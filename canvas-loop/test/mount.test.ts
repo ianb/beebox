@@ -4,9 +4,11 @@
 // installed here can't leak into the SSR test's asserted-DOM-free env).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mountSketch, sanitizeInitialParams } from "@ianbicking/canvas-loop/browser";
+import { attachSketch, mountSketch, sanitizeInitialParams, type EmittedEvent } from "@ianbicking/canvas-loop/browser";
+import type { Msg, Util } from "@ianbicking/canvas-loop";
 import { isTeaModule, toTeaModule } from "../src/headless/tea-load.js";
-import { FakeElement, asHTMLElement, rafState, runFrames, captureWarnings, decl, makeModule } from "./fake-dom.js";
+import { asPlaygroundModule } from "../browser/sketch-types.js";
+import { FakeElement, asHTMLCanvas, asHTMLElement, rafState, runFrames, captureWarnings, decl, makeModule } from "./fake-dom.js";
 
 
 // ── tests ────────────────────────────────────────────────────────────
@@ -118,6 +120,60 @@ test("teardown cancels the rAF loop, removes listeners, and unmounts the DOM", (
   assert.equal(rafState.pending.size, 0, "teardown cancels the pending animation frame");
   assert.equal(canvas.removedListeners, 6, "teardown removes every input listener");
   assert.equal(mount.children.length, 0, "teardown removes the container from the mount");
+});
+
+test("onEvent carries the engagement verdict (handled names + model-reference change)", () => {
+  interface Model {
+    hits: number;
+  }
+  const raw = {
+    params: {},
+    canvas: { width: 50, height: 50 },
+    init: (): Model => ({ hits: 0 }),
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: Model, msg: Msg, u: Util): Model => {
+      switch (msg.type) {
+        case "mousedown":
+          u.handled("pick");
+          return { hits: model.hits + 1 }; // named AND changed
+        case "keydown":
+          return { hits: model.hits }; // new reference, unnamed → changed only
+        default:
+          return model; // tick, mousemove, …: same reference
+      }
+    },
+    draw: (): void => {},
+  };
+  const canvas = new FakeElement("canvas");
+  canvas.width = 50;
+  canvas.height = 50;
+  const emitted: EmittedEvent[] = [];
+  const attached = attachSketch(asHTMLCanvas(canvas), {
+    module: asPlaygroundModule(raw),
+    seed: 1,
+    paused: false,
+    onFrame: () => {},
+    onEvent: (entry) => emitted.push(entry),
+  });
+  assert.ok(attached !== null, "attached to the fake canvas");
+
+  attached.runtime.pointer({ type: "mousedown", x: 10, y: 10 });
+  runFrames(2);
+  attached.runtime.key({ type: "keydown", key: "a" });
+  runFrames(2);
+  attached.runtime.pointer({ type: "mousemove", x: 12, y: 12 });
+  runFrames(2);
+
+  const down = emitted.find((e) => e.type === "mousedown");
+  assert.deepEqual(down?.handled, ["pick"], "a named u.handled() streams the name");
+  assert.equal(down?.changed, true, "the down also changed the model reference");
+  const keyEntry = emitted.find((e) => e.type === "keydown");
+  assert.deepEqual(keyEntry?.handled, [], "the unnamed keydown streams no names");
+  assert.equal(keyEntry?.changed, true, "a new model reference reports changed:true");
+  const moveEntry = emitted.find((e) => e.type === "mousemove");
+  assert.deepEqual(moveEntry?.handled, [], "the move named nothing");
+  assert.equal(moveEntry?.changed, false, "a same-reference return reports changed:false");
+  attached.teardown();
 });
 
 test("the headless loader ignores a default export (dual-export entries)", () => {

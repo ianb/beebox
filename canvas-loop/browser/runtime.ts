@@ -58,6 +58,17 @@ export interface RuntimeLog {
   message: string;
 }
 
+/**
+ * A streamed event carries the same engagement verdict the headless transcript
+ * shows, as structured data rather than a rendered string: `handled` (the names
+ * `u.handled(...)` acknowledged) and `changed` (did `update` return a new model
+ * reference). Both are present on interaction events (mouse/key/trigger), absent
+ * on `param` (a param change is definitionally applied — no separate verdict).
+ * Hosts render the verdict however they like; the on-disk events log
+ * (`eventsJSON`) stays the clean `TeaScriptEvent` shape.
+ */
+export type EmittedEvent = TeaScriptEvent & { handled?: readonly string[]; changed?: boolean };
+
 export interface RuntimeDeps {
   module: PlaygroundModule;
   ctx: CanvasRenderingContext2D;
@@ -68,8 +79,8 @@ export interface RuntimeDeps {
   onLog: (entry: RuntimeLog) => void;
   /** Partial override of declared param defaults — the initial values init() sees. */
   initialParams?: ParamOverrides;
-  /** Streams every recorded input entry (the `{frame, type, …}` events-file line) as it is dispatched. */
-  onEvent?: (entry: TeaScriptEvent) => void;
+  /** Streams every recorded input entry (the `{frame, type, …}` events-file line, plus the engagement verdict) as it is dispatched. */
+  onEvent?: (entry: EmittedEvent) => void;
   /**
    * Called once if a frame (update/draw) throws: the loop stops and the error
    * surfaces here instead of throwing uncaught on every subsequent rAF tick.
@@ -98,10 +109,13 @@ export class Runtime {
   #last: number | undefined;
   #onFrame: (frame: number) => void;
   #onLog: (entry: RuntimeLog) => void;
-  #onEvent: ((entry: TeaScriptEvent) => void) | undefined;
+  #onEvent: ((entry: EmittedEvent) => void) | undefined;
   #onError: ((error: unknown) => void) | undefined;
   #errored = false;
   #overrides: ParamOverrides | undefined;
+  // Per-event engagement accumulator (mirrors the headless runners); reset
+  // before each interaction fold, read after. BrowserUtil.handled pushes here.
+  #handledNames: string[] = [];
 
   constructor(deps: RuntimeDeps) {
     this.#module = deps.module;
@@ -118,6 +132,7 @@ export class Runtime {
       random: this.#random,
       getParams: () => this.#params,
       log: (args) => this.#recordLog(args),
+      onHandled: (name) => this.#handledNames.push(name),
     });
     this.#view = new BrowserView({ ctx: deps.ctx, width: deps.width, height: deps.height, log: (args) => this.#recordLog(args) });
     this.#model = frozen(this.#module.init(this.#util));
@@ -152,6 +167,7 @@ export class Runtime {
       random: this.#random,
       getParams: () => this.#params,
       log: (args) => this.#recordLog(args),
+      onHandled: (name) => this.#handledNames.push(name),
     });
     this.#params = initialParams(this.#decl, this.#overrides);
     this.#pending = [];
@@ -264,11 +280,24 @@ export class Runtime {
     for (const intent of intents) {
       const entry: TeaScriptEvent = { frame: this.#frame, ...intent };
       this.#log.push(entry);
-      this.#fold(this.#toMsg(intent));
+      const emitted = this.#foldIntent(entry, intent);
       // Fire after the fold so a `param` entry's value is already applied to
       // `#params` — a watcher reading `paramValues()` sees the new value.
-      this.#onEvent?.(entry);
+      this.#onEvent?.(emitted);
     }
+  }
+
+  // Fold one queued intent and return the entry to stream. A `param` keeps its
+  // clean shape (definitionally applied, no verdict); every interaction carries
+  // the engagement verdict (accumulated `handled` names + model-reference change).
+  #foldIntent(entry: TeaScriptEvent, intent: Intent): EmittedEvent {
+    if (intent.type === "param") {
+      this.#fold(this.#toMsg(intent));
+      return entry;
+    }
+    this.#handledNames = [];
+    const changed = this.#fold(this.#toMsg(intent));
+    return { ...entry, handled: [...this.#handledNames], changed };
   }
 
   #toMsg(intent: Intent): Msg {
@@ -291,14 +320,18 @@ export class Runtime {
     }
   }
 
-  #fold(msg: Msg): void {
+  #fold(msg: Msg): boolean {
     const next = this.#module.update(this.#model, msg, this.#util);
     // A box sketch (no lint) whose update switch omits a Msg case returns
     // undefined here; without this guard the model silently becomes undefined
     // and draw crashes downstream with a confusing error. Fail loud, naming the
     // unhandled msg.type so the author knows which case to add.
     if (next === undefined) throw new UnhandledMsgError({ msgType: msg.type });
+    // Reference-change is the free engagement signal — compute before freezing
+    // (frozen() returns the same reference it froze, so it must run first).
+    const changed = next !== this.#model;
     this.#model = frozen(next);
+    return changed;
   }
 
   #draw(): void {

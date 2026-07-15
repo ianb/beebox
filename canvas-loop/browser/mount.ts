@@ -12,12 +12,15 @@
 //
 //   import "@ianbicking/canvas-loop/browser/figure.css";
 import type { CanvasSize } from "../src/core/tea.js";
-import type { TeaScriptEvent } from "../src/headless/tea-events.js";
 import { toTeaModule } from "../src/headless/tea-load.js";
 import { buildControls } from "./controls.js";
 import { sanitizeInitialParams } from "./param-validate.js";
-import { Runtime, type ParamOverrides } from "./runtime.js";
+import { Runtime, type EmittedEvent, type ParamOverrides } from "./runtime.js";
 import type { PlaygroundModule } from "./sketch-types.js";
+
+// Re-exported so `./browser` consumers can type an `onEvent` handler that reads
+// the engagement verdict fields.
+export type { EmittedEvent } from "./runtime.js";
 
 // Re-exported here so the public `./browser` subpath keeps exporting it (the
 // definition lives in param-validate.ts, shared with Runtime.setParam).
@@ -51,7 +54,7 @@ export interface AttachSketchOptions {
   initialParams?: ParamOverrides;
   onFrame: (frame: number) => void;
   /** Streams each recorded input entry as it is dispatched. */
-  onEvent?: (entry: TeaScriptEvent) => void;
+  onEvent?: (entry: EmittedEvent) => void;
   /** Called once if a frame throws; the loop stops. Default: `console.error`. */
   onError?: (error: unknown) => void;
 }
@@ -135,7 +138,7 @@ export interface MountSketchOptions {
   /** Reports the applied param values after each change (host persistence hook). */
   onParamsChange?: (values: ParamOverrides) => void;
   /** Streams each recorded input entry (the events-file line). */
-  onEvent?: (entry: TeaScriptEvent) => void;
+  onEvent?: (entry: EmittedEvent) => void;
   /** Called once if a frame throws; the loop stops. Default: `console.error`. */
   onError?: (error: unknown) => void;
 }

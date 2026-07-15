@@ -4,6 +4,7 @@ import type { LogLevel } from "../core/types.js";
 export type TranscriptEntry =
   | { kind: "log"; frame: number; level: LogLevel; message: string }
   | { kind: "param"; frame: number; name: string; value: number | boolean | string }
+  | { kind: "input"; frame: number; event: string; verdict: string }
   | { kind: "image"; frame: number; labels: string[]; file: string; unchanged: boolean }
   | { kind: "error"; frame: number; name: string; message: string; stack: string };
 
@@ -42,6 +43,8 @@ function renderEntry(entry: TranscriptEntry): string {
       return `**[frame ${entry.frame}]** ${entry.level}: ${entry.message}`;
     case "param":
       return `**[frame ${entry.frame}]** param: ${entry.name} → ${formatValue(entry.value)}`;
+    case "input":
+      return `**[frame ${entry.frame}]** ${entry.event} → ${entry.verdict}`;
     case "image":
       return renderImage(entry);
     case "error":

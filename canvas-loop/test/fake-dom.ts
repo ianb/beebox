@@ -90,6 +90,11 @@ export function asHTMLElement(el: FakeElement): HTMLElement {
   return el as unknown as HTMLElement;
 }
 
+export function asHTMLCanvas(el: FakeElement): HTMLCanvasElement {
+  // eslint-disable-next-line no-restricted-syntax -- test boundary: the fake element stands in for the canvas element attachSketch duck-types against
+  return el as unknown as HTMLCanvasElement;
+}
+
 export const rafState: {
   next: number;
   pending: Map<number, (now: number) => void>;

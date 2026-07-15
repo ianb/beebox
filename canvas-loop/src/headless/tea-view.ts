@@ -122,10 +122,12 @@ export class TeaView implements View {
 export class TeaUtil<D extends ParamsDecl> implements Util<D> {
   #sketch: Sketch;
   #getParams: () => ParamValues<D>;
+  #onHandled: (name: string) => void;
 
-  constructor(deps: { sketch: Sketch; getParams: () => ParamValues<D> }) {
+  constructor(deps: { sketch: Sketch; getParams: () => ParamValues<D>; onHandled: (name: string) => void }) {
     this.#sketch = deps.sketch;
     this.#getParams = deps.getParams;
+    this.#onHandled = deps.onHandled;
   }
 
   random(): number;
@@ -147,5 +149,9 @@ export class TeaUtil<D extends ParamsDecl> implements Util<D> {
 
   log(...args: readonly unknown[]): void {
     this.#sketch.log(...args);
+  }
+
+  handled(name: string): void {
+    this.#onHandled(name);
   }
 }

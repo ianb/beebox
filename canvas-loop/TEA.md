@@ -43,8 +43,8 @@ export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof 
   the `p` argument. It cannot change the world.
 
 Capabilities are injected, not ambient — `update` gets `Util` (randomness,
-params, log) and no drawing; `draw` gets `View` (drawing, log, snapshot, `ctx`)
-and no randomness. That withholding *is* the enforcement.
+params, log, `handled`) and no drawing; `draw` gets `View` (drawing, log,
+snapshot, `ctx`) and no randomness. That withholding *is* the enforcement.
 
 `View` carries the same drawing surface as the mutable `Sketch` (see the
 [README API table](./README.md#the-sketch-api)), including the organic-shape
@@ -135,6 +135,42 @@ capture of that frame without perturbing the model, and its optional `label`
 flows to the transcript frame heading (`### frame 80 — after speed-up`). It is
 the scriptable twin of `v.snapshot(label?)`, for pinning a frame the capture
 policy would otherwise skip.
+
+## Engagement verdicts
+
+Every scripted **interaction** event (mouse, key, trigger — not `tick`, not
+`param`, not `snapshot`) gets an engagement verdict on its transcript line, so an
+events file reads as a test of whether each input actually connected:
+
+```
+**[frame 30]** mousedown (297,288) → select-planet
+**[frame 40]** keydown ArrowUp → Δmodel
+**[frame 55]** mousedown (200,150) → (unhandled)
+```
+
+The verdict is one of:
+
+- **a name** — `update` called `u.handled("select-planet")` (allowed multiple
+  times per dispatch; names join with `, `). The explicit acknowledgment that
+  this input engaged.
+- **Δmodel** — no name, but `update` returned a *different* model reference than
+  before the fold. State changed; the free signal, zero author cost.
+- **(unhandled)** — no name and the model reference was unchanged. Nothing
+  engaged.
+
+`u.handled(name)` is distinct from both "code ran" and "state changed": a `tick`
+changes everything and handles nothing; an absorbed click (a toggle already in
+its target state) handles and changes nothing. Reach for it when the free
+`Δmodel` signal is too coarse.
+
+The motivating case: a scripted click aimed at a *moving* target that has drifted
+by the time the frame arrives reads `(unhandled)` — the miss is visible in the
+transcript instead of having to be inferred from later frames.
+
+`param` changes keep their own `param: name → value` line (a param change is
+definitionally applied, so it carries no separate verdict). The browser runtime
+streams the same signal on its `onEvent` entries as structured
+`handled?: readonly string[]` / `changed?: boolean` fields.
 
 ## Dual-export entries (embedding as a figure)
 

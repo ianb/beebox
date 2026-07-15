@@ -103,6 +103,14 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
   readonly params: ParamValues<D>;
   /** Frame-tagged log line into the transcript. */
   log(...args: readonly unknown[]): void;
+  /**
+   * Acknowledge that this dispatch engaged with a name — the input's engagement
+   * verdict in the transcript. Callable multiple times per dispatch; names
+   * accumulate (joined by ", "). Distinct from both "code ran" and "state
+   * changed": a tick changes everything and handles nothing; an absorbed click
+   * handles and may change nothing. See TEA.md "Engagement verdicts".
+   */
+  handled(name: string): void;
 }
 
 /**

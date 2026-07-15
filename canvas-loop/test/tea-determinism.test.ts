@@ -29,6 +29,37 @@ test("two TEA runs of the same sketch produce byte-identical output", () => {
   }
 });
 
+test("a run that calls u.handled() is still byte-identical across two runs", () => {
+  const module = {
+    params: {},
+    canvas: undefined,
+    init: () => ({ n: 0 }),
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model: { n: number }, msg: { type: string }, u: { handled: (name: string) => void }) => {
+      if (msg.type === "mousedown") {
+        u.handled("tap");
+        return { n: model.n + 1 };
+      }
+      return model;
+    },
+    draw: () => {},
+  };
+  const events = [
+    { frame: 0, type: "mousedown", x: 10, y: 10 },
+    { frame: 1, type: "mousemove", x: 20, y: 20 },
+  ] as const;
+  const dirA = tmpDir();
+  const dirB = tmpDir();
+  teaRun(teaRunOptions(toTeaModule(module), { outDir: dirA, frames: 4, events: [...events] }));
+  teaRun(teaRunOptions(toTeaModule(module), { outDir: dirB, frames: 4, events: [...events] }));
+  const a = readDirBytes(dirA);
+  const b = readDirBytes(dirB);
+  assert.deepEqual([...a.keys()], [...b.keys()], "same output files");
+  for (const [name, bytesA] of a) {
+    assert.equal(Buffer.compare(bytesA, b.get(name) ?? Buffer.alloc(0)), 0, `${name} is byte-identical`);
+  }
+});
+
 test("param changes are logged and selection hit-tests land on moving planets", () => {
   const module = toTeaModule(orbitTea);
   const events = parseTeaEvents(JSON.parse(readFileSync(eventsJson, "utf8")), module.params);

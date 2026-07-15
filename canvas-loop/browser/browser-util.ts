@@ -10,11 +10,18 @@ export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
   #random: SeededRandom;
   #getParams: () => ParamValues<D>;
   #log: (args: readonly unknown[]) => void;
+  #onHandled: (name: string) => void;
 
-  constructor(deps: { random: SeededRandom; getParams: () => ParamValues<D>; log: (args: readonly unknown[]) => void }) {
+  constructor(deps: {
+    random: SeededRandom;
+    getParams: () => ParamValues<D>;
+    log: (args: readonly unknown[]) => void;
+    onHandled: (name: string) => void;
+  }) {
     this.#random = deps.random;
     this.#getParams = deps.getParams;
     this.#log = deps.log;
+    this.#onHandled = deps.onHandled;
   }
 
   random(): number;
@@ -40,5 +47,9 @@ export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
 
   log(...args: readonly unknown[]): void {
     this.#log(args);
+  }
+
+  handled(name: string): void {
+    this.#onHandled(name);
   }
 }

@@ -68,6 +68,13 @@ Handlers (all optional, all `(s: Sketch, e: SketchInputEvent)`):
 `keyReleased`. A `mousemove` while the mouse is pressed fires `mouseDragged`,
 otherwise `mouseMoved`. `e` carries `{ type, x, y, key }`.
 
+Each scripted input gets an **engagement verdict** on its transcript line
+(`mousedown (5,5) → grab`): whether a handler fired is a free signal — a fired
+handler reads `handled`, no matching handler reads `(unhandled)`; call
+`s.handled("name")` inside a handler to name the engagement instead
+(`… → grab`). (The TEA tier adds a `Δmodel` verdict from reducer state changes;
+see [TEA.md](./TEA.md#engagement-verdicts).)
+
 ### The `Sketch` API
 
 | Group | Members |
@@ -79,7 +86,7 @@ otherwise `mouseMoved`. `e` carries `{ type, x, y, key }`.
 | Transform | `push`, `pop`, `translate`, `rotate`, `scale` |
 | Randomness | `random()`, `random(max)`, `random(min, max)`, `randomChoice(arr)` — seeded (`--seed`) |
 | Input state | `mouseX`, `mouseY`, `mouseIsPressed`, `keysDown` (`Set<string>`) |
-| Output | `log(...args)` (frame-tagged into the transcript), `snapshot(label?)` (force-capture the frame) |
+| Output | `log(...args)` (frame-tagged into the transcript), `snapshot(label?)` (force-capture the frame), `handled(name)` (name this input's engagement verdict) |
 
 Colors are **CSS color strings only** (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`) —
 no p5 numeric color overloads. Habitual `console.log/warn/error` also work; they

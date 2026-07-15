@@ -90,6 +90,45 @@ test("within a frame, scripted msgs fold before the tick", () => {
   assert.ok(sawTick > sawParam, "the param msg folds before the tick msg");
 });
 
+test("interaction events get an engagement verdict: named, Δmodel, and (unhandled)", () => {
+  const module: LoadedTeaModule = {
+    params: {},
+    canvas: undefined,
+    init: () => ({ n: 0 }),
+    // eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined fold signature
+    update: (model, msg: Msg, u) => {
+      switch (msg.type) {
+        case "mousedown":
+          // A hit names itself; the miss returns the same reference silently.
+          if (msg.x < 100) u.handled("select");
+          return model;
+        case "keydown":
+          // A fresh object: a changed model reference, but no name.
+          return { n: 1 };
+        default:
+          return model;
+      }
+    },
+    draw: noop,
+  };
+  const dir = tmpDir();
+  teaRun(
+    teaRunOptions(module, {
+      outDir: dir,
+      frames: 3,
+      events: [
+        { frame: 0, type: "mousedown", x: 50, y: 50 },
+        { frame: 1, type: "keydown", key: "a" },
+        { frame: 2, type: "mousedown", x: 200, y: 50 },
+      ],
+    }),
+  );
+  const transcript = readTranscript(dir);
+  assert.ok(transcript.includes("**[frame 0]** mousedown (50,50) → select"), "a named u.handled() shows the name");
+  assert.ok(transcript.includes("**[frame 1]** keydown a → Δmodel"), "a new model reference with no name reads Δmodel");
+  assert.ok(transcript.includes("**[frame 2]** mousedown (200,50) → (unhandled)"), "same reference, no name reads (unhandled)");
+});
+
 test("param values reach draw and update through u.params / p", () => {
   const params: ParamsDecl = { speed: { type: "number", min: 0, max: 5, default: 1 } };
   const seen: number[] = [];

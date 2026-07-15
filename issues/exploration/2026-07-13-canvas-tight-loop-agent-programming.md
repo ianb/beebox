@@ -516,7 +516,16 @@ gets `expectHandled(name)`. Deliberately NOT a named-handler registry
 (`handlers: {name: {matches, apply}}`) — that would trade the plain-reducer
 fluency for a learned structure; naming is an act inside update.
 
-Status: designed, implementation queued behind the figure-runtime chunk 4.
+Status: implemented (2026-07-15). As-built decisions: `handled(name)` on
+`Util` (TEA) and `Sketch` (mutable); verdict recorded per scripted
+*interaction* event (mouse/key/trigger — NOT tick/snapshot; param keeps its
+own line to avoid a double). TEA middle verdict is `Δmodel` (update returned
+a new model reference); mutable middle verdict is bare `handled` (a handler
+export fired — no model to diff). Transcript `input` entry:
+`**[frame 30]** mousedown (297,288) → select-planet`. Browser `onEvent`
+carries structured `{handled?, changed?}` (not a rendered string — the
+replayable events log stays clean). `expectHandled` assert layer still
+future (no assert layer exists yet).
 
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 

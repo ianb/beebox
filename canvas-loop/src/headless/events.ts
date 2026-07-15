@@ -1,5 +1,5 @@
 import { EventScriptError } from "./errors.js";
-import type { Sketch, SketchModule } from "./sketch.js";
+import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
 import type { EventType, SketchEvent, SketchInputEvent } from "../core/types.js";
 
 const EVENT_TYPES: ReadonlySet<string> = new Set<EventType>([
@@ -112,42 +112,47 @@ function applyCoords(sketch: Sketch, event: SketchEvent): void {
   if (event.y !== undefined) sketch.mouseY = event.y;
 }
 
+// Fire an optional handler, reporting whether it existed to fire — the mutable
+// tier's free engagement signal (a handler export ran for this event).
+function fire(args: { handler: SketchEventHandler | undefined; sketch: Sketch; arg: SketchInputEvent }): boolean {
+  const { handler, sketch, arg } = args;
+  if (handler === undefined) return false;
+  handler(sketch, arg);
+  return true;
+}
+
 /**
  * Apply one scripted event to the sketch's input state and dispatch it through
  * the same handler path a real UI would use. A move while the mouse is pressed
- * fires mouseDragged; otherwise mouseMoved.
+ * fires mouseDragged; otherwise mouseMoved. Returns whether a matching handler
+ * export actually fired (the engagement verdict's free signal).
  */
-export function dispatchEvent(params: { sketch: Sketch; module: SketchModule; event: SketchEvent }): void {
+export function dispatchEvent(params: { sketch: Sketch; module: SketchModule; event: SketchEvent }): boolean {
   const { sketch, module, event } = params;
   switch (event.type) {
     case "mousemove": {
       applyCoords(sketch, event);
       const arg = inputArg(sketch, event);
-      if (sketch.mouseIsPressed) module.mouseDragged?.(sketch, arg);
-      else module.mouseMoved?.(sketch, arg);
-      return;
+      const handler = sketch.mouseIsPressed ? module.mouseDragged : module.mouseMoved;
+      return fire({ handler, sketch, arg });
     }
     case "mousedown": {
       applyCoords(sketch, event);
       sketch.mouseIsPressed = true;
-      module.mousePressed?.(sketch, inputArg(sketch, event));
-      return;
+      return fire({ handler: module.mousePressed, sketch, arg: inputArg(sketch, event) });
     }
     case "mouseup": {
       applyCoords(sketch, event);
       sketch.mouseIsPressed = false;
-      module.mouseReleased?.(sketch, inputArg(sketch, event));
-      return;
+      return fire({ handler: module.mouseReleased, sketch, arg: inputArg(sketch, event) });
     }
     case "keydown": {
       if (event.key !== undefined) sketch.keysDown.add(event.key);
-      module.keyPressed?.(sketch, inputArg(sketch, event));
-      return;
+      return fire({ handler: module.keyPressed, sketch, arg: inputArg(sketch, event) });
     }
     case "keyup": {
       if (event.key !== undefined) sketch.keysDown.delete(event.key);
-      module.keyReleased?.(sketch, inputArg(sketch, event));
-      return;
+      return fire({ handler: module.keyReleased, sketch, arg: inputArg(sketch, event) });
     }
   }
 }

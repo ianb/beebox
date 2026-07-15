@@ -8,7 +8,7 @@ import { Sketch } from "../src/headless/sketch.js";
 const NO_OP_HOST = { recordLog(): void {}, requestSnapshot(): void {} };
 
 function makeSketch(): Sketch {
-  const s = new Sketch({ host: NO_OP_HOST, seed: 42, fps: 60 });
+  const s = new Sketch({ host: NO_OP_HOST, seed: 42, fps: 60, onHandled: () => {} });
   s.createCanvas(100, 100);
   return s;
 }

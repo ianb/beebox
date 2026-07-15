@@ -38,11 +38,13 @@ export class Sketch {
   #host: SketchHost;
   #fps: number;
   #random: SeededRandom;
+  #onHandled: (name: string) => void;
 
-  constructor(options: { host: SketchHost; seed: number; fps: number }) {
+  constructor(options: { host: SketchHost; seed: number; fps: number; onHandled: (name: string) => void }) {
     this.#host = options.host;
     this.#fps = options.fps;
     this.#random = new SeededRandom(options.seed);
+    this.#onHandled = options.onHandled;
   }
 
   // ── canvas + time ────────────────────────────────────────────────
@@ -209,6 +211,15 @@ export class Sketch {
 
   snapshot(label?: string): void {
     this.#host.requestSnapshot(label);
+  }
+
+  /**
+   * Acknowledge that a handler engaged with a name — the input's engagement
+   * verdict in the transcript. Callable multiple times per event; names
+   * accumulate. The mutable-tier twin of TEA's `u.handled`.
+   */
+  handled(name: string): void {
+    this.#onHandled(name);
   }
 }
 

@@ -64,6 +64,33 @@ function initialParams(decl: ParamsDecl): ParamValues<ParamsDecl> {
   return Object.freeze(values);
 }
 
+// A scripted INTERACTION event: everything but snapshot (a forced capture) and
+// param (which keeps its own `param:` line). These earn an engagement verdict.
+type TeaInputEvent = Exclude<TeaScriptEvent, { type: "snapshot" } | { type: "param" }>;
+// The Msg an interaction folds as — the Msg union minus tick and param.
+type InteractionMsg = Exclude<Msg, { type: "tick" } | { type: "param" }>;
+
+/** Human description of an interaction for the transcript (`mousedown (297,288)`, `keydown ArrowUp`, `trigger reset`). */
+function describeInput(msg: InteractionMsg): string {
+  switch (msg.type) {
+    case "mousedown":
+    case "mouseup":
+    case "mousemove":
+      return `${msg.type} (${msg.x},${msg.y})`;
+    case "keydown":
+    case "keyup":
+      return `${msg.type} ${msg.key}`;
+    case "trigger":
+      return `trigger ${msg.name}`;
+  }
+}
+
+/** The engagement verdict: named acknowledgment wins, else a model-reference change, else unhandled. */
+function verdict(a: { handled: readonly string[]; changed: boolean }): string {
+  if (a.handled.length > 0) return a.handled.join(", ");
+  return a.changed ? "Δmodel" : "(unhandled)";
+}
+
 class TeaRunner {
   #options: TeaRunOptions;
   #recorder: FrameRecorder;
@@ -75,6 +102,10 @@ class TeaRunner {
   #model: unknown = undefined;
   #mouseX = 0;
   #mouseY = 0;
+  // Per-dispatch engagement accumulator: reset before each interaction fold,
+  // read after. TeaUtil.handled and Sketch.handled push here via injected
+  // callbacks — the runtime owns it; the capability objects never see it.
+  #handledNames: string[] = [];
 
   constructor(options: TeaRunOptions) {
     this.#options = options;
@@ -85,8 +116,11 @@ class TeaRunner {
       readPixels: () => this.#sketch.readPixels(),
       canvasReady: () => this.#sketch.width > 0 && this.#sketch.height > 0,
     });
-    this.#sketch = new Sketch({ host: this.#recorder, seed: options.seed, fps: options.fps });
-    this.#util = new TeaUtil({ sketch: this.#sketch, getParams: () => this.#params });
+    const onHandled = (name: string): void => {
+      this.#handledNames.push(name);
+    };
+    this.#sketch = new Sketch({ host: this.#recorder, seed: options.seed, fps: options.fps, onHandled });
+    this.#util = new TeaUtil({ sketch: this.#sketch, getParams: () => this.#params, onHandled });
     this.#view = new TeaView(this.#sketch);
     this.#eventsByFrame = bucketTeaByFrame(options.events);
   }
@@ -121,20 +155,47 @@ class TeaRunner {
     this.#sketch.frameCount = frame;
     const events = this.#eventsByFrame.get(frame) ?? [];
     this.#recorder.markEvents(events.length > 0);
-    for (const event of events) {
-      if (event.type === "snapshot") {
-        this.#recorder.requestSnapshot(event.label);
-        continue;
-      }
-      this.#fold(this.#toMsg(event));
-    }
+    for (const event of events) this.#dispatchEvent(event);
     this.#fold({ type: "tick", frame });
     const drawn = this.#options.module.draw(this.#view, this.#model, this.#params);
     assertSync(drawn, "draw");
     this.#recorder.captureIfNeeded(frame);
   }
 
-  #fold(msg: Msg): void {
+  // snapshot forces a capture (no fold); param folds and keeps its dedicated
+  // `param:` line (a param change is definitionally applied, so it gets no
+  // separate verdict); every other event is a scripted INTERACTION and earns an
+  // engagement verdict line.
+  #dispatchEvent(event: TeaScriptEvent): void {
+    switch (event.type) {
+      case "snapshot":
+        this.#recorder.requestSnapshot(event.label);
+        return;
+      case "param": {
+        this.#params = Object.freeze({ ...this.#params, [event.name]: event.value });
+        this.#recorder.recordParam({ name: event.name, value: event.value });
+        this.#fold({ type: "param", name: event.name, value: event.value });
+        return;
+      }
+      case "mousedown":
+      case "mouseup":
+      case "mousemove":
+      case "keydown":
+      case "keyup":
+      case "trigger":
+        this.#dispatchInteraction(event);
+        return;
+    }
+  }
+
+  #dispatchInteraction(event: TeaInputEvent): void {
+    const msg = this.#toMsg(event);
+    this.#handledNames = [];
+    const changed = this.#fold(msg);
+    this.#recorder.recordInput({ event: describeInput(msg), verdict: verdict({ handled: this.#handledNames, changed }) });
+  }
+
+  #fold(msg: Msg): boolean {
     const next = this.#options.module.update(this.#model, msg, this.#util);
     assertSync(next, "update");
     // A box sketch (no lint) whose update switch omits a Msg case returns
@@ -142,10 +203,14 @@ class TeaRunner {
     // and draw crashes downstream with a confusing error. Fail loud, naming the
     // unhandled msg.type so the author knows which case to add.
     if (next === undefined) throw new UnhandledMsgError({ msgType: msg.type });
+    // Reference-change is the free engagement signal — compute before freezing
+    // (frozenModel returns the same reference it froze, so it must run first).
+    const changed = next !== this.#model;
     this.#model = frozenModel(next);
+    return changed;
   }
 
-  #toMsg(event: Exclude<TeaScriptEvent, { type: "snapshot" }>): Msg {
+  #toMsg(event: TeaInputEvent): InteractionMsg {
     switch (event.type) {
       case "mousedown":
       case "mouseup":
@@ -157,11 +222,6 @@ class TeaRunner {
       case "keydown":
       case "keyup":
         return { type: event.type, key: event.key ?? "" };
-      case "param": {
-        this.#params = Object.freeze({ ...this.#params, [event.name]: event.value });
-        this.#recorder.recordParam({ name: event.name, value: event.value });
-        return { type: "param", name: event.name, value: event.value };
-      }
       case "trigger":
         return { type: "trigger", name: event.name };
     }

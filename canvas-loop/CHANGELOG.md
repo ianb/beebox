@@ -5,6 +5,22 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Engagement verdicts — scripted inputs report whether anything engaged.**
+  Every scripted *interaction* event (mouse/key/trigger — not `tick`, `param`,
+  or `snapshot`) now carries a verdict on its transcript line:
+  `**[frame 30]** mousedown (297,288) → select-planet`. Three states:
+  a **name** (TEA `u.handled(name)` / mutable `s.handled(name)`, callable
+  multiple times, names join with `, `); **Δmodel** (TEA only — `update`
+  returned a new model reference, the free reference-equality signal); or
+  **(unhandled)** (nothing engaged — e.g. a click that missed a moving target,
+  previously invisible in the transcript). The mutable tier's middle verdict is
+  a bare `handled` (a handler export fired but didn't name). `param` keeps its
+  own `param: name → value` line (definitionally applied, no separate verdict).
+  New capability: `handled(name)` on `Util` (TEA) and `Sketch` (mutable); new
+  `input` transcript entry kind. The browser runtime streams the same signal on
+  `onEvent` entries as structured `handled?: readonly string[]` / `changed?:
+  boolean` fields (the on-disk events log stays the clean `TeaScriptEvent`
+  shape); the new `EmittedEvent` type is exported from `./browser`.
 - **Figure hardening (review fixes).**
   - `<SketchFigure>` keys the creation effect on the module's stable
     sub-references (`init`/`update`/`draw`/`params`), not the wrapper object — so
