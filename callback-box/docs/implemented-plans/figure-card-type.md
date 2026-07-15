@@ -11,7 +11,7 @@
 > object arg) rather than three positional params, to satisfy the max-params
 > rule. A **fourth runtime, `canvas-loop`**, was added 2026-07 (deterministic
 > TEA sketches with auto-generated controls + a headless verify loop) — see
-> `docs/plans/canvas-loop-figure.md`; the `p5js|three|d3` enumerations below
+> `docs/implemented-plans/canvas-loop-figure.md`; the `p5js|three|d3` enumerations below
 > predate it.
 
 A new `figure` card type for small, embeddable, parameterized interactives —

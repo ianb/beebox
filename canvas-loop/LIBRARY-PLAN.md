@@ -1,12 +1,13 @@
 # canvas-loop: sandbox → library plan
 
-Status: DRAFT for cross-model review, 2026-07-14. Boxholder direction: turn
-the validated sandbox into a monorepo library — eslint plugin, Claude plugin
-(skill + maybe rule), React display component, usable as a figure in
-callback-box **without being bound to callback-box**. Treat as experimental:
-the library presentation is real but the API is expected to move as agent
-exercises teach us more. Design record:
-`issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`.
+**Status: implemented 2026-07** — all tracks below shipped and merged to
+`main`; kept as the founding design record (not a live proposal). Boxholder
+direction was to turn the validated sandbox into a monorepo library —
+eslint plugin, Claude plugin (skill + maybe rule), React display component,
+usable as a figure in callback-box **without being bound to callback-box**.
+Treat the package as experimental: the API is expected to keep moving as
+agent exercises teach us more (see the README's EXPERIMENTAL banner). Design
+record: `issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`.
 
 ## Status (2026-07-14): all implementation tracks shipped
 
