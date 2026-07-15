@@ -1,7 +1,14 @@
 ---
 title: "Full-text + semantic search over a box"
 area: callback-box
+resolution: implemented
 ---
+
+**Closed (2026-07-15): implemented** — shipped as `cb search` + the global
+`contains:` field (`src/core/search/`, Orama-based; design in
+`docs/implemented-plans/box-search.md`), as the body already records.
+Embeddings/hybrid (phase 3) remain a separate future plan, tracked on their own —
+not a blocker for closing the core search work.
 
 Shipped June 2026 as `cb search` + the global `contains:` field — see
 `docs/implemented-plans/box-search.md`. Embeddings/hybrid remain future

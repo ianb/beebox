@@ -1,7 +1,15 @@
 ---
 title: "scheduled task health surfacing"
 area: callback-box
+resolution: implemented
 ---
+
+**Closed (2026-07-15): implemented** — as the body's "IMPLEMENTED (June 2026)"
+note details: `cb health` (always-available, exit 1 when unhealthy), a `health`
+attribute on the session-start `<chat-app>` snapshot, proactive scheduler-daemon
+telegram alerts, and a per-box heartbeat. Confirmed live this session — `cb health`
+surfaces failing/overdue/blocked per box. Only the optional dashboard panel
+remains; not worth holding the issue open (refile if wanted).
 
 Scheduled automation (wakeup, scheduler ticks, overnight compaction once that exists, sync jobs) can silently stop running, and the failure isn't noticed until something downstream breaks (briefings stop updating, hunches stop being extracted, calendar drift). Stuff gets lost.
 
