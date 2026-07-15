@@ -5,6 +5,7 @@
  */
 
 import { registerSerializer } from "agent-doctest/check";
+import { isRecord } from "../../src/lib/is-record.js";
 
 /**
  * Serialize Fastify inject() response as "statusCode\n{json body}".
@@ -13,16 +14,9 @@ import { registerSerializer } from "agent-doctest/check";
  *   t.check(res, `200\n{ "success": true }`);
  */
 registerSerializer((v) => {
-  if (
-    v && typeof v === "object"
-    && "statusCode" in v
-    && "json" in v
-    && typeof (v as Record<string, unknown>).json === "function"
-  ) {
-    const r = v as { statusCode: number; json: () => unknown };
-    const body = r.json();
-    const json = JSON.stringify(body, null, 2);
-    return `${r.statusCode}\n${json}`;
-  }
-  return null;
+  if (!isRecord(v)) return null;
+  const { statusCode, json } = v;
+  if (typeof statusCode !== "number" || typeof json !== "function") return null;
+  const body: unknown = json.call(v);
+  return `${statusCode}\n${JSON.stringify(body, null, 2)}`;
 });

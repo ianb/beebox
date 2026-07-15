@@ -45,7 +45,7 @@
     "typecheck": "tsc --noEmit && cd src/frontend && pnpm exec tsc --noEmit",
     "typecheck:frontend": "cd src/frontend && pnpm typecheck",
     "typecheck:all": "pnpm typecheck && pnpm typecheck:frontend",
-    "lint": "eslint src/ scripts/ && cd src/frontend && pnpm exec eslint src/",
+    "lint": "eslint src/ scripts/ test/ && cd src/frontend && pnpm exec eslint src/",
     "start": "node dist/webapp/server.js",
     "cli": "node dist/cli/index.js",
     "pretest": "node scripts/build-cli.mjs",
@@ -93,7 +93,7 @@
     "tsx": "^4.21.0"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.3.205",
+    "@anthropic-ai/claude-agent-sdk": "0.3.207",
     "@fastify/cookie": "^11.0.2",
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
@@ -145,6 +145,9 @@
       "eslint --config src/frontend/eslint.config.mjs"
     ],
     "src/!(frontend)/**/*.ts": [
+      "eslint"
+    ],
+    "test/**/*.ts": [
       "eslint"
     ]
   }

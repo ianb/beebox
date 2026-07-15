@@ -6,7 +6,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { BrowseSession } from "./browse.js";
+import type { BrowseSession } from "./browse.js";
 import { runAxe } from "./axe.js";
 import type { CheckpointArtifact, Finding, ViewportSpec } from "./types.js";
 
@@ -27,7 +27,7 @@ export interface CaptureResult {
 
 export async function captureCheckpoint(input: CaptureInput): Promise<CaptureResult> {
   const { name, artifactsDir, viewport, session, pushFinding } = input;
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- artifactsDir is built from a static base + tour name
+
   await mkdir(artifactsDir, { recursive: true });
 
   const ready = await session.waitForReady();
@@ -47,18 +47,18 @@ export async function captureCheckpoint(input: CaptureInput): Promise<CaptureRes
 
   await session.screenshot(screenshotPath);
   const ax = await session.snapshot({ interactiveOnly: false });
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- artifact paths derived from artifactsDir
+
   await writeFile(axSnapshotPath, ax, "utf8");
 
   let violationCount = 0;
   try {
     const violations = await runAxe(session);
     violationCount = violations.length;
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- see above
+
     await writeFile(axeReportPath, JSON.stringify(violations, null, 2), "utf8");
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- see above
+
     await writeFile(axeReportPath, JSON.stringify({ error: message }, null, 2), "utf8");
     // Without this finding, an axe crash reads as "0 violations" in the
     // summary — indistinguishable from a clean page.

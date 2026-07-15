@@ -9,7 +9,7 @@
  */
 
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { invariant } from "../../../src/lib/invariant.js";
 import { BrowseSession } from "./browse.js";
 import { captureCheckpoint } from "./checkpoint.js";
 import { buildExpectAPI } from "./expect.js";
@@ -26,7 +26,7 @@ import type {
   ViewportSpec,
 } from "./types.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 const TOURS_DIR = path.resolve(__dirname, "..");
 const ARTIFACTS_ROOT = path.join(TOURS_DIR, ".artifacts");
 
@@ -44,7 +44,7 @@ interface PassResult {
 export async function runTour(tour: TourDefinition, options: RunOptions): Promise<TourResult> {
   const startedAt = new Date().toISOString();
   const t0 = Date.now();
-  const runId = startedAt.replace(/[:.]/g, "-");
+  const runId = startedAt.replace(/[.:]/g, "-");
   const artifactsDir = path.join(ARTIFACTS_ROOT, tour.name, runId);
 
   const passResults: PassResult[] = [];
@@ -151,9 +151,16 @@ function mergeCheckpoints(passes: readonly PassResult[]): CheckpointRecord[] {
 
   return ordered.map((name) => {
     const record = byName.get(name);
-    if (record === undefined) throw new Error(`internal: lost checkpoint ${name}`);
+    invariant(record !== undefined, `lost checkpoint ${name}`);
     return record;
   });
+}
+
+class LocatorResolveError extends Error {
+  constructor(locator: ClickLocator) {
+    super(`Could not resolve ${locator.role} "${locator.name}"`);
+    this.name = "LocatorResolveError";
+  }
 }
 
 async function clickIn(session: BrowseSession, locator: ClickLocator): Promise<void> {
@@ -170,7 +177,7 @@ async function clickIn(session: BrowseSession, locator: ClickLocator): Promise<v
     }
   }
   if (ref === null) {
-    throw new Error(`Could not resolve ${locator.role} "${locator.name}"`);
+    throw new LocatorResolveError(locator);
   }
   await session.clickRef(ref);
 }

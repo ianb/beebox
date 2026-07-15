@@ -329,8 +329,8 @@ FigureSchema.frontmatterSchema.safeParse({
 => true
 ```
 
-The figure template scaffolds a valid card pointing at `attach/sketch.ts`, with
-a `size` param declared so it's parameterizable out of the box:
+The figure template scaffolds a valid card pointing at `attach/sketch.ts`; no
+`size` param is scaffolded — the starter sizes itself from the container:
 
 ```ts
 createFigureTemplate({ runtime: "p5js", title: "Spinner" })
@@ -338,10 +338,6 @@ createFigureTemplate({ runtime: "p5js", title: "Spinner" })
 ---
 runtime: p5js
 entry: attach/sketch.ts
-params:
-  - name: size
-    type: number
-    default: 300
 title: Spinner
 ---
 A p5.js sketch figure. Describe what it demonstrates here; the runnable code lives in `attach/sketch.ts`.

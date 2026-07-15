@@ -2,7 +2,15 @@
 title: "Box deployment friction"
 needs: [design]
 area: callback-box
+resolution: superseded
 ---
+
+**Closed (2026-07-15): superseded / out of date.** The box-deployment model has
+moved on: `add-box.sh` now runs a post-add health check (point 3), and the
+boxes-as-packages (v2) migration reshaped the ownership / standard-dirs landscape
+the 2026-03 notes describe. These specific frictions are stale — refile any
+concrete add-a-box friction that actually recurs (a `cb deploy-check` command is
+still a reasonable idea if it does).
 
 Several things go wrong when adding a new box to the server that are easy to forget:
 

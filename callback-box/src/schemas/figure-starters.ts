@@ -5,22 +5,28 @@ import type { FigureRuntimeType } from "./figure.js";
 
 /**
  * Runnable starter sketches per runtime. Each one is a complete, working
- * `entry` module: it default-exports `(lib, { mount, figure }) => teardown`,
- * reads `figure.params.size`, and cleans up on teardown. Scaffolded into
+ * `entry` module: it default-exports `(lib, { mount, figure }) => teardown`
+ * and cleans up on teardown. The p5/three/d3 starters size themselves from
+ * the mount container (a `ResizeObserver`-driven fit, not a `size` param —
+ * see the schema instructions' "Fit the container" guidance) so they render
+ * correctly at any embed width, phone included. Scaffolded into
  * `attach/sketch.ts` by the figure template so a freshly created figure renders
  * immediately and is ready to edit.
  */
 const FIGURE_STARTERS: Record<FigureRuntimeType, string> = {
   p5js: `// p5.js figure. The harness provides p5 as \`lib\` (do not import it) and a
-// mount element; read parameters from figure.params.
+// mount element. Size from the container, not a fixed pixel width, so the
+// figure fits at phone width too.
 export default function (p5, { mount, figure }) {
+  const width = () => Math.min(mount.clientWidth || 360, 640);
+  let angle = 0;
   const instance = new p5((p) => {
-    let angle = 0;
-    const size = Number(figure.params.size) || 300;
     p.setup = () => {
-      p.createCanvas(size, size);
+      p.createCanvas(width(), width());
     };
     p.draw = () => {
+      // Derive ALL layout from p.width / p.height, not captured constants —
+      // resizeCanvas below changes them without re-running setup.
       p.background(28);
       p.translate(p.width / 2, p.height / 2);
       p.rotate(angle);
@@ -28,29 +34,49 @@ export default function (p5, { mount, figure }) {
       p.noStroke();
       p.fill(120, 200, 255);
       p.rectMode(p.CENTER);
-      p.rect(0, 0, size * 0.4, size * 0.4);
+      p.rect(0, 0, p.width * 0.4, p.height * 0.4);
     };
   }, mount);
-  return () => instance.remove();
+  // The width-compare guard breaks the observer feedback loop (resizeCanvas
+  // changes the mount's height, which would otherwise refire the observer).
+  const ro = new ResizeObserver(() => {
+    if (instance.width !== width()) instance.resizeCanvas(width(), width());
+  });
+  ro.observe(mount);
+  return () => {
+    ro.disconnect();
+    instance.remove();
+  };
 }
 `,
   three: `// three.js figure. The harness provides the three namespace as \`lib\`; mount a
 // WebGL canvas into \`mount\` and return a teardown that cancels the animation
-// frame and disposes GPU resources.
+// frame and disposes GPU resources. Size from the container so the figure
+// fits at phone width too.
 export default function (THREE, { mount, figure }) {
-  const size = Number(figure.params.size) || 300;
+  const width = () => Math.min(mount.clientWidth || 360, 640);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 100);
   camera.position.z = 2.5;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(size, size);
   mount.appendChild(renderer.domElement);
 
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const material = new THREE.MeshNormalMaterial();
   const cube = new THREE.Mesh(geometry, material);
   scene.add(cube);
+
+  // Track the logical width ourselves: renderer.domElement.width is physical
+  // pixels, which diverges from the logical size under setPixelRatio.
+  let canvasW = 0;
+  function resize(): void {
+    canvasW = width();
+    renderer.setSize(canvasW, canvasW);
+    camera.aspect = 1;
+    camera.updateProjectionMatrix();
+  }
+  resize();
 
   let raf = 0;
   const loop = () => {
@@ -61,7 +87,13 @@ export default function (THREE, { mount, figure }) {
   };
   loop();
 
+  const ro = new ResizeObserver(() => {
+    if (canvasW !== width()) resize();
+  });
+  ro.observe(mount);
+
   return () => {
+    ro.disconnect();
     cancelAnimationFrame(raf);
     geometry.dispose();
     material.dispose();
@@ -71,26 +103,32 @@ export default function (THREE, { mount, figure }) {
 }
 `,
   d3: `// D3 figure. The harness provides the d3 namespace as \`lib\`; append an <svg>
-// to \`mount\` and return a teardown that removes it.
+// with a viewBox so it scales to the container — no resize handling needed,
+// since d3.pointer() maps events into the viewBox's own coordinate system.
+// Keep the internal width modest and text >= 12px: viewBox scaling shrinks
+// text and strokes uniformly, so labels must stay legible even scaled down
+// to phone width.
 export default function (d3, { mount, figure }) {
-  const size = Number(figure.params.size) || 300;
+  const W = 600;
+  const H = 400;
   const data = [4, 8, 15, 16, 23, 42];
 
   const svg = d3
     .select(mount)
     .append("svg")
-    .attr("width", size)
-    .attr("height", size);
+    .attr("viewBox", \`0 0 \${W} \${H}\`)
+    .style("width", "100%")
+    .style("height", "auto");
 
   const x = d3
     .scaleBand()
     .domain(data.map((_, i) => String(i)))
-    .range([0, size])
+    .range([0, W])
     .padding(0.1);
   const y = d3
     .scaleLinear()
     .domain([0, d3.max(data) ?? 0])
-    .range([size, 0]);
+    .range([H, 0]);
 
   svg
     .selectAll("rect")
@@ -99,7 +137,7 @@ export default function (d3, { mount, figure }) {
     .attr("x", (_, i) => x(String(i)) ?? 0)
     .attr("y", (d) => y(d))
     .attr("width", x.bandwidth())
-    .attr("height", (d) => size - y(d))
+    .attr("height", (d) => H - y(d))
     .attr("fill", "#4ea3ff");
 
   return () => {

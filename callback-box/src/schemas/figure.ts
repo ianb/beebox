@@ -35,8 +35,6 @@ export const FigureSchema = cardSchema("figure", {
     entry: z.string(),
     data: z.record(z.string(), z.unknown()).optional(),
     params: z.array(FigureParam).optional(),
-    width: z.number().optional(),
-    height: z.number().optional(),
     body: body(z.string()),
   },
   instructions: `# Figure Cards
@@ -58,7 +56,8 @@ Whatever a figure is for, these make it usable and clear:
 - **Signal the affordances.** What's interactive should *look* interactive — a draggable part, a slider, a button should read as such (visible handles, hover cues), not blend into the scene.
 - **Tell the viewer what to do.** A short on-figure instruction ("drag the H⁺ to the base", "click a category") removes the guesswork; don't rely on the viewer discovering the interaction.
 - **Key what isn't self-evident.** If colours, symbols, or marks carry meaning, include a small legend; if it responds to the keyboard, name the keys.
-- **Legible and unclipped.** Readable text, enough contrast, no overlapping or garbled labels; lay it out so nothing is clipped at the figure's declared size. Match the box's quiet visual style — no decorative noise.
+- **Legible and unclipped.** Readable text, enough contrast, no overlapping or garbled labels; lay it out so nothing is clipped. Match the box's quiet visual style — no decorative noise.
+- **Fit the container.** Size from \`mount.clientWidth\` (fall back if 0, e.g. \`|| 360\`), watch it with a \`ResizeObserver\` (disconnect in teardown), and derive layout from the current canvas size — never a fixed pixel width or a \`size\` param. Give DOM controls \`width: 100%\`. A figure must work at phone width (~390px).
 - **Verify it renders before you call it done.** Open it and screenshot it: confirm it renders, the controls and instructions are visible, and nothing is clipped.
 
 ## Frontmatter
@@ -95,11 +94,16 @@ argument because positional params are capped at two.)
 \`\`\`ts
 // attach/sketch.ts  (p5js)
 export default function (p5, { mount, figure }) {
+  const width = () => Math.min(mount.clientWidth || 360, 640);
   const instance = new p5((p) => {
-    p.setup = () => p.createCanvas(figure.params.size ?? 300, 300);
-    p.draw = () => { /* read figure.params / figure.data */ };
+    p.setup = () => p.createCanvas(width(), Math.round(width() * 0.75));
+    p.draw = () => { /* derive layout from p.width / p.height, not a constant */ };
   }, mount);
-  return () => instance.remove();
+  const ro = new ResizeObserver(() => {
+    if (instance.width !== width()) instance.resizeCanvas(width(), Math.round(width() * 0.75));
+  });
+  ro.observe(mount);
+  return () => { ro.disconnect(); instance.remove(); };
 }
 \`\`\`
 
@@ -186,19 +190,18 @@ const RUNTIME_LABEL: Record<FigureRuntimeType, string> = {
 };
 
 /**
- * Starter embed `params` per runtime, declared so the scaffolded figure is
- * parameterizable out of the box AND every declared card param maps onto a real
- * module param (an unmatched card param warns on every mount — see the schema
- * instructions' vocabulary table). The p5/three/d3 starters read
- * `figure.params.size`; the canvas-loop starter's value-bearing module params
- * are `speed` (number), `show-ring` (boolean), and `tone` (select → card
- * `string`, its default among the select's options). Its `reset` trigger is not
- * embed-controllable, so it is omitted.
+ * Starter embed `params`, declared only for runtimes whose starter has real
+ * domain parameters to expose. The p5/three/d3 starters size themselves from
+ * the container (no `size` param — see the schema instructions' "Fit the
+ * container" guidance), so they scaffold no `params`; `params` stays reserved
+ * for domain parameters an author declares deliberately. The canvas-loop
+ * starter's value-bearing module params are `speed` (number), `show-ring`
+ * (boolean), and `tone` (select → card `string`, its default among the
+ * select's options) — every one maps onto a real module param (an unmatched
+ * card param warns on every mount — see the schema instructions' vocabulary
+ * table). Its `reset` trigger is not embed-controllable, so it is omitted.
  */
-const FIGURE_TEMPLATE_PARAMS: Record<FigureRuntimeType, Array<Record<string, unknown>>> = {
-  p5js: [{ name: "size", type: "number", default: 300 }],
-  three: [{ name: "size", type: "number", default: 300 }],
-  d3: [{ name: "size", type: "number", default: 300 }],
+const FIGURE_TEMPLATE_PARAMS: Partial<Record<FigureRuntimeType, Array<Record<string, unknown>>>> = {
   "canvas-loop": [
     { name: "speed", type: "number", default: 1 },
     { name: "show-ring", type: "boolean", default: true },
@@ -209,14 +212,15 @@ const FIGURE_TEMPLATE_PARAMS: Record<FigureRuntimeType, Array<Record<string, unk
 /**
  * Generate a starter figure card. The body is a short description; the runnable
  * code is scaffolded separately into the attach scope (see
- * {@link figureStarterSketch}). Embed `params` are declared per runtime (see
- * {@link FIGURE_TEMPLATE_PARAMS}).
+ * {@link figureStarterSketch}). Embed `params` are declared only for runtimes
+ * with real domain parameters to expose (see {@link FIGURE_TEMPLATE_PARAMS}).
  */
 export function createFigureTemplate(input: { runtime: FigureRuntimeType; title?: string }): string {
+  const templateParams = FIGURE_TEMPLATE_PARAMS[input.runtime];
   const fields: Record<string, unknown> = {
     runtime: input.runtime,
     entry: "attach/sketch.ts",
-    params: FIGURE_TEMPLATE_PARAMS[input.runtime],
+    ...(templateParams !== undefined ? { params: templateParams } : {}),
   };
   if (input.title !== undefined && input.title !== "") {
     fields["title"] = input.title;

@@ -362,8 +362,6 @@ const disabledRules = {
   "security/detect-unsafe-regex": "off",
   // Broken eslint-import-resolver-typescript setup
   "import/no-extraneous-dependencies": "off",
-  // One export per file — doesn't match typical module architecture
-  "single-export/single-export": "off",
   // Requires className on every JSX element — nonsensical
   "custom/jsx-classname-required": "off",
   // Every file needs a test file — not everyone's testing strategy
@@ -602,6 +600,22 @@ export function vibeCheck(options) {
       // `files` key because eslint-config-agent enables it globally (all file
       // types, all directories), which the main block's allRulesOff can't reach.
       rules: { "error/no-throw-literal": "off" },
+    },
+    {
+      // single-export (one export per file) is retired — boxholder decision
+      // 2026-07-15. One function/class per file is a fine constraint, but the
+      // rule counts EVERY export toward its limit — including `export interface`,
+      // `export type`, and `export const` — so a cohesive unit and its supporting
+      // types can't share a file. That fights how modules actually cluster here
+      // (a value plus its `Props`/`Options` type, a fixture plus the error it
+      // throws). The "only export what's needed" convention (code-style.md) plus
+      // review covers the real concern; the automated one-per-file nudge cost more
+      // than it bought. Disabled with no `files` key because eslint-config-agent
+      // enables it globally — the main block's allRulesOff/disabledRules only
+      // reach root-scoped files (src/, scripts/), leaving it live on the
+      // fall-through base for everything else (test/, etc.). Same shape as the
+      // no-optional-chaining / no-throw-literal retirements above.
+      rules: { "single-export/single-export": "off" },
     },
     {
       // Type-aware rules. projectService builds a TS program per project,

@@ -55,8 +55,12 @@ export function BrowseDetailPanel({
     selectedRawFile ? undefined : cardTypeFromPath(selectedFilePath),
   );
   const wide = selectedRawFile !== null || viewBinding !== null;
+  // w-full: without it, mx-auto suppresses flex stretch and the panel
+  // shrink-wraps to its content's intrinsic width — one wide child (a
+  // fixed-size canvas, an unbreakable path) then pans the whole card
+  // sideways on narrow viewports instead of the child scaling down.
   return (
-    <div className={`${wide ? "max-w-7xl" : "max-w-4xl"} mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
+    <div className={`${wide ? "max-w-7xl" : "max-w-4xl"} w-full mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
       <MobileBackButton label="Back" onClick={onBack} className="mb-4 mx-4 print:hidden" />
       {deleteError ? (
         <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark print:hidden">

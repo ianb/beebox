@@ -2964,6 +2964,20 @@ content:
       added: 2328
       turns: 4
   figure-card-where-code-lives:
+    - date: 2026-07-14T04:42:02.242Z
+      boxCommit: b4421d41f93404b32fa4f0a7dd99181b4bf9fe44
+      repoCommit: 3ba9951d02d52c73a41e48becf25f80e552b9100
+      initial: 40439
+      peak: 40439
+      added: 0
+      turns: 1
+    - date: 2026-07-14T05:02:26.202Z
+      boxCommit: b4421d41f93404b32fa4f0a7dd99181b4bf9fe44
+      repoCommit: 3ba9951d02d52c73a41e48becf25f80e552b9100
+      initial: 39972
+      peak: 42387
+      added: 2415
+      turns: 3
     - date: 2026-07-15T01:29:36.217Z
       boxCommit: 434470f40660bc689208a82dd995a9141b0fcdf3
       repoCommit: 91698978d45ed6017ea0852d8d6cf43c0dae7901
@@ -2972,6 +2986,13 @@ content:
       added: 3045
       turns: 3
   figure-card-runtimes:
+    - date: 2026-07-14T04:42:02.242Z
+      boxCommit: b4421d41f93404b32fa4f0a7dd99181b4bf9fe44
+      repoCommit: 3ba9951d02d52c73a41e48becf25f80e552b9100
+      initial: 39926
+      peak: 43198
+      added: 3272
+      turns: 4
     - date: 2026-07-15T01:29:36.217Z
       boxCommit: 434470f40660bc689208a82dd995a9141b0fcdf3
       repoCommit: 91698978d45ed6017ea0852d8d6cf43c0dae7901
@@ -2980,10 +3001,25 @@ content:
       added: 3020
       turns: 3
   figure-card-embed-params:
+    - date: 2026-07-14T04:42:02.242Z
+      boxCommit: b4421d41f93404b32fa4f0a7dd99181b4bf9fe44
+      repoCommit: 3ba9951d02d52c73a41e48becf25f80e552b9100
+      initial: 39761
+      peak: 43083
+      added: 3322
+      turns: 4
     - date: 2026-07-15T01:29:36.217Z
       boxCommit: 434470f40660bc689208a82dd995a9141b0fcdf3
       repoCommit: 91698978d45ed6017ea0852d8d6cf43c0dae7901
       initial: 39819
       peak: 43733
       added: 3914
+      turns: 4
+  figure-card-responsive-sizing:
+    - date: 2026-07-14T04:42:02.242Z
+      boxCommit: b4421d41f93404b32fa4f0a7dd99181b4bf9fe44
+      repoCommit: 3ba9951d02d52c73a41e48becf25f80e552b9100
+      initial: 39939
+      peak: 42272
+      added: 2333
       turns: 4

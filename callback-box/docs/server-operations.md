@@ -51,6 +51,29 @@ ssh root@$(cat deploy/server-ip) "su - callback -c 'cb boxes list'"
 su - callback -c "cd /home/callback/boxes/<box> && cb validate"
 ```
 
+> ⚠️ **Source `/home/callback/.env` for env-dependent commands.** The systemd
+> services load it via `EnvironmentFile=/home/callback/.env`, but an ad-hoc SSH
+> invocation does **not** inherit it. Most visibly, `cb health`'s connector-presence
+> probe reads `CB_GOOGLE_TOKENS_FILE` (the centralized Google-OAuth token path) from
+> that env; without it the probe falls back to a legacy `google.secret.json` that
+> prod doesn't use and reports a **false** `blocked: missing connectors` for
+> `google`/`gmail` — even when both are syncing fine. Always source it so an ad-hoc
+> check sees what the services see:
+>
+> ```bash
+> ssh root@$(cat deploy/server-ip) \
+>   "su - callback -c 'set -a; . /home/callback/.env; cb health --box /home/callback/boxes/<box>/content'"
+> ```
+>
+> (This produced a bogus "two boxes have missing connectors" health report on
+> 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
+
+> **Point `--box` at the operational tree.** Prod boxes are v2 packages, so their
+> cards/config/schedules live under `content/` — pass
+> `--box /home/callback/boxes/<box>/content`. Passing the package root
+> (`/home/callback/boxes/<box>`) makes `cb health` see zero schedules and report a
+> misleadingly empty/`never` state.
+
 **Restart services after deploying or after manual config changes:**
 
 ```bash

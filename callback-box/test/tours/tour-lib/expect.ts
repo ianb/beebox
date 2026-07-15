@@ -6,6 +6,7 @@
  */
 
 import type { BrowseSession } from "./browse.js";
+import { escapeForRegex, snapshotRegex } from "./snapshot-regex.js";
 import type { ExpectAPI, Finding, Severity, Viewport } from "./types.js";
 
 interface ExpectContext {
@@ -19,10 +20,6 @@ function record(ctx: ExpectContext, { severity, message }: { severity: Severity;
   ctx.pushFinding({ severity, checkpoint: ctx.checkpointName(), viewport: ctx.viewport, message });
 }
 
-function escapeForRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 export function buildExpectAPI(ctx: ExpectContext): ExpectAPI {
   return {
     async heading(name, opts) {
@@ -33,7 +30,7 @@ export function buildExpectAPI(ctx: ExpectContext): ExpectAPI {
       // requested attribute anywhere inside the bracket group, not just at
       // the end.
       const levelClause = level === undefined ? "" : `\\s*\\[(?:[^\\]]*,\\s*)?level=${level}(?:[\\s,\\]])`;
-      const re = new RegExp(`heading\\s+"${escaped}"${levelClause}`);
+      const re = snapshotRegex(`heading\\s+"${escaped}"${levelClause}`);
       if (!re.test(snap)) {
         const where = level === undefined ? `heading "${name}"` : `heading "${name}" at level ${level}`;
         record(ctx, { severity: "fail", message: `expected ${where} not found in snapshot` });
@@ -42,7 +39,7 @@ export function buildExpectAPI(ctx: ExpectContext): ExpectAPI {
     async landmark(name) {
       const snap = await ctx.session.snapshot({ interactiveOnly: false });
       const escaped = escapeForRegex(name);
-      const re = new RegExp(`(?:region|navigation|main|complementary|contentinfo|banner|search|form)\\s+"${escaped}"`, "i");
+      const re = snapshotRegex(`(?:region|navigation|main|complementary|contentinfo|banner|search|form)\\s+"${escaped}"`, "i");
       if (!re.test(snap)) {
         record(ctx, { severity: "fail", message: `expected landmark named "${name}" not found in snapshot` });
       }

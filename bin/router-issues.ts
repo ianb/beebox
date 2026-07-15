@@ -46,8 +46,17 @@ export interface IssueRecord {
 // deliberately minimal rather than pulling in a YAML dependency.
 
 function unquote(s: string): string {
-  if (s.length >= 2 && ((s[0] === '"' && s[s.length - 1] === '"') || (s[0] === "'" && s[s.length - 1] === "'"))) {
-    return s.slice(1, -1);
+  // Double-quoted YAML: strip the delimiters AND unescape the backslash escapes
+  // (\" \\ \n \t ...). Without the unescape, a title with inner quotes —
+  // written as `title: "Agent \"give up\""` — renders every quote as a literal
+  // `\"` on the page.
+  if (s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"') {
+    return s.slice(1, -1).replace(/\\(["\\/nt])/g, (_m, c: string) =>
+      c === "n" ? "\n" : c === "t" ? "\t" : c);
+  }
+  // Single-quoted YAML: `''` is the escaped single quote.
+  if (s.length >= 2 && s[0] === "'" && s[s.length - 1] === "'") {
+    return s.slice(1, -1).replace(/''/g, "'");
   }
   return s;
 }
