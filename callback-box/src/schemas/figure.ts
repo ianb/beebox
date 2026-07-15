@@ -1,20 +1,22 @@
 /**
  * Figure card schema — small, embeddable, parameterized interactives.
  *
- * A figure is an interactive graphic (a p5.js sketch, three.js scene, or
- * D3/SVG graphic) embedded to demonstrate one thing. The card's markdown body
- * describes what the figure demonstrates; the runnable source is a `.ts` file
- * in the card's attach scope, pointed to by the `entry` field. The frontend
- * compiles that source with the existing esbuild view compiler and mounts it
- * through a per-runtime harness (p5 instance mode into a `<div>`, etc.).
+ * A figure is an interactive graphic (a p5.js sketch, three.js scene, D3/SVG
+ * graphic, or canvas-loop TEA sketch) embedded to demonstrate one thing. The
+ * card's markdown body describes what the figure demonstrates; the runnable
+ * source is a `.ts` file in the card's attach scope, pointed to by the
+ * `entry` field. The frontend compiles that source with the existing esbuild
+ * view compiler and mounts it through a per-runtime harness (p5 instance mode
+ * into a `<div>`, canvas-loop's `mountSketch`, etc.).
  *
- * See docs/plans/figure-card-type.md for the full design.
+ * See docs/plans/figure-card-type.md and docs/plans/canvas-loop-figure.md for
+ * the full design.
  */
 
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
-export const FigureRuntime = z.enum(["p5js", "three", "d3"]);
+export const FigureRuntime = z.enum(["p5js", "three", "d3", "canvas-loop"]);
 export type FigureRuntimeType = z.infer<typeof FigureRuntime>;
 
 /** A declared embed parameter: supplied via the embed link's query string. */
@@ -26,7 +28,7 @@ const FigureParam = z.object({
 });
 
 export const FigureSchema = cardSchema("figure", {
-  description: "A small embeddable interactive graphic (p5.js/three.js/D3) demonstrating one thing; source lives in the attach scope",
+  description: "A small embeddable interactive graphic (p5.js/three.js/D3/canvas-loop) demonstrating one thing; source lives in the attach scope",
   category: "authored",
   fields: {
     runtime: FigureRuntime,
@@ -40,7 +42,8 @@ export const FigureSchema = cardSchema("figure", {
   instructions: `# Figure Cards
 
 A figure is a small, embeddable interactive graphic that demonstrates one
-thing — a p5.js sketch, a three.js scene, or a D3/SVG graphic.
+thing — a p5.js sketch, a three.js scene, a D3/SVG graphic, or a canvas-loop
+TEA sketch.
 
 The card's **markdown body describes what the figure demonstrates** (its
 intent). The **runnable code does not live in the body** — it lives in a
@@ -60,7 +63,7 @@ Whatever a figure is for, these make it usable and clear:
 
 ## Frontmatter
 
-- \`runtime:\` — one of \`p5js\`, \`three\`, \`d3\`. Selects the mount harness. (p5js for canvas sketches & animation, three for 3D scenes, d3 for data-driven SVG — including node-link graphs.)
+- \`runtime:\` — one of \`p5js\`, \`three\`, \`d3\`, \`canvas-loop\`. Selects the mount harness. (p5js for canvas sketches & animation, three for 3D scenes, d3 for data-driven SVG — including node-link graphs, canvas-loop for deterministic TEA sketches with auto-generated controls and a headless verify loop.)
 - \`entry:\` — **required.** Path to the source, e.g. \`attach/sketch.ts\`
   (resolved in the card's \`<basename>.attach/\` scope, like any \`attach/\`
   ref).
@@ -111,7 +114,46 @@ link, not an embed.
     ![caffeine](/store/figures/Molecule.figure.card?molecule=H2O2)
 
 The sketch reads those values from \`figure.params\`; the caption (alt text)
-shows beneath the figure.`,
+shows beneath the figure.
+
+## canvas-loop figures (deterministic TEA sketches)
+
+For \`runtime: canvas-loop\` the entry is a **TEA sketch module** — canvas-loop's
+Elm-style contract: named exports \`params\`/\`init\`/\`update\`/\`draw\` (+ optional
+\`canvas\`) — plus a one-line default figure factory beneath them:
+
+\`\`\`ts
+export default (cl, { mount, figure }) =>
+  cl.mountSketch(mount, { module: { params, canvas, init, update, draw }, initialParams: figure.params });
+\`\`\`
+
+- **\`import type\` ONLY** from \`@ianbicking/canvas-loop\` — the package is not
+  resolvable inside a box, so a value import fails the compile (type-only
+  imports are erased). The runtime API arrives as the factory's \`cl\` argument.
+- **Interactive controls come from the module's \`export const params\`**
+  (canvas-loop's declaration: number/boolean/select/trigger) — sliders,
+  checkboxes, selects, and trigger buttons render automatically.
+- The card-level \`params:\` field keeps its usual meaning — embed-query
+  declarations — and maps onto module params **by identical name**. A param
+  exposed both ways is declared in both vocabularies:
+
+  \`\`\`yaml
+  # card frontmatter: the embed-query declaration
+  params:
+    - { name: speed, type: number, default: 1 }
+  \`\`\`
+
+  \`\`\`ts
+  // module: the control declaration the boxholder sees
+  export const params = { speed: { type: "number", min: 0, max: 5, default: 1 } } as const satisfies ParamsDecl;
+  \`\`\`
+
+  An embed link's \`?speed=2\` then starts that slider at 2.
+- **\`export const canvas = { width, height }\` is authoritative for the drawing
+  size** — the card's \`width\`/\`height\` fields do not apply to canvas-loop
+  figures.
+- **Verify headlessly** (write → render → read the frame-tagged transcript;
+  the canvas-loop authoring loop) rather than opening a browser to screenshot.`,
 });
 
 export type FigureFields = InferCardFields<typeof FigureSchema>;
@@ -220,6 +262,63 @@ export default function (d3, { mount, figure }) {
   };
 }
 `,
+  "canvas-loop": `// canvas-loop figure: a TEA sketch (named exports) plus the figure factory
+// (default export). The named exports run headlessly through the canvas-loop
+// CLI — verify with that loop, not screenshots. Import canvas-loop TYPES only;
+// the browser API arrives as the factory's \`cl\` argument.
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
+
+export const params = {
+  speed: { type: "number", min: 0, max: 5, default: 1 },
+  "show-ring": { type: "boolean", default: true },
+  tone: { type: "select", options: ["sky", "ember", "moss"], default: "sky" },
+  reset: { type: "trigger" },
+} as const satisfies ParamsDecl;
+
+export const canvas = { width: 400, height: 300 };
+
+const TONES: Record<string, string> = { sky: "#7dd3fc", ember: "#fb923c", moss: "#86efac" };
+
+export type Model = { angle: number };
+
+export function init(): Model {
+  return { angle: 0 };
+}
+
+export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
+  switch (msg.type) {
+    case "tick":
+      return { angle: model.angle + 0.03 * u.params.speed };
+    case "trigger":
+      return msg.name === "reset" ? init() : model;
+    case "param":
+    case "mousedown":
+    case "mouseup":
+    case "mousemove":
+    case "keydown":
+    case "keyup":
+      return model;
+  }
+}
+
+export function draw(v: View, model: DeepReadonly<Model>, p: ParamValues<typeof params>): void {
+  v.background("#0b0e17");
+  const cx = v.width / 2;
+  const cy = v.height / 2;
+  const orbit = 90;
+  if (p["show-ring"]) {
+    v.noFill();
+    v.stroke("#334155");
+    v.circle(cx, cy, orbit * 2);
+  }
+  v.noStroke();
+  v.fill(TONES[p.tone] ?? "#7dd3fc");
+  v.circle(cx + orbit * Math.cos(model.angle), cy + orbit * Math.sin(model.angle), 24);
+}
+
+export default (cl, { mount, figure }) =>
+  cl.mountSketch(mount, { module: { params, canvas, init, update, draw }, initialParams: figure.params });
+`,
 };
 
 /** The runnable starter sketch source for a runtime (for the \`entry\` file). */
@@ -231,6 +330,7 @@ const RUNTIME_LABEL: Record<FigureRuntimeType, string> = {
   p5js: "p5.js sketch",
   three: "three.js scene",
   d3: "D3/SVG graphic",
+  "canvas-loop": "canvas-loop TEA sketch",
 };
 
 /**

@@ -136,6 +136,31 @@ flows to the transcript frame heading (`### frame 80 — after speed-up`). It is
 the scriptable twin of `v.snapshot(label?)`, for pinning a frame the capture
 policy would otherwise skip.
 
+## Dual-export entries (embedding as a figure)
+
+A TEA module may ALSO carry a `default` export — a host-specific figure
+factory that hands the named exports to the imperative browser API:
+
+```ts
+export default (cl, { mount, figure }) =>
+  cl.mountSketch(mount, { module: { params, canvas, init, update, draw }, initialParams: figure.params });
+```
+
+The headless CLI is unaffected: TEA detection keys on the named `update`
+export (`src/headless/tea-load.ts`) and the loader reads only the contract
+exports, so `default` is ignored. One file is simultaneously the
+headless-runnable sketch and the embeddable figure entry.
+
+`mountSketch(mount, opts)` lives at `@ianbicking/canvas-loop/browser` — the
+React-free twin of `<SketchFigure>` (which delegates to the same runtime
+attach). Its opts: `module` (validated TEA module object), `seed?`,
+`autoplay?`, `panel?` (declaration-generated controls; default on when the
+module declares params), `transport?` (play/pause/restart; default off —
+embeds are frameless), `initialParams?` (validated against the declaration;
+unknown names or mismatched types warn and fall back to defaults),
+`onParamsChange?`, `onEvent?`. It injects no styles — hosts import
+`@ianbicking/canvas-loop/browser/figure.css` (CSP-clean by construction).
+
 ## The discipline (one list)
 
 - **All state in `Model`.** No module-level `let`/`var`; `const` for fixed

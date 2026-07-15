@@ -7,12 +7,16 @@
 // component with:  pnpm --dir canvas-loop run build:dev-demo
 import { build } from "esbuild";
 import type { OnResolveArgs, Plugin } from "esbuild";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const HERE = import.meta.dirname;
 const ENTRY = resolve(HERE, "main.tsx");
 const OUT_FILE = resolve(HERE, "../../dev/canvas-loop.html");
+// The figure styles the component no longer injects at runtime (CSP) — a real
+// consumer imports @ianbicking/canvas-loop/browser/figure.css through its
+// bundler; this single-file demo inlines it into the HTML shell instead.
+const FIGURE_CSS = readFileSync(resolve(HERE, "../browser/figure.css"), "utf8");
 
 // The repo writes NodeNext `.js` import specifiers that point at `.ts`/`.tsx`
 // sources; esbuild resolves real files, so remap each relative `.js` to its
@@ -40,7 +44,7 @@ function renderHtml(js: string): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>canvas-loop · SketchFigure demo</title>
-<style>${CSS}</style>
+<style>${FIGURE_CSS}${CSS}</style>
 </head>
 <body>
 <div id="app"></div>

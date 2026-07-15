@@ -79,6 +79,16 @@ export default defineConfig({
       "@shared": resolvePath(__dirname, "../shared"),
     },
   },
+  optimizeDeps: {
+    // @ianbicking/canvas-loop is a linked workspace package whose subpaths
+    // serve raw TypeScript (NodeNext `.js` specifiers → `.ts` sources). Vite
+    // serves linked source through its normal transform pipeline (verified
+    // 2026-07-14, dev + build: resolves via /@fs/ with no pre-bundling and no
+    // mid-session "new dependencies optimized" reload; `vite build` emits its
+    // own chunk + extracted figure.css). Excluding it pins that source-serving
+    // behavior explicitly so an optimizer change can't start pre-bundling it.
+    exclude: ["@ianbicking/canvas-loop"],
+  },
   build: {
     outDir: "dist",
     sourcemap: true,

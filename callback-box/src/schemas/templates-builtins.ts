@@ -222,11 +222,11 @@ registerTemplate({
 
 registerTemplate({
   name: "figure",
-  description: "An embeddable interactive figure (p5.js / three.js / D3); scaffolds a runnable starter sketch",
+  description: "An embeddable interactive figure (p5.js / three.js / D3 / canvas-loop); scaffolds a runnable starter sketch",
   cardTypes: ["figure"],
   defaultForTypes: ["figure"],
   argsSchema: z.object({
-    runtime: FigureRuntime.describe("Runtime: p5js | three | d3"),
+    runtime: FigureRuntime.describe("Runtime: p5js | three | d3 | canvas-loop"),
     title: z.string().optional().describe("Display title"),
   }),
   generate: (args) => {

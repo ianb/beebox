@@ -2,7 +2,8 @@ import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RunOptions } from "../src/headless/runtime.js";
-import type { LoadedTeaModule, TeaRunOptions } from "../src/headless/tea-runtime.js";
+import type { TeaRunOptions } from "../src/headless/tea-runtime.js";
+import type { LoadedTeaModule } from "../src/headless/tea-load.js";
 import type { SketchModule } from "../src/headless/sketch.js";
 
 /** Fresh temp directory for a test run's out/ output. */

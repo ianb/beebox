@@ -1,10 +1,16 @@
 // <SketchFigure> — the browser TEA runner as a React component. This file is
-// mounting + prop plumbing + lifecycle ONLY; the runtime, view, util, and the
-// declaration-generated controls are the single browser implementation, imported
-// from ../../browser. SSR-safe by construction: no window/document/canvas is
-// touched at module scope or during render. `useSyncExternalStore` reports
-// client-vs-server so the server (and the first hydration pass) renders a plain
-// placeholder div; the runtime is created in an effect, only on the client.
+// mounting + prop plumbing + lifecycle ONLY; the runtime lifecycle (create +
+// wire input + teardown) is delegated to `attachSketch` (browser/mount.ts),
+// the same implementation the imperative `mountSketch` uses. SSR-safe by
+// construction: no window/document/canvas is touched at module scope or
+// during render. `useSyncExternalStore` reports client-vs-server so the
+// server (and the first hydration pass) renders a plain placeholder div; the
+// runtime is created in an effect, only on the client.
+//
+// Styling: consumers import the shared stylesheet (no runtime <style>
+// injection — strict-CSP hosts would block it):
+//
+//   import "@ianbicking/canvas-loop/browser/figure.css";
 //
 // Params are initializable / watchable / persistable, optionally:
 //   • Uncontrolled — `initialParams` overrides declaration defaults; state lives
@@ -18,11 +24,12 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import type { JSX } from "react";
 import type { TeaScriptEvent } from "../headless/tea-events.js";
 import type { PlaygroundModule } from "../../browser/sketch-types.js";
-import { Runtime } from "../../browser/runtime.js";
+import type { Runtime } from "../../browser/runtime.js";
+import { DEFAULT_CANVAS, attachSketch } from "../../browser/mount.js";
 import { ParamControls } from "./ParamControls.js";
 import { RecorderPanel } from "./RecorderPanel.js";
 import type { ParamRecord } from "./figure-internals.js";
-import { DEFAULT_CANVAS, SKETCH_FIGURE_CSS, displaySize, resolveValues, wireInput } from "./figure-internals.js";
+import { displaySize, resolveValues } from "./figure-internals.js";
 
 export type { ParamRecord } from "./figure-internals.js";
 
@@ -107,28 +114,22 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
   });
 
   // Create the runtime on the client whenever the sketch identity changes
-  // (module / seed / size), and on first hydration (isClient flips true). Full
-  // teardown on cleanup: stop the rAF, remove listeners, drop the ref.
+  // (module / seed / size), and on first hydration (isClient flips true).
+  // attachSketch (shared with the imperative mountSketch) owns the lifecycle:
+  // runtime creation, input wiring, and teardown (stop rAF, remove listeners).
   useEffect(() => {
     if (!isClient) return;
     const el = canvasRef.current;
     if (el === null) return;
-    const ctx = el.getContext("2d");
-    if (ctx === null) return;
     const latest = latestRef.current;
     const initialParams = latest === null ? undefined : latest.controlled ? latest.params : latest.initialParams;
-    const runtime = new Runtime({
+    const attached = attachSketch(el, {
       module: props.module,
-      ctx,
-      width: canvas.width,
-      height: canvas.height,
       seed,
-      // Omit rather than pass `undefined` — RuntimeDeps is exactOptionalPropertyTypes.
+      paused: !(latest?.playing ?? autoplay),
+      // Omit rather than pass `undefined` — exactOptionalPropertyTypes.
       ...(initialParams !== undefined ? { initialParams } : {}),
       onFrame: (f) => setFrame(f),
-      onLog: () => {
-        // The figure surfaces frames + recorded events, not the transcript log.
-      },
       onEvent: (entry) => {
         const now = latestRef.current;
         now?.onEvent?.(entry);
@@ -143,14 +144,11 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
         }
       },
     });
-    runtimeRef.current = runtime;
-    dispatchedRef.current = { ...runtime.paramValues() };
-    runtime.setPaused(!(latest?.playing ?? autoplay));
-    runtime.start();
-    const detach = wireInput(el, runtime);
+    if (attached === null) return;
+    runtimeRef.current = attached.runtime;
+    dispatchedRef.current = { ...attached.runtime.paramValues() };
     return () => {
-      detach();
-      runtime.stop();
+      attached.teardown();
       runtimeRef.current = null;
     };
   }, [props.module, seed, canvas.width, canvas.height, autoplay, isClient]);
@@ -205,7 +203,6 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
   if (!isClient) {
     return (
       <div className="cl-figure">
-        <style>{SKETCH_FIGURE_CSS}</style>
         <div className="cl-placeholder" style={{ width: display.width, height: display.height }} aria-busy="true" />
       </div>
     );
@@ -215,7 +212,6 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
 
   return (
     <div className="cl-figure">
-      <style>{SKETCH_FIGURE_CSS}</style>
       <canvas
         ref={canvasRef}
         width={canvas.width}

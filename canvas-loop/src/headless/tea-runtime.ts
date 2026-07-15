@@ -7,18 +7,12 @@ import type { TeaScriptEvent } from "./tea-events.js";
 import { TeaUtil, TeaView } from "./tea-view.js";
 import { withGuards } from "./guards.js";
 import type { RunMeta } from "./transcript.js";
-import type { CanvasSize, Msg, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
+import type { CanvasSize, Msg, ParamsDecl, ParamValues } from "../core/tea.js";
+// Type-only: the loader owns LoadedTeaModule (see tea-load.ts for why it
+// lives there and not here).
+import type { LoadedTeaModule } from "./tea-load.js";
 
 const DEFAULT_CANVAS: CanvasSize = { width: 400, height: 300 };
-
-/** A TEA sketch module after CLI validation; the model is opaque to the runtime. */
-export interface LoadedTeaModule {
-  params: ParamsDecl;
-  canvas: CanvasSize | undefined;
-  init(u: Util<ParamsDecl>): unknown;
-  update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
-  draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
-}
 
 export interface TeaRunOptions {
   module: LoadedTeaModule;

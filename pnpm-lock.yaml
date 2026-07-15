@@ -274,6 +274,9 @@ importers:
 
   callback-box/src/frontend:
     dependencies:
+      '@ianbicking/canvas-loop':
+        specifier: workspace:*
+        version: link:../../../canvas-loop
       '@markdoc/markdoc':
         specifier: ^0.5.2
         version: 0.5.7(@types/react@18.3.29)(react@18.3.1)
@@ -475,6 +478,46 @@ importers:
         specifier: ^0.20.26
         version: 0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@2.7.0))(jiti@2.7.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.22.3)(yaml@2.9.0)
 
+  canvas-loop:
+    dependencies:
+      '@napi-rs/canvas':
+        specifier: 1.0.2
+        version: 1.0.2
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.0
+    devDependencies:
+      '@ianbicking/personal-vibe-check':
+        specifier: workspace:*
+        version: link:../personal-vibe-check
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.29
+      '@types/react-dom':
+        specifier: ^18.3.0
+        version: 18.3.7(@types/react@18.3.29)
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
+      eslint:
+        specifier: ^9.39.2
+        version: 9.39.4(jiti@2.7.0)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      tsx:
+        specifier: ^4.22.3
+        version: 4.22.3
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   personal-vibe-check:
     dependencies:
       '@eslint/eslintrc':
@@ -538,28 +581,6 @@ importers:
       husky:
         specifier: ^9.1.7
         version: 9.1.7
-
-  sandbox/canvas-loop:
-    dependencies:
-      '@napi-rs/canvas':
-        specifier: 1.0.2
-        version: 1.0.2
-    devDependencies:
-      '@ianbicking/personal-vibe-check':
-        specifier: workspace:*
-        version: link:../../personal-vibe-check
-      '@types/node':
-        specifier: ^25.9.1
-        version: 25.9.1
-      eslint:
-        specifier: ^9.39.2
-        version: 9.39.4(jiti@2.7.0)
-      tsx:
-        specifier: ^4.22.3
-        version: 4.22.3
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
 
 packages:
 

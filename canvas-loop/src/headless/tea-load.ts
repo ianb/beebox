@@ -1,6 +1,20 @@
 import { CliError } from "./errors.js";
-import type { LoadedTeaModule } from "./tea-runtime.js";
-import type { CanvasSize, ParamDecl, ParamsDecl } from "../core/tea.js";
+import type { CanvasSize, Msg, ParamDecl, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
+
+/**
+ * A TEA sketch module after validation; the model is opaque to the runtime.
+ * Defined HERE (the loader that produces it) rather than in tea-runtime.ts so
+ * that consumers of the validator — including the browser mount, whose type
+ * graph must stay free of the node/napi-typed runner — never pull tea-runtime
+ * into their program.
+ */
+export interface LoadedTeaModule {
+  params: ParamsDecl;
+  canvas: CanvasSize | undefined;
+  init(u: Util<ParamsDecl>): unknown;
+  update(model: unknown, msg: Msg, u: Util<ParamsDecl>): unknown;
+  draw(v: View, model: unknown, p: ParamValues<ParamsDecl>): void;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

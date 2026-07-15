@@ -19,6 +19,32 @@ export default function (p5, mount, figure) {
   return () => instance.remove();
 }
 `;
+
+// A canvas-loop figure entry: TEA named exports + the default figure factory.
+// The canvas-loop import is TYPE-ONLY — the package resolves nowhere inside a
+// box, and esbuild erases type-only imports without attempting resolution.
+const CANVAS_LOOP_SKETCH = `
+import type { Msg, View } from "@ianbicking/canvas-loop";
+
+export const params = { speed: { type: "number", min: 0, max: 5, default: 1 } };
+export function init() { return { angle: 0 }; }
+export function update(model, msg, u) {
+  return msg.type === "tick" ? { angle: model.angle + 0.03 * u.params.speed } : model;
+}
+export function draw(v, model, p) {
+  v.background("#0b0e17");
+  v.circle(200 + 90 * Math.cos(model.angle), 150 + 90 * Math.sin(model.angle), 24);
+}
+
+export default (cl, { mount, figure }) =>
+  cl.mountSketch(mount, { module: { params, init, update, draw }, initialParams: figure.params });
+`;
+
+// The same import as a VALUE import — the instructive failure case.
+const VALUE_IMPORT_SKETCH = `
+import { mountSketch } from "@ianbicking/canvas-loop/browser";
+export default () => { mountSketch; };
+`;
 ```
 
 ## Compiling a sketch
@@ -50,6 +76,77 @@ res.payload.includes("createCanvas")
 
 res.payload.includes("figureError")
 => false
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Compiling a canvas-loop sketch (type-only import erased)
+
+A canvas-loop entry type-imports `@ianbicking/canvas-loop`, which is not
+resolvable from a box directory. esbuild erases type-only imports at parse
+without resolving them, so the compile succeeds and the output carries no bare
+canvas-loop specifier:
+
+```ts
+const ctx = await makeTestServer();
+await ctx.seed("box/inbox/Orbit.figure.attach/sketch.ts", CANVAS_LOOP_SKETCH);
+
+const res = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/figure/module.js?path=box/inbox/Orbit.figure.attach/sketch.ts",
+});
+res.statusCode
+=> 200
+```
+
+```ts continue
+res.payload.includes("figureError")
+=> false
+
+res.payload.includes("@ianbicking/canvas-loop")
+=> false
+
+res.payload.includes("mountSketch")
+=> true
+
+res.payload.includes("update")
+=> true
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## A value import of canvas-loop fails with the instructive resolve error
+
+The instructions say `import type` ONLY. A sketch that value-imports the
+package instead hits esbuild's resolve error (the package genuinely isn't
+resolvable from a box), which arrives through the `figureError` channel and
+names the module:
+
+```ts
+const ctx = await makeTestServer();
+await ctx.seed("box/inbox/Wrong.figure.attach/sketch.ts", VALUE_IMPORT_SKETCH);
+
+const res = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/figure/module.js?path=box/inbox/Wrong.figure.attach/sketch.ts",
+});
+res.statusCode
+=> 200
+```
+
+```ts continue
+res.payload.includes("figureError")
+=> true
+
+res.payload.includes("Could not resolve")
+=> true
+
+res.payload.includes("@ianbicking/canvas-loop/browser")
+=> true
 ```
 
 ```ts cleanup

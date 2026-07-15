@@ -6,7 +6,7 @@ import { run } from "../src/headless/runtime.js";
 import type { SketchModule } from "../src/headless/sketch.js";
 import { parseTeaEvents } from "../src/headless/tea-events.js";
 import { teaRun } from "../src/headless/tea-runtime.js";
-import type { LoadedTeaModule } from "../src/headless/tea-runtime.js";
+import type { LoadedTeaModule } from "../src/headless/tea-load.js";
 import type { ParamsDecl } from "../src/core/tea.js";
 import { readDirBytes, readTranscript, runOptions, teaRunOptions, tmpDir } from "./helpers.js";
 

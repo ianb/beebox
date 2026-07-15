@@ -17,6 +17,11 @@
       "types": "./src/react/index.ts",
       "default": "./src/react/index.ts"
     },
+    "./browser": {
+      "types": "./browser/mount.ts",
+      "default": "./browser/mount.ts"
+    },
+    "./browser/figure.css": "./browser/figure.css",
     "./eslint": {
       "default": "./src/eslint/index.mjs"
     }

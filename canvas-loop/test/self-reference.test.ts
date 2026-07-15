@@ -53,6 +53,15 @@ test('importing "." resolves neither the native @napi-rs/canvas backend nor reac
   assert.equal(probeDeps("@ianbicking/canvas-loop/headless").napi, true, "headless entry loads the native canvas dep");
 });
 
+test('importing "./browser" resolves neither the native backend nor react', () => {
+  // The browser mount API shares the TEA validator with the headless loader,
+  // but must never drag in the napi canvas backend (browsers have their own
+  // canvas) or react (mountSketch is the React-free path).
+  const browserDeps = probeDeps("@ianbicking/canvas-loop/browser");
+  assert.equal(browserDeps.napi, false, "browser mount is free of the native canvas dep");
+  assert.equal(browserDeps.react, false, "browser mount is free of react");
+});
+
 test('importing "./eslint" resolves neither the native backend nor react', () => {
   const eslintDeps = probeDeps("@ianbicking/canvas-loop/eslint");
   assert.equal(eslintDeps.napi, false, "eslint plugin is free of the native canvas dep");

@@ -17,8 +17,9 @@ export { renderTranscript } from "./transcript.js";
 
 // ── The Elm Architecture (TEA) tier ──────────────────────────────────
 export { teaRun } from "./tea-runtime.js";
-export type { LoadedTeaModule, TeaRunOptions } from "./tea-runtime.js";
+export type { TeaRunOptions } from "./tea-runtime.js";
 export { isTeaModule, toTeaModule } from "./tea-load.js";
+export type { LoadedTeaModule } from "./tea-load.js";
 export { parseTeaEvents, bucketTeaByFrame } from "./tea-events.js";
 export type { TeaScriptEvent } from "./tea-events.js";
 export { TeaView, TeaUtil } from "./tea-view.js";
