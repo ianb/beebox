@@ -11,17 +11,41 @@
  *    provenance, source refs, and every box identifier (the Notion lesson:
  *    nothing edge-side names cards or the box beyond what serving requires).
  *
+ * The runtime-agnostic pieces (tier literals, the submit block, the shared field
+ * schemas, and the whole {@link EdgeManifest}) live in `manifest-edge.ts`, which
+ * has **zero node-only imports** so the Worker can import it into the workerd
+ * runtime without dragging in `node:crypto`. This module owns the Node-only
+ * pieces — pub-id minting ({@link generatePubId}, `node:crypto` `randomBytes`)
+ * and the full box-side manifest — and re-exports the edge pieces so existing
+ * box-side importers keep resolving everything from `manifest.ts`.
+ *
  * Both forms are zod discriminated unions on `tier`, with strict objects, so
  * illegal states are *unrepresentable* at the type level and *rejected* at
  * runtime: "public + submit" and "secret + slug" cannot be constructed, and a
- * plain `safeParse` refuses them. The Worker treats its own R2 store as an
- * untrusted boundary and `safeParse`s the edge manifest on every serve, so the
- * strictness matters in both directions.
+ * plain `safeParse` refuses them.
  */
 
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { assertNever } from "../lib/invariant.js";
+import {
+  type EdgeManifest,
+  edgeManifestSchema,
+  filesSchema,
+  statusSchema,
+  submitBlockSchema,
+} from "./manifest-edge.js";
+
+// Re-export the runtime-agnostic pieces so box-side code keeps importing them
+// from `manifest.ts` (the Worker imports them from `manifest-edge.ts` instead).
+export {
+  type EdgeManifest,
+  edgeManifestSchema,
+  submitBlockSchema,
+  type SubmitBlock,
+  type Tier,
+  tierValues,
+} from "./manifest-edge.js";
 
 /** RFC 4648 lowercase base32 alphabet (a-z, 2-7), no padding. */
 const BASE32_ALPHABET = "abcdefghijklmnopqrstuvwxyz234567";
@@ -69,36 +93,6 @@ export function generatePubId(): PubId {
   return pubIdSchema.parse(encodeBase32(randomBytes(16)));
 }
 
-const statusSchema = z.enum(["draft", "live", "revoked"]);
-
-/** A single submit-form field. `choices` is present iff `kind` is `"choice"`. */
-const submitFieldSchema = z
-  .object({
-    name: z.string(),
-    kind: z.enum(["text", "textarea", "email", "choice"]),
-    required: z.boolean(),
-    maxLength: z.number().int().positive(),
-    choices: z.array(z.string()).optional(),
-  })
-  .strict()
-  .refine((field) => (field.kind === "choice" ? field.choices !== undefined : field.choices === undefined), {
-    message: "`choices` must be present for kind 'choice' and absent otherwise",
-  });
-
-/**
- * The submit ("drop box") block — an optional constrained form on the non-public
- * tiers. Full use is Track F; the shape is locked here.
- */
-export const submitBlockSchema = z
-  .object({
-    fields: z.array(submitFieldSchema),
-    maxSubmissionBytes: z.number().int().positive(),
-    maxPerDay: z.number().int().positive(),
-  })
-  .strict();
-
-export type SubmitBlock = z.infer<typeof submitBlockSchema>;
-
 /** Machine-filled record of where a publication came from — box-side only. */
 const provenanceSchema = z
   .object({
@@ -109,16 +103,6 @@ const provenanceSchema = z
     softwareVersion: z.string(),
   })
   .strict();
-
-/** Per-file integrity record for the rendered bundle tree. */
-const fileEntrySchema = z
-  .object({
-    bytes: z.number().int().nonnegative(),
-    sha256: z.string(),
-  })
-  .strict();
-
-const filesSchema = z.record(z.string(), fileEntrySchema);
 
 // Fields common to every tier of the full manifest. `submit` is nullable +
 // optional so both `null` and absence are legal on the tiers that allow it.
@@ -166,45 +150,6 @@ export const publicationManifestSchema = z.discriminatedUnion("tier", [
 ]);
 
 export type PublicationManifest = z.infer<typeof publicationManifestSchema>;
-
-// Edge manifest, per tier — the minimal serve/gate subset. No provenance, no
-// sourceRefs, no pubId, no box identifiers: nothing here names the box.
-const commonEdgeFields = {
-  status: statusSchema,
-  expiresAt: z.string().datetime({ offset: true }).nullable(),
-  files: filesSchema,
-} as const;
-
-const publicEdgeSchema = z
-  .object({ tier: z.literal("public"), slug: z.string().optional(), ...commonEdgeFields })
-  .strict();
-
-const secretEdgeSchema = z
-  .object({ tier: z.literal("secret"), submit: optionalSubmit, ...commonEdgeFields })
-  .strict();
-
-const accountsEdgeSchema = z
-  .object({
-    tier: z.literal("accounts"),
-    allowedEmails: z.array(z.string().email()).optional(),
-    submit: optionalSubmit,
-    ...commonEdgeFields,
-  })
-  .strict();
-
-const anyAccountEdgeSchema = z
-  .object({ tier: z.literal("any-account"), submit: optionalSubmit, ...commonEdgeFields })
-  .strict();
-
-/** The R2-stored subset the Worker parses on every serve. */
-export const edgeManifestSchema = z.discriminatedUnion("tier", [
-  publicEdgeSchema,
-  secretEdgeSchema,
-  accountsEdgeSchema,
-  anyAccountEdgeSchema,
-]);
-
-export type EdgeManifest = z.infer<typeof edgeManifestSchema>;
 
 /**
  * Project a validated full manifest down to its edge subset, then re-parse so

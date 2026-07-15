@@ -4,7 +4,9 @@ onlyBuiltDependencies:
   - better-sqlite3
   - esbuild
   - protobufjs
+  - sharp
   - unrs-resolver
+  - workerd
 
 ignoredBuiltDependencies:
   - "@ianbicking/personal-vibe-check"
@@ -13,6 +15,7 @@ ignoredBuiltDependencies:
 packages:
   - callback-box
   - callback-box/src/frontend
+  - callback-box/pub-worker
   - callback-clerk
   - personal-vibe-check
   - agent-doctest

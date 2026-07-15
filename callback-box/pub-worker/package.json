@@ -1,0 +1,26 @@
+{
+  "name": "pub-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Worker that serves callback-box publications from R2 (Track C of docs/plans/publish-pages.md)",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ test/",
+    "test": "vitest run",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.18.2",
+    "@cloudflare/workers-types": "5.20260708.1",
+    "@ianbicking/personal-vibe-check": "workspace:*",
+    "eslint": "^9.39.2",
+    "typescript": "^5.7.0",
+    "vitest": "4.1.10",
+    "wrangler": "4.108.0"
+  }
+}

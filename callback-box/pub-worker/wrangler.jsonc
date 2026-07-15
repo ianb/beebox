@@ -1,0 +1,31 @@
+{
+  // Cloudflare Worker that serves publications from R2 (Track C).
+  // Provisioning (`cb pub setup`, Track E) creates the real bucket and deploys
+  // this Worker per-box; this config is the shape it deploys and what the
+  // vitest-pool-workers suite runs against (miniflare supplies a local R2).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pub-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-06",
+  // Publication CONTENT is data in R2, never bundled into the Worker (locked
+  // decision 3 + the "old Worker versions stay reachable" leak finding).
+  "r2_buckets": [
+    {
+      "binding": "PUB_STORE",
+      "bucket_name": "pub-store",
+      "preview_bucket_name": "pub-store"
+    }
+  ],
+  // ACCOUNT_TIERS_ENABLED gates the `/a/` (account) tiers until Track D adds
+  // Cloudflare Access JWT validation. Off here → account tiers 404 (fail-closed).
+  "vars": {
+    "ACCOUNT_TIERS_ENABLED": "false"
+  },
+  // Old Worker *version* preview URLs are a leak surface (Prior art); setup
+  // disables them. Content never ships in the Worker, so an old version leaks
+  // only old code.
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  }
+}
