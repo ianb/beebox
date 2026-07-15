@@ -94,6 +94,18 @@ export const BOX_LAYOUT = [
       "— the Gmail connector reads the thread from there for correct threading",
   },
   {
+    boxDirsKey: "publish",
+    path: "box/publish",
+    area: "box",
+    description:
+      "Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each " +
+      "holding a `manifest.json` and a rendered `bundle/`. Written by `cb pub draft`; flipped live and " +
+      "uploaded by the human via `cb pub go`. See `docs/plans/publish-pages.md`.",
+    agentDescription:
+      "Publications staged for external hosting (one `<pub-id>/` each: manifest + bundle). Drafted by " +
+      "`cb pub draft`; only the human makes one live with `cb pub go`.",
+  },
+  {
     boxDirsKey: "questions",
     path: "box/questions",
     area: "box",

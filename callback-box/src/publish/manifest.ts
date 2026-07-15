@@ -101,6 +101,10 @@ const provenanceSchema = z
     sourceRefs: z.array(z.string()),
     renderer: z.enum(["docs", "view"]),
     softwareVersion: z.string(),
+    // Leak-scan finding ids the drafter explicitly waved through with
+    // `--accept-leak` (Track E). Absent when the scan was clean. Recorded here
+    // so the accept decision is auditable in git alongside the manifest.
+    acceptedLeaks: z.array(z.string()).optional(),
   })
   .strict();
 

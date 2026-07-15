@@ -114,6 +114,7 @@ Items move through these directories as they're processed. **Location is state**
 | `box/inbox/triaged/_unsure/` | Low-confidence triage results; paired with a question card. |
 | `box/jobs/` | Pending job cards for the reactor. Filename pattern: `<timestamp>.<type>.job.card`. |
 | `box/output/` | Outbound cards staged for delivery (push notifications, replies). Flushed by `cb finalize`. |
+| `box/publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding a `manifest.json` and a rendered `bundle/`. Written by `cb pub draft`; flipped live and uploaded by the human via `cb pub go`. See `docs/plans/publish-pages.md`. |
 | `box/questions/` | Open questions awaiting a user answer. |
 | `box/resources/` | Connector-synced external state that doesn't belong in the inbox. |
 
