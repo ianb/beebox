@@ -75,6 +75,12 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       // in-box file) would otherwise escape both the box-containment and the
       // figure-source guards and leak file contents. realpath canonicalizes
       // every segment; a dangling symlink or absent file throws → a clean 404.
+      //
+      // TOCTOU note: a path component swapped between this realpath and the
+      // compile below would let bundleView read a different target than the one
+      // validated. Accepted for a single-owner box (the box is not a multi-tenant
+      // host and figure entries are authored in-box, not synced from outside);
+      // closing it fully would need an fd-based read esbuild doesn't offer here.
       let realResolved: string;
       let realRoot: string;
       try {
@@ -114,12 +120,20 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
 
       try {
-        const { output } = await bundleView(realResolved, { external: FIGURE_EXTERNALS });
+        // cache: false — always reflect current disk state. bundleView's
+        // mtime+size cache misses same-tick same-length edits and never notices
+        // an edited *imported* helper (it keys on the entry's stat only); a
+        // single-file sketch recompiles in milliseconds, and FigureView only
+        // fetches on mount + file-change (not polled), so freshness beats reuse.
+        const { output } = await bundleView(realResolved, { external: FIGURE_EXTERNALS, cache: false });
         return reply
           .header("Content-Type", "application/javascript")
           .header("Cache-Control", "no-cache")
           .send(output);
       } catch (e) {
+        // The message may include the offending source line — intended: on a
+        // single-owner box the figure's author is its viewer, so the compile
+        // error is debugging feedback, not a cross-tenant content leak.
         const message = e instanceof Error ? e.message : String(e);
         return reply
           .header("Content-Type", "application/javascript")

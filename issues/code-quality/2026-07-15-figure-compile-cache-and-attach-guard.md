@@ -23,3 +23,13 @@ on the branch):
    process hosts; agents iterating on figures/views grow them for the
    process lifetime. An LRU cap or per-box sweep on box shutdown would
    bound it.
+
+3. **`bundleView` cache is blind to edited imports (views side)** — the
+   cache keys on the *entry* file's mtime+size, but `bundle: true` inlines
+   imports, so editing an imported helper leaves the entry's stat unchanged
+   and serves stale compiled output. The figure route now sidesteps this by
+   compiling with `cache: false` (2026-07-15), but the *views* system
+   (`AgentViewRenderer` etc., which does cache) still has the gap. Proper
+   fix: track every input file via esbuild's `metafile` and include their
+   mtimes in the freshness check (or hash the dependency set). Found by the
+   cross-model route review.

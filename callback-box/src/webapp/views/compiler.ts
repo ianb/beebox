@@ -139,9 +139,16 @@ function slugFromFilename(filename: string): string {
  */
 export async function bundleView(
   viewPath: string,
-  opts?: { target?: ViewCompileTarget; external?: string[] }
+  opts?: { target?: ViewCompileTarget; external?: string[]; cache?: boolean }
 ): Promise<{ output: string }> {
   const target = opts?.target ?? "browser";
+  // The mtime+size cache is a freshness heuristic, not a guarantee: it misses a
+  // same-length rewrite within one clock tick, and — because `bundle: true`
+  // inlines imports — it never notices an edited *imported* file (the key is the
+  // entry's stat only). Callers that must always reflect current disk state pass
+  // `cache: false`; a tiny single-file compile (a figure sketch) is cheap enough
+  // to redo per request, and it's strictly correct.
+  const useCache = opts?.cache ?? true;
   // Extra bare specifiers to leave unbundled. Figure sketches receive their
   // runtime library (p5/three/d3) as an argument from the harness; marking
   // those external means a stray `import p5` fails loudly at load instead of
@@ -158,9 +165,11 @@ export async function bundleView(
   // The viewPath is always the final `:`-delimited segment — invalidateView
   // relies on that to sweep every key referencing a path.
   const cacheKey = `${target}:${extraExternal.join(",")}:${viewPath}`;
-  const cached = cache.get(cacheKey);
-  if (cached && cached.mtime === mtime && cached.size === size) {
-    return { output: cached.output };
+  if (useCache) {
+    const cached = cache.get(cacheKey);
+    if (cached && cached.mtime === mtime && cached.size === size) {
+      return { output: cached.output };
+    }
   }
 
   const source = await fs.readFile(viewPath, "utf-8");
@@ -210,7 +219,7 @@ export async function bundleView(
     throw new EmptyEsbuildOutputError(viewPath);
   }
   const output = outputFile.text;
-  cache.set(cacheKey, { mtime, size, output });
+  if (useCache) cache.set(cacheKey, { mtime, size, output });
   return { output };
 }
 

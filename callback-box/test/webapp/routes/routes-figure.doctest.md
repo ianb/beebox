@@ -181,12 +181,13 @@ res.payload.includes("figureError")
 await ctx.cleanup();
 ```
 
-## A same-tick edit that changes length is not served stale
+## An edit is never served stale — even same length, same mtime
 
-The compile cache keys on the file's mtime AND size. An editor that rewrites a
-file within one clock tick leaves mtime unchanged — so mtime alone would serve
-the stale prior output. Here we pin mtime to a fixed instant across both writes
-so ONLY the size differs, proving the size half of the key catches the edit:
+The figure route compiles with `cache: false`, so it always reflects current
+disk state. This is stronger than the compiler's mtime+size heuristic: here we
+pin mtime to a fixed instant AND keep the byte length identical across both
+writes, so mtime *and* size match — a state where the cache heuristic would
+serve the stale prior output — and prove the route still returns the new module.
 
 ```ts
 const ctx = await makeTestServer();
@@ -206,18 +207,18 @@ first.payload.includes("AAA")
 => true
 ```
 
-Rewrite to a different length and re-pin the same mtime — the re-request returns
-the NEW output, not the cached "AAA" module:
+Rewrite to a SAME-LENGTH marker and re-pin the same mtime (mtime and size both
+unchanged) — the re-request still returns the NEW output, not the cached "AAA":
 
 ```ts continue
-await writeFile(abs, "export default function (p5, mount, figure) { const marker = \"BBBBBBBBBBBBBBBBBBBB\"; return () => marker; }");
+await writeFile(abs, "export default function (p5, mount, figure) { const marker = \"BBB\"; return () => marker; }");
 await utimes(abs, pinned, pinned);
 
 const second = await ctx.rawRequest({
   method: "GET",
   url: `/api/figure/module.js?path=${rel}`,
 });
-second.payload.includes("BBBBBBBBBBBBBBBBBBBB")
+second.payload.includes("BBB")
 => true
 
 second.payload.includes("AAA")
