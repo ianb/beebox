@@ -11,6 +11,7 @@ import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
+import { createPublishSubmissionsConnector } from "../../connectors/publish-submissions.js";
 import { getAllConnectors, type Connector } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -30,6 +31,7 @@ export async function runConnectors(
   createGoogleCalendarConnector(boxRoot);
   createTelegramConnector(boxRoot);
   createGoogleDriveConnector(boxRoot);
+  createPublishSubmissionsConnector(boxRoot);
 
   const connectors = getAllConnectors();
 
