@@ -1,5 +1,16 @@
 import type { AccessConfig } from "./access";
 
+/**
+ * The Workers rate-limiting binding surface the submit endpoint uses (Track F).
+ * Declared locally as a minimal interface rather than pulled from a global type
+ * because the binding is OPTIONAL: it may be absent in the vitest-pool-workers
+ * test pool and in a box that hasn't provisioned it. `limit({ key })` returns
+ * `{ success }` — `false` means the caller has hit the configured window.
+ */
+export interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 /** Bindings and vars the Worker runs against (declared in `wrangler.jsonc`). */
 export interface Env {
   /**
@@ -24,6 +35,14 @@ export interface Env {
    * ⇒ account tiers not configured. `cb pub setup` (Track E) fills it.
    */
   ACCESS_AUD: string | undefined;
+  /**
+   * OPTIONAL per-IP rate limiter for `POST /__submit/` (Track F). Absent in the
+   * test pool and in boxes that haven't provisioned it — the submit endpoint
+   * skips per-IP limiting when it's `undefined` and leans on the daily cap plus
+   * the platform's 100k-req/day backstop. `cb pub setup` (Track E) wires the real
+   * binding; `wrangler.jsonc` deliberately omits it so miniflare stays green.
+   */
+  SUBMIT_RATE_LIMITER?: RateLimiter;
 }
 
 /**
