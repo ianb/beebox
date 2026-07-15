@@ -493,6 +493,31 @@ stroke renders miter instead of round in the port). Also done, boxholder-
 authorized: `max-lines` raised to 600 in sketch dirs. Frame gallery of all
 five experiments published as an artifact (2026-07-14).
 
+## Handled-ness (Ian, 2026-07-14): engagement as a first-class test signal
+
+Scripted inputs should report whether anything *engaged* — the orbit
+experiment's missed-click-on-a-moving-target was invisible in the
+transcript and had to be inferred from downstream frames. Design (two
+layers):
+
+1. **Free signal**: TEA `update` returning the same reference = `Δmodel:
+   false` per msg (reference equality, zero author cost); mutable tier's
+   free layer is which handler exports fired.
+2. **Named acknowledgment**: `u.handled("select-planet")` /
+   `s.handled(name)` — callable during update/handlers, multiple allowed.
+   Distinct from both "code ran" and "state changed" (a tick changes
+   everything and handles nothing; an absorbed click handles and changes
+   nothing).
+
+Surface: transcript input lines gain an engagement verdict —
+`mousedown (297,288) → select-planet` | `→ Δmodel` | `→ (unhandled)` —
+and the browser `onEvent` stream carries the same. Future assert layer
+gets `expectHandled(name)`. Deliberately NOT a named-handler registry
+(`handlers: {name: {matches, apply}}`) — that would trade the plain-reducer
+fluency for a learned structure; naming is an act inside update.
+
+Status: designed, implementation queued behind the figure-runtime chunk 4.
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
