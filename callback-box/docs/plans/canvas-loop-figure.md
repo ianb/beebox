@@ -87,20 +87,57 @@ agent runs without a browser — validated in
 
 ## Tracks / scope
 
-Single track, four chunks:
+Single track, five chunks (chunk 0 added after adversarial review):
+
+**Chunk 0 — Vite integration spike (load-bearing unknown, proven first).**
+`@ianbicking/canvas-loop/browser` is a symlinked workspace subpath serving
+raw TypeScript with `.js`→`.ts` internal specifiers, imported *dynamically*
+— nothing like p5/three/d3 (published packages with dist JS that Vite
+pre-bundles trivially). Before any architecture lands: add the frontend
+dep, write a throwaway `import("@ianbicking/canvas-loop/browser")` call,
+and prove it resolves in BOTH cold `pnpm dev` (watch for the mid-session
+"new dependencies optimized" reload surfacing as a transient dynamic-import
+failure) AND `vite build`. Expected outcome: an
+`optimizeDeps.include`/`exclude` entry in `vite.config.ts`; whatever the
+spike finds rewrites chunk 3's wording. If it cannot be made to work, the
+fallback is a prebuilt JS artifact for the `./browser` subpath — a
+different plan; stop and re-plan.
 
 **Chunk 1 — canvas-loop `./browser` subpath.** In `canvas-loop/`:
-`src/browser/mount.ts` exporting
+**`browser/mount.ts`** (the browser code's real home is top-level
+`browser/`, sibling of `src/` — NOT `src/browser/`), exports-map entry
+`"./browser": { "types": "./browser/mount.ts", "default": "./browser/mount.ts" }`.
 `mountSketch(mount: HTMLElement, opts) => () => void` — opts:
-`{ module, seed?, autoplay?, showControls?, initialParams?, onParamsChange?,
-onEvent? }` — an imperative wrapper over the existing browser runtime +
-generated controls (shared `controls-model.ts`); `"./browser"` added to the
-exports map; `<SketchFigure>` refactored to call it (behavior-preserving —
-its SSR test and props contract unchanged); dependency-isolation test
-extends to `./browser` (no React, no napi). The entry-file duality is a
-canvas-loop docs addition (TEA.md): a sketch module may ALSO default-export
-a figure factory; the headless CLI ignores the default export (verify: it
-detects the TEA tier by the `update` export, `canvas-loop/src/headless/tea-load.ts`).
+`{ module, seed?, autoplay?, panel?, transport?, initialParams?,
+onParamsChange?, onEvent? }` — an imperative wrapper over the existing
+browser runtime + generated controls (shared `controls-model.ts`). Notes
+from review:
+- `wireInput` currently lives on the React side
+  (`canvas-loop/src/react/figure-internals.ts`); it moves into `browser/`
+  so the non-React path shares it.
+- **`initialParams` validation is net-new behavior, not existing**:
+  `mountSketch` validates keys AND types against the module's declaration —
+  unknown key or type mismatch → `console.warn` + ignore (this makes the
+  failure-modes row true; today `runtime.ts:43-51` silently drops unknowns
+  and never type-checks).
+- **Param panel and transport (play/pause/restart) are separate flags**
+  (`panel`, `transport`), because embeds are deliberately frameless chrome
+  — SketchFigure conflates them under `showControls` today and keeps its
+  prop surface via both flags.
+- **Controls CSS must be CSP-clean**: no runtime `<style>` injection in
+  `mountSketch` (prod `style-src` may block it — see `lib/csp.ts`); the
+  control styles ship as a real stylesheet the consumer imports (Vite
+  handles it at build), with SketchFigure migrated to the same.
+- `onEvent` stays on the `mountSketch` API (SketchFigure uses it) but is
+  NOT wired or documented in the figure factory — the box recorder UI is
+  out of scope.
+`<SketchFigure>` refactored to delegate (behavior-preserving — its SSR test
+and props contract unchanged); dependency-isolation test extends to
+`./browser` (no React, no napi). The entry-file duality is a canvas-loop
+docs addition (TEA.md): a sketch module may ALSO default-export a figure
+factory; the headless CLI ignores the default export (verified firsthand:
+TEA detection is `typeof mod["update"] === "function"`,
+`canvas-loop/src/headless/tea-load.ts:91-93`).
 
 **Chunk 2 — callback-box schema + route test.** `figure.ts`: enum +
 starter + label gain `canvas-loop`; instructions gain a terse section — the
@@ -109,26 +146,38 @@ the one-line reason: the package resolves nowhere inside a box) plus the
 one-line default factory:
 
 ```ts
-export default ((cl, { mount, figure }) =>
-  cl.mountSketch(mount, { module: { params, init, update, draw, canvas }, initialParams: figure.params })) satisfies FigureFactory;
+export default (cl, { mount, figure }) =>
+  cl.mountSketch(mount, { module: { params, init, update, draw, canvas }, initialParams: figure.params });
 ```
 
-(exact shape settled in-chunk against the real types; `satisfies` clause
-optional for boxes). Instructions also state: declare interactive controls
-in the module's `export const params` (canvas-loop's own declaration —
-sliders/checkbox/select/trigger render automatically); the card-level
-`params` field remains what it always was — embed-query declarations — and
-maps onto module params by name; and the agent SHOULD verify headlessly
-(the canvas-loop-sketch skill) instead of "open it and screenshot it".
+(No `satisfies` in the box-facing snippet — the frontend contract type is
+`FigureSketch` in `FigureMount.tsx:41`, a frontend module boxes cannot
+import; boxes type the factory structurally. In-repo examples may name the
+real type.) Instructions also state:
+- Declare interactive controls in the module's `export const params`
+  (sliders/checkbox/select/trigger render automatically).
+- The card-level `params` field remains what it always was — embed-query
+  declarations — and maps onto module params **by identical name**; a param
+  exposed both ways is declared in both places (worked two-declaration
+  example included, since the name-collision convention is non-obvious and
+  the two declarations use different type vocabularies).
+- **`module.canvas` is authoritative for canvas size; the card's
+  `width`/`height` fields do not apply to canvas-loop figures** — stated
+  explicitly so the schema's invitation isn't a silent no-op. (Those fields
+  appear unused by the p5/three/d3 starters too — pre-existing smell, filed
+  as its own issue at plan completion, not fixed here.)
+- The agent SHOULD verify headlessly (the canvas-loop-sketch skill) instead
+  of "open it and screenshot it".
 Route doctest: fixture canvas-loop entry compiles via
 `/api/figure/module.js`; value-import variant surfaces esbuild's resolve
 error through the `figureError` channel.
 
-**Chunk 3 — frontend wiring.** `@ianbicking/canvas-loop: workspace:*` in
-`src/frontend/package.json`; `FigureRuntime` union + `parseRuntime` +
+**Chunk 3 — frontend wiring.** `FigureRuntime` union + `parseRuntime` +
 `loadRuntimeLib` gain the member (the lib = lazy
-`import("@ianbicking/canvas-loop/browser")` namespace, own chunk, SSR-safe
-like p5's). No FigureView changes beyond what exhaustiveness forces.
+`import("@ianbicking/canvas-loop/browser")` namespace, own chunk, with
+whatever Vite config chunk 0's spike proved necessary — the dep itself
+lands in chunk 0). No FigureView changes beyond what exhaustiveness
+forces.
 
 **Chunk 4 — demo card + knowledge audits + docs.** A canvas-loop figure
 card in the worktree's test box (param-rich starter; test1 is a manual
@@ -151,7 +200,11 @@ API name.
 | Entry lacks the default factory (pure TEA file dropped in) | chunk-2/3 test | existing guard `FigureView.tsx:117-119` ("no default-exported sketch") | Clear |
 | Module passed to mountSketch isn't a TEA module (no `update`) | chunk-1 unit test | mountSketch validates and throws → harness onError `FigureMount.tsx:98-99` | Clear |
 | Sketch throws in init/update/draw | canvas-loop runtime tests + harness onError | yes | Clear — error state replaces figure |
-| Embed query param name doesn't match a module-declared param | chunk-1 test | mountSketch ignores unknown initialParams keys, logs console.warn | Clear-ish — warn, not silent (#4) |
+| Embed query param name doesn't match a module-declared param | chunk-1 test | **net-new in mountSketch** (today's runtime silently drops unknowns, `canvas-loop/browser/runtime.ts:43-51`): validate keys+types vs the module declaration, console.warn + ignore | Clear-ish — warn, not silent (#4) |
+| initialParams value type mismatches the declared param type (e.g. card `number` feeding a module `select`) | chunk-1 test | same net-new validation as above | Clear — warn + fall back to declared default |
+| Prod CSP blocks runtime-injected `<style>` → controls render unstyled | chunk-1 (CSS ships as imported stylesheet, no runtime injection) + chunk-4 live verify vs `lib/csp.ts` policy | yes, by construction | Clear |
+| Card `width`/`height` set on a canvas-loop figure | — | documented non-applicability (`module.canvas` authoritative), stated in instructions | Clear by documentation; silent-no-op risk accepted and named |
+| Vite fails to resolve the raw-TS workspace subpath (cold dev optimizer reload / build failure) | chunk-0 spike, both modes | spike gates the plan; fallback = prebuilt subpath artifact (re-plan) | Clear — loud build/dev failure |
 | Teardown leak (rAF keeps running after unmount) | chunk-1 test (teardown cancels rAF) | FigureMount teardown contract `FigureMount.tsx:103-117` | Clear — and logged if teardown throws |
 | Pathological update loop hangs the tab | none | none | Documented risk — identical exposure to shipped p5/three figures; a frame-budget watchdog is figure-wide future hardening |
 
@@ -220,10 +273,17 @@ Two entries in `src/dev/knowledge-audits.yaml`, run before completion:
 
 ## Implementation order
 
-Chunk 1 (canvas-loop, self-contained) → 2 (schema + route test) → 3
-(frontend wiring; depends on 1 for the subpath, 2 for the enum) → 4 (demo +
-audits + docs; depends on all). Each chunk a commit; ship (worktree→main
-merge) only on the boxholder's explicit call.
+Chunk 0 (Vite spike — gates everything) → 1 (canvas-loop, self-contained)
+→ 2 (schema + route test) → 3 (frontend wiring; depends on 0's config, 1's
+subpath, 2's enum) → 4 (demo + audits + docs; depends on all). Each chunk a
+commit; ship (worktree→main merge) only on the boxholder's explicit call.
+
+**Review record:** v2 reviewed 2026-07-14 by an independent fresh-context
+adversarial pass (codex unavailable — provider degradation; seven attempts
+logged). Its eight findings produced chunk 0, the `browser/` path fix, the
+net-new initialParams validation, the panel/transport split, the CSP CSS
+decision, the `module.canvas` authority rule, and the snippet type fix.
+Codex re-review to be attempted; findings fold in the same way.
 
 ## Rollout shape
 
