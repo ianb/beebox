@@ -195,9 +195,11 @@ describe("tier / prefix fail-closed", () => {
     expect(res.status).toBe(404);
   });
 
-  it("404s an account-tier pub via /a/ behind the disabled flag", async () => {
-    // ACCOUNT_TIERS_ENABLED is "false" in wrangler.jsonc → account tiers fail
-    // closed until Track D. Prefix + tier match, but the seam returns 404.
+  it("404s an account-tier pub via /a/ when Access is unconfigured", async () => {
+    // ACCESS_TEAM_DOMAIN/ACCESS_AUD are empty placeholders in wrangler.jsonc, so
+    // `accessConfig` is null → account tiers fail closed (Track D). Prefix + tier
+    // match, but with no Access config the `/a/` surface 404s (not-configured).
+    // (Access-configured behaviour is covered in access.test.ts.)
     const res = await get(`/a/${ACCOUNT_ID}/index.html`);
     expect(res.status).toBe(404);
     assertSecurityHeaders(res);

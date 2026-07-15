@@ -5,6 +5,7 @@
 declare namespace Cloudflare {
   interface Env {
     PUB_STORE: R2Bucket;
-    ACCOUNT_TIERS_ENABLED: string;
+    ACCESS_TEAM_DOMAIN: string;
+    ACCESS_AUD: string;
   }
 }

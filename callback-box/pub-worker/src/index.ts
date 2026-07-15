@@ -6,33 +6,67 @@
  *  - `/p/` public  — `<key>` is a human slug, resolved via a `slugs/<slug>` R2
  *    pointer object to a pub-id.
  *  - `/s/` secret  — `<key>` IS the pub-id (the ≥128-bit capability token).
- *  - `/a/` account — account-gated (Track D, behind ACCOUNT_TIERS_ENABLED).
+ *  - `/a/` account — account-gated (Track D): Cloudflare Access JWT + per-pub
+ *    allowlist. Fails closed to 404 when the box hasn't configured Access.
  *
  * The Worker treats its own R2 store as an untrusted boundary (principle #3 /
  * the Val Town lesson): it `safeParse`s the edge manifest on every serve and
  * fails closed — an invalid/missing manifest, a tier/URL-prefix mismatch, or an
- * unknown id is a 404; a revoked or expired publication is a 410. Every response
- * — 200, 404, 410 — leaves through `withSecurityHeaders`.
+ * unknown id is a 404; a revoked or expired publication is a 410; a bad/missing
+ * Access assertion is a 401; a non-allowlisted viewer is a 403. Every response —
+ * 200, 401, 403, 404, 410 — leaves through `withSecurityHeaders`.
  */
 
 import { edgeManifestSchema, type EdgeManifest, type Tier } from "../../src/publish/manifest-edge";
+import { verifyAccessAssertion, jwksFetcherFor, type GetJwks } from "./access";
+import { logAccess } from "./access-log";
 import { resolveAssetPath, decodeSegment } from "./asset-path";
 import { contentTypeFor } from "./content-type";
-import { accountTiersEnabled, type Env } from "./env";
+import { accessConfig, type Env } from "./env";
 import { assertNever } from "./exhaustive";
 import { withSecurityHeaders } from "./headers";
 
 type Prefix = "p" | "s" | "a";
 
+/**
+ * The Worker's injectable dependencies — a clock, a JWKS fetcher factory, and an
+ * id generator — so tests drive the account tiers deterministically (principle
+ * #10): sign assertions against a known `exp`, supply a stub JWKS with no
+ * network, and assert a fixed access-log object. Production wires the real ones.
+ */
+export interface WorkerDeps {
+  /** Current epoch-ms; threaded into Access `exp` checks and the access-log `ts`. */
+  now: () => number;
+  /** Builds the {@link GetJwks} for a team domain (prod: {@link jwksFetcherFor}). */
+  jwksFor: (teamDomain: string) => GetJwks;
+  /** Fresh id for a per-view access-log object key. */
+  newId: () => string;
+}
+
+const defaultDeps: WorkerDeps = {
+  now: () => Date.now(),
+  jwksFor: jwksFetcherFor,
+  newId: () => crypto.randomUUID(),
+};
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // Single exit: every response (including errors) gets the full header set.
-    return withSecurityHeaders(await route(request, env));
+    return handle({ request, env, deps: defaultDeps });
   },
 } satisfies ExportedHandler<Env>;
 
+/**
+ * The full request pipeline with injectable {@link WorkerDeps}, ending at the
+ * single `withSecurityHeaders` exit. Exported so tests exercise the account tiers
+ * with a stub clock/JWKS/id; the default `fetch` calls it with {@link defaultDeps}.
+ */
+export async function handle({ request, env, deps }: { request: Request; env: Env; deps: WorkerDeps }): Promise<Response> {
+  // Single exit: every response (including errors) gets the full header set.
+  return withSecurityHeaders(await route({ request, env, deps }));
+}
+
 /** Route a request to a response WITHOUT security headers (the caller adds them). */
-async function route(request: Request, env: Env): Promise<Response> {
+async function route({ request, env, deps }: { request: Request; env: Env; deps: WorkerDeps }): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
     // Track F adds `POST /__submit/<id>`; nothing else is writable.
     return methodNotAllowed();
@@ -75,37 +109,83 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (manifest.status === "revoked") return gone();
   if (isExpired(manifest.expiresAt)) return gone();
 
-  return serveByTier({ manifest, pubId, assetSegments, env });
+  return serveByTier({ manifest, pubId, assetSegments, request, env, deps });
 }
 
 /** Exhaustive dispatch over the tier union (principle #2). */
-function serveByTier({
+async function serveByTier({
   manifest,
   pubId,
   assetSegments,
+  request,
   env,
+  deps,
 }: {
   manifest: EdgeManifest;
   pubId: string;
   assetSegments: readonly string[];
+  request: Request;
   env: Env;
-}): Promise<Response> | Response {
+  deps: WorkerDeps;
+}): Promise<Response> {
   switch (manifest.tier) {
     case "public":
     case "secret":
       return serveAsset({ pubId, assetSegments, env });
-    case "accounts":
-    case "any-account":
-      // TRACK D SEAM: account-gated tiers require Cloudflare Access JWT
-      // validation (`Cf-Access-Jwt-Assertion`) + the per-pub allowlist. Until
-      // Track D lands they are disabled behind ACCOUNT_TIERS_ENABLED and fail
-      // closed (404). Track D's first chunk removes this guard and implements
-      // the JWT + allowlist checks here.
-      if (!accountTiersEnabled(env)) return notFound();
-      return notFound();
+    case "accounts": {
+      // Account-gated: Access proves *who*, then the CURRENT manifest decides
+      // access (Val Town lesson — identity ≠ access). The allowlist is
+      // fail-closed: an absent/empty `allowedEmails` means nobody (mirrors
+      // `box-access.ts` — the publisher must name viewers explicitly).
+      const auth = await authenticateAccess({ request, env, deps });
+      if (!auth.ok) return auth.response;
+      const allowed = manifest.allowedEmails ?? [];
+      if (!allowed.includes(auth.email)) return forbidden();
+      return serveAsset({ pubId, assetSegments, env });
+    }
+    case "any-account": {
+      const auth = await authenticateAccess({ request, env, deps });
+      if (!auth.ok) return auth.response;
+      // Any Access-verified email passes; record *who looked* (the log write
+      // must never deny an authorized viewer — see `logAccess`).
+      await logAccess({ env, pubId, email: auth.email, now: deps.now, newId: deps.newId });
+      return serveAsset({ pubId, assetSegments, env });
+    }
     default:
       return assertNever(manifest);
   }
+}
+
+/**
+ * Authenticate a `/a/` request via Cloudflare Access. Returns the verified email,
+ * or the fail-closed response to return unchanged:
+ *  - Access NOT configured (no team domain / aud) → **404**: the box hasn't set
+ *    up account tiers, so `/a/` is not a served surface here — treated like a
+ *    missing surface (mirrors the tier/host-mismatch 404) rather than advertising
+ *    gated content with a 401.
+ *  - Missing/invalid/expired/wrong-`aud` assertion → **401**: Access should have
+ *    supplied a valid assertion, so its absence means misconfig or a bypass
+ *    attempt; never serve (fail-closed, principle #4).
+ */
+async function authenticateAccess({
+  request,
+  env,
+  deps,
+}: {
+  request: Request;
+  env: Env;
+  deps: WorkerDeps;
+}): Promise<{ ok: true; email: string } | { ok: false; response: Response }> {
+  const config = accessConfig(env);
+  if (config === null) return { ok: false, response: notFound() };
+  const result = await verifyAccessAssertion({
+    request,
+    config,
+    getJwks: deps.jwksFor(config.teamDomain),
+    now: deps.now,
+  });
+  if (!result.ok) return { ok: false, response: unauthorized() };
+  return { ok: true, email: result.email };
 }
 
 /** Fetch a bundle asset from R2 after validating the asset path. */
@@ -199,6 +279,16 @@ function notFound(): Response {
 
 function gone(): Response {
   return new Response("Gone", { status: 410, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}
+
+/** Missing/invalid Access assertion on `/a/` — Access should have supplied one. */
+function unauthorized(): Response {
+  return new Response("Unauthorized", { status: 401, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}
+
+/** Verified viewer, but not permitted by the current manifest (allowlist miss). */
+function forbidden(): Response {
+  return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }
 
 function methodNotAllowed(): Response {

@@ -16,10 +16,13 @@
       "preview_bucket_name": "pub-store"
     }
   ],
-  // ACCOUNT_TIERS_ENABLED gates the `/a/` (account) tiers until Track D adds
-  // Cloudflare Access JWT validation. Off here → account tiers 404 (fail-closed).
+  // Cloudflare Access config for the account (`/a/`) tiers (Track D). Empty
+  // placeholders here → account tiers fail closed (404: not configured). `cb pub
+  // setup` (Track E) fills these with the team domain origin (e.g.
+  // `https://myteam.cloudflareaccess.com`) and the Access application `aud`.
   "vars": {
-    "ACCOUNT_TIERS_ENABLED": "false"
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
   },
   // Old Worker *version* preview URLs are a leak surface (Prior art); setup
   // disables them. Content never ships in the Worker, so an old version leaks
