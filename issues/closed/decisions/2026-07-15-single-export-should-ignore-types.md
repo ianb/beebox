@@ -3,7 +3,17 @@ title: "single-export should not count type/interface (and maybe const) exports"
 area: vibe-check
 filed-by: agent
 discovered-in: main session — while triaging tour-lib-lint-debt, the boxholder reconsidered the rule itself
+resolution: wontfix
 ---
+
+**Closed 2026-07-15 — the boxholder chose the "drop the plugin" fallback outright:
+remove `single-export` entirely rather than build a value-exports-only variant.**
+Done in personal-vibe-check `eslint.config.mjs` (a no-`files` global-off block, so
+it reaches the fall-through base that made it fire on non-root files like `test/`
+in the first place) + version bump to 0.6.0; the now-dead fake-agent carve-out in
+`callback-box/eslint.config.mjs` was removed. The "only export what's needed"
+convention (`code-style.md`) plus review covers the residual concern. The custom
+value-exports-only rule contemplated below was not built — settled as wontfix.
 
 The `single-export` rule (`eslint-plugin-single-export`, `error` in
 `eslint-config-agent` → personal-vibe-check) counts **every** local export toward

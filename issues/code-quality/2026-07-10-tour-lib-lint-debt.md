@@ -2,8 +2,16 @@
 title: "tour-lib predates the stricter lint preset"
 ---
 
-`callback-box/test/tours/tour-lib/` has ~41 lint violations under the
-current preset (single-export-per-file — types.ts alone exports 15 —
+**Update 2026-07-15:** `single-export` was removed from the preset entirely
+(boxholder decision — see
+[closed/decisions/2026-07-15-single-export-should-ignore-types](../closed/decisions/2026-07-15-single-export-should-ignore-types.md)),
+so `types.ts`'s 15 exports and the bulk of the count no longer trip anything. The
+remaining violations here are the substantive ones (template-literal Errors,
+non-literal RegExp in browse.ts); question 1 below is now just "should `test/` be
+lint-enforced at all," no longer entangled with a file-splitting mandate.
+
+`callback-box/test/tours/tour-lib/` had ~41 lint violations under the
+preset as of filing (single-export-per-file — types.ts alone exports 15 —
 plus template-literal Errors and non-literal RegExp in browse.ts).
 Nothing enforces lint on `test/`: the lint-staged patterns and
 `pnpm lint` cover `src/` only, so this never blocked a commit and only
