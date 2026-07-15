@@ -12,7 +12,7 @@ Candidates from ideas already in this file:
 
 - **Reflexive person-profile loading** ([Reflexive person-profile loading + person-as-directory promotion](2026-05-19-reflexive-person-profile-loading.md)). Currently framed as a rule. A hook that runs before any draft-message operation and injects the recipient's profile makes this enforced, not optional.
 - **Session-end compaction triggering** ([Overnight session compaction with custom compaction message](2026-05-19-overnight-session-compaction.md)). A session-end hook fires the compaction deterministically.
-- **Health-check surfacing at session start** ([Scheduled-task health surfacing](2026-05-19-scheduled-task-health-surfacing.md)). Session-start hook reads task health and prepends to the agent's context if anything's overdue.
+- **Health-check surfacing at session start** ([Scheduled-task health surfacing](../closed/features/2026-05-19-scheduled-task-health-surfacing.md)). Session-start hook reads task health and prepends to the agent's context if anything's overdue.
 - **Pre-irreversible-action gates** ([Declared per-box autonomy matrix with encounter queue](../exploration/2026-05-19-autonomy-matrix.md)). A hook on irreversible operations triggers confirmation, rather than relying on the agent to check.
 - **Link enforcement** (*Link, don't name* in [prompt-audits.md](../callback-box/docs/prompt-audits.md#link-dont-name) audit). A post-output hook could detect bare resource names and either reject the output or rewrite to link form.
 
