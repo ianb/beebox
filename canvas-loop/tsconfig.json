@@ -18,5 +18,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*", "examples/**/*", "gallery/**/*", "test/**/*"],
-  "exclude": ["node_modules", "out", "gallery/out", "src/react", "**/*.tsx", "test/mount.test.ts"]
+  "exclude": ["node_modules", "out", "gallery/out", "src/react", "**/*.tsx", "test/mount.test.ts", "test/figure-hardening.test.ts"]
 }

@@ -124,8 +124,13 @@ Elm-style contract: named exports \`params\`/\`init\`/\`update\`/\`draw\` (+ opt
 
 \`\`\`ts
 export default (cl, { mount, figure }) =>
-  cl.mountSketch(mount, { module: { params, canvas, init, update, draw }, initialParams: figure.params });
+  cl.mountSketch(mount, { module: { params, init, update, draw }, initialParams: figure.params });
 \`\`\`
+
+- The module literal lists only the exports you declared. \`canvas\` is optional
+  (\`mountSketch\` defaults to 400×300) — **if you \`export const canvas\`, add it to
+  the literal** (\`{ params, canvas, init, update, draw }\`); referencing an
+  undeclared \`canvas\` ships a \`ReferenceError\` figure (esbuild won't flag it).
 
 - **\`import type\` ONLY** from \`@ianbicking/canvas-loop\` — the package is not
   resolvable inside a box, so a value import fails the compile (type-only
@@ -149,9 +154,21 @@ export default (cl, { mount, figure }) =>
   \`\`\`
 
   An embed link's \`?speed=2\` then starts that slider at 2.
+- **The two vocabularies differ — map deliberately.** The card \`params:\` type
+  is one of \`string\`/\`number\`/\`boolean\` only (the card schema enforces this);
+  the module \`params\` type is \`number\`/\`boolean\`/\`select\`/\`trigger\`. Bridge
+  them by this table (mismatches are silently ignored at mount, so get it right):
+
+  | module param | card \`type:\` | note |
+  |---|---|---|
+  | \`number\`  | \`number\`  | direct |
+  | \`boolean\` | \`boolean\` | direct |
+  | \`select\`  | \`string\`  | the embed value must be **one of the select's \`options\`** |
+  | \`trigger\` | — | **not embed-controllable** (a trigger carries no value); omit it from card \`params:\` |
+
+  A card param matching no module param (or declared for a \`trigger\`) is dropped — its query value does nothing.
 - **\`export const canvas = { width, height }\` is authoritative for the drawing
-  size** — the card's \`width\`/\`height\` fields do not apply to canvas-loop
-  figures.
+  size** — the card's \`width\`/\`height\` fields don't apply to canvas-loop figures.
 - **Verify headlessly** (write → render → read the frame-tagged transcript;
   the canvas-loop authoring loop) rather than opening a browser to screenshot.`,
 });
@@ -334,16 +351,37 @@ const RUNTIME_LABEL: Record<FigureRuntimeType, string> = {
 };
 
 /**
+ * Starter embed `params` per runtime, declared so the scaffolded figure is
+ * parameterizable out of the box AND every declared card param maps onto a real
+ * module param (an unmatched card param warns on every mount — see the schema
+ * instructions' vocabulary table). The p5/three/d3 starters read
+ * `figure.params.size`; the canvas-loop starter's value-bearing module params
+ * are `speed` (number), `show-ring` (boolean), and `tone` (select → card
+ * `string`, its default among the select's options). Its `reset` trigger is not
+ * embed-controllable, so it is omitted.
+ */
+const FIGURE_TEMPLATE_PARAMS: Record<FigureRuntimeType, Array<Record<string, unknown>>> = {
+  p5js: [{ name: "size", type: "number", default: 300 }],
+  three: [{ name: "size", type: "number", default: 300 }],
+  d3: [{ name: "size", type: "number", default: 300 }],
+  "canvas-loop": [
+    { name: "speed", type: "number", default: 1 },
+    { name: "show-ring", type: "boolean", default: true },
+    { name: "tone", type: "string", default: "sky" },
+  ],
+};
+
+/**
  * Generate a starter figure card. The body is a short description; the runnable
  * code is scaffolded separately into the attach scope (see
- * {@link figureStarterSketch}). A `size` param is declared so the starter is
- * parameterizable out of the box.
+ * {@link figureStarterSketch}). Embed `params` are declared per runtime (see
+ * {@link FIGURE_TEMPLATE_PARAMS}).
  */
 export function createFigureTemplate(input: { runtime: FigureRuntimeType; title?: string }): string {
   const fields: Record<string, unknown> = {
     runtime: input.runtime,
     entry: "attach/sketch.ts",
-    params: [{ name: "size", type: "number", default: 300 }],
+    params: FIGURE_TEMPLATE_PARAMS[input.runtime],
   };
   if (input.title !== undefined && input.title !== "") {
     fields["title"] = input.title;

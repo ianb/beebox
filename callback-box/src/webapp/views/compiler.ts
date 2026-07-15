@@ -30,6 +30,12 @@ export type ViewCompileTarget = "browser" | "node";
 
 interface CacheEntry {
   mtime: number;
+  // File size joins mtime in the freshness check: an editor that rewrites a file
+  // within the same clock tick leaves mtimeMs unchanged, so mtime alone would
+  // serve stale output (including a stale figureError after the fix that cleared
+  // it). Size is a free stat field and catches most same-tick length-changing
+  // edits.
+  size: number;
   output: string;
 }
 
@@ -143,14 +149,17 @@ export async function bundleView(
   const extraExternal = opts?.external ?? [];
   const stat = await fs.stat(viewPath);
   const mtime = stat.mtimeMs;
+  const size = stat.size;
 
   // Key the cache by target too: the browser and node builds of the same file
   // produce incompatible output (window shim vs bare imports), so sharing one
   // slot would let one target's compile poison the other's. Externals go in the
   // key as well, so the same file compiled with and without them never collides.
+  // The viewPath is always the final `:`-delimited segment — invalidateView
+  // relies on that to sweep every key referencing a path.
   const cacheKey = `${target}:${extraExternal.join(",")}:${viewPath}`;
   const cached = cache.get(cacheKey);
-  if (cached && cached.mtime === mtime) {
+  if (cached && cached.mtime === mtime && cached.size === size) {
     return { output: cached.output };
   }
 
@@ -201,7 +210,7 @@ export async function bundleView(
     throw new EmptyEsbuildOutputError(viewPath);
   }
   const output = outputFile.text;
-  cache.set(cacheKey, { mtime, output });
+  cache.set(cacheKey, { mtime, size, output });
   return { output };
 }
 
@@ -370,12 +379,16 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
 }
 
 /**
- * Invalidate cache for a specific view file (both compile targets, no
- * externals — the only cache keys any current caller other than the figure
- * route produces — and its metadata).
+ * Invalidate cache for a specific view file (every compile target AND every
+ * externals combination — the figure route keys on `browser:p5,three,d3:<path>`,
+ * which a fixed `browser::`/`node::` pair would miss) plus its metadata. The
+ * viewPath is always the final `:`-delimited segment of a compile key, so sweep
+ * every key ending in `:<viewPath>` rather than enumerating known prefixes.
  */
 export function invalidateView(viewPath: string): void {
-  cache.delete(`browser::${viewPath}`);
-  cache.delete(`node::${viewPath}`);
+  const suffix = `:${viewPath}`;
+  for (const key of cache.keys()) {
+    if (key.endsWith(suffix)) cache.delete(key);
+  }
   metaCache.delete(viewPath);
 }

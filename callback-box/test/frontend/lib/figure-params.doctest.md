@@ -14,17 +14,36 @@ import {
 ## parseDeclaredParams
 
 Reads a frontmatter `params` array, keeping well-formed entries and dropping
-malformed ones:
+malformed ones. A dropped entry is a **visible degradation**: it warns (naming
+the offender) rather than vanishing silently, so we capture `console.warn` to
+keep the assertions — and the test output — clean:
 
 ```ts
-JSON.stringify(parseDeclaredParams([
+const warnings = [];
+const origWarn = console.warn;
+console.warn = (...args) => { warnings.push(args.map(String).join(" ")); };
+const parsed = parseDeclaredParams([
   { name: "molecule", type: "string" },
   { name: "size", type: "number", default: 300 },
   { name: "bad", type: "color" },
   { name: 123, type: "string" },
   "nonsense",
-]))
+]);
+console.warn = origWarn;
+JSON.stringify(parsed)
 => [{"name":"molecule","type":"string"},{"name":"size","type":"number","default":300}]
+```
+
+Each of the three malformed entries produced one warning, and the unknown-type
+warning names the param and the bad type (the module→card mapping trap — a
+module `select`/`trigger` written as a card type is silently ignored otherwise):
+
+```ts continue
+warnings.length
+=> 3
+
+warnings.some((w) => w.includes('"bad"') && w.includes('"color"'))
+=> true
 ```
 
 A non-array (or absent) declaration yields an empty list:

@@ -69,9 +69,40 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
           .send({ error: "Not a figure source (.ts/.tsx in an attach scope)" });
       }
 
+      // Resolve symlinks before trusting the path. The containment check above
+      // guards only the *literal* path, but stat/read/compile follow symlinks —
+      // a symlink inside an attach dir pointing outside the box (or at a loose
+      // in-box file) would otherwise escape both the box-containment and the
+      // figure-source guards and leak file contents. realpath canonicalizes
+      // every segment; a dangling symlink or absent file throws → a clean 404.
+      let realResolved: string;
+      let realRoot: string;
+      try {
+        realResolved = await fs.realpath(resolved);
+        realRoot = await fs.realpath(root);
+      } catch (_e) {
+        // Absent path or dangling symlink — a 404, distinct from a compile
+        // error, carrying no detail beyond "missing".
+        return reply.status(404).send({ error: "Source not found" });
+      }
+
+      // Re-run containment AND the figure-source guard on the REAL path: a
+      // symlink's target must itself be an in-box `.ts`/`.tsx` in an attach
+      // scope, or it is refused before any read/compile.
+      if (realResolved !== realRoot && !realResolved.startsWith(realRoot + path.sep)) {
+        return reply.status(400).send({ error: "Path outside box" });
+      }
+      const realExt = path.extname(realResolved);
+      const realInAttachScope = realResolved.split(path.sep).some((seg) => seg.endsWith(".attach"));
+      if (!realInAttachScope || (realExt !== ".ts" && realExt !== ".tsx")) {
+        return reply
+          .status(400)
+          .send({ error: "Not a figure source (.ts/.tsx in an attach scope)" });
+      }
+
       let isFile = false;
       try {
-        const stat = await fs.stat(resolved);
+        const stat = await fs.stat(realResolved);
         isFile = stat.isFile();
       } catch (_e) {
         // stat throwing means the path is absent — a 404, distinct from a
@@ -83,7 +114,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
 
       try {
-        const { output } = await bundleView(resolved, { external: FIGURE_EXTERNALS });
+        const { output } = await bundleView(realResolved, { external: FIGURE_EXTERNALS });
         return reply
           .header("Content-Type", "application/javascript")
           .header("Cache-Control", "no-cache")

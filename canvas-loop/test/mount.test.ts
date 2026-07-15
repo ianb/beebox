@@ -286,3 +286,38 @@ test("the headless loader ignores a default export (dual-export entries)", () =>
   assert.equal(typeof loaded.update, "function", "the named exports load normally");
   assert.equal("default" in loaded, false, "the loaded module carries no default export");
 });
+
+test("update returning undefined (an unhandled msg) surfaces a typed error naming the msg type", () => {
+  const mount = new FakeElement("div");
+  const module = {
+    params: {},
+    canvas: { width: 120, height: 90 },
+    init: () => ({ t: 0 }),
+    // A box sketch whose update switch has no case for "tick" — the empty body
+    // implicitly returns undefined, exactly as a fall-through switch would. The
+    // runtime's #fold guard throws UnhandledMsgError rather than letting the
+    // model silently become undefined and crash draw downstream.
+    update: () => {},
+    draw: () => {},
+  };
+  // The loop catches a frame throw, stops, and reports the error once (default
+  // channel is console.error). The first rAF frame only establishes the time
+  // baseline (dt=0, no fold); the second accumulates a step and folds the tick
+  // that throws.
+  const errors: unknown[] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => {
+    errors.push(args);
+  };
+  let teardown: () => void = () => {};
+  try {
+    teardown = mountSketch(asHTMLElement(mount), { module });
+    runFrames(2);
+  } finally {
+    console.error = original;
+  }
+  const thrown = errors.flat().find((e): e is Error => e instanceof Error);
+  assert.ok(thrown !== undefined && thrown.name === "UnhandledMsgError", "an UnhandledMsgError was surfaced");
+  assert.ok(thrown.message.includes("tick"), "the error names the unhandled msg type");
+  teardown();
+});

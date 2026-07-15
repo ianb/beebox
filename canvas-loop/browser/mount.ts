@@ -11,12 +11,17 @@
 // hosts with a strict CSP import the stylesheet instead:
 //
 //   import "@ianbicking/canvas-loop/browser/figure.css";
-import type { CanvasSize, ParamDecl, ParamsDecl } from "../src/core/tea.js";
+import type { CanvasSize } from "../src/core/tea.js";
 import type { TeaScriptEvent } from "../src/headless/tea-events.js";
 import { toTeaModule } from "../src/headless/tea-load.js";
 import { buildControls } from "./controls.js";
+import { sanitizeInitialParams } from "./param-validate.js";
 import { Runtime, type ParamOverrides } from "./runtime.js";
 import type { PlaygroundModule } from "./sketch-types.js";
+
+// Re-exported here so the public `./browser` subpath keeps exporting it (the
+// definition lives in param-validate.ts, shared with Runtime.setParam).
+export { sanitizeInitialParams } from "./param-validate.js";
 
 /** Default drawing surface when a sketch declares no `canvas`. */
 export const DEFAULT_CANVAS: CanvasSize = { width: 400, height: 300 };
@@ -37,11 +42,18 @@ export interface AttachSketchOptions {
   seed: number;
   /** Start paused (renders frame 0 and waits). */
   paused: boolean;
-  /** Partial override of declared param defaults (pre-validated by callers). */
+  /**
+   * Partial override of declared param defaults. Validated here (the single
+   * enforcement point both `mountSketch` and `<SketchFigure>` share): an unknown
+   * name or type-mismatched/non-finite value warns and falls back to the
+   * default; an out-of-range number is clamped.
+   */
   initialParams?: ParamOverrides;
   onFrame: (frame: number) => void;
   /** Streams each recorded input entry as it is dispatched. */
   onEvent?: (entry: TeaScriptEvent) => void;
+  /** Called once if a frame throws; the loop stops. Default: `console.error`. */
+  onError?: (error: unknown) => void;
 }
 
 export interface AttachedSketch {
@@ -60,6 +72,9 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
   const ctx = canvas.getContext("2d");
   if (ctx === null) return null;
   const size = opts.module.canvas ?? DEFAULT_CANVAS;
+  // The single validation point: every caller (imperative mountSketch and the
+  // React figure) passes raw overrides through here.
+  const initialParams = sanitizeInitialParams({ decl: opts.module.params ?? {}, overrides: opts.initialParams });
   const runtime = new Runtime({
     module: opts.module,
     ctx,
@@ -67,12 +82,13 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     height: size.height,
     seed: opts.seed,
     // Omit rather than pass `undefined` — RuntimeDeps is exactOptionalPropertyTypes.
-    ...(opts.initialParams !== undefined ? { initialParams: opts.initialParams } : {}),
+    ...(initialParams !== undefined ? { initialParams } : {}),
     onFrame: opts.onFrame,
     onLog: () => {
       // Figures surface frames + recorded events, not the transcript log.
     },
     ...(opts.onEvent !== undefined ? { onEvent: opts.onEvent } : {}),
+    ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
   });
   runtime.setPaused(opts.paused);
   runtime.start();
@@ -113,6 +129,8 @@ export interface MountSketchOptions {
   onParamsChange?: (values: ParamOverrides) => void;
   /** Streams each recorded input entry (the events-file line). */
   onEvent?: (entry: TeaScriptEvent) => void;
+  /** Called once if a frame throws; the loop stops. Default: `console.error`. */
+  onError?: (error: unknown) => void;
 }
 
 /**
@@ -143,12 +161,13 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
   // `attached` is assigned right below; runtime callbacks only fire from rAF
   // frames and control events, never synchronously during attachSketch.
   let attached: AttachedSketch | null = null;
-  const initialParams = sanitizeInitialParams({ decl, overrides: opts.initialParams });
+  // Raw overrides — attachSketch is the single validation point (no duplicate here).
   attached = attachSketch(canvas, {
     module,
     seed,
     paused: !(opts.autoplay ?? true),
-    ...(initialParams !== undefined ? { initialParams } : {}),
+    ...(opts.initialParams !== undefined ? { initialParams: opts.initialParams } : {}),
+    ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
     onFrame: (frame) => {
       frameLabel.textContent = `frame ${frame}`;
     },
@@ -239,50 +258,6 @@ function coerceModule(raw: unknown): PlaygroundModule {
   };
 }
 
-/** True when a supplied override value fits the declared param's type. */
-function matchesDecl(param: ParamDecl, value: number | boolean | string): boolean {
-  switch (param.type) {
-    case "number":
-      return typeof value === "number";
-    case "boolean":
-      return typeof value === "boolean";
-    case "select":
-      return typeof value === "string" && param.options.includes(value);
-    case "trigger":
-      return false;
-  }
-}
-
-/**
- * Validate initial-param overrides against the module's declaration: an
- * unknown name, a trigger, or a type-mismatched value (e.g. a string feeding
- * a number param, a select value outside its options) warns and is dropped —
- * the declared default applies instead. Net-new over the runtime's own
- * handling, which silently ignores unknown names and never type-checks.
- */
-export function sanitizeInitialParams(deps: {
-  decl: ParamsDecl;
-  overrides: ParamOverrides | undefined;
-}): ParamOverrides | undefined {
-  const { decl, overrides } = deps;
-  if (overrides === undefined) return undefined;
-  const out: Record<string, number | boolean | string> = {};
-  for (const [name, value] of Object.entries(overrides)) {
-    const param = decl[name];
-    if (param === undefined) {
-      console.warn(`canvas-loop: ignoring initial param "${name}" — the sketch declares no such param`);
-      continue;
-    }
-    if (!matchesDecl(param, value)) {
-      console.warn(
-        `canvas-loop: ignoring initial param "${name}" — ${JSON.stringify(value)} does not fit the declared ${param.type} param; using its default`,
-      );
-      continue;
-    }
-    out[name] = value;
-  }
-  return out;
-}
 
 /**
  * Wire pointer/key listeners on the canvas straight into the runtime's input

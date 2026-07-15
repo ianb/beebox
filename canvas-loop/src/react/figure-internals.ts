@@ -21,6 +21,19 @@ export function resolveValues(deps: { decl: ParamsDecl; overrides: ParamRecord |
   return out;
 }
 
+/**
+ * The recorded-events JSON to show, computed only when the recorder is visible.
+ * When hidden (the common case) it returns `"[]"` WITHOUT calling `eventsJSON()`
+ * — so a figure never pays the full-log `JSON.stringify` on every input just to
+ * feed a panel nobody is looking at. `<SketchFigure>` calls this from its
+ * per-event callback, so the stringify happens at most once per new event and
+ * only while the panel is open (never per animation frame).
+ */
+export function recorderJson(show: boolean, source: { eventsJSON: () => string } | null): string {
+  if (!show || source === null) return "[]";
+  return source.eventsJSON();
+}
+
 /** The display (CSS-pixel) size of the canvas given the scale/height props. */
 export function displaySize(deps: { canvas: CanvasSize; scale: number | undefined; height: number | undefined }): { width: number; height: number } {
   const factor = deps.scale ?? (deps.height !== undefined ? deps.height / deps.canvas.height : 1);

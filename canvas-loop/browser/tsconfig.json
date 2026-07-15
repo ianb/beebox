@@ -4,6 +4,6 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
-  "include": ["**/*.ts", "../test/mount.test.ts"],
+  "include": ["**/*.ts", "../test/mount.test.ts", "../test/figure-hardening.test.ts"],
   "exclude": ["dist"]
 }

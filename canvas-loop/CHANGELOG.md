@@ -5,6 +5,26 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Figure hardening (review fixes).**
+  - `<SketchFigure>` keys the creation effect on the module's stable
+    sub-references (`init`/`update`/`draw`/`params`), not the wrapper object — so
+    an inline `module={{…}}` literal built from module-scope functions no longer
+    resets the sketch (frame 0, reseed) on every parent re-render.
+  - A throwing `update`/`draw` no longer recurs uncaught every animation frame:
+    the loop is caught, stopped (pending rAF cancelled), and the error surfaced
+    exactly once via a new optional `onError(e)` on `RuntimeDeps`/`attachSketch`/
+    `mountSketch` (default `console.error`). `<SketchFigure>` renders a small
+    inline `.cl-error` box.
+  - `<SketchFigure>` no longer runs a full-log `JSON.stringify` on every input:
+    the recorded-events JSON is computed only while the recorder panel is open
+    (via `recorderJson`), keeping the per-event cost O(1) when it is closed.
+  - Initial-param overrides are now finiteness-checked and clamped: a non-finite
+    number (NaN/±Infinity) warns and falls back to the default; an out-of-range
+    number is clamped into the declared `[min, max]` (with a warning).
+  - Param validation has one definition (`param-validate.ts`) enforced at one
+    point per path: `attachSketch` for initial overrides (so `mountSketch` and
+    `<SketchFigure>` validate identically), `Runtime.setParam` for every live
+    change (widget edits, controlled host dispatch, scripted events).
 - **`./browser` subpath — React-free `mountSketch`.** New `browser/mount.ts`
   exports `mountSketch(mount, opts) => teardown`, an imperative wrapper over the
   browser TEA runtime + declaration-generated controls (shared

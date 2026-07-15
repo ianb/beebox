@@ -7,10 +7,12 @@
 // {frame, …} entry in the exact events-file format — so a session recorded here
 // replays byte-for-byte through the CLI.
 import { SeededRandom } from "../src/core/prng.js";
+import { UnhandledMsgError } from "../src/headless/errors.js";
 import type { Msg, ParamsDecl, ParamValues } from "../src/core/tea.js";
 import type { TeaScriptEvent } from "../src/headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
+import { sanitizeParamChange } from "./param-validate.js";
 import type { PlaygroundModule } from "./sketch-types.js";
 
 const STEP_MS = 1000 / 60;
@@ -68,6 +70,12 @@ export interface RuntimeDeps {
   initialParams?: ParamOverrides;
   /** Streams every recorded input entry (the `{frame, type, …}` events-file line) as it is dispatched. */
   onEvent?: (entry: TeaScriptEvent) => void;
+  /**
+   * Called once if a frame (update/draw) throws: the loop stops and the error
+   * surfaces here instead of throwing uncaught on every subsequent rAF tick.
+   * Default when omitted: `console.error` (still exactly once).
+   */
+  onError?: (error: unknown) => void;
 }
 
 export class Runtime {
@@ -91,6 +99,8 @@ export class Runtime {
   #onFrame: (frame: number) => void;
   #onLog: (entry: RuntimeLog) => void;
   #onEvent: ((entry: TeaScriptEvent) => void) | undefined;
+  #onError: ((error: unknown) => void) | undefined;
+  #errored = false;
   #overrides: ParamOverrides | undefined;
 
   constructor(deps: RuntimeDeps) {
@@ -103,6 +113,7 @@ export class Runtime {
     this.#onFrame = deps.onFrame;
     this.#onLog = deps.onLog;
     this.#onEvent = deps.onEvent;
+    this.#onError = deps.onError;
     this.#util = new BrowserUtil({
       random: this.#random,
       getParams: () => this.#params,
@@ -159,7 +170,13 @@ export class Runtime {
 
   // ── input (the one path controls and pointer/key listeners share) ─
   setParam(name: string, value: number | boolean | string): void {
-    this.#pending.push({ type: "param", name, value });
+    // The single choke point for every live param mutation (widget edits,
+    // controlled host dispatch, scripted events all land here): validate +
+    // coerce against the declaration, dropping an unknown/mismatched value and
+    // clamping an out-of-range number — the same `checkParam` initial overrides use.
+    const coerced = sanitizeParamChange({ decl: this.#decl, name, value });
+    if (coerced === undefined) return;
+    this.#pending.push({ type: "param", name, value: coerced });
   }
 
   trigger(name: string): void {
@@ -189,7 +206,20 @@ export class Runtime {
 
   // ── loop internals ───────────────────────────────────────────────
   #loop(now: number): void {
+    // Reschedule up front so a slow frame doesn't drop the loop — but that means
+    // a throwing update/draw would otherwise recur uncaught every tick forever.
+    // Guard the whole frame: on a throw, stop (cancelling the just-scheduled rAF)
+    // and surface the error exactly once.
     this.#raf = requestAnimationFrame((next) => this.#loop(next));
+    try {
+      this.#step(now);
+    } catch (error) {
+      this.stop();
+      this.#reportError(error);
+    }
+  }
+
+  #step(now: number): void {
     const last = this.#last ?? now;
     this.#last = now;
     if (this.#paused) {
@@ -212,6 +242,13 @@ export class Runtime {
       this.#draw();
       this.#onFrame(this.#frame);
     }
+  }
+
+  #reportError(error: unknown): void {
+    if (this.#errored) return;
+    this.#errored = true;
+    if (this.#onError !== undefined) this.#onError(error);
+    else console.error("canvas-loop: sketch frame threw; loop stopped", error);
   }
 
   #doFrame(): void {
@@ -255,7 +292,13 @@ export class Runtime {
   }
 
   #fold(msg: Msg): void {
-    this.#model = frozen(this.#module.update(this.#model, msg, this.#util));
+    const next = this.#module.update(this.#model, msg, this.#util);
+    // A box sketch (no lint) whose update switch omits a Msg case returns
+    // undefined here; without this guard the model silently becomes undefined
+    // and draw crashes downstream with a confusing error. Fail loud, naming the
+    // unhandled msg.type so the author knows which case to add.
+    if (next === undefined) throw new UnhandledMsgError({ msgType: msg.type });
+    this.#model = frozen(next);
   }
 
   #draw(): void {

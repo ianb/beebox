@@ -30,6 +30,16 @@ export class EventScriptError extends Error {
   }
 }
 
+/** Thrown when update() returns undefined — a msg.type fell through the switch without returning a Model. */
+export class UnhandledMsgError extends Error {
+  name = "UnhandledMsgError";
+  constructor(options: { msgType: string }) {
+    super(
+      `update() returned undefined for msg type "${options.msgType}" — every branch of update must return the Model. Add a case for "${options.msgType}" (or a default) to the update switch.`,
+    );
+  }
+}
+
 /** Thrown for bad CLI invocation (unknown command, non-numeric flag, missing sketch, …). */
 export class CliError extends Error {
   name = "CliError";

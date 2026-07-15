@@ -178,7 +178,7 @@ module={orbit}/>)` never throws and never emits a `<canvas>` (see
 
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `module` | TEA sketch module | — | The `init`/`update`/`draw` (+ `params`/`canvas`) to run. |
+| `module` | TEA sketch module | — | The `init`/`update`/`draw` (+ `params`/`canvas`) to run. Identity is keyed on the sub-references, not the wrapper — see below. |
 | `seed` | `number` | `42` | Changing it re-runs the sketch from frame 0. |
 | `autoplay` | `boolean` | `true` | `false` renders a paused frame 0 (a Play button starts it). |
 | `showControls` | `boolean` | `true` | The generated param panel + a play/pause + restart toolbar. |
@@ -194,6 +194,25 @@ Controls are plain HTML inputs generated from the sketch's `params` declaration
 (the same `controlModels` mapping the browser playground uses). A widget edit
 calls back into the runtime's `setParam`/`trigger` — the same path a scripted
 event takes — so widgets dispatch, they never poke model state.
+
+### Module identity
+
+The runtime is (re)created when the sketch identity changes — but identity is
+keyed on the module's **sub-references** (`init`, `update`, `draw`, `params`),
+NOT on the wrapper object. So an inline literal built from module-scope
+functions is stable across parent re-renders:
+
+```tsx
+// Safe: composed from stable module-scope references — the sketch keeps
+// running across re-renders (no frame-0 reset, no reseed).
+<SketchFigure module={{ init, update, draw, params }} />;
+```
+
+Keep `params` a stable reference too (define it at module scope, or memoize it)
+— it is keyed the same way. Passing a genuinely new `init`/`update`/`draw`/`params`
+reference restarts the sketch, as intended. If a frame (`update`/`draw`) throws,
+the loop stops and a small inline error box replaces the running readout rather
+than throwing uncaught every animation frame.
 
 ### Uncontrolled vs controlled
 

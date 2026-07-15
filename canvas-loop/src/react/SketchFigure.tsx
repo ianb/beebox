@@ -29,12 +29,21 @@ import { DEFAULT_CANVAS, attachSketch } from "../../browser/mount.js";
 import { ParamControls } from "./ParamControls.js";
 import { RecorderPanel } from "./RecorderPanel.js";
 import type { ParamRecord } from "./figure-internals.js";
-import { displaySize, resolveValues } from "./figure-internals.js";
+import { displaySize, recorderJson, resolveValues } from "./figure-internals.js";
 
 export type { ParamRecord } from "./figure-internals.js";
 
 export interface SketchFigureProps {
-  /** The TEA sketch module to run (its `init`/`update`/`draw`, `params`, `canvas`). */
+  /**
+   * The TEA sketch module to run (its `init`/`update`/`draw`, `params`,
+   * `canvas`). Identity is keyed on the sub-references — `init`, `update`,
+   * `draw`, and `params` — NOT on the wrapper object. So an inline
+   * `module={{ init, update, draw, params }}` literal built from module-scope
+   * functions stays stable across parent re-renders (the sketch keeps running:
+   * no frame-0 reset, no reseed); swapping in a genuinely new function restarts
+   * it. Keep `params` a stable reference too (define it at module scope) for the
+   * same reason.
+   */
   module: PlaygroundModule;
   /** PRNG seed; changing it re-runs the sketch from frame 0. Default 42. */
   seed?: number;
@@ -66,6 +75,7 @@ interface LatestProps {
   initialParams: ParamRecord | undefined;
   playing: boolean;
   seed: number;
+  showRecorder: boolean;
   onEvent: ((entry: TeaScriptEvent) => void) | undefined;
   onParamsChange: ((values: ParamRecord) => void) | undefined;
 }
@@ -77,11 +87,35 @@ const subscribeNoop = (): (() => void) => () => {};
 const clientSnapshot = (): boolean => true;
 const serverSnapshot = (): boolean => false;
 
+/** The play/pause + restart toolbar with its frame readout. */
+function FigureToolbar(props: { frame: number; playing: boolean; onToggle: () => void; onRestart: () => void }): JSX.Element {
+  return (
+    <div className="cl-toolbar">
+      <span className="cl-frame">frame {props.frame}</span>
+      <button type="button" className="cl-btn" onClick={props.onToggle}>
+        {props.playing ? "Pause" : "Play"}
+      </button>
+      <button type="button" className="cl-btn" onClick={props.onRestart}>
+        Restart
+      </button>
+    </div>
+  );
+}
+
 export function SketchFigure(props: SketchFigureProps): JSX.Element {
   const isClient = useSyncExternalStore(subscribeNoop, clientSnapshot, serverSnapshot);
   const controlled = props.params !== undefined;
-  const decl = props.module.params ?? {};
+  // Destructure the module's stable sub-identities so the creation effect can key
+  // on them (not the wrapper object's identity) — an inline module literal built
+  // from module-scope functions then stays stable across re-renders.
+  const modInit = props.module.init;
+  const modUpdate = props.module.update;
+  const modDraw = props.module.draw;
+  const modParams = props.module.params;
+  const decl = modParams ?? {};
   const canvas = props.module.canvas ?? DEFAULT_CANVAS;
+  const canvasWidth = canvas.width;
+  const canvasHeight = canvas.height;
   const seed = props.seed ?? DEFAULT_SEED;
   const autoplay = props.autoplay ?? true;
   const showControls = props.showControls ?? true;
@@ -96,6 +130,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
   const [frame, setFrame] = useState(0);
   const [eventCount, setEventCount] = useState(0);
   const [eventsJson, setEventsJson] = useState("[]");
+  const [error, setError] = useState<string | null>(null);
   const [ownValues, setOwnValues] = useState<ParamRecord>(() => resolveValues({ decl, overrides: props.initialParams }));
 
   // Keep the latest props reachable from the runtime callbacks and the creation
@@ -108,41 +143,62 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       initialParams: props.initialParams,
       playing,
       seed,
+      showRecorder,
       onEvent: props.onEvent,
       onParamsChange: props.onParamsChange,
     };
   });
 
-  // Create the runtime on the client whenever the sketch identity changes
-  // (module / seed / size), and on first hydration (isClient flips true).
-  // attachSketch (shared with the imperative mountSketch) owns the lifecycle:
-  // runtime creation, input wiring, and teardown (stop rAF, remove listeners).
+  // Create the runtime on the client whenever the sketch identity changes — but
+  // keyed on the module's stable sub-identities (init/update/draw/params), NOT
+  // the wrapper object, so an inline `module={{…}}` literal built from
+  // module-scope functions doesn't reset the sketch on every parent re-render.
+  // The module passed to attachSketch is rebuilt here from those same references
+  // (the effect never closes over `props.module` as a whole). attachSketch
+  // (shared with the imperative mountSketch) owns the lifecycle: runtime
+  // creation, input wiring, and teardown (stop rAF, remove listeners).
   useEffect(() => {
     if (!isClient) return;
     const el = canvasRef.current;
     if (el === null) return;
     const latest = latestRef.current;
     const initialParams = latest === null ? undefined : latest.controlled ? latest.params : latest.initialParams;
+    const module: PlaygroundModule = {
+      init: modInit,
+      update: modUpdate,
+      draw: modDraw,
+      canvas: { width: canvasWidth, height: canvasHeight },
+      ...(modParams !== undefined ? { params: modParams } : {}),
+    };
     const attached = attachSketch(el, {
-      module: props.module,
+      module,
       seed,
       paused: !(latest?.playing ?? autoplay),
       // Omit rather than pass `undefined` — exactOptionalPropertyTypes.
       ...(initialParams !== undefined ? { initialParams } : {}),
-      onFrame: (f) => setFrame(f),
+      onFrame: (f) => {
+        setFrame(f);
+        // A frame advanced: clear any stale error (e.g. after swapping in a
+        // working sketch). No-op re-render when already null (React bails).
+        setError(null);
+      },
       onEvent: (entry) => {
         const now = latestRef.current;
         now?.onEvent?.(entry);
         const rt = runtimeRef.current;
         if (rt === null) return;
         setEventCount(rt.eventCount());
-        setEventsJson(rt.eventsJSON());
+        // Only stringify the (growing) event log when the recorder is open —
+        // otherwise this was an O(n) JSON.stringify on every single input,
+        // O(n²) over a session, feeding a panel nobody is looking at.
+        setEventsJson(recorderJson(now?.showRecorder ?? false, rt));
         if (entry.type === "param" && now !== null && !now.controlled) {
           const values = rt.paramValues();
           setOwnValues(values);
           now.onParamsChange?.(values);
         }
       },
+      onError: (e) => setError(e instanceof Error ? e.message : String(e)),
     });
     if (attached === null) return;
     runtimeRef.current = attached.runtime;
@@ -151,7 +207,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
       attached.teardown();
       runtimeRef.current = null;
     };
-  }, [props.module, seed, canvas.width, canvas.height, autoplay, isClient]);
+  }, [modInit, modUpdate, modDraw, modParams, seed, canvasWidth, canvasHeight, autoplay, isClient]);
 
   // Toggle the existing runtime's paused state when the user hits play/pause —
   // pausing freezes the frame and state rather than tearing the runtime down.
@@ -196,6 +252,7 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
     dispatchedRef.current = { ...rt.paramValues() };
     setEventCount(0);
     setEventsJson("[]");
+    setError(null);
   }, []);
 
   const display = displaySize({ canvas, scale: props.scale, height: props.height });
@@ -220,17 +277,12 @@ export function SketchFigure(props: SketchFigureProps): JSX.Element {
         tabIndex={0}
         style={{ width: display.width, height: display.height }}
       />
-      {showControls ? (
-        <div className="cl-toolbar">
-          <span className="cl-frame">frame {frame}</span>
-          <button type="button" className="cl-btn" onClick={togglePlay}>
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button type="button" className="cl-btn" onClick={restart}>
-            Restart
-          </button>
+      {error !== null ? (
+        <div className="cl-error" role="alert">
+          Sketch error: {error}
         </div>
       ) : null}
+      {showControls ? <FigureToolbar frame={frame} playing={playing} onToggle={togglePlay} onRestart={restart} /> : null}
       {showControls ? <ParamControls decl={decl} values={values} onParam={handleParam} onTrigger={handleTrigger} /> : null}
       {showRecorder ? <RecorderPanel json={eventsJson} count={eventCount} /> : null}
     </div>

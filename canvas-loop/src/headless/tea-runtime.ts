@@ -1,4 +1,4 @@
-import { SketchUsageError } from "./errors.js";
+import { SketchUsageError, UnhandledMsgError } from "./errors.js";
 import { FrameRecorder, patchConsole } from "./recorder.js";
 import type { RunResult } from "./recorder.js";
 import { Sketch } from "./sketch.js";
@@ -137,6 +137,11 @@ class TeaRunner {
   #fold(msg: Msg): void {
     const next = this.#options.module.update(this.#model, msg, this.#util);
     assertSync(next, "update");
+    // A box sketch (no lint) whose update switch omits a Msg case returns
+    // undefined here; without this guard the model silently becomes undefined
+    // and draw crashes downstream with a confusing error. Fail loud, naming the
+    // unhandled msg.type so the author knows which case to add.
+    if (next === undefined) throw new UnhandledMsgError({ msgType: msg.type });
     this.#model = frozenModel(next);
   }
 

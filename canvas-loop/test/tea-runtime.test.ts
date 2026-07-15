@@ -40,6 +40,25 @@ test("a Promise returned from update is rejected with a clear error", () => {
   assert.ok(message !== undefined && message.includes("synchronous"), "names the sync requirement");
 });
 
+test("update returning undefined (an unhandled msg) surfaces a typed error naming the msg type", () => {
+  const module: LoadedTeaModule = {
+    params: {},
+    canvas: undefined,
+    init: () => ({ n: 0 }),
+    // A box sketch whose update switch has no case for "tick" — no lint runs in
+    // a box, so this ships and would otherwise leave the model undefined. The
+    // empty body implicitly returns undefined, exactly as a fall-through switch.
+    update: () => {},
+    draw: noop,
+  };
+  const dir = tmpDir();
+  const result = teaRun(teaRunOptions(module, { outDir: dir, frames: 2 }));
+  assert.equal(result.errors.length, 1, "the undefined-return surfaced one error");
+  const [message] = result.errors;
+  assert.ok(message !== undefined && message.includes("tick"), "the error names the unhandled msg type");
+  assert.ok(message !== undefined && /returned undefined/.test(message), "the error explains update returned undefined");
+});
+
 test("within a frame, scripted msgs fold before the tick", () => {
   const params: ParamsDecl = { speed: { type: "number", min: 0, max: 5, default: 1 } };
   const module: LoadedTeaModule = {
