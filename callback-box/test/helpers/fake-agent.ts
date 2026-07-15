@@ -246,22 +246,22 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
 
       for (const inv of invocations) {
         if (inv.systemPrompt != null) {
-          lines.push(`<system-prompt>`);
+          lines.push("<system-prompt>");
           lines.push(inv.systemPrompt);
-          lines.push(`</system-prompt>`);
+          lines.push("</system-prompt>");
         }
 
-        const attrs = inv.resumed ? ` continued="true"` : "";
+        const attrs = inv.resumed ? " continued=\"true\"" : "";
         const status = inv.result.success
           ? `success (exit ${inv.result.exitCode})`
           : `failed (exit ${inv.result.exitCode}${inv.result.error ? `: ${inv.result.error}` : ""})`;
         lines.push(`<invoke${attrs}>`);
         lines.push(inv.prompt);
         lines.push(`  → ${status}`);
-        lines.push(`</invoke>`);
+        lines.push("</invoke>");
       }
 
-      lines.push(`</agent>`);
+      lines.push("</agent>");
       return lines.join("\n");
     },
   };

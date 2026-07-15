@@ -7,9 +7,9 @@
 
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { escapeForRegex, snapshotRegex } from "./snapshot-regex.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 // tour-lib/ → tours/ → test/ → callback-box/ → monorepo root (bin/browse lives here).
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const BROWSE_BIN = path.join(REPO_ROOT, "bin/browse");
@@ -125,8 +125,8 @@ export class BrowseSession {
     // need the snapshot. Simpler: read the interactive snapshot, scan for
     // `<role> "<name>" [ref=eN]`.
     const snap = await this.snapshot({ interactiveOnly: true });
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`\\b${role}\\s+"${escaped}"\\s+\\[(?:[^\\]]*?,\\s*)?ref=(e\\d+)`);
+    const escaped = escapeForRegex(name);
+    const re = snapshotRegex(`\\b${role}\\s+"${escaped}"\\s+\\[(?:[^\\]]*?,\\s*)?ref=(e\\d+)`);
     const m = snap.match(re);
     return m && m[1] ? m[1] : null;
   }

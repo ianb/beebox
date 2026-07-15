@@ -151,9 +151,9 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
  */
 export async function seedCard(opts: { boxRoot: string; relativePath: string; content: string }): Promise<void> {
   const fullPath = join(opts.boxRoot, opts.relativePath);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
+
   await mkdir(dirname(fullPath), { recursive: true });
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
+
   await writeFile(fullPath, opts.content);
 }
 

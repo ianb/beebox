@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Fixture replay library for integration tests.
  *
@@ -83,6 +83,7 @@ export async function createFixtureReplay(options: FixtureReplayOptions): Promis
 
       // Replay mode — load from file
       const content = await readFile(fixturePath, "utf-8");
+      // eslint-disable-next-line no-restricted-syntax -- parse boundary: the fixture file was serialized from a T by the recording pass above; no runtime schema exists for the generic
       return JSON.parse(content) as T;
     },
 
@@ -103,7 +104,8 @@ export async function createFixtureReplay(options: FixtureReplayOptions): Promis
       try {
         await readFile(join(outputDir, `${name}.json`), "utf-8");
         return true;
-      } catch {
+      } catch (_e) {
+        /* ignore: missing fixture file is the "no" answer this method exists to give */
         return false;
       }
     },

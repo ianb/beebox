@@ -5,7 +5,7 @@
  * so temp dir names never appear in doctest expected output.
  */
 
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
@@ -74,7 +74,8 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean }): Prom
         let items: Awaited<ReturnType<typeof readdir>>;
         try {
           items = await readdir(d, { withFileTypes: true });
-        } catch {
+        } catch (_e) {
+          /* ignore: unreadable/vanished directory — skip this subtree in the listing */
           return;
         }
         for (const item of items) {

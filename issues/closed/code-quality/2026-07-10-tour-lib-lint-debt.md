@@ -1,10 +1,25 @@
 ---
 title: "tour-lib predates the stricter lint preset"
+resolution: implemented
 ---
+
+**Closed 2026-07-15:** Resolved on this worktree's branch
+(worktree-tour-lib-lint). Question 1 answered yes — `test` was added to the
+`roots` option in `callback-box/eslint.config.mjs`, so `test/` is now held to
+the same reviewed vibe-check ruleset as `src/`/`scripts/` instead of falling
+through to eslint-config-agent's harsher unreviewed global base; `pnpm lint`
+and lint-staged now cover `test/` too. Done as its own pass (question 2), not
+riding along in an unrelated diff. Remaining substantive violations fixed:
+custom error classes in `runner.ts` and `chat-session-spawner-helpers.ts`,
+centralized escaped-regex construction in
+`test/tours/tour-lib/snapshot-regex.ts` (one justified
+`security/detect-non-literal-regexp` disable), and cast removals in test
+helpers. See `code-style.md`'s "Type Checking and Linting" section for the
+one-line note this warranted.
 
 **Update 2026-07-15:** `single-export` was removed from the preset entirely
 (boxholder decision — see
-[closed/decisions/2026-07-15-single-export-should-ignore-types](../closed/decisions/2026-07-15-single-export-should-ignore-types.md)),
+[closed/decisions/2026-07-15-single-export-should-ignore-types](../decisions/2026-07-15-single-export-should-ignore-types.md)),
 so `types.ts`'s 15 exports and the bulk of the count no longer trip anything. The
 remaining violations here are the substantive ones (template-literal Errors,
 non-literal RegExp in browse.ts); question 1 below is now just "should `test/` be

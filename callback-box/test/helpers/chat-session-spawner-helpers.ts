@@ -6,7 +6,15 @@
 
 import { once } from "node:events";
 import type { ChatSession, ChatSessionOptions } from "../../src/core/chat/session/index.js";
+import { invariant } from "../../src/lib/invariant.js";
 import type { FakeChatBackend } from "../../src/services/claude-chat.js";
+
+class WaitForRunsTimeoutError extends Error {
+  constructor({ count, got, timeoutMs }: { count: number; got: number; timeoutMs: number }) {
+    super(`waitForRuns: expected ${count} run(s), got ${got} after ${timeoutMs}ms`);
+    this.name = "WaitForRunsTimeoutError";
+  }
+}
 
 export async function setupSystemPrompt(): Promise<string> { return "setup"; }
 export async function testPrompt(): Promise<string> { return "TEST PROMPT"; }
@@ -46,7 +54,7 @@ export async function waitForRuns(
   const deadline = Date.now() + timeoutMs;
   while (backend.runs.length < count) {
     if (Date.now() > deadline) {
-      throw new Error(`waitForRuns: expected ${count} run(s), got ${backend.runs.length} after ${timeoutMs}ms`);
+      throw new WaitForRunsTimeoutError({ count, got: backend.runs.length, timeoutMs });
     }
     await new Promise((r) => setImmediate(r));
   }
@@ -62,7 +70,7 @@ export async function runTurn(
   // synchronously, so `once` would miss the event if registered after.
   const done = once(session, "done");
   const run = backend.lastRun();
-  if (run === null) throw new Error("runTurn: no run started");
+  invariant(run !== null, "runTurn: no run started");
   run.emitSessionInit(sessionIdToEmit);
   run.emitResult();
   await done;

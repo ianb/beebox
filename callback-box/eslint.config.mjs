@@ -12,7 +12,12 @@ export default [
   // harsher global base — same rules as src/, not a weakening. See the per-edit
   // lint hook: this is what stops it flagging scripts with rules src/ is held to
   // deliberately (and `lint` below now covers scripts/ too).
-  ...vibeCheck({ react: false, roots: ["src", "scripts"], ignores: ["src/frontend/**", "**/*.mjs"] }),
+  // `test` in roots (added 2026-07-15): test/ is held to the same reviewed
+  // ruleset as src/ — previously it fell through to eslint-config-agent's
+  // harsher unreviewed base, whose extra bans (`??`, inline unions,
+  // process.env["X"], fs-filename) are NOT house style and made per-edit hook
+  // reports on test files misleading. `pnpm lint` and lint-staged enforce it.
+  ...vibeCheck({ react: false, roots: ["src", "scripts", "test"], ignores: ["src/frontend/**", "**/*.mjs"] }),
   {
     rules: {
       "max-params": ["error", 2],
