@@ -13,17 +13,20 @@ struct NativeChatEmission: Equatable, Identifiable {
 
 struct ChatWebView: UIViewRepresentable {
     var box: PairedBox
+    var embedded: Bool
     var pendingEmissions: [NativeChatEmission]
     var onSessionChange: (String?) -> Void
     var onEmissionHandled: (NativeChatEmission.ID) -> Void
 
     init(
         box: PairedBox,
+        embedded: Bool = true,
         pendingEmissions: [NativeChatEmission] = [],
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionHandled: @escaping (NativeChatEmission.ID) -> Void = { _ in }
     ) {
         self.box = box
+        self.embedded = embedded
         self.pendingEmissions = pendingEmissions
         self.onSessionChange = onSessionChange
         self.onEmissionHandled = onEmissionHandled
@@ -166,9 +169,9 @@ struct ChatWebView: UIViewRepresentable {
         guard
             let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines),
             authToken.isEmpty == false,
-            var components = URLComponents(url: box.chatURL, resolvingAgainstBaseURL: false)
+            var components = URLComponents(url: box.chatURL(embedded: embedded), resolvingAgainstBaseURL: false)
         else {
-            return box.chatURL
+            return box.chatURL(embedded: embedded)
         }
         var queryItems = components.queryItems ?? []
         queryItems.removeAll { $0.name == "mobileToken" }
