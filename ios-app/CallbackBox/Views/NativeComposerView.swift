@@ -12,7 +12,6 @@ struct NativeComposerView: View {
     @State private var text = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var images: [ChatImageAttachment] = []
-    @State private var pendingVoiceMessage: PendingVoiceMessage?
     @State private var statusText: String?
     @State private var lastSentEmissionID: NativeChatEmission.ID?
     @StateObject private var dictation = SpeechDictation()
@@ -72,17 +71,6 @@ struct NativeComposerView: View {
                 ImageAttachmentStrip(images: images, onRemove: removeImage)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 8)
-            }
-
-            if let pendingVoiceMessage {
-                VoiceConfirmationView(
-                    message: pendingVoiceMessage,
-                    currentText: text,
-                    onSend: confirmVoiceSend,
-                    onKeepEditing: keepEditingVoiceSend
-                )
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
             }
 
             let queuedMessages = outbox.messages(for: box)
@@ -146,7 +134,6 @@ struct NativeComposerView: View {
         dictation.stop()
         let origin: QueuedMessage.Origin = dictation.hasDictatedText ? .voice : .typed
         let emission = NativeChatEmission(text: message, origin: origin, diarized: false, images: images)
-        pendingVoiceMessage = nil
         dictation.resetDictationState()
         text = ""
         images = []
@@ -194,9 +181,7 @@ struct NativeComposerView: View {
                 audioURL: audioURL
             )
             await MainActor.run {
-                text = prepared.text
-                pendingVoiceMessage = PendingVoiceMessage(diarized: prepared.diarized)
-                statusText = "Voice message ready."
+                enqueuePreparedVoiceMessage(text: prepared.text, diarized: prepared.diarized)
             }
         }
     }
@@ -239,26 +224,12 @@ struct NativeComposerView: View {
         return "\(cleanFirst) \(cleanSecond)"
     }
 
-    private func confirmVoiceSend() {
-        guard let pendingVoiceMessage else {
-            return
-        }
-        enqueuePreparedVoiceMessage(text: text, diarized: pendingVoiceMessage.diarized)
-    }
-
-    private func keepEditingVoiceSend() {
-        pendingVoiceMessage = nil
-        dictation.resetDictationState()
-        statusText = "Voice message kept as a draft."
-    }
-
     private func enqueuePreparedVoiceMessage(text preparedText: String, diarized: Bool) {
         guard preparedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
             statusText = "Nothing to send."
             return
         }
         let emission = NativeChatEmission(text: preparedText, origin: .voice, diarized: diarized, images: images)
-        pendingVoiceMessage = nil
         dictation.resetDictationState()
         text = ""
         images = []
@@ -282,7 +253,7 @@ struct NativeComposerView: View {
     }
 
     private var sendDisabled: Bool {
-        pendingVoiceMessage != nil || (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && images.isEmpty)
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && images.isEmpty
     }
 
     private var draftKey: String {
@@ -324,42 +295,6 @@ struct NativeComposerView: View {
         images = images.enumerated().map { index, image in
             ChatImageAttachment(id: index + 1, mimeType: image.mimeType, dataBase64: image.dataBase64)
         }
-    }
-}
-
-private struct PendingVoiceMessage: Equatable {
-    var diarized: Bool
-}
-
-private struct VoiceConfirmationView: View {
-    var message: PendingVoiceMessage
-    var currentText: String
-    var onSend: () -> Void
-    var onKeepEditing: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "waveform")
-                    .foregroundStyle(.secondary)
-                Text(message.diarized ? "Diarized voice message ready" : "Voice message ready")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            Text(currentText)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-            HStack(spacing: 8) {
-                Button("Send", action: onSend)
-                    .buttonStyle(.borderedProminent)
-                Button("Keep Editing", action: onKeepEditing)
-                    .buttonStyle(.bordered)
-            }
-        }
-        .padding(10)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
