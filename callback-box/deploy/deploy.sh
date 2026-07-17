@@ -424,6 +424,19 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     done
   }
   install_with_retry
+  # Native-module ABI guard. pnpm's side-effects cache keys build artifacts by
+  # dependency graph, NOT by Node ABI — after a Node major upgrade, a "clean"
+  # reinstall can silently restore a binary compiled for the old ABI (this
+  # broke every box child on the 22→24 upgrade, 2026-07-16, while the hub's
+  # /healthz stayed green). Load the module with the runtime that will serve
+  # traffic; on mismatch, force a real prebuild fetch/compile and re-verify —
+  # a second failure fails the deploy.
+  if ! node -e 'require("better-sqlite3")' 2>/dev/null; then
+    echo "  better-sqlite3 ABI mismatch — forcing rebuild for $(node -v)..."
+    (cd node_modules/better-sqlite3 && rm -rf build \
+      && { npx --no-install prebuild-install || npx --no-install node-gyp rebuild --release; })
+    node -e 'require("better-sqlite3")'
+  fi
 REMOTE
 
 # Reconcile each v2-shape (package-layout) box's own node_modules against its
