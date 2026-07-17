@@ -17,10 +17,13 @@ Two layers to consider:
    A specific ABI guard was added to `deploy.sh` for the better-sqlite3 case,
    but the verification gap is generic — any child-only startup crash slips
    through.
-2. **Hub health semantics** — consider a `/healthz?deep=1` (or a separate
-   endpoint) that reports child supervisor state (n running / n crashed /
-   last spawn error per slug), so both deploys and monitoring can see child
-   failures without fetching authenticated pages.
+2. **Acting on the child state healthz already reports** — `/healthz` does
+   include per-box supervisor status (`running`/`stopped` + restart counts);
+   the deploy just doesn't evaluate it. A crash-looping child (nonzero
+   restarts, or a spawn that dies before "running") should fail verification.
+   Worth checking what status a crash-looping child actually reports —
+   during this incident the children died at request time and the hub
+   answered `No running box`, which a status-blind 200 check can't see.
 
 Related observation from the same incident: the deploy's 30s healthz timeout
 raced the hub's ~32s cold boot and reported failure on a deploy that (at hub
