@@ -2,6 +2,27 @@ import XCTest
 @testable import CallbackBox
 
 final class SpeechKeywordsTests: XCTestCase {
+    func testProgressiveTranscriptReplacesVolatileResults() {
+        var transcript = ProgressiveSpeechTranscript()
+
+        transcript.apply(text: "Hello wor", isFinal: false)
+        XCTAssertEqual(transcript.text, "Hello wor")
+
+        transcript.apply(text: "Hello world", isFinal: false)
+        XCTAssertEqual(transcript.text, "Hello world")
+
+        transcript.apply(text: "Hello world", isFinal: true)
+        XCTAssertEqual(transcript.finalizedText, "Hello world")
+        XCTAssertEqual(transcript.volatileText, "")
+        XCTAssertEqual(transcript.text, "Hello world")
+
+        transcript.apply(text: " again", isFinal: false)
+        XCTAssertEqual(transcript.text, "Hello world again")
+
+        transcript.apply(text: " again.", isFinal: true)
+        XCTAssertEqual(transcript.text, "Hello world again.")
+    }
+
     func testChatURLUsesNativeComposerAndPreservesSession() {
         let box = PairedBox(
             id: UUID(),

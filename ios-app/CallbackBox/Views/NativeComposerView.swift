@@ -19,7 +19,7 @@ struct NativeComposerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if let statusText = dictation.errorMessage ?? statusText {
+            if let statusText = dictation.errorMessage ?? dictation.preparationMessage ?? statusText {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
