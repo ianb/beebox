@@ -1,6 +1,7 @@
 # Native iOS capture mode
 
-**Status:** active — implementation plan for bringing the shipped web capture-mode workflow to the native iOS composer.
+**Status:** active — reviewed and ready to implement; the review findings in
+`ios-native-capture-mode.review.md` are incorporated below.
 
 This plan adds a native, full-screen capture mode to the iOS companion app. It
 reuses the box's existing capture staging, preparation, delivery, and pending
@@ -50,12 +51,14 @@ suspension or network loss cannot silently discard a capture.
   (`src/core/capture/staging-store.ts:1-12,71-78,96-128`). Per-session mutation
   is serialized (`staging-store.ts:167-180`), and limits are 1 GiB / 500 items
   (`src/core/capture/staging-limits.ts:1-14,37-51`).
-- **Raw-body upload — reuse.** The upload route accepts either multipart or a
-  raw `Buffer` (`src/webapp/routes/capture.ts:112-118`). Native background
-  `URLSessionUploadTask` can therefore upload a file URL directly with the
-  existing `X-Capture-*` metadata headers; no multipart body needs to be held in
-  memory.
-- **Crash resume and pending UI — reuse with one transport adjustment.** The
+- **Raw-body upload branch — repair before reuse.** The upload handler can read
+  a raw `Buffer` (`src/webapp/routes/capture.ts:112-118`), but the server
+  registers multipart only (`src/webapp/server.ts:93-98`), so Fastify rejects
+  an unregistered binary content type before that branch runs. Track 1 adds one
+  exact `application/octet-stream` parser and a route doctest before native
+  background uploads rely on this path. Fastify's 50 MiB body limit
+  (`src/webapp/server.ts:53-57`) is also the effective per-item native limit.
+- **Crash resume and pending UI — reuse after unifying request identity.** The
   pure selectors already scope resumable sessions by authenticated user and
   visible chat (`src/core/capture/pending.ts:63-105`). The web capture overlay
   offers Resume / Submit now / Discard
@@ -64,6 +67,10 @@ suspension or network loss cannot silently discard a capture.
   retry bubbles; native-shell mode suppresses only the web capture overlay, not
   those bubbles (`src/frontend/src/components/chat/InteractiveChat.tsx:135-140,
   174-175,279-284`). Native code should not build a second pending-chat model.
+  Today `getSessionUser` reads only the cookie (`src/webapp/auth.ts:189-196`),
+  while mobile bearer authorization returns only a boolean
+  (`src/webapp/server-box-scope.ts:82-90`); Track 1 must resolve both credentials
+  to the same capture owner before mobile resume can reuse the selector safely.
 - **Web capture UX — behavioral reference.** Capture is a full-screen,
   text-free stance with repeat photos, gallery/files, multiple audio segments,
   Done, Cancel, counts, and visible upload failures
@@ -122,12 +129,21 @@ suspension or network loss cannot silently discard a capture.
   <https://developer.apple.com/documentation/avfoundation/avcapturesessioninterruptionreason>
   and <https://developer.apple.com/documentation/avfaudio/avaudiosession/interruptionnotification>
 - Background `URLSession` upload tasks can send file-backed content while the
-  app is suspended or terminated. This fits the local-file queue and the
-  server's raw-body upload support.
+  app is suspended or terminated. This fits the local-file queue once Track 1
+  registers and advertises the raw-body contract.
   <https://developer.apple.com/documentation/foundation/urlsession>
 - `PhotosPicker` supports multiple selection and asynchronous `Transferable`
   loading; retrieval itself can fail, including when an iCloud asset is not
   locally available. <https://developer.apple.com/documentation/photosui/photospicker>
+- Fastify requires a content-type parser before a nonstandard request body can
+  reach a handler; `parseAs: "buffer"` is the supported buffered raw-body shape.
+  Track 1 registers only `application/octet-stream`, rather than treating the
+  existing dead `Buffer` branch as capability.
+  <https://fastify.dev/docs/latest/Reference/ContentTypeParser/>
+- `AVAudioRecorder.stop()` closes the recording file. A process killed before
+  `stop()` may therefore leave an unusable M4A container; the local manifest
+  must distinguish an in-progress recording from a closed uploadable segment.
+  <https://developer.apple.com/documentation/avfaudio/avaudiorecorder/stop()>
 
 No external protocol or third-party capture library is needed. The server
 already owns resumable staging, and AVFoundation/Foundation cover the native
@@ -135,11 +151,13 @@ acquisition and transfer boundaries.
 
 ## Tracks / scope
 
-### Track 1 — Make staged audio container-aware and expose mobile resume
+### Track 1 — Make capture transport and identity explicit
 
 **What.** Extend the existing capture REST contract so browser WebM/Opus and
-native M4A/AAC segments share one staging and preparation pipeline. Add a
-mobile-friendly resumable-session read to the same REST lifecycle.
+native M4A/AAC segments share one staging and preparation pipeline. Make raw
+file upload reachable and advertised, resolve paired mobile credentials to the
+pairing user, and add a mobile-friendly resumable-session read to the same REST
+lifecycle.
 
 **Why this needs to change.** Staged segments currently store only chunk names
 (`src/core/capture/staging-store.ts:32-34`), and preparation unconditionally
@@ -147,7 +165,10 @@ concatenates bytes and writes `.webm`
 (`src/core/capture/write-cards.ts:81-119`). Relabeling AAC bytes as WebM would
 produce corrupt cards. The existing resume selector is exposed only through a
 tRPC React query (`src/frontend/src/components/capture/useCaptureResume.ts:37-54`),
-whose transport encoding should not become a Swift API contract.
+whose transport encoding should not become a Swift API contract. The apparent
+raw-body branch has no registered parser, and mobile bearer auth currently has
+no user identity; both must be corrected before the native queue and
+cross-client resume can rely on them.
 
 **Direction.** Add a closed staging field:
 
@@ -171,21 +192,43 @@ session. The create response adds
 `capabilities.acceptedAudioFormats`; native recording is enabled only when
 `m4a-aac` is advertised, so an older box cannot silently mislabel audio.
 
+Register `application/octet-stream` with `parseAs: "buffer"` before capture
+routes and exercise the non-multipart path in a route doctest, including the
+behavior of `request.file()` on a non-multipart request. All native capture
+payloads use that content type; `X-Capture-Mime-Type` retains the media's real
+type. The create response also adds
+`capabilities.acceptedUploadEncodings: ["raw-body-v1"]`. Native capture proceeds
+only when both `m4a-aac` and `raw-body-v1` are advertised. Against an older
+server, the app cancels the just-created empty session and shows an update-server
+message; ordinary one-off composer attachments remain available.
+
+Persist the pairing ticket's `createdBy` on the redeemed `MobileDevice` record
+as `createdBy: string | null`; old device records default to `null`. Add one
+request-owner helper that resolves a session cookie or a verified mobile bearer
+to the same email. Capture session creation, the new resumable route, and the
+temporary tRPC resumable procedure use that helper. On an auth-enabled box, a
+mobile device whose old record has no owner receives a clear 403 requiring
+re-pairing; `null` remains valid only when box auth is disabled. This prevents
+all legacy devices from silently sharing one anonymous resume scope.
+
 Add `GET /api/capture/sessions/resumable?targetSessionId=&clientSessionId=` to
 the cohesive REST family. It delegates to `selectResumableCaptures`, scopes by
-`getSessionUser(request)`, and validates query strings at the route boundary.
+the unified request owner, and validates query strings at the route boundary.
 Move the web resume hook to this REST read and remove only the tRPC
 `resumableSessions` procedure; keep tRPC `pendingSessions`, which is web-chat UI
 state and needs no native duplicate.
 
 **Vocabulary lock-ins.** Wire/staging values `webm-opus` and `m4a-aac`;
-header `X-Capture-Audio-Format`; create-response field
-`capabilities.acceptedAudioFormats`.
+header `X-Capture-Audio-Format`; upload encoding `raw-body-v1`; create-response
+fields `capabilities.acceptedAudioFormats` and
+`capabilities.acceptedUploadEncodings`; paired-device field `createdBy`.
 
 **First implementation chunk.** Add the format schema/default, format-aware
-writer, route header validation, create capability response, and doctests using
-one WebM multi-chunk segment plus one single-file M4A segment. No native code in
-this chunk.
+writer, exact binary parser, route/header validation, both create capabilities,
+paired-device owner persistence, and the unified request-owner helper. Doctests
+cover a raw JPEG body, a WebM multi-chunk segment, one single-file M4A segment,
+cookie/mobile owner equivalence, a legacy ownerless device on an auth-enabled
+box, and the 50 MiB boundary. No native code is in this chunk.
 
 ### Track 2 — Native capture domain, durable queue, and API client
 
@@ -212,6 +255,7 @@ enum CapturePhase {
 }
 
 enum CaptureItemState: Codable {
+    case recording
     case local
     case uploading(taskIdentifier: Int)
     case uploaded
@@ -223,6 +267,8 @@ enum CaptureItemState: Codable {
 `Application Support/Capture/<box-id>/<session-id>/manifest.json` and local
 media. Each item records a UUID filename, kind, capture time, source, MIME type,
 audio format/segment id when applicable, and upload state. Writes are atomic.
+Audio creates and persists a `recording` row before `AVAudioRecorder` starts;
+only a successful Stop transitions it to `local` and therefore uploadable.
 The file stays local until a 2xx upload acknowledgement; then its manifest row
 remains but the payload can be deleted. Failed/local payloads remain until the
 user retries, submits/discards them explicitly, or moves them to a follow-up
@@ -232,22 +278,34 @@ capture.
 use raw file bodies and `URLSessionConfiguration.background`, with task metadata
 mapped back to manifest item IDs. The app delegate forwards background-session
 completion. Retryable network/408/429/5xx outcomes return to `local` with bounded
-backoff; 400/401/403/409/413 become typed, visible failures. Startup reconciles
-persisted manifests with `URLSession.getAllTasks()` before scheduling anything.
+backoff; 400/401/403/404/409/413 become typed, visible failures. Uploads use one
+background `URLSession` with one fixed app identifier across launches and boxes;
+task metadata carries box/session/item IDs. Startup reconciles persisted
+manifests with that session's `URLSession.getAllTasks()` before scheduling
+anything. An `uploading` row whose task identifier is absent returns to `local`
+instead of remaining orphaned. Imported or closed files are size-checked before
+enqueueing against the server's 50 MiB per-request cap; oversize items fail
+terminally without consuming retries.
 
 Native filenames are UUID-based (`ios-photo-<uuid>.jpg`,
 `ios-audio-<uuid>.m4a`, `ios-file-<uuid>-<sanitized-name>`) so simultaneous web
 and phone resume cannot overwrite count-based names. Timeline order continues
-to come from capture timestamps, not filenames.
+to come from capture timestamps, not filenames. Every staged photo is normalized
+to JPEG, or PNG when alpha must be retained, and its filename extension matches
+its encoded bytes. HEIC is converted before staging; MIME headers do not replace
+the writer's filename-extension contract.
 
 **Vocabulary lock-ins.** `CaptureStore`, `CapturePhase`, `CaptureItemState`, and
-`CaptureAPI`; one local manifest per box/server staging session.
+`CaptureAPI`; one local manifest per box/server staging session; one fixed
+background-session identifier per app; 50 MiB maximum per native upload item;
+JPEG/PNG photo bytes with matching `.jpg`/`.png` extensions.
 
 **First implementation chunk.** Implement Codable wire models, pure request
 builders, the atomic local store, and a fake transport. XCTest proves auth
 headers, raw upload metadata, atomic reload, task reconciliation, idempotent
-upload acknowledgement, and exhaustive transition behavior before any camera
-code lands.
+upload acknowledgement, missing background-task recovery, 404/409 terminal
+classification, size preflight, and exhaustive transition behavior before any
+camera code lands.
 
 ### Track 3 — Native camera, gallery, files, and segmented audio
 
@@ -269,9 +327,10 @@ assembly.
   invariant before entering the local queue. Camera and gallery sources remain
   distinct (`camera-user`, `camera-environment`, `gallery`).
 - Gallery uses multi-select `PhotosPicker`; each result is copied/normalized to
-  the app container before the picker object is released. Individual iCloud or
-  decode failures appear beside the affected selection and do not cancel other
-  items.
+  JPEG or PNG in the app container before the picker object is released. HEIC
+  and other decodable formats are converted, and each output extension matches
+  its encoded bytes. Individual iCloud or decode failures appear beside the
+  affected selection and do not cancel other items.
 - File import copies every security-scoped URL into the app container
   immediately, preserves original filename/MIME metadata, and then releases the
   external URL.
@@ -279,7 +338,13 @@ assembly.
   container (44.1 kHz, 64 kbps). Every Start creates a UUID segment; Stop closes
   one complete `.m4a` file and queues it as one `m4a-aac` upload. Start/Stop can
   repeat. The camera session contains no audio input, so the user can take
-  photos while an audio segment records.
+  photos while an audio segment records. The recorder persists the segment as
+  `recording` before acquisition and transitions it to `local` only after Stop.
+  On relaunch, a row still marked `recording` is treated as an interrupted,
+  potentially unfinalized M4A: exclude it from upload and show that the
+  interrupted recording could not be saved. Do not repeatedly retry or silently
+  delete it. Monitor file size and stop the segment visibly before the 50 MiB
+  request boundary; a new segment can then be started.
 - Entering capture stops `SpeechDictation` first. Audio interruptions stop and
   preserve the current segment, deactivate the audio session, and visibly mark
   recording paused; resumption is always a new segment.
@@ -289,8 +354,9 @@ assembly.
 
 **First implementation chunk.** Add protocol-backed fake camera/recorder and
 real AVFoundation services. XCTest covers file creation, segment identity,
-interruption transitions, and permission-denied results; a device smoke check
-proves repeated photos while recording one audio segment.
+interruption transitions, relaunch with a stale `recording` row, format/extension
+matching, size-limit stopping, and permission-denied results; a device smoke
+check proves repeated photos while recording one audio segment.
 
 ### Track 4 — Full-screen native capture UI and composer entry
 
@@ -349,7 +415,7 @@ another capture client act at different times.
 may retain items the server has never seen. The abandonment sweep can submit
 the acknowledged subset while the phone is away. A simultaneous web client may
 also resume the same server session. Treating these as ordinary retries would
-produce 409s or silent local loss.
+produce terminal 404/409 responses or silent local loss.
 
 **Direction.**
 
@@ -363,6 +429,14 @@ produce 409s or silent local loss.
   items as a follow-up** (create a new session bound to the same chat and move
   local rows) or **Discard remaining items**. Never silently attach them to a
   different capture.
+- Treat upload/finalize 404 as the same terminal recovery class because a
+  delivered or cancelled session has already had staging removed
+  (`src/core/capture/prepare.ts:333-342`,
+  `src/webapp/routes/capture.ts:141-142,229-232,243-244`). The copy acknowledges
+  the ambiguity: "This capture was already submitted or cancelled." Offer the
+  same follow-up-or-discard actions for local items. A resumable response that
+  still lists the ID wins over a stale 404 result; otherwise never retry a gone
+  staging ID.
 - A lost finalize response is retried against the same ID; the server's
   compare-and-swap finalize remains authoritative and idempotent
   (`src/webapp/routes/capture.ts:252-270`).
@@ -374,16 +448,16 @@ produce 409s or silent local loss.
   and verifies the resulting capture card references correctly typed media.
 
 **First implementation chunk.** Implement pure reconciliation of local
-manifest + resumable response + 409/already-sealed outcome, with XCTest tables
-for resume, follow-up, discard, and duplicate completion. Then wire the route
-and device integration pass.
+manifest + resumable response + 404/gone + 409/already-sealed outcomes, with
+XCTest tables for resume, follow-up, discard, ambiguous gone sessions, and
+duplicate completion. Then wire the route and device integration pass.
 
 ## Subplans (when a sub-question needs its own design step)
 
-No subplan is required. The only box-side shape change is the closed audio
-format discriminant plus a REST projection of an existing pure selector. The
-native camera, recorder, queue, and UI are one cohesive client feature and are
-fully directed above.
+No subplan is required. The box-side changes are bounded to the closed audio
+format discriminant, one binary parser/capability, paired-device ownership, and
+a REST projection of an existing pure selector. The native camera, recorder,
+queue, and UI are one cohesive client feature and are fully directed above.
 
 ## Failure modes (the load-bearing section)
 
@@ -393,16 +467,21 @@ camera hardware, audio interruption, or background transfer scheduling.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Old server does not advertise `m4a-aac` | Planned route + decode tests | Disable Record; photos/files remain available | Clear: update-server message |
+| Old server lacks `m4a-aac` or `raw-body-v1` | Planned route + decode tests | Cancel empty staging session; disable native Capture only | Clear: update-server message |
+| Raw binary content type is rejected before the upload handler | Planned raw-body route doctest | Exact parser registered before routes; capability advertised only with support | Clear contract failure |
+| Legacy paired device has no authenticated owner | Planned pairing/auth doctests | Reject capture on auth-enabled box; preserve ordinary app access | Clear re-pair action |
 | Mixed/unknown audio format reaches a segment | Planned route/store doctests | Reject before manifest mutation | Clear 400/409 |
 | Camera or microphone permission denied | Planned fake/XCTest + device pass | Leave other acquisition actions usable | Clear banner + Settings link |
 | Photo-library item cannot download/decode | Planned fake/XCTest | Fail that item only; retain other selections | Clear per-item failure |
 | Security-scoped file copy fails or disk is full | Planned store tests | Do not enqueue; keep capture open | Clear filename-specific error |
 | App dies after acquisition but before upload | Planned persistence/relaunch XCTest | Atomic local manifest + payload recovery | Clear resumable capture |
+| App dies during recording before M4A is closed | Planned stale-recording-row XCTest | Exclude damaged row from upload; retain it until explicit dismissal | Clear interrupted-recording error |
 | Upload loses network / times out / returns 5xx | Planned transport tests | Bounded retry; payload stays local | Clear uploading/failed state |
 | Auth is revoked during background upload | Planned 401/403 test | Stop retries; preserve local payload | Clear re-pair action |
-| Server cap returns 413 | Existing route handling + planned client test | Do not retry; preserve/discard explicitly | Clear limit message |
+| Item reaches 50 MiB request cap or server returns 413 | Planned preflight + route/client tests | Stop/reject before enqueue when possible; never retry 413 | Clear per-item limit message |
 | Server session is already sealed (409) | Planned reconciliation table | Follow-up-or-discard recovery | Clear, never auto-moved |
+| Server staging is gone after delivery/cancel (404) | Planned reconciliation table | Terminal follow-up-or-discard recovery | Clear submitted-or-cancelled ambiguity |
+| Persisted background task ID has no live task | Planned task reconciliation XCTest | Return item to `local` and reschedule once | Clear uploading state resolves |
 | Background task completes after Cancel | Planned task-generation XCTest | Ignore stale completion; local/server tombstone wins | Clear through stable cancelled state |
 | Phone call/route change interrupts recording | Planned fake + device pass | Stop and preserve complete segment; resume creates new one | Clear paused banner |
 | Scene backgrounds while camera/recording active | Planned lifecycle XCTest + device pass | Stop preview and current segment; uploads continue | Clear on return |
@@ -428,13 +507,15 @@ camera hardware, audio interruption, or background transfer scheduling.
 - **Fabricated free-form value — ADDRESSED by construction.** Capture metadata
   comes from device time/source and selected files. There is no native summary
   text or agent-authored value.
-- **Validation error UX — ADDRESSED.** Typed client failures map 400/409/413 and
-  auth failures to actionable banners, while unexpected response shapes fail
-  loudly and preserve local media (Tracks 1, 2, and Failure modes).
+- **Validation error UX — ADDRESSED.** Typed client failures map
+  400/401/403/404/409/413 to actionable banners or recovery sheets, while
+  unexpected response shapes fail loudly and preserve local media (Tracks 1,
+  2, and Failure modes).
 - **Partial migration / transition state — ADDRESSED.** Existing manifests
-  default missing format to `webm-opus`; web uploads remain compatible; native
-  audio waits for an advertised `m4a-aac` capability. Photos/files work against
-  the older route shape (Track 1).
+  default missing format to `webm-opus`; old mobile-device records default
+  `createdBy` to `null`; and web uploads remain compatible. Native capture waits
+  for both advertised capabilities and requires re-pairing an ownerless device
+  only on auth-enabled boxes (Track 1).
 - **Cross-box confusion — ADDRESSED.** Local manifests are keyed by paired-box
   ID and server staging ID; a full-screen capture holds an immutable box/session
   snapshot and disables switching (Tracks 2, 4, and 5).
@@ -486,9 +567,10 @@ not facts a box agent must recall. No knowledge-audit entry is needed.
 
 ## Implementation order
 
-1. Track 1 server audio-format contract, capabilities, and doctests.
-2. Track 1 mobile resume REST projection; migrate the web resume hook and its
-   tests off the removed tRPC procedure.
+1. Track 1 binary parser, audio-format contract, paired-device owner identity,
+   capabilities, and route/auth doctests.
+2. Track 1 mobile resume REST projection using unified request ownership;
+   migrate the web resume hook and its tests off the removed tRPC procedure.
 3. Track 2 native models, shared auth request builder, atomic local store, fake
    transport, and XCTest.
 4. Track 2 background upload coordinator and app-delegate completion wiring.
@@ -504,23 +586,28 @@ when the entire plan is complete.
 ## Rollout and verification
 
 - **Box-side automated:** focused capture doctests for schema defaulting,
-  format mismatch, M4A output, capability response, raw upload, resume auth
-  scoping, and web resume compatibility; then full callback-box test/typecheck/
-  lint.
+  format mismatch, M4A output, both capability fields, raw upload/parser
+  reachability, 50 MiB rejection, cookie/mobile owner equivalence, legacy-device
+  rejection, resume auth scoping, and web resume compatibility; then full
+  callback-box test/typecheck/lint.
 - **iOS automated:** XCTest for request construction, reducer transitions,
   local manifest recovery, background-task reconciliation, interruption,
-  resume/follow-up decisions, and image orientation; then the full
-  `CallbackBox` simulator suite.
+  interrupted-recording recovery, 404/409 follow-up decisions, size preflight,
+  format/extension matching, and image orientation; then the full `CallbackBox`
+  simulator suite.
 - **Simulator visual:** fake-state captures at compact phone, current phone, and
   iPad sizes; verify controls never overlap the safe area, recording/upload
   state does not resize the dock, and permission/recovery sheets fit.
 - **Real device:** pair to a test box; take repeated front/rear photos while
   recording; add gallery photos and files; background during recording; suspend
   during upload; disable networking and relaunch; interrupt with an audio-route
-  change; retry/finalize; verify the webview pending bubble and resulting capture
-  document. Repeat once against an old server to verify Record is disabled
-  rather than corrupting audio.
+  change; force-quit during one disposable recording; retry/finalize; verify the
+  webview pending bubble and resulting capture document. Repeat once against an
+  old server to verify native Capture is blocked with an update-server message
+  while ordinary composer attachments still work.
 - **Rollout compatibility:** deploy the server contract before installing the
   app build. Old web clients continue defaulting to `webm-opus`; new iOS clients
-  gate M4A recording on the create-response capability. No on-disk bulk
-  migration is needed because old manifests default on read.
+  gate native Capture on both create-response capabilities. Existing paired
+  devices on auth-enabled boxes must re-pair once so their device record gains
+  an owner; open local boxes continue accepting `null`. No on-disk bulk
+  migration is needed because old manifests and device records default on read.
