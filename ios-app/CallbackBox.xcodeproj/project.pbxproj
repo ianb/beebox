@@ -24,7 +24,13 @@
 		5A1000232C3C000100000001 /* PairingURLInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000252C3C000100000001 /* PairingURLInbox.swift */; };
 		5A1000272C3C000100000001 /* SpeechAnalyzerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */; };
 		5A1000292C3C000100000001 /* ComposerActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002A2C3C000100000001 /* ComposerActionsView.swift */; };
+		5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002E2C3C000100000001 /* CaptureModels.swift */; };
+		5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002F2C3C000100000001 /* CaptureAPI.swift */; };
+		5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000332C3C000100000001 /* CaptureStore.swift */; };
 		5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */; };
+		5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001132C3C000100000001 /* CaptureModelsTests.swift */; };
+		5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001142C3C000100000001 /* CaptureAPITests.swift */; };
+		5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000001 /* CaptureStoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,8 +63,14 @@
 		5A1000252C3C000100000001 /* PairingURLInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingURLInbox.swift; sourceTree = "<group>"; };
 		5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechAnalyzerSession.swift; sourceTree = "<group>"; };
 		5A10002A2C3C000100000001 /* ComposerActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerActionsView.swift; sourceTree = "<group>"; };
+		5A10002E2C3C000100000001 /* CaptureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModels.swift; sourceTree = "<group>"; };
+		5A10002F2C3C000100000001 /* CaptureAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPI.swift; sourceTree = "<group>"; };
+		5A1000332C3C000100000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
 		5A1001102C3C000100000001 /* CallbackBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CallbackBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywordsTests.swift; sourceTree = "<group>"; };
+		5A1001132C3C000100000001 /* CaptureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModelsTests.swift; sourceTree = "<group>"; };
+		5A1001142C3C000100000001 /* CaptureAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPITests.swift; sourceTree = "<group>"; };
+		5A1001152C3C000100000001 /* CaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +129,7 @@
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
+				5A10002E2C3C000100000001 /* CaptureModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -125,6 +138,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1000132C3C000100000001 /* PairedBoxStore.swift */,
+				5A1000332C3C000100000001 /* CaptureStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -150,6 +164,7 @@
 				5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */,
 				5A10001F2C3C000100000001 /* SpeechKeywords.swift */,
 				5A1000252C3C000100000001 /* PairingURLInbox.swift */,
+				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -158,6 +173,9 @@
 			isa = PBXGroup;
 			children = (
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
+				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
+				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
+				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
 			);
 			path = CallbackBoxTests;
 			sourceTree = "<group>";
@@ -277,6 +295,9 @@
 				5A1000232C3C000100000001 /* PairingURLInbox.swift in Sources */,
 				5A1000272C3C000100000001 /* SpeechAnalyzerSession.swift in Sources */,
 				5A1000292C3C000100000001 /* ComposerActionsView.swift in Sources */,
+				5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */,
+				5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */,
+				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +306,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */,
+				5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */,
+				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
+				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
