@@ -354,7 +354,7 @@ ssh "root@$SERVER_IP" "chown -R callback:callback $INSTALL_DIR"
 echo "Checking dependencies..."
 ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   set -e
-  # Bootstrap pnpm on demand. corepack ships with Node 22; this is idempotent
+  # Bootstrap pnpm on demand. corepack ships with Node 24; this is idempotent
   # and a no-op if pnpm is already on PATH.
   if ! command -v pnpm >/dev/null 2>&1; then
     echo "  Bootstrapping pnpm via corepack..."

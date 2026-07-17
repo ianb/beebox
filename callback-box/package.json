@@ -78,7 +78,7 @@
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/chokidar": "^1.7.5",
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.0.0",
     "@types/web-push": "^3.6.4",
     "agent-doctest": "workspace:*",
     "axe-core": "^4.11.4",
