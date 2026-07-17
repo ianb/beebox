@@ -248,7 +248,7 @@ area. Two standing rules, enforced in review rather than by tooling:
   carrying the malformed payload (or an escaped embedded document) — and
   `expected` records the lenient decoder outcome.
 - **Where does the audit cadence live?** Lean: a one-line entry in
-  `docs/maintenance.md` pointing here, rather than a scheduler artifact.
+  `docs/maintenance.md` pointing here, rather than a scheduler artifact. (Done 2026-07-17.)
 
 ## Implementation order
 
@@ -282,7 +282,7 @@ area. Two standing rules, enforced in review rather than by tooling:
 4. The pre-commit tripwire + anchor manifest. **(done 2026-07-17)** —
    `bin/mobile-contract-check.ts` + `.husky/commit-msg`, wired into
    `.husky/pre-commit`; manifest is §11 of `docs/mobile-contract.md`.
-5. `docs/maintenance.md` entry for the periodic audit.
+5. `docs/maintenance.md` entry for the periodic audit. **Done 2026-07-17.**
 
 Steps 1–2 are documentation; 3–4 are small code; each is independently
 useful — this plan does not block the Android plan's Track 0, which only needs
