@@ -56,13 +56,6 @@ struct NativeComposerView: View {
         }
         .background(.regularMaterial)
         .ignoresSafeArea(.container, edges: .bottom)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Send", systemImage: "arrow.up.circle.fill", action: send)
-                    .disabled(sendDisabled)
-            }
-        }
         .onAppear(perform: loadDraft)
         .onChange(of: text) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: draftKey)
