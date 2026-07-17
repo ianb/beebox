@@ -409,7 +409,10 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
       # npm_config_update_notifier=false: the "Update available!" banner is
       # noise in a deploy log (and agent context) on every run; updating pnpm
       # is a deliberate act, not something a deploy should advertise.
-      if HUSKY=0 npm_config_update_notifier=false pnpm install --frozen-lockfile; then
+      # CI=true: run non-interactively — without it pnpm aborts with
+      # ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY when it decides the modules
+      # dir must be recreated (e.g. after a Node major upgrade).
+      if HUSKY=0 npm_config_update_notifier=false CI=true pnpm install --frozen-lockfile; then
         return 0
       else
         rc=$?
