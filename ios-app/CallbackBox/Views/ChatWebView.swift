@@ -206,7 +206,7 @@ struct ChatWebView: UIViewRepresentable {
 
         private func receiveEmissionReceipt(_ body: Any) {
             guard
-                let payload = body as? [String: Any],
+                let payload = ChatWebView.dictionaryPayload(from: body),
                 let idString = payload["emissionId"] as? String,
                 let emissionID = UUID(uuidString: idString),
                 let dispositionString = payload["disposition"] as? String,
@@ -272,7 +272,7 @@ struct ChatWebView: UIViewRepresentable {
 
         private func receiveLocationResult(_ body: Any) {
             guard
-                let payload = body as? [String: Any],
+                let payload = ChatWebView.dictionaryPayload(from: body),
                 let idString = payload["id"] as? String,
                 let requestID = UUID(uuidString: idString),
                 requestID == inflightLocationRequestID,
@@ -341,6 +341,24 @@ struct ChatWebView: UIViewRepresentable {
         return "\(scheme)://\(host)"
     }
 
+    /// Script-message payloads arrive as a dictionary from legacy direct
+    /// `webkit.messageHandlers` posts and as a JSON string from the neutral
+    /// `callbackboxNativePost` transport; accept both.
+    static func dictionaryPayload(from body: Any) -> [String: Any]? {
+        if let payload = body as? [String: Any] {
+            return payload
+        }
+        guard
+            let string = body as? String,
+            let data = string.data(using: .utf8),
+            let parsed = try? JSONSerialization.jsonObject(with: data),
+            let payload = parsed as? [String: Any]
+        else {
+            return nil
+        }
+        return payload
+    }
+
     private func request() -> URLRequest {
         URLRequest(url: authenticatedChatURL)
     }
@@ -382,8 +400,14 @@ struct ChatWebView: UIViewRepresentable {
             window.callbackboxNativeLocationQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-share-location', { detail }));
           };
+          // Neutral web→native transport shared with the Android shell; the web
+          // layer prefers it over direct webkit.messageHandlers access.
+          // Keep in sync with callback-box/src/frontend/src/components/chat/native-post.ts.
+          window.callbackboxNativePost = (channel, payload) => {
+            try { window.webkit.messageHandlers[channel].postMessage(payload); } catch (_) {}
+          };
           const post = () => {
-            try { window.webkit.messageHandlers.callbackboxSession.postMessage(window.location.href); } catch (_) {}
+            window.callbackboxNativePost('callbackboxSession', window.location.href);
           };
           const wrap = (name) => {
             const original = history[name];

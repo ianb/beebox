@@ -41,6 +41,22 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertNil(queryItems.first { $0.name == "embed" })
     }
 
+    func testDictionaryPayloadAcceptsLegacyObjectAndNeutralStringForms() {
+        let legacy = ChatWebView.dictionaryPayload(from: ["disposition": "sent", "emissionId": "abc"])
+        XCTAssertEqual(legacy?["disposition"] as? String, "sent")
+        XCTAssertEqual(legacy?["emissionId"] as? String, "abc")
+
+        let neutral = ChatWebView.dictionaryPayload(
+            from: #"{"disposition":"rejected","emissionId":"abc","reason":"Invalid native message"}"#
+        )
+        XCTAssertEqual(neutral?["disposition"] as? String, "rejected")
+        XCTAssertEqual(neutral?["reason"] as? String, "Invalid native message")
+
+        XCTAssertNil(ChatWebView.dictionaryPayload(from: "not json"))
+        XCTAssertNil(ChatWebView.dictionaryPayload(from: #"["array","not","object"]"#))
+        XCTAssertNil(ChatWebView.dictionaryPayload(from: 42))
+    }
+
     func testVisibleChatSessionParsing() {
         XCTAssertEqual(
             ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?embed=1&session=abc123")!),

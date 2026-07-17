@@ -192,10 +192,18 @@ the contract.
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
-- **Web posts via the iOS-specific `window.webkit.messageHandlers.<channel>.postMessage(...)` path**
-  — VERIFIED in `src/frontend/src/components/chat/use-native-bridge.ts` (`postNativeReceipt`,
-  `postNativeLocationResult`). This is the one place the web side is **not** platform-agnostic
-  today; Android will require a contract change (see §9 and §10).
+- **Web posts via the platform-neutral `window.callbackboxNativePost(channel, payload)`** (since
+  2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+  defines the function; payloads always cross the neutral path as **strings** (`Receipt` and
+  location-result objects are `JSON.stringify`-ed; the session href is passed through as-is). Web
+  side: `src/frontend/src/components/chat/native-post.ts` · `postNativeMessage`, called from
+  `use-native-bridge.ts` (`postNativeReceipt`, `postNativeLocationResult`). **Transitional
+  fallback:** when the neutral function is absent (an installed iOS build that predates it), the web
+  falls back to the legacy `window.webkit.messageHandlers.<channel>.postMessage(<object>)` form;
+  remove once the neutral iOS build is the installed floor. iOS-side, the startup script in
+  `Views/ChatWebView.swift` defines `callbackboxNativePost` (routing to
+  `webkit.messageHandlers[channel]`), and the native handlers accept **both** the legacy object form
+  and the neutral JSON-string form (`ChatWebView.dictionaryPayload(from:)`).
 
 ### 3.4 Navigation policy
 
@@ -379,9 +387,9 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session][&mobileToken]` | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `authenticatedChatURL` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `callbackboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
 | B1 | Native emission | native→web | `{id,text,origin,diarized,images:[{id,mimeType,dataBase64}]}` via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Views/ChatWebView.swift` · `NativeEmissionPayload`; `Models/ChatImageAttachment.swift` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` | SILENT |
-| B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `callbackboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
+| B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `callbackboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location request | native→web | `callbackboxNativeShareLocation("<uuid>")`, queue `callbackboxNativeLocationQueue`, event `callbackbox:native-share-location`, detail `{id}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
-| B4 | Location result | web→native | `{id,success,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationResult` | LOUD |
+| B4 | Location result | web→native | `{id,success,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD / SILENT if float-WAV mis-decoded — **I8** |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
@@ -412,7 +420,10 @@ without the other is a contract break.
   script in `Views/ChatWebView.swift` ↔ `use-native-bridge.ts`.
 - **Script-message channel names** `callbackboxSession` / `callbackboxEmissionReceipt` /
   `callbackboxLocationResult` — `Views/ChatWebView.swift` (`userContentController.add`) ↔
-  `use-native-bridge.ts` (`window.webkit.messageHandlers.<name>`).
+  `native-post.ts` · `NativeShellChannel`.
+- **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
+  startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
+  legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
 
 ---
 
@@ -469,11 +480,12 @@ startup script** the client injects — the same slot the iOS app uses to define
 the web-side JS stay platform-agnostic: web code reads/writes the queues and dispatches the
 CustomEvents, blind to how the native side is wired.
 
-**One web-side wrinkle to fix.** Today the web side is *not* fully platform-agnostic on the return
-path: `use-native-bridge.ts` (`postNativeReceipt`, `postNativeLocationResult`) posts receipts and
-location results through the iOS-specific `window.webkit.messageHandlers.<channel>.postMessage(...)`
-path. VERIFIED in source. An Android client cannot receive on that path, so the Android work must
-change the web side to post through a platform-neutral shim (e.g. a native-provided
-`window.callbackboxPost(channel, payload)` defined by each platform's startup script, with the web
-side calling the shim instead of `window.webkit.messageHandlers` directly). That is itself a
-contract change and must update §3.3, §8, and the relevant §7 rows (B2, B4) in the same commit.
+**The return path is now platform-neutral (Track 0, landed 2026-07-17).** The web side posts
+through `window.callbackboxNativePost(channel, payload)` (§3.3) with a transitional fallback to the
+legacy `webkit.messageHandlers` object form for pre-neutral iOS builds. A new platform therefore
+defines `callbackboxNativePost` in its own document-start script and routes however its WebView
+delivers messages — the Android plan's shape is a single `{"channel", "payload"}` JSON-string
+envelope through an `androidx.webkit` `WebMessageListener` object, plus an optional
+`window.webkit.messageHandlers` compatibility façade so the shell also works against a box whose
+web code predates Track 0 (see `docs/plans/android-companion-app.md` Track 0). Payloads on the
+neutral path are strings; receipt and location-result payloads are JSON, the session href is raw.
