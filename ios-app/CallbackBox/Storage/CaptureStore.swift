@@ -6,6 +6,11 @@ struct CaptureUploadCandidate: Equatable, Sendable {
     var itemID: UUID
 }
 
+struct CaptureUploadPayload: Sendable {
+    var item: CaptureItem
+    var fileURL: URL
+}
+
 actor CaptureStore {
     static let maximumUploadBytes: Int64 = 50 * 1024 * 1024
     static let maximumUploadAttempts = 4
@@ -157,6 +162,24 @@ actor CaptureStore {
         return metadata
     }
 
+    func uploadPayload(for candidate: CaptureUploadCandidate) throws -> CaptureUploadPayload {
+        let item = try item(
+            boxID: candidate.boxID,
+            sessionID: candidate.sessionID,
+            itemID: candidate.itemID
+        )
+        guard item.state == .local else {
+            throw CaptureFailure.invalidTransition(from: item.state, to: .uploading(taskIdentifier: 0))
+        }
+        let url = payloadURL(
+            boxID: candidate.boxID,
+            sessionID: candidate.sessionID,
+            filename: item.filename
+        )
+        _ = try preflightPayload(at: url)
+        return CaptureUploadPayload(item: item, fileURL: url)
+    }
+
     @discardableResult
     func acknowledgeUpload(metadata: CaptureBackgroundTaskMetadata, taskIdentifier: Int) throws -> Bool {
         var manifest = try requiredManifest(boxID: metadata.boxID, sessionID: metadata.sessionID)
@@ -222,10 +245,32 @@ actor CaptureStore {
         }
     }
 
-    func reconcileBackgroundTasks(_ tasks: [CaptureBackgroundTask]) throws -> [CaptureUploadCandidate] {
+    @discardableResult
+    func cancelUpload(metadata: CaptureBackgroundTaskMetadata, taskIdentifier: Int) throws -> Bool {
+        var manifest = try requiredManifest(boxID: metadata.boxID, sessionID: metadata.sessionID)
+        let index = try itemIndex(in: manifest, itemID: metadata.itemID)
+        let item = manifest.items[index]
+        guard
+            item.uploadGeneration == metadata.generation,
+            item.state == .uploading(taskIdentifier: taskIdentifier)
+        else {
+            return false
+        }
+        manifest.items[index].state = .local
+        try write(manifest)
+        return true
+    }
+
+    func reconcileBackgroundTasks(
+        _ tasks: [CaptureBackgroundTask],
+        boxID selectedBoxID: UUID? = nil
+    ) throws -> [CaptureUploadCandidate] {
         let tasksByIdentifier = Dictionary(uniqueKeysWithValues: tasks.map { ($0.taskIdentifier, $0.metadata) })
         var candidates: [CaptureUploadCandidate] = []
         for var manifest in try loadAllManifests() {
+            guard selectedBoxID == nil || manifest.boxID == selectedBoxID else {
+                continue
+            }
             var changed = false
             for index in manifest.items.indices {
                 let item = manifest.items[index]

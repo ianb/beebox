@@ -27,10 +27,12 @@
 		5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002E2C3C000100000001 /* CaptureModels.swift */; };
 		5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002F2C3C000100000001 /* CaptureAPI.swift */; };
 		5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000332C3C000100000001 /* CaptureStore.swift */; };
+		5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */; };
 		5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */; };
 		5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001132C3C000100000001 /* CaptureModelsTests.swift */; };
 		5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001142C3C000100000001 /* CaptureAPITests.swift */; };
 		5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000001 /* CaptureStoreTests.swift */; };
+		5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,11 +68,13 @@
 		5A10002E2C3C000100000001 /* CaptureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModels.swift; sourceTree = "<group>"; };
 		5A10002F2C3C000100000001 /* CaptureAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPI.swift; sourceTree = "<group>"; };
 		5A1000332C3C000100000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
+		5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinator.swift; sourceTree = "<group>"; };
 		5A1001102C3C000100000001 /* CallbackBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CallbackBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywordsTests.swift; sourceTree = "<group>"; };
 		5A1001132C3C000100000001 /* CaptureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModelsTests.swift; sourceTree = "<group>"; };
 		5A1001142C3C000100000001 /* CaptureAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPITests.swift; sourceTree = "<group>"; };
 		5A1001152C3C000100000001 /* CaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStoreTests.swift; sourceTree = "<group>"; };
+		5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinatorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -165,6 +169,7 @@
 				5A10001F2C3C000100000001 /* SpeechKeywords.swift */,
 				5A1000252C3C000100000001 /* PairingURLInbox.swift */,
 				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
+				5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -176,6 +181,7 @@
 				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
+				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 			);
 			path = CallbackBoxTests;
 			sourceTree = "<group>";
@@ -298,6 +304,7 @@
 				5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */,
 				5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */,
 				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
+				5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -309,6 +316,7 @@
 				5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */,
 				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
+				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
