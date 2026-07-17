@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import CallbackBox
 
 final class SpeechKeywordsTests: XCTestCase {
@@ -137,5 +138,24 @@ final class SpeechKeywordsTests: XCTestCase {
     func testAtStartPreventsMidUtteranceMatches() {
         XCTAssertNil(SpeechKeywords.detect("please send message", atStart: true))
         XCTAssertEqual(SpeechKeywords.detect("send message please", atStart: true)?.action, .send)
+    }
+}
+
+final class CameraImageEncoderTests: XCTestCase {
+    func testJPEGDataFlattensImageOrientation() throws {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let source = UIGraphicsImageRenderer(size: CGSize(width: 12, height: 20), format: format).image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 12, height: 20))
+        }
+        let cgImage = try XCTUnwrap(source.cgImage)
+        let rotated = UIImage(cgImage: cgImage, scale: 1, orientation: .right)
+
+        let encoded = try XCTUnwrap(CameraImageEncoder.jpegData(from: rotated))
+        let decoded = try XCTUnwrap(UIImage(data: encoded))
+
+        XCTAssertEqual(decoded.imageOrientation, .up)
+        XCTAssertEqual(decoded.size, rotated.size)
     }
 }

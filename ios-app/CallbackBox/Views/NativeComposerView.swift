@@ -40,7 +40,7 @@ struct NativeComposerView: View {
             HStack(alignment: .bottom, spacing: 10) {
                 composerButton(
                     systemImage: "plus",
-                    accessibilityLabel: "Add and settings",
+                    accessibilityLabel: "Add",
                     action: { showingActions = true }
                 )
                 .disabled(isSending)
@@ -129,31 +129,16 @@ struct NativeComposerView: View {
         }
     }
 
-    @ViewBuilder
     private var textEntry: some View {
-        if focused || text.isEmpty == false {
-            TextField("Type...", text: $text, axis: .vertical)
-                .focused($focused)
-                .lineLimit(1...5)
-                .font(.body)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .frame(minHeight: 58)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-        } else {
-            Button {
-                focused = true
-            } label: {
-                Text("Type...")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-            }
-            .buttonStyle(.plain)
+        TextField("Type...", text: $text, axis: .vertical)
+            .focused($focused)
+            .lineLimit(1...5)
+            .font(.body)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(minHeight: 58)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
             .accessibilityLabel("Type a message")
-        }
     }
 
     @ViewBuilder
@@ -169,7 +154,7 @@ struct NativeComposerView: View {
                 foregroundStyle: .red,
                 action: { dictation.stop() }
             )
-        } else if hasSendableContent {
+        } else if hasTextContent {
             composerButton(
                 systemImage: "arrow.up",
                 accessibilityLabel: "Send",
@@ -177,13 +162,28 @@ struct NativeComposerView: View {
                 backgroundStyle: Color.accentColor,
                 action: send
             )
+        } else if images.isEmpty == false {
+            HStack(spacing: 10) {
+                microphoneButton
+                composerButton(
+                    systemImage: "arrow.up",
+                    accessibilityLabel: "Send photo",
+                    foregroundStyle: .white,
+                    backgroundStyle: Color.accentColor,
+                    action: send
+                )
+            }
         } else {
-            composerButton(
-                systemImage: "mic.fill",
-                accessibilityLabel: "Start dictation",
-                action: { dictation.toggle(currentText: text) }
-            )
+            microphoneButton
         }
+    }
+
+    private var microphoneButton: some View {
+        composerButton(
+            systemImage: "mic.fill",
+            accessibilityLabel: "Start dictation",
+            action: { dictation.toggle(currentText: text) }
+        )
     }
 
     private func composerButton(
@@ -324,7 +324,11 @@ struct NativeComposerView: View {
     }
 
     private var hasSendableContent: Bool {
-        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false || images.isEmpty == false
+        hasTextContent || images.isEmpty == false
+    }
+
+    private var hasTextContent: Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
     }
 
     private var sendDisabled: Bool {
@@ -394,7 +398,7 @@ struct NativeComposerView: View {
     }
 
     private func appendCameraImage(_ image: UIImage) {
-        guard images.count < 4, let data = image.jpegData(compressionQuality: 0.85) else {
+        guard images.count < 4, let data = CameraImageEncoder.jpegData(from: image) else {
             return
         }
         images.append(
@@ -404,6 +408,21 @@ struct NativeComposerView: View {
                 dataBase64: data.base64EncodedString()
             )
         )
+    }
+}
+
+enum CameraImageEncoder {
+    static func jpegData(from image: UIImage) -> Data? {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = true
+        let bounds = CGRect(origin: .zero, size: image.size)
+        let uprightImage = UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
+            UIColor.white.setFill()
+            UIRectFill(bounds)
+            image.draw(in: bounds)
+        }
+        return uprightImage.jpegData(compressionQuality: 0.85)
     }
 }
 
