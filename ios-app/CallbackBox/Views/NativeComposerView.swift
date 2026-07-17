@@ -31,8 +31,6 @@ struct NativeComposerView: View {
                     .focused($focused)
                     .lineLimit(1...5)
                     .textFieldStyle(.roundedBorder)
-                    .submitLabel(.send)
-                    .onSubmit(send)
 
                 PhotosPicker(
                     selection: $selectedPhotoItems,
@@ -99,6 +97,13 @@ struct NativeComposerView: View {
             }
         }
         .background(.regularMaterial)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Send", systemImage: "arrow.up.circle.fill", action: send)
+                    .disabled(sendDisabled)
+            }
+        }
         .onAppear(perform: loadDraft)
         .onChange(of: text) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: draftKey)
