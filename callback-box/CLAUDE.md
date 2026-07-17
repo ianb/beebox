@@ -139,6 +139,8 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Card format reference | `docs/cards-as-markdown.md` |
 | Card format design history (RFC) | `docs/implemented-plans/cards-as-markdown-rfc.md` |
 | Box migration runbook | `docs/migrations.md` |
+| Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
+| Mobile parity matrix (iOS vs Android capabilities) | `docs/mobile-parity.md` |
 | Card validation hooks | `docs/card-validation.md` |
 | Adding API endpoints | `docs/adding-api-endpoints.md` |
 | Connectors | `docs/connectors.md` |
