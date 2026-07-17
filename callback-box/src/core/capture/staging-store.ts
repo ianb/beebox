@@ -18,6 +18,8 @@ import { z } from "zod";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { handleStagingUploadReplay } from "./upload-replay.js";
+import { StagingPathError, StagingSessionGoneError } from "./staging-errors.js";
 import {
   CaptureAudioFormatSchema,
   M4ASegmentFileCountError,
@@ -87,22 +89,6 @@ const StagingSessionSchema = z.object({
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
 });
 export type StagingSession = z.infer<typeof StagingSessionSchema>;
-
-/** Raised when a session vanished between read and write (e.g. cancelled). */
-export class StagingSessionGoneError extends Error {
-  constructor(id: string) {
-    super(`Staging session ${id} disappeared during a mutation`);
-    this.name = "StagingSessionGoneError";
-  }
-}
-
-/** Raised when an upload filename would escape the session directory. */
-export class StagingPathError extends Error {
-  constructor(filename: string) {
-    super(`Unsafe staging filename: ${filename}`);
-    this.name = "StagingPathError";
-  }
-}
 
 export function stagingBaseDir(boxRoot: string): string {
   return path.join(boxRoot, "tmp", "capture-staging");
@@ -221,6 +207,12 @@ async function mutateSession(opts: {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
     if (media) {
+      const mediaPath = resolveStagedFile({ boxRoot, id, filename: media.filename });
+      if (await handleStagingUploadReplay({ session, mediaPath, ...media })) {
+        session.lastActivityAt = getBoxTimeISO(boxRoot);
+        await writeStagingSession({ boxRoot, session });
+        return;
+      }
       enforceStagingLimits({ session, incomingBytes: media.buffer.length });
       mutate(session);
       await fs.writeFile(resolveStagedFile({ boxRoot, id, filename: media.filename }), media.buffer);

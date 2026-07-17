@@ -6,13 +6,17 @@ import {
   addPhoto,
   readStagingSession,
   resolveStagedFile,
-  StagingPathError,
 } from "../../core/capture/staging-store.js";
+import {
+  StagingPathError,
+  StagingUploadReplayConflictError,
+} from "../../core/capture/staging-errors.js";
 import {
   CaptureAudioFormatSchema,
   isCaptureAudioFormatError,
 } from "../../core/capture/audio-format.js";
 import { isStagingLimitError } from "../../core/capture/staging-limits.js";
+import { authorizeCaptureSessionOwner } from "../capture-request-owner.js";
 
 type UploadKind = "audio" | "photo" | "file";
 type CaptureUploadRequest = FastifyRequest<{ Params: { id: string } }>;
@@ -39,6 +43,10 @@ export async function handleCaptureUpload(opts: {
   const { boxRoot, request, reply } = opts;
   const session = await readStagingSession({ boxRoot, id: request.params.id });
   if (!session) return reply.status(404).send({ error: "Session not found" });
+  const authorization = authorizeCaptureSessionOwner({ boxRoot, request, createdBy: session.createdBy });
+  if (authorization.status === "rejected") {
+    return reply.status(authorization.statusCode).send({ error: authorization.error });
+  }
   if (session.state !== "open") {
     return reply
       .status(409)
@@ -118,6 +126,9 @@ export async function handleCaptureUpload(opts: {
   } catch (error) {
     if (isStagingLimitError(error)) return reply.status(413).send({ error: error.message });
     if (isCaptureAudioFormatError(error)) {
+      return reply.status(409).send({ error: error.message });
+    }
+    if (error instanceof StagingUploadReplayConflictError) {
       return reply.status(409).send({ error: error.message });
     }
     throw error;

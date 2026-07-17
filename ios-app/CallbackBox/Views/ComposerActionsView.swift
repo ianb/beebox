@@ -5,7 +5,9 @@ import UIKit
 struct ComposerActionsView: View {
     @EnvironmentObject private var store: PairedBoxStore
     @Binding var selectedPhotoItems: [PhotosPickerItem]
+    var canCapture: Bool
     var canTakePhoto: Bool
+    var onCapture: () -> Void
     var onTakePhoto: () -> Void
     var onShareLocation: () -> Void
     var onPairBox: () -> Void
@@ -14,6 +16,19 @@ struct ComposerActionsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Capture") {
+                    Button(action: onCapture) {
+                        Label("Capture", systemImage: "viewfinder")
+                    }
+                    .disabled(canCapture == false)
+
+                    if canCapture == false {
+                        Text("Send a message first")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Add") {
                     Button(action: onTakePhoto) {
                         Label("Take Photo", systemImage: "camera")

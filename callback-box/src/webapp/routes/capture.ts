@@ -26,7 +26,10 @@ import {
 } from "../../core/capture/staging-store.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "../../core/capture/prepare.js";
 import { selectResumableCaptures } from "../../core/capture/pending.js";
-import { resolveCaptureRequestOwner } from "../capture-request-owner.js";
+import {
+  authorizeCaptureSessionOwner,
+  resolveCaptureRequestOwner,
+} from "../capture-request-owner.js";
 import { resumeStagingSessions } from "../../core/capture/resume.js";
 import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
@@ -179,6 +182,14 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
       const session = await readStagingSession({ boxRoot, id: request.params.id });
       if (!session) return reply.status(404).send({ error: "Session not found" });
+      const authorization = authorizeCaptureSessionOwner({
+        boxRoot,
+        request,
+        createdBy: session.createdBy,
+      });
+      if (authorization.status === "rejected") {
+        return reply.status(authorization.statusCode).send({ error: authorization.error });
+      }
       await cleanupStagingSession({ boxRoot, id: session.id });
       return { success: true };
     },
@@ -193,6 +204,14 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
       const session = await readStagingSession({ boxRoot, id: request.params.id });
       if (!session) return reply.status(404).send({ error: "Session not found" });
+      const authorization = authorizeCaptureSessionOwner({
+        boxRoot,
+        request,
+        createdBy: session.createdBy,
+      });
+      if (authorization.status === "rejected") {
+        return reply.status(authorization.statusCode).send({ error: authorization.error });
+      }
 
       const runtime = getChatRuntime(boxRoot);
       if (!runtime) {

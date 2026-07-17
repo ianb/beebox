@@ -1,7 +1,7 @@
 # Native iOS capture mode
 
-**Status:** active — reviewed and ready to implement; the review findings in
-`ios-native-capture-mode.review.md` are incorporated below.
+**Status:** active — implemented; automated and simulator verification pass,
+with the real-device acceptance checklist still pending.
 
 This plan adds a native, full-screen capture mode to the iOS companion app. It
 reuses the box's existing capture staging, preparation, delivery, and pending

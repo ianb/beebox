@@ -6,6 +6,10 @@ final class CallbackBoxAppDelegate: NSObject, UIApplicationDelegate {
         handleEventsForBackgroundURLSession identifier: String,
         completionHandler: @escaping () -> Void
     ) {
+        guard identifier == CaptureBackgroundSession.identifier else {
+            completionHandler()
+            return
+        }
         CaptureBackgroundEvents.shared.accept(
             identifier: identifier,
             completionHandler: completionHandler

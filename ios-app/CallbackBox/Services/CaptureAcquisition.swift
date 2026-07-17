@@ -133,11 +133,11 @@ enum CaptureImageNormalizer {
         }
         switch alphaInfo {
         case .first, .last, .premultipliedFirst, .premultipliedLast:
-            true
+            return true
         case .none, .noneSkipFirst, .noneSkipLast, .alphaOnly:
-            false
+            return false
         @unknown default:
-            true
+            return true
         }
     }
 }
@@ -388,6 +388,55 @@ final class CaptureCamera: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var errorMessage: String?
 
+    private let pipeline = CaptureCameraPipeline()
+
+    var session: AVCaptureSession { pipeline.session }
+
+    func start() async throws {
+        guard await requestCameraPermission() else {
+            throw CaptureAcquisitionError.cameraPermissionDenied
+        }
+        try await pipeline.start(position: position)
+        isRunning = true
+        errorMessage = nil
+    }
+
+    func stop() async {
+        await pipeline.stop()
+        isRunning = false
+    }
+
+    func switchCamera() async throws {
+        let next: CaptureCameraPosition = position == .environment ? .user : .environment
+        try await pipeline.switchCamera(from: position, to: next)
+        position = next
+    }
+
+    func capturePhoto(into sink: any CaptureAcquisitionSink) async throws -> CaptureItem {
+        let source = position.source
+        let data = try await pipeline.capturePhotoData()
+        return try await CaptureGalleryImporter.importData(data, source: source, into: sink)
+    }
+
+    func handleSceneBackgrounding() {
+        Task { await stop() }
+    }
+
+    private func requestCameraPermission() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            return true
+        case .notDetermined:
+            return await AVCaptureDevice.requestAccess(for: .video)
+        case .denied, .restricted:
+            return false
+        @unknown default:
+            return false
+        }
+    }
+}
+
+private final class CaptureCameraPipeline: @unchecked Sendable {
     let session = AVCaptureSession()
 
     private let photoOutput = AVCapturePhotoOutput()
@@ -395,15 +444,11 @@ final class CaptureCamera: ObservableObject {
     private var currentInput: AVCaptureDeviceInput?
     private var delegates: [Int64: CapturePhotoDelegate] = [:]
 
-    func start() async throws {
-        guard await requestCameraPermission() else {
-            throw CaptureAcquisitionError.cameraPermissionDenied
-        }
-        let requestedPosition = position
+    func start(position: CaptureCameraPosition) async throws {
         try await withCheckedThrowingContinuation { continuation in
             sessionQueue.async { [self] in
                 do {
-                    try configureIfNeeded(position: requestedPosition)
+                    try configureIfNeeded(position: position)
                     if session.isRunning == false {
                         session.startRunning()
                     }
@@ -413,8 +458,6 @@ final class CaptureCamera: ObservableObject {
                 }
             }
         }
-        isRunning = true
-        errorMessage = nil
     }
 
     func stop() async {
@@ -426,35 +469,22 @@ final class CaptureCamera: ObservableObject {
                 continuation.resume()
             }
         }
-        isRunning = false
     }
 
-    func switchCamera() async throws {
-        let next: CaptureCameraPosition = position == .environment ? .user : .environment
+    func switchCamera(from current: CaptureCameraPosition, to next: CaptureCameraPosition) async throws {
         try await withCheckedThrowingContinuation { continuation in
             sessionQueue.async { [self] in
                 do {
-                    try replaceInput(position: next)
+                    try replaceInput(from: current, to: next)
                     continuation.resume()
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
-        position = next
     }
 
-    func capturePhoto(into sink: any CaptureAcquisitionSink) async throws -> CaptureItem {
-        let source = position.source
-        let data = try await capturePhotoData()
-        return try await CaptureGalleryImporter.importData(data, source: source, into: sink)
-    }
-
-    func handleSceneBackgrounding() {
-        Task { await stop() }
-    }
-
-    private func capturePhotoData() async throws -> Data {
+    func capturePhotoData() async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in
             sessionQueue.async { [self] in
                 let settings: AVCapturePhotoSettings
@@ -488,7 +518,7 @@ final class CaptureCamera: ObservableObject {
         session.addOutput(photoOutput)
     }
 
-    private func replaceInput(position: CaptureCameraPosition) throws {
+    private func replaceInput(from current: CaptureCameraPosition, to next: CaptureCameraPosition) throws {
         session.beginConfiguration()
         defer { session.commitConfiguration() }
         if let currentInput {
@@ -496,15 +526,19 @@ final class CaptureCamera: ObservableObject {
             self.currentInput = nil
         }
         do {
-            try addInput(position: position)
+            try addInput(position: next)
         } catch {
-            try? addInput(position: self.position)
+            try? addInput(position: current)
             throw error
         }
     }
 
     private func addInput(position: CaptureCameraPosition) throws {
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position.devicePosition) else {
+        guard let device = AVCaptureDevice.default(
+            .builtInWideAngleCamera,
+            for: .video,
+            position: position.devicePosition
+        ) else {
             throw CaptureAcquisitionError.cameraUnavailable
         }
         let input = try AVCaptureDeviceInput(device: device)
@@ -513,19 +547,6 @@ final class CaptureCamera: ObservableObject {
         }
         session.addInput(input)
         currentInput = input
-    }
-
-    private func requestCameraPermission() async -> Bool {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            true
-        case .notDetermined:
-            await AVCaptureDevice.requestAccess(for: .video)
-        case .denied, .restricted:
-            false
-        @unknown default:
-            false
-        }
     }
 }
 
@@ -639,7 +660,7 @@ enum CaptureAudioEvent: Equatable {
 
 @MainActor
 final class CaptureAudioRecorder: ObservableObject {
-    static let softLimitBytes: Int64 = 48 * 1024 * 1024
+    nonisolated static let softLimitBytes: Int64 = 48 * 1024 * 1024
     static let settings: [String: Any] = [
         AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
         AVSampleRateKey: 44_100,
@@ -790,7 +811,7 @@ final class CaptureAudioRecorder: ObservableObject {
         await stop(reason: .background)
     }
 
-    static func shouldSoftStop(byteCount: Int64) -> Bool {
+    nonisolated static func shouldSoftStop(byteCount: Int64) -> Bool {
         byteCount >= softLimitBytes
     }
 

@@ -12,6 +12,21 @@ struct RootView: View {
 
     var body: some View {
         Group {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--capture-fixture=") }) {
+                NativeCaptureFixtureScreen()
+            } else {
+                rootContent
+            }
+            #else
+            rootContent
+            #endif
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        Group {
             if let box = store.selectedBox {
                 let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
                 ChatWebView(
@@ -38,6 +53,7 @@ struct RootView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     NativeComposerView(
                         box: composerBox,
+                        captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
                         emissionReceipt: nativeEmissionReceipt,
                         locationShareResult: locationShareResult,
                         onSendEmission: { emission in

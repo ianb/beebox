@@ -14,6 +14,7 @@ struct CaptureUploadPayload: Sendable {
 actor CaptureStore {
     static let maximumUploadBytes: Int64 = 50 * 1024 * 1024
     static let maximumUploadAttempts = 4
+    static let interruptedRecordingMessage = "Recording was interrupted before it could be completed."
 
     private let rootURL: URL
     private let fileManager: FileManager
@@ -308,6 +309,120 @@ actor CaptureStore {
             throw CaptureFailure.payloadTooLarge(byteCount: byteCount)
         }
         return byteCount
+    }
+
+    func retryFailedUploads(boxID: UUID, sessionID: CaptureSessionID) throws -> [CaptureUploadCandidate] {
+        var manifest = try requiredManifest(boxID: boxID, sessionID: sessionID)
+        var candidates: [CaptureUploadCandidate] = []
+        for index in manifest.items.indices {
+            guard case .failed = manifest.items[index].state else {
+                continue
+            }
+            let item = manifest.items[index]
+            if case .failed(let message) = item.state, message == Self.interruptedRecordingMessage {
+                continue
+            }
+            let url = payloadURL(boxID: boxID, sessionID: sessionID, filename: item.filename)
+            guard fileManager.fileExists(atPath: url.path) else {
+                continue
+            }
+            manifest.items[index].state = .local
+            candidates.append(candidate(manifest: manifest, itemID: item.id))
+        }
+        try write(manifest)
+        return candidates
+    }
+
+    @discardableResult
+    func markInterruptedRecordings(boxID: UUID, sessionID: CaptureSessionID) throws -> Int {
+        var manifest = try requiredManifest(boxID: boxID, sessionID: sessionID)
+        var interruptedCount = 0
+        for index in manifest.items.indices where manifest.items[index].state == .recording {
+            manifest.items[index].state = .failed(message: Self.interruptedRecordingMessage)
+            interruptedCount += 1
+        }
+        if interruptedCount > 0 {
+            try write(manifest)
+        }
+        return interruptedCount
+    }
+
+    func moveUnacknowledgedItems(
+        boxID: UUID,
+        from sourceSessionID: CaptureSessionID,
+        to destinationSessionID: CaptureSessionID
+    ) throws {
+        var source = try requiredManifest(boxID: boxID, sessionID: sourceSessionID)
+        var destination = try requiredManifest(boxID: boxID, sessionID: destinationSessionID)
+        let movable = source.items.filter { item in
+            switch item.state {
+            case .local, .failed:
+                true
+            case .recording, .uploading, .uploaded:
+                false
+            }
+        }
+        guard source.items.contains(where: { if case .uploading = $0.state { true } else { false } }) == false else {
+            throw CaptureFailure.invalidManifest("Cancel active uploads before creating a follow-up capture.")
+        }
+        guard movable.isEmpty == false else {
+            return
+        }
+
+        let duplicate = movable.first { item in destination.items.contains(where: { $0.id == item.id }) }
+        guard duplicate == nil else {
+            throw CaptureFailure.invalidManifest("The follow-up capture already contains an item being moved.")
+        }
+
+        var copiedURLs: [URL] = []
+        do {
+            for item in movable {
+                let sourceURL = payloadURL(
+                    boxID: boxID,
+                    sessionID: sourceSessionID,
+                    filename: item.filename
+                )
+                _ = try preflightPayload(at: sourceURL)
+                let destinationURL = payloadURL(
+                    boxID: boxID,
+                    sessionID: destinationSessionID,
+                    filename: item.filename
+                )
+                try fileManager.createDirectory(
+                    at: destinationURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try fileManager.copyItem(at: sourceURL, to: destinationURL)
+                copiedURLs.append(destinationURL)
+                var movedItem = item
+                movedItem.state = .local
+                movedItem.uploadGeneration = 0
+                destination.items.append(movedItem)
+            }
+            try write(destination)
+            let movedIDs = Set(movable.map(\.id))
+            source.items.removeAll { movedIDs.contains($0.id) }
+            try write(source)
+            for item in movable {
+                let sourceURL = payloadURL(
+                    boxID: boxID,
+                    sessionID: sourceSessionID,
+                    filename: item.filename
+                )
+                try? fileManager.removeItem(at: sourceURL)
+            }
+        } catch {
+            copiedURLs.forEach { try? fileManager.removeItem(at: $0) }
+            throw error
+        }
+    }
+
+    func deleteCapture(boxID: UUID, sessionID: CaptureSessionID) throws {
+        try validate(sessionID: sessionID)
+        let directory = sessionDirectory(boxID: boxID, sessionID: sessionID)
+        if fileManager.fileExists(atPath: directory.path) {
+            try fileManager.removeItem(at: directory)
+        }
     }
 
     private func requiredManifest(boxID: UUID, sessionID: CaptureSessionID) throws -> CaptureManifest {

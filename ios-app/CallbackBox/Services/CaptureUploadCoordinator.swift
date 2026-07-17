@@ -137,7 +137,7 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
                 continue
             }
             task.cancel()
-            try? await store.cancelUpload(metadata: metadata, taskIdentifier: task.taskIdentifier)
+            _ = try? await store.cancelUpload(metadata: metadata, taskIdentifier: task.taskIdentifier)
         }
     }
 
@@ -237,6 +237,84 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
         case .ignoredStaleCompletion:
             break
         }
+    }
+}
+
+final class CaptureUploadRuntime: @unchecked Sendable {
+    static let shared = CaptureUploadRuntime()
+
+    let store: CaptureStore
+
+    private let lock = NSLock()
+    private var boxes: [UUID: PairedBox] = [:]
+    private var observers: [UUID: @Sendable (CaptureUploadEvent) -> Void] = [:]
+    private var isStarting = false
+    private lazy var coordinator = CaptureUploadCoordinator(
+        boxProvider: { [weak self] boxID in self?.box(for: boxID) },
+        store: store,
+        eventHandler: { [weak self] event in self?.publish(event) }
+    )
+
+    init(store: CaptureStore = CaptureStore()) {
+        self.store = store
+    }
+
+    func updateBoxes(_ boxes: [PairedBox]) {
+        lock.withLock {
+            self.boxes = Dictionary(uniqueKeysWithValues: boxes.map { ($0.id, $0) })
+        }
+    }
+
+    func updateBox(_ box: PairedBox) {
+        lock.withLock {
+            boxes[box.id] = box
+        }
+    }
+
+    func start() async throws {
+        let shouldStart = lock.withLock {
+            guard isStarting == false else { return false }
+            isStarting = true
+            return true
+        }
+        guard shouldStart else { return }
+        defer {
+            lock.withLock {
+                isStarting = false
+            }
+        }
+        try await coordinator.start()
+    }
+
+    func schedule(_ candidate: CaptureUploadCandidate) async throws {
+        try await coordinator.schedule(candidate)
+    }
+
+    func cancel(boxID: UUID, sessionID: CaptureSessionID) async {
+        await coordinator.cancel(boxID: boxID, sessionID: sessionID)
+    }
+
+    func addObserver(_ observer: @escaping @Sendable (CaptureUploadEvent) -> Void) -> UUID {
+        let id = UUID()
+        lock.withLock {
+            observers[id] = observer
+        }
+        return id
+    }
+
+    func removeObserver(_ id: UUID) {
+        _ = lock.withLock {
+            observers.removeValue(forKey: id)
+        }
+    }
+
+    private func box(for id: UUID) -> PairedBox? {
+        lock.withLock { boxes[id] }
+    }
+
+    private func publish(_ event: CaptureUploadEvent) {
+        let current = lock.withLock { Array(observers.values) }
+        current.forEach { $0(event) }
     }
 }
 

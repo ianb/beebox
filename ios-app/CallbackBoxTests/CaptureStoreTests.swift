@@ -45,6 +45,25 @@ final class CaptureStoreTests: XCTestCase {
         XCTAssertEqual(persisted.items.first?.state, .local)
     }
 
+    func testRelaunchMarksOpenRecordingVisibleButNotRetryable() async throws {
+        let store = try await makeStore()
+        let item = makeAudioItem(state: .recording)
+        let payloadURL = try await store.beginItem(boxID: boxID, sessionID: sessionID, item: item)
+        try Data("unfinished audio".utf8).write(to: payloadURL)
+
+        let interrupted = try await store.markInterruptedRecordings(boxID: boxID, sessionID: sessionID)
+        let retryCandidates = try await store.retryFailedUploads(boxID: boxID, sessionID: sessionID)
+
+        XCTAssertEqual(interrupted, 1)
+        XCTAssertTrue(retryCandidates.isEmpty)
+        let manifest = try await requiredManifest(store)
+        XCTAssertEqual(
+            manifest.items.first?.state,
+            .failed(message: CaptureStore.interruptedRecordingMessage)
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: payloadURL.path))
+    }
+
     func testUploadAcknowledgementIsIdempotentAndDeletesPayload() async throws {
         let store = try await makeStore()
         let item = makeFileItem()
@@ -236,6 +255,100 @@ final class CaptureStoreTests: XCTestCase {
                 item: item
             )
         }
+    }
+
+    func testFollowUpMovesOnlyUnacknowledgedPayloadsAndResetsUploadState() async throws {
+        let store = try await makeStore()
+        let localItem = makeFileItem()
+        let failedItem = makeFileItem()
+        let uploadedItem = makeFileItem()
+        try await importItem(localItem, into: store)
+        try await importItem(failedItem, into: store)
+        try await importItem(uploadedItem, into: store)
+        try await store.transition(
+            boxID: boxID,
+            sessionID: sessionID,
+            itemID: failedItem.id,
+            to: .failed(message: "Session gone")
+        )
+        let uploadedMetadata = try await store.markUploading(
+            boxID: boxID,
+            sessionID: sessionID,
+            itemID: uploadedItem.id,
+            taskIdentifier: 9
+        )
+        _ = try await store.acknowledgeUpload(metadata: uploadedMetadata, taskIdentifier: 9)
+        let followUpID = CaptureSessionID(rawValue: "capture-follow-up")
+        _ = try await store.createManifest(
+            boxID: boxID,
+            sessionID: followUpID,
+            targetSessionID: "chat-1",
+            startedAt: "2026-07-17T12:05:00Z"
+        )
+
+        try await store.moveUnacknowledgedItems(
+            boxID: boxID,
+            from: sessionID,
+            to: followUpID
+        )
+
+        let source = try await requiredManifest(store)
+        let loadedDestination = try await store.loadManifest(boxID: boxID, sessionID: followUpID)
+        let destination = try XCTUnwrap(loadedDestination)
+        XCTAssertEqual(source.items.map(\.id), [uploadedItem.id])
+        XCTAssertEqual(Set(destination.items.map(\.id)), Set([localItem.id, failedItem.id]))
+        XCTAssertTrue(destination.items.allSatisfy { $0.state == .local && $0.uploadGeneration == 0 })
+        for item in destination.items {
+            let url = rootURL
+                .appendingPathComponent(boxID.uuidString.lowercased(), isDirectory: true)
+                .appendingPathComponent(followUpID.rawValue, isDirectory: true)
+                .appendingPathComponent(item.filename)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
+    func testFollowUpRefusesToMoveAnActiveUpload() async throws {
+        let store = try await makeStore()
+        let item = makeFileItem()
+        try await importItem(item, into: store)
+        _ = try await store.markUploading(
+            boxID: boxID,
+            sessionID: sessionID,
+            itemID: item.id,
+            taskIdentifier: 9
+        )
+        let followUpID = CaptureSessionID(rawValue: "capture-follow-up")
+        _ = try await store.createManifest(
+            boxID: boxID,
+            sessionID: followUpID,
+            targetSessionID: "chat-1",
+            startedAt: "2026-07-17T12:05:00Z"
+        )
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.moveUnacknowledgedItems(
+                boxID: self.boxID,
+                from: self.sessionID,
+                to: followUpID
+            )
+        }
+
+        let source = try await requiredManifest(store)
+        let destination = try await store.loadManifest(boxID: boxID, sessionID: followUpID)
+        XCTAssertEqual(source.items.map(\.id), [item.id])
+        XCTAssertTrue(destination?.items.isEmpty == true)
+    }
+
+    func testDeleteCaptureRemovesManifestAndPayloadDirectory() async throws {
+        let store = try await makeStore()
+        let item = makeFileItem()
+        try await importItem(item, into: store)
+
+        try await store.deleteCapture(boxID: boxID, sessionID: sessionID)
+
+        let deleted = try await store.loadManifest(boxID: boxID, sessionID: sessionID)
+        XCTAssertNil(deleted)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sessionDirectory.path))
     }
 
     private var sessionDirectory: URL {

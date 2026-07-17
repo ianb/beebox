@@ -161,6 +161,33 @@ audio.statusCode
 ```
 
 ```ts continue
+const photoReplay = await uploadRaw(ctx, {
+  sessionId, filename: "ios-photo-a.jpg", kind: "photo", data: Buffer.from("JPEG-BYTES"),
+});
+const audioReplay = await uploadRaw(ctx, {
+  sessionId, filename: "ios-audio-a.m4a", kind: "audio", data: Buffer.from("M4A-BYTES"),
+  headers: {
+    "x-capture-segment-id": "native-segment",
+    "x-capture-segment-started-at": "2026-07-09T14:01:00.000Z",
+    "x-capture-audio-format": "m4a-aac",
+  },
+});
+JSON.stringify({ photo: photoReplay.statusCode, audio: audioReplay.statusCode })
+=> {"photo":200,"audio":200}
+```
+
+Exact background-upload retries are idempotent. Reusing the same filename for
+different bytes remains a conflict:
+
+```ts continue
+const conflictingReplay = await uploadRaw(ctx, {
+  sessionId, filename: "ios-photo-a.jpg", kind: "photo", data: Buffer.from("DIFFERENT"),
+});
+conflictingReplay.statusCode
+=> 409
+```
+
+```ts continue
 const duplicate = await uploadRaw(ctx, {
   sessionId, filename: "ios-audio-b.m4a", kind: "audio", data: Buffer.from("SECOND"),
   headers: {
@@ -179,8 +206,9 @@ const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/ses
 JSON.stringify({
   photos: manifest.photos.map((item) => item.filename),
   audio: manifest.segments.map((segment) => ({ format: segment.format, chunks: segment.chunks })),
+  totalBytes: manifest.totalBytes,
 })
-=> {"photos":["ios-photo-a.jpg"],"audio":[{"format":"m4a-aac","chunks":["ios-audio-a.m4a"]}]}
+=> {"photos":["ios-photo-a.jpg"],"audio":[{"format":"m4a-aac","chunks":["ios-audio-a.m4a"]}],"totalBytes":19}
 ```
 
 ```ts cleanup
@@ -221,6 +249,40 @@ JSON.stringify({ status: resumed.statusCode, matches: resumed.body.resumable[0]?
 const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
 manifest.createdBy
 => owner@example.com
+```
+
+A different paired identity cannot upload to, finalize, or cancel the owner's
+session:
+
+```ts continue
+const otherTicket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "other@example.com" });
+const otherPaired = redeemMobilePairingTicket(ctx.boxRoot, {
+  pairingToken: otherTicket.token,
+  deviceLabel: "Other phone",
+});
+if (!otherPaired) throw new Error("second pairing failed");
+const otherAuth = { authorization: `Bearer ${otherPaired.deviceToken}` };
+const forbiddenUpload = await uploadRaw(ctx, {
+  sessionId, filename: "other.jpg", kind: "photo", data: Buffer.from("OTHER"), headers: otherAuth,
+});
+const forbiddenFinalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, headers: otherAuth,
+});
+const forbiddenCancel = await ctx.request({
+  method: "DELETE", url: `/api/capture/sessions/${sessionId}`, headers: otherAuth,
+});
+JSON.stringify([
+  forbiddenUpload.statusCode,
+  forbiddenFinalize.statusCode,
+  forbiddenCancel.statusCode,
+])
+=> [403,403,403]
+```
+
+```ts continue
+const stillOpen = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+JSON.stringify({ state: stillOpen.state, photos: stillOpen.photos.map((item) => item.filename) })
+=> {"state":"open","photos":["ios-photo-owner.jpg"]}
 ```
 
 ```ts cleanup

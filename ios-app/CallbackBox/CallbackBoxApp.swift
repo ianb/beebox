@@ -10,6 +10,13 @@ struct CallbackBoxApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(store)
+                .onReceive(store.$boxes) { boxes in
+                    let runtime = CaptureUploadRuntime.shared
+                    runtime.updateBoxes(boxes)
+                    Task {
+                        try? await runtime.start()
+                    }
+                }
                 .onOpenURL { url in
                     Task {
                         _ = await store.pair(from: url)

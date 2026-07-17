@@ -5,6 +5,7 @@ import UIKit
 
 struct NativeComposerView: View {
     var box: PairedBox
+    var captureAvailable: Bool
     var emissionReceipt: NativeEmissionReceipt?
     var locationShareResult: NativeLocationShareResult?
     var onSendEmission: (NativeChatEmission) -> Void
@@ -19,6 +20,7 @@ struct NativeComposerView: View {
     @State private var showingActions = false
     @State private var showingPairing = false
     @State private var showingCamera = false
+    @State private var showingCapture = false
     @StateObject private var dictation = SpeechDictation()
     @FocusState private var focused: Bool
 
@@ -101,7 +103,9 @@ struct NativeComposerView: View {
         .sheet(isPresented: $showingActions) {
             ComposerActionsView(
                 selectedPhotoItems: $selectedPhotoItems,
+                canCapture: captureAvailable,
                 canTakePhoto: UIImagePickerController.isSourceTypeAvailable(.camera),
+                onCapture: openCapture,
                 onTakePhoto: openCamera,
                 onShareLocation: shareLocation,
                 onPairBox: openPairing,
@@ -119,6 +123,9 @@ struct NativeComposerView: View {
                 showingCamera = false
             }
             .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $showingCapture) {
+            NativeCaptureScreen(box: box)
         }
     }
 
@@ -177,6 +184,18 @@ struct NativeComposerView: View {
             accessibilityLabel: "Start dictation",
             action: { dictation.toggle(currentText: text) }
         )
+    }
+
+    private func openCapture() {
+        guard captureAvailable else {
+            return
+        }
+        dictation.stop()
+        focused = false
+        showingActions = false
+        DispatchQueue.main.async {
+            showingCapture = true
+        }
     }
 
     private func composerButton(
