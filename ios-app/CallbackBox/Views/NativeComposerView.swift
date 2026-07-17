@@ -127,7 +127,7 @@ struct NativeComposerView: View {
             guard let newValue, newValue == lastSentEmissionID else {
                 return
             }
-            statusText = "Sent to chat."
+            statusText = nil
             lastSentEmissionID = nil
         }
         .onDisappear {
