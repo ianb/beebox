@@ -9,7 +9,6 @@ struct ComposerActionsView: View {
     var onTakePhoto: () -> Void
     var onShareLocation: () -> Void
     var onPairBox: () -> Void
-    var onRemoveBox: (PairedBox) -> Void
     var onDismiss: () -> Void
 
     var body: some View {
@@ -34,8 +33,8 @@ struct ComposerActionsView: View {
                     }
                 }
 
-                if store.boxes.isEmpty == false {
-                    Section("Boxes") {
+                Section("Boxes") {
+                    if store.boxes.isEmpty == false {
                         ForEach(store.boxes) { box in
                             Button {
                                 store.select(box)
@@ -51,22 +50,12 @@ struct ComposerActionsView: View {
                             }
                         }
                     }
-                }
-
-                Section("Settings") {
                     Button(action: onPairBox) {
                         Label("Pair or Manage Boxes", systemImage: "rectangle.stack.badge.plus")
                     }
-                    if let selectedBox = store.selectedBox {
-                        Button(role: .destructive) {
-                            onRemoveBox(selectedBox)
-                        } label: {
-                            Label("Remove Current Box", systemImage: "trash")
-                        }
-                    }
                 }
             }
-            .navigationTitle("Add & Settings")
+            .navigationTitle("Add")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

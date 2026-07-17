@@ -19,7 +19,6 @@ struct NativeComposerView: View {
     @State private var showingActions = false
     @State private var showingPairing = false
     @State private var showingCamera = false
-    @State private var boxPendingRemoval: PairedBox?
     @StateObject private var dictation = SpeechDictation()
     @FocusState private var focused: Bool
 
@@ -113,7 +112,6 @@ struct NativeComposerView: View {
                 onTakePhoto: openCamera,
                 onShareLocation: shareLocation,
                 onPairBox: openPairing,
-                onRemoveBox: confirmRemoval,
                 onDismiss: { showingActions = false }
             )
         }
@@ -128,19 +126,6 @@ struct NativeComposerView: View {
                 showingCamera = false
             }
             .ignoresSafeArea()
-        }
-        .alert("Remove Box?", isPresented: removeAlertBinding) {
-            Button("Cancel", role: .cancel) {
-                boxPendingRemoval = nil
-            }
-            Button("Remove", role: .destructive) {
-                if let boxPendingRemoval {
-                    store.remove(boxPendingRemoval)
-                }
-                self.boxPendingRemoval = nil
-            }
-        } message: {
-            Text("This removes the box and its mobile auth token from this iPhone. You can pair it again from Settings.")
         }
     }
 
@@ -346,17 +331,6 @@ struct NativeComposerView: View {
         isSending || hasSendableContent == false
     }
 
-    private var removeAlertBinding: Binding<Bool> {
-        Binding(
-            get: { boxPendingRemoval != nil },
-            set: { showing in
-                if showing == false {
-                    boxPendingRemoval = nil
-                }
-            }
-        )
-    }
-
     private var draftKey: String {
         "draft.\(box.id.uuidString)"
     }
@@ -417,13 +391,6 @@ struct NativeComposerView: View {
         showingActions = false
         statusText = "Requesting location..."
         onShareLocation()
-    }
-
-    private func confirmRemoval(_ box: PairedBox) {
-        showingActions = false
-        DispatchQueue.main.async {
-            boxPendingRemoval = box
-        }
     }
 
     private func appendCameraImage(_ image: UIImage) {
