@@ -10,33 +10,37 @@ import { nativeEmissionFromDetail } from "../../src/frontend/src/components/chat
 
 ```ts
 const typed = nativeEmissionFromDetail({
+  id: "ios-typed-1",
   text: " hello ",
   origin: "typed",
   diarized: false,
   images: [{ id: 1, mimeType: "image/png", dataBase64: "abc" }],
 });
 JSON.stringify({
+  id: typed?.id,
   origin: typed?.origin,
   text: typed?.text,
   imageCount: typed?.images.length,
   files: typed?.files.length,
 })
-=> {"origin":"typed","text":"hello","imageCount":1,"files":0}
+=> {"id":"ios-typed-1","origin":"typed","text":"hello","imageCount":1,"files":0}
 ```
 
 ```ts continue
 const voice = nativeEmissionFromDetail({
+  id: "ios-voice-1",
   text: " dictated ",
   origin: "voice",
   diarized: true,
   images: [],
 });
 JSON.stringify({
+  id: voice?.id,
   origin: voice?.origin,
   text: voice?.text,
   diarized: voice?.diarized,
 })
-=> {"origin":"voice","text":"dictated","diarized":true}
+=> {"id":"ios-voice-1","origin":"voice","text":"dictated","diarized":true}
 ```
 
 ```ts continue

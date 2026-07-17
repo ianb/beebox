@@ -17,8 +17,6 @@
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
 		5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001B2C3C000100000001 /* SpeechDictation.swift */; };
-		5A10000B2C3C000100000001 /* QueuedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001C2C3C000100000001 /* QueuedMessage.swift */; };
-		5A10000C2C3C000100000001 /* OutboxStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001D2C3C000100000001 /* OutboxStore.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
 		5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001F2C3C000100000001 /* SpeechKeywords.swift */; };
 		5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000212C3C000100000001 /* QRScannerView.swift */; };
@@ -51,8 +49,6 @@
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
 		5A10001A2C3C000100000001 /* NativeComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerView.swift; sourceTree = "<group>"; };
 		5A10001B2C3C000100000001 /* SpeechDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictation.swift; sourceTree = "<group>"; };
-		5A10001C2C3C000100000001 /* QueuedMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedMessage.swift; sourceTree = "<group>"; };
-		5A10001D2C3C000100000001 /* OutboxStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxStore.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
 		5A10001F2C3C000100000001 /* SpeechKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywords.swift; sourceTree = "<group>"; };
 		5A1000212C3C000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
@@ -119,7 +115,6 @@
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
-				5A10001C2C3C000100000001 /* QueuedMessage.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -128,7 +123,6 @@
 			isa = PBXGroup;
 			children = (
 				5A1000132C3C000100000001 /* PairedBoxStore.swift */,
-				5A10001D2C3C000100000001 /* OutboxStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -273,8 +267,6 @@
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
-				5A10000B2C3C000100000001 /* QueuedMessage.swift in Sources */,
-				5A10000C2C3C000100000001 /* OutboxStore.swift in Sources */,
 				5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */,
 				5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */,
 				5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */,

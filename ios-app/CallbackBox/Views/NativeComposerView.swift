@@ -5,15 +5,14 @@ import UIKit
 
 struct NativeComposerView: View {
     var box: PairedBox
-    var deliveredEmissionID: NativeChatEmission.ID? = nil
+    var emissionReceipt: NativeEmissionReceipt?
     var onSendEmission: (NativeChatEmission) -> Void
 
-    @EnvironmentObject private var outbox: OutboxStore
     @State private var text = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var images: [ChatImageAttachment] = []
     @State private var statusText: String?
-    @State private var lastSentEmissionID: NativeChatEmission.ID?
+    @State private var lastSentEmission: NativeChatEmission?
     @StateObject private var dictation = SpeechDictation()
     @FocusState private var focused: Bool
 
@@ -73,16 +72,6 @@ struct NativeComposerView: View {
                     .padding(.bottom, 8)
             }
 
-            let queuedMessages = outbox.messages(for: box)
-            if queuedMessages.isEmpty == false {
-                OutboxListView(
-                    messages: queuedMessages,
-                    onRetry: retry,
-                    onDiscard: outbox.discard
-                )
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-            }
         }
         .background(.regularMaterial)
         .toolbar {
@@ -111,18 +100,22 @@ struct NativeComposerView: View {
                 await loadPhotos(from: newValue)
             }
         }
-        .onChange(of: deliveredEmissionID) { _, newValue in
-            guard let newValue, newValue == lastSentEmissionID else {
+        .onChange(of: emissionReceipt) { _, receipt in
+            guard let receipt, let emission = lastSentEmission, receipt.emissionID == emission.id else {
                 return
             }
-            statusText = nil
-            lastSentEmissionID = nil
+            switch receipt.disposition {
+            case .sent, .queued:
+                statusText = nil
+            case .rejected:
+                text = emission.text
+                images = emission.images
+                statusText = receipt.reason ?? "The message was not accepted."
+            }
+            lastSentEmission = nil
         }
         .onDisappear {
             dictation.stop()
-        }
-        .task(id: box.id) {
-            await outbox.retryPending(for: box)
         }
     }
 
@@ -132,7 +125,7 @@ struct NativeComposerView: View {
             return
         }
         dictation.stop()
-        let origin: QueuedMessage.Origin = dictation.hasDictatedText ? .voice : .typed
+        let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         let emission = NativeChatEmission(text: message, origin: origin, diarized: false, images: images)
         dictation.resetDictationState()
         text = ""
@@ -140,7 +133,7 @@ struct NativeComposerView: View {
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        lastSentEmissionID = emission.id
+        lastSentEmission = emission
         statusText = "Sending to chat..."
         onSendEmission(emission)
     }
@@ -236,24 +229,17 @@ struct NativeComposerView: View {
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        lastSentEmissionID = emission.id
+        lastSentEmission = emission
         statusText = "Sending to chat..."
         onSendEmission(emission)
     }
 
-    private func retry(_ message: QueuedMessage) {
-        statusText = "Retrying..."
-        Task {
-            await outbox.send(messageID: message.id, box: box)
-        }
-    }
-
     private var isSending: Bool {
-        outbox.messages(for: box).contains { $0.state == .sending }
+        lastSentEmission != nil
     }
 
     private var sendDisabled: Bool {
-        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && images.isEmpty
+        isSending || (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && images.isEmpty)
     }
 
     private var draftKey: String {
@@ -343,98 +329,6 @@ private struct ImageAttachmentStrip: View {
                 .font(.title2)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(.thinMaterial)
-        }
-    }
-}
-
-private struct OutboxListView: View {
-    var messages: [QueuedMessage]
-    var onRetry: (QueuedMessage) -> Void
-    var onDiscard: (QueuedMessage) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(messages) { message in
-                HStack(alignment: .center, spacing: 8) {
-                    Image(systemName: iconName(for: message))
-                        .foregroundStyle(iconColor(for: message))
-                        .frame(width: 20)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title(for: message))
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                        Text(message.text)
-                            .font(.caption)
-                            .lineLimit(2)
-                            .foregroundStyle(.secondary)
-                        if message.images.isEmpty == false {
-                            Text("\(message.images.count) photo\(message.images.count == 1 ? "" : "s") attached")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        if let lastError = message.lastError {
-                            Text(lastError)
-                                .font(.caption2)
-                                .lineLimit(2)
-                                .foregroundStyle(.red)
-                        }
-                    }
-
-                    Spacer(minLength: 8)
-
-                    if message.state != .sending {
-                        Button {
-                            onRetry(message)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel("Retry")
-                    }
-
-                    Button(role: .destructive) {
-                        onDiscard(message)
-                    } label: {
-                        Image(systemName: "trash")
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Discard")
-                }
-                .padding(8)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
-            }
-        }
-    }
-
-    private func title(for message: QueuedMessage) -> String {
-        switch message.state {
-        case .pending:
-            "Pending"
-        case .sending:
-            "Sending..."
-        case .failed:
-            "Failed, saved for retry"
-        }
-    }
-
-    private func iconName(for message: QueuedMessage) -> String {
-        switch message.state {
-        case .pending:
-            "clock"
-        case .sending:
-            "paperplane"
-        case .failed:
-            "exclamationmark.circle"
-        }
-    }
-
-    private func iconColor(for message: QueuedMessage) -> Color {
-        switch message.state {
-        case .pending, .sending:
-            .secondary
-        case .failed:
-            .red
         }
     }
 }

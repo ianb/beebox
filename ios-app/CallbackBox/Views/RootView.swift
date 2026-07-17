@@ -2,13 +2,12 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
-    @EnvironmentObject private var outbox: OutboxStore
     @State private var showingPairSheet = false
     @State private var boxPendingRemoval: PairedBox?
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
     @State private var pendingNativeEmissions: [NativeChatEmission] = []
-    @State private var deliveredNativeEmissionID: NativeChatEmission.ID?
+    @State private var nativeEmissionReceipt: NativeEmissionReceipt?
 
     var body: some View {
         NavigationStack {
@@ -23,16 +22,16 @@ struct RootView: View {
                                 visibleChatBoxID = box.id
                                 visibleChatSessionID = sessionID
                             },
-                            onEmissionHandled: { emissionID in
-                                pendingNativeEmissions.removeAll { $0.id == emissionID }
-                                deliveredNativeEmissionID = emissionID
+                            onEmissionReceipt: { receipt in
+                                pendingNativeEmissions.removeAll { $0.id == receipt.emissionID }
+                                nativeEmissionReceipt = receipt
                             }
                         )
                             .id(box.id)
                             .safeAreaInset(edge: .bottom, spacing: 0) {
                                 NativeComposerView(
                                     box: composerBox,
-                                    deliveredEmissionID: deliveredNativeEmissionID
+                                    emissionReceipt: nativeEmissionReceipt
                                 ) { emission in
                                     pendingNativeEmissions.append(emission)
                                 }
@@ -61,7 +60,7 @@ struct RootView: View {
                 visibleChatBoxID = newBoxID
                 visibleChatSessionID = nil
                 pendingNativeEmissions = []
-                deliveredNativeEmissionID = nil
+                nativeEmissionReceipt = nil
             }
             .alert("Remove Box?", isPresented: removeAlertBinding) {
                 Button("Cancel", role: .cancel) {
@@ -159,5 +158,4 @@ private struct EmptyBoxView: View {
 #Preview {
     RootView()
         .environmentObject(PairedBoxStore())
-        .environmentObject(OutboxStore())
 }
