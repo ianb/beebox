@@ -2,6 +2,23 @@ import XCTest
 @testable import CallbackBox
 
 final class SpeechKeywordsTests: XCTestCase {
+    func testChatURLUsesNativeComposerAndPreservesSession() {
+        let box = PairedBox(
+            id: UUID(),
+            label: "Test",
+            baseURL: URL(string: "https://cb.example/box")!,
+            sessionID: "abc123",
+            authToken: nil
+        )
+        let components = URLComponents(url: box.chatURL, resolvingAgainstBaseURL: false)
+        let queryItems = components?.queryItems ?? []
+
+        XCTAssertEqual(components?.path, "/box/chat")
+        XCTAssertEqual(queryItems.first { $0.name == "nativeComposer" }?.value, "1")
+        XCTAssertEqual(queryItems.first { $0.name == "session" }?.value, "abc123")
+        XCTAssertNil(queryItems.first { $0.name == "embed" })
+    }
+
     func testVisibleChatSessionParsing() {
         XCTAssertEqual(
             ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?embed=1&session=abc123")!),

@@ -9,7 +9,6 @@ struct RootView: View {
     @State private var visibleChatBoxID: PairedBox.ID?
     @State private var pendingNativeEmissions: [NativeChatEmission] = []
     @State private var deliveredNativeEmissionID: NativeChatEmission.ID?
-    @State private var showingWebControls = false
 
     var body: some View {
         NavigationStack {
@@ -19,7 +18,6 @@ struct RootView: View {
                     VStack(spacing: 0) {
                         ChatWebView(
                             box: box,
-                            embedded: showingWebControls == false,
                             pendingEmissions: pendingNativeEmissions,
                             onSessionChange: { sessionID in
                                 visibleChatBoxID = box.id
@@ -30,16 +28,15 @@ struct RootView: View {
                                 deliveredNativeEmissionID = emissionID
                             }
                         )
-                            .id("\(box.id.uuidString)-\(showingWebControls ? "web" : "native")")
-                            .ignoresSafeArea(edges: .bottom)
-                        if showingWebControls == false {
-                            NativeComposerView(
-                                box: composerBox,
-                                deliveredEmissionID: deliveredNativeEmissionID
-                            ) { emission in
-                                pendingNativeEmissions.append(emission)
+                            .id(box.id)
+                            .safeAreaInset(edge: .bottom, spacing: 0) {
+                                NativeComposerView(
+                                    box: composerBox,
+                                    deliveredEmissionID: deliveredNativeEmissionID
+                                ) { emission in
+                                    pendingNativeEmissions.append(emission)
+                                }
                             }
-                        }
                     }
                 } else {
                     EmptyBoxView {
@@ -53,7 +50,6 @@ struct RootView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     AppChromeMenu(
                         showingPairSheet: $showingPairSheet,
-                        showingWebControls: $showingWebControls,
                         requestRemoval: { boxPendingRemoval = $0 }
                     )
                 }
@@ -66,7 +62,6 @@ struct RootView: View {
                 visibleChatSessionID = nil
                 pendingNativeEmissions = []
                 deliveredNativeEmissionID = nil
-                showingWebControls = false
             }
             .alert("Remove Box?", isPresented: removeAlertBinding) {
                 Button("Cancel", role: .cancel) {
@@ -99,7 +94,6 @@ struct RootView: View {
 private struct AppChromeMenu: View {
     @EnvironmentObject private var store: PairedBoxStore
     @Binding var showingPairSheet: Bool
-    @Binding var showingWebControls: Bool
     var requestRemoval: (PairedBox) -> Void
 
     var body: some View {
@@ -121,16 +115,6 @@ private struct AppChromeMenu: View {
             }
 
             Section {
-                if store.selectedBox != nil {
-                    Button {
-                        showingWebControls.toggle()
-                    } label: {
-                        Label(
-                            showingWebControls ? "Use Native Input" : "Show Web Controls",
-                            systemImage: showingWebControls ? "keyboard" : "safari"
-                        )
-                    }
-                }
                 Button {
                     showingPairSheet = true
                 } label: {
@@ -160,7 +144,7 @@ private struct EmptyBoxView: View {
         ContentUnavailableView {
             Label("No Box Paired", systemImage: "link.badge.plus")
         } description: {
-            Text("Add a Callback Box URL to load its embedded chat.")
+            Text("Add a Callback Box URL to load its chat.")
         } actions: {
             Button("Add Box", action: onManualPair)
             #if DEBUG

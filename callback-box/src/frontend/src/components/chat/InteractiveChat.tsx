@@ -98,6 +98,8 @@ interface InteractiveChatProps {
    * event client, but the web composer and mic controls are suppressed.
    */
   embedded?: boolean;
+  /** Preserve web chrome while suppressing input for a native shell. */
+  nativeComposer?: boolean;
   /**
    * Open capture mode immediately on mount — the `/capture` deep link
    * (`?capture=1`) redirects here. Consumed once via initial state; the mode is
@@ -106,8 +108,10 @@ interface InteractiveChatProps {
   openCaptureOnMount?: boolean;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, openCaptureOnMount }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount }: InteractiveChatProps) {
   const isEmbedded = embedded === true;
+  const usesNativeComposer = nativeComposer === true;
+  const usesNativeShell = isEmbedded || usesNativeComposer;
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -175,7 +179,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     (emission: Emission) => { void dispatchEmission(emission); },
     [dispatchEmission]
   );
-  useNativeEmissionBridge({ enabled: isEmbedded, dispatchEmission: dispatchEmissionVoid });
+  useNativeEmissionBridge({ enabled: usesNativeShell, dispatchEmission: dispatchEmissionVoid });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
@@ -278,12 +282,13 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       send={send}
       reportCardActivity={cardSend.report}
       embedded={isEmbedded}
+      nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
-      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!isEmbedded}
+      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell}
       captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       />
-      {captureMode && !isEmbedded ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
+      {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
     </InputStoreProvider>
   );
 }

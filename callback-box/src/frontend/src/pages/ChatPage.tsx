@@ -40,6 +40,11 @@ interface ChatSearch {
    */
   embed?: string | number;
   /**
+   * Keep the normal web navigation and chat header, but leave message input to
+   * the native shell.
+   */
+  nativeComposer?: string | number;
+  /**
    * Open capture mode on load — the `/capture` deep link redirects here with
    * this set. Consumed once by InteractiveChat's initial state.
    */
@@ -62,6 +67,7 @@ export function ChatPage() {
   const companion = search.companion;
   const card = search.card;
   const embedded = String(search.embed) === "1";
+  const nativeComposer = String(search.nativeComposer) === "1";
   const openCaptureOnMount = String(search.capture) === "1";
   const [resolved, setResolved] = useState<string | null>(null);
 
@@ -132,6 +138,7 @@ export function ChatPage() {
       card={card}
       emissionStore={emissionStore}
       embedded={embedded}
+      nativeComposer={nativeComposer}
       openCaptureOnMount={openCaptureOnMount}
     />
   );
