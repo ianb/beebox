@@ -6,74 +6,57 @@ import UIKit
 struct NativeComposerView: View {
     var box: PairedBox
     var emissionReceipt: NativeEmissionReceipt?
+    var locationShareResult: NativeLocationShareResult?
     var onSendEmission: (NativeChatEmission) -> Void
+    var onShareLocation: () -> Void
 
+    @EnvironmentObject private var store: PairedBoxStore
     @State private var text = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var images: [ChatImageAttachment] = []
     @State private var statusText: String?
     @State private var lastSentEmission: NativeChatEmission?
+    @State private var showingActions = false
+    @State private var showingPairing = false
+    @State private var showingCamera = false
+    @State private var boxPendingRemoval: PairedBox?
     @StateObject private var dictation = SpeechDictation()
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 0) {
             if let statusText = dictation.errorMessage ?? dictation.preparationMessage ?? statusText {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
             }
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("Message", text: $text, axis: .vertical)
-                    .focused($focused)
-                    .lineLimit(1...5)
-                    .textFieldStyle(.roundedBorder)
-
-                PhotosPicker(
-                    selection: $selectedPhotoItems,
-                    maxSelectionCount: 4,
-                    matching: .images
-                ) {
-                    Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 26))
-                }
-                .disabled(isSending)
-                .accessibilityLabel("Attach photos")
-
-                Button {
-                    dictation.toggle(currentText: text)
-                } label: {
-                    Image(systemName: dictation.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                        .font(.system(size: 30))
-                        .foregroundStyle(dictation.isRecording ? .red : .primary)
-                }
-                .disabled(isSending)
-                .accessibilityLabel(dictation.isRecording ? "Stop dictation" : "Start dictation")
-
-                Button(action: send) {
-                    if isSending {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 30))
-                    }
-                }
-                .disabled(sendDisabled)
-                .accessibilityLabel("Send")
-            }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 8)
-            .padding(.top, 8)
-
             if images.isEmpty == false {
                 ImageAttachmentStrip(images: images, onRemove: removeImage)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 10)
             }
 
+            HStack(alignment: .bottom, spacing: 10) {
+                composerButton(
+                    systemImage: "plus",
+                    accessibilityLabel: "Add and settings",
+                    action: { showingActions = true }
+                )
+                .disabled(isSending)
+
+                textEntry
+
+                trailingControl
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 5)
+            .offset(y: 10)
         }
         .background(.regularMaterial)
+        .ignoresSafeArea(.container, edges: .bottom)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -114,9 +97,126 @@ struct NativeComposerView: View {
             }
             lastSentEmission = nil
         }
+        .onChange(of: locationShareResult) { _, result in
+            guard let result else {
+                return
+            }
+            statusText = result.message
+        }
         .onDisappear {
             dictation.stop()
         }
+        .sheet(isPresented: $showingActions) {
+            ComposerActionsView(
+                selectedPhotoItems: $selectedPhotoItems,
+                canTakePhoto: UIImagePickerController.isSourceTypeAvailable(.camera),
+                onTakePhoto: openCamera,
+                onShareLocation: shareLocation,
+                onPairBox: openPairing,
+                onRemoveBox: confirmRemoval,
+                onDismiss: { showingActions = false }
+            )
+        }
+        .sheet(isPresented: $showingPairing) {
+            PairBoxView()
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraImagePicker { image in
+                showingCamera = false
+                appendCameraImage(image)
+            } onCancel: {
+                showingCamera = false
+            }
+            .ignoresSafeArea()
+        }
+        .alert("Remove Box?", isPresented: removeAlertBinding) {
+            Button("Cancel", role: .cancel) {
+                boxPendingRemoval = nil
+            }
+            Button("Remove", role: .destructive) {
+                if let boxPendingRemoval {
+                    store.remove(boxPendingRemoval)
+                }
+                self.boxPendingRemoval = nil
+            }
+        } message: {
+            Text("This removes the box and its mobile auth token from this iPhone. You can pair it again from Settings.")
+        }
+    }
+
+    @ViewBuilder
+    private var textEntry: some View {
+        if focused || text.isEmpty == false {
+            TextField("Type...", text: $text, axis: .vertical)
+                .focused($focused)
+                .lineLimit(1...5)
+                .font(.body)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(minHeight: 58)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        } else {
+            Button {
+                focused = true
+            } label: {
+                Text("Type...")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Type a message")
+        }
+    }
+
+    @ViewBuilder
+    private var trailingControl: some View {
+        if isSending {
+            ProgressView()
+                .frame(width: 58, height: 58)
+                .background(.quaternary, in: Circle())
+        } else if dictation.isRecording {
+            composerButton(
+                systemImage: "stop.fill",
+                accessibilityLabel: "Stop dictation",
+                foregroundStyle: .red,
+                action: { dictation.stop() }
+            )
+        } else if hasSendableContent {
+            composerButton(
+                systemImage: "arrow.up",
+                accessibilityLabel: "Send",
+                foregroundStyle: .white,
+                backgroundStyle: Color.accentColor,
+                action: send
+            )
+        } else {
+            composerButton(
+                systemImage: "mic.fill",
+                accessibilityLabel: "Start dictation",
+                action: { dictation.toggle(currentText: text) }
+            )
+        }
+    }
+
+    private func composerButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        foregroundStyle: Color = .primary,
+        backgroundStyle: Color = Color(uiColor: .tertiarySystemFill),
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(foregroundStyle)
+                .frame(width: 58, height: 58)
+                .background(backgroundStyle, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func send() {
@@ -238,8 +338,23 @@ struct NativeComposerView: View {
         lastSentEmission != nil
     }
 
+    private var hasSendableContent: Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false || images.isEmpty == false
+    }
+
     private var sendDisabled: Bool {
-        isSending || (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && images.isEmpty)
+        isSending || hasSendableContent == false
+    }
+
+    private var removeAlertBinding: Binding<Bool> {
+        Binding(
+            get: { boxPendingRemoval != nil },
+            set: { showing in
+                if showing == false {
+                    boxPendingRemoval = nil
+                }
+            }
+        )
     }
 
     private var draftKey: String {
@@ -257,8 +372,8 @@ struct NativeComposerView: View {
         guard items.isEmpty == false else {
             return
         }
-        var loaded: [ChatImageAttachment] = []
-        for (index, item) in items.prefix(4).enumerated() {
+        var loaded = images
+        for item in items.prefix(max(0, 4 - loaded.count)) {
             guard let data = try? await item.loadTransferable(type: Data.self) else {
                 continue
             }
@@ -267,13 +382,14 @@ struct NativeComposerView: View {
             }?.preferredMIMEType ?? "image/jpeg"
             loaded.append(
                 ChatImageAttachment(
-                    id: index + 1,
+                    id: loaded.count + 1,
                     mimeType: mimeType,
                     dataBase64: data.base64EncodedString()
                 )
             )
         }
-        images = loaded
+        images = Array(loaded.prefix(4))
+        selectedPhotoItems = []
     }
 
     private func removeImage(_ image: ChatImageAttachment) {
@@ -281,6 +397,46 @@ struct NativeComposerView: View {
         images = images.enumerated().map { index, image in
             ChatImageAttachment(id: index + 1, mimeType: image.mimeType, dataBase64: image.dataBase64)
         }
+    }
+
+    private func openCamera() {
+        showingActions = false
+        DispatchQueue.main.async {
+            showingCamera = true
+        }
+    }
+
+    private func openPairing() {
+        showingActions = false
+        DispatchQueue.main.async {
+            showingPairing = true
+        }
+    }
+
+    private func shareLocation() {
+        showingActions = false
+        statusText = "Requesting location..."
+        onShareLocation()
+    }
+
+    private func confirmRemoval(_ box: PairedBox) {
+        showingActions = false
+        DispatchQueue.main.async {
+            boxPendingRemoval = box
+        }
+    }
+
+    private func appendCameraImage(_ image: UIImage) {
+        guard images.count < 4, let data = image.jpegData(compressionQuality: 0.85) else {
+            return
+        }
+        images.append(
+            ChatImageAttachment(
+                id: images.count + 1,
+                mimeType: "image/jpeg",
+                dataBase64: data.base64EncodedString()
+            )
+        )
     }
 }
 

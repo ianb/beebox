@@ -28,22 +28,38 @@ struct NativeEmissionReceipt: Equatable {
     var reason: String?
 }
 
+struct NativeLocationShareRequest: Equatable, Identifiable {
+    var id = UUID()
+}
+
+struct NativeLocationShareResult: Equatable {
+    var requestID: NativeLocationShareRequest.ID
+    var success: Bool
+    var message: String
+}
+
 struct ChatWebView: UIViewRepresentable {
     var box: PairedBox
     var pendingEmissions: [NativeChatEmission]
+    var locationShareRequest: NativeLocationShareRequest?
     var onSessionChange: (String?) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
+    var onLocationShareResult: (NativeLocationShareResult) -> Void
 
     init(
         box: PairedBox,
         pendingEmissions: [NativeChatEmission] = [],
+        locationShareRequest: NativeLocationShareRequest? = nil,
         onSessionChange: @escaping (String?) -> Void = { _ in },
-        onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in }
+        onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
+        onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
+        self.locationShareRequest = locationShareRequest
         self.onSessionChange = onSessionChange
         self.onEmissionReceipt = onEmissionReceipt
+        self.onLocationShareResult = onLocationShareResult
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -51,6 +67,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.allowsInlineMediaPlayback = true
         configuration.userContentController.add(context.coordinator, name: "callbackboxSession")
         configuration.userContentController.add(context.coordinator, name: "callbackboxEmissionReceipt")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxLocationResult")
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
         }
@@ -65,19 +82,23 @@ struct ChatWebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.onSessionChange = onSessionChange
         context.coordinator.onEmissionReceipt = onEmissionReceipt
+        context.coordinator.onLocationShareResult = onLocationShareResult
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
+        context.coordinator.locationShareRequest = locationShareRequest
         if webView.url == nil {
             webView.load(request())
         }
         context.coordinator.deliver(pendingEmissions, to: webView)
+        context.coordinator.deliverLocationRequest(to: webView)
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             allowedOrigin: Self.origin(from: box.baseURL),
             onSessionChange: onSessionChange,
-            onEmissionReceipt: onEmissionReceipt
+            onEmissionReceipt: onEmissionReceipt,
+            onLocationShareResult: onLocationShareResult
         )
     }
 
@@ -85,25 +106,32 @@ struct ChatWebView: UIViewRepresentable {
         var allowedOrigin: String?
         var onSessionChange: (String?) -> Void
         var onEmissionReceipt: (NativeEmissionReceipt) -> Void
+        var onLocationShareResult: (NativeLocationShareResult) -> Void
         var pendingEmissions: [NativeChatEmission] = []
+        var locationShareRequest: NativeLocationShareRequest?
         private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
         private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
+        private var inflightLocationRequestID: NativeLocationShareRequest.ID?
+        private var locationRequestTimeout: DispatchWorkItem?
         private var pageLoaded = false
 
         init(
             allowedOrigin: String?,
             onSessionChange: @escaping (String?) -> Void,
-            onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void
+            onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void,
+            onLocationShareResult: @escaping (NativeLocationShareResult) -> Void
         ) {
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
             self.onEmissionReceipt = onEmissionReceipt
+            self.onLocationShareResult = onLocationShareResult
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             pageLoaded = true
             onSessionChange(ChatWebView.visibleSessionID(from: webView.url))
             deliver(pendingEmissions, to: webView)
+            deliverLocationRequest(to: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -111,6 +139,9 @@ struct ChatWebView: UIViewRepresentable {
             inflightEmissionIDs.removeAll()
             receiptTimeouts.values.forEach { $0.cancel() }
             receiptTimeouts.removeAll()
+            inflightLocationRequestID = nil
+            locationRequestTimeout?.cancel()
+            locationRequestTimeout = nil
         }
 
         func webView(
@@ -133,6 +164,10 @@ struct ChatWebView: UIViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "callbackboxEmissionReceipt" {
                 receiveEmissionReceipt(message.body)
+                return
+            }
+            if message.name == "callbackboxLocationResult" {
+                receiveLocationResult(message.body)
                 return
             }
             guard message.name == "callbackboxSession", let urlString = message.body as? String, let url = URL(string: urlString) else {
@@ -209,6 +244,70 @@ struct ChatWebView: UIViewRepresentable {
             receiptTimeouts.removeValue(forKey: emissionID)?.cancel()
         }
 
+        func deliverLocationRequest(to webView: WKWebView) {
+            guard
+                pageLoaded,
+                let request = locationShareRequest,
+                request.id != inflightLocationRequestID
+            else {
+                return
+            }
+            inflightLocationRequestID = request.id
+            startLocationRequestTimeout(for: request.id)
+            let script = "window.callbackboxNativeShareLocation(\"\(request.id.uuidString)\");"
+            webView.evaluateJavaScript(script) { [weak self] _, error in
+                guard error != nil else {
+                    return
+                }
+                self?.inflightLocationRequestID = nil
+                self?.locationRequestTimeout?.cancel()
+                self?.locationRequestTimeout = nil
+                self?.onLocationShareResult(NativeLocationShareResult(
+                    requestID: request.id,
+                    success: false,
+                    message: "The chat page could not request location."
+                ))
+            }
+        }
+
+        private func receiveLocationResult(_ body: Any) {
+            guard
+                let payload = body as? [String: Any],
+                let idString = payload["id"] as? String,
+                let requestID = UUID(uuidString: idString),
+                requestID == inflightLocationRequestID,
+                let success = payload["success"] as? Bool,
+                let message = payload["message"] as? String
+            else {
+                return
+            }
+            inflightLocationRequestID = nil
+            locationRequestTimeout?.cancel()
+            locationRequestTimeout = nil
+            onLocationShareResult(NativeLocationShareResult(
+                requestID: requestID,
+                success: success,
+                message: message
+            ))
+        }
+
+        private func startLocationRequestTimeout(for requestID: NativeLocationShareRequest.ID) {
+            let timeout = DispatchWorkItem { [weak self] in
+                guard let self, self.inflightLocationRequestID == requestID else {
+                    return
+                }
+                self.inflightLocationRequestID = nil
+                self.locationRequestTimeout = nil
+                self.onLocationShareResult(NativeLocationShareResult(
+                    requestID: requestID,
+                    success: false,
+                    message: "Location sharing timed out."
+                ))
+            }
+            locationRequestTimeout = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
+        }
+
         private static func javascriptDetail(for emission: NativeChatEmission) -> String? {
             let payload = NativeEmissionPayload(
                 id: emission.id.uuidString,
@@ -273,9 +372,15 @@ struct ChatWebView: UIViewRepresentable {
           const allowedOrigin = \(allowedOrigin);
           if (window.location.origin !== allowedOrigin) return;
           window.callbackboxNativeQueue = window.callbackboxNativeQueue || [];
+          window.callbackboxNativeLocationQueue = window.callbackboxNativeLocationQueue || [];
           window.callbackboxNativeReceive = (detail) => {
             window.callbackboxNativeQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-emission', { detail }));
+          };
+          window.callbackboxNativeShareLocation = (id) => {
+            const detail = { id };
+            window.callbackboxNativeLocationQueue.push(detail);
+            window.dispatchEvent(new CustomEvent('callbackbox:native-share-location', { detail }));
           };
           const post = () => {
             try { window.webkit.messageHandlers.callbackboxSession.postMessage(window.location.href); } catch (_) {}

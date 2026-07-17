@@ -3,135 +3,69 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
     @State private var showingPairSheet = false
-    @State private var boxPendingRemoval: PairedBox?
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
     @State private var pendingNativeEmissions: [NativeChatEmission] = []
     @State private var nativeEmissionReceipt: NativeEmissionReceipt?
+    @State private var locationShareRequest: NativeLocationShareRequest?
+    @State private var locationShareResult: NativeLocationShareResult?
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let box = store.selectedBox {
-                    let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
-                    VStack(spacing: 0) {
-                        ChatWebView(
-                            box: box,
-                            pendingEmissions: pendingNativeEmissions,
-                            onSessionChange: { sessionID in
-                                visibleChatBoxID = box.id
-                                visibleChatSessionID = sessionID
-                            },
-                            onEmissionReceipt: { receipt in
-                                pendingNativeEmissions.removeAll { $0.id == receipt.emissionID }
-                                nativeEmissionReceipt = receipt
-                            }
-                        )
-                            .id(box.id)
-                            .safeAreaInset(edge: .bottom, spacing: 0) {
-                                NativeComposerView(
-                                    box: composerBox,
-                                    emissionReceipt: nativeEmissionReceipt
-                                ) { emission in
-                                    pendingNativeEmissions.append(emission)
-                                }
-                            }
+        Group {
+            if let box = store.selectedBox {
+                let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
+                ChatWebView(
+                    box: box,
+                    pendingEmissions: pendingNativeEmissions,
+                    locationShareRequest: locationShareRequest,
+                    onSessionChange: { sessionID in
+                        visibleChatBoxID = box.id
+                        visibleChatSessionID = sessionID
+                    },
+                    onEmissionReceipt: { receipt in
+                        pendingNativeEmissions.removeAll { $0.id == receipt.emissionID }
+                        nativeEmissionReceipt = receipt
+                    },
+                    onLocationShareResult: { result in
+                        guard result.requestID == locationShareRequest?.id else {
+                            return
+                        }
+                        locationShareRequest = nil
+                        locationShareResult = result
                     }
-                } else {
-                    EmptyBoxView {
-                        showingPairSheet = true
-                    }
-                }
-            }
-            .navigationTitle(store.selectedBox?.label ?? "Callback Box")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    AppChromeMenu(
-                        showingPairSheet: $showingPairSheet,
-                        requestRemoval: { boxPendingRemoval = $0 }
+                )
+                .id(box.id)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    NativeComposerView(
+                        box: composerBox,
+                        emissionReceipt: nativeEmissionReceipt,
+                        locationShareResult: locationShareResult,
+                        onSendEmission: { emission in
+                            pendingNativeEmissions.append(emission)
+                        },
+                        onShareLocation: {
+                            locationShareResult = nil
+                            locationShareRequest = NativeLocationShareRequest()
+                        }
                     )
                 }
-            }
-            .sheet(isPresented: $showingPairSheet) {
-                PairBoxView()
-            }
-            .onChange(of: store.selectedBox?.id) { _, newBoxID in
-                visibleChatBoxID = newBoxID
-                visibleChatSessionID = nil
-                pendingNativeEmissions = []
-                nativeEmissionReceipt = nil
-            }
-            .alert("Remove Box?", isPresented: removeAlertBinding) {
-                Button("Cancel", role: .cancel) {
-                    boxPendingRemoval = nil
-                }
-                Button("Remove", role: .destructive) {
-                    if let boxPendingRemoval {
-                        store.remove(boxPendingRemoval)
-                    }
-                    boxPendingRemoval = nil
-                }
-            } message: {
-                Text("This removes the box and its mobile auth token from this iPhone. You can pair it again from Settings.")
-            }
-        }
-    }
-
-    private var removeAlertBinding: Binding<Bool> {
-        Binding(
-            get: { boxPendingRemoval != nil },
-            set: { showing in
-                if !showing {
-                    boxPendingRemoval = nil
-                }
-            }
-        )
-    }
-}
-
-private struct AppChromeMenu: View {
-    @EnvironmentObject private var store: PairedBoxStore
-    @Binding var showingPairSheet: Bool
-    var requestRemoval: (PairedBox) -> Void
-
-    var body: some View {
-        Menu {
-            if store.boxes.isEmpty == false {
-                Section("Boxes") {
-                    ForEach(store.boxes) { box in
-                        Button {
-                            store.select(box)
-                        } label: {
-                            if box.id == store.selectedBox?.id {
-                                Label(box.label, systemImage: "checkmark")
-                            } else {
-                                Text(box.label)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Section {
-                Button {
+            } else {
+                EmptyBoxView {
                     showingPairSheet = true
-                } label: {
-                    Label("Manage Boxes", systemImage: "rectangle.stack")
-                }
-                if let selectedBox = store.selectedBox {
-                    Button(role: .destructive) {
-                        requestRemoval(selectedBox)
-                    } label: {
-                        Label("Remove Current Box", systemImage: "trash")
-                    }
                 }
             }
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.title3)
         }
-        .accessibilityLabel("Box controls")
+        .sheet(isPresented: $showingPairSheet) {
+            PairBoxView()
+        }
+        .onChange(of: store.selectedBox?.id) { _, newBoxID in
+            visibleChatBoxID = newBoxID
+            visibleChatSessionID = nil
+            pendingNativeEmissions = []
+            nativeEmissionReceipt = nil
+            locationShareRequest = nil
+            locationShareResult = nil
+        }
     }
 }
 
