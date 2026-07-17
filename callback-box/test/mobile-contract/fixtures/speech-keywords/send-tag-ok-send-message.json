@@ -1,0 +1,10 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "OK send message"
+  },
+  "expected": {
+    "action": "send",
+    "processedTranscript": "OK <send-message phrase=\"send message\" />"
+  }
+}

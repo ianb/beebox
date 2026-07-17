@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "nevermind the message"
+  },
+  "expected": {
+    "action": "cancel"
+  }
+}

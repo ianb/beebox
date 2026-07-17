@@ -1,0 +1,13 @@
+{
+  "variant": "result",
+  "input": {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "success": false,
+    "message": "Location access denied."
+  },
+  "expected": {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "success": false,
+    "message": "Location access denied."
+  }
+}

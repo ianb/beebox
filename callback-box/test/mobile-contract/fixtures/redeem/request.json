@@ -1,0 +1,11 @@
+{
+  "variant": "request",
+  "input": {
+    "pairingToken": "tok123",
+    "deviceLabel": "Jamie's iPhone"
+  },
+  "expected": {
+    "pairingToken": "tok123",
+    "deviceLabel": "Jamie's iPhone"
+  }
+}

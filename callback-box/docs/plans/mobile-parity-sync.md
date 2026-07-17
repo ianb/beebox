@@ -129,7 +129,16 @@ implements a mobile feature on one platform:
    passed.
 6. Update `docs/mobile-parity.md` if any cell changed.
 
-### 5. Two-hook tripwire: pre-commit path check + commit-msg trailer override (to build, small)
+### 5. Two-hook tripwire: pre-commit path check + commit-msg trailer override (built 2026-07-17)
+
+**Built 2026-07-17.** `bin/mobile-contract-check.ts` (one script, two modes),
+wired into `.husky/pre-commit` (default mode) and a new `.husky/commit-msg`
+(`--commit-msg <file>` mode); registered as the root `pnpm mobile-contract-check`
+script alongside `path-leak-check`. The anchor manifest is §11 of
+`docs/mobile-contract.md` (a ```anchors fenced block of repo-relative paths;
+`#` comments and blanks skipped; a trailing `/` is a directory prefix, so the
+`callback-box/test/mobile-contract/` fixtures count). The description below is
+what shipped.
 
 A check in the family of `doc-check`/`path-leak-check`: the anchor manifest —
 the file list distilled from the Contract Surface Index (the bridge, auth,
@@ -201,7 +210,7 @@ area. Two standing rules, enforced in review rather than by tooling:
 
 | What can fail | Caught by | Handling | Clear-or-silent? |
 |---|---|---|---|
-| Contract change lands without doc update | Tripwire (5): pre-commit flags, commit-msg blocks | Update doc or `Contract-Unchanged:` trailer | Clear at commit time |
+| Contract change lands without doc update | Tripwire (5): pre-commit records the pending violation, commit-msg blocks | Update doc or `Contract-Unchanged:` trailer | Clear at commit time |
 | Contract change, doc updated, one platform not updated | Fixture edit fails that platform's suite (2); checklist step 4 files a parity issue | Parity issue + matrix `planned` cell | Clear — red test or tracked issue |
 | Semantic drift inside an anchor file with a wrong/stale doc edit | Periodic audit (6) | Issue filed from audit report | Clear at audit cadence, silent between audits (accepted) |
 | New surface added outside the anchor manifest | Audit (6); review of the "index first" rule | Add to index + manifest | Silent until audit — the known weakest point; kept acceptable by the small-surface rules |
@@ -246,11 +255,33 @@ area. Two standing rules, enforced in review rather than by tooling:
 1. `docs/mobile-contract.md` (done 2026-07-17) + Guides-table registration.
 2. `docs/mobile-parity.md` seeded from the contract index + the Android plan's
    deliberate divergences (can land with the Android plan, before any Kotlin).
-3. Fixtures: extract `speech-keywords/` from the existing mirrored tests, then
-   `emission/`, `receipt/`, `pairing-url/`; wire the TS doctest consumer and
-   the XCTest harness. (Android's consumer lands with the Android app's first
-   test chunk.)
-4. The pre-commit tripwire + anchor manifest.
+3. Fixtures (done 2026-07-17). Built `test/mobile-contract/fixtures/` with six
+   families — `emission/` (6), `receipt/` (3), `location/` (4), `pairing-url/`
+   (6), `redeem/` (3), `speech-keywords/` (37, extracted from the previously
+   hand-mirrored `SpeechKeywordsTests.swift` vectors). TS consumer:
+   `test/mobile-contract/fixtures.doctest.md` loads every family from disk
+   (resolved via `import.meta.url`), runs `emission`/`receipt`/`speech-keywords`
+   through the real web code (`nativeEmissionFromDetail`, the `Receipt` shape,
+   `detectKeyword`/`appendSendKeywordTag`) and structurally validates the
+   native-only families (`location`/`pairing-url`/`redeem`), one summary block
+   per family. iOS consumer: `SpeechKeywordsTests.swift` now loads the
+   `speech-keywords` fixtures (replacing the hardcoded vectors) and a new
+   `MobileContractFixtureDecodeTests` decodes the `receipt`/`location`/`emission`
+   fixtures through `ChatWebView.dictionaryPayload(from:)`; both locate the
+   fixtures via `#filePath` (no bundling). (Android's consumer lands with the
+   Android app's first test chunk.)
+
+   **Fixture-file shape (as built).** Each case is one well-formed JSON file
+   `{ "input": …, "expected": … }` plus family-specific flags: `variant`
+   (`location`: `request`|`result`; `redeem`: `request`|`response`|`error`),
+   `debugOnly` (`pairing-url` authToken), `expectGeneratedId` (`emission` cases
+   whose decoded id is generated, so `expected` omits `id`), `ignoredByClient`
+   (`redeem` response fields the client drops), and `status` (`redeem` error).
+   A malformed payload is the `input` value inside a valid file, never a broken
+   file — matching the "one JSON per case" lean in Open design questions.
+4. The pre-commit tripwire + anchor manifest. **(done 2026-07-17)** —
+   `bin/mobile-contract-check.ts` + `.husky/commit-msg`, wired into
+   `.husky/pre-commit`; manifest is §11 of `docs/mobile-contract.md`.
 5. `docs/maintenance.md` entry for the periodic audit.
 
 Steps 1–2 are documentation; 3–4 are small code; each is independently

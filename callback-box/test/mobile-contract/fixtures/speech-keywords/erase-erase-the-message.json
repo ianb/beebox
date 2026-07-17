@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "erase the message"
+  },
+  "expected": {
+    "action": "erase"
+  }
+}

@@ -489,3 +489,43 @@ envelope through an `androidx.webkit` `WebMessageListener` object, plus an optio
 `window.webkit.messageHandlers` compatibility façade so the shell also works against a box whose
 web code predates Track 0 (see `docs/plans/android-companion-app.md` Track 0). Payloads on the
 neutral path are strings; receipt and location-result payloads are JSON, the session href is raw.
+
+---
+
+## 11. Anchor manifest (tripwire input)
+
+The machine-readable distillation of §7 — the small set of files on all three sides that
+**are** the contract surface. It is the input to the two-hook tripwire (`bin/mobile-contract-check.ts`,
+wired into `.husky/pre-commit` + `.husky/commit-msg`; mechanism 5 of
+`docs/plans/mobile-parity-sync.md`): if a commit stages any file listed here but does **not** also
+stage this document, the commit is blocked at `commit-msg` time unless its message carries a
+`Contract-Unchanged: <reason>` trailer. Keep this list and the surface it guards in sync — adding a
+contract surface means adding its file here in the same change.
+
+Paths are **repo-relative** (from the monorepo root, so box files carry the `callback-box/` prefix,
+unlike the `callback-box/`-relative anchors in §7). A trailing `/` marks a **directory prefix** —
+every file beneath it counts as an anchor (fixtures are part of the contract). Blank lines and
+`#` comments are ignored. The Android bridge/native-shell files (`android-app/…`) join this list
+when `android-app/` exists — add them alongside their iOS counterparts at that point.
+
+```anchors
+# Web-side bridge, auth, and receipt surface
+callback-box/src/frontend/src/components/chat/native-post.ts
+callback-box/src/frontend/src/components/chat/use-native-bridge.ts
+callback-box/src/frontend/src/components/chat/native-emission.ts
+callback-box/src/frontend/src/lib/mobile-auth.ts
+callback-box/src/frontend/src/input/targets/receipts.ts
+
+# Box server: pairing, mobile-token verification, native HTTP endpoints
+callback-box/src/core/mobile/pairing.ts
+callback-box/src/webapp/routes/pairing.ts
+callback-box/src/webapp/routes/chat-audio-routes.ts
+
+# iOS native shell: webview bridge, pairing model, paired-box storage
+ios-app/CallbackBox/Views/ChatWebView.swift
+ios-app/CallbackBox/Models/PairedBox.swift
+ios-app/CallbackBox/Storage/PairedBoxStore.swift
+
+# Shared golden fixtures — any fixture change is a contract change (directory prefix)
+callback-box/test/mobile-contract/
+```

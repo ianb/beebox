@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "send and stop"
+  },
+  "expected": {
+    "action": "sendClose"
+  }
+}

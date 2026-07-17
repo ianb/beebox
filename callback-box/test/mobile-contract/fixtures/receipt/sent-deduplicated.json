@@ -1,0 +1,11 @@
+{
+  "input": {
+    "disposition": "sent",
+    "emissionId": "11111111-1111-1111-1111-111111111111",
+    "deduplicated": true
+  },
+  "expected": {
+    "disposition": "sent",
+    "emissionId": "11111111-1111-1111-1111-111111111111"
+  }
+}

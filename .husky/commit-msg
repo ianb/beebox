@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Monorepo commit-msg hook — mobile-contract tripwire (commit-msg half).
+#
+# The pre-commit half (bin/mobile-contract-check.ts, default mode) records a
+# pending violation to a per-worktree state file when a contract-surface anchor
+# is staged without a docs/mobile-contract.md update. This hook is the blocker:
+# a pre-commit hook can't read the not-yet-written commit message, so honoring
+# the `Contract-Unchanged: <reason>` override trailer has to happen here.
+#
+# If a violation is pending and the message lacks the trailer, the commit is
+# blocked with the touched anchors and the two ways out. Otherwise it passes
+# silently and clears the state. Fast (plain git + fs) — runs on every commit.
+#
+# Lives at the monorepo root alongside pre-commit; core.hooksPath (set to
+# .husky/_/ by the root `pnpm install`) is shared across all worktrees.
+
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+(cd "$REPO_DIR" && pnpm --silent mobile-contract-check --commit-msg "$1")
