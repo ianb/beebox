@@ -12,6 +12,7 @@ import { makeTestServer } from "../../helpers/doctest-server.js";
 import { buildMultipartForm } from "../../../src/lib/multipart.js";
 import { setStagingState, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
+import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 
 // Stage one upload via multipart, mirroring the browser client.
 async function upload(ctx, opts) {
@@ -37,6 +38,23 @@ async function upload(ctx, opts) {
     },
   });
 }
+
+// Stage one raw body exactly as URLSessionUploadTask does from a file URL.
+async function uploadRaw(ctx, opts) {
+  return ctx.request({
+    method: "POST",
+    url: `/api/capture/sessions/${opts.sessionId}/upload`,
+    payload: opts.data,
+    headers: {
+      "content-type": "application/octet-stream",
+      "x-capture-filename": opts.filename,
+      "x-capture-kind": opts.kind,
+      "x-capture-started-at": opts.startedAt ?? "2026-07-09T14:00:00.000Z",
+      "x-capture-source": opts.source ?? "camera-environment",
+      ...opts.headers,
+    },
+  });
+}
 ```
 
 ## Create → two audio segments land in the staging manifest
@@ -56,6 +74,9 @@ created.statusCode
 const sessionId = created.body.sessionId;
 typeof sessionId
 => string
+
+JSON.stringify(created.body.capabilities)
+=> {"acceptedAudioFormats":["webm-opus","m4a-aac"],"acceptedUploadEncodings":["raw-body-v1"]}
 ```
 
 Upload one chunk for each of two recording segments:
@@ -97,6 +118,141 @@ manifest.segments.map((s) => s.id).join(",")
 
 manifest.segments[0].chunks.join(",")
 => audio-0-001.webm
+
+manifest.segments[0].format
+=> webm-opus
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Raw JPEG and complete M4A bodies reach the upload handler
+
+The native transport sends `application/octet-stream`; Fastify must parse it to
+a Buffer before the route runs. M4A is one complete file per segment, while a
+second file or a mixed format is rejected before either filename is staged.
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: "chat-native" },
+});
+const sessionId = created.body.sessionId;
+
+const photo = await uploadRaw(ctx, {
+  sessionId, filename: "ios-photo-a.jpg", kind: "photo", data: Buffer.from("JPEG-BYTES"),
+});
+photo.statusCode
+=> 200
+```
+
+```ts continue
+const audio = await uploadRaw(ctx, {
+  sessionId, filename: "ios-audio-a.m4a", kind: "audio", data: Buffer.from("M4A-BYTES"),
+  headers: {
+    "x-capture-segment-id": "native-segment",
+    "x-capture-segment-started-at": "2026-07-09T14:01:00.000Z",
+    "x-capture-audio-format": "m4a-aac",
+  },
+});
+audio.statusCode
+=> 200
+```
+
+```ts continue
+const duplicate = await uploadRaw(ctx, {
+  sessionId, filename: "ios-audio-b.m4a", kind: "audio", data: Buffer.from("SECOND"),
+  headers: {
+    "x-capture-segment-id": "native-segment",
+    "x-capture-audio-format": "m4a-aac",
+  },
+});
+duplicate.statusCode
+=> 409
+```
+
+The rejected body never lands on disk or in the manifest:
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+JSON.stringify({
+  photos: manifest.photos.map((item) => item.filename),
+  audio: manifest.segments.map((segment) => ({ format: segment.format, chunks: segment.chunks })),
+})
+=> {"photos":["ios-photo-a.jpg"],"audio":[{"format":"m4a-aac","chunks":["ios-audio-a.m4a"]}]}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## REST resume uses the paired device owner
+
+The user who created the pairing QR is persisted onto the device and becomes
+the same `createdBy` value used by cookie-authenticated web capture.
+
+```ts
+const ctx = await makeTestServer();
+const ticket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "owner@example.com" });
+const paired = redeemMobilePairingTicket(ctx.boxRoot, {
+  pairingToken: ticket.token,
+  deviceLabel: "Owner's phone",
+});
+if (!paired) throw new Error("pairing failed");
+const auth = { authorization: `Bearer ${paired.deviceToken}` };
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: "chat-owner" }, headers: auth,
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "ios-photo-owner.jpg", kind: "photo", data: Buffer.from("OWNER"), headers: auth,
+});
+const resumed = await ctx.request({
+  method: "GET",
+  url: `/api/capture/sessions/resumable?targetSessionId=chat-owner&clientSessionId=${sessionId}`,
+  headers: auth,
+});
+JSON.stringify({ status: resumed.statusCode, matches: resumed.body.resumable[0]?.id === sessionId })
+=> {"status":200,"matches":true}
+```
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+manifest.createdBy
+=> owner@example.com
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## An ownerless legacy device must re-pair when auth is enabled
+
+Old device records decode with `createdBy: null`. They remain valid for ordinary
+mobile access, but cannot create captures in an authenticated box because all
+such devices would otherwise share the anonymous resume scope.
+
+```ts
+const ctx = await makeTestServer();
+const ticket = createMobilePairingTicket(ctx.boxRoot);
+const paired = redeemMobilePairingTicket(ctx.boxRoot, {
+  pairingToken: ticket.token,
+  deviceLabel: "Legacy phone",
+});
+if (!paired) throw new Error("pairing failed");
+const previousClientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+process.env.GOOGLE_OAUTH_CLIENT_ID = "capture-route-doctest-client";
+const created = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { targetSessionId: "chat-owner" },
+  headers: { authorization: `Bearer ${paired.deviceToken}` },
+});
+if (previousClientId === undefined) delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+else process.env.GOOGLE_OAUTH_CLIENT_ID = previousClientId;
+JSON.stringify({ status: created.statusCode, error: created.body.error })
+=> {"status":403,"error":"This paired device predates mobile identity. Re-pair it before using Capture."}
 ```
 
 ```ts cleanup

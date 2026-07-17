@@ -19,9 +19,10 @@ import { createAudioTemplate } from "../../schemas/audio.js";
 import { createImageTemplate, type ImageSource } from "../../schemas/image.js";
 import { createFileTemplate } from "../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
-import { concatSegments, type SegmentChunks } from "./audio-concat.js";
+import { concatSegmentChunks } from "./audio-concat.js";
 import { computeEntry, saveManifest, emptyManifest } from "../asset-manifest.js";
 import type { StagingSession, StagingSegment, StagingPhoto, StagingFile } from "./staging-store.js";
+import { M4ASegmentFileCountError } from "./audio-format.js";
 
 /**
  * Accumulates the media + cards written for one session, tracking which paths
@@ -91,19 +92,17 @@ export async function writeAudioCards(opts: {
 }): Promise<void> {
   const { builder, sessionDir, segments } = opts;
 
-  const segmentBuffers: SegmentChunks[] = [];
-  for (const segment of segments) {
-    const chunks: Buffer[] = [];
-    for (const chunkFilename of segment.chunks) {
-      chunks.push(await fs.readFile(path.join(sessionDir, chunkFilename)));
+  for (const [i, segment] of segments.entries()) {
+    const chunks = await Promise.all(
+      segment.chunks.map((chunkFilename) => fs.readFile(path.join(sessionDir, chunkFilename))),
+    );
+    if (chunks.length === 0) continue;
+    if (segment.format === "m4a-aac" && chunks.length !== 1) {
+      throw new M4ASegmentFileCountError();
     }
-    segmentBuffers.push({ segmentId: segment.id, startedAt: segment.startedAt, chunks });
-  }
-
-  const concatenated = concatSegments(segmentBuffers);
-  for (const [i, segment] of concatenated.entries()) {
     const audioBasename = `audio-${String(i + 1).padStart(3, "0")}`;
-    const mediaFilename = `${audioBasename}.webm`;
+    const extension = segment.format === "m4a-aac" ? "m4a" : "webm";
+    const mediaFilename = `${audioBasename}.${extension}`;
     const cardContent = createAudioTemplate({
       recordedAt: segment.startedAt,
       source: "microphone",
@@ -113,7 +112,7 @@ export async function writeAudioCards(opts: {
       childBasename: audioBasename,
       cardType: "audio",
       mediaFilename,
-      mediaContent: segment.buffer,
+      mediaContent: concatSegmentChunks(chunks),
       cardContent,
     });
     builder.audioRefs.push(`${audioBasename}.audio.card`);

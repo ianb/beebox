@@ -18,6 +18,12 @@ import { z } from "zod";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import {
+  CaptureAudioFormatSchema,
+  M4ASegmentFileCountError,
+  StagingAudioFormatMismatchError,
+  type CaptureAudioFormat,
+} from "./audio-format.js";
 
 /**
  * Preparation/lifecycle state. `failed:<step>` records which preparation step
@@ -29,8 +35,13 @@ const StagingSessionStateSchema = z.union([
 ]);
 export type StagingSessionState = z.infer<typeof StagingSessionStateSchema>;
 
-/** One recording start. Chunks are ordered as uploaded (WebM header rule). */
-const StagingSegmentSchema = z.object({ id: z.string(), startedAt: z.string(), chunks: z.array(z.string()) });
+/** One recording start. WebM chunks are ordered; M4A has exactly one file. */
+const StagingSegmentSchema = z.object({
+  id: z.string(),
+  startedAt: z.string(),
+  format: CaptureAudioFormatSchema.default("webm-opus"),
+  chunks: z.array(z.string()),
+});
 export type StagingSegment = z.infer<typeof StagingSegmentSchema>;
 
 /**
@@ -211,10 +222,12 @@ async function mutateSession(opts: {
     if (!session) throw new StagingSessionGoneError(id);
     if (media) {
       enforceStagingLimits({ session, incomingBytes: media.buffer.length });
+      mutate(session);
       await fs.writeFile(resolveStagedFile({ boxRoot, id, filename: media.filename }), media.buffer);
       session.totalBytes = (session.totalBytes ?? 0) + media.buffer.length;
+    } else {
+      mutate(session);
     }
-    mutate(session);
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
   });
@@ -227,12 +240,14 @@ export interface AddAudioChunkParams {
   segmentStartedAt: string;
   filename: string;
   buffer: Buffer;
+  audioFormat?: CaptureAudioFormat | undefined;
 }
 
 /** Write an audio chunk to disk and append it to its segment (creating the
  * segment on first chunk). */
 export async function addAudioChunk(params: AddAudioChunkParams): Promise<void> {
   const { boxRoot, id, segmentId, segmentStartedAt, filename, buffer } = params;
+  const audioFormat = params.audioFormat ?? "webm-opus";
   await mutateSession({
     boxRoot,
     id,
@@ -240,8 +255,14 @@ export async function addAudioChunk(params: AddAudioChunkParams): Promise<void> 
     mutate: (session) => {
       let segment = session.segments.find((s) => s.id === segmentId);
       if (!segment) {
-        segment = { id: segmentId, startedAt: segmentStartedAt, chunks: [] };
+        segment = { id: segmentId, startedAt: segmentStartedAt, format: audioFormat, chunks: [] };
         session.segments.push(segment);
+      }
+      if (segment.format !== audioFormat) {
+        throw new StagingAudioFormatMismatchError();
+      }
+      if (audioFormat === "m4a-aac" && segment.chunks.length > 0) {
+        throw new M4ASegmentFileCountError();
       }
       segment.chunks.push(filename);
     },

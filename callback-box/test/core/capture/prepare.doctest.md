@@ -56,7 +56,7 @@ function commitReport(boxRoot, baseA, baseB) {
   return countA === 1 && countB === 1 && aIsolated && bIsolated;
 }
 
-const GITIGNORE = ["tmp/", ".callback-box/", "**/*.attach/**/*.webm", "**/*.attach/**/*.jpg"].join("\n") + "\n";
+const GITIGNORE = ["tmp/", ".callback-box/", "**/*.attach/**/*.webm", "**/*.attach/**/*.m4a", "**/*.attach/**/*.jpg"].join("\n") + "\n";
 
 // Scripted transcription, keyed by the concatenated clip filename.
 const SCRIPT = {
@@ -77,6 +77,15 @@ const SCRIPT = {
       { word: "Found", start: 0, end: 1 },
       { word: "the", start: 1, end: 2 },
       { word: "recipe.", start: 2, end: 3 },
+    ],
+  },
+  "audio-001.m4a": {
+    text: "Native audio survived.",
+    duration: 2,
+    words: [
+      { word: "Native", start: 0, end: 0.5 },
+      { word: "audio", start: 0.5, end: 1 },
+      { word: "survived.", start: 1, end: 2 },
     ],
   },
 };
@@ -188,6 +197,51 @@ The staging session's media was cleaned up once delivered:
 ```ts continue
 await readStagingSession({ boxRoot: box.root, id })
 => null
+```
+
+```ts cleanup
+registry.shutdown();
+eventBus.close();
+await box.cleanup();
+```
+
+## Native M4A stays M4A through preparation
+
+A native segment is one complete M4A file. Preparation must not concatenate it
+under a WebM extension; transcription and the audio card both see `.m4a`.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write(".gitignore", GITIGNORE);
+await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
+await box.write("config/fake-transcription.json", JSON.stringify({ "audio-001.m4a": SCRIPT["audio-001.m4a"] }, null, 2));
+box.commitAll("configure native transcription");
+const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+await addAudioChunk({
+  boxRoot: box.root,
+  id: staged.id,
+  segmentId: "native-segment",
+  segmentStartedAt: "2026-07-09T15:00:00.000Z",
+  filename: "ios-audio.m4a",
+  buffer: Buffer.from("COMPLETE-M4A"),
+  audioFormat: "m4a-aac",
+});
+await setStagingState({ boxRoot: box.root, id: staged.id, state: "sealed" });
+const backend = createFakeChatBackend();
+const registry = new ChatSessionRegistry(box.root, {
+  backend,
+  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+});
+const eventBus = createEventBus(box.root);
+await prepareCaptureSession({ boxRoot: box.root, id: staged.id, eventBus, registry });
+await tick();
+const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T15:00:00.000Z", id: staged.id });
+const attach = `tmp-capture/${basename}.attach`;
+JSON.stringify({
+  media: await box.read(`${attach}/audio-001.attach/audio-001.m4a`),
+  cardNamesM4A: (await box.read(`${attach}/audio-001.audio.card`)).includes("ref: attach/audio-001.m4a"),
+})
+=> {"media":"COMPLETE-M4A","cardNamesM4A":true}
 ```
 
 ```ts cleanup
