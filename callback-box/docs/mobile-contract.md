@@ -11,7 +11,7 @@ request/response shape, or a server-side mobile-awareness branch — **must upda
 the same commit.** The Contract Surface Index (§7) and the mirrored-constants list (§8) are the
 artifacts an agent diffs a change against; if your change touches a row there, it touches this
 doc. The process that enforces this — how iOS and Android are kept in parity, who reviews a
-contract change — is defined in `docs/plans/mobile-parity-sync.md`.
+contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`.
 
 **Path conventions.** Box code paths are relative to `callback-box/`; iOS paths are under
 `ios-app/CallbackBox/`. Anchors name a file plus the identifier (function/struct/const) inside it —
@@ -241,7 +241,7 @@ the contract.
   non-empty string); an unknown/absent `origin` coerces to `"typed"`; `diarized` is `true` only for
   a literal `true`, else `false`; malformed `images` entries are dropped **individually**; and a
   synthetic rejection (a `null` parse) occurs **only when neither text nor any valid image
-  survives**. This is the current intentional behavior. Fixtures (`docs/plans/mobile-parity-sync.md`)
+  survives**. This is the current intentional behavior. Fixtures (`docs/implemented-plans/mobile-parity-sync.md`)
   must encode these **lenient** outcomes, not an imagined strict contract.
 - **Open question (boxholder):** should this parser be hardened to reject malformed native payloads
   loudly rather than coercing them? The house bias is strict, but changing it alters shipped iOS
@@ -497,7 +497,7 @@ neutral path are strings; receipt and location-result payloads are JSON, the ses
 The machine-readable distillation of §7 — the small set of files on all three sides that
 **are** the contract surface. It is the input to the two-hook tripwire (`bin/mobile-contract-check.ts`,
 wired into `.husky/pre-commit` + `.husky/commit-msg`; mechanism 5 of
-`docs/plans/mobile-parity-sync.md`): if a commit stages any file listed here but does **not** also
+`docs/implemented-plans/mobile-parity-sync.md`): if a commit stages any file listed here but does **not** also
 stage this document, the commit is blocked at `commit-msg` time unless its message carries a
 `Contract-Unchanged: <reason>` trailer. Keep this list and the surface it guards in sync — adding a
 contract surface means adding its file here in the same change.

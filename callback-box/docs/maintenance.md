@@ -24,7 +24,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Box data migrations | `cb migrate` (per box) | After adding a new migrator to `src/core/migrations.ts` | Box working tree |
 | Broken-ref cleanup | `npx tsx scripts/clean-broken-refs.ts <boxRoot>` | One-off; when `cb validate` shows ref errors that pre-date a migration | Box working tree |
 | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
-| Mobile parity audit | agent procedure (prompt in `docs/plans/mobile-parity-sync.md` §6) | After a burst of mobile work; quarterly otherwise | Issues filed for contract/matrix drift |
+| Mobile parity audit | agent procedure (prompt in `docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile work; quarterly otherwise | Issues filed for contract/matrix drift |
 
 ## Tasks
 

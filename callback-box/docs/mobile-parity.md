@@ -1,7 +1,7 @@
 # Mobile parity matrix
 
 Feature-level parity between the native companion apps and the box contract.
-Maintained under the process in `docs/plans/mobile-parity-sync.md`; wire-level
+Maintained under the process in `docs/implemented-plans/mobile-parity-sync.md`; wire-level
 detail lives in `docs/mobile-contract.md`. Cell values: **done**,
 **planned** (link the issue or plan), **divergent** (deliberate, with reason),
 **n/a** (platform limitation or not applicable).
@@ -29,7 +29,7 @@ app exists.
 | Voice: HQ server transcription upload | done (float WAV — format question tracked in `issues/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`) | planned (Track 4, 16 kHz mono 16-bit PCM WAV) |
 | Location share via bridge | done | planned (Track 5, + geolocation permission handoff) |
 | External links → system browser | done (Safari hand-off) | planned (Track 1, Custom Tabs) |
-| Shared golden-fixture contract tests | planned (`docs/plans/mobile-parity-sync.md` step 3) | planned (Track 6) |
+| Shared golden-fixture contract tests | done (`docs/implemented-plans/mobile-parity-sync.md` step 3 — TS doctest + iOS `MobileContractFixtureDecodeTests`/`SpeechKeywordsTests`) | planned (Track 6) |
 | Headless CI build + unit tests | n/a — needs macOS/Xcode | planned (Track 6 / open question; Linux-friendly) |
 | Capture mode | planned (`docs/plans/ios-native-capture-mode.md`) | not planned until iOS capture ships |
 | Push notifications | not planned (no APNs channel server-side) | not planned (no FCM channel server-side) |

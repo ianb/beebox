@@ -5,7 +5,7 @@ vectors every mobile client is checked against — the web-side doctests here, t
 iOS `SpeechKeywordsTests` XCTest suite, and (later) an Android JUnit suite all
 load the **same files**. A contract change edits a fixture once and every
 platform's suite fails for the cases the fixtures represent until it catches up.
-The design and policy live in `docs/plans/mobile-parity-sync.md` and
+The design and policy live in `docs/implemented-plans/mobile-parity-sync.md` and
 `docs/mobile-contract.md`.
 
 Each fixture is one well-formed JSON file: `{ "input": …, "expected": … }` plus

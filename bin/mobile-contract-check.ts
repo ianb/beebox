@@ -3,7 +3,7 @@
  * Mobile-contract tripwire (`pnpm mobile-contract-check`). One script, two modes,
  * driven by the two git hooks that together enforce the sync rule from
  * `callback-box/docs/mobile-contract.md` (mechanism 5 of
- * `callback-box/docs/plans/mobile-parity-sync.md`):
+ * `callback-box/docs/implemented-plans/mobile-parity-sync.md`):
  *
  *   pre-commit  (default mode)   — reads the staged file list and the anchor
  *     manifest (the ```anchors block in the contract doc). If a staged file
@@ -25,7 +25,7 @@
  * we cannot know whether a staged file is an anchor, so we refuse to guess.
  *
  * Runs on EVERY commit repo-wide, so it stays fast: plain git + fs, no heavy
- * imports. Background: `callback-box/docs/plans/mobile-parity-sync.md`.
+ * imports. Background: `callback-box/docs/implemented-plans/mobile-parity-sync.md`.
  */
 
 import { execFileSync } from "node:child_process";

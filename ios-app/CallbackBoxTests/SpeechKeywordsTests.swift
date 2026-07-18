@@ -74,7 +74,7 @@ final class SpeechKeywordsTests: XCTestCase {
     /// `callback-box/test/mobile-contract/fixtures/speech-keywords/`, consumed
     /// here and by the TS `test/mobile-contract/fixtures.doctest.md`. Editing a
     /// vector once fails both suites until they agree — see
-    /// `callback-box/docs/plans/mobile-parity-sync.md`.
+    /// `callback-box/docs/implemented-plans/mobile-parity-sync.md`.
     func testSpeechKeywordFixturesMatchSharedVectors() throws {
         let fixtures = try MobileContractFixtures.load("speech-keywords")
         XCTAssertFalse(fixtures.isEmpty, "no speech-keyword fixtures found at \(MobileContractFixtures.root.path)")

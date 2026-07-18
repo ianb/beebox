@@ -1,7 +1,9 @@
 # Native Android companion app
 
-**Status:** draft — build-ready, written 2026-07-17. Stack (native Kotlin +
-Compose), depth, and monorepo location were chosen by the boxholder; the rest is
+**Status:** partially implemented 2026-07-17 — Track 0 (platform-neutral
+web→native posting, box-side + iOS prerequisite) has shipped; the Android app
+itself (`android-app/`) does not exist yet. Stack (native Kotlin + Compose),
+depth, and monorepo location were chosen by the boxholder; the rest is
 grounded in the same-day contract inventory (`docs/mobile-contract.md`), the iOS
 follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
 research, pending boxholder review. Mirrors the shipped iOS companion app against
@@ -138,7 +140,17 @@ and `kotlinx.serialization` is required.
 
 Box-side TypeScript: Track 0 only. Everything else is the new `android-app/`.
 
-### Track 0 — Platform-neutral web→native posting *(box-side + iOS prerequisite)*
+### Track 0 — Platform-neutral web→native posting *(box-side + iOS prerequisite)* — done 2026-07-17
+
+Shipped: `callback-box/src/frontend/src/components/chat/native-post.ts` (the
+neutral `postNativeMessage`/`NativeShellChannel`), `use-native-bridge.ts` wired
+to it, and `ios-app/CallbackBox/Views/ChatWebView.swift`'s
+`callbackboxNativePost` startup-script global + `dictionaryPayload(from:)`
+dual-form decoder (accepts both the legacy object form and the new JSON-string
+form). `docs/mobile-contract.md` and its shared fixtures
+(`test/mobile-contract/fixtures/`) were updated in the same body of work. The
+Android-side transport and WebKit-compat façade described below remain
+unimplemented pending the rest of this plan.
 
 **What.** Replace the iOS-specific `window.webkit.messageHandlers.<channel>.postMessage`
 in the web layer with a single neutral `window.callbackboxNativePost(channel,
@@ -561,7 +573,7 @@ pending pipeline over both an https box (grant/deny) and a plain-http remote box
 
 ### Track 6 — Cross-platform golden fixtures, parity matrix, end-to-end verification
 
-**What.** Consume the shared golden fixtures the parallel `docs/plans/mobile-parity-sync.md`
+**What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
 process defines, wire them into the Gradle test build, maintain the
 iOS↔Android↔box parity matrix, and run the device acceptance pass.
 
@@ -574,7 +586,7 @@ one dispatch path; loud redeem errors) are tracked rather than lost.
 
 - Golden fixtures (emission JSON, receipt JSON, location result JSON, redeem
   request/response, pairing-URL cases) live under `callback-box/test/mobile-contract/fixtures/`
-  per `docs/plans/mobile-parity-sync.md`. Add a Gradle test-resources `srcDir`
+  per `docs/implemented-plans/mobile-parity-sync.md`. Add a Gradle test-resources `srcDir`
   pointing at that path so Android JUnit decodes the same bytes iOS XCTest and the
   box doctests decode. Any wire-shape change fails all three.
 - The parity matrix (`docs/mobile-parity.md`, owned by the sync plan) lists each
@@ -602,7 +614,7 @@ seed the parity matrix with the four divergences. Device pass is the closeout.
 
 No subplan is required. The box side is one bounded refactor (Track 0). The
 Android app is one cohesive client fully directed above; the cross-platform
-fixture *process* is owned by `docs/plans/mobile-parity-sync.md`, which this plan
+fixture *process* is owned by `docs/implemented-plans/mobile-parity-sync.md`, which this plan
 consumes rather than defines.
 
 ## Failure modes (the load-bearing section)
