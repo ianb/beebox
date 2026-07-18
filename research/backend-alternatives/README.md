@@ -8,9 +8,28 @@ data — those three facts, not "is it a good coding tool," decide everything be
 
 Method: parallel web research (July 2026) across Codex, Google Antigravity, Kimi/Moonshot,
 GLM/Zhipu, OpenCode/Crush/Kilo, a breadth sweep (Gemini CLI, Aider, Cline, Amp, Goose,
-Cursor CLI, Qwen Code, Continue, Warp, Roo), and multi-backend wrapper/router prior art.
-Every non-obvious claim was sourced; per-tool detail lives in the session transcripts —
-this README is the synthesis + decision.
+Cursor CLI, Qwen Code, Continue, Warp, Factory Droid, Copilot CLI, Roo), and multi-backend
+wrapper/router prior art. Every non-obvious claim was sourced; per-tool detail lives in the
+session transcripts — this README is the synthesis + decision.
+
+> ⚠️ **FIRST PASS — KNOWN-FLAWED; superseded by a deeper Fable-led investigation
+> (worktree `backend-research`, started 2026-07-18).** Boxholder flagged three gaps that
+> matter enough to redo this:
+> 1. **Wrong architecture model.** This doc treats the agent loop as callback-box's own and
+>    frames adopting OpenCode as "replacing our loop, a bigger bet." That's wrong — callback-box
+>    **delegates the loop to `@anthropic-ai/claude-agent-sdk`'s `query()`** (`src/core/agent/`);
+>    the loop is *external*. So OpenCode/Goose are **peer engine swaps at the same layer**, not
+>    a bigger disruption — possibly *easier* than implied. The real unexamined question is how
+>    coupled `src/core/agent/` is to the SDK's interface.
+> 2. **ToS-theoretical, not empirical.** The restriction analysis leans on ToS text; what's
+>    needed is real practitioner *accounts* of what subscriptions actually allow vs. what's only
+>    announced-but-unenforced (e.g. Anthropic's stated-but-not-yet-applied quota cuts).
+> 3. **Missing: self-hosting (vLLM) and image/multimodal capability** — image understanding is
+>    core to callback-box (screenshots, image cards, PDFs, capture), so every candidate needs a
+>    vision verdict, and vLLM's multimodal serving story must be assessed.
+>
+> Treat the sections below as a rough map, not conclusions. The corrected framing above still
+> holds (task-permission isn't the barrier); the *engine-swap* analysis is what's being redone.
 
 ---
 
