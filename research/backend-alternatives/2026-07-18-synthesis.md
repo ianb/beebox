@@ -22,10 +22,13 @@ PreToolUse/PostToolUse hooks (card validation), session store + transcripts, and
 subscription auth — with the Agent SDK as the driving handle
 (full inventory: [coupling audit](2026-07-18-sdk-coupling-audit.md)). Two consequences:
 
-- **Shape A is categorically cheap.** Swapping the model server under Claude Code
-  (`ANTHROPIC_BASE_URL` + token + model ids) keeps every layer we depend on. The env
-  plumbing already exists (`src/core/agent/run.ts:192` injects a base URL for the
-  prompt logger).
+- **Shape A is categorically cheaper.** Swapping the model server under Claude Code
+  (`ANTHROPIC_BASE_URL` + token + model ids) keeps every layer we depend on. There is
+  precedent for base-URL injection (`src/core/agent/run.ts:192`, the prompt-logger
+  proxy), though that is debug plumbing; real integration work remains in the
+  auth preflight, `buildScriptEnv`'s deliberate `ANTHROPIC_API_KEY` stripping, and
+  cost attribution (inventory in the coupling audit's closing section). Cheap
+  relative to Shape B; a scoped task, not a config flag.
 - **Shape B is a project.** The harness survey found no clean drop-in: in-process
   hooks, caller-minted session ids, and structured-output-under-tools each exist in
   some candidates and are missing or refused in others; our chat history subsystem
@@ -46,23 +49,31 @@ subscription auth — with the Agent SDK as the driving handle
 
 ## What the empirical passes established
 
-**1. Our current posture is the sanctioned one, and the real Anthropic risk is a
-pricing change with notice.** Single-tenant Agent SDK use on the subscriber's own
-login is documented "ordinary use"; no ban/throttle reports exist for personal
-headless/cron agents; task type is irrelevant to Anthropic (Cowork proves general use
-on the same quota pool). Every enforcement wave hit multi-tenant harnesses proxying
-other users' traffic. The concrete threat is the announced-then-cancelled credit-pool
+**1. Our current posture survived every enforcement wave, and the near-term Anthropic
+risk is a pricing change with notice — with one standing ambiguity.** Single-tenant
+Agent SDK use on the subscriber's own login is described as "ordinary use"; no
+ban/throttle reports exist for personal headless/cron agents; task type is irrelevant
+to Anthropic (Cowork proves general use on the same quota pool). Every enforcement
+wave hit multi-tenant harnesses proxying other users' traffic. The ambiguity to be
+honest about: the same docs point "developers building products/services" at API
+keys, and callback-box is a shipped product even though each user runs their own
+instance on their own login — a tolerated gray zone per the policy note, defensible
+as long as we never centralize users' subscriptions, and a second reason (beyond
+pricing) to want the provider-config escape hatch. The concrete threat is the announced-then-cancelled credit-pool
 split for SDK/`claude -p` usage (was to take effect 2026-06-15; pulled that day;
 "when, not if"). That is precisely a policy/pricing event of the kind the boxholder
 wants resilience to — and it comes with advance notice, which means pluggability can
 be a prepared response rather than a prerequisite.
 ([policy enforcement note](2026-07-18-anthropic-policy-enforcement.md))
 
-**2. The cheap coding plans are dead for us — now with primary-source confirmation.**
-z.ai's usage policy states the system detects non-coding request content, and
-enforcement reports name "personal assistants" verbatim among banned patterns, with a
-separate flag for headless "SDK-based access" (the boxholder's recollection was
-correct). MiniMax's plan bars non-interactive/backend use outright. Kimi's plan is
+**2. The cheap coding plans are dead for us.** Two evidence grades, kept distinct:
+z.ai's usage policy (primary source) states the plan is for coding scenarios and that
+the system detects requests "clearly unrelated to coding scenarios" — confirming the
+boxholder's recollection that content is inspected; that enforcement specifically
+names "personal assistants" among banned patterns comes from a third-party report
+(awesomeagents.ai), corroborated in spirit by a separate practitioner-reported
+"SDK-based access" flag on headless traffic, and should be treated as
+report-grade. MiniMax's plan bars non-interactive/backend use outright. Kimi's plan is
 quota-shaped for interactive coding. Every viable third-party path prices at
 pay-per-token API rates. ([drop-in providers](2026-07-18-drop-in-providers.md))
 
@@ -112,17 +123,28 @@ tool-use gap ~95% vs ~87.5%). Recheck in 6–12 months.
 
 ## Recommendations
 
-**ADOPT — provider-endpoint configuration under the existing harness (Shape A).**
-A per-box/install-time provider setting (base URL, auth token, model-id map — the
-boxholder's "choose your provider up front" model exactly) wired through
-`src/core/agent/run.ts` and `src/services/claude-chat.ts`, defaulting to Anthropic
-subscription auth. Concretely unlocks today: Anthropic API billing (policy hedge
-against the credit-pool change), OpenRouter (model + billing diversity, vision-capable
-non-China models), Kimi/GLM APIs for users who accept their data posture, and
-self-hosted vLLM later — all with near-zero marginal integration. Filed as
-`issues/features/2026-07-18-provider-endpoint-config.md`. First step is empirical: a
-scratch-box spike verifying the SDK's full loop (tools, images, streaming, caching)
-against one non-Anthropic endpoint, per the pre-existing spike issue.
+**ADOPT (gated on the spike) — provider-endpoint configuration under the existing
+harness (Shape A).** A per-box/install-time provider setting (base URL, auth token,
+model-id map via `src/shared/model-ids.ts` — the boxholder's "choose your provider up
+front" model exactly) wired through `src/core/agent/run.ts` and
+`src/services/claude-chat.ts`, defaulting to Anthropic subscription auth. Concretely
+unlocks: Anthropic API billing (policy hedge against the credit-pool change),
+OpenRouter (model + billing diversity, vision-capable non-China models), Kimi/GLM APIs
+for users who accept their data posture, and self-hosted vLLM later. Honest scope: a
+scoped task rather than a config flag — provider-aware auth preflight, a token path
+through `buildScriptEnv`'s API-key stripping, visible degradation of cost attribution
+(details in the feature issue). The gate is empirical: a scratch-box spike proving
+the SDK's full loop (tools, images, streaming, caching, session resume) against one
+real non-Anthropic endpoint under a real reactor workload, per the pre-existing spike
+issue — adoption is contingent on that spike passing. Filed as
+`issues/features/2026-07-18-provider-endpoint-config.md`.
+
+**Acknowledged gap — no workload cost model.** This pass established *which* paths
+are viable and legal; it did not build the per-provider cost comparison a pricing
+decision needs (expected monthly tokens, image volume, cache-hit assumptions,
+tool-call counts × per-provider rates). That model is cheap to build from our own
+usage data (`src/core/usage.ts` already attributes per-session cost) and should be
+part of the spike.
 
 **ADAPT — port hygiene that pays off regardless of any swap.** Move `adaptSdkMessage`
 inside `ChatBackend` so the port speaks our stable `ChatMessage` wire type; normalize
@@ -133,8 +155,10 @@ as cleanup on its own. Filed as
 
 **LATER — Codex SDK as an optional second backend (Shape B, scoped).** The only route
 to "bring your ChatGPT subscription," and the research says treat it as an optional,
-clearly-labeled backend rather than a default: informal policy for commercial use,
-two-toggle training exposure, image-path gap. Trigger conditions for picking it up:
+clearly-labeled backend rather than a default: OpenAI's tolerance is informal
+(tweet-grade, with the commercial-use question pointedly unanswered — shipping this
+warrants an actual legal read, and nothing stronger than "experimental" labeling),
+plus two-toggle training exposure and the image-path gap. Trigger conditions for picking it up:
 OpenAI formalizes third-party subscription policy, or the Anthropic credit-pool change
 lands and users need an escape hatch. Filed as
 `issues/exploration/2026-07-18-codex-sdk-second-backend.md`.

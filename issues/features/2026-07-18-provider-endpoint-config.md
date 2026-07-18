@@ -25,8 +25,11 @@ Design questions:
 - Where the config lives (box config vs install-level) and how auth tokens are
   stored; interaction with `buildScriptEnv`'s deliberate `ANTHROPIC_API_KEY`
   stripping (`src/core/script-env.ts`) which currently forces subscription auth.
-- Model-id mapping (`src/core/model-ids.ts`) per provider; what "haiku-tier" maps
-  to on each.
+- Model-id mapping (`src/shared/model-ids.ts`) per provider; what "haiku-tier"
+  maps to on each.
+- A workload cost model (from `src/core/usage.ts` data: monthly tokens, image
+  volume, cache-hit rate, tool-call counts × per-provider rates) — the research
+  established viability/legality per provider; pricing comparison remains open.
 - Auth preflight (`src/core/agent/auth-preflight.ts` shells to `claude auth
   status`) must become provider-aware — an API-key provider has no `claude login`.
 - Usage/cost attribution (`src/core/usage.ts` consumes `total_cost_usd`) — other

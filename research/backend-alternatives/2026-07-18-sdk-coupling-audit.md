@@ -172,10 +172,18 @@ Traced to the layers, cheapest first:
 
 1. **Provider config under the existing SDK (Shape A):** a per-box (or install-time)
    setting mapping to `ANTHROPIC_BASE_URL` + auth token + model ids
-   (`src/core/model-ids.ts`). The env plumbing already exists — the prompt logger
-   already injects `ANTHROPIC_BASE_URL` (`run.ts:192`). Effort: small; risk lives
-   entirely in whether the target endpoint faithfully implements tool use +
-   images + thinking + caching (empirical question, researched separately).
+   (`src/shared/model-ids.ts`). There is precedent for base-URL injection — the
+   prompt logger routes the SDK through a localhost proxy via `ANTHROPIC_BASE_URL`
+   (`run.ts:192`) — but that is debug-only plumbing, not a provider setting.
+   Real integration work beyond the env var: the auth preflight
+   (`auth-preflight.ts` shells to `claude auth status` on every run path and chat
+   declares `requiresClaudeAuth`) must become provider-aware; `buildScriptEnv`
+   deliberately strips `ANTHROPIC_API_KEY` (`script-env.ts:106`) and would need a
+   provider-token path; cost attribution (`core/usage.ts` consumes
+   `total_cost_usd`) must degrade visibly for providers that don't report cost.
+   Effort: small-to-moderate; the deeper risk is whether the target endpoint
+   faithfully implements tool use + images + thinking + caching (empirical
+   question, researched separately).
 2. **Port hygiene (backend-agnostic wins, no swap required):** move
    `adaptSdkMessage` inside `ChatBackend`; define a normalized stream-delta event;
    log our own durable `ChatMessage` transcript instead of parsing
