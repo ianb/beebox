@@ -30,6 +30,11 @@ session transcripts — this README is the synthesis + decision.
 >
 > Treat the sections below as a rough map, not conclusions. The corrected framing above still
 > holds (task-permission isn't the barrier); the *engine-swap* analysis is what's being redone.
+>
+> Deep-pass documents so far:
+> - [2026-07-18-sdk-coupling-audit.md](2026-07-18-sdk-coupling-audit.md) — code audit of how
+>   coupled callback-box actually is to the Claude Agent SDK / Claude Code runtime (corrects
+>   flaw 1 with file:line evidence).
 
 ---
 
