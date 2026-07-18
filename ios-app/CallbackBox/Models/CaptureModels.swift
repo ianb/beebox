@@ -171,6 +171,8 @@ enum CaptureUploadFailureResolution: Equatable, Sendable {
 }
 
 struct CaptureItem: Codable, Equatable, Identifiable, Sendable {
+    // The durable manifest mirrors conditionally present upload headers, so these stay flat for
+    // stable Codable output. CaptureStore validates every kind-specific combination on read/write.
     var id: UUID
     var filename: String
     var kind: CaptureKind

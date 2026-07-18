@@ -31,6 +31,21 @@ final class CaptureStoreTests: XCTestCase {
         XCTAssertFalse(try directoryContainsAtomicTemporaryFile())
     }
 
+    func testRejectsKindInconsistentManifestMetadata() async throws {
+        let store = try await makeStore()
+        var item = makeAudioItem(state: .local)
+        item.audioFormat = nil
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.importPayload(
+                from: try self.sourceFile(contents: Data("audio".utf8)),
+                boxID: self.boxID,
+                sessionID: self.sessionID,
+                item: item
+            )
+        }
+    }
+
     func testRecordingRowPrecedesPayloadAndClosesToLocal() async throws {
         let store = try await makeStore()
         let item = makeAudioItem(state: .recording)

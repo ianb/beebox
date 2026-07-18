@@ -475,8 +475,38 @@ actor CaptureStore {
         guard item.filename == (item.filename as NSString).lastPathComponent else {
             throw CaptureFailure.invalidManifest("Capture filename is unsafe.")
         }
-        if item.kind == .photo {
+        switch item.kind {
+        case .photo:
+            guard
+                item.originalName == nil,
+                item.audioFormat == nil,
+                item.segmentID == nil,
+                item.segmentStartedAt == nil
+            else {
+                throw CaptureFailure.invalidManifest("Photo capture metadata is inconsistent.")
+            }
             try CaptureFilename.validatePhoto(filename: item.filename, mimeType: item.mimeType)
+        case .file:
+            guard
+                let originalName = item.originalName,
+                originalName.isEmpty == false,
+                item.audioFormat == nil,
+                item.segmentID == nil,
+                item.segmentStartedAt == nil
+            else {
+                throw CaptureFailure.invalidManifest("File capture metadata is inconsistent.")
+            }
+        case .audio:
+            guard
+                item.originalName == nil,
+                item.audioFormat == .m4aAAC,
+                let segmentID = item.segmentID,
+                segmentID.isEmpty == false,
+                let segmentStartedAt = item.segmentStartedAt,
+                segmentStartedAt.isEmpty == false
+            else {
+                throw CaptureFailure.invalidManifest("Audio capture metadata is inconsistent.")
+            }
         }
     }
 

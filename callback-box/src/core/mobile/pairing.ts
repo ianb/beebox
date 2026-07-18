@@ -19,20 +19,6 @@ interface PendingPairing {
   used: boolean;
 }
 
-export interface MobileDevice {
-  id: string;
-  label: string;
-  tokenHash: string;
-  createdAt: string;
-  createdBy: string | null;
-  lastUsedAt?: string | undefined;
-  revokedAt?: string | undefined;
-}
-
-interface MobileDeviceStore {
-  devices: MobileDevice[];
-}
-
 const MobileDeviceSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -42,6 +28,11 @@ const MobileDeviceSchema = z.object({
   lastUsedAt: z.string().optional(),
   revokedAt: z.string().optional(),
 });
+export type MobileDevice = z.infer<typeof MobileDeviceSchema>;
+
+interface MobileDeviceStore {
+  devices: MobileDevice[];
+}
 
 export interface PairingTicket {
   token: string;

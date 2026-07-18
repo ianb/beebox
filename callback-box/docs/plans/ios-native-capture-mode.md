@@ -1,7 +1,7 @@
 # Native iOS capture mode
 
-**Status:** active — implemented; automated and simulator verification pass,
-with the real-device acceptance checklist still pending.
+**Status:** partially implemented 2026-07 — implementation and automated/simulator
+verification are complete; real-device acceptance remains the final gate.
 
 This plan adds a native, full-screen capture mode to the iOS companion app. It
 reuses the box's existing capture staging, preparation, delivery, and pending
@@ -467,26 +467,26 @@ camera hardware, audio interruption, or background transfer scheduling.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Old server lacks `m4a-aac` or `raw-body-v1` | Planned route + decode tests | Cancel empty staging session; disable native Capture only | Clear: update-server message |
-| Raw binary content type is rejected before the upload handler | Planned raw-body route doctest | Exact parser registered before routes; capability advertised only with support | Clear contract failure |
-| Legacy paired device has no authenticated owner | Planned pairing/auth doctests | Reject capture on auth-enabled box; preserve ordinary app access | Clear re-pair action |
-| Mixed/unknown audio format reaches a segment | Planned route/store doctests | Reject before manifest mutation | Clear 400/409 |
+| Old server lacks `m4a-aac` or `raw-body-v1` | Route + decode XCTest | Cancel empty staging session; disable native Capture only | Clear: update-server message |
+| Raw binary content type is rejected before the upload handler | Raw-body route doctest | Exact parser registered before routes; capability advertised only with support | Clear contract failure |
+| Legacy paired device has no authenticated owner | Pairing/auth doctests | Reject capture on auth-enabled box; preserve ordinary app access | Clear re-pair action |
+| Mixed/unknown audio format reaches a segment | Route/store doctests | Reject before manifest mutation | Clear 400/409 |
 | Camera or microphone permission denied | Planned fake/XCTest + device pass | Leave other acquisition actions usable | Clear banner + Settings link |
-| Photo-library item cannot download/decode | Planned fake/XCTest | Fail that item only; retain other selections | Clear per-item failure |
-| Security-scoped file copy fails or disk is full | Planned store tests | Do not enqueue; keep capture open | Clear filename-specific error |
-| App dies after acquisition but before upload | Planned persistence/relaunch XCTest | Atomic local manifest + payload recovery | Clear resumable capture |
-| App dies during recording before M4A is closed | Planned stale-recording-row XCTest | Exclude damaged row from upload; retain it until explicit dismissal | Clear interrupted-recording error |
-| Upload loses network / times out / returns 5xx | Planned transport tests | Bounded retry; payload stays local | Clear uploading/failed state |
-| Auth is revoked during background upload | Planned 401/403 test | Stop retries; preserve local payload | Clear re-pair action |
-| Item reaches 50 MiB request cap or server returns 413 | Planned preflight + route/client tests | Stop/reject before enqueue when possible; never retry 413 | Clear per-item limit message |
-| Server session is already sealed (409) | Planned reconciliation table | Follow-up-or-discard recovery | Clear, never auto-moved |
-| Server staging is gone after delivery/cancel (404) | Planned reconciliation table | Terminal follow-up-or-discard recovery | Clear submitted-or-cancelled ambiguity |
-| Persisted background task ID has no live task | Planned task reconciliation XCTest | Return item to `local` and reschedule once | Clear uploading state resolves |
-| Background task completes after Cancel | Planned task-generation XCTest | Ignore stale completion; local/server tombstone wins | Clear through stable cancelled state |
+| Photo-library item cannot download/decode | Fake/XCTest | Fail that item only; retain other selections | Clear per-item failure |
+| Security-scoped file copy fails or disk is full | Store XCTest | Do not enqueue; keep capture open | Clear filename-specific error |
+| App dies after acquisition but before upload | Persistence/relaunch XCTest | Atomic local manifest + payload recovery | Clear resumable capture |
+| App dies during recording before M4A is closed | Stale-recording-row XCTest | Exclude damaged row from upload; retain it until explicit dismissal | Clear interrupted-recording error |
+| Upload loses network / times out / returns 5xx | Transport XCTest | Bounded retry; payload stays local | Clear uploading/failed state |
+| Auth is revoked during background upload | 401/403 XCTest | Stop retries; preserve local payload | Clear re-pair action |
+| Item reaches 50 MiB request cap or server returns 413 | Preflight + route/client tests | Stop/reject before enqueue when possible; never retry 413 | Clear per-item limit message |
+| Server session is already sealed (409) | Reconciliation XCTest table | Follow-up-or-discard recovery | Clear, never auto-moved |
+| Server staging is gone after delivery/cancel (404) | Reconciliation XCTest table | Terminal follow-up-or-discard recovery | Clear submitted-or-cancelled ambiguity |
+| Persisted background task ID has no live task | Task reconciliation XCTest | Return item to `local` and reschedule once | Clear uploading state resolves |
+| Background task completes after Cancel | Task-generation XCTest | Ignore stale completion; local/server tombstone wins | Clear through stable cancelled state |
 | Phone call/route change interrupts recording | Planned fake + device pass | Stop and preserve complete segment; resume creates new one | Clear paused banner |
-| Scene backgrounds while camera/recording active | Planned lifecycle XCTest + device pass | Stop preview and current segment; uploads continue | Clear on return |
+| Scene backgrounds while camera/recording active | Lifecycle XCTest + pending device pass | Stop preview and current segment; uploads continue | Clear on return |
 | JPEG orientation metadata is ignored downstream | Existing encoder regression + device photo pass | Flatten visual orientation before queueing | Clear/correct pixels; EXIF debt linked |
-| Finalize response is lost | Existing server idempotency + planned client retry | Retry same staging ID | Clear sealing state |
+| Finalize response is lost | Server idempotency + client retry tests | Retry same staging ID | Clear sealing state |
 | Preparation or delivery later fails | Existing pending bubble/retry coverage | Webview shows server-derived retry bubble | Clear in transcript |
 | Visible chat changes or disappears during capture | Existing server target fallback + planned snapshot test | Capture remains bound to opening session; server resolves fallback | Clear destination label in capture UI |
 
@@ -565,7 +565,9 @@ schema instructions and audits from the shipped capture-mode plan. The new
 audio-format discriminant and native queue are developer/client infrastructure,
 not facts a box agent must recall. No knowledge-audit entry is needed.
 
-## Implementation order
+## Implementation record and final gate
+
+Implemented in this branch:
 
 1. Track 1 binary parser, audio-format contract, paired-device owner identity,
    capabilities, and route/auth doctests.
@@ -578,10 +580,13 @@ not facts a box agent must recall. No knowledge-audit entry is needed.
 6. Track 4 fixture-driven native capture UI and responsive simulator review.
 7. Track 4 real-service wiring from the `+` menu through finalize/dismiss.
 8. Track 5 reconciliation/follow-up behavior and local-box end-to-end fixture.
-9. Real-device acceptance pass, docs reconciliation, and plan closeout.
 
-These are commit boundaries, not shipping milestones. The feature ships only
-when the entire plan is complete.
+Still pending before plan closeout:
+
+9. Deploy the server contract, run the real-device acceptance pass, reconcile
+   any resulting fixes, then move this plan to `docs/implemented-plans/`.
+
+The feature does not pass its final acceptance gate until step 9 completes.
 
 ## Rollout and verification
 
