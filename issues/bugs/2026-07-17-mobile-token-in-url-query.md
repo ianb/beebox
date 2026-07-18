@@ -1,0 +1,29 @@
+---
+title: "Durable mobile device token rides in the ?mobileToken= URL query (S2)"
+area: callback-box
+filed-by: agent
+discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+---
+
+Both the web frontend and the iOS app put the long-lived mobile device token directly into a URL
+query parameter rather than only a header:
+
+- Web: `getWebSocketUrl` in `callback-box/src/frontend/src/lib/api-core.ts` appends
+  `?mobileToken=<token>` when building the tRPC WebSocket URL.
+- iOS: `ChatWebView.authenticatedChatURL` in `ios-app/CallbackBox/Views/ChatWebView.swift` appends
+  the same `?mobileToken=<token>` to the initial `/chat` navigation, to satisfy the hub's pre-upgrade
+  auth gate before the localStorage-injected token is available.
+
+Because device tokens never expire (see `MobileDevice` in `callback-box/src/core/mobile/pairing.ts` —
+no `expiresAt`, only `revokedAt`), a token that leaks into hub/nginx access logs, `Referer` headers, or
+WebKit history is replayable indefinitely until someone notices and manually revokes the device. The
+lack of expiry compounds the leak surface rather than bounding it.
+
+Consumed at three call sites that would all need to change together:
+`callback-box/src/hub/hub-server.ts`, `callback-box/src/webapp/server-box-scope.ts`, and
+`callback-box/src/webapp/server-root.ts` (all read `?mobileToken=` via a duplicated
+`mobileTokenFromUrl` parser — see the related code-quality issue for that duplication).
+
+Fix direction: scope the URL query param to a short-lived, single-use handshake token distinct from
+the durable device token (the durable token stays in the `Authorization` header / localStorage-injected
+channel only). Was first raised in the 2026-07-09 review and remains open.

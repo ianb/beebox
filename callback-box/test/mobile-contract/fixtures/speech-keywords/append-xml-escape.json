@@ -1,0 +1,9 @@
+{
+  "op": "append",
+  "input": {
+    "transcript": "Ping R&D.",
+    "action": "send",
+    "matchedPhrase": "send \"the\" message"
+  },
+  "expected": "Ping R&D. <send-message phrase=\"send &quot;the&quot; message\" />"
+}

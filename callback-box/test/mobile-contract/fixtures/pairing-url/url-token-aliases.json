@@ -1,0 +1,9 @@
+{
+  "input": "callbackbox://pair?url=http%3A%2F%2F127.0.0.1%3A3210%2Fmain%2Ftest1&token=tok456",
+  "expected": {
+    "accepted": true,
+    "baseURL": "http://127.0.0.1:3210/main/test1",
+    "label": "Callback Box",
+    "pairingToken": "tok456"
+  }
+}

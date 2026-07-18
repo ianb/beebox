@@ -1,0 +1,9 @@
+{
+  "op": "append",
+  "input": {
+    "transcript": "Buy milk tomorrow.",
+    "action": "sendClose",
+    "matchedPhrase": "send and close"
+  },
+  "expected": "Buy milk tomorrow. <send-close-message phrase=\"send and close\" />"
+}

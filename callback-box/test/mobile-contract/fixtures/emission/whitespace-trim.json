@@ -1,0 +1,17 @@
+{
+  "input": {
+    "id": "ws-1",
+    "text": "\n  trimmed to fit  \n",
+    "origin": "typed",
+    "images": []
+  },
+  "expected": {
+    "id": "ws-1",
+    "origin": "typed",
+    "text": "trimmed to fit",
+    "images": [],
+    "files": [],
+    "selections": [],
+    "diarized": false
+  }
+}

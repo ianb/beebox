@@ -3,16 +3,18 @@ import type { Emission } from "../../input/emission";
 import type { Receipt } from "../../input/targets/receipts";
 import { captureAndStore, isGeolocationAvailable } from "../../lib/location-share";
 import { nativeEmissionFromDetail } from "./native-emission";
+import type { NativeShellChannel } from "./native-post";
+import { postNativeMessage } from "./native-post";
 
 declare global {
   interface Window {
     callbackboxNativeQueue?: unknown[];
     callbackboxNativeLocationQueue?: unknown[];
+    callbackboxNativePost?: (channel: string, payload: string) => void;
     webkit?: {
-      messageHandlers?: {
-        callbackboxEmissionReceipt?: { postMessage: (message: unknown) => void };
-        callbackboxLocationResult?: { postMessage: (message: unknown) => void };
-      };
+      messageHandlers?: Partial<
+        Record<NativeShellChannel, { postMessage: (message: unknown) => void }>
+      >;
     };
   }
 }
@@ -96,13 +98,11 @@ function nativeRequestId(detail: unknown): string | null {
 }
 
 function postNativeReceipt(receipt: Receipt): void {
-  // eslint-disable-next-line unicorn/require-post-message-target-origin -- WKScriptMessageHandler accepts only the payload.
-  window.webkit?.messageHandlers?.callbackboxEmissionReceipt?.postMessage(receipt);
+  postNativeMessage(window, { channel: "callbackboxEmissionReceipt", payload: receipt });
 }
 
 function postNativeLocationResult(result: { id: string; success: boolean; message: string }): void {
-  // eslint-disable-next-line unicorn/require-post-message-target-origin -- WKScriptMessageHandler accepts only the payload.
-  window.webkit?.messageHandlers?.callbackboxLocationResult?.postMessage(result);
+  postNativeMessage(window, { channel: "callbackboxLocationResult", payload: result });
 }
 
 function drainNativeEmissionQueue(): unknown[] {

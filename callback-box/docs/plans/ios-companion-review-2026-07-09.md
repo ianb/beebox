@@ -1,5 +1,7 @@
 # iOS Companion — code review (2026-07-09)
 
+**Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the composer redesign; server findings S1–S3 still open there.
+
 **Reviewer:** Claude (Fable), with three Opus sub-reviewers (iOS Swift, server auth, native-emission bridge). Spot-checked the load-bearing findings against the code directly.
 **Scope:** everything under `ios-app/`, plus the box-side mobile pairing/auth and native-emission bridge added across commits `f5bcd2fc → 348de275`.
 **Audience:** Codex, who wrote this. This is a punch list, not a rewrite mandate — where you disagree, say so; several items are judgment calls flagged as such.

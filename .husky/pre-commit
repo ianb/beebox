@@ -34,6 +34,13 @@ echo "[pre-commit] .: pnpm path-leak-check"
 echo "[pre-commit] .: pnpm commit-blocklist-check"
 (cd "$REPO_DIR" && pnpm commit-blocklist-check)
 
+# Mobile-contract tripwire (pre-commit half): records a pending violation when a
+# contract-surface anchor file is staged without a docs/mobile-contract.md
+# update, so the commit-msg hook can enforce the Contract-Unchanged: override.
+# Fast (plain git + fs); never blocks here — the block lives in commit-msg.
+echo "[pre-commit] .: pnpm mobile-contract-check"
+(cd "$REPO_DIR" && pnpm --silent mobile-contract-check)
+
 # Any commit touching markdown runs the fast doc reference/orphan check.
 if echo "$staged" | grep -q '\.md$'; then
   run_in callback-box pnpm doc-check

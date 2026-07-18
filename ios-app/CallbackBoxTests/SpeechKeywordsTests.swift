@@ -41,6 +41,22 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertNil(queryItems.first { $0.name == "embed" })
     }
 
+    func testDictionaryPayloadAcceptsLegacyObjectAndNeutralStringForms() {
+        let legacy = ChatWebView.dictionaryPayload(from: ["disposition": "sent", "emissionId": "abc"])
+        XCTAssertEqual(legacy?["disposition"] as? String, "sent")
+        XCTAssertEqual(legacy?["emissionId"] as? String, "abc")
+
+        let neutral = ChatWebView.dictionaryPayload(
+            from: #"{"disposition":"rejected","emissionId":"abc","reason":"Invalid native message"}"#
+        )
+        XCTAssertEqual(neutral?["disposition"] as? String, "rejected")
+        XCTAssertEqual(neutral?["reason"] as? String, "Invalid native message")
+
+        XCTAssertNil(ChatWebView.dictionaryPayload(from: "not json"))
+        XCTAssertNil(ChatWebView.dictionaryPayload(from: #"["array","not","object"]"#))
+        XCTAssertNil(ChatWebView.dictionaryPayload(from: 42))
+    }
+
     func testVisibleChatSessionParsing() {
         XCTAssertEqual(
             ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?embed=1&session=abc123")!),
@@ -54,90 +70,166 @@ final class SpeechKeywordsTests: XCTestCase {
         XCTAssertNil(ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?embed=1&session=")!))
     }
 
-    func testSendCommandsMatchTypeScriptDoctestCases() {
-        XCTAssertEqual(SpeechKeywords.detect("send message")?.action, .send)
-        XCTAssertEqual(SpeechKeywords.detect("sent message")?.action, .send)
-        XCTAssertEqual(SpeechKeywords.detect("said message")?.action, .send)
-        XCTAssertEqual(SpeechKeywords.detect("same message")?.action, .send)
-        XCTAssertEqual(SpeechKeywords.detect("deliver the message")?.action, .send)
-        XCTAssertEqual(SpeechKeywords.detect("message finished")?.action, .send)
-        XCTAssertEqual(SpeechKeywords.detect("send now")?.action, .send)
-        XCTAssertEqual(SpeechKeywords.detect("it's a message")?.action, .send)
-
-        XCTAssertNil(SpeechKeywords.detect("finished"))
-        XCTAssertNil(SpeechKeywords.detect("I'm finished"))
-        XCTAssertEqual(
-            SpeechKeywords.detect("OK send message")?.processedTranscript,
-            #"OK <send-message phrase="send message" />"#
-        )
+    /// The keyword vectors are shared golden fixtures under
+    /// `callback-box/test/mobile-contract/fixtures/speech-keywords/`, consumed
+    /// here and by the TS `test/mobile-contract/fixtures.doctest.md`. Editing a
+    /// vector once fails both suites until they agree — see
+    /// `callback-box/docs/implemented-plans/mobile-parity-sync.md`.
+    func testSpeechKeywordFixturesMatchSharedVectors() throws {
+        let fixtures = try MobileContractFixtures.load("speech-keywords")
+        XCTAssertFalse(fixtures.isEmpty, "no speech-keyword fixtures found at \(MobileContractFixtures.root.path)")
+        for (name, fixture) in fixtures {
+            guard let op = fixture["op"] as? String, let input = fixture["input"] as? [String: Any] else {
+                XCTFail("\(name): missing op/input")
+                continue
+            }
+            switch op {
+            case "detect":
+                try assertDetectFixture(name: name, input: input, expected: fixture["expected"])
+            case "append":
+                try assertAppendFixture(name: name, input: input, expected: fixture["expected"])
+            default:
+                XCTFail("\(name): unknown op \(op)")
+            }
+        }
     }
 
-    func testSendAndCloseCommandsMatchTypeScriptDoctestCases() {
-        XCTAssertEqual(SpeechKeywords.detect("send and close")?.action, .sendClose)
-        XCTAssertEqual(SpeechKeywords.detect("send and stop")?.action, .sendClose)
-        XCTAssertEqual(SpeechKeywords.detect("send and close the mic")?.action, .sendClose)
-        XCTAssertEqual(SpeechKeywords.detect("set a closed message")?.action, .sendClose)
-        XCTAssertEqual(SpeechKeywords.detect("over and out")?.action, .sendClose)
-        XCTAssertEqual(
-            SpeechKeywords.detect("OK send and close")?.processedTranscript,
-            #"OK <send-close-message phrase="send and close" />"#
-        )
-
-        XCTAssertEqual(SpeechKeywords.detect("send and finish the message")?.action, .sendClose)
-        XCTAssertEqual(SpeechKeywords.detect("send and stop the mic")?.action, .sendClose)
+    private func assertDetectFixture(name: String, input: [String: Any], expected: Any?) throws {
+        let transcript = try XCTUnwrap(input["transcript"] as? String, "\(name): missing transcript")
+        let atStart = (input["atStart"] as? Bool) ?? false
+        let result = SpeechKeywords.detect(transcript, atStart: atStart)
+        if expected is NSNull {
+            XCTAssertNil(result, "\(name): expected no match")
+            return
+        }
+        let expectedFields = try XCTUnwrap(expected as? [String: Any], "\(name): unrecognized expected")
+        let match = try XCTUnwrap(result, "\(name): expected a match")
+        if let action = expectedFields["action"] as? String {
+            XCTAssertEqual(match.action.rawValue, action, "\(name): action")
+        }
+        if let processed = expectedFields["processedTranscript"] as? String {
+            XCTAssertEqual(match.processedTranscript, processed, "\(name): processedTranscript")
+        }
+        if let phrase = expectedFields["matchedPhrase"] as? String {
+            XCTAssertEqual(match.matchedPhrase, phrase, "\(name): matchedPhrase")
+        }
     }
 
-    func testControlCommandsMatchTypeScriptDoctestCases() {
-        XCTAssertEqual(SpeechKeywords.detect("cancel message")?.action, .cancel)
-        XCTAssertEqual(SpeechKeywords.detect("abort the message")?.action, .cancel)
-        XCTAssertNil(SpeechKeywords.detect("nevermind"))
-        XCTAssertEqual(SpeechKeywords.detect("nevermind the message")?.action, .cancel)
+    private func assertAppendFixture(name: String, input: [String: Any], expected: Any?) throws {
+        let transcript = try XCTUnwrap(input["transcript"] as? String, "\(name): missing transcript")
+        let actionRaw = try XCTUnwrap(input["action"] as? String, "\(name): missing action")
+        let action = try XCTUnwrap(SpeechKeywordAction(rawValue: actionRaw), "\(name): bad action \(actionRaw)")
+        let matchedPhrase = try XCTUnwrap(input["matchedPhrase"] as? String, "\(name): missing matchedPhrase")
+        let expectedText = try XCTUnwrap(expected as? String, "\(name): expected must be a string")
+        let got = SpeechKeywords.appendSendKeywordTag(to: transcript, action: action, matchedPhrase: matchedPhrase)
+        XCTAssertEqual(got, expectedText, "\(name)")
+    }
+}
 
-        XCTAssertEqual(SpeechKeywords.detect("microphone off")?.action, .micOff)
-        XCTAssertEqual(SpeechKeywords.detect("turn off the mic")?.action, .micOff)
-        XCTAssertEqual(SpeechKeywords.detect("stop listening")?.action, .micOff)
-
-        XCTAssertEqual(SpeechKeywords.detect("erase the message")?.action, .erase)
-        XCTAssertEqual(SpeechKeywords.detect("clear my message")?.action, .erase)
-        XCTAssertEqual(SpeechKeywords.detect("start over")?.action, .erase)
+/// Decodes the web→native golden fixtures (receipt, location result) through the
+/// real `ChatWebView.dictionaryPayload(from:)` seam — crossing the JSON-string
+/// neutral transport exactly as the web layer posts them. Shares the fixtures
+/// under `callback-box/test/mobile-contract/fixtures/` with the TS doctest.
+final class MobileContractFixtureDecodeTests: XCTestCase {
+    func testReceiptFixturesDecodeThroughDictionaryPayload() throws {
+        let fixtures = try MobileContractFixtures.load("receipt")
+        XCTAssertFalse(fixtures.isEmpty, "no receipt fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            let payload = try XCTUnwrap(
+                ChatWebView.dictionaryPayload(from: try MobileContractFixtures.jsonString(from: input)),
+                "\(name): dictionaryPayload returned nil"
+            )
+            let dispositionString = try XCTUnwrap(payload["disposition"] as? String, "\(name): disposition")
+            XCTAssertNotNil(
+                NativeEmissionReceipt.Disposition(rawValue: dispositionString),
+                "\(name): disposition \(dispositionString) is not a known native case"
+            )
+            XCTAssertEqual(dispositionString, expected["disposition"] as? String, "\(name): disposition")
+            XCTAssertEqual(payload["emissionId"] as? String, expected["emissionId"] as? String, "\(name): emissionId")
+            XCTAssertEqual(payload["reason"] as? String, expected["reason"] as? String, "\(name): reason")
+        }
     }
 
-    func testNoMatchCasesMatchTypeScriptDoctestCases() {
-        XCTAssertNil(SpeechKeywords.detect("hello world"))
-        XCTAssertNil(SpeechKeywords.detect("the weather is nice"))
+    func testLocationResultFixturesDecodeThroughDictionaryPayload() throws {
+        let fixtures = try MobileContractFixtures.load("location")
+        var decoded = 0
+        for (name, fixture) in fixtures where (fixture["variant"] as? String) == "result" {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            let payload = try XCTUnwrap(
+                ChatWebView.dictionaryPayload(from: try MobileContractFixtures.jsonString(from: input)),
+                "\(name): dictionaryPayload returned nil"
+            )
+            XCTAssertEqual(payload["id"] as? String, expected["id"] as? String, "\(name): id")
+            XCTAssertEqual(payload["success"] as? Bool, expected["success"] as? Bool, "\(name): success")
+            XCTAssertEqual(payload["message"] as? String, expected["message"] as? String, "\(name): message")
+            decoded += 1
+        }
+        XCTAssertGreaterThan(decoded, 0, "no location result fixtures decoded")
     }
 
-    func testAppendSendKeywordTagMatchesTypeScriptDoctestCases() {
-        XCTAssertNil(SpeechKeywords.detect("Buy milk tomorrow."))
-        XCTAssertEqual(
-            SpeechKeywords.appendSendKeywordTag(
-                to: "Buy milk tomorrow.",
-                action: .send,
-                matchedPhrase: "send message"
-            ),
-            #"Buy milk tomorrow. <send-message phrase="send message" />"#
-        )
-        XCTAssertEqual(
-            SpeechKeywords.appendSendKeywordTag(
-                to: "Buy milk tomorrow.",
-                action: .sendClose,
-                matchedPhrase: "send and close"
-            ),
-            #"Buy milk tomorrow. <send-close-message phrase="send and close" />"#
-        )
-        XCTAssertEqual(
-            SpeechKeywords.appendSendKeywordTag(
-                to: "Ping R&D.",
-                action: .send,
-                matchedPhrase: #"send "the" message"#
-            ),
-            #"Ping R&D. <send-message phrase="send &quot;the&quot; message" />"#
-        )
+    /// Emissions flow native→web, so `dictionaryPayload` is not the native
+    /// decoder for them; this only confirms the shared JSON emission shape
+    /// survives the same string→dictionary crossing (the fields both platforms
+    /// agree on), for the well-formed cases.
+    func testEmissionFixtureShapeSurvivesDictionaryPayload() throws {
+        let fixtures = try MobileContractFixtures.load("emission")
+        for (name, fixture) in fixtures {
+            guard let expected = fixture["expected"] as? [String: Any] else {
+                continue // the `null` (rejected) case has no emission shape to check
+            }
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let payload = try XCTUnwrap(
+                ChatWebView.dictionaryPayload(from: try MobileContractFixtures.jsonString(from: input)),
+                "\(name): dictionaryPayload returned nil"
+            )
+            if let origin = input["origin"] as? String {
+                XCTAssertEqual(payload["origin"] as? String, origin, "\(name): origin")
+            }
+            // The decoded text is not yet whitespace-trimmed (that is the web
+            // decoder's job) — assert the trimmed forms agree.
+            let payloadText = (payload["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            XCTAssertEqual(payloadText, expected["text"] as? String, "\(name): text")
+        }
+    }
+}
+
+/// Loads the shared cross-platform golden fixtures from the monorepo working
+/// tree. Located via `#filePath` (this test file's compiled-in source path),
+/// walking up to the repo root — acceptable for a monorepo-local test, and
+/// avoids bundling the fixtures into the test target.
+enum MobileContractFixtures {
+    static let root: URL = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent() // CallbackBoxTests/
+        .deletingLastPathComponent() // ios-app/
+        .deletingLastPathComponent() // repo root
+        .appendingPathComponent("callback-box/test/mobile-contract/fixtures")
+
+    struct FixtureError: Error { var message: String }
+
+    static func load(_ family: String) throws -> [(name: String, fixture: [String: Any])] {
+        let dir = root.appendingPathComponent(family)
+        let files = try FileManager.default
+            .contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "json" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        return try files.map { url in
+            let data = try Data(contentsOf: url)
+            guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw FixtureError(message: "\(url.lastPathComponent) is not a JSON object")
+            }
+            return (url.deletingPathExtension().lastPathComponent, dict)
+        }
     }
 
-    func testAtStartPreventsMidUtteranceMatches() {
-        XCTAssertNil(SpeechKeywords.detect("please send message", atStart: true))
-        XCTAssertEqual(SpeechKeywords.detect("send message please", atStart: true)?.action, .send)
+    static func jsonString(from object: [String: Any]) throws -> String {
+        let data = try JSONSerialization.data(withJSONObject: object)
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw FixtureError(message: "could not encode fixture JSON as UTF-8")
+        }
+        return string
     }
 }
 

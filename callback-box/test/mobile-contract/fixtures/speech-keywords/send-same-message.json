@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "same message"
+  },
+  "expected": {
+    "action": "send"
+  }
+}

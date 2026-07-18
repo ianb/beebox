@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "set a closed message"
+  },
+  "expected": {
+    "action": "sendClose"
+  }
+}

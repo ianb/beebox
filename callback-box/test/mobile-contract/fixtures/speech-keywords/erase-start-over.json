@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "start over"
+  },
+  "expected": {
+    "action": "erase"
+  }
+}

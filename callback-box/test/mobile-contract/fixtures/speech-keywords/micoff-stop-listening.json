@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "stop listening"
+  },
+  "expected": {
+    "action": "micOff"
+  }
+}

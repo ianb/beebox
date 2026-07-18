@@ -1,0 +1,7 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "finished"
+  },
+  "expected": null
+}

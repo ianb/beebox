@@ -1,0 +1,10 @@
+{
+  "variant": "error",
+  "status": 401,
+  "input": {
+    "error": "Pairing code is invalid or expired."
+  },
+  "expected": {
+    "error": "Pairing code is invalid or expired."
+  }
+}
