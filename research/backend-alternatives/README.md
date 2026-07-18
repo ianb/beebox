@@ -31,10 +31,19 @@ session transcripts — this README is the synthesis + decision.
 > Treat the sections below as a rough map, not conclusions. The corrected framing above still
 > holds (task-permission isn't the barrier); the *engine-swap* analysis is what's being redone.
 >
-> Deep-pass documents so far:
-> - [2026-07-18-sdk-coupling-audit.md](2026-07-18-sdk-coupling-audit.md) — code audit of how
->   coupled callback-box actually is to the Claude Agent SDK / Claude Code runtime (corrects
->   flaw 1 with file:line evidence).
+> **The deep pass is complete — read [2026-07-18-synthesis.md](2026-07-18-synthesis.md)
+> for current conclusions.** This README remains as the dated first-pass record only.
+> Deep-pass corpus:
+>
+> | Doc | Covers |
+> |---|---|
+> | [2026-07-18-synthesis.md](2026-07-18-synthesis.md) | **Current word**: adopt/adapt/reject recommendations, vision scorecard, watchlist |
+> | [2026-07-18-sdk-coupling-audit.md](2026-07-18-sdk-coupling-audit.md) | Code audit: what we actually delegate to the SDK/Claude Code (corrects flaw 1) |
+> | [2026-07-18-drop-in-providers.md](2026-07-18-drop-in-providers.md) | Providers under Claude Code via Anthropic-compatible endpoints; plan enforcement reality |
+> | [2026-07-18-chatgpt-subscription-path.md](2026-07-18-chatgpt-subscription-path.md) | Codex CLI/SDK, OpenAI's subscription-auth tolerance, data posture |
+> | [2026-07-18-anthropic-policy-enforcement.md](2026-07-18-anthropic-policy-enforcement.md) | Anthropic announced-vs-enforced; the paused credit-pool split |
+> | [2026-07-18-vllm-self-hosting.md](2026-07-18-vllm-self-hosting.md) | Self-hosting open vision models; vLLM's native Anthropic endpoint |
+> | [2026-07-18-alt-harnesses.md](2026-07-18-alt-harnesses.md) | OpenCode/Goose/Codex/Gemini/Cline/Amp/Crush vs our runtime contract |
 
 ---
 

@@ -32,25 +32,36 @@ remaps, run a real multi-turn reactor cycle, and check: (a) tools fire and resul
 (b) streaming works, (c) thinking blocks round-trip, (d) prompt caching isn't silently
 broken, (e) `tool_use`/`tool_result` turn-shape survives compaction. Record what breaks.
 
-## Decision context (from the research)
+## Decision context (updated 2026-07-18 by the deep pass)
 
-- **Don't** build the backend on the cheap coding *plans* (GLM $18 / Kimi) — they're
-  fenced to a **whitelist of client apps**; a custom app pays general per-token API rates
-  regardless of task. (Task type is *not* the restriction — verified against z.ai's usage
-  policy; the "coding-only" framing was wrong.)
-- **Don't** design around riding an end-user's Claude Max (or ChatGPT) subscription from
-  our app — Anthropic severed third-party-client subscription auth (Jan 2026); API billing
-  only.
-- **Data gate for a private-data assistant:** Anthropic/OpenAI don't train on API data by
-  default (clean); Kimi trains-by-default + bars commercial use; GLM's training opt-out is
-  undocumented and it carries China-jurisdiction exposure. Self-hosting open weights
-  (GLM-5.2 / Kimi K2) is the only path that fully clears the data gate.
-- **For OpenAI/Gemini**, the honest path is their *native* Responses/Managed-Agents API
-  behind a purpose-built loop, not a lossy proxy behind the Anthropic SDK.
-- **If the goal becomes "many models, one loop"** rather than cost, evaluate an engine swap
-  (OpenCode `serve`+SDK, or Goose) — bigger bet, justified by vendor-resilience/local-models,
-  not by price alone.
+The deep pass
+([synthesis](../../research/backend-alternatives/2026-07-18-synthesis.md)) corrected
+several bullets that originally stood here:
 
-**Why bother at all:** the strongest argument isn't cost (modest, conditional) — it's
-**vendor-resilience**: a pluggable backend means a silent harness/model regression from one
-vendor (cf. the April-2026 Opus-nerf episode) can't degrade callback-box with no recourse.
+- **Coding plans are dead for us, and task content IS inspected** (the original
+  "client-whitelist, not task rule" framing was wrong for z.ai): z.ai's policy text
+  says the system detects non-coding request content, enforcement reports name
+  "personal assistants" as a banned pattern, and headless use trips a separate
+  "SDK-based access" flag. MiniMax's plan bars non-interactive/backend use outright.
+- **Anthropic vs OpenAI subscription posture diverged** (the original "API billing
+  only" bullet was half wrong): Anthropic blocks third-party clients and sanctions
+  our own single-tenant SDK-on-own-login pattern; OpenAI informally tolerates
+  third-party ChatGPT-subscription riding — see
+  [codex-sdk-second-backend](2026-07-18-codex-sdk-second-backend.md) for why we
+  still don't build on it now.
+- **Vision gates the provider list hard**: MiniMax and DeepSeek are disqualified
+  (text-only API surfaces); Kimi API is the best China-based fit but trains on
+  content with no opt-out; OpenRouter (US aggregator, per-model choice) is the
+  cleanest neutral drop-in target.
+- **Self-hosting is Shape A now**: vLLM ships a native Anthropic Messages endpoint
+  that Claude Code runs against — the spike below applies to it too. Model/hardware
+  reality says future bet, recheck in 6–12 months.
+- **Boxholder scoping (2026-07-18):** resilience target is policy/pricing changes,
+  NOT intermittent quality regressions; the product model is one provider chosen up
+  front — no routing/fallback logic.
+
+Concrete follow-ons filed:
+[provider-endpoint-config](../features/2026-07-18-provider-endpoint-config.md)
+(the ADOPT item, blocked on the spike above),
+[chat-backend-port-hygiene](../code-quality/2026-07-18-chat-backend-port-hygiene.md),
+[codex-sdk-second-backend](2026-07-18-codex-sdk-second-backend.md).
