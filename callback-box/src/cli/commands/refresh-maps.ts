@@ -14,9 +14,13 @@
  *                                the agent consumes.
  *
  *   cb refresh-maps --finalize   Read the persisted brief, ensure per-dir
- *                                CLAUDE.md @-includes, stamp the state file.
- *                                Run after the agent has written the MAP.md
- *                                files and committed them.
+ *                                CLAUDE.md @-includes, stamp the state file for
+ *                                the maps that were actually rewritten. Runs as
+ *                                a procedure run-phase shell, so it executes
+ *                                even when the agent errored or ran out of
+ *                                turns — that's what makes a partial run bank
+ *                                its progress. A missing brief is a no-op, not
+ *                                an error.
  */
 
 import * as fs from "node:fs/promises";
@@ -24,7 +28,7 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { isRecord } from "../../lib/is-record.js";
-import { precheck, type MapBrief } from "../../core/maps/precheck.js";
+import { precheck, type MapBrief, type MapTask } from "../../core/maps/precheck.js";
 import { finalize } from "../../core/maps/finalize.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
@@ -32,12 +36,18 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 const BRIEF_FILE = path.join(".callback-box", "refresh-maps-brief.json");
 
 /**
- * The cached brief (our own JSON, round-tripped from `precheck`) is a valid
- * {@link MapBrief} when it carries a boolean `needsWork` and a `tasks` array.
+ * The cached brief carries a usable task list when it has a `tasks` array.
  * Task internals are trusted — we wrote the file.
+ *
+ * Only `tasks` is read back, never the whole {@link MapBrief}: finalize needs
+ * nothing else, and a brief written by an earlier version (before `anomalies`
+ * existed) would not satisfy the full shape. Reading the narrow thing keeps
+ * that one-run transition window from discarding a run's work.
  */
-function isMapBrief(value: unknown): value is MapBrief {
-  return isRecord(value) && typeof value["needsWork"] === "boolean" && Array.isArray(value["tasks"]);
+function briefTasks(value: unknown): MapTask[] | null {
+  if (!isRecord(value)) return null;
+  const tasks = value["tasks"];
+  return Array.isArray(tasks) ? tasks : null;
 }
 
 async function saveBrief(boxRoot: string, brief: MapBrief): Promise<void> {
@@ -49,11 +59,11 @@ async function saveBrief(boxRoot: string, brief: MapBrief): Promise<void> {
   );
 }
 
-async function readSavedBrief(boxRoot: string): Promise<MapBrief | null> {
+async function readSavedBriefTasks(boxRoot: string): Promise<MapTask[] | null> {
   try {
     const raw = await fs.readFile(path.join(boxRoot, BRIEF_FILE), "utf-8");
     const parsed: unknown = JSON.parse(raw);
-    return isMapBrief(parsed) ? parsed : null;
+    return briefTasks(parsed);
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
       console.warn("refresh-maps: could not read saved brief, treating as absent:", e);
@@ -76,7 +86,10 @@ function summarize(brief: MapBrief): string {
   for (const task of brief.tasks) {
     counts[task.action] += 1;
   }
-  return `${brief.tasks.length} map(s) need work (${counts.create} create, ${counts.update} update)`;
+  const base = `${brief.tasks.length} map(s) need work (${counts.create} create, ${counts.update} update)`;
+  if (brief.anomalies.length === 0) return base;
+  const dirs = brief.anomalies.map((a) => a.dir || "<root>").join(", ");
+  return `${base}; ${brief.anomalies.length} anomaly/anomalies: unresolvable asOf for ${dirs}`;
 }
 
 interface RunOptions {
@@ -85,14 +98,24 @@ interface RunOptions {
 }
 
 async function runFinalize(boxRoot: string): Promise<void> {
-  const brief = await readSavedBrief(boxRoot);
-  if (!brief) {
-    console.error("refresh-maps: no saved brief; run 'cb refresh-maps --brief' first.");
-    process.exit(1);
+  const tasks = await readSavedBriefTasks(boxRoot);
+  if (!tasks) {
+    // No brief is a no-op, not a failure. This runs as a procedure run-phase
+    // shell, which executes even when the run agent died before saving one —
+    // and a non-zero run shell fails the whole step regardless of the step's
+    // validate severity. "Nothing to bank" must not gate the procedure.
+    console.log("refresh-maps: no saved brief; nothing to finalize.");
+    return;
   }
-  const result = await finalize({ boxRoot, tasks: brief.tasks });
+  const result = await finalize({ boxRoot, tasks });
   await deleteSavedBrief(boxRoot);
-  console.log(`refresh-maps: finalized ${result.applied.length}/${brief.tasks.length} map(s).`);
+  console.log(`refresh-maps: finalized ${result.applied.length}/${tasks.length} map(s).`);
+  if (result.skippedUnchanged.length > 0) {
+    console.log(
+      `  ${result.skippedUnchanged.length} task(s) left for a later run — MAP.md unchanged: ` +
+        result.skippedUnchanged.map((d) => d || "<root>").join(", "),
+    );
+  }
   if (result.skippedMissingMap.length > 0) {
     console.log(
       `  ${result.skippedMissingMap.length} task(s) skipped — MAP.md not written: ` +

@@ -453,3 +453,73 @@ store children: README.md, keep/
 ```ts cleanup
 await box.cleanup();
 ```
+
+## An unresolvable asOf is an anomaly, not a diff
+
+When the commit a MAP.md was generated against no longer resolves — history
+rewritten, objects GC'd, a shallow clone — there is no trustworthy prior
+listing. Diffing against it would report every current child as newly added.
+The precheck records an anomaly and downgrades the task to `create`, so the
+map is regenerated from what's actually on disk.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/notes/a.md", "a\n");
+await box.write("store/refs/b.md", "b\n");
+await box.write("store/MAP.md", "# Map: store\n");
+box.commitAll("seed");
+
+await saveMapState({
+  boxRoot: box.root,
+  state: {
+    maps: { store: { asOf: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", generatedAt: "t" } },
+  },
+});
+box.commitAll("state");
+
+const brief = await precheck({ boxRoot: box.root });
+print(JSON.stringify(brief.anomalies));
+print(brief.tasks.map((t) => `${t.dir}:${t.action}:+${t.added.length}`).join(" "));
+=>
+[{"kind":"asof_unresolvable","dir":"store","asOf":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}]
+store:create:+0
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A directory absent at a *resolvable* asOf is ordinary
+
+The anomaly must not over-fire. A dir that simply didn't exist yet at `asOf`
+has an honest empty prior listing, so its children really are additions — that
+is a normal `update`, with no anomaly.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/notes/a.md", "a\n");
+await box.write("store/refs/b.md", "b\n");
+await box.write("store/MAP.md", "# Map: store\n");
+box.commitAll("seed");
+const asOf = await getHead(box.root);
+
+await box.write("store/later/c.md", "c\n");
+box.commitAll("add store/later");
+
+await saveMapState({
+  boxRoot: box.root,
+  state: { maps: { store: { asOf, generatedAt: "t" } } },
+});
+box.commitAll("state");
+
+const brief = await precheck({ boxRoot: box.root });
+print(`anomalies: ${brief.anomalies.length}`);
+print(brief.tasks.map((t) => `${t.dir}:${t.action}:${t.added.join("|")}`).join(" "));
+=>
+anomalies: 0
+store:update:later/
+```
+
+```ts cleanup
+await box.cleanup();
+```
