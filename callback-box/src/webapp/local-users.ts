@@ -1,0 +1,410 @@
+/**
+ * Local username/password credential store.
+ *
+ * Owns `~/.cb-auth.json` (override `CB_AUTH_FILE`): the on-disk file that gates
+ * every local login. Passwords are stored only as scrypt-derived hashes, never
+ * plaintext; the file is `mode 0600`, never a symlink, and Zod-validated on
+ * every load (a hand-edited file is an input boundary — principle #3). An
+ * unparseable file is a HARD failure of login (`AuthFileCorruptError`), never a
+ * silent fall-open (principle #4).
+ *
+ * Precedent: `src/core/mobile/pairing.ts` (0600 hashed-credential JSON), with
+ * scrypt (passwords are low-entropy) and crash-safe writes instead of a plain
+ * `writeFileSync`.
+ *
+ * Concurrency: the first user is created with `wx` (O_EXCL) so two racing
+ * first-run setups can't both win; every later write is temp-file + fsync +
+ * rename (crash-safe), and every mutation serializes through the cross-process
+ * `file-lock.ts` primitive (CLAUDE.md lock rule).
+ */
+
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { z } from "zod";
+import { errnoCode } from "../lib/error-guards.js";
+import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import {
+  AuthFileCorruptError,
+  AuthFileLockError,
+  AuthFileSymlinkError,
+  LastOwnerRemovalError,
+  NoOwnerError,
+  NoSuchUserError,
+  OwnerEmailMismatchError,
+  OwnerExistsError,
+  UserExistsError,
+} from "./local-users-errors.js";
+
+// --- scrypt work factor -----------------------------------------------------
+
+const PROD_SCRYPT_N = 2 ** 17;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_SALT_BYTES = 16;
+const SCRYPT_KEY_BYTES = 32;
+
+interface ScryptCostParams {
+  N: number;
+  r: number;
+  p: number;
+}
+
+/**
+ * Current scrypt cost parameters for new/rehashed passwords.
+ *
+ * Test-only seam (the `CB_TIME` precedent — principle #10): `CB_AUTH_SCRYPT_N`
+ * lowers the work factor so the pure-function doctest stays fast. Inert unless
+ * set — every real deployment leaves it unset and hashes at full strength — and
+ * any invalid value falls back to the production factor (fail toward strong
+ * hashing, never toward weak).
+ */
+function currentScryptParams(): ScryptCostParams {
+  const override = process.env.CB_AUTH_SCRYPT_N;
+  if (override !== undefined) {
+    const n = Number(override);
+    if (Number.isInteger(n) && n >= 2 ** 10 && (n & (n - 1)) === 0) {
+      return { N: n, r: SCRYPT_R, p: SCRYPT_P };
+    }
+    console.warn(`[local-users] ignoring invalid CB_AUTH_SCRYPT_N=${override}; using production work factor`);
+  }
+  return { N: PROD_SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P };
+}
+
+/**
+ * Node's default `maxmem` (32MB) is far below what N=2^17, r=8 needs
+ * (128·N·r ≈ 128MB), so scrypt throws unless it's raised next to the params.
+ */
+function scryptMaxmem(params: ScryptCostParams): number {
+  return 132 * params.N * params.r;
+}
+
+function deriveKey(opts: { password: string; salt: Buffer; params: ScryptCostParams }): Promise<Buffer> {
+  const { password, salt, params } = opts;
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(
+      password,
+      salt,
+      SCRYPT_KEY_BYTES,
+      { N: params.N, r: params.r, p: params.p, maxmem: scryptMaxmem(params) },
+      (err, key) => {
+        if (err) reject(err);
+        else resolve(key);
+      },
+    );
+  });
+}
+
+// --- schema -----------------------------------------------------------------
+
+const scryptRecordSchema = z.object({
+  N: z.number().int().positive(),
+  r: z.number().int().positive(),
+  p: z.number().int().positive(),
+  salt: z.string(),
+  hash: z.string(),
+});
+
+const roleSchema = z.enum(["owner", "member"]);
+
+const userRecordSchema = z.object({
+  email: z.string(),
+  name: z.string(),
+  role: roleSchema,
+  gen: z.number().int().positive(),
+  scrypt: scryptRecordSchema,
+  created: z.string(),
+});
+type UserRecord = z.infer<typeof userRecordSchema>;
+
+const authFileSchema = z
+  .object({
+    version: z.literal(1),
+    users: z.array(userRecordSchema),
+  })
+  .refine((f) => f.users.filter((u) => u.role === "owner").length === 1, {
+    message: "auth file must contain exactly one owner",
+  });
+type AuthFile = z.infer<typeof authFileSchema>;
+
+export type LocalRole = z.infer<typeof roleSchema>;
+
+/** Public view of a user record — never carries the scrypt hash. */
+export interface LocalUser {
+  email: string;
+  name: string;
+  role: LocalRole;
+  gen: number;
+  created: string;
+}
+
+// --- paths & helpers --------------------------------------------------------
+
+function authFilePath(): string {
+  return process.env.CB_AUTH_FILE ?? path.join(os.homedir(), ".cb-auth.json");
+}
+
+/** Trim + lowercase — the single canonical form compared everywhere. */
+function canonicalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function toPublic(record: UserRecord): LocalUser {
+  return { email: record.email, name: record.name, role: record.role, gen: record.gen, created: record.created };
+}
+
+async function hashPassword(password: string): Promise<z.infer<typeof scryptRecordSchema>> {
+  const params = currentScryptParams();
+  const salt = crypto.randomBytes(SCRYPT_SALT_BYTES);
+  const key = await deriveKey({ password, salt, params });
+  return { N: params.N, r: params.r, p: params.p, salt: salt.toString("base64"), hash: key.toString("base64") };
+}
+
+// --- load / write -----------------------------------------------------------
+
+/**
+ * Load and validate the auth file. Returns `null` when it doesn't exist yet
+ * (the zero-users / first-run state). Throws `AuthFileSymlinkError` /
+ * `AuthFileCorruptError` — both `AuthStoreUnavailableError` — otherwise; a bad
+ * file NEVER resolves to a silent empty store.
+ */
+function loadAuthFile(): AuthFile | null {
+  const file = authFilePath();
+  let stat: fs.Stats;
+  try {
+    stat = fs.lstatSync(file);
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw new AuthFileCorruptError(file, { cause: e });
+  }
+  if (stat.isSymbolicLink()) throw new AuthFileSymlinkError(file);
+  if ((stat.mode & 0o777) !== 0o600) {
+    console.warn(`[local-users] auth file ${file} has mode ${(stat.mode & 0o777).toString(8)}; tightening to 0600`);
+    fs.chmodSync(file, 0o600);
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(fs.readFileSync(file, "utf-8"));
+  } catch (e) {
+    throw new AuthFileCorruptError(file, { cause: e });
+  }
+  const result = authFileSchema.safeParse(json);
+  if (!result.success) throw new AuthFileCorruptError(file, { cause: result.error });
+  return result.data;
+}
+
+function serialize(file: AuthFile): string {
+  return `${JSON.stringify(file, null, 2)}\n`;
+}
+
+function writeAndSync(opts: { path: string; flags: string; data: string }): void {
+  const fd = fs.openSync(opts.path, opts.flags, 0o600);
+  try {
+    fs.writeSync(fd, opts.data);
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/** Crash-safe replace: write a temp sibling, fsync, atomically rename over the target. */
+function writeAuthFile(file: AuthFile): void {
+  const target = authFilePath();
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const tmp = `${target}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
+  writeAndSync({ path: tmp, flags: "w", data: serialize(file) });
+  fs.renameSync(tmp, target);
+}
+
+// --- cross-process lock -----------------------------------------------------
+
+const LOCK_RETRIES = 50;
+const LOCK_RETRY_MS = 100;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Run a read-modify-write of the auth file under the cross-process lock,
+ * retrying briefly under contention (each critical section is a single small
+ * write). `null` = the file doesn't exist yet.
+ */
+async function withAuthFileLock<T>(fn: (file: AuthFile | null) => Promise<T> | T): Promise<T> {
+  const lockPath = `${authFilePath()}.lock`;
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
+    try {
+      await acquireLock(lockPath, { purpose: "local-users" });
+    } catch (e) {
+      if (e instanceof LockHeldError) {
+        await delay(LOCK_RETRY_MS);
+        continue;
+      }
+      throw e;
+    }
+    try {
+      return await fn(loadAuthFile());
+    } finally {
+      await releaseLock(lockPath);
+    }
+  }
+  throw new AuthFileLockError(lockPath);
+}
+
+// --- public API -------------------------------------------------------------
+
+/** The owner's email from the auth file, or `null` when no file exists yet. */
+export function getLocalOwnerEmail(): string | null {
+  const file = loadAuthFile();
+  if (!file) return null;
+  const owner = file.users.find((u) => u.role === "owner");
+  return owner ? owner.email : null;
+}
+
+/** All users (public view — no hashes). Empty when no file exists yet. */
+export function listUsers(): LocalUser[] {
+  const file = loadAuthFile();
+  return file ? file.users.map(toPublic) : [];
+}
+
+/** One user by (canonicalized) email, or `null`. */
+export function getLocalUser(email: string): LocalUser | null {
+  const file = loadAuthFile();
+  if (!file) return null;
+  const canonical = canonicalizeEmail(email);
+  const record = file.users.find((u) => u.email === canonical);
+  return record ? toPublic(record) : null;
+}
+
+/**
+ * Create the first (owner) account atomically. `wx` (O_EXCL) means a second
+ * racing setup gets `UserExistsError` rather than clobbering the winner. When
+ * `CB_OWNER_EMAIL` is set, the email must match it (canonicalized) — matching,
+ * not shadowing, the configured owner.
+ */
+export async function createFirstUser(opts: {
+  email: string;
+  name: string;
+  password: string;
+}): Promise<LocalUser> {
+  const email = canonicalizeEmail(opts.email);
+  const configured = process.env.CB_OWNER_EMAIL ? canonicalizeEmail(process.env.CB_OWNER_EMAIL) : null;
+  if (configured && configured !== email) throw new OwnerEmailMismatchError(configured, email);
+  const record: UserRecord = {
+    email,
+    name: opts.name,
+    role: "owner",
+    gen: 1,
+    scrypt: await hashPassword(opts.password),
+    created: nowIso(),
+  };
+  const file: AuthFile = { version: 1, users: [record] };
+  const target = authFilePath();
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  try {
+    writeAndSync({ path: target, flags: "wx", data: serialize(file) });
+  } catch (e) {
+    if (errnoCode(e) === "EEXIST") throw new UserExistsError(email);
+    throw e;
+  }
+  return toPublic(record);
+}
+
+/** Add a member (or a first owner if the file is somehow missing an owner). */
+export async function addUser(opts: {
+  email: string;
+  name: string;
+  password: string;
+  role: LocalRole;
+}): Promise<LocalUser> {
+  const email = canonicalizeEmail(opts.email);
+  const scrypt = await hashPassword(opts.password);
+  return withAuthFileLock((file) => {
+    if (!file) throw new NoOwnerError();
+    if (file.users.some((u) => u.email === email)) throw new UserExistsError(email);
+    if (opts.role === "owner" && file.users.some((u) => u.role === "owner")) throw new OwnerExistsError(email);
+    const record: UserRecord = { email, name: opts.name, role: opts.role, gen: 1, scrypt, created: nowIso() };
+    writeAuthFile({ version: 1, users: [...file.users, record] });
+    return toPublic(record);
+  });
+}
+
+/**
+ * Verify a password. Returns the public user on success, `null` on unknown
+ * email OR wrong password (uniform — no user enumeration). On success, if the
+ * stored parameters differ from the current work factor, the record is
+ * transparently rehashed and rewritten (argon2/retuned-N migration path).
+ */
+export async function verifyPassword(opts: { email: string; password: string }): Promise<LocalUser | null> {
+  const email = canonicalizeEmail(opts.email);
+  const file = loadAuthFile();
+  if (!file) return null;
+  const record = file.users.find((u) => u.email === email);
+  if (!record) return null;
+
+  const stored = Buffer.from(record.scrypt.hash, "base64");
+  let derived: Buffer;
+  try {
+    derived = await deriveKey({
+      password: opts.password,
+      salt: Buffer.from(record.scrypt.salt, "base64"),
+      params: { N: record.scrypt.N, r: record.scrypt.r, p: record.scrypt.p },
+    });
+  } catch (e) {
+    // Bad stored params (hand-edited) or scrypt failure: fail the login closed.
+    console.error(`[local-users] scrypt verify failed for ${email}:`, e);
+    return null;
+  }
+  if (stored.length !== derived.length || !crypto.timingSafeEqual(stored, derived)) return null;
+
+  const current = currentScryptParams();
+  if (record.scrypt.N !== current.N || record.scrypt.r !== current.r || record.scrypt.p !== current.p) {
+    await rehash({ email, password: opts.password });
+  }
+  return toPublic(record);
+}
+
+/** Rewrite a verified user's hash with the current work factor. */
+async function rehash(opts: { email: string; password: string }): Promise<void> {
+  const scrypt = await hashPassword(opts.password);
+  await withAuthFileLock((file) => {
+    if (!file) return;
+    const record = file.users.find((u) => u.email === opts.email);
+    if (!record) return;
+    record.scrypt = scrypt;
+    writeAuthFile(file);
+  });
+}
+
+/** Set a user's password and bump `gen` (revokes every outstanding session). */
+export async function setPassword(opts: { email: string; password: string }): Promise<LocalUser> {
+  const email = canonicalizeEmail(opts.email);
+  const scrypt = await hashPassword(opts.password);
+  return withAuthFileLock((file) => {
+    if (!file) throw new NoSuchUserError(email);
+    const record = file.users.find((u) => u.email === email);
+    if (!record) throw new NoSuchUserError(email);
+    record.scrypt = scrypt;
+    record.gen += 1;
+    writeAuthFile(file);
+    return toPublic(record);
+  });
+}
+
+/** Remove a user. Refuses to remove the owner (`LastOwnerRemovalError`). */
+export async function removeUser(opts: { email: string }): Promise<void> {
+  const email = canonicalizeEmail(opts.email);
+  return withAuthFileLock((file) => {
+    if (!file) throw new NoSuchUserError(email);
+    const record = file.users.find((u) => u.email === email);
+    if (!record) throw new NoSuchUserError(email);
+    if (record.role === "owner") throw new LastOwnerRemovalError(email);
+    writeAuthFile({ version: 1, users: file.users.filter((u) => u.email !== email) });
+  });
+}
