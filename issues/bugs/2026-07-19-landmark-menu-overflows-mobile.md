@@ -10,12 +10,34 @@ The landmark cards menu — opened from the **bookmark icon** in chat — doesn'
 fit on a mobile viewport. It overflows rather than adapting, so some of it is
 unreachable.
 
-Not yet pinned down whether it overflows horizontally (too wide for the screen),
-vertically (taller than the viewport with no internal scroll), or is positioned
-such that part renders offscreen — the fix differs for each, so establish which
-before changing CSS. Also worth checking behavior with a long landmark list vs.
-a short one: a menu that fits with three entries and overflows with twenty is a
-missing `max-height` + internal scroll, not a width problem.
+## Diagnosis (2026-07-19, from reading the markup — not yet confirmed in a browser)
+
+The menu is one element, `LandmarkLinksButton.tsx:82`:
+
+```
+absolute top-full right-0 mt-1 w-[min(24rem,calc(100vw-2rem))] max-h-[70vh] overflow-auto
+```
+
+**Internal scrolling is already handled** and has been since 2026-07-06 —
+`max-h-[70vh] overflow-auto`. So a long list is not the problem, and adding a
+`max-height` is not the fix. Two other things are wrong:
+
+1. **Horizontal — position, not width.** Width is capped (`min(24rem,
+   100vw-2rem)`), but the menu is anchored `right-0` to *the button*. On a 390px
+   phone the width resolves to ~358px; if the bookmark button isn't hard against
+   the viewport's right edge, the menu's left edge lands at a negative x and is
+   clipped off-screen. Capping width can't fix this — the anchor is the bug.
+2. **Vertical — wrong unit.** `70vh` resolves against the *large* viewport (as
+   if browser chrome were hidden), so on mobile the menu can be taller than
+   what's actually visible. `70dvh` tracks the real viewport.
+
+A first attempt at (1) — swapping to `fixed left-2 right-2` with `sm:` restoring
+the dropdown — was written and then reverted, because `fixed` + `top-auto`
+depends on static-position behavior that's fragile across browsers, and the
+button's actual position in the header was never confirmed. **Look at it in a
+browser at a phone viewport before changing the CSS**; `bin/browse` drives the
+running app. The honest fix may need JS measurement (or a popover primitive)
+rather than pure CSS, since no CSS expression knows the button's x-position.
 
 **Repro:** on mobile, open a chat → tap the bookmark icon → the menu doesn't fit.
 
