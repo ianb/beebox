@@ -177,6 +177,20 @@ function resolveMobileTokenIdentity(boxRoot: string, token: string | undefined):
   return null;
 }
 
+/**
+ * Is this device still paired and unrevoked?
+ *
+ * A read-only counterpart to `resolveMobileTokenIdentity`, which writes
+ * `lastUsedAt` on every call. Used when renewing a `cb_mobile` cookie: the
+ * cookie already proved WHICH device it is (it's signed), so renewal only
+ * needs to re-check that the device hasn't been revoked since — and must not
+ * pay a store write to do it.
+ */
+export function isMobileDeviceActive(boxRoot: string, deviceId: string): boolean {
+  const device = readDeviceStore(boxRoot).devices.find((item) => item.id === deviceId);
+  return device !== undefined && !device.revokedAt;
+}
+
 export function revokeMobileDevice(boxRoot: string, deviceId: string): boolean {
   const store = readDeviceStore(boxRoot);
   const device = store.devices.find((item) => item.id === deviceId);

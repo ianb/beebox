@@ -1,7 +1,7 @@
 ---
 title: "Publish-pages: resume the Cloudflare publishing feature"
 area: callback-box
-needs: [implementation]
+needs: [implementation, manual-testing]
 design: ../../callback-box/docs/plans/publish-pages.md
 ---
 
@@ -44,15 +44,22 @@ best finished in a fresh session. Full design + security review:
 
 ## What remains
 
-1. **`cb pub setup`** (the one blocker to a usable feature). Provision against live CF:
-   create the R2 bucket (`POST /accounts/<id>/r2/buckets`, idempotent — OK if exists),
-   deploy `pub-worker` via **wrangler** with the account creds + the `PUB_STORE` R2
-   binding + set the `ACCESS_TEAM_DOMAIN`/`ACCESS_AUD` vars, **disable preview URLs**
-   (old Worker versions are a leak surface — plan Prior-art), print the `workers.dev`
-   hostname. Structure the CF calls behind an injectable client (fake for tests) like
-   the R2 store; unit-test the logic, iterate the wrangler/CF specifics against live CF.
-   For account tiers, setup also needs a **one-time Cloudflare Access app + Google IdP**
-   (Zero Trust) — can be manual/instructed first, automated later.
+1. ~~**`cb pub setup`**~~ DONE (plus `cb pub status`) — merged to `main` in
+   `0597b59f` (`feat(publish): cb pub setup + cb pub status behind an
+   injectable Cloudflare client (Track E)`, via `worktree-agent-ab7a0f30e32308676`).
+   Implemented behind an
+   injectable `CloudflareProvisioningClient` (`src/services/cloudflare-provisioning.ts`,
+   fake for tests) + an injectable wrangler-deploy runner (`src/publish/setup.ts`);
+   status logic in `src/publish/status.ts` with a `/__version` drift probe (the Worker
+   now serves `GET /__version` from a deploy-stamped `PUB_WORKER_VERSION` var — the
+   hash of the committed Worker source, `src/publish/pub-worker-meta.ts`). Setup
+   enforces + read-back-verifies previews-disabled, prints the hostname, and prints
+   the manual Access app + Google IdP instructions (re-run with
+   `--access-team-domain`/`--access-aud` to bake the vars in). The REAL Cloudflare
+   adapter and the real `wrangler deploy` spawn are ⚠️ UNVERIFIED — no live CF call
+   has been made; iterate their specifics during the live pass (exact endpoints to
+   check: R2 bucket GET/POST, `workers/subdomain`, `workers/scripts/<name>/settings`,
+   `workers/scripts/<name>/subdomain` with `previews_enabled`).
 2. **End-to-end verification** (plan step 7): `cb pub draft` a doc → `cb pub go` (needs
    a TTY; the human types the pub-id) → fetch the `workers.dev` URL, confirm it serves
    + carries the strict headers → `cb pub revoke` → confirm 410. Then a `secret`-tier

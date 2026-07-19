@@ -16,9 +16,10 @@
  * boundary either way.
  */
 
+import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
 import { joinTranscript } from "../components/chat/InteractiveChat-helpers";
-import { createVoiceEmission, type Emission } from "./emission";
+import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
 
 export type VoiceIntent =
   | {
@@ -39,19 +40,28 @@ export type VoiceIntent =
 /**
  * Pure freeze-boundary mapping: a "submit" intent's final committed text
  * (after any HQ pass rewrites it) plus the composer context frozen at
- * keyword-fire time (`priorInput`, `selectionsSnapshot`) becomes the voice
- * Emission. Selections added to the live composer after the freeze never
- * reach this function — the caller snapshots and clears them before the HQ
- * round-trip starts, so they land in the NEXT emission instead. This is the
- * one piece of `runKeywordSend`'s submit logic that's pure enough to
- * doctest headlessly (see `test/frontend/voice-intent.doctest.md`).
+ * keyword-fire time (`priorInput`, `selectionsSnapshot`, and the pending
+ * image/file attachments) becomes the voice Emission. Composer state added
+ * after the freeze never reaches this function — the caller snapshots and
+ * clears it before the HQ round-trip starts, so it lands in the NEXT
+ * emission instead. This is the one piece of `runKeywordSend`'s submit
+ * logic that's pure enough to doctest headlessly (see
+ * `test/frontend/voice-intent.doctest.md`).
  */
 export function buildVoiceSubmitEmission(opts: {
   priorInput: string;
   finalText: string;
   selectionsSnapshot: readonly SelectionItem[];
+  imagesSnapshot: readonly ChatImageAttachment[];
+  filesSnapshot: readonly EmissionFile[];
   diarized: boolean;
 }): Emission {
   const full = joinTranscript(opts.priorInput, opts.finalText);
-  return createVoiceEmission({ text: full, selections: opts.selectionsSnapshot, diarized: opts.diarized });
+  return createVoiceEmission({
+    text: full,
+    images: opts.imagesSnapshot,
+    files: opts.filesSnapshot,
+    selections: opts.selectionsSnapshot,
+    diarized: opts.diarized,
+  });
 }

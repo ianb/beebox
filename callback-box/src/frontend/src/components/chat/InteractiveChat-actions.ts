@@ -17,7 +17,7 @@ import { newMessageId } from "./InteractiveChat-helpers";
 import { toastError } from "../ui/toast-store";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { createTypedEmission, type Emission } from "../../input/emission";
+import { createTypedEmission, draftAttachments, type Emission } from "../../input/emission";
 import type { InputStore } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
 import type { ChatEvent } from "../../machines/chat-types";
@@ -70,9 +70,8 @@ export function useChatActions(opts: ChatActionsOpts) {
 
     const emission = createTypedEmission({
       text,
-      // UI attachments become the wire-format images payload.
-      images: attachments.map((a) => ({ id: a.id, mimeType: a.mimeType, dataBase64: a.dataBase64 })),
-      files: fileAttachments.map((f) => ({ id: f.id, path: f.path })),
+      // UI attachments become the wire-format payloads.
+      ...draftAttachments({ images: attachments, files: fileAttachments }),
       selections,
     });
 

@@ -43,31 +43,69 @@ const GITIGNORE_BLOCK_MARKER = "# cb-assets (managed by cb attachments init-giti
 /** Older marker the box may have if it was initialized before the rename. */
 const LEGACY_GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attachments init-gitignore)";
 
+/**
+ * Extensions ignored inside `.attach/` scopes. THE list — the box scaffold's
+ * `.gitignore` (core/box/index.ts) renders this same array, so a new asset type
+ * is added here once rather than in two places that quietly drift.
+ *
+ * Nothing keys asset *identity* off this list: `listScopeBinaries` manifests
+ * every non-`.card` file in a scope regardless of extension. This only decides
+ * what git skips, so an omission here means the bytes get committed directly —
+ * which is how frozen web pages (`page.frozen`, up to 41MB apiece) ended up in
+ * box history before 2026-07-19.
+ */
+export const ASSET_GITIGNORE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "avif",
+  "heic",
+  "tif",
+  "tiff",
+  "gif",
+  "webm",
+  "mp3",
+  "m4a",
+  "wav",
+  "pdf",
+  "mp4",
+  "mov",
+  // Frozen web-page snapshots captured by callback-clerk.
+  "frozen",
+];
+
+/** The `.gitignore` lines for {@link ASSET_GITIGNORE_EXTENSIONS}. */
+export function assetGitignorePatterns(): string {
+  return ASSET_GITIGNORE_EXTENSIONS.map((ext) => `**/*.attach/**/*.${ext}`).join("\n");
+}
+
 const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
 # (size + sha256), not committed directly. See docs/asset-manifests.md.
-**/*.attach/**/*.jpg
-**/*.attach/**/*.jpeg
-**/*.attach/**/*.png
-**/*.attach/**/*.webp
-**/*.attach/**/*.avif
-**/*.attach/**/*.heic
-**/*.attach/**/*.tif
-**/*.attach/**/*.tiff
-**/*.attach/**/*.gif
-**/*.attach/**/*.webm
-**/*.attach/**/*.mp3
-**/*.attach/**/*.m4a
-**/*.attach/**/*.wav
-**/*.attach/**/*.pdf
-**/*.attach/**/*.mp4
-**/*.attach/**/*.mov
+${assetGitignorePatterns()}
 `;
 
 /**
- * Append the binary-attachment block to the box's `.gitignore` if missing.
- * Idempotent: detected via the block marker, so running twice is a no-op.
- * Creates `.gitignore` if absent.
+ * Is this line part of the managed block's body — a comment or an asset
+ * pattern? Used to find the block's extent so a stale one can be replaced.
+ * Deliberately narrow: anything else (a blank line, an unrelated rule) ends
+ * the block, so hand-written entries after it are never swallowed.
+ */
+function isManagedBlockLine(line: string): boolean {
+  return line.startsWith("#") || line.startsWith("**/*.attach/**/*.");
+}
+
+/**
+ * Install or refresh the asset block in the box's `.gitignore`.
+ *
+ * Idempotent, and — unlike the original append-only version — it **replaces a
+ * stale block** rather than no-op'ing on the marker. Marker-presence alone was
+ * never the right test: adding an extension to
+ * {@link ASSET_GITIGNORE_EXTENSIONS} left every already-initialized box on the
+ * old list forever, so a newly-ignored asset type kept getting committed on
+ * exactly the boxes that had been running longest. (That's how `page.frozen`
+ * stayed tracked after being added.) Creates `.gitignore` if absent.
  */
 async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
   const gitignorePath = path.join(ctx.boxRoot, ".gitignore");
@@ -77,17 +115,31 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw new GitignoreReadError(gitignorePath, e);
   }
-  if (
-    existing.includes(GITIGNORE_BLOCK_MARKER) ||
-    existing.includes(LEGACY_GITIGNORE_BLOCK_MARKER)
-  ) {
-    ctx.writeLine("Already present in .gitignore — no change.");
+
+  const lines = existing.split("\n");
+  const markerAt = lines.findIndex(
+    (l) => l.trim() === GITIGNORE_BLOCK_MARKER || l.trim() === LEGACY_GITIGNORE_BLOCK_MARKER,
+  );
+
+  if (markerAt === -1) {
+    const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
+    await fs.writeFile(gitignorePath, existing + sep + GITIGNORE_BLOCK);
+    ctx.writeLine(`Appended asset block to ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
+    return { success: true, data: { changed: true } };
+  }
+
+  let end = markerAt + 1;
+  while (end < lines.length && isManagedBlockLine(lines[end] ?? "")) end += 1;
+
+  const currentBlock = lines.slice(markerAt, end).join("\n") + "\n";
+  if (currentBlock === GITIGNORE_BLOCK) {
+    ctx.writeLine("Already up to date in .gitignore — no change.");
     return { success: true, data: { changed: false } };
   }
-  const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
-  const updated = existing + sep + GITIGNORE_BLOCK;
+
+  const updated = [...lines.slice(0, markerAt), GITIGNORE_BLOCK.trimEnd(), ...lines.slice(end)].join("\n");
   await fs.writeFile(gitignorePath, updated);
-  ctx.writeLine(`Appended asset block to ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
+  ctx.writeLine(`Refreshed asset block in ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
   return { success: true, data: { changed: true } };
 }
 

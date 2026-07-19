@@ -32,6 +32,9 @@ out.images.length
 
 ## Site 1 — typed send: selections fold, files block, images ride
 
+(The text here carries no `[fileN]` tokens, so both files also get noted
+at the end of the body — see the placemarker section below.)
+
 ```ts
 const e = createTypedEmission({
   text: "compare [selection1] with the doc",
@@ -41,10 +44,51 @@ const e = createTypedEmission({
 });
 const out = assembleChatMessage(e, W);
 JSON.stringify(out.message)
-=> "<typed local-time=\"14:23\">compare <user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the doc</typed>\n<attachments>\n[file1]: tmp/2026-07-04T01-00-00_report.pdf\n[file2]: tmp/2026-07-04T01-00-01_notes.txt\n</attachments>"
+=> "<typed local-time=\"14:23\">compare <user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the doc [file1] [file2]</typed>\n<attachments>\n[file1]: tmp/2026-07-04T01-00-00_report.pdf\n[file2]: tmp/2026-07-04T01-00-01_notes.txt\n</attachments>"
 
 out.images[0]?.mimeType
 => image/png
+```
+
+## Missing [fileN] placemarkers are noted at the end of the text
+
+`[fileN]` tokens are placemarkers the user can position in the text; a
+file whose token is missing gets its token appended at the end instead, so
+the `<attachments>` block never lists an unreferenced file. Voice sends
+(whose spoken text never had tokens) and typed sends where the user edited
+a token out both land here.
+
+```ts
+const e = createVoiceEmission({
+  text: "summarize the attached report",
+  files: [{ id: 1, path: "tmp/2026-07-19T10-00-00_report.pdf" }],
+  selections: [],
+  diarized: false,
+});
+JSON.stringify(assembleChatMessage(e, W).message)
+=> "<speech local-time=\"14:23\">summarize the attached report [file1]</speech>\n<attachments>\n[file1]: tmp/2026-07-19T10-00-00_report.pdf\n</attachments>"
+```
+
+A present token is left in place — only the absent ones append:
+
+```ts
+const e = createTypedEmission({
+  text: "compare [file1] against the notes",
+  images: [],
+  files: [{ id: 1, path: "tmp/a.pdf" }, { id: 2, path: "tmp/b.txt" }],
+  selections: [],
+});
+JSON.stringify(assembleChatMessage(e, W).message)
+=> "<typed local-time=\"14:23\">compare [file1] against the notes [file2]</typed>\n<attachments>\n[file1]: tmp/a.pdf\n[file2]: tmp/b.txt\n</attachments>"
+```
+
+Empty text with only an attachment (the send guard allows it): the body
+is just the token, with no stray leading space:
+
+```ts
+const e = createTypedEmission({ text: "", images: [], files: [{ id: 1, path: "tmp/a.pdf" }], selections: [] });
+JSON.stringify(assembleChatMessage(e, W).message)
+=> "<typed local-time=\"14:23\">[file1]</typed>\n<attachments>\n[file1]: tmp/a.pdf\n</attachments>"
 ```
 
 ## Witness attributes: order is local-time, zoomed-view, time-passed

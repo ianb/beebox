@@ -57,7 +57,17 @@ export function assembleChatMessage(
   witness: ChatWitness,
 ): AssembledChatMessage {
   const attrs = witnessAttrs(witness);
-  const body = applySelections(emission.text, {
+  // `[fileN]` tokens are placemarkers the user can position in the text. A
+  // file whose token is missing (voice sends never had one; a typed send's
+  // may have been edited out) is noted at the end of the text instead, so
+  // the <attachments> block below never lists an unreferenced file.
+  const missingTokens = emission.files
+    .map((f) => `[file${f.id}]`)
+    .filter((token) => !emission.text.includes(token));
+  const text = missingTokens.length === 0
+    ? emission.text
+    : [emission.text, ...missingTokens].filter((s) => s.length > 0).join(" ");
+  const body = applySelections(text, {
     selections: [...emission.selections],
   });
 

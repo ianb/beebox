@@ -29,6 +29,7 @@ import {
   listChildrenOnDisk,
 } from "./precheck-listing.js";
 import { fileExists } from "../../lib/file-exists.js";
+import { invariant } from "../../lib/invariant.js";
 
 export interface MapTask {
   /** Path of the MAP.md to write, relative to box root. */
@@ -51,11 +52,26 @@ export interface MapTask {
 
 export type SkipReason = "uncommitted_work" | "not_a_repo" | "no_commits";
 
+/**
+ * A box-data problem found during detection. Not a failure — the precheck
+ * works around each one and keeps going — but a symptom worth surfacing,
+ * since it usually means the box's git state is inconsistent.
+ */
+export interface MapAnomaly {
+  kind: "asof_unresolvable";
+  /** Directory whose recorded state is affected, relative to box root. */
+  dir: string;
+  /** The commit hash that no longer resolves. */
+  asOf: string;
+}
+
 export interface MapBrief {
   needsWork: boolean;
   skippedReason?: SkipReason;
   head?: string;
   tasks: MapTask[];
+  /** Box-data problems found while detecting. Empty on a healthy box. */
+  anomalies: MapAnomaly[];
 }
 
 export interface PrecheckOptions {
@@ -79,10 +95,10 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
   }
 
   if (!(await isRepo(boxRoot))) {
-    return { needsWork: false, skippedReason: "not_a_repo", tasks: [] };
+    return { needsWork: false, skippedReason: "not_a_repo", tasks: [], anomalies: [] };
   }
   if (!(await hasCommits(boxRoot))) {
-    return { needsWork: false, skippedReason: "no_commits", tasks: [] };
+    return { needsWork: false, skippedReason: "no_commits", tasks: [], anomalies: [] };
   }
   const status = await getStatus(boxRoot);
   // getStatus paths are repo-root-relative; on a v2 box the repo root is the
@@ -100,13 +116,14 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
     .map(strip)
     .filter((p) => !p.startsWith("procedure/runs/"));
   if (dirtyPaths.length > 0) {
-    return { needsWork: false, skippedReason: "uncommitted_work", tasks: [] };
+    return { needsWork: false, skippedReason: "uncommitted_work", tasks: [], anomalies: [] };
   }
 
   const head = await getHead(boxRoot);
   const state = await loadMapState(boxRoot);
   const dirs = await listMappableDirs(boxRoot, patterns);
   const tasks: MapTask[] = [];
+  const anomalies: MapAnomaly[] = [];
 
   for (const dirRel of dirs) {
     const mapAbs = path.join(boxRoot, dirRel, "MAP.md");
@@ -130,18 +147,47 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
 
     if (stateEntry.asOf === head) continue;
 
-    const prevChildren = await listChildrenAtCommit({
+    const prev = await listChildrenAtCommit({
       boxRoot,
       dirRel,
       commit: stateEntry.asOf,
       patterns,
     });
-    const currChildren = await listChildrenAtCommit({
+    const curr = await listChildrenAtCommit({
       boxRoot,
       dirRel,
       commit: head,
       patterns,
     });
+    // HEAD must resolve — we just read it from this repo. If it doesn't, the
+    // repo is broken in a way no local workaround should paper over.
+    invariant(curr.ok, `HEAD (${head}) did not resolve while listing ${dirRel}`);
+    const currChildren = curr.value;
+
+    if (!prev.ok) {
+      // The recorded asOf is gone (history rewritten, GC'd, shallow clone).
+      // There's no trustworthy prior listing to diff against, so a diff would
+      // be fiction — every current child would read as "added". Regenerate the
+      // whole MAP.md from the current listing instead, and record the anomaly.
+      console.warn(
+        `refresh-maps: recorded asOf ${prev.error.commit} for "${dirRel || "<root>"}" ` +
+          "does not resolve — regenerating its MAP.md from the current listing. " +
+          "This usually means the box's git history was rewritten.",
+      );
+      anomalies.push({ kind: "asof_unresolvable", dir: dirRel, asOf: prev.error.commit });
+      tasks.push({
+        map: mapRel,
+        dir: dirRel,
+        action: "create",
+        head,
+        added: [],
+        deleted: [],
+        children: currChildren,
+      });
+      continue;
+    }
+
+    const prevChildren = prev.value;
     const prevSet = new Set(prevChildren);
     const currSet = new Set(currChildren);
     const added = currChildren.filter((c) => !prevSet.has(c));
@@ -165,5 +211,6 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
     needsWork: tasks.length > 0,
     head,
     tasks,
+    anomalies,
   };
 }

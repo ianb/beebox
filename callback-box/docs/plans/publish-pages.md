@@ -1,10 +1,12 @@
 # Publish Pages — External Static Publishing via Cloudflare Workers
 
-**Status:** active — design complete; Tracks A, B (docs renderer only), C, D, E
-(partial: draft/ls/revoke/go, not setup/status), and F are implemented and tested
-(landed on `worktree-publish-pages`). Still open: `cb pub setup` (live Cloudflare
-provisioning), end-to-end verification against a real Cloudflare account, the views
-renderer subplan, and docs/knowledge-audits. See
+**Status:** active — design complete; Tracks A, B (docs renderer only), C, D, E,
+and F are implemented and tested (landed on `worktree-publish-pages`). `cb pub
+setup` and `cb pub status` exist behind an injectable Cloudflare client (fake in
+tests) plus a `/__version` drift probe on the Worker; the real Cloudflare adapter
+and wrangler deploy are UNVERIFIED until the live pass. Still open: end-to-end
+verification against a real Cloudflare account, the views renderer subplan, and
+docs/knowledge-audits. See
 [the resume issue](../../../issues/features/2026-07-19-publish-pages-resume.md) for
 the exact per-track breakdown and how-to-resume notes.
 

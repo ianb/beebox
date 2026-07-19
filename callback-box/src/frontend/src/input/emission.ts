@@ -17,6 +17,7 @@
 
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
+import type { ImageItem, FileItem } from "./emission-store";
 import { newMessageId } from "../components/chat/InteractiveChat-helpers";
 
 /**
@@ -45,6 +46,22 @@ export interface Emission {
   readonly diarized: boolean;
 }
 
+/**
+ * Snapshot the draft store's pending attachments into emission shape — the
+ * one mapping from draft items (which carry preview metadata like object
+ * URLs) to the wire payloads an emission carries. Every live-composer send
+ * path (typed send, stop-and-send, keyword send) goes through this.
+ */
+export function draftAttachments(draft: { images: ImageItem[]; files: FileItem[] }): {
+  images: ChatImageAttachment[];
+  files: EmissionFile[];
+} {
+  return {
+    images: draft.images.map((a) => ({ id: a.id, mimeType: a.mimeType, dataBase64: a.dataBase64 })),
+    files: draft.files.map((f) => ({ id: f.id, path: f.path })),
+  };
+}
+
 interface TypedEmissionInput {
   text: string;
   images: readonly ChatImageAttachment[];
@@ -68,13 +85,16 @@ export function createTypedEmission(input: TypedEmissionInput): Emission {
 interface VoiceEmissionInput {
   text: string;
   images?: readonly ChatImageAttachment[];
+  files?: readonly EmissionFile[];
   selections: readonly SelectionItem[];
   diarized: boolean;
 }
 
 /**
  * A voice emission (keyword send, the stop-and-send buttons, recovered
- * dictation). Voice sends carry no images or file attachments today.
+ * dictation). Live-composer voice sends sweep pending images and files in
+ * (same alignment as selections); recovered dictation omits them — no live
+ * composer state exists in that case.
  */
 export function createVoiceEmission(input: VoiceEmissionInput): Emission {
   return {
@@ -82,7 +102,7 @@ export function createVoiceEmission(input: VoiceEmissionInput): Emission {
     origin: "voice",
     text: input.text,
     images: input.images ?? [],
-    files: [],
+    files: input.files ?? [],
     selections: input.selections,
     diarized: input.diarized,
   };

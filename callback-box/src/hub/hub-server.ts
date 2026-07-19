@@ -55,7 +55,7 @@ import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
-import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
+import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
@@ -127,29 +127,30 @@ function slugForPath(reqPath: string): string | null {
   return isWebhookPath(reqPath) ? parseWebhookSlug(reqPath) : parseSlug(reqPath);
 }
 
-function mobileTokenFromUrl(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  try {
-    return new URL(url, "http://hub.local").searchParams.get("mobileToken") ?? undefined;
-  } catch (_e) {
-    return undefined;
-  }
-}
-
-function hasMobileAuthAttempt(headers: http.IncomingHttpHeaders, url: string | undefined): boolean {
-  const authorization = headers.authorization;
-  return (typeof authorization === "string" && authorization.startsWith("Bearer "))
-    || mobileTokenFromUrl(url) !== undefined;
+/**
+ * Does this request carry mobile-device auth the named box actually accepts?
+ *
+ * This VERIFIES; it used to only check that an `Authorization: Bearer ` prefix
+ * or a `?mobileToken=` param was present, which meant the literal string
+ * "Bearer x" was enough to skip the hub's auth wall and be proxied to a box —
+ * cold-starting a stopped box for an unauthenticated caller (known risk S1 in
+ * `docs/mobile-contract.md`). Verifying here is affordable because the cookie
+ * path is pure HMAC with no filesystem access.
+ */
+function hasMobileAuth(opts: {
+  boxRoot: string | undefined;
+  headers: http.IncomingHttpHeaders;
+}): boolean {
+  if (opts.boxRoot === undefined) return false;
+  return verifyMobileRequest(opts.boxRoot, opts.headers);
 }
 
 function listMobileAuthorizedBoxes(opts: {
   boxes: BoxSpec[];
   headers: http.IncomingHttpHeaders;
-  url: string | undefined;
 }): Array<{ slug: string; name: string }> {
   return opts.boxes
-    .filter((box) => verifyMobileBearer(box.boxRoot, opts.headers.authorization)
-      || verifyMobileToken(box.boxRoot, mobileTokenFromUrl(opts.url)))
+    .filter((box) => verifyMobileRequest(box.boxRoot, opts.headers))
     .map((box) => ({ slug: box.slug, name: box.slug }));
 }
 
@@ -278,7 +279,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   app.get("/api/boxes", async (request) => {
     if (isAuthEnabled()) {
       const user = getSessionUser(request);
-      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers, url: request.url });
+      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       if (!user) return { boxes: [], authRequired: true };
       return { boxes: await listAccessibleBoxes(boxes, user.email) };
@@ -404,19 +405,18 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const isWebhook = isWebhookPath(reqPath);
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
     const slug = slugForPath(reqPath);
-    const mobileAuthAttempt = slug !== null
-      && boxRootBySlug.has(slug)
-      && hasMobileAuthAttempt(request.headers, request.url);
+    const mobileAuthed = slug !== null
+      && hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret });
-    if (!isMobilePairingRedeem && !mobileAuthAttempt && !decision.authorized) {
+    if (!isMobilePairingRedeem && !mobileAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
-    if (!isMobilePairingRedeem && !mobileAuthAttempt) {
+    if (!isMobilePairingRedeem && !mobileAuthed) {
       Object.assign(request.raw.headers, decision.headersToSet);
     }
 
@@ -456,18 +456,17 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const reqPath = req.url ?? "/";
     const isWebhook = isWebhookPath(reqPath);
     const slug = slugForPath(reqPath);
-    const mobileAuthAttempt = slug !== null
-      && boxRootBySlug.has(slug)
-      && hasMobileAuthAttempt(req.headers, req.url);
+    const mobileAuthed = slug !== null
+      && hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret });
-    if (!mobileAuthAttempt && !decision.authorized) {
+    if (!mobileAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
-    if (!mobileAuthAttempt) {
+    if (!mobileAuthed) {
       Object.assign(req.headers, decision.headersToSet);
     }
 

@@ -78,7 +78,7 @@ async function main() {
     const reactOpt = hasReact ? "true" : "false";
     writeFileSync(
       eslintPath,
-      `import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";\nexport default vibeCheck({ react: ${reactOpt} });\n`
+      `import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";\nexport default vibeCheck({ react: ${reactOpt} });\n`,
     );
     created.push("Created eslint.config.mjs");
   }
@@ -88,7 +88,7 @@ async function main() {
   if (!existsSync(prettierPath)) {
     writeFileSync(
       prettierPath,
-      `export { default } from "@ianbicking/personal-vibe-check/prettier";\n`
+      `export { default } from "@ianbicking/personal-vibe-check/prettier";\n`,
     );
     created.push("Created prettier.config.mjs");
   }
@@ -111,10 +111,7 @@ async function main() {
   // 5. Write knip.json
   const knipPath = join(cwd, "knip.json");
   if (!existsSync(knipPath)) {
-    const entryInput = await ask(
-      "Entry points for knip (comma-separated)",
-      "src/index.ts"
-    );
+    const entryInput = await ask("Entry points for knip (comma-separated)", "src/index.ts");
     const entries = entryInput.split(",").map((s) => s.trim());
     const knip = {
       $schema: "https://unpkg.com/knip@latest/schema.json",
@@ -174,11 +171,17 @@ async function main() {
   const postToolHooks = claudeSettings.hooks && claudeSettings.hooks.PostToolUse;
   // Also detect old shell script hook for migration
   const oldShellHookCommand = '"$CLAUDE_PROJECT_DIR"/.claude/hooks/lint-check.sh';
-  const hasLintHook = Array.isArray(postToolHooks) && postToolHooks.some(
-    (group) => Array.isArray(group.hooks) && group.hooks.some(
-      (h) => h.type === "command" && (h.command === lintHookCommand || h.command === oldShellHookCommand)
-    )
-  );
+  const hasLintHook =
+    Array.isArray(postToolHooks) &&
+    postToolHooks.some(
+      (group) =>
+        Array.isArray(group.hooks) &&
+        group.hooks.some(
+          (h) =>
+            h.type === "command" &&
+            (h.command === lintHookCommand || h.command === oldShellHookCommand),
+        ),
+    );
   if (!hasLintHook) {
     if (!claudeSettings.hooks) {
       claudeSettings.hooks = {};
@@ -189,9 +192,11 @@ async function main() {
     // Remove old Stop vibe-check hook if present
     if (Array.isArray(claudeSettings.hooks.Stop)) {
       claudeSettings.hooks.Stop = claudeSettings.hooks.Stop.filter(
-        (group) => !(Array.isArray(group.hooks) && group.hooks.some(
-          (h) => h.type === "command" && h.command === "npx vibe-check"
-        ))
+        (group) =>
+          !(
+            Array.isArray(group.hooks) &&
+            group.hooks.some((h) => h.type === "command" && h.command === "npx vibe-check")
+          ),
       );
       if (claudeSettings.hooks.Stop.length === 0) {
         delete claudeSettings.hooks.Stop;
@@ -215,15 +220,14 @@ async function main() {
     created.push("Copied conventions.md into project");
   }
   const claudeMdPath = join(cwd, "CLAUDE.md");
-  const claudeMdContent = existsSync(claudeMdPath)
-    ? readFileSync(claudeMdPath, "utf-8")
-    : "";
+  const claudeMdContent = existsSync(claudeMdPath) ? readFileSync(claudeMdPath, "utf-8") : "";
   if (!claudeMdContent.includes("@conventions.md")) {
-    const separator = claudeMdContent.length > 0 && !claudeMdContent.endsWith("\n")
-      ? "\n\n"
-      : claudeMdContent.length > 0
-        ? "\n"
-        : "";
+    const separator =
+      claudeMdContent.length > 0 && !claudeMdContent.endsWith("\n")
+        ? "\n\n"
+        : claudeMdContent.length > 0
+          ? "\n"
+          : "";
     writeFileSync(claudeMdPath, claudeMdContent + separator + "@conventions.md\n");
     created.push("Added @conventions.md to CLAUDE.md");
   }
@@ -238,7 +242,7 @@ async function main() {
       console.log(`  ✓ ${item}`);
     }
     console.log(
-      "\nNext steps:\n  1. Run `npx vibe-check` to verify\n  2. Review CLAUDE.md and .claude/settings.json"
+      "\nNext steps:\n  1. Run `npx vibe-check` to verify\n  2. Review CLAUDE.md and .claude/settings.json",
     );
   }
 }

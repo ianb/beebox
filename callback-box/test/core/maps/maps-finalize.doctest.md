@@ -15,12 +15,15 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 When a directory has a MAP.md but no CLAUDE.md, finalize writes a stub
 CLAUDE.md with the `@MAP.md` include and stamps the state file.
 
+`head` is the brief-time HEAD — captured *before* the agent writes, since
+that's what the precheck records on each task.
+
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("inbox/MAP.md", "");
-await box.write("MAP.md", "");
 box.commitAll("seed");
 const head = await getHead(box.root);
+await box.write("inbox/MAP.md", "");
+await box.write("MAP.md", "");
 
 await finalize({
   boxRoot: box.root,
@@ -63,9 +66,9 @@ the top without disturbing the rest.
 const box = await makeTmpBox({ git: true });
 const existing = "# Project notes\n\nSome details.\n";
 await box.write("CLAUDE.md", existing);
-await box.write("MAP.md", "");
 box.commitAll("seed");
 const head = await getHead(box.root);
+await box.write("MAP.md", "");
 
 await finalize({
   boxRoot: box.root,
@@ -141,6 +144,83 @@ const state = await loadMapState(box.root);
 print(Object.keys(state.maps).toSorted().join(","));
 =>
 
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Only stamps maps the agent actually rewrote
+
+An `update` task's MAP.md already exists before the agent runs, so its mere
+existence proves nothing. Finalize compares each map against the brief-time
+HEAD and leaves untouched ones unstamped, so a run that got through only part
+of its brief doesn't mark the rest current.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/MAP.md", "# Map: store\n\n(stale)\n");
+await box.write("inbox/MAP.md", "# Map: inbox\n\n(stale)\n");
+box.commitAll("seed");
+const head = await getHead(box.root);
+
+// The agent rewrites store's map and then stops — inbox is never touched.
+await box.write("store/MAP.md", "# Map: store\n\n(rewritten)\n");
+
+const result = await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "store/MAP.md", dir: "store", action: "update", asOf: head, head, added: [], deleted: [], children: [] },
+    { map: "inbox/MAP.md", dir: "inbox", action: "update", asOf: head, head, added: [], deleted: [], children: [] },
+  ],
+});
+
+print(`applied: ${result.applied.join(",")}`);
+print(`unchanged: ${result.skippedUnchanged.join(",")}`);
+=>
+applied: store
+unchanged: inbox
+```
+
+The untouched dir keeps its old `asOf`, so the next run picks it up again:
+
+```ts continue
+const state = await loadMapState(box.root);
+print(`store stamped: ${state.maps["store"] !== undefined}`);
+print(`inbox stamped: ${state.maps["inbox"] !== undefined}`);
+=>
+store stamped: true
+inbox stamped: false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Banks work the agent left uncommitted
+
+Finalize runs as a procedure run-phase shell, before the engine commits the
+step — so the agent's writes are still in the working tree. Evidence has to
+see them there, or a run that died before committing would bank nothing.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/MAP.md", "# Map: store\n\n(stale)\n");
+box.commitAll("seed");
+const head = await getHead(box.root);
+
+// Rewritten but never committed — the state after an agent runs out of turns.
+await box.write("store/MAP.md", "# Map: store\n\n(rewritten)\n");
+
+const result = await finalize({
+  boxRoot: box.root,
+  tasks: [
+    { map: "store/MAP.md", dir: "store", action: "update", asOf: head, head, added: [], deleted: [], children: [] },
+  ],
+});
+print(`applied: ${result.applied.join(",")}`);
+=>
+applied: store
 ```
 
 ```ts cleanup

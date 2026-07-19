@@ -7,5 +7,6 @@ declare namespace Cloudflare {
     PUB_STORE: R2Bucket;
     ACCESS_TEAM_DOMAIN: string;
     ACCESS_AUD: string;
+    PUB_WORKER_VERSION: string;
   }
 }

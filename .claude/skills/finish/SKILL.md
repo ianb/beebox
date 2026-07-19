@@ -19,6 +19,9 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
    mid-run, give it everything it needs up front in the prompt:
    - any **`cb feedback` item** this work resolves — its file basename and the
      source box;
+   - any **`issues/` item** this work resolves (or partly resolves) — it closes
+     what's done and leaves punch-lists open, but it can only judge issues it
+     knows about;
    - whether any **uncommitted changes** in the worktree are intentional;
    - anything unusual about **scope or verification** its final report should be
      honest about (e.g. "tests pass but I never exercised it in the app").

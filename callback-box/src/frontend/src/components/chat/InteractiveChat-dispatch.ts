@@ -10,7 +10,7 @@ import { useCallback } from "react";
 import type { SessionEntry } from "../../api";
 import { serializeViewUrl } from "../../lib/view-url";
 import { refreshLocationIfStale } from "../../lib/location-share";
-import { createVoiceEmission, type Emission } from "../../input/emission";
+import { createVoiceEmission, draftAttachments, type Emission } from "../../input/emission";
 import { markVoiceAudioAbsent } from "../../lib/audio/last-audio";
 import type { ChatWitness } from "../../input/targets/chat-assemble";
 import { acceptEmission, planRestore, applyRestorePlan } from "../../input/targets/chat-target";
@@ -32,8 +32,10 @@ export function useEmissionDispatch(opts: {
   /** Live composer selections, for the stop-and-send buttons (see sendStopSend). */
   selections: SelectionItem[];
   resetSelections: () => void;
+  /** Clears pending images/files after a stop-and-send sweeps them (revokes object URLs too). */
+  resetAttachments: () => void;
 }) {
-  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections } = opts;
+  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections, resetAttachments } = opts;
 
   // Frame state at the moment of sending, as plain values — consumed by the
   // chat-target assembler (input/targets/chat-assemble.ts).
@@ -107,17 +109,20 @@ export function useEmissionDispatch(opts: {
   // ALIGN these with every other send path and fold the live selections
   // snapshot in (they historically sent plain <speech> with none — an
   // accident of hand-built payloads, not a design; see docs/plans/
-  // input-extraction.md). Selections reset after send, same as
-  // runKeywordSend's freeze-and-clear.
+  // input-extraction.md). Pending images/files sweep in the same way (a file
+  // attached mid-dictation used to be silently dropped). Selections and
+  // attachments reset after send, same as runKeywordSend's freeze-and-clear.
   const sendStopSend = useCallback(
     (text: string) => {
-      const emission = createVoiceEmission({ text, selections, diarized: false });
+      const { images, files } = draftAttachments(emissionStore.get());
+      const emission = createVoiceEmission({ text, images, files, selections, diarized: false });
       // Same tombstone as sendVoiceSegment: this path carries no recording.
       markVoiceAudioAbsent(emission.id);
       void dispatchEmission(emission);
       resetSelections();
+      resetAttachments();
     },
-    [dispatchEmission, selections, resetSelections]
+    [dispatchEmission, emissionStore, selections, resetSelections, resetAttachments]
   );
 
   return { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend };

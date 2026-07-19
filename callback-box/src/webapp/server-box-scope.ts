@@ -29,7 +29,8 @@ import {
   isDiagnosticBypassRequest,
 } from "./auth.js";
 import { verifyAgentBearer } from "../core/agent/token.js";
-import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
+import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
+import { renewMobileSessionCookie } from "./mobile-cookie.js";
 import { canAccessBox } from "./box-access.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
@@ -85,10 +86,12 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     if (verifyAgentBearer(box.boxRoot, request.headers["authorization"])) {
       return;
     }
-    if (verifyMobileBearer(box.boxRoot, request.headers["authorization"])) {
-      return;
-    }
-    if (verifyMobileToken(box.boxRoot, mobileTokenFromUrl(request.url))) {
+    // Mobile devices authenticate with either the durable device token in an
+    // Authorization header or the short-lived cb_mobile cookie; one resolver
+    // decides for every gate (see core/mobile/request-auth.ts).
+    const mobileAuth = resolveMobileRequestAuth(box.boxRoot, request.headers);
+    if (mobileAuth) {
+      renewMobileSessionCookie(reply, { boxRoot: box.boxRoot, boxSlug: box.slug, auth: mobileAuth });
       return;
     }
     const identity = resolveRequestIdentity(request);
@@ -183,15 +186,14 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       const openAccess = isHubMode() ? identity.source === "open" : !isAuthEnabled();
       const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
-      const mobileBearerOk = verifyMobileBearer(box.boxRoot, req.headers["authorization"]);
-      const mobileTokenOk = verifyMobileToken(box.boxRoot, mobileTokenFromUrl(req.url));
+      const mobileOk = resolveMobileRequestAuth(box.boxRoot, req.headers) !== null;
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,
         eventBus,
         services: options.services ?? {},
         user,
-        authed: openAccess || user !== null || bearerOk || mobileBearerOk || mobileTokenOk,
+        authed: openAccess || user !== null || bearerOk || mobileOk,
         isOwner: openAccess || (user !== null && user.email === getOwnerEmail()),
       };
     },
@@ -224,15 +226,6 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       wildcard: true,
       decorateReply: false, // Avoid duplicate decorator across box prefixes
     });
-  }
-}
-
-function mobileTokenFromUrl(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  try {
-    return new URL(url, "http://box.local").searchParams.get("mobileToken") ?? undefined;
-  } catch (_e) {
-    return undefined;
   }
 }
 

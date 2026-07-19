@@ -16,6 +16,7 @@ import { createHubServer } from "../../src/hub/hub-server.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
+import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/mobile-session.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-auth-doctest";
@@ -97,6 +98,44 @@ JSON.stringify({
   secret: mobileBody.xCbHubSecret,
 })
 => {"status":200,"url":"/test1/chat?embed=1","email":null,"secret":null}
+```
+
+## A bogus mobile credential does NOT get past the hub
+
+The hub's mobile gate used to be presence-only: any `Authorization: Bearer `
+prefix, verified by nobody, was enough to skip the auth wall and be proxied to
+the box — which meant an unauthenticated caller could cold-start a stopped box
+(known risk S1). The gate now verifies, so a syntactically valid but
+cryptographically worthless credential is rejected here rather than downstream.
+
+```ts continue
+const bogusBearer = await fetch(`${hubBase}/test1/api/trpc/health.check`, {
+  headers: { authorization: "Bearer not-a-real-device-token" },
+});
+bogusBearer.status
+=> 401
+
+const bogusCookie = await fetch(`${hubBase}/test1/api/trpc/health.check`, {
+  headers: { cookie: "cb_mobile=forged.deadbeef" },
+});
+bogusCookie.status
+=> 401
+```
+
+A real `cb_mobile` cookie does pass — this is the credential a WebSocket
+upgrade carries, since the browser API cannot set headers on one.
+
+```ts continue
+const mobileCookie = signMobileSession(mobileBox.root, {
+  deviceId: mobileRedeemed.deviceId,
+  createdBy: null,
+  ttlMs: MOBILE_SESSION_TTL_MS,
+});
+const cookieResponse = await fetch(`${hubBase}/test1/chat?embed=1`, {
+  headers: { cookie: `${MOBILE_COOKIE_NAME}=${mobileCookie}` },
+});
+cookieResponse.status
+=> 200
 ```
 
 ## A mobile bearer token can discover its paired box
