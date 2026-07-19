@@ -145,8 +145,11 @@ function authFilePath(): string {
   return process.env.CB_AUTH_FILE ?? path.join(os.homedir(), ".cb-auth.json");
 }
 
-/** Trim + lowercase — the single canonical form compared everywhere. */
-function canonicalizeEmail(email: string): string {
+/** Trim + lowercase — the single canonical form compared everywhere. Exported
+ *  so the login/setup routes and the throttle key on the SAME canonical form the
+ *  store compares against (a case-varying email must not open a separate throttle
+ *  bucket or dodge the store's lookup). */
+export function canonicalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
