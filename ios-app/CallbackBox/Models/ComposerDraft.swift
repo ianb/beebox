@@ -149,6 +149,18 @@ struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
     var createdAt: Date
 }
 
+struct VoicePreparation: Codable, Equatable, Identifiable, Sendable {
+    var id: UUID
+    var boxID: UUID
+    var draft: ComposerDraft
+    var liveTranscript: String
+    var priorInput: String
+    var action: SpeechKeywordAction
+    var matchedPhrase: String
+    var audioFilename: String?
+    var createdAt: Date
+}
+
 enum ComposerDraftMutation: Equatable, Sendable {
     case setText(String)
     case setSelection(NSRangeValue)

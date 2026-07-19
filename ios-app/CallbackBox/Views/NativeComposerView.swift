@@ -25,6 +25,7 @@ struct NativeComposerView: View {
     @State private var showingCapture = false
     @State private var showingFileImporter = false
     @State private var detailedSelection: DraftSelection?
+    @State private var activeVoicePreparationIDs: Set<UUID> = []
     @StateObject private var dictation = SpeechDictation()
 
     var body: some View {
@@ -40,9 +41,10 @@ struct NativeComposerView: View {
                     .padding(.horizontal, 14)
                     .padding(.top, 8)
             }
-            if pendingStore.pending.isEmpty == false {
+            if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
+                    voicePreparations: pendingStore.voicePreparations,
                     canRestore: draftIsEmpty,
                     onRetry: retryPendingEmission,
                     onRestore: restorePendingEmission,
@@ -113,6 +115,9 @@ struct NativeComposerView: View {
                 return
             }
             handleKeywordIntent(newValue)
+        }
+        .onChange(of: pendingStore.voicePreparations) { _, preparations in
+            resumeVoicePreparations(preparations)
         }
         .onChange(of: selectedPhotoItems) { _, newValue in
             Task {
@@ -329,63 +334,84 @@ struct NativeComposerView: View {
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
         let audioURL = dictation.consumeRecordedAudioURL()
         let priorInput = dictation.consumeKeywordSeedText()
-        statusText = audioURL == nil ? "Sending..." : "Improving transcription..."
+        let snapshot = draftStore.draft
+        let sendingBox = box
+        isPreparingSend = true
+        statusText = "Saving voice message..."
         Task {
-            let prepared = await prepareKeywordMessage(
-                intent: intent,
-                priorInput: priorInput,
-                audioURL: audioURL
-            )
-            await MainActor.run {
-                enqueuePreparedVoiceMessage(text: prepared.text, diarized: prepared.diarized)
+            do {
+                let preparation = try await pendingStore.stageVoicePreparation(
+                    draft: snapshot,
+                    liveTranscript: intent.processedTranscript,
+                    priorInput: priorInput,
+                    action: intent.action,
+                    matchedPhrase: intent.matchedPhrase,
+                    audioURL: audioURL,
+                    boxID: sendingBox.id
+                )
+                if let audioURL {
+                    try? FileManager.default.removeItem(at: audioURL)
+                }
+                await draftStore.clearForSending(boxID: sendingBox.id)
+                dictation.resetDictationState()
+                selectedPhotoItems = []
+                focused = false
+                isPreparingSend = false
+                statusText = nil
+                resumeVoicePreparation(preparation, box: sendingBox)
+            } catch {
+                isPreparingSend = false
+                let message = "The voice message could not be saved."
+                statusText = message
+                dictation.failPreparation(message)
             }
         }
     }
 
-    private func prepareKeywordMessage(
-        intent: SpeechKeywordResult,
-        priorInput: String,
-        audioURL: URL?
+    private func resumeVoicePreparations(_ preparations: [VoicePreparation]) {
+        for preparation in preparations where preparation.boxID == box.id {
+            resumeVoicePreparation(preparation, box: box)
+        }
+    }
+
+    private func resumeVoicePreparation(_ preparation: VoicePreparation, box: PairedBox) {
+        guard activeVoicePreparationIDs.insert(preparation.id).inserted else {
+            return
+        }
+        Task {
+            defer { activeVoicePreparationIDs.remove(preparation.id) }
+            let prepared = await prepareVoiceMessage(preparation, box: box)
+            do {
+                try await pendingStore.finishVoicePreparation(
+                    id: preparation.id,
+                    text: prepared.text,
+                    diarized: prepared.diarized
+                )
+            } catch {
+                if pendingStore.voicePreparations.contains(where: { $0.id == preparation.id }) {
+                    statusText = "Voice preparation is saved and will retry."
+                }
+            }
+        }
+    }
+
+    private func prepareVoiceMessage(
+        _ preparation: VoicePreparation,
+        box: PairedBox
     ) async -> (text: String, diarized: Bool) {
-        guard let audioURL else {
-            return (intent.processedTranscript, false)
+        guard let audioURL = await pendingStore.voiceAudioURL(for: preparation) else {
+            return (preparation.liveTranscript, false)
         }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
-            let processed = SpeechKeywords.detect(hqResult.text)?.processedTranscript
-                ?? SpeechKeywords.appendSendKeywordTag(
-                    to: hqResult.text,
-                    action: intent.action,
-                    matchedPhrase: intent.matchedPhrase
-                )
-            try? FileManager.default.removeItem(at: audioURL)
-            return (Self.joinTranscript(priorInput, processed), hqResult.diarized)
+            return (
+                VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
+                hqResult.diarized
+            )
         } catch {
-            await MainActor.run {
-                statusText = "HQ transcription failed; sending live dictation."
-            }
-            return (intent.processedTranscript, false)
+            statusText = "HQ transcription failed; sending live dictation."
+            return (VoicePreparationResolver.text(for: preparation, hqTranscript: nil), false)
         }
-    }
-
-    private static func joinTranscript(_ first: String, _ second: String) -> String {
-        let cleanFirst = first.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanSecond = second.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleanFirst.isEmpty {
-            return cleanSecond
-        }
-        if cleanSecond.isEmpty {
-            return cleanFirst
-        }
-        return "\(cleanFirst) \(cleanSecond)"
-    }
-
-    private func enqueuePreparedVoiceMessage(text preparedText: String, diarized: Bool) {
-        guard preparedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
-            statusText = "Nothing to send."
-            return
-        }
-        enqueueMessage(text: preparedText, origin: .voice, diarized: diarized)
     }
 
     private func enqueueMessage(
@@ -919,6 +945,7 @@ private struct FileAttachmentList: View {
 
 private struct PendingEmissionList: View {
     var emissions: [PendingEmission]
+    var voicePreparations: [VoicePreparation]
     var canRestore: Bool
     var onRetry: (PendingEmission) -> Void
     var onRestore: (PendingEmission) -> Void
@@ -926,6 +953,15 @@ private struct PendingEmissionList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            ForEach(voicePreparations) { _ in
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Improving voice transcription…")
+                        .font(.caption)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
             ForEach(emissions) { emission in
                 switch emission.state {
                 case .awaitingWebView, .awaitingReceipt:

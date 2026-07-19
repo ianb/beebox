@@ -2,6 +2,47 @@ import XCTest
 @testable import CallbackBox
 
 final class ComposerDraftReducerTests: XCTestCase {
+    func testVoiceCompositionStateTransitionsAreExplicit() {
+        var state = VoiceCompositionState.idle
+        VoiceCompositionReducer.reduce(&state, .requestPermission)
+        XCTAssertEqual(state, .requestingPermission)
+        VoiceCompositionReducer.reduce(&state, .permissionGranted)
+        XCTAssertEqual(state, .recording)
+        VoiceCompositionReducer.reduce(&state, .keywordDetected)
+        XCTAssertEqual(state, .preparingHQ)
+        VoiceCompositionReducer.reduce(&state, .preparationCompleted)
+        XCTAssertEqual(state, .idle)
+        VoiceCompositionReducer.reduce(&state, .recordingStopped(hasText: true))
+        XCTAssertEqual(state, .editableResult)
+        VoiceCompositionReducer.reduce(&state, .fail(message: "interrupted"))
+        XCTAssertEqual(state, .failed(message: "interrupted"))
+        VoiceCompositionReducer.reduce(&state, .reset)
+        XCTAssertEqual(state, .idle)
+    }
+
+    func testVoicePreparationResolutionPreservesFallbackAndRebuildsHQText() {
+        let preparation = VoicePreparation(
+            id: UUID(),
+            boxID: UUID(),
+            draft: .empty,
+            liveTranscript: "live words <send-message phrase=\"send now\" />",
+            priorInput: "typed first",
+            action: .send,
+            matchedPhrase: "send now",
+            audioFilename: "voice.wav",
+            createdAt: Date()
+        )
+
+        XCTAssertEqual(
+            VoicePreparationResolver.text(for: preparation, hqTranscript: nil),
+            preparation.liveTranscript
+        )
+        XCTAssertEqual(
+            VoicePreparationResolver.text(for: preparation, hqTranscript: "clearer words"),
+            "typed first clearer words <send-message phrase=\"send now\" />"
+        )
+    }
+
     func testUnicodeCaretInsertionUsesUTF16Offsets() {
         var draft = ComposerDraft.empty
         ComposerDraftReducer.reduce(&draft, .setText("A 👩🏽‍💻 Z"))
@@ -437,6 +478,76 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         await store.discard(id: second.id)
         await XCTAssertThrowsErrorAsync {
             _ = try await repository.loadPayload(filename: filename, boxID: boxID)
+        }
+    }
+
+    @MainActor
+    func testVoicePreparationSurvivesRelaunchWithoutClobberingNextDraft() async throws {
+        let suite = "VoicePreparation.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let draftStore = ComposerDraftStore(repository: repository, defaults: defaults)
+        let pendingStore = PendingEmissionStore(repository: repository)
+        await draftStore.activate(boxID: boxID)
+        await pendingStore.activate(boxID: boxID)
+        draftStore.setText("original live <send-message phrase=\"send now\" />")
+        await draftStore.flush()
+        let snapshot = draftStore.draft
+        let audioURL = rootURL.deletingLastPathComponent()
+            .appendingPathComponent("voice-source-\(UUID().uuidString).wav")
+        try Data("voice bytes".utf8).write(to: audioURL)
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+
+        let preparation = try await pendingStore.stageVoicePreparation(
+            draft: snapshot,
+            liveTranscript: snapshot.text,
+            priorInput: "original",
+            action: .send,
+            matchedPhrase: "send now",
+            audioURL: audioURL,
+            boxID: boxID
+        )
+        await draftStore.clearForSending(boxID: boxID)
+        draftStore.setText("next draft")
+        await draftStore.flush()
+        let nextEmission = try await pendingStore.enqueue(
+            draft: draftStore.draft,
+            text: "next draft",
+            origin: .typed,
+            diarized: false,
+            boxID: boxID
+        )
+        XCTAssertTrue(pendingStore.deliveries.isEmpty, "later sends wait behind durable voice preparation")
+
+        let relaunchedPending = PendingEmissionStore(repository: repository)
+        await relaunchedPending.activate(boxID: boxID)
+        let relaunchedDraft = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunchedDraft.activate(boxID: boxID)
+        XCTAssertEqual(relaunchedPending.voicePreparations, [preparation])
+        XCTAssertEqual(relaunchedDraft.draft.text, "next draft")
+        XCTAssertTrue(relaunchedPending.deliveries.isEmpty)
+        let restoredAudioURL = await relaunchedPending.voiceAudioURL(for: preparation)
+        let durableAudioURL = try XCTUnwrap(restoredAudioURL)
+        XCTAssertEqual(try Data(contentsOf: durableAudioURL), Data("voice bytes".utf8))
+
+        try await relaunchedPending.finishVoicePreparation(
+            id: preparation.id,
+            text: "original HQ <send-message phrase=\"send now\" />",
+            diarized: true
+        )
+        XCTAssertTrue(relaunchedPending.voicePreparations.isEmpty)
+        XCTAssertEqual(relaunchedPending.pending.map(\.id), [preparation.id, nextEmission.id])
+        XCTAssertEqual(relaunchedPending.deliveries.map(\.id), [preparation.id, nextEmission.id])
+        XCTAssertEqual(relaunchedPending.pending.first?.draft, snapshot)
+        XCTAssertEqual(relaunchedPending.pending.first?.diarized, true)
+        XCTAssertEqual(relaunchedDraft.draft.text, "next draft")
+        await XCTAssertThrowsErrorAsync {
+            _ = try await repository.loadPayload(
+                filename: try XCTUnwrap(preparation.audioFilename),
+                boxID: boxID
+            )
         }
     }
 

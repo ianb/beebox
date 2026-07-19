@@ -2,9 +2,47 @@ import AVFAudio
 import Foundation
 import Speech
 
+enum VoiceCompositionState: Equatable {
+    case idle
+    case requestingPermission
+    case recording
+    case preparingHQ
+    case editableResult
+    case failed(message: String)
+}
+
+enum VoiceCompositionEvent: Equatable {
+    case requestPermission
+    case permissionGranted
+    case recordingStopped(hasText: Bool)
+    case keywordDetected
+    case preparationCompleted
+    case fail(message: String)
+    case reset
+}
+
+enum VoiceCompositionReducer {
+    static func reduce(_ state: inout VoiceCompositionState, _ event: VoiceCompositionEvent) {
+        switch event {
+        case .requestPermission:
+            state = .requestingPermission
+        case .permissionGranted:
+            state = .recording
+        case .recordingStopped(let hasText):
+            state = hasText ? .editableResult : .idle
+        case .keywordDetected:
+            state = .preparingHQ
+        case .preparationCompleted, .reset:
+            state = .idle
+        case .fail(let message):
+            state = .failed(message: message)
+        }
+    }
+}
+
 @MainActor
 final class SpeechDictation: ObservableObject {
-    @Published private(set) var isRecording = false
+    @Published private(set) var state: VoiceCompositionState = .idle
     @Published private(set) var hasDictatedText = false
     @Published private(set) var keywordIntent: SpeechKeywordResult?
     @Published private(set) var preparationMessage: String?
@@ -24,6 +62,29 @@ final class SpeechDictation: ObservableObject {
     private var recordedAudioURL: URL?
     private var recordingFile: AVAudioFile?
     private var keywordSeedText = ""
+    private var interruptionObserver: NSObjectProtocol?
+
+    init() {
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor in
+                self?.handleAudioInterruption(notification)
+            }
+        }
+    }
+
+    deinit {
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
+        }
+    }
+
+    var isRecording: Bool {
+        state == .recording
+    }
 
     func toggle(currentText: String) {
         if isRecording {
@@ -43,6 +104,9 @@ final class SpeechDictation: ObservableObject {
         startTask = nil
         preparationMessage = nil
         endRecording(cancelTranscription: false)
+        if state == .requestingPermission {
+            VoiceCompositionReducer.reduce(&state, .reset)
+        }
     }
 
     private func endRecording(cancelTranscription: Bool) {
@@ -68,7 +132,12 @@ final class SpeechDictation: ObservableObject {
         }
         recognitionRequest = nil
         recognitionTask = nil
-        isRecording = false
+        if state == .recording {
+            VoiceCompositionReducer.reduce(
+                &state,
+                .recordingStopped(hasText: transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            )
+        }
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
@@ -82,6 +151,7 @@ final class SpeechDictation: ObservableObject {
         firedKeywordKey = nil
         recordedAudioURL = nil
         keywordSeedText = ""
+        VoiceCompositionReducer.reduce(&state, .reset)
     }
 
     func noteManualTextChange(_ text: String) {
@@ -90,10 +160,16 @@ final class SpeechDictation: ObservableObject {
         }
         hasDictatedText = false
         transcript = ""
+        VoiceCompositionReducer.reduce(&state, .reset)
     }
 
     func clearKeywordIntent() {
         keywordIntent = nil
+    }
+
+    func failPreparation(_ message: String) {
+        errorMessage = message
+        VoiceCompositionReducer.reduce(&state, .fail(message: message))
     }
 
     func consumeRecordedAudioURL() -> URL? {
@@ -117,11 +193,15 @@ final class SpeechDictation: ObservableObject {
         keywordIntent = nil
         firedKeywordKey = nil
         endRecording(cancelTranscription: true)
+        VoiceCompositionReducer.reduce(&state, .requestPermission)
         guard await requestPermissions() else {
-            errorMessage = "Enable microphone and speech recognition permissions to dictate."
+            let message = "Enable microphone and speech recognition permissions to dictate."
+            errorMessage = message
+            VoiceCompositionReducer.reduce(&state, .fail(message: message))
             return
         }
         guard Task.isCancelled == false else {
+            VoiceCompositionReducer.reduce(&state, .reset)
             return
         }
 
@@ -143,13 +223,17 @@ final class SpeechDictation: ObservableObject {
             )
             guard Task.isCancelled == false else {
                 modernSession?.cancel()
+                VoiceCompositionReducer.reduce(&state, .reset)
                 return
             }
 
             let legacyRequest: SFSpeechAudioBufferRecognitionRequest?
             if modernSession == nil {
                 guard let legacyRecognizer, legacyRecognizer.isAvailable else {
-                    errorMessage = "Speech recognition is not available."
+                    let message = "Speech recognition is not available."
+                    endRecording(cancelTranscription: true)
+                    errorMessage = message
+                    VoiceCompositionReducer.reduce(&state, .fail(message: message))
                     return
                 }
                 let request = SFSpeechAudioBufferRecognitionRequest()
@@ -188,10 +272,11 @@ final class SpeechDictation: ObservableObject {
 
             audioEngine.prepare()
             try audioEngine.start()
-            isRecording = true
+            VoiceCompositionReducer.reduce(&state, .permissionGranted)
         } catch {
             endRecording(cancelTranscription: true)
             errorMessage = error.localizedDescription
+            VoiceCompositionReducer.reduce(&state, .fail(message: error.localizedDescription))
         }
     }
 
@@ -207,6 +292,7 @@ final class SpeechDictation: ObservableObject {
                 keywordSeedText = seedText
                 transcript = keyword.processedTranscript
                 hasDictatedText = true
+                VoiceCompositionReducer.reduce(&state, .keywordDetected)
                 keywordIntent = keyword
                 endRecording(cancelTranscription: true)
                 return
@@ -237,6 +323,7 @@ final class SpeechDictation: ObservableObject {
                     }
                     self.errorMessage = message
                     self.endRecording(cancelTranscription: true)
+                    VoiceCompositionReducer.reduce(&self.state, .fail(message: message))
                 }
             )
         } catch {
@@ -249,6 +336,20 @@ final class SpeechDictation: ObservableObject {
         async let microphoneAllowed = requestMicrophonePermission()
         let permissions = await (speechAllowed, microphoneAllowed)
         return permissions.0 && permissions.1
+    }
+
+    private func handleAudioInterruption(_ notification: Notification) {
+        guard
+            let rawValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+            AVAudioSession.InterruptionType(rawValue: rawValue) == .began,
+            state == .recording
+        else {
+            return
+        }
+        let message = "Dictation was interrupted. Your live transcript is ready to edit or send."
+        endRecording(cancelTranscription: true)
+        errorMessage = message
+        VoiceCompositionReducer.reduce(&state, .fail(message: message))
     }
 
     private func requestSpeechPermission() async -> Bool {

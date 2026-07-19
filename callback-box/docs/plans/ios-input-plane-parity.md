@@ -22,9 +22,11 @@ is implemented: sends persist
 before delivery, immediately clear to a fresh editable draft, replay with the
 same ID after relaunch/navigation, accept receipts in any order, and expose
 rejected Retry / Restore / Discard actions without overwriting newer work.
-Track 5's durable voice preparation and Track 6 remain; automated coverage and
-the real-device acceptance matrix in Track 6 are required before this plan
-ships.
+Track 5 is complete: voice uses an explicit composition state machine, keyword
+sends persist their draft and copied audio before clearing, HQ work resumes
+after relaunch, later drafts remain isolated, and later emissions wait behind
+earlier voice preparation. Track 6 remains; its visual coverage and real-device
+acceptance matrix are required before this plan ships.
 
 ## Stated preferences this plan trades against
 
@@ -496,8 +498,8 @@ named test and visible handling before the plan ships.
 | Caret is inside a composed Unicode sequence | Planned reducer tests with emoji/combining marks | Convert UIKit UTF-16 range through one tested helper; reject invalid persisted ranges to end-of-text | Clear test/invariant |
 | User manually edits or duplicates an attachment token | Planned assembly/reducer tests | Attachment arrays remain authoritative; missing tokens are allowed, unknown tokens remain ordinary text, remove strips only the matching known token | Clear deterministic behavior |
 | Attachment finishes processing after user removes it | Planned cancellation race XCTest | Generation/item ID check discards result and deletes temporary payload | Clear/no reappearance |
-| HQ transcription finishes after keyword send while user edits next draft | Planned voice reducer race XCTest | Keyword transition snapshots content first; completion mutates only its pending voice snapshot | Clear/no clobber |
-| Speech permission/interruption/model failure | Existing speech tests plus planned state tests/device pass | Preserve editable live transcript; expose retry or send live transcript | Clear |
+| HQ transcription finishes after keyword send while user edits next draft | Voice reducer/repository race XCTest | Keyword transition persists and clears the snapshot first; completion mutates only its pending voice snapshot | Clear/no clobber |
+| Speech permission/interruption/model failure | Voice state/resolver XCTest plus pending device pass | Preserve editable live transcript; expose retry or send live transcript | Clear |
 | Two emissions receive receipts in reverse order | Planned pending reducer and webview integration tests | Match strictly by emission ID and remove only that snapshot | Clear |
 | Webview navigates or reloads after injection but before receipt | Planned integration test | Reset inflight transport state, redeliver durable pending ID, rely on backend dedup | Clear pending state |
 | Receipt never arrives | Planned injected-clock timeout test | Move to rejected/timed-out state with Retry/Restore/Discard; never auto-discard | Clear |

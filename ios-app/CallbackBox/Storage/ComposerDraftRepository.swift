@@ -28,6 +28,20 @@ struct PendingEmissionManifest: Codable, Equatable, Sendable {
     }
 }
 
+struct VoicePreparationManifest: Codable, Equatable, Sendable {
+    static let currentVersion = 1
+
+    var version: Int
+    var boxID: UUID
+    var preparations: [VoicePreparation]
+
+    init(boxID: UUID, preparations: [VoicePreparation]) {
+        version = Self.currentVersion
+        self.boxID = boxID
+        self.preparations = preparations
+    }
+}
+
 actor ComposerDraftRepository {
     enum RepositoryError: Error {
         case unsupportedVersion(Int)
@@ -100,6 +114,45 @@ actor ComposerDraftRepository {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         let manifest = PendingEmissionManifest(boxID: boxID, emissions: emissions)
         try JSONEncoder().encode(manifest).write(to: pendingManifestURL(boxID: boxID), options: .atomic)
+    }
+
+    func loadVoicePreparations(boxID: UUID) throws -> [VoicePreparation] {
+        let url = voicePreparationManifestURL(boxID: boxID)
+        guard fileManager.fileExists(atPath: url.path) else {
+            return []
+        }
+        do {
+            let manifest = try JSONDecoder().decode(VoicePreparationManifest.self, from: Data(contentsOf: url))
+            guard manifest.version == VoicePreparationManifest.currentVersion else {
+                throw RepositoryError.unsupportedVersion(manifest.version)
+            }
+            guard manifest.boxID == boxID,
+                  manifest.preparations.allSatisfy({ $0.boxID == boxID }) else {
+                throw RepositoryError.boxMismatch
+            }
+            return manifest.preparations
+        } catch {
+            try quarantineManifest(at: url)
+            throw error
+        }
+    }
+
+    func saveVoicePreparations(_ preparations: [VoicePreparation], boxID: UUID) throws {
+        guard preparations.allSatisfy({ $0.boxID == boxID }) else {
+            throw RepositoryError.boxMismatch
+        }
+        let directory = boxDirectory(boxID: boxID)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let manifest = VoicePreparationManifest(boxID: boxID, preparations: preparations)
+        try JSONEncoder().encode(manifest).write(to: voicePreparationManifestURL(boxID: boxID), options: .atomic)
+    }
+
+    func clearVoicePreparation(boxID: UUID) throws {
+        let url = voicePreparationManifestURL(boxID: boxID)
+        guard fileManager.fileExists(atPath: url.path) else {
+            return
+        }
+        try fileManager.removeItem(at: url)
     }
 
     func savePayload(_ data: Data, filename: String, boxID: UUID) throws {
@@ -188,11 +241,15 @@ actor ComposerDraftRepository {
         boxDirectory(boxID: boxID).appendingPathComponent("pending-emissions.json")
     }
 
+    func voicePreparationManifestURL(boxID: UUID) -> URL {
+        boxDirectory(boxID: boxID).appendingPathComponent("voice-preparation.json")
+    }
+
     private func boxDirectory(boxID: UUID) -> URL {
         rootURL.appendingPathComponent(boxID.uuidString.lowercased(), isDirectory: true)
     }
 
-    private func payloadURL(filename: String, boxID: UUID) throws -> URL {
+    func payloadURL(filename: String, boxID: UUID) throws -> URL {
         guard
             filename.isEmpty == false,
             filename == (filename as NSString).lastPathComponent,

@@ -10,6 +10,7 @@ final class PendingEmissionStore: ObservableObject {
 
     @Published private(set) var pending: [PendingEmission] = []
     @Published private(set) var deliveries: [NativeChatEmission] = []
+    @Published private(set) var voicePreparations: [VoicePreparation] = []
     @Published private(set) var notice: String?
 
     private let repository: ComposerDraftRepository
@@ -31,16 +32,20 @@ final class PendingEmissionStore: ObservableObject {
         deliveries = []
         notice = nil
         do {
-            let restored = try await repository.loadPendingEmissions(boxID: boxID)
+            async let restoredPending = repository.loadPendingEmissions(boxID: boxID)
+            async let restoredVoice = repository.loadVoicePreparations(boxID: boxID)
+            let restored = try await (restoredPending, restoredVoice)
             guard activeBoxID == boxID, activationGeneration == generation else {
                 return
             }
-            pending = restored
+            pending = restored.0
+            voicePreparations = restored.1
         } catch {
             guard activeBoxID == boxID, activationGeneration == generation else {
                 return
             }
             pending = []
+            voicePreparations = []
             notice = "Pending messages could not be restored."
         }
         await rebuildDeliveries()
@@ -51,7 +56,97 @@ final class PendingEmissionStore: ObservableObject {
         activeBoxID = nil
         pending = []
         deliveries = []
+        voicePreparations = []
         notice = nil
+    }
+
+    func stageVoicePreparation(
+        draft: ComposerDraft,
+        liveTranscript: String,
+        priorInput: String,
+        action: SpeechKeywordAction,
+        matchedPhrase: String,
+        audioURL: URL?,
+        boxID: UUID
+    ) async throws -> VoicePreparation {
+        guard activeBoxID == boxID else {
+            throw StoreError.inactiveBox
+        }
+        let id = UUID()
+        let audioFilename = audioURL.map { _ in "voice-\(id.uuidString.lowercased()).wav" }
+        if let audioURL, let audioFilename {
+            try await repository.importPayload(from: audioURL, filename: audioFilename, boxID: boxID)
+        }
+        let preparation = VoicePreparation(
+            id: id,
+            boxID: boxID,
+            draft: draft,
+            liveTranscript: liveTranscript,
+            priorInput: priorInput,
+            action: action,
+            matchedPhrase: matchedPhrase,
+            audioFilename: audioFilename,
+            createdAt: Date()
+        )
+        do {
+            let updated = voicePreparations + [preparation]
+            try await repository.saveVoicePreparations(updated, boxID: boxID)
+            voicePreparations = updated
+            return preparation
+        } catch {
+            if let audioFilename {
+                try? await repository.removePayload(filename: audioFilename, boxID: boxID)
+            }
+            throw error
+        }
+    }
+
+    func voiceAudioURL(for preparation: VoicePreparation) async -> URL? {
+        guard let filename = preparation.audioFilename else {
+            return nil
+        }
+        return try? await repository.payloadURL(filename: filename, boxID: preparation.boxID)
+    }
+
+    func finishVoicePreparation(
+        id: UUID,
+        text: String,
+        diarized: Bool
+    ) async throws {
+        guard let index = voicePreparations.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        let preparation = voicePreparations[index]
+        guard activeBoxID == preparation.boxID else {
+            throw StoreError.inactiveBox
+        }
+        if pending.contains(where: { $0.id == id }) == false {
+            let emission = PendingEmission(
+                id: id,
+                boxID: preparation.boxID,
+                draft: preparation.draft,
+                text: text,
+                origin: .voice,
+                diarized: diarized,
+                state: .awaitingWebView,
+                createdAt: preparation.createdAt
+            )
+            _ = try await nativeEmission(from: emission)
+            pending.append(emission)
+            sortPendingByCreation()
+            try await persist()
+        }
+        let remaining = voicePreparations.filter { $0.id != id }
+        if remaining.isEmpty {
+            try await repository.clearVoicePreparation(boxID: preparation.boxID)
+        } else {
+            try await repository.saveVoicePreparations(remaining, boxID: preparation.boxID)
+        }
+        if let filename = preparation.audioFilename {
+            try? await repository.removePayload(filename: filename, boxID: preparation.boxID)
+        }
+        voicePreparations = remaining
+        await rebuildDeliveries()
     }
 
     func enqueue(
@@ -77,6 +172,7 @@ final class PendingEmissionStore: ObservableObject {
         _ = try await nativeEmission(from: emission)
         let previous = pending
         pending.append(emission)
+        sortPendingByCreation()
         do {
             try await persist()
             await rebuildDeliveries()
@@ -180,8 +276,12 @@ final class PendingEmissionStore: ObservableObject {
         }
         var rebuilt: [NativeChatEmission] = []
         var changed = false
+        let preparationBarrier = voicePreparations.map(\.createdAt).min()
         for index in pending.indices {
             guard pending[index].boxID == activeBoxID else {
+                continue
+            }
+            if let preparationBarrier, pending[index].createdAt > preparationBarrier {
                 continue
             }
             if case .rejected = pending[index].state {
@@ -197,6 +297,15 @@ final class PendingEmissionStore: ObservableObject {
         deliveries = rebuilt
         if changed {
             try? await persist()
+        }
+    }
+
+    private func sortPendingByCreation() {
+        pending.sort { first, second in
+            if first.createdAt == second.createdAt {
+                return first.id.uuidString < second.id.uuidString
+            }
+            return first.createdAt < second.createdAt
         }
     }
 

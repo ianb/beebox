@@ -48,15 +48,20 @@ This issue is the cold-start handoff for the next implementation session.
   ordered box-scoped queue before webview delivery, replays stable emission IDs
   after relaunch/navigation, handles out-of-order receipts, and keeps rejected
   messages separate from the current draft with Retry / Restore / Discard.
-  Composition resumes as soon as local enqueue succeeds. Durable voice
-  preparation remains the next Track 5 chunk.
+  Composition resumes as soon as local enqueue succeeds.
+- Track 5 is complete. `VoiceCompositionState` makes permission, recording,
+  editable, HQ preparation, and failure transitions explicit. Keyword sends
+  persist a stable-ID draft/audio snapshot before clearing; relaunch resumes
+  HQ work, HQ failure sends the preserved live transcript, audio interruption
+  leaves editable text, and later drafts/sends cannot clobber or pass the
+  earlier preparation.
 
 ## Current mismatch
 
 - The complete native bridge payload now carries files and selections, and
   unacknowledged emissions are durable across termination and box switching.
-- Voice preparation remains volatile and can still race later draft edits or
-  be lost on termination.
+- Integrated visual states, accessibility coverage, simulator screenshots, and
+  the real-phone acceptance matrix remain in Track 6.
 
 The web `TargetStrip` already remains visible when `nativeComposer=1`; do not
 duplicate target busy/queue/interrupt controls in Swift. Native owns the draft,
@@ -69,8 +74,8 @@ target state, final message assembly, and dispatch.
    `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
    plan. The design is complete; resume from the progress recorded above rather
    than writing another plan.
-2. Continue with Track 5's pending-send and voice state machines, then complete
-   Track 6. Commit-sized chunks are
+2. Track 5's pending-send and voice state machines are complete. Continue with
+   Track 6. The completed commit-sized chunks are
    identified in each track, but they are not shipping milestones:
    full V2 emission/selection-command contract; durable native draft; native
    editor and attachments; companion selections; pending-send/voice state;
