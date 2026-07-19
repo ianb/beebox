@@ -17,8 +17,13 @@ This issue is the cold-start handoff for the next implementation session.
   version-specific rejection; and TypeScript/XCTest consume shared emission
   and `NativeComposerCommand` fixtures.
 - The add-selection wire value exists, but command delivery, acknowledgement,
-  and mutation of the durable native draft remain with the Track 2/4 store
-  integration. Tracks 2-6 are otherwise not started.
+  and mutation of the durable native draft remain with the Track 4 integration.
+- Track 2's first chunk is complete: `ComposerDraftStore` owns box-scoped text;
+  `ComposerDraftRepository` writes atomic manifests and quarantines corrupt or
+  future data; legacy `UserDefaults` text migrates once; backgrounding flushes;
+  and XCTest covers restore, independent box switching, token removal,
+  monotonic IDs, and UTF-16/composed-character caret behavior. Track 3 will
+  move image/file bytes and UI into this model.
 
 ## Current mismatch
 
@@ -47,8 +52,8 @@ target state, final message assembly, and dispatch.
    `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
    plan. The plan is complete; implementation starts with Track 1 rather than
    writing another design.
-2. Continue with Track 2's durable draft store, then complete Tracks 3-6 in
-   dependency order. Commit-sized chunks are
+2. Continue with Track 3's editor and durable attachment acquisition, then
+   complete Tracks 4-6 in dependency order. Commit-sized chunks are
    identified in each track, but they are not shipping milestones:
    full V2 emission/selection-command contract; durable native draft; native
    editor and attachments; companion selections; pending-send/voice state;

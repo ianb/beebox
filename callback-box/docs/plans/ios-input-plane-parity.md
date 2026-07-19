@@ -6,11 +6,13 @@ extends the native draft and bridge to carry the complete web `Emission`, makes
 unsent and rejected work durable, and keeps the embedded web chat authoritative
 for target state and final dispatch.
 
-**Status:** active — Track 1's first contract chunk is implemented: canonical
-V2 emission encoding, strict V2 plus legacy web decoding, shared emission and
-add-selection fixtures, and matching Swift wire values. Command delivery into
-the future draft store and Tracks 2-6 remain; automated coverage and the
-real-device acceptance matrix in Track 6 are required before this plan ships.
+**Status:** active — Track 1's contract foundation and Track 2's first durable
+draft chunk are implemented: canonical V2 encoding/decoding and shared
+fixtures; a box-scoped `ComposerDraftStore`; atomic, quarantining manifests;
+one-shot text migration; reducer/token/Unicode-caret coverage; and native text
+binding. File-backed attachment acquisition, command delivery into the store,
+and Tracks 3-6 remain; automated coverage and the real-device acceptance
+matrix in Track 6 are required before this plan ships.
 
 ## Stated preferences this plan trades against
 

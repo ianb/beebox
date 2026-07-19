@@ -2,6 +2,8 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var composerDraftStore = ComposerDraftStore()
     @State private var showingPairSheet = false
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
@@ -53,6 +55,7 @@ struct RootView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     NativeComposerView(
                         box: composerBox,
+                        draftStore: composerDraftStore,
                         captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
                         emissionReceipt: nativeEmissionReceipt,
                         locationShareResult: locationShareResult,
@@ -81,6 +84,20 @@ struct RootView: View {
             nativeEmissionReceipt = nil
             locationShareRequest = nil
             locationShareResult = nil
+        }
+        .task(id: store.selectedBox?.id) {
+            guard let boxID = store.selectedBox?.id else {
+                return
+            }
+            await composerDraftStore.activate(boxID: boxID)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .background else {
+                return
+            }
+            Task {
+                await composerDraftStore.flush()
+            }
         }
     }
 }

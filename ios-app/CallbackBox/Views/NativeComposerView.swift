@@ -5,6 +5,7 @@ import UIKit
 
 struct NativeComposerView: View {
     var box: PairedBox
+    @ObservedObject var draftStore: ComposerDraftStore
     var captureAvailable: Bool
     var emissionReceipt: NativeEmissionReceipt?
     var locationShareResult: NativeLocationShareResult?
@@ -12,7 +13,6 @@ struct NativeComposerView: View {
     var onShareLocation: () -> Void
 
     @EnvironmentObject private var store: PairedBoxStore
-    @State private var text = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var images: [ChatImageAttachment] = []
     @State private var statusText: String?
@@ -26,7 +26,7 @@ struct NativeComposerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let statusText = dictation.errorMessage ?? dictation.preparationMessage ?? statusText {
+            if let statusText = dictation.errorMessage ?? dictation.preparationMessage ?? statusText ?? draftStore.restoreNotice {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -58,13 +58,11 @@ struct NativeComposerView: View {
         }
         .background(.regularMaterial)
         .ignoresSafeArea(.container, edges: .bottom)
-        .onAppear(perform: loadDraft)
-        .onChange(of: text) { _, newValue in
-            UserDefaults.standard.set(newValue, forKey: draftKey)
+        .onChange(of: draftStore.draft.text) { _, newValue in
             dictation.noteManualTextChange(newValue)
         }
         .onChange(of: dictation.transcript) { _, newValue in
-            text = newValue
+            draftStore.setText(newValue)
         }
         .onChange(of: dictation.keywordIntent) { _, newValue in
             guard let newValue else {
@@ -85,7 +83,7 @@ struct NativeComposerView: View {
             case .sent, .queued:
                 statusText = nil
             case .rejected:
-                text = emission.text
+                draftStore.setText(emission.text)
                 images = emission.images
                 statusText = receipt.reason ?? "The message was not accepted."
             }
@@ -130,7 +128,7 @@ struct NativeComposerView: View {
     }
 
     private var textEntry: some View {
-        TextField("Type...", text: $text, axis: .vertical)
+        TextField("Type...", text: textBinding, axis: .vertical)
             .focused($focused)
             .lineLimit(1...5)
             .font(.body)
@@ -225,10 +223,9 @@ struct NativeComposerView: View {
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         let emission = NativeChatEmission(text: message, origin: origin, diarized: false, images: images)
         dictation.resetDictationState()
-        text = ""
+        draftStore.setText("")
         images = []
         selectedPhotoItems = []
-        UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
         lastSentEmission = emission
         statusText = "Sending to chat..."
@@ -241,21 +238,19 @@ struct NativeComposerView: View {
         case .send, .sendClose:
             sendKeywordIntent(intent)
         case .cancel:
-            text = ""
+            draftStore.setText("")
             images = []
             selectedPhotoItems = []
             dictation.resetDictationState()
-            UserDefaults.standard.removeObject(forKey: draftKey)
             statusText = "Message cancelled."
         case .micOff:
             dictation.stop()
             statusText = "Microphone off."
         case .erase:
-            text = ""
+            draftStore.setText("")
             images = []
             selectedPhotoItems = []
             dictation.resetDictationState()
-            UserDefaults.standard.removeObject(forKey: draftKey)
             statusText = "Message erased."
         }
     }
@@ -321,10 +316,9 @@ struct NativeComposerView: View {
         }
         let emission = NativeChatEmission(text: preparedText, origin: .voice, diarized: diarized, images: images)
         dictation.resetDictationState()
-        text = ""
+        draftStore.setText("")
         images = []
         selectedPhotoItems = []
-        UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
         lastSentEmission = emission
         statusText = "Sending to chat..."
@@ -347,15 +341,15 @@ struct NativeComposerView: View {
         isSending || hasSendableContent == false
     }
 
-    private var draftKey: String {
-        "draft.\(box.id.uuidString)"
+    private var text: String {
+        draftStore.draft.text
     }
 
-    private func loadDraft() {
-        guard text.isEmpty else {
-            return
-        }
-        text = UserDefaults.standard.string(forKey: draftKey) ?? ""
+    private var textBinding: Binding<String> {
+        Binding(
+            get: { draftStore.draft.text },
+            set: { draftStore.setText($0) }
+        )
     }
 
     private func loadPhotos(from items: [PhotosPickerItem]) async {

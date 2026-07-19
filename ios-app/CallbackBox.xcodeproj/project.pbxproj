@@ -14,6 +14,10 @@
 		5A1000052C3C000100000001 /* PairBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000152C3C000100000001 /* PairBoxView.swift */; };
 		5A1000062C3C000100000001 /* ChatWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000162C3C000100000001 /* ChatWebView.swift */; };
 		B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000022C3C000100000001 /* NativeComposerContract.swift */; };
+		B72000112C3C000100000001 /* ComposerDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000122C3C000100000001 /* ComposerDraft.swift */; };
+		B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000142C3C000100000001 /* ComposerDraftRepository.swift */; };
+		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
+		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
 		5A1000072C3C000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000182C3C000100000001 /* Assets.xcassets */; };
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
@@ -60,6 +64,10 @@
 		5A1000152C3C000100000001 /* PairBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairBoxView.swift; sourceTree = "<group>"; };
 		5A1000162C3C000100000001 /* ChatWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebView.swift; sourceTree = "<group>"; };
 		B72000022C3C000100000001 /* NativeComposerContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerContract.swift; sourceTree = "<group>"; };
+		B72000122C3C000100000001 /* ComposerDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraft.swift; sourceTree = "<group>"; };
+		B72000142C3C000100000001 /* ComposerDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftRepository.swift; sourceTree = "<group>"; };
+		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
+		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
 		5A1000172C3C000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A1000182C3C000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
@@ -146,6 +154,7 @@
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
+				B72000122C3C000100000001 /* ComposerDraft.swift */,
 				5A10002E2C3C000100000001 /* CaptureModels.swift */,
 			);
 			path = Models;
@@ -156,6 +165,8 @@
 			children = (
 				5A1000132C3C000100000001 /* PairedBoxStore.swift */,
 				5A1000332C3C000100000001 /* CaptureStore.swift */,
+				B72000142C3C000100000001 /* ComposerDraftRepository.swift */,
+				B72000162C3C000100000001 /* ComposerDraftStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -200,6 +211,7 @@
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
+				B72000182C3C000100000001 /* ComposerDraftTests.swift */,
 			);
 			path = CallbackBoxTests;
 			sourceTree = "<group>";
@@ -310,6 +322,9 @@
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
 				5A1000062C3C000100000001 /* ChatWebView.swift in Sources */,
 				B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */,
+				B72000112C3C000100000001 /* ComposerDraft.swift in Sources */,
+				B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */,
+				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
@@ -341,6 +356,7 @@
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
+				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
