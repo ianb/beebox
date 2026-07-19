@@ -30,6 +30,7 @@ import {
   getOwnerEmail,
   authRequired,
   isHubMode,
+  resolveRequestIdentity,
   COOKIE_NAME,
   SESSION_MAX_AGE_MS,
   type SessionUser,
@@ -283,20 +284,31 @@ function registerPasswordRoutes(server: FastifyInstance): void {
  */
 function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): void {
   server.get("/auth/me", async (request, reply) => {
-    const user = getSessionUser(request);
-    if (user) {
+    // Route through the shared resolver so the `gen` revocation check and the
+    // distinct auth-store-unavailable outcome apply here too (Track D): a
+    // password change or user removal must stop reporting the old session as
+    // signed in, and a corrupt store answers 503, not a bogus signed-out 401.
+    const identity = resolveRequestIdentity(request);
+    if (identity.source === "unavailable") {
+      return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+    }
+    const email = identity.email;
+    if (email) {
+      // The resolver already validated the identity; read the cookie only to
+      // enrich the response with the display picture when one is present.
+      const sessionUser = getSessionUser(request);
       const ownerEmail = getOwnerEmail();
       const accessibleBoxes: string[] = [];
       for (const box of options.boxes) {
-        if (await canAccessBox({ boxRoot: box.boxRoot, email: user.email, ownerEmail })) {
+        if (await canAccessBox({ boxRoot: box.boxRoot, email, ownerEmail })) {
           accessibleBoxes.push(box.slug);
         }
       }
       return {
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-        isOwner: user.email === ownerEmail,
+        email,
+        name: identity.name ?? email,
+        picture: sessionUser?.email === email ? sessionUser.picture : undefined,
+        isOwner: email === ownerEmail,
         boxes: accessibleBoxes,
       };
     }

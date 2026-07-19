@@ -19,7 +19,13 @@ function fakeRequest({ headers, cookies }) {
 
 const ORIGINAL_HUB_SECRET = process.env.CB_HUB_SECRET;
 const ORIGINAL_SESSION_SECRET = process.env.CB_SESSION_SECRET;
+const ORIGINAL_AUTH_FILE = process.env.CB_AUTH_FILE;
 process.env.CB_SESSION_SECRET = "test-session-secret-for-hub-identity-doctest";
+// Track D: signSession + the resolver now consult the local credential store, so
+// pin CB_AUTH_FILE at a nonexistent tmp path — none of these example emails have
+// a record, keeping them gen-less (source "cookie"), independent of any real
+// ~/.cb-auth.json on the host.
+process.env.CB_AUTH_FILE = "/nonexistent/cb-auth-hub-identity-doctest.json";
 ```
 
 ## Outside hub mode, headers are ignored entirely — the cookie is the only source
@@ -132,4 +138,6 @@ if (ORIGINAL_HUB_SECRET === undefined) delete process.env.CB_HUB_SECRET;
 else process.env.CB_HUB_SECRET = ORIGINAL_HUB_SECRET;
 if (ORIGINAL_SESSION_SECRET === undefined) delete process.env.CB_SESSION_SECRET;
 else process.env.CB_SESSION_SECRET = ORIGINAL_SESSION_SECRET;
+if (ORIGINAL_AUTH_FILE === undefined) delete process.env.CB_AUTH_FILE;
+else process.env.CB_AUTH_FILE = ORIGINAL_AUTH_FILE;
 ```

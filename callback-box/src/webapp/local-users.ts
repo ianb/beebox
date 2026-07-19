@@ -126,7 +126,7 @@ const authFileSchema = z
   .refine((f) => f.users.filter((u) => u.role === "owner").length === 1, {
     message: "auth file must contain exactly one owner",
   });
-type AuthFile = z.infer<typeof authFileSchema>;
+export type AuthFile = z.infer<typeof authFileSchema>;
 
 export type LocalRole = z.infer<typeof roleSchema>;
 
@@ -141,7 +141,7 @@ export interface LocalUser {
 
 // --- paths & helpers --------------------------------------------------------
 
-function authFilePath(): string {
+export function authFilePath(): string {
   return process.env.CB_AUTH_FILE ?? path.join(os.homedir(), ".cb-auth.json");
 }
 
@@ -176,7 +176,7 @@ async function hashPassword(password: string): Promise<z.infer<typeof scryptReco
  * `AuthFileCorruptError` — both `AuthStoreUnavailableError` — otherwise; a bad
  * file NEVER resolves to a silent empty store.
  */
-function loadAuthFile(): AuthFile | null {
+export function loadAuthFile(): AuthFile | null {
   const file = authFilePath();
   let stat: fs.Stats;
   try {
@@ -279,7 +279,11 @@ export function listUsers(): LocalUser[] {
 /** One user by (canonicalized) email, or `null`. */
 export function getLocalUser(email: string): LocalUser | null {
   const file = loadAuthFile();
-  if (!file) return null;
+  return file ? findUser(file, email) : null;
+}
+
+/** Find a user in an already-loaded file by canonicalized email (public view). */
+export function findUser(file: AuthFile, email: string): LocalUser | null {
   const canonical = canonicalizeEmail(email);
   const record = file.users.find((u) => u.email === canonical);
   return record ? toPublic(record) : null;

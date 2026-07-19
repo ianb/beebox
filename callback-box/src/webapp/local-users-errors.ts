@@ -18,6 +18,19 @@ export class AuthStoreUnavailableError extends Error {
   }
 }
 
+/**
+ * Fail-closed marker thrown from the tRPC context factory when the credential
+ * store is unavailable (Track D): the WS upgrade shares that factory and has no
+ * HTTP reply to 503, so it throws instead of silently building an authed
+ * context. For HTTP the box preHandler already answered 503 before this fires.
+ */
+export class AuthStoreUnavailableAtContextError extends AuthStoreUnavailableError {
+  constructor(opts?: { cause: unknown }) {
+    super("Auth store unavailable during request-context creation; failing closed.", opts);
+    this.name = "AuthStoreUnavailableAtContextError";
+  }
+}
+
 export class AuthFileCorruptError extends AuthStoreUnavailableError {
   readonly filePath: string;
   constructor(filePath: string, opts: { cause: unknown }) {

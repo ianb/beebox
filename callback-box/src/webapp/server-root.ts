@@ -222,6 +222,9 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // fetch rides the session cookie, so a real resubscribe still authenticates.
   server.post("/api/push/resubscribe", async (request, reply) => {
     const identity = resolveRequestIdentity(request);
+    if (identity.source === "unavailable") {
+      return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+    }
     if (identity.source !== "open" && !identity.email) {
       return reply.status(401).send({ error: "Not authenticated" });
     }
@@ -288,7 +291,11 @@ export function registerSpaFallback(
     // exactly the exception that outlives its rationale (always-on-auth plan).
     if ((authRequired() || isHubMode()) && url !== "/" && !url.startsWith("/auth/")) {
       const identity = resolveRequestIdentity(request);
-      if (identity.source === "open") {
+      if (identity.source === "unavailable") {
+        // Credential store corrupt/unreadable: fail closed and distinctly (503),
+        // never a login redirect that reads as "just sign in" (Track D).
+        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+      } else if (identity.source === "open") {
         // Hub-wide auth is off — fall through to the SPA below.
       } else if (!identity.email && !isMobileSpaRequest(request, opts.boxes)) {
         if (isHubMode()) {

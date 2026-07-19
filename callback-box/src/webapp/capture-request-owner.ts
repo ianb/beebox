@@ -5,11 +5,12 @@ import { resolveRequestIdentity } from "./auth.js";
 export type CaptureRequestOwner =
   | { status: "ok"; email: string | null }
   | { status: "ownerless-mobile" }
+  | { status: "auth-store-unavailable" }
   | { status: "unauthenticated" };
 
 export type CaptureOwnerAuthorization =
   | { status: "ok" }
-  | { status: "rejected"; statusCode: 401 | 403; error: string };
+  | { status: "rejected"; statusCode: 401 | 403 | 503; error: string };
 
 /** Resolve cookie/hub and paired-device credentials to one capture owner. */
 export function resolveCaptureRequestOwner(opts: {
@@ -40,6 +41,12 @@ export function resolveCaptureRequestOwner(opts: {
   if (requestIdentity.source === "open") {
     return { status: "ok", email: null };
   }
+  // No cookie/hub identity and no paired device. Distinguish a corrupt/unreadable
+  // credential store (fail closed with 503, Track D) from a plain unauthenticated
+  // request (401) — checked AFTER mobile, which doesn't consult that store.
+  if (requestIdentity.source === "unavailable") {
+    return { status: "auth-store-unavailable" };
+  }
   return { status: "unauthenticated" };
 }
 
@@ -52,6 +59,9 @@ export function authorizeCaptureSessionOwner(opts: {
   const owner = resolveCaptureRequestOwner(opts);
   if (owner.status === "unauthenticated") {
     return { status: "rejected", statusCode: 401, error: "Not authenticated" };
+  }
+  if (owner.status === "auth-store-unavailable") {
+    return { status: "rejected", statusCode: 503, error: "Authentication temporarily unavailable" };
   }
   if (owner.status === "ownerless-mobile") {
     return {

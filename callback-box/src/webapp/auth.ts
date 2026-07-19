@@ -12,10 +12,12 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyRequest } from "fastify";
 import { parseCookieHeader } from "../lib/cookies.js";
 import { errnoCode } from "../lib/error-guards.js";
-import { getLocalOwnerEmail } from "./local-users.js";
+import { getLocalOwnerEmail, getLocalUser } from "./local-users.js";
+import { getLocalUserCached } from "./local-users-cache.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
 const COOKIE_NAME = "cb_session";
@@ -215,6 +217,13 @@ export interface SessionUser {
   email: string;
   name: string;
   picture?: string;
+  /**
+   * The local record's session generation at mint time (Track D). Present only
+   * for an email that has a local credential record; a Google-only identity
+   * mints no `gen`. `resolveRequestIdentity` compares it against the record's
+   * current `gen` to revoke sessions on a password change or user removal.
+   */
+  gen?: number;
 }
 
 /**
@@ -239,13 +248,28 @@ export function isHubMode(): boolean {
 }
 
 /**
+ * The request shape `resolveRequestIdentity` (and `verifyHubSecret`) reads: raw
+ * `headers` always, plus `@fastify/cookie`'s `cookies` decoration WHEN present.
+ * The tRPC WebSocket upgrade hands `createContext` a raw `http.IncomingMessage`
+ * that has no `.cookies` decoration, so `cookies` is optional and the resolver
+ * falls back to parsing the raw `Cookie` header there — without that fallback a
+ * cookie-authenticated WS/subscription silently loses its identity at context
+ * creation once auth is the default-on wall. A decorated `FastifyRequest` is
+ * assignable to this, so every existing caller keeps working unchanged.
+ */
+export interface IdentityRequest {
+  headers: IncomingHttpHeaders;
+  cookies?: { [cookieName: string]: string | undefined };
+}
+
+/**
  * Timing-safe check that a request's `x-cb-hub-secret` header matches
  * `CB_HUB_SECRET`. Modeled on `verifyDiagBearerKey`'s length-check +
  * `timingSafeEqual` pattern. False when the env var isn't set (so hub-mode
  * checks fail closed even if `isHubMode()` was somehow bypassed), the
  * header is missing, or the value doesn't match.
  */
-export function verifyHubSecret(request: FastifyRequest): boolean {
+export function verifyHubSecret(request: Pick<IdentityRequest, "headers">): boolean {
   const secret = process.env.CB_HUB_SECRET;
   if (!secret) return false;
   const header = request.headers[HUB_SECRET_HEADER];
@@ -255,13 +279,43 @@ export function verifyHubSecret(request: FastifyRequest): boolean {
 }
 
 /**
- * Create a signed session cookie value for the given user.
+ * The local record's session generation for `email`, or `undefined` when the
+ * email has no local record (a Google-only identity) — the value stamped into a
+ * freshly-minted session so a later password change or user removal can revoke
+ * it (Track D). A corrupt/unreadable auth store degrades to `undefined` here
+ * (mint without `gen`) rather than failing the login that mints it: the
+ * request-boundary resolver already fails the whole box closed (503) on an
+ * unavailable store, so a gen-less cookie minted during that window is harmless
+ * (it re-authenticates once the store heals and a record is found — or stays a
+ * valid Google-only identity if none is).
+ */
+function currentGenForEmail(email: string): number | undefined {
+  try {
+    return getLocalUser(email)?.gen;
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      console.warn(
+        `[auth] could not read the session generation for ${email} (auth store unavailable); minting without gen:`,
+        e,
+      );
+      return undefined;
+    }
+    throw e;
+  }
+}
+
+/**
+ * Create a signed session cookie value for the given user. Stamps the local
+ * record's current `gen` (Track D) when the email has one, looked up here so
+ * BOTH login paths (password POST and Google callback) get it uniformly.
  */
 export function signSession(user: SessionUser): string {
+  const gen = currentGenForEmail(user.email);
   const payload = JSON.stringify({
     email: user.email,
     name: user.name,
     ...(user.picture ? { picture: user.picture } : {}),
+    ...(gen !== undefined ? { gen } : {}),
     exp: Date.now() + SESSION_MAX_AGE_MS,
   });
   const sig = crypto
@@ -302,7 +356,13 @@ export function verifySession(cookie: string): SessionUser | null {
     const data = JSON.parse(payload);
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
     if (typeof data.email !== "string") return null;
-    return { email: data.email, name: data.name || data.email, picture: data.picture };
+    const gen = typeof data.gen === "number" ? data.gen : undefined;
+    return {
+      email: data.email,
+      name: data.name || data.email,
+      picture: data.picture,
+      ...(gen !== undefined ? { gen } : {}),
+    };
   } catch (_e) {
     // Payload isn't valid JSON — untrusted/tampered cookie, treat as no session.
     return null;
@@ -378,8 +438,16 @@ export function isOwner(request: FastifyRequest): boolean {
   return email === ownerEmail;
 }
 
-/** Where a request's identity came from, or `null` when it's unauthenticated. */
-export type IdentitySource = "hub" | "cookie" | "open" | null;
+/**
+ * Where a request's identity came from, or `null` when it's unauthenticated.
+ *
+ * `"unavailable"` is a DISTINCT fail-closed outcome (Track D): the credential
+ * store is corrupt/unreadable, so the cookie's `gen` can't be verified. Every
+ * consumer answers `503` for it — NEVER 401 (which would read as "just log in")
+ * and never a fall-through to "no record" (which would fail OPEN for exactly the
+ * sessions `gen`-revocation exists to kill).
+ */
+export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | null;
 
 export interface RequestIdentity {
   email: string | null;
@@ -424,7 +492,7 @@ export interface RequestIdentity {
  * "open"` — the always-on-auth plan's consolidation of the scattered
  * "auth disabled ⇒ open" recomputation into this one resolver.
  */
-export function resolveRequestIdentity(request: FastifyRequest): RequestIdentity {
+export function resolveRequestIdentity(request: IdentityRequest): RequestIdentity {
   if (isHubMode()) {
     if (!verifyHubSecret(request)) return { email: null, name: null, source: null };
     const emailHeader = request.headers[HUB_EMAIL_HEADER];
@@ -436,8 +504,8 @@ export function resolveRequestIdentity(request: FastifyRequest): RequestIdentity
     }
     return { email: null, name: null, source: null };
   }
-  const user = getSessionUser(request);
-  if (user) return { email: user.email, name: user.name, source: "cookie" };
+  const user = sessionUserFromRequest(request);
+  if (user) return classifyLocalRecord(user);
   // Standalone open mode (the `CB_ALLOW_UNAUTHENTICATED` opt-out): no cookie and
   // no wall, so identity is "open" — the SAME source hub mode returns when the
   // hub advertises `x-cb-hub-auth: off`. This is the ONE place openness is
@@ -445,6 +513,59 @@ export function resolveRequestIdentity(request: FastifyRequest): RequestIdentity
   // of re-deriving it (principle #8: one way to do each thing).
   if (!authRequired()) return { email: null, name: null, source: "open" };
   return { email: null, name: null, source: null };
+}
+
+/**
+ * Read the session cookie for the identity resolver. Prefers `@fastify/cookie`'s
+ * decorated `request.cookies`; when that decoration is absent (the tRPC WS
+ * upgrade's raw `IncomingMessage`) it parses the raw `Cookie` header instead, so
+ * a cookie-authenticated WS keeps its identity at context creation (Track D).
+ */
+function sessionUserFromRequest(request: IdentityRequest): SessionUser | null {
+  const cookies = request.cookies;
+  if (cookies !== undefined) {
+    const cookie = cookies[COOKIE_NAME];
+    return cookie ? verifySession(cookie) : null;
+  }
+  return getSessionUserFromCookieHeader(request.headers.cookie);
+}
+
+let loggedResolverAuthStoreUnavailable = false;
+
+/**
+ * Apply the `gen` session-revocation rules to a verified cookie identity
+ * (Track D). The single, consistent rule set:
+ *
+ * - a local record exists → the cookie MUST carry `gen === record.gen`; absent
+ *   or stale (a pre-password-change cookie) → revoked → unauthenticated;
+ * - no record, but the cookie carries a `gen` → dead (its record vanished — this
+ *   is how removing a local user revokes its sessions) → unauthenticated;
+ * - no record, no `gen` → valid Google-only identity (`canAccessBox` still gates
+ *   authorization).
+ *
+ * A corrupt/unreadable store fails closed DISTINCTLY as `source: "unavailable"`
+ * (→ 503), never as "no record" (which would fail OPEN for revoked sessions).
+ */
+function classifyLocalRecord(user: SessionUser): RequestIdentity {
+  let record;
+  try {
+    record = getLocalUserCached(user.email);
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      if (!loggedResolverAuthStoreUnavailable) {
+        console.error("[auth] auth store unavailable while verifying a session cookie; failing closed (503):", e);
+        loggedResolverAuthStoreUnavailable = true;
+      }
+      return { email: null, name: null, source: "unavailable" };
+    }
+    throw e;
+  }
+  if (record) {
+    if (user.gen !== record.gen) return { email: null, name: null, source: null };
+    return { email: user.email, name: user.name, source: "cookie" };
+  }
+  if (user.gen !== undefined) return { email: null, name: null, source: null };
+  return { email: user.email, name: user.name, source: "cookie" };
 }
 
 export { COOKIE_NAME, SESSION_MAX_AGE_MS };
