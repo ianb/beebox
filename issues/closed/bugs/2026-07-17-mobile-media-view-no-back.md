@@ -3,6 +3,18 @@ title: "Following a link to a media file traps you on mobile — no way to go ba
 filed-by: agent
 discovered-in: main session — boxholder got stuck on mobile
 area: callback-box
+resolution: implemented
+---
+
+Fixed by `59a0d3ea` (2026-07-17) — but not the way this issue proposed. Rather
+than adding a back affordance to the media view, the fix removed the navigation:
+a global `ViewOverlay` renders the file in a dismissible sheet over the current
+context (its own ✕ / Escape / backdrop tap), so following a file link never
+replaces where you were and there is nothing to go back from. Because the overlay
+carries its own close, it works identically in a browser tab, an installed PWA,
+and the iOS wrapper — no display-mode detection. The `/views/$` route stays as the
+fallback for SSR, direct URLs, and new-tab.
+
 ---
 
 On mobile, following a **link to a media file** opens the media view, which then
