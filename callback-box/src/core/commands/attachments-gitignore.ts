@@ -87,9 +87,25 @@ ${assetGitignorePatterns()}
 `;
 
 /**
- * Append the binary-attachment block to the box's `.gitignore` if missing.
- * Idempotent: detected via the block marker, so running twice is a no-op.
- * Creates `.gitignore` if absent.
+ * Is this line part of the managed block's body — a comment or an asset
+ * pattern? Used to find the block's extent so a stale one can be replaced.
+ * Deliberately narrow: anything else (a blank line, an unrelated rule) ends
+ * the block, so hand-written entries after it are never swallowed.
+ */
+function isManagedBlockLine(line: string): boolean {
+  return line.startsWith("#") || line.startsWith("**/*.attach/**/*.");
+}
+
+/**
+ * Install or refresh the asset block in the box's `.gitignore`.
+ *
+ * Idempotent, and — unlike the original append-only version — it **replaces a
+ * stale block** rather than no-op'ing on the marker. Marker-presence alone was
+ * never the right test: adding an extension to
+ * {@link ASSET_GITIGNORE_EXTENSIONS} left every already-initialized box on the
+ * old list forever, so a newly-ignored asset type kept getting committed on
+ * exactly the boxes that had been running longest. (That's how `page.frozen`
+ * stayed tracked after being added.) Creates `.gitignore` if absent.
  */
 async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
   const gitignorePath = path.join(ctx.boxRoot, ".gitignore");
@@ -99,17 +115,31 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw new GitignoreReadError(gitignorePath, e);
   }
-  if (
-    existing.includes(GITIGNORE_BLOCK_MARKER) ||
-    existing.includes(LEGACY_GITIGNORE_BLOCK_MARKER)
-  ) {
-    ctx.writeLine("Already present in .gitignore — no change.");
+
+  const lines = existing.split("\n");
+  const markerAt = lines.findIndex(
+    (l) => l.trim() === GITIGNORE_BLOCK_MARKER || l.trim() === LEGACY_GITIGNORE_BLOCK_MARKER,
+  );
+
+  if (markerAt === -1) {
+    const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
+    await fs.writeFile(gitignorePath, existing + sep + GITIGNORE_BLOCK);
+    ctx.writeLine(`Appended asset block to ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
+    return { success: true, data: { changed: true } };
+  }
+
+  let end = markerAt + 1;
+  while (end < lines.length && isManagedBlockLine(lines[end] ?? "")) end += 1;
+
+  const currentBlock = lines.slice(markerAt, end).join("\n") + "\n";
+  if (currentBlock === GITIGNORE_BLOCK) {
+    ctx.writeLine("Already up to date in .gitignore — no change.");
     return { success: true, data: { changed: false } };
   }
-  const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
-  const updated = existing + sep + GITIGNORE_BLOCK;
+
+  const updated = [...lines.slice(0, markerAt), GITIGNORE_BLOCK.trimEnd(), ...lines.slice(end)].join("\n");
   await fs.writeFile(gitignorePath, updated);
-  ctx.writeLine(`Appended asset block to ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
+  ctx.writeLine(`Refreshed asset block in ${path.relative(ctx.boxRoot, gitignorePath) || ".gitignore"}.`);
   return { success: true, data: { changed: true } };
 }
 
