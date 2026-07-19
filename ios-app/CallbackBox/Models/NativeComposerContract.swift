@@ -18,7 +18,7 @@ struct NativeEmissionSelection: Codable, Equatable, Identifiable {
 }
 
 struct NativeEmissionV2: Codable, Equatable {
-    enum Origin: String, Codable {
+    enum Origin: String, Codable, Sendable {
         case typed
         case voice
     }

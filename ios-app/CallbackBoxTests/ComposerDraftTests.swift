@@ -43,6 +43,30 @@ final class ComposerDraftReducerTests: XCTestCase {
 
         XCTAssertEqual(invalid.clamped(to: text), NSRange(location: (text as NSString).length, length: 0))
     }
+
+    func testResetKeepsCommandDedupHistoryOutsideEditableContent() {
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(
+            &draft,
+            .applySelectionCommand(
+                commandID: "command-1",
+                selection: DraftSelection(
+                    id: 1,
+                    ref: "/plan.md",
+                    text: "selected",
+                    position: "line 1",
+                    anchor: nil,
+                    spokenWords: nil
+                )
+            )
+        )
+
+        ComposerDraftReducer.reduce(&draft, .reset)
+
+        XCTAssertEqual(draft.processedCommandIDs, ["command-1"])
+        XCTAssertTrue(draft.text.isEmpty)
+        XCTAssertTrue(draft.selections.isEmpty)
+    }
 }
 
 final class ComposerDraftRepositoryTests: XCTestCase {
@@ -306,6 +330,114 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         let draft = try JSONDecoder().decode(ComposerDraft.self, from: Data(json.utf8))
 
         XCTAssertEqual(draft, .empty)
+    }
+
+    @MainActor
+    func testPendingEmissionsPersistReplayAndHandleOutOfOrderReceipts() async throws {
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        var firstDraft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&firstDraft, .setText("first"))
+        var secondDraft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&secondDraft, .setText("second"))
+
+        let first = try await store.enqueue(
+            draft: firstDraft,
+            text: "first",
+            origin: .typed,
+            diarized: false,
+            boxID: boxID
+        )
+        let second = try await store.enqueue(
+            draft: secondDraft,
+            text: "second",
+            origin: .voice,
+            diarized: true,
+            boxID: boxID
+        )
+        await store.markDeliveryAttempt(id: first.id, at: Date(timeIntervalSince1970: 10))
+        await store.markDeliveryAttempt(id: second.id, at: Date(timeIntervalSince1970: 11))
+
+        let relaunched = PendingEmissionStore(repository: repository)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.deliveries.map(\.id), [first.id, second.id])
+        XCTAssertEqual(
+            relaunched.pending.map(\.state),
+            [
+                .awaitingReceipt(attempt: 1, sentAt: Date(timeIntervalSince1970: 10)),
+                .awaitingReceipt(attempt: 1, sentAt: Date(timeIntervalSince1970: 11))
+            ]
+        )
+        await relaunched.markDeliveryAttempt(id: first.id, at: Date(timeIntervalSince1970: 12))
+        XCTAssertEqual(
+            relaunched.pending.first?.state,
+            .awaitingReceipt(attempt: 2, sentAt: Date(timeIntervalSince1970: 12))
+        )
+
+        await relaunched.handleReceipt(NativeEmissionReceipt(
+            emissionID: second.id,
+            disposition: .queued,
+            reason: nil
+        ))
+        await relaunched.handleReceipt(NativeEmissionReceipt(
+            emissionID: first.id,
+            disposition: .rejected,
+            reason: "offline"
+        ))
+        XCTAssertEqual(relaunched.pending.map(\.id), [first.id])
+        XCTAssertEqual(relaunched.pending.first?.state, .rejected(reason: "offline"))
+        XCTAssertTrue(relaunched.deliveries.isEmpty)
+
+        await relaunched.retry(id: first.id)
+        XCTAssertEqual(relaunched.deliveries.map(\.id), [first.id])
+        await relaunched.handleReceipt(NativeEmissionReceipt(
+            emissionID: first.id,
+            disposition: .sent,
+            reason: nil
+        ))
+        XCTAssertTrue(relaunched.pending.isEmpty)
+        XCTAssertTrue(relaunched.deliveries.isEmpty)
+    }
+
+    @MainActor
+    func testPendingRestoreKeepsPayloadWhileDiscardDeletesIt() async throws {
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        let filename = "image-pending.jpg"
+        try await repository.savePayload(Data("image".utf8), filename: filename, boxID: boxID)
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(
+            &draft,
+            .addImage(DraftImage(id: 1, filename: filename, mimeType: "image/jpeg", state: .local))
+        )
+
+        let first = try await store.enqueue(
+            draft: draft,
+            text: draft.text,
+            origin: .typed,
+            diarized: false,
+            boxID: boxID
+        )
+        let restored = await store.takeForRestore(id: first.id)
+        let restoredPayload = try await repository.loadPayload(filename: filename, boxID: boxID)
+        XCTAssertNotNil(restored)
+        XCTAssertEqual(restoredPayload, Data("image".utf8))
+
+        let second = try await store.enqueue(
+            draft: draft,
+            text: draft.text,
+            origin: .typed,
+            diarized: false,
+            boxID: boxID
+        )
+        await store.discard(id: second.id)
+        await XCTAssertThrowsErrorAsync {
+            _ = try await repository.loadPayload(filename: filename, boxID: boxID)
+        }
     }
 
     @MainActor

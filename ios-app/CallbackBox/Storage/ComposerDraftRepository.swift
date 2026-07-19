@@ -14,6 +14,20 @@ struct ComposerDraftManifest: Codable, Equatable, Sendable {
     }
 }
 
+struct PendingEmissionManifest: Codable, Equatable, Sendable {
+    static let currentVersion = 1
+
+    var version: Int
+    var boxID: UUID
+    var emissions: [PendingEmission]
+
+    init(boxID: UUID, emissions: [PendingEmission]) {
+        version = Self.currentVersion
+        self.boxID = boxID
+        self.emissions = emissions
+    }
+}
+
 actor ComposerDraftRepository {
     enum RepositoryError: Error {
         case unsupportedVersion(Int)
@@ -56,6 +70,36 @@ actor ComposerDraftRepository {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         let data = try JSONEncoder().encode(ComposerDraftManifest(boxID: boxID, draft: draft))
         try data.write(to: manifestURL(boxID: boxID), options: .atomic)
+    }
+
+    func loadPendingEmissions(boxID: UUID) throws -> [PendingEmission] {
+        let url = pendingManifestURL(boxID: boxID)
+        guard fileManager.fileExists(atPath: url.path) else {
+            return []
+        }
+        do {
+            let manifest = try JSONDecoder().decode(PendingEmissionManifest.self, from: Data(contentsOf: url))
+            guard manifest.version == PendingEmissionManifest.currentVersion else {
+                throw RepositoryError.unsupportedVersion(manifest.version)
+            }
+            guard manifest.boxID == boxID else {
+                throw RepositoryError.boxMismatch
+            }
+            guard manifest.emissions.allSatisfy({ $0.boxID == boxID }) else {
+                throw RepositoryError.boxMismatch
+            }
+            return manifest.emissions
+        } catch {
+            try quarantineManifest(at: url)
+            throw error
+        }
+    }
+
+    func savePendingEmissions(_ emissions: [PendingEmission], boxID: UUID) throws {
+        let directory = boxDirectory(boxID: boxID)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let manifest = PendingEmissionManifest(boxID: boxID, emissions: emissions)
+        try JSONEncoder().encode(manifest).write(to: pendingManifestURL(boxID: boxID), options: .atomic)
     }
 
     func savePayload(_ data: Data, filename: String, boxID: UUID) throws {
@@ -138,6 +182,10 @@ actor ComposerDraftRepository {
 
     func manifestURL(boxID: UUID) -> URL {
         boxDirectory(boxID: boxID).appendingPathComponent("manifest.json")
+    }
+
+    func pendingManifestURL(boxID: UUID) -> URL {
+        boxDirectory(boxID: boxID).appendingPathComponent("pending-emissions.json")
     }
 
     private func boxDirectory(boxID: UUID) -> URL {

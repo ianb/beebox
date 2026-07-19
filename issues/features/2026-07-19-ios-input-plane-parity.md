@@ -44,17 +44,19 @@ This issue is the cold-start handoff for the next implementation session.
   interrupted image processing exposes Retry/Remove, and neither processing
   images nor incomplete files can be sent. Physical-device acquisition checks
   remain part of Track 6 acceptance.
+- Track 5's pending-send half is complete: `PendingEmissionStore` persists an
+  ordered box-scoped queue before webview delivery, replays stable emission IDs
+  after relaunch/navigation, handles out-of-order receipts, and keeps rejected
+  messages separate from the current draft with Retry / Restore / Discard.
+  Composition resumes as soon as local enqueue succeeds. Durable voice
+  preparation remains the next Track 5 chunk.
 
 ## Current mismatch
 
-- The complete native bridge payload now carries files and selections, but
-  voice preparation and unacknowledged emissions can still be lost on
-  termination or box switching.
-- `NativeComposerView` permits only one pending emission and disables the whole
-  input plane until its receipt arrives.
-- A rejection restores directly into the visible native fields, which can
-  overwrite a newer draft once continued composition is allowed.
-- Pending emissions and voice preparation remain volatile and single-flight.
+- The complete native bridge payload now carries files and selections, and
+  unacknowledged emissions are durable across termination and box switching.
+- Voice preparation remains volatile and can still race later draft edits or
+  be lost on termination.
 
 The web `TargetStrip` already remains visible when `nativeComposer=1`; do not
 duplicate target busy/queue/interrupt controls in Swift. Native owns the draft,

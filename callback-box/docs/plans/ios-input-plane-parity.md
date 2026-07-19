@@ -17,9 +17,14 @@ acquisition. Image source bytes are persisted before processing, interrupted or
 failed processing restores as a retryable chip, and incomplete attachments
 block send. Track 4 adds strict durable companion-selection commands,
 idempotent acknowledgements, typed tokens, active-dictation anchors, native
-detail chips, and complete V2 selection emission. Tracks 5-6 remain; automated
-coverage and the real-device acceptance matrix in Track 6 are required before
-this plan ships.
+detail chips, and complete V2 selection emission. Track 5's pending-send half
+is implemented: sends persist
+before delivery, immediately clear to a fresh editable draft, replay with the
+same ID after relaunch/navigation, accept receipts in any order, and expose
+rejected Retry / Restore / Discard actions without overwriting newer work.
+Track 5's durable voice preparation and Track 6 remain; automated coverage and
+the real-device acceptance matrix in Track 6 are required before this plan
+ships.
 
 ## Stated preferences this plan trades against
 

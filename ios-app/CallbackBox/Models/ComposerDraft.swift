@@ -132,6 +132,23 @@ struct ComposerDraft: Codable, Equatable, Sendable {
     }
 }
 
+enum PendingEmissionState: Codable, Equatable, Sendable {
+    case awaitingWebView
+    case awaitingReceipt(attempt: Int, sentAt: Date)
+    case rejected(reason: String)
+}
+
+struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
+    var id: UUID
+    var boxID: UUID
+    var draft: ComposerDraft
+    var text: String
+    var origin: NativeEmissionV2.Origin
+    var diarized: Bool
+    var state: PendingEmissionState
+    var createdAt: Date
+}
+
 enum ComposerDraftMutation: Equatable, Sendable {
     case setText(String)
     case setSelection(NSRangeValue)
@@ -203,7 +220,9 @@ enum ComposerDraftReducer {
             draft.selections.removeAll { $0.id == id }
             removeToken("[selection\(id)]", from: &draft)
         case .reset:
+            let processedCommandIDs = draft.processedCommandIDs
             draft = .empty
+            draft.processedCommandIDs = processedCommandIDs
         }
     }
 

@@ -4,11 +4,10 @@ struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var composerDraftStore = ComposerDraftStore()
+    @StateObject private var pendingEmissionStore = PendingEmissionStore()
     @State private var showingPairSheet = false
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
-    @State private var pendingNativeEmissions: [NativeChatEmission] = []
-    @State private var nativeEmissionReceipt: NativeEmissionReceipt?
     @State private var locationShareRequest: NativeLocationShareRequest?
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var screenshotRequest: NativeScreenshotRequest?
@@ -36,7 +35,7 @@ struct RootView: View {
                 let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
                 ChatWebView(
                     box: box,
-                    pendingEmissions: pendingNativeEmissions,
+                    pendingEmissions: pendingEmissionStore.deliveries,
                     locationShareRequest: locationShareRequest,
                     screenshotRequest: screenshotRequest,
                     composerCommandAcknowledgements: composerCommandAcknowledgements,
@@ -44,9 +43,15 @@ struct RootView: View {
                         visibleChatBoxID = box.id
                         visibleChatSessionID = sessionID
                     },
+                    onEmissionDeliveryAttempt: { emissionID in
+                        Task {
+                            await pendingEmissionStore.markDeliveryAttempt(id: emissionID)
+                        }
+                    },
                     onEmissionReceipt: { receipt in
-                        pendingNativeEmissions.removeAll { $0.id == receipt.emissionID }
-                        nativeEmissionReceipt = receipt
+                        Task {
+                            await pendingEmissionStore.handleReceipt(receipt)
+                        }
                     },
                     onLocationShareResult: { result in
                         guard result.requestID == locationShareRequest?.id else {
@@ -87,13 +92,10 @@ struct RootView: View {
                     NativeComposerView(
                         box: composerBox,
                         draftStore: composerDraftStore,
+                        pendingStore: pendingEmissionStore,
                         captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
-                        emissionReceipt: nativeEmissionReceipt,
                         locationShareResult: locationShareResult,
                         screenshotResult: screenshotResult,
-                        onSendEmission: { emission in
-                            pendingNativeEmissions.append(emission)
-                        },
                         onShareLocation: {
                             locationShareResult = nil
                             locationShareRequest = NativeLocationShareRequest()
@@ -116,19 +118,19 @@ struct RootView: View {
         .onChange(of: store.selectedBox?.id) { _, newBoxID in
             visibleChatBoxID = newBoxID
             visibleChatSessionID = nil
-            pendingNativeEmissions = []
-            nativeEmissionReceipt = nil
             locationShareRequest = nil
             locationShareResult = nil
             screenshotRequest = nil
             screenshotResult = nil
             composerCommandAcknowledgements = []
+            pendingEmissionStore.deactivate()
         }
         .task(id: store.selectedBox?.id) {
             guard let boxID = store.selectedBox?.id else {
                 return
             }
             await composerDraftStore.activate(boxID: boxID)
+            await pendingEmissionStore.activate(boxID: boxID)
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .background else {

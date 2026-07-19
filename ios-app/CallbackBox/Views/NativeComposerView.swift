@@ -6,20 +6,16 @@ import UIKit
 struct NativeComposerView: View {
     var box: PairedBox
     @ObservedObject var draftStore: ComposerDraftStore
+    @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
-    var emissionReceipt: NativeEmissionReceipt?
     var locationShareResult: NativeLocationShareResult?
     var screenshotResult: NativeScreenshotResult?
-    var onSendEmission: (NativeChatEmission) -> Void
     var onShareLocation: () -> Void
     var onTakeScreenshot: () -> Void
 
     @EnvironmentObject private var store: PairedBoxStore
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var statusText: String?
-    @State private var lastSentEmission: NativeChatEmission?
-    @State private var lastSentDraft: ComposerDraft?
-    @State private var lastSentBoxID: UUID?
     @State private var isPreparingSend = false
     @State private var editorHeight: CGFloat = 58
     @State private var focused = false
@@ -33,12 +29,27 @@ struct NativeComposerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let statusText = dictation.errorMessage ?? dictation.preparationMessage ?? statusText ?? draftStore.restoreNotice {
+            if let statusText = dictation.errorMessage
+                ?? dictation.preparationMessage
+                ?? statusText
+                ?? draftStore.restoreNotice
+                ?? pendingStore.notice {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 14)
                     .padding(.top, 8)
+            }
+            if pendingStore.pending.isEmpty == false {
+                PendingEmissionList(
+                    emissions: pendingStore.pending,
+                    canRestore: draftIsEmpty,
+                    onRetry: retryPendingEmission,
+                    onRestore: restorePendingEmission,
+                    onDiscard: discardPendingEmission
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
             }
             if draftStore.draft.images.isEmpty == false {
                 ImageAttachmentStrip(
@@ -106,32 +117,6 @@ struct NativeComposerView: View {
         .onChange(of: selectedPhotoItems) { _, newValue in
             Task {
                 await loadPhotos(from: newValue)
-            }
-        }
-        .onChange(of: emissionReceipt) { _, receipt in
-            guard let receipt, let emission = lastSentEmission, receipt.emissionID == emission.id else {
-                return
-            }
-            let sentDraft = lastSentDraft
-            let sentBoxID = lastSentBoxID
-            lastSentEmission = nil
-            lastSentDraft = nil
-            lastSentBoxID = nil
-            switch receipt.disposition {
-            case .sent, .queued:
-                statusText = nil
-                if let sentDraft, let sentBoxID {
-                    Task {
-                        await draftStore.discard(sentDraft, boxID: sentBoxID)
-                    }
-                }
-            case .rejected:
-                statusText = receipt.reason ?? "The message was not accepted."
-                if let sentDraft, let sentBoxID {
-                    Task {
-                        await draftStore.restore(sentDraft, boxID: sentBoxID)
-                    }
-                }
             }
         }
         .onChange(of: locationShareResult) { _, result in
@@ -414,27 +399,19 @@ struct NativeComposerView: View {
         statusText = "Preparing attachments..."
         Task {
             do {
-                let attachments = try await draftStore.emissionImages(from: snapshot, boxID: sendingBoxID)
-                let files = try draftStore.emissionFiles(from: snapshot)
-                let selections = draftStore.emissionSelections(from: snapshot)
-                let emission = NativeChatEmission(
+                _ = try await pendingStore.enqueue(
+                    draft: snapshot,
                     text: text,
                     origin: origin,
                     diarized: diarized,
-                    images: attachments,
-                    files: files,
-                    selections: selections
+                    boxID: sendingBoxID
                 )
                 await draftStore.clearForSending(boxID: sendingBoxID)
                 dictation.resetDictationState()
                 selectedPhotoItems = []
                 focused = false
-                lastSentDraft = snapshot
-                lastSentBoxID = sendingBoxID
-                lastSentEmission = emission
                 isPreparingSend = false
-                statusText = "Sending to chat..."
-                onSendEmission(emission)
+                statusText = nil
             } catch {
                 isPreparingSend = false
                 statusText = "An attachment could not be read."
@@ -443,7 +420,7 @@ struct NativeComposerView: View {
     }
 
     private var isSending: Bool {
-        isPreparingSend || lastSentEmission != nil
+        isPreparingSend
     }
 
     private var hasSendableContent: Bool {
@@ -473,6 +450,39 @@ struct NativeComposerView: View {
                 return true
             }
             return false
+        }
+    }
+
+    private var draftIsEmpty: Bool {
+        draftStore.draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && draftStore.draft.images.isEmpty
+            && draftStore.draft.files.isEmpty
+            && draftStore.draft.selections.isEmpty
+    }
+
+    private func retryPendingEmission(_ emission: PendingEmission) {
+        Task {
+            await pendingStore.retry(id: emission.id)
+        }
+    }
+
+    private func restorePendingEmission(_ emission: PendingEmission) {
+        guard draftIsEmpty else {
+            statusText = "Restore is available when the current draft is empty."
+            return
+        }
+        Task {
+            guard let restored = await pendingStore.takeForRestore(id: emission.id) else {
+                return
+            }
+            await draftStore.restore(restored, boxID: emission.boxID)
+            statusText = nil
+        }
+    }
+
+    private func discardPendingEmission(_ emission: PendingEmission) {
+        Task {
+            await pendingStore.discard(id: emission.id)
         }
     }
 
@@ -904,6 +914,46 @@ private struct FileAttachmentList: View {
         case .uploading, .uploaded:
             false
         }
+    }
+}
+
+private struct PendingEmissionList: View {
+    var emissions: [PendingEmission]
+    var canRestore: Bool
+    var onRetry: (PendingEmission) -> Void
+    var onRestore: (PendingEmission) -> Void
+    var onDiscard: (PendingEmission) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(emissions) { emission in
+                switch emission.state {
+                case .awaitingWebView, .awaitingReceipt:
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Sending message…")
+                            .font(.caption)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                case .rejected(let reason):
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(reason, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                        HStack(spacing: 12) {
+                            Button("Retry") { onRetry(emission) }
+                            Button("Restore") { onRestore(emission) }
+                                .disabled(canRestore == false)
+                            Button("Discard", role: .destructive) { onDiscard(emission) }
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                }
+            }
+        }
+        .padding(10)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

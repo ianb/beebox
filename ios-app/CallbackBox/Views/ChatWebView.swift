@@ -59,6 +59,7 @@ struct ChatWebView: UIViewRepresentable {
     var screenshotRequest: NativeScreenshotRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var onSessionChange: (String?) -> Void
+    var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
     var onLocationShareResult: (NativeLocationShareResult) -> Void
     var onScreenshotResult: (NativeScreenshotResult) -> Void
@@ -72,6 +73,7 @@ struct ChatWebView: UIViewRepresentable {
         screenshotRequest: NativeScreenshotRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         onSessionChange: @escaping (String?) -> Void = { _ in },
+        onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
         onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
@@ -84,6 +86,7 @@ struct ChatWebView: UIViewRepresentable {
         self.screenshotRequest = screenshotRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.onSessionChange = onSessionChange
+        self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         self.onEmissionReceipt = onEmissionReceipt
         self.onLocationShareResult = onLocationShareResult
         self.onScreenshotResult = onScreenshotResult
@@ -111,6 +114,7 @@ struct ChatWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.onSessionChange = onSessionChange
+        context.coordinator.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         context.coordinator.onEmissionReceipt = onEmissionReceipt
         context.coordinator.onLocationShareResult = onLocationShareResult
         context.coordinator.onScreenshotResult = onScreenshotResult
@@ -134,6 +138,7 @@ struct ChatWebView: UIViewRepresentable {
         Coordinator(
             allowedOrigin: Self.origin(from: box.baseURL),
             onSessionChange: onSessionChange,
+            onEmissionDeliveryAttempt: onEmissionDeliveryAttempt,
             onEmissionReceipt: onEmissionReceipt,
             onLocationShareResult: onLocationShareResult,
             onScreenshotResult: onScreenshotResult,
@@ -145,6 +150,7 @@ struct ChatWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var allowedOrigin: String?
         var onSessionChange: (String?) -> Void
+        var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
         var onEmissionReceipt: (NativeEmissionReceipt) -> Void
         var onLocationShareResult: (NativeLocationShareResult) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
@@ -165,6 +171,7 @@ struct ChatWebView: UIViewRepresentable {
         init(
             allowedOrigin: String?,
             onSessionChange: @escaping (String?) -> Void,
+            onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void,
             onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void,
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
@@ -173,6 +180,7 @@ struct ChatWebView: UIViewRepresentable {
         ) {
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
+            self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
             self.onEmissionReceipt = onEmissionReceipt
             self.onLocationShareResult = onLocationShareResult
             self.onScreenshotResult = onScreenshotResult
@@ -248,6 +256,7 @@ struct ChatWebView: UIViewRepresentable {
                 guard let detail = Self.javascriptDetail(for: emission) else {
                     continue
                 }
+                onEmissionDeliveryAttempt(emission.id)
                 inflightEmissionIDs.insert(emission.id)
                 startReceiptTimeout(for: emission.id)
                 let script = "window.callbackboxNativeReceive(\(detail));"
