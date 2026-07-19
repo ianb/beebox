@@ -10,6 +10,18 @@ The landmark cards menu — opened from the **bookmark icon** in chat — doesn'
 fit on a mobile viewport. It overflows rather than adapting, so some of it is
 unreachable.
 
+## Fix landed (2026-07-19, commit 5b07cf0a) — awaiting on-device confirmation
+
+Diagnosis below confirmed at a 390px viewport (the menu header rendered as "S
+LINKS", contents clipped left of x=0). Fixed by adding viewport clamping to the
+shared `Dropdown` primitive (`components/ui/Dropdown.tsx` — clamps its portaled
+`fixed` menu `left`/`right` into `[8px, vw-8px]`, plus `maxHeight`+scroll) and
+migrating `LandmarkLinksButton` onto it (also `RecentFilesButton`, the paired
+issue). After: the menu measures `left=8 right=382` on a 390px screen, fully
+on-screen with all links reachable. Kept `needs: [manual-testing]` — verify on a
+real phone in both orientations, ideally with a landmark whose `expand` fan-out
+makes the list long enough to scroll.
+
 ## Diagnosis (2026-07-19, from reading the markup — not yet confirmed in a browser)
 
 The menu is one element, `LandmarkLinksButton.tsx:82`:
