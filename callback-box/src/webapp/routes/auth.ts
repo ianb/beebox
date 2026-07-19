@@ -108,6 +108,11 @@ const setupBodySchema = z.object({
 /** Cap on the raw request body these auth routes will read — they carry tiny
  *  JSON, so anything larger is abuse. Also bounds the hub raw-body read below. */
 const MAX_AUTH_BODY_BYTES = 16 * 1024;
+/** Cap the raw-body read (hub path only) so a client that opens the connection
+ *  and then dribbles/stalls the body can't hold the request open indefinitely
+ *  (a slow-loris on the hub's own login endpoint). Prod's reverse proxy also
+ *  bounds this, but the read defends itself regardless. */
+const MAX_AUTH_BODY_READ_MS = 10_000;
 
 /** Truncate a user-supplied string before logging so a failed/throttled attempt
  *  can't amplify log volume with a giant "email" (FIX 4). */
@@ -141,21 +146,39 @@ class AuthBodyTooLargeError extends Error {
   }
 }
 
+class AuthBodyReadTimeoutError extends Error {
+  constructor() {
+    super(`Auth request body not received within ${MAX_AUTH_BODY_READ_MS}ms.`);
+    this.name = "AuthBodyReadTimeoutError";
+  }
+}
+
 function readRawBody(raw: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
+    const timer = setTimeout(() => {
+      raw.destroy();
+      reject(new AuthBodyReadTimeoutError());
+    }, MAX_AUTH_BODY_READ_MS);
     raw.on("data", (chunk: Buffer) => {
       size += chunk.length;
       if (size > MAX_AUTH_BODY_BYTES) {
+        clearTimeout(timer);
         raw.destroy();
         reject(new AuthBodyTooLargeError());
         return;
       }
       chunks.push(chunk);
     });
-    raw.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
-    raw.on("error", reject);
+    raw.on("end", () => {
+      clearTimeout(timer);
+      resolve(Buffer.concat(chunks).toString("utf-8"));
+    });
+    raw.on("error", (e) => {
+      clearTimeout(timer);
+      reject(e);
+    });
   });
 }
 
