@@ -31,3 +31,8 @@ A bundle of small, independent iOS cleanups surfaced in the 2026-07-17 companion
 - **Stale comment in the web frontend.** `callback-box/src/frontend/src/input/emission.ts` still says
   voice sends carry no images, but `createVoiceEmission` now accepts `images` and native `.voice`
   emissions do carry photos — the comment is simply wrong now and should be updated or removed.
+- **A routine simulator build emits two avoidable Xcode warnings.** The app-icon catalog still includes
+  a 76x76@1x iPad slot that only applies before iOS 10 even though the deployment target is iOS 17,
+  and App Intents metadata extraction runs despite the target not linking AppIntents.framework. Remove
+  the obsolete icon slot and disable the inapplicable metadata-generation build step/setting so a clean
+  `xcodebuild -quiet ... build` is actually quiet.

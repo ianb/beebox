@@ -579,7 +579,9 @@ HEALTHCHECK
 fi
 
 echo "Deploy complete."
-notify "✅ callback-box deployed" "to $SERVER_IP"
+# Show what shipped (hash + commit subject) rather than the — frankly boring —
+# server IP. Both vars are computed above for deploy-info.json.
+notify "✅ callback-box deployed" "$CALLBACK_BOX_HASH $CALLBACK_BOX_SUBJECT"
 echo "Verify externally: curl -H \"Authorization: Bearer \$CB_DIAG_API_KEY\" https://box.example.com/healthz"
 
 # --- Chain to a newer request (latest-wins, second half) ----------------------

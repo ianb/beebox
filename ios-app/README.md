@@ -5,6 +5,8 @@ at first: the conversation view stays in the box's web chat via `WKWebView`,
 loaded with `?nativeComposer=1`, while native code owns pairing, native input
 controls, and the paired-box shell.
 
+Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
+
 ## Current Setup
 
 - SwiftUI app target: `CallbackBox`
