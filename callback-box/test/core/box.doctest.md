@@ -56,6 +56,7 @@ box/inbox/triaged/_unsure
 box/inbox/unhandled
 box/jobs
 box/output
+box/publish
 box/questions
 box/resources
 config
