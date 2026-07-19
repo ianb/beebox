@@ -214,6 +214,101 @@ final class ComposerDraftRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testSelectionCommandIsDurableIdempotentAndEmitsTypedSelection() async throws {
+        let suite = "ComposerDraftSelectionCommand.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        await store.activate(boxID: boxID)
+        let command = NativeComposerCommand(
+            id: "selection-command-1",
+            selection: NativeComposerCommand.Selection(
+                ref: "/notes/plan.md",
+                text: "Ship the complete contract",
+                position: "body; paragraph 2"
+            )
+        )
+
+        let first = await store.applySelectionCommand(command, boxID: boxID)
+        let duplicate = await store.applySelectionCommand(command, boxID: boxID)
+
+        XCTAssertTrue(first.accepted)
+        XCTAssertEqual(duplicate, first)
+        XCTAssertEqual(store.draft.selections.count, 1)
+        XCTAssertEqual(store.draft.text, "[selection1]")
+        XCTAssertEqual(store.draft.processedCommandIDs, [command.id])
+
+        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunched.activate(boxID: boxID)
+        let afterRelaunch = await relaunched.applySelectionCommand(command, boxID: boxID)
+        XCTAssertEqual(afterRelaunch, first)
+        XCTAssertEqual(relaunched.draft.selections.count, 1)
+        XCTAssertEqual(relaunched.draft.text, "[selection1]")
+        XCTAssertEqual(
+            relaunched.emissionSelections(from: relaunched.draft),
+            [NativeEmissionSelection(
+                id: 1,
+                ref: "/notes/plan.md",
+                text: "Ship the complete contract",
+                position: "body; paragraph 2",
+                anchor: nil,
+                spokenWords: nil
+            )]
+        )
+
+        await relaunched.removeSelection(id: 1)
+        XCTAssertTrue(relaunched.draft.selections.isEmpty)
+        XCTAssertEqual(relaunched.draft.text, "")
+    }
+
+    @MainActor
+    func testSelectionCommandUsesActiveVoiceAnchorThenReturnsToTypedTokens() async throws {
+        let suite = "ComposerDraftVoiceSelection.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let store = ComposerDraftStore(
+            repository: ComposerDraftRepository(rootURL: rootURL),
+            defaults: defaults
+        )
+        await store.activate(boxID: boxID)
+        store.setVoiceSelectionContext(
+            transcript: "one two three four five six seven eight nine ten",
+            active: true
+        )
+        let voiceCommand = NativeComposerCommand(
+            id: "voice-selection",
+            selection: NativeComposerCommand.Selection(ref: "/voice.md", text: "voice", position: "line 1")
+        )
+
+        let voiceAcknowledgement = await store.applySelectionCommand(voiceCommand, boxID: boxID)
+        XCTAssertTrue(voiceAcknowledgement.accepted)
+        XCTAssertEqual(store.draft.selections.first?.anchor, "three four five six seven eight nine ten")
+        XCTAssertEqual(store.draft.selections.first?.spokenWords, 10)
+        XCTAssertFalse(store.draft.text.contains("[selection1]"))
+
+        store.setVoiceSelectionContext(transcript: "", active: false)
+        let typedCommand = NativeComposerCommand(
+            id: "typed-selection",
+            selection: NativeComposerCommand.Selection(ref: "/typed.md", text: "typed", position: "line 2")
+        )
+        let typedAcknowledgement = await store.applySelectionCommand(typedCommand, boxID: boxID)
+        XCTAssertTrue(typedAcknowledgement.accepted)
+        XCTAssertTrue(store.draft.text.contains("[selection2]"))
+        XCTAssertNil(store.draft.selections.last?.anchor)
+        XCTAssertNil(store.draft.selections.last?.spokenWords)
+    }
+
+    func testLegacyManifestWithoutProcessedCommandIDsStillDecodes() throws {
+        let json = #"{"text":"","selection":{"location":0,"length":0},"images":[],"files":[],"selections":[],"nextImageID":1,"nextFileID":1,"nextSelectionID":1}"#
+        let draft = try JSONDecoder().decode(ComposerDraft.self, from: Data(json.utf8))
+
+        XCTAssertEqual(draft, .empty)
+    }
+
+    @MainActor
     func testLegacyTextMigratesOnceAndBoxSwitchingRestoresIndependentDrafts() async throws {
         let suite = "ComposerDraftTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

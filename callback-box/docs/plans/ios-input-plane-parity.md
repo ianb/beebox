@@ -6,8 +6,7 @@ extends the native draft and bridge to carry the complete web `Emission`, makes
 unsent and rejected work durable, and keeps the embedded web chat authoritative
 for target state and final dispatch.
 
-**Status:** active — Track 1's contract foundation, Track 2's first durable
-draft chunk, and Track 3's first editor/image chunk are implemented: canonical
+**Status:** active — Tracks 1-4 are implemented: canonical
 V2 encoding/decoding and shared fixtures; a box-scoped `ComposerDraftStore`;
 atomic, quarantining manifests; one-shot text migration; reducer/token/Unicode-
 caret coverage; a caret-aware, autosizing `UITextView`; and file-backed camera
@@ -16,9 +15,11 @@ Files import with the existing authenticated upload route, byte progress,
 durable upload failure/retry state, Paste Image, and visible-webview Screenshot
 acquisition. Image source bytes are persisted before processing, interrupted or
 failed processing restores as a retryable chip, and incomplete attachments
-block send. Track 4 command delivery and Tracks 5-6 remain; automated coverage
-and the real-device acceptance matrix in Track 6 are required before this plan
-ships.
+block send. Track 4 adds strict durable companion-selection commands,
+idempotent acknowledgements, typed tokens, active-dictation anchors, native
+detail chips, and complete V2 selection emission. Tracks 5-6 remain; automated
+coverage and the real-device acceptance matrix in Track 6 are required before
+this plan ships.
 
 ## Stated preferences this plan trades against
 

@@ -75,12 +75,20 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
 
     enum DecodeError: Error, Equatable {
         case unsupportedVersion(Int)
+        case emptyID
     }
 
     var version: Int
     var id: String
     var kind: Kind
     var selection: Selection
+
+    init(id: String, selection: Selection) {
+        version = 1
+        self.id = id
+        kind = .addSelection
+        self.selection = selection
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -89,7 +97,54 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
             throw DecodeError.unsupportedVersion(version)
         }
         id = try container.decode(String.self, forKey: .id)
+        guard !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw DecodeError.emptyID
+        }
         kind = try container.decode(Kind.self, forKey: .kind)
         selection = try container.decode(Selection.self, forKey: .selection)
+    }
+}
+
+struct NativeComposerCommandAcknowledgement: Codable, Equatable, Identifiable {
+    enum DecodeError: Error, Equatable {
+        case unsupportedVersion(Int)
+        case emptyID
+        case missingRejectionReason
+    }
+
+    var version = 1
+    var id: String
+    var accepted: Bool
+    var reason: String?
+
+    private init(id: String, accepted: Bool, reason: String?) {
+        self.id = id
+        self.accepted = accepted
+        self.reason = reason
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        guard version == 1 else {
+            throw DecodeError.unsupportedVersion(version)
+        }
+        id = try container.decode(String.self, forKey: .id)
+        guard !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw DecodeError.emptyID
+        }
+        accepted = try container.decode(Bool.self, forKey: .accepted)
+        reason = try container.decodeIfPresent(String.self, forKey: .reason)
+        if !accepted, reason?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+            throw DecodeError.missingRejectionReason
+        }
+    }
+
+    static func accepted(id: String) -> NativeComposerCommandAcknowledgement {
+        NativeComposerCommandAcknowledgement(id: id, accepted: true, reason: nil)
+    }
+
+    static func rejected(id: String, reason: String) -> NativeComposerCommandAcknowledgement {
+        NativeComposerCommandAcknowledgement(id: id, accepted: false, reason: reason)
     }
 }

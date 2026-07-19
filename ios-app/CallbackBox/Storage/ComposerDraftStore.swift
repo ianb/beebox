@@ -13,7 +13,10 @@ final class ComposerDraftStore: ObservableObject {
     private let repository: ComposerDraftRepository
     private let defaults: UserDefaults
     private var activeBoxID: UUID?
+    private var activatingBoxID: UUID?
+    private var activationWaiters: [UUID: [CheckedContinuation<Void, Never>]] = [:]
     private var saveTask: Task<Void, Never>?
+    private var voiceSelectionContext: VoiceSelectionContext?
 
     init(
         repository: ComposerDraftRepository = ComposerDraftRepository(),
@@ -30,6 +33,11 @@ final class ComposerDraftStore: ObservableObject {
         await flush()
         saveTask?.cancel()
         activeBoxID = boxID
+        activatingBoxID = boxID
+        defer {
+            activatingBoxID = nil
+            activationWaiters.removeValue(forKey: boxID)?.forEach { $0.resume() }
+        }
         restoreNotice = nil
         do {
             if var restored = try await repository.load(boxID: boxID) {
@@ -90,6 +98,78 @@ final class ComposerDraftStore: ObservableObject {
     func setSelection(_ selection: NSRangeValue) {
         ComposerDraftReducer.reduce(&draft, .setSelection(selection))
         scheduleSave()
+    }
+
+    func setVoiceSelectionContext(transcript: String, active: Bool) {
+        let words = transcript.split(whereSeparator: { $0.isWhitespace })
+        guard active, words.isEmpty == false else {
+            voiceSelectionContext = nil
+            return
+        }
+        voiceSelectionContext = VoiceSelectionContext(
+            anchor: words.suffix(8).joined(separator: " "),
+            spokenWords: words.count
+        )
+    }
+
+    func applySelectionCommand(
+        _ command: NativeComposerCommand,
+        boxID: UUID
+    ) async -> NativeComposerCommandAcknowledgement {
+        await waitForActivation(boxID: boxID)
+        guard activeBoxID == boxID else {
+            return .rejected(id: command.id, reason: "The selected box changed before the selection was saved.")
+        }
+        let source = command.selection
+        guard
+            source.ref.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
+            source.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
+            source.position.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        else {
+            return .rejected(id: command.id, reason: "The selection is missing its source, text, or position.")
+        }
+        if draft.processedCommandIDs.contains(command.id) {
+            return .accepted(id: command.id)
+        }
+        let previous = draft
+        let selection = DraftSelection(
+            id: draft.nextSelectionID,
+            ref: source.ref,
+            text: source.text,
+            position: source.position,
+            anchor: voiceSelectionContext?.anchor,
+            spokenWords: voiceSelectionContext?.spokenWords
+        )
+        ComposerDraftReducer.reduce(
+            &draft,
+            .applySelectionCommand(commandID: command.id, selection: selection)
+        )
+        saveTask?.cancel()
+        do {
+            try await repository.save(draft, boxID: boxID)
+            return .accepted(id: command.id)
+        } catch {
+            draft = previous
+            return .rejected(id: command.id, reason: "The selection could not be saved.")
+        }
+    }
+
+    func removeSelection(id: Int) async {
+        ComposerDraftReducer.reduce(&draft, .removeSelection(id))
+        await flush()
+    }
+
+    func emissionSelections(from snapshot: ComposerDraft) -> [NativeEmissionSelection] {
+        snapshot.selections.map { selection in
+            NativeEmissionSelection(
+                id: selection.id,
+                ref: selection.ref,
+                text: selection.text,
+                position: selection.position,
+                anchor: selection.anchor,
+                spokenWords: selection.spokenWords
+            )
+        }
     }
 
     func addImage(data: Data, mimeType: String, fileExtension: String) async {
@@ -421,7 +501,21 @@ final class ComposerDraftStore: ObservableObject {
         }
     }
 
+    private func waitForActivation(boxID: UUID) async {
+        guard activatingBoxID == boxID else {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            activationWaiters[boxID, default: []].append(continuation)
+        }
+    }
+
     private func legacyDraftKey(boxID: UUID) -> String {
         "draft.\(boxID.uuidString)"
     }
+}
+
+private struct VoiceSelectionContext {
+    var anchor: String
+    var spokenWords: Int
 }

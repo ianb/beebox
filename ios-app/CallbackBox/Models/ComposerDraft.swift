@@ -70,6 +70,7 @@ struct ComposerDraft: Codable, Equatable, Sendable {
     var nextImageID: Int
     var nextFileID: Int
     var nextSelectionID: Int
+    var processedCommandIDs: [String] = []
 
     static let empty = ComposerDraft(
         text: "",
@@ -79,8 +80,56 @@ struct ComposerDraft: Codable, Equatable, Sendable {
         selections: [],
         nextImageID: 1,
         nextFileID: 1,
-        nextSelectionID: 1
+        nextSelectionID: 1,
+        processedCommandIDs: []
     )
+
+    private enum CodingKeys: String, CodingKey {
+        case text
+        case selection
+        case images
+        case files
+        case selections
+        case nextImageID
+        case nextFileID
+        case nextSelectionID
+        case processedCommandIDs
+    }
+
+    init(
+        text: String,
+        selection: NSRangeValue,
+        images: [DraftImage],
+        files: [DraftFile],
+        selections: [DraftSelection],
+        nextImageID: Int,
+        nextFileID: Int,
+        nextSelectionID: Int,
+        processedCommandIDs: [String] = []
+    ) {
+        self.text = text
+        self.selection = selection
+        self.images = images
+        self.files = files
+        self.selections = selections
+        self.nextImageID = nextImageID
+        self.nextFileID = nextFileID
+        self.nextSelectionID = nextSelectionID
+        self.processedCommandIDs = processedCommandIDs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text = try container.decode(String.self, forKey: .text)
+        selection = try container.decode(NSRangeValue.self, forKey: .selection)
+        images = try container.decode([DraftImage].self, forKey: .images)
+        files = try container.decode([DraftFile].self, forKey: .files)
+        selections = try container.decode([DraftSelection].self, forKey: .selections)
+        nextImageID = try container.decode(Int.self, forKey: .nextImageID)
+        nextFileID = try container.decode(Int.self, forKey: .nextFileID)
+        nextSelectionID = try container.decode(Int.self, forKey: .nextSelectionID)
+        processedCommandIDs = try container.decodeIfPresent([String].self, forKey: .processedCommandIDs) ?? []
+    }
 }
 
 enum ComposerDraftMutation: Equatable, Sendable {
@@ -91,6 +140,7 @@ enum ComposerDraftMutation: Equatable, Sendable {
     case addSelection(DraftSelection)
     case updateFile(DraftFile)
     case updateImage(DraftImage)
+    case applySelectionCommand(commandID: String, selection: DraftSelection)
     case removeImage(Int)
     case removeFile(Int)
     case removeSelection(Int)
@@ -130,6 +180,19 @@ enum ComposerDraftReducer {
                 return
             }
             draft.images[index] = image
+        case .applySelectionCommand(let commandID, let selection):
+            guard draft.processedCommandIDs.contains(commandID) == false else {
+                return
+            }
+            draft.processedCommandIDs.append(commandID)
+            if draft.processedCommandIDs.count > 256 {
+                draft.processedCommandIDs.removeFirst(draft.processedCommandIDs.count - 256)
+            }
+            draft.selections.append(selection)
+            draft.nextSelectionID = max(draft.nextSelectionID, selection.id + 1)
+            if selection.anchor == nil {
+                insertToken("[selection\(selection.id)]", into: &draft)
+            }
         case .removeImage(let id):
             draft.images.removeAll { $0.id == id }
             removeToken("[image\(id)]", from: &draft)

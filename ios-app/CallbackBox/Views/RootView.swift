@@ -13,6 +13,7 @@ struct RootView: View {
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
+    @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
 
     var body: some View {
         Group {
@@ -38,6 +39,7 @@ struct RootView: View {
                     pendingEmissions: pendingNativeEmissions,
                     locationShareRequest: locationShareRequest,
                     screenshotRequest: screenshotRequest,
+                    composerCommandAcknowledgements: composerCommandAcknowledgements,
                     onSessionChange: { sessionID in
                         visibleChatBoxID = box.id
                         visibleChatSessionID = sessionID
@@ -59,6 +61,25 @@ struct RootView: View {
                         }
                         screenshotRequest = nil
                         screenshotResult = result
+                    },
+                    onComposerCommand: { delivery in
+                        switch delivery {
+                        case .command(let command):
+                            Task {
+                                let acknowledgement = await composerDraftStore.applySelectionCommand(
+                                    command,
+                                    boxID: box.id
+                                )
+                                composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
+                                composerCommandAcknowledgements.append(acknowledgement)
+                            }
+                        case .rejection(let acknowledgement):
+                            composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
+                            composerCommandAcknowledgements.append(acknowledgement)
+                        }
+                    },
+                    onComposerCommandAcknowledgementDelivered: { id in
+                        composerCommandAcknowledgements.removeAll { $0.id == id }
                     }
                 )
                 .id(box.id)
@@ -101,6 +122,7 @@ struct RootView: View {
             locationShareResult = nil
             screenshotRequest = nil
             screenshotResult = nil
+            composerCommandAcknowledgements = []
         }
         .task(id: store.selectedBox?.id) {
             guard let boxID = store.selectedBox?.id else {

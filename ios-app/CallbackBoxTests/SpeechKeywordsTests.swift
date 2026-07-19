@@ -220,6 +220,35 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         XCTAssertGreaterThan(decoded, 0, "no add-selection command fixture decoded")
         XCTAssertGreaterThan(rejected, 0, "no malformed command fixture rejected")
     }
+
+    func testComposerCommandAcknowledgementFixturesDecodeStrictly() throws {
+        let fixtures = try MobileContractFixtures.load("composer-command-ack")
+        var decoded = 0
+        var rejected = 0
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let data = try MobileContractFixtures.jsonData(from: input)
+            if fixture["expected"] is NSNull {
+                XCTAssertThrowsError(
+                    try JSONDecoder().decode(NativeComposerCommandAcknowledgement.self, from: data),
+                    "\(name): malformed acknowledgement decoded"
+                )
+                rejected += 1
+            } else {
+                let acknowledgement = try JSONDecoder().decode(
+                    NativeComposerCommandAcknowledgement.self,
+                    from: data
+                )
+                XCTAssertEqual(acknowledgement.version, 1, "\(name): version")
+                XCTAssertEqual(acknowledgement.id, input["id"] as? String, "\(name): id")
+                XCTAssertEqual(acknowledgement.accepted, input["accepted"] as? Bool, "\(name): accepted")
+                XCTAssertEqual(acknowledgement.reason, input["reason"] as? String, "\(name): reason")
+                decoded += 1
+            }
+        }
+        XCTAssertGreaterThan(decoded, 0, "no composer-command acknowledgement fixture decoded")
+        XCTAssertGreaterThan(rejected, 0, "no malformed composer-command acknowledgement fixture rejected")
+    }
 }
 
 /// Loads the shared cross-platform golden fixtures from the monorepo working

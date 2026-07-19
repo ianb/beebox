@@ -16,8 +16,11 @@ This issue is the cold-start handoff for the next implementation session.
   retaining documented legacy leniency; unknown versions produce a
   version-specific rejection; and TypeScript/XCTest consume shared emission
   and `NativeComposerCommand` fixtures.
-- The add-selection wire value exists, but command delivery, acknowledgement,
-  and mutation of the durable native draft remain with the Track 4 integration.
+- Track 4 is complete: companion selections post strict versioned commands to
+  native, durable command IDs make retries idempotent across relaunch, and the
+  web receives an accepted/rejected acknowledgement only after persistence.
+  Native renders removable detail chips, emits the full selection, inserts
+  typed tokens, and snapshots voice anchors during active dictation.
 - Track 2's first chunk is complete: `ComposerDraftStore` owns box-scoped text;
   `ComposerDraftRepository` writes atomic manifests and quarantines corrupt or
   future data; legacy `UserDefaults` text migrates once; backgrounding flushes;
@@ -44,19 +47,14 @@ This issue is the cold-start handoff for the next implementation session.
 
 ## Current mismatch
 
-- Native bridge payloads carry text, images, origin, and diarization, but web
-  `Emission` also carries uploaded files and companion-pane selections.
-- iOS persists text and acquired images, but file uploads, attachment work in
-  progress, voice preparation, and unacknowledged emissions can still be lost
-  on termination or box switching.
+- The complete native bridge payload now carries files and selections, but
+  voice preparation and unacknowledged emissions can still be lost on
+  termination or box switching.
 - `NativeComposerView` permits only one pending emission and disables the whole
   input plane until its receipt arrives.
 - A rejection restores directly into the visible native fields, which can
   overwrite a newer draft once continued composition is allowed.
-- Companion selections currently mutate the hidden web draft rather than the
-  native draft that the user sees and sends.
-- Companion `[selectionN]` integration remains absent. Pending emissions and
-  voice preparation are still volatile and single-flight.
+- Pending emissions and voice preparation remain volatile and single-flight.
 
 The web `TargetStrip` already remains visible when `nativeComposer=1`; do not
 duplicate target busy/queue/interrupt controls in Swift. Native owns the draft,
@@ -67,10 +65,10 @@ target state, final message assembly, and dispatch.
 
 1. Create an implementation worktree and read, in order:
    `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
-   plan. The plan is complete; implementation starts with Track 1 rather than
-   writing another design.
-2. Continue with Track 4's typed selection command path, then complete Tracks
-   5-6 in dependency order. Commit-sized chunks are
+   plan. The design is complete; resume from the progress recorded above rather
+   than writing another plan.
+2. Continue with Track 5's pending-send and voice state machines, then complete
+   Track 6. Commit-sized chunks are
    identified in each track, but they are not shipping milestones:
    full V2 emission/selection-command contract; durable native draft; native
    editor and attachments; companion selections; pending-send/voice state;

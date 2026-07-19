@@ -28,6 +28,7 @@ struct NativeComposerView: View {
     @State private var showingCamera = false
     @State private var showingCapture = false
     @State private var showingFileImporter = false
+    @State private var detailedSelection: DraftSelection?
     @StateObject private var dictation = SpeechDictation()
 
     var body: some View {
@@ -57,6 +58,15 @@ struct NativeComposerView: View {
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
             }
+            if draftStore.draft.selections.isEmpty == false {
+                SelectionAttachmentList(
+                    selections: draftStore.draft.selections,
+                    onOpen: { detailedSelection = $0 },
+                    onRemove: removeSelection
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
 
             HStack(alignment: .bottom, spacing: 10) {
                 composerButton(
@@ -82,6 +92,10 @@ struct NativeComposerView: View {
         }
         .onChange(of: dictation.transcript) { _, newValue in
             draftStore.setText(newValue)
+            draftStore.setVoiceSelectionContext(transcript: newValue, active: dictation.isRecording)
+        }
+        .onChange(of: dictation.isRecording) { _, isRecording in
+            draftStore.setVoiceSelectionContext(transcript: dictation.transcript, active: isRecording)
         }
         .onChange(of: dictation.keywordIntent) { _, newValue in
             guard let newValue else {
@@ -141,6 +155,7 @@ struct NativeComposerView: View {
         }
         .onDisappear {
             dictation.stop()
+            draftStore.setVoiceSelectionContext(transcript: "", active: false)
         }
         .sheet(isPresented: $showingActions) {
             ComposerActionsView(
@@ -186,6 +201,9 @@ struct NativeComposerView: View {
             Task {
                 await importFiles(urls)
             }
+        }
+        .sheet(item: $detailedSelection) { selection in
+            SelectionDetailView(selection: selection)
         }
     }
 
@@ -398,12 +416,14 @@ struct NativeComposerView: View {
             do {
                 let attachments = try await draftStore.emissionImages(from: snapshot, boxID: sendingBoxID)
                 let files = try draftStore.emissionFiles(from: snapshot)
+                let selections = draftStore.emissionSelections(from: snapshot)
                 let emission = NativeChatEmission(
                     text: text,
                     origin: origin,
                     diarized: diarized,
                     images: attachments,
-                    files: files
+                    files: files,
+                    selections: selections
                 )
                 await draftStore.clearForSending(boxID: sendingBoxID)
                 dictation.resetDictationState()
@@ -602,6 +622,12 @@ struct NativeComposerView: View {
     private func removeFile(_ file: DraftFile) {
         Task {
             await draftStore.removeFile(id: file.id)
+        }
+    }
+
+    private func removeSelection(_ selection: DraftSelection) {
+        Task {
+            await draftStore.removeSelection(id: selection.id)
         }
     }
 
@@ -878,5 +904,71 @@ private struct FileAttachmentList: View {
         case .uploading, .uploaded:
             false
         }
+    }
+}
+
+private struct SelectionAttachmentList: View {
+    var selections: [DraftSelection]
+    var onOpen: (DraftSelection) -> Void
+    var onRemove: (DraftSelection) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(selections) { selection in
+                    HStack(spacing: 6) {
+                        Button {
+                            onOpen(selection)
+                        } label: {
+                            Label(selection.ref, systemImage: "text.quote")
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
+                        .buttonStyle(.plain)
+                        Button {
+                            onRemove(selection)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove selection")
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(.quaternary, in: Capsule())
+                }
+            }
+        }
+    }
+}
+
+private struct SelectionDetailView: View {
+    var selection: DraftSelection
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Source") {
+                    Text(selection.ref)
+                    Text(selection.position)
+                        .foregroundStyle(.secondary)
+                }
+                Section("Selected text") {
+                    Text(selection.text)
+                        .textSelection(.enabled)
+                }
+            }
+            .navigationTitle("Selection")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }

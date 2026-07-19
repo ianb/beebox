@@ -1,0 +1,8 @@
+{
+  "input": {
+    "version": 1,
+    "id": "selection-command-bad",
+    "accepted": false
+  },
+  "expected": null
+}

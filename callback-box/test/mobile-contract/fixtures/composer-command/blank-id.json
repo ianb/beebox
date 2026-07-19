@@ -1,0 +1,13 @@
+{
+  "input": {
+    "version": 1,
+    "id": "",
+    "kind": "add-selection",
+    "selection": {
+      "ref": "/notes/plan.md",
+      "text": "Ship the complete contract",
+      "position": "body; paragraph 2"
+    }
+  },
+  "expected": null
+}

@@ -47,34 +47,48 @@ struct NativeScreenshotResult: Equatable {
     var message: String?
 }
 
+enum NativeComposerCommandDelivery {
+    case command(NativeComposerCommand)
+    case rejection(NativeComposerCommandAcknowledgement)
+}
+
 struct ChatWebView: UIViewRepresentable {
     var box: PairedBox
     var pendingEmissions: [NativeChatEmission]
     var locationShareRequest: NativeLocationShareRequest?
     var screenshotRequest: NativeScreenshotRequest?
+    var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var onSessionChange: (String?) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
     var onLocationShareResult: (NativeLocationShareResult) -> Void
     var onScreenshotResult: (NativeScreenshotResult) -> Void
+    var onComposerCommand: (NativeComposerCommandDelivery) -> Void
+    var onComposerCommandAcknowledgementDelivered: (String) -> Void
 
     init(
         box: PairedBox,
         pendingEmissions: [NativeChatEmission] = [],
         locationShareRequest: NativeLocationShareRequest? = nil,
         screenshotRequest: NativeScreenshotRequest? = nil,
+        composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
         onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in },
-        onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in }
+        onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
+        onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
+        onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
         self.locationShareRequest = locationShareRequest
         self.screenshotRequest = screenshotRequest
+        self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.onSessionChange = onSessionChange
         self.onEmissionReceipt = onEmissionReceipt
         self.onLocationShareResult = onLocationShareResult
         self.onScreenshotResult = onScreenshotResult
+        self.onComposerCommand = onComposerCommand
+        self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -83,6 +97,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "callbackboxSession")
         configuration.userContentController.add(context.coordinator, name: "callbackboxEmissionReceipt")
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationResult")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxComposerCommand")
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
         }
@@ -99,16 +114,20 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onEmissionReceipt = onEmissionReceipt
         context.coordinator.onLocationShareResult = onLocationShareResult
         context.coordinator.onScreenshotResult = onScreenshotResult
+        context.coordinator.onComposerCommand = onComposerCommand
+        context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
         context.coordinator.locationShareRequest = locationShareRequest
         context.coordinator.screenshotRequest = screenshotRequest
+        context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         if webView.url == nil {
             webView.load(request())
         }
         context.coordinator.deliver(pendingEmissions, to: webView)
         context.coordinator.deliverLocationRequest(to: webView)
         context.coordinator.captureScreenshot(from: webView)
+        context.coordinator.deliverComposerCommandAcknowledgements(to: webView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -117,7 +136,9 @@ struct ChatWebView: UIViewRepresentable {
             onSessionChange: onSessionChange,
             onEmissionReceipt: onEmissionReceipt,
             onLocationShareResult: onLocationShareResult,
-            onScreenshotResult: onScreenshotResult
+            onScreenshotResult: onScreenshotResult,
+            onComposerCommand: onComposerCommand,
+            onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered
         )
     }
 
@@ -127,14 +148,18 @@ struct ChatWebView: UIViewRepresentable {
         var onEmissionReceipt: (NativeEmissionReceipt) -> Void
         var onLocationShareResult: (NativeLocationShareResult) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
+        var onComposerCommand: (NativeComposerCommandDelivery) -> Void
+        var onComposerCommandAcknowledgementDelivered: (String) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var locationShareRequest: NativeLocationShareRequest?
         var screenshotRequest: NativeScreenshotRequest?
+        var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
         private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
+        private var inflightComposerCommandAcknowledgementIDs = Set<String>()
         private var pageLoaded = false
 
         init(
@@ -142,13 +167,17 @@ struct ChatWebView: UIViewRepresentable {
             onSessionChange: @escaping (String?) -> Void,
             onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void,
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
-            onScreenshotResult: @escaping (NativeScreenshotResult) -> Void
+            onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
+            onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
+            onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void
         ) {
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
             self.onEmissionReceipt = onEmissionReceipt
             self.onLocationShareResult = onLocationShareResult
             self.onScreenshotResult = onScreenshotResult
+            self.onComposerCommand = onComposerCommand
+            self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -157,6 +186,7 @@ struct ChatWebView: UIViewRepresentable {
             deliver(pendingEmissions, to: webView)
             deliverLocationRequest(to: webView)
             captureScreenshot(from: webView)
+            deliverComposerCommandAcknowledgements(to: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -168,6 +198,7 @@ struct ChatWebView: UIViewRepresentable {
             locationRequestTimeout?.cancel()
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
+            inflightComposerCommandAcknowledgementIDs.removeAll()
         }
 
         func webView(
@@ -194,6 +225,10 @@ struct ChatWebView: UIViewRepresentable {
             }
             if message.name == "callbackboxLocationResult" {
                 receiveLocationResult(message.body)
+                return
+            }
+            if message.name == "callbackboxComposerCommand" {
+                receiveComposerCommand(message.body)
                 return
             }
             guard message.name == "callbackboxSession", let urlString = message.body as? String, let url = URL(string: urlString) else {
@@ -334,6 +369,49 @@ struct ChatWebView: UIViewRepresentable {
             DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
         }
 
+        private func receiveComposerCommand(_ body: Any) {
+            guard let payload = ChatWebView.dictionaryPayload(from: body) else {
+                return
+            }
+            let commandID = payload["id"] as? String
+            guard
+                let data = try? JSONSerialization.data(withJSONObject: payload),
+                let command = try? JSONDecoder().decode(NativeComposerCommand.self, from: data)
+            else {
+                if let commandID, commandID.isEmpty == false {
+                    onComposerCommand(.rejection(.rejected(
+                        id: commandID,
+                        reason: "The native composer command was malformed."
+                    )))
+                }
+                return
+            }
+            onComposerCommand(.command(command))
+        }
+
+        func deliverComposerCommandAcknowledgements(to webView: WKWebView) {
+            guard pageLoaded else {
+                return
+            }
+            for acknowledgement in composerCommandAcknowledgements
+            where inflightComposerCommandAcknowledgementIDs.contains(acknowledgement.id) == false {
+                guard let detail = Self.javascriptDetail(for: acknowledgement) else {
+                    continue
+                }
+                inflightComposerCommandAcknowledgementIDs.insert(acknowledgement.id)
+                let script = "window.callbackboxNativeComposerCommandAck(\(detail));"
+                webView.evaluateJavaScript(script) { [weak self] _, error in
+                    guard let self else {
+                        return
+                    }
+                    self.inflightComposerCommandAcknowledgementIDs.remove(acknowledgement.id)
+                    if error == nil {
+                        self.onComposerCommandAcknowledgementDelivered(acknowledgement.id)
+                    }
+                }
+            }
+        }
+
         func captureScreenshot(from webView: WKWebView) {
             guard
                 pageLoaded,
@@ -359,6 +437,13 @@ struct ChatWebView: UIViewRepresentable {
         private static func javascriptDetail(for emission: NativeChatEmission) -> String? {
             let payload = NativeEmissionV2(emission: emission)
             guard let data = try? JSONEncoder().encode(payload) else {
+                return nil
+            }
+            return String(data: data, encoding: .utf8)
+        }
+
+        private static func javascriptDetail(for acknowledgement: NativeComposerCommandAcknowledgement) -> String? {
+            guard let data = try? JSONEncoder().encode(acknowledgement) else {
                 return nil
             }
             return String(data: data, encoding: .utf8)
@@ -446,6 +531,7 @@ struct ChatWebView: UIViewRepresentable {
           if (window.location.origin !== allowedOrigin) return;
           window.callbackboxNativeQueue = window.callbackboxNativeQueue || [];
           window.callbackboxNativeLocationQueue = window.callbackboxNativeLocationQueue || [];
+          window.callbackboxNativeComposerCommandAckQueue = window.callbackboxNativeComposerCommandAckQueue || [];
           window.callbackboxNativeReceive = (detail) => {
             window.callbackboxNativeQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-emission', { detail }));
@@ -454,6 +540,10 @@ struct ChatWebView: UIViewRepresentable {
             const detail = { id };
             window.callbackboxNativeLocationQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-share-location', { detail }));
+          };
+          window.callbackboxNativeComposerCommandAck = (detail) => {
+            window.callbackboxNativeComposerCommandAckQueue.push(detail);
+            window.dispatchEvent(new CustomEvent('callbackbox:native-composer-command-ack'));
           };
           // Neutral web→native transport shared with the Android shell; the web
           // layer prefers it over direct webkit.messageHandlers access.
