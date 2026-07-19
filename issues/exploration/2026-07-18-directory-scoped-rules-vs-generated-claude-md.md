@@ -55,12 +55,64 @@ Reasons this might NOT be a clean swap (check each):
   (`src/core/claude-md-lint.ts`) — directory-scoped static files lose the central
   regeneration/GC; is that a feature (less to keep in sync) or a regression (drift)?
 
-## Research (incomplete)
+## Research (2026-07-18) — verified: directory-scoped context works, two mechanisms
 
-Determine empirically: (1) whether `query()` auto-loads nested CLAUDE.md / rules from a
-given cwd; (2) for which of our run contexts (landmark, wakeup/reactor, triage) that
-reaches the right directory; (3) which currently-@-included briefings are location-specific
-(good candidates to move to directory-scoped files) vs. genuinely box-global (stay in root).
-Then decide which parts of the generate-and-@-include pipeline can be retired in favor of
-placing context per-directory. Note: even a partial win (triage locations only) may be worth
-it if it removes compile/prune machinery there.
+**Answer: yes, it works** — confirmed both by the docs and by a live experiment against the
+actual Claude Code agent (planted distinct secret codes in different locations and asked a
+headless `claude -p` run which it could see). The SDK path callback-box uses is covered
+because `settingSources` defaults to loading all sources (we omit it, so `project` — hence
+CLAUDE.md, nested memory, and `.claude/rules/` — loads; SDK d.ts: *"When omitted, all sources
+are loaded"*, *"Must include 'project' to load CLAUDE.md files"*). Docs:
+`code.claude.com/docs/en/memory` + `.../agent-sdk/typescript`.
+
+**Experiment (secrets in root `CLAUDE.md`, `triage/CLAUDE.md`, `.claude/rules/secret.md`):**
+
+| Test | cwd | Action | Agent saw |
+|---|---|---|---|
+| 1 | root | none | ROOT + RULES — **not** the triage-subdir secret |
+| 2 | `triage/` | none | TRIAGE + ROOT (walked up the parent chain) |
+| 3 | root | none | ROOT + RULES (unconditional rule, no `paths:`) |
+| 4 | root | **read `triage/note.txt`** | ROOT + RULES + **TRIAGE** (subdir loaded on-demand after the read) |
+
+**The mechanics (both verified):**
+- **CLAUDE.md** loads by walking **up** cwd→root at startup; a **subdirectory** CLAUDE.md
+  (below cwd) loads **lazily — only when the agent reads a file in that subdirectory**, not
+  at launch.
+- **`.claude/rules/*.md`** loads when `project` settings load. A rule **without** `paths:`
+  frontmatter is global; a rule **with** `paths: [glob]` is **path-scoped** — it loads
+  on-demand when the agent touches files matching the glob. This is the purpose-built
+  "directory/path-based rules" feature.
+
+**What this means for callback-box:**
+- **Landmark/triage-bound sessions run cwd = the subdir** → a `CLAUDE.md` placed there loads
+  automatically at start (it's in the cwd→root chain, per Test 2). **This is a clean fit** —
+  location-specific triage/landmark context can live in-place instead of being compiled and
+  @-included into the root CLAUDE.md. Strongest win.
+- **Wakeup/reactor runs cwd = box root** and works across subdirs → a subdir CLAUDE.md is
+  **lazy** (loads only after the agent reads a file there, per Test 4), so it is *not*
+  guaranteed in context before the agent acts. For "brief before touching this area," use a
+  **path-scoped `.claude/rules/` (with `paths:` globs)** — category-scoped, loads on touch,
+  no global @-include needed.
+
+**So the two viable replacements for the generate-and-@-include pipeline:**
+1. **Subdirectory `CLAUDE.md`** — for context that should load when the agent is *working in*
+   that dir (landmark/triage cwd = the dir). Not a drop-in where context must be present
+   before any file is read.
+2. **Path-scoped `.claude/rules/*.md`** with `paths:` frontmatter — the real "directory rules"
+   feature; scope category briefings by glob, loaded on-demand.
+
+**Caveat (the one real limitation):** subdir CLAUDE.md and path-scoped rules are **lazy** —
+they aren't in context until cwd is there (subdir CLAUDE.md at start) or a matching file is
+read (on-demand). Anything that must be in context *unconditionally, up front* stays in the
+root CLAUDE.md or an unconditional rule. So this replaces *location-specific* briefings, not
+*box-global* ones.
+
+## Next step (design)
+
+Triage/landmark locations are the clear first candidate (agent cwd = the location → subdir
+CLAUDE.md loads for free). Audit which currently-@-included compiled briefings are
+location-specific vs. box-global, move the location-specific ones to per-directory CLAUDE.md
+(cwd-bound cases) or path-scoped `.claude/rules/` (glob cases), and retire that slice of the
+compile/@-include/prune machinery in `docs-gen/`. Keep box-global briefings in root. Verify
+the migrated context actually surfaces in a real reactor/landmark run before removing the
+generator paths.
