@@ -253,6 +253,14 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       if (identity.source === "unavailable") {
         return reply.status(503).send({ error: "Authentication temporarily unavailable" });
       }
+      // Fleet-wide open mode reaching a hub child (hub started with the opt-out,
+      // so it injects `x-cb-hub-auth: off` → `source: "open"`): no identity, but
+      // the whole fleet is open, so list every box rather than an empty
+      // auth-required list. In standalone this branch is unreachable (the outer
+      // `!authRequired()` already handled open mode).
+      if (identity.source === "open") {
+        return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+      }
       if (!identity.email) {
         return { boxes: [], authRequired: true };
       }

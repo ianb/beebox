@@ -77,6 +77,15 @@ JSON.stringify({ status: unknownUser.statusCode, body: unknownUser.json() })
 // Byte-for-byte identical responses.
 JSON.stringify(wrongPass.json()) === JSON.stringify(unknownUser.json())
 => true
+
+// A parsed-but-non-object body (array/null/etc.) is rejected FAST as a 400 —
+// it must not fall through to the raw-stream reader (whose events already
+// fired) and stall until the read timeout. Regression guard for the
+// `request.body !== undefined` body-detect fix.
+loginThrottle.reset();
+const arrayBody = await server.server.inject({ method: "POST", url: "/auth/login", payload: [] });
+arrayBody.statusCode
+=> 400
 ```
 
 ## Setup happy path: a live token creates the owner and mints a session

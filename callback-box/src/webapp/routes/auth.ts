@@ -21,7 +21,6 @@ import type { IncomingMessage } from "node:http";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
-import { isRecord } from "../../lib/is-record.js";
 import { invariant } from "../../lib/invariant.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import {
@@ -134,7 +133,15 @@ function forLog(value: string): string {
  * Throws (oversize or invalid JSON) — the caller answers 400.
  */
 async function readJsonBody(request: FastifyRequest): Promise<unknown> {
-  if (isRecord(request.body)) return request.body;
+  // `request.body !== undefined` — NOT `isRecord(...)` — is the correct test for
+  // "a content-type parser already consumed the stream". Standalone, Fastify's
+  // JSON parser populates `body` for EVERY valid JSON value (array, null,
+  // string, number, object); an `isRecord` check would misread those as
+  // unparsed and then wait on stream events that already fired, stalling until
+  // the read timeout. Behind the hub, the wildcard parser leaves `body`
+  // undefined without draining, so we read the raw stream. A non-object body
+  // (e.g. `[]`) falls through to the Zod safeParse below, which rejects it fast.
+  if (request.body !== undefined) return request.body;
   const raw = await readRawBody(request.raw);
   return JSON.parse(raw);
 }
