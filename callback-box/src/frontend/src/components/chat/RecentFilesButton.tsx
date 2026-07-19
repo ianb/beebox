@@ -6,12 +6,12 @@
  * files as FileEntry components; peek / panel / page escalate from there.
  */
 
-import { useState } from "react";
 import { useRecentFiles } from "../../hooks/useRecentFiles";
 import type { SessionEntry } from "../../api";
 import type { FileSummary } from "@core/file-summary";
 import { FileEntry } from "../ui/FileEntry";
 import { DirectoryIcon } from "../../file-types/icons";
+import { Dropdown, useDropdownClose } from "../ui/Dropdown";
 
 interface RecentFilesButtonProps {
   entries: SessionEntry[];
@@ -27,61 +27,64 @@ function FolderIcon() {
 }
 
 export function RecentFilesButton({ entries, onPanel }: RecentFilesButtonProps) {
-  const [open, setOpen] = useState(false);
   const { files, isLoading } = useRecentFiles(entries);
   const count = files.length;
+
+  return (
+    <Dropdown
+      align="right"
+      width="w-[40rem]"
+      trigger={({ toggle, ariaProps }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
+          title={count > 0 ? `Recent files (${count})` : "Recent files"}
+          {...ariaProps}
+        >
+          <FolderIcon />
+        </button>
+      )}
+    >
+      <RecentFilesMenu files={files} isLoading={isLoading} onPanel={onPanel} />
+    </Dropdown>
+  );
+}
+
+/** Menu body — rendered inside the Dropdown so it can close it on selection. */
+function RecentFilesMenu({ files, isLoading, onPanel }: {
+  files: ReturnType<typeof useRecentFiles>["files"];
+  isLoading: boolean;
+  onPanel?: (summary: FileSummary<unknown>) => void;
+}) {
+  const close = useDropdownClose();
   const handlePanel = onPanel
     ? (summary: FileSummary<unknown>) => {
-        setOpen(false);
+        close();
         onPanel(summary);
       }
     : undefined;
-
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-        title={count > 0 ? `Recent files (${count})` : "Recent files"}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        <FolderIcon />
-      </button>
-      {open ? (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            role="menu"
-            className="absolute top-full right-0 mt-1 w-[min(40rem,calc(100vw-2rem))] max-h-[70vh] overflow-auto bg-white rounded-lg shadow-lg border border-warm-200 z-50 text-sm"
-          >
-            <div className="px-3 py-2 border-b border-warm-200 text-xs text-warm-500 font-medium uppercase tracking-wide">
-              Recent files
-            </div>
-            {count === 0 ? (
-              <div className="px-3 py-4 text-warm-500 italic flex items-center gap-2">
-                <DirectoryIcon size={16} />
-                {isLoading ? "Loading…" : "No files referenced yet"}
-              </div>
-            ) : (
-              <div className="py-1">
-                {files.map(({ path, summary }) => (
-                  <FileEntry
-                    key={path}
-                    summary={summary ?? { path, title: path }}
-                    onPanel={handlePanel}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </>
-      ) : null}
-    </div>
+    <>
+      <div className="px-3 py-2 border-b border-warm-200 text-xs text-warm-500 font-medium uppercase tracking-wide">
+        Recent files
+      </div>
+      {files.length === 0 ? (
+        <div className="px-3 py-4 text-warm-500 italic flex items-center gap-2">
+          <DirectoryIcon size={16} />
+          {isLoading ? "Loading…" : "No files referenced yet"}
+        </div>
+      ) : (
+        <div className="py-1">
+          {files.map(({ path, summary }) => (
+            <FileEntry
+              key={path}
+              summary={summary ?? { path, title: path }}
+              onPanel={handlePanel}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 }

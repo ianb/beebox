@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
+import { Dropdown, useDropdownClose } from "../ui/Dropdown";
 
 interface ResolvedLink {
   ref: string;
@@ -40,7 +41,6 @@ function BookmarkIcon() {
 }
 
 export function LandmarkLinksButton({ contextDir, onPanel }: LandmarkLinksButtonProps) {
-  const [open, setOpen] = useState(false);
   const { data } = trpc.landmarks.forDir.useQuery(
     { dir: contextDir ?? "" },
     { enabled: contextDir !== null },
@@ -53,58 +53,44 @@ export function LandmarkLinksButton({ contextDir, onPanel }: LandmarkLinksButton
 
   const menuTitle = landmark?.label ? `${landmark.label} links` : "Landmark links";
 
-  const onItem = (link: ResolvedLink) => {
-    setOpen(false);
-    onPanel(link);
-  };
-
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-        title={menuTitle}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        <BookmarkIcon />
-      </button>
-      {open ? (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            role="menu"
-            className="absolute top-full right-0 mt-1 w-[min(24rem,calc(100vw-2rem))] max-h-[70vh] overflow-auto bg-white rounded-lg shadow-lg border border-warm-200 z-50 text-sm"
-          >
-            <div className="px-3 py-2 border-b border-warm-200 text-xs text-warm-500 font-medium uppercase tracking-wide">
-              {menuTitle}
-            </div>
-            <div className="py-1">
-              {links.map((link) => (
-                <MenuLink key={link.ref} link={link} onItem={onItem} />
-              ))}
-              {groups.map((group) => (
-                <MenuGroup key={group.label} group={group} onItem={onItem} />
-              ))}
-            </div>
-          </div>
-        </>
-      ) : null}
-    </div>
+    <Dropdown
+      align="right"
+      width="w-[24rem]"
+      trigger={({ toggle, ariaProps }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
+          title={menuTitle}
+          {...ariaProps}
+        >
+          <BookmarkIcon />
+        </button>
+      )}
+    >
+      <div className="px-3 py-2 border-b border-warm-200 text-xs text-warm-500 font-medium uppercase tracking-wide">
+        {menuTitle}
+      </div>
+      <div className="py-1">
+        {links.map((link) => (
+          <MenuLink key={link.ref} link={link} onPanel={onPanel} />
+        ))}
+        {groups.map((group) => (
+          <MenuGroup key={group.label} group={group} onPanel={onPanel} />
+        ))}
+      </div>
+    </Dropdown>
   );
 }
 
-function MenuLink({ link, onItem }: { link: ResolvedLink; onItem: (link: ResolvedLink) => void }) {
+function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: ResolvedLink) => void }) {
+  const close = useDropdownClose();
   return (
     <button
       type="button"
       role="menuitem"
-      onClick={() => onItem(link)}
+      onClick={() => { close(); onPanel(link); }}
       className="w-full text-left px-3 py-2 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
     >
       <span className="truncate">{link.label ?? link.title}</span>
@@ -130,7 +116,7 @@ function GroupChevron({ open }: { open: boolean }) {
   );
 }
 
-function MenuGroup({ group, onItem }: { group: ResolvedGroup; onItem: (link: ResolvedLink) => void }) {
+function MenuGroup({ group, onPanel }: { group: ResolvedGroup; onPanel: (link: ResolvedLink) => void }) {
   const [open, setOpen] = useState(false);
   const overflow = group.count - group.children.length;
 
@@ -149,7 +135,7 @@ function MenuGroup({ group, onItem }: { group: ResolvedGroup; onItem: (link: Res
       {open ? (
         <div className="border-l border-warm-200 ml-5">
           {group.children.map((link) => (
-            <MenuLink key={link.ref} link={link} onItem={onItem} />
+            <MenuLink key={link.ref} link={link} onPanel={onPanel} />
           ))}
           {overflow > 0 ? (
             <div className="px-3 py-2 text-xs text-warm-500">+{overflow} more</div>
