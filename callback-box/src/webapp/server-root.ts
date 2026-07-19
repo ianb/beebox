@@ -21,7 +21,7 @@ import { getEngineVersionReport } from "../core/engine-version.js";
 import { filterAccessibleBoxes } from "./box-access.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
-import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
+import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 
 /** Body of `POST /api/push/resubscribe` — validated at the HTTP boundary. */
 const resubscribeBodySchema = z.object({
@@ -236,7 +236,7 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // Root-level box list endpoint (filtered by user access when auth enabled)
   server.get("/api/boxes", async (request) => {
     if (isAuthEnabled()) {
-      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers, url: request.url });
+      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       const email = getSessionEmail(request);
       if (!email) {
@@ -304,38 +304,22 @@ export function registerSpaFallback(
 function listMobileAuthorizedBoxes(opts: {
   boxes: BoxSpec[];
   headers: IncomingHttpHeaders;
-  url: string | undefined;
 }): Array<{ slug: string; name: string }> {
   return opts.boxes
-    .filter((box) => verifyMobileBearer(box.boxRoot, authorizationHeader(opts.headers.authorization))
-      || verifyMobileToken(box.boxRoot, mobileTokenFromUrl(opts.url)))
+    .filter((box) => verifyMobileRequest(box.boxRoot, opts.headers))
     .map((box) => ({ slug: box.slug, name: box.slug }));
 }
 
 function isMobileSpaRequest(request: FastifyRequest, boxes: BoxSpec[]): boolean {
   const box = boxForUrl(request.url, boxes);
   if (!box) return false;
-  return verifyMobileBearer(box.boxRoot, authorizationHeader(request.headers.authorization))
-    || verifyMobileToken(box.boxRoot, mobileTokenFromUrl(request.url));
+  return verifyMobileRequest(box.boxRoot, request.headers);
 }
 
 function boxForUrl(url: string, boxes: BoxSpec[]): BoxSpec | undefined {
   const pathname = url.split("?")[0] ?? "/";
   const slug = pathname.split("/")[1];
   return slug ? boxes.find((box) => box.slug === slug) : undefined;
-}
-
-function authorizationHeader(value: string | string[] | undefined): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
-
-function mobileTokenFromUrl(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  try {
-    return new URL(url, "http://box.local").searchParams.get("mobileToken") ?? undefined;
-  } catch (_e) {
-    return undefined;
-  }
 }
 
 /**

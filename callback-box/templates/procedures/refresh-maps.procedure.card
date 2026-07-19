@@ -121,20 +121,22 @@ steps:
             )"
             ```
 
-            STEP 4 - FINALIZE:
-            ```
-            cb refresh-maps --finalize
-            ```
-            This adds an `@MAP.md` line to each affected directory's CLAUDE.md
-            (creating a stub if it doesn't exist), stamps the state file at
-            HEAD, and prunes entries for deleted directories. Don't commit
-            after — the procedure engine's "Complete step" commit sweeps
-            those file changes into the same step commit.
+            You do NOT need to finalize — that runs automatically after you
+            finish. If you run out of turns partway, that's fine: every
+            MAP.md you actually rewrote is banked, and the next run picks up
+            where you stopped. Do as many as you can, in the order given.
 
             GIT: Do NOT add Co-Authored-By to commits. The system adds the
             appropriate trailers automatically.
           model: haiku
           max-turns: 40
+      shells:
+        - |-
+          # Finalize as a run shell, not a step in the agent's prompt: this
+          # executes even when the agent errored or ran out of turns, so a
+          # partial run still banks the maps it rewrote. Only maps that
+          # actually changed are stamped, so this is safe to run always.
+          cb refresh-maps --finalize
     validate:
       shells:
         - >-
@@ -155,12 +157,16 @@ steps:
       instructions:
         - |-
           After the agent runs, the next precheck should be a no-op
-          (needsWork=false). If it still reports tasks, the agent missed
-          one or more — re-run the procedure or inspect manually.
+          (needsWork=false). Residual tasks are not a failure — an agent
+          that ran out of turns banks what it finished and the next run
+          continues from there. Persistent residual work across several
+          runs is worth inspecting.
       whys:
         - |-
-          If a dirty MAP.md is silently missed, state stamping will move
-          the asOf forward and future precheck runs won't notice the
-          stale listing.
-      severity: abort
+          Finalize only stamps a MAP.md it can prove was rewritten, so a
+          silently-missed dirty map is left unstamped rather than marked
+          current. This check reports what's outstanding; it does not gate,
+          because refreshing a large or corrupted box legitimately takes
+          more than one run and a red step would never clear.
+      severity: warn
 ---

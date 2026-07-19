@@ -50,8 +50,17 @@ const baseConfig = baseConfigRaw.map((entry) => {
 //     would also be exempted — an accepted, negligible gap (the tightest
 //     practical AST match; a deliberate bypass already has `eslint-disable`).
 const AS_BAN_SELECTORS = [
-  { selector: 'TSAsExpression[typeAnnotation.type="TSIndexedAccessType"]', message: 'Type assertions with indexed access types like "as (typeof X)[number]" are not allowed. Use a named type instead.' },
-  { selector: 'TSAsExpression:not(:has(TSTypeReference[typeName.name="const"])):not(CallExpression[callee.name="setup"] > ObjectExpression > Property[key.name="types"] > ObjectExpression > Property > TSAsExpression[expression.type="ObjectExpression"][expression.properties.length=0])', message: 'Type assertions with "as" are not allowed except for "as const" (and the XState `setup({ types: { … : {} as T } })` idiom). If a cast is genuinely needed (e.g. at a parse boundary), guard it with an `eslint-disable-next-line no-restricted-syntax` comment explaining why, or centralize it in one typed helper.' },
+  {
+    selector: 'TSAsExpression[typeAnnotation.type="TSIndexedAccessType"]',
+    message:
+      'Type assertions with indexed access types like "as (typeof X)[number]" are not allowed. Use a named type instead.',
+  },
+  {
+    selector:
+      'TSAsExpression:not(:has(TSTypeReference[typeName.name="const"])):not(CallExpression[callee.name="setup"] > ObjectExpression > Property[key.name="types"] > ObjectExpression > Property > TSAsExpression[expression.type="ObjectExpression"][expression.properties.length=0])',
+    message:
+      'Type assertions with "as" are not allowed except for "as const" (and the XState `setup({ types: { … : {} as T } })` idiom). If a cast is genuinely needed (e.g. at a parse boundary), guard it with an `eslint-disable-next-line no-restricted-syntax` comment explaining why, or centralize it in one typed helper.',
+  },
 ];
 
 // ── Enabled rules ──────────────────────────────────────────────────
@@ -320,8 +329,7 @@ const enabledRules = {
     "error",
     {
       selector: "CatchClause:not([param])",
-      message:
-        "Catch clause must bind the error (use catch(e) instead of catch).",
+      message: "Catch clause must bind the error (use catch(e) instead of catch).",
     },
     // The `as`-cast ban (both `.ts` and `.tsx`; react:true `.tsx` flows through
     // this block). react:false `.tsx` gets the same selectors via the override
@@ -337,10 +345,7 @@ const enabledRules = {
   // Keep files under 300 lines (excluding blanks/comments)
   "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
   // Keep functions under 150 lines (excluding blanks/comments)
-  "max-lines-per-function": [
-    "error",
-    { max: 150, skipBlankLines: true, skipComments: true },
-  ],
+  "max-lines-per-function": ["error", { max: 150, skipBlankLines: true, skipComments: true }],
 };
 
 // ── Disabled rules ─────────────────────────────────────────────────
@@ -452,10 +457,7 @@ export function vibeCheck(options) {
         "react/self-closing-comp": "error",
         "react/no-unknown-property": "error",
         "react/jsx-no-target-blank": "error",
-        "react/jsx-filename-extension": [
-          "error",
-          { extensions: [".tsx", ".jsx"] },
-        ],
+        "react/jsx-filename-extension": ["error", { extensions: [".tsx", ".jsx"] }],
         // Boolean props must start with is/has/should/can/did/will
         "react/boolean-prop-naming": "error",
         // <input checked> requires onChange or readOnly — prevents uncontrolled/controlled mismatch
@@ -529,33 +531,77 @@ export function vibeCheck(options) {
   // the react config already replaces this rule with the catch-only variant on
   // .tsx, which never had the `??` ban.
   const tsxRestrictedSyntaxNoNullish = [
-    { selector: "SwitchStatement > SwitchCase > ReturnStatement[argument=null]", message: "Switch case functions must provide an explicit return value. Default return values are not allowed." },
-    { selector: "SwitchStatement > SwitchCase > BlockStatement > ReturnStatement[argument=null]", message: "Switch case functions must provide an explicit return value. Default return values are not allowed." },
-    { selector: "SwitchStatement > SwitchCase[test=null]", message: "Default cases are not allowed in switch statements. Handle all possible cases explicitly." },
-    { selector: "SwitchStatement > SwitchCase ArrowFunctionExpression:not([returnType])", message: "Switch case arrow functions must have explicit return type annotations." },
-    { selector: "SwitchStatement > SwitchCase FunctionExpression:not([returnType])", message: "Switch case function expressions must have explicit return type annotations." },
-    { selector: "SwitchStatement > SwitchCase > BlockStatement ArrowFunctionExpression:not([returnType])", message: "Switch case arrow functions must have explicit return type annotations." },
-    { selector: "SwitchStatement > SwitchCase > BlockStatement FunctionExpression:not([returnType])", message: "Switch case function expressions must have explicit return type annotations." },
-    { selector: "FunctionDeclaration:has(SwitchStatement):not([returnType])", message: "Functions containing switch statements must have explicit return type annotations." },
-    { selector: "ArrowFunctionExpression:has(SwitchStatement):not([returnType])", message: "Arrow functions containing switch statements must have explicit return type annotations." },
-    { selector: "FunctionExpression:has(SwitchStatement):not([returnType])", message: "Function expressions containing switch statements must have explicit return type annotations." },
+    {
+      selector: "SwitchStatement > SwitchCase > ReturnStatement[argument=null]",
+      message:
+        "Switch case functions must provide an explicit return value. Default return values are not allowed.",
+    },
+    {
+      selector: "SwitchStatement > SwitchCase > BlockStatement > ReturnStatement[argument=null]",
+      message:
+        "Switch case functions must provide an explicit return value. Default return values are not allowed.",
+    },
+    {
+      selector: "SwitchStatement > SwitchCase[test=null]",
+      message:
+        "Default cases are not allowed in switch statements. Handle all possible cases explicitly.",
+    },
+    {
+      selector: "SwitchStatement > SwitchCase ArrowFunctionExpression:not([returnType])",
+      message: "Switch case arrow functions must have explicit return type annotations.",
+    },
+    {
+      selector: "SwitchStatement > SwitchCase FunctionExpression:not([returnType])",
+      message: "Switch case function expressions must have explicit return type annotations.",
+    },
+    {
+      selector:
+        "SwitchStatement > SwitchCase > BlockStatement ArrowFunctionExpression:not([returnType])",
+      message: "Switch case arrow functions must have explicit return type annotations.",
+    },
+    {
+      selector:
+        "SwitchStatement > SwitchCase > BlockStatement FunctionExpression:not([returnType])",
+      message: "Switch case function expressions must have explicit return type annotations.",
+    },
+    {
+      selector: "FunctionDeclaration:has(SwitchStatement):not([returnType])",
+      message: "Functions containing switch statements must have explicit return type annotations.",
+    },
+    {
+      selector: "ArrowFunctionExpression:has(SwitchStatement):not([returnType])",
+      message:
+        "Arrow functions containing switch statements must have explicit return type annotations.",
+    },
+    {
+      selector: "FunctionExpression:has(SwitchStatement):not([returnType])",
+      message:
+        "Function expressions containing switch statements must have explicit return type annotations.",
+    },
     ...AS_BAN_SELECTORS,
-    { selector: "PropertyDefinition[value]", message: "Class properties cannot have default values. Initialize properties in the constructor or through methods instead." },
-    { selector: "MemberExpression[object.type='MemberExpression'][object.object.name='process'][object.property.name='env']", message: "Direct access to process.env properties is not allowed. Use process.env as a whole object instead (e.g., validate(process.env))." },
-    { selector: "ExportNamedDeclaration:not([source]):not(:has(VariableDeclaration)):not(:has(FunctionDeclaration)):not(:has(ClassDeclaration)):not(:has(TSInterfaceDeclaration)):not(:has(TSTypeAliasDeclaration)):not(:has(TSEnumDeclaration))", message: 'Export specifier syntax "export { ... }" is not allowed. Use direct exports instead. And make sure to only use one export per file.' },
+    {
+      selector: "PropertyDefinition[value]",
+      message:
+        "Class properties cannot have default values. Initialize properties in the constructor or through methods instead.",
+    },
+    {
+      selector:
+        "MemberExpression[object.type='MemberExpression'][object.object.name='process'][object.property.name='env']",
+      message:
+        "Direct access to process.env properties is not allowed. Use process.env as a whole object instead (e.g., validate(process.env)).",
+    },
+    {
+      selector:
+        "ExportNamedDeclaration:not([source]):not(:has(VariableDeclaration)):not(:has(FunctionDeclaration)):not(:has(ClassDeclaration)):not(:has(TSInterfaceDeclaration)):not(:has(TSTypeAliasDeclaration)):not(:has(TSEnumDeclaration))",
+      message:
+        'Export specifier syntax "export { ... }" is not allowed. Use direct exports instead. And make sure to only use one export per file.',
+    },
   ];
 
   return [
     ...baseConfig,
     {
-      ignores: [
-        "node_modules/**",
-        "dist/**",
-        "build/**",
-        "out/**",
-        "*.mjs",
-        ...extraIgnores,
-      ],
+      ignores: ["node_modules/**", "dist/**", "build/**", "out/**", "*.mjs", ...extraIgnores],
     },
     {
       files: filePatterns,
@@ -732,8 +778,11 @@ export function vibeCheck(options) {
             rules: {
               "no-restricted-syntax": ["error", ...tsxRestrictedSyntaxNoNullish],
               "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
-              "max-lines-per-function": ["error", { max: 150, skipBlankLines: true, skipComments: true }],
-              "complexity": ["error", 25],
+              "max-lines-per-function": [
+                "error",
+                { max: 150, skipBlankLines: true, skipComments: true },
+              ],
+              complexity: ["error", 25],
               // The main enabledRules block only matches `.{ts,js}` when
               // react:false, so `.tsx` (e.g. backend schema files) would
               // otherwise escape no-shadow entirely. Re-assert it here.

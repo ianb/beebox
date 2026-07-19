@@ -15,6 +15,7 @@
 import * as fs from "node:fs/promises";
 import { fileExists } from "../../lib/file-exists.js";
 import * as path from "node:path";
+import { simpleGit } from "simple-git";
 import { getHead } from "../../lib/git.js";
 import { loadMapState, saveMapState, type MapState } from "./state.js";
 import type { MapTask } from "./precheck.js";
@@ -39,6 +40,47 @@ async function dirExists(absPath: string): Promise<boolean> {
     // stat failure (typically ENOENT) means the path is not a directory.
     return false;
   }
+}
+
+interface MapWasRewrittenOptions {
+  boxRoot: string;
+  task: MapTask;
+}
+
+/**
+ * Did the agent actually rewrite this task's MAP.md during this run?
+ *
+ * The file merely existing is not evidence: an `update` task's MAP.md already
+ * exists, untouched, so an existence check always passes and would stamp maps
+ * the agent never reached — silently marking stale listings current, which is
+ * exactly what this step's `whys` says the design must prevent.
+ *
+ * Evidence is instead "does the MAP.md differ from what it was at the brief's
+ * HEAD (`task.head`)". Two probes, because neither covers the whole space:
+ *
+ * - `git diff <task.head> -- <map>` catches a rewrite whether the agent
+ *   committed it or left it in the working tree, but is blind to a file git
+ *   isn't tracking yet.
+ * - `git status --porcelain -- <map>` catches exactly that case — a `create`
+ *   task's brand-new, still-untracked MAP.md.
+ *
+ * Both compare against the working tree rather than HEAD, because the procedure
+ * engine's `ensureGitClean` has not committed the agent's writes at the point
+ * finalize runs (`engine-run-phase.ts` runs the run shells before it).
+ *
+ * The pathspec is box-relative with no `gitBoxPrefix`: `git diff` and
+ * `git status` interpret pathspecs relative to the CWD, which is `boxRoot`
+ * here — unlike `ls-tree --full-tree` in `precheck-listing.ts`, which forces
+ * repo-root interpretation and therefore does need the prefix.
+ */
+async function mapWasRewritten(options: MapWasRewrittenOptions): Promise<boolean> {
+  const { boxRoot, task } = options;
+  const git = simpleGit(boxRoot);
+  const [diffed, statused] = await Promise.all([
+    git.diff(["--name-only", task.head, "--", task.map]),
+    git.raw(["status", "--porcelain", "--", task.map]),
+  ]);
+  return diffed.trim() !== "" || statused.trim() !== "";
 }
 
 
@@ -111,15 +153,23 @@ export interface FinalizeResult {
   skippedMissingDir: string[];
   /** Tasks whose MAP.md is still missing — agent didn't write one. */
   skippedMissingMap: string[];
+  /**
+   * Tasks whose MAP.md exists but is unchanged since the brief — the agent
+   * never got to them (typically it ran out of turns). Left unstamped so the
+   * next run picks them up.
+   */
+  skippedUnchanged: string[];
 }
 
 /**
  * Run the finalize step. Idempotent — safe to re-run if a previous
  * attempt was interrupted.
  *
- * Tasks whose MAP.md is still missing are *not* stamped, so a re-run
- * of the procedure will pick them up. This guards against agents
- * that exit without writing every promised MAP.md.
+ * Only tasks whose MAP.md was actually rewritten this run are stamped (see
+ * {@link mapWasRewritten}); the rest are left for a later run. That makes
+ * partial progress bank correctly: an agent that gets through half its tasks
+ * before running out of turns advances `asOf` for exactly that half, so the
+ * next run starts from where it stopped instead of repeating the whole brief.
  */
 export async function finalize(options: FinalizeOptions): Promise<FinalizeResult> {
   const { boxRoot, tasks } = options;
@@ -127,6 +177,7 @@ export async function finalize(options: FinalizeOptions): Promise<FinalizeResult
     applied: [],
     skippedMissingDir: [],
     skippedMissingMap: [],
+    skippedUnchanged: [],
   };
   if (tasks.length === 0) return result;
 
@@ -141,6 +192,10 @@ export async function finalize(options: FinalizeOptions): Promise<FinalizeResult
     const mapAbs = path.join(boxRoot, task.map);
     if (!(await fileExists(mapAbs))) {
       result.skippedMissingMap.push(task.dir);
+      continue;
+    }
+    if (!(await mapWasRewritten({ boxRoot, task }))) {
+      result.skippedUnchanged.push(task.dir);
       continue;
     }
     await ensureClaudeMdInDir(boxRoot, task.dir);

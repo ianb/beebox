@@ -137,10 +137,7 @@ function collectStringFragments(expr) {
     return out;
   }
   if (expr.type === "ConditionalExpression") {
-    return [
-      ...collectStringFragments(expr.consequent),
-      ...collectStringFragments(expr.alternate),
-    ];
+    return [...collectStringFragments(expr.consequent), ...collectStringFragments(expr.alternate)];
   }
   if (expr.type === "LogicalExpression") {
     // For `&&` / `||` / `??`, the right side is what ends up assigned when the

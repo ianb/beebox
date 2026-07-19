@@ -16,7 +16,7 @@
  * `ComposerRegion`, a leaf that isn't an ancestor of the companion pane.
  */
 
-import { useRef, useCallback, useSyncExternalStore } from "react";
+import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
 import { useEmissionStore } from "./input-store";
@@ -79,11 +79,43 @@ export function useChatAttachmentValues(): { attachments: ImageItem[]; pendingIm
   return { attachments, pendingImageCount, fileAttachments };
 }
 
+/**
+ * Fills `ensureComposerVisibleRef` with the "make the composer text surface
+ * visible" action: on the mobile button bar — which has no textarea and no
+ * send button — a token insert would otherwise land in a hidden store with
+ * no way to submit it, so it opens typing mode. On desktop the inline
+ * textarea is always visible, and during dictation the mic row (whose send
+ * sweeps pending attachments) is already on screen — both no-ops.
+ *
+ * A ref, assigned here and read by `useChatAttachments`, breaks the
+ * attach → dispatch → voice ordering cycle (this needs `isTranscribing`,
+ * which exists only after the voice hook runs) — same pattern as
+ * `clearDraftRef`.
+ */
+export function useEnsureComposerVisible(opts: {
+  ensureComposerVisibleRef: React.MutableRefObject<() => void>;
+  isTranscribing: boolean;
+  setTypingMode: (v: boolean) => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+}): void {
+  const { ensureComposerVisibleRef, isTranscribing, setTypingMode, textareaRef } = opts;
+  useEffect(() => {
+    ensureComposerVisibleRef.current = () => {
+      if (isTranscribing) return;
+      const ta = textareaRef.current;
+      if (ta !== null && ta.offsetParent !== null) return; // desktop composer is visible
+      setTypingMode(true);
+    };
+  });
+}
+
 export function useChatAttachments(opts: {
   emissionStore: EmissionStore;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  /** Opens the mobile typing row when a token insert happens with no visible composer (see useEnsureComposerVisible). */
+  ensureComposerVisibleRef: React.MutableRefObject<() => void>;
 }) {
-  const { emissionStore, textareaRef } = opts;
+  const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,10 +154,11 @@ export function useChatAttachments(opts: {
     if (newItems.length === 0) return 0;
     const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
     insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });
+    ensureComposerVisibleRef.current();
     // Count actually added — the screenshot path toasts when this is 0
     // (a single-file capture that failed processing).
     return newItems.length;
-  }, [editor, emissionStore, textareaRef]);
+  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef]);
 
   const removeAttachment = useCallback((id: number) => {
     const target = emissionStore.get().images.find((a) => a.id === id);
@@ -167,7 +200,8 @@ export function useChatAttachments(opts: {
     // trailing space so the user can keep typing after the token.
     const tokens = newItems.map((f) => `[file${f.id}]`).join(" ");
     insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: true });
-  }, [editor, emissionStore, textareaRef]);
+    ensureComposerVisibleRef.current();
+  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);

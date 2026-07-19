@@ -16,6 +16,7 @@ import { simpleGit } from "simple-git";
 import { gitBoxPrefix } from "../../lib/git.js";
 import { isIgnored, joinChildPath } from "./precheck-ignore.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { ok, err, type Result } from "../../lib/result.js";
 
 /**
  * Recursively list every directory in the box that should have a MAP.md.
@@ -86,13 +87,55 @@ interface ListChildrenAtCommitOptions {
   patterns: readonly string[];
 }
 
+/** Why a listing at a commit could not be produced. */
+export interface ListingUnavailable {
+  reason: "commit_unresolvable";
+  commit: string;
+}
+
+/**
+ * Does `commit` resolve to a commit object in this repo?
+ *
+ * The discriminator that lets {@link listChildrenAtCommit} tell "the path
+ * wasn't there at that commit" from "that commit is gone". `git ls-tree`
+ * cannot: in the `<rev>:<path>` form both cases exit 128 with a byte-identical
+ * `fatal: Not a valid object name <rev>:<path>`, so neither the exit code nor
+ * the message can separate them. An affirmative `rev-parse --verify` can, and
+ * doesn't depend on parsing human-readable git output.
+ */
+async function commitResolves(boxRoot: string, commit: string): Promise<boolean> {
+  let out: string;
+  try {
+    out = await simpleGit(boxRoot).raw(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`]);
+  } catch (_e) {
+    // Non-zero exit is the answer we asked for, not a failure: this commit
+    // does not resolve. The caller turns that into a typed `err`.
+    return false;
+  }
+  // `--quiet` keeps a routine miss off stderr, but simple-git decides whether
+  // to throw by *inspecting* stderr — so with it, a failed lookup resolves to
+  // an empty string rather than raising. The printed hash is the real signal;
+  // trusting the absence of a throw would report every bad commit as valid.
+  return out.trim() !== "";
+}
+
 /**
  * Get immediate children of dirRel at the given commit. Names ending in "/"
  * are subdirectories; everything else is a file. Returns sorted; meta files
  * and ignored names are filtered out.
+ *
+ * Returns an `err` only when `commit` itself doesn't resolve. A resolvable
+ * commit whose tree simply lacks `dirRel` yields `ok([])` — that's a real,
+ * ordinary answer (the directory was added later), and treating it as an empty
+ * listing is correct rather than a guess.
  */
-export async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): Promise<string[]> {
+export async function listChildrenAtCommit(
+  opts: ListChildrenAtCommitOptions,
+): Promise<Result<string[], ListingUnavailable>> {
   const { boxRoot, dirRel, commit, patterns } = opts;
+  if (!(await commitResolves(boxRoot, commit))) {
+    return err({ reason: "commit_unresolvable", commit });
+  }
   // `<commit>:<path>` is interpreted relative to the CWD when git runs inside a
   // subdirectory of the repo. On a v2 box the box root (`content/`) is exactly
   // such a subdir, so `<commit>:store` would resolve to `content/content/store`
@@ -106,12 +149,12 @@ export async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): P
   let raw: string;
   try {
     raw = await simpleGit(boxRoot).raw(["ls-tree", "--full-tree", ref]);
-  } catch (e) {
-    // ls-tree fails when the dir didn't exist at this commit (e.g. comparing
-    // against an older asOf where the path was absent). Treat as empty listing
-    // so the diff still reports the right added/deleted set.
-    console.debug(`git ls-tree ${ref} failed, treating as empty listing:`, e);
-    return [];
+  } catch (_e) {
+    // The commit resolves (checked above), so the only remaining reason
+    // ls-tree can fail on `<commit>:<path>` is that the path wasn't in that
+    // commit's tree — the directory was added later. An empty listing is the
+    // correct answer here, not a fallback.
+    return ok([]);
   }
   const items: string[] = [];
   for (const line of raw.split("\n")) {
@@ -125,7 +168,7 @@ export async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): P
     if (isIgnored({ patterns, relPath: joinChildPath(dirRel, name), isFile })) continue;
     items.push(isFile ? name : `${name}/`);
   }
-  return items.toSorted();
+  return ok(items.toSorted());
 }
 
 interface ListChildrenOnDiskOptions {

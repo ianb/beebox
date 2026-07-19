@@ -1,6 +1,7 @@
 ---
 title: "web push followup testing"
 area: callback-box
+needs: [manual-testing]
 design: ../callback-box/docs/implemented-plans/web-push-notifications.md
 filed-by: agent
 discovered-in: worktree-web-push — while shipping Web Push (tracks A–E)

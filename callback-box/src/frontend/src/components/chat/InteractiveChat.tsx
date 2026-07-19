@@ -21,10 +21,10 @@ import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
 import { useRecoveredDictation } from "./InteractiveChat-recovery";
-import { ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
+import { ChatLoading, ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
-import { useChatAttachments } from "./InteractiveChat-attachments";
+import { useChatAttachments, useEnsureComposerVisible } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
 import { useChatWs } from "./InteractiveChat-ws";
@@ -157,11 +157,15 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // The one user-send funnel: every send site builds an Emission and lands
   // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly
   // and witness capture live in InteractiveChat-dispatch.ts.
-  const attach = useChatAttachments({ emissionStore, textareaRef });
+  // Assigned by useEnsureComposerVisible below (it needs voice state) — the
+  // same ref pattern as clearDraftRef.
+  const ensureComposerVisibleRef = useRef<() => void>(() => {});
+  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef });
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
+    resetAttachments: attach.resetAttachments,
   });
   // useChatVoice/useChatActions only ever fire-and-forget dispatchEmission
   // (its Promise<Receipt> is for callers that want to await the outcome,
@@ -179,8 +183,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
+    emissionStore, resetAttachments: attach.resetAttachments,
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
   });
+  useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
   // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
   const { recoveredDictation } = useRecoveredDictation({
@@ -222,13 +228,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     setScrollToBottomTrigger, dispatchEmission: dispatchEmissionVoid,
   });
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center text-warm-500">
-        Loading chat...
-      </div>
-    );
-  }
+  if (isLoading) return <ChatLoading />;
 
   return (
     <InputStoreProvider value={inputStore}>

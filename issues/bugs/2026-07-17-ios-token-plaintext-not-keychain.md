@@ -20,3 +20,11 @@ First raised (as I6) in the 2026-07-09 review; still open as of 2026-07-17.
 
 Fix direction: move `authToken` storage to Keychain (with an appropriate accessibility class), migrating
 existing plaintext entries on first launch after the change.
+
+**2026-07-19 (worktree-mobile-token-handshake):** re-confirmed while mapping the iOS auth surface —
+`Keychain`/`kSec*`/`SecItem` still return zero matches across every `.swift` file. One constraint for
+whoever picks this up: the accessibility class can't be `WhenUnlocked`. `CaptureUploadCoordinator`
+performs background uploads that need the token while the device is locked, so it has to be at least
+`kSecAttrAccessibleAfterFirstUnlock`. Note the `?mobileToken=` URL issue this cross-references is now
+closed — the token is off the wire, which shrinks the exposure but doesn't touch storage at rest.
+Related: [device tokens still never expire](../code-quality/2026-07-19-mobile-device-token-no-expiry.md).

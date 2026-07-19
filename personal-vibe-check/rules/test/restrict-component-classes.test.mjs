@@ -180,28 +180,16 @@ describe("restrict-component-classes", () => {
         ),
 
         // matchAll off (default): native div with disallowed class is NOT checked
-        valid(
-          `<div className="text-red-500 bg-plum shadow-lg" />`,
-          [{ components: ["./ui/**"] }],
-        ),
+        valid(`<div className="text-red-500 bg-plum shadow-lg" />`, [{ components: ["./ui/**"] }]),
 
         // matchAll on: allowed tokens on a native element pass
-        valid(
-          `<div className="mb-4 flex-1 w-full" />`,
-          [{ matchAll: true }],
-        ),
+        valid(`<div className="mb-4 flex-1 w-full" />`, [{ matchAll: true }]),
 
         // matchAll on: dynamic className on a native element is skipped
-        valid(
-          `export const X = ({ cls }) => <div className={cls} />;`,
-          [{ matchAll: true }],
-        ),
+        valid(`export const X = ({ cls }) => <div className={cls} />;`, [{ matchAll: true }]),
 
         // matchAll on: element with no className prop is ignored
-        valid(
-          `<div />`,
-          [{ matchAll: true }],
-        ),
+        valid(`<div />`, [{ matchAll: true }]),
       ],
 
       invalid: [

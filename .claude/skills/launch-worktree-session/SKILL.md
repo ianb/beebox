@@ -69,7 +69,25 @@ briefing.
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
    Ask the human if a good name isn't obvious from the discussion.
 
-3. **Draft the briefing and launch it.** Write the briefing directly and
+3. **Pick a model, and say which.** Match the model to the scope of the work,
+   and always pass `--model` explicitly — omitting it inherits whatever the
+   boxholder's saved default happens to be, which decides this by accident.
+
+   - **Fable** (`claude-fable-5`) — larger, more ambiguous, or harder work: a
+     feature, a refactor with design choices left open, anything spanning
+     several subsystems, anything where the right approach isn't settled yet.
+     Security and data-shape changes usually land here.
+   - **Opus** (`opus`) — unambiguous or clerical work: a known fix with a known
+     shape, a mechanical pass, cleanup, a change whose scope the briefing can
+     already state completely.
+
+   Judge by how much is *undecided*, not by how many files move. A ten-file
+   rename is clerical; a two-file change resting on an unresolved design
+   question is not. When it's genuinely borderline, say which way you're
+   leaning and why — the boxholder cares about reserving Fable for work that
+   needs it.
+
+4. **Draft the briefing and launch it.** Write the briefing directly and
    invoke the command — don't pre-review the briefing with the human in
    the current session. The whole point of the launched session is that
    *it* is where discussion, clarification, and approval happen. Pre-
@@ -85,7 +103,7 @@ briefing.
    quoting issues:
 
    ```bash
-   bin/launch-worktree-session <worktree-name> - <<'EOF'
+   bin/launch-worktree-session --model <model> <worktree-name> - <<'EOF'
    <briefing text — see "What the briefing is" above>
    EOF
    ```
@@ -98,8 +116,9 @@ briefing.
    briefing. Use `<<EOF` (unquoted) only if you intentionally want to
    interpolate variables.
 
-4. **Tell the human what happened.** One line: worktree name, where it
-   opened (new tab in Terminal.app), and that they can now switch over.
+5. **Tell the human what happened.** One line: worktree name, **which model**,
+   where it opened (new tab in Terminal.app), and that they can now switch
+   over. Naming the model lets them redirect before the session gets far.
 
 ## Script details
 
@@ -124,9 +143,13 @@ bin/launch-worktree-session --model <model> <name> @<file>   # run on a specific
 ```
 
 Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin the
-worktree up on a specific model — use it when the boxholder asks for a
-particular model (e.g. a Fable session, which then follows the
-delegate-and-Codex-review guidance in the root CLAUDE.md). Omit for the default.
+worktree up on a specific model. **Always pass it** — see "Pick a model" in the
+Flow. Omitting it silently inherits the boxholder's saved default, which is how
+a big ambiguous task ends up on a clerical-work model.
+
+A Fable session then follows the delegate-and-Codex-review guidance in the root
+CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
+just a stronger single pass.
 
 It opens a new tab in the front Terminal.app window (or a new window if
 none is open), `cd`s into the monorepo, and runs `claude --worktree <name>
@@ -173,3 +196,6 @@ think first, not act.
   new agent treats the briefing as a go-signal.
 - **Launching before the human confirms.** Even if the discussion clearly
   pointed at "spin this off", wait for the explicit cue.
+- **Omitting `--model`.** The launched session then inherits whatever default
+  is saved, so the scope-to-model match happens by luck. Choose, pass it, and
+  name it in the handoff line.
