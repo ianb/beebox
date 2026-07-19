@@ -44,7 +44,10 @@ best finished in a fresh session. Full design + security review:
 
 ## What remains
 
-1. ~~**`cb pub setup`**~~ DONE (plus `cb pub status`): implemented behind an
+1. ~~**`cb pub setup`**~~ DONE (plus `cb pub status`) — merged to `main` in
+   `0597b59f` (`feat(publish): cb pub setup + cb pub status behind an
+   injectable Cloudflare client (Track E)`, via `worktree-agent-ab7a0f30e32308676`).
+   Implemented behind an
    injectable `CloudflareProvisioningClient` (`src/services/cloudflare-provisioning.ts`,
    fake for tests) + an injectable wrangler-deploy runner (`src/publish/setup.ts`);
    status logic in `src/publish/status.ts` with a `/__version` drift probe (the Worker
