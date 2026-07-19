@@ -36,6 +36,15 @@ export interface Env {
    */
   ACCESS_AUD: string | undefined;
   /**
+   * Build-stamped Worker version (Track E drift detection): `cb pub setup`
+   * injects the content hash of the committed Worker source at deploy time
+   * (`--var PUB_WORKER_VERSION:<hash>`), and `GET /__version` echoes it so
+   * `cb pub status` can flag drift between committed and deployed code. A
+   * static, box-free string — safe to serve unauthenticated. Empty/absent ⇒
+   * the Worker was deployed outside `cb pub setup` and reports `unversioned`.
+   */
+  PUB_WORKER_VERSION: string | undefined;
+  /**
    * OPTIONAL per-IP rate limiter for `POST /__submit/` (Track F). Absent in the
    * test pool and in boxes that haven't provisioned it — the submit endpoint
    * skips per-IP limiting when it's `undefined` and leans on the daily cap plus
