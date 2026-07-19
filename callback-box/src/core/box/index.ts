@@ -12,6 +12,7 @@ import { getBoxShape } from "../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
+import { assetGitignorePatterns } from "../commands/attachments-gitignore.js";
 import {
   installSchemasGuide,
   installTricksFiles,
@@ -176,22 +177,7 @@ tmp/
 # cb-assets (managed by cb attachments init-gitignore)
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
 # (size + sha256), not committed directly. See docs/asset-manifests.md.
-**/*.attach/**/*.jpg
-**/*.attach/**/*.jpeg
-**/*.attach/**/*.png
-**/*.attach/**/*.webp
-**/*.attach/**/*.avif
-**/*.attach/**/*.heic
-**/*.attach/**/*.tif
-**/*.attach/**/*.tiff
-**/*.attach/**/*.gif
-**/*.attach/**/*.webm
-**/*.attach/**/*.mp3
-**/*.attach/**/*.m4a
-**/*.attach/**/*.wav
-**/*.attach/**/*.pdf
-**/*.attach/**/*.mp4
-**/*.attach/**/*.mov
+${assetGitignorePatterns()}
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
 

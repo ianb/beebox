@@ -43,25 +43,47 @@ const GITIGNORE_BLOCK_MARKER = "# cb-assets (managed by cb attachments init-giti
 /** Older marker the box may have if it was initialized before the rename. */
 const LEGACY_GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attachments init-gitignore)";
 
+/**
+ * Extensions ignored inside `.attach/` scopes. THE list — the box scaffold's
+ * `.gitignore` (core/box/index.ts) renders this same array, so a new asset type
+ * is added here once rather than in two places that quietly drift.
+ *
+ * Nothing keys asset *identity* off this list: `listScopeBinaries` manifests
+ * every non-`.card` file in a scope regardless of extension. This only decides
+ * what git skips, so an omission here means the bytes get committed directly —
+ * which is how frozen web pages (`page.frozen`, up to 41MB apiece) ended up in
+ * box history before 2026-07-19.
+ */
+export const ASSET_GITIGNORE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "avif",
+  "heic",
+  "tif",
+  "tiff",
+  "gif",
+  "webm",
+  "mp3",
+  "m4a",
+  "wav",
+  "pdf",
+  "mp4",
+  "mov",
+  // Frozen web-page snapshots captured by callback-clerk.
+  "frozen",
+];
+
+/** The `.gitignore` lines for {@link ASSET_GITIGNORE_EXTENSIONS}. */
+export function assetGitignorePatterns(): string {
+  return ASSET_GITIGNORE_EXTENSIONS.map((ext) => `**/*.attach/**/*.${ext}`).join("\n");
+}
+
 const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
 # (size + sha256), not committed directly. See docs/asset-manifests.md.
-**/*.attach/**/*.jpg
-**/*.attach/**/*.jpeg
-**/*.attach/**/*.png
-**/*.attach/**/*.webp
-**/*.attach/**/*.avif
-**/*.attach/**/*.heic
-**/*.attach/**/*.tif
-**/*.attach/**/*.tiff
-**/*.attach/**/*.gif
-**/*.attach/**/*.webm
-**/*.attach/**/*.mp3
-**/*.attach/**/*.m4a
-**/*.attach/**/*.wav
-**/*.attach/**/*.pdf
-**/*.attach/**/*.mp4
-**/*.attach/**/*.mov
+${assetGitignorePatterns()}
 `;
 
 /**
