@@ -11,10 +11,12 @@ draft chunk, and Track 3's first editor/image chunk are implemented: canonical
 V2 encoding/decoding and shared fixtures; a box-scoped `ComposerDraftStore`;
 atomic, quarantining manifests; one-shot text migration; reducer/token/Unicode-
 caret coverage; a caret-aware, autosizing `UITextView`; and file-backed camera
-and Photos images with stable IDs and no arbitrary count cap. Files, paste,
-screenshot, upload/failure UI, command delivery into the store, and Tracks 4-6
-remain; automated coverage and the real-device acceptance matrix in Track 6
-are required before this plan ships.
+and Photos images with stable IDs and no arbitrary count cap. Track 3 also has
+Files import with the existing authenticated upload route, durable upload
+failure/retry state, Paste Image, and visible-webview Screenshot acquisition.
+Granular upload progress, image processing/retry UI, command delivery into the
+store, and Tracks 4-6 remain; automated coverage and the real-device acceptance
+matrix in Track 6 are required before this plan ships.
 
 ## Stated preferences this plan trades against
 

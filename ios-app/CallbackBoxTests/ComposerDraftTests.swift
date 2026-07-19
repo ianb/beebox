@@ -148,7 +148,42 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
         XCTAssertTrue(store.draft.images.isEmpty)
         XCTAssertFalse(store.draft.text.contains("[image4]"))
-        XCTAssertEqual(store.restoreNotice, "Some draft images were missing and were removed.")
+        XCTAssertEqual(store.restoreNotice, "Some draft attachments were missing and were removed.")
+    }
+
+    @MainActor
+    func testFileImportUploadAndEmissionSurviveRelaunch() async throws {
+        let suite = "ComposerDraftFile.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let sourceURL = rootURL.appendingPathComponent("report.pdf")
+        let payload = Data("report".utf8)
+        try payload.write(to: sourceURL)
+        let repository = ComposerDraftRepository(rootURL: rootURL.appendingPathComponent("drafts"))
+        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        await store.activate(boxID: boxID)
+
+        let imported = await store.addFile(
+            from: sourceURL,
+            originalName: "report.pdf",
+            mimeType: "application/pdf",
+            size: payload.count
+        )
+        let file = try XCTUnwrap(imported)
+        await store.setFileState(id: file.id, state: .uploading(progress: 0.5), boxID: boxID)
+        await store.markFileUploaded(id: file.id, upload: UploadedChatFile(
+            path: "tmp/report.pdf",
+            originalName: "report.pdf",
+            size: payload.count,
+            mimetype: "application/pdf"
+        ), boxID: boxID)
+
+        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunched.activate(boxID: boxID)
+        let emitted = try relaunched.emissionFiles(from: relaunched.draft)
+        XCTAssertEqual(emitted.map(\.path), ["tmp/report.pdf"])
+        XCTAssertEqual(relaunched.draft.text, "[file1]")
     }
 
     @MainActor

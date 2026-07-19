@@ -7,8 +7,12 @@ struct ComposerActionsView: View {
     @Binding var selectedPhotoItems: [PhotosPickerItem]
     var canCapture: Bool
     var canTakePhoto: Bool
+    var canPasteImage: Bool
     var onCapture: () -> Void
     var onTakePhoto: () -> Void
+    var onPasteImage: () -> Void
+    var onChooseFile: () -> Void
+    var onScreenshot: () -> Void
     var onShareLocation: () -> Void
     var onPairBox: () -> Void
     var onDismiss: () -> Void
@@ -41,6 +45,19 @@ struct ComposerActionsView: View {
                         matching: .images
                     ) {
                         Label("Choose Photos", systemImage: "photo.on.rectangle")
+                    }
+
+                    Button(action: onPasteImage) {
+                        Label("Paste Image", systemImage: "doc.on.clipboard")
+                    }
+                    .disabled(canPasteImage == false)
+
+                    Button(action: onChooseFile) {
+                        Label("Choose File", systemImage: "doc")
+                    }
+
+                    Button(action: onScreenshot) {
+                        Label("Screenshot", systemImage: "rectangle.dashed.badge.record")
                     }
 
                     Button(action: onShareLocation) {

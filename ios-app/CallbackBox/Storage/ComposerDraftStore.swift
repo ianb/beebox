@@ -3,6 +3,9 @@ import Foundation
 
 @MainActor
 final class ComposerDraftStore: ObservableObject {
+    enum DraftError: Error {
+        case incompleteFile
+    }
     @Published private(set) var draft = ComposerDraft.empty
     @Published private(set) var restoreNotice: String?
 
@@ -30,12 +33,28 @@ final class ComposerDraftStore: ObservableObject {
         do {
             if var restored = try await repository.load(boxID: boxID) {
                 let missingImageIDs = await repository.missingImageIDs(restored.images, boxID: boxID)
+                let missingFileIDs = await repository.missingFileIDs(restored.files, boxID: boxID)
                 for id in missingImageIDs {
                     ComposerDraftReducer.reduce(&restored, .removeImage(id))
                 }
+                for id in missingFileIDs {
+                    ComposerDraftReducer.reduce(&restored, .removeFile(id))
+                }
+                var interruptedUpload = false
+                for var file in restored.files {
+                    guard case .uploading = file.state else {
+                        continue
+                    }
+                    interruptedUpload = true
+                    file.state = .failed(message: "Upload was interrupted. Retry when connected.")
+                    ComposerDraftReducer.reduce(&restored, .updateFile(file))
+                }
                 draft = restored
-                if missingImageIDs.isEmpty == false {
-                    restoreNotice = "Some draft images were missing and were removed."
+                if missingImageIDs.isEmpty == false || missingFileIDs.isEmpty == false {
+                    restoreNotice = "Some draft attachments were missing and were removed."
+                    await flush()
+                } else if interruptedUpload {
+                    restoreNotice = "An interrupted file upload is ready to retry."
                     await flush()
                 }
                 return
@@ -102,6 +121,99 @@ final class ComposerDraftStore: ObservableObject {
         }
     }
 
+    func addFile(
+        from sourceURL: URL,
+        originalName: String,
+        mimeType: String,
+        size: Int
+    ) async -> DraftFile? {
+        guard let activeBoxID else {
+            return nil
+        }
+        let sourceExtension = sourceURL.pathExtension.lowercased().filter { $0.isLetter || $0.isNumber }
+        let suffix = sourceExtension.isEmpty ? "" : ".\(sourceExtension)"
+        let filename = "file-\(UUID().uuidString.lowercased())\(suffix)"
+        do {
+            try await repository.importPayload(from: sourceURL, filename: filename, boxID: activeBoxID)
+            guard self.activeBoxID == activeBoxID else {
+                try? await repository.removePayload(filename: filename, boxID: activeBoxID)
+                return nil
+            }
+            let file = DraftFile(
+                id: draft.nextFileID,
+                filename: filename,
+                originalName: originalName,
+                size: size,
+                mimetype: mimeType,
+                state: .local
+            )
+            ComposerDraftReducer.reduce(&draft, .addFile(file))
+            await flush()
+            return file
+        } catch {
+            restoreNotice = "File could not be saved."
+            return nil
+        }
+    }
+
+    func fileData(for file: DraftFile, boxID: UUID) async -> Data? {
+        try? await repository.loadPayload(filename: file.filename, boxID: boxID)
+    }
+
+    func setFileState(id: Int, state: DraftTransferState, boxID: UUID) async {
+        if activeBoxID == boxID {
+            guard var file = draft.files.first(where: { $0.id == id }) else {
+                return
+            }
+            file.state = state
+            ComposerDraftReducer.reduce(&draft, .updateFile(file))
+            await flush()
+            return
+        }
+        guard var stored = try? await repository.load(boxID: boxID),
+              var file = stored.files.first(where: { $0.id == id }) else {
+            return
+        }
+        file.state = state
+        ComposerDraftReducer.reduce(&stored, .updateFile(file))
+        try? await repository.save(stored, boxID: boxID)
+    }
+
+    func markFileUploaded(id: Int, upload: UploadedChatFile, boxID: UUID) async {
+        if activeBoxID == boxID {
+            guard var file = draft.files.first(where: { $0.id == id }) else {
+                return
+            }
+            apply(upload, to: &file)
+            ComposerDraftReducer.reduce(&draft, .updateFile(file))
+            await flush()
+            return
+        }
+        guard var stored = try? await repository.load(boxID: boxID),
+              var file = stored.files.first(where: { $0.id == id }) else {
+            return
+        }
+        apply(upload, to: &file)
+        ComposerDraftReducer.reduce(&stored, .updateFile(file))
+        try? await repository.save(stored, boxID: boxID)
+    }
+
+    private func apply(_ upload: UploadedChatFile, to file: inout DraftFile) {
+        file.originalName = upload.originalName
+        file.size = upload.size
+        file.mimetype = upload.mimetype
+        file.state = .uploaded(path: upload.path)
+    }
+
+    func removeFile(id: Int) async {
+        guard let activeBoxID, let file = draft.files.first(where: { $0.id == id }) else {
+            return
+        }
+        ComposerDraftReducer.reduce(&draft, .removeFile(id))
+        await flush()
+        try? await repository.removePayload(filename: file.filename, boxID: activeBoxID)
+    }
+
     func imageData(for image: DraftImage) async -> Data? {
         guard let activeBoxID else {
             return nil
@@ -111,6 +223,21 @@ final class ComposerDraftStore: ObservableObject {
 
     func emissionImages(from snapshot: ComposerDraft, boxID: UUID) async throws -> [ChatImageAttachment] {
         try await repository.emissionImages(snapshot.images, boxID: boxID)
+    }
+
+    func emissionFiles(from snapshot: ComposerDraft) throws -> [NativeEmissionFile] {
+        try snapshot.files.map { file in
+            guard case .uploaded(let path) = file.state else {
+                throw DraftError.incompleteFile
+            }
+            return NativeEmissionFile(
+                id: file.id,
+                path: path,
+                originalName: file.originalName,
+                size: file.size,
+                mimetype: file.mimetype
+            )
+        }
     }
 
     func clearForSending(boxID: UUID) async {
@@ -133,6 +260,7 @@ final class ComposerDraftStore: ObservableObject {
 
     func discard(_ snapshot: ComposerDraft, boxID: UUID) async {
         await repository.removePayloads(for: snapshot.images, boxID: boxID)
+        await repository.removePayloads(for: snapshot.files, boxID: boxID)
     }
 
     func discardCurrentDraft() async {

@@ -280,4 +280,21 @@ final class CameraImageEncoderTests: XCTestCase {
         XCTAssertEqual(decoded.imageOrientation, .up)
         XCTAssertEqual(decoded.size, rotated.size)
     }
+
+    func testComposerImagesDownscaleAndPreservePNGEncoding() throws {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        let source = UIGraphicsImageRenderer(size: CGSize(width: 2_000, height: 1_000), format: format).image { context in
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 1_000, height: 1_000))
+        }
+
+        let encoded = try XCTUnwrap(ComposerImageEncoder.encode(image: source, sourceMimeType: "image/png"))
+        let decoded = try XCTUnwrap(UIImage(data: encoded.data))
+
+        XCTAssertEqual(encoded.mimeType, "image/png")
+        XCTAssertEqual(encoded.fileExtension, "png")
+        XCTAssertEqual(decoded.size, CGSize(width: 1_920, height: 960))
+    }
 }

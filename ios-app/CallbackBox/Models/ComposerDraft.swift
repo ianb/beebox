@@ -89,6 +89,7 @@ enum ComposerDraftMutation: Equatable, Sendable {
     case addImage(DraftImage)
     case addFile(DraftFile)
     case addSelection(DraftSelection)
+    case updateFile(DraftFile)
     case removeImage(Int)
     case removeFile(Int)
     case removeSelection(Int)
@@ -118,6 +119,11 @@ enum ComposerDraftReducer {
             if selection.anchor == nil {
                 insertToken("[selection\(selection.id)]", into: &draft)
             }
+        case .updateFile(let file):
+            guard let index = draft.files.firstIndex(where: { $0.id == file.id }) else {
+                return
+            }
+            draft.files[index] = file
         case .removeImage(let id):
             draft.images.removeAll { $0.id == id }
             removeToken("[image\(id)]", from: &draft)

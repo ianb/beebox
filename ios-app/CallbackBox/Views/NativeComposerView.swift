@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 import UIKit
 
 struct NativeComposerView: View {
@@ -8,8 +9,10 @@ struct NativeComposerView: View {
     var captureAvailable: Bool
     var emissionReceipt: NativeEmissionReceipt?
     var locationShareResult: NativeLocationShareResult?
+    var screenshotResult: NativeScreenshotResult?
     var onSendEmission: (NativeChatEmission) -> Void
     var onShareLocation: () -> Void
+    var onTakeScreenshot: () -> Void
 
     @EnvironmentObject private var store: PairedBoxStore
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
@@ -24,6 +27,7 @@ struct NativeComposerView: View {
     @State private var showingPairing = false
     @State private var showingCamera = false
     @State private var showingCapture = false
+    @State private var showingFileImporter = false
     @StateObject private var dictation = SpeechDictation()
 
     var body: some View {
@@ -39,6 +43,15 @@ struct NativeComposerView: View {
                 ImageAttachmentStrip(images: draftStore.draft.images, draftStore: draftStore)
                     .padding(.horizontal, 14)
                     .padding(.top, 10)
+            }
+            if draftStore.draft.files.isEmpty == false {
+                FileAttachmentList(
+                    files: draftStore.draft.files,
+                    onRetry: retryFile,
+                    onRemove: removeFile
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
             }
 
             HStack(alignment: .bottom, spacing: 10) {
@@ -109,6 +122,19 @@ struct NativeComposerView: View {
             }
             statusText = result.message
         }
+        .onChange(of: screenshotResult) { _, result in
+            guard let result else {
+                return
+            }
+            guard let data = result.data else {
+                statusText = result.message ?? "The visible chat could not be captured."
+                return
+            }
+            Task {
+                await appendImage(data: data, sourceMimeType: "image/png")
+                statusText = nil
+            }
+        }
         .onDisappear {
             dictation.stop()
         }
@@ -117,8 +143,12 @@ struct NativeComposerView: View {
                 selectedPhotoItems: $selectedPhotoItems,
                 canCapture: captureAvailable,
                 canTakePhoto: UIImagePickerController.isSourceTypeAvailable(.camera),
+                canPasteImage: UIPasteboard.general.hasImages,
                 onCapture: openCapture,
                 onTakePhoto: openCamera,
+                onPasteImage: pasteImage,
+                onChooseFile: openFileImporter,
+                onScreenshot: takeScreenshot,
                 onShareLocation: shareLocation,
                 onPairBox: openPairing,
                 onDismiss: { showingActions = false }
@@ -141,6 +171,18 @@ struct NativeComposerView: View {
         .fullScreenCover(isPresented: $showingCapture) {
             NativeCaptureScreen(box: box)
         }
+        .fileImporter(
+            isPresented: $showingFileImporter,
+            allowedContentTypes: [.data, .content],
+            allowsMultipleSelection: true
+        ) { result in
+            guard case .success(let urls) = result else {
+                return
+            }
+            Task {
+                await importFiles(urls)
+            }
+        }
     }
 
     private var textEntry: some View {
@@ -161,8 +203,8 @@ struct NativeComposerView: View {
             )
         }
         .frame(height: editorHeight)
-            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-            .allowsHitTesting(isSending == false)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        .allowsHitTesting(isSending == false)
     }
 
     @ViewBuilder
@@ -186,6 +228,7 @@ struct NativeComposerView: View {
                 backgroundStyle: Color.accentColor,
                 action: send
             )
+            .disabled(sendDisabled)
         } else if draftStore.draft.images.isEmpty == false {
             HStack(spacing: 10) {
                 microphoneButton
@@ -196,6 +239,7 @@ struct NativeComposerView: View {
                     backgroundStyle: Color.accentColor,
                     action: send
                 )
+                .disabled(sendDisabled)
             }
         } else {
             microphoneButton
@@ -349,11 +393,13 @@ struct NativeComposerView: View {
         Task {
             do {
                 let attachments = try await draftStore.emissionImages(from: snapshot, boxID: sendingBoxID)
+                let files = try draftStore.emissionFiles(from: snapshot)
                 let emission = NativeChatEmission(
                     text: text,
                     origin: origin,
                     diarized: diarized,
-                    images: attachments
+                    images: attachments,
+                    files: files
                 )
                 await draftStore.clearForSending(boxID: sendingBoxID)
                 dictation.resetDictationState()
@@ -385,7 +431,16 @@ struct NativeComposerView: View {
     }
 
     private var sendDisabled: Bool {
-        isSending || hasSendableContent == false
+        isSending || hasIncompleteFiles || hasSendableContent == false
+    }
+
+    private var hasIncompleteFiles: Bool {
+        draftStore.draft.files.contains { file in
+            guard case .uploaded = file.state else {
+                return true
+            }
+            return false
+        }
     }
 
     private var text: String {
@@ -411,14 +466,12 @@ struct NativeComposerView: View {
             return
         }
         for item in items {
-            guard
-                let sourceData = try? await item.loadTransferable(type: Data.self),
-                let sourceImage = UIImage(data: sourceData),
-                let data = CameraImageEncoder.jpegData(from: sourceImage)
-            else {
+            guard let sourceData = try? await item.loadTransferable(type: Data.self) else {
                 continue
             }
-            await draftStore.addImage(data: data, mimeType: "image/jpeg", fileExtension: "jpg")
+            let sourceMimeType = item.supportedContentTypes
+                .first(where: { $0.conforms(to: .image) })?.preferredMIMEType ?? "image/jpeg"
+            await appendImage(data: sourceData, sourceMimeType: sourceMimeType)
         }
         selectedPhotoItems = []
     }
@@ -427,6 +480,110 @@ struct NativeComposerView: View {
         showingActions = false
         DispatchQueue.main.async {
             showingCamera = true
+        }
+    }
+
+    private func pasteImage() {
+        showingActions = false
+        if let pngData = UIPasteboard.general.data(forPasteboardType: UTType.png.identifier) {
+            Task {
+                await appendImage(data: pngData, sourceMimeType: "image/png")
+            }
+            return
+        }
+        guard let image = UIPasteboard.general.image else {
+            statusText = "The clipboard does not contain an image."
+            return
+        }
+        Task {
+            await appendCameraImage(image)
+        }
+    }
+
+    private func openFileImporter() {
+        showingActions = false
+        DispatchQueue.main.async {
+            showingFileImporter = true
+        }
+    }
+
+    private func takeScreenshot() {
+        showingActions = false
+        statusText = "Capturing visible chat..."
+        onTakeScreenshot()
+    }
+
+    private func importFiles(_ urls: [URL]) async {
+        for url in urls {
+            await importFile(url)
+        }
+    }
+
+    private func importFile(_ url: URL) async {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        do {
+            let values = try url.resourceValues(forKeys: [.contentTypeKey, .fileSizeKey])
+            let size = values.fileSize ?? 0
+            guard size <= ChatUploadLimits.maximumFileBytes else {
+                statusText = ChatAPI.ChatAPIError.fileTooLarge.localizedDescription
+                return
+            }
+            let name = url.lastPathComponent.isEmpty ? "attachment" : url.lastPathComponent
+            let mimeType = values.contentType?.preferredMIMEType ?? "application/octet-stream"
+            guard let file = await draftStore.addFile(
+                from: url,
+                originalName: name,
+                mimeType: mimeType,
+                size: size
+            ) else {
+                return
+            }
+            await uploadFile(file)
+        } catch {
+            statusText = "File could not be imported: \(error.localizedDescription)"
+        }
+    }
+
+    private func retryFile(_ file: DraftFile) {
+        Task {
+            await uploadFile(file)
+        }
+    }
+
+    private func uploadFile(_ file: DraftFile) async {
+        await draftStore.setFileState(id: file.id, state: .uploading(progress: 0), boxID: box.id)
+        guard let data = await draftStore.fileData(for: file, boxID: box.id) else {
+            await draftStore.setFileState(
+                id: file.id,
+                state: .failed(message: "Local file data is missing."),
+                boxID: box.id
+            )
+            return
+        }
+        do {
+            let uploaded = try await ChatAPI(box: box).uploadFile(
+                data: data,
+                filename: file.originalName,
+                mimeType: file.mimetype
+            )
+            await draftStore.markFileUploaded(id: file.id, upload: uploaded, boxID: box.id)
+        } catch {
+            await draftStore.setFileState(
+                id: file.id,
+                state: .failed(message: error.localizedDescription),
+                boxID: box.id
+            )
+        }
+    }
+
+    private func removeFile(_ file: DraftFile) {
+        Task {
+            await draftStore.removeFile(id: file.id)
         }
     }
 
@@ -444,25 +601,77 @@ struct NativeComposerView: View {
     }
 
     private func appendCameraImage(_ image: UIImage) async {
-        guard let data = CameraImageEncoder.jpegData(from: image) else {
+        guard let encoded = ComposerImageEncoder.encode(image: image, sourceMimeType: "image/jpeg") else {
             return
         }
-        await draftStore.addImage(data: data, mimeType: "image/jpeg", fileExtension: "jpg")
+        await draftStore.addImage(
+            data: encoded.data,
+            mimeType: encoded.mimeType,
+            fileExtension: encoded.fileExtension
+        )
+    }
+
+    private func appendImage(data: Data, sourceMimeType: String) async {
+        guard let encoded = ComposerImageEncoder.encode(data: data, sourceMimeType: sourceMimeType) else {
+            statusText = "The image could not be processed."
+            return
+        }
+        await draftStore.addImage(
+            data: encoded.data,
+            mimeType: encoded.mimeType,
+            fileExtension: encoded.fileExtension
+        )
+    }
+}
+
+struct EncodedComposerImage {
+    var data: Data
+    var mimeType: String
+    var fileExtension: String
+}
+
+enum ComposerImageEncoder {
+    static let maximumDimension: CGFloat = 1_920
+
+    static func encode(data: Data, sourceMimeType: String) -> EncodedComposerImage? {
+        guard let image = UIImage(data: data) else {
+            return nil
+        }
+        return encode(image: image, sourceMimeType: sourceMimeType)
+    }
+
+    static func encode(image: UIImage, sourceMimeType: String) -> EncodedComposerImage? {
+        let longestSide = max(image.size.width, image.size.height)
+        let scale = longestSide > maximumDimension ? maximumDimension / longestSide : 1
+        let targetSize = CGSize(
+            width: max(1, round(image.size.width * scale)),
+            height: max(1, round(image.size.height * scale))
+        )
+        let preservesPNG = sourceMimeType.lowercased() == "image/png"
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = preservesPNG == false
+        let bounds = CGRect(origin: .zero, size: targetSize)
+        let normalized = UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+            if preservesPNG == false {
+                UIColor.white.setFill()
+                UIRectFill(bounds)
+            }
+            image.draw(in: bounds)
+        }
+        if preservesPNG, let data = normalized.pngData() {
+            return EncodedComposerImage(data: data, mimeType: "image/png", fileExtension: "png")
+        }
+        guard let data = normalized.jpegData(compressionQuality: 0.85) else {
+            return nil
+        }
+        return EncodedComposerImage(data: data, mimeType: "image/jpeg", fileExtension: "jpg")
     }
 }
 
 enum CameraImageEncoder {
     static func jpegData(from image: UIImage) -> Data? {
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = image.scale
-        format.opaque = true
-        let bounds = CGRect(origin: .zero, size: image.size)
-        let uprightImage = UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
-            UIColor.white.setFill()
-            UIRectFill(bounds)
-            image.draw(in: bounds)
-        }
-        return uprightImage.jpegData(compressionQuality: 0.85)
+        ComposerImageEncoder.encode(image: image, sourceMimeType: "image/jpeg")?.data
     }
 }
 
@@ -523,6 +732,78 @@ private struct DraftImageThumbnail: View {
                 return
             }
             uiImage = UIImage(data: data)
+        }
+    }
+}
+
+private struct FileAttachmentList: View {
+    var files: [DraftFile]
+    var onRetry: (DraftFile) -> Void
+    var onRemove: (DraftFile) -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(files) { file in
+                HStack(spacing: 10) {
+                    Image(systemName: "doc")
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(file.originalName)
+                            .font(.subheadline)
+                            .lineLimit(1)
+                        Text(status(for: file))
+                            .font(.caption)
+                            .foregroundStyle(statusColor(for: file))
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                    if case .uploading = file.state {
+                        ProgressView()
+                    } else if canRetry(file) {
+                        Button("Retry") {
+                            onRetry(file)
+                        }
+                        .font(.caption)
+                    }
+                    Button {
+                        onRemove(file)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .accessibilityLabel("Remove file")
+                }
+                .padding(10)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+
+    private func status(for file: DraftFile) -> String {
+        switch file.state {
+        case .local:
+            "Waiting to upload"
+        case .uploading:
+            "Uploading..."
+        case .uploaded:
+            ByteCountFormatter.string(fromByteCount: Int64(file.size), countStyle: .file)
+        case .failed(let message):
+            message
+        }
+    }
+
+    private func statusColor(for file: DraftFile) -> Color {
+        if case .failed = file.state {
+            return .red
+        }
+        return .secondary
+    }
+
+    private func canRetry(_ file: DraftFile) -> Bool {
+        switch file.state {
+        case .local, .failed:
+            true
+        case .uploading, .uploaded:
+            false
         }
     }
 }

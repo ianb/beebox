@@ -11,6 +11,8 @@ struct RootView: View {
     @State private var nativeEmissionReceipt: NativeEmissionReceipt?
     @State private var locationShareRequest: NativeLocationShareRequest?
     @State private var locationShareResult: NativeLocationShareResult?
+    @State private var screenshotRequest: NativeScreenshotRequest?
+    @State private var screenshotResult: NativeScreenshotResult?
 
     var body: some View {
         Group {
@@ -35,6 +37,7 @@ struct RootView: View {
                     box: box,
                     pendingEmissions: pendingNativeEmissions,
                     locationShareRequest: locationShareRequest,
+                    screenshotRequest: screenshotRequest,
                     onSessionChange: { sessionID in
                         visibleChatBoxID = box.id
                         visibleChatSessionID = sessionID
@@ -49,6 +52,13 @@ struct RootView: View {
                         }
                         locationShareRequest = nil
                         locationShareResult = result
+                    },
+                    onScreenshotResult: { result in
+                        guard result.requestID == screenshotRequest?.id else {
+                            return
+                        }
+                        screenshotRequest = nil
+                        screenshotResult = result
                     }
                 )
                 .id(box.id)
@@ -59,12 +69,17 @@ struct RootView: View {
                         captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
                         emissionReceipt: nativeEmissionReceipt,
                         locationShareResult: locationShareResult,
+                        screenshotResult: screenshotResult,
                         onSendEmission: { emission in
                             pendingNativeEmissions.append(emission)
                         },
                         onShareLocation: {
                             locationShareResult = nil
                             locationShareRequest = NativeLocationShareRequest()
+                        },
+                        onTakeScreenshot: {
+                            screenshotResult = nil
+                            screenshotRequest = NativeScreenshotRequest()
                         }
                     )
                 }
@@ -84,6 +99,8 @@ struct RootView: View {
             nativeEmissionReceipt = nil
             locationShareRequest = nil
             locationShareResult = nil
+            screenshotRequest = nil
+            screenshotResult = nil
         }
         .task(id: store.selectedBox?.id) {
             guard let boxID = store.selectedBox?.id else {

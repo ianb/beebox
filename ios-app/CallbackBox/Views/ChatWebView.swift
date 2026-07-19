@@ -37,28 +37,44 @@ struct NativeLocationShareResult: Equatable {
     var message: String
 }
 
+struct NativeScreenshotRequest: Equatable, Identifiable {
+    var id = UUID()
+}
+
+struct NativeScreenshotResult: Equatable {
+    var requestID: NativeScreenshotRequest.ID
+    var data: Data?
+    var message: String?
+}
+
 struct ChatWebView: UIViewRepresentable {
     var box: PairedBox
     var pendingEmissions: [NativeChatEmission]
     var locationShareRequest: NativeLocationShareRequest?
+    var screenshotRequest: NativeScreenshotRequest?
     var onSessionChange: (String?) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
     var onLocationShareResult: (NativeLocationShareResult) -> Void
+    var onScreenshotResult: (NativeScreenshotResult) -> Void
 
     init(
         box: PairedBox,
         pendingEmissions: [NativeChatEmission] = [],
         locationShareRequest: NativeLocationShareRequest? = nil,
+        screenshotRequest: NativeScreenshotRequest? = nil,
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
-        onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in }
+        onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in },
+        onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
         self.locationShareRequest = locationShareRequest
+        self.screenshotRequest = screenshotRequest
         self.onSessionChange = onSessionChange
         self.onEmissionReceipt = onEmissionReceipt
         self.onLocationShareResult = onLocationShareResult
+        self.onScreenshotResult = onScreenshotResult
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -82,14 +98,17 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onSessionChange = onSessionChange
         context.coordinator.onEmissionReceipt = onEmissionReceipt
         context.coordinator.onLocationShareResult = onLocationShareResult
+        context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
         context.coordinator.locationShareRequest = locationShareRequest
+        context.coordinator.screenshotRequest = screenshotRequest
         if webView.url == nil {
             webView.load(request())
         }
         context.coordinator.deliver(pendingEmissions, to: webView)
         context.coordinator.deliverLocationRequest(to: webView)
+        context.coordinator.captureScreenshot(from: webView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -97,7 +116,8 @@ struct ChatWebView: UIViewRepresentable {
             allowedOrigin: Self.origin(from: box.baseURL),
             onSessionChange: onSessionChange,
             onEmissionReceipt: onEmissionReceipt,
-            onLocationShareResult: onLocationShareResult
+            onLocationShareResult: onLocationShareResult,
+            onScreenshotResult: onScreenshotResult
         )
     }
 
@@ -106,24 +126,29 @@ struct ChatWebView: UIViewRepresentable {
         var onSessionChange: (String?) -> Void
         var onEmissionReceipt: (NativeEmissionReceipt) -> Void
         var onLocationShareResult: (NativeLocationShareResult) -> Void
+        var onScreenshotResult: (NativeScreenshotResult) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var locationShareRequest: NativeLocationShareRequest?
+        var screenshotRequest: NativeScreenshotRequest?
         private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
         private var receiptTimeouts: [NativeChatEmission.ID: DispatchWorkItem] = [:]
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
+        private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
         private var pageLoaded = false
 
         init(
             allowedOrigin: String?,
             onSessionChange: @escaping (String?) -> Void,
             onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void,
-            onLocationShareResult: @escaping (NativeLocationShareResult) -> Void
+            onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
+            onScreenshotResult: @escaping (NativeScreenshotResult) -> Void
         ) {
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
             self.onEmissionReceipt = onEmissionReceipt
             self.onLocationShareResult = onLocationShareResult
+            self.onScreenshotResult = onScreenshotResult
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -131,6 +156,7 @@ struct ChatWebView: UIViewRepresentable {
             onSessionChange(ChatWebView.visibleSessionID(from: webView.url))
             deliver(pendingEmissions, to: webView)
             deliverLocationRequest(to: webView)
+            captureScreenshot(from: webView)
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -141,6 +167,7 @@ struct ChatWebView: UIViewRepresentable {
             inflightLocationRequestID = nil
             locationRequestTimeout?.cancel()
             locationRequestTimeout = nil
+            inflightScreenshotRequestID = nil
         }
 
         func webView(
@@ -305,6 +332,28 @@ struct ChatWebView: UIViewRepresentable {
             }
             locationRequestTimeout = timeout
             DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
+        }
+
+        func captureScreenshot(from webView: WKWebView) {
+            guard
+                pageLoaded,
+                let request = screenshotRequest,
+                request.id != inflightScreenshotRequestID
+            else {
+                return
+            }
+            inflightScreenshotRequestID = request.id
+            webView.takeSnapshot(with: nil) { [weak self] image, error in
+                guard let self, self.inflightScreenshotRequestID == request.id else {
+                    return
+                }
+                let data = image?.pngData()
+                self.onScreenshotResult(NativeScreenshotResult(
+                    requestID: request.id,
+                    data: data,
+                    message: data == nil ? error?.localizedDescription ?? "The visible chat could not be captured." : nil
+                ))
+            }
         }
 
         private static func javascriptDetail(for emission: NativeChatEmission) -> String? {

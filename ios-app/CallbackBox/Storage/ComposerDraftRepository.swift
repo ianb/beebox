@@ -64,6 +64,19 @@ actor ComposerDraftRepository {
         try data.write(to: url, options: .atomic)
     }
 
+    func importPayload(from sourceURL: URL, filename: String, boxID: UUID) throws {
+        let destinationURL = try payloadURL(filename: filename, boxID: boxID)
+        try fileManager.createDirectory(
+            at: destinationURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let temporaryURL = destinationURL.deletingLastPathComponent()
+            .appendingPathComponent(".import-\(UUID().uuidString.lowercased())")
+        defer { try? fileManager.removeItem(at: temporaryURL) }
+        try fileManager.copyItem(at: sourceURL, to: temporaryURL)
+        try fileManager.moveItem(at: temporaryURL, to: destinationURL)
+    }
+
     func loadPayload(filename: String, boxID: UUID) throws -> Data {
         try Data(contentsOf: payloadURL(filename: filename, boxID: boxID))
     }
@@ -93,6 +106,12 @@ actor ComposerDraftRepository {
         }
     }
 
+    func removePayloads(for files: [DraftFile], boxID: UUID) {
+        for file in files {
+            try? removePayload(filename: file.filename, boxID: boxID)
+        }
+    }
+
     func missingImageIDs(_ images: [DraftImage], boxID: UUID) -> [Int] {
         images.compactMap { image in
             guard
@@ -100,6 +119,18 @@ actor ComposerDraftRepository {
                 fileManager.fileExists(atPath: url.path)
             else {
                 return image.id
+            }
+            return nil
+        }
+    }
+
+    func missingFileIDs(_ files: [DraftFile], boxID: UUID) -> [Int] {
+        files.compactMap { file in
+            guard
+                let url = try? payloadURL(filename: file.filename, boxID: boxID),
+                fileManager.fileExists(atPath: url.path)
+            else {
+                return file.id
             }
             return nil
         }
