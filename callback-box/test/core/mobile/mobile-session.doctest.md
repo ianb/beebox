@@ -39,10 +39,20 @@ MOBILE_SESSION_TTL_MS
 const box = await makeTmpBox();
 clearMobileSessionSecretCache();
 
-const cookie = signMobileSession(box.root, { deviceId: "device-1", ttlMs: MOBILE_SESSION_TTL_MS });
+const cookie = signMobileSession(box.root, { deviceId: "device-1", createdBy: "ada@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
 const session = verifyMobileSession(box.root, cookie);
 session?.deviceId
 => device-1
+```
+
+The payload carries the whole mobile identity, not just the device id.
+`createdBy` is what `capture-request-owner.ts` uses to enforce capture
+cross-user isolation, so a cookie that dropped it would silently weaken that
+check.
+
+```ts continue
+session?.createdBy
+=> ada@example.com
 ```
 
 The secret is created on first use, inside the box's `.callback-box/` directory
@@ -62,7 +72,7 @@ A second mint reuses that secret rather than rotating it, so cookies minted
 across requests stay mutually valid.
 
 ```ts continue
-verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "device-2", ttlMs: 60_000 }))?.deviceId
+verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "device-2", createdBy: null, ttlMs: 60_000 }))?.deviceId
 => device-2
 
 verifyMobileSession(box.root, cookie)?.deviceId
@@ -74,10 +84,10 @@ verifyMobileSession(box.root, cookie)?.deviceId
 `exp` is stamped at mint time, so a zero TTL is already in the past.
 
 ```ts continue
-verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "device-1", ttlMs: 0 }))
+verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "device-1", createdBy: null, ttlMs: 0 }))
 => null
 
-verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "device-1", ttlMs: -60_000 }))
+verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "device-1", createdBy: null, ttlMs: -60_000 }))
 => null
 ```
 
@@ -123,7 +133,7 @@ The reverse also holds, so this is mutual rather than an artifact of which box
 was created first.
 
 ```ts continue
-const otherCookie = signMobileSession(otherBox.root, { deviceId: "device-1", ttlMs: 60_000 });
+const otherCookie = signMobileSession(otherBox.root, { deviceId: "device-1", createdBy: null, ttlMs: 60_000 });
 verifyMobileSession(box.root, otherCookie)
 => null
 
@@ -158,7 +168,7 @@ the schema runs after the HMAC, so a payload we somehow signed but cannot
 parse fails closed rather than being trusted for having a good signature.
 
 ```ts continue
-verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "", ttlMs: 60_000 }))
+verifyMobileSession(box.root, signMobileSession(box.root, { deviceId: "", createdBy: null, ttlMs: 60_000 }))
 => null
 ```
 

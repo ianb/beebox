@@ -1,6 +1,6 @@
 # Mobile device token: replace `?mobileToken=` with a box-scoped session cookie
 
-**Status:** active — designed 2026-07-19, not yet implemented
+**Status:** implemented 2026-07 — all tracks landed; see the Reconciliation section for where the built shape differs from the design
 
 The durable mobile device token currently travels in a URL query parameter on both the
 iOS webview's initial `/chat` navigation and the web frontend's tRPC WebSocket URL. Because
@@ -39,7 +39,7 @@ The plan reuses far more than it builds.
   *"if (typeof data.exp !== \"number\" || data.exp < Date.now()) return null;"*). **Reused**
   as the structural model; the new cookie needs its own signer because of the secret
   scoping below.
-- **Raw cookie-header parsing for non-Fastify contexts** — `auth.ts:205` `parseCookieHeader`,
+- **Raw cookie-header parsing for non-Fastify contexts** — `lib/cookies.ts` `parseCookieHeader` (hoisted out of `auth.ts` by this plan),
   written for exactly one caller: `auth.ts:201`: *"the hub's raw WebSocket-upgrade path
   (`src/hub/hub-server.ts`), which sees a bare `http.IncomingMessage`, not a
   `FastifyRequest`."* **Reused directly** — this is the piece that makes cookie-on-WS-upgrade
@@ -163,7 +163,13 @@ it.
      2026-07-09 review found in the localStorage channel does not recur.
    - `SameSite=Lax` — a cross-site POST cannot ride it. `Lax` rather than `Strict` because
      the box is navigated to from external links.
-   - `Path=/<slug>` — scoped so one box's cookie is not offered to a sibling box.
+   - `Path=/<slug>` — keeps one box's cookie out of a sibling's request. This bounds the
+    **cookie jar**, and is NOT an access-control boundary: boxes are path siblings on one
+    origin, so a script running under box A can already `fetch("/boxB/api/...")` and box B's
+    cookie will ride. What actually prevents cross-box escalation is the per-box signing
+    secret. Same-origin sibling trust is a pre-existing property of the path-prefix layout
+    (`cb_session` isn't path-scoped at all) — this plan neither creates nor fixes it; see
+    the filed issue.
    - `Secure` follows the existing precedent at `routes/auth.ts:161`
      (*"secure: publicUrl.startsWith(\"https\")"*) rather than a second, divergent rule, so
      local dev over plain HTTP still receives the cookie.
@@ -363,13 +369,23 @@ This plan is infrastructural — it introduces no tag, card shape, or convention
 authoring box content needs to recall. The one agent-facing consequence is that a future
 agent touching mobile auth must not reintroduce a URL credential.
 
-Per the skill's default-with-rationale rule, that is worth **one** `knows_directly` entry in
-`src/dev/knowledge-audits.yaml`: *"Where does the mobile device token travel, and where must
-it never appear?"* — expected answer names the `Authorization` header and the `cb_mobile`
-cookie, and rules out URL query parameters. It will be **run** (`pnpm knowledge-audit run
---box <absolute-path-to-test-box> --filter mobile-auth`) with its status comment recorded
-before the plan completes. Note the `--box` argument must be an absolute path outside the
-monorepo.
+The draft of this plan committed to one `knows_directly` entry — *"Where does the mobile
+device token travel, and where must it never appear?"* **That was a mistake, made before
+reading the corpus, and it is deliberately not being added.**
+
+`src/dev/knowledge-audits.yaml` audits what a **box agent** knows about operating its box —
+`box-structure-inbox`, `find-memo-cards`, `how-items-enter`, all sourced from the agent guide
+and the box's CLAUDE.md. A box agent never sees mobile auth code; the question above is a
+*callback-box developer* concern, and answering it correctly would depend on this repo's
+`docs/mobile-contract.md`, which is not in a box agent's context at all. An entry there would
+either fail for the wrong reason or pass by accident, and would misrepresent what that corpus
+covers.
+
+Skip-with-rationale, per the skill's own allowance: this is infrastructural, and its
+agent-facing durability comes from `docs/mobile-contract.md` — which has a **pre-commit
+tripwire** (`bin/mobile-contract-check.ts`) that blocks any commit touching an anchor file
+without co-staging the doc. That is stronger enforcement than an audit would give, and the new
+modules were added to the anchor list in this change.
 
 ## Implementation order
 
@@ -401,6 +417,46 @@ monorepo.
    *partially* — its parser bullet is resolved here, its other four bullets are not — so it
    gets a closing note naming which bullets survive, and the surviving ones are re-filed as a
    fresh item rather than buried in a closed file.
+
+## Reconciliation — where the build diverged from this design
+
+Recorded rather than quietly edited into the tracks above, because the divergences are the
+part a future reader most needs.
+
+1. **Renewal is a `preHandler` step, not an `onSend` hook.** Track 2 specified `onSend`.
+   Renewal ended up in the box auth preHandler (`server-box-scope.ts`), beside the check that
+   already resolved the identity — so it renews on requests that pass the gate, not on
+   401s/redirects/static bypasses. That is the behavior we want and it avoids resolving the
+   identity twice, but the plan text was wrong.
+
+2. **The transition window in Implementation order was not used.** Steps 2–4 were designed to
+   keep accepting `?mobileToken=` so an un-updated client kept working, with step 5 deleting
+   it last. In practice the query-param acceptance was deleted in the same change that added
+   the cookie, because leaving a URL credential accepted while the hub's gate was rewritten
+   would have meant `hasMobileAuth` verifying one carrier and ignoring another. **Consequence:
+   box and iOS app must deploy together; an older installed iOS build stops working against a
+   deployed box.** Flagged for the boxholder rather than buried.
+
+3. **Three defects found by cross-model review, fixed before landing.** Recorded because each
+   was a silent failure the plan's Failure-modes table missed:
+   - **WebSocket reconnect had no recovery.** The 401→mint→retry path lives in `trpcFetch`,
+     which is HTTP-only. A failed WS *upgrade* has no response body to branch on — wsLink just
+     backs off and retries. A device idle past the TTL would have reconnected forever,
+     silently. Fixed by refreshing the session in `createWSClient`'s async `url` thunk before
+     each socket open.
+   - **Cookie shadowing across sibling boxes.** `parseCookieHeader` was last-wins on duplicate
+     names, and boxes share one origin, so `document.cookie = "cb_mobile=junk; Path=/"` under
+     box A crowded out box B's real cookie — a one-line cross-box DoS. Fixed with
+     `parseCookieHeaderAll`; the resolver now tries every value.
+   - **Verification could create a signing secret.** Box and hub verify in separate processes
+     with separate caches. Whichever first saw a missing file would have minted and cached a
+     new secret while the other kept the old one — every cookie verifying in one process and
+     failing in the other, indefinitely. Fixed by making the verify path read-only
+     (`readSecret`); only `signMobileSession` creates.
+
+4. **`Path=/<slug>` is not the isolation boundary the draft implied.** Corrected in Track 2.
+   The per-box signing secret is what prevents cross-box escalation. Same-origin sibling trust
+   is pre-existing and out of scope; filed separately.
 
 ## Rollout shape
 

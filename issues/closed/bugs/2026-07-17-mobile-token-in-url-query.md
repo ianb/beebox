@@ -3,6 +3,17 @@ title: "Durable mobile device token rides in the ?mobileToken= URL query (S2)"
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+resolution: implemented
+---
+
+**Closed 2026-07-19** — implemented in `worktree-mobile-token-handshake`, designed in
+`../../../callback-box/docs/plans/mobile-token-handshake.md`. The query-param carrier is gone: the
+durable token is header-only, and a short-lived per-box signed cookie (`cb_mobile`) carries
+navigations and WebSocket upgrades. All three `mobileTokenFromUrl` copies are deleted. The
+hub's presence-only mobile gate (risk S1) was replaced with real verification in the same
+change. Token expiry itself was deferred — see
+`../../code-quality/2026-07-19-mobile-device-token-no-expiry.md`.
+
 ---
 
 Both the web frontend and the iOS app put the long-lived mobile device token directly into a URL

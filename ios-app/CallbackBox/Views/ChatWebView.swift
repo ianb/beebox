@@ -359,23 +359,36 @@ struct ChatWebView: UIViewRepresentable {
         return payload
     }
 
-    private func request() -> URLRequest {
-        URLRequest(url: authenticatedChatURL)
+    /// The initial chat navigation, authenticated by header rather than by a
+    /// URL query parameter.
+    ///
+    /// The device token does not expire, so anywhere it lands is a permanent
+    /// credential — an access log, a `Referer`, WebKit history. It used to ride
+    /// `?mobileToken=` here because the webview has to satisfy the box's auth
+    /// gate before the startup script has run and localStorage exists.
+    ///
+    /// A header solves that ordering without the URL: WKWebView honors custom
+    /// headers on the initial `URLRequest`, and the box answers with a
+    /// short-lived `cb_mobile` cookie. WebKit stores that cookie itself, so
+    /// every later request carries it — including the tRPC WebSocket upgrade
+    /// (the browser WebSocket API cannot set headers at all) and reloads WebKit
+    /// starts on its own, which never come back through this method.
+    ///
+    /// Deliberately NOT written into `WKHTTPCookieStore` before loading:
+    /// `setCookie`'s completion handler is documented-unreliable and can hang
+    /// (WebKit bug 185483). Letting the navigation response set the cookie uses
+    /// WebKit's own network stack and sidesteps that entirely.
+    static func authenticatedRequest(for box: PairedBox) -> URLRequest {
+        var request = URLRequest(url: box.chatURL)
+        if let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines),
+           authToken.isEmpty == false {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
+        return request
     }
 
-    private var authenticatedChatURL: URL {
-        guard
-            let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines),
-            authToken.isEmpty == false,
-            var components = URLComponents(url: box.chatURL, resolvingAgainstBaseURL: false)
-        else {
-            return box.chatURL
-        }
-        var queryItems = components.queryItems ?? []
-        queryItems.removeAll { $0.name == "mobileToken" }
-        queryItems.append(URLQueryItem(name: "mobileToken", value: authToken))
-        components.queryItems = queryItems
-        return components.url ?? box.chatURL
+    private func request() -> URLRequest {
+        Self.authenticatedRequest(for: box)
     }
 
     private func startupScript() -> WKUserScript? {

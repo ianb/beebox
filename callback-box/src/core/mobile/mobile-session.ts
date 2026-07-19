@@ -46,12 +46,19 @@ const SECRET_RELATIVE_PATH = ".callback-box/mobile-session.secret";
 const SECRET_BYTES = 32;
 
 /**
- * The signed payload. `deviceId` matches `MobileBearerIdentity.deviceId` so a
- * cookie-authenticated request resolves to the same identity a bearer-
- * authenticated one does.
+ * The signed payload. It carries the WHOLE of `MobileBearerIdentity`, not just
+ * `deviceId`, so a cookie-authenticated request resolves to exactly the
+ * identity a bearer-authenticated one does.
+ *
+ * `createdBy` is load-bearing, not decoration: `webapp/capture-request-owner.ts`
+ * uses it as the authenticated email for capture-session ownership, which is
+ * what enforces cross-user isolation (`core/capture/pending.ts` X4). A cookie
+ * that dropped it would silently downgrade that check for any gate that
+ * later moved from the bearer path to the shared resolver.
  */
 const MobileSessionSchema = z.object({
   deviceId: z.string().min(1),
+  createdBy: z.string().nullable(),
   exp: z.number(),
 });
 export type MobileSession = z.infer<typeof MobileSessionSchema>;
@@ -64,13 +71,17 @@ function secretPath(boxRoot: string): string {
 }
 
 /**
- * Read the box's cookie-signing secret, generating it on first use.
+ * Read the box's cookie-signing secret, or null if it doesn't exist yet.
  *
- * Regenerating invalidates every live `cb_mobile` at once. That is the
- * fail-closed direction: clients fall back to the bearer-authenticated mint
- * endpoint and recover with one extra round-trip.
+ * Read-only on purpose. Two separate processes verify these cookies — the box
+ * and the hub — with separate caches and no way to invalidate each other's. If
+ * verification could generate a secret, whichever process first saw a missing
+ * or unreadable file would mint a new one and cache it, while the other kept
+ * signing with the old value: every cookie would then verify in one process and
+ * fail in the other, indefinitely and silently. Only `signMobileSession`
+ * creates (see `getOrCreateSecret`), and only the box ever signs.
  */
-function getSecret(boxRoot: string): string {
+function readSecret(boxRoot: string): string | null {
   const cached = secretCache.get(boxRoot);
   if (cached !== undefined) return cached;
 
@@ -82,16 +93,31 @@ function getSecret(boxRoot: string): string {
       return secret;
     }
     // An empty secret file would sign everything with "" — treat it as absent
-    // and regenerate rather than issuing forgeable cookies.
-    console.warn(`[mobile-session] empty secret file at ${file}, regenerating`);
+    // rather than issuing forgeable cookies.
+    console.warn(`[mobile-session] empty secret file at ${file}`);
+    return null;
   } catch (e) {
-    // Missing file is the normal first-run case. Anything else (permissions,
-    // corruption) we want to notice before overwriting it.
+    // Missing file is the normal first-run case: nothing has minted yet, so
+    // there is nothing to verify either. Anything else (permissions,
+    // corruption) is worth a human's attention.
     if (errnoCode(e) !== "ENOENT") {
-      console.warn(`[mobile-session] failed to read secret at ${file}, regenerating:`, e);
+      console.warn(`[mobile-session] failed to read secret at ${file}:`, e);
     }
+    return null;
   }
+}
 
+/**
+ * The signing path's secret, created on first mint.
+ *
+ * Creating invalidates nothing, because a secret is only ever created when
+ * none was readable — no live cookie could have been signed with one.
+ */
+function getOrCreateSecret(boxRoot: string): string {
+  const existing = readSecret(boxRoot);
+  if (existing !== null) return existing;
+
+  const file = secretPath(boxRoot);
   const generated = crypto.randomBytes(SECRET_BYTES).toString("hex");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, generated, { mode: 0o600 });
@@ -99,8 +125,11 @@ function getSecret(boxRoot: string): string {
   return generated;
 }
 
-function sign(boxRoot: string, payload: string): string {
-  return crypto.createHmac("sha256", getSecret(boxRoot)).update(payload).digest("hex");
+/** The signature this box would produce for a payload, or null if it has no secret. */
+function expectedSignature(boxRoot: string, payload: string): string | null {
+  const key = readSecret(boxRoot);
+  if (key === null) return null;
+  return crypto.createHmac("sha256", key).update(payload).digest("hex");
 }
 
 /**
@@ -114,9 +143,20 @@ function signaturesEqual(a: string, b: string): boolean {
 }
 
 /** Mint a cookie value for a device. The caller decides the cookie attributes. */
-export function signMobileSession(boxRoot: string, opts: { deviceId: string; ttlMs: number }): string {
-  const payload = JSON.stringify({ deviceId: opts.deviceId, exp: Date.now() + opts.ttlMs });
-  return `${Buffer.from(payload).toString("base64url")}.${sign(boxRoot, payload)}`;
+export function signMobileSession(
+  boxRoot: string,
+  opts: { deviceId: string; createdBy: string | null; ttlMs: number },
+): string {
+  const payload = JSON.stringify({
+    deviceId: opts.deviceId,
+    createdBy: opts.createdBy,
+    exp: Date.now() + opts.ttlMs,
+  });
+  const signature = crypto
+    .createHmac("sha256", getOrCreateSecret(boxRoot))
+    .update(payload)
+    .digest("hex");
+  return `${Buffer.from(payload).toString("base64url")}.${signature}`;
 }
 
 /**
@@ -140,7 +180,12 @@ export function verifyMobileSession(boxRoot: string, cookie: string | undefined)
     return null;
   }
 
-  if (!signaturesEqual(signature, sign(boxRoot, payload))) return null;
+  // Null means no secret exists for this box — nothing has ever been minted,
+  // so no cookie could legitimately verify. Fail closed rather than create one
+  // (see readSecret).
+  const expected = expectedSignature(boxRoot, payload);
+  if (expected === null) return null;
+  if (!signaturesEqual(signature, expected)) return null;
 
   let parsed: unknown;
   try {

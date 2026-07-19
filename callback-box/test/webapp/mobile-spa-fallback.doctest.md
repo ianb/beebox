@@ -3,13 +3,19 @@
 In hub mode, a box normally requires hub-injected identity headers before it
 serves the SPA fallback. A mobile companion has its own per-box token instead:
 the initial embedded document request must be allowed through so the frontend
-can boot and seed subsequent API/WebSocket calls with the same token.
+can boot and seed subsequent API/WebSocket calls.
+
+Two credentials are accepted, and neither is a URL query parameter: the durable
+device token in an `Authorization` header (the initial native navigation), and
+the short-lived `cb_mobile` cookie (everything after, including the WebSocket
+upgrade, which the browser API cannot attach headers to).
 
 ```ts setup
 import Fastify from "fastify";
 import path from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
+import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/mobile-session.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import { registerSpaFallback } from "../../src/webapp/server-root.js";
 
@@ -66,18 +72,63 @@ JSON.stringify({
 => {"status":200,"contentType":"text/html"}
 ```
 
-## A mobile query token can load the embedded chat document
+## A `cb_mobile` cookie can load the embedded chat document
+
+The cookie is what carries a WebKit-initiated reload, which re-issues the bare
+URL with no Authorization header.
+
+```ts continue
+const cookie = signMobileSession(box.root, {
+  deviceId: redeemed.deviceId,
+  createdBy: null,
+  ttlMs: MOBILE_SESSION_TTL_MS,
+});
+const cookieResponse = await server.inject({
+  method: "GET",
+  url: "/test/chat?embed=1",
+  headers: { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` },
+});
+JSON.stringify({
+  status: cookieResponse.statusCode,
+  contentType: cookieResponse.headers["content-type"]?.toString().split(";")[0],
+})
+=> {"status":200,"contentType":"text/html"}
+```
+
+## The device token in a URL query is no longer a credential
+
+This is the point of the change: the token doesn't expire, so a copy in an
+access log or in history was replayable until someone manually revoked the
+device. Passing it as `?mobileToken=` now authenticates nothing.
 
 ```ts continue
 const queryResponse = await server.inject({
   method: "GET",
   url: `/test/chat?embed=1&mobileToken=${encodeURIComponent(redeemed.deviceToken)}`,
 });
-JSON.stringify({
-  status: queryResponse.statusCode,
-  contentType: queryResponse.headers["content-type"]?.toString().split(";")[0],
-})
-=> {"status":200,"contentType":"text/html"}
+queryResponse.statusCode
+=> 401
+```
+
+A cookie signed by a *different* box is rejected too — the signing secret is
+per-box, so one box's cookie is not a credential anywhere else.
+
+```ts continue
+const otherBox = await makeTmpBox();
+const foreignCookie = signMobileSession(otherBox.root, {
+  deviceId: redeemed.deviceId,
+  createdBy: null,
+  ttlMs: MOBILE_SESSION_TTL_MS,
+});
+const foreignResponse = await server.inject({
+  method: "GET",
+  url: "/test/chat?embed=1",
+  headers: { cookie: `${MOBILE_COOKIE_NAME}=${foreignCookie}` },
+});
+foreignResponse.statusCode
+=> 401
+
+await otherBox.cleanup();
 ```
 
 ```ts cleanup

@@ -1,0 +1,32 @@
+---
+title: "Mobile device tokens still have no expiry or rotation"
+area: callback-box
+filed-by: agent
+discovered-in: worktree-mobile-token-handshake — deferred from the cb_mobile cookie work
+---
+
+`MobileDevice` (`callback-box/src/core/mobile/pairing.ts`) tracks `revokedAt` but no
+`expiresAt`. A paired device's durable token is valid forever unless a human notices and
+revokes it.
+
+The cb_mobile cookie work (`../../callback-box/docs/plans/mobile-token-handshake.md`) removed
+the urgent half of this: the token no longer travels in URLs, so it no longer lands in access
+logs, `Referer` headers, or WebKit history, and the *session* now expires hourly. What remains
+is that the durable token itself — held in the iOS app and in web localStorage — never ages
+out.
+
+Deferred from that plan deliberately: adding `expiresAt` is a shape change to
+`mobile-devices.secret.json` on boxes that already hold pairings, so it needs a migration per
+the `cb-migration` skill, and a naive rollout would silently un-pair every existing device.
+
+Open questions, none settled:
+
+- What TTL? A phone that's a daily driver shouldn't need re-pairing often; a lost one
+  shouldn't stay valid for a year.
+- Rotate-on-use (issue a fresh token alongside each renewal) instead of a hard expiry? That
+  keeps active devices working indefinitely while bounding a *stolen* token's life — but it
+  needs the client to persist the rotated value, which is a contract change on both iOS and
+  web (`docs/mobile-contract.md` §2).
+- Existing devices: grandfather them with a far-future `expiresAt`, or force one re-pair?
+
+Related: `2026-07-19-ios-token-plaintext-storage.md` (where the token is stored on-device).
