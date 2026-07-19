@@ -3,7 +3,18 @@ title: "No way to submit an uploaded file in chat (mobile; file not attached to 
 filed-by: agent
 discovered-in: main session — boxholder hit it on mobile
 area: callback-box
+resolution: implemented
 ---
+
+Closed by commit 7ad11496 (worktree-chat-attachment-submit). Classified as
+a **mobile-only affordance gap**, not a regression: the attach→send plumbing
+worked everywhere, but the mobile button bar has no textarea or send button
+(those live in typing mode), so the inserted `[fileN]` token and the send
+affordance were invisible. Fixed at the surface level — a token-producing
+insert now opens the typing row — plus two adjacent gaps found on the way:
+voice sends (stop-and-send, keyword send) silently dropped pending
+attachments, and assembly now notes a file whose placemarker token is
+missing from the text at the end of the message.
 
 On mobile (desktop untested), uploading a file in chat has **no way to actually
 submit it** — the file doesn't appear to get attached to the message being sent.
