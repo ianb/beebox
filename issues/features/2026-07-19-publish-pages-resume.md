@@ -65,9 +65,12 @@ best finished in a fresh session. Full design + security review:
 
 ## How to resume (gotchas)
 
-- **Node**: the project pins **v22** (`engines: >=22.11.0 <23`, `.nvmrc v22.22.1`).
-  Switching to v24 breaks commits/tests (`env: node not found` from tap, engines block
-  in husky). `nvm use 22` (or `nvm install 22.22.1`) before working.
+- **Node**: `main` now pins **v24** (`engines: >=24.11.0 <25`, `.nvmrc v24.18.0`) —
+  this superseded the v22 pin this feature was originally built against. After
+  switching Node versions, `better-sqlite3`'s native binding needs a rebuild
+  (`NODE_MODULE_VERSION` mismatch otherwise breaks most of `pnpm test` with
+  `ERR_DLOPEN_FAILED`, plus 30s+ hangs from things that depend on it): `cd
+  node_modules/better-sqlite3 && npm run build-release`, or reinstall from clean.
 - **Credentials**: live in `~/.cb-publish.env` (mode 600, outside the repo — machine-
   level like the Google OAuth creds). Holds `CLOUDFLARE_API_TOKEN` +
   `CLOUDFLARE_ACCOUNT_ID`. Still needs `CLOUDFLARE_R2_BUCKET` added once a bucket name
