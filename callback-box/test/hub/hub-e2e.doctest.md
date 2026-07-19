@@ -27,6 +27,13 @@ import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
 const execFileP = promisify(execFile);
 
+// Auth is always-on by default now. This e2e serves a box with no login
+// configured and fetches its HTML through the hub, so it must opt into open
+// mode — otherwise the proxied navigation hits the auth wall and redirects to a
+// (non-existent) /auth/login in a loop. The spawned `cb hub` inherits this env,
+// runs hub-wide open, and tells its children `x-cb-hub-auth: off`.
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+
 function pidAlive(pid) {
   try {
     process.kill(pid, 0);
