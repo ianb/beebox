@@ -3,6 +3,21 @@ title: "Mobile auth parser/plumbing cleanups: duplicated token parser, unanchore
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+resolution: superseded
+---
+
+**Closed 2026-07-19 as superseded, not fully implemented.** Only the first bullet is
+resolved: the duplicated `mobileTokenFromUrl` parser is gone — not hoisted, but deleted
+outright, since the query-param carrier it parsed no longer exists. Done in
+`../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
+gate now uses is `callback-box/src/core/mobile/request-auth.ts`.
+
+The token-expiry bullet moved to `../../code-quality/2026-07-19-mobile-device-token-no-expiry.md`.
+The remaining three bullets — the unanchored `isPairingRedeemUrl` match, the `embed=1` vs
+`nativeComposer=1` param drift, and `resolvedSession` mapping any non-2xx to `"new"` — are
+re-filed as `2026-07-19-mobile-contract-small-cleanups.md` rather than left buried in a
+closed file.
+
 ---
 
 A grab-bag of internal-consistency issues around mobile auth plumbing, none urgent alone but worth

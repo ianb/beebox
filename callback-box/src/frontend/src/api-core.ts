@@ -79,11 +79,15 @@ export function getApiBase(): string {
  * the subscription `wsLink`. Built from the page origin + the box-scoped API
  * base (so it rides the same router → Vite → Fastify proxy chain SSE used),
  * upgraded to the secure scheme when the page is HTTPS.
+ *
+ * Carries NO credential. The browser `WebSocket` API can't set headers, so a
+ * mobile device's pre-upgrade auth rides the `cb_mobile` cookie, which the
+ * browser attaches to the upgrade automatically; post-upgrade auth rides
+ * tRPC's `connectionParams` (see `lib/trpc/index.ts`). The device token used
+ * to be appended here as `?mobileToken=`, which put a non-expiring credential
+ * into access logs and history — see `docs/mobile-contract.md` §2.
  */
 export function getWebSocketUrl(): string {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const url = new URL(`${proto}//${window.location.host}${getApiBase()}/trpc`);
-  const token = window.localStorage.getItem("callbackbox.mobileAuthToken");
-  if (token) url.searchParams.set("mobileToken", token);
-  return url.toString();
+  return new URL(`${proto}//${window.location.host}${getApiBase()}/trpc`).toString();
 }
