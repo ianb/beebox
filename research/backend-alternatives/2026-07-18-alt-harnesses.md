@@ -12,8 +12,15 @@ Synthesis: [2026-07-18-synthesis.md](2026-07-18-synthesis.md).*
 2. Context-file auto-loading (walk-up, globbed rules, skills/slash-commands)
 3. System-prompt preset + append (not full replace)
 4. Programmatic hooks — genuine in-process callbacks (our card validator)
-5. Headless/embeddable SDK — image push mid-session, interrupt, session
-   create-with-id, resume across process restarts
+5. Headless/embeddable SDK — image delivery mid-session, interrupt, session
+   create-with-id, resume across process restarts. (Boxholder refinement,
+   2026-07-18: image delivery is satisfiable EITHER by inline image blocks in the
+   SDK's send path OR by file references + a vision-capable read tool — box media
+   already lives on disk and is agent-Read today. The scorecards below graded
+   inline push; a harness failing that but whose read tool delivers real
+   multimodal content to the model is a softer gap than scored. Needs per-harness
+   verification that the read-tool result reaches the model as image content.
+   Model-level vision remains a hard gate either way.)
 6. Session transcripts as host-readable structured data
 7. JSON-schema-constrained structured output
 8. Model/subscription-agnostic auth — what actually works vs marketing

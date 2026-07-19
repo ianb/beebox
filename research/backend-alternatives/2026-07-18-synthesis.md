@@ -47,6 +47,19 @@ subscription auth — with the Agent SDK as the driving handle
 | Qwen3-VL (self-host) | Yes — best open-weight option; ~45GB VRAM class for the good tier |
 | Gemini | Yes at model level; harness disqualified on other grounds |
 
+**Transport refinement (boxholder, 2026-07-18):** "accepts image input" decomposes
+into model vision (hard gate — MiniMax/DeepSeek stay disqualified) and transport.
+Transport can be inline image blocks OR a file reference resolved by a
+vision-capable read tool — box media is already on disk and agent-Read today. This
+softens Shape B gaps that are inline-push-specific (Codex's subscription-path
+image-forwarding bug, Crush's headless image gap) into verify-per-harness details.
+It does NOT help Shape A: when Claude Code reads an image file, the bytes still
+cross the wire to the provider as image content in the tool result, so an
+Anthropic-compatible endpoint must transport images regardless. It also suggests a
+port-narrowing move on our side: chat uploads written into the box and sent as
+paths would make `ChatBackend.send()` text-only (folded into the port-hygiene
+issue).
+
 ## What the empirical passes established
 
 **1. Our current posture survived every enforcement wave, and the near-term Anthropic

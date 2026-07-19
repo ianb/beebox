@@ -29,5 +29,15 @@ stand on their own as hygiene, whether or not a second backend ever exists:
    decouple history from the engine's store and remove the encoding hazards.
    Biggest of the three; needs a migration story for existing transcripts.
 
-Order matters: 1 and 2 are mechanical; 3 is a design. Doing 1 first makes 3's
-"log the wire messages" trivially well-defined.
+4. **(Boxholder, 2026-07-18) Consider file-reference images over inline blocks.**
+   Chat uploads could be written into the box (alongside existing attachment
+   conventions) and sent as paths for the agent to Read, instead of base64
+   image blocks through `send()` (`src/services/claude-chat-content.ts`). That
+   makes the port's send path text-only — one less backend capability any
+   future engine must provide — at the cost of a tool round-trip and trusting
+   the agent to look. Box media already works this way; this would unify chat
+   with it.
+
+Order matters: 1 and 2 are mechanical; 3 is a design (and 4 folds into its
+design space). Doing 1 first makes 3's "log the wire messages" trivially
+well-defined.
