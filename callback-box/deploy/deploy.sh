@@ -548,33 +548,63 @@ if [[ "$SKIP_RESTART" != true ]]; then
   echo "Restarting services..."
   ssh "root@$SERVER_IP" 'systemctl restart callback-hub callback-scheduler && echo "Services restarted"'
 
-  # Verify /healthz responds with 200 — proves the process came back up
-  # and is actually serving requests, not just that systemctl returned.
-  # Runs on the server so it uses localhost + the local CB_DIAG_API_KEY.
-  echo "Verifying /healthz..."
+  # Verify the deploy at two depths, on the server (localhost + local key):
+  #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
+  #      crash-looping. The hub blocks on startAll() before it listens, and a
+  #      failing box launch blocks ~30s on its readiness timeout, so the hub
+  #      genuinely may not answer for ~30s+ precisely when a box is broken —
+  #      hence the 180s window (the old 30s raced the cold boot and reported a
+  #      false failure during the 2026-07-16 ABI incident). A body of
+  #      status:"unhealthy" is a HARD fail, not something to keep polling.
+  #   2. /healthz/canary cold-starts ONE real box and confirms it serves — a
+  #      child-level check the passive verdict can't give on a lazy hub where
+  #      most boxes rest "stopped". A fleet-wide startup break (e.g. a native-
+  #      module ABI mismatch) makes this 503. Parsed with node (jq isn't on the
+  #      server); the box slug + error land in the log on failure.
+  echo "Verifying hub health + box canary..."
   ssh "root@$SERVER_IP" bash -s <<'HEALTHCHECK'
-    set -e
+    set -euo pipefail
     KEY=$(grep -E '^CB_DIAG_API_KEY=' /home/callback/.env 2>/dev/null | cut -d= -f2- || true)
     if [ -z "$KEY" ]; then
       echo "  Skipping: CB_DIAG_API_KEY not set in /home/callback/.env"
       exit 0
     fi
-    # Poll for up to 30s. Service typically responds in <2s.
-    for i in $(seq 1 30); do
-      body=$(curl -s -o /tmp/healthz.out -w '%{http_code}' \
+
+    # (1) Poll /healthz for up to 180s for a response, then judge the verdict.
+    verdict=""
+    for i in $(seq 1 180); do
+      code=$(curl -s -o /tmp/healthz.out -w '%{http_code}' \
         -H "Authorization: Bearer $KEY" \
         http://localhost:3210/healthz 2>/dev/null || echo "000")
-      if [ "$body" = "200" ]; then
-        echo "  Healthz OK: $(cat /tmp/healthz.out)"
-        rm -f /tmp/healthz.out
-        exit 0
+      # 200 (ok) or 503 (unhealthy) both mean the hub answered with a verdict;
+      # a connection failure (000) means it's still booting — keep polling.
+      if [ "$code" = "200" ] || [ "$code" = "503" ]; then
+        verdict=$(node -e 'const b=require("fs").readFileSync("/tmp/healthz.out","utf8");process.stdout.write(JSON.parse(b).status)' 2>/dev/null || echo "unparseable")
+        break
       fi
       sleep 1
     done
-    echo "  Healthz FAILED after 30s (last status: $body)"
-    [ -f /tmp/healthz.out ] && cat /tmp/healthz.out
+    if [ "$verdict" != "ok" ]; then
+      echo "  Hub healthz FAILED (verdict: ${verdict:-no-response}, last code: $code)"
+      [ -f /tmp/healthz.out ] && cat /tmp/healthz.out
+      rm -f /tmp/healthz.out
+      exit 1
+    fi
+    echo "  Hub healthz OK: $(cat /tmp/healthz.out)"
     rm -f /tmp/healthz.out
-    exit 1
+
+    # (2) Canary: actively cold-start one box and confirm it serves.
+    ccode=$(curl -s -o /tmp/canary.out -w '%{http_code}' \
+      -H "Authorization: Bearer $KEY" \
+      http://localhost:3210/healthz/canary 2>/dev/null || echo "000")
+    if [ "$ccode" != "200" ]; then
+      echo "  Box canary FAILED (code: $ccode) — a box could not start and serve:"
+      [ -f /tmp/canary.out ] && cat /tmp/canary.out
+      rm -f /tmp/canary.out
+      exit 1
+    fi
+    echo "  Box canary OK: $(cat /tmp/canary.out)"
+    rm -f /tmp/canary.out
 HEALTHCHECK
 fi
 

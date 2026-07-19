@@ -27,6 +27,13 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
 
+// Both hub health routes require this bearer key (mirroring the box server's
+// own /healthz). Set it for the whole doctest; the auth header helper below
+// sends it.
+const DIAG_KEY = "test-diag-key-for-router-doctest";
+process.env.CB_DIAG_API_KEY = DIAG_KEY;
+const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
+
 /** A minimal fake "box": echoes back method/url/headers as JSON for plain
  *  HTTP, and completes a bare-bones WebSocket handshake (no framing) for
  *  upgrade requests — enough to prove the hub proxies the upgrade through
@@ -67,11 +74,11 @@ async function startFakeBox() {
   return { server, sockets, port, origin: `http://127.0.0.1:${port}` };
 }
 
-async function startHub(endpoints, { boxes } = {}) {
+async function startHub(endpoints, { boxes, getHealth } = {}) {
   const sockets = [];
   const server = await createHubServer({
     endpoints,
-    getHealth: () => ({ status: "ok", boxes: [] }),
+    getHealth: getHealth ?? (() => ({ status: "ok", boxes: [] })),
     hubSecret: HUB_SECRET,
     boxes: boxes ?? [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
   });
@@ -133,7 +140,7 @@ const rootBody = await rootResponse.text();
 rootBody.length > 0
 => true
 
-const healthResponse = await fetch(`${hub.base}/healthz`);
+const healthResponse = await fetch(`${hub.base}/healthz`, diagAuth);
 JSON.stringify(await healthResponse.json())
 => {"status":"ok","boxes":[]}
 ```
@@ -412,6 +419,123 @@ apiBoxesResponse.status
 
 JSON.stringify(await apiBoxesResponse.json())
 => {"boxes":[{"slug":"test1","name":"test1"}]}
+```
+
+## `/healthz` is diag-key-gated (it used to leak slugs/PIDs/ports publicly)
+
+No key configured → 503 `unconfigured`; wrong/missing key → 401; correct key
+→ the verdict. (`CB_DIAG_API_KEY` is read per-request, so temporarily unsetting
+it exercises the unconfigured branch without restarting the hub.)
+
+```ts continue
+const savedKey = process.env.CB_DIAG_API_KEY;
+delete process.env.CB_DIAG_API_KEY;
+const unconfigured = await fetch(`${hub.base}/healthz`);
+process.env.CB_DIAG_API_KEY = savedKey;
+unconfigured.status
+=> 503
+
+const noKey = await fetch(`${hub.base}/healthz`);
+noKey.status
+=> 401
+
+const wrongKey = await fetch(`${hub.base}/healthz`, { headers: { authorization: "Bearer nope" } });
+wrongKey.status
+=> 401
+```
+
+## An `unhealthy` verdict is served as HTTP 503, not 200
+
+The status code carries the verdict so a monitor reading only the code alarms;
+the body names the crash-looping box. Here `getHealth` is injected to report a
+box latched `unhealthy` (the shape `hubVerdict` produces from supervisor state
+— see `hub-health.doctest.md` for the derivation itself).
+
+```ts continue
+const brokenHealth = () => ({
+  status: "unhealthy",
+  boxes: [{ slug: "sick", status: "unhealthy", pid: undefined, port: undefined, restarts: 5, consecutiveFailures: 5, lastError: "ERR_DLOPEN_FAILED" }],
+});
+const brokenHub = await startHub(staticEndpointProvider([]), { getHealth: brokenHealth });
+const brokenResponse = await fetch(`${brokenHub.base}/healthz`, diagAuth);
+brokenResponse.status
+=> 503
+
+const brokenBody = await brokenResponse.json();
+JSON.stringify({ status: brokenBody.status, slug: brokenBody.boxes[0].slug })
+=> {"status":"unhealthy","slug":"sick"}
+
+await new Promise((resolve) => brokenHub.server.close(resolve));
+```
+
+## `/healthz/canary` cold-starts one box and reports whether it serves
+
+The deploy's child-level check: it drives `ensureRunning` server-side (the
+passive verdict can't see a `stopped` box, and the diag key can't drive a box
+through the proxy auth wall). A slug that comes ready → 200; a configured slug
+whose cold-start never yields an endpoint → 503 `canary-failed`; an empty
+config → 503 `no-boxes`.
+
+```ts continue
+const canaryProvider = makeLazyProvider({ slug: "canarybox", origin: box.origin });
+const canaryHub = await startHub(canaryProvider, { boxes: [{ slug: "canarybox", boxRoot: "/nonexistent/canarybox" }] });
+
+// No ?box= → picks the first configured slug, cold-starts it, 200.
+const canaryOk = await fetch(`${canaryHub.base}/healthz/canary`, diagAuth);
+canaryOk.status
+=> 200
+
+JSON.stringify(await canaryOk.json())
+=> {"status":"ok","slug":"canarybox"}
+
+canaryProvider.ensureCalls
+=> 1
+```
+
+A provider whose `ensureRunning` never yields an endpoint (the crash-loop case
+— the child never becomes ready) → 503, naming the slug:
+
+```ts continue
+const deadProvider = {
+  get: () => undefined,
+  slugs: () => ["deadbox"],
+  ensureRunning: async () => undefined,
+};
+const deadHub = await startHub(deadProvider, { boxes: [{ slug: "deadbox", boxRoot: "/nonexistent/deadbox" }] });
+const canaryDead = await fetch(`${deadHub.base}/healthz/canary`, diagAuth);
+canaryDead.status
+=> 503
+
+const deadBody = await canaryDead.json();
+JSON.stringify({ status: deadBody.status, slug: deadBody.slug })
+=> {"status":"canary-failed","slug":"deadbox"}
+
+await new Promise((resolve) => deadHub.server.close(resolve));
+```
+
+An empty configuration has nothing to canary → 503 `no-boxes`:
+
+```ts continue
+const emptyHub = await startHub(staticEndpointProvider([]), { boxes: [] });
+const canaryEmpty = await fetch(`${emptyHub.base}/healthz/canary`, diagAuth);
+canaryEmpty.status
+=> 503
+
+JSON.stringify(await canaryEmpty.json())
+=> {"status":"no-boxes"}
+
+await new Promise((resolve) => emptyHub.server.close(resolve));
+```
+
+The canary is also diag-gated — no key → 401:
+
+```ts continue
+const canaryNoKey = await fetch(`${canaryHub.base}/healthz/canary`);
+canaryNoKey.status
+=> 401
+
+for (const socket of canaryHub.sockets) socket.destroy();
+await new Promise((resolve) => canaryHub.server.close(resolve));
 ```
 
 ```ts cleanup

@@ -68,9 +68,14 @@ import {
   HUB_AUTH_OFF_HEADER,
 } from "../webapp/auth.js";
 import { invariant } from "../lib/invariant.js";
+import type { HubVerdict } from "./hub-health.js";
+import { registerHealthRoutes } from "./hub-health-routes.js";
 
 export interface HubHealth {
-  status: "ok";
+  /** Derived in `cli/commands/hub.ts` via `hubVerdict()` — `"unhealthy"`
+   *  (served as HTTP 503) if any box is crash-looping or has latched
+   *  unhealthy, else `"ok"` (200). See `hub-health.ts`. */
+  status: HubVerdict;
   boxes: BoxRuntimeStatus[];
 }
 
@@ -249,7 +254,9 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     done(null);
   });
 
-  app.get("/healthz", async (_request, reply) => reply.send(getHealth()));
+  // Health surface: passive verdict (`/healthz`) + active canary
+  // (`/healthz/canary`), both diag-key-gated. See `hub-health-routes.ts`.
+  registerHealthRoutes(app, { endpoints, getHealth });
 
   // Login lives at the hub for the whole fleet (Track D, chunk D2) --
   // reuses the SAME routes a standalone box server registers, so there's
