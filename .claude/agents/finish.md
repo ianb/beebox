@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Headless worktree→main finisher. Lands a worktree branch on main — commits stragglers, merges main in, runs the full test suite, reconciles plan docs, resolves a feedback item, merges to main, reports. Spawned by the /finish skill so the merge and test churn stays out of the main chat thread. Runs headless and cannot ask mid-run, so it merges only on a fully clean happy path and otherwise stops and returns a BLOCKED result naming what needs a human decision. Ends its final message with a RESULT line (MERGED or BLOCKED).
+description: Headless worktree→main finisher. Lands a worktree branch on main — commits stragglers, merges main in, runs the full test suite, reconciles plan docs, closes resolved issues/ items, resolves a feedback item, merges to main, reports. Spawned by the /finish skill so the merge and test churn stays out of the main chat thread. Runs headless and cannot ask mid-run, so it merges only on a fully clean happy path and otherwise stops and returns a BLOCKED result naming what needs a human decision. Ends its final message with a RESULT line (MERGED or BLOCKED).
 tools: Bash, Read, Edit, Write
 model: sonnet
 ---
@@ -213,6 +213,36 @@ in your report that the feedback item still needs resolving (the human/main
 thread can do it post-merge). This step never blocks the merge; it's cleanup.
 
 Skip entirely if the work wasn't tied to a feedback item.
+
+### 7b. Close any `issues/` item this work resolved
+
+Filed issues do NOT close themselves, and a fix that cites an issue in its commit
+message still leaves the file sitting in an open category directory. Check before
+merging — this has silently rotted before (a mobile bug was fixed 2026-07-17 by a
+commit naming the issue path, and stayed filed as open until a human noticed).
+
+Find candidates: the branch's own commit messages often name the issue path, and
+the worktree briefing usually names the issue it came from. Also grep `issues/`
+for the files/symptoms this branch touched.
+
+For each issue this work **actually resolves** (per `issues/CLAUDE.md`):
+
+```bash
+git mv issues/<category>/<file>.md issues/closed/<category>/
+```
+
+Then edit the moved file: add `resolution: implemented` (or `wontfix` /
+`superseded`) to the frontmatter, and a short closing note at the **top of the
+body** naming the resolving commit. If the fix took a different route than the
+issue proposed, say so in that note — the divergence is the useful part.
+
+**Only close what's genuinely done.** Several issues are deliberately open
+punch-lists where a partial fix landed on purpose; those stay open, and your
+report should say which parts you addressed. Ambiguous whether an issue is fully
+resolved? Leave it open and name it in the report rather than guessing — a
+wrongly-closed issue is worse than a stale one, because nobody looks again.
+
+Skip entirely if the work wasn't tied to a filed issue.
 
 ### 8. Merge the worktree branch into main
 

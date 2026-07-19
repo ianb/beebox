@@ -10,6 +10,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import type { FastifyRequest } from "fastify";
+import { parseCookieHeader } from "../lib/cookies.js";
 import { errnoCode } from "../lib/error-guards.js";
 
 const COOKIE_NAME = "cb_session";
@@ -196,33 +197,9 @@ export function getSessionUser(request: FastifyRequest): SessionUser | null {
 }
 
 /**
- * Parse a raw `Cookie` header string into a name -> value map. Only used by
- * `getSessionUserFromCookieHeader` below, for the one place that doesn't
- * have `@fastify/cookie`'s request decoration available: the hub's raw
- * WebSocket-upgrade path (`src/hub/hub-server.ts`), which sees a bare
- * `http.IncomingMessage`, not a `FastifyRequest`.
- */
-function parseCookieHeader(header: string | undefined): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!header) return out;
-  for (const part of header.split(";")) {
-    const eq = part.indexOf("=");
-    if (eq === -1) continue;
-    const key = part.slice(0, eq).trim();
-    const value = part.slice(eq + 1).trim();
-    if (!key) continue;
-    try {
-      out[key] = decodeURIComponent(value);
-    } catch (_e) {
-      // Malformed percent-encoding — untrusted input, skip this cookie.
-    }
-  }
-  return out;
-}
-
-/**
  * Same as `getSessionUser`, but from a raw `Cookie` header string instead
- * of a `FastifyRequest`'s decorated `.cookies`. See `parseCookieHeader`.
+ * of a `FastifyRequest`'s decorated `.cookies` — for the paths without
+ * `@fastify/cookie`'s decoration (see `lib/cookies.ts`).
  */
 export function getSessionUserFromCookieHeader(cookieHeader: string | undefined): SessionUser | null {
   const cookie = parseCookieHeader(cookieHeader)[COOKIE_NAME];

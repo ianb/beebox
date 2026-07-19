@@ -1,7 +1,7 @@
 ---
 title: "Publish-pages: resume the Cloudflare publishing feature"
 area: callback-box
-needs: [implementation]
+needs: [implementation, manual-testing]
 design: ../../callback-box/docs/plans/publish-pages.md
 ---
 

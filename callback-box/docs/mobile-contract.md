@@ -109,8 +109,16 @@ composer not suppressed, wrong attribution — with no error surfaced).
 
 ## 2. Auth — device-token carriage
 
-The redeem step (§1.3) yields a durable device token. Every authenticated mobile interaction
-carries it by one of three mechanisms; the box verifies all three the same way.
+The redeem step (§1.3) yields a durable device token. It is **header-only on the wire**: it must
+never appear in a URL. Because a device token has no expiry (`MobileDevice` tracks only
+`revokedAt`), any copy that lands in an access log, a `Referer`, or WebKit history is replayable
+until a human manually revokes the device — so a URL carrier turns a routine leak into an
+unbounded one.
+
+Ordinary requests therefore carry the durable token in an `Authorization` header, and everything
+the browser sends on its own — navigations it initiates itself, and the tRPC WebSocket upgrade,
+which the browser `WebSocket` API cannot attach headers to — rides a **short-lived `cb_mobile`
+cookie** minted from that token.
 
 ### 2.1 Carriers
 
@@ -118,11 +126,26 @@ carries it by one of three mechanisms; the box verifies all three the same way.
 |---|---|---|---|
 | localStorage | key `callbackbox.mobileAuthToken` = `<token>` | native startup `WKUserScript` (`ChatWebView.swift`) writes it, gated on `origin === allowedOrigin`, `forMainFrameOnly:true` | web `mobile-auth.ts` — `getMobileAuthToken()`, `mobileAuthHeaders()`, `withMobileAuth()` |
 | `Authorization: Bearer <token>` header | HTTP header | native `ChatAPI.applyAuth`; web `mobileAuthHeaders()` (applied to `/chat/send`, `/chat/transcribe-audio`) | box `verifyMobileBearer` |
-| `?mobileToken=<token>` query | URL query param | native `ChatWebView.authenticatedChatURL` (initial `/chat` nav); web `getWebSocketUrl()` (tRPC WS URL) | box `mobileTokenFromUrl` |
+| `cb_mobile` cookie | `Set-Cookie: cb_mobile=<signed>; HttpOnly; Secure; SameSite=Lax; Path=/<slug>; Max-Age=3600` | box `webapp/mobile-cookie.ts` — issued on any mobile-authenticated response, and by `POST /api/pairing/session` | box `core/mobile/mobile-session.ts` · `verifyMobileSession` |
 
 - **Mirrored key:** `callbackbox.mobileAuthToken` is defined native-side inline in the
   `ChatWebView.swift` startup script and box-side as `MOBILE_AUTH_TOKEN_STORAGE_KEY` in
   `src/frontend/src/lib/mobile-auth.ts` (comment-linked).
+- **The initial webview navigation** (`ChatWebView.request()`) sets `Authorization` on the
+  `URLRequest` and loads a plain URL. The response's `Set-Cookie` seeds WebKit's own cookie
+  store, which is what carries every later request. The cookie is deliberately NOT written via
+  `WKHTTPCookieStore.setCookie` before loading — that API's completion handler is
+  documented-unreliable and can hang (WebKit bug 185483).
+- **Cookie lifetime and revocation.** The cookie lives one hour and is re-issued on any
+  authenticated response past its halfway point; renewal re-reads the device store, so a revoked
+  device stops renewing at once and its existing cookie is actively cleared. A signed cookie
+  cannot be revoked before it expires, so **revocation takes effect within at most one hour** on
+  an active session. That bound is the deliberate trade for a verification path that costs no
+  filesystem access per request.
+- **Recovery.** A WebKit-initiated reload re-issues the bare URL with no `Authorization` header,
+  so a lapsed cookie 401s. The web layer then calls `POST /api/pairing/session` with the token
+  from localStorage and retries once (`lib/trpc/index.ts` · `trpcFetch`). This is why the
+  localStorage carrier still exists.
 
 ### 2.2 Verification (box)
 
@@ -130,9 +153,11 @@ carries it by one of three mechanisms; the box verifies all three the same way.
 |---|---|
 | `src/core/mobile/pairing.ts` — `verifyMobileBearer(boxRoot, authHeader)` | parses `Bearer ` prefix, delegates |
 | `src/core/mobile/pairing.ts` — `verifyMobileToken(boxRoot, token)` | SHA-256 + timing-safe compare vs non-revoked devices; writes `lastUsedAt` back |
-| `src/hub/hub-server.ts` / `src/webapp/server-box-scope.ts` / `src/webapp/server-root.ts` — `mobileTokenFromUrl(url)` | reads `?mobileToken=`; **duplicated verbatim 3×** |
-| `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | box auth preHandler: accepts agent bearer, mobile bearer, or `?mobileToken=` |
-| `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileBearerOk`/`mobileTokenOk` → `authed:true` |
+| `src/core/mobile/pairing.ts` — `isMobileDeviceActive(boxRoot, deviceId)` | read-only revocation check, used when renewing a cookie |
+| `src/core/mobile/mobile-session.ts` — `verifyMobileSession(boxRoot, cookie)` | per-box HMAC + `exp` check; no filesystem access |
+| `src/core/mobile/request-auth.ts` — `resolveMobileRequestAuth(boxRoot, headers)` | **the one resolver every mobile gate uses** — cookie first, then bearer |
+| `src/webapp/server-box-scope.ts` — `addBoxAuthHook` | box auth preHandler: accepts agent bearer or `resolveMobileRequestAuth`; renews the cookie |
+| `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileOk` → `authed:true` |
 | `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
 
 ### 2.3 Identity NOT unified (structural)
@@ -382,9 +407,10 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | P3 | `POST /api/pairing/redeem` | native→box | req `{pairingToken,deviceLabel}`; res `{boxSlug,label,deviceId,deviceLabel,token}` (native reads only `token`) | `Storage/PairedBoxStore.swift` · `redeemPairing` | `routes/pairing.ts` · redeem route, `RedeemBody` | LOUD server / SILENT native |
 | A1 | Device token → localStorage | native→web | key `callbackbox.mobileAuthToken` = `<token>` | `Views/ChatWebView.swift` · startup `WKUserScript` | `lib/mobile-auth.ts` · `MOBILE_AUTH_TOKEN_STORAGE_KEY` | SILENT |
 | A2 | Device token → `Authorization: Bearer` | native/web→box | header | `Services/ChatAPI.swift` · `applyAuth`; web `lib/mobile-auth.ts` · `mobileAuthHeaders` | `core/mobile/pairing.ts` · `verifyMobileBearer`; `server-box-scope.ts` · `addBoxAuthHook` | LOUD |
-| A3 | Device token → `?mobileToken=` | native/web→box | query param | `Views/ChatWebView.swift` · `authenticatedChatURL`; web `api-core.ts` · `getWebSocketUrl` | `hub-server.ts`/`server-box-scope.ts`/`server-root.ts` · `mobileTokenFromUrl` | LOUD — **S2** |
+| A3 | Device token → `Set-Cookie: cb_mobile` | box→browser | `cb_mobile=<signed>; HttpOnly; Secure; SameSite=Lax; Path=/<slug>; Max-Age=3600` | `Views/ChatWebView.swift` · `request()` sets `Authorization`, WebKit stores the response cookie | `webapp/mobile-cookie.ts` · `setMobileSessionCookie`; `core/mobile/mobile-session.ts` · `MOBILE_COOKIE_NAME` | LOUD |
+| A5 | `POST /api/pairing/session` | web→box | req `Authorization: Bearer <token>`; res `204` + `Set-Cookie` | web `lib/mobile-auth.ts` · `refreshMobileSession` | `routes/pairing.ts` · session route | LOUD |
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
-| W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session][&mobileToken]` | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `authenticatedChatURL` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
+| W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `callbackboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
 | B1 | Native emission | native→web | `{id,text,origin,diarized,images:[{id,mimeType,dataBase64}]}` via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Views/ChatWebView.swift` · `NativeEmissionPayload`; `Models/ChatImageAttachment.swift` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` | SILENT |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `callbackboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
@@ -393,7 +419,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD / SILENT if float-WAV mis-decoded — **I8** |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
-| M1 | Hub mobile-auth wall bypass | box internal | presence of Bearer/mobileToken | — | `hub-server.ts` · `hasMobileAuthAttempt` | SILENT — **S1** |
+| M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 
 ---
 
@@ -404,6 +430,10 @@ without the other is a contract break.
 
 - **localStorage key** `callbackbox.mobileAuthToken` — `Views/ChatWebView.swift` (startup script) ↔
   `lib/mobile-auth.ts` · `MOBILE_AUTH_TOKEN_STORAGE_KEY` (comment-linked).
+- **Mobile session cookie name** `cb_mobile` — `core/mobile/mobile-session.ts` ·
+  `MOBILE_COOKIE_NAME` ↔ nothing native-side by design: the native shell never names the cookie,
+  it only sends `Authorization` and lets WebKit store whatever the response sets. A rename is
+  therefore box-internal, which is the point — it keeps the credential out of client code.
 - **Webview param** `nativeComposer=1` — `Models/PairedBox.swift` · `chatURL` (with in-code sync
   comment) ↔ `pages/ChatPage.tsx` / `router.tsx`.
 - **Emission JSON keys** `{id,text,origin,diarized,images:[{id,mimeType,dataBase64}]}` —
@@ -432,12 +462,14 @@ without the other is a contract break.
 Still-open items to carry into the Android plan and the sync process. Full analysis (severity,
 reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 
-- **S1 — hub presence-only wall bypass (OPEN).** `hub-server.ts` · `hasMobileAuthAttempt` checks
-  only that a `Bearer` header or `?mobileToken=` is *present*, never valid, before bypassing the
-  hub auth wall; the box then re-verifies. A valid slug + any `Bearer x` still cold-starts the box →
-  unauthenticated box-wake / existence oracle.
-- **S2 — durable token in `?mobileToken=` URL (OPEN).** Produced by `getWebSocketUrl` and
-  `authenticatedChatURL`; lands in access/proxy logs, `Referer`, history. Tokens never expire.
+- **S1 — hub presence-only wall bypass (CLOSED 2026-07).** `hasMobileAuthAttempt` checked only
+  that a `Bearer` header or `?mobileToken=` was *present*, never valid, so any `Bearer x` bypassed
+  the hub auth wall and cold-started the box. Replaced by `hasMobileAuth`, which verifies against
+  the request's slug — affordable because the cookie path is pure HMAC. See
+  `docs/implemented-plans/mobile-token-handshake.md`.
+- **S2 — durable token in `?mobileToken=` URL (CLOSED 2026-07).** The carrier is gone: the token
+  is header-only and the `cb_mobile` cookie carries what the browser sends on its own. All three
+  copies of `mobileTokenFromUrl` are deleted. See `docs/implemented-plans/mobile-token-handshake.md`.
 - **S3 — unlocked device-store RMW + non-atomic write (OPEN).** `verifyMobileToken` does
   read→mutate-`lastUsedAt`→write with no `withCardLock`/file-lock, racing `revokeMobileDevice`;
   `writeDeviceStore` is a bare `writeFileSync` (crash mid-write corrupts the store).
@@ -518,6 +550,9 @@ callback-box/src/frontend/src/input/targets/receipts.ts
 
 # Box server: pairing, mobile-token verification, native HTTP endpoints
 callback-box/src/core/mobile/pairing.ts
+callback-box/src/core/mobile/mobile-session.ts
+callback-box/src/core/mobile/request-auth.ts
+callback-box/src/webapp/mobile-cookie.ts
 callback-box/src/webapp/routes/pairing.ts
 callback-box/src/webapp/routes/chat-audio-routes.ts
 

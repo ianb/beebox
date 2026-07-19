@@ -3,7 +3,7 @@ import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink, typ
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
 import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
-import { getMobileAuthToken, isMobileAuthenticated, withMobileAuth } from "../mobile-auth";
+import { getMobileAuthToken, isMobileAuthenticated, refreshMobileSession, withMobileAuth } from "../mobile-auth";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -22,7 +22,17 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
     : reqUrl;
   const response = await fetch(fixedUrl, withMobileAuth(options));
   if (response.status === 401) {
-    if (isMobileAuthenticated()) return response;
+    if (isMobileAuthenticated()) {
+      // A mobile 401 usually means the short-lived cb_mobile cookie lapsed
+      // (e.g. after a WebKit-initiated reload, which carries no Authorization
+      // header). We still hold the durable token, so re-establish the session
+      // and retry once. One retry only — a second 401 means the device token
+      // itself is revoked, and retrying would spin.
+      if (await refreshMobileSession(getApiBase())) {
+        return fetch(fixedUrl, withMobileAuth(options));
+      }
+      return response;
+    }
     const returnTo = encodeURIComponent(
       window.location.pathname + window.location.search,
     );
@@ -44,7 +54,18 @@ let wsClientSingleton: ReturnType<typeof createWSClient> | null = null;
 function getWsClient(): ReturnType<typeof createWSClient> {
   if (!wsClientSingleton) {
     wsClientSingleton = createWSClient({
-      url: () => getWebSocketUrl(),
+      // The WS URL carries no credential (the browser API can't set headers),
+      // so the upgrade is gated entirely on the cb_mobile cookie. That cookie
+      // is short-lived, and unlike an HTTP 401 there is no response body to
+      // recover from: a failed upgrade just makes wsLink back off and retry.
+      // A device idle past the TTL would reconnect-fail forever, silently. So
+      // refresh the session before opening a socket — one extra POST per
+      // socket open (lazy + 30s closeMs, so this is rare), in exchange for
+      // removing that failure mode entirely.
+      url: async () => {
+        if (isMobileAuthenticated()) await refreshMobileSession(getApiBase());
+        return getWebSocketUrl();
+      },
       connectionParams: () => {
         const token = getMobileAuthToken();
         return token ? { authorization: `Bearer ${token}` } : null;
