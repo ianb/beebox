@@ -54,17 +54,32 @@ export class RemoteObjectNotFoundError extends Error {
   }
 }
 
+/** The body + metadata for a {@link PublishRemoteStore.put}. */
+export interface PublishPutOptions {
+  /** The object bytes (or a string, encoded UTF-8). */
+  body: Uint8Array | string;
+  /** `Content-Type` metadata for the stored object (bundle assets set it by extension). */
+  contentType?: string | undefined;
+}
+
 /**
- * The subset of R2 the connector uses: list under a prefix, fetch bytes, delete.
- * Deliberately minimal — no put (the box only pulls), no metadata.
+ * The R2 surface the publish flow uses. The connector (Track F) only ever pulls
+ * — list under a prefix, fetch bytes, delete — but the CLI publish-lifecycle
+ * commands (Track E: `cb pub go`/`revoke`) additionally *write* the edge
+ * manifest, bundle objects, and slug pointer, so `put` and a generic `list`
+ * round out the interface. Still minimal: no metadata, no multipart.
  */
 export interface PublishRemoteStore {
   /** Object keys under `submissions/` (each a stored submission JSON). */
   listSubmissions(): Promise<string[]>;
   /** Object keys under `access-log/` (each a stored `{ts,pubId,email}` JSON). */
   listAccessLogs(): Promise<string[]>;
+  /** Object keys under an arbitrary prefix (e.g. `pubs/<id>/bundle/`). Sorted. */
+  list(prefix: string): Promise<string[]>;
   /** Fetch an object's raw bytes. Rejects if the key is absent. */
   get(key: string): Promise<Uint8Array>;
+  /** Write (create or overwrite) an object. Idempotent — a re-put is a no-op change. */
+  put(key: string, opts: PublishPutOptions): Promise<void>;
   /** Delete an object. Idempotent from the caller's view. */
   delete(key: string): Promise<void>;
 }
@@ -151,10 +166,19 @@ export function createR2PublishStore(config: R2PublishStoreConfig): PublishRemot
     listAccessLogs(): Promise<string[]> {
       return listPrefix(ACCESS_LOG_PREFIX);
     },
+    list(prefix: string): Promise<string[]> {
+      return listPrefix(prefix);
+    },
     async get(key: string): Promise<Uint8Array> {
       const res = await client.fetch(`${base}/${encodeR2Key(key)}`, { method: "GET" });
       if (!res.ok) throw new R2RequestError({ op: "get", key, status: res.status, statusText: res.statusText });
       return new Uint8Array(await res.arrayBuffer());
+    },
+    async put(key: string, opts: PublishPutOptions): Promise<void> {
+      const headers: Record<string, string> = {};
+      if (opts.contentType !== undefined) headers["content-type"] = opts.contentType;
+      const res = await client.fetch(`${base}/${encodeR2Key(key)}`, { method: "PUT", body: opts.body, headers });
+      if (!res.ok) throw new R2RequestError({ op: "put", key, status: res.status, statusText: res.statusText });
     },
     async delete(key: string): Promise<void> {
       const res = await client.fetch(`${base}/${encodeR2Key(key)}`, { method: "DELETE" });
@@ -176,10 +200,14 @@ function encodeR2Key(key: string): string {
 // ---------------------------------------------------------------------------
 
 export interface FakePublishStore extends PublishRemoteStore {
-  /** Live object map (full R2 key → bytes). Mutated by `delete`. */
+  /** Live object map (full R2 key → bytes). Mutated by `put`/`delete`. */
   objects: Map<string, Uint8Array>;
+  /** Keys written so far, in call order — tests assert bundle-before-manifest upload order. */
+  puts: string[];
   /** Keys deleted so far, in call order — tests assert land-then-delete. */
   deleted: string[];
+  /** Every mutating op in call order (`put:<key>` / `delete:<key>`) — for cross-op ordering assertions. */
+  ops: string[];
   /** Stable, human-readable snapshot for doctest assertions. */
   describe(): string;
 }
@@ -197,24 +225,36 @@ export function createFakePublishStore(options?: FakePublishStoreOptions): FakeP
   for (const [key, value] of Object.entries(options?.objects ?? {})) {
     objects.set(key, typeof value === "string" ? encoder.encode(value) : value);
   }
+  const puts: string[] = [];
   const deleted: string[] = [];
+  const ops: string[] = [];
 
   const listPrefix = (prefix: string): Promise<string[]> =>
     Promise.resolve([...objects.keys()].filter((k) => k.startsWith(prefix)).toSorted());
 
   return {
     objects,
+    puts,
     deleted,
+    ops,
     listSubmissions: () => listPrefix(SUBMISSIONS_PREFIX),
     listAccessLogs: () => listPrefix(ACCESS_LOG_PREFIX),
+    list: (prefix: string) => listPrefix(prefix),
     get(key: string): Promise<Uint8Array> {
       const bytes = objects.get(key);
       if (bytes === undefined) return Promise.reject(new RemoteObjectNotFoundError(key));
       return Promise.resolve(bytes);
     },
+    put(key: string, opts: PublishPutOptions): Promise<void> {
+      objects.set(key, typeof opts.body === "string" ? encoder.encode(opts.body) : opts.body);
+      puts.push(key);
+      ops.push(`put:${key}`);
+      return Promise.resolve();
+    },
     delete(key: string): Promise<void> {
       objects.delete(key);
       deleted.push(key);
+      ops.push(`delete:${key}`);
       return Promise.resolve();
     },
     describe(): string {

@@ -154,7 +154,7 @@ function checkFlagCombo({ tier, slug, emails }: Pick<DraftInput, "tier" | "slug"
 }
 
 /** Byte length + full sha256 hex of a bundle entry (string or binary). */
-function fileStats(content: string | Uint8Array): { bytes: number; sha256: string } {
+export function fileStats(content: string | Uint8Array): { bytes: number; sha256: string } {
   const buf = typeof content === "string" ? Buffer.from(content, "utf-8") : Buffer.from(content);
   return { bytes: buf.length, sha256: createHash("sha256").update(buf).digest("hex") };
 }

@@ -24,6 +24,13 @@ import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { tierValues, type Tier } from "../../publish/manifest.js";
 import { draftPublication, type FilePreview } from "../../publish/draft.js";
 import type { LeakScanResult } from "../../publish/leak-scan.js";
+import {
+  listPublications,
+  type PublicationSummary,
+  resolvePublishStore,
+  revokePublication,
+} from "../../publish/lifecycle.js";
+import { goPublication } from "../../publish/go.js";
 
 /** Commander accumulator for repeatable options (e.g. `--accept-leak`). */
 function collect(val: string, acc: string[]): string[] {
@@ -128,10 +135,125 @@ const draftCommand = new Command("draft")
     }
   });
 
+/** Format one `cb pub ls` row. */
+function formatSummaryRow(s: PublicationSummary): string {
+  const detail = s.slug !== null
+    ? `slug:${s.slug}`
+    : s.allowedEmails !== null
+      ? `emails:${s.allowedEmails.length > 0 ? s.allowedEmails.join(",") : "(none)"}`
+      : "";
+  return [
+    `  ${s.pubId}`,
+    `${s.tier}`,
+    `${s.status}`,
+    `expires:${s.expiresAt ?? "—"}`,
+    detail,
+    `← ${s.source}`,
+  ].filter((part) => part.length > 0).join("  ");
+}
+
+const lsCommand = new Command("ls")
+  .description("List this box's publications (read-only; no Cloudflare)")
+  .action(async () => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const summaries = await listPublications(boxRoot);
+      if (summaries.length === 0) {
+        console.log("No publications yet. Draft one with `cb pub draft <source> --tier <tier>`.");
+        return;
+      }
+      console.log(`${summaries.length} publication${summaries.length === 1 ? "" : "s"}:`);
+      for (const summary of summaries) console.log(formatSummaryRow(summary));
+    } catch (error) {
+      console.error(`Error: ${errorMessage(error)}`);
+      process.exit(1);
+    }
+  });
+
+const revokeCommand = new Command("revoke")
+  .description("Revoke a live publication — tombstones it edge-side (pages + submit die together)")
+  .argument("<pub-id>", "The pub-id to revoke (a revoked id is never reused)")
+  .action(async (...actionArgs: [pubId: string, ...unknown[]]) => {
+    const [pubId] = actionArgs;
+    try {
+      const boxRoot = await requireBoxRoot();
+      const store = resolvePublishStore();
+      if (!store) {
+        console.error("Error: publishing is not configured on this box — run `cb pub setup` first.");
+        process.exit(1);
+      }
+      const result = await revokePublication({ boxRoot, pubId }, { store });
+      if (result.ok) {
+        console.log(`Revoked ${result.pubId}: tombstone written edge-side (next request 410s).`);
+        console.log(`  deleted ${result.deletedBundleObjects} bundle object(s)${result.deletedSlug ? " + slug pointer" : ""}; local manifest committed as revoked.`);
+        return;
+      }
+      switch (result.reason) {
+        case "unconfigured":
+        case "not-found":
+        case "invalid-manifest":
+          console.error(`Error: ${result.message}`);
+          break;
+        default:
+          assertNever(result);
+      }
+      process.exit(1);
+    } catch (error) {
+      console.error(`Error: ${errorMessage(error)}`);
+      process.exit(1);
+    }
+  });
+
+const goCommand = new Command("go")
+  .description("Flip a drafted publication LIVE — the human-only flip (interactive confirmation required)")
+  .argument("<pub-id>", "The drafted pub-id to publish live")
+  .action(async (...actionArgs: [pubId: string, ...unknown[]]) => {
+    const [pubId] = actionArgs;
+    try {
+      const boxRoot = await requireBoxRoot();
+      const store = resolvePublishStore();
+      if (!store) {
+        console.error("Error: publishing is not configured on this box — run `cb pub setup` first.");
+        process.exit(1);
+      }
+      // The default confirm is the real interactive TTY prompt (it displays the
+      // preview + tier/expiry/allowlist and requires the typed pub-id).
+      const result = await goPublication({ boxRoot, pubId }, { store, ownerEmail: getOwnerEmail() });
+      if (result.ok) {
+        console.log(`\nPublished ${result.pubId} LIVE (tier: ${result.manifest.tier}).`);
+        console.log(`  uploaded ${result.uploadedBundleObjects} bundle object(s) + edge manifest${result.slugPointer ? " + slug pointer" : ""}; local manifest committed as live.`);
+        return;
+      }
+      switch (result.reason) {
+        case "leaks-blocked":
+          printPreview(result.files, result.scan);
+          console.error(`\nRefusing to flip live: ${result.blocking.length} leak-scan finding(s) not accepted at draft time.`);
+          console.error("Re-draft accepting each genuine false positive, then `cb pub go` again.");
+          break;
+        case "unconfigured":
+        case "not-found":
+        case "invalid-manifest":
+        case "not-draft":
+        case "not-confirmed":
+          console.error(`${result.reason === "not-confirmed" ? "" : "Error: "}${result.message}`);
+          break;
+        default:
+          assertNever(result);
+      }
+      process.exit(1);
+    } catch (error) {
+      console.error(`Error: ${errorMessage(error)}`);
+      process.exit(1);
+    }
+  });
+
 /**
- * The `cb pub` parent. Subcommands: `draft` (here). `setup`/`go`/`revoke`/`ls`/
- * `status` land with the Cloudflare-dependent half.
+ * The `cb pub` parent. Subcommands: `draft`, `ls`, `revoke`, `go` (here).
+ * `setup`/`status` land with a live-Cloudflare session.
  */
 export const pubCommand = new Command("pub")
-  .description("Publish box content as external static pages (draft now; Cloudflare flow later)")
-  .addCommand(draftCommand);
+  .description("Publish box content as external static pages (draft, list, go-live, revoke)")
+  .addCommand(draftCommand)
+  .addCommand(lsCommand)
+  .addCommand(revokeCommand)
+  .addCommand(goCommand);
