@@ -309,6 +309,12 @@ RSYNC_OPTS=(-az --delete
   # should ever be pushed to (or deleted from) the server based on the checkout.
   --exclude 'deploy/server-ip'
   --exclude 'deploy/.deploy-logs'
+  # pub-worker is a Cloudflare Worker deployed via `cb pub setup` (wrangler), NOT
+  # run on the box server. Excluding its dir makes it an absent workspace member
+  # on prod, so the root `pnpm install --frozen-lockfile` skips its heavy CF
+  # toolchain (workerd, wrangler) — same "partial workspace installs fine" path
+  # as browse/agent-browser-typed above. It stays in pnpm-workspace.yaml for local dev.
+  --exclude 'pub-worker'
 )
 
 # Sync monorepo packages FROM THE BUILD CHECKOUT. These are pnpm workspace
