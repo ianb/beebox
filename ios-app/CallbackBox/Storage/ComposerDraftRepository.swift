@@ -19,6 +19,7 @@ actor ComposerDraftRepository {
         case unsupportedVersion(Int)
         case boxMismatch
         case corruptManifest
+        case invalidPayloadFilename
     }
 
     private let rootURL: URL
@@ -57,12 +58,71 @@ actor ComposerDraftRepository {
         try data.write(to: manifestURL(boxID: boxID), options: .atomic)
     }
 
+    func savePayload(_ data: Data, filename: String, boxID: UUID) throws {
+        let url = try payloadURL(filename: filename, boxID: boxID)
+        try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: url, options: .atomic)
+    }
+
+    func loadPayload(filename: String, boxID: UUID) throws -> Data {
+        try Data(contentsOf: payloadURL(filename: filename, boxID: boxID))
+    }
+
+    func emissionImages(_ images: [DraftImage], boxID: UUID) throws -> [ChatImageAttachment] {
+        try images.map { image in
+            let data = try Data(contentsOf: payloadURL(filename: image.filename, boxID: boxID))
+            return ChatImageAttachment(
+                id: image.id,
+                mimeType: image.mimeType,
+                dataBase64: data.base64EncodedString()
+            )
+        }
+    }
+
+    func removePayload(filename: String, boxID: UUID) throws {
+        let url = try payloadURL(filename: filename, boxID: boxID)
+        guard fileManager.fileExists(atPath: url.path) else {
+            return
+        }
+        try fileManager.removeItem(at: url)
+    }
+
+    func removePayloads(for images: [DraftImage], boxID: UUID) {
+        for image in images {
+            try? removePayload(filename: image.filename, boxID: boxID)
+        }
+    }
+
+    func missingImageIDs(_ images: [DraftImage], boxID: UUID) -> [Int] {
+        images.compactMap { image in
+            guard
+                let url = try? payloadURL(filename: image.filename, boxID: boxID),
+                fileManager.fileExists(atPath: url.path)
+            else {
+                return image.id
+            }
+            return nil
+        }
+    }
+
     func manifestURL(boxID: UUID) -> URL {
         boxDirectory(boxID: boxID).appendingPathComponent("manifest.json")
     }
 
     private func boxDirectory(boxID: UUID) -> URL {
         rootURL.appendingPathComponent(boxID.uuidString.lowercased(), isDirectory: true)
+    }
+
+    private func payloadURL(filename: String, boxID: UUID) throws -> URL {
+        guard
+            filename.isEmpty == false,
+            filename == (filename as NSString).lastPathComponent,
+            filename != ".",
+            filename != ".."
+        else {
+            throw RepositoryError.invalidPayloadFilename
+        }
+        return boxDirectory(boxID: boxID).appendingPathComponent(filename, isDirectory: false)
     }
 
     private func quarantineManifest(at url: URL) throws {

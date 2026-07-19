@@ -22,15 +22,22 @@ This issue is the cold-start handoff for the next implementation session.
   `ComposerDraftRepository` writes atomic manifests and quarantines corrupt or
   future data; legacy `UserDefaults` text migrates once; backgrounding flushes;
   and XCTest covers restore, independent box switching, token removal,
-  monotonic IDs, and UTF-16/composed-character caret behavior. Track 3 will
-  move image/file bytes and UI into this model.
+  monotonic IDs, and UTF-16/composed-character caret behavior.
+- Track 3's first chunk is complete: the native editor is a caret-aware,
+  autosizing `UITextView`; camera and Photos acquisitions are normalized into
+  file-backed `DraftImage` values; stable `[imageN]` tokens follow the saved
+  selection; removal does not renumber surviving images; base64 is created
+  only while snapshotting an emission; and the four-image cap is gone. XCTest
+  covers payload persistence, relaunch, stable IDs, cleanup, and filename
+  traversal rejection. Files, paste, screenshot, and upload/failure UI remain.
 
 ## Current mismatch
 
 - Native bridge payloads carry text, images, origin, and diarization, but web
   `Emission` also carries uploaded files and companion-pane selections.
-- iOS persists only text; image data, attachment work, voice preparation, and
-  unacknowledged emissions can be lost on termination or box switching.
+- iOS persists text and acquired images, but file uploads, attachment work in
+  progress, voice preparation, and unacknowledged emissions can still be lost
+  on termination or box switching.
 - `NativeComposerView` permits only one pending emission and disables the whole
   input plane until its receipt arrives.
 - A rejection restores directly into the visible native fields, which can
@@ -38,8 +45,8 @@ This issue is the cold-start handoff for the next implementation session.
 - Companion selections currently mutate the hidden web draft rather than the
   native draft that the user sees and sends.
 - Regular iOS composition has no arbitrary-file, image-paste, or screenshot
-  acquisition path and no caret-aware `[imageN]`, `[fileN]`, or `[selectionN]`
-  token handling.
+  acquisition path and no caret-aware `[fileN]` or `[selectionN]` token
+  integration yet.
 
 The web `TargetStrip` already remains visible when `nativeComposer=1`; do not
 duplicate target busy/queue/interrupt controls in Swift. Native owns the draft,
@@ -52,7 +59,7 @@ target state, final message assembly, and dispatch.
    `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
    plan. The plan is complete; implementation starts with Track 1 rather than
    writing another design.
-2. Continue with Track 3's editor and durable attachment acquisition, then
+2. Continue Track 3 with Files, paste, screenshot, and upload/failure UI, then
    complete Tracks 4-6 in dependency order. Commit-sized chunks are
    identified in each track, but they are not shipping milestones:
    full V2 emission/selection-command contract; durable native draft; native

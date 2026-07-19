@@ -85,6 +85,72 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         XCTAssertTrue(files.contains { $0.hasPrefix("manifest.corrupt-") })
     }
 
+    func testPayloadRoundTripAndFilenameValidation() async throws {
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let expected = Data("image bytes".utf8)
+
+        try await repository.savePayload(expected, filename: "image-1.jpg", boxID: boxID)
+        let restored = try await repository.loadPayload(filename: "image-1.jpg", boxID: boxID)
+        XCTAssertEqual(restored, expected)
+        await XCTAssertThrowsErrorAsync {
+            try await repository.savePayload(expected, filename: "../outside.jpg", boxID: boxID)
+        }
+        try await repository.removePayload(filename: "image-1.jpg", boxID: boxID)
+        await XCTAssertThrowsErrorAsync {
+            _ = try await repository.loadPayload(filename: "image-1.jpg", boxID: boxID)
+        }
+    }
+
+    @MainActor
+    func testStoredImagesKeepStableIDsAcrossRemovalAndRelaunch() async throws {
+        let suite = "ComposerDraftImages.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        await store.activate(boxID: boxID)
+
+        await store.addImage(data: Data("first".utf8), mimeType: "image/jpeg", fileExtension: "jpg")
+        await store.addImage(data: Data("second".utf8), mimeType: "image/jpeg", fileExtension: "jpg")
+        await store.removeImage(id: 1)
+
+        XCTAssertEqual(store.draft.images.map(\.id), [2])
+        XCTAssertEqual(store.draft.nextImageID, 3)
+        XCTAssertFalse(store.draft.text.contains("[image1]"))
+        XCTAssertTrue(store.draft.text.contains("[image2]"))
+
+        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.draft.images.map(\.id), [2])
+        let attachments = try await relaunched.emissionImages(from: relaunched.draft, boxID: boxID)
+        XCTAssertEqual(attachments.map(\.id), [2])
+        XCTAssertEqual(attachments.first?.dataBase64, Data("second".utf8).base64EncodedString())
+    }
+
+    @MainActor
+    func testRelaunchRemovesManifestImagesWithMissingPayloads() async throws {
+        let suite = "ComposerDraftMissingImage.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(
+            &draft,
+            .addImage(DraftImage(id: 4, filename: "missing.jpg", mimeType: "image/jpeg", state: .local))
+        )
+        try await repository.save(draft, boxID: boxID)
+
+        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        await store.activate(boxID: boxID)
+
+        XCTAssertTrue(store.draft.images.isEmpty)
+        XCTAssertFalse(store.draft.text.contains("[image4]"))
+        XCTAssertEqual(store.restoreNotice, "Some draft images were missing and were removed.")
+    }
+
     @MainActor
     func testLegacyTextMigratesOnceAndBoxSwitchingRestoresIndependentDrafts() async throws {
         let suite = "ComposerDraftTests.\(UUID().uuidString)"

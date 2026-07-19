@@ -28,8 +28,16 @@ final class ComposerDraftStore: ObservableObject {
         activeBoxID = boxID
         restoreNotice = nil
         do {
-            if let restored = try await repository.load(boxID: boxID) {
+            if var restored = try await repository.load(boxID: boxID) {
+                let missingImageIDs = await repository.missingImageIDs(restored.images, boxID: boxID)
+                for id in missingImageIDs {
+                    ComposerDraftReducer.reduce(&restored, .removeImage(id))
+                }
                 draft = restored
+                if missingImageIDs.isEmpty == false {
+                    restoreNotice = "Some draft images were missing and were removed."
+                    await flush()
+                }
                 return
             }
         } catch {
@@ -54,6 +62,87 @@ final class ComposerDraftStore: ObservableObject {
     func setSelection(_ selection: NSRangeValue) {
         ComposerDraftReducer.reduce(&draft, .setSelection(selection))
         scheduleSave()
+    }
+
+    func addImage(data: Data, mimeType: String, fileExtension: String) async {
+        guard let activeBoxID else {
+            return
+        }
+        let safeExtension = fileExtension.lowercased().filter { $0.isLetter || $0.isNumber }
+        let filename = "image-\(UUID().uuidString.lowercased()).\(safeExtension.isEmpty ? "jpg" : safeExtension)"
+        do {
+            try await repository.savePayload(data, filename: filename, boxID: activeBoxID)
+            guard self.activeBoxID == activeBoxID else {
+                try? await repository.removePayload(filename: filename, boxID: activeBoxID)
+                return
+            }
+            let image = DraftImage(
+                id: draft.nextImageID,
+                filename: filename,
+                mimeType: mimeType,
+                state: .local
+            )
+            ComposerDraftReducer.reduce(&draft, .addImage(image))
+            await flush()
+        } catch {
+            restoreNotice = "Image could not be saved."
+        }
+    }
+
+    func removeImage(id: Int) async {
+        guard let activeBoxID, let image = draft.images.first(where: { $0.id == id }) else {
+            return
+        }
+        ComposerDraftReducer.reduce(&draft, .removeImage(id))
+        await flush()
+        do {
+            try await repository.removePayload(filename: image.filename, boxID: activeBoxID)
+        } catch {
+            restoreNotice = "Removed image data could not be cleaned up."
+        }
+    }
+
+    func imageData(for image: DraftImage) async -> Data? {
+        guard let activeBoxID else {
+            return nil
+        }
+        return try? await repository.loadPayload(filename: image.filename, boxID: activeBoxID)
+    }
+
+    func emissionImages(from snapshot: ComposerDraft, boxID: UUID) async throws -> [ChatImageAttachment] {
+        try await repository.emissionImages(snapshot.images, boxID: boxID)
+    }
+
+    func clearForSending(boxID: UUID) async {
+        guard activeBoxID == boxID else {
+            try? await repository.save(.empty, boxID: boxID)
+            return
+        }
+        ComposerDraftReducer.reduce(&draft, .reset)
+        await flush()
+    }
+
+    func restore(_ snapshot: ComposerDraft, boxID: UUID) async {
+        if activeBoxID == boxID {
+            draft = snapshot
+            await flush()
+        } else {
+            try? await repository.save(snapshot, boxID: boxID)
+        }
+    }
+
+    func discard(_ snapshot: ComposerDraft, boxID: UUID) async {
+        await repository.removePayloads(for: snapshot.images, boxID: boxID)
+    }
+
+    func discardCurrentDraft() async {
+        guard let activeBoxID else {
+            return
+        }
+        let snapshot = draft
+        ComposerDraftReducer.reduce(&draft, .reset)
+        await flush()
+        await discard(snapshot, boxID: activeBoxID)
     }
 
     func flush() async {

@@ -1,6 +1,5 @@
 import PhotosUI
 import SwiftUI
-import UniformTypeIdentifiers
 import UIKit
 
 struct NativeComposerView: View {
@@ -14,15 +13,18 @@ struct NativeComposerView: View {
 
     @EnvironmentObject private var store: PairedBoxStore
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var images: [ChatImageAttachment] = []
     @State private var statusText: String?
     @State private var lastSentEmission: NativeChatEmission?
+    @State private var lastSentDraft: ComposerDraft?
+    @State private var lastSentBoxID: UUID?
+    @State private var isPreparingSend = false
+    @State private var editorHeight: CGFloat = 58
+    @State private var focused = false
     @State private var showingActions = false
     @State private var showingPairing = false
     @State private var showingCamera = false
     @State private var showingCapture = false
     @StateObject private var dictation = SpeechDictation()
-    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -33,8 +35,8 @@ struct NativeComposerView: View {
                     .padding(.horizontal, 14)
                     .padding(.top, 8)
             }
-            if images.isEmpty == false {
-                ImageAttachmentStrip(images: images, onRemove: removeImage)
+            if draftStore.draft.images.isEmpty == false {
+                ImageAttachmentStrip(images: draftStore.draft.images, draftStore: draftStore)
                     .padding(.horizontal, 14)
                     .padding(.top, 10)
             }
@@ -79,15 +81,27 @@ struct NativeComposerView: View {
             guard let receipt, let emission = lastSentEmission, receipt.emissionID == emission.id else {
                 return
             }
+            let sentDraft = lastSentDraft
+            let sentBoxID = lastSentBoxID
+            lastSentEmission = nil
+            lastSentDraft = nil
+            lastSentBoxID = nil
             switch receipt.disposition {
             case .sent, .queued:
                 statusText = nil
+                if let sentDraft, let sentBoxID {
+                    Task {
+                        await draftStore.discard(sentDraft, boxID: sentBoxID)
+                    }
+                }
             case .rejected:
-                draftStore.setText(emission.text)
-                images = emission.images
                 statusText = receipt.reason ?? "The message was not accepted."
+                if let sentDraft, let sentBoxID {
+                    Task {
+                        await draftStore.restore(sentDraft, boxID: sentBoxID)
+                    }
+                }
             }
-            lastSentEmission = nil
         }
         .onChange(of: locationShareResult) { _, result in
             guard let result else {
@@ -116,7 +130,9 @@ struct NativeComposerView: View {
         .fullScreenCover(isPresented: $showingCamera) {
             CameraImagePicker { image in
                 showingCamera = false
-                appendCameraImage(image)
+                Task {
+                    await appendCameraImage(image)
+                }
             } onCancel: {
                 showingCamera = false
             }
@@ -128,15 +144,25 @@ struct NativeComposerView: View {
     }
 
     private var textEntry: some View {
-        TextField("Type...", text: textBinding, axis: .vertical)
-            .focused($focused)
-            .lineLimit(1...5)
-            .font(.body)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(minHeight: 58)
+        ZStack(alignment: .topLeading) {
+            if text.isEmpty {
+                Text("Type...")
+                    .font(.body)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 19)
+                    .allowsHitTesting(false)
+            }
+            ComposerTextView(
+                text: textBinding,
+                selection: selectionBinding,
+                isFocused: $focused,
+                height: $editorHeight
+            )
+        }
+        .frame(height: editorHeight)
             .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-            .accessibilityLabel("Type a message")
+            .allowsHitTesting(isSending == false)
     }
 
     @ViewBuilder
@@ -160,7 +186,7 @@ struct NativeComposerView: View {
                 backgroundStyle: Color.accentColor,
                 action: send
             )
-        } else if images.isEmpty == false {
+        } else if draftStore.draft.images.isEmpty == false {
             HStack(spacing: 10) {
                 microphoneButton
                 composerButton(
@@ -221,15 +247,7 @@ struct NativeComposerView: View {
         }
         dictation.stop()
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
-        let emission = NativeChatEmission(text: message, origin: origin, diarized: false, images: images)
-        dictation.resetDictationState()
-        draftStore.setText("")
-        images = []
-        selectedPhotoItems = []
-        focused = false
-        lastSentEmission = emission
-        statusText = "Sending to chat..."
-        onSendEmission(emission)
+        enqueueMessage(text: message, origin: origin, diarized: false)
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -238,20 +256,22 @@ struct NativeComposerView: View {
         case .send, .sendClose:
             sendKeywordIntent(intent)
         case .cancel:
-            draftStore.setText("")
-            images = []
             selectedPhotoItems = []
             dictation.resetDictationState()
             statusText = "Message cancelled."
+            Task {
+                await draftStore.discardCurrentDraft()
+            }
         case .micOff:
             dictation.stop()
             statusText = "Microphone off."
         case .erase:
-            draftStore.setText("")
-            images = []
             selectedPhotoItems = []
             dictation.resetDictationState()
             statusText = "Message erased."
+            Task {
+                await draftStore.discardCurrentDraft()
+            }
         }
     }
 
@@ -314,23 +334,50 @@ struct NativeComposerView: View {
             statusText = "Nothing to send."
             return
         }
-        let emission = NativeChatEmission(text: preparedText, origin: .voice, diarized: diarized, images: images)
-        dictation.resetDictationState()
-        draftStore.setText("")
-        images = []
-        selectedPhotoItems = []
-        focused = false
-        lastSentEmission = emission
-        statusText = "Sending to chat..."
-        onSendEmission(emission)
+        enqueueMessage(text: preparedText, origin: .voice, diarized: diarized)
+    }
+
+    private func enqueueMessage(
+        text: String,
+        origin: NativeChatEmission.Origin,
+        diarized: Bool
+    ) {
+        let snapshot = draftStore.draft
+        let sendingBoxID = box.id
+        isPreparingSend = true
+        statusText = "Preparing attachments..."
+        Task {
+            do {
+                let attachments = try await draftStore.emissionImages(from: snapshot, boxID: sendingBoxID)
+                let emission = NativeChatEmission(
+                    text: text,
+                    origin: origin,
+                    diarized: diarized,
+                    images: attachments
+                )
+                await draftStore.clearForSending(boxID: sendingBoxID)
+                dictation.resetDictationState()
+                selectedPhotoItems = []
+                focused = false
+                lastSentDraft = snapshot
+                lastSentBoxID = sendingBoxID
+                lastSentEmission = emission
+                isPreparingSend = false
+                statusText = "Sending to chat..."
+                onSendEmission(emission)
+            } catch {
+                isPreparingSend = false
+                statusText = "An attachment could not be read."
+            }
+        }
     }
 
     private var isSending: Bool {
-        lastSentEmission != nil
+        isPreparingSend || lastSentEmission != nil
     }
 
     private var hasSendableContent: Bool {
-        hasTextContent || images.isEmpty == false
+        hasTextContent || draftStore.draft.images.isEmpty == false
     }
 
     private var hasTextContent: Bool {
@@ -352,35 +399,28 @@ struct NativeComposerView: View {
         )
     }
 
+    private var selectionBinding: Binding<NSRangeValue> {
+        Binding(
+            get: { draftStore.draft.selection },
+            set: { draftStore.setSelection($0) }
+        )
+    }
+
     private func loadPhotos(from items: [PhotosPickerItem]) async {
         guard items.isEmpty == false else {
             return
         }
-        var loaded = images
-        for item in items.prefix(max(0, 4 - loaded.count)) {
-            guard let data = try? await item.loadTransferable(type: Data.self) else {
+        for item in items {
+            guard
+                let sourceData = try? await item.loadTransferable(type: Data.self),
+                let sourceImage = UIImage(data: sourceData),
+                let data = CameraImageEncoder.jpegData(from: sourceImage)
+            else {
                 continue
             }
-            let mimeType = item.supportedContentTypes.first { type in
-                type.conforms(to: .image) && type.preferredMIMEType != nil
-            }?.preferredMIMEType ?? "image/jpeg"
-            loaded.append(
-                ChatImageAttachment(
-                    id: loaded.count + 1,
-                    mimeType: mimeType,
-                    dataBase64: data.base64EncodedString()
-                )
-            )
+            await draftStore.addImage(data: data, mimeType: "image/jpeg", fileExtension: "jpg")
         }
-        images = Array(loaded.prefix(4))
         selectedPhotoItems = []
-    }
-
-    private func removeImage(_ image: ChatImageAttachment) {
-        images.removeAll { $0.id == image.id }
-        images = images.enumerated().map { index, image in
-            ChatImageAttachment(id: index + 1, mimeType: image.mimeType, dataBase64: image.dataBase64)
-        }
     }
 
     private func openCamera() {
@@ -403,17 +443,11 @@ struct NativeComposerView: View {
         onShareLocation()
     }
 
-    private func appendCameraImage(_ image: UIImage) {
-        guard images.count < 4, let data = CameraImageEncoder.jpegData(from: image) else {
+    private func appendCameraImage(_ image: UIImage) async {
+        guard let data = CameraImageEncoder.jpegData(from: image) else {
             return
         }
-        images.append(
-            ChatImageAttachment(
-                id: images.count + 1,
-                mimeType: "image/jpeg",
-                dataBase64: data.base64EncodedString()
-            )
-        )
+        await draftStore.addImage(data: data, mimeType: "image/jpeg", fileExtension: "jpg")
     }
 }
 
@@ -433,15 +467,15 @@ enum CameraImageEncoder {
 }
 
 private struct ImageAttachmentStrip: View {
-    var images: [ChatImageAttachment]
-    var onRemove: (ChatImageAttachment) -> Void
+    var images: [DraftImage]
+    @ObservedObject var draftStore: ComposerDraftStore
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(images) { image in
                     ZStack(alignment: .topTrailing) {
-                        thumbnail(for: image)
+                        DraftImageThumbnail(image: image, draftStore: draftStore)
                             .frame(width: 58, height: 58)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                             .overlay {
@@ -449,7 +483,9 @@ private struct ImageAttachmentStrip: View {
                                     .stroke(.separator, lineWidth: 1)
                             }
                         Button {
-                            onRemove(image)
+                            Task {
+                                await draftStore.removeImage(id: image.id)
+                            }
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .symbolRenderingMode(.palette)
@@ -462,21 +498,31 @@ private struct ImageAttachmentStrip: View {
             }
         }
     }
+}
 
-    @ViewBuilder
-    private func thumbnail(for image: ChatImageAttachment) -> some View {
-        if
-            let data = Data(base64Encoded: image.dataBase64),
-            let uiImage = UIImage(data: data)
-        {
-            Image(uiImage: uiImage)
-                .resizable()
-                .scaledToFill()
-        } else {
-            Image(systemName: "photo")
-                .font(.title2)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(.thinMaterial)
+private struct DraftImageThumbnail: View {
+    var image: DraftImage
+    @ObservedObject var draftStore: ComposerDraftStore
+    @State private var uiImage: UIImage?
+
+    var body: some View {
+        Group {
+            if let uiImage {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "photo")
+                    .font(.title2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.thinMaterial)
+            }
+        }
+        .task(id: image.filename) {
+            guard let data = await draftStore.imageData(for: image) else {
+                return
+            }
+            uiImage = UIImage(data: data)
         }
     }
 }

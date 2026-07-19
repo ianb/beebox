@@ -37,7 +37,7 @@ struct ComposerActionsView: View {
 
                     PhotosPicker(
                         selection: $selectedPhotoItems,
-                        maxSelectionCount: 4,
+                        maxSelectionCount: 0,
                         matching: .images
                     ) {
                         Label("Choose Photos", systemImage: "photo.on.rectangle")
