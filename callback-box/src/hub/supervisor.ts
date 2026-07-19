@@ -51,7 +51,17 @@ export interface BoxRuntimeStatus {
   status: BoxRunStatus;
   pid: number | undefined;
   port: number | undefined;
+  /** Lifetime restart count — never resets. Informational only; do NOT derive
+   *  a health verdict from it (a box that blipped once weeks ago would pin the
+   *  hub unhealthy forever). The live crash-loop signal is
+   *  `consecutiveFailures`. */
   restarts: number;
+  /** Consecutive failed launches since the last success — reset to 0 the
+   *  moment a launch reaches "running" (`launch()`), incremented on each
+   *  failed launch/unexpected exit. Nonzero while `status === "starting"`
+   *  means the box is crash-looping right now; this is the field the health
+   *  verdict keys on. */
+  consecutiveFailures: number;
   lastError: string | undefined;
 }
 
@@ -402,6 +412,7 @@ export class Supervisor implements EndpointProvider {
       pid: box.child?.pid,
       port: box.port,
       restarts: box.restarts,
+      consecutiveFailures: box.consecutiveFailures,
       lastError: box.lastError,
     }));
   }
@@ -502,9 +513,7 @@ export class Supervisor implements EndpointProvider {
     box.status = "starting";
     box.restarts += 1;
     const delay = Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** (box.consecutiveFailures - 1));
-    box.restartTimer = setTimeout(() => {
-      void this.launch(box);
-    }, delay);
+    box.restartTimer = setTimeout(() => void this.launch(box), delay);
     box.restartTimer.unref();
   }
 }

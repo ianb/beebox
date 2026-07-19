@@ -27,6 +27,11 @@ import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
 const execFileP = promisify(execFile);
 
+// The hub's /healthz is diag-key-gated; the spawned hub inherits this env.
+const DIAG_KEY = "test-diag-key-for-e2e-doctest";
+process.env.CB_DIAG_API_KEY = DIAG_KEY;
+const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
+
 function pidAlive(pid) {
   try {
     process.kill(pid, 0);
@@ -116,7 +121,7 @@ const hubPort = await waitFor(() => {
 }, { timeoutMs: 30000, intervalMs: 200 });
 
 const health = await waitFor(async () => {
-  const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`);
+  const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`, diagAuth);
   const body = await res.json();
   const box = body.boxes.find((b) => b.slug === "fixture");
   return box && box.status === "running" ? box : null;
@@ -127,6 +132,20 @@ health.status
 
 typeof health.pid === "number" && health.pid > 0
 => true
+
+health.consecutiveFailures
+=> 0
+```
+
+The diag-gated canary cold-starts a box and confirms it serves — the deploy's
+child-level check. The fixture box is already running here, so `ensureRunning`
+resolves immediately and the canary reports it ready.
+
+```ts continue
+const canaryRes = await fetch(`http://127.0.0.1:${hubPort}/healthz/canary`, diagAuth);
+const canaryBody = await canaryRes.json();
+JSON.stringify({ status: canaryRes.status, box: canaryBody.status, slug: canaryBody.slug })
+=> {"status":200,"box":"ok","slug":"fixture"}
 ```
 
 Traffic actually reaches the box through the hub (its own Fastify instance

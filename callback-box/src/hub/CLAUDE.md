@@ -4,6 +4,17 @@
 owns the children, `hub-server.ts` owns HTTP/WS routing + auth, `hub-config.ts`
 the `hub.json` schema).
 
+## Health endpoints
+
+`/healthz` reports a derived verdict (`hub-health.ts`'s `hubVerdict`): 503 when
+any box is crash-looping or crash-budget-latched, 200 otherwise — a `stopped`
+(idle) box is NOT a fault. `/healthz/canary` actively cold-starts one box to
+prove a child can serve (what the passive verdict can't see on a lazy hub).
+Both are diag-key-gated (`hub-health-routes.ts`) — they used to be open and
+leaked slugs/PIDs/ports. The deploy verifies both; full rationale in
+`docs/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
+counter) — the live signal is `consecutiveFailures`.
+
 ## Spawned children get an allowlisted env, not a spread
 
 `child-env.ts`'s `buildChildEnv` is a fail-closed ALLOWLIST: only named vars
