@@ -349,6 +349,17 @@ const proxy = httpProxy.createProxyServer({
   changeOrigin: true,
 });
 
+/**
+ * Socket errors that mean "the peer went away", not "the router is broken".
+ * A client abandoning a request is routine during a worktree cold start, and a
+ * dev router must not die of it — these are logged-and-ignored everywhere they
+ * surface, including the process-level uncaughtException backstop.
+ */
+function isBenignSocketError(err: NodeJS.ErrnoException | undefined): boolean {
+  if (!err) return false;
+  return err.code === "ECONNRESET" || err.code === "EPIPE" || err.code === "ECONNABORTED";
+}
+
 proxy.on("error", (err: Error, _req, res) => {
   log(`proxy error: ${err.message}`);
   if (res && "writeHead" in res && !(res as http.ServerResponse).headersSent) {
@@ -665,6 +676,20 @@ function createRouterServer(core: RouterCore): http.Server {
   const refusedUpgradeLogAt = new Map<string, number>();
 
   const server = http.createServer(async (req, res) => {
+    // A client that hangs up mid-request (tab closed, navigated away, gave up
+    // waiting on a ~4s worktree cold start) makes node's abortIncoming emit
+    // ECONNRESET on the request. With no listener here it escapes to the
+    // process-level uncaughtException handler, which used to take the whole
+    // shared router down — one abandoned request killing every worktree's dev
+    // server. Absorb it at the socket it belongs to; there is nothing to do
+    // but stop writing.
+    req.on("error", (err: NodeJS.ErrnoException) => {
+      if (!isBenignSocketError(err)) log(`request error: ${err.message}`);
+    });
+    res.on("error", (err: NodeJS.ErrnoException) => {
+      if (!isBenignSocketError(err)) log(`response error: ${err.message}`);
+    });
+
     const url = req.url || "/";
 
     if (url === "/__router/status" || url === "/__router/status/") {
@@ -994,7 +1019,15 @@ async function main(): Promise<void> {
   process.on("SIGTERM", () => {
     void shutdown("SIGTERM");
   });
-  process.on("uncaughtException", (err) => {
+  process.on("uncaughtException", (err: NodeJS.ErrnoException) => {
+    // Backstop for the per-request handlers in createRouterServer: a client
+    // disconnect that reaches this far is still not a reason to kill a router
+    // serving every worktree. Anything else is a real fault and still fatal —
+    // a supervisor limping on in an unknown state is worse than restarting.
+    if (isBenignSocketError(err)) {
+      log(`ignoring benign socket error: ${err.code}`);
+      return;
+    }
     console.error("uncaughtException:", err);
     void shutdown("uncaughtException");
   });
