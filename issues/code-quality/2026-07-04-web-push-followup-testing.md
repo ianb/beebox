@@ -1,7 +1,7 @@
 ---
 title: "web push followup testing"
 area: callback-box
-needs: [manual-testing]
+needs: [manual-testing, decision]
 design: ../callback-box/docs/implemented-plans/web-push-notifications.md
 filed-by: agent
 discovered-in: worktree-web-push — while shipping Web Push (tracks A–E)
@@ -11,6 +11,42 @@ Web Push shipped (tracks A–E, see the design link). The code is merged and
 deploys, but the feature is **dormant in prod until VAPID keys are set**, and the
 real end-to-end paths were never exercised before merge (merged on green tests +
 UI render + fake-mode e2e only). This tracks what's left.
+
+## Confirmed 2026-07-19: it has never run, anywhere
+
+Not just "unverified" — **zero executions in its lifetime**, verified directly:
+
+- `/home/callback/.env` on prod contains **no VAPID keys** (`grep -c VAPID` → 0),
+  so the server has never been able to send.
+- `push-subscriptions.json` **does not exist** on prod *or* on the boxholder's
+  local machine, so no browser has ever subscribed.
+
+Shipped 2026-07-04; still dormant two weeks later. Every path below the
+"Verification not yet done" heading has therefore run only against fakes.
+
+## The decision this is really pointing at
+
+Boxholder's read (2026-07-19): *"implemented but totally unexercised and probably
+unused."* That's worth resolving explicitly rather than letting it sit — the
+feature carries real surface area (a connector, a service worker, an Admin UI, a
+`web-push` card schema, a subscription store, and the `pushsubscriptionchange`
+rotation path) and all of it is untested code that other work has to keep
+accounting for. A live example: the
+[v2 box-slug bug](../bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md)
+includes `send-push.ts` among the sites deriving a slug wrongly — we are
+maintaining correctness in code that has never executed.
+
+Three honest options:
+
+1. **Finish it** — set VAPID keys (a ~5-minute ops task, documented below) and
+   work the verification list. Cheapest path to knowing whether it works.
+2. **Decide it's wanted later** — leave it dormant but say so, so nobody keeps
+   re-triaging it and so future work knows this code is cold.
+3. **Remove it** — if notifications aren't actually wanted (mobile/iOS paths may
+   have superseded the need), delete the surface rather than carry it.
+
+Option 1 is cheap enough that it's probably worth doing *before* choosing between
+2 and 3 — you can't judge whether you want it until it has worked once.
 
 ## Blocking prod use
 
