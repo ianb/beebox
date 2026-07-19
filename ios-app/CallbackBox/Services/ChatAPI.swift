@@ -2,11 +2,64 @@ import Foundation
 
 protocol ChatTransport: Sendable {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
+    func upload(
+        for request: URLRequest,
+        body: Data,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> (Data, URLResponse)
+}
+
+extension ChatTransport {
+    func upload(
+        for request: URLRequest,
+        body: Data,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> (Data, URLResponse) {
+        var request = request
+        request.httpBody = body
+        onProgress(0)
+        let result = try await data(for: request)
+        onProgress(1)
+        return result
+    }
 }
 
 struct URLSessionChatTransport: ChatTransport {
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         try await URLSession.shared.data(for: request)
+    }
+
+    func upload(
+        for request: URLRequest,
+        body: Data,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> (Data, URLResponse) {
+        try await withCheckedThrowingContinuation { continuation in
+            let task = URLSession.shared.uploadTask(with: request, from: body) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let data, let response else {
+                    continuation.resume(throwing: URLError(.badServerResponse))
+                    return
+                }
+                onProgress(1)
+                continuation.resume(returning: (data, response))
+            }
+            Task {
+                var lastReported = -1.0
+                while task.state == .suspended || task.state == .running {
+                    let progress = task.progress.fractionCompleted
+                    if progress - lastReported >= 0.01 {
+                        lastReported = progress
+                        onProgress(progress)
+                    }
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+            }
+            task.resume()
+        }
     }
 }
 
@@ -73,9 +126,22 @@ struct ChatAPI: Sendable {
         return try JSONDecoder().decode(HqTranscriptionResult.self, from: data)
     }
 
-    func uploadFile(data: Data, filename: String, mimeType: String) async throws -> UploadedChatFile {
-        let request = try uploadFileRequest(data: data, filename: filename, mimeType: mimeType)
-        let (responseData, response) = try await transport.data(for: request)
+    func uploadFile(
+        data: Data,
+        filename: String,
+        mimeType: String,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> UploadedChatFile {
+        var request = try uploadFileRequest(data: data, filename: filename, mimeType: mimeType)
+        guard let body = request.httpBody else {
+            throw ChatAPIError.invalidResponse
+        }
+        request.httpBody = nil
+        let (responseData, response) = try await transport.upload(
+            for: request,
+            body: body,
+            onProgress: onProgress
+        )
         guard let http = response as? HTTPURLResponse else {
             throw ChatAPIError.invalidResponse
         }

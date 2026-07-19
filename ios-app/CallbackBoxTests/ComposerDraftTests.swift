@@ -130,6 +130,31 @@ final class ComposerDraftRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testInterruptedImageProcessingRestoresAsRetryableFailure() async throws {
+        let suite = "ComposerDraftImageProcessing.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        await store.activate(boxID: boxID)
+
+        let imported = await store.beginImageImport(data: Data("source".utf8), mimeType: "image/png")
+        let image = try XCTUnwrap(imported)
+        XCTAssertEqual(image.state, .uploading(progress: 0))
+
+        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(
+            relaunched.draft.images.first?.state,
+            .failed(message: "Image processing was interrupted. Retry to continue.")
+        )
+        XCTAssertEqual(relaunched.restoreNotice, "An interrupted attachment is ready to retry.")
+        let restoredData = await relaunched.imageData(for: image, boxID: boxID)
+        XCTAssertEqual(restoredData, Data("source".utf8))
+    }
+
+    @MainActor
     func testRelaunchRemovesManifestImagesWithMissingPayloads() async throws {
         let suite = "ComposerDraftMissingImage.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -172,6 +197,8 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         )
         let file = try XCTUnwrap(imported)
         await store.setFileState(id: file.id, state: .uploading(progress: 0.5), boxID: boxID)
+        await store.setFileProgress(id: file.id, progress: 0.75, boxID: boxID)
+        XCTAssertEqual(store.draft.files.first?.state, .uploading(progress: 0.75))
         await store.markFileUploaded(id: file.id, upload: UploadedChatFile(
             path: "tmp/report.pdf",
             originalName: "report.pdf",

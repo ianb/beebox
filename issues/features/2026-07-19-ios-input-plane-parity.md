@@ -35,8 +35,12 @@ This issue is the cold-start handoff for the next implementation session.
   route is used with its canonical response and named 50 MiB limit, file
   upload/failure/retry state is durable, and uploaded file metadata reaches V2
   emissions. Paste Image and Screenshot both enter the normalized 1920-pixel
-  durable image pipeline. Granular byte progress and image-specific
-  processing/retry chips remain before Track 3 is fully closed.
+  durable image pipeline.
+- Track 3 hardening is complete: URLSession byte progress is reflected in the
+  durable file state, source image bytes are saved before processing, failed or
+  interrupted image processing exposes Retry/Remove, and neither processing
+  images nor incomplete files can be sent. Physical-device acquisition checks
+  remain part of Track 6 acceptance.
 
 ## Current mismatch
 
@@ -51,9 +55,8 @@ This issue is the cold-start handoff for the next implementation session.
   overwrite a newer draft once continued composition is allowed.
 - Companion selections currently mutate the hidden web draft rather than the
   native draft that the user sees and sends.
-- File uploads currently expose a phase spinner rather than byte progress, and
-  image processing failures use composer status rather than a retryable image
-  chip. Companion `[selectionN]` integration remains absent.
+- Companion `[selectionN]` integration remains absent. Pending emissions and
+  voice preparation are still volatile and single-flight.
 
 The web `TargetStrip` already remains visible when `nativeComposer=1`; do not
 duplicate target busy/queue/interrupt controls in Swift. Native owns the draft,
@@ -66,8 +69,8 @@ target state, final message assembly, and dispatch.
    `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
    plan. The plan is complete; implementation starts with Track 1 rather than
    writing another design.
-2. Finish Track 3's granular progress and image failure/retry UI, then complete
-   Tracks 4-6 in dependency order. Commit-sized chunks are
+2. Continue with Track 4's typed selection command path, then complete Tracks
+   5-6 in dependency order. Commit-sized chunks are
    identified in each track, but they are not shipping milestones:
    full V2 emission/selection-command contract; durable native draft; native
    editor and attachments; companion selections; pending-send/voice state;

@@ -12,11 +12,13 @@ V2 encoding/decoding and shared fixtures; a box-scoped `ComposerDraftStore`;
 atomic, quarantining manifests; one-shot text migration; reducer/token/Unicode-
 caret coverage; a caret-aware, autosizing `UITextView`; and file-backed camera
 and Photos images with stable IDs and no arbitrary count cap. Track 3 also has
-Files import with the existing authenticated upload route, durable upload
-failure/retry state, Paste Image, and visible-webview Screenshot acquisition.
-Granular upload progress, image processing/retry UI, command delivery into the
-store, and Tracks 4-6 remain; automated coverage and the real-device acceptance
-matrix in Track 6 are required before this plan ships.
+Files import with the existing authenticated upload route, byte progress,
+durable upload failure/retry state, Paste Image, and visible-webview Screenshot
+acquisition. Image source bytes are persisted before processing, interrupted or
+failed processing restores as a retryable chip, and incomplete attachments
+block send. Track 4 command delivery and Tracks 5-6 remain; automated coverage
+and the real-device acceptance matrix in Track 6 are required before this plan
+ships.
 
 ## Stated preferences this plan trades against
 

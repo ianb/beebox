@@ -40,7 +40,11 @@ struct NativeComposerView: View {
                     .padding(.top, 8)
             }
             if draftStore.draft.images.isEmpty == false {
-                ImageAttachmentStrip(images: draftStore.draft.images, draftStore: draftStore)
+                ImageAttachmentStrip(
+                    images: draftStore.draft.images,
+                    draftStore: draftStore,
+                    onRetry: retryImage
+                )
                     .padding(.horizontal, 14)
                     .padding(.top, 10)
             }
@@ -431,7 +435,16 @@ struct NativeComposerView: View {
     }
 
     private var sendDisabled: Bool {
-        isSending || hasIncompleteFiles || hasSendableContent == false
+        isSending || hasIncompleteImages || hasIncompleteFiles || hasSendableContent == false
+    }
+
+    private var hasIncompleteImages: Bool {
+        draftStore.draft.images.contains { image in
+            guard case .local = image.state else {
+                return true
+            }
+            return false
+        }
     }
 
     private var hasIncompleteFiles: Bool {
@@ -569,7 +582,12 @@ struct NativeComposerView: View {
             let uploaded = try await ChatAPI(box: box).uploadFile(
                 data: data,
                 filename: file.originalName,
-                mimeType: file.mimetype
+                mimeType: file.mimetype,
+                onProgress: { progress in
+                    Task {
+                        await draftStore.setFileProgress(id: file.id, progress: progress, boxID: box.id)
+                    }
+                }
             )
             await draftStore.markFileUploaded(id: file.id, upload: uploaded, boxID: box.id)
         } catch {
@@ -601,25 +619,54 @@ struct NativeComposerView: View {
     }
 
     private func appendCameraImage(_ image: UIImage) async {
-        guard let encoded = ComposerImageEncoder.encode(image: image, sourceMimeType: "image/jpeg") else {
+        guard let sourceData = image.jpegData(compressionQuality: 1) else {
+            statusText = "The camera image could not be prepared."
             return
         }
-        await draftStore.addImage(
-            data: encoded.data,
-            mimeType: encoded.mimeType,
-            fileExtension: encoded.fileExtension
-        )
+        await appendImage(data: sourceData, sourceMimeType: "image/jpeg")
     }
 
     private func appendImage(data: Data, sourceMimeType: String) async {
-        guard let encoded = ComposerImageEncoder.encode(data: data, sourceMimeType: sourceMimeType) else {
-            statusText = "The image could not be processed."
+        guard let image = await draftStore.beginImageImport(data: data, mimeType: sourceMimeType) else {
             return
         }
-        await draftStore.addImage(
+        await processImage(image)
+    }
+
+    private func retryImage(_ image: DraftImage) {
+        Task {
+            await draftStore.setImageState(
+                id: image.id,
+                state: .uploading(progress: 0),
+                boxID: box.id
+            )
+            await processImage(image)
+        }
+    }
+
+    private func processImage(_ image: DraftImage) async {
+        guard let sourceData = await draftStore.imageData(for: image, boxID: box.id) else {
+            await draftStore.failImageImport(
+                id: image.id,
+                message: "Local image data is missing.",
+                boxID: box.id
+            )
+            return
+        }
+        guard let encoded = ComposerImageEncoder.encode(data: sourceData, sourceMimeType: image.mimeType) else {
+            await draftStore.failImageImport(
+                id: image.id,
+                message: "The image could not be processed.",
+                boxID: box.id
+            )
+            return
+        }
+        await draftStore.completeImageImport(
+            id: image.id,
             data: encoded.data,
             mimeType: encoded.mimeType,
-            fileExtension: encoded.fileExtension
+            fileExtension: encoded.fileExtension,
+            boxID: box.id
         )
     }
 }
@@ -678,30 +725,55 @@ enum CameraImageEncoder {
 private struct ImageAttachmentStrip: View {
     var images: [DraftImage]
     @ObservedObject var draftStore: ComposerDraftStore
+    var onRetry: (DraftImage) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(images) { image in
-                    ZStack(alignment: .topTrailing) {
-                        DraftImageThumbnail(image: image, draftStore: draftStore)
-                            .frame(width: 58, height: 58)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(.separator, lineWidth: 1)
+                    VStack(spacing: 3) {
+                        ZStack(alignment: .topTrailing) {
+                            DraftImageThumbnail(image: image, draftStore: draftStore)
+                                .frame(width: 58, height: 58)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(.separator, lineWidth: 1)
+                                }
+                            Button {
+                                Task {
+                                    await draftStore.removeImage(id: image.id)
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, .black.opacity(0.65))
                             }
-                        Button {
-                            Task {
-                                await draftStore.removeImage(id: image.id)
+                            .offset(x: 5, y: -5)
+                            .accessibilityLabel("Remove photo")
+                            if case .uploading = image.state {
+                                ProgressView()
+                                    .padding(5)
+                                    .background(.regularMaterial, in: Circle())
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                            } else if case .failed(let message) = image.state {
+                                Button {
+                                    onRetry(image)
+                                } label: {
+                                    Image(systemName: "arrow.clockwise.circle.fill")
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, .red)
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                                .accessibilityLabel("Retry image")
+                                .accessibilityHint(message)
                             }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .symbolRenderingMode(.palette)
-                                .foregroundStyle(.white, .black.opacity(0.65))
                         }
-                        .offset(x: 5, y: -5)
-                        .accessibilityLabel("Remove photo")
+                        if case .failed = image.state {
+                            Text("Failed")
+                                .font(.caption2)
+                                .foregroundStyle(.red)
+                        }
                     }
                 }
             }
@@ -757,8 +829,9 @@ private struct FileAttachmentList: View {
                             .lineLimit(2)
                     }
                     Spacer()
-                    if case .uploading = file.state {
-                        ProgressView()
+                    if case .uploading(let progress) = file.state {
+                        ProgressView(value: progress)
+                            .frame(width: 54)
                     } else if canRetry(file) {
                         Button("Retry") {
                             onRetry(file)
@@ -782,8 +855,8 @@ private struct FileAttachmentList: View {
         switch file.state {
         case .local:
             "Waiting to upload"
-        case .uploading:
-            "Uploading..."
+        case .uploading(let progress):
+            "Uploading \(Int(progress * 100))%"
         case .uploaded:
             ByteCountFormatter.string(fromByteCount: Int64(file.size), countStyle: .file)
         case .failed(let message):

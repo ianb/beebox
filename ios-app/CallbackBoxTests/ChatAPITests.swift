@@ -24,14 +24,19 @@ final class ChatAPITests: XCTestCase {
         let response = Data(#"{"path":"tmp/report.pdf","originalName":"report.pdf","size":8,"mimetype":"application/pdf"}"#.utf8)
         let transport = StubChatTransport(data: response)
 
+        let progress = ProgressRecorder()
         let uploaded = try await ChatAPI(box: makeBox(), transport: transport).uploadFile(
             data: Data("contents".utf8),
             filename: "report.pdf",
-            mimeType: "application/pdf"
+            mimeType: "application/pdf",
+            onProgress: { value in
+                progress.append(value)
+            }
         )
 
         XCTAssertEqual(uploaded.path, "tmp/report.pdf")
         XCTAssertEqual(uploaded.size, 8)
+        XCTAssertEqual(progress.values, [0, 1])
     }
 
     func testUploadRejectsMalformedResponseAndOversizeInput() async {
@@ -62,6 +67,21 @@ final class ChatAPITests: XCTestCase {
             sessionID: nil,
             authToken: "secret"
         )
+    }
+}
+
+private final class ProgressRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [Double] = []
+
+    var values: [Double] {
+        lock.withLock { recorded }
+    }
+
+    func append(_ value: Double) {
+        lock.withLock {
+            recorded.append(value)
+        }
     }
 }
 

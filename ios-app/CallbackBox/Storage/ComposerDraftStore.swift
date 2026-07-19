@@ -5,6 +5,7 @@ import Foundation
 final class ComposerDraftStore: ObservableObject {
     enum DraftError: Error {
         case incompleteFile
+        case incompleteImage
     }
     @Published private(set) var draft = ComposerDraft.empty
     @Published private(set) var restoreNotice: String?
@@ -41,6 +42,14 @@ final class ComposerDraftStore: ObservableObject {
                     ComposerDraftReducer.reduce(&restored, .removeFile(id))
                 }
                 var interruptedUpload = false
+                for var image in restored.images {
+                    guard case .uploading = image.state else {
+                        continue
+                    }
+                    interruptedUpload = true
+                    image.state = .failed(message: "Image processing was interrupted. Retry to continue.")
+                    ComposerDraftReducer.reduce(&restored, .updateImage(image))
+                }
                 for var file in restored.files {
                     guard case .uploading = file.state else {
                         continue
@@ -54,7 +63,7 @@ final class ComposerDraftStore: ObservableObject {
                     restoreNotice = "Some draft attachments were missing and were removed."
                     await flush()
                 } else if interruptedUpload {
-                    restoreNotice = "An interrupted file upload is ready to retry."
+                    restoreNotice = "An interrupted attachment is ready to retry."
                     await flush()
                 }
                 return
@@ -106,6 +115,88 @@ final class ComposerDraftStore: ObservableObject {
         } catch {
             restoreNotice = "Image could not be saved."
         }
+    }
+
+    func beginImageImport(data: Data, mimeType: String) async -> DraftImage? {
+        guard let activeBoxID else {
+            return nil
+        }
+        let fileExtension: String
+        switch mimeType.lowercased() {
+        case "image/png":
+            fileExtension = "png"
+        case "image/jpeg":
+            fileExtension = "jpg"
+        case "image/heic", "image/heif":
+            fileExtension = "heic"
+        default:
+            fileExtension = "image"
+        }
+        let filename = "image-source-\(UUID().uuidString.lowercased()).\(fileExtension)"
+        do {
+            try await repository.savePayload(data, filename: filename, boxID: activeBoxID)
+            guard self.activeBoxID == activeBoxID else {
+                try? await repository.removePayload(filename: filename, boxID: activeBoxID)
+                return nil
+            }
+            let image = DraftImage(
+                id: draft.nextImageID,
+                filename: filename,
+                mimeType: mimeType,
+                state: .uploading(progress: 0)
+            )
+            ComposerDraftReducer.reduce(&draft, .addImage(image))
+            await flush()
+            return image
+        } catch {
+            restoreNotice = "Image could not be saved."
+            return nil
+        }
+    }
+
+    func completeImageImport(
+        id: Int,
+        data: Data,
+        mimeType: String,
+        fileExtension: String,
+        boxID: UUID
+    ) async {
+        guard activeBoxID == boxID,
+              var image = draft.images.first(where: { $0.id == id }) else {
+            return
+        }
+        let sourceFilename = image.filename
+        let filename = "image-\(UUID().uuidString.lowercased()).\(fileExtension)"
+        do {
+            try await repository.savePayload(data, filename: filename, boxID: boxID)
+            guard activeBoxID == boxID,
+                  draft.images.contains(where: { $0.id == id }) else {
+                try? await repository.removePayload(filename: filename, boxID: boxID)
+                return
+            }
+            image.filename = filename
+            image.mimeType = mimeType
+            image.state = .local
+            ComposerDraftReducer.reduce(&draft, .updateImage(image))
+            await flush()
+            try? await repository.removePayload(filename: sourceFilename, boxID: boxID)
+        } catch {
+            await failImageImport(id: id, message: "The processed image could not be saved.", boxID: boxID)
+        }
+    }
+
+    func failImageImport(id: Int, message: String, boxID: UUID) async {
+        await setImageState(id: id, state: .failed(message: message), boxID: boxID)
+    }
+
+    func setImageState(id: Int, state: DraftTransferState, boxID: UUID) async {
+        guard activeBoxID == boxID,
+              var image = draft.images.first(where: { $0.id == id }) else {
+            return
+        }
+        image.state = state
+        ComposerDraftReducer.reduce(&draft, .updateImage(image))
+        await flush()
     }
 
     func removeImage(id: Int) async {
@@ -179,6 +270,28 @@ final class ComposerDraftStore: ObservableObject {
         try? await repository.save(stored, boxID: boxID)
     }
 
+    func setFileProgress(id: Int, progress: Double, boxID: UUID) async {
+        let boundedProgress = min(1, max(0, progress))
+        if activeBoxID == boxID {
+            guard var file = draft.files.first(where: { $0.id == id }),
+                  case .uploading = file.state else {
+                return
+            }
+            file.state = .uploading(progress: boundedProgress)
+            ComposerDraftReducer.reduce(&draft, .updateFile(file))
+            scheduleSave()
+            return
+        }
+        guard var stored = try? await repository.load(boxID: boxID),
+              var file = stored.files.first(where: { $0.id == id }),
+              case .uploading = file.state else {
+            return
+        }
+        file.state = .uploading(progress: boundedProgress)
+        ComposerDraftReducer.reduce(&stored, .updateFile(file))
+        try? await repository.save(stored, boxID: boxID)
+    }
+
     func markFileUploaded(id: Int, upload: UploadedChatFile, boxID: UUID) async {
         if activeBoxID == boxID {
             guard var file = draft.files.first(where: { $0.id == id }) else {
@@ -221,8 +334,20 @@ final class ComposerDraftStore: ObservableObject {
         return try? await repository.loadPayload(filename: image.filename, boxID: activeBoxID)
     }
 
+    func imageData(for image: DraftImage, boxID: UUID) async -> Data? {
+        try? await repository.loadPayload(filename: image.filename, boxID: boxID)
+    }
+
     func emissionImages(from snapshot: ComposerDraft, boxID: UUID) async throws -> [ChatImageAttachment] {
-        try await repository.emissionImages(snapshot.images, boxID: boxID)
+        guard snapshot.images.allSatisfy({ image in
+            if case .local = image.state {
+                return true
+            }
+            return false
+        }) else {
+            throw DraftError.incompleteImage
+        }
+        return try await repository.emissionImages(snapshot.images, boxID: boxID)
     }
 
     func emissionFiles(from snapshot: ComposerDraft) throws -> [NativeEmissionFile] {
