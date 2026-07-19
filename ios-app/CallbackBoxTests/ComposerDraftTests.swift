@@ -366,6 +366,52 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         XCTAssertNil(store.draft.selections.last?.spokenWords)
     }
 
+    @MainActor
+    func testSelectionCommandBeforeStartupActivationRestoresThenPersists() async throws {
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = ComposerDraftStore(repository: repository)
+        let command = NativeComposerCommand(
+            id: "startup-selection",
+            selection: NativeComposerCommand.Selection(
+                ref: "/startup.md",
+                text: "arrived early",
+                position: "line 1"
+            )
+        )
+
+        let acknowledgement = await store.applySelectionCommand(command, boxID: boxID)
+
+        XCTAssertTrue(acknowledgement.accepted)
+        XCTAssertTrue(store.isReady)
+        let relaunched = ComposerDraftStore(repository: repository)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.draft.selections.first?.text, "arrived early")
+        XCTAssertTrue(relaunched.draft.text.contains("[selection1]"))
+    }
+
+    @MainActor
+    func testRapidActivationCannotLetOlderBoxOverwriteNewerBox() async throws {
+        let firstBoxID = UUID()
+        let secondBoxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        var firstDraft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&firstDraft, .setText("first"))
+        var secondDraft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&secondDraft, .setText("second"))
+        try await repository.save(firstDraft, boxID: firstBoxID)
+        try await repository.save(secondDraft, boxID: secondBoxID)
+        let store = ComposerDraftStore(repository: repository)
+
+        let firstActivation = Task { await store.activate(boxID: firstBoxID) }
+        await Task.yield()
+        await store.activate(boxID: secondBoxID)
+        await firstActivation.value
+
+        XCTAssertTrue(store.isReady)
+        XCTAssertEqual(store.draft.text, "second")
+    }
+
     func testLegacyManifestWithoutProcessedCommandIDsStillDecodes() throws {
         let json = #"{"text":"","selection":{"location":0,"length":0},"images":[],"files":[],"selections":[],"nextImageID":1,"nextFileID":1,"nextSelectionID":1}"#
         let draft = try JSONDecoder().decode(ComposerDraft.self, from: Data(json.utf8))

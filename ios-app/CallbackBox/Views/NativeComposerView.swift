@@ -492,7 +492,7 @@ struct NativeComposerView: View {
     }
 
     private var isSending: Bool {
-        isPreparingSend
+        isPreparingSend || draftStore.isReady == false
     }
 
     private var hasSendableContent: Bool {

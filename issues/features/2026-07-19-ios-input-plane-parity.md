@@ -60,7 +60,9 @@ This issue is the cold-start handoff for the next implementation session.
   iPhones and iPad across light/dark and large accessibility text, including
   the software keyboard. The sweep fixed attachment-context overflow and long
   transcript width expansion, and added 44-point recovery controls plus named
-  VoiceOver actions. Landscape and real-phone acceptance remain.
+  VoiceOver actions. Draft activation is generation-safe, disables composition
+  until restore completes, and covers selections arriving before startup
+  activation. Landscape and real-phone acceptance remain.
 
 ## Current mismatch
 

@@ -31,8 +31,10 @@ and first simulator sweep are implemented. All thirteen deterministic states
 were captured on iPhone 17 Pro; attachment overflow was also checked on iPhone
 17e in dark mode at Accessibility Large, rejection UI on iPad (A16) at XXXL,
 and the focused editor with the software keyboard. This sweep fixed context
-overflow and long-transcript horizontal expansion. Landscape and the
-real-device matrix remain.
+overflow and long-transcript horizontal expansion. A final lifecycle pass also
+made draft activation generation-safe, disables composition until restoration
+finishes, and accepts startup selection commands only after the target box is
+ready. Landscape and the real-device matrix remain.
 
 ## Stated preferences this plan trades against
 
@@ -501,7 +503,7 @@ named test and visible handling before the plan ships.
 |---|---|---|---|
 | V2 payload contains an unknown version or malformed file/selection | Planned golden fixture + web doctest + XCTest | Reject whole V2 payload with a reason; legacy leniency remains separately tested | Clear receipt/error |
 | Web selection command arrives twice | Planned command-ID reducer test | Persist first mutation and return idempotent acknowledgement | Clear/idempotent |
-| Web selection command arrives before native store is ready | Planned webview startup integration test | Queue by command ID until store restore finishes, then acknowledge | Clear on timeout |
+| Web selection command arrives before native store is ready | Startup activation/selection XCTest | Activate or await the target box, persist the command, then acknowledge | Clear rejection if the selected box changed |
 | Selection source becomes stale after it is attached | Planned assembly test with stale `ref` | Preserve the quoted selected text and source metadata; the agent receives the snapshot even if ref resolution later fails | Clear in emitted context |
 | Draft manifest is truncated or has a future version | Planned repository XCTest | Quarantine bad manifest, preserve payload files for diagnostics/recovery, show “Draft could not be restored” | Clear |
 | App dies between payload copy and manifest replace | Planned injected-crash repository test | Orphan sweep retains recent unreferenced files for one recovery window, then removes them | Clear recovery notice if adopted |

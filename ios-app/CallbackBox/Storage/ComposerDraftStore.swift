@@ -8,12 +8,14 @@ final class ComposerDraftStore: ObservableObject {
         case incompleteImage
     }
     @Published private(set) var draft = ComposerDraft.empty
+    @Published private(set) var isReady = false
     @Published private(set) var restoreNotice: String?
 
     private let repository: ComposerDraftRepository
     private let defaults: UserDefaults
     private var activeBoxID: UUID?
     private var activatingBoxID: UUID?
+    private var activationGeneration = UUID()
     private var activationWaiters: [UUID: [CheckedContinuation<Void, Never>]] = [:]
     private var saveTask: Task<Void, Never>?
     private var voiceSelectionContext: VoiceSelectionContext?
@@ -27,22 +29,44 @@ final class ComposerDraftStore: ObservableObject {
     }
 
     func activate(boxID: UUID) async {
-        guard boxID != activeBoxID else {
+        if boxID == activeBoxID {
+            await waitForActivation(boxID: boxID)
             return
         }
-        await flush()
+        let generation = UUID()
+        activationGeneration = generation
         saveTask?.cancel()
+        let previousBoxID = activeBoxID
+        let previousDraft = draft
+        let previousWasReady = isReady
+        isReady = false
+        if let previousBoxID, previousWasReady {
+            try? await repository.save(previousDraft, boxID: previousBoxID)
+        }
+        guard activationGeneration == generation else {
+            return
+        }
+        if let activatingBoxID {
+            activationWaiters.removeValue(forKey: activatingBoxID)?.forEach { $0.resume() }
+        }
         activeBoxID = boxID
         activatingBoxID = boxID
+        isReady = false
+        draft = .empty
         defer {
-            activatingBoxID = nil
-            activationWaiters.removeValue(forKey: boxID)?.forEach { $0.resume() }
+            if activationGeneration == generation, activatingBoxID == boxID {
+                activatingBoxID = nil
+                activationWaiters.removeValue(forKey: boxID)?.forEach { $0.resume() }
+            }
         }
         restoreNotice = nil
         do {
             if var restored = try await repository.load(boxID: boxID) {
                 let missingImageIDs = await repository.missingImageIDs(restored.images, boxID: boxID)
                 let missingFileIDs = await repository.missingFileIDs(restored.files, boxID: boxID)
+                guard activationIsCurrent(boxID: boxID, generation: generation) else {
+                    return
+                }
                 for id in missingImageIDs {
                     ComposerDraftReducer.reduce(&restored, .removeImage(id))
                 }
@@ -67,6 +91,7 @@ final class ComposerDraftStore: ObservableObject {
                     ComposerDraftReducer.reduce(&restored, .updateFile(file))
                 }
                 draft = restored
+                isReady = true
                 if missingImageIDs.isEmpty == false || missingFileIDs.isEmpty == false {
                     restoreNotice = "Some draft attachments were missing and were removed."
                     await flush()
@@ -77,16 +102,24 @@ final class ComposerDraftStore: ObservableObject {
                 return
             }
         } catch {
+            guard activationIsCurrent(boxID: boxID, generation: generation) else {
+                return
+            }
             restoreNotice = "Draft could not be restored."
+        }
+        guard activationIsCurrent(boxID: boxID, generation: generation) else {
+            return
         }
         let key = legacyDraftKey(boxID: boxID)
         if let legacyText = defaults.string(forKey: key) {
             draft = .empty
             ComposerDraftReducer.reduce(&draft, .setText(legacyText))
             defaults.removeObject(forKey: key)
+            isReady = true
             await flush()
         } else {
             draft = .empty
+            isReady = true
         }
     }
 
@@ -116,8 +149,11 @@ final class ComposerDraftStore: ObservableObject {
         _ command: NativeComposerCommand,
         boxID: UUID
     ) async -> NativeComposerCommandAcknowledgement {
+        if activeBoxID == nil, activatingBoxID == nil {
+            await activate(boxID: boxID)
+        }
         await waitForActivation(boxID: boxID)
-        guard activeBoxID == boxID else {
+        guard activeBoxID == boxID, isReady else {
             return .rejected(id: command.id, reason: "The selected box changed before the selection was saved.")
         }
         let source = command.selection
@@ -480,13 +516,16 @@ final class ComposerDraftStore: ObservableObject {
 
     func flush() async {
         saveTask?.cancel()
-        guard let activeBoxID else {
+        guard let activeBoxID, isReady else {
             return
         }
+        let snapshot = draft
         do {
-            try await repository.save(draft, boxID: activeBoxID)
+            try await repository.save(snapshot, boxID: activeBoxID)
         } catch {
-            restoreNotice = "Draft could not be saved."
+            if self.activeBoxID == activeBoxID {
+                restoreNotice = "Draft could not be saved."
+            }
         }
     }
 
@@ -494,6 +533,7 @@ final class ComposerDraftStore: ObservableObject {
     func replaceForFixture(_ fixtureDraft: ComposerDraft, boxID: UUID) {
         activeBoxID = boxID
         draft = fixtureDraft
+        isReady = true
         restoreNotice = nil
     }
     #endif
@@ -516,6 +556,10 @@ final class ComposerDraftStore: ObservableObject {
         await withCheckedContinuation { continuation in
             activationWaiters[boxID, default: []].append(continuation)
         }
+    }
+
+    private func activationIsCurrent(boxID: UUID, generation: UUID) -> Bool {
+        activeBoxID == boxID && activationGeneration == generation
     }
 
     private func legacyDraftKey(boxID: UUID) -> String {
