@@ -1,7 +1,7 @@
 ---
 title: "web push followup testing"
 area: callback-box
-needs: [manual-testing, decision]
+needs: [manual-testing]
 design: ../callback-box/docs/implemented-plans/web-push-notifications.md
 filed-by: agent
 discovered-in: worktree-web-push — while shipping Web Push (tracks A–E)
@@ -24,29 +24,24 @@ Not just "unverified" — **zero executions in its lifetime**, verified directly
 Shipped 2026-07-04; still dormant two weeks later. Every path below the
 "Verification not yet done" heading has therefore run only against fakes.
 
-## The decision this is really pointing at
+## Keep-or-drop: settled — this is wanted
 
-Boxholder's read (2026-07-19): *"implemented but totally unexercised and probably
-unused."* That's worth resolving explicitly rather than letting it sit — the
-feature carries real surface area (a connector, a service worker, an Admin UI, a
-`web-push` card schema, a subscription store, and the `pushsubscriptionchange`
-rotation path) and all of it is untested code that other work has to keep
-accounting for. A live example: the
-[v2 box-slug bug](../bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md)
-includes `send-push.ts` among the sites deriving a slug wrongly — we are
-maintaining correctness in code that has never executed.
+Asked 2026-07-19 whether the dormancy meant push was unwanted. Boxholder:
+*"it's important, I just haven't gotten around to it. I'm highly confident it is
+important."* So this is **not** a candidate for removal — it's a finished feature
+waiting on one ops step and a verification pass, and it should be treated as
+scheduled work rather than re-triaged as a maybe.
 
-Three honest options:
+Practical consequence: code touching push is worth keeping correct. The
+[v2 box-slug bug](../bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md) lists
+`send-push.ts` among the sites deriving a slug wrongly — fixing that *before*
+push goes live is the right order, since a wrong slug would key subscriptions
+under `"content"` for every box (cross-box delivery) the moment the first one is
+written.
 
-1. **Finish it** — set VAPID keys (a ~5-minute ops task, documented below) and
-   work the verification list. Cheapest path to knowing whether it works.
-2. **Decide it's wanted later** — leave it dormant but say so, so nobody keeps
-   re-triaging it and so future work knows this code is cold.
-3. **Remove it** — if notifications aren't actually wanted (mobile/iOS paths may
-   have superseded the need), delete the surface rather than carry it.
-
-Option 1 is cheap enough that it's probably worth doing *before* choosing between
-2 and 3 — you can't judge whether you want it until it has worked once.
+The unblock is small and sequenced: **install VAPID keys → the desktop
+end-to-end → then everything else below.** Nothing in the verification list can
+start until the keys exist.
 
 ## Blocking prod use
 
