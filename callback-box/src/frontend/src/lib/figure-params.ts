@@ -9,7 +9,9 @@
  * fallback runs).
  */
 
-import { isRecord } from "./is-record";
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
+import { isRecord } from "../../../shared/is-record.js";
 
 export type FigureParamType = "string" | "number" | "boolean";
 export type FigureParamValue = string | number | boolean;
@@ -29,11 +31,27 @@ export function parseDeclaredParams(value: unknown): FigureParamDecl[] {
   if (!Array.isArray(value)) return [];
   const out: FigureParamDecl[] = [];
   for (const item of value) {
-    if (!isRecord(item)) continue;
+    if (!isRecord(item)) {
+      console.warn("figure params: dropping a non-object param declaration", item);
+      continue;
+    }
     const name = item.name;
     const type = item.type;
-    if (typeof name !== "string") continue;
-    if (type !== "string" && type !== "number" && type !== "boolean") continue;
+    if (typeof name !== "string") {
+      console.warn("figure params: dropping a param declaration with no string `name`", item);
+      continue;
+    }
+    // A card param's type vocabulary is string/number/boolean only. A module-
+    // vocabulary type (e.g. `select`/`trigger`) here is a mis-mapping — the
+    // embed value would be silently ignored — so surface it as a visible
+    // degradation (engineering principle #4) rather than a silent drop. The
+    // schema instructions carry the module→card mapping table.
+    if (type !== "string" && type !== "number" && type !== "boolean") {
+      console.warn(
+        `figure params: dropping param "${name}" — unknown card type ${JSON.stringify(type)} (card params are string|number|boolean; map a module select→string, trigger is not embed-controllable)`,
+      );
+      continue;
+    }
     const decl: FigureParamDecl = { name, type };
     const def = item.default;
     if (typeof def === "string" || typeof def === "number" || typeof def === "boolean") {

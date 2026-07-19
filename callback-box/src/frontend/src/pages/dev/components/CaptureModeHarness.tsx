@@ -38,7 +38,14 @@ function makeFakeApi(log: (line: string) => void): CaptureApi {
   return {
     createCaptureSession: async (targetSessionId) => {
       log(`createCaptureSession(target=${String(targetSessionId)})`);
-      return { sessionId: `fake-${Math.random().toString(36).slice(2, 8)}`, startedAt: new Date().toISOString() };
+      return {
+        sessionId: `fake-${Math.random().toString(36).slice(2, 8)}`,
+        startedAt: new Date().toISOString(),
+        capabilities: {
+          acceptedAudioFormats: ["webm-opus", "m4a-aac"],
+          acceptedUploadEncodings: ["raw-body-v1"],
+        },
+      };
     },
     finalizeCaptureSession: async (id) => { log(`finalize(${id})`); },
     cancelCaptureSession: async (id) => { log(`cancel(${id})`); },

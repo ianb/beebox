@@ -82,4 +82,8 @@ if [ -n "$committed_images" ]; then
 fi
 
 # 3. Let git-lfs do its post-commit work (cleans up pointer-tracking state).
-command -v git-lfs >/dev/null 2>&1 && git lfs post-commit "$@" || true
+if command -v git-lfs >/dev/null 2>&1; then
+  git lfs post-commit "$@" || true
+else
+  echo "warning: git-lfs not found — media files will not be handled (see callback-box/docs/developer-install.md)" >&2
+fi

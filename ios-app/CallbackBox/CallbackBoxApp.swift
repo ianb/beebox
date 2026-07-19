@@ -4,14 +4,19 @@ import SwiftUI
 struct CallbackBoxApp: App {
     @UIApplicationDelegateAdaptor(CallbackBoxAppDelegate.self) private var appDelegate
     @StateObject private var store = PairedBoxStore()
-    @StateObject private var outbox = OutboxStore()
     @StateObject private var pairingURLInbox = PairingURLInbox.shared
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(store)
-                .environmentObject(outbox)
+                .onReceive(store.$boxes) { boxes in
+                    let runtime = CaptureUploadRuntime.shared
+                    runtime.updateBoxes(boxes)
+                    Task {
+                        try? await runtime.start()
+                    }
+                }
                 .onOpenURL { url in
                     Task {
                         _ = await store.pair(from: url)

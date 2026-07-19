@@ -19,6 +19,7 @@ pnpm lint:circular  # Circular dependency detector (madge)
 - oxlint provides supplemental checks (ambiguous constructors, useless spreads, identical ternary branches, etc.) — run periodically, not in pre-commit
 - knip detects unused files, exports, and dependencies — run periodically to catch dead code
 - madge detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not
+- `pnpm lint` covers `src/`, `scripts/`, AND `test/` — test code is held to the same reviewed ruleset as src (the eslint config's `roots` option), so per-edit lint reports on test files are real pre-commit blockers, not noise
 
 ## Error Handling
 
@@ -109,3 +110,4 @@ Every rule in `@ianbicking/personal-vibe-check` is a deliberate choice, and the 
 - **File naming: PascalCase for a single-React-component file, kebab-case otherwise.** A file whose primary export is one React component matches the component name (`CommitTimeline.tsx`, `FileView.tsx`); everything else — hooks, utilities, non-component modules, backend `.ts` — is kebab-case (`view-url.ts`, `chat-actors.ts`, `use-capture-session.ts`). A file that moves into a subdirectory drops the now-redundant directory prefix from its name (`chat-session-history.ts` → `chat/session/history.ts`). Rename opportunistically when you touch a mis-cased file; don't sweep.
 - Files max 300 lines, functions max 150 lines (excluding blanks/comments)
 - **Only export what's needed**: don't export functions/constants only used within their own file. Not currently knip-enforced — `knip.json` excludes the `exports` check because the codebase has a backlog of ~277 unused exports; enforce this by convention/review until that backlog is cleared.
+- **No barrels** (boxholder decision, 2026-07-12): no `index.ts` re-export files — import from the module that defines the thing. Barrels are indirection: they blur what's public (fighting the export-what's-needed rule), invite import cycles, and fuzz dead-export detection. Directory grouping already carries discoverability.

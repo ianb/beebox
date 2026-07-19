@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-12T08:12:29Z
-Total documents: 175
+Generated: 2026-07-18T00:05:36Z
+Total documents: 190
 
 ## Issues
 
@@ -9,10 +9,10 @@ Total documents: 175
 
 These documents are not referenced by any other document.
 
+- **docker/README.md** — "Docker packaging" (28 lines)
 - **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (544 lines)
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (354 lines)
-- **docs/implemented-plans/card-view-widgets.md** — "Card-aware widgets for box-authored views" (662 lines)
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (154 lines)
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (366 lines)
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (345 lines)
@@ -28,10 +28,10 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (57 lines)
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (49 lines)
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (621 lines)
+- **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (411 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (373 lines)
 - **docs/implemented-plans/semantic-search.md** — "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" (533 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (544 lines)
-- **docs/plans/ios-companion-review-2026-07-09.md** — "iOS Companion — code review (2026-07-09)" (165 lines)
 - **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (21 lines)
@@ -53,12 +53,12 @@ These references point to files that don't exist.
 
 #### CLAUDE.md
 
-Title: "Callback Box" | 170 lines
+Title: "Callback Box" | 175 lines
 
 Referenced by:
 - CLAUDE.md:9 (mention) — **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy star
 - README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
-- code-style.md:40 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
+- code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
 - docs/README.md:38 (mention) — - **kebab-case filenames.** `README.md` and `CLAUDE.md` are exempt (fixed
 - docs/activities-design.md:46 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code, 
 - docs/activities-retrospective.md:21 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
@@ -84,6 +84,7 @@ Referenced by:
 - docs/implemented-plans/markdoc-tags-plan.md:177 (mention) — text in the compiled CLAUDE.md include (not lost); the warning surfaces
 - docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md:9 (mention) — - **Card validation pipeline** — `cb validate` PostToolUse hook + pre-commit hook (per CLAUDE.md). Markdoc's `Markdoc.va
 - docs/implemented-plans/markdoc-tags-plan.review.md:5 (mention) — source. Trace each to a stated preference in CLAUDE.md / code-style.md
+- docs/implemented-plans/mobile-parity-sync.md:27 (mention) — - Root `CLAUDE.md` "new infrastructure isn't done until it's discoverable" — the
 - docs/implemented-plans/mvp-implementation-guide.md:3 (mention) — > still true in it is documented better in CLAUDE.md and the reference docs
 - docs/implemented-plans/named-places.md:85 (mention) — (the CLAUDE.md parse-mutate-reserialize contract, faithful form). **Not**
 - docs/implemented-plans/normalize-chat-links.md:80 (mention) — - **Monorepo `CLAUDE.md:` "NEVER disable or weaken a lint rule… Ask first."**
@@ -112,9 +113,9 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:36 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/plans/docs-reorg.md:5 (mention) — convention docs → CLAUDE.md slimming → cb-guide-* skills → design
 - docs/plans/ios-companion-app.md:25 (mention) — - `callback-box/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file u
-- docs/plans/ios-companion-review-2026-07-09.md:54 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
+- docs/plans/ios-companion-review-2026-07-09.md:56 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
-- docs/plans/source-available-release.md:385 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
+- docs/plans/source-available-release.md:388 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
 - docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/user-stories-audit-2026-06-26.md:1474 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
@@ -132,8 +133,9 @@ Referenced by:
 - ../.claude/skills/launch-worktree-session/SKILL.md:129 (mention) — delegate-and-Codex-review guidance in the root CLAUDE.md). Omit for the default.
 - ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
+- ../issues/bugs/2026-07-15-box-packageify-doubled-subtrees.md:45 (mention) — it holds files (e.g. per-directory `CLAUDE.md`) that have **no identical twin at
+- ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:14 (mention) — not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:7 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
-- ../issues/code-quality/2026-07-04-fake-agent-single-export-split.md:14 (mention) — Do NOT weaken the rule to avoid this (root CLAUDE.md lint policy).
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:21 (mention) — Related: the noisy-output policy in the root CLAUDE.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:7 (mention) — it spawns an agent with a box cwd and box CLAUDE.md context and checks
 - ../issues/decisions/2026-05-27-bin-browse-wrapper-future.md:11 (mention) — - **Replace the rewriting with a `BASE_PATH.txt` file** that holds the current worktree's URL prefix (e.g. `http://local
@@ -155,6 +157,7 @@ Referenced by:
 - ../issues/features/2026-05-28-retrospective-session-scan.md:7 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user 
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:12 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
 - ../issues/features/2026-07-05-writing-skill.md:9 (mention) — Scope: prose, usually exposition — READMEs, docs, `CLAUDE.md`s, issue bodies,
+- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:14 (mention) — and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 - ../research/gstack/README.md:21 (mention) — 3. When something becomes a real change to our project, link out to where it landed (CLAUDE.md, a skill of our own, etc.
 - ../research/gstack/notes/design-consultation.md:3 (mention) — Six-phase conversation that ends with a written DESIGN.md and a CLAUDE.md update telling the agent to always read it. Th
@@ -198,6 +201,9 @@ References:
 - → docs/client-debug-log.md (mention)
 - → docs/example-names.md (mention)
 - → code-style.md (mention)
+- → docs/developer-install.md (mention)
+- → docs/docker-install.md (mention)
+- → docs/agent-install.md (mention)
 - → docs/engineering-principles.md (mention)
 - → docs/module-map.md (mention)
 - → docs/design/README.md (mention)
@@ -205,6 +211,8 @@ References:
 - → docs/testing.md (mention)
 - → docs/tours.md (mention)
 - → docs/migrations.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/mobile-parity.md (mention)
 - → docs/adding-api-endpoints.md (mention)
 - → docs/connectors.md (mention)
 - → docs/procedure-implementation.md (mention)
@@ -229,11 +237,11 @@ References:
 
 #### code-style.md
 
-Title: "Code Style" | 112 lines
+Title: "Code Style" | 114 lines
 
 Referenced by:
 - CLAUDE.md:120 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
-- CLAUDE.md:169 (at-include) — @code-style.md
+- CLAUDE.md:174 (at-include) — @code-style.md
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:84 (mention) — - `callback-box/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/app-wide-csp.md:28 (mention) — - `callback-box/code-style.md:` no `any`, max 2 positional params, custom error
@@ -241,6 +249,7 @@ Referenced by:
 - docs/implemented-plans/box-retrospectives.md:39 (mention) — - `callback-box/code-style.md` — custom error classes; no silent error
 - docs/implemented-plans/box-search.md:38 (mention) — - `callback-box/code-style.md`: max 2 positional params, no default
 - docs/implemented-plans/boxes-as-packages-v2.md:48 (mention) — - `callback-box/code-style.md`: strict types, no `any`, custom error classes — the new
+- docs/implemented-plans/canvas-loop-figure.md:28 (mention) — - `code-style.md`: max 2 positional params (the figure contract's
 - docs/implemented-plans/capture-mode.md:39 (mention) — - `callback-box/code-style.md` — no `any`, named-params objects, custom
 - docs/implemented-plans/card-view-widgets.md:22 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/chat-scroll-redesign.md:46 (mention) — - `callback-box/code-style.md:36-37` — no default parameters; max 2 positional
@@ -250,7 +259,7 @@ Referenced by:
 - docs/implemented-plans/courseware-lesson-plan.md:23 (mention) — - `callback-box/code-style.md` — no `any`, no default params, max 2 positional params, files ≤300
 - docs/implemented-plans/courseware-phase1.md:100 (mention) — - `callback-box/code-style.md` → **"No default parameters"**, **"Max 2 positional
 - docs/implemented-plans/extfile-card.md:42 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional params
-- docs/implemented-plans/figure-card-type.md:72 (mention) — - **`callback-box/code-style.md`** — *"No default parameters"*, *"Max 2 positional
+- docs/implemented-plans/figure-card-type.md:75 (mention) — - **`callback-box/code-style.md`** — *"No default parameters"*, *"Max 2 positional
 - docs/implemented-plans/job-xml-purge.subplan.md:35 (mention) — - `callback-box/code-style.md` — no `any`, max-2 positional params, named-error
 - docs/implemented-plans/link-validation-fix.md:31 (mention) — - `callback-box/code-style.md` — no `any`, double quotes, semicolons, max 2
 - docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md:16 (mention) — Drawn from `CLAUDE.md` and `code-style.md`; referenced by name in findings below.
@@ -265,6 +274,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-and-xml.md:51 (mention) — - **`callback-box/code-style.md`** — `code-style.md:25`: *"NEVER use
 - docs/implemented-plans/remove-cardworks-deletion.md:100 (mention) — - **`callback-box/code-style.md:25`** (no `any`), **`:55`** (`as` is like Rust
 - docs/implemented-plans/remove-cardworks-package.md:93 (mention) — - **`callback-box/code-style.md`** — `code-style.md:25` (no `any`),
+- docs/implemented-plans/responsive-figures.md:43 (mention) — - `code-style.md` — no default parameters, explicit return types, teardown/
 - docs/implemented-plans/rest-to-trpc-consolidation.md:43 (mention) — - **`callback-box/code-style.md`** — Zod-validated inputs, `only export what's
 - docs/implemented-plans/schema-validate-hook.md:32 (mention) — - `callback-box/code-style.md` — *"as type assertions are like Rust's
 - docs/implemented-plans/see-as-the-user.md:35 (mention) — - `callback-box/code-style.md` — mechanical rules (no default parameters,
@@ -274,8 +284,10 @@ Referenced by:
 - docs/implemented-plans/view-render-testing.md:28 (mention) — - `callback-box/code-style.md` — no `any`; custom error classes not
 - docs/implemented-plans/webpage-card-and-commentary.md:48 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params,
 - docs/implemented-plans/websocket-chat-transport.md:72 (mention) — - `callback-box/code-style.md:` no `any`, no default params, max 2 positional
+- docs/plans/android-companion-app.md:36 (mention) — - `code-style.md`: the box side of Track 0 (TypeScript) follows the usual
 - docs/plans/box-commentary-surface.md:94 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/plans/ios-companion-app.md:26 (mention) — - `callback-box/code-style.md` — standard mechanical rules for the box-side TS.
+- docs/plans/ios-native-capture-mode.md:24 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
 - docs/plans/source-available-release.md:44 (mention) — - `callback-box/code-style.md` — style rules for any code touched by deploy
 - docs/unimplemented-plans/query-cards.md:34 (mention) — - `callback-box/code-style.md` — strict types, no `any`, custom errors,
@@ -283,10 +295,12 @@ Referenced by:
 - ../.claude/agents/finish.md:56 (mention) — root `CLAUDE.md`/`code-style.md` — also drops you to the full flow.
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:100 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
-- ../CLAUDE.md:38 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../CLAUDE.md:39 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:17 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
+- ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:37 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:102 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
+- ../issues/closed/decisions/2026-07-15-single-export-should-ignore-types.md:15 (mention) — convention (`code-style.md`) plus review covers the residual concern. The custom
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
-- ../issues/code-quality/2026-07-10-tour-lib-lint-debt.md:17 (mention) — in code-style.md so per-edit hook reports on test files stop
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:77 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/features/2026-07-05-writing-skill.md:12 (mention) — code style (that's `code-style.md`).
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -307,8 +321,9 @@ Referenced by:
 - docs/implemented-plans/card-view-widgets.md:24 (mention) — - `callback-box/frontend.md:34` — *"Reach for a primitive from
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read frontend.md before writing UI"* and the
-- docs/implemented-plans/figure-card-type.md:76 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
+- docs/implemented-plans/figure-card-type.md:79 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
 - docs/implemented-plans/open-chat-from-card.md:57 (mention) — - `callback-box/frontend.md` — UI primitives + semantic palette, `className` only for
+- docs/implemented-plans/responsive-figures.md:42 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:103 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
 - docs/implemented-plans/user-location.md:63 (mention) — - `callback-box/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/design-reconciliation.md:39 (mention) — capture, dashboard, views, and a real design system (frontend.md).
@@ -364,7 +379,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 289 lines
+Title: "Deploy" | 295 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -373,14 +388,26 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:76 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
+- docs/plans/installation-story.md:283 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see [`
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:17 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
 - ../issues/code-quality/2026-07-04-web-push-followup-testing.md:19 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
+- ../research/openclaw-hermes/deep-installation.md:96 (mention) — and `callback-box/deploy/README.md`.
 
 References:
 - → deploy/CLAUDE.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/adding-a-box.md (link)
+
+### docker/
+
+#### docker/README.md **[ORPHAN]**
+
+Title: "Docker packaging" | 28 lines
+
+References:
+- → docs/docker-install.md (link)
+- → docs/developer-install.md (mention)
 
 ### docs/
 
@@ -422,7 +449,7 @@ References:
 Title: "Adding a Box" | 131 lines
 
 Referenced by:
-- CLAUDE.md:151 (mention) — | Adding a box | `docs/adding-a-box.md` |
+- CLAUDE.md:156 (mention) — | Adding a box | `docs/adding-a-box.md` |
 - README.md:81 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
 - deploy/README.md:104 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
@@ -430,7 +457,7 @@ Referenced by:
 - docs/plans/cli-restructure.md:130 (mention) — (see `docs/adding-a-box.md`), `cb upgrade` is the per-box engine-upgrade
 - docs/plans/docs-reorg.gap-analysis.md:135 (mention) — `docs/adding-a-box.md`.
 - docs/plans/source-available-release.md:62 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
-- docs/server-operations.md:201 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
+- docs/server-operations.md:224 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
 - ../issues/decisions/2026-03-15-per-box-secret-management.md:15 (mention) — For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:31 (mention) — Refs: `callback-box/docs/scheduler.md`, `callback-box/docs/adding-a-box.md`,
 
@@ -447,9 +474,10 @@ References:
 Title: "Adding API Endpoints" | 237 lines
 
 Referenced by:
-- CLAUDE.md:140 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
+- CLAUDE.md:145 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
 - docs/plans/docs-reorg.gap-analysis.md:160 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/plans/docs-reorg.md:150 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
+- docs/plans/ios-native-capture-mode.md:27 (mention) — - `docs/adding-api-endpoints.md`: capture uploads remain raw Fastify because
 - ../.claude/skills/cb-guide-api/SKILL.md:3 (mention) — description: Explains how HTTP endpoints are added in callback-box and the tRPC-vs-raw-Fastify decision. Use when adding
 
 #### docs/adding-schemas.md
@@ -457,7 +485,7 @@ Referenced by:
 Title: "Adding a New Card Schema" | 279 lines
 
 Referenced by:
-- CLAUDE.md:131 (mention) — | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/template
+- CLAUDE.md:134 (mention) — | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/template
 - README.md:80 (link) — - [`docs/adding-schemas.md`](docs/adding-schemas.md) — adding a new card type
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For 
 - docs/glossary.md:22 (mention) — **card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.
@@ -477,6 +505,17 @@ Referenced by:
 
 References:
 - → CLAUDE.md (mention)
+
+#### docs/agent-install.md
+
+Title: "Installing callback-box with an AI agent" | 97 lines
+
+Referenced by:
+- CLAUDE.md:130 (mention) — | Agent-driven install (for a user's AI assistant) | `docs/agent-install.md` |
+
+References:
+- → docs/docker-install.md (link)
+- → docs/developer-install.md (link)
 
 #### docs/asset-manifests.md
 
@@ -517,6 +556,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:590 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
 - docs/plans/docs-reorg.gap-analysis.md:41 (mention) — `docs/box-layout.md`.
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
+- docs/plans/installation-story.md:130 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-ia-review.md:146 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/source-available-release.md:60 (mention) — and documented at `callback-box/docs/box-layout.md:194`. No credential values
 - docs/reports/user-stories-audit-2026-06-26.md:4927 (mention) — The user story is accurately implemented across both claimed files. `callback-box/src/cli/commands/init.ts` provides the
@@ -534,7 +574,7 @@ References:
 Title: "Calendar Integration" | 89 lines
 
 Referenced by:
-- CLAUDE.md:160 (mention) — | Calendar integration | `docs/calendar.md` |
+- CLAUDE.md:165 (mention) — | Calendar integration | `docs/calendar.md` |
 - docs/connectors.md:28 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
 - docs/design/README.md:29 (link) — [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../calendar.md).
@@ -619,7 +659,7 @@ References:
 Title: "Chat session lifecycle" | 94 lines
 
 Referenced by:
-- CLAUDE.md:155 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
+- CLAUDE.md:160 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
 - docs/implemented-plans/architectural-review-followups.md:271 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
 - ../issues/code-quality/2026-07-06-chat-session-shared-core.md:50 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
@@ -634,7 +674,7 @@ Title: "Client Debug Log" | 55 lines
 Referenced by:
 - CLAUDE.md:114 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
 - docs/box-layout.md:165 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
-- docs/server-operations.md:195 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
+- docs/server-operations.md:218 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 - ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 
 #### docs/composer-input-machine.md
@@ -664,7 +704,7 @@ References:
 Title: "Connectors" | 89 lines
 
 Referenced by:
-- CLAUDE.md:141 (mention) — | Connectors | `docs/connectors.md` |
+- CLAUDE.md:146 (mention) — | Connectors | `docs/connectors.md` |
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `cb finalize`). See [`../connectors.md`](../connectors.md);
 - docs/implemented-plans/gmail-gc-unlabeled.md:5 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:288 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
@@ -686,10 +726,10 @@ References:
 Title: "Content-Security-Policy" | 80 lines
 
 Referenced by:
-- CLAUDE.md:156 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
+- CLAUDE.md:161 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- src/dev/CLAUDE.md:14 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
+- src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 
 References:
 - → docs/scheduled/csp-violation-review.md (mention)
@@ -703,34 +743,64 @@ Referenced by:
 - ../issues/features/2026-07-08-selection-provenance-canonical-anchors.md:9 (mention) — `docs/data-source-tagging.md`) and text-selection capture (`SelectionCapture.tsx` +
 - ../research/hoversource-review.md:13 (mention) — - **`data-cb-source`** (`src/frontend/src/lib/source-tag.ts`, `docs/data-source-tagging.md`) tags rendered elements with
 
+#### docs/developer-install.md
+
+Title: "Developer install (from source)" | 130 lines
+
+Referenced by:
+- CLAUDE.md:128 (mention) — | Developer install (from source) | `docs/developer-install.md` |
+- docker/README.md:15 (mention) — | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/developer-install.md` from a fresh `de
+- docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
+- docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
+
+References:
+- → docs/docker-install.md (link)
+
 #### docs/doc-graph.md
 
 Title: "(no title)" | 1 lines
 
 Referenced by:
 - docs/README.md:32 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
-- docs/maintenance.md:18 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
+- docs/maintenance.md:19 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 - docs/plans/docs-reorg.md:116 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
-- docs/plans/source-available-release.md:429 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
+- docs/plans/source-available-release.md:432 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
 - docs/testing.md:601 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
-- src/dev/CLAUDE.md:10 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
+- src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:7 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
+
+#### docs/docker-install.md
+
+Title: "Docker install (local + VPS)" | 191 lines
+
+Referenced by:
+- CLAUDE.md:129 (mention) — | Docker install (local + VPS) | `docs/docker-install.md` |
+- docker/README.md:5 (link) — [`../docs/docker-install.md`](../docs/docker-install.md); this file is a map
+- docs/agent-install.md:43 (link) — ([docker-install.md](docker-install.md)) is simpler and bundles every
+- docs/developer-install.md:7 (link) — [docker-install.md](docker-install.md).
+- docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
 
 #### docs/engineering-principles.md
 
 Title: "Engineering Principles" | 160 lines
 
 Referenced by:
-- CLAUDE.md:128 (mention) — | Engineering principles | `docs/engineering-principles.md` |
+- CLAUDE.md:131 (mention) — | Engineering principles | `docs/engineering-principles.md` |
 - code-style.md:3 (link) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/implemented-plans/architectural-review-followups.md:10 (mention) — principles (`../engineering-principles.md`) and the same execution model
 - docs/implemented-plans/architectural-review.md:29 (mention) — >   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
+- docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
+- docs/implemented-plans/mobile-parity-sync.md:21 (mention) — - `docs/engineering-principles.md` **#4 resilient and never silent** — drift
 - docs/implemented-plans/questions-end-to-end.md:57 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
 - docs/implemented-plans/remove-box-shape-v1.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — most load-bearing: **#4
+- docs/implemented-plans/responsive-figures.md:33 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
+- docs/plans/android-companion-app.md:25 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
+- docs/plans/installation-story.md:41 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
+- docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
@@ -765,7 +835,7 @@ Referenced by:
 Title: "Glossary" | 57 lines
 
 Referenced by:
-- CLAUDE.md:166 (mention) — | Glossary | `docs/glossary.md` |
+- CLAUDE.md:171 (mention) — | Glossary | `docs/glossary.md` |
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/plans/design-reconciliation.md:21 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/plans/docs-reorg.gap-analysis.md:143 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
@@ -837,9 +907,10 @@ References:
 Title: "Health Checks" | 60 lines
 
 Referenced by:
-- CLAUDE.md:144 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
+- CLAUDE.md:149 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
-- docs/server-operations.md:180 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
+- docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
+- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:63 (mention) — updates) and `docs/health-checks.md` owns deployed-server runbooks — this admin
 
 References:
 - → docs/server-operations.md (link)
@@ -849,15 +920,16 @@ References:
 Title: "Knowledge Audits" | 91 lines
 
 Referenced by:
-- CLAUDE.md:158 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
+- CLAUDE.md:163 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
 - docs/engineering-principles.md:159 (link) — ([`docs/knowledge-audits.md`](knowledge-audits.md)).
-- docs/maintenance.md:59 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
+- docs/maintenance.md:61 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/plans/docs-reorg.md:119 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/reports/user-stories-audit-2026-06-26.md:5670 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/knowledge-audits.md` |
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't 
 - ../.claude/skills/cb-context/SKILL.md:133 (mention) — `docs/knowledge-audits.md`).
 - ../.claude/skills/cb-guide-schemas/SKILL.md:41 (mention) — (`docs/knowledge-audits.md`).
+- ../issues/bugs/2026-07-15-knowledge-audit-box-nesting.md:13 (mention) — `docs/knowledge-audits.md`'s `--box ~/src/boxes/test1` example presumably
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
 
 References:
@@ -902,7 +974,7 @@ References:
 Title: "Landmarks" | 164 lines
 
 Referenced by:
-- CLAUDE.md:153 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
+- CLAUDE.md:158 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
 - docs/design/representation.md:91 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
 - docs/implemented-plans/architectural-review.md:829 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/clerk-webpage-capture.md:264 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
@@ -912,17 +984,19 @@ Referenced by:
 - docs/unimplemented-plans/design-vision-superseded.md:7 (mention) — > retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
 - docs/unimplemented-plans/query-cards.md:14 (mention) — planned in docs/landmarks.md long before this, useful for any list-shaped
 - ../issues/features/2026-06-12-card-level-prominence.md:7 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
+- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:26 (mention) — Landmarks are already the box's "notable spots" surface (`docs/landmarks.md`), and
 
 References:
 - → docs/triage.md (mention)
 
 #### docs/maintenance.md
 
-Title: "Code Maintenance" | 125 lines
+Title: "Code Maintenance" | 133 lines
 
 Referenced by:
-- CLAUDE.md:157 (mention) — | Periodic maintenance | `docs/maintenance.md` |
+- CLAUDE.md:162 (mention) — | Periodic maintenance | `docs/maintenance.md` |
 - docs/implemented-plans/box-retrospectives.md:413 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
+- docs/implemented-plans/mobile-parity-sync.md:180 (mention) — After any burst of mobile work, and otherwise on the `docs/maintenance.md`
 - docs/knowledge-audits.md:22 (mention) — `docs/maintenance.md` lists this alongside the other periodic tasks.
 - docs/migrations.md:286 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - docs/plans/cli-restructure.md:138 (mention) — - **Card normalization story.** `cb format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML
@@ -931,11 +1005,13 @@ Referenced by:
 - ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:13 (mention) — semantics. Documented in `callback-box/docs/maintenance.md`.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:15 (mention) — `callback-box/docs/maintenance.md` with a cadence, or a scheduled routine):
+- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:62 (mention) — `docs/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
 
 References:
 - → CLAUDE.md (mention)
 - → docs/doc-graph.md (mention)
 - → docs/todo-security.md (mention)
+- → docs/implemented-plans/mobile-parity-sync.md (mention)
 - → docs/knowledge-audits.md (mention)
 - → docs/migrations.md (mention)
 - → docs/architecture/CLAUDE.md (mention)
@@ -945,7 +1021,7 @@ References:
 Title: "Box Migrations" | 300 lines
 
 Referenced by:
-- CLAUDE.md:138 (mention) — | Box migration runbook | `docs/migrations.md` |
+- CLAUDE.md:141 (mention) — | Box migration runbook | `docs/migrations.md` |
 - README.md:82 (link) — - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
 - docs/design/representation.md:65 (link) — controlled migration ([`../migrations.md`](../migrations.md)), not silent
 - docs/implemented-plans/agent-applied-migrations.md:33 (mention) — `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
@@ -958,7 +1034,7 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:47 (mention) — entries." `migrations.md:80-84`: "Never reorder, rename, or remove."
 - docs/implemented-plans/remove-cardworks-deletion.md:456 (mention) — `docs/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:324 (mention) — it now means "from `src/cards/`"); retire `docs/migrations.md` references to
-- docs/maintenance.md:83 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
+- docs/maintenance.md:91 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
 - docs/plans/docs-reorg.gap-analysis.md:161 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - ../.claude/skills/cb-migration/SKILL.md:12 (mention) — lives in **`callback-box/docs/migrations.md`** — read it before writing one.
@@ -972,19 +1048,52 @@ References:
 - → docs/maintenance.md (mention)
 - → docs/adding-schemas.md (mention)
 
-#### docs/module-map.md
+#### docs/mobile-contract.md
 
-Title: "Module map: where shared code lives" | 42 lines
+Title: "Cross-Platform Mobile Contract" | 532 lines
 
 Referenced by:
-- CLAUDE.md:129 (mention) — | Module map (lib/shared/types boundary) | `docs/module-map.md` |
+- CLAUDE.md:142 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
+- docs/implemented-plans/mobile-parity-sync.md:36 (mention) — ### 1. `docs/mobile-contract.md` — the canonical contract (exists)
+- docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
+- docs/plans/android-companion-app.md:7 (mention) — grounded in the same-day contract inventory (`docs/mobile-contract.md`), the iOS
+
+References:
+- → docs/implemented-plans/mobile-parity-sync.md (mention)
+- → docs/plans/android-companion-app.md (mention)
+- → docs/plans/ios-companion-review-2026-07-17.md (mention)
+
+#### docs/mobile-parity.md
+
+Title: "Mobile parity matrix" | 42 lines
+
+Referenced by:
+- CLAUDE.md:143 (mention) — | Mobile parity matrix (iOS vs Android capabilities) | `docs/mobile-parity.md` |
+- docs/implemented-plans/mobile-parity-sync.md:97 (mention) — ### 3. `docs/mobile-parity.md` — the parity matrix (to build)
+- docs/plans/android-companion-app.md:592 (mention) — - The parity matrix (`docs/mobile-parity.md`, owned by the sync plan) lists each
+
+References:
+- → docs/implemented-plans/mobile-parity-sync.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/plans/android-companion-app.md (mention)
+- → docs/plans/ios-native-capture-mode.md (mention)
+
+#### docs/module-map.md
+
+Title: "Module map: where shared code lives" | 52 lines
+
+Referenced by:
+- CLAUDE.md:132 (mention) — | Module map (lib/shared/types boundary) | `docs/module-map.md` |
+- docs/implemented-plans/clerk-contract-and-import-boundary.md:113 (mention) — against `docs/module-map.md` and update that doc if it's silent on
+- ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:22 (mention) — added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:140 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
 
 #### docs/procedure-implementation.md
 
 Title: "Procedures" | 223 lines
 
 Referenced by:
-- CLAUDE.md:142 (mention) — | Procedures | `docs/procedure-implementation.md` |
+- CLAUDE.md:147 (mention) — | Procedures | `docs/procedure-implementation.md` |
 - docs/glossary.md:40 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `config/pro
 - docs/implemented-plans/agent-applied-migrations.md:29 (mention) — general write-up landed in `docs/procedure-implementation.md` ("Checklists"
 - docs/implemented-plans/procedure-validation-completion.md:9 (mention) — > `docs/procedure-implementation.md` and the generated procedure guide. Two
@@ -1016,7 +1125,7 @@ References:
 Title: "Prompt Logging for Agent Invocations" | 212 lines
 
 Referenced by:
-- CLAUDE.md:146 (mention) — | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
+- CLAUDE.md:151 (mention) — | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
 - docs/plans/docs-reorg.md:179 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - docs/reports/user-stories-audit-2026-06-26.md:1326 (mention) — 6. **Supporting documentation**: `docs/prompt-logging.md` provides detailed guidance on using the feature, confirming th
 
@@ -1028,7 +1137,7 @@ References:
 Title: "Questions" | 335 lines
 
 Referenced by:
-- CLAUDE.md:148 (mention) — | Questions subsystem design | `docs/questions.md` |
+- CLAUDE.md:153 (mention) — | Questions subsystem design | `docs/questions.md` |
 - docs/implemented-plans/questions-end-to-end.md:461 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
 - docs/triage.md:133 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:14 (mention) — See `docs/questions.md` § Aging.
@@ -1049,9 +1158,9 @@ Referenced by:
 - docs/cards-as-markdown.md:20 (mention) — **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` fr
 - docs/plans/README.md:68 (mention) — applies the naming conventions (`docs/README.md`). The 2026-07-04
 - docs/plans/docs-reorg.md:344 (mention) — role change). Conventions recorded in `docs/README.md`.
-- src/dev/CLAUDE.md:11 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs or live-area orphans; run by pre-commit o
+- src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs or live-area orphans; run by pre-commit o
 - ../.claude/agents/finish.md:189 (mention) — - **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
-- ../CLAUDE.md:24 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
+- ../CLAUDE.md:25 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
 
 References:
 - → docs/plans/README.md (mention)
@@ -1076,14 +1185,15 @@ Referenced by:
 - docs/plans/docs-reorg.md:179 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:31 (mention) — Refs: `callback-box/docs/scheduler.md`, `callback-box/docs/adding-a-box.md`,
 - ../issues/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:22 (mention) — `docs/scheduler.md`). Is the latency gap real for the user, and could it be closed
+- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:86 (mention) — (`docs/scheduler.md` / the scheduled-task health state at
 - ../research/pai/README.md:65 (mention) — | Scheduling | Pulse daemon, `[[job]]` cron in one TOML | `cb tick` + per-box `scheduled-script.card`s (`docs/scheduler.
 
 #### docs/server-operations.md
 
-Title: "Server Operations" | 202 lines
+Title: "Server Operations" | 225 lines
 
 Referenced by:
-- CLAUDE.md:150 (mention) — | Server operations | `docs/server-operations.md` |
+- CLAUDE.md:155 (mention) — | Server operations | `docs/server-operations.md` |
 - docs/health-checks.md:9 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:499 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
@@ -1104,7 +1214,7 @@ References:
 Title: "SSR Render Testing (`cb render`)" | 185 lines
 
 Referenced by:
-- CLAUDE.md:159 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
+- CLAUDE.md:164 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 - docs/reports/user-stories-audit-2026-06-26.md:4686 (mention) — All files exist and are properly implemented. Verified: (1) src/cli/commands/render.ts spawns render.tsx with full optio
 - ../.claude/skills/cb-guide-testing/SKILL.md:38 (mention) — - **SSR render tests** (`cb render`, `docs/ssr-render-testing.md`) —
 - ../issues/closed/bugs/2026-07-07-cb-render-ssr-window-undefined.md:35 (mention) — couldn't use. It's also covered by `docs/ssr-render-testing.md`, so SSR is
@@ -1124,6 +1234,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:22 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/plans/docs-reorg.gap-analysis.md:110 (mention) — 8. **`@xstate/store` documented as adopted (`docs/stack-decisions.md:143`)
 - docs/plans/docs-reorg.md:92 (mention) — `stack-decisions.md`, the Google/Telegram setup runbooks, CSP docs) verified
+- docs/plans/installation-story.md:111 (mention) — `node --watch` over the backend; `docs/stack-decisions.md` used to pair
 - docs/reports/user-stories-audit-2026-06-26.md:4801 (mention) — Feature is fully implemented with all claimed capabilities. Evidence: (1) /src/cli/commands/render.ts registers the `cb 
 - docs/unimplemented-plans/design-vision-superseded.md:13 (mention) — > `../stack-decisions.md` Decision 18).
 - ../issues/code-quality/2026-07-04-xstate-store-never-adopted.md:7 (mention) — `callback-box/docs/stack-decisions.md` (~line 143) records `@xstate/store`
@@ -1149,7 +1260,7 @@ Referenced by:
 Title: "Testing" | 621 lines
 
 Referenced by:
-- CLAUDE.md:132 (mention) — | Testing philosophy | `docs/testing.md` |
+- CLAUDE.md:135 (mention) — | Testing philosophy | `docs/testing.md` |
 - docs/chat-scroll-testing.md:5 (mention) — behavior that doctests can't exercise (`docs/testing.md` §6). This is the
 - docs/engineering-principles.md:125 (link) — [`docs/testing.md`](testing.md).
 - docs/implemented-plans/agent-applied-migrations.md:82 (mention) — - `callback-box/docs/testing.md` — tests-first as a design tool; the machine
@@ -1160,11 +1271,12 @@ Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:53 (mention) — - `callback-box/docs/testing.md:5-9` + `:474-521` — layout/streaming behavior is
 - docs/implemented-plans/courseware-lesson-plan.md:326 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
 - docs/implemented-plans/courseware-phase1.md:487 (mention) — - **Tests** (per `docs/testing.md`):
-- docs/implemented-plans/figure-card-type.md:78 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
+- docs/implemented-plans/figure-card-type.md:81 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
 - docs/implemented-plans/input-extraction.md:30 (mention) — - `docs/testing.md` via the cb-plan template: tests first as a design tool;
 - docs/implemented-plans/link-validation-fix.md:35 (mention) — - `callback-box/docs/testing.md` — tests as a design tool; name the doctest for
 - docs/implemented-plans/normalize-chat-links.md:78 (mention) — - **`callback-box/docs/testing.md`** — tests as a design tool; doctest the
 - docs/implemented-plans/procedure-validation-completion.md:36 (mention) — - **`docs/testing.md`** — tests come first as a design tool; cover substantial codepaths, not coverage-for-its-own-sake.
+- docs/implemented-plans/responsive-figures.md:403 (mention) — doctest tiers exercise (`docs/testing.md` posture: don't test for coverage's
 - docs/implemented-plans/rest-to-trpc-consolidation.md:383 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
 - docs/implemented-plans/see-as-the-user.md:575 (mention) — - **Tests first as design tool** (`docs/testing.md`): B0's extraction is
 - docs/implemented-plans/slopo-codehealth-adoption.md:56 (mention) — - **`docs/testing.md`** — tests are not for coverage (`docs/testing.md:11`:
@@ -1173,6 +1285,7 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:53 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/plans/ios-companion-app.md:212 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
+- docs/plans/ios-native-capture-mode.md:33 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
 - docs/tours.md:16 (link) — ([testing.md](testing.md)).
 - ../.claude/skills/cb-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/cb-guide-testing/SKILL.md:3 (mention) — description: Explains callback-box's testing system — the test tiers, what each is for, and how to choose. Use when deci
@@ -1196,17 +1309,20 @@ References:
 Title: "Security TODOs" | 25 lines
 
 Referenced by:
-- docs/maintenance.md:25 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
+- docs/maintenance.md:26 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
+- ../issues/features/2026-07-16-local-password-auth-default-on.md:76 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
 
 #### docs/tours.md
 
 Title: "Tours — scripted browser walks for rendering + a11y review" | 133 lines
 
 Referenced by:
-- CLAUDE.md:133 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
+- CLAUDE.md:136 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
 - docs/testing.md:553 (link) — them: [tours.md](tours.md).
-- ../issues/code-quality/2026-07-10-tour-lib-lint-debt.md:22 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
+- ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:45 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
+- ../issues/exploration/2026-07-15-claude-code-cloud-environment.md:193 (mention) — (`agent-browser` / `bin/browse`) and **tours** (`docs/tours.md` — scripted browser
+- ../issues/features/2026-07-17-regenerable-app-demo-video.md:22 (mention) — 375×800) + a11y snapshots, not video (`docs/tours.md`). The interaction-scripting
 
 References:
 - → docs/testing.md (link)
@@ -1216,7 +1332,7 @@ References:
 Title: "Triage" | 264 lines
 
 Referenced by:
-- CLAUDE.md:147 (mention) — | Triage pipeline design | `docs/triage.md` |
+- CLAUDE.md:152 (mention) — | Triage pipeline design | `docs/triage.md` |
 - docs/box-layout.md:110 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
 - docs/connectors.md:86 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:28 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
@@ -1234,6 +1350,7 @@ Referenced by:
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
+- ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:78 (mention) — role with a handler procedure (`docs/triage.md`). Could the admin landmark host
 - ../research/pai/README.md:60 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
 
 References:
@@ -1265,8 +1382,8 @@ Title: "Architecture Docs" | 59 lines
 
 Referenced by:
 - docs/design/README.md:5 (link) — narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
-- docs/maintenance.md:116 (mention) — **When to run:** after editing `docs/architecture/*.md` text that drives image prompts, or after editing `.mmd` Mermaid 
-- src/dev/CLAUDE.md:13 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
+- docs/maintenance.md:124 (mention) — **When to run:** after editing `docs/architecture/*.md` text that drives image prompts, or after editing `.mmd` Mermaid 
+- src/dev/CLAUDE.md:14 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 
 References:
 - → docs/stack-decisions.md (mention)
@@ -1405,7 +1522,7 @@ References:
 Title: "docs/design/ — engineering rationale" | 40 lines
 
 Referenced by:
-- CLAUDE.md:130 (mention) — | Design rationale | `docs/design/README.md` |
+- CLAUDE.md:133 (mention) — | Design rationale | `docs/design/README.md` |
 - docs/implemented-plans/mvp-implementation-guide.md:4 (mention) — > that postdate it; current design rationale is `../design/README.md`. Known
 
 References:
@@ -1516,10 +1633,10 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-05-connector-transient-state-rmw.md:23 (mention) — `docs/implemented-plans/architectural-review.md`.
 - ../issues/closed/bugs/2026-07-05-git-commit-race-audit.md:15 (mention) — Deferred from Track H (plan `docs/implemented-plans/architectural-review.md`): a card
 - ../issues/closed/code-quality/2026-07-06-phase2-deferred-boundaries.md:15 (mention) — (`callback-box/docs/implemented-plans/architectural-review.md`, Tracks P.2/D.2):
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:6 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:15 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
 
 References:
-- → ../issues/decisions/2026-07-06-architectural-review-open-decisions.md (link)
+- → ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
@@ -1595,7 +1712,7 @@ Title: "Box search (`cb search`) and the global `contains` field" | 567 lines
 
 Referenced by:
 - docs/implemented-plans/semantic-search.md:12 (mention) — (`docs/implemented-plans/box-search.md` § NOT in scope), which pre-committed
-- ../issues/features/2026-05-11-box-search.md:7 (mention) — `docs/implemented-plans/box-search.md`. Embeddings/hybrid remain future
+- ../issues/closed/features/2026-05-11-box-search.md:9 (mention) — `docs/implemented-plans/box-search.md`), as the body already records.
 
 References:
 - → code-style.md (mention)
@@ -1616,12 +1733,13 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:99 (mention) — `boxes-as-packages-v2.md:532-538` prior-art citation IS accurate.)
 - docs/plans/design-reconciliation.md:23 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`,
 - docs/plans/docs-reorg.md:51 (mention) — - **At least 5 plans are done-but-never-moved**: `boxes-as-packages-v2.md`
-- docs/plans/source-available-release.md:384 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
+- docs/plans/source-available-release.md:387 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server-operations.md:38 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
 - docs/testing.md:303 (mention) — **Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an op
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:3 (mention) — **Status:** SUPERSEDED by `docs/implemented-plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:33 (mention) — `callback-box/docs/implemented-plans/boxes-as-packages-v2.md`.
+- ../research/openclaw-hermes/deep-installation.md:200 (mention) — | 7 | **npm publish** — the gate to a real five-minute start (`pnpm dlx`), and the prerequisite for any installer script
 
 References:
 - → docs/unimplemented-plans/boxes-as-packages-v1-superseded.md (mention)
@@ -1636,6 +1754,18 @@ References:
 - → docs/server-operations.md (mention)
 - → docs/unimplemented-plans/box-user-account-spec.md (mention)
 
+#### docs/implemented-plans/canvas-loop-figure.md
+
+Title: "canvas-loop figure runtime" | 300 lines
+
+Referenced by:
+- docs/implemented-plans/figure-card-type.md:14 (mention) — > `docs/implemented-plans/canvas-loop-figure.md`; the `p5js|three|d3` enumerations below
+
+References:
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/implemented-plans/figure-card-type.md (mention)
+
 #### docs/implemented-plans/capture-mode.md
 
 Title: "Capture mode — unifying capture into the input" | 670 lines
@@ -1645,6 +1775,8 @@ Referenced by:
 - docs/plans/cli-restructure.md:9 (mention) — **2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`cb transcribe-captures`, `cb
 - docs/plans/input-widget.md:9 (mention) — (`docs/implemented-plans/capture-mode.md`). The remaining open section
 - docs/plans/input-widget.md:535 (link) — [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)
+- docs/plans/ios-native-capture-mode.md:36 (mention) — - Shipped precedent: `docs/implemented-plans/capture-mode.md` owns the capture
+- docs/plans/ios-native-capture-mode.review.md:72 (mention) — - Doc references exist: `docs/implemented-plans/capture-mode.md`,
 - docs/unimplemented-plans/capture-pipeline-redesign.md:3 (link) — **Superseded by [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)** — that plan retired the `
 - ../issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md:53 (mention) — capture-mode work (`callback-box/docs/implemented-plans/capture-mode.md`):
 
@@ -1658,9 +1790,12 @@ References:
 - → docs/migrations.md (mention)
 - → src/services/CLAUDE.md (mention)
 
-#### docs/implemented-plans/card-view-widgets.md **[ORPHAN]**
+#### docs/implemented-plans/card-view-widgets.md
 
 Title: "Card-aware widgets for box-authored views" | 662 lines
+
+Referenced by:
+- ../issues/closed/features/2026-06-29-card-aware-view-widgets.md:9 (mention) — design in `callback-box/docs/implemented-plans/card-view-widgets.md` (marked
 
 References:
 - → code-style.md (mention)
@@ -1724,6 +1859,17 @@ References:
 - → CLAUDE.md (mention)
 - → src/frontend/src/components/chat/CLAUDE.md (mention)
 - → docs/chat-scroll-testing.md (mention)
+
+#### docs/implemented-plans/clerk-contract-and-import-boundary.md
+
+Title: "Clerk↔Server Contract + Frontend Import Boundary" | 181 lines
+
+Referenced by:
+- ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:5 (mention) — discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boun
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:71 (mention) — `callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
+
+References:
+- → docs/module-map.md (mention)
 
 #### docs/implemented-plans/clerk-webpage-capture.md
 
@@ -1796,12 +1942,14 @@ References:
 
 #### docs/implemented-plans/figure-card-type.md
 
-Title: "Figure card type" | 426 lines
+Title: "Figure card type" | 429 lines
 
 Referenced by:
+- docs/implemented-plans/canvas-loop-figure.md:31 (mention) — `docs/implemented-plans/figure-card-type.md`. This plan adds a runtime to
 - docs/reports/user-stories-audit-2026-06-26.md:4230 (mention) — 7. **Documentation**: Complete plan documented in `callback-box/docs/implemented-plans/figure-card-type.md` (marked as i
 
 References:
+- → docs/implemented-plans/canvas-loop-figure.md (mention)
 - → code-style.md (mention)
 - → frontend.md (mention)
 - → docs/testing.md (mention)
@@ -1901,6 +2049,24 @@ References:
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
 
+#### docs/implemented-plans/mobile-parity-sync.md
+
+Title: "Mobile parity & contract-sync discipline" | 294 lines
+
+Referenced by:
+- docs/maintenance.md:27 (mention) — | Mobile parity audit | agent procedure (prompt in `docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of
+- docs/mobile-contract.md:14 (mention) — contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`.
+- docs/mobile-parity.md:4 (mention) — Maintained under the process in `docs/implemented-plans/mobile-parity-sync.md`; wire-level
+- docs/plans/android-companion-app.md:576 (mention) — **What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
+
+References:
+- → docs/plans/android-companion-app.md (mention)
+- → docs/engineering-principles.md (mention)
+- → CLAUDE.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/mobile-parity.md (mention)
+- → docs/maintenance.md (mention)
+
 #### docs/implemented-plans/mvp-implementation-guide.md
 
 Title: "Callback Box: Implementation Guide (MVP era)" | 1029 lines
@@ -1908,7 +2074,7 @@ Title: "Callback Box: Implementation Guide (MVP era)" | 1029 lines
 Referenced by:
 - docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-de
 - docs/plans/docs-reorg.md:335 (mention) — implementation.md → implemented-plans/mvp-implementation-guide.md
-- ../issues/code-quality/2026-07-04-git-replay-testing.md:6 (mention) — (`implemented-plans/mvp-implementation-guide.md`).
+- ../issues/closed/code-quality/2026-07-04-git-replay-testing.md:15 (mention) — (`implemented-plans/mvp-implementation-guide.md`).
 
 References:
 - → docs/plans/design-reconciliation.md (mention)
@@ -2093,6 +2259,16 @@ References:
 - → docs/adding-schemas.md (mention)
 - → docs/migrations.md (mention)
 
+#### docs/implemented-plans/responsive-figures.md **[ORPHAN]**
+
+Title: "Responsive Figures" | 411 lines
+
+References:
+- → docs/engineering-principles.md (mention)
+- → frontend.md (mention)
+- → code-style.md (mention)
+- → docs/testing.md (mention)
+
 #### docs/implemented-plans/rest-to-trpc-consolidation.md
 
 Title: "REST → tRPC route consolidation" | 397 lines
@@ -2112,7 +2288,7 @@ Title: "Router Phase 2 — WorktreeState Formalization" | 259 lines
 
 Referenced by:
 - ../bin/docs/router-protocol.md:215 (mention) — `callback-box/docs/implemented-plans/router-state-formalization.md`) then did the fuller
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:45 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:54 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
 #### docs/implemented-plans/schema-validate-hook.md **[ORPHAN]**
 
@@ -2305,6 +2481,25 @@ References:
 
 ### docs/plans/
 
+#### docs/plans/android-companion-app.md
+
+Title: "Native Android companion app" | 763 lines
+
+Referenced by:
+- docs/implemented-plans/mobile-parity-sync.md:7 (mention) — the planned Android app (`docs/plans/android-companion-app.md`), and the
+- docs/mobile-contract.md:196 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
+
+References:
+- → docs/mobile-contract.md (mention)
+- → docs/plans/ios-companion-review-2026-07-17.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/plans/ios-companion-app.md (mention)
+- → docs/implemented-plans/mobile-parity-sync.md (mention)
+- → docs/mobile-parity.md (mention)
+- → docs/plans/ios-native-capture-mode.md (mention)
+
 #### docs/plans/box-commentary-surface.md
 
 Title: "In-box Commentary Surface for Out-of-Box Files" | 781 lines
@@ -2486,12 +2681,28 @@ References:
 - → ../issues/features/2026-06-28-triage-agent-session-routing.md (link)
 - → docs/implemented-plans/capture-mode.md (link)
 
+#### docs/plans/installation-story.md
+
+Title: "Installation story, phase 1: developer install + local Docker" | 612 lines
+
+Referenced by:
+- docs/plans/source-available-release.md:271 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
+
+References:
+- → docs/plans/source-available-release.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/stack-decisions.md (mention)
+- → docs/developer-install.md (mention)
+- → docs/box-layout.md (mention)
+- → deploy/README.md (mention)
+- → docs/docker-install.md (mention)
+
 #### docs/plans/interface-as-cards.md
 
 Title: "The interface as cards — design" | 473 lines
 
 Referenced by:
-- CLAUDE.md:163 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
+- CLAUDE.md:168 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
 - docs/design/interaction-model.md:17 (link) — ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
@@ -2515,7 +2726,10 @@ References:
 Title: "iOS Companion App for Callback Box" | 216 lines
 
 Referenced by:
-- docs/plans/ios-companion-review-2026-07-09.md:13 (mention) — Cross-referencing the plan (`ios-companion-app.md`): this work is **Tracks A, C, D, G, H partially built ahead of their 
+- docs/plans/android-companion-app.md:39 (mention) — - Shipped precedent: `docs/plans/ios-companion-app.md` (umbrella), the native
+- docs/plans/ios-companion-review-2026-07-09.md:15 (mention) — Cross-referencing the plan (`ios-companion-app.md`): this work is **Tracks A, C, D, G, H partially built ahead of their 
+- docs/plans/ios-companion-review-2026-07-17.md:144 (mention) — - **The plan's hardest question is still unresolved.** `ios-companion-app.md` named **device-token/web-session convergen
+- ../issues/bugs/2026-07-17-mobile-chat-unattributed.md:14 (mention) — The `ios-companion-app.md` plan already calls identity unification the hardest problem in its
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -2523,13 +2737,70 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 
-#### docs/plans/ios-companion-review-2026-07-09.md **[ORPHAN]**
+#### docs/plans/ios-companion-review-2026-07-09.md
 
-Title: "iOS Companion — code review (2026-07-09)" | 165 lines
+Title: "iOS Companion — code review (2026-07-09)" | 167 lines
+
+Referenced by:
+- docs/plans/ios-companion-review-2026-07-17.md:4 (mention) — **Scope:** everything under `ios-app/` re-reviewed against the July-9 punch list (`ios-companion-review-2026-07-09.md`),
 
 References:
+- → docs/plans/ios-companion-review-2026-07-17.md (mention)
 - → docs/plans/ios-companion-app.md (mention)
 - → CLAUDE.md (mention)
+
+#### docs/plans/ios-companion-review-2026-07-17.md
+
+Title: "iOS Companion — follow-up code review (2026-07-17)" | 149 lines
+
+Referenced by:
+- docs/mobile-contract.md:433 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/plans/android-companion-app.md:8 (mention) — follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
+- docs/plans/ios-companion-review-2026-07-09.md:3 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
+- ../issues/bugs/2026-07-17-hub-mobile-auth-presence-only.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-ios-hq-transcription-window-unlocked.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-ios-send-hangs-webview-unloaded.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-mobile-chat-unattributed.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/bugs/2026-07-17-mobile-token-in-url-query.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/code-quality/2026-07-17-ios-small-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+
+References:
+- → docs/plans/ios-companion-review-2026-07-09.md (mention)
+- → docs/plans/ios-companion-app.md (mention)
+
+#### docs/plans/ios-native-capture-mode.md
+
+Title: "Native iOS capture mode" | 614 lines
+
+Referenced by:
+- docs/mobile-parity.md:34 (mention) — | Capture mode | planned (`docs/plans/ios-native-capture-mode.md`) | not planned until iOS capture ships |
+- docs/plans/android-companion-app.md:676 (mention) — (`docs/plans/ios-native-capture-mode.md`); Android follows once it ships.
+- docs/plans/ios-native-capture-mode.review.md:3 (mention) — Review of `docs/plans/ios-native-capture-mode.md`, performed against the shipped
+
+References:
+- → docs/plans/ios-native-capture-mode.review.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/adding-api-endpoints.md (mention)
+- → docs/testing.md (mention)
+- → docs/implemented-plans/capture-mode.md (mention)
+- → ../issues/bugs/2026-07-17-image-orientation-exif-boundaries.md (mention)
+
+#### docs/plans/ios-native-capture-mode.review.md
+
+Title: "Plan Engineering Review — Native iOS capture mode" | 430 lines
+
+Referenced by:
+- docs/plans/ios-native-capture-mode.md:4 (mention) — `ios-native-capture-mode.review.md` are incorporated below.
+
+References:
+- → docs/plans/ios-native-capture-mode.md (mention)
+- → docs/implemented-plans/capture-mode.md (mention)
 
 #### docs/plans/narration-mode.md
 
@@ -2551,7 +2822,7 @@ References:
 Title: "PDF Intake" | 179 lines
 
 Referenced by:
-- CLAUDE.md:161 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
+- CLAUDE.md:166 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
 - docs/implemented-plans/user-story-audit-followups.md:57 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 - docs/plans/README.md:81 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
@@ -2607,11 +2878,15 @@ References:
 
 #### docs/plans/source-available-release.md
 
-Title: "Source-available release of callback-box" | 526 lines
+Title: "Source-available release of callback-box" | 529 lines
 
 Referenced by:
+- docs/plans/installation-story.md:21 (mention) — Coordinates with `docs/plans/source-available-release.md`: this plan
 - ../issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md:40 (mention) — (`callback-box/docs/plans/source-available-release.md`) records the leak
 - ../issues/decisions/2026-07-08-release-cloud-provider-honesty.md:14 (mention) — feature gap. Two things to settle in `docs/plans/source-available-release.md`:
+- ../issues/features/2026-07-12-cb-doctor-preflight.md:25 (mention) — `callback-box/docs/plans/source-available-release.md` (preflight + actionable
+- ../issues/features/2026-07-12-docker-vps-install-path.md:10 (mention) — `callback-box/docs/plans/source-available-release.md`, currently deferred
+- ../research/openclaw-hermes/deep-installation.md:9 (link) — [`source-available-release.md`](../../callback-box/docs/plans/source-available-release.md)
 - ../research/rowboat-review.md:39 (mention) — - **Local-model option (Ollama/LM Studio).** We hard-require a configured Claude key (deliberately — bill safety, `feedb
 
 References:
@@ -2624,6 +2899,7 @@ References:
 - → docs/knowledge-taxonomy.md (mention)
 - → docs/reports/user-stories-audit-2026-06-26.md (mention)
 - → docs/implemented-plans/box-migration.subplan.md (mention)
+- → docs/plans/installation-story.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → CLAUDE.md (mention)
 - → docs/doc-graph.md (mention)
@@ -2633,7 +2909,7 @@ References:
 Title: "Source Editor Plan" | 140 lines
 
 Referenced by:
-- CLAUDE.md:162 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
+- CLAUDE.md:167 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
 - docs/plans/README.md:82 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
 
@@ -2692,7 +2968,7 @@ Referenced by:
 - docs/content-security-policy.md:76 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
 - docs/plans/docs-reorg.md:196 (mention) — `scheduled/csp-violation-review.md` is half dev reference, half the literal
 - docs/scheduled/csp-violation-review.md:11 (mention) — `callback-box/docs/scheduled/csp-violation-review.md`."* Everything it needs is
-- src/dev/CLAUDE.md:14 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
+- src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 
 References:
 - → docs/content-security-policy.md (mention)
@@ -2857,7 +3133,7 @@ References:
 
 #### src/dev/CLAUDE.md
 
-Title: "Dev Scripts" | 18 lines
+Title: "Dev Scripts" | 19 lines
 
 Referenced by:
 - docs/implemented-plans/box-retrospectives.md:414 (mention) — glossary entries, the two knowledge-audit entries, `src/dev/CLAUDE.md`

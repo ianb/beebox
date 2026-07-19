@@ -7,7 +7,11 @@
  */
 
 import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
-import { MODEL_ID } from "../../../../core/model-ids";
+// Raw relative (not `@shared/…`): this module is transitively loaded by the
+// tap/tsx doctest runner (via input/emission + input/voice-intent), which uses
+// the root tsconfig where @shared doesn't resolve. Exempted from the
+// shared-alias lint rule in eslint.config.mjs.
+import { MODEL_ID } from "../../../../shared/model-ids.js";
 
 /**
  * Format the current local time as HH:MM for the typed/speech tag.

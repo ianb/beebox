@@ -1,0 +1,9 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "turn off the mic"
+  },
+  "expected": {
+    "action": "micOff"
+  }
+}

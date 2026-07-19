@@ -1,0 +1,39 @@
+slug: particles-opus
+title: "Particle fountain — attractor drag (Opus)"
+created: 2026-07-14
+model: opus-4.8
+driver: fable-5
+cycles: 2
+tier: tea
+harness-commit: 1b8285e9
+frames: 280
+seed: 42
+fps: 60
+every: 30
+reconstructed: true
+audit: >
+  Independent post-hoc audit (lint, smuggling grep, double-run byte-diff,
+  frame inspection) found zero TEA violations: no module state, no mutation
+  attempts (the deep-freeze never triggered), no async, imports confined to
+  the framework types, an exhaustive 8-case Msg switch, and the prescribed
+  max-params contract comment used verbatim and nowhere else. Deterministic.
+  The only lint trip — shared with the parallel Sonnet run — was
+  unicorn/prefer-modern-math-apis on the distance calculation (fixed with
+  Math.hypot in one edit). Frames caught the same render-only HUD-ghosting
+  bug under trails as the Sonnet run, but Opus both caught AND fixed it
+  (opaque HUD backing rect) plus independently retuned a too-weak attraction
+  strength after inspecting the frames — the capability gap between the two
+  models showed in fix-vs-report, not in compliance or cycle count.
+self-report-summary: >
+  The pure fold fit particle physics naturally; the mode-union pattern for
+  the attractor's idle/dragging state made press/drag/release "trivially
+  correct" in Opus's own words — a stray mousemove can't spawn a phantom
+  attractor because there is no attractor state to touch outside the
+  "dragging" mode.
+features-exercised:
+  - TEA tier (init/update/draw)
+  - "params — number (rate, gravity), boolean (trails), select (palette), trigger (burst)"
+  - mode-union model field (idle | dragging attractor)
+  - mousedown/mousemove/mouseup direct manipulation (attractor placement/drag)
+  - motion trails (translucent overlay redraw) with opaque HUD backing rect
+  - seeded randomness (stochastic fractional spawn rate)

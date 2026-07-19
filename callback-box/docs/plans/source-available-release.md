@@ -267,7 +267,10 @@ history decision. **No history surgery needed.** The repeatable gate is
      - *Document + preflight.* State the auth model loudly and add a preflight
        credential check with an actionable error (*"not logged in — run `claude
        auth login`, or configure an API key"*) in the run path; fix the
-       macOS-skipped health probe so local dev gets a signal.
+       macOS-skipped health probe so local dev gets a signal. **Implemented
+       (preflight + health half) by `docs/plans/installation-story.md` Track B
+       (B2)** — the run-path preflight and un-skipped `claude auth status` health
+       probe landed there; only the explicit-config API-key path below remains.
      - *Explicit-config API key (decided this session).* Keep force-stripping the
        **ambient** `ANTHROPIC_API_KEY` (`bootstrap.ts:27`, `script-env.ts:103`) —
        never inherit it from the environment; that's the bill-safety guarantee.

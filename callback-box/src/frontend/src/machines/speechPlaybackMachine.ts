@@ -16,7 +16,7 @@
  */
 
 import { setup, assign, fromPromise } from "xstate";
-import { invariant } from "../lib/invariant";
+import { invariant } from "@shared/invariant";
 import { shouldPrefetchSpeech } from "../lib/audio/context";
 import type { SpeechSegment } from "../lib/audio/speech-parsing";
 import type { getTTSClient, PrefetchHandle } from "../lib/audio/tts-client";

@@ -12,15 +12,17 @@ import type {
   ExperimentStatus,
 } from "./guide.js";
 
+// `VOICE_MODELS`/`VoiceModel` live in `shared/voice-models.ts` (extracted so
+// the frontend speech-parsing helpers can import the runtime array without
+// pulling this schema graph into the client bundle). Re-exported here so the
+// schema (`personality.tsx`) and its downstream importers are unaffected.
+import { VOICE_MODELS, type VoiceModel } from "../shared/voice-models.js";
+
+export { VOICE_MODELS, type VoiceModel };
+
 type ConfidenceLevelType = z.infer<typeof ConfidenceLevel>;
 type BeliefSourceType = z.infer<typeof BeliefSource>;
 type ExperimentStatusType = z.infer<typeof ExperimentStatus>;
-
-export const VOICE_MODELS = [
-  "alloy", "ash", "ballad", "cedar", "coral", "echo",
-  "fable", "marin", "onyx", "nova", "sage", "shimmer", "verse",
-] as const;
-export type VoiceModel = typeof VOICE_MODELS[number];
 
 /**
  * A boxholder, resolved from a `people/*.person.card` with `boxholder: true`.

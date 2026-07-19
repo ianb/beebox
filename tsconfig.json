@@ -18,5 +18,5 @@
     "types": ["node"]
   },
   "include": ["bin/**/*.ts"],
-  "exclude": ["node_modules", "callback-box", "cardworks", "agent-doctest", "callback-clerk", "browse"]
+  "exclude": ["node_modules", "callback-box", "cardworks", "agent-doctest", "canvas-loop", "callback-clerk", "browse"]
 }

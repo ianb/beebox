@@ -1,3 +1,6 @@
 #!/usr/bin/env sh
-command -v git-lfs >/dev/null 2>&1 || exit 0
+if ! command -v git-lfs >/dev/null 2>&1; then
+  echo "warning: git-lfs not found — media files will not be handled (see callback-box/docs/developer-install.md)" >&2
+  exit 0
+fi
 git lfs pre-push "$@"

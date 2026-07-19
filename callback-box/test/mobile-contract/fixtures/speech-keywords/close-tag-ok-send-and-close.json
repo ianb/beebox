@@ -1,0 +1,10 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "OK send and close"
+  },
+  "expected": {
+    "action": "sendClose",
+    "processedTranscript": "OK <send-close-message phrase=\"send and close\" />"
+  }
+}

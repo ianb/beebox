@@ -3,8 +3,8 @@
  * Permissive parser for XML-like tags in assistant responses.
  */
 
-import { parseAttrs } from "../../../core/parse-attrs";
-import { invariant } from "./invariant";
+import { parseAttrs } from "../../../shared/parse-attrs.js";
+import { invariant } from "../../../shared/invariant.js";
 
 export interface TagType {
   type: string;

@@ -159,21 +159,26 @@ clipped) before calling it done.
 ## 1. Minimal interactive (p5) — the contract
 
 \`\`\`ts
-// attach/sketch.ts — click to toggle. Shows the required shape: instance-mode p5,
-// size read from figure.meta, a teardown that removes the instance.
+// attach/sketch.ts — click to toggle. Shows the required shape: instance-mode p5
+// sized to the container (never a fixed pixel width), and a teardown that
+// disconnects the observer and removes the instance.
 export default function (p5, { mount, figure }) {
+  const width = () => Math.min(mount.clientWidth || 360, 640);
   const instance = new p5((p) => {
-    const W = Number(figure.meta.width) || 360;
     let on = false;
-    p.setup = () => p.createCanvas(W, 200);
+    p.setup = () => p.createCanvas(width(), 200);
     p.mousePressed = () => { on = !on; };
     p.draw = () => {
       p.background(28);
       p.fill(on ? p.color(120, 200, 120) : p.color(90));
-      p.circle(W / 2, 100, 80);
+      p.circle(p.width / 2, 100, 80);
     };
   }, mount);
-  return () => instance.remove();
+  const ro = new ResizeObserver(() => {
+    if (instance.width !== width()) instance.resizeCanvas(width(), 200);
+  });
+  ro.observe(mount);
+  return () => { ro.disconnect(); instance.remove(); };
 }
 \`\`\`
 
@@ -198,11 +203,16 @@ data:
 export default function (p5, { mount, figure }) {
   const items = figure.data.items;       // [{ text, category }]
   const cats = figure.data.categories;   // ["acid", "base", ...]
+  const width = () => Math.min(mount.clientWidth || 420, 640);
   let i = 0, score = 0, feedback = "";
   const instance = new p5((p) => {
-    const W = Number(figure.meta.width) || 420;
-    const buttons = () => cats.map((c, k) => ({ c, x: 20 + k * 130, y: 150, w: 120, h: 36 }));
-    p.setup = () => p.createCanvas(W, 220);
+    // Layout derives from p.width (not a captured constant) so the buckets
+    // fit a phone column and reflow when the container resizes.
+    const buttons = () => {
+      const bw = Math.min(120, (p.width - 40) / cats.length - 10);
+      return cats.map((c, k) => ({ c, x: 20 + k * (bw + 10), y: 150, w: bw, h: 36 }));
+    };
+    p.setup = () => p.createCanvas(width(), 220);
     p.mousePressed = () => {
       if (i >= items.length) return;
       for (const b of buttons()) {
@@ -218,12 +228,12 @@ export default function (p5, { mount, figure }) {
     p.draw = () => {
       p.background(28);
       p.fill(235); p.textAlign(p.CENTER, p.CENTER); p.textSize(18);
-      p.text(i < items.length ? items[i].text : "Done: " + score + "/" + items.length, W / 2, 70);
+      p.text(i < items.length ? items[i].text : "Done: " + score + "/" + items.length, p.width / 2, 70);
       for (const b of buttons()) {
         p.fill(60, 70, 90); p.rect(b.x, b.y, b.w, b.h, 6);
         p.fill(230); p.textSize(13); p.text(b.c, b.x + b.w / 2, b.y + b.h / 2);
       }
-      p.fill(150); p.textSize(12); p.text(feedback, W / 2, 110);
+      p.fill(150); p.textSize(12); p.text(feedback, p.width / 2, 110);
     };
   }, mount);
   return () => instance.remove();

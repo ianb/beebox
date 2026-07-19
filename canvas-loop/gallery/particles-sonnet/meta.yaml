@@ -1,0 +1,37 @@
+slug: particles-sonnet
+title: "Particle fountain — attractor drag (Sonnet)"
+created: 2026-07-14
+model: sonnet-5
+driver: fable-5
+cycles: 3
+tier: tea
+harness-commit: 1b8285e9
+frames: 240
+seed: 42
+fps: 60
+every: 30
+reconstructed: true
+audit: >
+  Independent post-hoc audit (lint, smuggling grep, double-run byte-diff,
+  frame inspection) found zero TEA violations: no module state, no mutation
+  attempts (the deep-freeze never triggered), no async, imports confined to
+  the framework types, an exhaustive 8-case Msg switch, and the prescribed
+  max-params contract comment used verbatim and nowhere else. Deterministic.
+  The only lint trip — shared with the parallel Opus run — was
+  unicorn/prefer-modern-math-apis on the distance calculation (fixed with
+  Math.hypot in one edit). Frames caught a render-only bug (HUD text ghosting
+  under the trails effect, since the translucent overlay never clears prior
+  text); Sonnet reported it as an observed artifact but did not fix it in this
+  exercise, unlike the parallel Opus run.
+self-report-summary: >
+  The pure fold fit particle physics naturally
+  (particles.map(step).filter(alive)); the one friction point was expressing
+  a fractional spawn rate purely (floor + stochastic remainder). Used the
+  mode-union pattern for the attractor's idle/dragging state.
+features-exercised:
+  - TEA tier (init/update/draw)
+  - "params — number (rate, gravity), boolean (trails), select (palette), trigger (burst)"
+  - mode-union model field (idle | dragging attractor)
+  - mousedown/mousemove/mouseup direct manipulation (attractor placement/drag)
+  - motion trails (translucent overlay redraw)
+  - seeded randomness (stochastic fractional spawn rate)

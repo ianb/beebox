@@ -11,7 +11,7 @@
  * live feedback stands out without losing the record of what was settled.
  */
 
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { Stack } from "./ui/Stack";
 import { Row } from "./ui/Row";
 import { Card } from "./ui/Card";

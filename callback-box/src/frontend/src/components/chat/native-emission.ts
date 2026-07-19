@@ -1,5 +1,7 @@
 import { createTypedEmission, createVoiceEmission, type Emission } from "../../input/emission";
-import { isRecord } from "../../lib/is-record";
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
+import { isRecord } from "../../../../shared/is-record.js";
 import type { ChatImageAttachment } from "../../api-chat";
 
 export function nativeEmissionFromDetail(detail: unknown): Emission | null {
@@ -10,19 +12,26 @@ export function nativeEmissionFromDetail(detail: unknown): Emission | null {
   if (!text && images.length === 0) return null;
   const origin = candidate.origin === "voice" ? "voice" : "typed";
   if (origin === "voice") {
-    return createVoiceEmission({
+    const emission = createVoiceEmission({
       text,
       images,
       selections: [],
       diarized: candidate.diarized === true,
     });
+    return withNativeId(emission, candidate.id);
   }
-  return createTypedEmission({
+  const emission = createTypedEmission({
     text,
     images,
     files: [],
     selections: [],
   });
+  return withNativeId(emission, candidate.id);
+}
+
+function withNativeId(emission: Emission, value: unknown): Emission {
+  if (typeof value !== "string" || value.trim() === "") return emission;
+  return { ...emission, id: value };
 }
 
 function parseNativeImages(value: unknown): ChatImageAttachment[] {

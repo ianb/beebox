@@ -3,6 +3,11 @@ import { getActiveBox, isBoxEnabled, type ClerkConfig, type EnabledBox } from ".
 import { loadConfig } from "../platform/config-storage.js";
 import { detectBoxOnActiveTab } from "../platform/detect-box.js";
 import { activateBox, disableBox, enableBox } from "../platform/enable-box.js";
+import {
+  hasSilentCapturePermission,
+  requestSilentCapturePermission,
+  revokeSilentCapturePermission,
+} from "../platform/capture-permission.js";
 import { ActionsPanel } from "./actions-panel.js";
 
 export function PopupApp() {
@@ -70,7 +75,65 @@ export function PopupApp() {
           popup will offer to enable it.
         </p>
       ) : null}
+      {config.boxes.length > 0 ? <SilentCaptureToggle /> : null}
       {activeBox !== null ? <ActionsPanel box={activeBox} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Opt-in for silent agent screenshots. Toggles the broad host permission
+ * captureVisibleTab needs (see capture-permission.ts). Off is the safe default:
+ * the box app falls back to its getDisplayMedia consent popup, so screenshots
+ * still work, just with a one-time browser share prompt.
+ */
+function SilentCaptureToggle() {
+  const [granted, setGranted] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    hasSilentCapturePermission().then(setGranted).catch((err: unknown) => {
+      console.error("[clerk] failed to read capture permission:", err);
+    });
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (granted === null) return;
+    setBusy(true);
+    // request()/remove() must stay inside the click gesture — no awaits before.
+    const action = granted ? revokeSilentCapturePermission() : requestSilentCapturePermission();
+    action
+      .then((ok) => {
+        // request → ok means granted; remove → ok means revoked.
+        if (ok) setGranted(!granted);
+      })
+      .catch((err: unknown) => {
+        console.error("[clerk] failed to change capture permission:", err);
+      })
+      .finally(() => setBusy(false));
+  }, [granted]);
+
+  if (granted === null) return null;
+
+  return (
+    <div className="mt-3 rounded border border-gray-200 p-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">Silent screenshots</span>
+        <button
+          onClick={toggle}
+          disabled={busy}
+          className={`shrink-0 rounded px-2 py-1 text-xs font-medium ${
+            granted ? "bg-teal-600 text-white hover:bg-teal-700" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          } disabled:opacity-50`}
+        >
+          {granted ? "On" : "Off"}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-gray-500">
+        {granted
+          ? "The agent can capture your box tabs without a prompt. Turn off to require the browser share prompt each time."
+          : "Let the agent screenshot your box tabs without a prompt. Grants access to all sites (the extension only captures enabled boxes). Off = a browser share prompt each time."}
+      </p>
     </div>
   );
 }

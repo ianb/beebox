@@ -9,7 +9,7 @@
  * error boundary is only a backstop for synchronous render throws).
  */
 
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
@@ -34,7 +34,7 @@ interface FigureModule {
 }
 
 function parseRuntime(value: unknown): FigureRuntime | null {
-  return value === "p5js" || value === "three" || value === "d3" ? value : null;
+  return value === "p5js" || value === "three" || value === "d3" || value === "canvas-loop" ? value : null;
 }
 
 

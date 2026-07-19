@@ -36,6 +36,26 @@ export class BoxPackageConflictError extends Error {
   }
 }
 
+/**
+ * The dependency spec `cb init` writes for `callback-box` itself when
+ * `CB_INIT_CALLBACK_BOX_SPEC` doesn't override it (release/install tools
+ * pin a tarball via that env var — e.g. the smoke tests' `file:<tarball>`).
+ *
+ * When the running engine is a source checkout (not installed under some
+ * `node_modules/`, as a tarball install or `pnpm dlx` cache would be),
+ * default to `link:<checkout>` so the box's own `pnpm install` — required
+ * for a v2 box to resolve react/typescript for real — actually works.
+ * A bare `^<version>` range is unresolvable (callback-box isn't on npm)
+ * and aborts the box's entire install with a registry 404, taking every
+ * other dependency down with it. For an installed engine the bare range
+ * remains the fallback: `link:` into a disposable dlx cache would be
+ * worse, and those flows set `CB_INIT_CALLBACK_BOX_SPEC` explicitly.
+ */
+function defaultCallbackBoxSpec(engineVersion: string): string {
+  const installed = PACKAGE_ROOT.split(path.sep).includes("node_modules");
+  return installed ? `^${engineVersion}` : `link:${PACKAGE_ROOT}`;
+}
+
 export interface BoxTarget {
   mode: BoxInitMode;
   /** The operational root — where `.cb-box`, `box/`, `config/`, etc. live (or will). */
@@ -176,17 +196,7 @@ export async function scaffoldPackageRoot(
   }
 
   const versions = await readEngineVersions();
-  // The dependency spec for `callback-box` itself. Defaults to a bare semver
-  // range against the running engine's own version — meaningless to resolve
-  // via a real install today (there's no registry; Track F's "Now" channel
-  // is a tarball, not `npm publish` — see "Distribution (decision 2)" in
-  // docs/implemented-plans/boxes-as-packages-v2.md), but harmless, since scaffolding
-  // immediately symlinks `node_modules/callback-box` at the running engine
-  // instead of installing anything. A release/install tool that DOES want a
-  // real `pnpm install` to resolve this dependency (pinning a tarball path
-  // or URL, e.g. the release smoke test) overrides it via
-  // `CB_INIT_CALLBACK_BOX_SPEC` before calling `cb init`.
-  const callbackBoxSpec = process.env.CB_INIT_CALLBACK_BOX_SPEC ?? `^${versions.engine}`;
+  const callbackBoxSpec = process.env.CB_INIT_CALLBACK_BOX_SPEC ?? defaultCallbackBoxSpec(versions.engine);
   const packageJson = {
     name: path.basename(packageRoot),
     private: true,

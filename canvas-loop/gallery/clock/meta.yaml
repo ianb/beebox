@@ -1,0 +1,37 @@
+slug: clock
+title: "Analog clock — visually-precise task"
+created: 2026-07-14
+model: sonnet-5
+driver: fable-5
+cycles: 1
+tier: tea
+harness-commit: 1b8285e9
+frames: 100
+seed: 42
+fps: 60
+every: 30
+reconstructed: true
+audit: >
+  One render cycle to a correct result, independently verified frame by
+  frame. The agent caught a genuinely subtle bug analytically, before ever
+  running the sketch: the runtime ticks frame 0 too, which would have made an
+  accumulating clock start one virtual second ahead (10:08:01 rather than
+  10:08:00) — invisible in pixels, caught only by checking the readout
+  against the hand math at frame 0. Full strict lint preset inheritance held
+  with zero trips.
+self-report-summary: >
+  Front-loaded the trig, then built itself a verification lever: bumped
+  timeScale to 3600 mid-script so specific frames land on exact round times
+  (11:00:00 / 11:15:00 / 11:30:00) and eyeballed the hands against the
+  digital readout at those unambiguous positions. Its own conclusion:
+  determinism converts "visually difficult" into "calculable and
+  spot-checkable at chosen instants" — this was the third independent
+  request (across three separate agent runs) for a scripted snapshot event,
+  since it had to bait the capture policy with a no-op param event to land
+  on specific frames.
+features-exercised:
+  - TEA tier (init/update/draw)
+  - "params — number (timeScale), select (style), boolean (showDigital)"
+  - virtual-time accumulation across frame 0
+  - trigonometric hand-angle rendering (hour/minute/second)
+  - self-verification via a debug overlay param (showDigital)

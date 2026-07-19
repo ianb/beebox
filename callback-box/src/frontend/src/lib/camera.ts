@@ -1,5 +1,5 @@
 import { encodeCanvasBlob } from "./canvas-encode";
-import { invariant } from "./invariant";
+import { invariant } from "@shared/invariant";
 
 export type FacingMode = "user" | "environment";
 
@@ -103,7 +103,7 @@ export class CameraCapture {
     const ctx = canvas.getContext("2d");
     if (!ctx) return Promise.resolve(null);
     ctx.drawImage(this.videoEl, 0, 0);
-    // AVIF/WebP when the browser can encode them, else JPEG — a direct encode
+    // WebP when the browser can encode it, else JPEG — a direct encode
     // of the captured frame (no extra re-encode generation).
     return encodeCanvasBlob(canvas, { quality: 0.85, fallback: "image/jpeg" });
   }

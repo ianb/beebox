@@ -11,6 +11,7 @@ import { Outlet, useParams, useNavigate, useLocation } from "@tanstack/react-rou
 import { BrowsePage } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
+import { ViewOverlayProvider } from "./components/ViewOverlay";
 import { AppNav } from "./components/AppNav";
 import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
@@ -78,23 +79,25 @@ export function AppLayout() {
   useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
   return (
-    <Column className="h-app">
-      {embeddedChat ? null : (
-        <AppNav
-          onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
-          onToggleSourceView={handleToggleSourceView}
-        />
-      )}
-      <main className="flex-1 min-h-0">
-        {boxExists ? (
-          <Outlet />
-        ) : (
-          <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />
+    <ViewOverlayProvider>
+      <Column className="h-app">
+        {embeddedChat ? null : (
+          <AppNav
+            onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
+            onToggleSourceView={handleToggleSourceView}
+          />
         )}
-      </main>
-      {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
-      <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
-    </Column>
+        <main className="flex-1 min-h-0">
+          {boxExists ? (
+            <Outlet />
+          ) : (
+            <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />
+          )}
+        </main>
+        {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
+        <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
+      </Column>
+    </ViewOverlayProvider>
   );
 }
 

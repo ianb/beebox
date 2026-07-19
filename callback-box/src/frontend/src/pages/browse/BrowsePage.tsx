@@ -9,7 +9,7 @@ import { useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
-import { isRecord } from "../../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
 import { trpc } from "../../lib/trpc";

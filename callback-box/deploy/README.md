@@ -186,9 +186,15 @@ neither has been verified end-to-end yet.
 
 ## Environment variables (`/home/callback/.env`)
 
+Claude auth is **not** an env var here: `ANTHROPIC_API_KEY` is deliberately
+stripped (`src/cli/bootstrap.ts`, `src/core/script-env.ts`) so a stray key
+can't silently take over billing. The server authenticates via subscription
+login instead — run `claude auth login` as the `callback` user
+(`su - callback -c 'claude auth login'`) once after `setup-server.sh`
+installs the CLI, then it persists in `~/.claude/` for that user.
+
 ```
 # Required
-ANTHROPIC_API_KEY=sk-ant-...
 PUBLIC_URL=https://box.example.com
 
 # Systemd doesn't source .bashrc, so PATH must include the native

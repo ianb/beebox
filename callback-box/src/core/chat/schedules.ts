@@ -10,7 +10,7 @@
  */
 
 import * as fs from "node:fs";
-import { parseAttrs } from "../parse-attrs.js";
+import { parseAttrs } from "../../shared/parse-attrs.js";
 import * as path from "node:path";
 import { z } from "zod";
 import { parseDuration } from "../../schemas/scheduled-script.js";

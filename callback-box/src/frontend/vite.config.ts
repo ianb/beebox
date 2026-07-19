@@ -65,13 +65,29 @@ export default defineConfig({
     ),
   ],
   resolve: {
-    // Mirror the `@shared/*` path alias from tsconfig.json so Vite
-    // resolves value imports at runtime. The matching `@backend/*` alias
-    // in tsconfig is type-only (frontend only imports types from there);
-    // a runtime alias is only needed for paths used as value imports.
+    // Mirror ONLY the `@shared/*` path alias from tsconfig.json so Vite
+    // resolves its value imports at runtime. The `@backend/*`, `@core/*`, and
+    // `@schemas/*` aliases in tsconfig are deliberately NOT mirrored here:
+    // the frontend imports only *types* from those backend trees. Leaving them
+    // unaliased means an accidental value import through them fails this client
+    // build loudly ("Failed to resolve import @core/...") instead of silently
+    // bundling backend source into the browser bundle. Do not add them here.
+    // (Probed 2026-07-12: tsx pointed at src/frontend/tsconfig.json resolves a
+    // value import through @core, so tsx is not the guard — the eslint rule is;
+    // see the tsconfig paths comment.)
     alias: {
       "@shared": resolvePath(__dirname, "../shared"),
     },
+  },
+  optimizeDeps: {
+    // @ianbicking/canvas-loop is a linked workspace package whose subpaths
+    // serve raw TypeScript (NodeNext `.js` specifiers → `.ts` sources). Vite
+    // serves linked source through its normal transform pipeline (verified
+    // 2026-07-14, dev + build: resolves via /@fs/ with no pre-bundling and no
+    // mid-session "new dependencies optimized" reload; `vite build` emits its
+    // own chunk + extracted figure.css). Excluding it pins that source-serving
+    // behavior explicitly so an optimizer change can't start pre-bundling it.
+    exclude: ["@ianbicking/canvas-loop"],
   },
   build: {
     outDir: "dist",

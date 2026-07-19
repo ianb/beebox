@@ -18,6 +18,7 @@ import {
   type ChatBackendRun,
 } from "../../../services/claude-chat.js";
 import { pumpChatRun } from "./consume.js";
+import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 function log(context: string, ...args: unknown[]): void {
@@ -132,6 +133,11 @@ export class ChatThreadSession extends EventEmitter {
   private async startRun(): Promise<void> {
     if (this.liveRun() !== null) { log("start", "Run already active"); return; }
     if (this.state.phase !== "idle") { log("start", "Run is closing; not starting a second run"); return; }
+
+    // Preflight the real SDK backend's Claude login before we transition; a
+    // missing one is emitted as "error" (→ turn buffer). Fakes skip it.
+    if (!(await preflightChatBackend({ backend: this.backend, session: this }))) return;
+
     this.state = nextLifecycle(this.state, { phase: "starting" });
 
     let systemPrompt = "";

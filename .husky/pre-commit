@@ -34,6 +34,13 @@ echo "[pre-commit] .: pnpm path-leak-check"
 echo "[pre-commit] .: pnpm commit-blocklist-check"
 (cd "$REPO_DIR" && pnpm commit-blocklist-check)
 
+# Mobile-contract tripwire (pre-commit half): records a pending violation when a
+# contract-surface anchor file is staged without a docs/mobile-contract.md
+# update, so the commit-msg hook can enforce the Contract-Unchanged: override.
+# Fast (plain git + fs); never blocks here — the block lives in commit-msg.
+echo "[pre-commit] .: pnpm mobile-contract-check"
+(cd "$REPO_DIR" && pnpm --silent mobile-contract-check)
+
 # Any commit touching markdown runs the fast doc reference/orphan check.
 if echo "$staged" | grep -q '\.md$'; then
   run_in callback-box pnpm doc-check
@@ -42,6 +49,28 @@ fi
 # Docs-only commits need nothing further — typecheck/lint add nothing.
 if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
   exit 0
+fi
+
+# Clerk contract staleness gate. The dispatcher runs the per-subtree checks
+# below independently, so a callback-box-only change to the clerk wire shape
+# never exercises the clerk side — this branch closes that gap. It fires when
+# the staged set touches the leaf schema, the generator, the generated
+# snapshot, or this hook itself; it regenerates and diffs ONLY the generated
+# path (a bare `git diff` would trip over sibling agents' unrelated edits in a
+# shared checkout). Recorded accepted misses: a zod or TS version bump can
+# alter emission — mitigated by the deterministic-generator test and the
+# printer's whitelist-throw, plus a full regenerate whenever the contract is
+# touched. Scope caveat: this whole subtree ships across a store release, so a
+# store-version skew gate is deliberately out of scope (runtime validation in
+# clerk-api.ts handles deployed skew by degradation).
+if echo "$staged" | grep -qE '^(callback-box/src/webapp/trpc/routers/clerk-contract\.ts|bin/snapshot-clerk-contract\.ts|callback-clerk/src/contract/clerk-contract\.generated\.ts|\.husky/pre-commit)$'; then
+  echo "[pre-commit] .: pnpm snapshot:clerk-contract (clerk contract staleness gate)"
+  (cd "$REPO_DIR" && pnpm --silent snapshot:clerk-contract)
+  if ! git -C "$REPO_DIR" diff --exit-code -- callback-clerk/src/contract/clerk-contract.generated.ts; then
+    echo "[pre-commit] clerk contract is stale — regenerate and stage it:" >&2
+    echo "[pre-commit]   pnpm snapshot:clerk-contract && git add callback-clerk/src/contract/clerk-contract.generated.ts" >&2
+    exit 1
+  fi
 fi
 
 # --no-stash: lint-staged's default failure path does `git reset --hard HEAD`

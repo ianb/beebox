@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../test/mount.test.ts", "../test/figure-hardening.test.ts", "../test/mount-failure-paths.test.ts", "../test/fake-dom.ts"],
+  "exclude": ["dist"]
+}

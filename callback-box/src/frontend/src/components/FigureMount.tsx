@@ -2,17 +2,17 @@
  * Per-runtime mount harness for figure sketches.
  *
  * A figure's compiled module default-exports a `(lib, mount, figure) =>
- * teardown` factory. This component lazily imports the runtime library (p5 for
- * now; three/d3 land with their own harness chunks), hands it to the factory
- * along with a mount element and the figure context, and runs the returned
- * teardown on unmount. The lazy import keeps each runtime in its own Vite chunk
- * and off the SSR path (p5 touches `window` at import time).
+ * teardown` factory. This component lazily imports the runtime library
+ * (p5/three/d3/canvas-loop), hands it to the factory along with a mount
+ * element and the figure context, and runs the returned teardown on unmount.
+ * The lazy import keeps each runtime in its own Vite chunk and off the SSR
+ * path (p5 touches `window` at import time).
  */
 
 import { useEffect, useRef } from "react";
 import type { ViewFileHelpers } from "../hooks/useViewFileHelpers";
 
-export type FigureRuntime = "p5js" | "three" | "d3";
+export type FigureRuntime = "p5js" | "three" | "d3" | "canvas-loop";
 
 /**
  * Optional cleanup returned by a sketch — required for runtimes that hold
@@ -47,7 +47,11 @@ export type FigureSketch = (
  * Lazily load the runtime library a sketch is handed as `lib`. Each `import()`
  * becomes its own Vite chunk, loaded only when a figure of that runtime first
  * renders. p5 hands over its default-exported constructor; three and d3 hand
- * over their module namespace (`new lib.Scene()`, `lib.select(mount)`).
+ * over their module namespace (`new lib.Scene()`, `lib.select(mount)`);
+ * canvas-loop hands over its browser-API namespace (`lib.mountSketch(...)` —
+ * a linked workspace subpath Vite serves as source, see vite.config.ts
+ * `optimizeDeps`) plus its stylesheet (real CSS import, not a runtime <style>,
+ * so the prod CSP's style-src stays clean).
  */
 async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   if (runtime === "p5js") {
@@ -56,6 +60,10 @@ async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   }
   if (runtime === "three") {
     return import("three");
+  }
+  if (runtime === "canvas-loop") {
+    await import("@ianbicking/canvas-loop/browser/figure.css");
+    return import("@ianbicking/canvas-loop/browser");
   }
   return import("d3");
 }
@@ -95,6 +103,15 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
         const lib = await loadRuntimeLib(runtime);
         if (state.cancelled) return;
         teardown = sketch(lib, { mount: el, figure: figureRef.current });
+        // Legacy backstop: an <svg> without a viewBox *crops* instead of
+        // scaling under the CSS max-width below, so patch one in from its
+        // width/height attributes. New sketches (d3 guidance) carry their own
+        // viewBox already, so this only fires for older, fixed-size sketches.
+        for (const svg of el.querySelectorAll("svg:not([viewBox])")) {
+          const w = Number(svg.getAttribute("width"));
+          const h = Number(svg.getAttribute("height"));
+          if (w > 0 && h > 0) svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+        }
       } catch (e) {
         if (!state.cancelled) onError(e instanceof Error ? e.message : String(e));
       }
@@ -117,5 +134,19 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
     };
   }, [runtime, sketch, onError]);
 
-  return <div ref={mountRef} className="w-full" />;
+  // max-width/height:auto caps any descendant canvas/svg/input at the mount's
+  // width while preserving intrinsic aspect ratio, so a fixed-size sketch
+  // scales down instead of overflowing its column. The `!` (important) is
+  // load-bearing: p5 writes inline `width`/`height` styles on its canvas, and
+  // plain classes lose to those — height would stay fixed while max-width
+  // shrank the canvas, distorting the aspect ratio. Safe for p5 interactions:
+  // p5 2.3.0's `_updatePointerCoords` divides pointer coordinates by
+  // `canvas.scrollWidth / this.width`, compensating for CSS scaling — re-
+  // verify this on any p5 major bump.
+  return (
+    <div
+      ref={mountRef}
+      className="w-full [&_canvas]:!max-w-full [&_canvas]:!h-auto [&_svg]:!max-w-full [&_svg]:!h-auto [&_input]:!max-w-full"
+    />
+  );
 }

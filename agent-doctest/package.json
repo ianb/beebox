@@ -17,7 +17,7 @@
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@tapjs/core": "^4.0.0",
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.0.0",
     "esbuild": "^0.20.0",
     "eslint": "^9.39.2",
     "tap": "^21.0.0",

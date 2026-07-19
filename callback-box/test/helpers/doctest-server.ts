@@ -6,7 +6,7 @@
  * so check() works directly without custom serializers.
  */
 
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
@@ -73,8 +73,8 @@ export interface TestServer {
   cleanup(): Promise<void>;
 }
 
-export async function makeTestServer(opts?: TestServerOptions): Promise<TestServer> {
-  const ctx = await createTestServer(opts);
+export async function makeTestServer(options?: TestServerOptions): Promise<TestServer> {
+  const ctx = await createTestServer(options);
   const BASE = `/${TEST_SLUG}`;
 
   return {
@@ -121,10 +121,15 @@ export async function makeTestServer(opts?: TestServerOptions): Promise<TestServ
         reqOpts.headers = opts.headers;
       }
       const res = await ctx.server.inject(reqOpts);
+      const headers: Record<string, string> = {};
+      for (const [key, value] of Object.entries(res.headers)) {
+        if (value === undefined) continue;
+        headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
+      }
       return {
         statusCode: res.statusCode,
         payload: res.payload,
-        headers: res.headers as Record<string, string>,
+        headers,
       };
     },
     async rootRequest(opts: InjectOpts) {

@@ -1,0 +1,11 @@
+[
+  { "frame": 5, "type": "mousemove", "x": 200, "y": 150 },
+  { "frame": 6, "type": "mousedown", "x": 200, "y": 150 },
+  { "frame": 8, "type": "mousemove", "x": 212, "y": 144 },
+  { "frame": 10, "type": "mousemove", "x": 224, "y": 138 },
+  { "frame": 12, "type": "mousemove", "x": 236, "y": 132 },
+  { "frame": 14, "type": "mousemove", "x": 248, "y": 126 },
+  { "frame": 16, "type": "mousemove", "x": 260, "y": 120 },
+  { "frame": 17, "type": "mouseup", "x": 260, "y": 120 },
+  { "frame": 90, "type": "keydown", "key": "r" }
+]

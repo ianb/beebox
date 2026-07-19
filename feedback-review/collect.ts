@@ -24,6 +24,13 @@ const FEEDBACK_DIR = path.join("config", "feedback");
 const RESOLVED_DIR = path.join("config", "feedback", "resolved");
 const REMOTE_BOXES_DIR = "/home/callback/boxes";
 
+// `cb feedback` names every item `YYYY-MM-DDTHH-MM-SS-<slug>.md`. Match only
+// that shape so the feedback dir's own docs (CLAUDE.md, MAP.md, README.md) are
+// never collected — and, critically, never swept into resolved/ by --resolve-all.
+function isFeedbackFilename(name: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-.+\.md$/.test(name);
+}
+
 function getRemoteHost(): string | null {
   const serverIpFile = path.join(__dirname, "..", "callback-box", "deploy", "server-ip");
   try {
@@ -92,7 +99,7 @@ function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
 
     let files: string[];
     try {
-      files = fs.readdirSync(feedbackDir).filter((f) => f.endsWith(".md"));
+      files = fs.readdirSync(feedbackDir).filter(isFeedbackFilename);
     } catch {
       continue;
     }
@@ -129,7 +136,7 @@ function collectRemoteFeedback(host: string): FeedbackFile[] {
     return [];
   }
 
-  const files = find.stdout.trim().split("\n").filter(Boolean);
+  const files = find.stdout.trim().split("\n").filter(Boolean).filter((p) => isFeedbackFilename(path.basename(p)));
   const items: FeedbackFile[] = [];
 
   for (const filePath of files.sort()) {

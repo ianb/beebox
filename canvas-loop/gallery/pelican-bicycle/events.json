@@ -1,0 +1,6 @@
+[
+  { "frame": 40, "type": "param", "name": "pause", "value": true },
+  { "frame": 70, "type": "param", "name": "pause", "value": false },
+  { "frame": 90, "type": "param", "name": "speed", "value": 2.5 },
+  { "frame": 150, "type": "param", "name": "speed", "value": 0.5 }
+]

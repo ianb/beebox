@@ -50,6 +50,7 @@ import {
   DEFAULT_MODEL_FILE,
 } from "./state.js";
 import { pumpChatRun } from "./consume.js";
+import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { acquireSessionRunLock, releaseSessionRunLock } from "./run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
@@ -167,6 +168,11 @@ export class ChatSession extends EventEmitter {
       log("start", "Run is closing; not starting a second run");
       return;
     }
+
+    // Preflight the real SDK backend's Claude login before we transition or
+    // lock; a missing one is emitted as "error" (→ turn buffer). Fakes skip it.
+    if (!(await preflightChatBackend({ backend: this.backend, session: this }))) return;
+
     this.transition({ phase: "starting" });
 
     // Ensure agent docs are up to date (fast mtime-cached no-op if unchanged).
@@ -183,10 +189,8 @@ export class ChatSession extends EventEmitter {
     // mid-response and defer commits that would race with agent writes.
     await this.acquireRunLock();
 
-    const startOpts = await this.buildBackendStartOptions();
-
     const run = this.backend.start({
-      ...startOpts,
+      ...(await this.buildBackendStartOptions()),
       resumeSessionId: this.sessionId ?? undefined,
       model: this.currentModel ?? undefined,
     });

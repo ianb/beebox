@@ -1,0 +1,65 @@
+{
+  "name": "@ianbicking/canvas-loop",
+  "version": "0.1.0",
+  "description": "Deterministic, browser-less, frame-stepped Canvas2D sandbox for agent programming",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/core/index.ts",
+      "default": "./src/core/index.ts"
+    },
+    "./headless": {
+      "types": "./src/headless/index.ts",
+      "default": "./src/headless/index.ts"
+    },
+    "./react": {
+      "types": "./src/react/index.ts",
+      "default": "./src/react/index.ts"
+    },
+    "./browser": {
+      "types": "./browser/mount.ts",
+      "default": "./browser/mount.ts"
+    },
+    "./browser/figure.css": "./browser/figure.css",
+    "./eslint": {
+      "default": "./src/eslint/index.mjs"
+    }
+  },
+  "scripts": {
+    "cli": "node --import tsx src/headless/cli.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p browser/tsconfig.json && tsc --noEmit -p src/react/tsconfig.json",
+    "lint": "eslint .",
+    "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test test/*.test.ts test/*.test.mjs test/*.test.tsx",
+    "build:playground": "node --import tsx browser/build.ts",
+    "build:dev-demo": "node --import tsx dev-demo/build.ts",
+    "gallery:check": "node --import tsx src/headless/cli.ts gallery check",
+    "sync:claude-skill": "mkdir -p ../.claude/skills/canvas-loop-sketch && cp claude-plugin/skills/canvas-loop-sketch/SKILL.md ../.claude/skills/canvas-loop-sketch/SKILL.md"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.2",
+    "yaml": "^2.7.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ianbicking/personal-vibe-check": "workspace:*",
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "esbuild": "0.25.12",
+    "eslint": "^9.39.2",
+    "linkedom": "^0.18.12",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsx": "^4.22.3",
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT"
+}

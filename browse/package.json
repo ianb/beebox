@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
-    "@types/node": "^22.10.0",
+    "@types/node": "^24.0.0",
     "eslint": "^9.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "tsx": "^4.19.0",

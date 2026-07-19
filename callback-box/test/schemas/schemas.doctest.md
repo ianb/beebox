@@ -13,7 +13,8 @@ import {
 } from "../../src/schemas/index.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
-import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
+import { FigureSchema, createFigureTemplate } from "../../src/schemas/figure.js";
+import { figureStarterSketch } from "../../src/schemas/figure-starters.js";
 import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
 import { CourseSchema, createCourseTemplate } from "../../src/schemas/course.js";
 import { ExpositionPlanSchema, createExpositionPlanTemplate } from "../../src/schemas/exposition-plan.js";
@@ -328,8 +329,8 @@ FigureSchema.frontmatterSchema.safeParse({
 => true
 ```
 
-The figure template scaffolds a valid card pointing at `attach/sketch.ts`, with
-a `size` param declared so it's parameterizable out of the box:
+The figure template scaffolds a valid card pointing at `attach/sketch.ts`; no
+`size` param is scaffolded — the starter sizes itself from the container:
 
 ```ts
 createFigureTemplate({ runtime: "p5js", title: "Spinner" })
@@ -337,13 +338,35 @@ createFigureTemplate({ runtime: "p5js", title: "Spinner" })
 ---
 runtime: p5js
 entry: attach/sketch.ts
-params:
-  - name: size
-    type: number
-    default: 300
 title: Spinner
 ---
 A p5.js sketch figure. Describe what it demonstrates here; the runnable code lives in `attach/sketch.ts`.
+```
+
+The canvas-loop template declares embed params that match its starter's
+value-bearing module params — `speed`/`show-ring`/`tone`, NOT `size` (which no
+canvas-loop module param would match, warning on every mount). Its `reset`
+trigger is not embed-controllable, so it is omitted; the select `tone` maps to a
+card `string`:
+
+```ts
+createFigureTemplate({ runtime: "canvas-loop" })
+=>
+---
+runtime: canvas-loop
+entry: attach/sketch.ts
+params:
+  - name: speed
+    type: number
+    default: 1
+  - name: show-ring
+    type: boolean
+    default: true
+  - name: tone
+    type: string
+    default: sky
+---
+A canvas-loop TEA sketch figure. Describe what it demonstrates here; the runnable code lives in `attach/sketch.ts`.
 ```
 
 The generated card validates against the schema:

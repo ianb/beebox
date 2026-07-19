@@ -1,0 +1,37 @@
+slug: pelican-bicycle
+title: "Pelican on a bicycle — aesthetic task"
+created: 2026-07-14
+model: sonnet-5
+driver: fable-5
+cycles: 2
+tier: tea
+harness-commit: 1b8285e9
+frames: 200
+seed: 42
+fps: 60
+every: 30
+reconstructed: true
+audit: >
+  Passes the stranger test (Fable, independent review): genuinely reads as a
+  pelican on a bicycle. Bicycle was right on the first render; the pelican
+  was fixed in one revision (pouched bill, wing visibility, eye contrast,
+  material-color separation). Self-grade vs. pixels gap observed: the
+  agent's own report claims the wings are "draping toward the handlebars" —
+  no handlebars are actually visible in any frame (the bill occupies that
+  space) — its listed weaknesses understate this. The self-critique was
+  specific and mostly honest, but this final-frame claim needed independent
+  eyes to catch, which is exactly the argument for a planned golden/assert
+  layer and for keeping a human in the loop on aesthetic verdicts.
+self-report-summary: >
+  Bicycle correct on the first render; pelican fixed in one revision. Like
+  the parallel fjord run, relied on the `v.ctx` escape hatch for organic
+  curves — "not an edge case for landscape/creature work, it's the main
+  tool" — since the View primitive set (at the time) had no polygon/bezier
+  support, which was the direct motivation for adding those primitives
+  afterward.
+features-exercised:
+  - TEA tier (init/update/draw)
+  - "params — number (speed), boolean (pause)"
+  - pure function of frame + params (no extra pause/resume state)
+  - v.ctx escape hatch for organic curves (bill, body, wings)
+  - layered composition (bicycle frame, wheels, crank/pedals, rider)

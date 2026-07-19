@@ -1,0 +1,8 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "please send message",
+    "atStart": true
+  },
+  "expected": null
+}

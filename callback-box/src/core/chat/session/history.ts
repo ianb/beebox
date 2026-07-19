@@ -23,9 +23,7 @@
 import { makeLog } from "./log.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as readline from "node:readline";
-import { createReadStream } from "node:fs";
-import { listSessions, getSessionLogPath } from "../../../cli/lib/session.js";
+import { getSessionDir, getSessionLogPath } from "./transcript-paths.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
 
@@ -44,7 +42,7 @@ export interface SessionHistoryEntry {
   features?: Record<string, string>;
 }
 
-interface HistoryFile {
+export interface HistoryFile {
   sessions: SessionHistoryEntry[];
   migrated: boolean;
 }
@@ -79,7 +77,11 @@ function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
   return entry;
 }
 
-async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
+/**
+ * Read the raw history file (both writers — this module and backfill.ts —
+ * go through this and writeHistoryFile; nothing else should).
+ */
+export async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
   const filePath = path.join(boxRoot, HISTORY_FILE);
   try {
     const data = await fs.readFile(filePath, "utf-8");
@@ -106,7 +108,7 @@ async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
   }
 }
 
-async function writeHistoryFile(boxRoot: string, contents: HistoryFile): Promise<void> {
+export async function writeHistoryFile(boxRoot: string, contents: HistoryFile): Promise<void> {
   const filePath = path.join(boxRoot, HISTORY_FILE);
   const dir = path.dirname(filePath);
   await fs.mkdir(dir, { recursive: true });
@@ -129,6 +131,47 @@ export async function loadHistoryEntries(boxRoot: string): Promise<SessionHistor
   const file = await readHistoryFile(boxRoot);
   if (file === null) return [];
   return file.sessions;
+}
+
+/** One encoded `~/.claude/projects/` directory a box's sessions may live in. */
+export interface SessionRoot {
+  /** Box-relative context dir ("" = the box root itself). */
+  contextDir: string;
+  /** Absolute path of the encoded projects directory for that cwd. */
+  dir: string;
+}
+
+/**
+ * Every `~/.claude/projects/` directory this box's sessions can live in:
+ * the box root first, then one per distinct `contextDir` recorded in the
+ * session history (landmark-bound chats run the SDK with cwd set to the
+ * subdirectory, so their transcripts land under a different encoded dir).
+ * Deduped by encoded dir name and filtered to dirs that exist on disk —
+ * except the box-root entry, which is always returned so callers have at
+ * least one root to probe and report.
+ */
+export async function listSessionRoots(boxRoot: string): Promise<SessionRoot[]> {
+  const boxRootDir = getSessionDir(boxRoot);
+  const roots: SessionRoot[] = [{ contextDir: "", dir: boxRootDir }];
+  const seen = new Set<string>([path.basename(boxRootDir)]);
+  const entries = await loadHistoryEntries(boxRoot);
+  for (const entry of entries) {
+    const contextDir = entry.contextDir;
+    if (contextDir === undefined || contextDir === "") continue;
+    const dir = getSessionDir(path.join(boxRoot, contextDir));
+    const encoded = path.basename(dir);
+    if (seen.has(encoded)) continue;
+    seen.add(encoded);
+    try {
+      await fs.access(dir);
+    } catch (_e) {
+      // Landmark dir has no transcripts on disk (all its sessions were
+      // cleaned up, or the entry is a ghost) — nothing to list there.
+      continue;
+    }
+    roots.push({ contextDir, dir });
+  }
+  return roots;
 }
 
 interface AppendHistoryOptions {
@@ -335,80 +378,4 @@ export async function setMostActive(boxRoot: string, sessionId: string): Promise
     savedAt: new Date().toISOString(),
   };
   await fs.writeFile(filePath, JSON.stringify(contents, null, 2));
-}
-
-/**
- * Detect whether a session log contains web-chat user input (`<speech>` or
- * `<typed>` tags). Streams the file and returns on first match.
- */
-async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
-  const fileStream = createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-  try {
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-      let raw: { type?: string; message?: { content?: unknown } };
-      try {
-        raw = JSON.parse(line);
-      } catch (e) {
-        // Tolerate a malformed JSONL line (partial write, truncation) — skip
-        // it and keep scanning the rest of the log for chat markers.
-        console.warn(`[chat-history] Skipping unparseable line in ${logPath}: ${e instanceof Error ? e.message : String(e)}`);
-        continue;
-      }
-      if (raw.type !== "user") continue;
-      const content = raw.message?.content;
-      const blocks: Array<{ type?: string; text?: string }> =
-        typeof content === "string"
-          ? [{ type: "text", text: content }]
-          : Array.isArray(content)
-            ? content.filter(isRecord).map((item) => ({
-                ...(typeof item.type === "string" ? { type: item.type } : {}),
-                ...(typeof item.text === "string" ? { text: item.text } : {}),
-              }))
-            : [];
-      for (const block of blocks) {
-        if (block.type !== "text" || typeof block.text !== "string") continue;
-        if (block.text.includes("<speech") || block.text.includes("<typed")) {
-          return true;
-        }
-      }
-    }
-  } finally {
-    rl.close();
-    fileStream.destroy();
-  }
-  return false;
-}
-
-/**
- * One-shot scan that adds any pre-existing web chat sessions to the history
- * file, then sets `migrated: true` so it never runs again.
- *
- * Identifies "web chat" by scanning each JSONL for user messages containing
- * `<speech>` or `<typed>` markers.
- */
-export async function runBackfillIfNeeded(boxRoot: string): Promise<void> {
-  const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
-  if (file.migrated) return;
-
-  log("backfill", "Scanning JSONLs for web chat sessions");
-  const sessions = await listSessions(boxRoot);
-  const known = new Set(file.sessions.map((s) => s.id));
-  let added = 0;
-  for (const s of sessions) {
-    if (known.has(s.sessionId)) continue;
-    try {
-      if (await logHasWebChatMarkers(s.path)) {
-        file.sessions.push({ id: s.sessionId });
-        known.add(s.sessionId);
-        added += 1;
-      }
-    } catch (e) {
-      log("backfill", `Failed to scan ${s.path}: ${e instanceof Error ? e.message : e}`);
-    }
-  }
-  file.migrated = true;
-  await writeHistoryFile(boxRoot, file);
-  log("backfill", `Done — added ${added} session(s)`);
 }

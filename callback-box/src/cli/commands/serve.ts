@@ -20,7 +20,8 @@ import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { getBoxShapeIfPresent } from "../../lib/box-shape.js";
-import { findBoxRoot } from "../../lib/paths.js";
+import { findBoxRoot, BOX_MARKER } from "../../lib/paths.js";
+import { isValidBox } from "../../core/box/index.js";
 
 /**
  * The slug a box gets when nothing overrides it. A box's `boxRoot` is the
@@ -51,6 +52,27 @@ export function toBoxArgs(boxes: BoxSpec[]): string[] {
 }
 
 /**
+ * Resolve an explicit dir argument to the directory that actually holds the
+ * box. A v2 package root (marker at `<dir>/content/.cb-box`) resolves to its
+ * `content/` — `cb serve <package-root>` is the obvious thing to type and
+ * used to die later with a raw ENOENT reading `<package-root>/.cb-box`. A
+ * dir that is neither a box nor a package root fails here, with the marker
+ * path named, instead of as an uncaught stack trace at startup.
+ * Exported for its doctest.
+ */
+export async function resolveServableBoxRoot(boxRoot: string): Promise<string> {
+  if (await isValidBox(boxRoot)) return boxRoot;
+  const contentRoot = path.join(boxRoot, "content");
+  if (await isValidBox(contentRoot)) return contentRoot;
+  console.error(
+    `Error: ${boxRoot} is not a callback box — no ${BOX_MARKER} there or in ` +
+      `${contentRoot}. Run \`cb init ${boxRoot}\` to create one, or point ` +
+      "`cb serve` at an existing box."
+  );
+  process.exit(1);
+}
+
+/**
  * Resolve directory arguments into a `BoxSpec` array. `slugOverride` (from
  * `--slug`) only applies when there's exactly one dir — passing it with
  * multiple dirs is an ambiguous request, not a "apply to all" default.
@@ -64,7 +86,7 @@ export async function resolveBoxes(dirs: string[], slugOverride: string | undefi
 
   const resolved = await Promise.all(
     dirs.map(async (dir) => {
-      const boxRoot = path.resolve(dir);
+      const boxRoot = await resolveServableBoxRoot(path.resolve(dir));
       const slug = slugOverride ?? (await defaultSlugFor(boxRoot));
       return { slug, boxRoot };
     })

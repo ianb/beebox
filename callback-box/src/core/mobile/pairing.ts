@@ -19,27 +19,20 @@ interface PendingPairing {
   used: boolean;
 }
 
-export interface MobileDevice {
-  id: string;
-  label: string;
-  tokenHash: string;
-  createdAt: string;
-  lastUsedAt?: string | undefined;
-  revokedAt?: string | undefined;
-}
-
-interface MobileDeviceStore {
-  devices: MobileDevice[];
-}
-
 const MobileDeviceSchema = z.object({
   id: z.string(),
   label: z.string(),
   tokenHash: z.string(),
   createdAt: z.string(),
+  createdBy: z.string().nullable().default(null),
   lastUsedAt: z.string().optional(),
   revokedAt: z.string().optional(),
 });
+export type MobileDevice = z.infer<typeof MobileDeviceSchema>;
+
+interface MobileDeviceStore {
+  devices: MobileDevice[];
+}
 
 export interface PairingTicket {
   token: string;
@@ -138,6 +131,7 @@ export function redeemMobilePairingTicket(
     label,
     tokenHash: hashToken(deviceToken),
     createdAt: nowIso(),
+    createdBy: pending.createdBy,
   };
   const store = readDeviceStore(boxRoot);
   store.devices.push(device);
@@ -145,15 +139,31 @@ export function redeemMobilePairingTicket(
   return { deviceId: device.id, deviceToken, label };
 }
 
-export function verifyMobileBearer(boxRoot: string, authorization: string | undefined): boolean {
-  if (typeof authorization !== "string") return false;
+export interface MobileBearerIdentity {
+  deviceId: string;
+  createdBy: string | null;
+}
+
+export function resolveMobileBearerIdentity(
+  boxRoot: string,
+  authorization: string | undefined,
+): MobileBearerIdentity | null {
+  if (typeof authorization !== "string") return null;
   const prefix = "Bearer ";
-  if (!authorization.startsWith(prefix)) return false;
-  return verifyMobileToken(boxRoot, authorization.slice(prefix.length));
+  if (!authorization.startsWith(prefix)) return null;
+  return resolveMobileTokenIdentity(boxRoot, authorization.slice(prefix.length));
+}
+
+export function verifyMobileBearer(boxRoot: string, authorization: string | undefined): boolean {
+  return resolveMobileBearerIdentity(boxRoot, authorization) !== null;
 }
 
 export function verifyMobileToken(boxRoot: string, token: string | undefined): boolean {
-  if (typeof token !== "string" || token.length === 0) return false;
+  return resolveMobileTokenIdentity(boxRoot, token) !== null;
+}
+
+function resolveMobileTokenIdentity(boxRoot: string, token: string | undefined): MobileBearerIdentity | null {
+  if (typeof token !== "string" || token.length === 0) return null;
   const suppliedHash = hashToken(token);
   const store = readDeviceStore(boxRoot);
   for (const device of store.devices) {
@@ -161,10 +171,10 @@ export function verifyMobileToken(boxRoot: string, token: string | undefined): b
     if (timingSafeStringEqual(suppliedHash, device.tokenHash)) {
       device.lastUsedAt = nowIso();
       writeDeviceStore(boxRoot, store);
-      return true;
+      return { deviceId: device.id, createdBy: device.createdBy };
     }
   }
-  return false;
+  return null;
 }
 
 export function revokeMobileDevice(boxRoot: string, deviceId: string): boolean {

@@ -11,11 +11,11 @@
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL, fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
 import { runTour } from "./runner.js";
 import { clearRegistry, registeredTours } from "./index.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 const TOURS_DIR = path.resolve(__dirname, "..");
 
 interface ParsedArgs {
@@ -36,7 +36,7 @@ async function discoverTourFiles(): Promise<string[]> {
   return entries
     .filter((e) => e.isFile() && e.name.endsWith(".tour.ts"))
     .map((e) => path.join(TOURS_DIR, e.name))
-    .sort();
+    .toSorted();
 }
 
 async function loadAll(files: readonly string[]): Promise<void> {
@@ -86,7 +86,7 @@ async function main(): Promise<number> {
   const target = tours.find((t) => t.name === args.name);
   if (!target) {
     process.stderr.write(`tour: no tour named "${args.name ?? "<none>"}"\n`);
-    process.stderr.write(`Use \`bin/tour --list\` to see what's available.\n`);
+    process.stderr.write("Use `bin/tour --list` to see what's available.\n");
     return 1;
   }
   return runOne(target.name, baseUrl);

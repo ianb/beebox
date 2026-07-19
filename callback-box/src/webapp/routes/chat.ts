@@ -24,10 +24,8 @@
 import type { FastifyInstance } from "fastify";
 import { type ChatSession, type TaskEvent } from "../../core/chat/session/index.js";
 import { ChatSessionRegistry } from "../../core/chat/session/registry.js";
-import {
-  getMostActive,
-  runBackfillIfNeeded,
-} from "../../core/chat/session/history.js";
+import { getMostActive } from "../../core/chat/session/history.js";
+import { runBackfillIfNeeded } from "../../core/chat/session/backfill.js";
 import { backfillChatHusks } from "../../core/chat/husk.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";

@@ -1,0 +1,41 @@
+slug: fjord-tides
+title: "Fjord with tides — aesthetic task"
+created: 2026-07-14
+model: sonnet-5
+driver: fable-5
+cycles: 6
+tier: tea
+harness-commit: 1b8285e9
+frames: 250
+seed: 42
+fps: 60
+every: 30
+reconstructed: true
+audit: >
+  Passes the stranger test (Fable, independent review) as a steep-walled
+  tidal channel with a clearly-working tide sweep, though the far-channel
+  "waterfall ghost" the agent fought never fully died and the wet-rim
+  outlines read as heavy. Real iterative visual work: 6 render cycles, and
+  the failures were conceptual rather than numeric. Cycle 1's screen-space
+  vertical waterline made the channel read as a waterfall of sky; the fix
+  (cycle 3) was a perspective restructure expressing the tide at the water's
+  edges (exposed foreshore, wet rim) instead of a line sliding in screen
+  space. Later cycles were classic art iteration: color continuity,
+  composition (nested-V slopes to make the walls read steep), and a
+  path-ordering bug only visible as shattered slivers.
+self-report-summary: >
+  Own reflection: the transcript's text logs were "nearly useless" here —
+  all judgment came from the PNGs, not the log lines, unlike every
+  precision-task exercise. Loop speed (~5s/cycle) is what made 6 cycles
+  cheap. Relied on the `v.ctx` escape hatch for every curve — "not an edge
+  case for landscape work, it's the main tool" — since the View primitive
+  set (at the time) had no polygon/bezier/gradient/clip support, which was
+  the direct motivation for adding those primitives afterward (this sketch
+  was later ported to examples/fjord-tea.ts with zero v.ctx use, visually
+  equivalent).
+features-exercised:
+  - TEA tier (init/update/draw)
+  - "params — number (tide), select (timeOfDay)"
+  - seeded-random geometry generated once in init, stored in Model
+  - v.ctx escape hatch for path fills, clipping, gradients (pre-primitives)
+  - perspective/composition iteration (nested-V cliff slopes, wet-rim edges)

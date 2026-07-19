@@ -19,11 +19,13 @@ import {
 } from "../api";
 import type { ChatTurnStart } from "../api-chat";
 import { trpcClient } from "../lib/trpc";
-import { isRecord } from "../lib/is-record";
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
+import { isRecord } from "../../../shared/is-record.js";
 import { settleReceipt } from "../input/targets/receipts";
 import { buildStreamEntry } from "../lib/stream-entry";
-import type { ChatMessage } from "../../../core/chat/session/messages.js";
-import type { ActivityKind, CardStateDetails } from "../../../core/chat/card-activity.js";
+import type { ChatMessage } from "@core/chat/session/messages.js";
+import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES, logFsm, type ChatEvent, type SessionInput } from "./chat-types";
 import { runFakeStream } from "./chat-actors-fakestream";
 

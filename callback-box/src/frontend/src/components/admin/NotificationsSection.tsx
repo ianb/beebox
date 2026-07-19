@@ -16,7 +16,7 @@ import { Stack } from "../ui/Stack";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
 import { Button } from "../ui/Button";
-import { errorMessage } from "../../lib/error-guards";
+import { errorMessage } from "@shared/error-guards";
 
 // iOS Safari's non-standard `navigator.standalone` (whether the page is
 // running as an installed Home-Screen app) isn't in the DOM lib types.

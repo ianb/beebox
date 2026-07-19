@@ -1,0 +1,9 @@
+{
+  "input": {
+    "id": "empty-1",
+    "text": "   ",
+    "origin": "typed",
+    "images": []
+  },
+  "expected": null
+}

@@ -10,9 +10,12 @@ check must resolve the box shape and probe `packageRoot/.git/objects`.
 import * as fs from "node:fs/promises";
 import { join } from "node:path";
 import { runHealthChecks } from "../../src/webapp/trpc/routers/health.js";
+import { createFakeClaudeCli } from "../../src/services/claude-cli.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const gitWritableCheck = (checks) => checks.find((c) => c.name === "git-writable");
+// Inject a fake so the claude-auth check never shells out to real `claude`.
+const claudeCli = createFakeClaudeCli({ loggedIn: true });
 ```
 
 ## v2 box: `.git/objects` lives at the PACKAGE root, one level above `content/`
@@ -23,7 +26,7 @@ satisfy the check — only the package root's `.git` counts.
 ```ts
 const box = await makeTmpBox();
 await fs.mkdir(box.path(".git/objects"), { recursive: true });
-const checks = await runHealthChecks(box.root);
+const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":false,"message":".git/objects is not writable — all commits will fail (run: chown -R callback:callback «*»)","severity":"error"}
 ```
@@ -37,7 +40,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await fs.mkdir(join(box.packageRoot, ".git/objects"), { recursive: true });
-const checks = await runHealthChecks(box.root);
+const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":true,"message":".git/objects is writable","severity":"error"}
 ```

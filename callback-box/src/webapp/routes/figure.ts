@@ -69,9 +69,46 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
           .send({ error: "Not a figure source (.ts/.tsx in an attach scope)" });
       }
 
+      // Resolve symlinks before trusting the path. The containment check above
+      // guards only the *literal* path, but stat/read/compile follow symlinks —
+      // a symlink inside an attach dir pointing outside the box (or at a loose
+      // in-box file) would otherwise escape both the box-containment and the
+      // figure-source guards and leak file contents. realpath canonicalizes
+      // every segment; a dangling symlink or absent file throws → a clean 404.
+      //
+      // TOCTOU note: a path component swapped between this realpath and the
+      // compile below would let bundleView read a different target than the one
+      // validated. Accepted for a single-owner box (the box is not a multi-tenant
+      // host and figure entries are authored in-box, not synced from outside);
+      // closing it fully would need an fd-based read esbuild doesn't offer here.
+      let realResolved: string;
+      let realRoot: string;
+      try {
+        realResolved = await fs.realpath(resolved);
+        realRoot = await fs.realpath(root);
+      } catch (_e) {
+        // Absent path or dangling symlink — a 404, distinct from a compile
+        // error, carrying no detail beyond "missing".
+        return reply.status(404).send({ error: "Source not found" });
+      }
+
+      // Re-run containment AND the figure-source guard on the REAL path: a
+      // symlink's target must itself be an in-box `.ts`/`.tsx` in an attach
+      // scope, or it is refused before any read/compile.
+      if (realResolved !== realRoot && !realResolved.startsWith(realRoot + path.sep)) {
+        return reply.status(400).send({ error: "Path outside box" });
+      }
+      const realExt = path.extname(realResolved);
+      const realInAttachScope = realResolved.split(path.sep).some((seg) => seg.endsWith(".attach"));
+      if (!realInAttachScope || (realExt !== ".ts" && realExt !== ".tsx")) {
+        return reply
+          .status(400)
+          .send({ error: "Not a figure source (.ts/.tsx in an attach scope)" });
+      }
+
       let isFile = false;
       try {
-        const stat = await fs.stat(resolved);
+        const stat = await fs.stat(realResolved);
         isFile = stat.isFile();
       } catch (_e) {
         // stat throwing means the path is absent — a 404, distinct from a
@@ -83,12 +120,20 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
 
       try {
-        const { output } = await bundleView(resolved, { external: FIGURE_EXTERNALS });
+        // cache: false — always reflect current disk state. bundleView's
+        // mtime+size cache misses same-tick same-length edits and never notices
+        // an edited *imported* helper (it keys on the entry's stat only); a
+        // single-file sketch recompiles in milliseconds, and FigureView only
+        // fetches on mount + file-change (not polled), so freshness beats reuse.
+        const { output } = await bundleView(realResolved, { external: FIGURE_EXTERNALS, cache: false });
         return reply
           .header("Content-Type", "application/javascript")
           .header("Cache-Control", "no-cache")
           .send(output);
       } catch (e) {
+        // The message may include the offending source line — intended: on a
+        // single-owner box the figure's author is its viewer, so the compile
+        // error is debugging feedback, not a cross-tenant content leak.
         const message = e instanceof Error ? e.message : String(e);
         return reply
           .header("Content-Type", "application/javascript")

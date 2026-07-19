@@ -3,7 +3,7 @@
 **Status:** implemented 2026-07 — all tracks A–P landed on the
 `architectural-review` worktree and merged to `main`; the genuinely-open
 judgment calls below were carried forward to
-[`issues/decisions/2026-07-06-architectural-review-open-decisions.md`](../../../issues/decisions/2026-07-06-architectural-review-open-decisions.md)
+[`issues/decisions/2026-07-06-architectural-review-open-decisions.md`](../../../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md)
 rather than left buried in this now-historical plan.
 
 A whole-monorepo architectural review (2026-07-05), run as ~17 parallel scan

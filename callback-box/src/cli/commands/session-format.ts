@@ -9,6 +9,13 @@ import {
   getSessionMetadata,
   type SessionMetadata,
 } from "../lib/session.js";
+import { fmt } from "../../lib/format.js";
+
+/** Session metadata plus the context root the transcript was found under. */
+export interface EnrichedSession extends SessionMetadata {
+  /** Box-relative context dir ("" = box root). */
+  contextDir: string;
+}
 
 function formatTimestamp(d: Date): string {
   return d.toISOString().replace("T", " ").substring(0, 16);
@@ -28,9 +35,15 @@ export function formatTimeRange(start: Date | null, end: Date | null): string {
   return `${startStr} → ${endStr}`;
 }
 
-export function sessionDivider(meta: SessionMetadata): string {
+/** Dim `[<contextDir>]` tag for landmark-bound sessions; "" for root-bound. */
+function contextLabel(contextDir: string): string {
+  if (contextDir === "") return "";
+  return `  ${fmt.dim(`[${contextDir}]`)}`;
+}
+
+export function sessionDivider(meta: EnrichedSession): string {
   const range = formatTimeRange(meta.startTime, meta.endTime);
-  return `═══ Session ${meta.sessionId}  ${range} ═══`;
+  return `═══ Session ${meta.sessionId}  ${range} ═══${contextLabel(meta.contextDir)}`;
 }
 
 /**
@@ -39,7 +52,7 @@ export function sessionDivider(meta: SessionMetadata): string {
  * is a continuation rather than a fresh session).
  */
 export function sessionDividerForWindow(
-  meta: SessionMetadata,
+  meta: EnrichedSession,
   shown: { start: Date; end: Date }
 ): string {
   const range = formatTimeRange(shown.start, shown.end);
@@ -48,25 +61,26 @@ export function sessionDividerForWindow(
     started !== null && started.getTime() < shown.start.getTime()
       ? ` (continues from ${formatTimestamp(started)})`
       : "";
-  return `═══ Session ${meta.sessionId}  ${range}${suffix} ═══`;
+  return `═══ Session ${meta.sessionId}  ${range}${suffix} ═══${contextLabel(meta.contextDir)}`;
 }
 
-export function printListRow(meta: SessionMetadata): void {
+export function printListRow(meta: EnrichedSession): void {
   const id = `${meta.sessionId.substring(0, 12)}...`;
   const range = formatTimeRange(meta.startTime, meta.endTime);
   const stats = `(${meta.userTurns}/${meta.assistantTurns} turns · ${meta.toolCount} tools)`;
-  console.log(`  ${id}  ${range}  ${stats}`);
+  console.log(`  ${id}  ${range}  ${stats}${contextLabel(meta.contextDir)}`);
   if (meta.firstUserSnippet) {
     console.log(`    "${meta.firstUserSnippet}"`);
   }
 }
 
 export async function enrichSessions(
-  sessions: Array<{ sessionId: string; path: string }>
-): Promise<SessionMetadata[]> {
+  sessions: Array<{ sessionId: string; path: string; contextDir: string }>
+): Promise<EnrichedSession[]> {
   return Promise.all(
-    sessions.map((s) =>
-      getSessionMetadata({ sessionId: s.sessionId, logPath: s.path })
-    )
+    sessions.map(async (s) => {
+      const meta = await getSessionMetadata({ sessionId: s.sessionId, logPath: s.path });
+      return { ...meta, contextDir: s.contextDir };
+    })
   );
 }

@@ -16,7 +16,7 @@
  * exactly as before, just through one function instead of two.
  */
 
-import type { FileSummary } from "../../core/file-summary";
+import type { FileSummary } from "@core/file-summary";
 import type { NavigateHint, ViewTarget } from "./lib/view-url";
 import { GenericIcon, type FileIcon } from "./file-types/icons";
 

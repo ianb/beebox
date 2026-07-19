@@ -15,7 +15,7 @@ import { getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import { cbSource } from "../lib/source-tag";
 import { RequestError } from "../lib/errors";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { Accordion } from "./ui/Accordion";
 import { Text } from "./ui/Text";
 import { CommentsThread, parseComments } from "./CommentsThread";

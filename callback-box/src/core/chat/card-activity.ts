@@ -25,9 +25,13 @@
  * the output is stable regardless of arrival order.
  */
 
-export const ACTIVITY_KINDS = ["scrolled", "navigated", "explored", "modified"] as const;
+// `ACTIVITY_KINDS`/`ActivityKind` live in `shared/card-activity-kinds.ts`
+// (extracted so the frontend can import the runtime array as a bundler-safe
+// value). Re-exported here so this module's many backend importers of both are
+// unaffected; the union/serialization logic below still owns them.
+import { ACTIVITY_KINDS, type ActivityKind } from "../../shared/card-activity-kinds.js";
 
-export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+export { ACTIVITY_KINDS, type ActivityKind };
 
 const ACTIVITY_KIND_SET: ReadonlySet<string> = new Set(ACTIVITY_KINDS);
 

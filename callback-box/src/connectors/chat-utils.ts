@@ -20,7 +20,7 @@ import {
   type ChatThreadMessage,
 } from "../schemas/chat-thread.js";
 import { createChatJobTemplate } from "../schemas/chat-job.js";
-import { sanitizeFilenameStem } from "../lib/filename.js";
+import { sanitizeFilenameStem } from "../shared/filename.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { isRecord } from "../lib/is-record.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";

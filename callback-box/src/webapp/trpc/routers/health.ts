@@ -7,9 +7,9 @@
 
 import * as fs from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
+import { createClaudeCliService, type ClaudeCliService } from "../../../services/claude-cli.js";
 import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
@@ -120,10 +120,21 @@ async function sweepLegacyHealthCheckFiles(boxRoot: string): Promise<void> {
   }
 }
 
+export interface RunHealthChecksOptions {
+  /**
+   * Claude CLI service for the auth probe. Omit in production — a real
+   * `createClaudeCliService()` is constructed. Tests inject a fake.
+   */
+  claudeCli?: ClaudeCliService | undefined;
+}
+
 /**
  * Run all health checks for a box.
  */
-export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
+export async function runHealthChecks(
+  boxRoot: string,
+  options?: RunHealthChecksOptions,
+): Promise<HealthCheck[]> {
   await sweepLegacyHealthCheckFiles(boxRoot);
   const checks: HealthCheck[] = [];
 
@@ -265,31 +276,23 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     severity: "warning",
   });
 
-  // Claude Code credentials (needed for agent operations — chat, reactor, procedures).
-  // On Linux (the deployed server) Claude Code stores them at
-  // ~/.claude/.credentials.json. On macOS they live in the Keychain instead,
-  // which we can't probe without spawning `security` — and local dev machines
-  // rely on the developer managing their own auth — so skip the check there.
-  if (os.platform() !== "darwin") {
-    const credsPath = path.join(os.homedir(), ".claude", ".credentials.json");
-    let hasClaudeCredentials = false;
-    try {
-      const creds = await fs.readFile(credsPath, "utf-8");
-      const parsed = JSON.parse(creds);
-      hasClaudeCredentials = !!(parsed.claudeAiOauth && parsed.claudeAiOauth.accessToken);
-    } catch (_e) {
-      // Credentials file missing or unparseable — treated as "not configured",
-      // which the check below reports as an error. No actionable detail to log.
-    }
-    checks.push({
-      name: "claude-credentials",
-      ok: hasClaudeCredentials,
-      message: hasClaudeCredentials
-        ? "Claude Code credentials configured"
-        : "Claude Code credentials not found — agent operations (chat, reactor, procedures) will not work. Run 'claude auth login' or copy credentials to ~/.claude/.credentials.json",
-      severity: "error",
-    });
-  }
+  // Claude Code auth (needed for agent operations — chat, reactor, procedures).
+  // Probe via `claude auth status` through the ClaudeCli service rather than
+  // peeking at ~/.claude/.credentials.json: that file only exists on Linux, so
+  // the old file-peek skipped macOS entirely (where credentials live in the
+  // Keychain), leaving local dev with no signal. The CLI reads whichever store
+  // this platform uses.
+  const claudeCli = options?.claudeCli ?? createClaudeCliService();
+  const authStatus = await claudeCli.authStatus();
+  const loggedIn = authStatus["loggedIn"] === true;
+  checks.push({
+    name: "claude-credentials",
+    ok: loggedIn,
+    message: loggedIn
+      ? "Claude Code is logged in"
+      : "Claude Code is not logged in — agent operations (chat, reactor, procedures) will not work. Run `claude auth login` on this machine",
+    severity: "error",
+  });
 
   checks.push(...(await engineHealthChecks(boxRoot)));
 
@@ -299,7 +302,7 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
 export const healthRouter = router({
   check: publicProcedure.query(async ({ ctx }) => {
     const [checks, version] = await Promise.all([
-      runHealthChecks(ctx.boxRoot),
+      runHealthChecks(ctx.boxRoot, { claudeCli: ctx.services.claudeCli }),
       readVersionInfo(),
     ]);
     const hasErrors = checks.some((c) => !c.ok && c.severity === "error");

@@ -30,7 +30,7 @@ import type { useChatVoice } from "./InteractiveChat-voice";
 import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveChat-attachments";
 import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
-import type { ActivityKind } from "../../../../core/chat/card-activity.js";
+import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { CaptureBubbleModel } from "./capture-bubble";
 
 interface ChatBodyProps {
@@ -80,10 +80,11 @@ interface ChatBodyProps {
   /** Report user activity on the open companion card (scrolled/navigated/…). */
   reportCardActivity: (kind: ActivityKind, detail?: string) => void;
   /**
-   * Native companion embed mode: keep the web conversation live, but suppress
-   * the web input surface so the native shell can own composition.
+   * Native shell modes: embed also suppresses the header, while nativeComposer
+   * keeps the normal web chrome. Both suppress the web input surface.
    */
   embedded: boolean;
+  nativeComposer: boolean;
   /** Server-derived pending capture bubbles for this chat (Track 4). */
   captureBubbles: CaptureBubbleModel[];
   /** Retry a failed pending capture (re-seals its staging session). */
@@ -260,9 +261,8 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send, embedded } = props;
+  const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
-  const { addSelection } = selections;
   // Capture the live transcript phrase at grab-time so voice selections get a
   // positional anchor. Refs keep the handler identity stable while reading the
   // latest values at click time. Typed selections (not transcribing) pass a
@@ -275,14 +275,14 @@ export function InteractiveChatBody(props: ChatBodyProps) {
   });
   const handleAddSelection = useCallback((selection: AddSelectionInput) => {
     if (!transcribingRef.current) {
-      addSelection(selection, { anchor: null, spokenWords: null });
+      selections.addSelection(selection, { anchor: null, spokenWords: null });
       return;
     }
     // Voice grab: capture the anchor phrase and how far into the utterance we
     // are (word count ≈ time), so a lost anchor still places by rough timing.
     const transcript = transcriptRef.current;
-    addSelection(selection, { anchor: lastWords(transcript, 8), spokenWords: countWords(transcript) });
-  }, [addSelection]);
+    selections.addSelection(selection, { anchor: lastWords(transcript, 8), spokenWords: countWords(transcript) });
+  }, [selections]);
   return (
     <ChatView
       hasCompanion={Boolean(activeView)}
@@ -334,7 +334,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           />
         </>
       }
-      composerSection={embedded ? null : <ComposerRegion {...props} />}
+      composerSection={embedded || nativeComposer ? null : <ComposerRegion {...props} />}
       debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
     />
   );

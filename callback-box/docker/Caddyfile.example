@@ -1,0 +1,12 @@
+# Public HTTPS for a VPS box. Copy to `Caddyfile`, set CB_DOMAIN in `.env`,
+# then: docker compose --profile public up -d
+#
+# Caddy fetches and renews a Let's Encrypt certificate for {$CB_DOMAIN}
+# automatically. The box itself stays on the loopback mapping inside the
+# compose network; Caddy is the only thing bound to the public 80/443.
+
+{$CB_DOMAIN} {
+	# WebSocket upgrades (chat/event streams) pass through unchanged — Caddy
+	# reverse_proxy handles them without extra config.
+	reverse_proxy box:3210
+}

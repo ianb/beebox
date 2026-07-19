@@ -10,7 +10,7 @@ per-run report. The observer here is a scripted fake — the real one
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { getSessionLogPath } from "../../../src/cli/lib/session.js";
+import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { loadLedgerEntries } from "../../../src/core/retro/ledger.js";
 import { runRetroScan } from "../../../src/core/retro/scan.js";
 import { loadRetroState } from "../../../src/core/retro/state.js";

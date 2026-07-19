@@ -1,0 +1,131 @@
+import PhotosUI
+import SwiftUI
+import UIKit
+
+struct ComposerActionsView: View {
+    @EnvironmentObject private var store: PairedBoxStore
+    @Binding var selectedPhotoItems: [PhotosPickerItem]
+    var canCapture: Bool
+    var canTakePhoto: Bool
+    var onCapture: () -> Void
+    var onTakePhoto: () -> Void
+    var onShareLocation: () -> Void
+    var onPairBox: () -> Void
+    var onDismiss: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Capture") {
+                    Button(action: onCapture) {
+                        Label("Capture", systemImage: "viewfinder")
+                    }
+                    .disabled(canCapture == false)
+
+                    if canCapture == false {
+                        Text("Send a message first")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("Add") {
+                    Button(action: onTakePhoto) {
+                        Label("Take Photo", systemImage: "camera")
+                    }
+                    .disabled(canTakePhoto == false)
+
+                    PhotosPicker(
+                        selection: $selectedPhotoItems,
+                        maxSelectionCount: 4,
+                        matching: .images
+                    ) {
+                        Label("Choose Photos", systemImage: "photo.on.rectangle")
+                    }
+
+                    Button(action: onShareLocation) {
+                        Label("Share Location", systemImage: "location")
+                    }
+                }
+
+                Section("Boxes") {
+                    if store.boxes.isEmpty == false {
+                        ForEach(store.boxes) { box in
+                            Button {
+                                store.select(box)
+                                onDismiss()
+                            } label: {
+                                HStack {
+                                    Text(box.label)
+                                    Spacer()
+                                    if box.id == store.selectedBox?.id {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Button(action: onPairBox) {
+                        Label("Pair or Manage Boxes", systemImage: "rectangle.stack.badge.plus")
+                    }
+                }
+            }
+            .navigationTitle("Add")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done", action: onDismiss)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .onChange(of: selectedPhotoItems) { _, items in
+            if items.isEmpty == false {
+                onDismiss()
+            }
+        }
+    }
+}
+
+struct CameraImagePicker: UIViewControllerRepresentable {
+    var onImage: (UIImage) -> Void
+    var onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onImage: onImage, onCancel: onCancel)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        var onImage: (UIImage) -> Void
+        var onCancel: () -> Void
+
+        init(onImage: @escaping (UIImage) -> Void, onCancel: @escaping () -> Void) {
+            self.onImage = onImage
+            self.onCancel = onCancel
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            guard let image = info[.originalImage] as? UIImage else {
+                onCancel()
+                return
+            }
+            onImage(image)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            onCancel()
+        }
+    }
+}

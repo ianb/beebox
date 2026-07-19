@@ -17,14 +17,26 @@
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
 		5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001B2C3C000100000001 /* SpeechDictation.swift */; };
-		5A10000B2C3C000100000001 /* QueuedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001C2C3C000100000001 /* QueuedMessage.swift */; };
-		5A10000C2C3C000100000001 /* OutboxStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001D2C3C000100000001 /* OutboxStore.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
 		5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001F2C3C000100000001 /* SpeechKeywords.swift */; };
 		5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000212C3C000100000001 /* QRScannerView.swift */; };
 		5A1000222C3C000100000001 /* CallbackBoxAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000242C3C000100000001 /* CallbackBoxAppDelegate.swift */; };
 		5A1000232C3C000100000001 /* PairingURLInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000252C3C000100000001 /* PairingURLInbox.swift */; };
+		5A1000272C3C000100000001 /* SpeechAnalyzerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */; };
+		5A1000292C3C000100000001 /* ComposerActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002A2C3C000100000001 /* ComposerActionsView.swift */; };
+		5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002E2C3C000100000001 /* CaptureModels.swift */; };
+		5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002F2C3C000100000001 /* CaptureAPI.swift */; };
+		5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000332C3C000100000001 /* CaptureStore.swift */; };
+		5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */; };
+		5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003A2C3C000100000001 /* CaptureAcquisition.swift */; };
+		5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003B2C3C000100000001 /* NativeCaptureView.swift */; };
+		5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003C2C3C000100000001 /* NativeCaptureController.swift */; };
 		5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */; };
+		5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001132C3C000100000001 /* CaptureModelsTests.swift */; };
+		5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001142C3C000100000001 /* CaptureAPITests.swift */; };
+		5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000001 /* CaptureStoreTests.swift */; };
+		5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */; };
+		5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,15 +62,27 @@
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
 		5A10001A2C3C000100000001 /* NativeComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerView.swift; sourceTree = "<group>"; };
 		5A10001B2C3C000100000001 /* SpeechDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictation.swift; sourceTree = "<group>"; };
-		5A10001C2C3C000100000001 /* QueuedMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueuedMessage.swift; sourceTree = "<group>"; };
-		5A10001D2C3C000100000001 /* OutboxStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxStore.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
 		5A10001F2C3C000100000001 /* SpeechKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywords.swift; sourceTree = "<group>"; };
 		5A1000212C3C000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		5A1000242C3C000100000001 /* CallbackBoxAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallbackBoxAppDelegate.swift; sourceTree = "<group>"; };
 		5A1000252C3C000100000001 /* PairingURLInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingURLInbox.swift; sourceTree = "<group>"; };
+		5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechAnalyzerSession.swift; sourceTree = "<group>"; };
+		5A10002A2C3C000100000001 /* ComposerActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerActionsView.swift; sourceTree = "<group>"; };
+		5A10002E2C3C000100000001 /* CaptureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModels.swift; sourceTree = "<group>"; };
+		5A10002F2C3C000100000001 /* CaptureAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPI.swift; sourceTree = "<group>"; };
+		5A1000332C3C000100000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
+		5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinator.swift; sourceTree = "<group>"; };
+		5A10003A2C3C000100000001 /* CaptureAcquisition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisition.swift; sourceTree = "<group>"; };
+		5A10003B2C3C000100000001 /* NativeCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureView.swift; sourceTree = "<group>"; };
+		5A10003C2C3C000100000001 /* NativeCaptureController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureController.swift; sourceTree = "<group>"; };
 		5A1001102C3C000100000001 /* CallbackBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CallbackBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywordsTests.swift; sourceTree = "<group>"; };
+		5A1001132C3C000100000001 /* CaptureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModelsTests.swift; sourceTree = "<group>"; };
+		5A1001142C3C000100000001 /* CaptureAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPITests.swift; sourceTree = "<group>"; };
+		5A1001152C3C000100000001 /* CaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStoreTests.swift; sourceTree = "<group>"; };
+		5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinatorTests.swift; sourceTree = "<group>"; };
+		5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisitionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,7 +141,7 @@
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
-				5A10001C2C3C000100000001 /* QueuedMessage.swift */,
+				5A10002E2C3C000100000001 /* CaptureModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -126,7 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1000132C3C000100000001 /* PairedBoxStore.swift */,
-				5A10001D2C3C000100000001 /* OutboxStore.swift */,
+				5A1000332C3C000100000001 /* CaptureStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -138,7 +162,10 @@
 				5A1000152C3C000100000001 /* PairBoxView.swift */,
 				5A1000162C3C000100000001 /* ChatWebView.swift */,
 				5A10001A2C3C000100000001 /* NativeComposerView.swift */,
+				5A10002A2C3C000100000001 /* ComposerActionsView.swift */,
 				5A1000212C3C000100000001 /* QRScannerView.swift */,
+				5A10003B2C3C000100000001 /* NativeCaptureView.swift */,
+				5A10003C2C3C000100000001 /* NativeCaptureController.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -148,8 +175,12 @@
 			children = (
 				5A1000192C3C000100000001 /* ChatAPI.swift */,
 				5A10001B2C3C000100000001 /* SpeechDictation.swift */,
+				5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */,
 				5A10001F2C3C000100000001 /* SpeechKeywords.swift */,
 				5A1000252C3C000100000001 /* PairingURLInbox.swift */,
+				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
+				5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */,
+				5A10003A2C3C000100000001 /* CaptureAcquisition.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -158,6 +189,11 @@
 			isa = PBXGroup;
 			children = (
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
+				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
+				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
+				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
+				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
+				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
 			);
 			path = CallbackBoxTests;
 			sourceTree = "<group>";
@@ -270,13 +306,20 @@
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
-				5A10000B2C3C000100000001 /* QueuedMessage.swift in Sources */,
-				5A10000C2C3C000100000001 /* OutboxStore.swift in Sources */,
 				5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */,
 				5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */,
 				5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */,
 				5A1000222C3C000100000001 /* CallbackBoxAppDelegate.swift in Sources */,
 				5A1000232C3C000100000001 /* PairingURLInbox.swift in Sources */,
+				5A1000272C3C000100000001 /* SpeechAnalyzerSession.swift in Sources */,
+				5A1000292C3C000100000001 /* ComposerActionsView.swift in Sources */,
+				5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */,
+				5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */,
+				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
+				5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */,
+				5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */,
+				5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */,
+				5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +328,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */,
+				5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */,
+				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
+				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
+				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
+				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

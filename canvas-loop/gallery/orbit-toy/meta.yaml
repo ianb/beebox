@@ -1,0 +1,36 @@
+slug: orbit-toy
+title: "Orbit toy — click-select on moving planets"
+created: 2026-07-13
+model: sonnet-5
+driver: fable-5
+cycles: 2
+tier: mutable
+harness-commit: 4723b305
+frames: 140
+seed: 42
+fps: 60
+every: 30
+reconstructed: true
+audit: >
+  2 write-run-read cycles to fully working, independently verified frame by
+  frame. Cycle 2 caught a render-only bug the frame-tagged logs could never
+  have caught: an Array.prototype.at(-1) sentinel footgun made the HUD show
+  "selected: Earth" after deselect while the log line correctly said
+  "deselected" — only the rendered frame exposed the mismatch between what
+  the code believed and what it drew.
+self-report-summary: >
+  Determinism converted hit-testing from trial-and-error into calculation:
+  the agent precomputed the exact click coordinate on a moving planet with a
+  one-liner mirroring the sketch's own angle formula and hit it first try —
+  its own comparison was that a browser+screenshot loop would have needed
+  several screenshot/click/retry round trips for the same thing. It judged
+  the capture volume (~9 images over 140 frames) "exactly right" and found
+  the events-file-as-test workflow natural: "one file was simultaneously the
+  test scenario and the reproduction."
+features-exercised:
+  - mutable tier (setup/draw)
+  - mousePressed (click-to-select a moving target via precomputed hit-test)
+  - keyPressed (ArrowUp/ArrowDown speed adjustment)
+  - deterministic frame-based motion (angle = angle0 + speed * frame, no RNG)
+  - HUD text rendering
+  - log() frame-tagged output

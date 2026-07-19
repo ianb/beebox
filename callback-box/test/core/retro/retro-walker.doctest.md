@@ -10,7 +10,7 @@ Claude projects dir, overridable for tests via `CB_CLAUDE_PROJECTS_DIR`.
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { getSessionLogPath } from "../../../src/cli/lib/session.js";
+import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { discoverSessions } from "../../../src/core/retro/discovery.js";
 import { renderSessionCompact } from "../../../src/core/retro/render.js";
 import { renderRunReport } from "../../../src/core/retro/report.js";
