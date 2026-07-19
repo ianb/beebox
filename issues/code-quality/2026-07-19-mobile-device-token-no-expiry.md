@@ -29,4 +29,5 @@ Open questions, none settled:
   web (`docs/mobile-contract.md` §2).
 - Existing devices: grandfather them with a far-future `expiresAt`, or force one re-pair?
 
-Related: `2026-07-19-ios-token-plaintext-storage.md` (where the token is stored on-device).
+Related: [iOS stores the token as plaintext, not Keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md)
+(where the token lives on-device).

@@ -5,6 +5,9 @@ filed-by: agent
 discovered-in: worktree-mobile-token-handshake — carried over from the closed parser-plumbing issue
 ---
 
+Sibling to [iOS small cleanups](2026-07-17-ios-small-cleanups.md) — that one is native-side
+housekeeping, this one is the cross-platform contract surface; worth triaging together.
+
 The three bullets that survived
 `../closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md` when its
 duplicated-parser half was resolved. Independent of each other; none urgent.
