@@ -5,7 +5,6 @@
  */
 
 import { Link } from "@tanstack/react-router";
-import { withBase } from "../api";
 import { href, toSearch } from "../lib/routing";
 
 interface Box {
@@ -13,14 +12,21 @@ interface Box {
   name: string;
 }
 
+/**
+ * Routes to the login page (a client-side SPA route, not a raw redirect) —
+ * the login page itself offers password sign-in and, when configured,
+ * "Sign in with Google" (`GET /auth/methods`). `returnTo` carries through
+ * as a search param so login lands the user back where they started.
+ */
 export function SignInLink({ returnTo }: { returnTo: string }) {
   return (
-    <a
-      href={withBase(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`)}
+    <Link
+      to={href("/auth/login")}
+      search={toSearch({ returnTo })}
       className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors"
     >
-      Sign in with Google
-    </a>
+      Sign in
+    </Link>
   );
 }
 

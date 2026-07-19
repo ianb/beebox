@@ -13,6 +13,7 @@ import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./compone
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ViewOverlayProvider } from "./components/ViewOverlay";
 import { AppNav } from "./components/AppNav";
+import { OpenModeBanner } from "./components/OpenModeBanner";
 import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
@@ -31,6 +32,21 @@ export { BoxRedirect } from "./pages/BoxSelection";
 
 // Start capturing console errors immediately so we never miss early failures
 enableDebugLogCapture();
+
+/**
+ * Root-level layout, above the route tree's `Outlet`. Global, page-agnostic
+ * chrome goes here rather than in `AppLayout` (which only wraps box routes,
+ * not `/`, `/auth/login`, or `/auth/setup`) — the open-mode banner needs to
+ * show on all of those.
+ */
+export function RootLayout() {
+  return (
+    <>
+      <OpenModeBanner />
+      <Outlet />
+    </>
+  );
+}
 
 /**
  * Layout wrapper with navigation.

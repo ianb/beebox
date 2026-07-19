@@ -6,7 +6,7 @@
  * typed boxSlug params automatically.
  */
 
-import { createRouter, createRoute, createRootRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createRouter, createRoute, createRootRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
 
 // --- Page imports ---
@@ -17,7 +17,9 @@ import { HistoryPage } from "./pages/HistoryPage";
 import { CapturePage } from "./pages/capture/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
-import { AppLayout, BoxRedirect, BrowsePageWrapper } from "./app-shell";
+import { AppLayout, BoxRedirect, BrowsePageWrapper, RootLayout } from "./app-shell";
+import { LoginPage } from "./pages/login/LoginPage";
+import { SetupPage } from "./pages/login/SetupPage";
 import { CardViewPage } from "./pages/card/CardViewPage";
 import { ViewPage } from "./pages/ViewPage";
 import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
@@ -29,7 +31,7 @@ import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
 // --- Root route ---
 
 const rootRoute = createRootRoute({
-  component: Outlet,
+  component: RootLayout,
 });
 
 // --- Top-level routes (no boxSlug) ---
@@ -38,6 +40,24 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: BoxRedirect,
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/auth/login",
+  component: LoginPage,
+  validateSearch: z.object({
+    returnTo: z.string().optional(),
+  }),
+});
+
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/auth/setup",
+  component: SetupPage,
+  validateSearch: z.object({
+    token: z.string().optional(),
+  }),
 });
 
 // --- Box layout (nav wrapper) ---
@@ -196,6 +216,8 @@ const boxCatchAllRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  loginRoute,
+  setupRoute,
   boxLayoutRoute.addChildren([
     dashboardRoute,
     chatRoute,
