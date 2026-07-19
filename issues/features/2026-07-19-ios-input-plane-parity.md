@@ -55,6 +55,12 @@ This issue is the cold-start handoff for the next implementation session.
   HQ work, HQ failure sends the preserved live transcript, audio interruption
   leaves editable text, and later drafts/sends cannot clobber or pass the
   earlier preparation.
+- Track 6 has a DEBUG fixture host for all thirteen planned states plus a
+  repeatable screenshot script. Portrait sweeps passed on current and compact
+  iPhones and iPad across light/dark and large accessibility text, including
+  the software keyboard. The sweep fixed attachment-context overflow and long
+  transcript width expansion, and added 44-point recovery controls plus named
+  VoiceOver actions. Landscape and real-phone acceptance remain.
 
 ## Current mismatch
 

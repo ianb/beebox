@@ -12,6 +12,10 @@ struct NativeComposerView: View {
     var screenshotResult: NativeScreenshotResult?
     var onShareLocation: () -> Void
     var onTakeScreenshot: () -> Void
+    var automaticallyResumeVoicePreparations = true
+    var voiceStateOverride: VoiceCompositionState?
+    var initiallyFocused = false
+    var initialDetailedSelection: DraftSelection?
 
     @EnvironmentObject private var store: PairedBoxStore
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
@@ -30,55 +34,12 @@ struct NativeComposerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let statusText = dictation.errorMessage
-                ?? dictation.preparationMessage
-                ?? statusText
-                ?? draftStore.restoreNotice
-                ?? pendingStore.notice {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
-            }
-            if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
-                PendingEmissionList(
-                    emissions: pendingStore.pending,
-                    voicePreparations: pendingStore.voicePreparations,
-                    canRestore: draftIsEmpty,
-                    onRetry: retryPendingEmission,
-                    onRestore: restorePendingEmission,
-                    onDiscard: discardPendingEmission
-                )
-                .padding(.horizontal, 14)
-                .padding(.top, 10)
-            }
-            if draftStore.draft.images.isEmpty == false {
-                ImageAttachmentStrip(
-                    images: draftStore.draft.images,
-                    draftStore: draftStore,
-                    onRetry: retryImage
-                )
-                    .padding(.horizontal, 14)
-                    .padding(.top, 10)
-            }
-            if draftStore.draft.files.isEmpty == false {
-                FileAttachmentList(
-                    files: draftStore.draft.files,
-                    onRetry: retryFile,
-                    onRemove: removeFile
-                )
-                .padding(.horizontal, 14)
-                .padding(.top, 10)
-            }
-            if draftStore.draft.selections.isEmpty == false {
-                SelectionAttachmentList(
-                    selections: draftStore.draft.selections,
-                    onOpen: { detailedSelection = $0 },
-                    onRemove: removeSelection
-                )
-                .padding(.horizontal, 14)
-                .padding(.top, 10)
+            if hasComposerContext {
+                ScrollView(.vertical, showsIndicators: true) {
+                    composerContext
+                }
+                .frame(maxHeight: 220)
+                .scrollBounceBehavior(.basedOnSize)
             }
 
             HStack(alignment: .bottom, spacing: 10) {
@@ -117,7 +78,17 @@ struct NativeComposerView: View {
             handleKeywordIntent(newValue)
         }
         .onChange(of: pendingStore.voicePreparations) { _, preparations in
-            resumeVoicePreparations(preparations)
+            if automaticallyResumeVoicePreparations {
+                resumeVoicePreparations(preparations)
+            }
+        }
+        .onAppear {
+            if initiallyFocused {
+                focused = true
+            }
+            if let initialDetailedSelection {
+                detailedSelection = initialDetailedSelection
+            }
         }
         .onChange(of: selectedPhotoItems) { _, newValue in
             Task {
@@ -197,6 +168,74 @@ struct NativeComposerView: View {
         }
     }
 
+    private var composerContext: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let visibleStatusText {
+                Text(visibleStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+            }
+            if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
+                PendingEmissionList(
+                    emissions: pendingStore.pending,
+                    voicePreparations: pendingStore.voicePreparations,
+                    canRestore: draftIsEmpty,
+                    onRetry: retryPendingEmission,
+                    onRestore: restorePendingEmission,
+                    onDiscard: discardPendingEmission
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+            if draftStore.draft.images.isEmpty == false {
+                ImageAttachmentStrip(
+                    images: draftStore.draft.images,
+                    draftStore: draftStore,
+                    onRetry: retryImage
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+            if draftStore.draft.files.isEmpty == false {
+                FileAttachmentList(
+                    files: draftStore.draft.files,
+                    onRetry: retryFile,
+                    onRemove: removeFile
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+            if draftStore.draft.selections.isEmpty == false {
+                SelectionAttachmentList(
+                    selections: draftStore.draft.selections,
+                    onOpen: { detailedSelection = $0 },
+                    onRemove: removeSelection
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+        }
+    }
+
+    private var visibleStatusText: String? {
+        dictation.errorMessage
+            ?? dictation.preparationMessage
+            ?? statusText
+            ?? draftStore.restoreNotice
+            ?? pendingStore.notice
+    }
+
+    private var hasComposerContext: Bool {
+        visibleStatusText != nil
+            || pendingStore.pending.isEmpty == false
+            || pendingStore.voicePreparations.isEmpty == false
+            || draftStore.draft.images.isEmpty == false
+            || draftStore.draft.files.isEmpty == false
+            || draftStore.draft.selections.isEmpty == false
+    }
+
     private var textEntry: some View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
@@ -215,7 +254,10 @@ struct NativeComposerView: View {
             )
         }
         .frame(height: editorHeight)
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .layoutPriority(1)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .allowsHitTesting(isSending == false)
     }
 
@@ -225,7 +267,7 @@ struct NativeComposerView: View {
             ProgressView()
                 .frame(width: 58, height: 58)
                 .background(.quaternary, in: Circle())
-        } else if dictation.isRecording {
+        } else if isVoiceRecording {
             composerButton(
                 systemImage: "stop.fill",
                 accessibilityLabel: "Stop dictation",
@@ -264,6 +306,10 @@ struct NativeComposerView: View {
             accessibilityLabel: "Start dictation",
             action: { dictation.toggle(currentText: text) }
         )
+    }
+
+    private var isVoiceRecording: Bool {
+        voiceStateOverride == .recording || dictation.isRecording
     }
 
     private func openCapture() {
@@ -811,8 +857,8 @@ private struct ImageAttachmentStrip: View {
                                     .symbolRenderingMode(.palette)
                                     .foregroundStyle(.white, .black.opacity(0.65))
                             }
-                            .offset(x: 5, y: -5)
-                            .accessibilityLabel("Remove photo")
+                            .frame(width: 44, height: 44, alignment: .topTrailing)
+                            .accessibilityLabel("Remove photo \(image.id)")
                             if case .uploading = image.state {
                                 ProgressView()
                                     .padding(5)
@@ -827,7 +873,8 @@ private struct ImageAttachmentStrip: View {
                                         .foregroundStyle(.white, .red)
                                 }
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                                .accessibilityLabel("Retry image")
+                                .frame(minWidth: 44, minHeight: 44)
+                                .accessibilityLabel("Retry photo \(image.id)")
                                 .accessibilityHint(message)
                             }
                         }
@@ -861,11 +908,26 @@ private struct DraftImageThumbnail: View {
                     .background(.thinMaterial)
             }
         }
+        .accessibilityLabel("Photo \(image.id)")
+        .accessibilityValue(accessibilityStatus)
         .task(id: image.filename) {
             guard let data = await draftStore.imageData(for: image) else {
                 return
             }
             uiImage = UIImage(data: data)
+        }
+    }
+
+    private var accessibilityStatus: String {
+        switch image.state {
+        case .local:
+            "Ready"
+        case .uploading(let progress):
+            "Processing \(Int(progress * 100)) percent"
+        case .uploaded:
+            "Uploaded"
+        case .failed(let message):
+            "Failed: \(message)"
         }
     }
 }
@@ -899,13 +961,15 @@ private struct FileAttachmentList: View {
                             onRetry(file)
                         }
                         .font(.caption)
+                        .frame(minWidth: 44, minHeight: 44)
                     }
                     Button {
                         onRemove(file)
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                     }
-                    .accessibilityLabel("Remove file")
+                    .frame(width: 44, height: 44)
+                    .accessibilityLabel("Remove \(file.originalName)")
                 }
                 .padding(10)
                 .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
@@ -979,9 +1043,12 @@ private struct PendingEmissionList: View {
                             .foregroundStyle(.red)
                         HStack(spacing: 12) {
                             Button("Retry") { onRetry(emission) }
+                                .frame(minHeight: 44)
                             Button("Restore") { onRestore(emission) }
                                 .disabled(canRestore == false)
+                                .frame(minHeight: 44)
                             Button("Discard", role: .destructive) { onDiscard(emission) }
+                                .frame(minHeight: 44)
                         }
                         .font(.caption.weight(.semibold))
                     }
@@ -1011,13 +1078,16 @@ private struct SelectionAttachmentList: View {
                                 .lineLimit(1)
                         }
                         .buttonStyle(.plain)
+                        .frame(minHeight: 44)
+                        .accessibilityLabel("Show selection from \(selection.ref)")
                         Button {
                             onRemove(selection)
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Remove selection")
+                        .frame(width: 44, height: 44)
+                        .accessibilityLabel("Remove selection from \(selection.ref)")
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)

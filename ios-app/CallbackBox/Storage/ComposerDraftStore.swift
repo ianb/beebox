@@ -490,6 +490,14 @@ final class ComposerDraftStore: ObservableObject {
         }
     }
 
+    #if DEBUG
+    func replaceForFixture(_ fixtureDraft: ComposerDraft, boxID: UUID) {
+        activeBoxID = boxID
+        draft = fixtureDraft
+        restoreNotice = nil
+    }
+    #endif
+
     private func scheduleSave() {
         saveTask?.cancel()
         saveTask = Task { [weak self] in

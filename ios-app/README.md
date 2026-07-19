@@ -51,3 +51,21 @@ xcrun simctl openurl booted 'callbackbox://pair?label=Local%20test%20box&baseURL
 ```
 
 In DEBUG builds, the empty state also shows a "Use Local Test Box" button.
+
+## Composer Layout Fixtures
+
+A DEBUG build can render the production native composer without a live box:
+
+```sh
+xcrun simctl launch --terminate-running-process booted app.callbackbox.ios \
+  --composer-fixture=many-attachments
+```
+
+Capture every deterministic composer state after installing the app with:
+
+```sh
+ios-app/scripts/capture-composer-fixtures booted /tmp/composer-fixtures
+```
+
+The full state list and simulator/device verification boundary are documented
+in [`CLAUDE.md`](CLAUDE.md#native-testing-boundary).

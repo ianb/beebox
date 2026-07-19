@@ -166,7 +166,9 @@ struct ChatWebView: UIViewRepresentable {
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
         private var inflightComposerCommandAcknowledgementIDs = Set<String>()
-        private var pageLoaded = false
+        private var pageLoaded: Bool
+        private let receiptTimeoutDelay: TimeInterval
+        private let evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)?
 
         init(
             allowedOrigin: String?,
@@ -176,7 +178,10 @@ struct ChatWebView: UIViewRepresentable {
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
-            onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void
+            onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
+            receiptTimeoutDelay: TimeInterval = 35,
+            pageLoaded: Bool = false,
+            evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil
         ) {
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
@@ -186,6 +191,9 @@ struct ChatWebView: UIViewRepresentable {
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+            self.receiptTimeoutDelay = receiptTimeoutDelay
+            self.pageLoaded = pageLoaded
+            self.evaluateEmission = evaluateEmission
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -260,7 +268,7 @@ struct ChatWebView: UIViewRepresentable {
                 inflightEmissionIDs.insert(emission.id)
                 startReceiptTimeout(for: emission.id)
                 let script = "window.callbackboxNativeReceive(\(detail));"
-                webView.evaluateJavaScript(script) { [weak self] _, error in
+                evaluate(script, in: webView) { [weak self] error in
                     guard error != nil else {
                         return
                     }
@@ -306,7 +314,21 @@ struct ChatWebView: UIViewRepresentable {
                 ))
             }
             receiptTimeouts[emissionID] = timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + 35, execute: timeout)
+            DispatchQueue.main.asyncAfter(deadline: .now() + receiptTimeoutDelay, execute: timeout)
+        }
+
+        private func evaluate(
+            _ script: String,
+            in webView: WKWebView,
+            completion: @escaping (Error?) -> Void
+        ) {
+            if let evaluateEmission {
+                evaluateEmission(script, completion)
+                return
+            }
+            webView.evaluateJavaScript(script) { _, error in
+                completion(error)
+            }
         }
 
         private func finishInflightEmission(_ emissionID: NativeChatEmission.ID) {

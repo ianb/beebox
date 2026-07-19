@@ -1,4 +1,5 @@
 import XCTest
+import WebKit
 @testable import CallbackBox
 
 /// The chat navigation must authenticate by header, never by URL.
@@ -59,5 +60,85 @@ final class ChatWebViewRequestTests: XCTestCase {
 
         XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
         XCTAssertEqual(request.url, box.chatURL)
+    }
+
+    @MainActor
+    func testUnacknowledgedEmissionTimesOutAsRejected() async {
+        let emission = makeEmission()
+        let timedOut = expectation(description: "receipt timeout")
+        var receipt: NativeEmissionReceipt?
+        let coordinator = makeCoordinator(
+            timeout: 0.01,
+            onReceipt: {
+                receipt = $0
+                timedOut.fulfill()
+            },
+            evaluate: { _, completion in completion(nil) }
+        )
+
+        coordinator.deliver([emission], to: WKWebView())
+        await fulfillment(of: [timedOut], timeout: 1)
+
+        XCTAssertEqual(receipt?.emissionID, emission.id)
+        XCTAssertEqual(receipt?.disposition, .rejected)
+        XCTAssertEqual(receipt?.reason, "The chat did not confirm the message. Try sending it again.")
+    }
+
+    @MainActor
+    func testNavigationClearsInflightStateAndRedeliversSameID() {
+        let emission = makeEmission()
+        var attempts: [UUID] = []
+        var evaluationCount = 0
+        let coordinator = makeCoordinator(
+            timeout: 60,
+            onAttempt: { attempts.append($0) },
+            evaluate: { _, completion in
+                evaluationCount += 1
+                completion(nil)
+            }
+        )
+        coordinator.pendingEmissions = [emission]
+        let webView = WKWebView()
+
+        coordinator.deliver([emission], to: webView)
+        coordinator.webView(webView, didStartProvisionalNavigation: nil)
+        coordinator.webView(webView, didFinish: nil)
+
+        XCTAssertEqual(attempts, [emission.id, emission.id])
+        XCTAssertEqual(evaluationCount, 2)
+    }
+
+    private func makeEmission() -> NativeChatEmission {
+        NativeChatEmission(
+            id: UUID(),
+            text: "test",
+            origin: .typed,
+            diarized: false,
+            images: [],
+            files: [],
+            selections: []
+        )
+    }
+
+    @MainActor
+    private func makeCoordinator(
+        timeout: TimeInterval,
+        onAttempt: @escaping (UUID) -> Void = { _ in },
+        onReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
+        evaluate: @escaping (String, @escaping (Error?) -> Void) -> Void
+    ) -> ChatWebView.Coordinator {
+        ChatWebView.Coordinator(
+            allowedOrigin: "https://box.example.com",
+            onSessionChange: { _ in },
+            onEmissionDeliveryAttempt: onAttempt,
+            onEmissionReceipt: onReceipt,
+            onLocationShareResult: { _ in },
+            onScreenshotResult: { _ in },
+            onComposerCommand: { _ in },
+            onComposerCommandAcknowledgementDelivered: { _ in },
+            receiptTimeoutDelay: timeout,
+            pageLoaded: true,
+            evaluateEmission: evaluate
+        )
     }
 }

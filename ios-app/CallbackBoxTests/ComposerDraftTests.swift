@@ -482,6 +482,38 @@ final class ComposerDraftRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testPendingStoreSwitchesBoxesWithoutCrossDelivery() async throws {
+        let firstBoxID = UUID()
+        let secondBoxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: firstBoxID)
+        let first = try await store.enqueue(
+            draft: .empty,
+            text: "first box",
+            origin: .typed,
+            diarized: false,
+            boxID: firstBoxID
+        )
+
+        await store.activate(boxID: secondBoxID)
+        XCTAssertTrue(store.pending.isEmpty)
+        XCTAssertTrue(store.deliveries.isEmpty)
+        let second = try await store.enqueue(
+            draft: .empty,
+            text: "second box",
+            origin: .typed,
+            diarized: false,
+            boxID: secondBoxID
+        )
+        XCTAssertEqual(store.deliveries.map(\.id), [second.id])
+
+        await store.activate(boxID: firstBoxID)
+        XCTAssertEqual(store.pending.map(\.id), [first.id])
+        XCTAssertEqual(store.deliveries.map(\.id), [first.id])
+    }
+
+    @MainActor
     func testVoicePreparationSurvivesRelaunchWithoutClobberingNextDraft() async throws {
         let suite = "VoicePreparation.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

@@ -22,7 +22,11 @@ struct ComposerTextView: UIViewRepresentable {
         textView.adjustsFontForContentSizeCategory = true
         textView.textContainerInset = UIEdgeInsets(top: 12, left: 11, bottom: 12, right: 11)
         textView.textContainer.lineFragmentPadding = 5
+        textView.textContainer.widthTracksTextView = true
+        textView.textContainer.lineBreakMode = .byWordWrapping
         textView.isScrollEnabled = false
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
         textView.accessibilityLabel = "Type a message"
         return textView
     }

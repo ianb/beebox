@@ -163,5 +163,17 @@ when it depends on camera hardware, iCloud Photos, microphone/speech models,
 audio interruptions, background execution, QR pairing, signing, or physical
 keyboard/safe-area behavior until it passes on a real phone.
 
+For deterministic composer layout checks, launch a DEBUG build with
+`--composer-fixture=<state>`. Supported states are `empty`, `typing`,
+`multiline`, `many-attachments`, `uploading`, `failed-upload`,
+`selection-detail`, `recording`, `hq-preparation`, `two-pending`,
+`rejected-send`, `expired-attachment`, and `keyboard-shown`. The fixture uses
+the production composer with isolated stores and no web/server dependency.
+After installing the build, `ios-app/scripts/capture-composer-fixtures` captures
+the complete state set for a simulator and restores its status-bar override.
+Use `simctl ui <device> appearance` and `content_size` to repeat representative
+states in dark mode and accessibility sizes. The `keyboard-shown` reference
+requires the simulator's hardware-keyboard connection to be disabled.
+
 For user-facing composer or capture work, record which of these were actually
 tested. Do not describe a simulator-only pass as device verification.
