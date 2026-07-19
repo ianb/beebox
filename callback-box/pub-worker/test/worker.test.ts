@@ -8,6 +8,7 @@
  */
 import { env, SELF } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
+import { handle, type WorkerDeps } from "../src/index";
 
 const SECRET_ID = "a".repeat(26);
 const PUBLIC_ID = "b".repeat(26);
@@ -256,5 +257,37 @@ describe("method + reserved paths", () => {
   it("404s the reserved /__submit/ seam (Track F)", async () => {
     const res = await get(`/__submit/${SECRET_ID}`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe("version probe (Track E drift detection)", () => {
+  it("serves 'unversioned' with the full header set when the deploy stamp is empty", async () => {
+    // wrangler.jsonc commits an empty PUB_WORKER_VERSION placeholder; only a
+    // real `cb pub setup` deploy injects the hash.
+    const res = await get("/__version");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("unversioned");
+    expect(res.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
+    assertSecurityHeaders(res);
+  });
+
+  it("echoes the deploy-stamped version var", async () => {
+    const stamped = { ...env, PUB_WORKER_VERSION: "abc123deadbeef00" };
+    const deps: WorkerDeps = {
+      now: () => Date.now(),
+      // Never called on the version path — an empty JWKS satisfies the type.
+      jwksFor: () => () => Promise.resolve([]),
+      newId: () => "unused",
+    };
+    const res = await handle({ request: new Request("https://pub.example.com/__version"), env: stamped, deps });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("abc123deadbeef00");
+    assertSecurityHeaders(res);
+  });
+
+  it("405s a POST to /__version (only submit may POST)", async () => {
+    const res = await get("/__version", { method: "POST" });
+    expect(res.status).toBe(405);
+    assertSecurityHeaders(res);
   });
 });
