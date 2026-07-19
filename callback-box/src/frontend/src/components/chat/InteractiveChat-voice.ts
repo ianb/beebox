@@ -22,7 +22,8 @@ import { postAudioForHqTranscription } from "../../api";
 import { retainVoiceAudio, markVoiceAudioAbsent } from "../../lib/audio/last-audio";
 import { sendSound, tick, recordingStop } from "../../lib/audio/earcons";
 import { joinTranscript } from "./InteractiveChat-helpers";
-import { type Emission } from "../../input/emission";
+import { draftAttachments, type Emission } from "../../input/emission";
+import type { EmissionStore } from "../../input/emission-store";
 import { buildVoiceSubmitEmission, type VoiceIntent } from "../../input/voice-intent";
 import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection/serialize";
@@ -69,12 +70,15 @@ function runKeywordSend(opts: {
   narrationEnabledRef: React.MutableRefObject<boolean>;
   selectionsRef: React.MutableRefObject<SelectionItem[]>;
   resetSelections: () => void;
+  /** Pending images/files are read at fire time (`get()`), like the text store. */
+  emissionStore: EmissionStore;
+  resetAttachments: () => void;
   dispatchEmission: (emission: Emission) => void;
   clearDraftRef: React.MutableRefObject<() => void>;
   /** Composer text store; the latest text is prepended at fire time so it isn't dropped. */
   inputStore: InputStore;
 }) {
-  const { intent, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore } = opts;
+  const { intent, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments, dispatchEmission, clearDraftRef, inputStore } = opts;
   const { text, matchedPhrase, audioBlob, closeMic } = intent;
   // Restart the mic for a continuous conversation, or — for "send and close" —
   // end dictation (STOP_DICTATION clears turnTaking, suppressing the
@@ -101,6 +105,13 @@ function runKeywordSend(opts: {
   if (selectionsSnapshot.length > 0) {
     resetSelections();
   }
+  // Pending image/file attachments freeze at keyword-fire the same way —
+  // they belong to *this* utterance; ones added during the HQ window go to
+  // the next message. (They used to be silently dropped from voice sends.)
+  const { images: imagesSnapshot, files: filesSnapshot } = draftAttachments(emissionStore.get());
+  if (imagesSnapshot.length > 0 || filesSnapshot.length > 0) {
+    resetAttachments();
+  }
   sendSound.play();
   stopTickRef.current = tick.repeatPlay(1000, 30000);
   const submit = (finalText: string, submitOpts?: { diarized?: boolean }) => {
@@ -109,7 +120,7 @@ function runKeywordSend(opts: {
     // fold the prior composer text back in at submit time. The frozen
     // selections snapshot rides the emission — additions during the HQ
     // window belong to the next message.
-    const emission = buildVoiceSubmitEmission({ priorInput, finalText, selectionsSnapshot, diarized });
+    const emission = buildVoiceSubmitEmission({ priorInput, finalText, selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized });
     dispatchEmission(emission);
     // Keep the original recording around, keyed by this emission's id, so the
     // agent can fetch it via `cb chat get-last-audio` — retention is
@@ -155,6 +166,35 @@ function runKeywordSend(opts: {
   settleMic();
 }
 
+/**
+ * Mirror device + settings state into the composer machine so its guards can
+ * read it. Module-level so `useChatVoice` stays under the per-function line
+ * budget.
+ */
+function useComposerMirrors(opts: {
+  composerSend: (event: ComposerEvent) => void;
+  recording: boolean;
+  transcriptNonEmpty: boolean;
+  narrationEnabled: boolean;
+  muted: boolean;
+}) {
+  const { composerSend, recording, transcriptNonEmpty, narrationEnabled, muted } = opts;
+  useEffect(() => {
+    composerSend({ type: "RECORDING", value: recording });
+  }, [recording, composerSend]);
+  useEffect(() => {
+    composerSend({ type: "TRANSCRIPT", nonEmpty: transcriptNonEmpty });
+  }, [transcriptNonEmpty, composerSend]);
+  useEffect(() => {
+    composerSend({ type: "SET_NARRATION", value: narrationEnabled });
+  }, [narrationEnabled, composerSend]);
+  useEffect(() => {
+    composerSend({ type: "SET_MUTE", value: muted });
+    // Stop any in-flight speech the moment mute is engaged.
+    if (muted) composerSend({ type: "STOP_SPEECH" });
+  }, [muted, composerSend]);
+}
+
 export function useChatVoice(opts: {
   snapshot: SnapshotLike;
   sessionId: string | null;
@@ -162,13 +202,16 @@ export function useChatVoice(opts: {
   narrationEnabled: boolean;
   selections: SelectionItem[];
   resetSelections: () => void;
+  /** Pending images/files sweep into keyword sends (read at fire time, like the text store). */
+  emissionStore: EmissionStore;
+  resetAttachments: () => void;
   /** Drops the persisted dictation draft once a segment commits (set by the chat). */
   clearDraftRef: React.MutableRefObject<() => void>;
   /** Composer text store, so a voice-keyword send doesn't drop existing text. */
   inputStore: InputStore;
   dispatchEmission: (emission: Emission) => void;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, inputStore, dispatchEmission } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, dispatchEmission } = opts;
 
   // Live device handles, in a ref the command subscriber reads at emit time
   // (never during render). Effects below keep its fields current.
@@ -220,7 +263,8 @@ export function useChatVoice(opts: {
         case "submit":
           runKeywordSend({
             intent, transcription, stopTickRef, composerSend, sessionId,
-            narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore,
+            narrationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments,
+            dispatchEmission, clearDraftRef, inputStore,
           });
           break;
         case "cancel":
@@ -266,21 +310,12 @@ export function useChatVoice(opts: {
     transcription.state === "reconnecting" ||
     transcription.state === "finalizing";
 
-  // Mirror device + settings state into the machine so its guards can read it.
-  useEffect(() => {
-    composerSend({ type: "RECORDING", value: transcription.state === "recording" });
-  }, [transcription.state, composerSend]);
-  useEffect(() => {
-    composerSend({ type: "TRANSCRIPT", nonEmpty: transcription.transcript.trim().length > 0 });
-  }, [transcription.transcript, composerSend]);
-  useEffect(() => {
-    composerSend({ type: "SET_NARRATION", value: narrationEnabled });
-  }, [narrationEnabled, composerSend]);
-  useEffect(() => {
-    composerSend({ type: "SET_MUTE", value: muted });
-    // Stop any in-flight speech the moment mute is engaged.
-    if (muted) composerSend({ type: "STOP_SPEECH" });
-  }, [muted, composerSend]);
+  useComposerMirrors({
+    composerSend,
+    recording: transcription.state === "recording",
+    transcriptNonEmpty: transcription.transcript.trim().length > 0,
+    narrationEnabled, muted,
+  });
 
   const voicePaused = composerSnapshot.matches({ voice: "pausedForSpeech" });
 
