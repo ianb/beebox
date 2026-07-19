@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-19T19:48:46Z
-Total documents: 195
+Generated: 2026-07-19T20:43:27Z
+Total documents: 196
 
 ## Issues
 
@@ -120,7 +120,7 @@ Referenced by:
 - docs/plans/ios-companion-app.md:25 (mention) — - `callback-box/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file u
 - docs/plans/ios-companion-review-2026-07-09.md:56 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
-- docs/plans/publish-pages.md:152 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
+- docs/plans/publish-pages.md:154 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
 - docs/plans/source-available-release.md:388 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
 - docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
@@ -302,7 +302,7 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:31 (mention) — - `code-style.md`: TypeScript uses validated `unknown` boundaries, exhaustive
 - docs/plans/ios-native-capture-mode.md:24 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
-- docs/plans/publish-pages.md:27 (mention) — - `callback-box/code-style.md` — mechanical rules for all box-side TS and the Worker package.
+- docs/plans/publish-pages.md:29 (mention) — - `callback-box/code-style.md` — mechanical rules for all box-side TS and the Worker package.
 - docs/plans/source-available-release.md:44 (mention) — - `callback-box/code-style.md` — style rules for any code touched by deploy
 - docs/unimplemented-plans/query-cards.md:34 (mention) — - `callback-box/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
@@ -390,20 +390,22 @@ References:
 Title: "Deploy" | 44 lines
 
 Referenced by:
-- deploy/README.md:47 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
+- deploy/README.md:57 (mention) — (see `deploy/CLAUDE.md` for the wait/poll pattern).
 
 References:
 - → deploy/README.md (mention)
 
 #### deploy/README.md
 
-Title: "Deploy" | 295 lines
+Title: "Deploy" | 305 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
 - deploy/CLAUDE.md:3 (mention) — Server provisioning and deployment scripts for Hetzner cloud. See `deploy/README.md` for full setup guide.
 - docs/adding-a-box.md:108 (link) — [`deploy/README.md`](../deploy/README.md) for the full provisioning story,
+- docs/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
 - docs/implemented-plans/boxes-as-packages-v2.md:76 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
+- docs/implemented-plans/hub-healthz-box-aggregation.md:313 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:283 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
@@ -414,6 +416,7 @@ Referenced by:
 - ../research/openclaw-hermes/deep-installation.md:96 (mention) — and `callback-box/deploy/README.md`.
 
 References:
+- → docs/health-checks.md (link)
 - → deploy/CLAUDE.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/adding-a-box.md (link)
@@ -470,7 +473,7 @@ Title: "Adding a Box" | 131 lines
 Referenced by:
 - CLAUDE.md:156 (mention) — | Adding a box | `docs/adding-a-box.md` |
 - README.md:81 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
-- deploy/README.md:104 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
+- deploy/README.md:114 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/implemented-plans/remove-box-shape-v1.md:250 (mention) — `docs/migrations.md` (remove box-packageify section), `docs/adding-a-box.md:91`,
 - docs/plans/cli-restructure.md:130 (mention) — (see `docs/adding-a-box.md`), `cb upgrade` is the per-box engine-upgrade
@@ -749,7 +752,7 @@ Title: "Content-Security-Policy" | 80 lines
 Referenced by:
 - CLAUDE.md:161 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
-- docs/plans/publish-pages.md:41 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source 
+- docs/plans/publish-pages.md:43 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source 
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/decisions/2026-07-19-boxes-share-one-origin.md:22 (mention) — - This is not hypothetical content: `docs/content-security-policy.md` notes *"box views and
@@ -816,6 +819,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:29 (mention) — >   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
+- docs/implemented-plans/hub-healthz-box-aggregation.md:31 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
 - docs/implemented-plans/mobile-parity-sync.md:21 (mention) — - `docs/engineering-principles.md` **#4 resilient and never silent** — drift
 - docs/implemented-plans/mobile-token-handshake.md:14 (mention) — - **`docs/engineering-principles.md` #3 (validate at boundaries)** — the cookie is untrusted
 - docs/implemented-plans/questions-end-to-end.md:57 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
@@ -830,7 +834,7 @@ Referenced by:
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
 - docs/plans/ios-input-plane-parity.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
 - docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
-- docs/plans/publish-pages.md:17 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
+- docs/plans/publish-pages.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
@@ -934,15 +938,19 @@ References:
 
 #### docs/health-checks.md
 
-Title: "Health Checks" | 60 lines
+Title: "Health Checks" | 70 lines
 
 Referenced by:
 - CLAUDE.md:149 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
+- deploy/README.md:38 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
+- docs/implemented-plans/hub-healthz-box-aggregation.md:4 (mention) — canary route all shipped; see `docs/health-checks.md` for the current
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
+- src/hub/CLAUDE.md:15 (mention) — `docs/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:63 (mention) — updates) and `docs/health-checks.md` owns deployed-server runbooks — this admin
 
 References:
+- → deploy/README.md (link)
 - → docs/server-operations.md (link)
 
 #### docs/knowledge-audits.md
@@ -1236,7 +1244,7 @@ Title: "Server Operations" | 225 lines
 
 Referenced by:
 - CLAUDE.md:155 (mention) — | Server operations | `docs/server-operations.md` |
-- docs/health-checks.md:9 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
+- docs/health-checks.md:19 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:499 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/plans/docs-reorg.md:91 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
@@ -1277,7 +1285,7 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:110 (mention) — 8. **`@xstate/store` documented as adopted (`docs/stack-decisions.md:143`)
 - docs/plans/docs-reorg.md:92 (mention) — `stack-decisions.md`, the Google/Telegram setup runbooks, CSP docs) verified
 - docs/plans/installation-story.md:111 (mention) — `node --watch` over the backend; `docs/stack-decisions.md` used to pair
-- docs/plans/publish-pages.md:42 (mention) — - **Designed-but-unbuilt authorization.** `docs/stack-decisions.md:581`: *`## Decision 11: Authorization — Typed Princip
+- docs/plans/publish-pages.md:44 (mention) — - **Designed-but-unbuilt authorization.** `docs/stack-decisions.md:581`: *`## Decision 11: Authorization — Typed Princip
 - docs/reports/user-stories-audit-2026-06-26.md:4801 (mention) — Feature is fully implemented with all claimed capabilities. Evidence: (1) /src/cli/commands/render.ts registers the `cb 
 - docs/unimplemented-plans/design-vision-superseded.md:13 (mention) — > `../stack-decisions.md` Decision 18).
 - ../issues/code-quality/2026-07-04-xstate-store-never-adopted.md:7 (mention) — `callback-box/docs/stack-decisions.md` (~line 143) records `@xstate/store`
@@ -1315,6 +1323,7 @@ Referenced by:
 - docs/implemented-plans/courseware-lesson-plan.md:326 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
 - docs/implemented-plans/courseware-phase1.md:487 (mention) — - **Tests** (per `docs/testing.md`):
 - docs/implemented-plans/figure-card-type.md:81 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
+- docs/implemented-plans/hub-healthz-box-aggregation.md:429 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design tool.
 - docs/implemented-plans/input-extraction.md:30 (mention) — - `docs/testing.md` via the cb-plan template: tests first as a design tool;
 - docs/implemented-plans/link-validation-fix.md:35 (mention) — - `callback-box/docs/testing.md` — tests as a design tool; name the doctest for
 - docs/implemented-plans/mobile-token-handshake.md:494 (mention) — substantial new codepaths, per `docs/testing.md`.
@@ -1333,7 +1342,7 @@ Referenced by:
 - docs/plans/ios-companion-app.md:212 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
 - docs/plans/ios-input-plane-parity.md:35 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:33 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
-- docs/plans/publish-pages.md:272 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
+- docs/plans/publish-pages.md:274 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - docs/tours.md:16 (link) — ([testing.md](testing.md)).
 - ../.claude/skills/cb-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/cb-guide-testing/SKILL.md:3 (mention) — description: Explains callback-box's testing system — the test tiers, what each is for, and how to choose. Use when deci
@@ -1460,7 +1469,7 @@ Referenced by:
 - docs/architecture/CLAUDE.md:15 (mention) — - **`outline.md`** — Working outline for the architecture docs. Section structure, story ideas, open design questions.
 - docs/plans/design-reconciliation.md:20 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/plans/docs-reorg.md:80 (mention) — `architecture/outline.md` (75%-unwritten writing plan),
-- docs/plans/publish-pages.md:43 (mention) — - **The aspiration this plan implements.** `docs/architecture/outline.md:166` (James's build journal story): *"The box t
+- docs/plans/publish-pages.md:45 (mention) — - **The aspiration this plan implements.** `docs/architecture/outline.md:166` (James's build journal story): *"The box t
 
 References:
 - → docs/architecture/spirit.md (mention)
@@ -1522,7 +1531,7 @@ Title: "Identity — what Callback Box is" | 47 lines
 
 Referenced by:
 - docs/design/README.md:19 (link) — - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI a
-- docs/plans/publish-pages.md:44 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
+- docs/plans/publish-pages.md:46 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../plans/design
 - docs/unimplemented-plans/design-vision-superseded.md:5 (mention) — > `../design/identity.md` (ruling 3); landmarks — the shipped role-bearing-card
 
@@ -1775,7 +1784,7 @@ Title: "Boxes as Packages v2 — callback-box as a library" | 725 lines
 
 Referenced by:
 - README.md:25 (link) — live yet — see [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md)
-- deploy/README.md:79 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+- deploy/README.md:89 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
 - docs/adding-a-box.md:4 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](plans/boxes-as-packages-v2.md)
 - docs/box-layout.md:15 (mention) — repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full design.
 - docs/design/identity.md:45 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
@@ -2014,6 +2023,20 @@ Referenced by:
 
 References:
 - → docs/connectors.md (mention)
+
+#### docs/implemented-plans/hub-healthz-box-aggregation.md
+
+Title: "Hub `/healthz` reflects box-child health" | 454 lines
+
+Referenced by:
+- ../issues/code-quality/2026-07-19-hub-startall-blocks-listen.md:14 (link) — ([design](../../callback-box/docs/implemented-plans/hub-healthz-box-aggregation.md)) worked
+- ../issues/docs-and-chores/2026-07-19-tech-talk-box-not-in-hub-config.md:6 (link) — ([design](../../callback-box/docs/implemented-plans/hub-healthz-box-aggregation.md)):
+
+References:
+- → docs/health-checks.md (mention)
+- → docs/engineering-principles.md (mention)
+- → deploy/README.md (mention)
+- → docs/testing.md (mention)
 
 #### docs/implemented-plans/input-extraction.md
 
@@ -2830,7 +2853,7 @@ Referenced by:
 - docs/plans/android-companion-app.md:39 (mention) — - Shipped precedent: `docs/plans/ios-companion-app.md` (umbrella), the native
 - docs/plans/ios-companion-review-2026-07-09.md:15 (mention) — Cross-referencing the plan (`ios-companion-app.md`): this work is **Tracks A, C, D, G, H partially built ahead of their 
 - docs/plans/ios-companion-review-2026-07-17.md:144 (mention) — - **The plan's hardest question is still unresolved.** `ios-companion-app.md` named **device-token/web-session convergen
-- docs/plans/publish-pages.md:28 (mention) — - **Precedents (denser than docs):** the Telegram webhook (`src/webapp/routes/telegram.ts`) as the "external service wit
+- docs/plans/publish-pages.md:30 (mention) — - **Precedents (denser than docs):** the Telegram webhook (`src/webapp/routes/telegram.ts`) as the "external service wit
 - ../issues/bugs/2026-07-17-mobile-chat-unattributed.md:14 (mention) — The `ios-companion-app.md` plan already calls identity unification the hardest problem in its
 
 References:
@@ -2963,7 +2986,7 @@ References:
 
 #### docs/plans/publish-pages.md
 
-Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 283 lines
+Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 285 lines
 
 Referenced by:
 - docs/box-layout.md:117 (mention) — | `box/publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding
@@ -3318,7 +3341,7 @@ References:
 
 #### src/hub/CLAUDE.md
 
-Title: "Hub" | 53 lines
+Title: "Hub" | 64 lines
 
 Referenced by:
 - CLAUDE.md:61 (mention) — src/hub/          `cb hub`: routes /<slug>/... to per-box `cb serve` children (lazy start, idle-collect, health-check) —
@@ -3328,6 +3351,9 @@ Referenced by:
 - docs/plans/docs-reorg.md:319 (mention) — conventions documented at colocated homes (new `src/hub/CLAUDE.md`,
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:32 (mention) — `callback-box/src/hub/CLAUDE.md`,
 - ../issues/decisions/2026-07-19-boxes-share-one-origin.md:13 (mention) — withholding `CB_SESSION_SECRET` from boxes (`src/hub/CLAUDE.md`).
+
+References:
+- → docs/health-checks.md (mention)
 
 ### src/services/
 

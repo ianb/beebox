@@ -3,7 +3,7 @@ title: tech-talk box exists on the prod server but isn't in hub.json
 ---
 
 Noticed while verifying the fleet for the healthz-aggregation work
-([design](../../callback-box/docs/plans/hub-healthz-box-aggregation.md)):
+([design](../../callback-box/docs/implemented-plans/hub-healthz-box-aggregation.md)):
 `/home/callback/boxes/tech-talk/` exists on the server (its
 `node_modules/callback-box` symlinks to the shared engine like every other
 box), but `tech-talk` is **not** a slug in
