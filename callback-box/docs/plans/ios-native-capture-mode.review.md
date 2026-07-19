@@ -416,7 +416,47 @@ recording cleanly), which is worth stating as the rationale.
   native queue are client/developer infrastructure; no box-agent-facing concept
   is introduced, and the skip is stated with rationale as the skill requires.
 
-## Readiness
+## Re-review of revision c2b3fc67 (2026-07-17)
+
+The plan was revised on `main` ("Incorporate iOS capture plan review") and now
+resolves every finding above:
+
+- **Finding 1** — Track 1 now registers an exact `application/octet-stream`
+  parser (`parseAs: "buffer"`), adds a raw-body route doctest that includes
+  `request.file()` behavior on a non-multipart request, advertises
+  `capabilities.acceptedUploadEncodings: ["raw-body-v1"]`, and gates *all*
+  native capture (not just Record) on both capabilities against an old server —
+  the previously false "photos/files remain available" row is corrected.
+- **Finding 2** — pairing now persists `createdBy` on the `MobileDevice`
+  record, a unified request-owner helper resolves cookie and bearer to one
+  identity, and legacy ownerless devices get a fail-closed 403 (capture only)
+  on auth-enabled boxes with a re-pair path; rollout notes the one-time
+  re-pairing. Strict and explicit — the right call.
+- **Finding 3** — upload/finalize 404 is a terminal recovery class with honest
+  "submitted or cancelled" copy, a resumable-response-wins precedence rule, and
+  its own failure row + XCTest table entries.
+- **Finding 4** — `CaptureItemState` gains `recording`; the row persists before
+  `AVAudioRecorder` starts and only Stop promotes it to `local`; relaunch
+  treats a stale `recording` row as damaged (visible, excluded from upload,
+  never silently deleted), with a failure row and prior-art citation.
+- **Findings 5-8** — Track 1's first chunk and the implementation order now
+  include the parser + identity work; the JPEG/PNG-with-matching-extension
+  photo contract is a vocabulary lock-in; the 50 MiB per-request cap is named
+  as the operative limit with client preflight and a recorder size stop; and
+  the single fixed background-session identifier is locked in, with orphaned
+  `uploading` rows returning to `local`.
+
+One implementation-time watch item, already covered by the planned doctest:
+`readUploadBuffer` (`capture.ts:113-119`) calls `request.file()` *before*
+checking for a raw `Buffer`; if `@fastify/multipart` throws on a non-multipart
+request rather than returning undefined, that call order must change (guard
+with `request.isMultipart()` or check the Buffer first). The doctest the plan
+now mandates will surface this on the first run.
+
+**Revised verdict: ready to implement.** The revision's new citations were
+spot-checked and are accurate; no new problems were introduced.
+
+## Readiness (original review)
 
 Not ready to implement as written. Findings 1 and 2 each invalidate a
 "reuse, already exists" claim that Track 1/Track 5 build on, and both require
