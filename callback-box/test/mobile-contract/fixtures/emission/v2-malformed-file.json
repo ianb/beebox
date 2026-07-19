@@ -1,0 +1,22 @@
+{
+  "input": {
+    "version": 2,
+    "id": "ios-v2-bad-file",
+    "origin": "typed",
+    "text": "Do not drop this malformed file silently",
+    "diarized": false,
+    "images": [],
+    "files": [
+      {
+        "id": 1,
+        "path": "tmp/report.pdf",
+        "originalName": "report.pdf",
+        "size": "2048",
+        "mimetype": "application/pdf"
+      }
+    ],
+    "selections": []
+  },
+  "expected": null,
+  "expectedReason": "Invalid native emission V2: malformed image, file, or selection"
+}

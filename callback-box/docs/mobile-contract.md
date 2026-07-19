@@ -244,11 +244,15 @@ the contract.
 
 ### 4.1 Emission (native → web)
 
-- **Wire shape** (native → `window.callbackboxNativeReceive(<json>)`):
+- **Canonical V2 wire shape** (native → `window.callbackboxNativeReceive(<json>)`):
   ```json
-  { "id": "<UUID string>", "text": "<string>", "origin": "typed"|"voice",
-    "diarized": <bool>,
-    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ] }
+  { "version": 2, "id": "<UUID string>", "text": "<string>",
+    "origin": "typed"|"voice", "diarized": <bool>,
+    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
+    "files": [ { "id": <int>, "path": "<tmp/...>", "originalName": "<string>",
+      "size": <number>, "mimetype": "<string>" } ],
+    "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
+      "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
   ```
 - **Transport globals + event (native-authored startup script):**
   `window.callbackboxNativeReceive(detail)` pushes onto `window.callbackboxNativeQueue` and
@@ -258,28 +262,29 @@ the contract.
   `callbackboxNativeQueue` on mount + each event → `handleNativeEmission` →
   `nativeEmissionFromDetail` (`native-emission.ts`) → `createTypedEmission`/`createVoiceEmission`
   (native `id` preserved via `withNativeId`) → dispatched to `/chat/send`.
-- **Image parse:** `native-emission.ts` — `parseNativeImages` drops any element missing
-  `{ id: number, mimeType: string, dataBase64: string }`.
-- **Parser leniency (intentional — a boundary-tolerant consumer):** `native-emission.ts`
-  · `nativeEmissionFromDetail` is deliberately **lenient**, not strict: a missing/invalid `id`
+- **Legacy image parse:** malformed image entries are dropped individually; V2 rejects the whole
+  payload when any image is malformed.
+- **V2 validation:** `native-emission.ts` · `parseNativeEmissionDetail` requires every V2 field
+  and rejects the whole payload when an image, file, or selection is malformed. Unknown versions
+  reject with a reason naming that version. File metadata is retained on the `Emission` value even
+  though current chat assembly needs only `id` and `path`.
+- **Legacy compatibility (intentional boundary leniency):** a payload with no `version` keeps the
+  shipped decoder policy: a missing/invalid `id`
   is replaced with a generated emission id (`withNativeId` keeps the native id only when it is a
   non-empty string); an unknown/absent `origin` coerces to `"typed"`; `diarized` is `true` only for
   a literal `true`, else `false`; malformed `images` entries are dropped **individually**; and a
   synthetic rejection (a `null` parse) occurs **only when neither text nor any valid image
-  survives**. This is the current intentional behavior. Fixtures (`docs/implemented-plans/mobile-parity-sync.md`)
-  must encode these **lenient** outcomes, not an imagined strict contract.
-- **Open question (boxholder):** should this parser be hardened to reject malformed native payloads
-  loudly rather than coercing them? The house bias is strict, but changing it alters shipped iOS
-  behavior, so it stays open.
-- **Field mapping:** web `Emission { id, origin, text, images, files, selections, diarized }`; native
-  supplies only `text`/`origin`/`diarized`/`images` — `files`/`selections` are always empty for native.
+  survives**. Fixtures (`docs/implemented-plans/mobile-parity-sync.md`) pin both policies separately.
+- **Field mapping:** V2 is a complete projection of web
+  `Emission { id, origin, text, images, files, selections, diarized }`. Legacy payloads produce
+  empty `files` and `selections`.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native payload | `ios-app/CallbackBox/Views/ChatWebView.swift` — `NativeEmissionPayload { id, text, origin, diarized, images }`, `NativeChatEmission`; `ios-app/CallbackBox/Models/ChatImageAttachment.swift` — `{ id: Int, mimeType, dataBase64 }` |
-  | web parse | `src/frontend/src/components/chat/native-emission.ts` — `nativeEmissionFromDetail`, `parseNativeImages`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
-- **Drift:** SILENT (leniency coerces or drops malformed fields; only a payload with no usable text
-  and no valid image parses to `null` → a synthetic `rejected` receipt).
+  | native payload | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/CallbackBox/Views/ChatWebView.swift` — `NativeChatEmission` |
+  | web parse | `src/frontend/src/components/chat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
+- **Drift:** LOUD for V2 (a rejected receipt carries the validation reason); legacy coercion remains
+  SILENT except when no usable text or image survives.
 
 ### 4.2 Emission receipt (web → native)
 
@@ -412,7 +417,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `callbackboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | `{id,text,origin,diarized,images:[{id,mimeType,dataBase64}]}` via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Views/ChatWebView.swift` · `NativeEmissionPayload`; `Models/ChatImageAttachment.swift` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` | SILENT |
+| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `callbackboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location request | native→web | `callbackboxNativeShareLocation("<uuid>")`, queue `callbackboxNativeLocationQueue`, event `callbackbox:native-share-location`, detail `{id}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location result | web→native | `{id,success,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
@@ -436,9 +441,9 @@ without the other is a contract break.
   therefore box-internal, which is the point — it keeps the credential out of client code.
 - **Webview param** `nativeComposer=1` — `Models/PairedBox.swift` · `chatURL` (with in-code sync
   comment) ↔ `pages/ChatPage.tsx` / `router.tsx`.
-- **Emission JSON keys** `{id,text,origin,diarized,images:[{id,mimeType,dataBase64}]}` —
-  `Views/ChatWebView.swift` · `NativeEmissionPayload` / `Models/ChatImageAttachment.swift` ↔
-  `native-emission.ts` (`nativeEmissionFromDetail`, `parseNativeImages`).
+- **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}` —
+  `Models/NativeComposerContract.swift` · `NativeEmissionV2` ↔
+  `native-emission.ts` · `NativeEmissionV2` / `parseNativeEmissionDetail`.
 - **Receipt shape** `{disposition,emissionId,reason?,deduplicated?}`, dispositions
   `sent|queued|rejected` — `Views/ChatWebView.swift` · `NativeEmissionReceipt.Disposition` ↔
   `input/targets/receipts.ts` · `Receipt`.

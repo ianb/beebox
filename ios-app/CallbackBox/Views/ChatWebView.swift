@@ -4,16 +4,15 @@ import UIKit
 import WebKit
 
 struct NativeChatEmission: Equatable, Identifiable {
-    enum Origin: String {
-        case typed
-        case voice
-    }
+    typealias Origin = NativeEmissionV2.Origin
 
     var id = UUID()
     var text: String
     var origin: Origin
     var diarized: Bool
     var images: [ChatImageAttachment]
+    var files: [NativeEmissionFile] = []
+    var selections: [NativeEmissionSelection] = []
 }
 
 struct NativeEmissionReceipt: Equatable {
@@ -309,13 +308,7 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         private static func javascriptDetail(for emission: NativeChatEmission) -> String? {
-            let payload = NativeEmissionPayload(
-                id: emission.id.uuidString,
-                text: emission.text,
-                origin: emission.origin.rawValue,
-                diarized: emission.diarized,
-                images: emission.images
-            )
+            let payload = NativeEmissionV2(emission: emission)
             guard let data = try? JSONEncoder().encode(payload) else {
                 return nil
             }
@@ -454,14 +447,6 @@ struct ChatWebView: UIViewRepresentable {
         """
         return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     }
-}
-
-private struct NativeEmissionPayload: Encodable {
-    var id: String
-    var text: String
-    var origin: String
-    var diarized: Bool
-    var images: [ChatImageAttachment]
 }
 
 private extension String {

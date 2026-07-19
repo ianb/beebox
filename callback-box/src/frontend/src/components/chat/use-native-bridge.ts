@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { Emission } from "../../input/emission";
 import type { Receipt } from "../../input/targets/receipts";
 import { captureAndStore, isGeolocationAvailable } from "../../lib/location-share";
-import { nativeEmissionFromDetail } from "./native-emission";
+import { parseNativeEmissionDetail } from "./native-emission";
 import type { NativeShellChannel } from "./native-post";
 import { postNativeMessage } from "./native-post";
 
@@ -60,14 +60,14 @@ async function handleNativeEmission(
   detail: unknown,
   dispatchEmission: (emission: Emission) => Promise<Receipt>
 ): Promise<void> {
-  const emission = nativeEmissionFromDetail(detail);
-  if (emission === null) {
-    const emissionId = nativeRequestId(detail);
-    if (emissionId !== null) {
-      postNativeReceipt({ disposition: "rejected", emissionId, reason: "Invalid native message" });
+  const parsed = parseNativeEmissionDetail(detail);
+  if (!parsed.ok) {
+    if (parsed.emissionId !== null) {
+      postNativeReceipt({ disposition: "rejected", emissionId: parsed.emissionId, reason: parsed.reason });
     }
     return;
   }
+  const { emission } = parsed;
   try {
     postNativeReceipt(await dispatchEmission(emission));
   } catch (error) {

@@ -13,6 +13,7 @@
 		5A1000042C3C000100000001 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000142C3C000100000001 /* RootView.swift */; };
 		5A1000052C3C000100000001 /* PairBoxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000152C3C000100000001 /* PairBoxView.swift */; };
 		5A1000062C3C000100000001 /* ChatWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000162C3C000100000001 /* ChatWebView.swift */; };
+		B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000022C3C000100000001 /* NativeComposerContract.swift */; };
 		5A1000072C3C000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000182C3C000100000001 /* Assets.xcassets */; };
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
@@ -58,6 +59,7 @@
 		5A1000142C3C000100000001 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		5A1000152C3C000100000001 /* PairBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairBoxView.swift; sourceTree = "<group>"; };
 		5A1000162C3C000100000001 /* ChatWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebView.swift; sourceTree = "<group>"; };
+		B72000022C3C000100000001 /* NativeComposerContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerContract.swift; sourceTree = "<group>"; };
 		5A1000172C3C000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A1000182C3C000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
@@ -143,6 +145,7 @@
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
+				B72000022C3C000100000001 /* NativeComposerContract.swift */,
 				5A10002E2C3C000100000001 /* CaptureModels.swift */,
 			);
 			path = Models;
@@ -306,6 +309,7 @@
 				5A1000042C3C000100000001 /* RootView.swift in Sources */,
 				5A1000052C3C000100000001 /* PairBoxView.swift in Sources */,
 				5A1000062C3C000100000001 /* ChatWebView.swift in Sources */,
+				B72000012C3C000100000001 /* NativeComposerContract.swift in Sources */,
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,

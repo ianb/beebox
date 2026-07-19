@@ -170,29 +170,55 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         XCTAssertGreaterThan(decoded, 0, "no location result fixtures decoded")
     }
 
-    /// Emissions flow native→web, so `dictionaryPayload` is not the native
-    /// decoder for them; this only confirms the shared JSON emission shape
-    /// survives the same string→dictionary crossing (the fields both platforms
-    /// agree on), for the well-formed cases.
-    func testEmissionFixtureShapeSurvivesDictionaryPayload() throws {
+    func testV2EmissionFixturesDecodeStrictly() throws {
         let fixtures = try MobileContractFixtures.load("emission")
+        var decodedV2 = 0
+        var rejectedV2 = 0
+        var rejectedLegacy = 0
         for (name, fixture) in fixtures {
-            guard let expected = fixture["expected"] as? [String: Any] else {
-                continue // the `null` (rejected) case has no emission shape to check
-            }
             let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
-            let payload = try XCTUnwrap(
-                ChatWebView.dictionaryPayload(from: try MobileContractFixtures.jsonString(from: input)),
-                "\(name): dictionaryPayload returned nil"
-            )
-            if let origin = input["origin"] as? String {
-                XCTAssertEqual(payload["origin"] as? String, origin, "\(name): origin")
+            let data = try MobileContractFixtures.jsonData(from: input)
+            if (input["version"] as? Int) == 2, fixture["expected"] is [String: Any] {
+                let emission = try JSONDecoder().decode(NativeEmissionV2.self, from: data)
+                XCTAssertEqual(emission.version, 2, "\(name): version")
+                XCTAssertEqual(emission.id, input["id"] as? String, "\(name): id")
+                XCTAssertEqual(emission.files.count, (input["files"] as? [Any])?.count, "\(name): files")
+                XCTAssertEqual(emission.selections.count, (input["selections"] as? [Any])?.count, "\(name): selections")
+                decodedV2 += 1
+                continue
             }
-            // The decoded text is not yet whitespace-trimmed (that is the web
-            // decoder's job) — assert the trimmed forms agree.
-            let payloadText = (payload["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            XCTAssertEqual(payloadText, expected["text"] as? String, "\(name): text")
+            XCTAssertThrowsError(try JSONDecoder().decode(NativeEmissionV2.self, from: data), "\(name): must not decode as V2")
+            if input["version"] == nil {
+                rejectedLegacy += 1
+            } else {
+                rejectedV2 += 1
+            }
         }
+        XCTAssertGreaterThan(decodedV2, 0, "no complete V2 fixture decoded")
+        XCTAssertGreaterThan(rejectedV2, 0, "no malformed or unknown V2 fixture rejected")
+        XCTAssertGreaterThan(rejectedLegacy, 0, "no legacy fixture kept outside the V2 decoder")
+    }
+
+    func testComposerCommandFixturesDecodeStrictly() throws {
+        let fixtures = try MobileContractFixtures.load("composer-command")
+        var decoded = 0
+        var rejected = 0
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let data = try MobileContractFixtures.jsonData(from: input)
+            if fixture["expected"] is [String: Any] {
+                let command = try JSONDecoder().decode(NativeComposerCommand.self, from: data)
+                XCTAssertEqual(command.version, 1, "\(name): version")
+                XCTAssertEqual(command.kind, .addSelection, "\(name): kind")
+                XCTAssertEqual(command.id, input["id"] as? String, "\(name): id")
+                decoded += 1
+            } else {
+                XCTAssertThrowsError(try JSONDecoder().decode(NativeComposerCommand.self, from: data), "\(name): malformed command decoded")
+                rejected += 1
+            }
+        }
+        XCTAssertGreaterThan(decoded, 0, "no add-selection command fixture decoded")
+        XCTAssertGreaterThan(rejected, 0, "no malformed command fixture rejected")
     }
 }
 
@@ -225,11 +251,15 @@ enum MobileContractFixtures {
     }
 
     static func jsonString(from object: [String: Any]) throws -> String {
-        let data = try JSONSerialization.data(withJSONObject: object)
+        let data = try jsonData(from: object)
         guard let string = String(data: data, encoding: .utf8) else {
             throw FixtureError(message: "could not encode fixture JSON as UTF-8")
         }
         return string
+    }
+
+    static func jsonData(from object: [String: Any]) throws -> Data {
+        try JSONSerialization.data(withJSONObject: object)
     }
 }
 

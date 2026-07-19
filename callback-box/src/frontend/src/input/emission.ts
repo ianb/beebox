@@ -28,6 +28,9 @@ import { newMessageId } from "../components/chat/InteractiveChat-helpers";
 export interface EmissionFile {
   id: number;
   path: string;
+  originalName?: string;
+  size?: number;
+  mimetype?: string;
 }
 
 /**
@@ -58,7 +61,13 @@ export function draftAttachments(draft: { images: ImageItem[]; files: FileItem[]
 } {
   return {
     images: draft.images.map((a) => ({ id: a.id, mimeType: a.mimeType, dataBase64: a.dataBase64 })),
-    files: draft.files.map((f) => ({ id: f.id, path: f.path })),
+    files: draft.files.map((f) => ({
+      id: f.id,
+      path: f.path,
+      originalName: f.originalName,
+      size: f.size,
+      mimetype: f.mimetype,
+    })),
   };
 }
 

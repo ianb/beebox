@@ -1,0 +1,14 @@
+{
+  "input": {
+    "version": 99,
+    "id": "ios-v99",
+    "origin": "typed",
+    "text": "future payload",
+    "diarized": false,
+    "images": [],
+    "files": [],
+    "selections": []
+  },
+  "expected": null,
+  "expectedReason": "Unsupported native emission version: 99"
+}

@@ -1,0 +1,22 @@
+{
+  "input": {
+    "version": 1,
+    "id": "selection-command-1",
+    "kind": "add-selection",
+    "selection": {
+      "ref": "/notes/plan.md",
+      "text": "Ship the complete contract",
+      "position": "body; paragraph 2"
+    }
+  },
+  "expected": {
+    "version": 1,
+    "id": "selection-command-1",
+    "kind": "add-selection",
+    "selection": {
+      "ref": "/notes/plan.md",
+      "text": "Ship the complete contract",
+      "position": "body; paragraph 2"
+    }
+  }
+}

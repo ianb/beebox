@@ -1,0 +1,12 @@
+{
+  "input": {
+    "version": 1,
+    "id": "selection-command-bad",
+    "kind": "add-selection",
+    "selection": {
+      "ref": "/notes/plan.md",
+      "position": "body; paragraph 2"
+    }
+  },
+  "expected": null
+}

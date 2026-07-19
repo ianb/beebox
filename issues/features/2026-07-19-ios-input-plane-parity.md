@@ -9,6 +9,17 @@ plane's complete semantics. The implementation-ready design is
 [`ios-input-plane-parity.md`](../../callback-box/docs/plans/ios-input-plane-parity.md).
 This issue is the cold-start handoff for the next implementation session.
 
+## Implementation progress
+
+- Track 1 contract foundation is complete: iOS emits `NativeEmissionV2`; the
+  web strictly validates complete V2 images, files, and selections while
+  retaining documented legacy leniency; unknown versions produce a
+  version-specific rejection; and TypeScript/XCTest consume shared emission
+  and `NativeComposerCommand` fixtures.
+- The add-selection wire value exists, but command delivery, acknowledgement,
+  and mutation of the durable native draft remain with the Track 2/4 store
+  integration. Tracks 2-6 are otherwise not started.
+
 ## Current mismatch
 
 - Native bridge payloads carry text, images, origin, and diarization, but web
@@ -36,7 +47,8 @@ target state, final message assembly, and dispatch.
    `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
    plan. The plan is complete; implementation starts with Track 1 rather than
    writing another design.
-2. Implement all six tracks in dependency order. Commit-sized chunks are
+2. Continue with Track 2's durable draft store, then complete Tracks 3-6 in
+   dependency order. Commit-sized chunks are
    identified in each track, but they are not shipping milestones:
    full V2 emission/selection-command contract; durable native draft; native
    editor and attachments; companion selections; pending-send/voice state;
