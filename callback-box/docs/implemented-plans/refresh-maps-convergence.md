@@ -1,5 +1,9 @@
 # refresh-maps convergence
 
+**Status:** implemented 2026-07 — finalize now stamps only proven-rewritten
+maps, runs as a run-phase shell so partial runs bank progress, and validate
+treats residual tasks as a warn, not an abort.
+
 `cb refresh-maps` banks its progress only if the agent reaches the last step of
 its prompt. When the agent runs out of turns first, nothing is recorded and the
 next run produces an identical brief — the procedure never converges. When the
