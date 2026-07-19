@@ -56,7 +56,7 @@ other issues AND from `docs/`.
 ```yaml
 ---
 title: "Short human title"    # required — the H1 replacement
-needs: [design, decision]     # what must happen before this could be implemented
+needs: [design, decision]     # what must happen before this can be called done
 design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
 filed-by: agent               # only for non-Ian items
@@ -66,10 +66,21 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
 ```
 
 - `needs:` values: `design` (needs a design/plan written), `decision` (a fork
-  only Ian can resolve). Research-needed is signalled in the body instead — see
-  below. `needs: [decision]` is **orthogonal** to the `decisions/` category: a
-  *feature* can carry `needs: [decision]` and still live in `features/`;
-  `decisions/` is only for items whose *whole deliverable* is the call.
+  only Ian can resolve), `manual-testing` (see below). Research-needed is
+  signalled in the body instead — see below. `needs: [decision]` is
+  **orthogonal** to the `decisions/` category: a *feature* can carry
+  `needs: [decision]` and still live in `features/`; `decisions/` is only for
+  items whose *whole deliverable* is the call.
+- `needs: [manual-testing]` means **an agent cannot finish verifying this — Ian
+  has to exercise it himself.** Unlike the other two it's usually added *after*
+  the code lands, not before: the work is written and tests pass, but the thing
+  it actually fixes can only be confirmed by a human (on a phone, in a real
+  browser, against live external credentials, over a real network, or by looking
+  at whether it *feels* right). Add it rather than closing an item on green
+  tests, and say in the body **what specifically to try and what should happen**
+  — a year from now "needs testing" alone is useless. An agent should never
+  remove this itself; only Ian clears it, by testing. `grep -rl "manual-testing"
+  issues/` is the list of things waiting on him.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 
