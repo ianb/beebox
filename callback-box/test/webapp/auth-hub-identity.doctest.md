@@ -107,6 +107,26 @@ verifyHubSecret(noServerSecret)
 => false
 ```
 
+## Standalone open mode: a cookieless request resolves to `source: "open"`
+
+Outside hub mode, when the box is in open mode (the `CB_ALLOW_UNAUTHENTICATED`
+opt-out) and carries no session cookie, the resolver returns `source: "open"` —
+the single place standalone openness is decided, so the openness-recomputing
+call sites can just read `identity.source`. With auth required (opt-out unset),
+the same cookieless request is `source: null` (unauthenticated).
+
+```ts continue
+delete process.env.CB_HUB_SECRET;
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+const openStandalone = fakeRequest({});
+JSON.stringify(resolveRequestIdentity(openStandalone))
+=> {"email":null,"name":null,"source":"open"}
+
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
+JSON.stringify(resolveRequestIdentity(openStandalone))
+=> {"email":null,"name":null,"source":null}
+```
+
 ```ts cleanup
 if (ORIGINAL_HUB_SECRET === undefined) delete process.env.CB_HUB_SECRET;
 else process.env.CB_HUB_SECRET = ORIGINAL_HUB_SECRET;

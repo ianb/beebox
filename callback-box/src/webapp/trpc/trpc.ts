@@ -20,8 +20,9 @@ export const authedProcedure = t.procedure.use(({ ctx, next }) => {
 
 /**
  * Requires the box owner. Mirrors the raw `addOwnerCheck` gate exactly
- * (`ctx.isOwner` = `!isAuthEnabled() || isOwner(request)`), so auth-disabled
- * dev passes and every other caller must be the owner.
+ * (`ctx.isOwner` = open mode (`identity.source === "open"`) OR the caller is the
+ * owner), so an open (opt-out) box passes and every other caller must be the
+ * owner.
  */
 export const ownerProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.isOwner) {

@@ -15,7 +15,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { isAuthEnabled, getSessionUser, getOwnerEmail } from "../webapp/auth.js";
+import { authRequired, getSessionUser, getOwnerEmail } from "../webapp/auth.js";
 import { filterAccessibleBoxes } from "../webapp/box-access.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { invariant } from "../lib/invariant.js";
@@ -63,18 +63,18 @@ ${items || "    <li>No boxes available.</li>"}
 
 /**
  * Register `GET /` on the hub's Fastify instance: the fleet-wide box
- * picker. Unauthenticated -> redirect to `/auth/login` (unless the hub has
- * no `GOOGLE_OAUTH_CLIENT_ID`, i.e. hub-wide auth is off, in which case
- * every configured box is listed — same "open" semantics the fleet's boxes
- * get via `x-cb-hub-auth: off`).
+ * picker. Unauthenticated -> redirect to `/auth/login` (unless the hub was
+ * started with the `CB_ALLOW_UNAUTHENTICATED` opt-out, i.e. hub-wide auth is
+ * off, in which case every configured box is listed — same "open" semantics
+ * the fleet's boxes get via `x-cb-hub-auth: off`).
  */
 export function registerBoxPicker(
   server: FastifyInstance,
   { boxes, frontendDist }: { boxes: BoxSpec[]; frontendDist: string },
 ): void {
   server.get("/", async (request, reply) => {
-    const user = isAuthEnabled() ? getSessionUser(request) : null;
-    if (isAuthEnabled() && !user) {
+    const user = authRequired() ? getSessionUser(request) : null;
+    if (authRequired() && !user) {
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
     // Serve the SPA (its `/` route renders the styled box-selection tiles and

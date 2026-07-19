@@ -14,6 +14,7 @@ import { Supervisor } from "../../hub/supervisor.js";
 import { resolveBoxRoot } from "../../hub/child-spawn.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
 import { loadEnv, hubEnvSchema } from "../../lib/env.js";
+import { enforceOpenModeAtListen } from "../../webapp/auth.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
 
 function describeError(e: unknown): string {
@@ -48,6 +49,12 @@ export const hubCommand = new Command("hub")
 
     const port = config.port ?? DEFAULT_HUB_PORT;
     const host = config.host ?? "127.0.0.1";
+
+    // Validate the open-mode opt-out against the hub's bind and warn loudly if
+    // open — before starting children or binding. A garbage
+    // CB_ALLOW_UNAUTHENTICATED value or a loopback-only opt-out on a public bind
+    // fails the hub startup here.
+    enforceOpenModeAtListen({ host, port });
 
     // Fresh per boot -- never persisted, never logged. The only channels
     // that see it are each child's env (Supervisor) and the hub's own

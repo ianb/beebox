@@ -125,7 +125,11 @@ const health = await waitFor(async () => {
 health.status
 => running
 
-typeof health.pid === "number" && health.pid > 0
+// The hub's public /healthz was reviewed down to liveness + open (no per-box
+// runtime detail like pid), so read the child's own pid file to prove it's a
+// real running process — `cb serve` writes `.cb-serve.pid` into the box root.
+const childPid = Number((await fs.readFile(path.join(fixture.boxRoot, ".cb-serve.pid"), "utf-8")).trim());
+Number.isInteger(childPid) && childPid > 0
 => true
 ```
 
@@ -150,7 +154,6 @@ proxiedBody.toLowerCase().includes("<!doctype html>")
 ## SIGTERM kills the hub AND its child -- no orphan
 
 ```ts continue
-const childPid = health.pid;
 hubProcess.kill("SIGTERM");
 await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), { timeoutMs: 5000, intervalMs: 100 });
 await waitFor(() => (pidAlive(childPid) ? null : true), { timeoutMs: 5000, intervalMs: 100 });

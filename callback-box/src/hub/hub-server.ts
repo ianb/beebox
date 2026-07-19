@@ -59,7 +59,7 @@ import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
-  isAuthEnabled,
+  authRequired,
   getSessionUser,
   getSessionUserFromCookieHeader,
   getOwnerEmail,
@@ -208,7 +208,10 @@ function decideHubAuth({
   if (isWebhook) {
     return { authorized: true, headersToSet: { [HUB_SECRET_HEADER]: hubSecret } };
   }
-  if (!isAuthEnabled()) {
+  // The hub advertises `x-cb-hub-auth: off` to its children ONLY when the hub
+  // itself was started with the `CB_ALLOW_UNAUTHENTICATED` opt-out — i.e.
+  // hub-wide open mode. Google configuration no longer decides this.
+  if (!authRequired()) {
     return {
       authorized: true,
       headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_AUTH_OFF_HEADER]: "off" },
@@ -250,7 +253,20 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     done(null);
   });
 
-  app.get("/healthz", async (_request, reply) => reply.send(getHealth()));
+  // Public liveness endpoint. Reviewed down to liveness + the open-mode flag:
+  // `getHealth()` carries per-box runtime detail (pid, port, restarts,
+  // lastError) that an unauthenticated caller should not see, so the public
+  // shape projects each box to just `{ slug, status }`. Internal consumers that
+  // want the full `BoxRuntimeStatus` read `getHealth()`/`supervisor.getStatuses()`
+  // directly, not this endpoint.
+  app.get("/healthz", async (_request, reply) => {
+    const health = getHealth();
+    return reply.send({
+      status: health.status,
+      open: !authRequired(),
+      boxes: health.boxes.map((box) => ({ slug: box.slug, status: box.status })),
+    });
+  });
 
   // Login lives at the hub for the whole fleet (Track D, chunk D2) --
   // reuses the SAME routes a standalone box server registers, so there's
@@ -270,7 +286,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // filter (`listAccessibleBoxes`, which shares `canAccessBox` with the box
   // picker) so the two never drift into different box lists.
   app.get("/api/boxes", async (request) => {
-    if (isAuthEnabled()) {
+    if (authRequired()) {
       const user = getSessionUser(request);
       const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };

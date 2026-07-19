@@ -14,7 +14,7 @@ import * as fs from "node:fs";
 import { createEventBus } from "../core/event-bus.js";
 import { registerAuthSurface } from "./routes/auth.js";
 import { registerGoogleServicesCallback } from "./routes/admin.js";
-import { isHubMode } from "./auth.js";
+import { isHubMode, enforceOpenModeAtListen } from "./auth.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { ServerOptions } from "./server-types.js";
@@ -183,6 +183,12 @@ export async function startServer(options?: ServerOptions): Promise<void> {
   options = options ?? {};
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? "localhost";
+
+  // Validate the open-mode opt-out against the actual bind and, if open, emit
+  // the loud multi-line warning — BEFORE binding, so a garbage
+  // CB_ALLOW_UNAUTHENTICATED value or a loopback-only opt-out on a public bind
+  // fails startup rather than quietly serving an unauthenticated box.
+  enforceOpenModeAtListen({ host, port });
 
   const boxes = await resolveBoxes(options);
 

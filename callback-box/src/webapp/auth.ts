@@ -2,7 +2,10 @@
  * Session authentication helpers.
  *
  * Uses signed cookies (HMAC-SHA256) — no server-side session store.
- * Auth is opt-in: disabled when GOOGLE_OAUTH_CLIENT_ID is not set.
+ * Auth is ALWAYS-ON by default: a box requires authentication unless the
+ * operator sets a loud, deliberate `CB_ALLOW_UNAUTHENTICATED` opt-out (see
+ * `openMode`/`authRequired`). "Is Google configured" no longer means "is this
+ * box protected" — Google is just one login method layered on top.
  */
 
 import * as crypto from "node:crypto";
@@ -12,6 +15,8 @@ import * as os from "node:os";
 import type { FastifyRequest } from "fastify";
 import { parseCookieHeader } from "../lib/cookies.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { getLocalOwnerEmail } from "./local-users.js";
+import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
 const COOKIE_NAME = "cb_session";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -49,8 +54,101 @@ function getSessionSecret(): string {
   }
 }
 
-export function isAuthEnabled(): boolean {
-  return !!process.env.GOOGLE_OAUTH_CLIENT_ID;
+/** How the `CB_ALLOW_UNAUTHENTICATED` opt-out is configured. */
+export type OpenMode =
+  /** No opt-out (the default): authentication is required. */
+  | "off"
+  /** `=1`: open, but only when the server binds a loopback host. */
+  | "loopback"
+  /** `=network`: open on any bind, including a public interface. */
+  | "network";
+
+/** Thrown at startup when `CB_ALLOW_UNAUTHENTICATED` holds a value that is
+ *  neither the loopback opt-out (`1`) nor the network opt-out (`network`).
+ *  Fail closed — an unrecognized value is never coerced to "open". */
+export class InvalidOpenModeError extends Error {
+  constructor(readonly value: string) {
+    super(
+      `CB_ALLOW_UNAUTHENTICATED=${JSON.stringify(value)} is not a recognized value. ` +
+        "Use \"1\" (open on a loopback bind only) or \"network\" (open on any bind, including a public one), " +
+        "or unset it to require authentication.",
+    );
+    this.name = "InvalidOpenModeError";
+  }
+}
+
+/** Thrown at listen time when the loopback-only opt-out (`=1`) is combined
+ *  with a non-loopback bind — the catastrophic "open on a public interface"
+ *  config, which requires the explicit `network` spelling. */
+export class OpenModeBindError extends Error {
+  constructor(readonly host: string) {
+    super(
+      "CB_ALLOW_UNAUTHENTICATED=1 permits open (unauthenticated) mode only on a loopback bind, " +
+        `but this server is binding ${JSON.stringify(host)}. Set CB_ALLOW_UNAUTHENTICATED=network to ` +
+        "deliberately serve an unauthenticated box on a non-loopback interface, or remove the opt-out " +
+        "to require authentication.",
+    );
+    this.name = "OpenModeBindError";
+  }
+}
+
+/**
+ * Classify the `CB_ALLOW_UNAUTHENTICATED` opt-out. Unset/empty is `"off"`
+ * (auth required); `"1"` is loopback-only open mode; `"network"` is open on
+ * any bind. Any other non-empty value throws `InvalidOpenModeError` — the
+ * value is never silently coerced (principle #4: never fail open silently).
+ */
+export function openMode(): OpenMode {
+  const value = process.env.CB_ALLOW_UNAUTHENTICATED;
+  if (value === undefined || value === "") return "off";
+  if (value === "1") return "loopback";
+  if (value === "network") return "network";
+  throw new InvalidOpenModeError(value);
+}
+
+/**
+ * Whether this box requires authentication. `true` unless a valid
+ * `CB_ALLOW_UNAUTHENTICATED` opt-out is set — the always-on default. This
+ * REPLACES the old `isAuthEnabled()` (`!!GOOGLE_OAUTH_CLIENT_ID`): Google
+ * configuration no longer gates the wall.
+ */
+export function authRequired(): boolean {
+  return openMode() === "off";
+}
+
+/** A loopback bind host — the opt-out's `=1` tier only permits open mode here. */
+function isLoopbackHost(host: string): boolean {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost";
+}
+
+/**
+ * Validate the opt-out against the actual bind host and emit the loud warning,
+ * at LISTEN time only (`startServer`/`cb hub`) — never at `createServer`, so
+ * injected test servers that never `listen()` stay quiet (noise-is-a-bug).
+ *
+ * Throws `InvalidOpenModeError` (garbage opt-out value) or `OpenModeBindError`
+ * (loopback-only opt-out on a non-loopback bind) so a misconfigured open server
+ * fails to start rather than silently exposing an unauthenticated box.
+ */
+export function enforceOpenModeAtListen({ host, port }: { host: string; port: number }): void {
+  const mode = openMode();
+  if (mode === "off") return;
+  if (mode === "loopback" && !isLoopbackHost(host)) {
+    throw new OpenModeBindError(host);
+  }
+  console.warn(
+    "\n" +
+      "╔══════════════════════════════════════════════════════════════════════╗\n" +
+      "║  WARNING: authentication is DISABLED (CB_ALLOW_UNAUTHENTICATED)         ║\n" +
+      "╠══════════════════════════════════════════════════════════════════════╣\n" +
+      `║  This server is serving an UNAUTHENTICATED box at ${host}:${port}\n` +
+      `║  Opt-out mode: ${mode === "network" ? "network (open on ANY interface, including public)" : "loopback (open on 127.0.0.1/::1 only)"}\n` +
+      "║  Anyone who can reach this port has full access. This is intended only\n" +
+      "║  for local development or a trusted, isolated network. Unset\n" +
+      "║  CB_ALLOW_UNAUTHENTICATED (and use `cb auth create-user` / login) to\n" +
+      "║  require authentication.\n" +
+      "╚══════════════════════════════════════════════════════════════════════╝\n",
+  );
 }
 
 /**
@@ -81,11 +179,35 @@ export function verifyDiagBearerKey(request: FastifyRequest): boolean {
  *
  * Whitelist: /api/trpc/health.check and /api/trpc/debugLog.get.
  * Top-level /healthz is handled by its own root-level route, not this bypass.
+ *
+ * The whitelist is checked against the EXACT set of tRPC procedures the URL
+ * names, not a substring: a tRPC batch URL like
+ * `/api/trpc/health.check,history.list?batch=1` lists multiple comma-separated
+ * procedures, and EVERY one must be whitelisted. A substring test
+ * (`url.includes("health.check")`) let such a batch bypass auth while carrying
+ * a non-whitelisted `publicProcedure` (e.g. `history.list`) — a privilege
+ * widening for diag-key holders, now closed.
  */
+const DIAG_PROCEDURE_WHITELIST: ReadonlySet<string> = new Set(["health.check", "debugLog.get"]);
+
+/** Extract the comma-separated tRPC procedure list from a URL's path segment
+ *  (the text after `/api/trpc/`, before the query), or `null` when the URL
+ *  isn't a tRPC call. */
+function parseTrpcProcedures(url: string): string[] | null {
+  const marker = "/api/trpc/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  const afterMarker = url.slice(idx + marker.length);
+  const pathSegment = afterMarker.split("?")[0];
+  if (pathSegment === undefined || pathSegment.length === 0) return null;
+  return pathSegment.split(",");
+}
+
 export function isDiagnosticBypassRequest(request: FastifyRequest): boolean {
   if (request.method !== "GET") return false;
-  const url = request.url;
-  if (!url.includes("/api/trpc/health.check") && !url.includes("/api/trpc/debugLog.get")) return false;
+  const procedures = parseTrpcProcedures(request.url);
+  if (procedures === null || procedures.length === 0) return false;
+  if (!procedures.every((proc) => DIAG_PROCEDURE_WHITELIST.has(proc))) return false;
   return verifyDiagBearerKey(request);
 }
 
@@ -214,11 +336,36 @@ export function getSessionEmail(request: FastifyRequest): string | null {
   return getSessionUser(request)?.email ?? null;
 }
 
+let loggedAuthStoreUnavailable = false;
+
 /**
- * Get the owner email from environment, or null if not set.
+ * Get the owner email. `CB_OWNER_EMAIL` is an override; when it's unset the
+ * owner falls back to the local credential store's owner account
+ * (`getLocalOwnerEmail`, `local-users.ts`), so the env var becomes optional
+ * once a local owner exists.
+ *
+ * A corrupt/unreadable auth store (`AuthStoreUnavailableError`) degrades to
+ * `null` here — owner checks then fail CLOSED to non-owner (`isOwner` → false,
+ * `canAccessBox` denies) rather than crashing every unauthenticated code path.
+ * The error is logged once. Cookie VERIFICATION at the request boundary needs
+ * the sharper, distinct handling Track D adds (`auth-store-unavailable` → 503),
+ * because treating a corrupt store as "no record" there would fail OPEN for the
+ * very sessions revocation exists to kill; this owner-lookup path is not that.
  */
 export function getOwnerEmail(): string | null {
-  return process.env.CB_OWNER_EMAIL || null;
+  if (process.env.CB_OWNER_EMAIL) return process.env.CB_OWNER_EMAIL;
+  try {
+    return getLocalOwnerEmail();
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      if (!loggedAuthStoreUnavailable) {
+        console.error("[auth] auth store unavailable while resolving owner email; treating as no owner:", e);
+        loggedAuthStoreUnavailable = true;
+      }
+      return null;
+    }
+    throw e;
+  }
 }
 
 /**
@@ -269,11 +416,13 @@ export interface RequestIdentity {
  *   shouldn't happen from a well-behaved hub; treated as a fail-closed 401,
  *   not silently "open."
  *
- * Outside hub mode, behavior is byte-for-byte what it was before D2: the
- * session cookie is the only source (`source: "cookie"` when present), and
- * the hub headers are IGNORED even if somehow present on the request —
- * trusting them outside hub mode is exactly the spoofing hole this design
- * closes.
+ * Outside hub mode, the session cookie is the primary source (`source:
+ * "cookie"` when present), and the hub headers are IGNORED even if somehow
+ * present on the request — trusting them outside hub mode is exactly the
+ * spoofing hole this design closes. When there is no cookie and the box is in
+ * standalone open mode (`!authRequired()`), the resolver returns `source:
+ * "open"` — the always-on-auth plan's consolidation of the scattered
+ * "auth disabled ⇒ open" recomputation into this one resolver.
  */
 export function resolveRequestIdentity(request: FastifyRequest): RequestIdentity {
   if (isHubMode()) {
@@ -289,6 +438,12 @@ export function resolveRequestIdentity(request: FastifyRequest): RequestIdentity
   }
   const user = getSessionUser(request);
   if (user) return { email: user.email, name: user.name, source: "cookie" };
+  // Standalone open mode (the `CB_ALLOW_UNAUTHENTICATED` opt-out): no cookie and
+  // no wall, so identity is "open" — the SAME source hub mode returns when the
+  // hub advertises `x-cb-hub-auth: off`. This is the ONE place openness is
+  // decided; the openness-recomputing call sites read `identity.source` instead
+  // of re-deriving it (principle #8: one way to do each thing).
+  if (!authRequired()) return { email: null, name: null, source: "open" };
   return { email: null, name: null, source: null };
 }
 

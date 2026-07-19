@@ -22,9 +22,11 @@ export function useCurrentUser(): CurrentUser | null {
         if (!r.ok) return null;
         return r.json();
       })
-      .then((data: { email: string; name: string; picture?: string; isOwner: boolean } | null) => {
-        if (data) {
-          setUser({ email: data.email, name: data.name, picture: data.picture, isOwner: data.isOwner });
+      .then((data: { email?: string; name?: string; picture?: string; isOwner?: boolean; open?: boolean } | null) => {
+        // Open mode answers `{ open: true }` (no user). Only build a CurrentUser
+        // from a real signed-in identity; the open-mode banner is Track G's job.
+        if (data && data.email) {
+          setUser({ email: data.email, name: data.name ?? data.email, picture: data.picture, isOwner: data.isOwner ?? false });
         }
       })
       .catch(() => {

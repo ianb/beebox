@@ -59,8 +59,9 @@ await attempt(() => caller({ authed: true, isOwner: false }).owner())
 
 ## ownerProcedure admits the owner (and auth-disabled dev)
 
-`ctx.isOwner` is `true` for the real owner and for auth-disabled local dev
-(`!isAuthEnabled()`), so both reach the procedure.
+`ctx.isOwner` is `true` for the real owner and for an open-mode box (the
+`CB_ALLOW_UNAUTHENTICATED` opt-out, `identity.source === "open"`), so both reach
+the procedure.
 
 ```ts
 await attempt(() => caller({ isOwner: true }).owner())

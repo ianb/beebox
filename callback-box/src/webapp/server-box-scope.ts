@@ -22,7 +22,7 @@ import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
 import {
-  isAuthEnabled,
+  authRequired,
   isHubMode,
   resolveRequestIdentity,
   getOwnerEmail,
@@ -49,8 +49,10 @@ export function isApiUrl(url: string): boolean {
 
 /**
  * Per-box auth preHandler: verify identity and box-level access. Installed
- * when either standalone auth is enabled OR this box is running behind a
- * hub (`isHubMode()`). Lets static assets and diagnostic-bypass requests
+ * whenever authentication is required (`authRequired()` — the always-on
+ * default) OR this box is running behind a hub (`isHubMode()`); skipped only
+ * in standalone open mode (the `CB_ALLOW_UNAUTHENTICATED` opt-out). Lets
+ * static assets and diagnostic-bypass requests
  * through; redirects page navigations to login and 401s API calls —
  * EXCEPT in hub mode, where the box never redirects to its own
  * `/auth/login` (the hub owns login and gates page navigation before
@@ -133,7 +135,7 @@ interface BoxScopeDeps {
 async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
   const { box, eventBus, options, frontendPath, frontendExists } = deps;
 
-  if (isAuthEnabled() || isHubMode()) {
+  if (authRequired() || isHubMode()) {
     addBoxAuthHook(instance, box);
   }
 
@@ -183,7 +185,11 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // recompute here to fail closed rather than assume it ran (e.g. the
       // WS upgrade path shares this same createContext).
       const identity = resolveRequestIdentity(req);
-      const openAccess = isHubMode() ? identity.source === "open" : !isAuthEnabled();
+      // One openness signal: the resolver returns `source: "open"` both in
+      // hub-wide open mode AND in standalone open mode (the
+      // CB_ALLOW_UNAUTHENTICATED opt-out), so this reads it instead of
+      // re-deriving from the gate (principle #8).
+      const openAccess = identity.source === "open";
       const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
       const mobileOk = resolveMobileRequestAuth(box.boxRoot, req.headers) !== null;

@@ -9,8 +9,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { IncomingHttpHeaders } from "node:http";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { isAuthEnabled, isHubMode, getSessionEmail, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
+import { authRequired, isHubMode, getSessionEmail, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { transferEndpoint } from "../core/push-subscriptions.js";
 import { z } from "zod";
@@ -190,6 +189,10 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
     }
     return {
       status: "ok",
+      // Machine-visible open-mode signal, alongside the human boot warning and
+      // UI banner — an operator scraping /healthz can alarm on an accidentally
+      // open box.
+      open: !authRequired(),
       boxCount: boxes.length,
       version,
       templateDrift: { total: templateDriftTotal, byBox },
@@ -198,27 +201,30 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
     };
   });
 
-  // Build info — written by deploy.sh, shows what's deployed
-  const deployInfoDir = PACKAGE_ROOT;
+  // Build info — public but minimal: the deployed build hash + the open-mode
+  // flag, nothing box- or runtime-detailed. This is an UNAUTHENTICATED endpoint
+  // (a pre-auth "what's running here" probe), so it deliberately does not expose
+  // the full deploy record or deploy history the way it once did; the rich
+  // version detail lives behind auth in the `health.check` tRPC procedure.
   server.get("/api/build-info", async () => {
-    try {
-      const raw = fs.readFileSync(path.join(deployInfoDir, "deploy-info.json"), "utf-8");
-      const current = JSON.parse(raw);
-      let history: unknown[] = [];
-      try {
-        history = JSON.parse(fs.readFileSync(path.join(deployInfoDir, "deploy-history.json"), "utf-8"));
-      } catch (_e) { /* no history yet */ }
-      return { current, history };
-    } catch (_e) {
-      return { error: "No deploy info available" };
-    }
+    const version = await readVersionInfo();
+    const buildHash = version.commits["callback-box"]?.hash ?? null;
+    return { buildHash, open: !authRequired() };
   });
 
   // Web Push key rotation (pushsubscriptionchange). Root-level and box-agnostic:
   // the service worker controls the whole origin, and a subscription's endpoint
   // is server-wide, so we just transfer the old endpoint's box opt-ins to the
   // rotated one. Best-effort — the next page visit re-subscribes regardless.
+  //
+  // State-changing, so it sits BEHIND the auth wall: an unauthenticated caller
+  // (no identity, and not open mode) gets 401. A logged-in service worker's
+  // fetch rides the session cookie, so a real resubscribe still authenticates.
   server.post("/api/push/resubscribe", async (request, reply) => {
+    const identity = resolveRequestIdentity(request);
+    if (identity.source !== "open" && !identity.email) {
+      return reply.status(401).send({ error: "Not authenticated" });
+    }
     const parsedBody = resubscribeBodySchema.safeParse(request.body);
     const body = parsedBody.success ? parsedBody.data : undefined;
     const sub = body?.subscription;
@@ -233,9 +239,9 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
     return { ok: true };
   });
 
-  // Root-level box list endpoint (filtered by user access when auth enabled)
+  // Root-level box list endpoint (filtered by user access when auth required)
   server.get("/api/boxes", async (request) => {
-    if (isAuthEnabled()) {
+    if (authRequired()) {
       const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       const email = getSessionEmail(request);
@@ -275,10 +281,12 @@ export function registerSpaFallback(
       return reply.status(404).send({ error: "Not found" });
     }
 
-    // Auth wall: if auth is enabled (or this box is behind a hub) and the
+    // Auth wall: if auth is required (or this box is behind a hub) and the
     // user isn't identified, gate the navigation (except for root "/" which
-    // shows its own login UI, and /auth/* routes).
-    if ((isAuthEnabled() || isHubMode()) && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
+    // shows its own login UI, and /auth/* routes). No `/share` carve-out —
+    // there is no share feature in the tree, and an unused hole in the wall is
+    // exactly the exception that outlives its rationale (always-on-auth plan).
+    if ((authRequired() || isHubMode()) && url !== "/" && !url.startsWith("/auth/")) {
       const identity = resolveRequestIdentity(request);
       if (identity.source === "open") {
         // Hub-wide auth is off — fall through to the SPA below.

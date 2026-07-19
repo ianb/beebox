@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import { resolveMobileBearerIdentity } from "../core/mobile/pairing.js";
-import { isAuthEnabled, isHubMode, resolveRequestIdentity } from "./auth.js";
+import { resolveRequestIdentity } from "./auth.js";
 
 export type CaptureRequestOwner =
   | { status: "ok"; email: string | null }
@@ -29,14 +29,15 @@ export function resolveCaptureRequestOwner(opts: {
     if (mobileIdentity.createdBy) {
       return { status: "ok", email: mobileIdentity.createdBy };
     }
-    if (!isAuthEnabled()) {
+    // Open mode (standalone opt-out or hub-wide off) — the resolver already
+    // reported `source: "open"`, so an owner-less paired device is fine.
+    if (requestIdentity.source === "open") {
       return { status: "ok", email: null };
     }
     return { status: "ownerless-mobile" };
   }
 
-  const openStandalone = !isHubMode() && !isAuthEnabled();
-  if (requestIdentity.source === "open" || openStandalone) {
+  if (requestIdentity.source === "open") {
     return { status: "ok", email: null };
   }
   return { status: "unauthenticated" };

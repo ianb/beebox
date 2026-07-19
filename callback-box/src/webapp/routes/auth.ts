@@ -14,7 +14,7 @@ import {
   signSession,
   getSessionUser,
   getOwnerEmail,
-  isAuthEnabled,
+  authRequired,
   COOKIE_NAME,
   SESSION_MAX_AGE_MS,
 } from "../auth.js";
@@ -52,24 +52,61 @@ interface AuthRoutesOptions {
 }
 
 /**
- * Register the login surface: the full OAuth routes when auth is enabled,
- * or a stub `/auth/me` (always `null`) otherwise. Factored out so both the
- * standalone box server (`server.ts`) and the hub (`src/hub/hub-server.ts`,
- * Track D chunk D2) get identical behavior from one place — the hub hosts
- * login for the whole fleet, and reusing this exact function is what keeps
+ * Register the login surface. Two independent halves:
+ *
+ * - **Google OAuth routes** (`/auth/login`, `/auth/callback`, `/auth/logout`)
+ *   register ONLY when Google is configured (`getGoogleClientCreds()` returns a
+ *   pair). Google availability is now a private concern of this module — the
+ *   always-on-auth plan severed it from "is this box protected." An
+ *   ID-without-secret half-config is a misconfiguration, not "Google absent",
+ *   so it still fails loudly (`MissingOAuthClientSecretError`).
+ * - **`/auth/me`** registers ALWAYS (see `registerAuthMe`): a session answers as
+ *   before, open mode answers `{ "open": true }`, and an unauthenticated request
+ *   with auth required answers `401`.
+ *
+ * Factored out so both the standalone box server (`server.ts`) and the hub
+ * (`src/hub/hub-server.ts`) get identical behavior from one place — the hub
+ * hosts login for the whole fleet, and reusing this exact function is what keeps
  * that from becoming a second, drifting copy of the OAuth flow.
  */
 export async function registerAuthSurface(server: FastifyInstance, options: AuthRoutesOptions): Promise<void> {
-  if (isAuthEnabled()) {
+  if (process.env.GOOGLE_OAUTH_CLIENT_ID) {
     await server.register(registerAuthRoutes, options);
-  } else {
-    // Auth disabled (no GOOGLE_OAUTH_CLIENT_ID — e.g. local dev): answer the
-    // client's /auth/me probe with `200 null` instead of letting it 404 and
-    // spam the browser console. There's no session, so there's no user.
-    server.get("/auth/me", async (_request, reply) => {
-      return reply.type("application/json").send("null");
-    });
   }
+  registerAuthMe(server, options);
+}
+
+/**
+ * `GET /auth/me` — always registered. With a session, returns the user and the
+ * boxes they can access (unchanged). In open mode (the
+ * `CB_ALLOW_UNAUTHENTICATED` opt-out), returns `{ "open": true }` so the SPA can
+ * surface the persistent open-mode banner instead of a bogus signed-out state.
+ * Otherwise (auth required, no session) returns `401`.
+ */
+function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): void {
+  server.get("/auth/me", async (request, reply) => {
+    const user = getSessionUser(request);
+    if (user) {
+      const ownerEmail = getOwnerEmail();
+      const accessibleBoxes: string[] = [];
+      for (const box of options.boxes) {
+        if (await canAccessBox({ boxRoot: box.boxRoot, email: user.email, ownerEmail })) {
+          accessibleBoxes.push(box.slug);
+        }
+      }
+      return {
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        isOwner: user.email === ownerEmail,
+        boxes: accessibleBoxes,
+      };
+    }
+    if (!authRequired()) {
+      return reply.type("application/json").send(JSON.stringify({ open: true }));
+    }
+    return reply.status(401).send({ error: "Not authenticated" });
+  });
 }
 
 export async function registerAuthRoutes(
@@ -169,29 +206,5 @@ export async function registerAuthRoutes(
     return reply
       .clearCookie(COOKIE_NAME, { path: "/" })
       .redirect("/");
-  });
-
-  server.get("/auth/me", async (request, reply) => {
-    const user = getSessionUser(request);
-    if (!user) {
-      return reply.status(401).send({ error: "Not authenticated" });
-    }
-
-    // Determine which boxes this user can access
-    const ownerEmail = getOwnerEmail();
-    const accessibleBoxes: string[] = [];
-    for (const box of options.boxes) {
-      if (await canAccessBox({ boxRoot: box.boxRoot, email: user.email, ownerEmail })) {
-        accessibleBoxes.push(box.slug);
-      }
-    }
-
-    return {
-      email: user.email,
-      name: user.name,
-      picture: user.picture,
-      isOwner: user.email === ownerEmail,
-      boxes: accessibleBoxes,
-    };
   });
 }
