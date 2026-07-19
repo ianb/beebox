@@ -1,7 +1,8 @@
 import { AgentBrowserError, run, runPassthrough } from "agent-browser-typed";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
-import { BrowseConfigError, detectWorktreeContext, rewriteOpenUrl } from "./worktree.js";
+import { authHeaderFor, BrowseConfigError, detectWorktreeContext, rewriteOpenUrl } from "./worktree.js";
+import type { WorktreeContext } from "./worktree.js";
 
 // JS expression evaluated in the page. The callback-box frontend exposes
 // `<body data-cb-loading="true|false">` driven by React Query's
@@ -44,7 +45,7 @@ async function main(): Promise<number> {
     const rest = args.slice(1);
     const target = rest[0];
     const passArgs = target !== undefined
-      ? ["open", rewriteOpenUrl(target, ctx), ...rest.slice(1)]
+      ? buildOpenArgs(rewriteOpenUrl(target, ctx), { rest: rest.slice(1), ctx })
       : ["open"];
     const code = await runPassthrough(passArgs);
     if (code === 0 && !skipWait && WAIT_AFTER.has(sub)) await waitForReady();
@@ -62,6 +63,20 @@ async function main(): Promise<number> {
   }
 
   return runPassthrough(args);
+}
+
+// Auto-attaches the box's agent-token bearer when `url` is this worktree's
+// own origin (see worktree.ts `authHeaderFor`), using agent-browser's
+// native origin-scoped `open <url> --headers <json>` (the header is only
+// ever sent to that origin, never to a target the same session later
+// navigates to). A caller-supplied `--headers` wins outright — we don't
+// merge into it, since we can't know it's safe to layer our bearer onto
+// whatever origin the caller already scoped it to.
+function buildOpenArgs(url: string, { rest, ctx }: { rest: readonly string[]; ctx: WorktreeContext }): string[] {
+  if (rest.includes("--headers")) return ["open", url, ...rest];
+  const authHeader = authHeaderFor(url, ctx);
+  if (authHeader === null) return ["open", url, ...rest];
+  return ["open", url, "--headers", JSON.stringify(authHeader), ...rest];
 }
 
 function parseScreenshotArgs(args: readonly string[]): ScreenshotInvocation {
