@@ -5,42 +5,57 @@
  * The connector never talks to R2 directly; it goes through this narrow
  * interface so the pull logic is fully unit-testable against
  * {@link createFakePublishStore} with no network. The real implementation
- * ({@link createR2PublishStore}) signs S3-compatible requests to Cloudflare R2
- * with `aws4fetch`.
+ * ({@link createR2PublishStore}) calls Cloudflare's REST API
+ * (`api.cloudflare.com/client/v4/accounts/<id>/r2/buckets/<bucket>/objects/...`)
+ * with a single bearer API token — no S3-style request signing.
  *
  * ⚠️ UNVERIFIED: the real R2 adapter cannot be exercised without live Cloudflare
  * credentials, so it is NOT covered by any doctest. The connector *logic* is
  * fully tested through the fake; the adapter is the thin, best-effort seam.
- * Treat its request shaping / XML parsing as unproven until a manual
+ * Treat its request shaping / error mapping as unproven until a manual
  * end-to-end run against a real bucket (the plan's step-7 verification).
  *
  * Credentials come from machine-level env (NOT the box repo — same posture as
  * the Google OAuth creds, plan Track E):
- *   - `CLOUDFLARE_R2_ENDPOINT`          e.g. https://<accountid>.r2.cloudflarestorage.com
- *   - `CLOUDFLARE_R2_BUCKET`            the publications bucket name
- *   - `CLOUDFLARE_R2_ACCESS_KEY_ID`     R2 access key id
- *   - `CLOUDFLARE_R2_SECRET_ACCESS_KEY` R2 secret access key
+ *   - `CLOUDFLARE_API_TOKEN`   scoped API token (Workers R2 Storage: Edit)
+ *   - `CLOUDFLARE_ACCOUNT_ID`  Cloudflare account id
+ *   - `CLOUDFLARE_R2_BUCKET`   the publications bucket name
  * When any is absent the connector treats publishing as unconfigured and its
  * sync is a silent no-op.
  */
 
-import { AwsClient } from "aws4fetch";
+import { z } from "zod";
 
 /** R2 key prefixes the connector pulls from (plan Track A/F key layout). */
 export const SUBMISSIONS_PREFIX = "submissions/";
 export const ACCESS_LOG_PREFIX = "access-log/";
 
-/** An R2 request (list/get/delete) returned a non-success HTTP status. */
+/** One entry of a Cloudflare API JSON error body's `errors` array. */
+export interface CloudflareApiErrorDetail {
+  code: number;
+  message: string;
+}
+
+/** An R2 request (list/get/put/delete) returned a non-success HTTP status. */
 export class R2RequestError extends Error {
   readonly op: string;
   readonly key: string;
   readonly status: number;
-  constructor(args: { op: string; key: string; status: number; statusText: string }) {
-    super(`R2 ${args.op} failed for '${args.key}': ${args.status} ${args.statusText}`);
+  readonly cfErrors: CloudflareApiErrorDetail[];
+  constructor(args: {
+    op: string;
+    key: string;
+    status: number;
+    statusText: string;
+    cfErrors?: CloudflareApiErrorDetail[] | undefined;
+  }) {
+    const detail = args.cfErrors?.length ? `: ${args.cfErrors.map((e) => `[${e.code}] ${e.message}`).join(", ")}` : "";
+    super(`R2 ${args.op} failed for '${args.key}': ${args.status} ${args.statusText}${detail}`);
     this.name = "R2RequestError";
     this.op = args.op;
     this.key = args.key;
     this.status = args.status;
+    this.cfErrors = args.cfErrors ?? [];
   }
 }
 
@@ -85,10 +100,9 @@ export interface PublishRemoteStore {
 }
 
 export interface R2PublishStoreConfig {
-  endpoint: string;
+  accountId: string;
   bucket: string;
-  accessKeyId: string;
-  secretAccessKey: string;
+  apiToken: string;
 }
 
 /**
@@ -97,66 +111,81 @@ export interface R2PublishStoreConfig {
  */
 export function r2ConfigFromEnv(env?: NodeJS.ProcessEnv): R2PublishStoreConfig | null {
   const source = env ?? process.env;
-  const endpoint = source["CLOUDFLARE_R2_ENDPOINT"];
+  const apiToken = source["CLOUDFLARE_API_TOKEN"];
+  const accountId = source["CLOUDFLARE_ACCOUNT_ID"];
   const bucket = source["CLOUDFLARE_R2_BUCKET"];
-  const accessKeyId = source["CLOUDFLARE_R2_ACCESS_KEY_ID"];
-  const secretAccessKey = source["CLOUDFLARE_R2_SECRET_ACCESS_KEY"];
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
-  return { endpoint, bucket, accessKeyId, secretAccessKey };
+  if (!apiToken || !accountId || !bucket) return null;
+  return { accountId, bucket, apiToken };
 }
 
-/** Extract `<Key>…</Key>` values from a ListObjectsV2 XML body. */
-function parseListedKeys(xml: string): string[] {
-  const keys: string[] = [];
-  const re = /<Key>([^<]+)<\/Key>/g;
-  for (let m = re.exec(xml); m !== null; m = re.exec(xml)) {
-    const raw = m[1];
-    if (raw !== undefined) keys.push(decodeXmlEntities(raw));
+/** The subset of `fetch` the real adapter calls — injectable so a unit test can exercise URL/error mapping without a network. */
+export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
+/** Zod shape of a Cloudflare API JSON error body's `errors` array — the untrusted-response parse boundary. */
+const cloudflareApiErrorSchema = z.object({ code: z.number(), message: z.string() });
+
+/** Zod shape of a Cloudflare API JSON response envelope (list) — the untrusted-response parse boundary. */
+const cloudflareListResponseSchema = z.object({
+  success: z.boolean(),
+  errors: z.array(cloudflareApiErrorSchema).optional(),
+  result: z.array(z.object({ key: z.string() })).optional(),
+  result_info: z
+    .object({
+      cursor: z.string().optional(),
+      is_truncated: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+/** Best-effort extraction of a Cloudflare JSON error body's `errors` array (absent for non-JSON or unexpected bodies). */
+async function tryReadCfErrors(res: Response): Promise<CloudflareApiErrorDetail[] | undefined> {
+  try {
+    const body: unknown = await res.clone().json();
+    const parsed = z.object({ errors: z.array(cloudflareApiErrorSchema).optional() }).safeParse(body);
+    return parsed.success ? parsed.data.errors : undefined;
+  } catch (_e) {
+    // Non-JSON error body (e.g. a plain-text gateway error) — no CF detail available.
+    return undefined;
   }
-  return keys;
 }
 
-/** Minimal XML entity decode for the handful of chars S3 escapes in keys. */
-function decodeXmlEntities(value: string): string {
-  return value
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&apos;", "'");
+/** Percent-encode a key for the request path, preserving `/` separators. */
+function encodeR2Key(key: string): string {
+  return key.split("/").map(encodeURIComponent).join("/");
 }
 
 /**
- * ⚠️ UNVERIFIED (no live-CF test). Real R2 adapter over the S3-compatible API,
- * path-style addressing (`<endpoint>/<bucket>/<key>`), signed by `aws4fetch`
- * with `region: "auto"`, `service: "s3"`.
+ * ⚠️ UNVERIFIED (no live-CF test). Real R2 adapter over Cloudflare's REST API
+ * (`api.cloudflare.com/client/v4/accounts/<id>/r2/buckets/<bucket>/objects/...`),
+ * authenticated with a single bearer API token (Workers R2 Storage: Edit) — no
+ * S3-style request signing.
  */
-export function createR2PublishStore(config: R2PublishStoreConfig): PublishRemoteStore {
-  const client = new AwsClient({
-    accessKeyId: config.accessKeyId,
-    secretAccessKey: config.secretAccessKey,
-    region: "auto",
-    service: "s3",
-  });
-  const base = `${config.endpoint.replace(/\/$/, "")}/${config.bucket}`;
+export function createR2PublishStore(config: R2PublishStoreConfig, deps?: { fetch?: FetchLike | undefined }): PublishRemoteStore {
+  const doFetch = deps?.fetch ?? fetch;
+  const base = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/r2/buckets/${config.bucket}`;
+  const authHeaders: Record<string, string> = { authorization: `Bearer ${config.apiToken}` };
 
   async function listPrefix(prefix: string): Promise<string[]> {
     const keys: string[] = [];
-    let continuationToken: string | undefined;
+    let cursor: string | undefined;
     do {
-      const url = new URL(base);
-      url.searchParams.set("list-type", "2");
+      const url = new URL(`${base}/objects`);
       url.searchParams.set("prefix", prefix);
-      if (continuationToken !== undefined) url.searchParams.set("continuation-token", continuationToken);
-      const res = await client.fetch(url.toString(), { method: "GET" });
-      if (!res.ok) throw new R2RequestError({ op: "list", key: prefix, status: res.status, statusText: res.statusText });
-      const xml = await res.text();
-      keys.push(...parseListedKeys(xml));
-      const truncated = /<IsTruncated>true<\/IsTruncated>/.test(xml);
-      const tokenMatch = /<NextContinuationToken>([^<]+)<\/NextContinuationToken>/.exec(xml);
-      continuationToken = truncated && tokenMatch?.[1] !== undefined ? decodeXmlEntities(tokenMatch[1]) : undefined;
-    } while (continuationToken !== undefined);
-    return keys;
+      url.searchParams.set("per_page", "1000");
+      if (cursor !== undefined) url.searchParams.set("cursor", cursor);
+      const res = await doFetch(url.toString(), { method: "GET", headers: authHeaders });
+      if (!res.ok) {
+        throw new R2RequestError({ op: "list", key: prefix, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
+      }
+      const parsed = cloudflareListResponseSchema.safeParse(await res.json());
+      if (!parsed.success) {
+        throw new R2RequestError({ op: "list", key: prefix, status: res.status, statusText: `malformed response body: ${parsed.error.message}` });
+      }
+      const body = parsed.data;
+      for (const obj of body.result ?? []) keys.push(obj.key);
+      cursor = body.result_info?.is_truncated ? body.result_info.cursor : undefined;
+    } while (cursor !== undefined);
+    return keys.toSorted();
   }
 
   return {
@@ -170,29 +199,29 @@ export function createR2PublishStore(config: R2PublishStoreConfig): PublishRemot
       return listPrefix(prefix);
     },
     async get(key: string): Promise<Uint8Array> {
-      const res = await client.fetch(`${base}/${encodeR2Key(key)}`, { method: "GET" });
-      if (!res.ok) throw new R2RequestError({ op: "get", key, status: res.status, statusText: res.statusText });
+      const res = await doFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "GET", headers: authHeaders });
+      if (res.status === 404) throw new RemoteObjectNotFoundError(key);
+      if (!res.ok) {
+        throw new R2RequestError({ op: "get", key, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
+      }
       return new Uint8Array(await res.arrayBuffer());
     },
     async put(key: string, opts: PublishPutOptions): Promise<void> {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = { ...authHeaders };
       if (opts.contentType !== undefined) headers["content-type"] = opts.contentType;
-      const res = await client.fetch(`${base}/${encodeR2Key(key)}`, { method: "PUT", body: opts.body, headers });
-      if (!res.ok) throw new R2RequestError({ op: "put", key, status: res.status, statusText: res.statusText });
+      const res = await doFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "PUT", body: opts.body, headers });
+      if (!res.ok) {
+        throw new R2RequestError({ op: "put", key, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
+      }
     },
     async delete(key: string): Promise<void> {
-      const res = await client.fetch(`${base}/${encodeR2Key(key)}`, { method: "DELETE" });
-      // 204 (deleted) and 404 (already gone) are both success from our view.
+      const res = await doFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "DELETE", headers: authHeaders });
+      // 404 (already gone) is success from our view — delete is idempotent.
       if (!res.ok && res.status !== 404) {
-        throw new R2RequestError({ op: "delete", key, status: res.status, statusText: res.statusText });
+        throw new R2RequestError({ op: "delete", key, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
       }
     },
   };
-}
-
-/** Percent-encode a key for the request path, preserving `/` separators. */
-function encodeR2Key(key: string): string {
-  return key.split("/").map(encodeURIComponent).join("/");
 }
 
 // ---------------------------------------------------------------------------

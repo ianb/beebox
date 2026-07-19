@@ -141,9 +141,6 @@ importers:
       ansi-to-html:
         specifier: ^0.7.2
         version: 0.7.2
-      aws4fetch:
-        specifier: ^1.0.20
-        version: 1.0.20
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.10.0
@@ -3826,9 +3823,6 @@ packages:
 
   avvio@9.2.0:
     resolution: {integrity: sha512-2t/sy01ArdHHE0vRH5Hsay+RtCZt3dLPji7W7/MMOCEgze5b7SNDC4j5H6FnVgPkI1MTNFGzHdHrVXDDl7QSSQ==}
-
-  aws4fetch@1.0.20:
-    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   axe-core@4.11.4:
     resolution: {integrity: sha512-KunSNx+TVpkAw/6ULfhnx+HWRecjqZGTOyquAoWHYLRSdK1tB5Ihce1ZW+UY3fj33bYAFWPu7W/GRSmmrCGuxA==}
@@ -11529,8 +11523,6 @@ snapshots:
     dependencies:
       '@fastify/error': 4.2.0
       fastq: 1.20.1
-
-  aws4fetch@1.0.20: {}
 
   axe-core@4.11.4: {}
 
