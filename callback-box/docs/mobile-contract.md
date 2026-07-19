@@ -466,10 +466,10 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   that a `Bearer` header or `?mobileToken=` was *present*, never valid, so any `Bearer x` bypassed
   the hub auth wall and cold-started the box. Replaced by `hasMobileAuth`, which verifies against
   the request's slug — affordable because the cookie path is pure HMAC. See
-  `docs/plans/mobile-token-handshake.md`.
+  `docs/implemented-plans/mobile-token-handshake.md`.
 - **S2 — durable token in `?mobileToken=` URL (CLOSED 2026-07).** The carrier is gone: the token
   is header-only and the `cb_mobile` cookie carries what the browser sends on its own. All three
-  copies of `mobileTokenFromUrl` are deleted. See `docs/plans/mobile-token-handshake.md`.
+  copies of `mobileTokenFromUrl` are deleted. See `docs/implemented-plans/mobile-token-handshake.md`.
 - **S3 — unlocked device-store RMW + non-atomic write (OPEN).** `verifyMobileToken` does
   read→mutate-`lastUsedAt`→write with no `withCardLock`/file-lock, racing `revokeMobileDevice`;
   `writeDeviceStore` is a bare `writeFileSync` (crash mid-write corrupts the store).

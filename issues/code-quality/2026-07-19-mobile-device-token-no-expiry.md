@@ -9,7 +9,7 @@ discovered-in: worktree-mobile-token-handshake — deferred from the cb_mobile c
 `expiresAt`. A paired device's durable token is valid forever unless a human notices and
 revokes it.
 
-The cb_mobile cookie work (`../../callback-box/docs/plans/mobile-token-handshake.md`) removed
+The cb_mobile cookie work (`../../callback-box/docs/implemented-plans/mobile-token-handshake.md`) removed
 the urgent half of this: the token no longer travels in URLs, so it no longer lands in access
 logs, `Referer` headers, or WebKit history, and the *session* now expires hourly. What remains
 is that the durable token itself — held in the iOS app and in web localStorage — never ages

@@ -25,7 +25,7 @@ shared between them:
 - Cookie `Path` scoping doesn't help. It bounds which cookie the browser *offers*, not which
   requests a script may *make*. `cb_session` isn't path-scoped at all.
 
-The mobile-token work (`docs/plans/mobile-token-handshake.md`) ran into this and deliberately
+The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
 did not try to fix it — a per-box signing secret means a shadowing or stolen cookie can't
 *authenticate* as another box, which closes escalation but not ambient same-origin access. It
 did fix the narrow cross-box DoS this enables (duplicate-cookie shadowing; see

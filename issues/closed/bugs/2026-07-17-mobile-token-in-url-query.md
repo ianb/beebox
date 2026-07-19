@@ -7,7 +7,7 @@ resolution: implemented
 ---
 
 **Closed 2026-07-19** — implemented in `worktree-mobile-token-handshake`, designed in
-`../../../callback-box/docs/plans/mobile-token-handshake.md`. The query-param carrier is gone: the
+`../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 durable token is header-only, and a short-lived per-box signed cookie (`cb_mobile`) carries
 navigations and WebSocket upgrades. All three `mobileTokenFromUrl` copies are deleted. The
 hub's presence-only mobile gate (risk S1) was replaced with real verification in the same
