@@ -59,6 +59,23 @@ JSON.stringify(resolveRequestIdentity(reqWithCookie(cookie1)))
 => {"email":"owner@example.com","name":"Owner","source":"cookie"}
 ```
 
+## A cookie with a malformed signature returns null instead of throwing (FIX 7)
+
+`crypto.timingSafeEqual` THROWS on unequal-length buffers, so `verifySession`
+must length-check the decoded signature before comparing — otherwise a cookie
+like `cb_session=e30.x` (valid base64url payload, 1-char signature) becomes a
+logged 500 instead of a clean "no session."
+
+```ts continue
+// `e30` is base64url for `{}`; `x` is a 1-char signature (32 bytes expected).
+JSON.stringify(verifySession("e30.x"))
+=> null
+
+// A signature of the right hex form but wrong length is also just invalid.
+JSON.stringify(verifySession("e30.abcd"))
+=> null
+```
+
 ## Changing the password bumps `gen`, so the old cookie is unauthenticated
 
 ```ts continue

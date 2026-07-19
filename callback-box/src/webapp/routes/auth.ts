@@ -17,10 +17,10 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { IncomingMessage } from "node:http";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
-import { OAuth2Client } from "google-auth-library";
 import { isRecord } from "../../lib/is-record.js";
 import { invariant } from "../../lib/invariant.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -35,29 +35,16 @@ import {
   SESSION_MAX_AGE_MS,
   type SessionUser,
 } from "../auth.js";
-import { getPublicUrl } from "../../lib/public-url.js";
 import { canAccessBox } from "../box-access.js";
 import type { BoxSpec } from "../server.js";
 import { getGoogleClientCreds } from "../../connectors/google-auth.js";
+import { registerAuthRoutes } from "./auth-google.js";
 import { canonicalizeEmail, createFirstUser, listUsers, verifyPassword } from "../local-users.js";
 import { AuthStoreUnavailableError, OwnerEmailMismatchError, UserExistsError } from "../local-users-errors.js";
 import { CONCURRENCY_RETRY_MS, loginThrottle } from "../login-throttle.js";
 import { checkSetupToken, clearSetupToken } from "../setup-token.js";
 
-/** Thrown when auth is enabled (GOOGLE_OAUTH_CLIENT_ID set) but the paired
- * GOOGLE_OAUTH_CLIENT_SECRET is missing — a misconfiguration, not a request
- * failure, so it fails the server at route-registration time. */
-export class MissingOAuthClientSecretError extends Error {
-  constructor() {
-    super(
-      "GOOGLE_OAUTH_CLIENT_ID is set but GOOGLE_OAUTH_CLIENT_SECRET is missing — " +
-        "both must be configured together to enable Google OAuth.",
-    );
-    this.name = "MissingOAuthClientSecretError";
-  }
-}
-
-interface AuthRoutesOptions {
+export interface AuthRoutesOptions {
   boxes: BoxSpec[];
   /**
    * Fallback base URL for `getPublicUrl()` when neither `CB_PUBLIC_URL` nor
@@ -108,13 +95,69 @@ export async function registerAuthSurface(server: FastifyInstance, options: Auth
   registerAuthMe(server, options);
 }
 
-const loginBodySchema = z.object({ email: z.string(), password: z.string() });
+// Bounded inputs (FIX 4 — DoS): email at the RFC-max 254, password 1024, name
+// 200, token 256. Caps the parsed fields on top of the raw-body cap below.
+const loginBodySchema = z.object({ email: z.string().max(254), password: z.string().max(1024) });
 const setupBodySchema = z.object({
-  email: z.string(),
-  name: z.string(),
-  password: z.string(),
-  token: z.string(),
+  email: z.string().max(254),
+  name: z.string().max(200),
+  password: z.string().max(1024),
+  token: z.string().max(256),
 });
+
+/** Cap on the raw request body these auth routes will read — they carry tiny
+ *  JSON, so anything larger is abuse. Also bounds the hub raw-body read below. */
+const MAX_AUTH_BODY_BYTES = 16 * 1024;
+
+/** Truncate a user-supplied string before logging so a failed/throttled attempt
+ *  can't amplify log volume with a giant "email" (FIX 4). */
+function forLog(value: string): string {
+  return value.length > 128 ? `${value.slice(0, 128)}…` : value;
+}
+
+/**
+ * Read the JSON body for an auth POST, working in BOTH server modes (FIX 2):
+ *
+ * - **Standalone**: Fastify's JSON content-type parser already populated
+ *   `request.body`, so it's returned as-is (the path stays byte-identical).
+ * - **Behind `cb hub`**: the hub installs a wildcard content-type parser that
+ *   `done(null)`s WITHOUT reading the stream (so it can proxy raw bodies to
+ *   children), leaving `request.body` undefined for the hub's OWN routes. Here
+ *   the still-readable `request.raw` stream is drained (bounded by
+ *   `MAX_AUTH_BODY_BYTES`) and JSON-parsed.
+ *
+ * Throws (oversize or invalid JSON) — the caller answers 400.
+ */
+async function readJsonBody(request: FastifyRequest): Promise<unknown> {
+  if (isRecord(request.body)) return request.body;
+  const raw = await readRawBody(request.raw);
+  return JSON.parse(raw);
+}
+
+class AuthBodyTooLargeError extends Error {
+  constructor() {
+    super(`Auth request body exceeds ${MAX_AUTH_BODY_BYTES} bytes.`);
+    this.name = "AuthBodyTooLargeError";
+  }
+}
+
+function readRawBody(raw: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    raw.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MAX_AUTH_BODY_BYTES) {
+        raw.destroy();
+        reject(new AuthBodyTooLargeError());
+        return;
+      }
+      chunks.push(chunk);
+    });
+    raw.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+    raw.on("error", reject);
+  });
+}
 
 /** Serve the SPA (its frontend router owns the login/setup screens). Bundles are
  *  public pre-auth by design — the client must load before a user can
@@ -176,18 +219,26 @@ function registerPasswordRoutes(server: FastifyInstance): void {
   });
 
   server.post("/auth/login", async (request, reply) => {
-    const parsed = loginBodySchema.safeParse(request.body);
+    let body: unknown;
+    try {
+      body = await readJsonBody(request);
+    } catch (_e) {
+      /* ignore: oversize/unparseable auth body is untrusted input — answer 400
+         without logging, so a malformed request can't amplify logs (FIX 2/4). */
+      return reply.status(400).send({ error: "Invalid request" });
+    }
+    const parsed = loginBodySchema.safeParse(body);
     if (!parsed.success) return reply.status(400).send({ error: "Invalid request" });
     const email = canonicalizeEmail(parsed.data.email);
     const ip = request.ip;
 
     const decision = loginThrottle.check({ ip, email, now: Date.now() });
     if (!decision.allowed) {
-      console.warn(`[auth] throttled login for ${JSON.stringify(email)} from ${ip}`);
+      console.warn(`[auth] throttled login for ${JSON.stringify(forLog(email))} from ${ip}`);
       return reply.status(429).send({ error: "Too many attempts, please wait", retryAfterMs: decision.retryAfterMs });
     }
     if (!loginThrottle.acquireHashSlot()) {
-      console.warn(`[auth] login verification capacity reached; rejecting ${JSON.stringify(email)} from ${ip}`);
+      console.warn(`[auth] login verification capacity reached; rejecting ${JSON.stringify(forLog(email))} from ${ip}`);
       return reply.status(429).send({ error: "Server busy, please retry", retryAfterMs: CONCURRENCY_RETRY_MS });
     }
 
@@ -206,7 +257,7 @@ function registerPasswordRoutes(server: FastifyInstance): void {
 
     if (!user) {
       loginThrottle.recordFailure({ ip, email, now: Date.now() });
-      console.warn(`[auth] failed login for ${JSON.stringify(email)} from ${ip}`);
+      console.warn(`[auth] failed login for ${JSON.stringify(forLog(email))} from ${ip}`);
       // Unknown user and wrong password answer identically — no user enumeration.
       return reply.status(401).send({ error: "Invalid credentials" });
     }
@@ -216,7 +267,15 @@ function registerPasswordRoutes(server: FastifyInstance): void {
   });
 
   server.post("/auth/setup", async (request, reply) => {
-    const parsed = setupBodySchema.safeParse(request.body);
+    let body: unknown;
+    try {
+      body = await readJsonBody(request);
+    } catch (_e) {
+      /* ignore: oversize/unparseable auth body is untrusted input — answer 400
+         without logging, so a malformed request can't amplify logs (FIX 2/4). */
+      return reply.status(400).send({ error: "Invalid request" });
+    }
+    const parsed = setupBodySchema.safeParse(body);
     if (!parsed.success) return reply.status(400).send({ error: "Invalid request" });
 
     let existingUsers: number;
@@ -242,7 +301,7 @@ function registerPasswordRoutes(server: FastifyInstance): void {
 
     const decision = loginThrottle.check({ ip, email, now });
     if (!decision.allowed) {
-      console.warn(`[auth] throttled setup for ${JSON.stringify(email)} from ${ip}`);
+      console.warn(`[auth] throttled setup for ${JSON.stringify(forLog(email))} from ${ip}`);
       return reply.status(429).send({ error: "Too many attempts, please wait", retryAfterMs: decision.retryAfterMs });
     }
 
@@ -260,6 +319,13 @@ function registerPasswordRoutes(server: FastifyInstance): void {
       });
     }
 
+    // Setup hashes a password too (createFirstUser → scrypt), so it must take the
+    // SAME global concurrency slot login does (FIX 6) — otherwise concurrent
+    // setup POSTs bypass the ~128MB-per-hash cap and can OOM the process.
+    if (!loginThrottle.acquireHashSlot()) {
+      console.warn(`[auth] setup verification capacity reached; rejecting ${JSON.stringify(forLog(email))} from ${ip}`);
+      return reply.status(429).send({ error: "Server busy, please retry", retryAfterMs: CONCURRENCY_RETRY_MS });
+    }
     try {
       const owner = await createFirstUser({ email, name: parsed.data.name, password: parsed.data.password });
       clearSetupToken();
@@ -271,6 +337,8 @@ function registerPasswordRoutes(server: FastifyInstance): void {
       if (e instanceof UserExistsError) return reply.status(409).send({ error: "An account already exists" });
       if (e instanceof OwnerEmailMismatchError) return reply.status(400).send({ error: e.message });
       throw e;
+    } finally {
+      loginThrottle.releaseHashSlot();
     }
   });
 }
@@ -317,98 +385,4 @@ function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): vo
     }
     return reply.status(401).send({ error: "Not authenticated" });
   });
-}
-
-export async function registerAuthRoutes(
-  server: FastifyInstance,
-  options: AuthRoutesOptions,
-) {
-  const creds = getGoogleClientCreds();
-  if (!creds) throw new MissingOAuthClientSecretError();
-  const { clientId, clientSecret } = creds;
-  const publicUrl = getPublicUrl(options.publicUrlFallback ?? "http://localhost:3210");
-  const redirectUri = `${publicUrl}/auth/callback`;
-
-  const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
-
-  server.get<{ Querystring: { returnTo?: string } }>(
-    "/auth/google",
-    async (request, reply) => {
-      const returnTo = request.query.returnTo || "/";
-      const authorizeUrl = oauth2Client.generateAuthUrl({
-        scope: ["openid", "email", "profile"],
-        state: returnTo,
-        prompt: "select_account",
-      });
-      return reply.redirect(authorizeUrl);
-    },
-  );
-
-  server.get<{ Querystring: { code?: string; state?: string; error?: string } }>(
-    "/auth/callback",
-    async (request, reply) => {
-      if (request.query.error) {
-        return reply.status(400).send({ error: `OAuth error: ${request.query.error}` });
-      }
-
-      const code = request.query.code;
-      if (!code) {
-        return reply.status(400).send({ error: "Missing authorization code" });
-      }
-
-      let tokens;
-      try {
-        const result = await oauth2Client.getToken(code);
-        tokens = result.tokens;
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        const errResponse = isRecord(err) ? err["response"] : undefined;
-        const response = isRecord(errResponse) ? errResponse["data"] : undefined;
-        console.error("[auth] Token exchange failed:", message);
-        if (response) console.error("[auth] Google response:", JSON.stringify(response));
-        console.error("[auth] Redirect URI used:", redirectUri);
-        console.error("[auth] Client ID:", clientId.slice(0, 20) + "...");
-        return reply.status(500).send({ error: `Token exchange failed: ${message}` });
-      }
-
-      const idToken = tokens.id_token;
-      if (!idToken) {
-        return reply.status(400).send({ error: "No ID token received" });
-      }
-
-      let email: string;
-      let displayName: string;
-      let picture: string | undefined;
-      try {
-        const ticket = await oauth2Client.verifyIdToken({
-          idToken,
-          audience: clientId,
-        });
-        const payload = ticket.getPayload();
-        if (!payload?.email) {
-          return reply.status(400).send({ error: "No email in token" });
-        }
-        email = payload.email;
-        displayName = payload.name || email;
-        picture = payload.picture;
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error("[auth] ID token verification failed:", message);
-        return reply.status(500).send({ error: `Token verification failed: ${message}` });
-      }
-
-      const sessionValue = signSession({ email, name: displayName, ...(picture ? { picture } : {}) });
-      const returnTo = request.query.state || "/";
-
-      return reply
-        .setCookie(COOKIE_NAME, sessionValue, {
-          path: "/",
-          httpOnly: true,
-          secure: publicUrl.startsWith("https"),
-          sameSite: "lax",
-          maxAge: SESSION_MAX_AGE_MS / 1000,
-        })
-        .redirect(returnTo);
-    },
-  );
 }

@@ -348,7 +348,15 @@ export function verifySession(cookie: string): SessionUser | null {
     .update(payload)
     .digest("hex");
 
-  if (!crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expectedSig, "hex"))) {
+  // `crypto.timingSafeEqual` THROWS on unequal-length buffers, so a malformed
+  // cookie like `cb_session=e30.x` (valid base64url payload, 1-char signature)
+  // would surface as a logged 500 instead of a clean "no session". Compare
+  // lengths first — an untrusted, wrong-length signature is simply invalid —
+  // then use the timing-safe compare only when the lengths match.
+  const sigBuf = Buffer.from(sig, "hex");
+  const expectedBuf = Buffer.from(expectedSig, "hex");
+  if (sigBuf.length !== expectedBuf.length) return null;
+  if (!crypto.timingSafeEqual(sigBuf, expectedBuf)) {
     return null;
   }
 

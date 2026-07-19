@@ -25,6 +25,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../lib/error-guards.js";
 import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { currentScryptParams, deriveKey, dummyVerify, hashPassword } from "./local-users-scrypt.js";
 import {
   AuthFileCorruptError,
   AuthFileLockError,
@@ -36,65 +37,6 @@ import {
   OwnerExistsError,
   UserExistsError,
 } from "./local-users-errors.js";
-
-// --- scrypt work factor -----------------------------------------------------
-
-const PROD_SCRYPT_N = 2 ** 17;
-const SCRYPT_R = 8;
-const SCRYPT_P = 1;
-const SCRYPT_SALT_BYTES = 16;
-const SCRYPT_KEY_BYTES = 32;
-
-interface ScryptCostParams {
-  N: number;
-  r: number;
-  p: number;
-}
-
-/**
- * Current scrypt cost parameters for new/rehashed passwords.
- *
- * Test-only seam (the `CB_TIME` precedent — principle #10): `CB_AUTH_SCRYPT_N`
- * lowers the work factor so the pure-function doctest stays fast. Inert unless
- * set — every real deployment leaves it unset and hashes at full strength — and
- * any invalid value falls back to the production factor (fail toward strong
- * hashing, never toward weak).
- */
-function currentScryptParams(): ScryptCostParams {
-  const override = process.env.CB_AUTH_SCRYPT_N;
-  if (override !== undefined) {
-    const n = Number(override);
-    if (Number.isInteger(n) && n >= 2 ** 10 && (n & (n - 1)) === 0) {
-      return { N: n, r: SCRYPT_R, p: SCRYPT_P };
-    }
-    console.warn(`[local-users] ignoring invalid CB_AUTH_SCRYPT_N=${override}; using production work factor`);
-  }
-  return { N: PROD_SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P };
-}
-
-/**
- * Node's default `maxmem` (32MB) is far below what N=2^17, r=8 needs
- * (128·N·r ≈ 128MB), so scrypt throws unless it's raised next to the params.
- */
-function scryptMaxmem(params: ScryptCostParams): number {
-  return 132 * params.N * params.r;
-}
-
-function deriveKey(opts: { password: string; salt: Buffer; params: ScryptCostParams }): Promise<Buffer> {
-  const { password, salt, params } = opts;
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(
-      password,
-      salt,
-      SCRYPT_KEY_BYTES,
-      { N: params.N, r: params.r, p: params.p, maxmem: scryptMaxmem(params) },
-      (err, key) => {
-        if (err) reject(err);
-        else resolve(key);
-      },
-    );
-  });
-}
 
 // --- schema -----------------------------------------------------------------
 
@@ -159,13 +101,6 @@ function nowIso(): string {
 
 function toPublic(record: UserRecord): LocalUser {
   return { email: record.email, name: record.name, role: record.role, gen: record.gen, created: record.created };
-}
-
-async function hashPassword(password: string): Promise<z.infer<typeof scryptRecordSchema>> {
-  const params = currentScryptParams();
-  const salt = crypto.randomBytes(SCRYPT_SALT_BYTES);
-  const key = await deriveKey({ password, salt, params });
-  return { N: params.N, r: params.r, p: params.p, salt: salt.toString("base64"), hash: key.toString("base64") };
 }
 
 // --- load / write -----------------------------------------------------------
@@ -351,9 +286,13 @@ export async function addUser(opts: {
 export async function verifyPassword(opts: { email: string; password: string }): Promise<LocalUser | null> {
   const email = canonicalizeEmail(opts.email);
   const file = loadAuthFile();
-  if (!file) return null;
-  const record = file.users.find((u) => u.email === email);
-  if (!record) return null;
+  const record = file?.users.find((u) => u.email === email);
+  if (!record) {
+    // No record: burn a comparable amount of time before the uniform null so an
+    // unknown email can't be distinguished from a known one by response timing.
+    await dummyVerify(opts.password);
+    return null;
+  }
 
   const stored = Buffer.from(record.scrypt.hash, "base64");
   let derived: Buffer;

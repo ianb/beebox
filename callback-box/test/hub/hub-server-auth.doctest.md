@@ -12,9 +12,14 @@ unauthenticated API/WS gets a bare 401, an authenticated cookie becomes an
 ```ts setup
 import http from "node:http";
 import net from "node:net";
+import * as os from "node:os";
+import * as path from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
 import { createHubServer } from "../../src/hub/hub-server.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
+import { createFirstUser, setPassword } from "../../src/webapp/local-users.js";
+import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../src/core/mobile/mobile-session.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -26,6 +31,13 @@ process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-hub-server-auth-doctest
 // registerAuthRoutes now fails loudly on an ID-without-secret half-config
 // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
 process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-hub-server-auth-doctest";
+
+// A per-test credential store (empty until the gen-revocation section creates an
+// owner) with a fast test-only scrypt work factor. Pointing CB_AUTH_FILE at a
+// tmp path also keeps every cookie check off any real ~/.cb-auth.json.
+const authDir = await mkdtemp(path.join(os.tmpdir(), "cb-hub-auth-"));
+process.env.CB_AUTH_FILE = path.join(authDir, "auth.json");
+process.env.CB_AUTH_SCRYPT_N = "1024";
 
 async function startFakeBox() {
   const sockets = [];
@@ -245,10 +257,43 @@ unauthedUpgrade.startsWith("HTTP/1.1 401")
 => true
 ```
 
+## `gen`-revocation applies at the hub (FIX 1): a password change kills the old cookie
+
+The hub verifies the cookie through the SAME `resolveRequestIdentity` a box uses,
+so a cookie minted before a password change (stale `gen`) is rejected at the hub —
+`decideHubAuth` no longer trusts an HMAC-valid-but-revoked cookie.
+
+```ts continue
+await createFirstUser({ email: "owner@example.com", name: "Owner", password: "pw-original" });
+resetLocalUserCache();
+
+// A cookie minted now carries the record's current gen (1) and proxies through.
+const genCookie = signSession({ email: "owner@example.com", name: "Owner" });
+const authedGen = await fetch(`${hubBase}/test1/browse/x`, { headers: { cookie: `${COOKIE_NAME}=${genCookie}` } });
+authedGen.status
+=> 200
+
+// Change the password → gen bumps to 2 → the old cookie is now revoked.
+await setPassword({ email: "owner@example.com", password: "pw-rotated" });
+resetLocalUserCache();
+const revoked = await fetch(`${hubBase}/test1/browse/x`, {
+  headers: { cookie: `${COOKIE_NAME}=${genCookie}` },
+  redirect: "manual",
+});
+revoked.status
+=> 302
+
+revoked.headers.get("location")
+=> /auth/login?returnTo=%2Ftest1%2Fbrowse%2Fx
+```
+
 ```ts cleanup
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 delete process.env.CB_SESSION_SECRET;
+delete process.env.CB_AUTH_FILE;
+delete process.env.CB_AUTH_SCRYPT_N;
+await rm(authDir, { recursive: true, force: true });
 await mobileBox.cleanup();
 for (const socket of hubSockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();

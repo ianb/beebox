@@ -70,6 +70,39 @@ throttle.check({ ip: "10.0.0.10", email: "fresh@example.com", now: t0 }).allowed
 => true
 ```
 
+## The per-email bucket is independent of the IP (a spoofed X-Forwarded-For doesn't reset the clock)
+
+`trustProxy` makes `request.ip` attacker-controllable, so an (ip,email)- or
+IP-only throttle is bypassable by rotating the forged IP. The per-email bucket
+throttles a targeted account regardless of source IP.
+
+```ts
+const throttle = new LoginThrottle();
+const email = "target@example.com";
+const t0 = 7_000_000;
+
+// Fail against the SAME email from three DIFFERENT (spoofed) IPs.
+throttle.recordFailure({ ip: "10.0.0.1", email, now: t0 });
+throttle.recordFailure({ ip: "10.0.0.2", email, now: t0 });
+throttle.recordFailure({ ip: "10.0.0.3", email, now: t0 });
+
+// A brand-new IP targeting that email is already throttled — the per-email
+// bucket escalated to 3 failures (→ 4s) regardless of source IP.
+JSON.stringify(throttle.check({ ip: "10.0.0.99", email, now: t0 }))
+=> {"allowed":false,"retryAfterMs":4000}
+
+// A different email from that fresh IP is untouched (neither its per-IP nor its
+// per-email bucket has any history).
+throttle.check({ ip: "10.0.0.99", email: "other@example.com", now: t0 }).allowed
+=> true
+
+// A success for the targeted email clears its per-email bucket too, so the real
+// user isn't locked out by an attacker's failures against their address.
+throttle.recordSuccess({ ip: "10.0.0.99", email });
+throttle.check({ ip: "10.0.0.5", email, now: t0 }).allowed
+=> true
+```
+
 ## The global scrypt-concurrency cap refuses the 3rd concurrent verification
 
 At most two verifications run at once; the excess caller is told to retry

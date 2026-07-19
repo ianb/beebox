@@ -15,7 +15,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { authRequired, getSessionUser, getOwnerEmail } from "../webapp/auth.js";
+import { authRequired, resolveRequestIdentity, getOwnerEmail } from "../webapp/auth.js";
 import { filterAccessibleBoxes } from "../webapp/box-access.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { invariant } from "../lib/invariant.js";
@@ -73,9 +73,20 @@ export function registerBoxPicker(
   { boxes, frontendDist }: { boxes: BoxSpec[]; frontendDist: string },
 ): void {
   server.get("/", async (request, reply) => {
-    const user = authRequired() ? getSessionUser(request) : null;
-    if (authRequired() && !user) {
-      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+    // Route through the SAME identity resolver the boxes use (FIX 1) so a
+    // stale-`gen` cookie doesn't authenticate and a corrupt store answers 503
+    // rather than a bogus login redirect. The hub process is not in hub mode, so
+    // the resolver takes its cookie path.
+    let email: string | null = null;
+    if (authRequired()) {
+      const identity = resolveRequestIdentity(request);
+      if (identity.source === "unavailable") {
+        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+      }
+      if (!identity.email) {
+        return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+      }
+      email = identity.email;
     }
     // Serve the SPA (its `/` route renders the styled box-selection tiles and
     // fetches the accessible-box list from /api/boxes). Fall back to the minimal
@@ -84,8 +95,8 @@ export function registerBoxPicker(
     if (fs.existsSync(indexHtml)) {
       return reply.type("text/html").send(fs.readFileSync(indexHtml, "utf-8"));
     }
-    const accessible = user
-      ? await filterAccessibleBoxes({ boxes, email: user.email, ownerEmail: getOwnerEmail() })
+    const accessible = email
+      ? await filterAccessibleBoxes({ boxes, email, ownerEmail: getOwnerEmail() })
       : boxes;
     return reply.type("text/html").send(renderPage(accessible));
   });

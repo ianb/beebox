@@ -9,7 +9,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { IncomingHttpHeaders } from "node:http";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { authRequired, isHubMode, getSessionEmail, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
+import { authRequired, isHubMode, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { transferEndpoint } from "../core/push-subscriptions.js";
 import { z } from "zod";
@@ -243,15 +243,20 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   });
 
   // Root-level box list endpoint (filtered by user access when auth required)
-  server.get("/api/boxes", async (request) => {
+  server.get("/api/boxes", async (request, reply) => {
     if (authRequired()) {
       const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
-      const email = getSessionEmail(request);
-      if (!email) {
+      // Through the shared resolver (FIX 1): a corrupt store answers 503, and a
+      // stale-`gen`/removed-user cookie resolves to no email → authRequired.
+      const identity = resolveRequestIdentity(request);
+      if (identity.source === "unavailable") {
+        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+      }
+      if (!identity.email) {
         return { boxes: [], authRequired: true };
       }
-      return { boxes: await listAccessibleBoxes(boxes, email) };
+      return { boxes: await listAccessibleBoxes(boxes, identity.email) };
     }
     return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
   });
