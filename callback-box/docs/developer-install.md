@@ -114,6 +114,19 @@ Open `http://localhost:3210/`. If you're also running this monorepo's
 personal dev router (port 3210/3211), pick different ports for one of
 the two to avoid a collision.
 
+### First-run account (auth is on, even in dev)
+
+A dev box is authenticated by default — the first time you open it you'll hit
+a login wall. Create your account once with `cb auth create-user` (or open the
+`First-run setup: …/auth/setup?token=…` URL the server prints to its console on
+first boot). The credential store is home-level (`~/.cb-auth.json`), so one
+account works across every worktree's dev server — you set it up once.
+
+If you genuinely need an open box (a throwaway/headless run), start the server
+with `CB_ALLOW_UNAUTHENTICATED=1` (loopback only; `=network` to serve open on a
+public interface). It warns loudly on every boot and shows a persistent banner
+— it's a deliberate opt-out, not a default.
+
 ## Troubleshooting
 
 Anything misbehaves — installs, missing binaries, auth, a stale
