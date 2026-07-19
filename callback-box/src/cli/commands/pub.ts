@@ -2,12 +2,10 @@
  * `cb pub` — the publication command family (Track E of
  * `docs/plans/publish-pages.md`).
  *
- * This is the CF-independent surface: `cb pub draft` renders a docs source into
- * a `box/publish/<pub-id>/` draft, runs the leak scan, prints a file-by-file
- * preview, and (on a clean or accepted scan) commits the draft to the box repo.
- * The Cloudflare-dependent subcommands (`setup`, `go`, `revoke`, `ls`,
- * `status`) attach to this same parent later; the parent is structured so they
- * slot in as siblings of `draft`.
+ * This module holds `draft` (render + leak scan + human-gated commit, no
+ * Cloudflare), `ls` (read-only), and the store-backed `revoke` / `go` (the
+ * human flip). The provisioning pair — `setup` and `status` — lives in
+ * `pub-setup.ts` and is attached to the same parent below.
  */
 
 import { Command } from "commander";
@@ -31,6 +29,7 @@ import {
   revokePublication,
 } from "../../publish/lifecycle.js";
 import { goPublication } from "../../publish/go.js";
+import { pubSetupCommand, pubStatusCommand } from "./pub-setup.js";
 
 /** Commander accumulator for repeatable options (e.g. `--accept-leak`). */
 function collect(val: string, acc: string[]): string[] {
@@ -109,7 +108,7 @@ const draftCommand = new Command("draft")
         if (result.acceptedLeaks.length > 0) {
           console.log(`  accepted leaks: ${result.acceptedLeaks.join(", ")}`);
         }
-        console.log("  committed to the box repo. Preview + flip live with `cb pub go` (not yet available).");
+        console.log("  committed to the box repo. Flip live with `cb pub go` (interactive).");
         return;
       }
 
@@ -248,12 +247,14 @@ const goCommand = new Command("go")
   });
 
 /**
- * The `cb pub` parent. Subcommands: `draft`, `ls`, `revoke`, `go` (here).
- * `setup`/`status` land with a live-Cloudflare session.
+ * The `cb pub` parent. Subcommands: `setup` + `status` (in `pub-setup.ts`),
+ * and `draft`, `ls`, `revoke`, `go` (here).
  */
 export const pubCommand = new Command("pub")
-  .description("Publish box content as external static pages (draft, list, go-live, revoke)")
+  .description("Publish box content as external static pages (setup, draft, list, go-live, revoke, status)")
+  .addCommand(pubSetupCommand)
   .addCommand(draftCommand)
   .addCommand(lsCommand)
   .addCommand(revokeCommand)
-  .addCommand(goCommand);
+  .addCommand(goCommand)
+  .addCommand(pubStatusCommand);

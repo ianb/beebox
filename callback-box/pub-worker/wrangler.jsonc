@@ -22,7 +22,11 @@
   // `https://myteam.cloudflareaccess.com`) and the Access application `aud`.
   "vars": {
     "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": ""
+    "ACCESS_AUD": "",
+    // Build-stamped at deploy by `cb pub setup` (`--var PUB_WORKER_VERSION:<hash>`)
+    // for the `cb pub status` drift probe; the committed placeholder stays empty
+    // so the version hash of the committed tree is stable.
+    "PUB_WORKER_VERSION": ""
   },
   // Old Worker *version* preview URLs are a leak surface (Prior art); setup
   // disables them. Content never ships in the Worker, so an old version leaks

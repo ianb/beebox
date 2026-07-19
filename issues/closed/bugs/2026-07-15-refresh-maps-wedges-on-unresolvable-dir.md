@@ -53,3 +53,31 @@ convergence path disagree.
 `asOf` (e.g. a doubled/migration-artifact subtree) → `cb tick --script
 refresh-maps --force` fails the `refresh` step at validate, and the state at
 `config/schedules/.state/refresh-maps.json` never reaches `success`.
+
+---
+
+## Closed 2026-07-19 — the stated mechanism was wrong; the underlying problem is fixed
+
+A synthetic repro built a box for each candidate mechanism and ran the real
+`precheck`/`finalize` against it. **Both converge.** A directory absent at a
+resolvable `asOf`, and an `asOf` commit that doesn't resolve at all, each end
+with `finalize` stamping `asOf = head` and the next run short-circuiting clean.
+The deadlock described above does not reproduce.
+
+Two links in the chain are wrong: `finalize` already stamped per-task, and
+`engine-step.ts` commits even when a step fails, so a failing step never
+prevented `asOf` from advancing.
+
+The real defect was different and not described here: `finalize` stamped any
+task whose MAP.md merely *existed*, which for an `update` task is always true.
+So an agent that got through half its brief silently marked the other half
+current, and an agent that ran out of turns before the finalize step in its
+prompt banked nothing at all.
+
+Fixed in `worktree-refresh-maps-convergence`: finalize now stamps only maps it
+can prove were rewritten, and runs as a run-phase shell so a dead agent's
+partial work is still banked. The unresolvable-`asOf` case is now surfaced as an
+explicit anomaly rather than silently inflating the brief. Design and evidence:
+[`callback-box/docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/plans/refresh-maps-convergence.md).
+
+Remaining follow-up: [refresh-maps max-turns throughput](../../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md).
