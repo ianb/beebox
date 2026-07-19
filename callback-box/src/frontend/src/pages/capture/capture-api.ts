@@ -69,6 +69,21 @@ export function clearResumeSessionId(): void {
 
 export type UploadState = "uploading" | "uploaded" | "failed";
 
+export interface ResumableCaptureResponse {
+  resumable: Array<{
+    id: string;
+    counts: { photos: number; files: number; audioSegments: number };
+    startedAt: string;
+  }>;
+}
+
+class ResumableCaptureListError extends Error {
+  constructor() {
+    super("List resumable capture sessions failed");
+    this.name = "ResumableCaptureListError";
+  }
+}
+
 // --- Device preferences (localStorage) ---
 
 const STORAGE_KEY = "capture-device-prefs";
@@ -96,7 +111,14 @@ export function saveDevicePrefs(prefs: DevicePrefs): void {
 
 export async function createCaptureSession(
   targetSessionId: string | null,
-): Promise<{ sessionId: string; startedAt: string }> {
+): Promise<{
+  sessionId: string;
+  startedAt: string;
+  capabilities: {
+    acceptedAudioFormats: string[];
+    acceptedUploadEncodings: string[];
+  };
+}> {
   const res = await fetch(
     `${getApiBase()}/capture/sessions`,
     withMobileAuth({
@@ -108,6 +130,24 @@ export async function createCaptureSession(
   if (!res.ok) {
     const message = `Create session failed: ${res.status}`;
     throw new RequestError(message);
+  }
+  return res.json();
+}
+
+export async function listResumableCaptureSessions(
+  targetSessionId: string | null,
+  clientSessionId: string | null,
+): Promise<ResumableCaptureResponse> {
+  const query = new URLSearchParams();
+  if (targetSessionId !== null) query.set("targetSessionId", targetSessionId);
+  if (clientSessionId !== null) query.set("clientSessionId", clientSessionId);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  const res = await fetch(
+    `${getApiBase()}/capture/sessions/resumable${suffix}`,
+    withMobileAuth({ method: "GET" }),
+  );
+  if (!res.ok) {
+    throw new ResumableCaptureListError();
   }
   return res.json();
 }

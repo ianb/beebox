@@ -1,0 +1,7 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "the weather is nice"
+  },
+  "expected": null
+}

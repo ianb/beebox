@@ -1,0 +1,19 @@
+{
+  "variant": "response",
+  "input": {
+    "boxSlug": "test1",
+    "label": "Callback Box",
+    "deviceId": "33333333-3333-3333-3333-333333333333",
+    "deviceLabel": "iOS companion",
+    "token": "device-token-base64url"
+  },
+  "ignoredByClient": [
+    "boxSlug",
+    "label",
+    "deviceId",
+    "deviceLabel"
+  ],
+  "expected": {
+    "token": "device-token-base64url"
+  }
+}

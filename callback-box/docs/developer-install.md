@@ -8,7 +8,7 @@ server), the Docker path is simpler: see
 
 ## Prerequisites
 
-- **Node 22.** Enforced by `engine-strict` (root `.npmrc`) plus the
+- **Node 24.** Enforced by `engine-strict` (root `.npmrc`) plus the
   `engines` field in the root `package.json` — an install under any other
   major version fails outright. If you use a version manager (nvm, fnm,
   volta, asdf), it will pick up the root `.nvmrc` automatically once you
@@ -18,7 +18,7 @@ server), the Docker path is simpler: see
 
   ```bash
   # Debian/Ubuntu
-  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+  curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash -
   sudo apt-get install -y nodejs
   ```
 - **pnpm**, via [corepack](https://nodejs.org/api/corepack.html):

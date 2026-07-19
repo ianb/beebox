@@ -1,0 +1,18 @@
+{
+  "input": {
+    "id": "ios-voice-1",
+    "text": " dictated ",
+    "origin": "voice",
+    "diarized": true,
+    "images": []
+  },
+  "expected": {
+    "id": "ios-voice-1",
+    "origin": "voice",
+    "text": "dictated",
+    "images": [],
+    "files": [],
+    "selections": [],
+    "diarized": true
+  }
+}

@@ -2,17 +2,17 @@
  * Per-runtime mount harness for figure sketches.
  *
  * A figure's compiled module default-exports a `(lib, mount, figure) =>
- * teardown` factory. This component lazily imports the runtime library (p5 for
- * now; three/d3 land with their own harness chunks), hands it to the factory
- * along with a mount element and the figure context, and runs the returned
- * teardown on unmount. The lazy import keeps each runtime in its own Vite chunk
- * and off the SSR path (p5 touches `window` at import time).
+ * teardown` factory. This component lazily imports the runtime library
+ * (p5/three/d3/canvas-loop), hands it to the factory along with a mount
+ * element and the figure context, and runs the returned teardown on unmount.
+ * The lazy import keeps each runtime in its own Vite chunk and off the SSR
+ * path (p5 touches `window` at import time).
  */
 
 import { useEffect, useRef } from "react";
 import type { ViewFileHelpers } from "../hooks/useViewFileHelpers";
 
-export type FigureRuntime = "p5js" | "three" | "d3";
+export type FigureRuntime = "p5js" | "three" | "d3" | "canvas-loop";
 
 /**
  * Optional cleanup returned by a sketch — required for runtimes that hold
@@ -47,7 +47,11 @@ export type FigureSketch = (
  * Lazily load the runtime library a sketch is handed as `lib`. Each `import()`
  * becomes its own Vite chunk, loaded only when a figure of that runtime first
  * renders. p5 hands over its default-exported constructor; three and d3 hand
- * over their module namespace (`new lib.Scene()`, `lib.select(mount)`).
+ * over their module namespace (`new lib.Scene()`, `lib.select(mount)`);
+ * canvas-loop hands over its browser-API namespace (`lib.mountSketch(...)` —
+ * a linked workspace subpath Vite serves as source, see vite.config.ts
+ * `optimizeDeps`) plus its stylesheet (real CSS import, not a runtime <style>,
+ * so the prod CSP's style-src stays clean).
  */
 async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   if (runtime === "p5js") {
@@ -56,6 +60,10 @@ async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   }
   if (runtime === "three") {
     return import("three");
+  }
+  if (runtime === "canvas-loop") {
+    await import("@ianbicking/canvas-loop/browser/figure.css");
+    return import("@ianbicking/canvas-loop/browser");
   }
   return import("d3");
 }

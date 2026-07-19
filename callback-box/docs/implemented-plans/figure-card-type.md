@@ -9,7 +9,10 @@
 > `templates-builtins.ts`. One deviation from the draft below: the authoring
 > contract is `(lib, { mount, figure }) => teardown` (mount + context in one
 > object arg) rather than three positional params, to satisfy the max-params
-> rule.
+> rule. A **fourth runtime, `canvas-loop`**, was added 2026-07 (deterministic
+> TEA sketches with auto-generated controls + a headless verify loop) — see
+> `docs/implemented-plans/canvas-loop-figure.md`; the `p5js|three|d3` enumerations below
+> predate it.
 
 A new `figure` card type for small, embeddable, parameterized interactives —
 p5.js sketches, three.js scenes, D3/SVG graphics — the kind of thing you embed in

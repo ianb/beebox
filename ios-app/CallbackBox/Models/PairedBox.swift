@@ -17,7 +17,8 @@ struct PairedBox: Codable, Equatable, Identifiable {
 
     var chatURL: URL {
         var components = URLComponents(url: baseURL.appendingPathComponent("chat"), resolvingAgainstBaseURL: false)
-        var items = [URLQueryItem(name: "embed", value: "1")]
+        // Keep this query parameter in sync with ChatPage's nativeComposer search option.
+        var items = [URLQueryItem(name: "nativeComposer", value: "1")]
         if let sessionID, !sessionID.isEmpty {
             items.append(URLQueryItem(name: "session", value: sessionID))
         }

@@ -5,100 +5,59 @@ import UIKit
 
 struct NativeComposerView: View {
     var box: PairedBox
-    var deliveredEmissionID: NativeChatEmission.ID? = nil
+    var captureAvailable: Bool
+    var emissionReceipt: NativeEmissionReceipt?
+    var locationShareResult: NativeLocationShareResult?
     var onSendEmission: (NativeChatEmission) -> Void
+    var onShareLocation: () -> Void
 
-    @EnvironmentObject private var outbox: OutboxStore
+    @EnvironmentObject private var store: PairedBoxStore
     @State private var text = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var images: [ChatImageAttachment] = []
-    @State private var pendingVoiceMessage: PendingVoiceMessage?
     @State private var statusText: String?
-    @State private var lastSentEmissionID: NativeChatEmission.ID?
+    @State private var lastSentEmission: NativeChatEmission?
+    @State private var showingActions = false
+    @State private var showingPairing = false
+    @State private var showingCamera = false
+    @State private var showingCapture = false
     @StateObject private var dictation = SpeechDictation()
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let statusText = dictation.errorMessage ?? statusText {
+        VStack(alignment: .leading, spacing: 0) {
+            if let statusText = dictation.errorMessage ?? dictation.preparationMessage ?? statusText {
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
             }
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("Message", text: $text, axis: .vertical)
-                    .focused($focused)
-                    .lineLimit(1...5)
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.send)
-                    .onSubmit(send)
-
-                PhotosPicker(
-                    selection: $selectedPhotoItems,
-                    maxSelectionCount: 4,
-                    matching: .images
-                ) {
-                    Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 26))
-                }
-                .disabled(isSending)
-                .accessibilityLabel("Attach photos")
-
-                Button {
-                    dictation.toggle(currentText: text)
-                } label: {
-                    Image(systemName: dictation.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                        .font(.system(size: 30))
-                        .foregroundStyle(dictation.isRecording ? .red : .primary)
-                }
-                .disabled(isSending)
-                .accessibilityLabel(dictation.isRecording ? "Stop dictation" : "Start dictation")
-
-                Button(action: send) {
-                    if isSending {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 30))
-                    }
-                }
-                .disabled(sendDisabled)
-                .accessibilityLabel("Send")
-            }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 8)
-            .padding(.top, 8)
-
             if images.isEmpty == false {
                 ImageAttachmentStrip(images: images, onRemove: removeImage)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 10)
             }
 
-            if let pendingVoiceMessage {
-                VoiceConfirmationView(
-                    message: pendingVoiceMessage,
-                    currentText: text,
-                    onSend: confirmVoiceSend,
-                    onKeepEditing: keepEditingVoiceSend
+            HStack(alignment: .bottom, spacing: 10) {
+                composerButton(
+                    systemImage: "plus",
+                    accessibilityLabel: "Add",
+                    action: { showingActions = true }
                 )
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-            }
+                .disabled(isSending)
 
-            let queuedMessages = outbox.messages(for: box)
-            if queuedMessages.isEmpty == false {
-                OutboxListView(
-                    messages: queuedMessages,
-                    onRetry: retry,
-                    onDiscard: outbox.discard
-                )
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
+                textEntry
+
+                trailingControl
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 5)
+            .offset(y: 10)
         }
         .background(.regularMaterial)
+        .ignoresSafeArea(.container, edges: .bottom)
         .onAppear(perform: loadDraft)
         .onChange(of: text) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: draftKey)
@@ -118,19 +77,143 @@ struct NativeComposerView: View {
                 await loadPhotos(from: newValue)
             }
         }
-        .onChange(of: deliveredEmissionID) { _, newValue in
-            guard let newValue, newValue == lastSentEmissionID else {
+        .onChange(of: emissionReceipt) { _, receipt in
+            guard let receipt, let emission = lastSentEmission, receipt.emissionID == emission.id else {
                 return
             }
-            statusText = "Sent to chat."
-            lastSentEmissionID = nil
+            switch receipt.disposition {
+            case .sent, .queued:
+                statusText = nil
+            case .rejected:
+                text = emission.text
+                images = emission.images
+                statusText = receipt.reason ?? "The message was not accepted."
+            }
+            lastSentEmission = nil
+        }
+        .onChange(of: locationShareResult) { _, result in
+            guard let result else {
+                return
+            }
+            statusText = result.message
         }
         .onDisappear {
             dictation.stop()
         }
-        .task(id: box.id) {
-            await outbox.retryPending(for: box)
+        .sheet(isPresented: $showingActions) {
+            ComposerActionsView(
+                selectedPhotoItems: $selectedPhotoItems,
+                canCapture: captureAvailable,
+                canTakePhoto: UIImagePickerController.isSourceTypeAvailable(.camera),
+                onCapture: openCapture,
+                onTakePhoto: openCamera,
+                onShareLocation: shareLocation,
+                onPairBox: openPairing,
+                onDismiss: { showingActions = false }
+            )
         }
+        .sheet(isPresented: $showingPairing) {
+            PairBoxView()
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraImagePicker { image in
+                showingCamera = false
+                appendCameraImage(image)
+            } onCancel: {
+                showingCamera = false
+            }
+            .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $showingCapture) {
+            NativeCaptureScreen(box: box)
+        }
+    }
+
+    private var textEntry: some View {
+        TextField("Type...", text: $text, axis: .vertical)
+            .focused($focused)
+            .lineLimit(1...5)
+            .font(.body)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(minHeight: 58)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+            .accessibilityLabel("Type a message")
+    }
+
+    @ViewBuilder
+    private var trailingControl: some View {
+        if isSending {
+            ProgressView()
+                .frame(width: 58, height: 58)
+                .background(.quaternary, in: Circle())
+        } else if dictation.isRecording {
+            composerButton(
+                systemImage: "stop.fill",
+                accessibilityLabel: "Stop dictation",
+                foregroundStyle: .red,
+                action: { dictation.stop() }
+            )
+        } else if hasTextContent {
+            composerButton(
+                systemImage: "arrow.up",
+                accessibilityLabel: "Send",
+                foregroundStyle: .white,
+                backgroundStyle: Color.accentColor,
+                action: send
+            )
+        } else if images.isEmpty == false {
+            HStack(spacing: 10) {
+                microphoneButton
+                composerButton(
+                    systemImage: "arrow.up",
+                    accessibilityLabel: "Send photo",
+                    foregroundStyle: .white,
+                    backgroundStyle: Color.accentColor,
+                    action: send
+                )
+            }
+        } else {
+            microphoneButton
+        }
+    }
+
+    private var microphoneButton: some View {
+        composerButton(
+            systemImage: "mic.fill",
+            accessibilityLabel: "Start dictation",
+            action: { dictation.toggle(currentText: text) }
+        )
+    }
+
+    private func openCapture() {
+        guard captureAvailable else {
+            return
+        }
+        dictation.stop()
+        focused = false
+        showingActions = false
+        DispatchQueue.main.async {
+            showingCapture = true
+        }
+    }
+
+    private func composerButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        foregroundStyle: Color = .primary,
+        backgroundStyle: Color = Color(uiColor: .tertiarySystemFill),
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(foregroundStyle)
+                .frame(width: 58, height: 58)
+                .background(backgroundStyle, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func send() {
@@ -139,16 +222,15 @@ struct NativeComposerView: View {
             return
         }
         dictation.stop()
-        let origin: QueuedMessage.Origin = dictation.hasDictatedText ? .voice : .typed
+        let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         let emission = NativeChatEmission(text: message, origin: origin, diarized: false, images: images)
-        pendingVoiceMessage = nil
         dictation.resetDictationState()
         text = ""
         images = []
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        lastSentEmissionID = emission.id
+        lastSentEmission = emission
         statusText = "Sending to chat..."
         onSendEmission(emission)
     }
@@ -189,9 +271,7 @@ struct NativeComposerView: View {
                 audioURL: audioURL
             )
             await MainActor.run {
-                text = prepared.text
-                pendingVoiceMessage = PendingVoiceMessage(diarized: prepared.diarized)
-                statusText = "Voice message ready."
+                enqueuePreparedVoiceMessage(text: prepared.text, diarized: prepared.diarized)
             }
         }
     }
@@ -234,50 +314,37 @@ struct NativeComposerView: View {
         return "\(cleanFirst) \(cleanSecond)"
     }
 
-    private func confirmVoiceSend() {
-        guard let pendingVoiceMessage else {
-            return
-        }
-        enqueuePreparedVoiceMessage(text: text, diarized: pendingVoiceMessage.diarized)
-    }
-
-    private func keepEditingVoiceSend() {
-        pendingVoiceMessage = nil
-        dictation.resetDictationState()
-        statusText = "Voice message kept as a draft."
-    }
-
     private func enqueuePreparedVoiceMessage(text preparedText: String, diarized: Bool) {
         guard preparedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
             statusText = "Nothing to send."
             return
         }
         let emission = NativeChatEmission(text: preparedText, origin: .voice, diarized: diarized, images: images)
-        pendingVoiceMessage = nil
         dictation.resetDictationState()
         text = ""
         images = []
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        lastSentEmissionID = emission.id
+        lastSentEmission = emission
         statusText = "Sending to chat..."
         onSendEmission(emission)
     }
 
-    private func retry(_ message: QueuedMessage) {
-        statusText = "Retrying..."
-        Task {
-            await outbox.send(messageID: message.id, box: box)
-        }
+    private var isSending: Bool {
+        lastSentEmission != nil
     }
 
-    private var isSending: Bool {
-        outbox.messages(for: box).contains { $0.state == .sending }
+    private var hasSendableContent: Bool {
+        hasTextContent || images.isEmpty == false
+    }
+
+    private var hasTextContent: Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
     }
 
     private var sendDisabled: Bool {
-        pendingVoiceMessage != nil || (text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && images.isEmpty)
+        isSending || hasSendableContent == false
     }
 
     private var draftKey: String {
@@ -295,8 +362,8 @@ struct NativeComposerView: View {
         guard items.isEmpty == false else {
             return
         }
-        var loaded: [ChatImageAttachment] = []
-        for (index, item) in items.prefix(4).enumerated() {
+        var loaded = images
+        for item in items.prefix(max(0, 4 - loaded.count)) {
             guard let data = try? await item.loadTransferable(type: Data.self) else {
                 continue
             }
@@ -305,13 +372,14 @@ struct NativeComposerView: View {
             }?.preferredMIMEType ?? "image/jpeg"
             loaded.append(
                 ChatImageAttachment(
-                    id: index + 1,
+                    id: loaded.count + 1,
                     mimeType: mimeType,
                     dataBase64: data.base64EncodedString()
                 )
             )
         }
-        images = loaded
+        images = Array(loaded.prefix(4))
+        selectedPhotoItems = []
     }
 
     private func removeImage(_ image: ChatImageAttachment) {
@@ -320,41 +388,53 @@ struct NativeComposerView: View {
             ChatImageAttachment(id: index + 1, mimeType: image.mimeType, dataBase64: image.dataBase64)
         }
     }
-}
 
-private struct PendingVoiceMessage: Equatable {
-    var diarized: Bool
-}
-
-private struct VoiceConfirmationView: View {
-    var message: PendingVoiceMessage
-    var currentText: String
-    var onSend: () -> Void
-    var onKeepEditing: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "waveform")
-                    .foregroundStyle(.secondary)
-                Text(message.diarized ? "Diarized voice message ready" : "Voice message ready")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            Text(currentText)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-            HStack(spacing: 8) {
-                Button("Send", action: onSend)
-                    .buttonStyle(.borderedProminent)
-                Button("Keep Editing", action: onKeepEditing)
-                    .buttonStyle(.bordered)
-            }
+    private func openCamera() {
+        showingActions = false
+        DispatchQueue.main.async {
+            showingCamera = true
         }
-        .padding(10)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func openPairing() {
+        showingActions = false
+        DispatchQueue.main.async {
+            showingPairing = true
+        }
+    }
+
+    private func shareLocation() {
+        showingActions = false
+        statusText = "Requesting location..."
+        onShareLocation()
+    }
+
+    private func appendCameraImage(_ image: UIImage) {
+        guard images.count < 4, let data = CameraImageEncoder.jpegData(from: image) else {
+            return
+        }
+        images.append(
+            ChatImageAttachment(
+                id: images.count + 1,
+                mimeType: "image/jpeg",
+                dataBase64: data.base64EncodedString()
+            )
+        )
+    }
+}
+
+enum CameraImageEncoder {
+    static func jpegData(from image: UIImage) -> Data? {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = true
+        let bounds = CGRect(origin: .zero, size: image.size)
+        let uprightImage = UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
+            UIColor.white.setFill()
+            UIRectFill(bounds)
+            image.draw(in: bounds)
+        }
+        return uprightImage.jpegData(compressionQuality: 0.85)
     }
 }
 
@@ -403,98 +483,6 @@ private struct ImageAttachmentStrip: View {
                 .font(.title2)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(.thinMaterial)
-        }
-    }
-}
-
-private struct OutboxListView: View {
-    var messages: [QueuedMessage]
-    var onRetry: (QueuedMessage) -> Void
-    var onDiscard: (QueuedMessage) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(messages) { message in
-                HStack(alignment: .center, spacing: 8) {
-                    Image(systemName: iconName(for: message))
-                        .foregroundStyle(iconColor(for: message))
-                        .frame(width: 20)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title(for: message))
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                        Text(message.text)
-                            .font(.caption)
-                            .lineLimit(2)
-                            .foregroundStyle(.secondary)
-                        if message.images.isEmpty == false {
-                            Text("\(message.images.count) photo\(message.images.count == 1 ? "" : "s") attached")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        if let lastError = message.lastError {
-                            Text(lastError)
-                                .font(.caption2)
-                                .lineLimit(2)
-                                .foregroundStyle(.red)
-                        }
-                    }
-
-                    Spacer(minLength: 8)
-
-                    if message.state != .sending {
-                        Button {
-                            onRetry(message)
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel("Retry")
-                    }
-
-                    Button(role: .destructive) {
-                        onDiscard(message)
-                    } label: {
-                        Image(systemName: "trash")
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Discard")
-                }
-                .padding(8)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
-            }
-        }
-    }
-
-    private func title(for message: QueuedMessage) -> String {
-        switch message.state {
-        case .pending:
-            "Pending"
-        case .sending:
-            "Sending..."
-        case .failed:
-            "Failed, saved for retry"
-        }
-    }
-
-    private func iconName(for message: QueuedMessage) -> String {
-        switch message.state {
-        case .pending:
-            "clock"
-        case .sending:
-            "paperplane"
-        case .failed:
-            "exclamationmark.circle"
-        }
-    }
-
-    private func iconColor(for message: QueuedMessage) -> Color {
-        switch message.state {
-        case .pending, .sending:
-            .secondary
-        case .failed:
-            .red
         }
     }
 }

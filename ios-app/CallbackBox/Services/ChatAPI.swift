@@ -1,12 +1,6 @@
 import Foundation
 
 struct ChatAPI {
-    enum SendState: Equatable {
-        case sent
-        case queued
-        case deduplicated
-    }
-
     enum ChatAPIError: LocalizedError {
         case invalidResponse
         case server(String)
@@ -26,45 +20,6 @@ struct ChatAPI {
     struct HqTranscriptionResult: Decodable, Equatable {
         var text: String
         var diarized: Bool
-    }
-
-    func send(
-        message: String,
-        messageId: String,
-        origin: QueuedMessage.Origin,
-        diarized: Bool,
-        images: [ChatImageAttachment]
-    ) async throws -> SendState {
-        let session = try await resolvedSession()
-        let body = SendBody(
-            session: session,
-            message: assembleMessage(message, origin: origin, diarized: diarized),
-            messageId: messageId,
-            images: images.isEmpty ? nil : images
-        )
-        var request = URLRequest(url: box.apiURL.appendingPathComponent("chat/send"))
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
-        applyAuth(to: &request)
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw ChatAPIError.invalidResponse
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let error = try? JSONDecoder().decode(ErrorBody.self, from: data)
-            throw ChatAPIError.server(error?.error ?? "Chat send failed.")
-        }
-        let result = try JSONDecoder().decode(SendResult.self, from: data)
-        if result.queued == true {
-            return .queued
-        }
-        if result.deduplicated == true {
-            return .deduplicated
-        }
-        return .sent
     }
 
     func transcribeAudio(fileURL: URL) async throws -> HqTranscriptionResult {
@@ -106,13 +61,6 @@ struct ChatAPI {
         return result.sessionId ?? "new"
     }
 
-    private func assembleMessage(_ message: String, origin: QueuedMessage.Origin, diarized: Bool) -> String {
-        let tag = origin == .voice ? "speech" : "typed"
-        let diarizedAttr = origin == .voice && diarized ? " diarized=\"1\"" : ""
-        let attrs = "\(diarizedAttr) local-time=\"\(Self.localTimeString())\""
-        return "<\(tag)\(attrs)>\(message)</\(tag)>"
-    }
-
     private func applyAuth(to request: inout URLRequest) {
         guard let token = box.authToken, token.isEmpty == false else {
             return
@@ -134,30 +82,10 @@ struct ChatAPI {
         body.appendString("--\(boundary)--\r\n")
         return body
     }
-
-    private static func localTimeString() -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: Date())
-    }
 }
 
 private struct DefaultSessionResult: Decodable {
     var sessionId: String?
-}
-
-private struct SendBody: Encodable {
-    var session: String
-    var message: String
-    var messageId: String
-    var images: [ChatImageAttachment]?
-}
-
-private struct SendResult: Decodable {
-    var turnId: String?
-    var queued: Bool?
-    var deduplicated: Bool?
 }
 
 private struct ErrorBody: Decodable {

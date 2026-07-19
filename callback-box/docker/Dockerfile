@@ -7,7 +7,7 @@
 #
 # or via callback-box/docker/compose.yaml, which sets the context for you.
 #
-# Node 22: the repo pins ">=22.11 <23" with engine-strict, so the base image
+# Node 24: the repo pins ">=24.11 <25" with engine-strict, so the base image
 # major must match. Debian (glibc) is mandatory, not Alpine: the Agent SDK's
 # launcher resolves a glibc binary first (src/core/sdk-binary-path.ts, SDK
 # issue #296) and musl breaks it.
@@ -16,7 +16,7 @@
 # Build stage — install the workspace and produce the release tarball the
 # same way scripts/release.ts does (build:cli + frontend build + pnpm pack).
 # ─────────────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS build
+FROM node:24-bookworm-slim AS build
 
 # Native modules (better-sqlite3, etc.) may compile if no prebuilt binary is
 # available for this arch — give the throwaway build stage the toolchain.
@@ -45,7 +45,7 @@ RUN pnpm install --frozen-lockfile \
 # native Claude Code CLI, the installed engine, and a non-root user that owns
 # everything and carries the git/LFS/auth state.
 # ─────────────────────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim
+FROM node:24-bookworm-slim
 
 # Git identity baked in as defaults; the entrypoint overrides from
 # CB_GIT_NAME / CB_GIT_EMAIL at runtime if they are set.

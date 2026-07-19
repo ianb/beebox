@@ -1,0 +1,38 @@
+/*
+ * Figure styles shared by BOTH figure surfaces: the imperative `mountSketch`
+ * DOM (browser/mount.ts) and the React <SketchFigure> component (src/react/).
+ * Shipped as a real stylesheet the consumer imports
+ * (`@ianbicking/canvas-loop/browser/figure.css`) rather than a runtime-injected
+ * <style> tag, so a host with a strict CSP style-src (no inline styles at
+ * runtime) still renders the controls styled — bundlers extract this into
+ * their normal CSS pipeline.
+ */
+.cl-figure { display: inline-flex; flex-direction: column; gap: 10px; font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: #1e293b; }
+.cl-figure * { box-sizing: border-box; }
+.cl-canvas { display: block; image-rendering: pixelated; outline: none; cursor: crosshair; border-radius: 6px; background: #05070d; }
+.cl-canvas:focus { box-shadow: 0 0 0 2px #2563eb; }
+.cl-placeholder { border-radius: 6px; background: #0b0e17; }
+.cl-toolbar { display: flex; align-items: center; gap: 8px; }
+.cl-frame { font-variant-numeric: tabular-nums; color: #64748b; min-width: 72px; }
+.cl-btn { background: #eef2ff; color: #1e293b; border: 1px solid #c7d2fe; border-radius: 5px; padding: 3px 10px; cursor: pointer; font: inherit; }
+.cl-btn:hover { background: #e0e7ff; }
+.cl-params { display: flex; flex-direction: column; gap: 8px; }
+.cl-param-row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 10px; }
+.cl-param-name { color: #475569; overflow-wrap: anywhere; }
+.cl-range-holder { display: flex; align-items: center; gap: 8px; }
+.cl-range-holder input { flex: 1; }
+.cl-param-value { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: #2563eb; }
+.cl-trigger-btn { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; border-radius: 5px; padding: 3px 10px; cursor: pointer; font: inherit; }
+.cl-muted { color: #94a3b8; font-style: italic; margin: 0; }
+.cl-error { max-width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid #fca5a5; background: #fef2f2; color: #b91c1c; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cl-recorder { display: flex; flex-direction: column; gap: 6px; }
+.cl-recorder summary { cursor: pointer; color: #2563eb; }
+.cl-events { width: 100%; min-width: 260px; background: #05070d; color: #cbd5e1; border: 1px solid #26304a; border-radius: 6px; font: 12px/1.4 ui-monospace, monospace; }
+@media (prefers-color-scheme: dark) {
+  .cl-figure { color: #e2e8f0; }
+  .cl-btn { background: #1e2740; color: #e2e8f0; border-color: #35406a; }
+  .cl-btn:hover { background: #27314f; }
+  .cl-param-name { color: #cbd5e1; }
+  .cl-param-value { color: #93c5fd; }
+  .cl-error { border-color: #7f1d1d; background: #2a1414; color: #fca5a5; }
+}

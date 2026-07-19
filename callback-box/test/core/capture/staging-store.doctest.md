@@ -69,6 +69,9 @@ afterAudio.segments.length
 
 JSON.stringify(afterAudio.segments.map((s) => ({ id: s.id, chunks: s.chunks })))
 => [{"id":"seg-a","chunks":["audio-0-001.webm","audio-0-002.webm"]},{"id":"seg-b","chunks":["audio-1-001.webm"]}]
+
+afterAudio.segments.map((s) => s.format).join(",")
+=> webm-opus,webm-opus
 ```
 
 Photos and files land in their own collections (photos keep `source`; files
@@ -113,6 +116,47 @@ Cleanup removes the whole session directory:
 await cleanupStagingSession({ boxRoot: box.root, id: session.id });
 await readStagingSession({ boxRoot: box.root, id: session.id })
 => null
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## M4A segments accept exactly one complete file
+
+Native audio declares `m4a-aac`; a second file or a WebM chunk under the same
+segment id is rejected before the bytes or manifest mutate.
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+await addAudioChunk({
+  boxRoot: box.root,
+  id: session.id,
+  segmentId: "native-audio",
+  segmentStartedAt: "2026-07-09T14:00:00.000Z",
+  filename: "ios-audio-a.m4a",
+  buffer: Buffer.from("COMPLETE"),
+  audioFormat: "m4a-aac",
+});
+let message = "";
+try {
+  await addAudioChunk({
+    boxRoot: box.root,
+    id: session.id,
+    segmentId: "native-audio",
+    segmentStartedAt: "2026-07-09T14:00:00.000Z",
+    filename: "ios-audio-b.m4a",
+    buffer: Buffer.from("SECOND"),
+    audioFormat: "m4a-aac",
+  });
+} catch (error) {
+  message = error.message;
+}
+const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+const files = await box.list(`tmp/capture-staging/${session.id}`);
+JSON.stringify({ message, segment: after.segments[0], firstExists: files.includes(`tmp/capture-staging/${session.id}/ios-audio-a.m4a`), rejectedExists: files.includes(`tmp/capture-staging/${session.id}/ios-audio-b.m4a`) })
+=> {"message":"M4A segment must contain exactly one complete file","segment":{"id":"native-audio","startedAt":"2026-07-09T14:00:00.000Z","format":"m4a-aac","chunks":["ios-audio-a.m4a"]},"firstExists":true,"rejectedExists":false}
 ```
 
 ```ts cleanup

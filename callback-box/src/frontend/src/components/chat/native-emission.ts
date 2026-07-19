@@ -12,19 +12,26 @@ export function nativeEmissionFromDetail(detail: unknown): Emission | null {
   if (!text && images.length === 0) return null;
   const origin = candidate.origin === "voice" ? "voice" : "typed";
   if (origin === "voice") {
-    return createVoiceEmission({
+    const emission = createVoiceEmission({
       text,
       images,
       selections: [],
       diarized: candidate.diarized === true,
     });
+    return withNativeId(emission, candidate.id);
   }
-  return createTypedEmission({
+  const emission = createTypedEmission({
     text,
     images,
     files: [],
     selections: [],
   });
+  return withNativeId(emission, candidate.id);
+}
+
+function withNativeId(emission: Emission, value: unknown): Emission {
+  if (typeof value !== "string" || value.trim() === "") return emission;
+  return { ...emission, id: value };
 }
 
 function parseNativeImages(value: unknown): ChatImageAttachment[] {

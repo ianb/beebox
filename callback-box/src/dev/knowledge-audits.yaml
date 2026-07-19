@@ -140,6 +140,38 @@ tests:
     correct_contains: ["job", "directive"]
     tags: [questions, jobs]
 
+  # === Figure Cards (canvas-loop runtime) ===
+  #
+  # Status (2026-07-15): 2/2 pass (knows_directly; agent read only the
+  # generated card-figure.md schema doc, 0 searches, ~40k ctx). Both answer
+  # from the figure schema instructions: runtime-canvas-loop is named directly,
+  # and figure-canvas-loop-import-rule nails the reason — "the package isn't
+  # resolvable inside a box, so a value import would fail at compile time;
+  # type-only imports are erased" — plus the `cl`-injection detail.
+  # Re-run 2026-07-15 after the review rounds rewrote the figure instructions
+  # (params-snippet fix, warn-vs-silent wording, embed-mapping table, starters
+  # split): 2/2 still pass, unchanged — the rewrites didn't degrade recall.
+
+  - id: figure-canvas-loop-runtime
+    prompt: "You want an interactive, deterministic canvas figure with auto-generated slider controls. What card do you create and what runtime do you declare?"
+    expected_level: knows_directly
+    watch_for: "Names a figure card with runtime: canvas-loop, from the figure schema instructions"
+    correct_contains: ["figure", "canvas-loop"]
+    tags: [cards, schemas, figure]
+
+  - id: figure-canvas-loop-import-rule
+    prompt: "In a canvas-loop figure's entry source, how do you import the canvas-loop types, and why that way?"
+    expected_level: knows_directly
+    watch_for: "Says import type only, because the package doesn't resolve inside a box (type-only imports are erased at compile; a value import fails)"
+    correct_contains: ["import type"]
+    tags: [cards, schemas, figure]
+    notes: >
+      The reason matters: @ianbicking/canvas-loop is not resolvable from a box
+      directory, so a value import fails the esbuild compile. Type-only imports
+      are erased, so `import type` compiles; the runtime API arrives as the
+      factory's `cl` argument. A pass names the box-can't-resolve-the-package
+      reason, not just the syntax.
+
   # === Questions: Lifecycle and Learning ===
   #
   # Status (2026-07-10): 3/3 pass on first run (the --filter questions run

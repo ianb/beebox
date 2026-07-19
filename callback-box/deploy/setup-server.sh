@@ -8,7 +8,7 @@ INSTALL_DIR="/opt/callback"
 CB_USER="callback"
 CB_HOME="/home/$CB_USER"
 BOX_DIR="$CB_HOME/boxes/test1"
-NODE_MAJOR=22
+NODE_MAJOR=24
 
 echo "=== Callback Box Server Setup ==="
 
@@ -32,7 +32,7 @@ if ! command -v node &>/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d v)" -lt 
 fi
 echo "Node.js $(node -v)"
 
-# Enable corepack so pnpm is available (ships with Node 22, no install needed).
+# Enable corepack so pnpm is available (ships with Node 24, no install needed).
 corepack enable pnpm
 echo "pnpm $(pnpm -v)"
 

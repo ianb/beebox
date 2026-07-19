@@ -9,13 +9,13 @@
  * staging session directly through the capture REST API.
  */
 
-import { useCallback } from "react";
-import { trpc } from "../../lib/trpc";
+import { useCallback, useEffect, useState } from "react";
 import {
   loadResumeSessionId,
   clearResumeSessionId,
   finalizeCaptureSession,
   cancelCaptureSession,
+  listResumableCaptureSessions,
 } from "../../pages/capture/capture-api";
 
 export interface ResumableCaptureView {
@@ -36,7 +36,27 @@ export interface CaptureResume {
 
 export function useCaptureResume(targetSessionId: string | null): CaptureResume {
   const clientSessionId = loadResumeSessionId();
-  const query = trpc.capture.resumableSessions.useQuery({ targetSessionId, clientSessionId });
+  const [loading, setLoading] = useState(true);
+  const [resumable, setResumable] = useState<ResumableCaptureView[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    void listResumableCaptureSessions(targetSessionId, clientSessionId)
+      .then((result) => {
+        if (active) setResumable(result.resumable);
+      })
+      .catch((error: unknown) => {
+        console.error("[capture] Failed to load resumable sessions:", error);
+        if (active) setResumable([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [clientSessionId, targetSessionId]);
 
   const submitNow = useCallback(async (id: string): Promise<void> => {
     await finalizeCaptureSession(id);
@@ -49,8 +69,8 @@ export function useCaptureResume(targetSessionId: string | null): CaptureResume 
   }, []);
 
   return {
-    loading: query.isLoading,
-    resumable: query.data ? query.data.resumable : [],
+    loading,
+    resumable,
     submitNow,
     discard,
   };

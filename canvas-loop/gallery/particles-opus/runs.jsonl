@@ -1,0 +1,1 @@
+{"date": "2026-07-14", "commit": "1b8285e9", "model": "opus-4.8", "action": "authored", "cycles": 2, "outcome": "pass", "notes": "TEA tier vs Opus: 2 cycles, ceremony cost near zero, zero compliance violations. Frames caught HUD ghosting under trails; Opus fixed it plus retuned attraction strength. Ran in parallel with the identical task on Sonnet (../particles-sonnet/)."}

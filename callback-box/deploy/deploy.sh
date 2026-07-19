@@ -360,7 +360,7 @@ ssh "root@$SERVER_IP" "chown -R callback:callback $INSTALL_DIR"
 echo "Checking dependencies..."
 ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   set -e
-  # Bootstrap pnpm on demand. corepack ships with Node 22; this is idempotent
+  # Bootstrap pnpm on demand. corepack ships with Node 24; this is idempotent
   # and a no-op if pnpm is already on PATH.
   if ! command -v pnpm >/dev/null 2>&1; then
     echo "  Bootstrapping pnpm via corepack..."
@@ -415,7 +415,10 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
       # npm_config_update_notifier=false: the "Update available!" banner is
       # noise in a deploy log (and agent context) on every run; updating pnpm
       # is a deliberate act, not something a deploy should advertise.
-      if HUSKY=0 npm_config_update_notifier=false pnpm install --frozen-lockfile; then
+      # CI=true: run non-interactively — without it pnpm aborts with
+      # ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY when it decides the modules
+      # dir must be recreated (e.g. after a Node major upgrade).
+      if HUSKY=0 npm_config_update_notifier=false CI=true pnpm install --frozen-lockfile; then
         return 0
       else
         rc=$?
@@ -430,6 +433,19 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     done
   }
   install_with_retry
+  # Native-module ABI guard. pnpm's side-effects cache keys build artifacts by
+  # dependency graph, NOT by Node ABI — after a Node major upgrade, a "clean"
+  # reinstall can silently restore a binary compiled for the old ABI (this
+  # broke every box child on the 22→24 upgrade, 2026-07-16, while the hub's
+  # /healthz stayed green). Load the module with the runtime that will serve
+  # traffic; on mismatch, force a real prebuild fetch/compile and re-verify —
+  # a second failure fails the deploy.
+  if ! node -e 'require("better-sqlite3")' 2>/dev/null; then
+    echo "  better-sqlite3 ABI mismatch — forcing rebuild for $(node -v)..."
+    (cd node_modules/better-sqlite3 && rm -rf build \
+      && { npx --no-install prebuild-install || npx --no-install node-gyp rebuild --release; })
+    node -e 'require("better-sqlite3")'
+  fi
 REMOTE
 
 # Reconcile each v2-shape (package-layout) box's own node_modules against its

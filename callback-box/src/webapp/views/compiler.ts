@@ -30,6 +30,12 @@ export type ViewCompileTarget = "browser" | "node";
 
 interface CacheEntry {
   mtime: number;
+  // File size joins mtime in the freshness check: an editor that rewrites a file
+  // within the same clock tick leaves mtimeMs unchanged, so mtime alone would
+  // serve stale output (including a stale figureError after the fix that cleared
+  // it). Size is a free stat field and catches most same-tick length-changing
+  // edits.
+  size: number;
   output: string;
 }
 
@@ -133,9 +139,16 @@ function slugFromFilename(filename: string): string {
  */
 export async function bundleView(
   viewPath: string,
-  opts?: { target?: ViewCompileTarget; external?: string[] }
+  opts?: { target?: ViewCompileTarget; external?: string[]; cache?: boolean }
 ): Promise<{ output: string }> {
   const target = opts?.target ?? "browser";
+  // The mtime+size cache is a freshness heuristic, not a guarantee: it misses a
+  // same-length rewrite within one clock tick, and — because `bundle: true`
+  // inlines imports — it never notices an edited *imported* file (the key is the
+  // entry's stat only). Callers that must always reflect current disk state pass
+  // `cache: false`; a tiny single-file compile (a figure sketch) is cheap enough
+  // to redo per request, and it's strictly correct.
+  const useCache = opts?.cache ?? true;
   // Extra bare specifiers to leave unbundled. Figure sketches receive their
   // runtime library (p5/three/d3) as an argument from the harness; marking
   // those external means a stray `import p5` fails loudly at load instead of
@@ -143,15 +156,20 @@ export async function bundleView(
   const extraExternal = opts?.external ?? [];
   const stat = await fs.stat(viewPath);
   const mtime = stat.mtimeMs;
+  const size = stat.size;
 
   // Key the cache by target too: the browser and node builds of the same file
   // produce incompatible output (window shim vs bare imports), so sharing one
   // slot would let one target's compile poison the other's. Externals go in the
   // key as well, so the same file compiled with and without them never collides.
+  // The viewPath is always the final `:`-delimited segment — invalidateView
+  // relies on that to sweep every key referencing a path.
   const cacheKey = `${target}:${extraExternal.join(",")}:${viewPath}`;
-  const cached = cache.get(cacheKey);
-  if (cached && cached.mtime === mtime) {
-    return { output: cached.output };
+  if (useCache) {
+    const cached = cache.get(cacheKey);
+    if (cached && cached.mtime === mtime && cached.size === size) {
+      return { output: cached.output };
+    }
   }
 
   const source = await fs.readFile(viewPath, "utf-8");
@@ -201,7 +219,7 @@ export async function bundleView(
     throw new EmptyEsbuildOutputError(viewPath);
   }
   const output = outputFile.text;
-  cache.set(cacheKey, { mtime, output });
+  if (useCache) cache.set(cacheKey, { mtime, size, output });
   return { output };
 }
 
@@ -370,12 +388,16 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
 }
 
 /**
- * Invalidate cache for a specific view file (both compile targets, no
- * externals — the only cache keys any current caller other than the figure
- * route produces — and its metadata).
+ * Invalidate cache for a specific view file (every compile target AND every
+ * externals combination — the figure route keys on `browser:p5,three,d3:<path>`,
+ * which a fixed `browser::`/`node::` pair would miss) plus its metadata. The
+ * viewPath is always the final `:`-delimited segment of a compile key, so sweep
+ * every key ending in `:<viewPath>` rather than enumerating known prefixes.
  */
 export function invalidateView(viewPath: string): void {
-  cache.delete(`browser::${viewPath}`);
-  cache.delete(`node::${viewPath}`);
+  const suffix = `:${viewPath}`;
+  for (const key of cache.keys()) {
+    if (key.endsWith(suffix)) cache.delete(key);
+  }
   metaCache.delete(viewPath);
 }

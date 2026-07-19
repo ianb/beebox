@@ -6,6 +6,7 @@ Four projects live in one git repository (previously independent repos, merged 2
 - **callback-clerk/** — Chrome extension that talks to a hosted callback-box instance.
 - **agent-doctest/** — Doctest framework extracted from callback-box.
 - **personal-vibe-check/** — The shared ESLint/TS/Prettier preset (`@ianbicking/personal-vibe-check`), consumed by the other packages via `workspace:*`. Edit it HERE — the old standalone checkout at `~/src/personal-vibe-check` is stale and no longer what anything resolves to.
+- **canvas-loop/** — EXPERIMENTAL library (`@ianbicking/canvas-loop`): a deterministic, browser-less, frame-stepped Canvas2D sandbox for agent programming (write a sketch → CLI run → Read a frame-tagged transcript). Subpath exports (`.`/`./headless`/`./react`/`./eslint`), a gallery exercise corpus, and a Claude plugin (skill `canvas-loop-sketch`). See its README/TEA.md.
 
 Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `dev/` — per-worktree pages served at `/<worktree>/dev/`; `bin/` — the dev router and worktree tooling (see `bin/CLAUDE.md`); `issues/` — the task/idea queue, sorted into category subdirs (`bugs/`, `features/`, `code-quality/`, `docs-and-chores/`, `decisions/`, `exploration/`; `closed/<category>/` for done), one `YYYY-MM-DD-slug.md` per item, title in frontmatter — the parking lot for known problems that aren't scheduled work yet (conventions in `issues/CLAUDE.md`).
 

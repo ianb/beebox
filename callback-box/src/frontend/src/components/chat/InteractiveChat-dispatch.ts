@@ -56,15 +56,14 @@ export function useEmissionDispatch(opts: {
   //
   // Returns the settled Receipt (never rejects the promise itself — a
   // `rejected` disposition is a normal value, not a thrown error). Every
-  // current call site is fire-and-forget and ignores the return value; it
-  // exists for callers that DO want to await the outcome (docs/plans/
-  // input-extraction.md chunk 3).
-  const dispatchEmission = useCallback(
-    (emission: Emission): Promise<Receipt> => {
+  // Most call sites are fire-and-forget. The native bridge awaits the receipt
+  // so iOS can keep its draft pending until the backend accepts the send.
+  const dispatchWithRestorePolicy = useCallback(
+    (emission: Emission, restoreRejected: boolean): Promise<Receipt> => {
       void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
       const cardFields = captureCardSend();
       return acceptEmission(emission, { witness: getWitness(), cardFields, send }).then((receipt) => {
-        if (receipt.disposition === "rejected") {
+        if (receipt.disposition === "rejected" && restoreRejected) {
           // The composer was cleared optimistically at dispatch — put the
           // emission back rather than losing it to the error banner.
           const plan = planRestore(emissionStore.get(), emission);
@@ -75,6 +74,14 @@ export function useEmissionDispatch(opts: {
       });
     },
     [send, captureCardSend, boxSlug, getWitness, emissionStore]
+  );
+  const dispatchEmission = useCallback(
+    (emission: Emission): Promise<Receipt> => dispatchWithRestorePolicy(emission, true),
+    [dispatchWithRestorePolicy]
+  );
+  const dispatchNativeEmission = useCallback(
+    (emission: Emission): Promise<Receipt> => dispatchWithRestorePolicy(emission, false),
+    [dispatchWithRestorePolicy]
   );
 
   // Recovered dictation: a segment that survived a page drop (screen sleep,
@@ -113,5 +120,5 @@ export function useEmissionDispatch(opts: {
     [dispatchEmission, selections, resetSelections]
   );
 
-  return { dispatchEmission, sendVoiceSegment, sendStopSend };
+  return { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend };
 }

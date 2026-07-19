@@ -8,7 +8,7 @@
 # container (fresh every run, removed after) and follows docs/developer-install.md
 # step by step, as a stranger with nothing preinstalled would:
 #
-#   apt prerequisites → Node 22 → corepack/pnpm → git lfs install → the Claude
+#   apt prerequisites → Node 24 → corepack/pnpm → git lfs install → the Claude
 #   Code CLI native installer → clone → pnpm install → build:frontend →
 #   cb init → box-local pnpm install → cb serve → HTTP probe → pnpm run doctor.
 #
@@ -92,10 +92,10 @@ step "apt prerequisites (doc: pandoc imagemagick poppler-utils git-lfs)" \
 step "magick shim (Debian IM6 ships convert, doctor/agent want magick)" \
   bash -c 'command -v magick >/dev/null 2>&1 || ln -sf "$(command -v convert)" /usr/local/bin/magick'
 
-# Node 22 — developer-install.md states the version; NodeSource is the stated
+# Node 24 — developer-install.md states the version; NodeSource is the stated
 # Linux mechanism.
-step "Node 22 via NodeSource" \
-  bash -c 'curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null 2>&1 && apt-get install -y -qq nodejs'
+step "Node 24 via NodeSource" \
+  bash -c 'curl -fsSL https://deb.nodesource.com/setup_24.x | bash - >/dev/null 2>&1 && apt-get install -y -qq nodejs'
 
 # pnpm via corepack (doc: `corepack enable`).
 step "corepack enable (pnpm)" corepack enable

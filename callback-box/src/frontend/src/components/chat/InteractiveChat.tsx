@@ -10,7 +10,7 @@
  * a session switch (or new-chat reset) cleanly remounts the machine.
  */
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { chatMachine } from "../../machines/chatMachine.js";
@@ -34,18 +34,10 @@ import { InteractiveChatBody } from "./InteractiveChat-view";
 import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
 import type { Emission } from "../../input/emission";
-import { nativeEmissionFromDetail } from "./native-emission";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
 import { useScreenshotRequests } from "./screenshot-request-handler";
-
-// The native app shell (when embedding this page) queues emission events on
-// this global before React mounts. Not in the DOM lib types.
-declare global {
-  interface Window {
-    callbackboxNativeQueue?: unknown[];
-  }
-}
+import { useNativeEmissionBridge, useNativeLocationBridge } from "./use-native-bridge";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -98,6 +90,8 @@ interface InteractiveChatProps {
    * event client, but the web composer and mic controls are suppressed.
    */
   embedded?: boolean;
+  /** Preserve web chrome while suppressing input for a native shell. */
+  nativeComposer?: boolean;
   /**
    * Open capture mode immediately on mount — the `/capture` deep link
    * (`?capture=1`) redirects here. Consumed once via initial state; the mode is
@@ -106,8 +100,10 @@ interface InteractiveChatProps {
   openCaptureOnMount?: boolean;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, openCaptureOnMount }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount }: InteractiveChatProps) {
   const isEmbedded = embedded === true;
+  const usesNativeComposer = nativeComposer === true;
+  const usesNativeShell = isEmbedded || usesNativeComposer;
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -163,7 +159,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // and witness capture live in InteractiveChat-dispatch.ts.
   const attach = useChatAttachments({ emissionStore, textareaRef });
   const selections = useChatSelections({ emissionStore, textareaRef });
-  const { dispatchEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
+  const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
   });
@@ -175,7 +171,8 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     (emission: Emission) => { void dispatchEmission(emission); },
     [dispatchEmission]
   );
-  useNativeEmissionBridge({ enabled: isEmbedded, dispatchEmission: dispatchEmissionVoid });
+  useNativeEmissionBridge({ enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission });
+  useNativeLocationBridge({ enabled: usesNativeShell, boxSlug });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
@@ -278,37 +275,13 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       send={send}
       reportCardActivity={cardSend.report}
       embedded={isEmbedded}
+      nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
-      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!isEmbedded}
+      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell}
       captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       />
-      {captureMode && !isEmbedded ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
+      {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
     </InputStoreProvider>
   );
-}
-
-function useNativeEmissionBridge(opts: { enabled: boolean; dispatchEmission: (emission: Emission) => void }) {
-  const { enabled, dispatchEmission } = opts;
-  useEffect(() => {
-    if (!enabled) return;
-    for (const detail of drainNativeEmissionQueue()) {
-      const emission = nativeEmissionFromDetail(detail);
-      if (emission) dispatchEmission(emission);
-    }
-    const listener = () => {
-      for (const detail of drainNativeEmissionQueue()) {
-        const emission = nativeEmissionFromDetail(detail);
-        if (emission) dispatchEmission(emission);
-      }
-    };
-    window.addEventListener("callbackbox:native-emission", listener);
-    return () => window.removeEventListener("callbackbox:native-emission", listener);
-  }, [enabled, dispatchEmission]);
-}
-
-function drainNativeEmissionQueue(): unknown[] {
-  const queued = window.callbackboxNativeQueue ?? [];
-  window.callbackboxNativeQueue = [];
-  return queued;
 }

@@ -19,5 +19,6 @@ packages:
   - callback-clerk
   - personal-vibe-check
   - agent-doctest
+  - canvas-loop
   - browse
   - browse/packages/agent-browser-typed

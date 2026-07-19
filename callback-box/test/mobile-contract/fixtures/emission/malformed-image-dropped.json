@@ -1,0 +1,52 @@
+{
+  "input": {
+    "id": "img-drop-1",
+    "text": "with mixed images",
+    "origin": "typed",
+    "images": [
+      {
+        "id": 1,
+        "mimeType": "image/png",
+        "dataBase64": "good"
+      },
+      {
+        "id": "2",
+        "mimeType": "image/png",
+        "dataBase64": "bad-id-type"
+      },
+      {
+        "mimeType": "image/png",
+        "dataBase64": "missing-id"
+      },
+      {
+        "id": 3,
+        "dataBase64": "missing-mime"
+      },
+      {
+        "id": 4,
+        "mimeType": "image/jpeg",
+        "dataBase64": "good2"
+      }
+    ]
+  },
+  "expected": {
+    "id": "img-drop-1",
+    "origin": "typed",
+    "text": "with mixed images",
+    "images": [
+      {
+        "id": 1,
+        "mimeType": "image/png",
+        "dataBase64": "good"
+      },
+      {
+        "id": 4,
+        "mimeType": "image/jpeg",
+        "dataBase64": "good2"
+      }
+    ],
+    "files": [],
+    "selections": [],
+    "diarized": false
+  }
+}

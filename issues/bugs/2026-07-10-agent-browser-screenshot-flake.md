@@ -50,3 +50,11 @@ pass-through with no bug of its own. Decision needed: file this upstream
 (report is ready — the file:line citations above), and/or add a stopgap outer
 retry with a longer budget in `browse/src/cli.ts` — which papers over the wait
 failure but can't prevent the post-failure indefinite hang observed here.
+
+Data point (2026-07-14, quick-seeing-p5js worktree): worse variant again — a
+successful `open` of a local `file://` page (title returned correctly), then
+every subsequent command wedged: `screenshot` (repeated "page-ready wait timed
+out; agent-browser exited -1"), then `get title`, `close`, and re-`open` all
+hung past 30–60s timeouts, and the hang **survived `pkill -f agent-browser`**
+plus a fresh daemon start. Not screenshot-specific in this mode; the whole
+per-worktree daemon channel was unusable and never recovered in-session.

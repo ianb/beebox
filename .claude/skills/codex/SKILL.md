@@ -26,6 +26,29 @@ divergences so they don't get silently reverted.
 **Cost:** real money (~$0.05–0.50/call, more for big diffs + high reasoning).
 Don't run it unprompted; the human asks for it.
 
+## Known-good invocation shape (2026-07-15 incident)
+
+Nine consecutive runs stalled (~0.5 lines/s, timing out at any scope/effort)
+before isolating the cause: the **default model `gpt-5.6-sol` was throttled on
+this ChatGPT-plan account**, while `-m gpt-5.5` completed a fenced single-file
+review in <7 min. It was NOT the desktop-app config (MCP node_repl, plugins,
+hooks) — a stripped `CODEX_HOME` (auth.json + 2-line config.toml only)
+reproduced the stall on 5.6-sol and the success on 5.5. When codex crawls with
+no errors in the log:
+
+1. Try `-m gpt-5.5` (or whatever older model the account allows;
+   `gpt-5.1-codex-mini` is rejected on ChatGPT accounts).
+2. Fence the prompt hard: a named read-list ("READ EXACTLY THESE files"),
+   pre-verified facts it must NOT re-verify, a findings cap. Codex left
+   unfenced grep-crawls the repo and burns its whole budget reading.
+3. Run FOREGROUND with the 10-min Bash timeout — backgrounded codex runs in
+   this harness get killed before completing.
+4. Kill orphaned `codex exec` processes from failed runs by PID (never
+   `pkill -f codex` — it matches Codex.app); orphans wedge the
+   models-manager child ("timeout waiting for child process to exit").
+5. A stripped `CODEX_HOME` (copy auth.json, minimal config.toml) is the clean
+   isolation probe when config is suspected.
+
 ## Preconditions
 
 ```bash

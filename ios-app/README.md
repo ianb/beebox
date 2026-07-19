@@ -2,8 +2,8 @@
 
 Native iOS companion app for Callback Box. This project is intentionally thin
 at first: the conversation view stays in the box's web chat via `WKWebView`,
-loaded with `?embed=1`, while native code owns pairing, native input controls,
-and the paired-box shell.
+loaded with `?nativeComposer=1`, while native code owns pairing, native input
+controls, and the paired-box shell.
 
 ## Current Setup
 
@@ -18,6 +18,11 @@ and the paired-box shell.
 - Native text, photo, and speech input is delivered into the embedded web chat
   via a small same-origin `WKWebView` bridge. Keep that bridge in sync with the
   frontend native-emission handler.
+- Speech input uses Apple's on-device `SpeechAnalyzer` and `SpeechTranscriber`
+  on iOS 26. `DictationTranscriber` covers unsupported iOS 26 hardware/locales,
+  and `SFSpeechRecognizer` remains the iOS 17–25 fallback. The first use of a
+  locale may download its system-managed model. A recorded WAV is still kept in
+  parallel for the box's HQ transcription and diarization pass at send time.
 
 Once Xcode is installed, open:
 

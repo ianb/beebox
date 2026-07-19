@@ -1,0 +1,13 @@
+{
+  "variant": "result",
+  "input": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "success": true,
+    "message": "Location shared."
+  },
+  "expected": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "success": true,
+    "message": "Location shared."
+  }
+}

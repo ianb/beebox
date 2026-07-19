@@ -21,7 +21,7 @@ interface SummaryInput {
 export async function writeSummary(input: SummaryInput): Promise<TourResult> {
   const summaryPath = path.join(input.artifactsDir, "summary.md");
   const body = renderSummary(input);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- summaryPath built from a static artifacts dir + tour name
+
   await writeFile(summaryPath, body, "utf8");
   return {
     tour: input.tour,

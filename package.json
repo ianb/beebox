@@ -13,6 +13,7 @@
     "doctor": "node --import tsx bin/doctor.ts",
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
     "commit-blocklist-check": "node --import tsx bin/commit-blocklist-check.ts",
+    "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts",
     "snapshot:clerk-contract": "node --import tsx bin/snapshot-clerk-contract.ts",
     "typecheck": "tsc --noEmit",
@@ -24,7 +25,7 @@
     "http-proxy-3": "^1.23.2"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^24.0.0",
     "agent-browser": "^0.27.0",
     "husky": "^9.1.7",
     "patch-package": "^8.0.0",
@@ -48,7 +49,7 @@
     }
   },
   "engines": {
-    "node": ">=22.11.0 <23"
+    "node": ">=24.11.0 <25"
   },
   "packageManager": "pnpm@10.26.2"
 }

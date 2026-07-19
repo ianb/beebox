@@ -1,0 +1,30 @@
+{
+  "input": {
+    "id": "ios-typed-1",
+    "text": " hello ",
+    "origin": "typed",
+    "diarized": false,
+    "images": [
+      {
+        "id": 1,
+        "mimeType": "image/png",
+        "dataBase64": "abc"
+      }
+    ]
+  },
+  "expected": {
+    "id": "ios-typed-1",
+    "origin": "typed",
+    "text": "hello",
+    "images": [
+      {
+        "id": 1,
+        "mimeType": "image/png",
+        "dataBase64": "abc"
+      }
+    ],
+    "files": [],
+    "selections": [],
+    "diarized": false
+  }
+}

@@ -29,6 +29,12 @@ struct PairBoxView: View {
                         .keyboardType(.URL)
                     TextField("Session ID", text: $sessionID)
                         .textInputAutocapitalization(.never)
+                    Button {
+                        addBox()
+                    } label: {
+                        Label("Add Manual Box", systemImage: "plus")
+                    }
+                    .disabled(pairingInProgress)
                 }
 
                 if let errorMessage {
@@ -68,10 +74,6 @@ struct PairBoxView: View {
                     Button("Done") {
                         dismiss()
                     }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add", action: addBox)
-                        .disabled(pairingInProgress)
                 }
             }
             .sheet(isPresented: $showingScanner) {

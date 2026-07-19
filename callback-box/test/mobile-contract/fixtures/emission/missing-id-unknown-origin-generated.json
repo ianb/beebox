@@ -1,0 +1,16 @@
+{
+  "input": {
+    "text": "no id here",
+    "origin": "hollered",
+    "images": []
+  },
+  "expectGeneratedId": true,
+  "expected": {
+    "origin": "typed",
+    "text": "no id here",
+    "images": [],
+    "files": [],
+    "selections": [],
+    "diarized": false
+  }
+}

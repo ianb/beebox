@@ -15,7 +15,7 @@ let axeSourcePromise: Promise<string> | null = null;
 function loadAxeSource(): Promise<string> {
   if (axeSourcePromise === null) {
     const axePath = require.resolve("axe-core/axe.min.js");
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is resolved from a static package name
+
     axeSourcePromise = readFile(axePath, "utf8");
   }
   return axeSourcePromise;
@@ -73,8 +73,10 @@ function parseAxeOutput(raw: string): AxeViolation[] {
   try {
     const parsed = JSON.parse(trimmed);
     if (!Array.isArray(parsed)) return [];
+    // eslint-disable-next-line no-restricted-syntax -- parse boundary: the shape comes from RUN_SCRIPT above, which builds exactly these fields from axe results in the browser
     return parsed as AxeViolation[];
-  } catch {
+  } catch (_e) {
+    /* ignore: non-JSON eval output means axe produced nothing usable — treat as no violations */
     return [];
   }
 }

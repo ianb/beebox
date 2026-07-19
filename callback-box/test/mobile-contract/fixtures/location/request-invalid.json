@@ -1,0 +1,7 @@
+{
+  "variant": "request",
+  "input": {
+    "id": 123
+  },
+  "expected": null
+}

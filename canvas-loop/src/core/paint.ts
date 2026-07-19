@@ -1,0 +1,179 @@
+// Shared drawing-data types for both tiers (the mutable Sketch engine and the
+// TEA View facade). Everything here is DATA, not calls on a live context: point
+// arrays, a tagged path mini-language, and gradient handles. That keeps the
+// surface serializable-in-principle — a later browser renderer could emit these
+// as JSON draw commands — and keeps live `CanvasGradient`/`Path2D` objects from
+// leaking into sketch code. The `trace*`/`resolveGradient` helpers below are the
+// one place those data forms are turned into ctx calls; the engine calls them.
+
+// ── Structural 2D-context subset ─────────────────────────────────────
+// The drawing engine (paint.ts helpers + Painter) is typed against this
+// structural subset rather than a concrete `SKRSContext2D`/`CanvasRenderingContext2D`.
+// Both the headless Skia context and the browser's DOM context satisfy it, so one
+// drawing implementation serves both the CLI and the browser harness. The two
+// concrete contexts are handed in through a single boundary cast each (their
+// `fillStyle` unions are wider — they include `CanvasPattern` — so structural
+// assignability doesn't hold, but every method/property the engine touches is
+// shared and behaves identically).
+
+/** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
+export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
+/** Text baseline — mirrors the (unexported) `CanvasTextBaseline`. */
+export type CtxTextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
+
+/** A gradient handle as both contexts expose it — the one shared method is `addColorStop`. */
+export interface Ctx2DGradient {
+  addColorStop(offset: number, color: string): void;
+}
+
+/** The exact 2D-context surface the drawing engine uses. */
+export interface Ctx2D {
+  fillStyle: string | Ctx2DGradient;
+  strokeStyle: string | Ctx2DGradient;
+  lineWidth: number;
+  font: string;
+  textAlign: CtxTextAlign;
+  textBaseline: CtxTextBaseline;
+  save(): void;
+  restore(): void;
+  resetTransform(): void;
+  translate(x: number, y: number): void;
+  rotate(angle: number): void;
+  scale(x: number, y: number): void;
+  beginPath(): void;
+  closePath(): void;
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
+  rect(x: number, y: number, w: number, h: number): void;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
+  ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number): void;
+  fill(): void;
+  stroke(): void;
+  clip(): void;
+  fillRect(x: number, y: number, w: number, h: number): void;
+  fillText(text: string, x: number, y: number): void;
+  createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
+  createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
+}
+
+/** A single point, `[x, y]`. The vertex form used by `polygon` and `clip`. */
+export type Vec2 = readonly [number, number];
+
+/**
+ * One step of a `path`, a tagged tuple so the whole path is a JSON array literal
+ * (the discriminant is element 0, so a switch narrows cleanly):
+ *
+ *   [["move", x, y], ["line", x, y], ["quad", cx, cy, x, y],
+ *    ["bezier", c1x, c1y, c2x, c2y, x, y], ["close"]]
+ */
+export type PathCommand =
+  | readonly ["move", number, number]
+  | readonly ["line", number, number]
+  | readonly ["quad", number, number, number, number]
+  | readonly ["bezier", number, number, number, number, number, number]
+  | readonly ["close"];
+
+/** A gradient color stop, `[offset0to1, cssColor]`. */
+export type ColorStop = readonly [number, string];
+
+/**
+ * A linear gradient handle. Opaque to sketch code — you get it from
+ * `linearGradient(...)` and hand it back to `fill`/`stroke`/`background`; the
+ * engine builds the real `CanvasGradient` at paint time. Plain data, so it
+ * serializes.
+ */
+export interface LinearGradient {
+  readonly kind: "linear-gradient";
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+  readonly stops: readonly ColorStop[];
+}
+
+/**
+ * A radial gradient handle. Stored in the general two-circle form (so the data
+ * is fully expressive and serializable) even though `radialGradient(x, y, r,
+ * stops)` only exposes the concentric glow/sky case.
+ */
+export interface RadialGradient {
+  readonly kind: "radial-gradient";
+  readonly x1: number;
+  readonly y1: number;
+  readonly r1: number;
+  readonly x2: number;
+  readonly y2: number;
+  readonly r2: number;
+  readonly stops: readonly ColorStop[];
+}
+
+/** Any gradient handle. */
+export type Gradient = LinearGradient | RadialGradient;
+
+/** What `fill`/`stroke`/`background` accept: a CSS color string or a gradient handle. */
+export type Paint = string | Gradient;
+
+/**
+ * A clip region: either a polygon (point array) or a path (command array). The
+ * two are distinguishable at compile time (a `PathCommand`'s element 0 is a
+ * string, a `Vec2`'s is a number) and at runtime the same way.
+ */
+export type ClipShape = readonly Vec2[] | readonly PathCommand[];
+
+// ── data → ctx (the one crossing point) ──────────────────────────────
+/** A `ClipShape` whose first element is a `PathCommand` (its element 0 is a string). */
+export function isPathShape(shape: ClipShape): shape is readonly PathCommand[] {
+  const first = shape[0];
+  return first !== undefined && typeof first[0] === "string";
+}
+
+/** Trace a closed polygon onto `ctx`'s current path (no fill/stroke). */
+export function tracePolygon(ctx: Ctx2D, points: readonly Vec2[]): void {
+  ctx.beginPath();
+  let started = false;
+  for (const [x, y] of points) {
+    if (started) {
+      ctx.lineTo(x, y);
+    } else {
+      ctx.moveTo(x, y);
+      started = true;
+    }
+  }
+  ctx.closePath();
+}
+
+/** Trace a `PathCommand` list onto `ctx`'s current path (no fill/stroke). */
+export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
+  ctx.beginPath();
+  for (const cmd of commands) {
+    switch (cmd[0]) {
+      case "move":
+        ctx.moveTo(cmd[1], cmd[2]);
+        break;
+      case "line":
+        ctx.lineTo(cmd[1], cmd[2]);
+        break;
+      case "quad":
+        ctx.quadraticCurveTo(cmd[1], cmd[2], cmd[3], cmd[4]);
+        break;
+      case "bezier":
+        ctx.bezierCurveTo(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
+        break;
+      case "close":
+        ctx.closePath();
+        break;
+    }
+  }
+}
+
+/** Build the ctx-bound gradient for a gradient handle. */
+export function resolveGradient(ctx: Ctx2D, g: Gradient): Ctx2DGradient {
+  const grad =
+    g.kind === "linear-gradient"
+      ? ctx.createLinearGradient(g.x1, g.y1, g.x2, g.y2)
+      : ctx.createRadialGradient(g.x1, g.y1, g.r1, g.x2, g.y2, g.r2);
+  for (const [offset, color] of g.stops) grad.addColorStop(offset, color);
+  return grad;
+}

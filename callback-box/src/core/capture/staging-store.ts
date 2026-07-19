@@ -18,6 +18,14 @@ import { z } from "zod";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { handleStagingUploadReplay } from "./upload-replay.js";
+import { StagingPathError, StagingSessionGoneError } from "./staging-errors.js";
+import {
+  CaptureAudioFormatSchema,
+  M4ASegmentFileCountError,
+  StagingAudioFormatMismatchError,
+  type CaptureAudioFormat,
+} from "./audio-format.js";
 
 /**
  * Preparation/lifecycle state. `failed:<step>` records which preparation step
@@ -29,8 +37,13 @@ const StagingSessionStateSchema = z.union([
 ]);
 export type StagingSessionState = z.infer<typeof StagingSessionStateSchema>;
 
-/** One recording start. Chunks are ordered as uploaded (WebM header rule). */
-const StagingSegmentSchema = z.object({ id: z.string(), startedAt: z.string(), chunks: z.array(z.string()) });
+/** One recording start. WebM chunks are ordered; M4A has exactly one file. */
+const StagingSegmentSchema = z.object({
+  id: z.string(),
+  startedAt: z.string(),
+  format: CaptureAudioFormatSchema.default("webm-opus"),
+  chunks: z.array(z.string()),
+});
 export type StagingSegment = z.infer<typeof StagingSegmentSchema>;
 
 /**
@@ -76,22 +89,6 @@ const StagingSessionSchema = z.object({
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
 });
 export type StagingSession = z.infer<typeof StagingSessionSchema>;
-
-/** Raised when a session vanished between read and write (e.g. cancelled). */
-export class StagingSessionGoneError extends Error {
-  constructor(id: string) {
-    super(`Staging session ${id} disappeared during a mutation`);
-    this.name = "StagingSessionGoneError";
-  }
-}
-
-/** Raised when an upload filename would escape the session directory. */
-export class StagingPathError extends Error {
-  constructor(filename: string) {
-    super(`Unsafe staging filename: ${filename}`);
-    this.name = "StagingPathError";
-  }
-}
 
 export function stagingBaseDir(boxRoot: string): string {
   return path.join(boxRoot, "tmp", "capture-staging");
@@ -210,11 +207,19 @@ async function mutateSession(opts: {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
     if (media) {
+      const mediaPath = resolveStagedFile({ boxRoot, id, filename: media.filename });
+      if (await handleStagingUploadReplay({ session, mediaPath, ...media })) {
+        session.lastActivityAt = getBoxTimeISO(boxRoot);
+        await writeStagingSession({ boxRoot, session });
+        return;
+      }
       enforceStagingLimits({ session, incomingBytes: media.buffer.length });
+      mutate(session);
       await fs.writeFile(resolveStagedFile({ boxRoot, id, filename: media.filename }), media.buffer);
       session.totalBytes = (session.totalBytes ?? 0) + media.buffer.length;
+    } else {
+      mutate(session);
     }
-    mutate(session);
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
   });
@@ -227,12 +232,14 @@ export interface AddAudioChunkParams {
   segmentStartedAt: string;
   filename: string;
   buffer: Buffer;
+  audioFormat?: CaptureAudioFormat | undefined;
 }
 
 /** Write an audio chunk to disk and append it to its segment (creating the
  * segment on first chunk). */
 export async function addAudioChunk(params: AddAudioChunkParams): Promise<void> {
   const { boxRoot, id, segmentId, segmentStartedAt, filename, buffer } = params;
+  const audioFormat = params.audioFormat ?? "webm-opus";
   await mutateSession({
     boxRoot,
     id,
@@ -240,8 +247,14 @@ export async function addAudioChunk(params: AddAudioChunkParams): Promise<void> 
     mutate: (session) => {
       let segment = session.segments.find((s) => s.id === segmentId);
       if (!segment) {
-        segment = { id: segmentId, startedAt: segmentStartedAt, chunks: [] };
+        segment = { id: segmentId, startedAt: segmentStartedAt, format: audioFormat, chunks: [] };
         session.segments.push(segment);
+      }
+      if (segment.format !== audioFormat) {
+        throw new StagingAudioFormatMismatchError();
+      }
+      if (audioFormat === "m4a-aac" && segment.chunks.length > 0) {
+        throw new M4ASegmentFileCountError();
       }
       segment.chunks.push(filename);
     },

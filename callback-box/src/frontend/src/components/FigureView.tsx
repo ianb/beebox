@@ -34,7 +34,7 @@ interface FigureModule {
 }
 
 function parseRuntime(value: unknown): FigureRuntime | null {
-  return value === "p5js" || value === "three" || value === "d3" ? value : null;
+  return value === "p5js" || value === "three" || value === "d3" || value === "canvas-loop" ? value : null;
 }
 
 
