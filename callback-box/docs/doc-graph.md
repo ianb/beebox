@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-19T16:41:23Z
-Total documents: 193
+Generated: 2026-07-19T19:48:46Z
+Total documents: 195
 
 ## Issues
 
@@ -25,6 +25,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (339 lines)
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (440 lines)
 - **docs/implemented-plans/refresh-clerk.md** — "Refresh callback-clerk" (441 lines)
+- **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (379 lines)
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (57 lines)
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (49 lines)
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (621 lines)
@@ -94,6 +95,8 @@ Referenced by:
 - docs/implemented-plans/procedure-validation-completion.md:33 (mention) — - *"Treat noisy command output as a bug"* (monorepo `CLAUDE.md`) — model calls and retries must stay quiet on the happy 
 - docs/implemented-plans/questions-end-to-end.md:113 (mention) — the box `CLAUDE.md` via `src/core/docs-gen/claude-md.ts:20`). Reused as-is
 - docs/implemented-plans/refresh-clerk.md:17 (mention) — - Monorepo `CLAUDE.md` — **"NEVER disable or weaken a lint rule to make code
+- docs/implemented-plans/refresh-maps-convergence.md:77 (link) — - **[`CLAUDE.md`](../../CLAUDE.md)** — don't add features beyond the task;
+- docs/implemented-plans/refresh-maps-convergence.review.md:216 (mention) — **Why it matters:** This fails *silently and universally on v2 boxes* — the only shape that exists per `CLAUDE.md` — whi
 - docs/implemented-plans/remove-cardworks-and-xml.md:416 (mention) — pnpm-workspace entry. Update `callback-box/CLAUDE.md`, root `CLAUDE.md`,
 - docs/implemented-plans/remove-cardworks-deletion.md:127 (mention) — CLAUDE.md "refs starting with `attach/` resolve into this scope").
 - docs/implemented-plans/remove-cardworks-package.md:87 (mention) — - **`callback-box/CLAUDE.md`** — `CLAUDE.md:28` (current): *"Every built-in
@@ -138,6 +141,7 @@ Referenced by:
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 - ../issues/bugs/2026-07-15-box-packageify-doubled-subtrees.md:45 (mention) — it holds files (e.g. per-directory `CLAUDE.md`) that have **no identical twin at
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:14 (mention) — not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
+- ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:24 (mention) — failure for a loud one. Note `CLAUDE.md` claims "the repo lints itself", which
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:7 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:21 (mention) — Related: the noisy-output policy in the root CLAUDE.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:7 (mention) — it spawns an agent with a box cwd and box CLAUDE.md context and checks
@@ -276,6 +280,8 @@ Referenced by:
 - docs/implemented-plans/procedure-validation-completion.md:35 (mention) — - **`callback-box/code-style.md`** — no `any`; no default parameters; max 2 positional params (named-params objects); cu
 - docs/implemented-plans/questions-end-to-end.md:72 (mention) — - `callback-box/code-style.md` — Result-vs-throw convention, `withCardLock`
 - docs/implemented-plans/refresh-clerk.md:23 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params, max
+- docs/implemented-plans/refresh-maps-convergence.md:75 (link) — - **[`code-style.md`](../../code-style.md)** — logging levels, max 2 positional
+- docs/implemented-plans/refresh-maps-convergence.review.md:124 (mention) — What the section does *not* trade against, and should: `code-style.md`'s
 - docs/implemented-plans/remove-box-shape-v1.md:102 (mention) — - `callback-box/code-style.md` — no default params, exhaustiveness, strict casts.
 - docs/implemented-plans/remove-cardworks-and-xml.md:51 (mention) — - **`callback-box/code-style.md`** — `code-style.md:25`: *"NEVER use
 - docs/implemented-plans/remove-cardworks-deletion.md:100 (mention) — - **`callback-box/code-style.md:25`** (no `any`), **`:55`** (`as` is like Rust
@@ -339,6 +345,7 @@ Referenced by:
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - frontend.md:113 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
+- ../issues/bugs/2026-07-19-landmark-menu-overflows-mobile.md:53 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/decisions/2026-07-07-cb-render-vs-bin-browse.md:48 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -403,7 +410,7 @@ Referenced by:
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see [`
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:85 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:17 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
-- ../issues/code-quality/2026-07-04-web-push-followup-testing.md:19 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
+- ../issues/code-quality/2026-07-04-web-push-followup-testing.md:20 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
 - ../research/openclaw-hermes/deep-installation.md:96 (mention) — and `callback-box/deploy/README.md`.
 
 References:
@@ -524,7 +531,7 @@ Title: "Installing callback-box with an AI agent" | 97 lines
 
 Referenced by:
 - CLAUDE.md:130 (mention) — | Agent-driven install (for a user's AI assistant) | `docs/agent-install.md` |
-- ../issues/features/2026-07-19-installation-remaining-work.md:21 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
+- ../issues/features/2026-07-19-installation-remaining-work.md:22 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
 
 References:
 - → docs/docker-install.md (link)
@@ -768,7 +775,7 @@ Referenced by:
 - docker/README.md:15 (mention) — | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/developer-install.md` from a fresh `de
 - docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
 - docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
-- ../issues/features/2026-07-19-installation-remaining-work.md:13 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
+- ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
 
 References:
 - → docs/docker-install.md (link)
@@ -796,7 +803,7 @@ Referenced by:
 - docs/agent-install.md:43 (link) — ([docker-install.md](docker-install.md)) is simpler and bundles every
 - docs/developer-install.md:7 (link) — [docker-install.md](docker-install.md).
 - docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
-- ../issues/features/2026-07-19-installation-remaining-work.md:16 (mention) — - Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
+- ../issues/features/2026-07-19-installation-remaining-work.md:17 (mention) — - Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
 
 #### docs/engineering-principles.md
 
@@ -812,6 +819,8 @@ Referenced by:
 - docs/implemented-plans/mobile-parity-sync.md:21 (mention) — - `docs/engineering-principles.md` **#4 resilient and never silent** — drift
 - docs/implemented-plans/mobile-token-handshake.md:14 (mention) — - **`docs/engineering-principles.md` #3 (validate at boundaries)** — the cookie is untrusted
 - docs/implemented-plans/questions-end-to-end.md:57 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
+- docs/implemented-plans/refresh-maps-convergence.md:62 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
+- docs/implemented-plans/refresh-maps-convergence.review.md:113 (mention) — `docs/engineering-principles.md` (#1 types are structure, #3 validate at
 - docs/implemented-plans/remove-box-shape-v1.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — most load-bearing: **#4
 - docs/implemented-plans/responsive-figures.md:33 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
@@ -1004,6 +1013,7 @@ Referenced by:
 - docs/reports/user-stories-audit-2026-06-26.md:732 (mention) — The file src/core/frontmatter-field.ts exports two functions that implement the exact capability described. lookupField(
 - docs/unimplemented-plans/design-vision-superseded.md:7 (mention) — > retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
 - docs/unimplemented-plans/query-cards.md:14 (mention) — planned in docs/landmarks.md long before this, useful for any list-shaped
+- ../issues/bugs/2026-07-19-landmark-menu-overflows-mobile.md:47 (mention) — `src/schemas/landmark.ts` and `docs/landmarks.md`; an `expand` entry fans out to
 - ../issues/features/2026-06-12-card-level-prominence.md:7 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:26 (mention) — Landmarks are already the box's "notable spots" surface (`docs/landmarks.md`), and
 
@@ -1310,6 +1320,8 @@ Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:494 (mention) — substantial new codepaths, per `docs/testing.md`.
 - docs/implemented-plans/normalize-chat-links.md:78 (mention) — - **`callback-box/docs/testing.md`** — tests as a design tool; doctest the
 - docs/implemented-plans/procedure-validation-completion.md:36 (mention) — - **`docs/testing.md`** — tests come first as a design tool; cover substantial codepaths, not coverage-for-its-own-sake.
+- docs/implemented-plans/refresh-maps-convergence.md:352 (mention) — **Test posture.** Doctests named as part of the design, per `docs/testing.md`:
+- docs/implemented-plans/refresh-maps-convergence.review.md:268 (mention) — **Why it matters:** The plan's ordering rationale is the one place a reader checks before starting work. An "independent
 - docs/implemented-plans/responsive-figures.md:403 (mention) — doctest tiers exercise (`docs/testing.md` posture: don't test for coverage's
 - docs/implemented-plans/rest-to-trpc-consolidation.md:383 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
 - docs/implemented-plans/see-as-the-user.md:575 (mention) — - **Tests first as design tool** (`docs/testing.md`): B0's extraction is
@@ -1777,7 +1789,7 @@ Referenced by:
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:3 (mention) — **Status:** SUPERSEDED by `docs/implemented-plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:33 (mention) — `callback-box/docs/implemented-plans/boxes-as-packages-v2.md`.
-- ../issues/features/2026-07-19-installation-remaining-work.md:50 (mention) — (Roadmap: `callback-box/docs/implemented-plans/boxes-as-packages-v2.md`
+- ../issues/features/2026-07-19-installation-remaining-work.md:51 (mention) — (Roadmap: `callback-box/docs/implemented-plans/boxes-as-packages-v2.md`
 - ../research/openclaw-hermes/deep-installation.md:200 (mention) — | 7 | **npm publish** — the gate to a real five-minute start (`pnpm dlx`), and the prerequisite for any installer script
 
 References:
@@ -2229,6 +2241,32 @@ References:
 - → CLAUDE.md (mention)
 - → code-style.md (mention)
 
+#### docs/implemented-plans/refresh-maps-convergence.md
+
+Title: "refresh-maps convergence" | 382 lines
+
+Referenced by:
+- docs/implemented-plans/refresh-maps-convergence.review.md:12 (link) — Adversarial review of [`refresh-maps-convergence.md`](refresh-maps-convergence.md),
+- ../issues/closed/bugs/2026-07-15-refresh-maps-wedges-on-unresolvable-dir.md:81 (link) — [`callback-box/docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/plans/refresh-maps-convergence.md).
+- ../issues/code-quality/2026-07-19-refresh-maps-max-turns-throughput.md:16 (link) — [`docs/plans/refresh-maps-convergence.md`](../../callback-box/docs/plans/refresh-maps-convergence.md)).
+
+References:
+- → docs/engineering-principles.md (link)
+- → code-style.md (link)
+- → CLAUDE.md (link)
+- → docs/testing.md (mention)
+
+#### docs/implemented-plans/refresh-maps-convergence.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — refresh-maps convergence" | 379 lines
+
+References:
+- → docs/implemented-plans/refresh-maps-convergence.md (link)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → CLAUDE.md (mention)
+- → docs/testing.md (mention)
+
 #### docs/implemented-plans/remove-box-shape-v1.core-review.md **[ORPHAN]**
 
 Title: "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" | 57 lines
@@ -2495,7 +2533,7 @@ Title: "Web Push notifications" | 508 lines
 
 Referenced by:
 - docs/implemented-plans/web-push-notifications.review-codex.md:1 (mention) — # Codex review — web-push-notifications.md
-- ../issues/code-quality/2026-07-04-web-push-followup-testing.md:4 (mention) — design: ../callback-box/docs/implemented-plans/web-push-notifications.md
+- ../issues/code-quality/2026-07-04-web-push-followup-testing.md:5 (mention) — design: ../callback-box/docs/implemented-plans/web-push-notifications.md
 
 References:
 - → docs/box-layout.md (mention)
@@ -2984,7 +3022,7 @@ Referenced by:
 - ../issues/closed/features/2026-07-12-cb-doctor-preflight.md:25 (mention) — `callback-box/docs/plans/source-available-release.md` (preflight + actionable
 - ../issues/closed/features/2026-07-12-docker-vps-install-path.md:10 (mention) — `callback-box/docs/plans/source-available-release.md`, currently deferred
 - ../issues/decisions/2026-07-08-release-cloud-provider-honesty.md:14 (mention) — feature gap. Two things to settle in `docs/plans/source-available-release.md`:
-- ../issues/features/2026-07-19-installation-remaining-work.md:51 (mention) — distribution decisions; `source-available-release.md` NOT-in-scope.)
+- ../issues/features/2026-07-19-installation-remaining-work.md:52 (mention) — distribution decisions; `source-available-release.md` NOT-in-scope.)
 - ../research/openclaw-hermes/deep-installation.md:9 (link) — [`source-available-release.md`](../../callback-box/docs/plans/source-available-release.md)
 - ../research/rowboat-review.md:39 (mention) — - **Local-model option (Ollama/LM Studio).** We hard-require a configured Claude key (deliberately — bill safety, `feedb
 
