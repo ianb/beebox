@@ -66,15 +66,27 @@ Reused (cited); nothing here is rebuilt:
 - **Hub boundary (unchanged)** — `auth.ts:115` `isHubMode()`, `auth.ts:126`
   `verifyHubSecret` (timing-safe), header trust documented at
   `auth.ts:252-276`. Deliberately untouched.
-- **Diag bearer (unchanged)** — `auth.ts:63` `verifyDiagBearerKey`,
-  `auth.ts:85` `isDiagnosticBypassRequest` (GET + whitelist + timing-safe
-  key). Deliberately untouched.
-- **Per-box agent token** — `src/core/agent/token.ts:26`
-  `.callback-box/agent-token` (0600, gitignored), injected as
-  `CB_AGENT_TOKEN` into spawned scripts, verified by
-  `token.ts:55` `verifyAgentBearer`, already granting `authed: true` in the
-  tRPC context (`server-box-scope.ts:188,196`). Reused as the local-tooling
-  credential for page access (Track E) — no new dev credential is invented.
+- **Diag bearer (kept, but tightened)** — `auth.ts:63` `verifyDiagBearerKey`,
+  `auth.ts:85` `isDiagnosticBypassRequest`. The key mechanism stays, but the
+  "whitelist" is a substring match (`auth.ts:88`
+  `url.includes("/api/trpc/health.check")`), which a tRPC **batch** URL
+  (`/api/trpc/health.check,history.list?batch=1`) satisfies while carrying
+  non-whitelisted procedures — and procedures like `history.list` are
+  `publicProcedure` (`trpc/routers/history.ts:65`), gated only by the outer
+  wall. A diag-key holder can therefore read well beyond the two whitelisted
+  endpoints. Pre-existing bug (found in cross-model review); Track B fixes
+  it by parsing the exact procedure list and requiring every batched
+  procedure to be whitelisted.
+- **Per-box agent token — already accepted for ALL in-box requests.** —
+  `src/core/agent/token.ts:26` `.callback-box/agent-token` (0600,
+  gitignored), injected as `CB_AGENT_TOKEN` into spawned scripts. The box
+  auth preHandler already returns early on `verifyAgentBearer`
+  (`server-box-scope.ts:86-88`: "The box's own agents … call back in with
+  the per-box loopback token"), pages and API alike, and the tRPC context
+  sets `authed: true` on it (`server-box-scope.ts:188,196`). Note the limit:
+  the bearer grants `authed`, **not** `isOwner`
+  (`server-box-scope.ts:197`). Track E therefore needs no server change at
+  all — only browse-tooling header injection.
 - **Hashed-credential file precedent** — `src/core/mobile/pairing.ts:56-58`
   stores mobile device tokens as SHA-256 hashes in a
   `*.secret.json` written `{ mode: 0o600 }` (`pairing.ts:77-80`). The users
@@ -174,11 +186,25 @@ remove.
 **Direction.** File at `~/.cb-auth.json` (sibling of `~/.cb-session-secret`,
 same home-level scope — identity is fleet-level: the hub logs users into many
 boxes, and in dev one account serves every worktree). Env override
-`CB_AUTH_FILE` for prod/tests. Written mode 0600; created with `wx`
-(O_EXCL) so two racing first-run setups can't both win. Zod-validated on
-every load (principle #3); an unparseable file is a **hard failure of
-login** (typed `AuthFileCorruptError`, `console.error`, all logins refused —
-never fail open) while non-auth traffic is unaffected.
+`CB_AUTH_FILE` for prod/tests. Created with `wx` (O_EXCL) so two racing
+first-run setups can't both win; every subsequent write is
+**write-temp + fsync + rename** (a crash mid-write must not truncate the
+file that gates all logins — `mode: 0o600` on a plain `writeFileSync`, the
+mobile-pairing precedent, is not crash-safe). Loads validate more than
+shape: Zod parse (principle #3), plus a permissions check (not 0600 →
+`console.warn` and chmod) and a refusal to follow a symlink. An unparseable
+file is a **hard failure of login** (typed `AuthFileCorruptError`,
+`console.error`, all logins refused — never fail open); how that state
+answers at the request boundary is specified in Track D
+(`auth-store-unavailable` → 503). Mutating operations (add/set/remove)
+serialize through `src/lib/file-lock.ts` per the CLAUDE.md lock rule.
+Emails are **canonicalized (trimmed, lowercased) at every boundary** —
+store, login POST, setup, CLI — because `canAccessBox`
+(`box-access.ts:19-31`) and `getOwnerEmail` compare exact strings, and a
+case-differing first account would be a successfully created owner who gets
+403 everywhere. For the same reason, when `CB_OWNER_EMAIL` is set, setup
+refuses to create a first owner with a different (canonicalized) email —
+matching, not shadowing, the configured owner.
 
 Shape:
 
@@ -239,23 +265,48 @@ that conflation is the whole disease (issue, problems 1–2).
   (`server-box-scope.ts:186`, `capture-request-owner.ts:38`, `server-root.ts:283`)
   just read `identity.source`. The `IdentitySource` union doesn't change;
   "open" gains the standalone meaning its name already implies.
-- **The loud opt-out.** Warning emitted at `startServer`/hub listen time (not
-  `createServer`): every real boot of an open server prints a multi-line
-  `console.warn` naming the flag and the risk; test servers using
-  `server.inject()` never listen, so hundreds of route tests stay quiet
-  (noise-is-a-bug, root CLAUDE.md) while any actually-listening dev server
-  warns on every boot. The frontend shows a persistent (non-dismissible)
-  banner: `/auth/me` in open mode returns `{ "open": true }` instead of
-  `null` (the stub at `routes/auth.ts:66-72` becomes this), and
-  `useCurrentUser` surfaces it.
+- **The loud opt-out, tiered by exposure.** `CB_ALLOW_UNAUTHENTICATED=1`
+  permits open mode only when the server binds loopback; binding a
+  non-loopback host in open mode requires the explicit value
+  `CB_ALLOW_UNAUTHENTICATED=network` — otherwise startup fails with an error
+  naming both spellings. (An open box on `0.0.0.0` is the catastrophic
+  config; it gets its own, uglier opt-in.) Warning emitted at
+  `startServer`/hub listen time (not `createServer`): every real boot of an
+  open server prints a multi-line `console.warn` naming the flag and the
+  risk; test servers using `server.inject()` never listen, so hundreds of
+  route tests stay quiet (noise-is-a-bug, root CLAUDE.md) while any
+  actually-listening dev server warns on every boot. Open state is also
+  machine-visible: `/healthz` and `/api/build-info` include
+  `"open": true`, so API/WS consumers who never see a banner can still
+  detect it. The frontend shows a persistent (non-dismissible) banner:
+  `/auth/me` in open mode returns `{ "open": true }` instead of `null` (the
+  stub at `routes/auth.ts:66-72` becomes this), and `useCurrentUser`
+  surfaces it.
+- **Root-route classification (complete, not just the SPA fallback).** Every
+  root-level route gets an explicit auth class in this track:
+  `/api/boxes` (filtered by identity — existing behavior),
+  `/api/build-info` (`server-root.ts:201`) stays public but minimal (build
+  hash + `open` flag only), `/api/push/resubscribe` (`server-root.ts:217-234`,
+  today an unauthenticated state-changing POST) moves behind the wall,
+  hub `/healthz` stays public but is reviewed down to liveness + `open` (no
+  per-box runtime detail), and the SPA fallback's `/share` carve-out
+  (`server-root.ts:281`) is **removed** — no share feature exists in the
+  tree to justify it, and an unused hole in the wall is exactly the kind of
+  exception that outlives its rationale.
+- **Diag-bypass tightening.** `isDiagnosticBypassRequest` (`auth.ts:85-90`)
+  replaces its `url.includes(...)` substring test with parsing the tRPC path
+  segment and requiring **every** comma-separated batched procedure to be in
+  the whitelist. (See What-already-exists; this is a live pre-existing
+  privilege-widening for diag-key holders.)
 - `makeTestServer`/`createTestServer` sets `CB_ALLOW_UNAUTHENTICATED=1`
   (around `test-server.ts:128-131`) — honest: test servers *are*
   deliberately open. Tests exercising auth itself unset it locally, exactly
   as they toggle `GOOGLE_OAUTH_CLIENT_ID` today
   (e.g. `test/hub/hub-server-auth.doctest.md:25`).
 
-**Vocabulary lock-ins.** `authRequired()`, `CB_ALLOW_UNAUTHENTICATED` (value
-`"1"` exactly; anything else is off — fail closed).
+**Vocabulary lock-ins.** `authRequired()`, `CB_ALLOW_UNAUTHENTICATED`
+(value `"1"` = loopback-only open mode, `"network"` = open on any bind;
+any other value is rejected at startup — fail closed, never coerced).
 
 **First implementation chunk.** `authRequired()` + the mechanical call-site
 flip + test-helper env + updating the existing auth doctests
@@ -293,24 +344,39 @@ carve-out for "OAuth redirects" extends to the login surface):
   boot (listen-time, same hook as the opt-out warning) generates a one-time
   in-memory setup token and prints
   `First-run setup: http://<host>/auth/setup?token=<…>` to the console.
-  `GET /auth/setup` serves the SPA; `POST /auth/setup` requires the token
-  and creates the owner account (O_EXCL — first writer wins), then mints a
-  session. The route answers `410 Gone` the moment a user exists. The token
-  closes the network race (Prior art #3/#4) at zero cost for the legitimate
-  installer, who is watching the console they just started the server from.
-  Headless twin: `cb auth create-user` (Track F) needs no token — it runs as
-  the file owner, which *is* the authority.
+  The token **expires 15 minutes after boot** (restart re-arms it — the
+  Portainer lesson without the self-terminating service): an unattended
+  exposed server with zero users is not claimable indefinitely, and a
+  leaked old log line is worthless. `GET /auth/setup` serves the SPA;
+  `POST /auth/setup` requires the live token and creates the owner account
+  (O_EXCL — first writer wins), then mints a session. The route answers
+  `410 Gone` the moment a user exists, and `410` with a "restart the server
+  or run `cb auth create-user`" body after expiry. The **token never
+  appears in any served page**: the login page's pointer to setup is text
+  ("check the server console for the setup link, or run
+  `cb auth create-user`"), because an unauthenticated endpoint that hands
+  out the setup capability would defeat it. Headless twin:
+  `cb auth create-user` (Track F) needs no token — it runs as the file
+  owner, which *is* the authority.
   With Google configured and zero users (prod's migration state), nothing
-  redirects to setup — the login page simply offers Google plus a "create
-  local account" pointer at the setup URL; Google login keeps working
-  throughout.
-- **Throttle** — `src/webapp/login-throttle.ts`: pure core
-  (`Map<key, {failures, nextAllowedAt}>`, key = `ip|email`, delay
-  `min(1s · 2^(failures-1), 60s)`, cleared on success, entries expire after
-  1h; injected clock per principle #10). Applied to `POST /auth/login` and
-  `POST /auth/setup`. Every throttled attempt logs `console.warn` with ip +
-  email. In-memory is correct: single process holds the login surface
-  (standalone or hub), and restart-resets are acceptable for a backoff.
+  redirects to setup; Google login keeps working throughout.
+- **Throttle** — `src/webapp/login-throttle.ts`: pure core with injected
+  clock (principle #10), applied to `POST /auth/login` and
+  `POST /auth/setup`. Three independent limits, because an attacker
+  controls both key dimensions:
+  1. per-`(ip,email)` exponential backoff (`min(1s · 2^(failures-1), 60s)`,
+     cleared on success, entries expire after 1h);
+  2. a per-IP bucket across all emails (so varying the email doesn't reset
+     the clock);
+  3. a **global scrypt concurrency cap** (2 in flight; excess requests
+     answer `429` *before* hashing) — each verification costs ~128MB and
+     ~100ms, so unthrottled parallel logins are a memory-DoS primitive
+     regardless of backoff.
+  The map is hard-capped (~4k entries, oldest-evicted, eviction logged) —
+  "expires in 1h" alone is not a memory bound when the attacker mints keys.
+  Every throttled attempt logs `console.warn` with ip + email. In-memory is
+  correct: a single process holds the login surface (standalone or hub),
+  and restart-resets are acceptable for a backoff.
 
 **Vocabulary lock-ins.** Route paths `/auth/login` (GET page + POST),
 `/auth/google`, `/auth/setup`; response shapes above; module name
@@ -330,15 +396,39 @@ session store"); a password change must invalidate outstanding sessions or
 changing a leaked password doesn't end the leak.
 
 **Direction.** `signSession` payload gains optional `gen`; the check lives in
-`resolveRequestIdentity`'s cookie path (`auth.ts:290-292`): after
-`verifySession`, if the email has a local user record, require
-`payload.gen === user.gen` (missing or stale → unauthenticated). Emails with
-no local record (Google-only identities) skip the check — and creating a
-local credential for an email therefore invalidates that email's older
-Google-minted cookies, which is the strict direction. Auth-file reads on the
-request path are cached with an mtime guard (the file changes only on
-credential operations). Hub mode needs no change: the hub is the only cookie
-verifier and the only auth-file reader; children keep trusting headers.
+`resolveRequestIdentity`'s cookie path (`auth.ts:290-292`), with one
+consistent rule set (this replaces an earlier draft the cross-model review
+showed was self-contradictory):
+
+- **Every** login for an email that has a local record mints `gen` — the
+  password POST *and* the Google callback both stamp the record's current
+  value. (Google-only emails, no record, mint no `gen`.)
+- Verify: record exists → cookie must carry `gen === record.gen` (absent or
+  stale → unauthenticated). No record → cookie must carry **no** `gen`
+  (a `gen`-bearing cookie whose record vanished is dead — so removing a
+  local user revokes its sessions). No record, no `gen` → valid
+  (Google-only identity; `canAccessBox` still gates authorization).
+- Consequences, stated: password change bumps `gen` → all prior sessions
+  for that email die, Google-minted ones included (strict, intended);
+  creating a local record for an email invalidates that email's older
+  Google-minted (gen-less) cookies — one re-login, intended.
+
+`verifySession` (`auth.ts:179-184`) currently discards unknown payload
+fields; it gains `gen` passthrough. Auth-file reads on the request path are
+cached with an mtime guard (the file changes only on credential
+operations). **Corrupt auth file at the request boundary fails closed but
+distinctly**: the resolver returns a dedicated `auth-store-unavailable`
+outcome and every consumer answers `503` (not 401, not fall-through-to-
+Google-only — treating corruption as "no record" would fail *open* for
+exactly the sessions `gen` exists to revoke). **WS upgrades**: the tRPC WS
+adapter hands `createContext` a raw `IncomingMessage`, not a
+cookie-decorated Fastify request, so the resolver's cookie path falls back
+to parsing the raw `Cookie` header via the existing
+`getSessionUserFromCookieHeader` (`auth.ts:204` — built for "the paths
+without `@fastify/cookie`'s decoration"); today the gap is masked because
+standalone+auth is rare, but default-on makes it every dev box's WS path.
+Hub mode needs no change: the hub is the only cookie verifier and the only
+auth-file reader; children keep trusting headers.
 
 **Vocabulary lock-ins.** Cookie payload field `gen`.
 
@@ -359,31 +449,37 @@ Chromium — confirmed no header/cookie injection exists anywhere in
 the login wall, and forced-in-dev that tooling can't survive is forced-in-dev
 that gets bypassed.
 
-**Direction.** Two small pieces, both riding `verifyAgentBearer`
-(`token.ts:55`):
-1. The box auth preHandler (`server-box-scope.ts:100-114`) accepts
-   `Authorization: Bearer <agent-token>` for any in-box request, page or
-   API — the token already grants `authed: true` in the tRPC context
-   (`server-box-scope.ts:188,196`), so this widens *where* the same trust
-   applies, not *what* is trusted. Serves curl-style probes.
-2. `GET /auth/agent-login?token=<agent-token>&returnTo=<path>` (per-box
-   scope): verifies via `verifyAgentBearer`, mints a short-lived session
-   cookie (owner identity, 12h), redirects. This is what a real browser can
-   actually use: `bin/browse`'s wrapper rewrites `/`-leading paths and can
-   open this URL first, reading the token from the worktree box's
-   `.callback-box/agent-token`. The token appears in a URL — acceptable for a
-   local dev token that already sits world-readable-to-owner on the same
-   machine and already grants API access; the route logs each use
-   (`console.warn`, "agent-login used") so it's never invisible.
+**Direction.** No server change at all. The box auth preHandler *already*
+accepts `Authorization: Bearer <agent-token>` for every in-box request,
+page or API (`server-box-scope.ts:86-88`) — the gap is purely that a real
+Chromium can't attach the header. So the work is confined to the in-monorepo
+browse tooling: the `browse` CLI (driven via `bin/browse`) gains an
+extra-headers option (CDP `Network.setExtraHTTPHeaders` per page), and the
+`bin/browse` wrapper — which already resolves the worktree — reads the box's
+`.callback-box/agent-token` and injects
+`Authorization: Bearer <token>` for requests to this worktree's origin.
+Tours (`test/tours/tour-lib/browse.ts`) inherit it by spawning `bin/browse`.
 
-Identity for both: the owner email (from Track A's file / `CB_OWNER_EMAIL`),
-matching the token's existing owner-equivalent API power.
+An earlier draft had a `GET /auth/agent-login?token=…` route minting an
+owner session cookie. Cross-model review killed it, correctly, on three
+counts: the bearer grants `authed`, **not** owner
+(`server-box-scope.ts:197`), so an owner cookie would be an escalation; the
+session cookie is `Path=/` (`routes/auth.ts:157-158`), so a *per-box* token
+would buy a *fleet-wide* session on a multi-box server; and the token would
+land in browser history and logs. Header injection stays exactly inside the
+trust the token already has — same requests, same `authed`-not-owner
+identity, no cookie minted, no product surface added.
 
-**Vocabulary lock-ins.** Route `/auth/agent-login`.
+Limit, stated: browse-driven pages act as an authed non-owner, so
+owner-gated UI (`ownerProcedure` admin surfaces) stays walled off from
+tooling — correct, and previously false only because dev boxes were open.
 
-**First implementation chunk.** Both pieces + doctest
-(`test/webapp/agent-login.doctest.md`); the `bin/browse` wiring (read token,
-prime the session before first navigation) is a follow-on commit in `bin/`.
+**Vocabulary lock-ins.** None (no new routes, env vars, or credentials).
+
+**First implementation chunk.** The browse-CLI header option + `bin/browse`
+token wiring; verified by a tour against a `makeTestServer`-style authed
+worktree serve rather than a new callback-box doctest (the change is in
+`browse/`+`bin/`, not in the server).
 
 ### Track F — `cb auth` CLI
 
@@ -462,17 +558,20 @@ accommodates it and no current decision is blocked by it.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Auth file corrupt / fails Zod parse | Track A doctest | `AuthFileCorruptError`; all password logins refuse; server keeps serving | Clear — `console.error` with path; login page shows "local login unavailable" |
+| Auth file corrupt / fails Zod parse | Track A + Track D doctests (login path AND cookie-verify path) | `AuthFileCorruptError`; logins refuse; cookie resolution returns `auth-store-unavailable` → 503 (never "no record", which would fail open for revoked sessions) | Clear — `console.error` with path; login page shows "local login unavailable" |
 | Auth file missing on a box that had users (deleted/moved) | Track A doctest | Zero-users state → setup flow re-arms, but existing cookies carry `gen` and the resolver finds no record → Google-only emails still work, password sessions die | Clear — boot prints setup line again |
 | scrypt throws (maxmem, bad params from hand-edited file) | Track A doctest (bad-params case) | Verify path catches typed error → login fails closed, `console.error` | Clear |
 | Two first-run setups race (two browsers, or setup page vs `cb auth create-user`) | Track A doctest (O_EXCL) | `wx` create: second writer gets `UserExistsError` → setup POST answers 409 | Clear |
-| Setup token leaks via console scrollback | — | Token is single-use and dies once a user exists; route 410s after | Clear-enough; accepted (matches Jupyter posture) |
-| Brute-force against `POST /auth/login` | Throttle doctest | Exponential backoff per (ip,email); uniform 401 body | Clear — each throttled attempt `console.warn`s |
-| Throttle map growth (spray of ips/emails) | Throttle doctest (expiry) | 1h entry expiry; map bounded by attack window | Clear enough; memory-only |
+| Setup token leaks (console scrollback, shipped logs) | Setup doctest (expiry case) | 15-minute TTL from boot + dies once a user exists; never served in any page | Clear — 410 with recovery instructions |
+| Brute-force against `POST /auth/login` | Throttle doctest | Per-(ip,email) backoff + per-IP bucket + uniform 401 body | Clear — each throttled attempt `console.warn`s |
+| scrypt memory-DoS (parallel logins × 128MB each) | Throttle doctest (concurrency case) | Global cap of 2 in-flight verifications; excess 429 before hashing | Clear — 429 |
+| Throttle map growth (spray of ips/emails) | Throttle doctest (eviction) | 1h expiry + hard cap (~4k, oldest-evicted) | Clear — eviction logged |
 | `CB_ALLOW_UNAUTHENTICATED` set in prod by mistake | — | Cannot be silent: boot warning every start + non-dismissible UI banner | Clear by construction |
 | Test-helper env leaks `CB_ALLOW_UNAUTHENTICATED=1` into an auth-testing doctest | Existing auth doctests re-run under Track B | Auth doctests explicitly unset it (same discipline as `GOOGLE_OAUTH_CLIENT_ID` today, e.g. `hub-server-auth.doctest.md:25`) | Clear — those tests fail if the gate is open |
 | Stale `gen` cache (mtime guard misses a same-ms write) | session-gen doctest | Worst case: a revoked cookie lives until next mtime tick (<1s); credential ops are rare and human-paced | Accepted risk, documented in module comment |
-| `/auth/agent-login` token in a shared/pasted URL | agent-login doctest (bad token → 401) | Token is per-box, local-file-gated, already API-omnipotent; every use logged | Clear — logged on use |
+| WS upgrade authed via cookie on standalone (raw `IncomingMessage`, no `@fastify/cookie` decoration) | New WS-auth doctest (Track D) | Resolver falls back to `getSessionUserFromCookieHeader` on raw headers | Clear — without it, WS dies at context creation once auth is default-on |
+| Browse-injected bearer used against owner-gated UI | — | By design: bearer is `authed`, never `isOwner`; owner surfaces stay walled | Clear — 403 from `ownerProcedure` |
+| Removed local user's outstanding sessions | session-gen doctest | `gen`-bearing cookie with no record → unauthenticated | Clear |
 | Hub child receives password POST directly (bypassing hub) | Existing `hub-mode-auth` doctest extended | Children in hub mode don't register credential verification (no secret, no auth file read); box-scope routes stay header-gated | Clear — 401 with the existing hub-bypass detail message (`server-box-scope.ts:104-112`) |
 | Login page unreachable because SPA bundle missing (fresh clone, no build) | — | Same failure as every page today (`frontendExists` guard, `server-box-scope.ts:222`); curl + `cb auth` still work | Clear enough |
 
@@ -533,10 +632,12 @@ The template's card-centric scenarios, mapped honestly onto an auth surface:
 - **Throttle keying behind NAT/proxies** — (ip,email) keying means a shared
   NAT can throttle a household. Lean: accept; single-user system, backoff
   caps at 60s. Not worth `trustProxy` complexity in standalone mode.
-- **Should `POST /auth/setup` also require the token when the request comes
-  from localhost?** Lean: yes, no localhost carve-out — carve-outs are how
-  fail-open comes back (principle: strict bias). The token is already in the
-  console the localhost user is watching.
+- **Does gating `/api/push/resubscribe` break service-worker resubscribes?**
+  Lean: no — the SW fetches same-origin with credentials, so the session
+  cookie rides along; verify in Track G's manual pass. If a push-triggered
+  resubscribe can fire from a logged-out SW, it degrades to "resubscribe on
+  next visit", which the route's own comment already calls best-effort
+  (`server-root.ts:220`).
 - **Banner copy and login-page "why" copy** — wording lands in Track G
   review with the boxholder; not structural.
 
@@ -558,8 +659,8 @@ If a future change makes agents interact with auth (e.g. an agent-facing
 3. **Track C** — password login + setup + throttle + doctests. (Needs A;
    with B makes the system coherent again.)
 4. **Track D** — `gen` revocation. (Needs A, C.)
-5. **Track E** — agent-token page access + `/auth/agent-login` + `bin/browse`
-   wiring. (Needs B; independent of C/D.)
+5. **Track E** — browse-CLI header injection + `bin/browse` token wiring
+   (no server change). (Needs B; independent of C/D.)
 6. **Track F** — `cb auth` CLI. (Needs A.)
 7. **Track G** — frontend login/setup/banner + `/auth/methods`. (Needs C.)
 8. **Track H** — docs/deploy/migration notes + issue closure. (Last.)
@@ -570,15 +671,21 @@ land. No main merge without the boxholder's explicit signal.
 ## Rollout shape
 
 - **Test posture (tests as design tool, `docs/testing.md`).** Named up
-  front: `local-users.doctest.md` (pure tier), `login-throttle.doctest.md`
-  (pure, injected clock), `password-login.doctest.md`,
-  `session-gen.doctest.md`, `agent-login.doctest.md` (route tier via
-  `makeTestServer` with the opt-out unset), `auth-command.doctest.md` (CLI,
-  tmp `CB_AUTH_FILE`); plus updates to the five existing auth/hub doctests
-  that today toggle `GOOGLE_OAUTH_CLIENT_ID`. Done-when: all of the above
-  green, `pnpm test` green, and a manual pass — fresh dev serve forces
-  setup → login works → `bin/browse` tours an authed box → `cb serve` with
-  `CB_ALLOW_UNAUTHENTICATED=1` warns and banners.
+  front: `local-users.doctest.md` (pure tier: create/verify/rehash/
+  gen-bump/corrupt/atomic-write/canonicalization),
+  `login-throttle.doctest.md` (pure, injected clock: backoff, per-IP
+  bucket, concurrency cap, eviction), `password-login.doctest.md` (route
+  tier: login, uniform 401, setup incl. token expiry and O_EXCL race),
+  `session-gen.doctest.md` (password change kills sessions; removed user
+  kills sessions; Google+local coexistence; corrupt file → 503),
+  `ws-auth.doctest.md` (cookie-authed WS upgrade on standalone),
+  `auth-command.doctest.md` (CLI, tmp `CB_AUTH_FILE`); a diag-bypass
+  doctest asserting a batch URL no longer passes; plus updates to the five
+  existing auth/hub doctests that today toggle `GOOGLE_OAUTH_CLIENT_ID`.
+  Done-when: all of the above green, `pnpm test` green, and a manual pass —
+  fresh dev serve forces setup → login works → `bin/browse` tours an authed
+  box via injected bearer → `cb serve` with `CB_ALLOW_UNAUTHENTICATED=1`
+  warns and banners, and with `=1` on a non-loopback bind refuses to start.
 - **Knowledge audits.** None (rationale above).
 - **Migration.** No data migrates. Prod upgrades in place (Track H);
   `needs: [manual-testing]` goes on the issue for the prod hardening step
