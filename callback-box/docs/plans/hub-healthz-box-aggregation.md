@@ -214,10 +214,13 @@ app.get("/healthz/canary", async (request, reply) => {
   const slug = (request.query as { box?: string }).box ?? endpoints.slugs()[0];
   if (!slug) return reply.status(503).send({ status: "no-boxes" });
   const endpoint = await endpoints.ensureRunning?.(slug) ?? endpoints.get(slug);
-  if (!endpoint) {
-    return reply.status(503).send({ status: "canary-failed", slug });
-  }
-  return reply.send({ status: "ok", slug });
+  if (!endpoint) return reply.status(503).send({ status: "canary-failed", slug });
+  // Readiness (waitForHttp) accepts ANY HTTP response, so a socket that
+  // accepts isn't proof the box is healthy — fetch its own /healthz and
+  // require 200. (Added after codex review; see below.)
+  const res = await fetch(`${endpoint.origin}/healthz`, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10_000) });
+  if (res.status !== 200) return reply.status(503).send({ status: "canary-failed", slug, boxHealthz: res.status });
+  return reply.status(200).send({ status: "ok", slug });
 });
 ```
 
@@ -225,7 +228,12 @@ app.get("/healthz/canary", async (request, reply) => {
 On a lazy hub `ensureRunning` cold-starts and waits; on a non-lazy hub it's
 `get()` and the box is already up. During the ABI incident this returns 503
 (the child crash-loops, `ensureRunning` never gets a live endpoint) — the exact
-signal the deploy needed.
+signal the deploy needed. The added box-`/healthz` fetch closes a gap a
+cross-model review caught: the supervisor's readiness probe treats any HTTP
+response as ready, so without it a child that opens its port but whose health
+handler is broken would canary green. The box's `/healthz` returns 200 on the
+authorized path regardless of drift/schema/engine signals (those go in the
+body), so this doesn't false-fail on benign drift.
 
 **Route ordering / slug collision.** `GET /healthz/canary` is a more specific
 path than the catch-all `/*` and than `/healthz`; Fastify matches it before the
@@ -290,21 +298,24 @@ are documented below with rationale.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A box crash-loops at startup (the incident) | Yes — verdict unit test + `hub-router.doctest.md` canary 503 case | `unhealthy`/`starting+failures` → 503; canary → 503 | Clear — slug + `lastError` in body and deploy log |
-| A running box wedges its event loop but keeps its port | No — accepted | Not detected (no probe) | **Silent** — accepted residual, see below |
+| A running box wedges its event loop but keeps its port | At deploy: yes (canary box-`/healthz` requires 200) | Caught at deploy time; not flagged by passive `/healthz` between deploys | Clear at deploy; silent in steady-state monitoring — accepted, see below |
 | Every box is `stopped` (genuinely idle) and a latent break exists | N/A — accepted | Passive verdict says `ok`; **canary actively starts one and would catch a fleet-wide break** | Clear at deploy (canary), silent between deploys until first real request |
 | `hub-state.json` is empty/corrupt so `prestartLazy` starts nothing | Covered by not depending on it | Canary starts a box explicitly; deploy no longer relies on prestart | Clear — this is the first draft's critical bug, fixed by Track B |
-| Diag key unset in prod `.env` | To add: doctest asserting 503 `unconfigured` | Both routes 503 `unconfigured`; deploy's existing "skip if no key" branch stays | Clear |
+| Diag key unset in prod `.env` | Route 503 `unconfigured` covered in `hub-router.doctest.md` | Both routes 503 `unconfigured`; **deploy fails closed** (exit 1 with a remediation message) rather than skipping — verifying nothing must not report success | Clear — the key isn't auto-provisioned by `setup-server.sh`, so a fresh server's first deploy fails until the operator sets it (a deliberate strict trade, flagged to the boxholder) |
 | `deploy.sh`'s `node -e` hits malformed JSON | No | Parse failure exits non-zero → deploy fails | Clear — fail-closed, body echoed |
 | A future `BoxRunStatus` member defaults to "healthy" | Compile-time | `assertNever` in the verdict switch | Clear — build breaks (principle 2) |
 | Canary picks a slug that is legitimately slow to cold-start, exceeding readiness timeout | Partially — the ready/not-ready doctest cases | `READY_TIMEOUT_MS` (30s) is the same budget a real request gives; 180s deploy poll wraps it | Clear — canary 503 names the slug |
 | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.md` | Clear — monitor gets 401, operator adds the key (already used for external checks per `deploy.sh:585`) |
 
-**Accepted risk — wedged-but-listening running box.** Dropping the probe means
-a box that reaches `running` and then blocks its event loop while still holding
-its port is not detected. Rationale: the incident's failure mode (crash before
-`running`) *is* caught; this distinct mode did not occur, and catching it cost a
-per-request network fan-out behind a public endpoint (principle 6). If it
-recurs, a probe can be added later as its own plan.
+**Accepted risk — wedged-but-listening running box, *between deploys*.** The
+passive verdict trusts `running` without a per-request probe, so a box that
+reaches `running` and then blocks its event loop while still holding its port
+is not flagged by `/healthz` between deploys. Rationale: the incident's failure
+mode (crash before `running`) *is* caught, and a per-request probe cost a
+network fan-out behind a public endpoint (principle 6). At **deploy** time the
+canary's box-`/healthz` fetch does catch a listening-but-broken box (it requires
+a 200), so the deploy is not blind to it — only steady-state monitoring is. If
+steady-state detection is needed, a probe is its own plan.
 
 **Accepted risk — fleet-wide idle blindness between deploys.** Between deploys,
 if every box is `stopped`, the passive verdict cannot distinguish a healthy idle

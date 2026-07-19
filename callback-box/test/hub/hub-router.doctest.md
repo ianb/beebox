@@ -21,6 +21,7 @@ import net from "node:net";
 import crypto from "node:crypto";
 import { createHubServer } from "../../src/hub/hub-server.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
+import { Supervisor } from "../../src/hub/supervisor.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -527,15 +528,64 @@ JSON.stringify(await canaryEmpty.json())
 await new Promise((resolve) => emptyHub.server.close(resolve));
 ```
 
-The canary is also diag-gated — no key → 401:
+The canary is also diag-gated — no key → 401, and the gate runs BEFORE the
+side effect, so an unauthorized request never cold-starts a box
+(`ensureCalls` unchanged):
 
 ```ts continue
+const callsBefore = canaryProvider.ensureCalls;
 const canaryNoKey = await fetch(`${canaryHub.base}/healthz/canary`);
 canaryNoKey.status
 => 401
 
+canaryProvider.ensureCalls === callsBefore
+=> true
+
 for (const socket of canaryHub.sockets) socket.destroy();
 await new Promise((resolve) => canaryHub.server.close(resolve));
+```
+
+## The canary reproduces the incident path: a real Supervisor whose child never becomes ready → 503
+
+The fake providers above prove the route's branching; this proves the actual
+production wiring. A lazy `Supervisor` with an injected `checkReady` that always
+rejects models the 2026-07-16 ABI crash (the child never answers `/healthz`, so
+`ensureRunning` never yields a live endpoint). The canary must 503, not 200.
+
+```ts continue
+const crashFixture = await makeTmpBox();
+function crashSpawn() {
+  const exitHandlers = [];
+  return { pid: 970001, on: (e, cb) => { if (e === "exit") exitHandlers.push(cb); }, catch: () => {}, fireExit: (c, s) => exitHandlers.forEach((cb) => cb(c, s)) };
+}
+const crashSupervisor = new Supervisor({
+  config: {
+    port: undefined, host: undefined,
+    boxes: { crashbox: { path: crashFixture.root } },
+    configPath: crashFixture.path("hub.json"),
+    lazy: true, idleMs: 30, keepRecent: 0,
+  },
+  hubSecret: HUB_SECRET,
+  spawnChild: crashSpawn,
+  checkReady: () => Promise.reject(new Error("simulated readiness timeout (ABI crash)")),
+});
+await crashSupervisor.startAll();
+const crashHub = await startHub(crashSupervisor, { boxes: [{ slug: "crashbox", boxRoot: crashFixture.root }] });
+
+const canaryCrash = await fetch(`${crashHub.base}/healthz/canary`, diagAuth);
+canaryCrash.status
+=> 503
+
+const crashBody = await canaryCrash.json();
+JSON.stringify({ status: crashBody.status, slug: crashBody.slug })
+=> {"status":"canary-failed","slug":"crashbox"}
+```
+
+```ts continue
+await crashSupervisor.stopAll();
+await crashFixture.cleanup();
+for (const socket of crashHub.sockets) socket.destroy();
+await new Promise((resolve) => crashHub.server.close(resolve));
 ```
 
 ```ts cleanup

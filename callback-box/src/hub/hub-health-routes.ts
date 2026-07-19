@@ -17,8 +17,13 @@
  *   2026-07-16 incident) is invisible to it. The deploy can't drive a box
  *   through the normal proxy path — that's behind the session-cookie auth wall
  *   (`decideHubAuth`), and the diag key alone gets redirected to login — so
- *   this route drives `ensureRunning` server-side. Deploy-only; not a monitor
- *   endpoint (it wakes a box). See `docs/health-checks.md`.
+ *   this route drives `ensureRunning` server-side, THEN fetches the box's own
+ *   `/healthz` (authenticated, requiring 200) so "canary ok" means the box
+ *   answered its health endpoint, not merely that a socket accepted a
+ *   connection — the supervisor's readiness probe (`waitForHttp`) treats ANY
+ *   HTTP response as ready, so a child that listens but whose health handler
+ *   is broken would otherwise pass. Deploy-only; not a monitor endpoint (it
+ *   wakes a box). See `docs/health-checks.md`.
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -26,6 +31,10 @@ import { verifyDiagBearerKey } from "../webapp/auth.js";
 import { errorMessage } from "../lib/error-guards.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
 import type { HubHealth } from "./hub-server.js";
+
+/** Bound the canary's fetch of the box's own `/healthz` — a box that can't
+ *  answer its health endpoint within this at deploy time is itself a fault. */
+const CANARY_BOX_HEALTHZ_TIMEOUT_MS = 10_000;
 
 /** 503 when the diag key isn't configured, 401 when it's missing/wrong; false
  *  means the reply was already sent and the handler must stop. */
@@ -67,6 +76,22 @@ export function registerHealthRoutes(
       return reply.status(503).send({ status: "canary-failed", slug, error: errorMessage(e) });
     }
     if (!endpoint) return reply.status(503).send({ status: "canary-failed", slug });
+    // The endpoint exists (a socket accepts), but readiness accepts any HTTP
+    // response — so confirm the box actually answers its own /healthz with a
+    // 200. `requireDiagKey` above guarantees the key is set, so forward it.
+    let boxStatus: number;
+    try {
+      const res = await fetch(`${endpoint.origin}/healthz`, {
+        headers: { authorization: `Bearer ${process.env.CB_DIAG_API_KEY ?? ""}` },
+        signal: AbortSignal.timeout(CANARY_BOX_HEALTHZ_TIMEOUT_MS),
+      });
+      boxStatus = res.status;
+    } catch (e) {
+      return reply.status(503).send({ status: "canary-failed", slug, error: errorMessage(e) });
+    }
+    if (boxStatus !== 200) {
+      return reply.status(503).send({ status: "canary-failed", slug, boxHealthz: boxStatus });
+    }
     return reply.status(200).send({ status: "ok", slug });
   });
 }
