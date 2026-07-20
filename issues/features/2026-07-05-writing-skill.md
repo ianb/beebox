@@ -212,6 +212,47 @@ Convention worth adopting: **brackets `[ ]` are reserved exclusively for
 editorial insertions** — words not in the source. Near-universal in oral history
 transcription, and a ready-made complement to `{% quote %}`.
 
+### 3b. Nothing is deleted during drafting — the dumping ground
+
+Boxholder, describing his own practice:
+
+> Sometimes in writing (and I think this is common) I'll have a ton of stuff at
+> the bottom of the document as a kind of dumping ground instead of deleting
+> anything, and then assembling things at the top.
+
+This deserves to be a first-class part of the process, not an incidental habit,
+and it fits the rest of the design unusually well:
+
+- **It lowers the cost of cutting.** If removing a paragraph doesn't destroy it,
+  the user can be much bolder about restructuring — which is exactly what stage 4
+  needs, and the same logic as StoryCorps' heavy-cut-plus-approval pattern.
+- **It's the natural home for material collected before its destination is
+  known** (see the core frame — "not always clear"). Gathered-but-unplaced and
+  cut-but-kept are the same state.
+- **It preserves the user's words by default**, which is the whole posture here.
+  An agent that deletes the user's speech to tidy a draft is doing a small
+  version of the thing the Law of Quoting forbids.
+
+Boxholder also notes the form needn't be a literal bottom-of-document pile:
+
+> Obviously we can structure things differently than a linear document (e.g.,
+> keeping things inline but presenting them in a collapsed form or something).
+
+Inline-but-collapsed keeps a cut fragment *where it was*, preserving the context
+that explains why it existed — a bottom pile loses that. Worth weighing against
+the simplicity of one dumping ground.
+
+The obvious failure mode to design against: **a graveyard nobody reads is just
+delayed deletion.** If material goes down there and is never retrievable in
+practice, the affordance is comfort rather than function — so retrieval, not
+storage, is the hard part.
+
+**Research pending** — this is a common enough practice that it likely has an
+established name and much more developed forms than the boxholder's own; a
+focused pass is running (results will land in
+`scratch/writing-dumping-ground-research.md`). Scrivener's binder/corkboard model
+is an obvious tool precedent to examine.
+
 ### 4. Acting on feedback
 
 StoryCorps' model is the useful precedent: aggressive curatorial cutting (40 min
