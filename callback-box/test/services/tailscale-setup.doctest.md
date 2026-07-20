@@ -75,10 +75,16 @@ function makeServeSim(state) {
         return Promise.resolve(cmdOk(""));
       }
       if (args[args.length - 1] === "off") {
-        const web = state.serve.Web?.[hostPort()];
+        // Like the real CLI, `serve … off` addresses the node's CURRENT
+        // hostname (honoring --https=<port>); it cannot remove a mapping
+        // stored under a pre-rename hostname.
+        const httpsArg = args.find((a) => a.startsWith("--https="));
+        const port = httpsArg ? httpsArg.slice("--https=".length) : "443";
+        const host = `${(state.status.Self?.DNSName ?? "").replace(/\.$/, "")}:${port}`;
+        const web = state.serve.Web?.[host];
         if (web?.Handlers) {
           delete web.Handlers[setPathOf(args)];
-          if (Object.keys(web.Handlers).length === 0) delete state.serve.Web[hostPort()];
+          if (Object.keys(web.Handlers).length === 0) delete state.serve.Web[host];
         }
         return Promise.resolve(cmdOk(""));
       }
@@ -424,6 +430,48 @@ const stop = await runTailscaleStop(sim.deps, { target: "3250" });
   "http://127.0.0.1:5000",
   "/"
 ]
+```
+
+## Stop scans EVERY host: a pre-rename mapping keeps the guard armed
+
+A mapping created before a node rename lives under the OLD hostname (here also
+a non-443 serve port) and still fronts the target. Stop finds it by scanning
+every Web host for the loopback port — but the real CLI's `serve … off` only
+addresses the current hostname, so the stale mapping survives the readback.
+The proof therefore FAILS: intent is kept and stop reports the survivor.
+(Without the every-host scan, stop would clear the guard while that mapping
+stays live — the fail-open shape of findings 1-2.)
+
+```ts
+const serve = {
+  Web: {
+    "old-name.tail1234.ts.net:8443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3260" } } },
+    "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3260" } } },
+  },
+};
+const sim = makeServeSim({ status: runningStatus, serve, probe: enforced401 });
+await recordExposure({ port: 3260, dnsName: "box.tail1234.ts.net" });
+const stop = await runTailscaleStop(sim.deps, { target: "3260" });
+[
+  stop.ok,                                                              // proof failed: fail closed
+  stop.message.includes("still present"),
+  sim.calls.includes("tailscale serve --https=8443 --set-path=/ off"), // teardown attempted old mapping
+  sim.calls.includes("tailscale serve --https=443 --set-path=/ off"),  // current mapping torn down
+  Object.keys(serve.Web ?? {}).join(","),                               // stale host survives
+  loadExposureFile().targets.some((t) => t.port === 3260),              // guard KEPT
+]
+=> [
+  false,
+  true,
+  true,
+  true,
+  "old-name.tail1234.ts.net:8443",
+  true
+]
+```
+
+```ts cleanup
+await clearExposure(3260);
 ```
 
 ## F2: stop KEEPS the intent when removal can't be proven (tailscale absent)

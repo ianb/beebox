@@ -19,7 +19,6 @@
 import { clearExposure, loadExposureFile, recordExposure } from "./tailscale-exposure.js";
 import {
   loopbackProxyPort,
-  normalizeDnsName,
   parseServeConfig,
   parseStatusJson,
   resolveTarget,
@@ -192,14 +191,29 @@ export async function runTailscaleSetup(
   };
 }
 
-/** The serve handler paths under `hostPort` whose proxy targets loopback:`port`
- *  — an EXACT parsed match (loopback host, exact port), never a substring like
- *  `:321` inside `:3210`. `stop` tears down exactly these paths. */
-function matchingTargetPaths(serve: ServeConfigJson, { hostPort, port }: { hostPort: string; port: number }): string[] {
-  const handlers = serve.Web?.[hostPort]?.Handlers ?? {};
-  return Object.entries(handlers)
-    .filter(([, h]) => h.Proxy !== undefined && loopbackProxyPort(h.Proxy) === port)
-    .map(([servePath]) => servePath);
+interface TargetMapping {
+  hostPort: string;
+  servePath: string;
+  servePort: number;
+}
+
+/** Every serve handler — across ALL Web hosts, not just the current DNS name —
+ *  whose proxy targets loopback:`port`, as an EXACT parsed match (loopback
+ *  host, exact port; never a substring like `:321` inside `:3210`). Scanning
+ *  every host matters for `stop`: a mapping created before a node rename, or
+ *  on a non-443 serve port, still fronts the target and must be found by both
+ *  teardown and the clear-the-guard proof. */
+function matchingTargetMappings(serve: ServeConfigJson, port: number): TargetMapping[] {
+  const out: TargetMapping[] = [];
+  for (const [hostPort, site] of Object.entries(serve.Web ?? {})) {
+    const servePort = Number(hostPort.slice(hostPort.lastIndexOf(":") + 1));
+    for (const [servePath, h] of Object.entries(site.Handlers ?? {})) {
+      if (h.Proxy !== undefined && loopbackProxyPort(h.Proxy) === port) {
+        out.push({ hostPort, servePath, servePort });
+      }
+    }
+  }
+  return out;
 }
 
 type ServeReadOutcome = { ok: true; serve: ServeConfigJson } | { ok: false; reason: string };
@@ -257,44 +271,47 @@ export async function runTailscaleStop(
   if (!parsedStatus.ok) {
     return unproven({ port, reason: `\`tailscale status --json\` was unreadable: ${parsedStatus.message}`, hadIntent });
   }
-  const dnsName = normalizeDnsName(parsedStatus.value.Self?.DNSName ?? "");
-  const hostPort = `${dnsName}:443`;
-
   const before = await readServeConfig(deps);
   if (!before.ok) return unproven({ port, reason: before.reason, hadIntent });
 
-  const paths = matchingTargetPaths(before.serve, { hostPort, port });
-  if (paths.length === 0 && !hadIntent) {
+  const mappings = matchingTargetMappings(before.serve, port);
+  if (mappings.length === 0 && !hadIntent) {
     return { ok: true, message: `Nothing configured for loopback:${port} — nothing to stop.` };
   }
 
-  // Tear down exactly the paths that map to this target (never a hardcoded `/`).
-  for (const servePath of paths) {
-    const off = await deps.run("tailscale", ["serve", "--https=443", `--set-path=${servePath}`, "off"]);
+  // Tear down exactly the mappings that front this target — across every Web
+  // host and serve port (a pre-rename hostname or an 8443 mapping still counts).
+  for (const m of mappings) {
+    if (!Number.isInteger(m.servePort)) {
+      return unproven({ port, reason: `serve host ${JSON.stringify(m.hostPort)} has no parseable port — cannot tear it down`, hadIntent });
+    }
+    const off = await deps.run("tailscale", ["serve", `--https=${m.servePort}`, `--set-path=${m.servePath}`, "off"]);
     if (!off.spawned) return unproven({ port, reason: "the `tailscale` CLI is not on PATH (during teardown)", hadIntent });
     if (off.code !== 0) {
-      return unproven({ port, reason: `\`tailscale serve … off\` for ${servePath} exited ${off.code ?? "null"}: ${off.stderr.trim()}`, hadIntent });
+      return unproven({ port, reason: `\`tailscale serve … off\` for ${m.hostPort}${m.servePath} exited ${off.code ?? "null"}: ${off.stderr.trim()}`, hadIntent });
     }
   }
 
-  // Prove removal by reading serve back — clear the guard ONLY on proof.
+  // Prove removal by reading serve back — clear the guard ONLY on proof, and
+  // the proof re-scans every host, not just the hostname we tore down under.
   const after = await readServeConfig(deps);
   if (!after.ok) return unproven({ port, reason: `${after.reason} (readback)`, hadIntent });
-  if (matchingTargetPaths(after.serve, { hostPort, port }).length > 0) {
+  if (matchingTargetMappings(after.serve, port).length > 0) {
     return {
       ok: false,
       message:
-        `The serve mapping for loopback:${port} is still present after teardown — KEEPING the exposure intent ` +
+        `A serve mapping for loopback:${port} is still present after teardown — KEEPING the exposure intent ` +
         "(fail closed). Remove it manually with `tailscale serve status`.",
     };
   }
 
   if (hadIntent) await clearExposure(port);
+  const removed = mappings.map((m) => `${m.hostPort}${m.servePath}`).join(", ");
   return {
     ok: true,
     message:
-      paths.length > 0
-        ? `Removed the serve mapping for ${hostPort} → loopback:${port} and cleared its exposure intent.`
+      mappings.length > 0
+        ? `Removed ${removed} → loopback:${port} and cleared its exposure intent.`
         : `No serve mapping remained for loopback:${port}; cleared its stale exposure intent.`,
   };
 }
