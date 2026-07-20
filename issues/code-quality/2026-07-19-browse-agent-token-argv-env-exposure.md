@@ -34,4 +34,4 @@ Fix direction: pass the token to `agent-browser` via a file/stdin rather than
 argv/env; and either scope the header by URL path-prefix (`/<worktree>/`) rather
 than origin, or document that dev tokens are per-user-machine and the cross-
 worktree bleed is acceptable. See the Track E section of
-`../../callback-box/docs/plans/local-password-auth.md`.
+`../../callback-box/docs/implemented-plans/local-password-auth.md`.

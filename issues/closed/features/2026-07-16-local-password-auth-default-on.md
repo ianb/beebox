@@ -1,6 +1,6 @@
 ---
 title: "Username/password login + forced account creation (even in dev) so a box is never accidentally open"
-design: ../../callback-box/docs/plans/local-password-auth.md
+design: ../../callback-box/docs/implemented-plans/local-password-auth.md
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked for a local-first, default-secure auth path
@@ -17,7 +17,7 @@ fail-closed auth-store + WS cookie fallback, browse agent-token injection,
 (Codex) reviewed at plan and implementation stages; the implementation review
 found (and fixed) hub-side gen-revocation and hub login body-parse breaks. Full
 doctest suite green. Plan + review:
-`../../callback-box/docs/plans/local-password-auth.md` (+ `.review.md`).
+`../../callback-box/docs/implemented-plans/local-password-auth.md` (+ `.review.md`).
 
 The human-only verification (real login/setup/WS/browse flows + prod hardening)
 lives in its own tracker:

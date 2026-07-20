@@ -11,8 +11,8 @@ The always-on local-password-auth feature is implemented, cross-model reviewed
 **cannot** cover — the real browser flows, a live WebSocket auth upgrade, browser
 tooling against an authed box, and real-Google coexistence on prod — needs you.
 Do not clear this until you've walked it. Design + review:
-[../../callback-box/docs/plans/local-password-auth.md] (and `.review.md`);
-origin: [../features/2026-07-16-local-password-auth-default-on.md].
+[../../callback-box/docs/implemented-plans/local-password-auth.md] (and `.review.md`);
+origin: [../closed/features/2026-07-16-local-password-auth-default-on.md].
 
 Fastest path: run a local dev serve with no `~/.cb-auth.json` and no
 `CB_ALLOW_UNAUTHENTICATED`, then work down the list. Items 1–7 are local; item 8

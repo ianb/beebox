@@ -1,11 +1,21 @@
 # Local password auth, default-on
 
+**Status:** implemented 2026-07 — local username/password login shipped
+alongside always-on auth (Google OAuth is now layered on top, not the gate);
+cross-model (Codex) reviewed at both the plan and implementation stages, with
+findings fixed and re-reviewed. Not yet manually exercised in a live app —
+see `issues/docs-and-chores/2026-07-19-manually-verify-local-password-auth.md`.
+Three pre-existing security findings from the implementation review remain
+open and unfixed: `issues/bugs/2026-07-19-google-oauth-callback-unauthenticated.md`,
+`issues/bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md`,
+`issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md`.
+
 Add a local username/password login method and make authentication the
 always-on default — including in dev — so an unauthenticated box requires a
 loud, deliberate opt-out instead of being the accidental easy state. Google
 OAuth becomes *a* method layered on top; the local credential is
 self-contained (hashed on disk, zero remote services), completing the
-local-first story. Origin: `issues/features/2026-07-16-local-password-auth-default-on.md`.
+local-first story. Origin: `issues/closed/features/2026-07-16-local-password-auth-default-on.md`.
 
 ## Stated preferences this plan trades against
 

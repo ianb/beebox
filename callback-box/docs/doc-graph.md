@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-19T20:43:27Z
-Total documents: 196
+Generated: 2026-07-20T02:42:09Z
+Total documents: 198
 
 ## Issues
 
@@ -18,6 +18,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (345 lines)
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (714 lines)
 - **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines)
+- **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines)
 - **docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md** — "Plan Engineering Review — Markdoc Tags Design" (129 lines)
 - **docs/implemented-plans/markdoc-tags-plan.review.md** — "Plan Engineering Review — Markdoc Tags Design" (505 lines)
 - **docs/implemented-plans/named-places.md** — "Named Places (`place` cards + `cb location mark`)" (465 lines)
@@ -83,6 +84,7 @@ Referenced by:
 - docs/implemented-plans/courseware-phase1.md:98 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/implemented-plans/extfile-card.md:39 (mention) — (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
 - docs/implemented-plans/link-validation-fix.md:28 (mention) — - User-global rule (project CLAUDE.md) — *"NEVER disable or weaken a lint rule to
+- docs/implemented-plans/local-password-auth.md:210 (mention) — serialize through `src/lib/file-lock.ts` per the CLAUDE.md lock rule.
 - docs/implemented-plans/markdoc-tags-plan.md:177 (mention) — text in the compiled CLAUDE.md include (not lost); the warning surfaces
 - docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md:9 (mention) — - **Card validation pipeline** — `cb validate` PostToolUse hook + pre-commit hook (per CLAUDE.md). Markdoc's `Markdoc.va
 - docs/implemented-plans/markdoc-tags-plan.review.md:5 (mention) — source. Trace each to a stated preference in CLAUDE.md / code-style.md
@@ -272,6 +274,7 @@ Referenced by:
 - docs/implemented-plans/figure-card-type.md:75 (mention) — - **`callback-box/code-style.md`** — *"No default parameters"*, *"Max 2 positional
 - docs/implemented-plans/job-xml-purge.subplan.md:35 (mention) — - `callback-box/code-style.md` — no `any`, max-2 positional params, named-error
 - docs/implemented-plans/link-validation-fix.md:31 (mention) — - `callback-box/code-style.md` — no `any`, double quotes, semicolons, max 2
+- docs/implemented-plans/local-password-auth.md:38 (mention) — - `code-style.md` — custom error classes, no default params, named-params
 - docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md:16 (mention) — Drawn from `CLAUDE.md` and `code-style.md`; referenced by name in findings below.
 - docs/implemented-plans/markdoc-tags-plan.review.md:5 (mention) — source. Trace each to a stated preference in CLAUDE.md / code-style.md
 - docs/implemented-plans/named-places.md:53 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional params,
@@ -337,6 +340,7 @@ Referenced by:
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read frontend.md before writing UI"* and the
 - docs/implemented-plans/figure-card-type.md:79 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
+- docs/implemented-plans/local-password-auth.md:529 (mention) — precedent but non-dismissible. Per cb-frontend conventions (frontend.md
 - docs/implemented-plans/open-chat-from-card.md:57 (mention) — - `callback-box/frontend.md` — UI primitives + semantic palette, `className` only for
 - docs/implemented-plans/responsive-figures.md:42 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:103 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
@@ -345,7 +349,7 @@ Referenced by:
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - frontend.md:113 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
-- ../issues/bugs/2026-07-19-landmark-menu-overflows-mobile.md:53 (mention) — read `frontend.md` before reaching for utility classes.
+- ../issues/bugs/2026-07-19-landmark-menu-overflows-mobile.md:65 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/decisions/2026-07-07-cb-render-vs-bin-browse.md:48 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -397,7 +401,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 305 lines
+Title: "Deploy" | 326 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -406,13 +410,14 @@ Referenced by:
 - docs/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
 - docs/implemented-plans/boxes-as-packages-v2.md:76 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/implemented-plans/hub-healthz-box-aggregation.md:313 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
+- docs/implemented-plans/local-password-auth.md:539 (mention) — `deploy/README.md:196-217` env template gains `CB_AUTH_FILE` (default is
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:283 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see [`
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:85 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:17 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
-- ../issues/code-quality/2026-07-04-web-push-followup-testing.md:20 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
+- ../issues/code-quality/2026-07-04-web-push-followup-testing.md:51 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
 - ../research/openclaw-hermes/deep-installation.md:96 (mention) — and `callback-box/deploy/README.md`.
 
 References:
@@ -534,6 +539,7 @@ Title: "Installing callback-box with an AI agent" | 97 lines
 
 Referenced by:
 - CLAUDE.md:130 (mention) — | Agent-driven install (for a user's AI assistant) | `docs/agent-install.md` |
+- docs/implemented-plans/local-password-auth.md:538 (mention) — `docs/agent-install.md` gain the first-run account step;
 - ../issues/features/2026-07-19-installation-remaining-work.md:22 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
 
 References:
@@ -771,12 +777,13 @@ Referenced by:
 
 #### docs/developer-install.md
 
-Title: "Developer install (from source)" | 130 lines
+Title: "Developer install (from source)" | 143 lines
 
 Referenced by:
 - CLAUDE.md:128 (mention) — | Developer install (from source) | `docs/developer-install.md` |
 - docker/README.md:15 (mention) — | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/developer-install.md` from a fresh `de
 - docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
+- docs/implemented-plans/local-password-auth.md:537 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
 - ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
 
@@ -798,13 +805,14 @@ Referenced by:
 
 #### docs/docker-install.md
 
-Title: "Docker install (local + VPS)" | 191 lines
+Title: "Docker install (local + VPS)" | 197 lines
 
 Referenced by:
 - CLAUDE.md:129 (mention) — | Docker install (local + VPS) | `docs/docker-install.md` |
 - docker/README.md:5 (link) — [`../docs/docker-install.md`](../docs/docker-install.md); this file is a map
 - docs/agent-install.md:43 (link) — ([docker-install.md](docker-install.md)) is simpler and bundles every
 - docs/developer-install.md:7 (link) — [docker-install.md](docker-install.md).
+- docs/implemented-plans/local-password-auth.md:537 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
 - ../issues/features/2026-07-19-installation-remaining-work.md:17 (mention) — - Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
 
@@ -820,6 +828,7 @@ Referenced by:
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
 - docs/implemented-plans/hub-healthz-box-aggregation.md:31 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
+- docs/implemented-plans/local-password-auth.md:22 (mention) — - `docs/engineering-principles.md` — principally:
 - docs/implemented-plans/mobile-parity-sync.md:21 (mention) — - `docs/engineering-principles.md` **#4 resilient and never silent** — drift
 - docs/implemented-plans/mobile-token-handshake.md:14 (mention) — - **`docs/engineering-principles.md` #3 (validate at boundaries)** — the cookie is untrusted
 - docs/implemented-plans/questions-end-to-end.md:57 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
@@ -1021,7 +1030,7 @@ Referenced by:
 - docs/reports/user-stories-audit-2026-06-26.md:732 (mention) — The file src/core/frontmatter-field.ts exports two functions that implement the exact capability described. lookupField(
 - docs/unimplemented-plans/design-vision-superseded.md:7 (mention) — > retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
 - docs/unimplemented-plans/query-cards.md:14 (mention) — planned in docs/landmarks.md long before this, useful for any list-shaped
-- ../issues/bugs/2026-07-19-landmark-menu-overflows-mobile.md:47 (mention) — `src/schemas/landmark.ts` and `docs/landmarks.md`; an `expand` entry fans out to
+- ../issues/bugs/2026-07-19-landmark-menu-overflows-mobile.md:59 (mention) — `src/schemas/landmark.ts` and `docs/landmarks.md`; an `expand` entry fans out to
 - ../issues/features/2026-06-12-card-level-prominence.md:7 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:26 (mention) — Landmarks are already the box's "notable spots" surface (`docs/landmarks.md`), and
 
@@ -1326,6 +1335,7 @@ Referenced by:
 - docs/implemented-plans/hub-healthz-box-aggregation.md:429 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design tool.
 - docs/implemented-plans/input-extraction.md:30 (mention) — - `docs/testing.md` via the cb-plan template: tests first as a design tool;
 - docs/implemented-plans/link-validation-fix.md:35 (mention) — - `callback-box/docs/testing.md` — tests as a design tool; name the doctest for
+- docs/implemented-plans/local-password-auth.md:683 (mention) — - **Test posture (tests as design tool, `docs/testing.md`).** Named up
 - docs/implemented-plans/mobile-token-handshake.md:494 (mention) — substantial new codepaths, per `docs/testing.md`.
 - docs/implemented-plans/normalize-chat-links.md:78 (mention) — - **`callback-box/docs/testing.md`** — tests as a design tool; doctest the
 - docs/implemented-plans/procedure-validation-completion.md:36 (mention) — - **`docs/testing.md`** — tests come first as a design tool; cover substantial codepaths, not coverage-for-its-own-sake.
@@ -1363,12 +1373,17 @@ References:
 
 #### docs/todo-security.md
 
-Title: "Security TODOs" | 25 lines
+Title: "Security TODOs" | 49 lines
 
 Referenced by:
+- docs/implemented-plans/local-password-auth.md:541 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
 - docs/maintenance.md:26 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
-- ../issues/features/2026-07-16-local-password-auth-default-on.md:76 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
+- ../issues/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:28 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
+- ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:95 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
+
+References:
+- → docs/implemented-plans/local-password-auth.md (mention)
 
 #### docs/tours.md
 
@@ -2080,6 +2095,35 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 - → /store/foo/bar.md (link) **[BROKEN]**
+
+#### docs/implemented-plans/local-password-auth.md
+
+Title: "Local password auth, default-on" | 704 lines
+
+Referenced by:
+- docs/implemented-plans/local-password-auth.review.md:3 (mention) — Adversarial review of `local-password-auth.md` by OpenAI Codex
+- docs/todo-security.md:8 (mention) — `docs/implemented-plans/local-password-auth.md`). A box requires a logged-in identity unless
+- ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:3 (mention) — design: ../../callback-box/docs/implemented-plans/local-password-auth.md
+- ../issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md:37 (mention) — `../../callback-box/docs/implemented-plans/local-password-auth.md`.
+
+References:
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → CLAUDE.md (mention)
+- → frontend.md (mention)
+- → docs/developer-install.md (mention)
+- → docs/docker-install.md (mention)
+- → docs/agent-install.md (mention)
+- → deploy/README.md (mention)
+- → docs/todo-security.md (mention)
+- → docs/testing.md (mention)
+
+#### docs/implemented-plans/local-password-auth.review.md **[ORPHAN]**
+
+Title: "Cross-model review — local-password-auth (Codex, 2026-07-19)" | 81 lines
+
+References:
+- → docs/implemented-plans/local-password-auth.md (mention)
 
 #### docs/implemented-plans/markdoc-format-investigation.md
 
@@ -2990,6 +3034,7 @@ Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 2
 
 Referenced by:
 - docs/box-layout.md:117 (mention) — | `box/publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding
+- ../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md:5 (mention) — design: ../../callback-box/docs/plans/publish-pages.md
 - ../issues/features/2026-07-19-publish-pages-resume.md:5 (mention) — design: ../../callback-box/docs/plans/publish-pages.md
 - ../issues/features/2026-07-19-publish-pages-resume.md:12 (link) — [publish-pages.md](../../callback-box/docs/plans/publish-pages.md).
 

@@ -5,7 +5,7 @@ Known security gaps and future hardening work.
 ## Auth posture: on by default (2026-07)
 
 Authentication is now **always-on by default** (see
-`docs/plans/local-password-auth.md`). A box requires a logged-in identity unless
+`docs/implemented-plans/local-password-auth.md`). A box requires a logged-in identity unless
 the operator sets the loud `CB_ALLOW_UNAUTHENTICATED` opt-out (`=1` loopback-only,
 `=network` for a public bind; both warn on every boot and show a persistent UI
 banner). Two login methods: local password (scrypt in `~/.cb-auth.json`, 0600)
