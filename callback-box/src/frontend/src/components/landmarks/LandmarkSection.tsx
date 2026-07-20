@@ -44,14 +44,29 @@ function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   return (
     <Link
       to={href(`/${boxSlug}/browse/${dir}`)}
-      className="inline-block self-start px-2 py-0.5 -mx-2 rounded hover:bg-warm-100"
+      className="inline-block self-start min-w-0 max-w-full px-2 py-0.5 -mx-2 rounded hover:bg-warm-100"
     >
-      <Text as="span" size="xs" tone="muted">{dir ? `${dir}/` : "/"}</Text>
+      {/*
+       * breakAll because a box path is one unbreakable token — browsers don't
+       * offer a line-break opportunity at `/`, so a deep path overflows its
+       * container and pushes the page wide on a phone. Wrapping (not truncate)
+       * because the tail of a path is the part that identifies it; the sibling
+       * link refs below truncate, but those have a label above them and this
+       * doesn't.
+       */}
+      <Text as="span" size="xs" tone="muted" breakAll>{dir ? `${dir}/` : "/"}</Text>
     </Link>
   );
 }
 
-const INDENT_CLASSES = ["", "ml-8", "ml-16", "ml-24", "ml-32"];
+/*
+ * Nesting indent, reduced below `sm`. The desktop steps (8/16/24/32 = up to
+ * 8rem) are unchanged; on a 390px phone that deepest step alone ate a third of
+ * the viewport before any content, which compounds with a long path to push the
+ * page wide. Mobile steps are a quarter of desktop's — still legible as
+ * hierarchy, without spending the screen on it.
+ */
+const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
 
 export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; boxSlug: string }) {
   const labelText = landmark.label || landmark.path;
