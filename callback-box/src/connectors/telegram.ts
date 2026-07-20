@@ -18,6 +18,7 @@
 
 import * as path from "node:path";
 import { errorMessage } from "../lib/error-guards.js";
+import { boxSlug } from "../lib/box-slug.js";
 import {
   registerConnector,
   type Connector,
@@ -301,13 +302,13 @@ class TelegramConnector implements Connector {
       throw new MissingPublicUrlError();
     }
 
-    const boxSlug = path.basename(this.boxRoot);
+    const slug = await boxSlug(this.boxRoot);
     // publicUrl includes the box slug (e.g. https://box.example.com/ledger)
     // but webhook routes are at the server root, so strip the trailing path segment
     const baseUrl = new URL(publicUrl);
     baseUrl.pathname = baseUrl.pathname.replace(/\/[^/]+\/?$/, "");
     const basePath = baseUrl.pathname.replace(/\/+$/, "");
-    const webhookUrl = `${baseUrl.origin}${basePath}/webhook/${boxSlug}/telegram`;
+    const webhookUrl = `${baseUrl.origin}${basePath}/webhook/${slug}/telegram`;
 
     const tg = this.getTelegram(config.botToken);
     await tg.setWebhook(webhookUrl, {

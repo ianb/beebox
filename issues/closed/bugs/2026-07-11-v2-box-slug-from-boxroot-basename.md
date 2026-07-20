@@ -1,9 +1,20 @@
 ---
 title: "v2 boxes: slug/box-name derived from basename(boxRoot) is \"content\" everywhere"
-status: open
+status: closed
 created: 2026-07-11
 tags: [box-shape, v2, push, slug, correctness]
+resolution: implemented
 ---
+
+Closed 2026-07-19: `src/lib/box-slug.ts` (`boxSlug` / `boxSlugFromShape`) is now
+the one derivation, used by every site below; `cb serve`'s `defaultSlugFor`
+collapsed into it. `test/lib/box-slug.doctest.md` pins that two v2 boxes slug
+differently, and `push-output-cards.doctest.md` dropped its per-box store
+isolation — both boxes now share one slug-keyed store without colliding. The
+one audited site left alone was `chat/session/history.ts:156`, which is an
+encoded `~/.claude/projects` dir name, not a slug. Remaining tension: these
+sites still *derive* a slug the running server already knows authoritatively —
+see [thread the authoritative box slug](../../code-quality/2026-07-19-thread-authoritative-box-slug.md).
 
 ## Problem
 

@@ -19,24 +19,9 @@ import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { getBoxShapeIfPresent } from "../../lib/box-shape.js";
+import { boxSlug } from "../../lib/box-slug.js";
 import { findBoxRoot, BOX_MARKER } from "../../lib/paths.js";
 import { isValidBox } from "../../core/box/index.js";
-
-/**
- * The slug a box gets when nothing overrides it. A box's `boxRoot` is the
- * `content/` directory (see "The box repository" in
- * `docs/implemented-plans/boxes-as-packages-v2.md`), so `path.basename(boxRoot)` would
- * always be the literal string "content" — the F1 gap the plan calls out.
- * The meaningful name is its PACKAGE root's basename instead.
- */
-async function defaultSlugFor(boxRoot: string): Promise<string> {
-  // A real v2 box's slug is its PACKAGE root's basename (the content root's is
-  // always the literal "content"). A marker-less directory (the documented
-  // plain-directory serve mode) has no shape — fall back to its own basename.
-  const lookup = await getBoxShapeIfPresent(boxRoot);
-  return path.basename(lookup.found ? lookup.shape.packageRoot : boxRoot);
-}
 
 /**
  * `<slug>=<boxRoot>` argv encoding `server-main.ts` expects. Exported so
@@ -87,7 +72,7 @@ export async function resolveBoxes(dirs: string[], slugOverride: string | undefi
   const resolved = await Promise.all(
     dirs.map(async (dir) => {
       const boxRoot = await resolveServableBoxRoot(path.resolve(dir));
-      const slug = slugOverride ?? (await defaultSlugFor(boxRoot));
+      const slug = slugOverride ?? (await boxSlug(boxRoot));
       return { slug, boxRoot };
     })
   );

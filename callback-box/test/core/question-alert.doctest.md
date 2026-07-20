@@ -6,6 +6,7 @@ no per-producer hook, just a sweep. Each question notifies once while it stays
 pending.
 
 ```ts setup
+import { boxSlug } from "../../src/lib/box-slug.js";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -31,7 +32,7 @@ const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: NOW.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.seed(".cb-box", MARKER);
-await addSubscription({ boxSlug: path.basename(box.root), subscription: SUB, now: NOW });
+await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
 await box.seed("box/questions/Color.question.card", question("What color?"));
 box.commitAll("seed question");
 

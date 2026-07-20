@@ -9,6 +9,7 @@ a card's `expires-after` override (nudge at half). Expiry never depends on a
 notification channel being configured — only nudge *delivery* does.
 
 ```ts setup
+import { boxSlug } from "../../src/lib/box-slug.js";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -66,7 +67,7 @@ function headTrailers(root) {
 ```ts
 const box = await makeTmpBox({ git: true });
 await seedBox(box);
-await addSubscription({ boxSlug: path.basename(box.root), subscription: SUB, now: ASKED_AT });
+await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
 await box.write(
   "box/questions/Color.question.card",
   question({ prompt: "What color?", askedAt: ASKED_AT.toISOString() })
@@ -169,7 +170,7 @@ A 10-day override nudges at 5 days (half), not the default 7:
 ```ts
 const box = await makeTmpBox({ git: true });
 await seedBox(box);
-await addSubscription({ boxSlug: path.basename(box.root), subscription: SUB, now: ASKED_AT });
+await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 await box.write(
   "box/questions/Deadline.question.card",

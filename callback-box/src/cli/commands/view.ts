@@ -25,6 +25,7 @@
 
 import { Command } from "commander";
 import * as path from "node:path";
+import { boxSlug as resolveBoxSlug } from "../../lib/box-slug.js";
 import { promises as fs } from "node:fs";
 import { spawn } from "node:child_process";
 import * as esbuild from "esbuild";
@@ -167,7 +168,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     try {
       // eslint-disable-next-line no-restricted-syntax -- dynamic import of a runtime-computed module URL yields an untyped namespace; cast to the known compiled-view contract (validated by the render call that follows)
       const viewMod = (await import(mod.moduleUrl)) as LoadedViewModule;
-      const props = buildProps({ cards, files, params, boxSlug: path.basename(boxRoot) });
+      const props = buildProps({ cards, files, params, boxSlug: await resolveBoxSlug(boxRoot) });
       // Wrap in the node view host so the card widgets (<CardLink>/<CardRef>)
       // resolve their context. NodeViewHostProvider comes from the same
       // dist/view-widgets bundle the view's widgets do (view.ts self-references

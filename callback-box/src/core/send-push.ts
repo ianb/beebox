@@ -27,6 +27,7 @@ import {
 } from "../services/push.js";
 import { endpointsForBox, removeEndpoint } from "./push-subscriptions.js";
 import { errorMessage } from "../lib/error-guards.js";
+import { boxSlug as resolveBoxSlug } from "../lib/box-slug.js";
 
 export interface SendPushResult {
   sent: number;
@@ -77,7 +78,7 @@ export async function sendPush(
   opts: { payload: PushPayload; push?: PushService | undefined },
 ): Promise<SendPushResult> {
   const { payload } = opts;
-  const boxSlug = path.basename(boxRoot);
+  const boxSlug = await resolveBoxSlug(boxRoot);
   const forceFake = process.env.CB_PUSH_FAKE === "1";
   const push = opts.push ?? (forceFake ? createFakePush() : realPushFromEnv());
 

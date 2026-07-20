@@ -16,6 +16,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { boxSlug } from "../lib/box-slug.js";
 import { getSystemState } from "./state.js";
 import { cardFields, parseCardText } from "./card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
@@ -213,7 +214,7 @@ export async function ageQuestions(
       await notifyBoxholder(boxRoot, {
         title: "⏰ Reminder: a question is waiting",
         body: fields.prompt,
-        url: `/${path.basename(boxRoot)}/browse/${q.relativePath}`,
+        url: `/${await boxSlug(boxRoot)}/browse/${q.relativePath}`,
         severity: "info",
         name: "question-nudge",
         deliver: options.deliver ?? false,

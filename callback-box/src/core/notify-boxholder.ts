@@ -27,6 +27,7 @@ import { loadTelegramConfig } from "../connectors/telegram-helpers.js";
 import { createTelegramService, type TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
 import { endpointsForBox } from "./push-subscriptions.js";
+import { boxSlug } from "../lib/box-slug.js";
 
 /**
  * Which channels can currently reach the boxholder for this box: telegram if
@@ -36,7 +37,7 @@ import { endpointsForBox } from "./push-subscriptions.js";
 export async function notifyChannels(boxRoot: string): Promise<{ telegram: boolean; push: boolean }> {
   const config = await loadBoxConfig(boxRoot);
   const telegram = config.healthAlerts?.telegramChat != null;
-  const push = (await endpointsForBox(path.basename(boxRoot))).length > 0;
+  const push = (await endpointsForBox(await boxSlug(boxRoot))).length > 0;
   return { telegram, push };
 }
 
@@ -72,7 +73,7 @@ export async function notifyBoxholder(
   const base = `${input.name ?? "notify"}-${now.toISOString().replace(/[.:]/g, "-")}`;
   const config = await loadBoxConfig(boxRoot);
   const chatId = config.healthAlerts?.telegramChat;
-  const hasSubs = (await endpointsForBox(path.basename(boxRoot))).length > 0;
+  const hasSubs = (await endpointsForBox(await boxSlug(boxRoot))).length > 0;
 
   const cards: string[] = [];
   const channels: Array<"web-push" | "telegram"> = [];

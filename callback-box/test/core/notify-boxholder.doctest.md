@@ -7,6 +7,7 @@
 web push is its mirror.
 
 ```ts setup
+import { boxSlug } from "../../src/lib/box-slug.js";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -61,7 +62,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await addSubscription({ boxSlug: path.basename(box.root), subscription: SUB, now: NOW });
+await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
 
 const r = await notifyBoxholder(box.root, INPUT);
 JSON.stringify([r.channels, await outputCards(box)])
@@ -78,7 +79,7 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 await box.seed("config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
 box.commitAll("seed");
-await addSubscription({ boxSlug: path.basename(box.root), subscription: SUB, now: NOW });
+await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
 
 const r = await notifyBoxholder(box.root, INPUT);
 JSON.stringify([r.channels.toSorted(), await outputCards(box)])

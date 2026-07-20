@@ -141,8 +141,64 @@ function highlightCodeBlocks(html: string, defaultLang: string): string {
   });
 }
 
+// Markdoc has no GFM-style autolinking, so a bare `https://…` in a doc renders
+// as dead text. Our issues cite sources as bare URLs constantly, so linkify them
+// after render.
+//
+// Operating on the HTML (not the markdown source) is deliberate: at this stage
+// the protected regions are unambiguous tags rather than markdown syntax we'd
+// have to re-parse. The split alternation captures, in order, whole <a> and
+// <pre>/<code> elements and then ANY remaining tag — so the only pieces left
+// untouched by the capture are true text nodes. That means we can't linkify
+// inside an existing link (nested <a> is invalid), inside code, or inside a tag
+// attribute (the classic way naive linkifiers corrupt an href).
+//
+// Text here is already HTML-escaped by Markdoc, so a URL's `&` arrives as
+// `&amp;` — which is also what it should be inside the emitted href, so it
+// round-trips correctly without special handling.
+const PROTECTED_HTML = /(<a\b[^>]*>[\s\S]*?<\/a>|<pre\b[\s\S]*?<\/pre>|<code\b[\s\S]*?<\/code>|<[^>]+>)/gi;
+const BARE_URL = /\bhttps?:\/\/[^\s<>"'`]+/g;
+
+/** Trailing characters that are almost always sentence punctuation, not URL. */
+function trimUrlTail(url: string): { href: string; tail: string } {
+  let end = url.length;
+  while (end > 0) {
+    const ch = url[end - 1] ?? "";
+    if (".,;:!?".includes(ch)) { end -= 1; continue; }
+    // A closing paren/bracket only belongs to the URL if it's balanced within
+    // it — `(see https://x.com/a)` ends the sentence, but a Wikipedia URL like
+    // `…/Foo_(bar)` legitimately ends in one.
+    if (ch === ")" || ch === "]") {
+      const open = ch === ")" ? "(" : "[";
+      const slice = url.slice(0, end);
+      const opens = slice.split(open).length - 1;
+      const closes = slice.split(ch).length - 1;
+      if (closes > opens) { end -= 1; continue; }
+    }
+    break;
+  }
+  return { href: url.slice(0, end), tail: url.slice(end) };
+}
+
+function autolinkUrls(html: string): string {
+  return html
+    .split(PROTECTED_HTML)
+    .map((part, i) => {
+      // Odd indices are the captured protected regions — pass through verbatim.
+      if (i % 2 === 1) return part;
+      return part.replace(BARE_URL, (match) => {
+        const { href, tail } = trimUrlTail(match);
+        if (!href) return match;
+        return `<a href="${href}">${href}</a>${tail}`;
+      });
+    })
+    .join("");
+}
+
 export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
-  return highlightCodeBlocks(Markdoc.renderers.html(Markdoc.transform(Markdoc.parse(src))), defaultLang);
+  return autolinkUrls(
+    highlightCodeBlocks(Markdoc.renderers.html(Markdoc.transform(Markdoc.parse(src))), defaultLang),
+  );
 }
 
 /**

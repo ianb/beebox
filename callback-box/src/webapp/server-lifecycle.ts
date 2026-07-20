@@ -3,7 +3,7 @@
  * cleanup. Split out of server.ts to keep that file under its line budget.
  */
 
-import * as path from "node:path";
+import { boxSlug } from "../lib/box-slug.js";
 import * as fs from "node:fs";
 import { requireBoxRoot } from "../lib/paths.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
@@ -17,7 +17,7 @@ export async function resolveBoxes(options: ServerOptions): Promise<BoxSpec[]> {
     return options.boxes;
   }
   const boxRoot = options.boxRoot ?? await requireBoxRoot();
-  return [{ slug: path.basename(boxRoot), boxRoot }];
+  return [{ slug: await boxSlug(boxRoot), boxRoot }];
 }
 
 /**

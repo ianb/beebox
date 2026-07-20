@@ -9,6 +9,7 @@
 import { Command } from "commander";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { boxSlug } from "../../lib/box-slug.js";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { stageFiles, commitPaths } from "../../lib/git.js";
 import { slugify } from "../../shared/filename.js";
@@ -120,7 +121,7 @@ export const feedbackCommand = new Command("feedback")
         "# Agent Feedback",
         "",
         `**Date:** ${now.toISOString()}`,
-        `**Box:** ${path.basename(boxRoot)}`,
+        `**Box:** ${await boxSlug(boxRoot)}`,
         `**Box path:** ${boxRoot}`,
         ...(serverUrl ? [`**Server:** ${serverUrl}`] : []),
         ...(session ? [`**Session:** ${session.sessionId}`] : []),

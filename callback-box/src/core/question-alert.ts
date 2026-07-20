@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { boxSlug } from "../lib/box-slug.js";
 import { generateContext } from "../webapp/context.js";
 import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
 import type { TelegramService } from "../services/telegram.js";
@@ -90,7 +91,7 @@ export async function checkPendingQuestionsAndNotify(
 
   if (fresh.length === 0) return null;
 
-  const boxName = path.basename(boxRoot);
+  const boxName = await boxSlug(boxRoot);
   const title = fresh.length === 1
     ? "❓ A question needs an answer"
     : `❓ ${fresh.length} questions need answers`;
