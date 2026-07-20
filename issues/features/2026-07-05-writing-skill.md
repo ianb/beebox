@@ -24,6 +24,26 @@ user's actual words doesn't read as AI, because it isn't. The tells research
 (kept below) stops being the point and becomes the standard for the small
 amount of connective prose the agent does write.
 
+## The governing rule (settled 2026-07-20)
+
+> **Opinionated in conversation and conservative in the artifact.**
+
+Boxholder's phrasing, confirmed as the rule. It came out of the outline
+discussion below but governs the whole design, and most of the specific guidance
+here is a consequence of it:
+
+- The agent may think freely, argue, suggest structure, brainstorm, point out
+  what's missing — **in chat**. Being unhelpfully coy is not the goal, and a
+  design that can't answer "what am I missing?" is worse than useless.
+- **The document changes only on instruction.** That's what keeps authorship with
+  the user: the instruction is the provenance.
+- **Anything of the agent's that does land in the document is marked**, so it
+  isn't passing itself off — the same reason an accurate `{% quote %}` boundary
+  makes connective tissue tolerable.
+
+It's how a good editor behaves in a meeting: they'll tell you your third section
+is doing two jobs, and they won't reorganize your document while you're talking.
+
 ## The core frame: oral → written, fidelity as a dial
 
 Boxholder, on what this actually is:
@@ -499,8 +519,9 @@ so precious it can't answer that is worse than useless. The
 [earlier note](#9-offering-ideas-without-over-steering) already concedes the
 brainstorm is legitimate.
 
-**Proposed resolution: separate the channels.** The agent is free to be
-opinionated *in conversation* and conservative *in the artifact*.
+**Resolution: separate the channels** — this is where the governing rule at the
+top of this issue came from. The agent is free to be opinionated *in
+conversation* and conservative *in the artifact*.
 
 - Asked "what do I need to explain first?", the agent **answers in chat** —
   fully, with a real opinion, as many suggestions as are useful. It does not
@@ -521,9 +542,7 @@ connective tissue tolerable. The mark should persist until the user speaks to
 that node, at which point their words replace the placeholder and it becomes
 theirs.
 
-This generalizes past outlines and may be the cleanest statement of the whole
-design: **the agent may think freely and out loud; the document changes only on
-instruction, and anything of the agent's that lands in it is marked.**
+This generalizes past outlines — see the governing rule at the top.
 
 ### What still needs deciding
 
