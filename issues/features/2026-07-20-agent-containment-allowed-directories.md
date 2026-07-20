@@ -24,12 +24,18 @@ So the shape is:
   (wakeups, reactors, schedules); a dialog nobody sees is a hang or an
   auto-approve.
 - **A control plane of allowed directories** — the box's own directory
-  plus operator-configured extras; everything else mechanically refused.
-  The natural enforcement point is the Agent SDK hook layer (PreToolUse
-  on file tools and Bash), which is a *mechanical* floor, not a prompt
-  instruction. Needs care on the classic bypass routes: Bash indirection
-  (`cat`, redirection, `cd`), symlinks out of the allowed tree, and
-  path-normalization tricks.
+  plus operator-configured extras; everything else refused.
+- **Scope constraint (boxholder, 2026-07-20): "Containment doesn't have
+  to be perfect… setting boundaries and expectations using Claude
+  Code's own features for that. Nothing that can't be expressed with
+  existing config."** So: no custom enforcement engine. The control
+  plane is callback-box generating/managing the box's Claude Code
+  permission configuration — settings `permissions` rules (deny/allow
+  on file tools and Bash patterns), additional-directories grants, and
+  whatever the SDK's existing settings surface expresses. Known
+  bypass routes that existing config can't fully close (Bash
+  indirection, symlinks) are accepted and *documented as expectations*
+  in the security report rather than chased with custom code.
 - **Docker as the stronger tier** — the container is a real wall and
   the blessed deploy path already has it; the hook floor is what makes
   bare-metal running honest rather than "trust the prompt."
