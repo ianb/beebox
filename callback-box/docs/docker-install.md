@@ -118,18 +118,48 @@ started at all.
 
 ### Tailscale-only (no open ports)
 
+> **Status: not yet exercised end-to-end.** The smoke harness
+> (`docker/smoke-docker.sh`, `docker/smoke-vps-install.sh`) does not cover
+> this path. Live proof is tracked in
+> [`issues/features/2026-07-19-installation-remaining-work.md`](../../issues/features/2026-07-19-installation-remaining-work.md)
+> item 2 — treat the steps below as unverified until that item records a run.
+
 To reach the box privately over a [tailnet](https://tailscale.com/) with
-nothing exposed to the public internet:
+nothing exposed to the public internet, `cb tailscale` drives the whole
+setup — the box keeps its normal loopback mapping, and Tailscale Serve
+fronts it with TLS. Which topology applies depends on where `cb` runs:
 
-1. Install Tailscale on the VPS and `tailscale up`.
-2. Change the box's port mapping in `compose.yaml` from `127.0.0.1:3210:3210`
-   to bind the tailnet IP instead, e.g. `100.x.y.z:3210:3210` (your
-   `tailscale ip -4`), and do **not** start the Caddy profile.
-3. `docker compose up -d`.
+**Host-daemon (from-source or VPS-host install, `cb` on the same machine as
+`tailscaled`):**
 
-The box is then reachable at `http://<tailnet-ip>:3210/box/` from any device on
-your tailnet, with zero ports open to the world. (Add TLS via Tailscale Serve
-if you want `https://`.)
+1. [Install Tailscale](https://tailscale.com/download) on the host and run
+   `tailscale up`.
+2. Run `cb tailscale setup --target 3210` (or whatever port the box is
+   served on). It inspects the real Tailscale and serve state and tells you
+   the single next step — logging in, approving the machine, enabling
+   tailnet HTTPS — looping until the box is reachable at
+   `https://<host>.<tailnet>.ts.net/`. `cb tailscale status --target 3210`
+   is the read-only version of the same inspection; `cb tailscale stop
+   --target 3210` removes the mapping.
+
+**Docker container (`cb` runs inside the container, which has no
+`tailscaled`):** `cb tailscale setup` cannot drive a host daemon it can't
+reach — `cb tailscale status` run inside the container detects "no
+tailscaled reachable" and points here instead of pretending to configure
+it. The supported shape is Tailscale's own
+[sidecar container](https://tailscale.com/kb/1282/docker): a `tailscale`
+service holding the tailnet identity (`TS_AUTHKEY`) and a serve config
+(`TS_SERVE_CONFIG`) that proxies to the box service over the compose
+network, added alongside — not instead of — the existing services. The box
+service keeps its `127.0.0.1:3210:3210` mapping unchanged; only the sidecar
+is tailnet-facing. Follow Tailscale's compose example there for the
+`TS_AUTHKEY` and `TS_SERVE_CONFIG` shape.
+
+Either way, `cb tailscale setup` refuses to expose a server currently
+running with `CB_ALLOW_UNAUTHENTICATED` set (fail closed — Tailscale
+membership is never treated as authentication), and once a target is
+exposed, starting it in open mode refuses at startup until you run `cb
+tailscale stop`.
 
 ### Box login (on by default)
 
