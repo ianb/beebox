@@ -21,6 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   createRouterCore,
+  listenLoopback,
   type RouterCore,
   type RouterEffects,
   type SpawnOptions,
@@ -619,4 +620,24 @@ test("pidfile serialization: a write cannot be clobbered by a concurrent stale r
   const final = files.get("/pids/wt.json");
   assert.ok(final, "N+1's record survives — not clobbered by N's stale unlink");
   assert.equal(JSON.parse(final).vitePid, 300, "the surviving record is N+1's");
+});
+
+// --- listenLoopback: the router must never bind a routable interface --------
+// (docs/plans/tailscale-expose-and-protect.md Track A: the router's
+// `/__router/*` control routes are unauthenticated, so exposure is a security
+// hole, not a feature. This exercises the real listen path main() uses.)
+
+test("listenLoopback binds 127.0.0.1 only", async () => {
+  const http = await import("node:http");
+  const server = http.createServer();
+  await new Promise<void>((resolve) => {
+    listenLoopback(server, 0, resolve);
+  });
+  try {
+    const addr = server.address();
+    assert.ok(addr && typeof addr === "object", "server has a bound address");
+    assert.equal(addr.address, "127.0.0.1", "bound to loopback, not a routable interface");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

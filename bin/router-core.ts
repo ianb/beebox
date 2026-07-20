@@ -166,6 +166,23 @@ export function httpStatusOf(err: unknown): number | undefined {
   return undefined;
 }
 
+/**
+ * Bind a server to loopback only. The router has unauthenticated control
+ * routes (`/__router/status|retry|stop`) and proxies to worktree backends
+ * whose open-mode opt-out is legal precisely because their bind is loopback —
+ * so the router itself must never listen on a routable interface. There is
+ * deliberately no host override; tailnet/remote access goes through
+ * `tailscale serve` fronting a dedicated auth-gated `cb serve`/`cb hub`,
+ * never the router (docs/plans/tailscale-expose-and-protect.md, Track A).
+ */
+export function listenLoopback(
+  server: import("node:net").Server,
+  port: number,
+  onListening: () => void,
+): void {
+  server.listen(port, "127.0.0.1", onListening);
+}
+
 // --- the core -----------------------------------------------------------------
 
 export interface RouterCore {
