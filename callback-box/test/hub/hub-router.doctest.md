@@ -149,7 +149,7 @@ rootBody.length > 0
 
 const healthResponse = await fetch(`${hub.base}/healthz`, diagAuth);
 JSON.stringify(await healthResponse.json())
-=> {"status":"ok","open":true,"boxes":[]}
+=> {"status":"ok","boxes":[]}
 ```
 
 ## A request under a configured slug is proxied unchanged (no prefix stripping)
