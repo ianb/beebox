@@ -20,12 +20,14 @@ struct NativeComposerFixtureScreen: View {
         label: "Fixture Box",
         baseURL: URL(string: "http://127.0.0.1:3210/main/test1") ?? URL(fileURLWithPath: "/"),
         sessionID: "fixture-session",
-        authToken: nil
+        authToken: nil,
+        requiresDeviceUnlock: false
     )
 
     @StateObject private var draftStore: ComposerDraftStore
     @StateObject private var pendingStore: PendingEmissionStore
     @StateObject private var pairedBoxStore = PairedBoxStore()
+    @StateObject private var boxLockManager = BoxLockManager()
     @State private var seeded = false
 
     init() {
@@ -52,6 +54,7 @@ struct NativeComposerFixtureScreen: View {
                 )
             }
             .environmentObject(pairedBoxStore)
+            .environmentObject(boxLockManager)
             .task {
                 await seedFixture()
             }

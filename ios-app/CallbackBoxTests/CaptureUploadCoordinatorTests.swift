@@ -14,7 +14,8 @@ final class CaptureUploadCoordinatorTests: XCTestCase {
             label: "Test box",
             baseURL: URL(string: "https://example.test/box-test")!,
             sessionID: "chat-1",
-            authToken: "mobile-token"
+            authToken: "mobile-token",
+            requiresDeviceUnlock: false
         )
         MockCaptureUploadURLProtocol.response = .success(statusCode: 200, body: Data("{}".utf8))
     }

@@ -106,7 +106,8 @@ final class CaptureAPITests: XCTestCase {
             label: "Test",
             baseURL: URL(string: "https://example.test/box")!,
             sessionID: nil,
-            authToken: token
+            authToken: token,
+            requiresDeviceUnlock: false
         )
     }
 

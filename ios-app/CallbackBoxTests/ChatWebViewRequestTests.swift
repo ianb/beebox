@@ -14,7 +14,8 @@ final class ChatWebViewRequestTests: XCTestCase {
             label: "Test box",
             baseURL: URL(string: "https://box.example.com/test1")!,
             sessionID: nil,
-            authToken: authToken
+            authToken: authToken,
+            requiresDeviceUnlock: false
         )
     }
 

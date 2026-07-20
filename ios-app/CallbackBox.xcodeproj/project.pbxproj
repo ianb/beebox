@@ -22,6 +22,8 @@
 		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
 		B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001E2C3C000100000001 /* PendingEmissionStore.swift */; };
 		B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */; };
+		C83000012C3C000100000001 /* BoxLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000022C3C000100000001 /* BoxLockManager.swift */; };
+		C83000032C3C000100000001 /* BoxLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000042C3C000100000001 /* BoxLockTests.swift */; };
 		5A1000072C3C000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000182C3C000100000001 /* Assets.xcassets */; };
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
@@ -76,6 +78,8 @@
 		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
 		B720001E2C3C000100000001 /* PendingEmissionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingEmissionStore.swift; sourceTree = "<group>"; };
 		B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerFixtureScreen.swift; sourceTree = "<group>"; };
+		C83000022C3C000100000001 /* BoxLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockManager.swift; sourceTree = "<group>"; };
+		C83000042C3C000100000001 /* BoxLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockTests.swift; sourceTree = "<group>"; };
 		5A1000172C3C000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A1000182C3C000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
@@ -200,6 +204,7 @@
 		5A1000432C3C000100000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				C83000022C3C000100000001 /* BoxLockManager.swift */,
 				5A1000192C3C000100000001 /* ChatAPI.swift */,
 				5A10001B2C3C000100000001 /* SpeechDictation.swift */,
 				5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */,
@@ -215,6 +220,7 @@
 		5A1001122C3C000100000001 /* CallbackBoxTests */ = {
 			isa = PBXGroup;
 			children = (
+				C83000042C3C000100000001 /* BoxLockTests.swift */,
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
 				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
@@ -338,6 +344,7 @@
 				B72000132C3C000100000001 /* ComposerDraftRepository.swift in Sources */,
 				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
 				B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */,
+				C83000012C3C000100000001 /* BoxLockManager.swift in Sources */,
 				B72000192C3C000100000001 /* ComposerTextView.swift in Sources */,
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
@@ -373,6 +380,7 @@
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
 				B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */,
+				C83000032C3C000100000001 /* BoxLockTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -30,7 +30,8 @@ final class SpeechKeywordsTests: XCTestCase {
             label: "Test",
             baseURL: URL(string: "https://cb.example/box")!,
             sessionID: "abc123",
-            authToken: nil
+            authToken: nil,
+            requiresDeviceUnlock: false
         )
         let components = URLComponents(url: box.chatURL, resolvingAgainstBaseURL: false)
         let queryItems = components?.queryItems ?? []

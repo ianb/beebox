@@ -65,7 +65,8 @@ final class ChatAPITests: XCTestCase {
             label: "Test",
             baseURL: URL(string: "https://example.test/box")!,
             sessionID: nil,
-            authToken: "secret"
+            authToken: "secret",
+            requiresDeviceUnlock: false
         )
     }
 }
