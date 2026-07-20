@@ -134,6 +134,26 @@ bogusCookie.status
 => 401
 ```
 
+## A bogus credential on a REAL slug is indistinguishable from an UNKNOWN slug (no enumeration)
+
+The rejection must not leak whether the slug exists: a valid-but-live slug with a
+worthless token and a slug that was never configured have to answer identically,
+and neither may cold-start a box. Because the auth wall rejects BEFORE the
+endpoint is resolved, both return the same bare 401 — an attacker learns nothing
+about which slugs are real, and pays no box-wake for the guess.
+
+```ts continue
+const bogusOnRealSlug = await fetch(`${hubBase}/test1/api/trpc/health.check`, {
+  headers: { authorization: "Bearer worthless" },
+});
+const bogusOnUnknownSlug = await fetch(`${hubBase}/nosuchbox/api/trpc/health.check`, {
+  headers: { authorization: "Bearer worthless" },
+});
+const unauthedUnknownSlug = await fetch(`${hubBase}/nosuchbox/api/trpc/health.check`);
+JSON.stringify([bogusOnRealSlug.status, bogusOnUnknownSlug.status, unauthedUnknownSlug.status])
+=> [401,401,401]
+```
+
 A real `cb_mobile` cookie does pass — this is the credential a WebSocket
 upgrade carries, since the browser API cannot set headers on one.
 

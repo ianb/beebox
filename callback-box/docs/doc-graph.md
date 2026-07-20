@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-20T23:40:12Z
+Generated: 2026-07-20T23:41:54Z
 Total documents: 199
 
 ## Issues
@@ -1399,7 +1399,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:40 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:95 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
-- ../issues/decisions/2026-07-20-soft-launch-posture.md:82 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
+- ../issues/decisions/2026-07-20-soft-launch-posture.md:83 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:27 (link) — [todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
 
 References:
@@ -2979,7 +2979,6 @@ Referenced by:
 - docs/mobile-contract.md:525 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:8 (mention) — follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
 - docs/plans/ios-companion-review-2026-07-09.md:3 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
-- ../issues/bugs/2026-07-17-hub-mobile-auth-presence-only.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-hq-transcription-window-unlocked.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -2987,6 +2986,7 @@ Referenced by:
 - ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-mobile-chat-unattributed.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/code-quality/2026-07-17-ios-small-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
