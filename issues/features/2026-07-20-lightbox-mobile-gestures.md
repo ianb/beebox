@@ -66,6 +66,30 @@ matching rather than inventing — muscle memory is the whole point of a gesture
   order without covering the close button.
 - **A drag must not fire the backdrop's click-to-close** on release.
 
+## What to try on the phone (manual-testing checklist, 2026-07-20)
+
+Implementation landed (`c326d4a5` + `299297e5`, design in
+`../../callback-box/docs/plans/lightbox-mobile-gestures.md`). Desktop
+pointer-event testing verified the logic; the phone pass is about **feel and
+iOS specifics**:
+
+1. Double-tap an image → zooms ~2.5× at the tap point; double-tap again → fit.
+2. While zoomed: one-finger pan — edges should resist (rubber-band) and spring
+   back on release. Vertical drag must pan, never dismiss.
+3. Pinch in/out, including pinch below fit (should rubber-band back to fit on
+   release) and adding/removing a finger mid-pinch (no jumps).
+4. At fit: slow vertical drag → image follows finger and fades; release early
+   → springs back; drag ~a third of the screen or flick → closes. Both up and
+   down. Flicking *back toward center* after a drag should cancel, not close.
+5. iOS checks: no page scroll/bounce behind the overlay during any gesture, no
+   native double-tap or pinch zoom of the page, gestures survive an
+   interrupted touch (notification pull-down mid-drag → image snaps back),
+   toolbar show/hide doesn't leave the image outside the viewport.
+6. Feel dials (report anything that reads wrong; all constants in
+   `lightbox-gesture-math.ts` / `lightbox-spring.ts`): zoom level 2.5×, spring
+   omega 22, flick threshold 0.5 px/ms, close distance 30% of viewport,
+   fade-out over 40%.
+
 ## This needs a real device
 
 Headless Chromium cannot emulate pinch, momentum, or rubber-banding — the
