@@ -49,6 +49,11 @@ exist yet are fine as plain text naming the idea. `doc-check` validates every
 link, so moving/reclassifying an item means rewriting its inbound links — from
 other issues AND from `docs/`.
 
+**External URLs get a title too** — `[Orwell's six rules](https://…)`, not a bare
+URL. A bare URL makes the reader parse a link to find out what it is. (The dev
+docs renderer autolinks bare ones as a fallback, but that only makes them
+clickable, not informative.)
+
 ## Frontmatter
 
 `title:` is required; everything else is optional — omit what doesn't apply.

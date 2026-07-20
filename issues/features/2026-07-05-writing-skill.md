@@ -177,9 +177,9 @@ but anecdotal — false-positive prone.
 
 **Sources:**
 
-- https://www.deadlanguagesociety.com/p/rhetorical-analysis-ai — why LLM prose lacks taste
-- https://reutersinstitute.politics.ox.ac.uk/news/how-ai-generated-prose-diverges-human-writing-and-why-it-matters — corpus-backed divergences
-- https://www.paulgraham.com/writing44.html — write simply, revise ruthlessly
-- https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/ — Orwell's six rules
-- https://every.to/p/how-to-make-ai-write-less-like-ai — practical de-AI edits
-- https://github.com/conorbronsdon/avoid-ai-writing — an existing agent skill auditing these patterns
+- [Dead Language Society — rhetorical analysis of AI prose](https://www.deadlanguagesociety.com/p/rhetorical-analysis-ai) — why LLM prose lacks taste
+- [Reuters Institute — how AI-generated prose diverges from human writing](https://reutersinstitute.politics.ox.ac.uk/news/how-ai-generated-prose-diverges-human-writing-and-why-it-matters) — corpus-backed divergences
+- [Paul Graham — Write Simply](https://www.paulgraham.com/writing44.html) — write simply, revise ruthlessly
+- [Orwell — Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/) — the six rules
+- [Every — How to make AI write less like AI](https://every.to/p/how-to-make-ai-write-less-like-ai) — practical de-AI edits
+- [conorbronsdon/avoid-ai-writing](https://github.com/conorbronsdon/avoid-ai-writing) — an existing agent skill auditing these patterns
