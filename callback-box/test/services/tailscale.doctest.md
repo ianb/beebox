@@ -144,7 +144,7 @@ const report = await runTailscaleStatus(
 [report.state, report.docLink]
 => [
   "needs-login",
-  "https://tailscale.com/docs/features/access-control/auth-keys"
+  "https://tailscale.com/kb/1085/auth-keys"
 ]
 ```
 
