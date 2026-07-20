@@ -93,17 +93,164 @@ disclosed edit. Which means quote accuracy is load-bearing for the whole
 practice: get it wrong and the connective tissue silently becomes attributed
 speech.
 
-## What's actually missing
+## The shape of the skill: a constructive process, stage by stage
 
-- **Eliciting words that don't exist yet.** Assembly presupposes material. When
-  the user hasn't said the thing yet, the agent's move is to *ask*, not to draft
-  a paragraph for approval — a draft anchors the user to the agent's phrasing and
-  they end up editing AI prose instead of speaking. What does good elicitation
-  look like: interview? one question at a time? reading back what's been
-  gathered?
-- **Showing an assembly for revision.** The user needs to see the arrangement and
-  react — "move that up," "cut that," "I'd rather say it this way." That's a
-  conversational loop with a document in the middle, and it's the core UX.
+Boxholder, on what the skill should actually contain — note this is a **positive
+process description**, not a rule set. The prohibitions are the easy part; the
+value is in how the agent *works with* someone:
+
+> I'm imagining something like a process of how to collect the text, how to
+> present what was collected, how to assemble that raw material into drafts and
+> how to act on feedback on that draft, how to solicit and use rewriting of
+> merged items, how to insert research or references into that text, how to keep
+> track of references. And then some more about editorial reviews (where there's
+> lots of good existing material to take from). And perhaps how to provide ideas
+> in a way that doesn't over-steer the user... ideas on structure, missing items,
+> explicit brainstorms. Also the agent as research assistant is very useful, and
+> where that fits in.
+
+And on the evidence bar — this can't wait for studies that don't exist:
+
+> Of course it'll require a lot of testing (and very much human-based), so we
+> can't go that far. But even one person's description of how they personally do
+> a process (that fits my own goals here) is useful.
+
+So: practitioner accounts count. Below, each stage with the most applicable
+existing craft. Full research with citations in
+`scratch/authentic-ai-writing-research.md` (gitignored).
+
+### 1. Collecting the text
+
+The professions that do this treat **the interview as the creative act, not a
+preliminary** — memoir ghostwriting locates the book in the recorded interview
+series; the writing is shaping that material. Moehringer lived a mile from Agassi
+for two years, watching old matches while Agassi narrated his in-match thoughts
+shot by shot.
+
+Transferable craft:
+
+- **Start easy and concrete, save the hardest for last** — after trust. (StoryCorps; CJR)
+- **Open questions, never leading.** "How was…?" not "Wasn't it…?" Follow with
+  "tell me more," "describe what that was like."
+- **The question list is scaffold, not script** — "when you hear something that
+  moves you, ask more questions."
+- **Prepare 20, ask 10.** "If you need to ask all 20, you're not having a
+  conversation."
+- **Silence is a tool** — letting a question float a beat too long yields more
+  genuine answers. (Non-obvious for a chat agent, which is built to fill turns.)
+- **Concrete/sensory/memory questions beat abstract reflective ones** — the one
+  empirical result found on question type.
+- **Notice the quotable moment when it happens**, and stay alert for it.
+- **OARS** (open questions, affirmations, reflective listening, summarizing) from
+  motivational interviewing is the most rigorously developed elicitation
+  framework found — built precisely to get a person to voice their own reasoning
+  in their own words rather than be led.
+
+### 2. Presenting what was collected
+
+OARS's **reflective listening + summarizing** map directly here: play the user's
+own words back for confirmation. Oral history makes this a formal pipeline stage
+rather than a courtesy — **narrator review**, with its own chapter in Baum's
+foundational text and near-universal institutional practice. Columbia's actual
+pipeline adds an **audit-edit**: a verification pass against the source.
+
+### 3. Assembling raw material into drafts
+
+Oral history codifies a **fidelity spectrum** that makes a natural user-facing
+dial (AudioPen already ships one as an "edit intensity" slider):
+
+**full verbatim** (every um and false start) → **intelligent verbatim** (filler
+stripped, voice and meaningful pauses kept) → **edited / clean read** (smoothed
+for publication).
+
+The field's rule of thumb is worth stealing: **false starts that carry meaning
+are preserved** (broken with an em-dash) even when pure filler is dropped —
+false starts reflect thought patterns, filler doesn't. Institutions genuinely
+disagree on where to draw the line, so this is a dial with defaults, not a
+constant.
+
+Ghostwriting's bright line for this stage: **shape, don't invent.** A ghost may
+select, sequence, and dramatize material the subject actually said or
+experienced — but must not invent experiences, expertise, or opinions they never
+had.
+
+Convention worth adopting: **brackets `[ ]` are reserved exclusively for
+editorial insertions** — words not in the source. Near-universal in oral history
+transcription, and a ready-made complement to `{% quote %}`.
+
+### 4. Acting on feedback
+
+StoryCorps' model is the useful precedent: aggressive curatorial cutting (40 min
+→ 2–8 min) is **licensed by storyteller approval of the edited segment**. Heavy
+editing plus subject sign-off is an accepted, principled pattern — which means
+the review stage isn't friction to minimize, it's what buys the freedom to edit
+boldly.
+
+### 5. Soliciting and using rewrites of merged items
+
+When the user directs a rewrite, **the instruction is the provenance.** The
+thesis-editing analogy: normally the student makes the change themselves after
+the editor flags it; here the agent executes, so what keeps authorship with the
+human is that the instruction came from them and is recorded.
+
+### 6–7. Research, references, and tracking them
+
+Thinnest area in the research — little exists on incorporating outside material
+into someone's own voice. Two transferable ideas:
+
+- **Archive the raw.** The Library of Congress Veterans History Project sidesteps
+  transcript-fidelity disputes by requiring deposit of the **unedited original
+  recording** as the primary record. Keeping sources retrievable is itself a
+  provenance strategy — and the box already has `{% source %}` for anchoring to a
+  document span.
+- **Provenance falls out of process capture, not output analysis.** No span-level
+  attribution format has been adopted anywhere; the systems that get closest (iA
+  Writer's Authorship, Grammarly Authorship) log as you work. So reference
+  tracking should be a byproduct of the gathering loop, not a later reconstruction.
+
+### 8. Editorial review
+
+This is the "lots of good existing material" — the standard four-tier taxonomy
+gives the agent a vocabulary for *what kind of review it's doing*, which is
+useful precisely because these are different jobs and conflating them is how an
+edit turns into a rewrite:
+
+**developmental / structural** → **line editing** → **copyediting** →
+**proofreading**.
+
+### 9. Offering ideas without over-steering
+
+The strongest find, and it reads as a *technique* rather than a restriction.
+Australia's IPEd thesis-editing guidelines — the one place this line is
+ethics-board-enforced, because a thesis must remain provably the student's:
+
+> In relation to matters of substance and structure, the professional editor may
+> draw attention to problems, but should not provide solutions. **Examples may be
+> offered in order to guide the student in resolving problems.**
+
+That's a constructive move: *name the problem, offer an example, let them
+resolve it.* It's how you help someone with structure without writing their
+structure. Directly applicable to the boxholder's "ideas on structure, missing
+items, explicit brainstorms" — the brainstorm is legitimate; handing over
+finished prose is what isn't.
+
+Why it matters is empirically supported: a covertly opinionated assistant made
+writers **twice as likely** to adopt its position, unnoticed (Jakesch et al.,
+CHI 2023, N=1,506); draft exposure flips writers from "what do I think?" into
+evaluating-the-suggestion, with a quarter to a third of AI words surviving into
+final text while writers report feeling fully in control.
+
+### 10. The agent as research assistant
+
+The connection worth designing around: **homework makes elicitation better.**
+Working journalists report that *specificity born of homework unlocks better
+answers than generic prompts* — so the research-assistant role isn't a separate
+mode bolted on, it's the preparation that makes stage 1 work. An agent that has
+read the user's existing cards can ask the specific question instead of the
+generic one.
+
+## Other open questions
+
 - **What the agent's own prose may be.** Headings? Transitions? A sentence
   linking two quotes? Draw the line explicitly, because it will creep. A rule
   like "the agent writes scaffolding, never claims" would be testable.
@@ -113,11 +260,23 @@ speech.
 - **One source, several forms.** The same gathered material should assemble into
   different outputs (a doc, a summary, a page). Does the assembly persist as an
   artifact, or is it re-derived each time from the quoted source cards?
-- **Where this lives.** Per the original open question: an invoked skill won't
-  fire, because an agent doesn't think to call a skill before writing a sentence.
-  This probably wants to be a rule or part of the always-loaded guide, with a
-  skill only for the deliberate "let's write X together" session. Note the law it
-  extends is already always-loaded.
+- **Selection is authorial too.** Tony Schwartz invented no facts for *The Art of
+  the Deal* and still considers the result a falsified persona — "I put lipstick
+  on a pig" — created purely through curation. So accurate `{% quote %}` is
+  necessary but **not sufficient**: the user has to own the *arrangement*, which
+  is what stage 4's approval step is actually for.
+- **Don't trust felt ownership as the success metric.** Research shows felt
+  ownership dissociates from disclosure behavior, and that token effort
+  manufactures the feeling. Better process measures: what fraction of final words
+  trace to user utterances, and whether the user can quote their own document.
+- **Where this lives.** An invoked skill won't fire, because an agent doesn't
+  think to call a skill before writing a sentence. This probably wants to be a
+  rule or part of the always-loaded guide, with a skill only for the deliberate
+  "let's write X together" session. Note the law it extends is already
+  always-loaded.
+- **The niche is unnamed.** No term of art exists for "AI assembles the human's
+  words" — nearest anchors are "as told to," centaur, and Sarkar's "provocateur,
+  not assistant." Open ground if we want a name for it.
 
 ## Scope
 
