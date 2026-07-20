@@ -121,6 +121,30 @@ if [ ! -d "$BOX_DEST" ]; then
       fi
     fi
 
+    # Carry over gitignored attachment binaries — same shape as the connector
+    # secrets above, different reason. Assets inside `*.attach/` scopes are
+    # deliberately NOT in git: they're gitignored and tracked by a per-dir
+    # manifest.json (size + sha256) instead — see docs/asset-manifests.md. So a
+    # clone gets the cards and the manifests but none of the bytes, and every
+    # image in the worktree's UI renders as alt text, which makes image work
+    # untestable against the worktree box.
+    #
+    # `ls-files --others --ignored` asks git for exactly what it deliberately
+    # left behind, scoped to attach dirs, so this can't drift from the ignore
+    # list the way a hardcoded extension list would. Paths are repo-root
+    # relative, so this works for both the v2 (content/) and legacy layouts
+    # without knowing which is which.
+    asset_count=0
+    while IFS= read -r -d '' rel; do
+      [ -f "$BOX_SRC/$rel" ] || continue
+      mkdir -p "$(dirname "$BOX_DEST/$rel")"
+      cp "$BOX_SRC/$rel" "$BOX_DEST/$rel"
+      asset_count=$((asset_count + 1))
+    done < <(git -C "$BOX_SRC" ls-files --others --ignored --exclude-standard -z -- '*.attach/*' 2>/dev/null || true)
+    if [ "$asset_count" -gt 0 ]; then
+      echo "[worktree-create] copied $asset_count attachment binar(y|ies) from source box"
+    fi
+
     # v2 (package-layout) box: redirect its "callback-box" dependency at
     # THIS worktree's own callback-box checkout via a pnpm.overrides
     # `link:` entry — a live symlink that never installs the target's own
