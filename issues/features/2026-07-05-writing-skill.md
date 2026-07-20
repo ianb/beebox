@@ -24,6 +24,49 @@ user's actual words doesn't read as AI, because it isn't. The tells research
 (kept below) stops being the point and becomes the standard for the small
 amount of connective prose the agent does write.
 
+## The core frame: oral → written, fidelity as a dial
+
+Boxholder, on what this actually is:
+
+> We're helping turn a person's oral presentation of an idea into something else
+> (blog post, email, etc... not always clear).
+
+That names the discipline. **Oral history is the closest existing field** — it has
+worked exactly this problem (one person's speech becoming that person's prose)
+for decades, with codified norms, and it should be treated as the primary source
+of practice here rather than one input among several. **There is more to mine
+there than the pass below captured** — a deeper read of the field is worth doing
+before designing.
+
+The single most valuable import is the **fidelity spectrum**, which should be a
+core concept of the skill, not an implementation detail:
+
+**full verbatim** (every um and false start — used when verbal behavior is itself
+the data) → **intelligent verbatim** (filler stripped; voice and meaningful
+pauses kept) → **edited / clean read** (smoothed for publication).
+
+Three things make this the right spine:
+
+- **It's a dial, not a rule.** Different destinations want different points on
+  it, and the user can be asked where to sit — AudioPen already ships this idea
+  as an "edit intensity" slider.
+- **The field disagrees about where to draw the line**, openly and in print. That
+  means we're picking a default in a live debate, not implementing a settled
+  standard — so the dial should be visible, and our default defensible rather
+  than assumed.
+- **Its rule of thumb encodes real judgment**: meaningful false starts are
+  preserved (broken with an em-dash) even when pure filler is dropped, because
+  false starts reflect thought patterns and filler doesn't. That's the kind of
+  distinction that separates a transcript that sounds like the person from one
+  that sounds sanitized.
+
+**The destination is often unknown while collecting.** "Not always clear" is a
+design constraint, not vagueness: material is gathered before anyone knows if
+it's a blog post, an email, or a note. That argues for keeping the collected
+material in a form that isn't yet committed to an output — quoted source cards
+that several assemblies can draw on — and for treating "what is this for?" as a
+question the process asks *later*, possibly repeatedly.
+
 ## The primitive already exists
 
 This is not a from-scratch idea — it's the natural extension of machinery
@@ -156,18 +199,9 @@ pipeline adds an **audit-edit**: a verification pass against the source.
 
 ### 3. Assembling raw material into drafts
 
-Oral history codifies a **fidelity spectrum** that makes a natural user-facing
-dial (AudioPen already ships one as an "edit intensity" slider):
-
-**full verbatim** (every um and false start) → **intelligent verbatim** (filler
-stripped, voice and meaningful pauses kept) → **edited / clean read** (smoothed
-for publication).
-
-The field's rule of thumb is worth stealing: **false starts that carry meaning
-are preserved** (broken with an em-dash) even when pure filler is dropped —
-false starts reflect thought patterns, filler doesn't. Institutions genuinely
-disagree on where to draw the line, so this is a dial with defaults, not a
-constant.
+The **fidelity spectrum** is the spine of this stage — see the core frame at the
+top of this issue. Where the dial sits should be a decision the process surfaces,
+not a constant baked into a prompt, and it may differ per destination.
 
 Ghostwriting's bright line for this stage: **shape, don't invent.** A ghost may
 select, sequence, and dramatize material the subject actually said or
@@ -195,8 +229,28 @@ human is that the instruction came from them and is recorded.
 
 ### 6–7. Research, references, and tracking them
 
-Thinnest area in the research — little exists on incorporating outside material
-into someone's own voice. Two transferable ideas:
+Boxholder on the bar here:
+
+> Research isn't _hard_ really, just worth structuring. Like, you know how to do
+> research. I just don't want it unspecified, so it gets figured out anew each
+> time.
+
+So this stage is a **specification** problem, not a capability one. The agent can
+already research; what's missing is a named procedure, so the same session
+doesn't reinvent when to look something up, how a found source enters the draft,
+and where the citation lands. Unspecified means inconsistent — and inconsistency
+is what makes a reference list rot.
+
+Concretely, the skill should fix: when research is offered vs. waited for
+(unbidden research is a mild form of over-steering — it introduces material the
+user didn't ask for), how a found fact is marked as *not the user's words*
+(this is the same boundary problem `{% quote %}` solves, from the other
+direction), and whether references accumulate as they're found or get gathered at
+the end (the process-capture finding below argues for as-found).
+
+Thinnest area in the external research — little exists on incorporating outside
+material into someone's own voice, so this stage is mostly ours to specify. Two
+transferable ideas:
 
 - **Archive the raw.** The Library of Congress Veterans History Project sidesteps
   transcript-fidelity disputes by requiring deposit of the **unedited original
