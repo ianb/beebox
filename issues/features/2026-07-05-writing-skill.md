@@ -180,7 +180,8 @@ And on the evidence bar — this can't wait for studies that don't exist:
 
 So: practitioner accounts count. Below, each stage with the most applicable
 existing craft. Full research with citations in
-`scratch/authentic-ai-writing-research.md` (gitignored).
+[research/writing-practice/](../../research/writing-practice/README.md) — full
+reports with citations and per-finding dispositions.
 
 ### 1. Collecting the text
 
@@ -269,7 +270,8 @@ storage, is the hard part.
 
 #### What it's called, and who has gone further (research 2026-07-20)
 
-Full report: `scratch/writing-dumping-ground-research.md` (gitignored).
+Full report:
+[boneyards and cut material](../../research/writing-practice/boneyards-and-cut-material.md).
 
 **The term of art is "boneyard"** — screenwriting/production, originating with
 the physical stripboard where strips for cut or unscheduled scenes were parked in
