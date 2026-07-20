@@ -1,7 +1,8 @@
 # iOS per-box device lock
 
-**Status:** active — implementation is underway; automated tests plus simulator
-and physical-device authentication/background checks are required before ship.
+**Status:** implemented 2026-07-20 — build and XCTest are green, and seeded
+protected-box layouts were exercised on iPhone and iPad simulators. Interactive
+authentication/background checks on a physical device remain before ship.
 
 This plan adds an optional, device-local navigation lock to each box paired with
 the iOS companion. A protected box requires Face ID, Touch ID, or device
@@ -217,7 +218,8 @@ exact-ID predicate fails. The underlying content receives
 
 - **Unlock** while locked;
 - progress plus **Cancel** while authenticating;
-- generic failure plus **Retry** after failure/cancellation;
+- generic failure plus **Retry** after failure; cancellation quietly returns to
+  the initial **Unlock** state;
 - no-passcode explanation plus **Open Anyway** only for `passcodeNotSet`;
 - **Choose Another Box** and **Manage Boxes** in every state.
 
@@ -289,8 +291,8 @@ There are no accepted critical gaps.
 |---|---|---|---|
 | Old paired-box JSON lacks the Boolean | XCTest decodes legacy JSON and preserves every old field | Boundary decoder defaults only the lock to false | Clear in test; no reset |
 | `withSessionID` drops the lock | XCTest reconstructs a protected box | Required initializer argument/compiler plus explicit forwarding | Clear test/compiler failure |
-| Borrower opens management and disables lock | Fake-auth toggle test | Disabling always authenticates; cancellation/failure preserves true | Clear prompt/state |
-| Device has no passcode while disabling | Fake-auth test and explicit confirmation test | Only passcodeNotSet offers Disable Lock Anyway | Clear degraded path |
+| Borrower opens management and disables lock | Manager/store XCTest plus device acceptance | Disabling always authenticates; cancellation/failure preserves true | Clear prompt/state |
+| Device has no passcode while disabling | Adapter-result XCTest plus device acceptance | Only passcodeNotSet offers Disable Lock Anyway | Clear degraded path |
 | Protected box is selected at launch | Manager/root test | No matching unlocked ID; opaque layer blocks content | Clear lock screen |
 | User cancels or fails auth | Manager tests and simulator | Remain locked; cancellation is quiet, failure offers Retry | Clear |
 | Unexpected canEvaluate/evaluate error occurs | Fake adapter mapping test | Failed; never Open Anyway | Clear generic failure |

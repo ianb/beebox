@@ -2,6 +2,7 @@
 title: "Per-box lock: require re-auth (biometric/device) to open a sensitive box in a multi-box client"
 area: callback-box
 design: ../../callback-box/docs/plans/ios-per-box-device-lock.md
+needs: [manual-testing]
 filed-by: agent
 discovered-in: main session — boxholder raised it while working through the queue
 ---
@@ -31,8 +32,8 @@ facilities** rather than inventing a PIN.
   hardware-backed; a UX users already understand. It also composes with Keychain
   access control, so the gate can protect *material* rather than just a screen
   (see the honesty question below).
-- **Android** — `BiometricPrompt` is the direct analogue when
-  [the companion](2026-07-18-android-companion-track1-unblocked.md) gets there.
+- **Android** — `BiometricPrompt` is the direct analogue; parity is tracked in
+  [android-per-box-device-lock-parity](2026-07-20-android-per-box-device-lock-parity.md).
 - **Web/PWA** — WebAuthn/passkeys is the analogue, though a browser context makes
   the "protects material vs. protects a screen" problem sharper.
 
@@ -74,8 +75,8 @@ together.
   being a local navigation affordance and avoids implying enforcement the box
   cannot provide. Each phone opts its boxes in independently.
 - **Re-lock policy — settled by the design:** lock on app background and every
-  box switch, with no idle timer. An opaque cover also hides content while the
-  scene is inactive so app-switcher snapshots do not expose the transcript.
+  box switch, with no idle timer. App-switcher snapshot privacy is outside the
+  phone-share navigation scope and can be considered separately if needed.
 - **Fallback when biometrics are unavailable or fail** — device passcode is the
   natural fallback. Given the scope, a device with no biometric *and* no passcode
   set is already an unlocked phone; a lock there is close to meaningless, so
@@ -91,3 +92,26 @@ together.
 Call it **lock**, not **pin**. In UI vocabulary "pin" overwhelmingly means
 favorite/stick-to-top, and this feature is the opposite of promoting a box —
 someone reading `pinned: true` in a paired-box record would guess wrong.
+
+## Implementation status (2026-07-20)
+
+The iOS implementation is complete on branch `worktree-per-box-lock`:
+
+- the preference is stored only in the local paired-box JSON, with legacy
+  snapshots defaulting safely to unlocked;
+- every unlock and every attempt to disable the preference uses a fresh
+  `LocalAuthentication` request;
+- backgrounding or changing boxes invalidates in-flight authentication and
+  discards the current grant;
+- protected chat/composer views remain mounted but opaque, non-interactive, and
+  accessibility-hidden; presented composer surfaces dismiss when the lock
+  returns;
+- the full simulator XCTest suite passes, and seeded locked layouts were
+  inspected on iPhone 17e and iPad (A16) simulators.
+
+Close this issue only after physical-device acceptance covers successful Face
+ID/Touch ID and passcode fallback, cancellation/failure, background during and
+after the prompt, authenticated lock removal, protected/unprotected box
+switching, force quit/relaunch, large type, and the no-passcode degradation if
+practical. Also confirm the webview stays mounted and composer drafts/pending
+sends survive re-lock/unlock.
