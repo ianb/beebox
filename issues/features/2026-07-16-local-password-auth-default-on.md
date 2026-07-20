@@ -1,51 +1,27 @@
 ---
 title: "Username/password login + forced account creation (even in dev) so a box is never accidentally open"
-needs: [manual-testing]
 design: ../../callback-box/docs/plans/local-password-auth.md
+resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked for a local-first, default-secure auth path
 area: callback-box
 ---
 
-## Implemented (2026-07-19) — needs manual testing
+## Implemented (2026-07-19)
 
 Built end-to-end on `worktree-local-password-auth` per the design plan (Tracks
-A–H). Full doctest suite green (4365/4365). Automated tests can't exercise the
-real login/setup flow, a live WebSocket auth upgrade, or a browser tour against
-an authenticated box, so this carries `needs: [manual-testing]` until the
-boxholder confirms — **do not close on green tests alone.** What to try, and what
-should happen:
-
-1. **Fresh dev box forces setup.** Start a dev serve with no `~/.cb-auth.json`
-   and no `CB_ALLOW_UNAUTHENTICATED`; open it. → Redirected to a login wall; the
-   server console prints a `First-run setup: …/auth/setup?token=…` line; visiting
-   it shows the account-creation page with the "why" copy. Create the owner →
-   redirected in, logged in.
-2. **Password login.** Log out, log in with the created credentials. → Success
-   redirects to `returnTo`. Wrong password → inline "Invalid credentials".
-   Hammer it → 429 with a retry countdown.
-3. **Setup self-disables.** After an account exists, revisit `/auth/setup?token=…`
-   → 410 Gone. Restart the server, wait 15+ min, use the old token → 410 (expired).
-4. **`gen` revocation.** Log in on two browsers; run `cb auth set-password` →
-   both sessions are logged out on next request.
-5. **Open-mode opt-out.** Start with `CB_ALLOW_UNAUTHENTICATED=1` → loud boot
-   warning + persistent non-dismissible banner on every page, no login required.
-   Try `=1` with a non-loopback bind → startup refuses; `=network` → serves open
-   with the warning.
-6. **Browse/tour tooling.** With auth on, `bin/browse open /<box>/…` against the
-   running authed dev box → reaches the page (agent-token header injected), not
-   the login wall. A non-worktree host must NOT receive the token.
-7. **WebSocket auth.** Open a box page that uses live chat/subscriptions while
-   logged in via cookie on a standalone (non-hub) serve → the WS connects and
-   streams (this is the raw-`IncomingMessage` cookie path Track D fixed).
-8. **Prod hardening.** After merge/deploy: create the prod owner account
-   (`cb auth create-user`), confirm Google login still works alongside it, and
-   confirm existing Google sessions weren't invalidated.
-
-Commits: credential store, always-on gate, login/setup/throttle, `gen`
-revocation + fail-closed 503 + WS fix, browse token injection, `cb auth` CLI,
-frontend pages + banner, docs. Plan + cross-model review:
+A–H): scrypt credential store, always-on gate with the `CB_ALLOW_UNAUTHENTICATED`
+opt-out, password login + first-run setup + throttle, `gen` session revocation +
+fail-closed auth-store + WS cookie fallback, browse agent-token injection,
+`cb auth` CLI, frontend login/setup pages + open-mode banner, docs. Cross-model
+(Codex) reviewed at plan and implementation stages; the implementation review
+found (and fixed) hub-side gen-revocation and hub login body-parse breaks. Full
+doctest suite green. Plan + review:
 `../../callback-box/docs/plans/local-password-auth.md` (+ `.review.md`).
+
+The human-only verification (real login/setup/WS/browse flows + prod hardening)
+lives in its own tracker:
+[manually-verify-local-password-auth](../docs-and-chores/2026-07-19-manually-verify-local-password-auth.md).
 
 ---
 
