@@ -67,7 +67,8 @@ to people; close when the soft launch happens. Builds on
 1. **Unauthenticated holes on the blessed deploy path**:
    [google-oauth-callback-unauthenticated](../closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md)
    (worst — credential swap; FIXED),
-   [csp-report-endpoint-memory-exhaustion](../bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md),
+   [csp-report-endpoint-memory-exhaustion](../closed/bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md)
+   (FIXED),
    [hub-mobile-auth-presence-only](../bugs/2026-07-17-hub-mobile-auth-presence-only.md).
 2. **[boxes-share-one-origin](2026-07-19-boxes-share-one-origin.md)** —
    either fix or stop claiming isolation in `auth.ts`/docs. Honest-docs is

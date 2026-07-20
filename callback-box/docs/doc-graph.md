@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-20T23:36:14Z
+Generated: 2026-07-20T23:40:12Z
 Total documents: 199
 
 ## Issues
@@ -1399,7 +1399,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:40 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:95 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
-- ../issues/decisions/2026-07-20-soft-launch-posture.md:81 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
+- ../issues/decisions/2026-07-20-soft-launch-posture.md:82 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:27 (link) — [todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
 
 References:

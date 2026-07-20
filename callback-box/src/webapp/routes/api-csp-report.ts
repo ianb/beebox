@@ -21,6 +21,22 @@ import { isRecord } from "../../lib/is-record.js";
 const CSP_REPORT_LOG = "csp-reports.log";
 const MAX_LOG_FILE_BYTES = 200_000;
 
+// Bounds against an unauthenticated memory/disk-amplification vector (the
+// endpoint MUST stay public — browsers post reports without a session). A real
+// CSP report is a few hundred bytes; these caps are generous headroom, not a
+// guess at the wire format.
+//
+// - Body limit: reject anything that isn't tiny before it's even buffered. Set
+//   on the content-type parser below (the server-wide 50 MB JSON limit does not
+//   apply to these two CSP content types).
+// - Field cap: truncate each logged field so one report can't write a
+//   multi-megabyte line (a ~49 MB `documentURL` was the reported vector).
+// - Report cap: a Reporting-API POST is an array; bound how many we log per
+//   request so a single post can't append thousands of lines.
+const MAX_REPORT_BODY_BYTES = 16 * 1024;
+const MAX_FIELD_CHARS = 2_048;
+const MAX_REPORTS_PER_REQUEST = 20;
+
 /**
  * Absolute path of the CSP report log under a box. The sink writes here and the
  * digest tool (`src/dev/csp-digest.ts`) reads from the same place — keep both
@@ -42,14 +58,18 @@ interface NormalizedReport {
 }
 
 function str(value: unknown): string {
-  return typeof value === "string" && value !== "" ? value : "-";
+  if (typeof value !== "string" || value === "") return "-";
+  // Truncate per-field so a single report can't write a giant log line.
+  return value.length > MAX_FIELD_CHARS ? value.slice(0, MAX_FIELD_CHARS) + "…" : value;
 }
 
 function normalizeReports(body: unknown): NormalizedReport[] {
   // Reporting-API form: an array of { type, body: { effectiveDirective, blockedURL, documentURL } }.
   if (Array.isArray(body)) {
     const out: NormalizedReport[] = [];
-    for (const entry of body) {
+    // Bound how many reports one POST can log (a Reporting-API batch is an
+    // array; cap it so a single request can't append thousands of lines).
+    for (const entry of body.slice(0, MAX_REPORTS_PER_REQUEST)) {
       if (!isRecord(entry)) continue;
       if (entry["type"] !== undefined && entry["type"] !== "csp-violation") continue;
       const b = isRecord(entry["body"]) ? entry["body"] : {};
@@ -86,7 +106,7 @@ export function registerCspReportRoute({ server, logDir }: { server: FastifyInst
   // rejects (a malformed report should be dropped, not 415/500 the browser).
   server.addContentTypeParser(
     ["application/csp-report", "application/reports+json"],
-    { parseAs: "string" },
+    { parseAs: "string", bodyLimit: MAX_REPORT_BODY_BYTES },
     // eslint-disable-next-line max-params -- Fastify's content-type parser callback signature is (request, body, done)
     (_request, body, done) => {
       try {
@@ -107,7 +127,11 @@ export function registerCspReportRoute({ server, logDir }: { server: FastifyInst
         const content = await readFile(logFile, "utf-8");
         const half = content.slice(content.length / 2);
         const firstNewline = half.indexOf("\n");
-        await writeFile(logFile, firstNewline === -1 ? half : half.slice(firstNewline + 1));
+        // Cut on a newline boundary so JSONL stays valid. If the retained half
+        // has NO newline (a single oversized partial line), drop it entirely
+        // rather than keep a giant fragment — the field caps make this
+        // near-impossible, but the truncation must not depend on that.
+        await writeFile(logFile, firstNewline === -1 ? "" : half.slice(firstNewline + 1));
       }
     } catch (_e) {
       // A logging failure must not break the report endpoint.
