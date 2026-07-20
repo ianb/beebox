@@ -33,28 +33,32 @@ facilities** rather than inventing a PIN.
 A hand-rolled PIN would mean storing and verifying another secret, a reset path,
 and lockout policy — all of which the platform already solved.
 
-## The question that decides whether this is real
+## Scope: the phone-share case, deliberately — not a security boundary
 
-**What does the gate actually protect?**
+**Settled 2026-07-19 (boxholder): "the lock is for the phone share, no more."**
 
-If the box's data is already cached on the device and its session token is
-already valid, a lock that only gates *navigation* is a **speed bump** — good
-against shoulder-surfing, a handed-over phone, or a glance while the app is open;
-useless against someone with the unlocked device who is willing to look further.
+The threat model is handing your unlocked phone to someone — to show them a
+photo, look something up, let a kid play — and not wanting a sensitive box one
+tap away. It is **not** meant to withstand someone who has the device and is
+determined to read its storage.
 
-That is still a legitimate feature (it's the same value a password manager's
-auto-relock provides), but it should be **built and described honestly**. The
-stronger version is to gate the *material*: keep the locked box's token — or its
-local cache — behind a biometric-protected Keychain item, so failing the check
-means the data genuinely can't be read, not merely that a view won't render.
-Which of those we're building is the first thing to decide, because it changes
-everything downstream.
+So the gate is a **navigation gate**, and that's the intended design, not a
+compromise:
 
-Related and worth resolving together: iOS currently stores its device token in
-plaintext rather than the Keychain
+- Don't build the heavyweight version (biometric-protected Keychain item
+  wrapping the token or local cache, so failing the check makes data
+  unreadable). That solves a threat model we've explicitly declined.
+- Don't *describe* it as protection either — in docs, UI copy, and any prompt
+  text, it's "locked" the way a screen lock is, not encryption. Overstating it
+  would invite someone to rely on it for the case it doesn't cover.
+- Correspondingly, the implementation should stay small. If it starts growing a
+  key-management story, that's the signal it has drifted past this scope.
+
+Independently: iOS stores its device token in plaintext rather than the Keychain
 ([ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md)).
-Moving to the Keychain is a prerequisite for the strong version *and* an
-independent fix — doing them in one pass is cheaper than twice.
+That's a real fix worth doing on its own merits — it is **not** a prerequisite
+for this feature under the scope above, so the two need not be sequenced
+together.
 
 ## Other design questions
 
@@ -65,12 +69,16 @@ independent fix — doing them in one pass is cheaper than twice.
   it — so server-declared + client-enforced is a trust statement, not a
   guarantee. Probably still worth it: it means a newly paired device inherits the
   intent instead of defaulting to open.
-- **Re-lock policy** — on app background? After N minutes idle? On every box
-  switch? This single choice decides whether the feature is useful or merely
-  irritating, and it should be tunable per box rather than global.
+- **Re-lock policy** — this is now the *main* design question, since the scope is
+  settled. Re-lock on app background is the one that actually serves the
+  phone-share case (you hand the phone over after backgrounding, or they
+  background it themselves). An idle timer alone would leave the box open in
+  exactly the moment that matters. Probably: lock on background, plus on every
+  box switch, with no timer to reason about.
 - **Fallback when biometrics are unavailable or fail** — device passcode is the
-  natural fallback; decide whether a locked box is reachable *at all* on a device
-  with no biometric/passcode set (fail-closed says no).
+  natural fallback. Given the scope, a device with no biometric *and* no passcode
+  set is already an unlocked phone; a lock there is close to meaningless, so
+  degrade gracefully rather than making the box unreachable.
 - **Relationship to the in-flight local auth work.** The
   [local password auth](2026-07-16-local-password-auth-default-on.md) design
   (being written now) is redefining what `isAuthEnabled()` means and adding a
