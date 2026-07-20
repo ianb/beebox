@@ -2,6 +2,16 @@
 
 Manual runbooks for periodic checks on the deployed callback-box server. Each section is self-contained — follow the steps, report the verdict, and suggest a next action if unhealthy. These are designed to be driven by a local Claude Code agent that has SSH access to `box.example.com`.
 
+## Hub health endpoints (`/healthz`, `/healthz/canary`)
+
+The hub exposes two diagnostic endpoints, both requiring the `CB_DIAG_API_KEY` bearer token (`Authorization: Bearer <key>`). An unauthenticated caller gets 401 — the endpoints used to be open and leaked slugs/PIDs/ports, so they're now gated like the box server's own `/healthz`. Both run on the server's localhost (`http://localhost:3210`); externally they're reachable at `https://box.example.com/...` with the same key.
+
+**`GET /healthz` — passive verdict.** Reports `status: "ok"` (HTTP 200) or `status: "unhealthy"` (HTTP 503), plus per-box supervisor state. The verdict is **liveness**, not readiness: it's `unhealthy` only if a box is *broken* — crash-looping (`starting` with `consecutiveFailures > 0`) or crash-budget-latched (`unhealthy`). A `stopped` box is a lazy hub's normal resting state and is **not** a fault, so an idle fleet reads `ok`. `restarts` is a lifetime counter shown for information; the verdict never keys on it (a box that blipped once long ago would otherwise pin the hub red forever). Derivation lives in `src/hub/hub-health.ts`. This endpoint has no side effects — safe for an uptime monitor to poll.
+
+**`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches that box's *own* root `/healthz` (authenticated) and returns 200 only if the box answers 200 — otherwise 503, naming the slug. The box-healthz step matters: the supervisor's readiness probe treats *any* HTTP response as "ready", so a child that opens its port but whose health handler is broken would pass a socket-only check; requiring the box's healthz 200 makes "canary ok" mean the box actually answered. This is what catches a **fleet-wide startup break** — e.g. a native-module ABI mismatch after a Node major bump — that the passive verdict can't see, because on a lazy hub most boxes rest `stopped` and report nothing. `?box=<slug>` names the box to canary; unset picks the first configured slug. **It wakes a box** (leaving it resident for `idleMs`), so it's a deploy-time / on-demand check, not something a monitor should poll. The deploy runs it automatically (see [`deploy/README.md`](../deploy/README.md)).
+
+Why the canary exists at all: during the 2026-07-16 Node 22→24 upgrade every box child crash-looped on a better-sqlite3 ABI mismatch while the old `/healthz` returned a constant 200 — the deploy verified "healthy" while no box could serve a request. The passive verdict now catches a crash-looping box; the canary catches a break on boxes that were never started.
+
 ## claude-update (nightly Claude Code self-update)
 
 ### Why this exists

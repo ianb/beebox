@@ -33,6 +33,10 @@ const execFileP = promisify(execFile);
 // (non-existent) /auth/login in a loop. The spawned `cb hub` inherits this env,
 // runs hub-wide open, and tells its children `x-cb-hub-auth: off`.
 process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+// The hub's /healthz is diag-key-gated; the spawned hub inherits this env.
+const DIAG_KEY = "test-diag-key-for-e2e-doctest";
+process.env.CB_DIAG_API_KEY = DIAG_KEY;
+const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
 
 function pidAlive(pid) {
   try {
@@ -123,7 +127,7 @@ const hubPort = await waitFor(() => {
 }, { timeoutMs: 30000, intervalMs: 200 });
 
 const health = await waitFor(async () => {
-  const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`);
+  const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`, diagAuth);
   const body = await res.json();
   const box = body.boxes.find((b) => b.slug === "fixture");
   return box && box.status === "running" ? box : null;
@@ -132,12 +136,26 @@ const health = await waitFor(async () => {
 health.status
 => running
 
-// The hub's public /healthz was reviewed down to liveness + open (no per-box
-// runtime detail like pid), so read the child's own pid file to prove it's a
-// real running process — `cb serve` writes `.cb-serve.pid` into the box root.
+// `/healthz`'s per-box status is derived from supervisor state, not the raw
+// process, so read the child's own pid file to prove it's a real running
+// process — `cb serve` writes `.cb-serve.pid` into the box root.
 const childPid = Number((await fs.readFile(path.join(fixture.boxRoot, ".cb-serve.pid"), "utf-8")).trim());
 Number.isInteger(childPid) && childPid > 0
 => true
+
+health.consecutiveFailures
+=> 0
+```
+
+The diag-gated canary cold-starts a box and confirms it serves — the deploy's
+child-level check. The fixture box is already running here, so `ensureRunning`
+resolves immediately and the canary reports it ready.
+
+```ts continue
+const canaryRes = await fetch(`http://127.0.0.1:${hubPort}/healthz/canary`, diagAuth);
+const canaryBody = await canaryRes.json();
+JSON.stringify({ status: canaryRes.status, box: canaryBody.status, slug: canaryBody.slug })
+=> {"status":200,"box":"ok","slug":"fixture"}
 ```
 
 Traffic actually reaches the box through the hub (its own Fastify instance

@@ -72,6 +72,16 @@ async function route({ request, env, deps }: { request: Request; env: Env; deps:
     return methodNotAllowed("GET, HEAD");
   }
 
+  // Version probe (Track E drift detection): a static, box-free string stamped
+  // at deploy by `cb pub setup`, compared by `cb pub status` against the hash of
+  // the committed Worker source. Unauthenticated by design — it exposes only a
+  // content hash of code that is itself versioned in the monorepo.
+  if (pathname === "/__version") {
+    const version = env.PUB_WORKER_VERSION;
+    const body = version === undefined || version.length === 0 ? "unversioned" : version;
+    return new Response(body, { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+
   // `URL.pathname` keeps percent-encoding (so `%2e%2e` survives) but does
   // collapse a literal `/../`. Split into raw (still-encoded) segments WITHOUT
   // collapsing empties: only the always-present leading slash and a single

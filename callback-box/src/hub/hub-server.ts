@@ -67,9 +67,14 @@ import {
   HUB_AUTH_OFF_HEADER,
 } from "../webapp/auth.js";
 import { invariant } from "../lib/invariant.js";
+import type { HubVerdict } from "./hub-health.js";
+import { registerHealthRoutes } from "./hub-health-routes.js";
 
 export interface HubHealth {
-  status: "ok";
+  /** Derived in `cli/commands/hub.ts` via `hubVerdict()` — `"unhealthy"`
+   *  (served as HTTP 503) if any box is crash-looping or has latched
+   *  unhealthy, else `"ok"` (200). See `hub-health.ts`. */
+  status: HubVerdict;
   boxes: BoxRuntimeStatus[];
 }
 
@@ -285,20 +290,9 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     done(null);
   });
 
-  // Public liveness endpoint. Reviewed down to liveness + the open-mode flag:
-  // `getHealth()` carries per-box runtime detail (pid, port, restarts,
-  // lastError) that an unauthenticated caller should not see, so the public
-  // shape projects each box to just `{ slug, status }`. Internal consumers that
-  // want the full `BoxRuntimeStatus` read `getHealth()`/`supervisor.getStatuses()`
-  // directly, not this endpoint.
-  app.get("/healthz", async (_request, reply) => {
-    const health = getHealth();
-    return reply.send({
-      status: health.status,
-      open: !authRequired(),
-      boxes: health.boxes.map((box) => ({ slug: box.slug, status: box.status })),
-    });
-  });
+  // Health surface: passive verdict (`/healthz`) + active canary
+  // (`/healthz/canary`), both diag-key-gated. See `hub-health-routes.ts`.
+  registerHealthRoutes(app, { endpoints, getHealth });
 
   // Login lives at the hub for the whole fleet (Track D, chunk D2) --
   // reuses the SAME routes a standalone box server registers, so there's

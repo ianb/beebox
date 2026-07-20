@@ -202,12 +202,26 @@ JSON.stringify({ email: authedBody.xCbAuthenticatedEmail, secret: authedBody.xCb
 => {"email":"person@example.com","secret":"test-hub-secret-for-auth-doctest"}
 ```
 
-## `/healthz` stays open regardless of auth
+## `/healthz` is outside the session/OAuth wall, but diag-key-gated
+
+`/healthz` never redirects to login the way a protected box path does (the
+whole point of it being outside the auth wall — an uptime monitor has no
+session). But it carries its own diag-key gate, so an unauthenticated caller
+gets a 401 from the gate, NOT a 302 to `/auth/login`. With the diag bearer key
+it returns the verdict.
 
 ```ts continue
-const healthzResponse = await fetch(`${hubBase}/healthz`);
-healthzResponse.status
+process.env.CB_DIAG_API_KEY = "test-diag-key-for-auth-doctest";
+
+const healthzNoKey = await fetch(`${hubBase}/healthz`, { redirect: "manual" });
+healthzNoKey.status
+=> 401
+
+const healthzWithKey = await fetch(`${hubBase}/healthz`, { headers: { authorization: "Bearer test-diag-key-for-auth-doctest" } });
+healthzWithKey.status
 => 200
+
+delete process.env.CB_DIAG_API_KEY;
 ```
 
 ## A webhook path proxies through with NO session required, and no email attached

@@ -12,6 +12,37 @@ deploys, but the feature is **dormant in prod until VAPID keys are set**, and th
 real end-to-end paths were never exercised before merge (merged on green tests +
 UI render + fake-mode e2e only). This tracks what's left.
 
+## Confirmed 2026-07-19: it has never run, anywhere
+
+Not just "unverified" — **zero executions in its lifetime**, verified directly:
+
+- `/home/callback/.env` on prod contains **no VAPID keys** (`grep -c VAPID` → 0),
+  so the server has never been able to send.
+- `push-subscriptions.json` **does not exist** on prod *or* on the boxholder's
+  local machine, so no browser has ever subscribed.
+
+Shipped 2026-07-04; still dormant two weeks later. Every path below the
+"Verification not yet done" heading has therefore run only against fakes.
+
+## Keep-or-drop: settled — this is wanted
+
+Asked 2026-07-19 whether the dormancy meant push was unwanted. Boxholder:
+*"it's important, I just haven't gotten around to it. I'm highly confident it is
+important."* So this is **not** a candidate for removal — it's a finished feature
+waiting on one ops step and a verification pass, and it should be treated as
+scheduled work rather than re-triaged as a maybe.
+
+Practical consequence: code touching push is worth keeping correct. The
+[v2 box-slug bug](../bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md) lists
+`send-push.ts` among the sites deriving a slug wrongly — fixing that *before*
+push goes live is the right order, since a wrong slug would key subscriptions
+under `"content"` for every box (cross-box delivery) the moment the first one is
+written.
+
+The unblock is small and sequenced: **install VAPID keys → the desktop
+end-to-end → then everything else below.** Nothing in the verification list can
+start until the keys exist.
+
 ## Blocking prod use
 
 - **Generate + install prod VAPID keys.** `npx web-push generate-vapid-keys`, add

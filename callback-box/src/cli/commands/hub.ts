@@ -13,6 +13,7 @@ import { loadHubConfig, defaultHubConfigPath, HubConfigError } from "../../hub/h
 import { Supervisor } from "../../hub/supervisor.js";
 import { resolveBoxRoot } from "../../hub/child-spawn.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
+import { hubVerdict } from "../../hub/hub-health.js";
 import { loadEnv, hubEnvSchema } from "../../lib/env.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { enforceOpenModeAtListen } from "../../webapp/auth.js";
@@ -85,7 +86,10 @@ export const hubCommand = new Command("hub")
     );
     const boxes: BoxSpec[] = boxEntries.filter((box): box is BoxSpec => box !== undefined);
 
-    const getHealth = (): HubHealth => ({ status: "ok", boxes: supervisor.getStatuses() });
+    const getHealth = (): HubHealth => {
+      const statuses = supervisor.getStatuses();
+      return { status: hubVerdict(statuses), boxes: statuses };
+    };
     // The hub's own base URL -- see hub-server.ts's `baseUrl` doc comment for
     // why this must be threaded in rather than letting the auth routes fall
     // back to the box server's unrelated default port.

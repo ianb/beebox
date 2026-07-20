@@ -34,6 +34,16 @@ the frontend and CLI bundle are built, and the result is rsynced to
 healthcheck. `deploy-info.json` on the server therefore records exactly what
 shipped.
 
+The healthcheck has two depths, both diag-key-gated and run on the server's
+localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
+the hub's `/healthz` for up to 180s and **fails the deploy** unless the verdict
+is `ok` (the hub is up and no box is crash-looping), then hits `/healthz/canary`
+to cold-start one real box and confirm it serves — so a child-only startup
+failure (e.g. a native-module ABI mismatch that leaves the hub itself green)
+fails the deploy instead of shipping silently. The 180s window replaces an old
+30s poll that raced the hub's cold boot; the endpoints now require the bearer
+key, so an unauthenticated external monitor gets 401.
+
 ```bash
 ./deploy/deploy.sh                 # deploy HEAD of this checkout
 ./deploy/deploy.sh --ref <sha>     # deploy (or roll back to) any commit

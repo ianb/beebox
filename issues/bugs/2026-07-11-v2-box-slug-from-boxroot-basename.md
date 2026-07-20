@@ -47,6 +47,27 @@ must change the write and read slugs together, and consider a one-time migration
 of the on-disk `push-subscriptions.json` keys. This is why it was NOT folded into
 the v1-removal fixture step.
 
+## Finding 2026-07-19: there is no push data to migrate
+
+Checked prod and local — **`push-subscriptions.json` does not exist in either
+place**, and prod's `.env` has no VAPID keys at all (consistent with
+[web push followup testing](../code-quality/2026-07-04-web-push-followup-testing.md),
+which notes push is shipped but dormant until VAPID keys are set).
+
+That removes the biggest caution above:
+
+- **No migration is needed.** There are no on-disk slug-keyed subscriptions to
+  strand, so the write/read slug change doesn't have to be coordinated with a
+  data migration — it just has to be internally consistent.
+- **Nothing is leaking today.** The "are all boxes sharing one `content` key,
+  i.e. cross-box push leakage?" worry is real in principle, but no subscription
+  has ever been written, so it has not happened. Fixing this *before* push goes
+  live is exactly the right order.
+
+So this is now a straightforward correctness refactor, not a data-migration
+problem. Re-verify before relying on it (a subscription could be created at any
+time), but as of 2026-07-19 the store is empty everywhere.
+
 ## Suggested direction
 
 A single shared helper `boxSlug(shape | boxRoot)` = `basename(packageRoot)`, used

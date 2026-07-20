@@ -72,7 +72,11 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
   // The menu is portaled to document.body so it escapes any `overflow-hidden`
   // / clipping ancestor (e.g. chat message bubbles). Because it's no longer in
   // normal flow, it's positioned `fixed` from the trigger's viewport rect and
-  // repositioned on scroll/resize.
+  // repositioned on scroll/resize. The final box is clamped into the viewport
+  // (with an 8px margin) so a menu wider or taller than the room beside/below
+  // its trigger stays fully on-screen rather than clipping off an edge — a menu
+  // near the right edge no longer runs off the left, and a long menu scrolls
+  // in place instead of overflowing the bottom.
   const [coords, setCoords] = useState<CSSProperties>({});
   useLayoutEffect(() => {
     if (!open || rootRef.current === null) return;
@@ -81,11 +85,28 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       if (root === null) return;
       const rect = root.getBoundingClientRect();
       const gap = 4;
-      const next: CSSProperties = { position: "fixed" };
-      if (vertical === "above") next.bottom = window.innerHeight - rect.top + gap;
-      else next.top = rect.bottom + gap;
-      if (align === "right") next.right = window.innerWidth - rect.right;
-      else next.left = rect.left;
+      const margin = 8;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const next: CSSProperties = { position: "fixed", maxWidth: vw - margin * 2 };
+      // Vertical: anchor the near edge to the trigger, then bound the far edge
+      // to the viewport so a tall menu gains a scrollbar instead of overflowing.
+      if (vertical === "above") {
+        next.bottom = vh - rect.top + gap;
+        next.maxHeight = rect.top - gap - margin;
+      } else {
+        next.top = rect.bottom + gap;
+        next.maxHeight = vh - (rect.bottom + gap) - margin;
+      }
+      // Horizontal: align to the trigger per `align`, then clamp the whole box
+      // within [margin, vw - margin]. `right-0`-style alignment measured only
+      // the trigger's x, so a wide menu beside a mid-header trigger slid off the
+      // left edge; clamping the computed left keeps it on-screen either way.
+      const menu = menuRef.current;
+      const rawWidth = menu ? menu.getBoundingClientRect().width : 0;
+      const effWidth = Math.min(rawWidth, vw - margin * 2);
+      const anchored = align === "right" ? rect.right - effWidth : rect.left;
+      next.left = Math.max(margin, Math.min(anchored, vw - margin - effWidth));
       setCoords(next);
     };
     update();
@@ -133,7 +154,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
               ref={menuRef}
               role="menu"
               style={coords}
-              className={cn("bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm", dense ? "py-0.5" : "py-1", width)}
+              className={cn("bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain", dense ? "py-0.5" : "py-1", width)}
             >
               <DropdownContext.Provider value={ctxValue}>
                 {children}
