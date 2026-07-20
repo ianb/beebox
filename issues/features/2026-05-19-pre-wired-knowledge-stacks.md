@@ -8,7 +8,7 @@ The agent currently mostly wings it on domain reasoning — uses general trainin
 
 Distinct from the [Canonical wisdom corpus (in lieu of plugins)](../exploration/2026-05-11-canonical-wisdom-corpus.md) entry: that's about *how to structure things in the box* (book-tracking patterns). This is about *domain frameworks for the things in the box* (negotiation lens for a vendor relationship, communication framework for a family member, methodology for a project).
 
-The real risk: pre-wiring makes application reflexive, and *reflexive misuse* is the dangerous failure mode. A framework that doesn't fit the situation, applied confidently because it was pre-wired, is worse than the agent winging it from observation. The boxholder's sister wired to attachment-theory frameworks that don't actually fit produces confident wrongness the agent wouldn't otherwise reach.
+The real risk: pre-wiring makes application reflexive, and *reflexive misuse* is the dangerous failure mode. A framework that doesn't fit the situation, applied confidently because it was pre-wired, is worse than the agent winging it from observation. A family member wired to psychology frameworks that don't actually fit produces confident wrongness the agent wouldn't otherwise reach.
 
 Design tension: pre-wiring trades accuracy-from-observation for speed-of-application. Probably useful for domains where frameworks are mature and broadly applicable (negotiation, basic communication styles, project-management methodologies). Probably risky for contested or person-specific domains (psychology, family dynamics, anything where fit is the whole question).
 

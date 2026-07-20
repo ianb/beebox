@@ -1,8 +1,14 @@
 ---
 title: "categorize issues into subdirectories"
 area: issues
-needs: [decision]
+resolution: implemented
 ---
+
+**Closed 2026-07-20** — implemented some time ago: the queue now uses the six
+category subdirectories with a status-first `closed/<category>/` layout, and
+`issues/CLAUDE.md` documents the conventions (categories are dirs, dominant
+category wins, reclassify by `git mv`). The orthogonal "HOT" filename marker
+was not adopted; revive as its own item if the need returns.
 
 The flat `issues/` dir has ~119 open items — too many to scan, and questions like
 "which of these are real bugs?" (asked this session) have to be answered by hand.

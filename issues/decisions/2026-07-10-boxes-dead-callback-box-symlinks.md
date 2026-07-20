@@ -3,13 +3,13 @@ title: "Box engine symlinks: should anything repair a dead link automatically?"
 needs: [decision]
 area: callback-box
 filed-by: agent
-discovered-in: worktree-orama-semantic-search — live-testing semantic search on the estate box
+discovered-in: worktree-orama-semantic-search — live-testing semantic search on a local box
 ---
 
 Found 2026-07-10: 13 of 13 local boxes under `~/src/boxes/` had a dead
-`node_modules/callback-box` symlink, so any box-local schema (`estate`'s
-`bill`, `ai-class`'s `outline`/`progress`, `box-family`'s
-`itinerary`/`stop`) silently failed to load in local CLI use — those card
+`node_modules/callback-box` symlink, so any box-local schema (a `bill`
+here, an `outline`/`progress` or `itinerary`/`stop` pair there)
+silently failed to load in local CLI use — those card
 types vanished from search, validation, and templates with only a
 stderr `Warning:`. Prod unaffected (real installs).
 
