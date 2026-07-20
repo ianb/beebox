@@ -283,18 +283,28 @@ check lacks:
 - *Probe, don't read env.* Calling `openMode()` from the CLI process reads
   the CLI's environment, not the running server's (which may live under
   systemd with its own env file). The guard instead probes the running
-  target over HTTP: an endpoint reporting the effective auth posture
-  (`/auth/me` extended, or a sibling, to state open-vs-required — small
-  webapp change, part of Track B chunk 2). No response or ambiguous
-  response ⇒ refuse (fail closed).
+  target over HTTP. Settled during implementation: the existing `/auth/me`
+  already reports posture (`routes/auth.ts` returns `{open:true}` in open
+  mode) — no webapp route change needed. `{open:true}` ⇒ refuse; 401 or an
+  authenticated user ⇒ proceed; unreachable/unparseable ⇒ refuse (fail
+  closed).
 - *Persist exposure intent.* Serve config is persistent; a later app restart
   into open mode would otherwise reopen the hole with only a stale-status
-  warning standing guard. Setup records exposure intent in the server's own
-  config (hub config / serve state, exact field settled in chunk 2's
-  design), and `enforceOpenModeAtListen` (`auth.ts:135`) grows the
-  corresponding check: open mode refuses to start while exposure intent is
-  recorded, the same loud-startup-error shape it already has for
-  non-loopback binds.
+  warning standing guard. Settled during implementation: intent lives at
+  `~/.config/cb/tailscale-exposure.json` (machine-level like the hub's
+  config home — exposure is a machine fact, not a per-box one; env override
+  for tests), written only after serve config is verified.
+  `enforceOpenModeAtListen` (`auth.ts:135`) grows the corresponding check:
+  open mode refuses to start while the bound port has recorded exposure —
+  the same loud-startup-error shape it already has for non-loopback binds —
+  and a corrupt intent file under open mode also refuses (fail closed).
+  Both existing call sites (`server.ts:193`, `hub.ts:60`) inherit it.
+- *Teardown is part of the lifecycle.* `cb tailscale stop` (added during
+  implementation — the guard is only honest if it can be legitimately
+  released) removes the target's serve mapping (preserving unrelated
+  mappings), clears the intent entry, and re-verifies. Without it, the
+  startup refusal would push operators toward deleting the intent file by
+  hand, which is the fail-open workaround the guard exists to prevent.
 
 `setup` refuses to configure serve unless the probe confirms auth is
 required (no override flag in this plan); `status` reports the same probe as
@@ -497,11 +507,9 @@ not prevention.
 - Should `cb status` surface a one-line Tailscale summary when serve is
   active? Lean: yes, later — after Track B ships and the output shape is
   proven; not part of this plan.
-- Where exposure intent is persisted (hub config field vs a serve-state file
-  next to it): settled inside Track B chunk 2's design before code; the
-  requirement (startup-time refusal of open mode while exposure is recorded)
-  is fixed, only the storage location is open. Lean: hub/serve config, since
-  `enforceOpenModeAtListen` already runs with config in hand.
+- ~~Where exposure intent is persisted~~ — settled (see the auth-posture
+  guard section): `~/.config/cb/tailscale-exposure.json`, machine-level,
+  consulted by `enforceOpenModeAtListen` only when open mode is requested.
 
 ## Knowledge audits
 
