@@ -9,6 +9,20 @@ needs: [manual-testing]
 In the image lightbox, only **one** navigation arrow is visible — you can page
 forward but there's no visible control to go back.
 
+## Fix landed 2026-07-19 — awaiting visual confirmation
+
+Nav buttons raised to `z-20`, and the close/counter cluster to `z-30`. The
+second half matters: the cluster lives *inside* the figure at `z-10`, so raising
+only the arrows would have made a `z-20` arrow paint over the **close button**
+for a short wide image (the cluster is positioned against the figure's top-right
+while an arrow is against the viewport's vertical centre — those converge as the
+figure gets shorter). Trading a hidden back arrow for an unclickable close button
+would have been a worse bug. Explicit stack is now backdrop `0` < figure `10` <
+arrows `20` < controls `30`.
+
+Typecheck, lint, and the frontend build all pass. **Not visually verified** —
+see the manual-testing note at the bottom.
+
 ## Cause (from reading `components/ImageLightbox.tsx`)
 
 Both arrows *are* rendered, under the same condition (`hasMany`), so this is not
