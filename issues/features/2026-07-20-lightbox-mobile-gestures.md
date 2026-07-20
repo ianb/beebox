@@ -3,7 +3,8 @@ title: "Lightbox mobile gestures: double-tap to zoom + pan, swipe up/down to clo
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked for it after using the lightbox on a phone
-needs: [design, manual-testing]
+needs: [decision, manual-testing]
+design: ../../callback-box/docs/plans/lightbox-mobile-gestures.md
 ---
 
 Two mobile gestures wanted in the image lightbox
