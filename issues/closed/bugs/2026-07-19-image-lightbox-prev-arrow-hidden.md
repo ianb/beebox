@@ -3,13 +3,13 @@ title: "Image lightbox shows only the next arrow — a wide image paints over th
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it paging through images
-needs: [manual-testing]
+resolution: implemented
 ---
 
 In the image lightbox, only **one** navigation arrow is visible — you can page
 forward but there's no visible control to go back.
 
-## Fix landed 2026-07-19 — awaiting visual confirmation
+## Fixed in `ef98ae6f` — confirmed working by the boxholder
 
 Nav buttons raised to `z-20`, and the close/counter cluster to `z-30`. The
 second half matters: the cluster lives *inside* the figure at `z-10`, so raising
@@ -20,8 +20,8 @@ figure gets shorter). Trading a hidden back arrow for an unclickable close butto
 would have been a worse bug. Explicit stack is now backdrop `0` < figure `10` <
 arrows `20` < controls `30`.
 
-Typecheck, lint, and the frontend build all pass. **Not visually verified** —
-see the manual-testing note at the bottom.
+Typecheck, lint, and the frontend build all pass, and the boxholder confirmed it
+working in the app. Closed.
 
 ## Cause (from reading `components/ImageLightbox.tsx`)
 
