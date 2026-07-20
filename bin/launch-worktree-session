@@ -11,6 +11,11 @@
 # --model passes `claude --model <model>` (e.g. claude-fable-5, opus, sonnet) so a
 # worktree can be spun up on a specific model; omit to use the default.
 #
+# Remote Control is enabled by default (`claude --remote-control <worktree>`),
+# so a session started here can be steered from elsewhere — these run unattended
+# in background tabs and much of the testing they generate happens on a phone.
+# Pass --no-remote-control to launch without it.
+#
 # Examples:
 #   launch-worktree-session service-inject-gcal "We discussed switching the gcal connector to use a Service-style injection..."
 #   pbpaste | launch-worktree-session explore-foo -
@@ -24,18 +29,27 @@
 
 set -euo pipefail
 
-# Leading options (only --model today); stop at the first non-option (the name).
+# Leading options; stop at the first non-option (the name).
+#
+# Remote Control is ON by default: these sessions run unattended in background
+# Terminal tabs, and the boxholder is frequently away from the machine (much of
+# the manual testing they generate happens on a phone). The session is named
+# after the worktree so several concurrent ones stay tellable apart.
+# `--no-remote-control` opts out.
 model=""
+remote_control=1
 while [ $# -ge 1 ]; do
   case "$1" in
     --model)   [ $# -ge 2 ] || { echo "launch-worktree-session: --model needs a value" >&2; exit 1; }; model="$2"; shift 2 ;;
     --model=*) model="${1#--model=}"; shift ;;
+    --no-remote-control) remote_control=0; shift ;;
+    --remote-control)    remote_control=1; shift ;;
     *)         break ;;
   esac
 done
 
 if [ $# -lt 1 ]; then
-  echo "Usage: launch-worktree-session [--model <model>] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "Usage: launch-worktree-session [--model <model>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
   exit 1
 fi
 
@@ -94,14 +108,19 @@ fi
 model_arg=""
 [ -n "$model" ] && model_arg="--model $model"
 
+# `--remote-control <name>` takes the name inline (it's an optional-value flag,
+# so it must not be left bare before another flag or it would swallow it).
+rc_arg=""
+[ "$remote_control" = "1" ] && rc_arg="--remote-control $wt"
+
 launcher="$launch_dir/launch.sh"
 cat > "$launcher" <<EOF
 #!/usr/bin/env bash
 cd "$MONO"
 if [ -s "$prompt_file" ]; then
-  exec claude --worktree "$wt" --name "$wt" $model_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
+  exec claude --worktree "$wt" --name "$wt" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
 else
-  exec claude --worktree "$wt" --name "$wt" $model_arg --dangerously-skip-permissions
+  exec claude --worktree "$wt" --name "$wt" $model_arg $rc_arg --dangerously-skip-permissions
 fi
 EOF
 chmod +x "$launcher"
