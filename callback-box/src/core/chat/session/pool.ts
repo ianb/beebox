@@ -20,10 +20,7 @@ import {
   parseCancelScheduleTags,
 } from "../schedules.js";
 import { isRecord } from "../../card-io.js";
-
-function getBoxSlug(boxRoot: string): string {
-  return path.basename(boxRoot);
-}
+import { boxSlug } from "../../../lib/box-slug.js";
 
 const SESSIONS_FILE = ".callback-box/chat-thread-sessions.json";
 
@@ -110,7 +107,7 @@ export class ChatSessionPool {
 
     // Activate session for this thread if not already active
     if (!this.active || this.active.getThreadRef() !== threadRef) {
-      this.active = this.createSession(store, { threadRef, chatDescription });
+      this.active = await this.createSession(store, { threadRef, chatDescription });
     }
 
     const session = this.active;
@@ -159,10 +156,10 @@ export class ChatSessionPool {
   /**
    * Create or resume a ChatThreadSession for the given thread.
    */
-  private createSession(
+  private async createSession(
     store: SessionStore,
     opts: { threadRef: string; chatDescription: string },
-  ): ChatThreadSession {
+  ): Promise<ChatThreadSession> {
     const { threadRef, chatDescription } = opts;
     const record = store[threadRef];
     let sessionId: string | undefined;
@@ -185,8 +182,8 @@ export class ChatSessionPool {
     }
 
     const publicUrl = getPublicUrl("");
-    const boxSlug = getBoxSlug(this.boxRoot);
-    const sessionViewBaseUrl = publicUrl ? `${publicUrl}/${boxSlug}/chat` : undefined;
+    const slug = await boxSlug(this.boxRoot);
+    const sessionViewBaseUrl = publicUrl ? `${publicUrl}/${slug}/chat` : undefined;
 
     const session = new ChatThreadSession({
       boxRoot: this.boxRoot,

@@ -8,6 +8,7 @@ pruning removes the endpoint from *every* box at once. See
 `docs/plans/web-push-notifications.md` (Track B).
 
 ```ts setup
+import { boxSlug } from "../src/lib/box-slug.js";
 import { addSubscription, endpointsForBox } from "../src/core/push-subscriptions.js";
 import { sendPush } from "../src/core/send-push.js";
 import { createFakePush } from "../src/services/push.js";
@@ -29,7 +30,7 @@ const NOW = new Date("2026-06-29T12:00:00Z");
 
 ```ts
 const box = await makeTmpBox();
-const slug = path.basename(box.root);
+const slug = await boxSlug(box.root);
 
 await addSubscription({ boxSlug: slug, subscription: SUB_A, now: NOW });
 await addSubscription({ boxSlug: "other", subscription: SUB_A, now: NOW });

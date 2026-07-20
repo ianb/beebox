@@ -18,6 +18,7 @@
 import path from "node:path";
 import { startServer, type BoxSpec } from "./server.js";
 import { loadEnv, serverEnvSchema } from "../lib/env.js";
+import { boxSlug } from "../lib/box-slug.js";
 
 // Validate + type the environment before anything reads it (Track D.8): a
 // malformed PORT/HOST/secret fails here, loudly and all-at-once, with secret
@@ -28,16 +29,17 @@ const boxArgs = process.argv.slice(2);
 const port = env.PORT;
 const host = env.HOST;
 
-function parseBoxArg(arg: string): BoxSpec {
+async function parseBoxArg(arg: string): Promise<BoxSpec> {
   const eq = arg.indexOf("=");
   if (eq === -1) {
     const boxRoot = path.resolve(arg);
-    return { slug: path.basename(boxRoot), boxRoot };
+    return { slug: await boxSlug(boxRoot), boxRoot };
   }
   return { slug: arg.slice(0, eq), boxRoot: path.resolve(arg.slice(eq + 1)) };
 }
 
-const boxes: BoxSpec[] | undefined = boxArgs.length > 0 ? boxArgs.map(parseBoxArg) : undefined;
+const boxes: BoxSpec[] | undefined =
+  boxArgs.length > 0 ? await Promise.all(boxArgs.map(parseBoxArg)) : undefined;
 
 startServer({ port, host, boxes }).catch((err: unknown) => {
   console.error("Failed to start server:", err);

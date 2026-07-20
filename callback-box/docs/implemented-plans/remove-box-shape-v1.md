@@ -3,7 +3,7 @@
 **Status:** implemented 2026-07 — both tracks shipped: Track 1 (skills
 de-templating, commit `b358885a`) and Track 2 (v1 removal, per the locked
 design below). Two contained follow-ups were filed as issues rather than
-folded in: `issues/bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md` and
+folded in: `issues/closed/bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md` and
 `issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md`.
 
 > **Status (2026-07-11, historical):** Track 1 (skills de-templating) — **DONE**

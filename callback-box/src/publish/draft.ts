@@ -24,6 +24,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { boxSlug } from "../lib/box-slug.js";
 
 import { stageAndCommitPaths } from "../lib/git.js";
 import { getBoxDir } from "../lib/paths.js";
@@ -206,7 +207,7 @@ export async function draftPublication(input: DraftInput, ctx: DraftContext): Pr
     ...(slug !== undefined ? { slug } : {}),
     ...(emails !== undefined ? { allowedEmails: emails } : {}),
     provenance: {
-      boxSlug: path.basename(boxRoot),
+      boxSlug: await boxSlug(boxRoot),
       renderedAt: ctx.now.toISOString(),
       sourceRefs: [sourceRef],
       renderer: "docs" as const,

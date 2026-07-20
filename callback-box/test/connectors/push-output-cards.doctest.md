@@ -6,6 +6,7 @@ that reach no device are stamped `failed` and left in place (a durable, inspecta
 artifact — never a silent drop). Endpoints reported gone are pruned.
 
 ```ts setup
+import { boxSlug } from "../../src/lib/box-slug.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
@@ -28,12 +29,11 @@ const NOW = new Date("2026-06-29T12:00:00Z");
 
 ```ts
 const box = await makeTmpBox({ git: true });
-// Isolate the (global, slug-keyed) push store per box: every v2 box's
-// content-root basename is the literal "content", so a shared store would
-// leak subscriptions between subtests. Real deployments get unique slugs
-// (basename of the package root) instead.
-process.env.CALLBACK_PUSH_STORE_DIR = path.join(box.packageRoot, "push-store");
-const slug = path.basename(box.root);
+// Both subtests share one (global, slug-keyed) push store on purpose: each
+// tmp box's slug is its package root's basename, which is unique, so their
+// subscriptions can't leak into each other. Isolating per box here used to be
+// necessary because every box slugged to the literal "content".
+const slug = await boxSlug(box.root);
 await addSubscription({ boxSlug: slug, subscription: SUB, now: NOW });
 
 await box.seed(
@@ -66,8 +66,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-process.env.CALLBACK_PUSH_STORE_DIR = path.join(box.packageRoot, "push-store");
-const slug = path.basename(box.root);
+const slug = await boxSlug(box.root);
 await addSubscription({ boxSlug: slug, subscription: GONE, now: NOW });
 
 await box.seed(

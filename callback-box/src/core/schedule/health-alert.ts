@@ -14,7 +14,7 @@
  * failure leaves a `failed` card (inspectable), so latching is safe.
  */
 
-import * as path from "node:path";
+import { boxSlug } from "../../lib/box-slug.js";
 import {
   loadScheduleHealth,
   selectAlertableTasks,
@@ -65,7 +65,7 @@ export async function checkHealthAndAlert(
   const fresh = selectAlertableTasks(health).filter((t) => t.alertedAt === null);
   if (fresh.length === 0) return null;
 
-  const boxName = path.basename(boxRoot);
+  const boxName = await boxSlug(boxRoot);
   const title = `⚠️ Scheduled-task health (${boxName})`;
   const body = [
     ...fresh.map((t) => alertLine(t, now)),
