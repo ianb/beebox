@@ -140,7 +140,14 @@ bin/launch-worktree-session <worktree-name> "<briefing>"
 bin/launch-worktree-session <worktree-name> -            # stdin (heredoc)
 bin/launch-worktree-session <worktree-name> @<file>      # from a file
 bin/launch-worktree-session --model <model> <name> @<file>   # run on a specific model
+bin/launch-worktree-session --no-remote-control <name> -     # opt out of Remote Control
 ```
+
+**Remote Control is on by default** — the launcher passes
+`claude --remote-control <worktree-name>`, so a launched session can be steered
+from elsewhere (these run unattended in background tabs, and much of the
+manual testing they generate happens on a phone). The session is named after the
+worktree so concurrent ones stay tellable apart. `--no-remote-control` opts out.
 
 Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin the
 worktree up on a specific model. **Always pass it** — see "Pick a model" in the
