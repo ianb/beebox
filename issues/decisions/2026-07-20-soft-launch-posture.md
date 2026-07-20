@@ -45,6 +45,22 @@ to people; close when the soft launch happens. Builds on
 - **Front door**: README is the launch front door; a
   [GitHub Pages site](../features/2026-07-20-github-pages-site.md)
   (deliberately un-polished, cool in other ways) may follow.
+- **Register**: the audience is friendly but low-attention; what grabs
+  attention is *personal* — the front door reads as a message from the
+  boxholder to them, not neutral product docs. It should also state
+  cost/usage expectations honestly (a running box burns the operator's
+  Claude subscription quota).
+- **Agent-legible docs as capability** (the SECURITY.md /
+  [EXPORT.md](../features/2026-07-20-export-md-agent-instructions.md) /
+  agent-install pattern): instruction docs addressed to the user's agent
+  are the product surface; small helper tools, not end-to-end automation.
+- **[Schedules off by default](../features/2026-07-20-schedules-off-by-default.md)**
+  on fresh boxes — nothing runs until the user (or their agent, at their
+  request) turns it on.
+- Close behind but not gates:
+  [release discipline + update story](2026-07-20-release-discipline-and-update-story.md)
+  (paired with the blessed VPS path),
+  [git push confirmation](2026-07-20-git-push-confirmation.md).
 
 ## Gates — before people see it
 
