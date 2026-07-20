@@ -23,11 +23,8 @@ import {
   runTailscaleStop,
   type SetupIo,
 } from "../../services/tailscale-setup.js";
-import {
-  reportToJson,
-  runTailscaleStatus,
-  type TailscaleReport,
-} from "../../services/tailscale-status.js";
+import { reportToJson, runTailscaleStatus } from "../../services/tailscale-status.js";
+import type { TailscaleReport } from "../../services/tailscale-report.js";
 
 /** A per-state one-line description of the observed condition. */
 function summaryLine(report: TailscaleReport): string {
@@ -36,6 +33,8 @@ function summaryLine(report: TailscaleReport): string {
       return report.detail;
     case "binary-absent":
       return "the `tailscale` CLI is not on PATH";
+    case "cli-error":
+      return `\`${report.command}\` exited ${report.code ?? "null"}: ${report.detail}`;
     case "unrecognized-status-output":
       return `unrecognized \`tailscale status --json\` output: ${report.detail}`;
     case "unknown-backend-state":
@@ -62,6 +61,10 @@ function summaryLine(report: TailscaleReport): string {
       return `serve at ${report.dnsName}:443 points at ${report.pointsAt}, not loopback:${report.target.port}`;
     case "probe-failed":
       return `serve is configured but ${report.url}auth/me did not respond`;
+    case "exposed-unauthenticated":
+      return `serve is LIVE at ${report.url} but the box reports open (UNAUTHENTICATED) mode`;
+    case "posture-ambiguous":
+      return report.detail;
     case "ready":
       return `serve is fronting the target; ${report.url}auth/me responded (${report.status ?? "no status"})`;
     default:
@@ -79,7 +82,7 @@ export function formatReportHuman(report: TailscaleReport): string {
 
 const statusCommand = new Command("status")
   .description("Inspect Tailscale state for a loopback target and print the single next step to expose it")
-  .option("--target <port>", "The loopback port of the auth-gated cb serve/hub to expose (e.g. 3210)")
+  .option("--target <port>", "Required: the loopback port of the auth-gated cb serve/hub to expose (e.g. 3210)")
   .option("--json", "Machine-readable output")
   .action(async (options: { target?: string; json?: boolean }) => {
     try {
@@ -116,7 +119,7 @@ function createRealSetupIo(wait: boolean): SetupIo {
 
 const setupCommand = new Command("setup")
   .description("Guided loop: configure `tailscale serve` to front an auth-gated loopback cb server, off the public internet")
-  .option("--target <port>", "The loopback port of the auth-gated cb serve/hub to expose (e.g. 3210)")
+  .option("--target <port>", "Required: the loopback port of the auth-gated cb serve/hub to expose (e.g. 3210)")
   .option("--no-wait", "Non-interactive: print the next human step and exit nonzero instead of waiting")
   .action(async (options: { target?: string; wait?: boolean }) => {
     try {
@@ -132,7 +135,7 @@ const setupCommand = new Command("setup")
 
 const stopCommand = new Command("stop")
   .description("Remove this target's `tailscale serve` mapping and clear its exposure intent (preserves unrelated mappings)")
-  .option("--target <port>", "The loopback port whose Tailscale exposure to remove (e.g. 3210)")
+  .option("--target <port>", "Required: the loopback port whose Tailscale exposure to remove (e.g. 3210)")
   .action(async (options: { target?: string }) => {
     try {
       const result = await runTailscaleStop(createRealTailscaleDeps(), { target: options.target });

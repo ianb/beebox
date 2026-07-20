@@ -1,24 +1,20 @@
 /**
- * Tailscale engine foundation for `cb tailscale` (Track B chunk 1 of
+ * Tailscale engine foundation for `cb tailscale` (Track B of
  * `docs/plans/tailscale-expose-and-protect.md`).
  *
- * This module owns the injected-dependency seam ({@link TailscaleDeps}, modeled
- * on `bin/doctor.ts`'s `DoctorDeps`), the zod schemas that validate `tailscale`
- * CLI JSON *at the subprocess boundary*, target resolution, and the low-level
- * parsing helpers. The status state machine lives in `tailscale-status.ts`; the
- * command file (`src/cli/commands/tailscale.ts`) is a thin presenter — the same
- * split `health.ts` has over `health-box.ts`.
+ * This module owns the injected-dependency seam ({@link TailscaleDeps}), the zod
+ * schemas that validate `tailscale` CLI JSON *at the subprocess boundary*,
+ * target resolution, and the low-level parsing helpers. The status state machine
+ * lives in `tailscale-status.ts`; the fake deps in `tailscale-fake.ts`; the
+ * command file is a thin presenter (`src/cli/commands/tailscale.ts`).
  *
- * Fail-closed is the governing rule (the OpenClaw-CVE bug class the plan calls
- * out): every `tailscale ... --json` payload is parsed through a schema and an
- * unrecognized shape becomes its OWN state, never undefined-propagation.
- *
- * Testability: `TailscaleDeps` injects the subprocess runner and an HTTP probe,
- * so the whole state machine runs against {@link createFakeTailscaleDeps} with
- * no tailnet — see `test/services/tailscale.doctest.md`.
+ * Fail-closed is the governing rule: every `tailscale ... --json` payload is
+ * parsed through a schema and an unrecognized shape becomes its OWN state, never
+ * undefined-propagation. The whole machine runs against a fake with no tailnet.
  */
 
 import { execFile } from "node:child_process";
+import * as os from "node:os";
 import { promisify } from "node:util";
 import { z } from "zod";
 
@@ -57,9 +53,18 @@ export interface ProbeResult {
 
 export type ProbeEndpoint = (url: string) => Promise<ProbeResult>;
 
+/**
+ * Enumerate this host's NON-loopback, non-internal IP addresses. Injected so the
+ * non-loopback-bind guard (`classifyTargetPosture`) can be tested with a fake
+ * interface list — a server that answers on a public interface must be refused
+ * even though it also answers on 127.0.0.1.
+ */
+export type ListNetworkAddresses = () => string[];
+
 export interface TailscaleDeps {
   run: RunCommand;
   probe: ProbeEndpoint;
+  networkInterfaces: ListNetworkAddresses;
 }
 
 export function createRealRun(): RunCommand {
@@ -99,54 +104,30 @@ export function createRealProbe(): ProbeEndpoint {
   };
 }
 
-export function createRealTailscaleDeps(): TailscaleDeps {
-  return { run: createRealRun(), probe: createRealProbe() };
-}
-
-// ─── Fake deps for tests: script the two `tailscale` subcommands plus the
-// probe. `status`/`serve` accept either an object (JSON-stringified into
-// stdout) or a raw string (to exercise schema-drift / parse failure). ────────
-
-export interface FakeTailscaleOptions {
-  /** Default true; false makes every `tailscale` call unspawnable (binary absent). */
-  binaryPresent?: boolean;
-  /** `tailscale status --json` stdout: an object to serialize, or a raw string. */
-  status?: unknown;
-  /** `tailscale serve status --json` stdout: an object to serialize, or a raw string. */
-  serve?: unknown;
-  /** What the injected probe returns for `/auth/me`. */
-  probe?: ProbeResult;
-}
-
-function stdoutFor(value: unknown): string {
-  if (value === undefined) return "";
-  return typeof value === "string" ? value : JSON.stringify(value);
-}
-
-export function createFakeTailscaleDeps(options: FakeTailscaleOptions): TailscaleDeps {
-  const binaryPresent = options.binaryPresent ?? true;
-  const notSpawned: CommandResult = { spawned: false, code: null, stdout: "", stderr: "" };
-  return {
-    run: (cmd, args) => {
-      if (cmd !== "tailscale" || !binaryPresent) return Promise.resolve(notSpawned);
-      const sub = args.join(" ");
-      if (sub === "status --json") {
-        return Promise.resolve({ spawned: true, code: 0, stdout: stdoutFor(options.status), stderr: "" });
+/** Real non-loopback address enumeration: every non-internal interface address. */
+export function createRealNetworkInterfaces(): ListNetworkAddresses {
+  return () => {
+    const out: string[] = [];
+    for (const infos of Object.values(os.networkInterfaces())) {
+      for (const info of infos ?? []) {
+        if (!info.internal) out.push(info.address);
       }
-      if (sub === "serve status --json") {
-        return Promise.resolve({ spawned: true, code: 0, stdout: stdoutFor(options.serve), stderr: "" });
-      }
-      return Promise.resolve({ spawned: true, code: 0, stdout: "", stderr: "" });
-    },
-    probe: () => Promise.resolve(options.probe ?? { reachable: false, status: null }),
+    }
+    return out;
   };
 }
 
-// ─── Boundary schemas: only the fields the state machine reads, with
-// `.passthrough()` so a NEW Tailscale field never trips a parse failure — but a
-// RENAMED/absent field the machine depends on does (the distinct "unrecognized
-// output" state). ────────────────────────────────────────────────────────────
+export function createRealTailscaleDeps(): TailscaleDeps {
+  return { run: createRealRun(), probe: createRealProbe(), networkInterfaces: createRealNetworkInterfaces() };
+}
 
+// ─── Boundary schemas: only the fields the machine reads, `.passthrough()` so a
+// NEW field never trips a parse failure — but a RENAMED/absent required field
+// does (the "unrecognized output" state). `status --json`'s marshaler emits
+// `BackendState`/`Self`/`CertDomains` WITHOUT `,omitempty` (verified against
+// ipn/ipnstate/ipnstate.go) — always present, `null` before the node is up — so
+// the KEYS are required (absence ⇒ drift) but `null` values are allowed. Inside
+// `Self`, `DNSName`/`TailscaleIPs` are likewise always-emitted members. ────────
 const tailscaleStatusSchema = z
   .object({
     // A plain string on purpose: a future BackendState value must NOT fail the
@@ -155,12 +136,12 @@ const tailscaleStatusSchema = z
     BackendState: z.string(),
     Self: z
       .object({
-        DNSName: z.string().optional(),
-        TailscaleIPs: z.array(z.string()).nullish(),
+        DNSName: z.string(),
+        TailscaleIPs: z.array(z.string()).nullable(),
       })
       .passthrough()
-      .nullish(),
-    CertDomains: z.array(z.string()).nullish(),
+      .nullable(),
+    CertDomains: z.array(z.string()).nullable(),
   })
   .passthrough();
 
@@ -172,14 +153,42 @@ const serveWebSchema = z
   .object({ Handlers: z.record(z.string(), serveHandlerSchema).optional() })
   .passthrough();
 
-const serveConfigSchema = z
-  .object({
-    Web: z.record(z.string(), serveWebSchema).optional(),
-    AllowFunnel: z.record(z.string(), z.boolean()).optional(),
-  })
-  .passthrough();
+/**
+ * The `tailscale serve status --json` payload (`ipn.ServeConfig`). `Foreground`
+ * is a map of IPN-bus session id → a nested `ServeConfig`: running `tailscale
+ * funnel` WITHOUT `--bg` writes the funnel allowance into one of these instead
+ * of the top level, so the no-Funnel invariant must inspect BOTH (mirrors
+ * Tailscale's own `ServeConfigView.HasFunnelForTarget`). The schema is therefore
+ * recursive.
+ */
+export interface ServeConfigJson {
+  Web?: Record<string, z.infer<typeof serveWebSchema>> | undefined;
+  AllowFunnel?: Record<string, boolean> | undefined;
+  Foreground?: Record<string, ServeConfigJson> | undefined;
+}
 
-export type ServeConfigJson = z.infer<typeof serveConfigSchema>;
+const serveConfigSchema: z.ZodType<ServeConfigJson> = z.lazy(() =>
+  z
+    .object({
+      Web: z.record(z.string(), serveWebSchema).optional(),
+      AllowFunnel: z.record(z.string(), z.boolean()).optional(),
+      Foreground: z.record(z.string(), serveConfigSchema).optional(),
+    })
+    .passthrough(),
+);
+
+/**
+ * Whether a Funnel allowance covers `hostPort`, checking the top-level
+ * `AllowFunnel` AND every foreground config — the shape `tailscale funnel`
+ * (no `--bg`) produces. Mirrors `ServeConfigView.HasFunnelForTarget`.
+ */
+export function hasFunnelForTarget(serve: ServeConfigJson, hostPort: string): boolean {
+  if (serve.AllowFunnel?.[hostPort] === true) return true;
+  for (const conf of Object.values(serve.Foreground ?? {})) {
+    if (conf.AllowFunnel?.[hostPort] === true) return true;
+  }
+  return false;
+}
 
 // ─── BackendState: the seven known ipn.State values plus a fail-closed unknown
 // branch (a "six states" schema would misreport InUseOtherUser). ─────────────

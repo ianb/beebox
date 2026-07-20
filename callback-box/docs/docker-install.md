@@ -134,19 +134,33 @@ fronts it with TLS. Which topology applies depends on where `cb` runs:
 
 1. [Install Tailscale](https://tailscale.com/download) on the host and run
    `tailscale up`.
-2. Run `cb tailscale setup --target 3210` (or whatever port the box is
-   served on). It inspects the real Tailscale and serve state and tells you
-   the single next step — logging in, approving the machine, enabling
-   tailnet HTTPS — looping until the box is reachable at
+2. Run `cb tailscale setup --target 3210` (`--target <port>` is required — the
+   port the box is served on). It inspects the real Tailscale and serve state
+   and tells you the single next step — logging in, approving the machine,
+   enabling tailnet HTTPS — looping until the box is reachable at
    `https://<host>.<tailnet>.ts.net/`. `cb tailscale status --target 3210`
    is the read-only version of the same inspection; `cb tailscale stop
    --target 3210` removes the mapping.
 
+   Run `cb tailscale setup` as the SAME OS account the box server runs as (the
+   service account in prod, not root or an admin). The exposure intent that
+   backs the startup guard is recorded in that account's home
+   (`~/.config/cb/tailscale-exposure.json`, or `CB_TAILSCALE_EXPOSURE_FILE`); a
+   setup run under a different user records the guard where the server never
+   reads it.
+
+   On the host-daemon path this is fully guarded: setup refuses to expose a
+   server currently running with `CB_ALLOW_UNAUTHENTICATED` (fail closed —
+   Tailscale membership is never treated as authentication), and once a target
+   is recorded as exposed, restarting it in open mode refuses at startup until
+   you run `cb tailscale stop`.
+
 **Docker container (`cb` runs inside the container, which has no
 `tailscaled`):** `cb tailscale setup` cannot drive a host daemon it can't
-reach — `cb tailscale status` run inside the container detects "no
-tailscaled reachable" and points here instead of pretending to configure
-it. The supported shape is Tailscale's own
+reach — run inside the container it reports `binary-absent` (the generic
+"install Tailscale, then `tailscale up`" step), which is your cue to use the
+sidecar topology below rather than configure Tailscale in-container. The
+supported shape is Tailscale's own
 [sidecar container](https://tailscale.com/kb/1282/docker): a `tailscale`
 service holding the tailnet identity (`TS_AUTHKEY`) and a serve config
 (`TS_SERVE_CONFIG`) that proxies to the box service over the compose
@@ -155,11 +169,15 @@ service keeps its `127.0.0.1:3210:3210` mapping unchanged; only the sidecar
 is tailnet-facing. Follow Tailscale's compose example there for the
 `TS_AUTHKEY` and `TS_SERVE_CONFIG` shape.
 
-Either way, `cb tailscale setup` refuses to expose a server currently
-running with `CB_ALLOW_UNAUTHENTICATED` set (fail closed — Tailscale
-membership is never treated as authentication), and once a target is
-exposed, starting it in open mode refuses at startup until you run `cb
-tailscale stop`.
+**The sidecar path has NO cb-side guard, by construction.** The sidecar
+applies `TS_SERVE_CONFIG` directly; `cb tailscale setup` never runs, no
+exposure intent is written, and the box process reads a different container
+filesystem than any place setup could record one — so neither setup's
+open-mode refusal nor the startup guard protects it. Keeping the box loopback
+only (`127.0.0.1:3210:3210`) with authentication ON is the operator's
+responsibility on this topology: never set `CB_ALLOW_UNAUTHENTICATED` on a box
+the sidecar fronts, since restarting that container in open mode exposes an
+unauthenticated box through the still-running sidecar with nothing to stop it.
 
 ### Box login (on by default)
 

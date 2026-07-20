@@ -2,32 +2,31 @@
  * `cb tailscale setup` (the guided serve-config loop) and `cb tailscale stop`
  * (Track B chunk 2 of `docs/plans/tailscale-expose-and-protect.md`).
  *
- * `setup` runs the chunk-1 status state machine (`tailscale-status.ts`) as a
- * loop: in the human-action states (1–4) it prints the ONE next step and either
- * waits-and-rechecks (a TTY prompt) or, with `--no-wait`, exits with the
- * instruction and a nonzero code; in the serve states (5) it probes the running
- * target's AUTH POSTURE over loopback and REFUSES to configure an open server
- * (the OpenClaw-#50630 analog), then writes a persistent, path-scoped `tailscale
- * serve` mapping — preserving every unrelated mapping — re-verifies, and only
- * then records exposure intent (`tailscale-exposure.ts`). `stop` removes only
- * this target's mapping, clears the intent entry, and re-verifies.
+ * `setup` runs the status state machine (`tailscale-status.ts`) as a loop: human
+ * steps print the ONE next action and wait-and-recheck (or exit nonzero under
+ * `--no-wait`); the serve step classifies the loopback target (`tailscale-target.ts`)
+ * and REFUSES to expose anything but a proven auth-enforcing cb, records exposure
+ * intent BEFORE mutating Serve (over-record is fail-closed), writes a persistent
+ * path-scoped mapping (preserving unrelated ones), and re-verifies. `stop`
+ * removes only this target's mapping(s) and clears intent ONLY after a readback
+ * proves removal.
  *
  * All subprocess + probe access goes through the injected {@link TailscaleDeps},
  * and all operator I/O through the injected {@link SetupIo}, so the whole flow
  * is testable with no tailnet and no TTY.
  */
 
-import { isRecord } from "../lib/is-record.js";
 import { clearExposure, loadExposureFile, recordExposure } from "./tailscale-exposure.js";
 import {
+  loopbackProxyPort,
   normalizeDnsName,
   parseServeConfig,
   parseStatusJson,
   resolveTarget,
-  type ProbeResult,
   type ServeConfigJson,
   type TailscaleDeps,
 } from "./tailscale.js";
+import { classifyTargetPosture, describeRefusal } from "./tailscale-target.js";
 import { runTailscaleStatus } from "./tailscale-status.js";
 
 /** Injected operator I/O so the guided loop is testable without a real TTY. */
@@ -45,65 +44,8 @@ export interface TailscaleActionResult {
   message: string;
 }
 
-/** The running target's effective auth posture, from a loopback `/auth/me` probe. */
-export type AuthPosture = "enforced" | "open" | "unreachable" | "ambiguous";
-
-/**
- * Classify a loopback `/auth/me` probe. `{ open: true }` ⇒ the box is
- * unauthenticated (`open`) and must NOT be exposed; a `401` or an
- * authenticated-user body ⇒ auth is `enforced`; no response ⇒ `unreachable`;
- * anything else (503, unparseable, unexpected 200) ⇒ `ambiguous`. Every
- * non-`enforced` outcome is a refusal — fail closed, no override flag.
- */
-export function classifyAuthPosture(probe: ProbeResult): AuthPosture {
-  if (!probe.reachable) return "unreachable";
-  if (probe.status === 401) return "enforced";
-  if (probe.status === 200) {
-    const body = probe.body;
-    if (body === undefined || body === null) return "ambiguous";
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(body);
-    } catch (_e) {
-      return "ambiguous";
-    }
-    if (isRecord(parsed)) {
-      if (parsed["open"] === true) return "open";
-      if (typeof parsed["email"] === "string" && parsed["email"].length > 0) return "enforced";
-    }
-    return "ambiguous";
-  }
-  return "ambiguous";
-}
-
-function postureRefusal(posture: Exclude<AuthPosture, "enforced">, port: number): string {
-  const probed = `http://127.0.0.1:${port}/auth/me`;
-  switch (posture) {
-    case "open":
-      return (
-        `REFUSING to expose loopback:${port} — it reports open (UNAUTHENTICATED) mode at ${probed}. ` +
-        "Fronting it with Tailscale Serve would hand the whole tailnet an unauthenticated box. " +
-        "Unset CB_ALLOW_UNAUTHENTICATED and give the server real auth first."
-      );
-    case "unreachable":
-      return (
-        `REFUSING to expose loopback:${port} — nothing answered at ${probed}. ` +
-        "Start the auth-gated cb serve/hub on that port first, then re-run `cb tailscale setup`."
-      );
-    case "ambiguous":
-      return (
-        `REFUSING to expose loopback:${port} — ${probed} did not report a recognizable auth posture ` +
-        "(neither a 401 nor an authenticated user nor open mode). Refusing to assume it is protected."
-      );
-    default:
-      return posture;
-  }
-}
-
-/** Configure a persistent, path-scoped serve mapping for the loopback target.
- *  `--bg` makes it survive the command (a plain `tailscale serve` is foreground
- *  and dies with the shell); a path-scoped write leaves unrelated mappings
- *  untouched. */
+/** Configure a persistent (`--bg`), path-scoped serve mapping for the loopback
+ *  target — a path-scoped write leaves unrelated mappings untouched. */
 async function configureServe(deps: TailscaleDeps, port: number): Promise<TailscaleActionResult> {
   const run = await deps.run("tailscale", [
     "serve",
@@ -119,18 +61,74 @@ async function configureServe(deps: TailscaleDeps, port: number): Promise<Tailsc
   return { ok: true, message: "configured" };
 }
 
-async function probePosture(deps: TailscaleDeps, port: number): Promise<AuthPosture> {
-  return classifyAuthPosture(await deps.probe(`http://127.0.0.1:${port}/auth/me`));
-}
-
-/** Guard the two probe-then-record paths: refuse unless auth is enforced. */
+/** Guard the two probe-then-record paths: refuse unless the loopback target is
+ *  proven to be an auth-enforcing callback-box (not the router, not a
+ *  non-loopback bind, not open/ambiguous). Fail closed on everything else. */
 async function ensureEnforced(deps: TailscaleDeps, port: number): Promise<TailscaleActionResult | null> {
-  const posture = await probePosture(deps, port);
-  if (posture !== "enforced") return { ok: false, message: postureRefusal(posture, port) };
+  const posture = await classifyTargetPosture(deps, port);
+  if (posture.kind !== "enforced") return { ok: false, message: describeRefusal(posture, port) };
   return null;
 }
 
 const MAX_SETUP_STEPS = 12;
+
+/** Print the one human step and, in a TTY, wait for the operator; returns a
+ *  terminal result (non-interactive giving up) or `null` to re-check. */
+async function guideHumanStep(
+  io: SetupIo,
+  { nextStep, docLink }: { nextStep: string; docLink: string | null },
+): Promise<TailscaleActionResult | null> {
+  io.log(`Next: ${nextStep}`);
+  if (docLink !== null) io.log(`Docs: ${docLink}`);
+  if (!io.interactive) {
+    return { ok: false, message: "Not done yet — do the step above, then re-run `cb tailscale setup`." };
+  }
+  io.log("Waiting… press Enter once that step is done.");
+  await io.waitForContinue();
+  return null;
+}
+
+/**
+ * The serve-write step (F1): refuse unless the loopback target is a proven
+ * auth-enforcing cb, then record intent BEFORE mutating Serve, then write.
+ * Returns `{ done }` for a terminal result, or `{ retry: true }` to re-check.
+ */
+async function writeServeWithIntent(
+  deps: TailscaleDeps,
+  { port, dnsName, configuredThisRun }: { port: number; dnsName: string; configuredThisRun: boolean },
+): Promise<{ done: TailscaleActionResult } | { retry: true }> {
+  if (configuredThisRun) {
+    return {
+      done: {
+        ok: false,
+        message:
+          `Configured serve for loopback:${port} but \`tailscale serve status\` still does not reflect it — ` +
+          "the write did not take. Check `tailscale serve status --json` manually.",
+      },
+    };
+  }
+  const refusal = await ensureEnforced(deps, port);
+  if (refusal) return { done: refusal };
+  // F1: record intent BEFORE mutating Serve. Over-recording is the fail-closed
+  // direction — if the write/verify then fails, intent STAYS and the startup
+  // guard, a re-run, or `stop` heals it (never a live mapping with no guard).
+  await recordExposure({ port, dnsName });
+  const configured = await configureServe(deps, port);
+  if (!configured.ok) return { done: configured };
+  return { retry: true };
+}
+
+/** Terminal success: serve already fronts the target — re-prove auth, then
+ *  (idempotently) record the intent for the already-configured path. */
+async function finishReady(
+  deps: TailscaleDeps,
+  { port, url }: { port: number; url: string },
+): Promise<TailscaleActionResult> {
+  const refusal = await ensureEnforced(deps, port);
+  if (refusal) return refusal;
+  await recordExposure({ port, dnsName: new URL(url).hostname });
+  return { ok: true, message: `Exposed at ${url} (loopback:${port}). Serve config + exposure intent recorded.` };
+}
 
 /**
  * Run the guided setup loop. Returns once it reaches a terminal outcome (the
@@ -158,49 +156,29 @@ export async function runTailscaleSetup(
       case "in-use-other-user":
       case "https-disabled":
       case "probe-failed": {
-        io.log(`Next: ${report.nextStep}`);
-        if (report.docLink !== null) io.log(`Docs: ${report.docLink}`);
-        if (!io.interactive) {
-          return { ok: false, message: "Not done yet — do the step above, then re-run `cb tailscale setup`." };
-        }
-        io.log("Waiting… press Enter once that step is done.");
-        await io.waitForContinue();
+        const outcome = await guideHumanStep(io, report);
+        if (outcome) return outcome;
         continue;
       }
 
       // State 5: serve unconfigured / pointing elsewhere — the automatable step.
       case "serve-unconfigured":
       case "serve-drift": {
-        if (configuredThisRun) {
-          return {
-            ok: false,
-            message:
-              `Configured serve for loopback:${port} but \`tailscale serve status\` still does not reflect it — ` +
-              "the write did not take. Check `tailscale serve status --json` manually.",
-          };
-        }
-        const refusal = await ensureEnforced(deps, port);
-        if (refusal) return refusal;
-        const configured = await configureServe(deps, port);
-        if (!configured.ok) return configured;
+        const outcome = await writeServeWithIntent(deps, { port, dnsName: report.dnsName, configuredThisRun });
+        if ("done" in outcome) return outcome.done;
         configuredThisRun = true;
         continue;
       }
 
-      // Terminal success: serve already fronts the target and it responded.
-      case "ready": {
-        const refusal = await ensureEnforced(deps, port);
-        if (refusal) return refusal;
-        const dnsName = new URL(report.url).hostname;
-        recordExposure({ port, dnsName });
-        return { ok: true, message: `Exposed at ${report.url} (loopback:${port}). Serve config + exposure intent recorded.` };
-      }
+      case "ready":
+        return finishReady(deps, { port, url: report.url });
 
-      // Funnel on the target is PUBLIC exposure — never enabled by us; refuse.
+      // Every remaining state is a refusal we can't guide past: Funnel/open
+      // exposure, an ambiguous posture, a cli-error, or drifted CLI output.
       case "funnel-enabled":
-        return { ok: false, message: report.nextStep };
-
-      // Unrecoverable states — can't guide past these.
+      case "exposed-unauthenticated":
+      case "posture-ambiguous":
+      case "cli-error":
       case "ambiguous-target":
       case "unrecognized-status-output":
       case "unknown-backend-state":
@@ -214,16 +192,47 @@ export async function runTailscaleSetup(
   };
 }
 
-/** Does the serve config front `hostPort` at loopback:`port` on any path? */
-function serveFrontsPort(serve: ServeConfigJson, { hostPort, port }: { hostPort: string; port: number }): boolean {
+/** The serve handler paths under `hostPort` whose proxy targets loopback:`port`
+ *  — an EXACT parsed match (loopback host, exact port), never a substring like
+ *  `:321` inside `:3210`. `stop` tears down exactly these paths. */
+function matchingTargetPaths(serve: ServeConfigJson, { hostPort, port }: { hostPort: string; port: number }): string[] {
   const handlers = serve.Web?.[hostPort]?.Handlers ?? {};
-  return Object.values(handlers).some((h) => h.Proxy?.includes(`:${port}`) === true);
+  return Object.entries(handlers)
+    .filter(([, h]) => h.Proxy !== undefined && loopbackProxyPort(h.Proxy) === port)
+    .map(([servePath]) => servePath);
+}
+
+type ServeReadOutcome = { ok: true; serve: ServeConfigJson } | { ok: false; reason: string };
+
+/** Read + validate `tailscale serve status --json`, gating on spawn AND exit
+ *  code (empty stdout is a valid empty config ONLY at exit 0). */
+async function readServeConfig(deps: TailscaleDeps): Promise<ServeReadOutcome> {
+  const run = await deps.run("tailscale", ["serve", "status", "--json"]);
+  if (!run.spawned) return { ok: false, reason: "the `tailscale` CLI is not on PATH" };
+  if (run.code !== 0) return { ok: false, reason: `\`tailscale serve status --json\` exited ${run.code ?? "null"}` };
+  const parsed = parseServeConfig(run.stdout);
+  if (!parsed.ok) return { ok: false, reason: `\`tailscale serve status --json\` was unreadable: ${parsed.message}` };
+  return { ok: true, serve: parsed.value };
+}
+
+/** F2: removal could NOT be proven — keep the intent (fail closed) and fail. */
+function unproven({ port, reason, hadIntent }: { port: number; reason: string; hadIntent: boolean }): TailscaleActionResult {
+  const kept = hadIntent ? ` KEEPING the exposure intent for loopback:${port} (fail closed).` : "";
+  return {
+    ok: false,
+    message:
+      `Could not prove the Tailscale serve mapping for loopback:${port} is gone (${reason}).${kept} ` +
+      `Re-run \`cb tailscale stop --target ${port}\` once Tailscale is reachable.`,
+  };
 }
 
 /**
- * Remove only this target's serve mapping and clear its exposure intent. A
- * clean no-op (exit 0) when nothing is configured for the port. Unrelated serve
- * mappings are preserved — the removal is path-scoped, never a `serve reset`.
+ * Remove only this target's serve mapping and clear its exposure intent. The
+ * intent is the durable open-mode guard, so it is cleared ONLY after a readback
+ * PROVES no matching serve mapping remains (F2): CLI-absent, a spawn/exit
+ * failure, or an unparseable readback all keep the intent and exit nonzero.
+ * Unrelated serve mappings are preserved — teardown is scoped to exactly the
+ * paths that map to this target, never a hardcoded `/` or a `serve reset`.
  */
 export async function runTailscaleStop(
   deps: TailscaleDeps,
@@ -236,50 +245,56 @@ export async function runTailscaleStop(
 
   const statusRun = await deps.run("tailscale", ["status", "--json"]);
   if (!statusRun.spawned) {
-    if (hadIntent) {
-      clearExposure(port);
-      return {
-        ok: true,
-        message: `\`tailscale\` CLI not found — cleared the local exposure intent for loopback:${port}, but could not update serve config.`,
-      };
+    if (!hadIntent) {
+      return { ok: true, message: `\`tailscale\` CLI not found and nothing recorded for loopback:${port} — nothing to do.` };
     }
-    return { ok: true, message: `\`tailscale\` CLI not found and nothing recorded for loopback:${port} — nothing to do.` };
+    return unproven({ port, reason: "the `tailscale` CLI is not on PATH", hadIntent });
+  }
+  if (statusRun.code !== 0) {
+    return unproven({ port, reason: `\`tailscale status --json\` exited ${statusRun.code ?? "null"}`, hadIntent });
   }
   const parsedStatus = parseStatusJson(statusRun.stdout);
-  if (!parsedStatus.ok) return { ok: false, message: `\`tailscale status --json\` was unreadable: ${parsedStatus.message}` };
+  if (!parsedStatus.ok) {
+    return unproven({ port, reason: `\`tailscale status --json\` was unreadable: ${parsedStatus.message}`, hadIntent });
+  }
   const dnsName = normalizeDnsName(parsedStatus.value.Self?.DNSName ?? "");
   const hostPort = `${dnsName}:443`;
 
-  const serveRun = await deps.run("tailscale", ["serve", "status", "--json"]);
-  if (!serveRun.spawned) return { ok: false, message: "the `tailscale` CLI is not on PATH." };
-  const parsedServe = parseServeConfig(serveRun.stdout);
-  if (!parsedServe.ok) return { ok: false, message: `\`tailscale serve status --json\` was unreadable: ${parsedServe.message}` };
+  const before = await readServeConfig(deps);
+  if (!before.ok) return unproven({ port, reason: before.reason, hadIntent });
 
-  const mappingPresent = serveFrontsPort(parsedServe.value, { hostPort, port });
-  if (!mappingPresent && !hadIntent) {
+  const paths = matchingTargetPaths(before.serve, { hostPort, port });
+  if (paths.length === 0 && !hadIntent) {
     return { ok: true, message: `Nothing configured for loopback:${port} — nothing to stop.` };
   }
 
-  if (mappingPresent) {
-    const off = await deps.run("tailscale", ["serve", "--https=443", "--set-path=/", "off"]);
-    if (!off.spawned) return { ok: false, message: "the `tailscale` CLI is not on PATH." };
+  // Tear down exactly the paths that map to this target (never a hardcoded `/`).
+  for (const servePath of paths) {
+    const off = await deps.run("tailscale", ["serve", "--https=443", `--set-path=${servePath}`, "off"]);
+    if (!off.spawned) return unproven({ port, reason: "the `tailscale` CLI is not on PATH (during teardown)", hadIntent });
     if (off.code !== 0) {
-      return { ok: false, message: `\`tailscale serve … off\` failed (exit ${off.code ?? "null"}): ${off.stderr.trim()}` };
+      return unproven({ port, reason: `\`tailscale serve … off\` for ${servePath} exited ${off.code ?? "null"}: ${off.stderr.trim()}`, hadIntent });
     }
   }
-  clearExposure(port);
 
-  // Re-verify: the mapping must be gone (unrelated mappings stay).
-  const afterRun = await deps.run("tailscale", ["serve", "status", "--json"]);
-  const afterParsed = afterRun.spawned ? parseServeConfig(afterRun.stdout) : null;
-  if (afterParsed?.ok === true && serveFrontsPort(afterParsed.value, { hostPort, port })) {
+  // Prove removal by reading serve back — clear the guard ONLY on proof.
+  const after = await readServeConfig(deps);
+  if (!after.ok) return unproven({ port, reason: `${after.reason} (readback)`, hadIntent });
+  if (matchingTargetPaths(after.serve, { hostPort, port }).length > 0) {
     return {
       ok: false,
-      message: `Cleared exposure intent for loopback:${port}, but the serve mapping is still present — remove it manually with \`tailscale serve status\`.`,
+      message:
+        `The serve mapping for loopback:${port} is still present after teardown — KEEPING the exposure intent ` +
+        "(fail closed). Remove it manually with `tailscale serve status`.",
     };
   }
+
+  if (hadIntent) await clearExposure(port);
   return {
     ok: true,
-    message: `Removed the serve mapping for ${hostPort} → loopback:${port} and cleared its exposure intent.`,
+    message:
+      paths.length > 0
+        ? `Removed the serve mapping for ${hostPort} → loopback:${port} and cleared its exposure intent.`
+        : `No serve mapping remained for loopback:${port}; cleared its stale exposure intent.`,
   };
 }

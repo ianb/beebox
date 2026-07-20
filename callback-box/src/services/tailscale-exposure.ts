@@ -9,13 +9,22 @@
  * rather than silently reopening an unauthenticated box to the whole tailnet —
  * the persisted half of the OpenClaw-#50630 guard the plan calls out.
  *
- * The file lives at `~/.config/cb/tailscale-exposure.json` (override
- * `CB_TAILSCALE_EXPOSURE_FILE` for tests). It carries no secret — only a port,
- * the tailnet DNS name, and a timestamp — so it is a normal-mode file, not the
- * 0600 credential store. Writes are crash-safe (temp sibling + fsync + rename,
- * the same shape `local-users.ts` uses). Reads are validated through zod at the
- * boundary: a corrupt/unparseable file is a DISTINCT failure, never a silent
- * empty store (principle #4, fail closed).
+ * The file lives at `~/.config/cb/tailscale-exposure.json` in the HOME OF THE
+ * ACCOUNT THAT RUNS `cb` (override `CB_TAILSCALE_EXPOSURE_FILE` for tests / a
+ * shared location). This is a per-user, machine-local record, NOT a truly
+ * machine-global one: the listen-time guard (`assertPortNotExposedInOpenMode`)
+ * consults the file of whichever user the SERVER runs as, so `cb tailscale
+ * setup` MUST run as that same account — the service account in prod, not root /
+ * an admin — or the intent it records lands in a home the server never reads.
+ * See `docs/docker-install.md`.
+ *
+ * It carries no secret — only a port, the tailnet DNS name, and a timestamp — so
+ * it is a normal-mode file, not the 0600 credential store. Writes are crash-safe
+ * (temp sibling + fsync + atomic rename + parent-dir fsync) and serialized
+ * across processes through the project file lock (`recordExposure`/
+ * `clearExposure`), so concurrent setup/stop runs can't lose an entry. Reads are
+ * validated through zod at the boundary: a corrupt/unparseable file is a
+ * DISTINCT failure, never a silent empty store (principle #4, fail closed).
  */
 
 import * as crypto from "node:crypto";
@@ -25,6 +34,7 @@ import * as path from "node:path";
 import { z } from "zod";
 
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { acquireLock, releaseLock } from "../lib/file-lock.js";
 
 const exposureTargetSchema = z.object({
   port: z.number().int().positive(),
@@ -136,11 +146,33 @@ function serialize(file: ExposureFile): string {
   return `${JSON.stringify(file, null, 2)}\n`;
 }
 
-/** Crash-safe replace: write a temp sibling, fsync, atomically rename over the
- *  target (the `local-users.ts` pattern). */
+/** fsync a directory so a preceding `rename` into it is durable across power
+ *  loss. Best-effort: some platforms (Windows) reject a directory fsync — the
+ *  rename+file-fsync already gives us atomicity there, so ignore those errnos. */
+function fsyncDir(dir: string): void {
+  let fd: number;
+  try {
+    fd = fs.openSync(dir, "r");
+  } catch (_e) {
+    return;
+  }
+  try {
+    fs.fsyncSync(fd);
+  } catch (_e) {
+    /* ignore: directory fsync is unsupported on some platforms — the atomic
+       rename already bounds the crash window there. */
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/** Crash-safe replace: write a temp sibling, fsync the file, atomically rename
+ *  over the target, then fsync the parent directory so the rename itself is
+ *  power-loss durable (the file-fsync alone does not persist the dir entry). */
 function writeExposureFile(file: ExposureFile): void {
   const target = exposureFilePath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const dir = path.dirname(target);
+  fs.mkdirSync(dir, { recursive: true });
   const tmp = `${target}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
   const fd = fs.openSync(tmp, "w");
   try {
@@ -150,27 +182,48 @@ function writeExposureFile(file: ExposureFile): void {
     fs.closeSync(fd);
   }
   fs.renameSync(tmp, target);
+  fsyncDir(dir);
+}
+
+/**
+ * Serialize the read-modify-write of the exposure file across processes through
+ * the project file lock — two concurrent `setup`/`stop` runs would otherwise
+ * lose an entry (an unlocked RMW, the repo's required-locking policy forbids).
+ */
+async function withExposureLock<T>(fn: () => T): Promise<T> {
+  const lockPath = `${exposureFilePath()}.lock`;
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  await acquireLock(lockPath, { op: "tailscale-exposure" });
+  try {
+    return fn();
+  } finally {
+    await releaseLock(lockPath);
+  }
 }
 
 /**
  * Record (or refresh) the exposure entry for `port`. Idempotent: a second call
  * for the same port replaces the existing entry rather than appending a
- * duplicate, so re-running `setup` never grows the file.
+ * duplicate, so re-running `setup` never grows the file. Locked (cross-process).
  */
-export function recordExposure({ port, dnsName }: { port: number; dnsName: string }): void {
-  const file = loadExposureFile();
-  const targets = file.targets.filter((t) => t.port !== port);
-  targets.push({ port, dnsName, configuredAt: new Date().toISOString() });
-  targets.sort((a, b) => a.port - b.port);
-  writeExposureFile({ version: 1, targets });
+export async function recordExposure({ port, dnsName }: { port: number; dnsName: string }): Promise<void> {
+  await withExposureLock(() => {
+    const file = loadExposureFile();
+    const targets = file.targets.filter((t) => t.port !== port);
+    targets.push({ port, dnsName, configuredAt: new Date().toISOString() });
+    targets.sort((a, b) => a.port - b.port);
+    writeExposureFile({ version: 1, targets });
+  });
 }
 
-/** Remove the exposure entry for `port` (a no-op if none is recorded). */
-export function clearExposure(port: number): void {
-  const file = loadExposureFile();
-  const targets = file.targets.filter((t) => t.port !== port);
-  if (targets.length === file.targets.length) return;
-  writeExposureFile({ version: 1, targets });
+/** Remove the exposure entry for `port` (a no-op if none is recorded). Locked. */
+export async function clearExposure(port: number): Promise<void> {
+  await withExposureLock(() => {
+    const file = loadExposureFile();
+    const targets = file.targets.filter((t) => t.port !== port);
+    if (targets.length === file.targets.length) return;
+    writeExposureFile({ version: 1, targets });
+  });
 }
 
 /** Whether `port` is currently recorded as exposed. */
