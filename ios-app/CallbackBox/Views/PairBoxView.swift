@@ -72,7 +72,7 @@ struct PairBoxView: View {
                                     "Require Device Unlock",
                                     isOn: lockBinding(for: box)
                                 )
-                                .disabled(authenticatingLockBoxID == box.id)
+                                .disabled(authenticatingLockBoxID != nil)
                                 if authenticatingLockBoxID == box.id {
                                     ProgressView("Authenticating…")
                                         .font(.caption)

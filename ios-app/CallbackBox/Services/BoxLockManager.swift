@@ -137,6 +137,7 @@ final class BoxLockManager: ObservableObject {
 
     func authenticateForLockRemoval() async -> DeviceAuthenticationResult {
         beginNewAttempt()
+        status = .locked
         let attemptGeneration = generation
         let result = await authenticator.authenticate(reason: "Turn off the lock for this box.")
         guard generation == attemptGeneration else {

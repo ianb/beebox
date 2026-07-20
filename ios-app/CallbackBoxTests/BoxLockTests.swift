@@ -151,6 +151,40 @@ final class BoxLockManagerTests: XCTestCase {
         XCTAssertEqual(authenticator.reasons, ["Unlock this box.", "Turn off the lock for this box."])
     }
 
+    func testRelockRejectsLateLockRemovalSuccess() async {
+        let authenticator = FakeDeviceAuthenticator()
+        let manager = BoxLockManager(authenticator: authenticator)
+
+        let removalTask = Task {
+            await manager.authenticateForLockRemoval()
+        }
+        await authenticator.waitForCalls(1)
+        manager.relock()
+        authenticator.resolveFirst(.authenticated)
+
+        let result = await removalTask.value
+        XCTAssertEqual(result, .cancelled)
+    }
+
+    func testLockRemovalNormalizesCancelledUnlockPresentation() async {
+        let authenticator = FakeDeviceAuthenticator()
+        let manager = BoxLockManager(authenticator: authenticator)
+        manager.unlock(makeBox(requiresDeviceUnlock: true))
+        await authenticator.waitForCalls(1)
+        XCTAssertEqual(manager.status, .authenticating)
+
+        let removalTask = Task {
+            await manager.authenticateForLockRemoval()
+        }
+        await authenticator.waitForCalls(2)
+
+        XCTAssertEqual(manager.status, .locked)
+        authenticator.resolve(at: 0, with: .cancelled)
+        authenticator.resolve(at: 1, with: .cancelled)
+        let result = await removalTask.value
+        XCTAssertEqual(result, .cancelled)
+    }
+
     func testLocalAuthenticationErrorMappingOnlyBypassesMissingPasscode() {
         let missing = NSError(domain: LAError.errorDomain, code: LAError.Code.passcodeNotSet.rawValue)
         let cancelled = NSError(domain: LAError.errorDomain, code: LAError.Code.userCancel.rawValue)

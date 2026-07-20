@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
@@ -63,6 +64,7 @@ struct RootView: View {
             PairBoxView()
         }
         .onChange(of: store.selectedBox?.id) { _, newBoxID in
+            resignProtectedFirstResponder()
             boxLockManager.relock()
             visibleChatBoxID = newBoxID
             visibleChatSessionID = nil
@@ -84,12 +86,24 @@ struct RootView: View {
             guard phase == .background else {
                 return
             }
-            showingPairSheet = false
+            if store.selectedBox?.requiresDeviceUnlock == true {
+                showingPairSheet = false
+                resignProtectedFirstResponder()
+            }
             boxLockManager.relock()
             Task {
                 await composerDraftStore.flush()
             }
         }
+    }
+
+    private func resignProtectedFirstResponder() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func boxContent(box: PairedBox, composerBox: PairedBox) -> some View {
