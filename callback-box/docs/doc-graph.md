@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-20T16:58:33Z
-Total documents: 200
+Generated: 2026-07-20T23:37:48Z
+Total documents: 201
 
 ## Issues
 
@@ -139,7 +139,7 @@ Referenced by:
 - ../.claude/skills/cb-frontend/SKILL.md:11 (mention) — read it before writing UI (`CLAUDE.md` already says so). This skill is the
 - ../.claude/skills/cb-plan/SKILL.md:97 (mention) — - `callback-box/CLAUDE.md` — project conventions, validation contract,
 - ../.claude/skills/cb-prompt-review/SKILL.md:22 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `cb init` last wrote — re-run `
-- ../.claude/skills/launch-worktree-session/SKILL.md:151 (mention) — CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
+- ../.claude/skills/launch-worktree-session/SKILL.md:158 (mention) — CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
 - ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 - ../issues/bugs/2026-07-15-box-packageify-doubled-subtrees.md:45 (mention) — it holds files (e.g. per-directory `CLAUDE.md`) that have **no identical twin at
@@ -297,6 +297,7 @@ Referenced by:
 - docs/implemented-plans/see-as-the-user.md:35 (mention) — - `callback-box/code-style.md` — mechanical rules (no default parameters,
 - docs/implemented-plans/selection-commentary.md:88 (mention) — - `callback-box/code-style.md:36` — *"**No default parameters**: handle
 - docs/implemented-plans/slopo-codehealth-adoption.md:42 (mention) — - **`callback-box/code-style.md`** — style preferences; the centralise-a-cast
+- docs/implemented-plans/tailscale-expose-and-protect.md:57 (mention) — - `callback-box/code-style.md` — no default parameters, injected-deps
 - docs/implemented-plans/user-location.md:60 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/view-render-testing.md:28 (mention) — - `callback-box/code-style.md` — no `any`; custom error classes not
 - docs/implemented-plans/webpage-card-and-commentary.md:48 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params,
@@ -412,6 +413,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:76 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/implemented-plans/hub-healthz-box-aggregation.md:313 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
 - docs/implemented-plans/local-password-auth.md:539 (mention) — `deploy/README.md:196-217` env template gains `CB_AUTH_FILE` (default is
+- docs/implemented-plans/tailscale-expose-and-protect.md:110 (mention) — `cb hub` on the live server (hand-migrated; `deploy/README.md:85` records
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:283 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
@@ -536,11 +538,12 @@ References:
 
 #### docs/agent-install.md
 
-Title: "Installing callback-box with an AI agent" | 97 lines
+Title: "Installing callback-box with an AI agent" | 102 lines
 
 Referenced by:
 - CLAUDE.md:130 (mention) — | Agent-driven install (for a user's AI assistant) | `docs/agent-install.md` |
 - docs/implemented-plans/local-password-auth.md:538 (mention) — `docs/agent-install.md` gain the first-run account step;
+- docs/implemented-plans/tailscale-expose-and-protect.md:551 (mention) — surface is `docs/agent-install.md`'s existing "widening exposure is a real
 - ../issues/features/2026-07-19-installation-remaining-work.md:22 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
 
 References:
@@ -559,6 +562,7 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:160 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/plans/pdf-intake-design.md:80 (link) — All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and t
 - docs/reports/user-stories-audit-2026-06-26.md:713 (mention) — 1. **Pre-commit hook integration missing**: The design doc (docs/asset-manifests.md) says "A pre-commit hook keeps the m
+- ../issues/closed/bugs/2026-07-20-worktree-box-clone-missing-attachments.md:26 (mention) — `callback-box/docs/asset-manifests.md` and the `cb-assets` block in the box
 - ../issues/closed/features/2026-06-26-asset-manifest-completion-d10.md:7 (mention) — **Closed:** Done (descoped): the pre-commit verify hook had already landed. Content dedup and an attach-a-file UI were d
 - ../issues/code-quality/2026-05-27-review-asset-manifest-scope.md:6 (mention) — The asset-manifest hook (`docs/asset-manifests.md`) scopes its discipline to `**/*.attach/**` only. Binaries outside att
 
@@ -787,6 +791,7 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:537 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
 - ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
+- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:65 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 
 References:
 - → docs/docker-install.md (link)
@@ -806,7 +811,7 @@ Referenced by:
 
 #### docs/docker-install.md
 
-Title: "Docker install (local + VPS)" | 197 lines
+Title: "Docker install (local + VPS)" | 245 lines
 
 Referenced by:
 - CLAUDE.md:129 (mention) — | Docker install (local + VPS) | `docs/docker-install.md` |
@@ -814,8 +819,13 @@ Referenced by:
 - docs/agent-install.md:43 (link) — ([docker-install.md](docker-install.md)) is simpler and bundles every
 - docs/developer-install.md:7 (link) — [docker-install.md](docker-install.md).
 - docs/implemented-plans/local-password-auth.md:537 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
+- docs/implemented-plans/tailscale-expose-and-protect.md:74 (mention) — - **The documented-but-untested path.** `callback-box/docs/docker-install.md:119`
 - docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
 - ../issues/features/2026-07-19-installation-remaining-work.md:17 (mention) — - Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
+- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:26 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
+
+References:
+- → ../issues/features/2026-07-19-installation-remaining-work.md (link)
 
 #### docs/engineering-principles.md
 
@@ -840,6 +850,7 @@ Referenced by:
 - docs/implemented-plans/responsive-figures.md:33 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
+- docs/implemented-plans/tailscale-expose-and-protect.md:48 (mention) — - `callback-box/docs/engineering-principles.md` — especially fail-closed /
 - docs/plans/android-companion-app.md:25 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
 - docs/plans/installation-story.md:41 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
@@ -956,10 +967,12 @@ Referenced by:
 - CLAUDE.md:149 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
 - deploy/README.md:38 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
 - docs/implemented-plans/hub-healthz-box-aggregation.md:4 (mention) — canary route all shipped; see `docs/health-checks.md` for the current
+- docs/implemented-plans/tailscale-expose-and-protect.md:414 (mention) — on the server plus a short runbook note in `docs/health-checks.md`'s style
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
 - src/hub/CLAUDE.md:15 (mention) — `docs/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:63 (mention) — updates) and `docs/health-checks.md` owns deployed-server runbooks — this admin
+- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:68 (mention) — (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
 
 References:
 - → deploy/README.md (link)
@@ -2595,6 +2608,23 @@ Referenced by:
 - docs/plans/docs-reorg.md:81 (mention) — `state-management-comparison.md` (bake-off record, unclear adoption), and
 - docs/stack-decisions.md:157 (mention) — Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. 
 
+#### docs/implemented-plans/tailscale-expose-and-protect.md
+
+Title: "Tailscale expose-and-protect" | 596 lines
+
+Referenced by:
+- ../research/openclaw-hermes/README.md:98 (mention) — | 23 | **Tailscale identity as an app-login accelerator (OpenClaw's post-fix `tailscale` auth mode: Serve identity heade
+
+References:
+- → ../issues/features/2026-07-19-installation-remaining-work.md (link)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/docker-install.md (mention)
+- → deploy/README.md (mention)
+- → docs/plans/installation-story.md (mention)
+- → docs/health-checks.md (mention)
+- → docs/agent-install.md (mention)
+
 #### docs/implemented-plans/user-location.md
 
 Title: "User Location (`cb location get`)" | 496 lines
@@ -2891,8 +2921,10 @@ References:
 Title: "Installation story, phase 1: developer install + local Docker" | 612 lines
 
 Referenced by:
+- docs/implemented-plans/tailscale-expose-and-protect.md:365 (mention) — `docs/plans/installation-story.md`'s failure-modes table, which treats the
 - docs/plans/source-available-release.md:271 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
 - ../issues/features/2026-07-19-installation-remaining-work.md:3 (mention) — design: ../../callback-box/docs/plans/installation-story.md
+- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:25 (mention) — first-class alternative in `callback-box/docs/plans/installation-story.md` and
 
 References:
 - → docs/plans/source-available-release.md (mention)

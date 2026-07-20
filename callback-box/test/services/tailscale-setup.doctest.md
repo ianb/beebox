@@ -7,7 +7,7 @@ mutates Serve, writes a persistent path-scoped mapping (preserving unrelated
 ones), and re-verifies. `cb tailscale stop` removes only that target's mapping(s)
 and clears intent ONLY after a readback proves removal. Everything runs against a
 stateful fake modeling `tailscale serve`'s incremental semantics — no tailnet, no
-TTY. See `docs/plans/tailscale-expose-and-protect.md` Track B chunk 2.
+TTY. See `docs/implemented-plans/tailscale-expose-and-protect.md` Track B chunk 2.
 
 ```ts setup
 import * as fs from "node:fs";

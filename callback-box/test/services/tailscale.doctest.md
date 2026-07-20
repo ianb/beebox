@@ -5,7 +5,7 @@ output. It runs against injected fake deps (`createFakeTailscaleDeps`) so every
 state is testable with no tailnet. Each fake scripts the two subcommands
 (`tailscale status --json`, `tailscale serve status --json`) plus the `/auth/me`
 probe, and per-command exit codes. See
-`docs/plans/tailscale-expose-and-protect.md` Track B.
+`docs/implemented-plans/tailscale-expose-and-protect.md` Track B.
 
 ```ts setup
 import {

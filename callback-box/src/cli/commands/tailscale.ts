@@ -1,6 +1,6 @@
 /**
  * `cb tailscale` — the Tailscale expose-and-protect command family (Track B of
- * `docs/plans/tailscale-expose-and-protect.md`). Chunk 1 ships one subcommand,
+ * `docs/implemented-plans/tailscale-expose-and-protect.md`). Chunk 1 ships one subcommand,
  * `status`, which inspects real state and prints the single next concrete step.
  * `setup` (the guided serve-config loop) is chunk 2.
  *

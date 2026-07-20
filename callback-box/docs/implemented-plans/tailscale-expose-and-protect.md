@@ -1,5 +1,17 @@
 # Tailscale expose-and-protect
 
+**Status:** implemented 2026-07 — Tracks A, B, C, and E (the `cb tailscale`
+command family, the persisted-exposure listen-time guard, the router loopback
+fix, and the OpenClaw research dispositions) are all landed and fully
+unit-tested against injected fakes (4598/4598 green). Track D (rollout —
+actually running `cb tailscale setup` against a real `tailscaled` on the
+Mac/phone, the VPS, and prod) has not executed: nothing in this plan has been
+exercised against real Tailscale infrastructure, so the exact `tailscale serve`
+command spellings (`--bg`, `--set-path=… off`) are modeled in fakes and
+unverified live. That live-proof gap is tracked in
+[`issues/features/2026-07-19-installation-remaining-work.md`](../../../issues/features/2026-07-19-installation-remaining-work.md)
+item 2, which stays open.
+
 Make Tailscale a working, tool-driven way to expose callback-box deployments
 (dev boxes behind the shared router; a deployed multi-user instance) while
 keeping them off the public internet — via a `cb tailscale` command family that

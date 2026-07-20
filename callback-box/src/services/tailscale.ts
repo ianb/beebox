@@ -1,6 +1,6 @@
 /**
  * Tailscale engine foundation for `cb tailscale` (Track B of
- * `docs/plans/tailscale-expose-and-protect.md`).
+ * `docs/implemented-plans/tailscale-expose-and-protect.md`).
  *
  * This module owns the injected-dependency seam ({@link TailscaleDeps}), the zod
  * schemas that validate `tailscale` CLI JSON *at the subprocess boundary*,

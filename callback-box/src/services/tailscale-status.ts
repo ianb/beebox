@@ -1,6 +1,6 @@
 /**
  * The `cb tailscale status` state machine (Track B chunk 1 of
- * `docs/plans/tailscale-expose-and-protect.md`).
+ * `docs/implemented-plans/tailscale-expose-and-protect.md`).
  *
  * Read-only and exhaustive over the plan's states 1-6, plus fail-closed
  * branches for schema drift, an unknown BackendState, a nonzero CLI exit, and a
