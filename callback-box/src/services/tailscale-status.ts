@@ -23,15 +23,18 @@ import {
   type TailscaleTarget,
 } from "./tailscale.js";
 
-// Doc links kept in one place so a moved Tailscale doc is a one-line fix. The
-// scheme follows the plan's cited https://tailscale.com/docs/... form.
+// Doc links kept in one place so a moved Tailscale doc is a one-line fix.
+// Uses tailscale.com/kb/<id>/ permalinks — the numeric kb IDs survive
+// Tailscale's doc reorganizations, where the prettier /docs/... paths are
+// redirect-dependent (the vendor-link-rot lesson from the Cloudflare
+// dashboard incident; all verified live 2026-07-20).
 const DOC = {
   install: "https://tailscale.com/download",
-  up: "https://tailscale.com/docs/features/tailscale-up",
-  authKeys: "https://tailscale.com/docs/features/access-control/auth-keys",
-  https: "https://tailscale.com/docs/features/https",
-  serve: "https://tailscale.com/docs/features/tailscale-serve",
-  funnel: "https://tailscale.com/docs/features/tailscale-funnel",
+  up: "https://tailscale.com/kb/1080/cli",
+  authKeys: "https://tailscale.com/kb/1085/auth-keys",
+  https: "https://tailscale.com/kb/1153/enabling-https",
+  serve: "https://tailscale.com/kb/1242/tailscale-serve",
+  funnel: "https://tailscale.com/kb/1223/funnel",
   adminDns: "https://login.tailscale.com/admin/dns",
 } as const;
 
