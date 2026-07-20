@@ -67,6 +67,27 @@ to people; close when the soft launch happens. Builds on
    box" in
    [stale-image-refs-after-renames](../bugs/2026-05-14-stale-image-refs-after-renames.md)
    is a real box or the example slug (boxholder to confirm).
+6. **Blessed-path bug review** (full ranking 2026-07-20; "high priority
+   bugs 100% should be addressed or at least reviewed" — boxholder).
+   Fix-before-launch tier beyond gate 1:
+   [mobile-chat-unattributed](../bugs/2026-07-17-mobile-chat-unattributed.md),
+   [mobile-device-store-unlocked-rmw](../bugs/2026-07-17-mobile-device-store-unlocked-rmw.md),
+   [image-orientation-exif-boundaries](../bugs/2026-07-17-image-orientation-exif-boundaries.md),
+   and the two landed-but-unverified mobile-web fixes awaiting a real
+   phone
+   ([landmark-menu-overflows-mobile](../bugs/2026-07-19-landmark-menu-overflows-mobile.md),
+   [mobile-composer-grows-on-scroll](../bugs/2026-07-19-mobile-composer-grows-on-scroll.md)).
+   Conditional:
+   [ios-pairing-flow-robustness](../bugs/2026-07-17-ios-pairing-flow-robustness.md)
+   escalates to a gate if the iOS app ships with the release (external-URL
+   auto-redeem is a phishing surface).
+7. **First-hour experience** — reviewed, boxholder-flagged ("the
+   dashboard is crap"): at minimum decide how much of
+   [first-run-experience](../features/2026-07-20-first-run-experience.md)
+   and [chat-thread-management](../features/2026-07-20-chat-thread-management.md)
+   (delete is the ask) lands pre-launch; the
+   [day-to-day usage docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md)
+   are the docs half of the same gap.
 
 ## Explicitly not gates
 
