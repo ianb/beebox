@@ -408,6 +408,81 @@ mode bolted on, it's the preparation that makes stage 1 work. An agent that has
 read the user's existing cards can ask the specific question instead of the
 generic one.
 
+## The outline mode — a different path, with one unsolved step
+
+Boxholder, raising it as a distinct approach from assembly-from-quotes:
+
+> Writing from an outline is an interesting approach too, different than what
+> I've described mostly. How that works is different. Since the outline isn't the
+> final thing it's more acceptable to AI generate the words, though you want to
+> kind of keep and capture the underlying quotes for possible resurfacing. But I
+> kind of want an outline to feel a bit spare and minimal again to avoid AI
+> steering and language.
+
+> I don't have an intuition for how to turn the outline into a finished piece
+> without letting the AI take on too much writing.
+
+**That last part is the open problem**, and it's sharper than it first looks:
+expanding a skeleton into prose *is* writing. If the agent expands, it's
+composing — the exact thing this design avoids. If the user expands, the outline
+was just a plan and the agent did nothing much.
+
+### Why "spare" is the right instinct — the outline's word count is the steering surface
+
+A detailed outline already carries the agent's framings and phrasings. Expanding
+it doesn't avoid AI prose; it **launders AI prose through a structure**, and the
+result reads as the user's because they approved the outline. A spare outline —
+a few words per node — carries *structure* without carrying *voice*, which is
+exactly the structure-vs-words line from the worked example above, applied one
+level up. So spareness isn't an aesthetic preference; it's the mechanism that
+keeps the outline from being a draft in disguise.
+
+Corollary worth deciding: **who writes the outline?** An agent-proposed outline
+has already framed the piece even when spare. Offering structure is the sanctioned
+move under the IPEd rule (draw attention, offer examples, don't supply prose) — but
+an outline is closer to a solution than a problem-flag, so it may want the same
+approval step as an arrangement.
+
+### Candidate resolution: the outline is an elicitation script, not a draft to expand
+
+**Hypothesis, untested** — but it dissolves the tension cleanly, so it's worth
+trying first.
+
+Treat each outline node as **a question waiting to be asked** rather than a
+paragraph waiting to be written. The agent walks the user through the outline
+node by node — *"section two says 'why the old approach failed' — tell me about
+that"* — the user talks, and now their words exist for that node. Expansion
+happens by **elicitation, not composition**. The agent never writes the
+paragraph; it asks the question that makes the user produce it, then arranges
+what they said.
+
+This also explains why outlining is attractive in the first place: it solves the
+blank page. Node-by-node elicitation keeps that benefit — you're never facing the
+whole piece at once — without the agent supplying the words.
+
+Two supporting moves:
+
+- **The outline as an index into existing material.** Where quotes are already
+  captured, a node points at which of them belong there. "Expansion" is
+  arrangement, and the boneyard/membership-in-output model handles the
+  attached-but-not-currently-included material the boxholder wants kept "for
+  possible resurfacing."
+- **Nodes with no material are visible.** A node the user won't or can't speak to
+  is the "not enough material" case — ask, or leave a gap. An outline makes those
+  gaps *countable*, which is a real advantage over prose drafting.
+
+### What still needs deciding
+
+- **Do nodes get expanded in order, or by readiness?** Sequential walking is
+  simple but may force material before the user is ready; letting them pick keeps
+  energy but risks a permanently thin section.
+- **How much may the agent write to join elicited nodes?** The connective-tissue
+  ladder above applies, but node boundaries create more seams than continuous
+  speech does — so an outline-built piece may need proportionally *more*
+  connective tissue, which cuts against the whole approach. Worth watching.
+- **Does the outline survive into the finished piece** as headings, or dissolve?
+  If it survives, its agent-written words are in the final text.
+
 ## Other open questions
 
 - **What the agent's own prose may be.** Headings? Transitions? A sentence
