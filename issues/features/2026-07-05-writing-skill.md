@@ -247,11 +247,75 @@ delayed deletion.** If material goes down there and is never retrievable in
 practice, the affordance is comfort rather than function — so retrieval, not
 storage, is the hard part.
 
-**Research pending** — this is a common enough practice that it likely has an
-established name and much more developed forms than the boxholder's own; a
-focused pass is running (results will land in
-`scratch/writing-dumping-ground-research.md`). Scrivener's binder/corkboard model
-is an obvious tool precedent to examine.
+#### What it's called, and who has gone further (research 2026-07-20)
+
+Full report: `scratch/writing-dumping-ground-research.md` (gitignored).
+
+**The term of art is "boneyard"** — screenwriting/production, originating with
+the physical stripboard where strips for cut or unscheduled scenes were parked in
+a reserved section. Now a named feature in Final Draft. **"Graveyard"** is the
+fiction-writer equivalent (also WriterDuet's feature name); "outtake file" (from
+film editing), "cut file," and "scrap file" are also attested.
+
+Worth recording because they're *not* this, and it's easy to assume otherwise:
+**"morgue file"** is genuine journalism jargon but means the reference/clippings
+archive; **"spark file"** (Steven Johnson) is idea capture; **"composting"**
+(Goldberg) is a pre-writing metaphor. And "murder your darlings" is Arthur
+Quiller-Couch (Cambridge lectures, 1913–14), not Faulkner or King.
+
+**Three organizational archetypes**, each with a named practitioner:
+
+1. **Bottom-of-document, then purge** — the pile is scaffolding for one piece and
+   is deleted when it ships. (Deb Tennen)
+2. **Per-project twin file** — a companion file created alongside *every* new
+   document; retrieval by text search. (Lucy Flint)
+3. **One career-spanning reservoir**, with documented reuse across manuscripts.
+   (Miriam Herin)
+
+These differ mainly in lifespan, which is the design question: is a boneyard
+scoped to a draft, a project, or the box?
+
+**Retrieval is genuinely unsolved — and that's our opening.** Nobody tags cuts by
+*why* they were cut. Several writers openly admit the file's function is purely
+psychological ("the illusion they haven't deleted words"). The only worked
+retrieval discipline found anywhere is Johnson's habit of rereading his entire
+spark file every 3–4 months. No tool surveyed addresses it. So the
+graveyard-nobody-reads failure mode named above is real, near-universal, and
+unaddressed — **a scheduled reread prompt at revision milestones would go beyond
+every tool surveyed**, and is a natural fit for a box that already runs
+procedures on a schedule.
+
+**The psychology claim is unanimous** across sources and near-verbatim: making
+deletion reversible removes the flinch, so you cut more aggressively.
+
+#### What shipping tools already teach
+
+- **Adjacency beats bottom-exile.** The convergent pattern is drag-out/drag-back
+  with a *persistent adjacent pane*: Highland 2's "Bin" (John August explicitly
+  modeled it on Avid/Final Cut editors' bins), Final Draft's split-screen
+  Boneyard, WriterDuet's Graveyard with a `Cut to Graveyard` shortcut sitting as
+  a peer of the clipboard. A pile at the bottom of the document goes unread; a
+  pane beside it stays alive.
+- **Cuts stay chunked and nameable**, not concatenated into a blob. Final Draft
+  gives each cut a named, color-coded card. This is what makes retrieval
+  possible at all.
+- **Cut material must be excluded from word counts and export** automatically
+  (Scrivener compile, Ulysses) — otherwise the boneyard poisons every measure of
+  the draft.
+
+- **The boxholder's collapsed-inline instinct already ships**, and its framing is
+  the most useful idea in the whole report: Ulysses **Material Sheets**,
+  Scrivener's per-document *include-in-compile* checkbox, and org-mode `COMMENT`
+  subtrees all treat **membership-in-output as a toggleable property of a chunk,
+  rather than a location it has been moved to**. That dissolves the
+  bottom-pile-vs-inline-collapsed choice: a fragment doesn't move, it just stops
+  being *in* the current assembly. Which fits this design unusually well, since
+  the same material may be in one assembly and out of another (see "the
+  destination is often unknown").
+
+No empirical composition-studies research exists on whether saved cuts actually
+get reused (Sommers 1980 covers recursive revision generally) — genuinely
+understudied, so we shouldn't expect literature to settle the retrieval design.
 
 ### 4. Acting on feedback
 
