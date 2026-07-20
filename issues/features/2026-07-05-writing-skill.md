@@ -471,6 +471,60 @@ Two supporting moves:
   is the "not enough material" case — ask, or leave a gap. An outline makes those
   gaps *countable*, which is a real advantage over prose drafting.
 
+### Structuring the user's material vs. inventing nodes
+
+Boxholder, drawing the line more finely:
+
+> Maybe another thing is for the agent to be reluctant to expand an outline
+> directly. It's normal to chat about an outline and the agent to take something
+> a bit more freeform and put it into a structure, but then when it invents its
+> own subitems and stuff then it's harder. Though sometimes the author wants to
+> say things like "What do I need to explain first before I get to this point"
+> where the author is looking for another opinion or perspective. I'm not sure
+> how to resolve that.
+
+Two operations that look alike in a diff and are not alike at all:
+
+- **Structuring** — the user says something freeform, the agent arranges it into
+  nodes. Every node traces to something they said. This is the structure-vs-words
+  principle again, and it's safe.
+- **Inventing subitems** — the agent adds nodes the user never raised. That's
+  content generation wearing structure's clothing: a subitem asserts *this
+  belongs in the piece*, which is an authorial claim even when it's three words
+  long.
+
+And the complication is real: the author sometimes *wants* invention. "What do I
+need to explain first?" is a direct request for outside perspective, and a design
+so precious it can't answer that is worse than useless. The
+[earlier note](#9-offering-ideas-without-over-steering) already concedes the
+brainstorm is legitimate.
+
+**Proposed resolution: separate the channels.** The agent is free to be
+opinionated *in conversation* and conservative *in the artifact*.
+
+- Asked "what do I need to explain first?", the agent **answers in chat** —
+  fully, with a real opinion, as many suggestions as are useful. It does not
+  silently add nodes to the outline.
+- The outline changes **on instruction**. If the user likes a suggestion, they
+  say so, and then it lands — at which point the instruction is the provenance,
+  exactly as in stage 5.
+
+The channel separation does the work: perspective stays available, but the
+artifact stays the user's. It also matches how a good editor behaves in a
+meeting — they'll tell you your third section is doing two jobs, and they won't
+reorganize your document while you're talking.
+
+**Second mechanism, for what does land: mark node provenance.** An
+agent-originated node that's visibly marked as such isn't dangerous, because it
+isn't passing itself off — the same reason accurate `{% quote %}` makes
+connective tissue tolerable. The mark should persist until the user speaks to
+that node, at which point their words replace the placeholder and it becomes
+theirs.
+
+This generalizes past outlines and may be the cleanest statement of the whole
+design: **the agent may think freely and out loud; the document changes only on
+instruction, and anything of the agent's that lands in it is marked.**
+
 ### What still needs deciding
 
 - **Do nodes get expanded in order, or by readiness?** Sequential walking is
