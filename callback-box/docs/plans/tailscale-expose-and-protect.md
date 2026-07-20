@@ -218,13 +218,18 @@ boundary; unknown/missing fields are distinct failure states, never
 undefined-propagation.
 
 **The target is always explicit.** `cb tailscale status|setup --target
-<port|hub|serve>` (with a discovered default only when exactly one loopback
-`cb` server is unambiguous, else refuse and list candidates): the machine may
-be running a dev router, a standalone `cb serve` (arbitrary host/port,
-`callback-box/src/cli/commands/serve.ts:95`), a hub
+<port>` (port-only — the symbolic `hub|serve` forms and candidate discovery
+were considered and deferred; refusing without a target is the shipped
+behavior): the machine may be running a dev router, a standalone `cb serve`
+(arbitrary host/port, `callback-box/src/cli/commands/serve.ts:95`), a hub
 (`callback-box/src/hub/hub-config.ts:57`), or a Docker mapping, and guessing
 across those is how the wrong thing gets exposed. The router is never a
-valid target (Track A).
+valid target (Track A) — enforced structurally, not by port number: the
+target is probed for the router's `/__router/status` signature and refused
+on match, the `/auth/me` posture check accepts only callback-box's exact
+response shapes (a generic 401 or arbitrary JSON is ambiguous ⇒ refuse),
+and a target that also answers on any non-loopback interface is refused
+(diff-review findings 4–5).
 
 `cb tailscale status` is a state machine, exhaustive over the states below,
 each emitting a next step (linking Tailscale's docs, never transcribing
@@ -305,6 +310,15 @@ check lacks:
   mappings), clears the intent entry, and re-verifies. Without it, the
   startup refusal would push operators toward deleting the intent file by
   hand, which is the fail-open workaround the guard exists to prevent.
+- *The transaction runs guard-first (diff-review findings 1–2).* Intent is
+  recorded — under `src/lib/file-lock.ts`, per repo policy — *before* any
+  serve mutation, so every crash window leaves the guard over-armed rather
+  than absent; a failed setup leaves intent standing (status reports
+  intent-without-mapping as drift; re-run or `stop` heals). `stop` clears
+  intent only after a read-back proves no serve/funnel mapping for the
+  target remains — CLI-absent or unparseable read-back keeps the guard and
+  exits nonzero. The Funnel invariant checks foreground serve configs too
+  (`ServeConfig.Foreground`), not just the top-level `AllowFunnel` map.
 
 `setup` refuses to configure serve unless the probe confirms auth is
 required (no override flag in this plan); `status` reports the same probe as
@@ -348,8 +362,13 @@ isn't the host mapping — so `cb tailscale setup` cannot run there against a
 host daemon. The Docker path is the official tailscale **sidecar container**
 (`TS_AUTHKEY` + `TS_SERVE_CONFIG`, Tailscale's own compose example), with
 the box service keeping its loopback host mapping; `cb tailscale status`
-inside the container detects "no tailscaled reachable" and points at the
-sidecar doc section rather than pretending to drive it. Proof runs: (a)
+inside the container reports tailscaled unreachable (the doc, not the tool,
+routes container users to the sidecar section). The sidecar path carries a
+stated tradeoff the docs must not paper over: it has no cb-side guard —
+`TS_SERVE_CONFIG` is applied by the sidecar without any setup-time posture
+probe, and the open-mode startup guard cannot see across container
+filesystems — so keeping the box service loopback-mapped with auth on is
+the operator's responsibility there (diff-review finding 9). Proof runs: (a)
 locally on the boxholder's Mac (serve fronting a dedicated loopback
 `cb serve`/hub — never the router), (b) the already-flagged VPS afternoon
 for the Docker sidecar variant, sequenced *after* the Mac/phone proof.
@@ -442,7 +461,9 @@ not prevention.
 | Funnel enabled for the target hostname-port after setup | planned | no-Funnel invariant check in status state 5 — detection at next run | clear (detection) |
 | Serve configured non-persistently (missing `--bg`) so exposure dies with the shell | planned (config read-back) | setup uses persistent mode and re-reads full config after write | clear |
 | Setup clobbers an unrelated pre-existing serve path mapping | planned | read-first, preserve, re-verify | clear |
-| Probe endpoint unreachable / ambiguous auth posture | planned (probe fn injected) | refuse (fail closed), distinct message from config drift | clear |
+| Probe endpoint unreachable / ambiguous auth posture (incl. a non-callback-box process answering the port) | planned (probe fn injected) | refuse (fail closed); only callback-box's exact response shapes classify | clear |
+| Crash between serve write and intent write | planned | intent written first; crash leaves the guard over-armed, status reports intent-without-mapping drift | clear |
+| `stop` cannot prove the mapping is gone (CLI absent, readback fails) | planned | intent kept, nonzero exit | clear |
 | `setup` targets a server running in open mode | planned | probe-based refusal + startup-time exposure-intent check in `enforceOpenModeAtListen` | clear |
 | Server restarted into open mode after exposure was configured | planned | exposure intent persisted; open mode refuses to start (startup error) | clear |
 | Ambiguous target (multiple loopback `cb` servers / router present) | planned | refuse and list candidates; router never a candidate | clear |
