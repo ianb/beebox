@@ -4,7 +4,21 @@ area: callback-box
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder asked for it; worktree-tailscale-exposure spun up on Fable
+resolution: implemented
 ---
+
+**Closed:** The tooling deliverable this issue asked for ("tooling, not
+documentation") is implemented and merged from `worktree-tailscale-exposure` —
+`cb tailscale status`/`setup`/`stop`, the persisted-exposure listen-time guard
+in `webapp/auth.ts`, the router loopback fix (`:3210` now binds `127.0.0.1`
+only), and the OpenClaw research dispositions recorded in
+`research/openclaw-hermes/`. Design/history: `docs/implemented-plans/tailscale-expose-and-protect.md`
+(moved from `docs/plans/` on merge). Full suite is green (4598/4598) but the
+whole path is fake-only — nothing here has run against a real `tailscaled`
+yet. That live-proof gap (Mac/phone, VPS, and prod rollout) is NOT closed by
+this; it stays tracked in
+[installation-remaining-work](../../features/2026-07-19-installation-remaining-work.md)
+item 2, which remains open.
 
 Use Tailscale to both **expose** boxes (reach them from anywhere without opening
 ports) and **protect** them (nothing on the public internet). Two environments:

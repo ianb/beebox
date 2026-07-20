@@ -18,7 +18,7 @@ keeping them off the public internet — via a `cb tailscale` command family tha
 inspects real state and says the next concrete step, not another prose path.
 Tailscale augments the app's always-on auth; it never substitutes for it.
 
-Driven by `issues/features/2026-07-20-tailscale-expose-and-protect.md`, whose
+Driven by `issues/closed/features/2026-07-20-tailscale-expose-and-protect.md`, whose
 bar is explicit: "tooling, not documentation" — the existing documented variant
 has never been exercised, and another untested guide would be the failure mode.
 The boxholder's UX bar, stated directly: the installation process should always

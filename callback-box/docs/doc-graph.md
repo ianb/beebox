@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-20T23:37:48Z
+Generated: 2026-07-20T23:39:27Z
 Total documents: 201
 
 ## Issues
@@ -790,8 +790,8 @@ Referenced by:
 - docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
 - docs/implemented-plans/local-password-auth.md:537 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:79 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 - ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:65 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 
 References:
 - → docs/docker-install.md (link)
@@ -821,8 +821,8 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:537 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/implemented-plans/tailscale-expose-and-protect.md:74 (mention) — - **The documented-but-untested path.** `callback-box/docs/docker-install.md:119`
 - docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
 - ../issues/features/2026-07-19-installation-remaining-work.md:17 (mention) — - Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:26 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
 
 References:
 - → ../issues/features/2026-07-19-installation-remaining-work.md (link)
@@ -971,8 +971,8 @@ Referenced by:
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
 - src/hub/CLAUDE.md:15 (mention) — `docs/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:82 (mention) — (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:63 (mention) — updates) and `docs/health-checks.md` owns deployed-server runbooks — this admin
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:68 (mention) — (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
 
 References:
 - → deploy/README.md (link)
@@ -2613,6 +2613,7 @@ Referenced by:
 Title: "Tailscale expose-and-protect" | 596 lines
 
 Referenced by:
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:15 (mention) — `research/openclaw-hermes/`. Design/history: `docs/implemented-plans/tailscale-expose-and-protect.md`
 - ../research/openclaw-hermes/README.md:98 (mention) — | 23 | **Tailscale identity as an app-login accelerator (OpenClaw's post-fix `tailscale` auth mode: Serve identity heade
 
 References:
@@ -2923,8 +2924,8 @@ Title: "Installation story, phase 1: developer install + local Docker" | 612 lin
 Referenced by:
 - docs/implemented-plans/tailscale-expose-and-protect.md:365 (mention) — `docs/plans/installation-story.md`'s failure-modes table, which treats the
 - docs/plans/source-available-release.md:271 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:39 (mention) — first-class alternative in `callback-box/docs/plans/installation-story.md` and
 - ../issues/features/2026-07-19-installation-remaining-work.md:3 (mention) — design: ../../callback-box/docs/plans/installation-story.md
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:25 (mention) — first-class alternative in `callback-box/docs/plans/installation-story.md` and
 
 References:
 - → docs/plans/source-available-release.md (mention)
