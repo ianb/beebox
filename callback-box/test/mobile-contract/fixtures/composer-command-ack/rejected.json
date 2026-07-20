@@ -1,0 +1,14 @@
+{
+  "input": {
+    "version": 1,
+    "id": "selection-command-2",
+    "accepted": false,
+    "reason": "The selection could not be saved."
+  },
+  "expected": {
+    "version": 1,
+    "id": "selection-command-2",
+    "accepted": false,
+    "reason": "The selection could not be saved."
+  }
+}

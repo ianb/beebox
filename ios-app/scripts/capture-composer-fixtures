@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+device="${1:-booted}"
+output_dir="${2:-/tmp/callback-box-composer-fixtures}"
+bundle_id="app.callbackbox.ios"
+states=(
+  empty
+  typing
+  multiline
+  many-attachments
+  uploading
+  failed-upload
+  selection-detail
+  recording
+  hq-preparation
+  two-pending
+  rejected-send
+  expired-attachment
+  keyboard-shown
+)
+
+mkdir -p "$output_dir"
+xcrun simctl status_bar "$device" override \
+  --time "9:41" \
+  --dataNetwork wifi \
+  --wifiBars 3 \
+  --cellularBars 4 \
+  --batteryState charged \
+  --batteryLevel 100
+trap 'xcrun simctl status_bar "$device" clear >/dev/null' EXIT
+
+for state in "${states[@]}"; do
+  xcrun simctl launch --terminate-running-process "$device" "$bundle_id" \
+    "--composer-fixture=$state" >/dev/null
+  sleep 1
+  xcrun simctl io "$device" screenshot "$output_dir/$state.png" >/dev/null
+done
+
+echo "Captured ${#states[@]} composer fixtures in $output_dir"

@@ -6,8 +6,35 @@ extends the native draft and bridge to carry the complete web `Emission`, makes
 unsent and rejected work durable, and keeps the embedded web chat authoritative
 for target state and final dispatch.
 
-**Status:** active — implementation has not started; automated coverage and the
-real-device acceptance matrix in Track 6 are required before this plan ships.
+**Status:** partially implemented 2026-07 — Tracks 1-4 are implemented: canonical
+V2 encoding/decoding and shared fixtures; a box-scoped `ComposerDraftStore`;
+atomic, quarantining manifests; one-shot text migration; reducer/token/Unicode-
+caret coverage; a caret-aware, autosizing `UITextView`; and file-backed camera
+and Photos images with stable IDs and no arbitrary count cap. Track 3 also has
+Files import with the existing authenticated upload route, byte progress,
+durable upload failure/retry state, Paste Image, and visible-webview Screenshot
+acquisition. Image source bytes are persisted before processing, interrupted or
+failed processing restores as a retryable chip, and incomplete attachments
+block send. Track 4 adds strict durable companion-selection commands,
+idempotent acknowledgements, typed tokens, active-dictation anchors, native
+detail chips, and complete V2 selection emission. Track 5's pending-send half
+is implemented: sends persist
+before delivery, immediately clear to a fresh editable draft, replay with the
+same ID after relaunch/navigation, accept receipts in any order, and expose
+rejected Retry / Restore / Discard actions without overwriting newer work.
+Track 5 is complete: voice uses an explicit composition state machine, keyword
+sends persist their draft and copied audio before clearing, HQ work resumes
+after relaunch, later drafts remain isolated, and later emissions wait behind
+earlier voice preparation. Track 6 remains; its visual coverage and real-device
+acceptance matrix are required before this plan ships. Track 6's fixture host
+and first simulator sweep are implemented. All thirteen deterministic states
+were captured on iPhone 17 Pro; attachment overflow was also checked on iPhone
+17e in dark mode at Accessibility Large, rejection UI on iPad (A16) at XXXL,
+and the focused editor with the software keyboard. This sweep fixed context
+overflow and long-transcript horizontal expansion. A final lifecycle pass also
+made draft activation generation-safe, disables composition until restoration
+finishes, and accepts startup selection commands only after the target box is
+ready. Landscape and the real-device matrix remain.
 
 ## Stated preferences this plan trades against
 
@@ -447,6 +474,18 @@ acceptance state names above.
 before final polish so every subsequent UI commit can be compared at the same
 viewports.
 
+**Simulator results (2026-07-19).** `--composer-fixture=<state>` and
+`ios-app/scripts/capture-composer-fixtures` now provide the full deterministic
+state set through the production composer with isolated stores. Portrait visual
+checks passed on iPhone 17 Pro in light mode, iPhone 17e in dark mode at
+Accessibility Large, and iPad (A16) at XXXL. The software-keyboard fixture kept
+the active line and all three controls above the keyboard. Attachment-heavy
+context scrolls vertically within a 220-point cap while photos and selection
+chips retain horizontal scrolling. Attachment/recovery controls have 44-point
+targets and named VoiceOver actions. These are simulator results only;
+landscape, VoiceOver traversal on device, and the real-device matrix below are
+not yet accepted.
+
 ## Subplans (when a sub-question needs its own design step)
 
 No subplan is required. The bridge, native draft, attachments, selections,
@@ -464,7 +503,7 @@ named test and visible handling before the plan ships.
 |---|---|---|---|
 | V2 payload contains an unknown version or malformed file/selection | Planned golden fixture + web doctest + XCTest | Reject whole V2 payload with a reason; legacy leniency remains separately tested | Clear receipt/error |
 | Web selection command arrives twice | Planned command-ID reducer test | Persist first mutation and return idempotent acknowledgement | Clear/idempotent |
-| Web selection command arrives before native store is ready | Planned webview startup integration test | Queue by command ID until store restore finishes, then acknowledge | Clear on timeout |
+| Web selection command arrives before native store is ready | Startup activation/selection XCTest | Activate or await the target box, persist the command, then acknowledge | Clear rejection if the selected box changed |
 | Selection source becomes stale after it is attached | Planned assembly test with stale `ref` | Preserve the quoted selected text and source metadata; the agent receives the snapshot even if ref resolution later fails | Clear in emitted context |
 | Draft manifest is truncated or has a future version | Planned repository XCTest | Quarantine bad manifest, preserve payload files for diagnostics/recovery, show “Draft could not be restored” | Clear |
 | App dies between payload copy and manifest replace | Planned injected-crash repository test | Orphan sweep retains recent unreferenced files for one recovery window, then removes them | Clear recovery notice if adopted |
@@ -479,13 +518,13 @@ named test and visible handling before the plan ships.
 | Caret is inside a composed Unicode sequence | Planned reducer tests with emoji/combining marks | Convert UIKit UTF-16 range through one tested helper; reject invalid persisted ranges to end-of-text | Clear test/invariant |
 | User manually edits or duplicates an attachment token | Planned assembly/reducer tests | Attachment arrays remain authoritative; missing tokens are allowed, unknown tokens remain ordinary text, remove strips only the matching known token | Clear deterministic behavior |
 | Attachment finishes processing after user removes it | Planned cancellation race XCTest | Generation/item ID check discards result and deletes temporary payload | Clear/no reappearance |
-| HQ transcription finishes after keyword send while user edits next draft | Planned voice reducer race XCTest | Keyword transition snapshots content first; completion mutates only its pending voice snapshot | Clear/no clobber |
-| Speech permission/interruption/model failure | Existing speech tests plus planned state tests/device pass | Preserve editable live transcript; expose retry or send live transcript | Clear |
-| Two emissions receive receipts in reverse order | Planned pending reducer and webview integration tests | Match strictly by emission ID and remove only that snapshot | Clear |
-| Webview navigates or reloads after injection but before receipt | Planned integration test | Reset inflight transport state, redeliver durable pending ID, rely on backend dedup | Clear pending state |
-| Receipt never arrives | Planned injected-clock timeout test | Move to rejected/timed-out state with Retry/Restore/Discard; never auto-discard | Clear |
-| Rejected emission returns while a newer draft is nonempty | Planned reducer test | Keep failed pending row; do not overwrite draft; Restore requires an empty draft | Clear |
-| User switches boxes with draft/pending work | Planned store lifecycle test | Flush old box, load new box's independent state, continue old pending delivery only when its box is active | Clear per-box state |
+| HQ transcription finishes after keyword send while user edits next draft | Voice reducer/repository race XCTest | Keyword transition persists and clears the snapshot first; completion mutates only its pending voice snapshot | Clear/no clobber |
+| Speech permission/interruption/model failure | Voice state/resolver XCTest plus pending device pass | Preserve editable live transcript; expose retry or send live transcript | Clear |
+| Two emissions receive receipts in reverse order | Pending-store XCTest | Match strictly by emission ID and remove only that snapshot | Clear |
+| Webview navigates or reloads after injection but before receipt | Coordinator integration XCTest | Reset inflight transport state, redeliver durable pending ID, rely on backend dedup | Clear pending state |
+| Receipt never arrives | Injected-delay coordinator XCTest | Move to rejected/timed-out state with Retry/Restore/Discard; never auto-discard | Clear |
+| Rejected emission returns while a newer draft is nonempty | Pending restore/rejection XCTest plus rejected fixture | Keep failed pending row; do not overwrite draft; Restore requires an empty draft | Clear |
+| User switches boxes with draft/pending work | Draft and pending-store lifecycle XCTest | Flush old box, load new box's independent state, continue old pending delivery only when its box is active | Clear per-box state |
 | Location permission or bridge request fails | Existing contract fixtures, extended UI test | Existing visible result message; draft remains unchanged | Clear |
 | Native shell and hidden web store both accept a selection | Planned native-shell browser test | Exactly one branch: command in native mode, web store mutation otherwise | Clear invariant/test failure |
 

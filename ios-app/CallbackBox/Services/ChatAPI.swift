@@ -1,14 +1,91 @@
 import Foundation
 
-struct ChatAPI {
+protocol ChatTransport: Sendable {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse)
+    func upload(
+        for request: URLRequest,
+        body: Data,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> (Data, URLResponse)
+}
+
+extension ChatTransport {
+    func upload(
+        for request: URLRequest,
+        body: Data,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> (Data, URLResponse) {
+        var request = request
+        request.httpBody = body
+        onProgress(0)
+        let result = try await data(for: request)
+        onProgress(1)
+        return result
+    }
+}
+
+struct URLSessionChatTransport: ChatTransport {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        try await URLSession.shared.data(for: request)
+    }
+
+    func upload(
+        for request: URLRequest,
+        body: Data,
+        onProgress: @escaping @Sendable (Double) -> Void
+    ) async throws -> (Data, URLResponse) {
+        try await withCheckedThrowingContinuation { continuation in
+            let task = URLSession.shared.uploadTask(with: request, from: body) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let data, let response else {
+                    continuation.resume(throwing: URLError(.badServerResponse))
+                    return
+                }
+                onProgress(1)
+                continuation.resume(returning: (data, response))
+            }
+            Task {
+                var lastReported = -1.0
+                while task.state == .suspended || task.state == .running {
+                    let progress = task.progress.fractionCompleted
+                    if progress - lastReported >= 0.01 {
+                        lastReported = progress
+                        onProgress(progress)
+                    }
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+            }
+            task.resume()
+        }
+    }
+}
+
+enum ChatUploadLimits {
+    static let maximumFileBytes = 50 * 1024 * 1024
+}
+
+struct UploadedChatFile: Decodable, Equatable, Sendable {
+    var path: String
+    var originalName: String
+    var size: Int
+    var mimetype: String
+}
+
+struct ChatAPI: Sendable {
     enum ChatAPIError: LocalizedError {
         case invalidResponse
+        case fileTooLarge
         case server(String)
 
         var errorDescription: String? {
             switch self {
             case .invalidResponse:
                 "The box returned an unexpected response."
+            case .fileTooLarge:
+                "Files must be 50 MB or smaller."
             case .server(let message):
                 message
             }
@@ -16,6 +93,12 @@ struct ChatAPI {
     }
 
     var box: PairedBox
+    var transport: any ChatTransport
+
+    init(box: PairedBox, transport: any ChatTransport = URLSessionChatTransport()) {
+        self.box = box
+        self.transport = transport
+    }
 
     struct HqTranscriptionResult: Decodable, Equatable {
         var text: String
@@ -32,7 +115,7 @@ struct ChatAPI {
         applyAuth(to: &request)
         request.httpBody = try multipartAudioBody(fileURL: fileURL, session: session, boundary: boundary)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await transport.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw ChatAPIError.invalidResponse
         }
@@ -43,6 +126,66 @@ struct ChatAPI {
         return try JSONDecoder().decode(HqTranscriptionResult.self, from: data)
     }
 
+    func uploadFile(
+        data: Data,
+        filename: String,
+        mimeType: String,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> UploadedChatFile {
+        var request = try uploadFileRequest(data: data, filename: filename, mimeType: mimeType)
+        guard let body = request.httpBody else {
+            throw ChatAPIError.invalidResponse
+        }
+        request.httpBody = nil
+        let (responseData, response) = try await transport.upload(
+            for: request,
+            body: body,
+            onProgress: onProgress
+        )
+        guard let http = response as? HTTPURLResponse else {
+            throw ChatAPIError.invalidResponse
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let error = try? JSONDecoder().decode(ErrorBody.self, from: responseData)
+            throw ChatAPIError.server(error?.error ?? "File upload failed.")
+        }
+        guard let uploaded = try? JSONDecoder().decode(UploadedChatFile.self, from: responseData) else {
+            throw ChatAPIError.invalidResponse
+        }
+        guard
+            uploaded.path.isEmpty == false,
+            uploaded.originalName.isEmpty == false,
+            uploaded.size >= 0,
+            uploaded.mimetype.isEmpty == false
+        else {
+            throw ChatAPIError.invalidResponse
+        }
+        return uploaded
+    }
+
+    func uploadFileRequest(data: Data, filename: String, mimeType: String) throws -> URLRequest {
+        guard data.count <= ChatUploadLimits.maximumFileBytes else {
+            throw ChatAPIError.fileTooLarge
+        }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: box.apiURL.appendingPathComponent("chat/upload-file"))
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
+        applyAuth(to: &request)
+        var body = Data()
+        body.appendMultipartFile(
+            name: "file",
+            filename: Self.safeMultipartFilename(filename),
+            contentType: mimeType,
+            data: data,
+            boundary: boundary
+        )
+        body.appendString("--\(boundary)--\r\n")
+        request.httpBody = body
+        return request
+    }
+
     private func resolvedSession() async throws -> String {
         if let sessionID = box.sessionID, sessionID.isEmpty == false {
             return sessionID
@@ -50,7 +193,7 @@ struct ChatAPI {
         var request = URLRequest(url: box.apiURL.appendingPathComponent("chat/default"))
         request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
         applyAuth(to: &request)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await transport.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw ChatAPIError.invalidResponse
         }
@@ -81,6 +224,14 @@ struct ChatAPI {
         )
         body.appendString("--\(boundary)--\r\n")
         return body
+    }
+
+    private static func safeMultipartFilename(_ filename: String) -> String {
+        let leaf = (filename as NSString).lastPathComponent
+        let safe = leaf.replacingOccurrences(of: "\r", with: "_")
+            .replacingOccurrences(of: "\n", with: "_")
+            .replacingOccurrences(of: "\"", with: "_")
+        return safe.isEmpty ? "attachment" : safe
     }
 }
 

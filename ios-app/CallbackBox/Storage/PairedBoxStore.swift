@@ -9,9 +9,13 @@ final class PairedBoxStore: ObservableObject {
 
     private let storageURL: URL
 
-    init() {
+    convenience init() {
         let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        storageURL = supportDirectory.appendingPathComponent("paired-boxes.json")
+        self.init(storageURL: supportDirectory.appendingPathComponent("paired-boxes.json"))
+    }
+
+    init(storageURL: URL) {
+        self.storageURL = storageURL
         load()
     }
 
@@ -42,7 +46,8 @@ final class PairedBoxStore: ObservableObject {
             label: cleanLabel.isEmpty ? baseURL.host ?? "Callback Box" : cleanLabel,
             baseURL: baseURL,
             sessionID: cleanSessionID,
-            authToken: cleanAuthToken
+            authToken: cleanAuthToken,
+            requiresDeviceUnlock: false
         )
         boxes.append(normalized)
         selectedBoxID = normalized.id
@@ -104,6 +109,14 @@ final class PairedBoxStore: ObservableObject {
 
     func select(_ box: PairedBox) {
         selectedBoxID = box.id
+        save()
+    }
+
+    func setRequiresDeviceUnlock(_ required: Bool, for box: PairedBox) {
+        guard let index = boxes.firstIndex(where: { $0.id == box.id }) else {
+            return
+        }
+        boxes[index].requiresDeviceUnlock = required
         save()
     }
 

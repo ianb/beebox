@@ -1,6 +1,6 @@
 import Foundation
 
-enum SpeechKeywordAction: String, Codable {
+enum SpeechKeywordAction: String, Codable, Sendable {
     case send
     case sendClose
     case cancel
@@ -252,6 +252,33 @@ enum SpeechKeywords {
             words[index].trailing = nsText.substring(with: NSRange(location: currentEnd, length: nextStart - currentEnd))
         }
         return words.filter { $0.normalized.isEmpty == false }
+    }
+}
+
+enum VoicePreparationResolver {
+    static func text(for preparation: VoicePreparation, hqTranscript: String?) -> String {
+        guard let hqTranscript else {
+            return preparation.liveTranscript
+        }
+        let processed = SpeechKeywords.detect(hqTranscript)?.processedTranscript
+            ?? SpeechKeywords.appendSendKeywordTag(
+                to: hqTranscript,
+                action: preparation.action,
+                matchedPhrase: preparation.matchedPhrase
+            )
+        return join(preparation.priorInput, processed)
+    }
+
+    private static func join(_ first: String, _ second: String) -> String {
+        let cleanFirst = first.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanSecond = second.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanFirst.isEmpty {
+            return cleanSecond
+        }
+        if cleanSecond.isEmpty {
+            return cleanFirst
+        }
+        return "\(cleanFirst) \(cleanSecond)"
     }
 }
 

@@ -1,7 +1,8 @@
 ---
 title: "Per-box lock: require re-auth (biometric/device) to open a sensitive box in a multi-box client"
 area: callback-box
-needs: [design]
+design: ../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
+needs: [manual-testing]
 filed-by: agent
 discovered-in: main session — boxholder raised it while working through the queue
 ---
@@ -15,6 +16,12 @@ the app is open.
 Proposal: mark some boxes as **locked**, so opening one requires an additional
 gate even inside an already-authenticated client.
 
+The implementation-ready iOS design is
+[`ios-per-box-device-lock.md`](../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md).
+It resolves the declaration question in favor of an honest device-local
+preference: this feature gates navigation on one phone and does not introduce a
+server policy that can become stale or imply enforcement a client cannot provide.
+
 ## Use the platform's auth, not a hand-rolled PIN
 
 Boxholder's own refinement, and it's the right instinct: reach for **native auth
@@ -25,8 +32,8 @@ facilities** rather than inventing a PIN.
   hardware-backed; a UX users already understand. It also composes with Keychain
   access control, so the gate can protect *material* rather than just a screen
   (see the honesty question below).
-- **Android** — `BiometricPrompt` is the direct analogue when
-  [the companion](2026-07-18-android-companion-track1-unblocked.md) gets there.
+- **Android** — `BiometricPrompt` is the direct analogue; parity is tracked in
+  [android-per-box-device-lock-parity](2026-07-20-android-per-box-device-lock-parity.md).
 - **Web/PWA** — WebAuthn/passkeys is the analogue, though a browser context makes
   the "protects material vs. protects a screen" problem sharper.
 
@@ -62,33 +69,49 @@ together.
 
 ## Other design questions
 
-- **Where does "locked" live?** A per-box declaration in the box's own config
-  (travels with the box, every client can honor it, the box asserts its own
-  sensitivity) versus a per-device client preference (honest that it's a local UI
-  affordance). Server-declared is more meaningful but a client can always ignore
-  it — so server-declared + client-enforced is a trust statement, not a
-  guarantee. Probably still worth it: it means a newly paired device inherits the
-  intent instead of defaulting to open.
-- **Re-lock policy** — this is now the *main* design question, since the scope is
-  settled. Re-lock on app background is the one that actually serves the
-  phone-share case (you hand the phone over after backgrounding, or they
-  background it themselves). An idle timer alone would leave the box open in
-  exactly the moment that matters. Probably: lock on background, plus on every
-  box switch, with no timer to reason about.
+- **Where does "locked" live? Settled 2026-07-20 (boxholder): locally in the
+  iOS app.** It is a per-device preference on the paired-box record, not a field
+  in the box's config and not server-synchronized. That is honest about this
+  being a local navigation affordance and avoids implying enforcement the box
+  cannot provide. Each phone opts its boxes in independently.
+- **Re-lock policy — settled by the design:** lock on app background and every
+  box switch, with no idle timer. App-switcher snapshot privacy is outside the
+  phone-share navigation scope and can be considered separately if needed.
 - **Fallback when biometrics are unavailable or fail** — device passcode is the
   natural fallback. Given the scope, a device with no biometric *and* no passcode
   set is already an unlocked phone; a lock there is close to meaningless, so
   degrade gracefully rather than making the box unreachable.
-- **Relationship to the in-flight local auth work.** The
-  [local password auth](2026-07-16-local-password-auth-default-on.md) design
-  (being written now) is redefining what `isAuthEnabled()` means and adding a
-  local credential method. This is a **second, orthogonal axis**: that one is
+- **Relationship to local auth.** The
+  [local password auth](../closed/features/2026-07-16-local-password-auth-default-on.md)
+  work has shipped. This remains a **second, orthogonal axis**: that one is
   "is this client authenticated at all," this one is "may it open *this* box
-  right now." Design them aware of each other so the second doesn't get bolted
-  onto a gate the first just moved.
+  right now." The iOS-only local preference does not alter server authentication.
 
 ## Naming nit
 
 Call it **lock**, not **pin**. In UI vocabulary "pin" overwhelmingly means
 favorite/stick-to-top, and this feature is the opposite of promoting a box —
-someone reading `pinned: true` in a box config would guess wrong.
+someone reading `pinned: true` in a paired-box record would guess wrong.
+
+## Implementation status (2026-07-20)
+
+The iOS implementation has landed on `main`:
+
+- the preference is stored only in the local paired-box JSON, with legacy
+  snapshots defaulting safely to unlocked;
+- every unlock and every attempt to disable the preference uses a fresh
+  `LocalAuthentication` request;
+- backgrounding or changing boxes invalidates in-flight authentication and
+  discards the current grant;
+- protected chat/composer views remain mounted but opaque, non-interactive, and
+  accessibility-hidden; presented composer surfaces dismiss when the lock
+  returns;
+- the full simulator XCTest suite passes, and seeded locked layouts were
+  inspected on iPhone 17e and iPad (A16) simulators.
+
+Close this issue only after physical-device acceptance covers successful Face
+ID/Touch ID and passcode fallback, cancellation/failure, background during and
+after the prompt, authenticated lock removal, protected/unprotected box
+switching, force quit/relaunch, large type, and the no-passcode degradation if
+practical. Also confirm the webview stays mounted and composer drafts/pending
+sends survive re-lock/unlock.

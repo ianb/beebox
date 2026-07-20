@@ -5,38 +5,42 @@ import UIKit
 
 struct NativeComposerView: View {
     var box: PairedBox
+    @ObservedObject var draftStore: ComposerDraftStore
+    @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
-    var emissionReceipt: NativeEmissionReceipt?
     var locationShareResult: NativeLocationShareResult?
-    var onSendEmission: (NativeChatEmission) -> Void
+    var screenshotResult: NativeScreenshotResult?
     var onShareLocation: () -> Void
+    var onTakeScreenshot: () -> Void
+    var automaticallyResumeVoicePreparations = true
+    var voiceStateOverride: VoiceCompositionState?
+    var initiallyFocused = false
+    var initialDetailedSelection: DraftSelection?
 
     @EnvironmentObject private var store: PairedBoxStore
-    @State private var text = ""
+    @EnvironmentObject private var boxLockManager: BoxLockManager
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var images: [ChatImageAttachment] = []
     @State private var statusText: String?
-    @State private var lastSentEmission: NativeChatEmission?
+    @State private var isPreparingSend = false
+    @State private var editorHeight: CGFloat = 58
+    @State private var focused = false
     @State private var showingActions = false
     @State private var showingPairing = false
     @State private var showingCamera = false
     @State private var showingCapture = false
+    @State private var showingFileImporter = false
+    @State private var detailedSelection: DraftSelection?
+    @State private var activeVoicePreparationIDs: Set<UUID> = []
     @StateObject private var dictation = SpeechDictation()
-    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let statusText = dictation.errorMessage ?? dictation.preparationMessage ?? statusText {
-                Text(statusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
-            }
-            if images.isEmpty == false {
-                ImageAttachmentStrip(images: images, onRemove: removeImage)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 10)
+            if hasComposerContext {
+                ScrollView(.vertical, showsIndicators: true) {
+                    composerContext
+                }
+                .frame(maxHeight: 220)
+                .scrollBounceBehavior(.basedOnSize)
             }
 
             HStack(alignment: .bottom, spacing: 10) {
@@ -58,13 +62,15 @@ struct NativeComposerView: View {
         }
         .background(.regularMaterial)
         .ignoresSafeArea(.container, edges: .bottom)
-        .onAppear(perform: loadDraft)
-        .onChange(of: text) { _, newValue in
-            UserDefaults.standard.set(newValue, forKey: draftKey)
+        .onChange(of: draftStore.draft.text) { _, newValue in
             dictation.noteManualTextChange(newValue)
         }
         .onChange(of: dictation.transcript) { _, newValue in
-            text = newValue
+            draftStore.setText(newValue)
+            draftStore.setVoiceSelectionContext(transcript: newValue, active: dictation.isRecording)
+        }
+        .onChange(of: dictation.isRecording) { _, isRecording in
+            draftStore.setVoiceSelectionContext(transcript: dictation.transcript, active: isRecording)
         }
         .onChange(of: dictation.keywordIntent) { _, newValue in
             guard let newValue else {
@@ -72,24 +78,28 @@ struct NativeComposerView: View {
             }
             handleKeywordIntent(newValue)
         }
+        .onChange(of: pendingStore.voicePreparations) { _, preparations in
+            if automaticallyResumeVoicePreparations {
+                resumeVoicePreparations(preparations)
+            }
+        }
+        .onAppear {
+            if initiallyFocused {
+                focused = true
+            }
+            if let initialDetailedSelection {
+                detailedSelection = initialDetailedSelection
+            }
+        }
         .onChange(of: selectedPhotoItems) { _, newValue in
             Task {
                 await loadPhotos(from: newValue)
             }
         }
-        .onChange(of: emissionReceipt) { _, receipt in
-            guard let receipt, let emission = lastSentEmission, receipt.emissionID == emission.id else {
-                return
+        .onChange(of: boxLockManager.isLocked(box)) { _, isLocked in
+            if isLocked {
+                dismissPresentedContentForLock()
             }
-            switch receipt.disposition {
-            case .sent, .queued:
-                statusText = nil
-            case .rejected:
-                text = emission.text
-                images = emission.images
-                statusText = receipt.reason ?? "The message was not accepted."
-            }
-            lastSentEmission = nil
         }
         .onChange(of: locationShareResult) { _, result in
             guard let result else {
@@ -97,16 +107,34 @@ struct NativeComposerView: View {
             }
             statusText = result.message
         }
+        .onChange(of: screenshotResult) { _, result in
+            guard let result else {
+                return
+            }
+            guard let data = result.data else {
+                statusText = result.message ?? "The visible chat could not be captured."
+                return
+            }
+            Task {
+                await appendImage(data: data, sourceMimeType: "image/png")
+                statusText = nil
+            }
+        }
         .onDisappear {
             dictation.stop()
+            draftStore.setVoiceSelectionContext(transcript: "", active: false)
         }
         .sheet(isPresented: $showingActions) {
             ComposerActionsView(
                 selectedPhotoItems: $selectedPhotoItems,
                 canCapture: captureAvailable,
                 canTakePhoto: UIImagePickerController.isSourceTypeAvailable(.camera),
+                canPasteImage: UIPasteboard.general.hasImages,
                 onCapture: openCapture,
                 onTakePhoto: openCamera,
+                onPasteImage: pasteImage,
+                onChooseFile: openFileImporter,
+                onScreenshot: takeScreenshot,
                 onShareLocation: shareLocation,
                 onPairBox: openPairing,
                 onDismiss: { showingActions = false }
@@ -118,7 +146,9 @@ struct NativeComposerView: View {
         .fullScreenCover(isPresented: $showingCamera) {
             CameraImagePicker { image in
                 showingCamera = false
-                appendCameraImage(image)
+                Task {
+                    await appendCameraImage(image)
+                }
             } onCancel: {
                 showingCamera = false
             }
@@ -127,18 +157,114 @@ struct NativeComposerView: View {
         .fullScreenCover(isPresented: $showingCapture) {
             NativeCaptureScreen(box: box)
         }
+        .fileImporter(
+            isPresented: $showingFileImporter,
+            allowedContentTypes: [.data, .content],
+            allowsMultipleSelection: true
+        ) { result in
+            guard case .success(let urls) = result else {
+                return
+            }
+            Task {
+                await importFiles(urls)
+            }
+        }
+        .sheet(item: $detailedSelection) { selection in
+            SelectionDetailView(selection: selection)
+        }
+    }
+
+    private var composerContext: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let visibleStatusText {
+                Text(visibleStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+            }
+            if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
+                PendingEmissionList(
+                    emissions: pendingStore.pending,
+                    voicePreparations: pendingStore.voicePreparations,
+                    canRestore: draftIsEmpty,
+                    onRetry: retryPendingEmission,
+                    onRestore: restorePendingEmission,
+                    onDiscard: discardPendingEmission
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+            if draftStore.draft.images.isEmpty == false {
+                ImageAttachmentStrip(
+                    images: draftStore.draft.images,
+                    draftStore: draftStore,
+                    onRetry: retryImage
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+            if draftStore.draft.files.isEmpty == false {
+                FileAttachmentList(
+                    files: draftStore.draft.files,
+                    onRetry: retryFile,
+                    onRemove: removeFile
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+            if draftStore.draft.selections.isEmpty == false {
+                SelectionAttachmentList(
+                    selections: draftStore.draft.selections,
+                    onOpen: { detailedSelection = $0 },
+                    onRemove: removeSelection
+                )
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+            }
+        }
+    }
+
+    private var visibleStatusText: String? {
+        dictation.errorMessage
+            ?? dictation.preparationMessage
+            ?? statusText
+            ?? draftStore.restoreNotice
+            ?? pendingStore.notice
+    }
+
+    private var hasComposerContext: Bool {
+        visibleStatusText != nil
+            || pendingStore.pending.isEmpty == false
+            || pendingStore.voicePreparations.isEmpty == false
+            || draftStore.draft.images.isEmpty == false
+            || draftStore.draft.files.isEmpty == false
+            || draftStore.draft.selections.isEmpty == false
     }
 
     private var textEntry: some View {
-        TextField("Type...", text: $text, axis: .vertical)
-            .focused($focused)
-            .lineLimit(1...5)
-            .font(.body)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(minHeight: 58)
-            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-            .accessibilityLabel("Type a message")
+        ZStack(alignment: .topLeading) {
+            if text.isEmpty {
+                Text("Type...")
+                    .font(.body)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 19)
+                    .allowsHitTesting(false)
+            }
+            ComposerTextView(
+                text: textBinding,
+                selection: selectionBinding,
+                isFocused: $focused,
+                height: $editorHeight
+            )
+        }
+        .frame(height: editorHeight)
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .layoutPriority(1)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .allowsHitTesting(isSending == false)
     }
 
     @ViewBuilder
@@ -147,7 +273,7 @@ struct NativeComposerView: View {
             ProgressView()
                 .frame(width: 58, height: 58)
                 .background(.quaternary, in: Circle())
-        } else if dictation.isRecording {
+        } else if isVoiceRecording {
             composerButton(
                 systemImage: "stop.fill",
                 accessibilityLabel: "Stop dictation",
@@ -162,7 +288,8 @@ struct NativeComposerView: View {
                 backgroundStyle: Color.accentColor,
                 action: send
             )
-        } else if images.isEmpty == false {
+            .disabled(sendDisabled)
+        } else if draftStore.draft.images.isEmpty == false {
             HStack(spacing: 10) {
                 microphoneButton
                 composerButton(
@@ -172,6 +299,7 @@ struct NativeComposerView: View {
                     backgroundStyle: Color.accentColor,
                     action: send
                 )
+                .disabled(sendDisabled)
             }
         } else {
             microphoneButton
@@ -184,6 +312,10 @@ struct NativeComposerView: View {
             accessibilityLabel: "Start dictation",
             action: { dictation.toggle(currentText: text) }
         )
+    }
+
+    private var isVoiceRecording: Bool {
+        voiceStateOverride == .recording || dictation.isRecording
     }
 
     private func openCapture() {
@@ -223,16 +355,7 @@ struct NativeComposerView: View {
         }
         dictation.stop()
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
-        let emission = NativeChatEmission(text: message, origin: origin, diarized: false, images: images)
-        dictation.resetDictationState()
-        text = ""
-        images = []
-        selectedPhotoItems = []
-        UserDefaults.standard.removeObject(forKey: draftKey)
-        focused = false
-        lastSentEmission = emission
-        statusText = "Sending to chat..."
-        onSendEmission(emission)
+        enqueueMessage(text: message, origin: origin, diarized: false)
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -241,102 +364,145 @@ struct NativeComposerView: View {
         case .send, .sendClose:
             sendKeywordIntent(intent)
         case .cancel:
-            text = ""
-            images = []
             selectedPhotoItems = []
             dictation.resetDictationState()
-            UserDefaults.standard.removeObject(forKey: draftKey)
             statusText = "Message cancelled."
+            Task {
+                await draftStore.discardCurrentDraft()
+            }
         case .micOff:
             dictation.stop()
             statusText = "Microphone off."
         case .erase:
-            text = ""
-            images = []
             selectedPhotoItems = []
             dictation.resetDictationState()
-            UserDefaults.standard.removeObject(forKey: draftKey)
             statusText = "Message erased."
+            Task {
+                await draftStore.discardCurrentDraft()
+            }
         }
     }
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
         let audioURL = dictation.consumeRecordedAudioURL()
         let priorInput = dictation.consumeKeywordSeedText()
-        statusText = audioURL == nil ? "Sending..." : "Improving transcription..."
+        let snapshot = draftStore.draft
+        let sendingBox = box
+        isPreparingSend = true
+        statusText = "Saving voice message..."
         Task {
-            let prepared = await prepareKeywordMessage(
-                intent: intent,
-                priorInput: priorInput,
-                audioURL: audioURL
-            )
-            await MainActor.run {
-                enqueuePreparedVoiceMessage(text: prepared.text, diarized: prepared.diarized)
+            do {
+                let preparation = try await pendingStore.stageVoicePreparation(
+                    draft: snapshot,
+                    liveTranscript: intent.processedTranscript,
+                    priorInput: priorInput,
+                    action: intent.action,
+                    matchedPhrase: intent.matchedPhrase,
+                    audioURL: audioURL,
+                    boxID: sendingBox.id
+                )
+                if let audioURL {
+                    try? FileManager.default.removeItem(at: audioURL)
+                }
+                await draftStore.clearForSending(boxID: sendingBox.id)
+                dictation.resetDictationState()
+                selectedPhotoItems = []
+                focused = false
+                isPreparingSend = false
+                statusText = nil
+                resumeVoicePreparation(preparation, box: sendingBox)
+            } catch {
+                isPreparingSend = false
+                let message = "The voice message could not be saved."
+                statusText = message
+                dictation.failPreparation(message)
             }
         }
     }
 
-    private func prepareKeywordMessage(
-        intent: SpeechKeywordResult,
-        priorInput: String,
-        audioURL: URL?
+    private func resumeVoicePreparations(_ preparations: [VoicePreparation]) {
+        for preparation in preparations where preparation.boxID == box.id {
+            resumeVoicePreparation(preparation, box: box)
+        }
+    }
+
+    private func resumeVoicePreparation(_ preparation: VoicePreparation, box: PairedBox) {
+        guard activeVoicePreparationIDs.insert(preparation.id).inserted else {
+            return
+        }
+        Task {
+            defer { activeVoicePreparationIDs.remove(preparation.id) }
+            let prepared = await prepareVoiceMessage(preparation, box: box)
+            do {
+                try await pendingStore.finishVoicePreparation(
+                    id: preparation.id,
+                    text: prepared.text,
+                    diarized: prepared.diarized
+                )
+            } catch {
+                if pendingStore.voicePreparations.contains(where: { $0.id == preparation.id }) {
+                    statusText = "Voice preparation is saved and will retry."
+                }
+            }
+        }
+    }
+
+    private func prepareVoiceMessage(
+        _ preparation: VoicePreparation,
+        box: PairedBox
     ) async -> (text: String, diarized: Bool) {
-        guard let audioURL else {
-            return (intent.processedTranscript, false)
+        guard let audioURL = await pendingStore.voiceAudioURL(for: preparation) else {
+            return (preparation.liveTranscript, false)
         }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
-            let processed = SpeechKeywords.detect(hqResult.text)?.processedTranscript
-                ?? SpeechKeywords.appendSendKeywordTag(
-                    to: hqResult.text,
-                    action: intent.action,
-                    matchedPhrase: intent.matchedPhrase
-                )
-            try? FileManager.default.removeItem(at: audioURL)
-            return (Self.joinTranscript(priorInput, processed), hqResult.diarized)
+            return (
+                VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
+                hqResult.diarized
+            )
         } catch {
-            await MainActor.run {
-                statusText = "HQ transcription failed; sending live dictation."
+            statusText = "HQ transcription failed; sending live dictation."
+            return (VoicePreparationResolver.text(for: preparation, hqTranscript: nil), false)
+        }
+    }
+
+    private func enqueueMessage(
+        text: String,
+        origin: NativeChatEmission.Origin,
+        diarized: Bool
+    ) {
+        let snapshot = draftStore.draft
+        let sendingBoxID = box.id
+        isPreparingSend = true
+        statusText = "Preparing attachments..."
+        Task {
+            do {
+                _ = try await pendingStore.enqueue(
+                    draft: snapshot,
+                    text: text,
+                    origin: origin,
+                    diarized: diarized,
+                    boxID: sendingBoxID
+                )
+                await draftStore.clearForSending(boxID: sendingBoxID)
+                dictation.resetDictationState()
+                selectedPhotoItems = []
+                focused = false
+                isPreparingSend = false
+                statusText = nil
+            } catch {
+                isPreparingSend = false
+                statusText = "An attachment could not be read."
             }
-            return (intent.processedTranscript, false)
         }
-    }
-
-    private static func joinTranscript(_ first: String, _ second: String) -> String {
-        let cleanFirst = first.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanSecond = second.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleanFirst.isEmpty {
-            return cleanSecond
-        }
-        if cleanSecond.isEmpty {
-            return cleanFirst
-        }
-        return "\(cleanFirst) \(cleanSecond)"
-    }
-
-    private func enqueuePreparedVoiceMessage(text preparedText: String, diarized: Bool) {
-        guard preparedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
-            statusText = "Nothing to send."
-            return
-        }
-        let emission = NativeChatEmission(text: preparedText, origin: .voice, diarized: diarized, images: images)
-        dictation.resetDictationState()
-        text = ""
-        images = []
-        selectedPhotoItems = []
-        UserDefaults.standard.removeObject(forKey: draftKey)
-        focused = false
-        lastSentEmission = emission
-        statusText = "Sending to chat..."
-        onSendEmission(emission)
     }
 
     private var isSending: Bool {
-        lastSentEmission != nil
+        isPreparingSend || draftStore.isReady == false
     }
 
     private var hasSendableContent: Bool {
-        hasTextContent || images.isEmpty == false
+        hasTextContent || draftStore.draft.images.isEmpty == false
     }
 
     private var hasTextContent: Bool {
@@ -344,55 +510,225 @@ struct NativeComposerView: View {
     }
 
     private var sendDisabled: Bool {
-        isSending || hasSendableContent == false
+        isSending || hasIncompleteImages || hasIncompleteFiles || hasSendableContent == false
     }
 
-    private var draftKey: String {
-        "draft.\(box.id.uuidString)"
+    private var hasIncompleteImages: Bool {
+        draftStore.draft.images.contains { image in
+            guard case .local = image.state else {
+                return true
+            }
+            return false
+        }
     }
 
-    private func loadDraft() {
-        guard text.isEmpty else {
+    private var hasIncompleteFiles: Bool {
+        draftStore.draft.files.contains { file in
+            guard case .uploaded = file.state else {
+                return true
+            }
+            return false
+        }
+    }
+
+    private var draftIsEmpty: Bool {
+        draftStore.draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && draftStore.draft.images.isEmpty
+            && draftStore.draft.files.isEmpty
+            && draftStore.draft.selections.isEmpty
+    }
+
+    private func retryPendingEmission(_ emission: PendingEmission) {
+        Task {
+            await pendingStore.retry(id: emission.id)
+        }
+    }
+
+    private func restorePendingEmission(_ emission: PendingEmission) {
+        guard draftIsEmpty else {
+            statusText = "Restore is available when the current draft is empty."
             return
         }
-        text = UserDefaults.standard.string(forKey: draftKey) ?? ""
+        Task {
+            guard let restored = await pendingStore.takeForRestore(id: emission.id) else {
+                return
+            }
+            await draftStore.restore(restored, boxID: emission.boxID)
+            statusText = nil
+        }
+    }
+
+    private func discardPendingEmission(_ emission: PendingEmission) {
+        Task {
+            await pendingStore.discard(id: emission.id)
+        }
+    }
+
+    private var text: String {
+        draftStore.draft.text
+    }
+
+    private var textBinding: Binding<String> {
+        Binding(
+            get: { draftStore.draft.text },
+            set: { draftStore.setText($0) }
+        )
+    }
+
+    private var selectionBinding: Binding<NSRangeValue> {
+        Binding(
+            get: { draftStore.draft.selection },
+            set: { draftStore.setSelection($0) }
+        )
     }
 
     private func loadPhotos(from items: [PhotosPickerItem]) async {
         guard items.isEmpty == false else {
             return
         }
-        var loaded = images
-        for item in items.prefix(max(0, 4 - loaded.count)) {
-            guard let data = try? await item.loadTransferable(type: Data.self) else {
+        for item in items {
+            guard let sourceData = try? await item.loadTransferable(type: Data.self) else {
                 continue
             }
-            let mimeType = item.supportedContentTypes.first { type in
-                type.conforms(to: .image) && type.preferredMIMEType != nil
-            }?.preferredMIMEType ?? "image/jpeg"
-            loaded.append(
-                ChatImageAttachment(
-                    id: loaded.count + 1,
-                    mimeType: mimeType,
-                    dataBase64: data.base64EncodedString()
-                )
-            )
+            let sourceMimeType = item.supportedContentTypes
+                .first(where: { $0.conforms(to: .image) })?.preferredMIMEType ?? "image/jpeg"
+            await appendImage(data: sourceData, sourceMimeType: sourceMimeType)
         }
-        images = Array(loaded.prefix(4))
         selectedPhotoItems = []
     }
 
-    private func removeImage(_ image: ChatImageAttachment) {
-        images.removeAll { $0.id == image.id }
-        images = images.enumerated().map { index, image in
-            ChatImageAttachment(id: index + 1, mimeType: image.mimeType, dataBase64: image.dataBase64)
-        }
+    private func dismissPresentedContentForLock() {
+        showingActions = false
+        showingPairing = false
+        showingCamera = false
+        showingCapture = false
+        showingFileImporter = false
+        detailedSelection = nil
+        focused = false
+        selectedPhotoItems = []
+        dictation.stop()
+        draftStore.setVoiceSelectionContext(transcript: "", active: false)
     }
 
     private func openCamera() {
         showingActions = false
         DispatchQueue.main.async {
             showingCamera = true
+        }
+    }
+
+    private func pasteImage() {
+        showingActions = false
+        if let pngData = UIPasteboard.general.data(forPasteboardType: UTType.png.identifier) {
+            Task {
+                await appendImage(data: pngData, sourceMimeType: "image/png")
+            }
+            return
+        }
+        guard let image = UIPasteboard.general.image else {
+            statusText = "The clipboard does not contain an image."
+            return
+        }
+        Task {
+            await appendCameraImage(image)
+        }
+    }
+
+    private func openFileImporter() {
+        showingActions = false
+        DispatchQueue.main.async {
+            showingFileImporter = true
+        }
+    }
+
+    private func takeScreenshot() {
+        showingActions = false
+        statusText = "Capturing visible chat..."
+        onTakeScreenshot()
+    }
+
+    private func importFiles(_ urls: [URL]) async {
+        for url in urls {
+            await importFile(url)
+        }
+    }
+
+    private func importFile(_ url: URL) async {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        do {
+            let values = try url.resourceValues(forKeys: [.contentTypeKey, .fileSizeKey])
+            let size = values.fileSize ?? 0
+            guard size <= ChatUploadLimits.maximumFileBytes else {
+                statusText = ChatAPI.ChatAPIError.fileTooLarge.localizedDescription
+                return
+            }
+            let name = url.lastPathComponent.isEmpty ? "attachment" : url.lastPathComponent
+            let mimeType = values.contentType?.preferredMIMEType ?? "application/octet-stream"
+            guard let file = await draftStore.addFile(
+                from: url,
+                originalName: name,
+                mimeType: mimeType,
+                size: size
+            ) else {
+                return
+            }
+            await uploadFile(file)
+        } catch {
+            statusText = "File could not be imported: \(error.localizedDescription)"
+        }
+    }
+
+    private func retryFile(_ file: DraftFile) {
+        Task {
+            await uploadFile(file)
+        }
+    }
+
+    private func uploadFile(_ file: DraftFile) async {
+        await draftStore.setFileState(id: file.id, state: .uploading(progress: 0), boxID: box.id)
+        guard let data = await draftStore.fileData(for: file, boxID: box.id) else {
+            await draftStore.setFileState(
+                id: file.id,
+                state: .failed(message: "Local file data is missing."),
+                boxID: box.id
+            )
+            return
+        }
+        do {
+            let uploaded = try await ChatAPI(box: box).uploadFile(
+                data: data,
+                filename: file.originalName,
+                mimeType: file.mimetype,
+                onProgress: { progress in
+                    Task {
+                        await draftStore.setFileProgress(id: file.id, progress: progress, boxID: box.id)
+                    }
+                }
+            )
+            await draftStore.markFileUploaded(id: file.id, upload: uploaded, boxID: box.id)
+        } catch {
+            await draftStore.setFileState(
+                id: file.id,
+                state: .failed(message: error.localizedDescription),
+                boxID: box.id
+            )
+        }
+    }
+
+    private func removeFile(_ file: DraftFile) {
+        Task {
+            await draftStore.removeFile(id: file.id)
+        }
+    }
+
+    private func removeSelection(_ selection: DraftSelection) {
+        Task {
+            await draftStore.removeSelection(id: selection.id)
         }
     }
 
@@ -409,80 +745,405 @@ struct NativeComposerView: View {
         onShareLocation()
     }
 
-    private func appendCameraImage(_ image: UIImage) {
-        guard images.count < 4, let data = CameraImageEncoder.jpegData(from: image) else {
+    private func appendCameraImage(_ image: UIImage) async {
+        guard let sourceData = image.jpegData(compressionQuality: 1) else {
+            statusText = "The camera image could not be prepared."
             return
         }
-        images.append(
-            ChatImageAttachment(
-                id: images.count + 1,
-                mimeType: "image/jpeg",
-                dataBase64: data.base64EncodedString()
+        await appendImage(data: sourceData, sourceMimeType: "image/jpeg")
+    }
+
+    private func appendImage(data: Data, sourceMimeType: String) async {
+        guard let image = await draftStore.beginImageImport(data: data, mimeType: sourceMimeType) else {
+            return
+        }
+        await processImage(image)
+    }
+
+    private func retryImage(_ image: DraftImage) {
+        Task {
+            await draftStore.setImageState(
+                id: image.id,
+                state: .uploading(progress: 0),
+                boxID: box.id
             )
+            await processImage(image)
+        }
+    }
+
+    private func processImage(_ image: DraftImage) async {
+        guard let sourceData = await draftStore.imageData(for: image, boxID: box.id) else {
+            await draftStore.failImageImport(
+                id: image.id,
+                message: "Local image data is missing.",
+                boxID: box.id
+            )
+            return
+        }
+        guard let encoded = ComposerImageEncoder.encode(data: sourceData, sourceMimeType: image.mimeType) else {
+            await draftStore.failImageImport(
+                id: image.id,
+                message: "The image could not be processed.",
+                boxID: box.id
+            )
+            return
+        }
+        await draftStore.completeImageImport(
+            id: image.id,
+            data: encoded.data,
+            mimeType: encoded.mimeType,
+            fileExtension: encoded.fileExtension,
+            boxID: box.id
         )
+    }
+}
+
+struct EncodedComposerImage {
+    var data: Data
+    var mimeType: String
+    var fileExtension: String
+}
+
+enum ComposerImageEncoder {
+    static let maximumDimension: CGFloat = 1_920
+
+    static func encode(data: Data, sourceMimeType: String) -> EncodedComposerImage? {
+        guard let image = UIImage(data: data) else {
+            return nil
+        }
+        return encode(image: image, sourceMimeType: sourceMimeType)
+    }
+
+    static func encode(image: UIImage, sourceMimeType: String) -> EncodedComposerImage? {
+        let longestSide = max(image.size.width, image.size.height)
+        let scale = longestSide > maximumDimension ? maximumDimension / longestSide : 1
+        let targetSize = CGSize(
+            width: max(1, round(image.size.width * scale)),
+            height: max(1, round(image.size.height * scale))
+        )
+        let preservesPNG = sourceMimeType.lowercased() == "image/png"
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = preservesPNG == false
+        let bounds = CGRect(origin: .zero, size: targetSize)
+        let normalized = UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+            if preservesPNG == false {
+                UIColor.white.setFill()
+                UIRectFill(bounds)
+            }
+            image.draw(in: bounds)
+        }
+        if preservesPNG, let data = normalized.pngData() {
+            return EncodedComposerImage(data: data, mimeType: "image/png", fileExtension: "png")
+        }
+        guard let data = normalized.jpegData(compressionQuality: 0.85) else {
+            return nil
+        }
+        return EncodedComposerImage(data: data, mimeType: "image/jpeg", fileExtension: "jpg")
     }
 }
 
 enum CameraImageEncoder {
     static func jpegData(from image: UIImage) -> Data? {
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = image.scale
-        format.opaque = true
-        let bounds = CGRect(origin: .zero, size: image.size)
-        let uprightImage = UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
-            UIColor.white.setFill()
-            UIRectFill(bounds)
-            image.draw(in: bounds)
-        }
-        return uprightImage.jpegData(compressionQuality: 0.85)
+        ComposerImageEncoder.encode(image: image, sourceMimeType: "image/jpeg")?.data
     }
 }
 
 private struct ImageAttachmentStrip: View {
-    var images: [ChatImageAttachment]
-    var onRemove: (ChatImageAttachment) -> Void
+    var images: [DraftImage]
+    @ObservedObject var draftStore: ComposerDraftStore
+    var onRetry: (DraftImage) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(images) { image in
-                    ZStack(alignment: .topTrailing) {
-                        thumbnail(for: image)
-                            .frame(width: 58, height: 58)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(.separator, lineWidth: 1)
+                    VStack(spacing: 3) {
+                        ZStack(alignment: .topTrailing) {
+                            DraftImageThumbnail(image: image, draftStore: draftStore)
+                                .frame(width: 58, height: 58)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(.separator, lineWidth: 1)
+                                }
+                            Button {
+                                Task {
+                                    await draftStore.removeImage(id: image.id)
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, .black.opacity(0.65))
                             }
-                        Button {
-                            onRemove(image)
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .symbolRenderingMode(.palette)
-                                .foregroundStyle(.white, .black.opacity(0.65))
+                            .frame(width: 44, height: 44, alignment: .topTrailing)
+                            .accessibilityLabel("Remove photo \(image.id)")
+                            if case .uploading = image.state {
+                                ProgressView()
+                                    .padding(5)
+                                    .background(.regularMaterial, in: Circle())
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                            } else if case .failed(let message) = image.state {
+                                Button {
+                                    onRetry(image)
+                                } label: {
+                                    Image(systemName: "arrow.clockwise.circle.fill")
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, .red)
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .accessibilityLabel("Retry photo \(image.id)")
+                                .accessibilityHint(message)
+                            }
                         }
-                        .offset(x: 5, y: -5)
-                        .accessibilityLabel("Remove photo")
+                        if case .failed = image.state {
+                            Text("Failed")
+                                .font(.caption2)
+                                .foregroundStyle(.red)
+                        }
                     }
                 }
             }
         }
     }
+}
 
-    @ViewBuilder
-    private func thumbnail(for image: ChatImageAttachment) -> some View {
-        if
-            let data = Data(base64Encoded: image.dataBase64),
-            let uiImage = UIImage(data: data)
-        {
-            Image(uiImage: uiImage)
-                .resizable()
-                .scaledToFill()
-        } else {
-            Image(systemName: "photo")
-                .font(.title2)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(.thinMaterial)
+private struct DraftImageThumbnail: View {
+    var image: DraftImage
+    @ObservedObject var draftStore: ComposerDraftStore
+    @State private var uiImage: UIImage?
+
+    var body: some View {
+        Group {
+            if let uiImage {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "photo")
+                    .font(.title2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.thinMaterial)
+            }
         }
+        .accessibilityLabel("Photo \(image.id)")
+        .accessibilityValue(accessibilityStatus)
+        .task(id: image.filename) {
+            guard let data = await draftStore.imageData(for: image) else {
+                return
+            }
+            uiImage = UIImage(data: data)
+        }
+    }
+
+    private var accessibilityStatus: String {
+        switch image.state {
+        case .local:
+            "Ready"
+        case .uploading(let progress):
+            "Processing \(Int(progress * 100)) percent"
+        case .uploaded:
+            "Uploaded"
+        case .failed(let message):
+            "Failed: \(message)"
+        }
+    }
+}
+
+private struct FileAttachmentList: View {
+    var files: [DraftFile]
+    var onRetry: (DraftFile) -> Void
+    var onRemove: (DraftFile) -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(files) { file in
+                HStack(spacing: 10) {
+                    Image(systemName: "doc")
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(file.originalName)
+                            .font(.subheadline)
+                            .lineLimit(1)
+                        Text(status(for: file))
+                            .font(.caption)
+                            .foregroundStyle(statusColor(for: file))
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                    if case .uploading(let progress) = file.state {
+                        ProgressView(value: progress)
+                            .frame(width: 54)
+                    } else if canRetry(file) {
+                        Button("Retry") {
+                            onRetry(file)
+                        }
+                        .font(.caption)
+                        .frame(minWidth: 44, minHeight: 44)
+                    }
+                    Button {
+                        onRemove(file)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .frame(width: 44, height: 44)
+                    .accessibilityLabel("Remove \(file.originalName)")
+                }
+                .padding(10)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+
+    private func status(for file: DraftFile) -> String {
+        switch file.state {
+        case .local:
+            "Waiting to upload"
+        case .uploading(let progress):
+            "Uploading \(Int(progress * 100))%"
+        case .uploaded:
+            ByteCountFormatter.string(fromByteCount: Int64(file.size), countStyle: .file)
+        case .failed(let message):
+            message
+        }
+    }
+
+    private func statusColor(for file: DraftFile) -> Color {
+        if case .failed = file.state {
+            return .red
+        }
+        return .secondary
+    }
+
+    private func canRetry(_ file: DraftFile) -> Bool {
+        switch file.state {
+        case .local, .failed:
+            true
+        case .uploading, .uploaded:
+            false
+        }
+    }
+}
+
+private struct PendingEmissionList: View {
+    var emissions: [PendingEmission]
+    var voicePreparations: [VoicePreparation]
+    var canRestore: Bool
+    var onRetry: (PendingEmission) -> Void
+    var onRestore: (PendingEmission) -> Void
+    var onDiscard: (PendingEmission) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(voicePreparations) { _ in
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Improving voice transcription…")
+                        .font(.caption)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            ForEach(emissions) { emission in
+                switch emission.state {
+                case .awaitingWebView, .awaitingReceipt:
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Sending message…")
+                            .font(.caption)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                case .rejected(let reason):
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(reason, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                        HStack(spacing: 12) {
+                            Button("Retry") { onRetry(emission) }
+                                .frame(minHeight: 44)
+                            Button("Restore") { onRestore(emission) }
+                                .disabled(canRestore == false)
+                                .frame(minHeight: 44)
+                            Button("Discard", role: .destructive) { onDiscard(emission) }
+                                .frame(minHeight: 44)
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                }
+            }
+        }
+        .padding(10)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private struct SelectionAttachmentList: View {
+    var selections: [DraftSelection]
+    var onOpen: (DraftSelection) -> Void
+    var onRemove: (DraftSelection) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(selections) { selection in
+                    HStack(spacing: 6) {
+                        Button {
+                            onOpen(selection)
+                        } label: {
+                            Label(selection.ref, systemImage: "text.quote")
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(minHeight: 44)
+                        .accessibilityLabel("Show selection from \(selection.ref)")
+                        Button {
+                            onRemove(selection)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: 44, height: 44)
+                        .accessibilityLabel("Remove selection from \(selection.ref)")
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(.quaternary, in: Capsule())
+                }
+            }
+        }
+    }
+}
+
+private struct SelectionDetailView: View {
+    var selection: DraftSelection
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Source") {
+                    Text(selection.ref)
+                    Text(selection.position)
+                        .foregroundStyle(.secondary)
+                }
+                Section("Selected text") {
+                    Text(selection.text)
+                        .textSelection(.enabled)
+                }
+            }
+            .navigationTitle("Selection")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }

@@ -9,21 +9,67 @@ plane's complete semantics. The implementation-ready design is
 [`ios-input-plane-parity.md`](../../callback-box/docs/plans/ios-input-plane-parity.md).
 This issue is the cold-start handoff for the next implementation session.
 
+## Implementation progress
+
+- Track 1 contract foundation is complete: iOS emits `NativeEmissionV2`; the
+  web strictly validates complete V2 images, files, and selections while
+  retaining documented legacy leniency; unknown versions produce a
+  version-specific rejection; and TypeScript/XCTest consume shared emission
+  and `NativeComposerCommand` fixtures.
+- Track 4 is complete: companion selections post strict versioned commands to
+  native, durable command IDs make retries idempotent across relaunch, and the
+  web receives an accepted/rejected acknowledgement only after persistence.
+  Native renders removable detail chips, emits the full selection, inserts
+  typed tokens, and snapshots voice anchors during active dictation.
+- Track 2's first chunk is complete: `ComposerDraftStore` owns box-scoped text;
+  `ComposerDraftRepository` writes atomic manifests and quarantines corrupt or
+  future data; legacy `UserDefaults` text migrates once; backgrounding flushes;
+  and XCTest covers restore, independent box switching, token removal,
+  monotonic IDs, and UTF-16/composed-character caret behavior.
+- Track 3's first chunk is complete: the native editor is a caret-aware,
+  autosizing `UITextView`; camera and Photos acquisitions are normalized into
+  file-backed `DraftImage` values; stable `[imageN]` tokens follow the saved
+  selection; removal does not renumber surviving images; base64 is created
+  only while snapshotting an emission; and the four-image cap is gone. XCTest
+  covers payload persistence, relaunch, stable IDs, cleanup, and filename
+  traversal rejection.
+- Track 3's acquisition chunk is complete: Files picker URLs are copied while
+  security scope is held, the existing authenticated `/api/chat/upload-file`
+  route is used with its canonical response and named 50 MiB limit, file
+  upload/failure/retry state is durable, and uploaded file metadata reaches V2
+  emissions. Paste Image and Screenshot both enter the normalized 1920-pixel
+  durable image pipeline.
+- Track 3 hardening is complete: URLSession byte progress is reflected in the
+  durable file state, source image bytes are saved before processing, failed or
+  interrupted image processing exposes Retry/Remove, and neither processing
+  images nor incomplete files can be sent. Physical-device acquisition checks
+  remain part of Track 6 acceptance.
+- Track 5's pending-send half is complete: `PendingEmissionStore` persists an
+  ordered box-scoped queue before webview delivery, replays stable emission IDs
+  after relaunch/navigation, handles out-of-order receipts, and keeps rejected
+  messages separate from the current draft with Retry / Restore / Discard.
+  Composition resumes as soon as local enqueue succeeds.
+- Track 5 is complete. `VoiceCompositionState` makes permission, recording,
+  editable, HQ preparation, and failure transitions explicit. Keyword sends
+  persist a stable-ID draft/audio snapshot before clearing; relaunch resumes
+  HQ work, HQ failure sends the preserved live transcript, audio interruption
+  leaves editable text, and later drafts/sends cannot clobber or pass the
+  earlier preparation.
+- Track 6 has a DEBUG fixture host for all thirteen planned states plus a
+  repeatable screenshot script. Portrait sweeps passed on current and compact
+  iPhones and iPad across light/dark and large accessibility text, including
+  the software keyboard. The sweep fixed attachment-context overflow and long
+  transcript width expansion, and added 44-point recovery controls plus named
+  VoiceOver actions. Draft activation is generation-safe, disables composition
+  until restore completes, and covers selections arriving before startup
+  activation. Landscape and real-phone acceptance remain.
+
 ## Current mismatch
 
-- Native bridge payloads carry text, images, origin, and diarization, but web
-  `Emission` also carries uploaded files and companion-pane selections.
-- iOS persists only text; image data, attachment work, voice preparation, and
-  unacknowledged emissions can be lost on termination or box switching.
-- `NativeComposerView` permits only one pending emission and disables the whole
-  input plane until its receipt arrives.
-- A rejection restores directly into the visible native fields, which can
-  overwrite a newer draft once continued composition is allowed.
-- Companion selections currently mutate the hidden web draft rather than the
-  native draft that the user sees and sends.
-- Regular iOS composition has no arbitrary-file, image-paste, or screenshot
-  acquisition path and no caret-aware `[imageN]`, `[fileN]`, or `[selectionN]`
-  token handling.
+- The complete native bridge payload now carries files and selections, and
+  unacknowledged emissions are durable across termination and box switching.
+- Integrated visual states, accessibility coverage, simulator screenshots, and
+  the real-phone acceptance matrix remain in Track 6.
 
 The web `TargetStrip` already remains visible when `nativeComposer=1`; do not
 duplicate target busy/queue/interrupt controls in Swift. Native owns the draft,
@@ -34,9 +80,10 @@ target state, final message assembly, and dispatch.
 
 1. Create an implementation worktree and read, in order:
    `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
-   plan. The plan is complete; implementation starts with Track 1 rather than
-   writing another design.
-2. Implement all six tracks in dependency order. Commit-sized chunks are
+   plan. The design is complete; resume from the progress recorded above rather
+   than writing another plan.
+2. Track 5's pending-send and voice state machines are complete. Continue with
+   Track 6. The completed commit-sized chunks are
    identified in each track, but they are not shipping milestones:
    full V2 emission/selection-command contract; durable native draft; native
    editor and attachments; companion selections; pending-send/voice state;

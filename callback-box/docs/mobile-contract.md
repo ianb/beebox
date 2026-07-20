@@ -203,7 +203,7 @@ authenticated-but-unattributed behavior.
 
 ### 3.3 Script-message channels (web → native)
 
-Three channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
+Four channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
 `userContentController`; the transport is platform glue (§10), the channel names and payloads are
 the contract.
 
@@ -212,8 +212,9 @@ the contract.
 | `callbackboxSession` | `window.location.href` (string) | `Coordinator.userContentController` → `onSessionChange(visibleSessionID)` |
 | `callbackboxEmissionReceipt` | `Receipt` object (§4.2) | → `receiveEmissionReceipt` |
 | `callbackboxLocationResult` | `{ id, success, message }` | → `receiveLocationResult` |
+| `callbackboxComposerCommand` | V1 composer command (§4.4) | → `receiveComposerCommand` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all three).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all four).
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
@@ -240,15 +241,19 @@ the contract.
 
 ---
 
-## 4. Bridge channels — native emission & location
+## 4. Bridge channels — emission, location, and composer mutation
 
 ### 4.1 Emission (native → web)
 
-- **Wire shape** (native → `window.callbackboxNativeReceive(<json>)`):
+- **Canonical V2 wire shape** (native → `window.callbackboxNativeReceive(<json>)`):
   ```json
-  { "id": "<UUID string>", "text": "<string>", "origin": "typed"|"voice",
-    "diarized": <bool>,
-    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ] }
+  { "version": 2, "id": "<UUID string>", "text": "<string>",
+    "origin": "typed"|"voice", "diarized": <bool>,
+    "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
+    "files": [ { "id": <int>, "path": "<tmp/...>", "originalName": "<string>",
+      "size": <number>, "mimetype": "<string>" } ],
+    "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
+      "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
   ```
 - **Transport globals + event (native-authored startup script):**
   `window.callbackboxNativeReceive(detail)` pushes onto `window.callbackboxNativeQueue` and
@@ -258,28 +263,29 @@ the contract.
   `callbackboxNativeQueue` on mount + each event → `handleNativeEmission` →
   `nativeEmissionFromDetail` (`native-emission.ts`) → `createTypedEmission`/`createVoiceEmission`
   (native `id` preserved via `withNativeId`) → dispatched to `/chat/send`.
-- **Image parse:** `native-emission.ts` — `parseNativeImages` drops any element missing
-  `{ id: number, mimeType: string, dataBase64: string }`.
-- **Parser leniency (intentional — a boundary-tolerant consumer):** `native-emission.ts`
-  · `nativeEmissionFromDetail` is deliberately **lenient**, not strict: a missing/invalid `id`
+- **Legacy image parse:** malformed image entries are dropped individually; V2 rejects the whole
+  payload when any image is malformed.
+- **V2 validation:** `native-emission.ts` · `parseNativeEmissionDetail` requires every V2 field
+  and rejects the whole payload when an image, file, or selection is malformed. Unknown versions
+  reject with a reason naming that version. File metadata is retained on the `Emission` value even
+  though current chat assembly needs only `id` and `path`.
+- **Legacy compatibility (intentional boundary leniency):** a payload with no `version` keeps the
+  shipped decoder policy: a missing/invalid `id`
   is replaced with a generated emission id (`withNativeId` keeps the native id only when it is a
   non-empty string); an unknown/absent `origin` coerces to `"typed"`; `diarized` is `true` only for
   a literal `true`, else `false`; malformed `images` entries are dropped **individually**; and a
   synthetic rejection (a `null` parse) occurs **only when neither text nor any valid image
-  survives**. This is the current intentional behavior. Fixtures (`docs/implemented-plans/mobile-parity-sync.md`)
-  must encode these **lenient** outcomes, not an imagined strict contract.
-- **Open question (boxholder):** should this parser be hardened to reject malformed native payloads
-  loudly rather than coercing them? The house bias is strict, but changing it alters shipped iOS
-  behavior, so it stays open.
-- **Field mapping:** web `Emission { id, origin, text, images, files, selections, diarized }`; native
-  supplies only `text`/`origin`/`diarized`/`images` — `files`/`selections` are always empty for native.
+  survives**. Fixtures (`docs/implemented-plans/mobile-parity-sync.md`) pin both policies separately.
+- **Field mapping:** V2 is a complete projection of web
+  `Emission { id, origin, text, images, files, selections, diarized }`. Legacy payloads produce
+  empty `files` and `selections`.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native payload | `ios-app/CallbackBox/Views/ChatWebView.swift` — `NativeEmissionPayload { id, text, origin, diarized, images }`, `NativeChatEmission`; `ios-app/CallbackBox/Models/ChatImageAttachment.swift` — `{ id: Int, mimeType, dataBase64 }` |
-  | web parse | `src/frontend/src/components/chat/native-emission.ts` — `nativeEmissionFromDetail`, `parseNativeImages`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
-- **Drift:** SILENT (leniency coerces or drops malformed fields; only a payload with no usable text
-  and no valid image parses to `null` → a synthetic `rejected` receipt).
+  | native payload | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/CallbackBox/Views/ChatWebView.swift` — `NativeChatEmission` |
+  | web parse | `src/frontend/src/components/chat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
+- **Drift:** LOUD for V2 (a rejected receipt carries the validation reason); legacy coercion remains
+  SILENT except when no usable text or image survives.
 
 ### 4.2 Emission receipt (web → native)
 
@@ -319,11 +325,43 @@ the contract.
   | web handle | `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeLocationBridge`, `handleNativeLocationRequest` (→ `captureAndStore(boxSlug, Date.now())`), `postNativeLocationResult`, `drainNativeLocationQueue` |
 - **Drift:** request → SILENT→LOUD (15s native timeout); result → LOUD (status message shown).
 
+### 4.4 Companion selection command (web → native) + durability acknowledgement
+
+- **Command wire shape** (web posts on `callbackboxComposerCommand`):
+  ```json
+  { "version": 1, "id": "<UUID string>", "kind": "add-selection",
+    "selection": { "ref": "<card path>", "text": "<selected text>",
+      "position": "<source position>" } }
+  ```
+  V1 is strict: every field is required and `kind` has only `add-selection`.
+- **Acknowledgement wire shape** (native → web): accepted is
+  `{ "version":1, "id":"<same id>", "accepted":true }`; rejected is
+  `{ "version":1, "id":"<same id>", "accepted":false, "reason":"<user-visible reason>" }`.
+  Rejection without a non-empty `reason` is malformed.
+- **Transport globals + event:** `window.callbackboxNativeComposerCommandAck(detail)` pushes the
+  acknowledgement onto `window.callbackboxNativeComposerCommandAckQueue` and dispatches
+  `CustomEvent('callbackbox:native-composer-command-ack', { detail })`. The queue is authoritative;
+  the event is a wake signal.
+- **Durability and dedup:** native acknowledges acceptance only after the box-scoped draft manifest
+  is saved. It persists a bounded history of processed command IDs, so retrying before or after app
+  relaunch returns accepted without adding a second selection or inline token. Rejection leaves the
+  draft unchanged. Web waits 15s, then shows a dismissible error and lets the user add again.
+- **Composition semantics:** typed companion selections have `anchor:null` and `spokenWords:null`,
+  so native inserts `[selectionN]` at the current UTF-16 caret. During active native dictation,
+  native instead snapshots the last eight recognized words and total spoken-word count as
+  `anchor`/`spokenWords` and does not insert an inline token. Both forms reach Emission V2.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | web command + ack | `src/frontend/src/components/chat/native-composer-command.ts`; `use-native-composer-commands.ts`; `use-companion-selection.ts`; `InteractiveChat-view.tsx` |
+  | native decode + durable mutation | `ios-app/CallbackBox/Models/NativeComposerContract.swift` — `NativeComposerCommand`, `NativeComposerCommandAcknowledgement`; `Storage/ComposerDraftStore.swift` — `applySelectionCommand`; `Views/ChatWebView.swift` — `receiveComposerCommand` |
+- **Drift:** LOUD (native rejection or web 15s timeout is user-visible).
+
 ---
 
 ## 5. Direct HTTP calls from native code
 
-Only three endpoints are hit by native code. (`/chat/send` is called by the **web layer inside the
+Only four endpoints are hit by native code. (`/chat/send` is called by the **web layer inside the
 webview**, not natively — §6.)
 
 ### 5.1 `POST /api/pairing/redeem`
@@ -358,7 +396,23 @@ See §1.3 (full request/response/errors).
 - **Drift:** SILENT (on any non-2xx `resolvedSession` returns `"new"` — a transient 5xx silently
   forks a new session).
 
-### 5.4 (web layer, for completeness) `POST /api/chat/send`
+### 5.4 `POST /api/chat/upload-file` — composer file upload
+
+- **Direction:** native → box.
+- **Request:** `POST`; `Content-Type: multipart/form-data`; `User-Agent: CallbackBox-iOS/0.1`;
+  `Authorization: Bearer <token>`. One file field named `file` with the original filename and MIME
+  type. Native reports `URLSession` byte progress while uploading.
+- **Response 200:** `{ path: string, originalName: string, size: number, mimetype: string }`; `path`
+  points under the box's `tmp/` directory and becomes the Emission V2 file `path`.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | native caller | `ios-app/CallbackBox/Services/ChatAPI.swift` — `uploadFile`, `uploadFileRequest` |
+  | box handler | `src/webapp/routes/chat-uploads.ts` — `registerChatUploadRoutes` |
+- **Drift:** LOUD (non-2xx, malformed metadata, interruption, and timeout produce retryable native
+  attachment failure; incomplete files block send).
+
+### 5.5 (web layer, for completeness) `POST /api/chat/send`
 
 - **Direction:** the webview's own JS → box, on every native emission (§4.1).
 - **Request:** `{ "Content-Type": "application/json", ...mobileAuthHeaders() }`; body
@@ -390,7 +444,7 @@ query-param-driven — there is **no user-agent gating** anywhere.
 | `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify | mobile box list / per-box authorization for standalone server |
 | `src/core/mobile/pairing.ts` (whole module) | device store, tokens | source of truth |
 
-- **`User-Agent: CallbackBox-iOS/0.1`** is sent on all three native HTTP calls but the server never
+- **`User-Agent: CallbackBox-iOS/0.1`** is sent on all four native HTTP calls but the server never
   branches on it — informational / for logs only.
 
 ---
@@ -412,13 +466,16 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `callbackboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | `{id,text,origin,diarized,images:[{id,mimeType,dataBase64}]}` via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Views/ChatWebView.swift` · `NativeEmissionPayload`; `Models/ChatImageAttachment.swift` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` | SILENT |
+| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `callbackboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location request | native→web | `callbackboxNativeShareLocation("<uuid>")`, queue `callbackboxNativeLocationQueue`, event `callbackbox:native-share-location`, detail `{id}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location result | web→native | `{id,success,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
+| B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
+| B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `callbackboxNativeComposerCommandAck`, queue + `callbackbox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD / SILENT if float-WAV mis-decoded — **I8** |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
+| H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 
 ---
@@ -436,21 +493,26 @@ without the other is a contract break.
   therefore box-internal, which is the point — it keeps the credential out of client code.
 - **Webview param** `nativeComposer=1` — `Models/PairedBox.swift` · `chatURL` (with in-code sync
   comment) ↔ `pages/ChatPage.tsx` / `router.tsx`.
-- **Emission JSON keys** `{id,text,origin,diarized,images:[{id,mimeType,dataBase64}]}` —
-  `Views/ChatWebView.swift` · `NativeEmissionPayload` / `Models/ChatImageAttachment.swift` ↔
-  `native-emission.ts` (`nativeEmissionFromDetail`, `parseNativeImages`).
+- **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}` —
+  `Models/NativeComposerContract.swift` · `NativeEmissionV2` ↔
+  `native-emission.ts` · `NativeEmissionV2` / `parseNativeEmissionDetail`.
 - **Receipt shape** `{disposition,emissionId,reason?,deduplicated?}`, dispositions
   `sent|queued|rejected` — `Views/ChatWebView.swift` · `NativeEmissionReceipt.Disposition` ↔
   `input/targets/receipts.ts` · `Receipt`.
 - **Location result** `{id,success,message}` — `Views/ChatWebView.swift` · `receiveLocationResult`
   ↔ `use-native-bridge.ts` · `postNativeLocationResult`.
+- **Composer command V1** `{version,id,kind,selection:{ref,text,position}}` and acknowledgement V1
+  `{version,id,accepted,reason?}` — `Models/NativeComposerContract.swift` ↔
+  `native-composer-command.ts`.
 - **Bridge globals** `callbackboxNativeReceive` / `callbackboxNativeQueue` /
-  `callbackboxNativeShareLocation` / `callbackboxNativeLocationQueue` and events
-  `callbackbox:native-emission` / `callbackbox:native-share-location` — native-authored startup
-  script in `Views/ChatWebView.swift` ↔ `use-native-bridge.ts`.
+  `callbackboxNativeShareLocation` / `callbackboxNativeLocationQueue` /
+  `callbackboxNativeComposerCommandAck` / `callbackboxNativeComposerCommandAckQueue` and events
+  `callbackbox:native-emission` / `callbackbox:native-share-location` /
+  `callbackbox:native-composer-command-ack` — native-authored startup script in
+  `Views/ChatWebView.swift` ↔ `use-native-bridge.ts` / `use-native-composer-commands.ts`.
 - **Script-message channel names** `callbackboxSession` / `callbackboxEmissionReceipt` /
-  `callbackboxLocationResult` — `Views/ChatWebView.swift` (`userContentController.add`) ↔
-  `native-post.ts` · `NativeShellChannel`.
+  `callbackboxLocationResult` / `callbackboxComposerCommand` — `Views/ChatWebView.swift`
+  (`userContentController.add`) ↔ `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
@@ -545,6 +607,9 @@ when `android-app/` exists — add them alongside their iOS counterparts at that
 callback-box/src/frontend/src/components/chat/native-post.ts
 callback-box/src/frontend/src/components/chat/use-native-bridge.ts
 callback-box/src/frontend/src/components/chat/native-emission.ts
+callback-box/src/frontend/src/components/chat/native-composer-command.ts
+callback-box/src/frontend/src/components/chat/use-native-composer-commands.ts
+callback-box/src/frontend/src/components/chat/use-companion-selection.ts
 callback-box/src/frontend/src/lib/mobile-auth.ts
 callback-box/src/frontend/src/input/targets/receipts.ts
 
@@ -555,9 +620,13 @@ callback-box/src/core/mobile/request-auth.ts
 callback-box/src/webapp/mobile-cookie.ts
 callback-box/src/webapp/routes/pairing.ts
 callback-box/src/webapp/routes/chat-audio-routes.ts
+callback-box/src/webapp/routes/chat-uploads.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/CallbackBox/Views/ChatWebView.swift
+ios-app/CallbackBox/Models/NativeComposerContract.swift
+ios-app/CallbackBox/Storage/ComposerDraftStore.swift
+ios-app/CallbackBox/Services/ChatAPI.swift
 ios-app/CallbackBox/Models/PairedBox.swift
 ios-app/CallbackBox/Storage/PairedBoxStore.swift
 

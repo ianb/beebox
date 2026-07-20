@@ -27,7 +27,8 @@ shapes.
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { nativeEmissionFromDetail } from "../../src/frontend/src/components/chat/native-emission.js";
+import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../src/frontend/src/components/chat/native-emission.js";
+import { nativeComposerCommandAcknowledgementFromDetail, nativeComposerCommandFromDetail } from "../../src/frontend/src/components/chat/native-composer-command.js";
 import { detectKeyword, appendSendKeywordTag } from "../../src/frontend/src/lib/audio/speech-keywords.js";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -76,6 +77,13 @@ function runFamily(family, validate) {
 ```ts setup
 // ── emission: the web decoder, documented-lenient (contract §4.1) ──
 function validateEmission(fx) {
+  const parsed = parseNativeEmissionDetail(fx.input);
+  if (fx.expectedReason !== undefined) {
+    if (parsed.ok) return { ok: false, detail: `expected rejection, got ${JSON.stringify(parsed.emission)}` };
+    if (parsed.reason !== fx.expectedReason) {
+      return { ok: false, detail: `expected reason ${JSON.stringify(fx.expectedReason)}, got ${JSON.stringify(parsed.reason)}` };
+    }
+  }
   const out = nativeEmissionFromDetail(fx.input);
   if (fx.expected === null) {
     return out === null ? { ok: true } : { ok: false, detail: `expected null, got ${JSON.stringify(out)}` };
@@ -90,6 +98,22 @@ function validateEmission(fx) {
       : { ok: false, detail: `got ${JSON.stringify(out)}` };
   }
   return deepEqual(out, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(out)}` };
+}
+
+// ── composer-command: strict web→native add-selection command ──
+function validateComposerCommand(fx) {
+  const out = nativeComposerCommandFromDetail(fx.input);
+  return deepEqual(out, fx.expected)
+    ? { ok: true }
+    : { ok: false, detail: `got ${JSON.stringify(out)}` };
+}
+
+// ── composer-command-ack: strict native→web mutation result ──
+function validateComposerCommandAcknowledgement(fx) {
+  const out = nativeComposerCommandAcknowledgementFromDetail(fx.input);
+  return deepEqual(out, fx.expected)
+    ? { ok: true }
+    : { ok: false, detail: `got ${JSON.stringify(out)}` };
 }
 
 // ── receipt: the web-encoded Receipt; native decode drops `deduplicated` ──
@@ -221,14 +245,30 @@ function validateSpeechKeyword(fx) {
 
 ## emission
 
-The native-emission decoder is deliberately lenient: whitespace-trimmed text,
-individually-dropped malformed images, unknown `origin` coerced to `"typed"`, a
-generated emission id when the native id is missing, and a `null` parse only when
-neither text nor any valid image survives.
+V2 is strict: every complete-emission field is required, a malformed item
+rejects the whole payload, and an unknown version gets a version-specific
+reason. Payloads without `version` retain the documented legacy leniency.
 
 ```ts
 runFamily("emission", validateEmission)
-=> {"family":"emission","cases":6,"pass":6}
+=> {"family":"emission","cases":9,"pass":9}
+```
+
+## composer-command
+
+The web-to-native selection command uses one versioned, strict shape.
+
+```ts
+runFamily("composer-command", validateComposerCommand)
+=> {"family":"composer-command","cases":3,"pass":3}
+```
+
+The acknowledgement is emitted only after the native draft mutation is
+durable; rejection always carries a user-visible reason.
+
+```ts
+runFamily("composer-command-ack", validateComposerCommandAcknowledgement)
+=> {"family":"composer-command-ack","cases":3,"pass":3}
 ```
 
 ## receipt

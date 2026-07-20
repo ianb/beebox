@@ -6,12 +6,10 @@
  * wires them into the layout regions.
  */
 
-import { useRef, useCallback, useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import { MessageList } from "./InteractiveChat-messages";
 import { ChatContextDirProvider } from "./chat-context-dir";
-import { lastWords, countWords } from "../../lib/selection/serialize";
-import type { AddSelectionInput } from "../../lib/selection/position";
 import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
@@ -32,6 +30,7 @@ import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { CaptureBubbleModel } from "./capture-bubble";
+import { useCompanionSelection } from "./use-companion-selection";
 
 interface ChatBodyProps {
   tabs: ReturnType<typeof useChatTabs>;
@@ -263,26 +262,11 @@ function ComposerRegion(props: ChatBodyProps) {
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
-  // Capture the live transcript phrase at grab-time so voice selections get a
-  // positional anchor. Refs keep the handler identity stable while reading the
-  // latest values at click time. Typed selections (not transcribing) pass a
-  // null anchor → inline token instead.
-  const transcriptRef = useRef("");
-  const transcribingRef = useRef(false);
-  useEffect(() => {
-    transcriptRef.current = voice.transcription.transcript;
-    transcribingRef.current = voice.isTranscribing;
-  });
-  const handleAddSelection = useCallback((selection: AddSelectionInput) => {
-    if (!transcribingRef.current) {
-      selections.addSelection(selection, { anchor: null, spokenWords: null });
-      return;
-    }
-    // Voice grab: capture the anchor phrase and how far into the utterance we
-    // are (word count ≈ time), so a lost anchor still places by rough timing.
-    const transcript = transcriptRef.current;
-    selections.addSelection(selection, { anchor: lastWords(transcript, 8), spokenWords: countWords(transcript) });
-  }, [selections]);
+  const {
+    handleAddSelection,
+    nativeCommandError,
+    dismissNativeCommandError,
+  } = useCompanionSelection({ nativeComposer, selections, voice });
   return (
     <ChatView
       hasCompanion={Boolean(activeView)}
@@ -315,11 +299,15 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           <BackgroundTasks tasks={props.backgroundTasks} />
           <ScreenshotRequestUI controller={props.screenshots} />
           <ChatStatusBanners
-            error={error}
+            error={nativeCommandError ?? error}
             transcriptionError={voice.transcription.error}
             onDismissError={() => {
-              send({ type: "DISMISS_ERROR" });
-              voice.transcription.dismissError();
+              if (nativeCommandError !== null) {
+                dismissNativeCommandError();
+              } else {
+                send({ type: "DISMISS_ERROR" });
+                voice.transcription.dismissError();
+              }
             }}
             activeSchedules={schedules.activeSchedules}
             onCancelSchedule={schedules.handleCancelSchedule}

@@ -1,0 +1,12 @@
+{
+  "input": {
+    "version": 1,
+    "id": "selection-command-1",
+    "accepted": true
+  },
+  "expected": {
+    "version": 1,
+    "id": "selection-command-1",
+    "accepted": true
+  }
+}

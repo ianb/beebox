@@ -31,6 +31,7 @@ app exists.
 | External links → system browser | done (Safari hand-off) | planned (Track 1, Custom Tabs) |
 | Shared golden-fixture contract tests | done (`docs/implemented-plans/mobile-parity-sync.md` step 3 — TS doctest + iOS `MobileContractFixtureDecodeTests`/`SpeechKeywordsTests`) | planned (Track 6) |
 | Headless CI build + unit tests | n/a — needs macOS/Xcode | planned (Track 6 / open question; Linux-friendly) |
+| Per-box local device lock | done (`docs/implemented-plans/ios-per-box-device-lock.md`; physical-device acceptance remains) | planned (`issues/features/2026-07-20-android-per-box-device-lock-parity.md`) |
 | Capture mode | planned (`docs/plans/ios-native-capture-mode.md`) | not planned until iOS capture ships |
 | Push notifications | not planned (no APNs channel server-side) | not planned (no FCM channel server-side) |
 | Share-sheet intake | not planned yet (umbrella plan Track E) | not planned |
