@@ -36,6 +36,42 @@ export function rewriteOpenUrl(url: string, ctx: WorktreeContext): string {
   return url;
 }
 
+/**
+ * The box agent-token (`.callback-box/agent-token`, 0600 — see
+ * callback-box's `src/core/agent/token.ts`), when `bin/browse` found one
+ * for this worktree's box and exported it as `BROWSE_AGENT_TOKEN`. Auth is
+ * on by default in dev, and the box's per-request auth preHandler already
+ * accepts this bearer as box-scoped authentication
+ * (`server-box-scope.ts` `verifyAgentBearer`) for every in-box request,
+ * page navigations included.
+ */
+function agentToken(): string | undefined {
+  const token = process.env["BROWSE_AGENT_TOKEN"];
+  return token !== undefined && token !== "" ? token : undefined;
+}
+
+/**
+ * `true` when `url` (already run through `rewriteOpenUrl`) targets this
+ * worktree's own dev origin. Guards the bearer injection below so the
+ * token — which authenticates as this box — never rides along to an
+ * unrelated host a browse invocation happens to navigate to.
+ */
+export function isOwnOrigin(url: string, ctx: WorktreeContext): boolean {
+  return url === ctx.routerBase || url.startsWith(`${ctx.routerBase}/`) || url.startsWith(`${ctx.routerBase}?`);
+}
+
+/**
+ * The `Authorization` header to attach for `url`, or `null` when there's
+ * no token to inject (no agent-token file yet — not every target needs
+ * auth) or `url` isn't this worktree's own origin. Callers pass the result
+ * straight to agent-browser's origin-scoped `open <url> --headers <json>`.
+ */
+export function authHeaderFor(url: string, ctx: WorktreeContext): Record<string, string> | null {
+  const token = agentToken();
+  if (token === undefined || !isOwnOrigin(url, ctx)) return null;
+  return { Authorization: `Bearer ${token}` };
+}
+
 export class BrowseConfigError extends Error {
   constructor(message: string) {
     super(message);

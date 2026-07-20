@@ -80,10 +80,11 @@ request with the box's agent bearer gets through the wall (and then fails
 route validation — proof it reached the handler).
 
 ```ts
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id";
-// registerAuthRoutes fails loudly on an ID-without-secret half-config
-// (MissingOAuthClientSecretError), so the fake credentials must be a pair.
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
+// Auth is always-on by default; the test-server helper opts OUT
+// (CB_ALLOW_UNAUTHENTICATED=1) so most route tests run open. Drop the opt-out
+// here to exercise the wall — this is the new toggle that used to be
+// "set GOOGLE_OAUTH_CLIENT_ID".
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
 const ctx = await makeTestServer();
 const anon = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload: {} });
 print(`anonymous: ${anon.statusCode} ${anon.body.error}`);
@@ -109,7 +110,6 @@ last-audio with bearer: 504 no-client
 ```
 
 ```ts cleanup
-delete process.env.GOOGLE_OAUTH_CLIENT_ID;
-delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 await ctx.cleanup();
 ```

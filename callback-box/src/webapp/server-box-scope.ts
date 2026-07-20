@@ -22,7 +22,7 @@ import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
 import {
-  isAuthEnabled,
+  authRequired,
   isHubMode,
   resolveRequestIdentity,
   getOwnerEmail,
@@ -36,7 +36,8 @@ import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
-import { invariant } from "../lib/invariant.js";
+import { assertNever, invariant } from "../lib/invariant.js";
+import { AuthStoreUnavailableAtContextError } from "./local-users-errors.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
@@ -49,8 +50,10 @@ export function isApiUrl(url: string): boolean {
 
 /**
  * Per-box auth preHandler: verify identity and box-level access. Installed
- * when either standalone auth is enabled OR this box is running behind a
- * hub (`isHubMode()`). Lets static assets and diagnostic-bypass requests
+ * whenever authentication is required (`authRequired()` — the always-on
+ * default) OR this box is running behind a hub (`isHubMode()`); skipped only
+ * in standalone open mode (the `CB_ALLOW_UNAUTHENTICATED` opt-out). Lets
+ * static assets and diagnostic-bypass requests
  * through; redirects page navigations to login and 401s API calls —
  * EXCEPT in hub mode, where the box never redirects to its own
  * `/auth/login` (the hub owns login and gates page navigation before
@@ -95,7 +98,21 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
       return;
     }
     const identity = resolveRequestIdentity(request);
-    if (identity.source === "open") return; // hub-wide auth is off
+    switch (identity.source) {
+      case "unavailable":
+        // The credential store is corrupt/unreadable: fail CLOSED and DISTINCTLY
+        // (503, not 401) — treating it as "no session" would fail OPEN for exactly
+        // the sessions gen-revocation exists to kill (Track D).
+        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+      case "open":
+        return; // hub-wide (or standalone opt-out) auth is off
+      case "hub":
+      case "cookie":
+      case null:
+        break; // fall through to the email-based access check below
+      default:
+        assertNever(identity.source);
+    }
     const email = identity.email;
     if (!email) {
       if (isApiUrl(request.url)) {
@@ -133,7 +150,7 @@ interface BoxScopeDeps {
 async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
   const { box, eventBus, options, frontendPath, frontendExists } = deps;
 
-  if (isAuthEnabled() || isHubMode()) {
+  if (authRequired() || isHubMode()) {
     addBoxAuthHook(instance, box);
   }
 
@@ -183,10 +200,23 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // recompute here to fail closed rather than assume it ran (e.g. the
       // WS upgrade path shares this same createContext).
       const identity = resolveRequestIdentity(req);
-      const openAccess = isHubMode() ? identity.source === "open" : !isAuthEnabled();
-      const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
       const mobileOk = resolveMobileRequestAuth(box.boxRoot, req.headers) !== null;
+      // Fail closed on a corrupt/unreadable credential store (Track D): never
+      // build an authed context off an auth store we couldn't verify against.
+      // For HTTP the box preHandler already answered 503 before this ran; this
+      // is the fail-closed twin for the WS upgrade, which shares this context.
+      // Agent- and mobile-authenticated requests don't consult that store, so
+      // they stay valid through a store outage (matching the preHandler order).
+      if (identity.source === "unavailable" && !bearerOk && !mobileOk) {
+        throw new AuthStoreUnavailableAtContextError();
+      }
+      // One openness signal: the resolver returns `source: "open"` both in
+      // hub-wide open mode AND in standalone open mode (the
+      // CB_ALLOW_UNAUTHENTICATED opt-out), so this reads it instead of
+      // re-deriving from the gate (principle #8).
+      const openAccess = identity.source === "open";
+      const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,

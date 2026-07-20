@@ -2,16 +2,23 @@
  * Session authentication helpers.
  *
  * Uses signed cookies (HMAC-SHA256) — no server-side session store.
- * Auth is opt-in: disabled when GOOGLE_OAUTH_CLIENT_ID is not set.
+ * Auth is ALWAYS-ON by default: a box requires authentication unless the
+ * operator sets a loud, deliberate `CB_ALLOW_UNAUTHENTICATED` opt-out (see
+ * `openMode`/`authRequired`). "Is Google configured" no longer means "is this
+ * box protected" — Google is just one login method layered on top.
  */
 
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyRequest } from "fastify";
 import { parseCookieHeader } from "../lib/cookies.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { getLocalOwnerEmail, getLocalUser } from "./local-users.js";
+import { getLocalUserCached } from "./local-users-cache.js";
+import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
 const COOKIE_NAME = "cb_session";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -49,8 +56,101 @@ function getSessionSecret(): string {
   }
 }
 
-export function isAuthEnabled(): boolean {
-  return !!process.env.GOOGLE_OAUTH_CLIENT_ID;
+/** How the `CB_ALLOW_UNAUTHENTICATED` opt-out is configured. */
+export type OpenMode =
+  /** No opt-out (the default): authentication is required. */
+  | "off"
+  /** `=1`: open, but only when the server binds a loopback host. */
+  | "loopback"
+  /** `=network`: open on any bind, including a public interface. */
+  | "network";
+
+/** Thrown at startup when `CB_ALLOW_UNAUTHENTICATED` holds a value that is
+ *  neither the loopback opt-out (`1`) nor the network opt-out (`network`).
+ *  Fail closed — an unrecognized value is never coerced to "open". */
+export class InvalidOpenModeError extends Error {
+  constructor(readonly value: string) {
+    super(
+      `CB_ALLOW_UNAUTHENTICATED=${JSON.stringify(value)} is not a recognized value. ` +
+        "Use \"1\" (open on a loopback bind only) or \"network\" (open on any bind, including a public one), " +
+        "or unset it to require authentication.",
+    );
+    this.name = "InvalidOpenModeError";
+  }
+}
+
+/** Thrown at listen time when the loopback-only opt-out (`=1`) is combined
+ *  with a non-loopback bind — the catastrophic "open on a public interface"
+ *  config, which requires the explicit `network` spelling. */
+export class OpenModeBindError extends Error {
+  constructor(readonly host: string) {
+    super(
+      "CB_ALLOW_UNAUTHENTICATED=1 permits open (unauthenticated) mode only on a loopback bind, " +
+        `but this server is binding ${JSON.stringify(host)}. Set CB_ALLOW_UNAUTHENTICATED=network to ` +
+        "deliberately serve an unauthenticated box on a non-loopback interface, or remove the opt-out " +
+        "to require authentication.",
+    );
+    this.name = "OpenModeBindError";
+  }
+}
+
+/**
+ * Classify the `CB_ALLOW_UNAUTHENTICATED` opt-out. Unset/empty is `"off"`
+ * (auth required); `"1"` is loopback-only open mode; `"network"` is open on
+ * any bind. Any other non-empty value throws `InvalidOpenModeError` — the
+ * value is never silently coerced (principle #4: never fail open silently).
+ */
+export function openMode(): OpenMode {
+  const value = process.env.CB_ALLOW_UNAUTHENTICATED;
+  if (value === undefined || value === "") return "off";
+  if (value === "1") return "loopback";
+  if (value === "network") return "network";
+  throw new InvalidOpenModeError(value);
+}
+
+/**
+ * Whether this box requires authentication. `true` unless a valid
+ * `CB_ALLOW_UNAUTHENTICATED` opt-out is set — the always-on default. This
+ * REPLACES the old `isAuthEnabled()` (`!!GOOGLE_OAUTH_CLIENT_ID`): Google
+ * configuration no longer gates the wall.
+ */
+export function authRequired(): boolean {
+  return openMode() === "off";
+}
+
+/** A loopback bind host — the opt-out's `=1` tier only permits open mode here. */
+function isLoopbackHost(host: string): boolean {
+  return host === "127.0.0.1" || host === "::1" || host === "localhost";
+}
+
+/**
+ * Validate the opt-out against the actual bind host and emit the loud warning,
+ * at LISTEN time only (`startServer`/`cb hub`) — never at `createServer`, so
+ * injected test servers that never `listen()` stay quiet (noise-is-a-bug).
+ *
+ * Throws `InvalidOpenModeError` (garbage opt-out value) or `OpenModeBindError`
+ * (loopback-only opt-out on a non-loopback bind) so a misconfigured open server
+ * fails to start rather than silently exposing an unauthenticated box.
+ */
+export function enforceOpenModeAtListen({ host, port }: { host: string; port: number }): void {
+  const mode = openMode();
+  if (mode === "off") return;
+  if (mode === "loopback" && !isLoopbackHost(host)) {
+    throw new OpenModeBindError(host);
+  }
+  console.warn(
+    "\n" +
+      "╔══════════════════════════════════════════════════════════════════════╗\n" +
+      "║  WARNING: authentication is DISABLED (CB_ALLOW_UNAUTHENTICATED)         ║\n" +
+      "╠══════════════════════════════════════════════════════════════════════╣\n" +
+      `║  This server is serving an UNAUTHENTICATED box at ${host}:${port}\n` +
+      `║  Opt-out mode: ${mode === "network" ? "network (open on ANY interface, including public)" : "loopback (open on 127.0.0.1/::1 only)"}\n` +
+      "║  Anyone who can reach this port has full access. This is intended only\n" +
+      "║  for local development or a trusted, isolated network. Unset\n" +
+      "║  CB_ALLOW_UNAUTHENTICATED (and use `cb auth create-user` / login) to\n" +
+      "║  require authentication.\n" +
+      "╚══════════════════════════════════════════════════════════════════════╝\n",
+  );
 }
 
 /**
@@ -81,11 +181,35 @@ export function verifyDiagBearerKey(request: FastifyRequest): boolean {
  *
  * Whitelist: /api/trpc/health.check and /api/trpc/debugLog.get.
  * Top-level /healthz is handled by its own root-level route, not this bypass.
+ *
+ * The whitelist is checked against the EXACT set of tRPC procedures the URL
+ * names, not a substring: a tRPC batch URL like
+ * `/api/trpc/health.check,history.list?batch=1` lists multiple comma-separated
+ * procedures, and EVERY one must be whitelisted. A substring test
+ * (`url.includes("health.check")`) let such a batch bypass auth while carrying
+ * a non-whitelisted `publicProcedure` (e.g. `history.list`) — a privilege
+ * widening for diag-key holders, now closed.
  */
+const DIAG_PROCEDURE_WHITELIST: ReadonlySet<string> = new Set(["health.check", "debugLog.get"]);
+
+/** Extract the comma-separated tRPC procedure list from a URL's path segment
+ *  (the text after `/api/trpc/`, before the query), or `null` when the URL
+ *  isn't a tRPC call. */
+function parseTrpcProcedures(url: string): string[] | null {
+  const marker = "/api/trpc/";
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  const afterMarker = url.slice(idx + marker.length);
+  const pathSegment = afterMarker.split("?")[0];
+  if (pathSegment === undefined || pathSegment.length === 0) return null;
+  return pathSegment.split(",");
+}
+
 export function isDiagnosticBypassRequest(request: FastifyRequest): boolean {
   if (request.method !== "GET") return false;
-  const url = request.url;
-  if (!url.includes("/api/trpc/health.check") && !url.includes("/api/trpc/debugLog.get")) return false;
+  const procedures = parseTrpcProcedures(request.url);
+  if (procedures === null || procedures.length === 0) return false;
+  if (!procedures.every((proc) => DIAG_PROCEDURE_WHITELIST.has(proc))) return false;
   return verifyDiagBearerKey(request);
 }
 
@@ -93,6 +217,13 @@ export interface SessionUser {
   email: string;
   name: string;
   picture?: string;
+  /**
+   * The local record's session generation at mint time (Track D). Present only
+   * for an email that has a local credential record; a Google-only identity
+   * mints no `gen`. `resolveRequestIdentity` compares it against the record's
+   * current `gen` to revoke sessions on a password change or user removal.
+   */
+  gen?: number;
 }
 
 /**
@@ -117,13 +248,28 @@ export function isHubMode(): boolean {
 }
 
 /**
+ * The request shape `resolveRequestIdentity` (and `verifyHubSecret`) reads: raw
+ * `headers` always, plus `@fastify/cookie`'s `cookies` decoration WHEN present.
+ * The tRPC WebSocket upgrade hands `createContext` a raw `http.IncomingMessage`
+ * that has no `.cookies` decoration, so `cookies` is optional and the resolver
+ * falls back to parsing the raw `Cookie` header there — without that fallback a
+ * cookie-authenticated WS/subscription silently loses its identity at context
+ * creation once auth is the default-on wall. A decorated `FastifyRequest` is
+ * assignable to this, so every existing caller keeps working unchanged.
+ */
+export interface IdentityRequest {
+  headers: IncomingHttpHeaders;
+  cookies?: { [cookieName: string]: string | undefined };
+}
+
+/**
  * Timing-safe check that a request's `x-cb-hub-secret` header matches
  * `CB_HUB_SECRET`. Modeled on `verifyDiagBearerKey`'s length-check +
  * `timingSafeEqual` pattern. False when the env var isn't set (so hub-mode
  * checks fail closed even if `isHubMode()` was somehow bypassed), the
  * header is missing, or the value doesn't match.
  */
-export function verifyHubSecret(request: FastifyRequest): boolean {
+export function verifyHubSecret(request: Pick<IdentityRequest, "headers">): boolean {
   const secret = process.env.CB_HUB_SECRET;
   if (!secret) return false;
   const header = request.headers[HUB_SECRET_HEADER];
@@ -133,13 +279,43 @@ export function verifyHubSecret(request: FastifyRequest): boolean {
 }
 
 /**
- * Create a signed session cookie value for the given user.
+ * The local record's session generation for `email`, or `undefined` when the
+ * email has no local record (a Google-only identity) — the value stamped into a
+ * freshly-minted session so a later password change or user removal can revoke
+ * it (Track D). A corrupt/unreadable auth store degrades to `undefined` here
+ * (mint without `gen`) rather than failing the login that mints it: the
+ * request-boundary resolver already fails the whole box closed (503) on an
+ * unavailable store, so a gen-less cookie minted during that window is harmless
+ * (it re-authenticates once the store heals and a record is found — or stays a
+ * valid Google-only identity if none is).
+ */
+function currentGenForEmail(email: string): number | undefined {
+  try {
+    return getLocalUser(email)?.gen;
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      console.warn(
+        `[auth] could not read the session generation for ${email} (auth store unavailable); minting without gen:`,
+        e,
+      );
+      return undefined;
+    }
+    throw e;
+  }
+}
+
+/**
+ * Create a signed session cookie value for the given user. Stamps the local
+ * record's current `gen` (Track D) when the email has one, looked up here so
+ * BOTH login paths (password POST and Google callback) get it uniformly.
  */
 export function signSession(user: SessionUser): string {
+  const gen = currentGenForEmail(user.email);
   const payload = JSON.stringify({
     email: user.email,
     name: user.name,
     ...(user.picture ? { picture: user.picture } : {}),
+    ...(gen !== undefined ? { gen } : {}),
     exp: Date.now() + SESSION_MAX_AGE_MS,
   });
   const sig = crypto
@@ -172,7 +348,15 @@ export function verifySession(cookie: string): SessionUser | null {
     .update(payload)
     .digest("hex");
 
-  if (!crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expectedSig, "hex"))) {
+  // `crypto.timingSafeEqual` THROWS on unequal-length buffers, so a malformed
+  // cookie like `cb_session=e30.x` (valid base64url payload, 1-char signature)
+  // would surface as a logged 500 instead of a clean "no session". Compare
+  // lengths first — an untrusted, wrong-length signature is simply invalid —
+  // then use the timing-safe compare only when the lengths match.
+  const sigBuf = Buffer.from(sig, "hex");
+  const expectedBuf = Buffer.from(expectedSig, "hex");
+  if (sigBuf.length !== expectedBuf.length) return null;
+  if (!crypto.timingSafeEqual(sigBuf, expectedBuf)) {
     return null;
   }
 
@@ -180,7 +364,13 @@ export function verifySession(cookie: string): SessionUser | null {
     const data = JSON.parse(payload);
     if (typeof data.exp !== "number" || data.exp < Date.now()) return null;
     if (typeof data.email !== "string") return null;
-    return { email: data.email, name: data.name || data.email, picture: data.picture };
+    const gen = typeof data.gen === "number" ? data.gen : undefined;
+    return {
+      email: data.email,
+      name: data.name || data.email,
+      picture: data.picture,
+      ...(gen !== undefined ? { gen } : {}),
+    };
   } catch (_e) {
     // Payload isn't valid JSON — untrusted/tampered cookie, treat as no session.
     return null;
@@ -214,11 +404,36 @@ export function getSessionEmail(request: FastifyRequest): string | null {
   return getSessionUser(request)?.email ?? null;
 }
 
+let loggedAuthStoreUnavailable = false;
+
 /**
- * Get the owner email from environment, or null if not set.
+ * Get the owner email. `CB_OWNER_EMAIL` is an override; when it's unset the
+ * owner falls back to the local credential store's owner account
+ * (`getLocalOwnerEmail`, `local-users.ts`), so the env var becomes optional
+ * once a local owner exists.
+ *
+ * A corrupt/unreadable auth store (`AuthStoreUnavailableError`) degrades to
+ * `null` here — owner checks then fail CLOSED to non-owner (`isOwner` → false,
+ * `canAccessBox` denies) rather than crashing every unauthenticated code path.
+ * The error is logged once. Cookie VERIFICATION at the request boundary needs
+ * the sharper, distinct handling Track D adds (`auth-store-unavailable` → 503),
+ * because treating a corrupt store as "no record" there would fail OPEN for the
+ * very sessions revocation exists to kill; this owner-lookup path is not that.
  */
 export function getOwnerEmail(): string | null {
-  return process.env.CB_OWNER_EMAIL || null;
+  if (process.env.CB_OWNER_EMAIL) return process.env.CB_OWNER_EMAIL;
+  try {
+    return getLocalOwnerEmail();
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      if (!loggedAuthStoreUnavailable) {
+        console.error("[auth] auth store unavailable while resolving owner email; treating as no owner:", e);
+        loggedAuthStoreUnavailable = true;
+      }
+      return null;
+    }
+    throw e;
+  }
 }
 
 /**
@@ -231,8 +446,16 @@ export function isOwner(request: FastifyRequest): boolean {
   return email === ownerEmail;
 }
 
-/** Where a request's identity came from, or `null` when it's unauthenticated. */
-export type IdentitySource = "hub" | "cookie" | "open" | null;
+/**
+ * Where a request's identity came from, or `null` when it's unauthenticated.
+ *
+ * `"unavailable"` is a DISTINCT fail-closed outcome (Track D): the credential
+ * store is corrupt/unreadable, so the cookie's `gen` can't be verified. Every
+ * consumer answers `503` for it — NEVER 401 (which would read as "just log in")
+ * and never a fall-through to "no record" (which would fail OPEN for exactly the
+ * sessions `gen`-revocation exists to kill).
+ */
+export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | null;
 
 export interface RequestIdentity {
   email: string | null;
@@ -269,13 +492,15 @@ export interface RequestIdentity {
  *   shouldn't happen from a well-behaved hub; treated as a fail-closed 401,
  *   not silently "open."
  *
- * Outside hub mode, behavior is byte-for-byte what it was before D2: the
- * session cookie is the only source (`source: "cookie"` when present), and
- * the hub headers are IGNORED even if somehow present on the request —
- * trusting them outside hub mode is exactly the spoofing hole this design
- * closes.
+ * Outside hub mode, the session cookie is the primary source (`source:
+ * "cookie"` when present), and the hub headers are IGNORED even if somehow
+ * present on the request — trusting them outside hub mode is exactly the
+ * spoofing hole this design closes. When there is no cookie and the box is in
+ * standalone open mode (`!authRequired()`), the resolver returns `source:
+ * "open"` — the always-on-auth plan's consolidation of the scattered
+ * "auth disabled ⇒ open" recomputation into this one resolver.
  */
-export function resolveRequestIdentity(request: FastifyRequest): RequestIdentity {
+export function resolveRequestIdentity(request: IdentityRequest): RequestIdentity {
   if (isHubMode()) {
     if (!verifyHubSecret(request)) return { email: null, name: null, source: null };
     const emailHeader = request.headers[HUB_EMAIL_HEADER];
@@ -287,9 +512,68 @@ export function resolveRequestIdentity(request: FastifyRequest): RequestIdentity
     }
     return { email: null, name: null, source: null };
   }
-  const user = getSessionUser(request);
-  if (user) return { email: user.email, name: user.name, source: "cookie" };
+  const user = sessionUserFromRequest(request);
+  if (user) return classifyLocalRecord(user);
+  // Standalone open mode (the `CB_ALLOW_UNAUTHENTICATED` opt-out): no cookie and
+  // no wall, so identity is "open" — the SAME source hub mode returns when the
+  // hub advertises `x-cb-hub-auth: off`. This is the ONE place openness is
+  // decided; the openness-recomputing call sites read `identity.source` instead
+  // of re-deriving it (principle #8: one way to do each thing).
+  if (!authRequired()) return { email: null, name: null, source: "open" };
   return { email: null, name: null, source: null };
+}
+
+/**
+ * Read the session cookie for the identity resolver. Prefers `@fastify/cookie`'s
+ * decorated `request.cookies`; when that decoration is absent (the tRPC WS
+ * upgrade's raw `IncomingMessage`) it parses the raw `Cookie` header instead, so
+ * a cookie-authenticated WS keeps its identity at context creation (Track D).
+ */
+function sessionUserFromRequest(request: IdentityRequest): SessionUser | null {
+  const cookies = request.cookies;
+  if (cookies !== undefined) {
+    const cookie = cookies[COOKIE_NAME];
+    return cookie ? verifySession(cookie) : null;
+  }
+  return getSessionUserFromCookieHeader(request.headers.cookie);
+}
+
+let loggedResolverAuthStoreUnavailable = false;
+
+/**
+ * Apply the `gen` session-revocation rules to a verified cookie identity
+ * (Track D). The single, consistent rule set:
+ *
+ * - a local record exists → the cookie MUST carry `gen === record.gen`; absent
+ *   or stale (a pre-password-change cookie) → revoked → unauthenticated;
+ * - no record, but the cookie carries a `gen` → dead (its record vanished — this
+ *   is how removing a local user revokes its sessions) → unauthenticated;
+ * - no record, no `gen` → valid Google-only identity (`canAccessBox` still gates
+ *   authorization).
+ *
+ * A corrupt/unreadable store fails closed DISTINCTLY as `source: "unavailable"`
+ * (→ 503), never as "no record" (which would fail OPEN for revoked sessions).
+ */
+function classifyLocalRecord(user: SessionUser): RequestIdentity {
+  let record;
+  try {
+    record = getLocalUserCached(user.email);
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      if (!loggedResolverAuthStoreUnavailable) {
+        console.error("[auth] auth store unavailable while verifying a session cookie; failing closed (503):", e);
+        loggedResolverAuthStoreUnavailable = true;
+      }
+      return { email: null, name: null, source: "unavailable" };
+    }
+    throw e;
+  }
+  if (record) {
+    if (user.gen !== record.gen) return { email: null, name: null, source: null };
+    return { email: user.email, name: user.name, source: "cookie" };
+  }
+  if (user.gen !== undefined) return { email: null, name: null, source: null };
+  return { email: user.email, name: user.name, source: "cookie" };
 }
 
 export { COOKIE_NAME, SESSION_MAX_AGE_MS };

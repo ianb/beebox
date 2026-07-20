@@ -19,7 +19,13 @@ function fakeRequest({ headers, cookies }) {
 
 const ORIGINAL_HUB_SECRET = process.env.CB_HUB_SECRET;
 const ORIGINAL_SESSION_SECRET = process.env.CB_SESSION_SECRET;
+const ORIGINAL_AUTH_FILE = process.env.CB_AUTH_FILE;
 process.env.CB_SESSION_SECRET = "test-session-secret-for-hub-identity-doctest";
+// Track D: signSession + the resolver now consult the local credential store, so
+// pin CB_AUTH_FILE at a nonexistent tmp path — none of these example emails have
+// a record, keeping them gen-less (source "cookie"), independent of any real
+// ~/.cb-auth.json on the host.
+process.env.CB_AUTH_FILE = "/nonexistent/cb-auth-hub-identity-doctest.json";
 ```
 
 ## Outside hub mode, headers are ignored entirely — the cookie is the only source
@@ -107,9 +113,31 @@ verifyHubSecret(noServerSecret)
 => false
 ```
 
+## Standalone open mode: a cookieless request resolves to `source: "open"`
+
+Outside hub mode, when the box is in open mode (the `CB_ALLOW_UNAUTHENTICATED`
+opt-out) and carries no session cookie, the resolver returns `source: "open"` —
+the single place standalone openness is decided, so the openness-recomputing
+call sites can just read `identity.source`. With auth required (opt-out unset),
+the same cookieless request is `source: null` (unauthenticated).
+
+```ts continue
+delete process.env.CB_HUB_SECRET;
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+const openStandalone = fakeRequest({});
+JSON.stringify(resolveRequestIdentity(openStandalone))
+=> {"email":null,"name":null,"source":"open"}
+
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
+JSON.stringify(resolveRequestIdentity(openStandalone))
+=> {"email":null,"name":null,"source":null}
+```
+
 ```ts cleanup
 if (ORIGINAL_HUB_SECRET === undefined) delete process.env.CB_HUB_SECRET;
 else process.env.CB_HUB_SECRET = ORIGINAL_HUB_SECRET;
 if (ORIGINAL_SESSION_SECRET === undefined) delete process.env.CB_SESSION_SECRET;
 else process.env.CB_SESSION_SECRET = ORIGINAL_SESSION_SECRET;
+if (ORIGINAL_AUTH_FILE === undefined) delete process.env.CB_AUTH_FILE;
+else process.env.CB_AUTH_FILE = ORIGINAL_AUTH_FILE;
 ```

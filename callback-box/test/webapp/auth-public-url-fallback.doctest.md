@@ -1,5 +1,7 @@
-# `/auth/login`'s redirect URI falls back to the caller's own base URL (Track D, chunk D2)
+# `/auth/google`'s redirect URI falls back to the caller's own base URL (Track D, chunk D2)
 
+Google consent now lives at `GET /auth/google` (the local login page took over
+`/auth/login`, so the Google-OAuth redirect route was renamed — Track C).
 `registerAuthRoutes` builds its OAuth redirect URI from `getPublicUrl()`,
 which needs SOME fallback when neither `CB_PUBLIC_URL` nor `PUBLIC_URL` is
 set. The standalone box server's default (`http://localhost:3210`, the dev
@@ -24,7 +26,7 @@ async function loginRedirectUri(options) {
   const app = Fastify({ logger: false });
   await registerAuthSurface(app, options);
   await app.ready();
-  const res = await app.inject({ method: "GET", url: "/auth/login" });
+  const res = await app.inject({ method: "GET", url: "/auth/google" });
   await app.close();
   const location = new URL(res.headers.location);
   return location.searchParams.get("redirect_uri");

@@ -15,7 +15,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { isAuthEnabled, getSessionUser, getOwnerEmail } from "../webapp/auth.js";
+import { authRequired, resolveRequestIdentity, getOwnerEmail } from "../webapp/auth.js";
 import { filterAccessibleBoxes } from "../webapp/box-access.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { invariant } from "../lib/invariant.js";
@@ -63,19 +63,30 @@ ${items || "    <li>No boxes available.</li>"}
 
 /**
  * Register `GET /` on the hub's Fastify instance: the fleet-wide box
- * picker. Unauthenticated -> redirect to `/auth/login` (unless the hub has
- * no `GOOGLE_OAUTH_CLIENT_ID`, i.e. hub-wide auth is off, in which case
- * every configured box is listed — same "open" semantics the fleet's boxes
- * get via `x-cb-hub-auth: off`).
+ * picker. Unauthenticated -> redirect to `/auth/login` (unless the hub was
+ * started with the `CB_ALLOW_UNAUTHENTICATED` opt-out, i.e. hub-wide auth is
+ * off, in which case every configured box is listed — same "open" semantics
+ * the fleet's boxes get via `x-cb-hub-auth: off`).
  */
 export function registerBoxPicker(
   server: FastifyInstance,
   { boxes, frontendDist }: { boxes: BoxSpec[]; frontendDist: string },
 ): void {
   server.get("/", async (request, reply) => {
-    const user = isAuthEnabled() ? getSessionUser(request) : null;
-    if (isAuthEnabled() && !user) {
-      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+    // Route through the SAME identity resolver the boxes use (FIX 1) so a
+    // stale-`gen` cookie doesn't authenticate and a corrupt store answers 503
+    // rather than a bogus login redirect. The hub process is not in hub mode, so
+    // the resolver takes its cookie path.
+    let email: string | null = null;
+    if (authRequired()) {
+      const identity = resolveRequestIdentity(request);
+      if (identity.source === "unavailable") {
+        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+      }
+      if (!identity.email) {
+        return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+      }
+      email = identity.email;
     }
     // Serve the SPA (its `/` route renders the styled box-selection tiles and
     // fetches the accessible-box list from /api/boxes). Fall back to the minimal
@@ -84,8 +95,8 @@ export function registerBoxPicker(
     if (fs.existsSync(indexHtml)) {
       return reply.type("text/html").send(fs.readFileSync(indexHtml, "utf-8"));
     }
-    const accessible = user
-      ? await filterAccessibleBoxes({ boxes, email: user.email, ownerEmail: getOwnerEmail() })
+    const accessible = email
+      ? await filterAccessibleBoxes({ boxes, email, ownerEmail: getOwnerEmail() })
       : boxes;
     return reply.type("text/html").send(renderPage(accessible));
   });

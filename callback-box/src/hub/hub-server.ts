@@ -43,7 +43,7 @@ import type { Socket } from "node:net";
 import fs from "node:fs";
 import path from "node:path";
 import { isRecord } from "../lib/is-record.js";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
 import httpProxy from "http-proxy-3";
@@ -59,9 +59,8 @@ import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
-  isAuthEnabled,
-  getSessionUser,
-  getSessionUserFromCookieHeader,
+  authRequired,
+  resolveRequestIdentity,
   getOwnerEmail,
   HUB_SECRET_HEADER,
   HUB_EMAIL_HEADER,
@@ -155,6 +154,28 @@ function listMobileAuthorizedBoxes(opts: {
 }
 
 /**
+ * The hub's `/api/boxes` response — mirrors `server-root.ts`'s handler, routed
+ * through the SAME identity resolver (FIX 1): a stale-`gen` cookie is not a user,
+ * and a corrupt credential store answers `503`, not a bogus empty list.
+ */
+async function respondHubBoxes(opts: {
+  boxes: BoxSpec[];
+  request: FastifyRequest;
+  reply: FastifyReply;
+}): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
+  const { boxes, request, reply } = opts;
+  if (!authRequired()) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
+  if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
+  const identity = resolveRequestIdentity(request);
+  if (identity.source === "unavailable") {
+    return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+  }
+  if (!identity.email) return { boxes: [], authRequired: true };
+  return { boxes: await listAccessibleBoxes(boxes, identity.email) };
+}
+
+/**
  * The single resolve path EVERY proxied HTTP route (the catch-all below and
  * the dedicated `/auth/google-services/callback` route) must use. A lazy
  * provider's `ensureRunning` already both cold-starts a stopped box AND
@@ -213,18 +234,32 @@ function decideHubAuth({
   if (isWebhook) {
     return { authorized: true, headersToSet: { [HUB_SECRET_HEADER]: hubSecret } };
   }
-  if (!isAuthEnabled()) {
+  // The hub advertises `x-cb-hub-auth: off` to its children ONLY when the hub
+  // itself was started with the `CB_ALLOW_UNAUTHENTICATED` opt-out — i.e.
+  // hub-wide open mode. Google configuration no longer decides this.
+  if (!authRequired()) {
     return {
       authorized: true,
       headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_AUTH_OFF_HEADER]: "off" },
     };
   }
-  const user = getSessionUserFromCookieHeader(cookieHeader);
-  if (!user) return { authorized: false, headersToSet: {} };
-  return {
-    authorized: true,
-    headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_EMAIL_HEADER]: user.email },
-  };
+  // Verify the cookie through the SAME resolver the boxes use (FIX 1): this
+  // applies the `gen` session-revocation check and the distinct "unavailable"
+  // (corrupt store) fail-closed outcome that a bare `getSessionUserFromCookieHeader`
+  // (HMAC + expiry only) skipped. The hub process is never in hub mode
+  // (`isHubMode()` false — it mints the secret, it doesn't receive one), so the
+  // resolver takes its cookie path here.
+  const identity = resolveRequestIdentity({ headers: { cookie: cookieHeader } });
+  if (identity.source === "cookie" && identity.email) {
+    return {
+      authorized: true,
+      headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_EMAIL_HEADER]: identity.email },
+    };
+  }
+  // Not authenticated, or the store is unavailable — fail closed either way. The
+  // hub must NOT inject an identity header when it can't verify the cookie's gen;
+  // a `null`/`"unavailable"` outcome both mean "no trusted identity."
+  return { authorized: false, headersToSet: {} };
 }
 
 /**
@@ -276,16 +311,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // can't match to a box). Own it here with the SAME shape and the SAME
   // filter (`listAccessibleBoxes`, which shares `canAccessBox` with the box
   // picker) so the two never drift into different box lists.
-  app.get("/api/boxes", async (request) => {
-    if (isAuthEnabled()) {
-      const user = getSessionUser(request);
-      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
-      if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
-      if (!user) return { boxes: [], authRequired: true };
-      return { boxes: await listAccessibleBoxes(boxes, user.email) };
-    }
-    return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
-  });
+  app.get("/api/boxes", (request, reply) => respondHubBoxes({ boxes, request, reply }));
 
   // Shared frontend static, served at the ROOT for the whole fleet. The built
   // SPA references its bundles by ABSOLUTE path (`/assets/...`, `/icons/...`,

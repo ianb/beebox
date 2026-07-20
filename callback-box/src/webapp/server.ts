@@ -14,8 +14,10 @@ import * as fs from "node:fs";
 import { createEventBus } from "../core/event-bus.js";
 import { registerAuthSurface } from "./routes/auth.js";
 import { registerGoogleServicesCallback } from "./routes/admin.js";
-import { isHubMode } from "./auth.js";
+import { isHubMode, enforceOpenModeAtListen } from "./auth.js";
+import { maybeArmFirstRunSetup } from "./setup-token.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
+import { getPublicUrl } from "../lib/public-url.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { ServerOptions } from "./server-types.js";
 import { resolveBoxes, killPreviousServer } from "./server-lifecycle.js";
@@ -183,6 +185,18 @@ export async function startServer(options?: ServerOptions): Promise<void> {
   options = options ?? {};
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? "localhost";
+
+  // Validate the open-mode opt-out against the actual bind and, if open, emit
+  // the loud multi-line warning — BEFORE binding, so a garbage
+  // CB_ALLOW_UNAUTHENTICATED value or a loopback-only opt-out on a public bind
+  // fails startup rather than quietly serving an unauthenticated box.
+  enforceOpenModeAtListen({ host, port });
+
+  // First-run setup: with auth required and zero local users, arm a one-time
+  // setup token and print its claim link. No-op in open mode or once a user
+  // exists. (At listen time, like the open-mode warning — never at createServer,
+  // so injected test servers stay quiet.)
+  maybeArmFirstRunSetup({ publicUrl: getPublicUrl(`http://${host}:${port}`) });
 
   const boxes = await resolveBoxes(options);
 

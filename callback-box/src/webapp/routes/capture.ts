@@ -133,6 +133,9 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       if (owner.status === "unauthenticated") {
         return reply.status(401).send({ error: "Not authenticated" });
       }
+      if (owner.status === "auth-store-unavailable") {
+        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
+      }
       const targetSessionId = request.body?.targetSessionId ?? null;
       const session = await createStagingSession({ boxRoot, targetSessionId, createdBy: owner.email });
       return {
@@ -158,6 +161,9 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     }
     if (owner.status === "unauthenticated") {
       return reply.status(401).send({ error: "Not authenticated" });
+    }
+    if (owner.status === "auth-store-unavailable") {
+      return reply.status(503).send({ error: "Authentication temporarily unavailable" });
     }
     const sessions = await listStagingSessions({ boxRoot });
     return {

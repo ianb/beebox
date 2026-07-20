@@ -21,13 +21,15 @@ export interface TrpcContext {
   /** Authenticated user from the request session cookie, or null. */
   user: TrpcUser | null;
   /**
-   * Passed authentication: either auth is disabled (local dev) or a valid
-   * box-authorized session request. Mirrors the box auth preHandler's outcome.
+   * Passed authentication: either the box is in open mode (the
+   * `CB_ALLOW_UNAUTHENTICATED` opt-out) or a valid box-authorized session
+   * request. Mirrors the box auth preHandler's outcome.
    */
   authed: boolean;
   /**
-   * The request is the box owner (or auth is disabled). Mirrors the raw
-   * `addOwnerCheck` gate exactly: `!isAuthEnabled() || isOwner(request)`.
+   * The request is the box owner (or the box is in open mode). Mirrors the raw
+   * `addOwnerCheck` gate exactly: open mode (`identity.source === "open"`) OR
+   * the caller is the owner.
    */
   isOwner: boolean;
 }

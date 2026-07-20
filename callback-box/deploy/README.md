@@ -211,10 +211,16 @@ PUBLIC_URL=https://box.example.com
 # Claude Code install location for the callback user.
 PATH=/home/callback/.local/bin:/usr/local/bin:/usr/bin:/bin
 
-# Auth (optional — enables Google OAuth when set)
+# Auth is ON by default (local password login + first-run setup). Google OAuth
+# is an OPTIONAL additional method, enabled only when these are set.
 GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
 CB_PUBLIC_URL=https://box.example.com
+
+# Local credential store for password login. Optional — defaults to
+# ~/.cb-auth.json (i.e. /home/callback/.cb-auth.json). Created 0600 by the
+# first-run setup page or `cb auth create-user`. Never commit it.
+# CB_AUTH_FILE=/home/callback/.cb-auth.json
 
 # Google tokens — centralized file shared across all boxes (chmod 600)
 CB_GOOGLE_TOKENS_FILE=/home/callback/.google-tokens.json
@@ -249,15 +255,30 @@ Subscriptions are stored server-side at `~/.local/share/cb/push-subscriptions.js
 (gitignored, never committed). Boxholders enable push per-device from a box's Admin
 page; on iOS the app must first be added to the Home Screen.
 
-## Authentication (Google OAuth)
+## Authentication
 
-Auth is opt-in. When `GOOGLE_OAUTH_CLIENT_ID` is set, all box access requires login. The hub
-terminates login and forwards the authenticated identity to each box child over a trusted
-internal header (`x-cb-authenticated-email`, verified by a per-boot secret — see
-`src/webapp/auth.ts`); each box still runs its own per-box authorization check independently
-(next section).
+Authentication is **on by default** — every box requires a logged-in identity, with no
+"auth happens to be off" state to fall into. Two login methods:
 
-### Setup
+- **Local password** (always available, no external service). The first account is the
+  boxholder/owner; create it on the server with `cb auth create-user` (interactive prompt or
+  `--password-file`), or open the first-run setup URL the hub prints to its log on first boot
+  (`First-run setup: <url>/auth/setup?token=…` — the token expires 15 minutes after boot and
+  the page self-disables once an account exists). Credentials are scrypt-hashed in the local
+  store (`CB_AUTH_FILE`, default `~/.cb-auth.json`, mode 0600).
+- **Google OAuth** (optional additional method, enabled by the `GOOGLE_OAUTH_*` env below).
+
+The hub terminates login and forwards the authenticated identity to each box child over a
+trusted internal header (`x-cb-authenticated-email`, verified by a per-boot `CB_HUB_SECRET`
+— see `src/webapp/auth.ts`); each box still runs its own per-box authorization check
+independently (next section).
+
+> **Escape hatch (avoid in production).** `CB_ALLOW_UNAUTHENTICATED=1` serves a box open on a
+> loopback bind; `=network` is required to serve open on a public interface. Either prints a
+> loud warning on every boot and shows a persistent banner in the UI. It exists for
+> headless/CI/throwaway use, not for a real deployment.
+
+### Enabling Google OAuth (optional)
 
 1. Go to [Google Cloud Console - Credentials](https://console.cloud.google.com/apis/credentials?project=callback-box)
 2. Create an **OAuth 2.0 Client ID** (Web application type)

@@ -6,8 +6,9 @@ the frontend bundle isn't built it falls back to a minimal server-rendered list,
 filtered through the SAME fail-closed `allowedEmails` predicate a box uses for
 its own ACL (`canAccessBox`, `src/webapp/box-access.ts`), not a copy of it. When
 hub auth is off, every configured box is listed unconditionally (same "open"
-semantics a standalone box gets without `GOOGLE_OAUTH_CLIENT_ID`). Either way the
-route is auth-gated: an unauthenticated navigation redirects to login.
+semantics a standalone box gets with the `CB_ALLOW_UNAUTHENTICATED` opt-out).
+Either way the route is auth-gated: an unauthenticated navigation redirects to
+login.
 
 ```ts setup
 import { registerBoxPicker } from "../../src/hub/box-picker.js";
@@ -49,6 +50,8 @@ async function startPicker(frontendDist = NO_FRONTEND) {
 ```ts
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+// "Hub auth off" is now the explicit opt-out, not "Google unconfigured".
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 const distDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "picker-dist-"));
 await fs.promises.writeFile(path.join(distDir, "index.html"), `<!doctype html><html><body><div id="root"></div></body></html>`);
 const spaApp = await startPicker(distDir);
@@ -70,6 +73,7 @@ await fs.promises.rm(distDir, { recursive: true, force: true });
 ```ts
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 const openApp = await startPicker();
 const openRes = await openApp.inject({ method: "GET", url: "/" });
 openRes.statusCode
@@ -86,6 +90,8 @@ await openApp.close();
 ## Hub auth on, no session: redirected to login
 
 ```ts
+// Auth is required by default now; clear any opt-out a prior subtest set.
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-doctest";
 // Paired secret: an ID-without-secret half-config is now a loud
 // MissingOAuthClientSecretError wherever auth routes register.

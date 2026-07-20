@@ -2,6 +2,30 @@
 
 Known security gaps and future hardening work.
 
+## Auth posture: on by default (2026-07)
+
+Authentication is now **always-on by default** (see
+`docs/implemented-plans/local-password-auth.md`). A box requires a logged-in identity unless
+the operator sets the loud `CB_ALLOW_UNAUTHENTICATED` opt-out (`=1` loopback-only,
+`=network` for a public bind; both warn on every boot and show a persistent UI
+banner). Two login methods: local password (scrypt in `~/.cb-auth.json`, 0600)
+and Google OAuth (optional). Sessions are HMAC cookies revocable via a per-user
+`gen` claim (bumped on password change / user removal); a corrupt credential
+store fails **closed** (503), never open. Login is throttled (per-IP + per-account
+backoff, a global scrypt-concurrency cap, a bounded map). The `CB_DIAG_API_KEY`
+bearer and the `CB_HUB_SECRET` header-trust boundary are unchanged.
+
+Residual, accepted for now:
+- **Setup-token window.** First-run setup is reachable unauthenticated until an
+  account exists; mitigated by a 15-minute token TTL and a self-disabling route,
+  but a box left with zero users and an exposed port during that window is
+  claimable. Provision the owner account promptly (`cb auth create-user`).
+- **No true socket-level WS-auth integration test.** The `gen`/identity resolver
+  the WS `createContext` depends on is unit-tested, but no test drives a real
+  tRPC subscription upgrade end to end. Covered by manual verification.
+- **No MFA / password reset.** Recovery is `cb auth set-password` on the host;
+  MFA/passkeys are deferred (see the plan's NOT-in-scope).
+
 ## Google OAuth: shared token with broad scopes
 
 **Status:** Known limitation, accepted for now (single-owner system).

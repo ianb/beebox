@@ -27,6 +27,12 @@ import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
 const execFileP = promisify(execFile);
 
+// Auth is always-on by default now. This e2e serves a box with no login
+// configured and fetches its HTML through the hub, so it must opt into open
+// mode — otherwise the proxied navigation hits the auth wall and redirects to a
+// (non-existent) /auth/login in a loop. The spawned `cb hub` inherits this env,
+// runs hub-wide open, and tells its children `x-cb-hub-auth: off`.
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 // The hub's /healthz is diag-key-gated; the spawned hub inherits this env.
 const DIAG_KEY = "test-diag-key-for-e2e-doctest";
 process.env.CB_DIAG_API_KEY = DIAG_KEY;
@@ -130,7 +136,11 @@ const health = await waitFor(async () => {
 health.status
 => running
 
-typeof health.pid === "number" && health.pid > 0
+// `/healthz`'s per-box status is derived from supervisor state, not the raw
+// process, so read the child's own pid file to prove it's a real running
+// process — `cb serve` writes `.cb-serve.pid` into the box root.
+const childPid = Number((await fs.readFile(path.join(fixture.boxRoot, ".cb-serve.pid"), "utf-8")).trim());
+Number.isInteger(childPid) && childPid > 0
 => true
 
 health.consecutiveFailures
@@ -169,7 +179,6 @@ proxiedBody.toLowerCase().includes("<!doctype html>")
 ## SIGTERM kills the hub AND its child -- no orphan
 
 ```ts continue
-const childPid = health.pid;
 hubProcess.kill("SIGTERM");
 await waitFor(() => (pidAlive(hubProcess.pid) ? null : true), { timeoutMs: 5000, intervalMs: 100 });
 await waitFor(() => (pidAlive(childPid) ? null : true), { timeoutMs: 5000, intervalMs: 100 });

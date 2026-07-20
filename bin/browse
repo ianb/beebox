@@ -36,6 +36,30 @@ mkdir -p "${browse_base}/socket" "${browse_base}/profile"
 
 export BROWSE_REPO_DIR="$REPO_DIR"
 export BROWSE_WORKTREE="$worktree"
+
+# Auth is on by default in dev (local-password-auth Track B), so a page
+# navigation into this worktree's box now hits the login wall unless it
+# carries the box's agent-token bearer. The token already authenticates
+# every in-box request (server-box-scope.ts verifyAgentBearer) — the only
+# gap was that a real Chromium has no way to attach it. Resolve the same
+# box path the dev router clones for this worktree (root CLAUDE.md: "main"
+# serves from ~/src/boxes, every other worktree from
+# ~/src/box-worktrees/<name>") and hand the token to cli.ts via env, which
+# scopes it to this worktree's origin only (browse/src/worktree.ts) before
+# passing it to agent-browser's own origin-scoped `open --headers`. No
+# token file yet (first agent call hasn't run) is not an error — browse
+# just proceeds unauthenticated, same as before this change.
+browse_box="${BROWSE_BOX:-test1}"
+if [[ "$worktree" == "main" ]]; then
+  browse_box_root="${HOME}/src/boxes/${browse_box}"
+else
+  browse_box_root="${HOME}/src/box-worktrees/${worktree}/${browse_box}"
+fi
+browse_agent_token_file="${browse_box_root}/.callback-box/agent-token"
+if [[ -r "$browse_agent_token_file" ]]; then
+  BROWSE_AGENT_TOKEN="$(tr -d '[:space:]' < "$browse_agent_token_file")"
+  export BROWSE_AGENT_TOKEN
+fi
 export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
 export AGENT_BROWSER_PROFILE="${browse_base}/profile"
 export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"

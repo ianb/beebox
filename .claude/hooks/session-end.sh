@@ -39,6 +39,26 @@ session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 reason=$(printf '%s' "$input" | jq -r '.reason // empty')
 wlog "event: session=$session_id reason=$reason cwd=$cwd"
 
+# Trigger a sweep on EVERY session end, before the per-worktree logic below
+# runs (which mostly can't resolve its own worktree — see next comment). Must
+# be here, above the early `exit 0`s, or it never fires in the common case.
+#
+# Why: the per-session cleanup below identifies its worktree from cwd or
+# transcript_path, and BOTH are the main checkout when the session was started
+# by `bin/launch-worktree-session` (it runs `claude --worktree <name>` from the
+# monorepo root, so Claude Code files the session under main's project dir).
+# So this hook logs `skip:not-a-worktree-session` and cleans nothing. The sweep
+# doesn't care whose session ended — it removes every worktree that is merged,
+# clean, and has no live `claude` — so it covers this case and tab-kills alike.
+# Previously the sweep only ran at SessionStart, which meant a long-lived main
+# session accumulated finished worktrees all day with nothing to collect them
+# (2026-07-19: nine piled up in one session).
+#
+# Absolute path to the MAIN checkout's copy deliberately: auto-sweep.sh gates
+# itself out when its own REPO is a worktree, so invoking a worktree's copy
+# would no-op.
+"$HOME/src/callback-box/.claude/hooks/auto-sweep.sh" session-end 2>/dev/null || true
+
 # Determine the worktree directory. cwd is the obvious signal, but Claude
 # Code reports the session's *final* cwd — an agent that cd'd to the main
 # checkout (e.g. to run a cross-tree git command) before exiting would

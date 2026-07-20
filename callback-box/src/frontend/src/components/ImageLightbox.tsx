@@ -98,8 +98,14 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
             {captionText}
           </figcaption>
         ) : null}
+        {/* z-30 keeps the controls above the nav arrows (z-20). The cluster is
+            positioned against the FIGURE's top-right while an arrow is against
+            the VIEWPORT's vertical centre, so for a short wide image the two
+            land at nearly the same spot — and close must never be the thing
+            that ends up underneath. Full stack: backdrop 0 < figure 10 <
+            arrows 20 < controls 30. */}
         <div
-          className="pointer-events-auto absolute top-2 right-2 flex items-center gap-2"
+          className="pointer-events-auto absolute z-30 top-2 right-2 flex items-center gap-2"
         >
           {hasMany ? (
             <span className="text-xs text-white/80 bg-black/40 rounded px-2 py-0.5 font-mono">
@@ -127,7 +133,13 @@ function NavButton({ direction, onClick }: { direction: "prev" | "next"; onClick
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={`absolute z-10 top-1/2 -translate-y-1/2 ${positionClass} w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white`}
+      /* z-20, above the figure's z-10: at equal z-index the figure (rendered
+         between the two buttons) painted over `prev` while `next` painted over
+         the figure, so a wide image hid the back arrow and left the forward one
+         showing. Keep both buttons above the figure rather than reordering the
+         JSX — an ordering fix silently re-breaks the next time someone moves
+         them. */
+      className={`absolute z-20 top-1/2 -translate-y-1/2 ${positionClass} w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white`}
     >
       <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
         {isPrev ? (

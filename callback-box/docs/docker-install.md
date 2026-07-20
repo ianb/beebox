@@ -131,10 +131,16 @@ The box is then reachable at `http://<tailnet-ip>:3210/box/` from any device on
 your tailnet, with zero ports open to the world. (Add TLS via Tailscale Serve
 if you want `https://`.)
 
-### Multi-device login (Google OAuth)
+### Box login (on by default)
 
-For signing in from more than one device/browser, set a Google OAuth client so
-the box can authenticate accounts:
+The box requires a login. Create the first (owner) account with
+`docker compose run --rm box cb auth create-user`, or open the first-run setup
+URL the server prints to its log. This uses the built-in local password method —
+no external service. Credentials are scrypt-hashed in `~/.cb-auth.json` (mode
+0600) inside the box volume.
+
+**Google OAuth (optional additional method).** To also allow Google sign-in
+(e.g. from more than one device), set a Google OAuth client:
 
 ```bash
 GOOGLE_OAUTH_CLIENT_ID=...

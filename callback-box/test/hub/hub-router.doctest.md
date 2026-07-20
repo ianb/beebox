@@ -28,6 +28,12 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
 
+// Most of this file exercises hub-wide OPEN mode (the hub advertises
+// `x-cb-hub-auth: off` to children). Auth is always-on by default now, so open
+// mode is the explicit `CB_ALLOW_UNAUTHENTICATED` opt-out — this replaces the
+// old "GOOGLE_OAUTH_CLIENT_ID unset ⇒ open" signal. The ONE section that needs
+// hub auth actually ON deletes it locally (and restores it after).
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 // Both hub health routes require this bearer key (mirroring the box server's
 // own /healthz). Set it for the whole doctest; the auth header helper below
 // sends it.
@@ -328,6 +334,9 @@ this file) to have a session to check in the first place.
 const ownedBox = await makeTmpBox();
 await ownedBox.write("config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
 
+// Hub auth ON for this section: drop the open-mode opt-out so the hub
+// verifies the session cookie (the rest of the file runs open).
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
 // registerAuthRoutes fails loudly on an ID-without-secret half-config
 // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
@@ -375,6 +384,8 @@ JSON.stringify({ url: allowedBody.url, email: allowedBody.headers.xCbAuthenticat
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 delete process.env.CB_SESSION_SECRET;
+// Restore open mode for any remaining blocks / consistency with the file's default.
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 for (const socket of authedHub.sockets) socket.destroy();
 await new Promise((resolve) => authedHub.server.close(resolve));
 await ownedBox.cleanup();
@@ -597,4 +608,5 @@ for (const socket of hub.sockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
 await new Promise((resolve) => hub.server.close(resolve));
 await new Promise((resolve) => box.server.close(resolve));
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
 ```

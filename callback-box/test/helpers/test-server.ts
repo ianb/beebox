@@ -28,6 +28,16 @@ import type { Services } from "../../src/services/index.js";
 
 export const TEST_SLUG = "test";
 
+// Auth is always-on by default now, so a test server is only reachable if it
+// opts out — which is honest: these servers ARE deliberately open. Set the
+// opt-out at MODULE scope (not per createTestServer call) so a doctest that
+// exercises auth itself can `delete process.env.CB_ALLOW_UNAUTHENTICATED` in
+// its own setup block and have that stick — createTestServer never re-sets it,
+// exactly as tests used to toggle GOOGLE_OAUTH_CLIENT_ID. Loopback-only ("1")
+// is enough: injected servers never bind a socket, and any that do bind
+// loopback.
+process.env.CB_ALLOW_UNAUTHENTICATED ??= "1";
+
 export interface TestServerContext {
   server: FastifyInstance;
   boxRoot: string;

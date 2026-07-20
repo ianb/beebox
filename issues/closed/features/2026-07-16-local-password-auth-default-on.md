@@ -1,9 +1,28 @@
 ---
 title: "Username/password login + forced account creation (even in dev) so a box is never accidentally open"
-needs: [design]
+design: ../../callback-box/docs/implemented-plans/local-password-auth.md
+resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked for a local-first, default-secure auth path
 area: callback-box
+---
+
+## Implemented (2026-07-19)
+
+Built end-to-end on `worktree-local-password-auth` per the design plan (Tracks
+A–H): scrypt credential store, always-on gate with the `CB_ALLOW_UNAUTHENTICATED`
+opt-out, password login + first-run setup + throttle, `gen` session revocation +
+fail-closed auth-store + WS cookie fallback, browse agent-token injection,
+`cb auth` CLI, frontend login/setup pages + open-mode banner, docs. Cross-model
+(Codex) reviewed at plan and implementation stages; the implementation review
+found (and fixed) hub-side gen-revocation and hub login body-parse breaks. Full
+doctest suite green. Plan + review:
+`../../callback-box/docs/implemented-plans/local-password-auth.md` (+ `.review.md`).
+
+The human-only verification (real login/setup/WS/browse flows + prod hardening)
+lives in its own tracker:
+[manually-verify-local-password-auth](../docs-and-chores/2026-07-19-manually-verify-local-password-auth.md).
+
 ---
 
 Auth today is **Google-OAuth-only, and off by default**. `isAuthEnabled()` is
