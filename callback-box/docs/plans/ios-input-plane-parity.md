@@ -6,7 +6,7 @@ extends the native draft and bridge to carry the complete web `Emission`, makes
 unsent and rejected work durable, and keeps the embedded web chat authoritative
 for target state and final dispatch.
 
-**Status:** active — Tracks 1-4 are implemented: canonical
+**Status:** partially implemented 2026-07 — Tracks 1-4 are implemented: canonical
 V2 encoding/decoding and shared fixtures; a box-scoped `ComposerDraftStore`;
 atomic, quarantining manifests; one-shot text migration; reducer/token/Unicode-
 caret coverage; a caret-aware, autosizing `UITextView`; and file-backed camera

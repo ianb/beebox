@@ -27,7 +27,7 @@ Expected parity:
   device credential is configured.
 
 The threat model and vocabulary are fixed by the
-[iOS design](../../callback-box/docs/plans/ios-per-box-device-lock.md): this is
+[iOS design](../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md): this is
 a phone-share navigation gate, not encryption or server policy. Write an
 Android-specific subplan once the companion's Track 1/2 architecture exists,
 then add unit tests plus emulator and physical-device lifecycle/authentication

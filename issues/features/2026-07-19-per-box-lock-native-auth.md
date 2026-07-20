@@ -1,7 +1,7 @@
 ---
 title: "Per-box lock: require re-auth (biometric/device) to open a sensitive box in a multi-box client"
 area: callback-box
-design: ../../callback-box/docs/plans/ios-per-box-device-lock.md
+design: ../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
 needs: [manual-testing]
 filed-by: agent
 discovered-in: main session — boxholder raised it while working through the queue
@@ -17,7 +17,7 @@ Proposal: mark some boxes as **locked**, so opening one requires an additional
 gate even inside an already-authenticated client.
 
 The implementation-ready iOS design is
-[`ios-per-box-device-lock.md`](../../callback-box/docs/plans/ios-per-box-device-lock.md).
+[`ios-per-box-device-lock.md`](../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md).
 It resolves the declaration question in favor of an honest device-local
 preference: this feature gates navigation on one phone and does not introduce a
 server policy that can become stale or imply enforcement a client cannot provide.
@@ -95,7 +95,7 @@ someone reading `pinned: true` in a paired-box record would guess wrong.
 
 ## Implementation status (2026-07-20)
 
-The iOS implementation is complete on branch `worktree-per-box-lock`:
+The iOS implementation has landed on `main`:
 
 - the preference is stored only in the local paired-box JSON, with legacy
   snapshots defaulting safely to unlocked;
