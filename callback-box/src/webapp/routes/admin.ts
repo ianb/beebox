@@ -9,6 +9,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, type GoogleTokens } from "../../connectors/google-auth.js";
+import { parseOAuthState, consumeGoogleOAuthState } from "../../connectors/google-oauth-state.js";
 import { isRecord } from "../../lib/is-record.js";
 import { baseServerUrl } from "../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../lib/public-url.js";
@@ -25,11 +26,16 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
     const query = request.query;
     const code = isRecord(query) && typeof query["code"] === "string" ? query["code"] : undefined;
     const state = isRecord(query) && typeof query["state"] === "string" ? query["state"] : undefined;
-    console.log("[google-oauth] Callback received, state:", state, "code:", code ? "present" : "missing");
-    // State format: "boxSlug" or "boxSlug:returnPath"
-    const colonIdx = (state || "").indexOf(":");
-    const boxSlug = colonIdx !== -1 ? (state || "").slice(0, colonIdx) : (state || "");
-    const returnPath = colonIdx !== -1 ? (state || "").slice(colonIdx + 1) : "admin";
+    console.log("[google-oauth] Callback received, state:", state ? "present" : "missing", "code:", code ? "present" : "missing");
+    // State format: "<boxSlug>:<nonce>". The nonce is a one-time server-minted
+    // secret from the owner-gated setup flow — without a valid one, this
+    // callback (reachable outside the auth wall) must NOT persist tokens.
+    const parsed = parseOAuthState(state);
+    if (!parsed) {
+      console.log("[google-oauth] Missing/malformed state, rejecting");
+      return reply.status(400).send({ error: "Invalid OAuth state" });
+    }
+    const boxSlug = parsed.boxSlug;
     const box = boxes.find((b) => b.slug === boxSlug);
 
     if (!box) {
@@ -37,6 +43,14 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       return reply.status(400).send({ error: `Unknown box: ${boxSlug}` });
     }
 
+    // Verify + consume the nonce. A caller who never passed the owner wall has
+    // no valid nonce; this is the credential-swap / token-fixation gate.
+    const consumed = consumeGoogleOAuthState({ boxRoot: box.boxRoot, nonce: parsed.nonce });
+    if (!consumed) {
+      console.log("[google-oauth] Invalid/expired/replayed state nonce, rejecting");
+      return reply.status(400).send({ error: "Invalid or expired OAuth state" });
+    }
+    const returnPath = consumed.returnPath;
     const returnUrl = `/${boxSlug}/${returnPath}`;
 
     if (!code) {

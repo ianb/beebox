@@ -5,10 +5,12 @@ alongside always-on auth (Google OAuth is now layered on top, not the gate);
 cross-model (Codex) reviewed at both the plan and implementation stages, with
 findings fixed and re-reviewed. Not yet manually exercised in a live app —
 see `issues/docs-and-chores/2026-07-19-manually-verify-local-password-auth.md`.
-Three pre-existing security findings from the implementation review remain
-open and unfixed: `issues/bugs/2026-07-19-google-oauth-callback-unauthenticated.md`,
-`issues/bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md`,
-`issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md`.
+Three pre-existing security findings surfaced by the implementation review; the
+OAuth-callback one is now fixed
+(`issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md`), while
+`issues/bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md` and
+`issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md` remain
+open.
 
 Add a local username/password login method and make authentication the
 always-on default — including in dev — so an unauthenticated box requires a

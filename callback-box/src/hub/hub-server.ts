@@ -361,9 +361,11 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // path under the "auth" reserved slug, which the generic catch-all below
   // can never route (no box is actually named "auth"). The setup flow
   // (`admin-google.ts`'s `googleSetup`) already encodes which box initiated
-  // it in the OAuth `state` param ("boxSlug" or "boxSlug:returnPath", same
-  // format `routes/admin.ts`'s callback handler parses) -- so the hub reads
-  // just enough of `state` to pick the child, then forwards unchanged. The
+  // it in the OAuth `state` param ("<boxSlug>:<nonce>", where the nonce is a
+  // one-time secret the child's callback verifies — same format
+  // `routes/admin.ts`'s callback handler parses) -- so the hub reads just
+  // enough of `state` (the slug before the first colon) to pick the child,
+  // then forwards unchanged. The
   // child's own handler (still registered on every `cb serve`, per-box) is
   // the one that exchanges the code and saves tokens; the hub only routes
   // and injects the same gated identity headers every proxied request gets.
