@@ -51,6 +51,48 @@ Select, trim, split, relocate, and revise-on-instruction are exactly the verbs
 of assembling a document. The law already permits them. What's missing is the
 **practice** built on the primitive, not the primitive.
 
+## Worked example of the guidance this should contain
+
+Boxholder, giving a sample of what belongs in the skill:
+
+> if the agent is structuring the user's words into a document, it is better for
+> that structure to be in the form of lists, paragraphs, punctuation; avoiding
+> adding _words_, but using visual structure. Visual structure does not imply
+> authenticity one way or the other.
+
+The distinction is **structure vs. words**. Breaking a run of speech into
+paragraphs, turning three parallel remarks into a list, adding punctuation — none
+of that puts words in the user's mouth, and none of it makes a claim about voice.
+A reader doesn't attribute a bullet point to anyone. But an added *word* is
+attributable, and a sentence of agent prose sitting among the user's sentences
+reads as theirs. So the first tool for structuring is always typography, not
+vocabulary.
+
+Then the graduated rule for when structure alone won't carry it:
+
+> When restructuring requires new connective tissue […] it is best to solicit
+> that from the user. OTOH, if you maintain accurate `{% quote %}` then
+> agent-compose connective words can be okay as a placeholder, or if it is based
+> on well-represented authentic samples.
+
+So, in order of preference:
+
+1. **Ask the user for it.** The connective sentence is still a sentence with a
+   voice; the user is the one who should supply it.
+2. **Agent-composed as an explicit placeholder** — written to be replaced, and
+   legible as such, not quietly permanent.
+3. **Agent-composed from well-represented authentic samples** — acceptable when
+   there's enough of the user's own material on the point that the connective
+   words are a faithful extrapolation rather than an invention.
+
+What makes 2 and 3 tolerable at all is the **accurate `{% quote %}` boundary**.
+If the user's words are correctly marked, then the unmarked text is visibly *not*
+theirs — the agent's prose isn't passing itself off, it's declaring itself. The
+quote tag is what converts "agent wrote some of this" from a betrayal into a
+disclosed edit. Which means quote accuracy is load-bearing for the whole
+practice: get it wrong and the connective tissue silently becomes attributed
+speech.
+
 ## What's actually missing
 
 - **Eliciting words that don't exist yet.** Assembly presupposes material. When
