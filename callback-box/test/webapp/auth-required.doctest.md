@@ -9,6 +9,10 @@ diagnostic-bypass batch-URL fix, and the two root-route edges (`/auth/me` open
 shape, `/api/push/resubscribe` behind the wall).
 
 ```ts setup
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+
 import {
   openMode,
   authRequired,
@@ -19,6 +23,28 @@ import { makeTestServer } from "../helpers/doctest-server.js";
 
 const ORIGINAL_OPT_OUT = process.env.CB_ALLOW_UNAUTHENTICATED;
 const ORIGINAL_DIAG_KEY = process.env.CB_DIAG_API_KEY;
+
+// Point the Tailscale exposure file at a clean per-run tmp path so the bind-tier
+// checks above see "nothing exposed" (no file), and the exposure-guard section
+// below can write/clear it hermetically.
+const ORIGINAL_EXPOSURE_FILE = process.env.CB_TAILSCALE_EXPOSURE_FILE;
+const exposureFile = path.join(os.tmpdir(), `cb-exposure-auth-test-${process.pid}-${Date.now()}.json`);
+process.env.CB_TAILSCALE_EXPOSURE_FILE = exposureFile;
+
+/** Call `enforceOpenModeAtListen` with the open-mode boot warning suppressed,
+ *  returning `"ok"` or the thrown error's name — for the exposure-guard section. */
+function listenResult({ host, port }) {
+  const origWarn = console.warn;
+  console.warn = function suppressed() { /* silence the open-mode boot warning */ };
+  try {
+    enforceOpenModeAtListen({ host, port });
+    return "ok";
+  } catch (e) {
+    return e.name;
+  } finally {
+    console.warn = origWarn;
+  }
+}
 
 /** Minimal fake FastifyRequest for the diagnostic-bypass check. */
 function fakeRequest({ method, url, headers }) {
@@ -161,4 +187,52 @@ if (ORIGINAL_OPT_OUT === undefined) delete process.env.CB_ALLOW_UNAUTHENTICATED;
 else process.env.CB_ALLOW_UNAUTHENTICATED = ORIGINAL_OPT_OUT;
 if (ORIGINAL_DIAG_KEY === undefined) delete process.env.CB_DIAG_API_KEY;
 else process.env.CB_DIAG_API_KEY = ORIGINAL_DIAG_KEY;
+```
+
+## The exposure-intent guard: open mode refuses to start while a port is exposed
+
+Once `cb tailscale setup` records a port in the exposure file
+(`tailscale-exposure.ts`), `enforceOpenModeAtListen` refuses to bind that port in
+open mode — the durable half of the auth-posture guard, so a restart into open
+mode can't silently reopen a Tailscale-fronted box (the OpenClaw-#50630 analog).
+
+```ts
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
+fs.writeFileSync(
+  exposureFile,
+  JSON.stringify({ version: 1, targets: [{ port: 3210, dnsName: "box.tail1234.ts.net", configuredAt: "2026-07-20T00:00:00Z" }] }),
+);
+
+// Open mode + the recorded port ⇒ refuse to start (fail closed).
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+listenResult({ host: "127.0.0.1", port: 3210 })
+=> OpenModeExposureError
+
+// Open mode but a DIFFERENT (unrecorded) port ⇒ no exposure conflict.
+listenResult({ host: "127.0.0.1", port: 9999 })
+=> ok
+
+// Auth on (opt-out unset) ⇒ the exposure file is never consulted, even for the
+// recorded port (zero cost on the normal path).
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
+listenResult({ host: "127.0.0.1", port: 3210 })
+=> ok
+```
+
+A corrupt/unparseable exposure file while open mode is requested also refuses —
+distinct from the recorded-port error, never assumed-empty:
+
+```ts
+fs.writeFileSync(exposureFile, "{ this is not json");
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+listenResult({ host: "127.0.0.1", port: 3210 })
+=> ExposureFileUnreadableError
+```
+
+```ts cleanup
+fs.rmSync(exposureFile, { force: true });
+if (ORIGINAL_EXPOSURE_FILE === undefined) delete process.env.CB_TAILSCALE_EXPOSURE_FILE;
+else process.env.CB_TAILSCALE_EXPOSURE_FILE = ORIGINAL_EXPOSURE_FILE;
+if (ORIGINAL_OPT_OUT === undefined) delete process.env.CB_ALLOW_UNAUTHENTICATED;
+else process.env.CB_ALLOW_UNAUTHENTICATED = ORIGINAL_OPT_OUT;
 ```

@@ -19,6 +19,7 @@ import { errnoCode } from "../lib/error-guards.js";
 import { getLocalOwnerEmail, getLocalUser } from "./local-users.js";
 import { getLocalUserCached } from "./local-users-cache.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
+import { assertPortNotExposedInOpenMode } from "../services/tailscale-exposure.js";
 
 const COOKIE_NAME = "cb_session";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -134,7 +135,14 @@ function isLoopbackHost(host: string): boolean {
  */
 export function enforceOpenModeAtListen({ host, port }: { host: string; port: number }): void {
   const mode = openMode();
+  // Zero cost on the normal (auth-on) path: the exposure file is never consulted
+  // unless the operator has explicitly requested open mode.
   if (mode === "off") return;
+  // Durable half of the auth-posture guard: a persisted Tailscale exposure for
+  // this port means Serve is fronting it to the tailnet, so open mode must NOT
+  // start (a corrupt exposure file refuses too — fail closed). Throws
+  // OpenModeExposureError / ExposureFileUnreadableError.
+  assertPortNotExposedInOpenMode(port);
   if (mode === "loopback" && !isLoopbackHost(host)) {
     throw new OpenModeBindError(host);
   }

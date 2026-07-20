@@ -46,6 +46,13 @@ export interface ProbeResult {
   reachable: boolean;
   /** HTTP status code, or null when the request never completed. */
   status: number | null;
+  /**
+   * The response body text, or null when unreachable/unread. Setup reads this
+   * from a loopback `/auth/me` probe to classify the target's auth posture
+   * (`open` vs `enforced`); the status state machine ignores it. Optional so
+   * chunk-1 fakes and callers that only need reachability stay unchanged.
+   */
+  body?: string | null;
 }
 
 export type ProbeEndpoint = (url: string) => Promise<ProbeResult>;
@@ -75,11 +82,19 @@ export function createRealProbe(): ProbeEndpoint {
   return async (url) => {
     try {
       const res = await fetch(url, { method: "GET", redirect: "manual" });
-      return { reachable: true, status: res.status };
+      // Body is small (an `/auth/me` JSON) and load-bearing for the auth-posture
+      // classification; a body read failure degrades to null, still reachable.
+      let body: string | null;
+      try {
+        body = await res.text();
+      } catch (_e) {
+        body = null;
+      }
+      return { reachable: true, status: res.status, body };
     } catch (_e) {
       // Network-level failure (DNS, TLS, connection refused) — the endpoint is
       // simply not reachable; an expected state-machine branch, not a crash.
-      return { reachable: false, status: null };
+      return { reachable: false, status: null, body: null };
     }
   };
 }

@@ -11,11 +11,18 @@
  * modules.
  */
 
+import * as readline from "node:readline";
+
 import { Command } from "commander";
 
 import { errorMessage } from "../../lib/error-guards.js";
 import { assertNever } from "../../lib/invariant.js";
 import { createRealTailscaleDeps } from "../../services/tailscale.js";
+import {
+  runTailscaleSetup,
+  runTailscaleStop,
+  type SetupIo,
+} from "../../services/tailscale-setup.js";
 import {
   reportToJson,
   runTailscaleStatus,
@@ -89,6 +96,56 @@ const statusCommand = new Command("status")
     }
   });
 
+/** Real operator I/O for the guided setup loop: log to stdout, and (in a TTY)
+ *  block on a single line of stdin between human steps. `--no-wait` forces
+ *  `interactive: false` so a non-interactive caller never hangs on the prompt. */
+function createRealSetupIo(wait: boolean): SetupIo {
+  return {
+    interactive: wait && process.stdin.isTTY === true,
+    log: (line) => console.log(line),
+    waitForContinue: () =>
+      new Promise((resolve) => {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        rl.question("", () => {
+          rl.close();
+          resolve();
+        });
+      }),
+  };
+}
+
+const setupCommand = new Command("setup")
+  .description("Guided loop: configure `tailscale serve` to front an auth-gated loopback cb server, off the public internet")
+  .option("--target <port>", "The loopback port of the auth-gated cb serve/hub to expose (e.g. 3210)")
+  .option("--no-wait", "Non-interactive: print the next human step and exit nonzero instead of waiting")
+  .action(async (options: { target?: string; wait?: boolean }) => {
+    try {
+      const io = createRealSetupIo(options.wait ?? true);
+      const result = await runTailscaleSetup(createRealTailscaleDeps(), { target: options.target, io });
+      console.log(result.ok ? `✓ ${result.message}` : `✗ ${result.message}`);
+      if (!result.ok) process.exitCode = 1;
+    } catch (error) {
+      console.error(`Error: ${errorMessage(error)}`);
+      process.exitCode = 1;
+    }
+  });
+
+const stopCommand = new Command("stop")
+  .description("Remove this target's `tailscale serve` mapping and clear its exposure intent (preserves unrelated mappings)")
+  .option("--target <port>", "The loopback port whose Tailscale exposure to remove (e.g. 3210)")
+  .action(async (options: { target?: string }) => {
+    try {
+      const result = await runTailscaleStop(createRealTailscaleDeps(), { target: options.target });
+      console.log(result.ok ? `✓ ${result.message}` : `✗ ${result.message}`);
+      if (!result.ok) process.exitCode = 1;
+    } catch (error) {
+      console.error(`Error: ${errorMessage(error)}`);
+      process.exitCode = 1;
+    }
+  });
+
 export const tailscaleCommand = new Command("tailscale")
-  .description("Expose a loopback cb server over Tailscale, off the public internet (status; setup is chunk 2)")
-  .addCommand(statusCommand);
+  .description("Expose a loopback cb server over Tailscale, off the public internet (status, setup, stop)")
+  .addCommand(statusCommand)
+  .addCommand(setupCommand)
+  .addCommand(stopCommand);
