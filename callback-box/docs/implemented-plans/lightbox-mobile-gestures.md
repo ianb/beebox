@@ -1,5 +1,9 @@
 # Lightbox mobile gestures: double-tap zoom + pan, pinch, swipe-to-dismiss
 
+**Status:** implemented 2026-07 — code shipped and reviewed; on-device manual
+verification (pinch feel, flick thresholds, iOS Safari overlay behavior) still
+pending, tracked by `needs: [manual-testing]` on the issue below.
+
 Issue: `issues/features/2026-07-20-lightbox-mobile-gestures.md` (monorepo root).
 Target: `src/frontend/src/components/ImageLightbox.tsx` (+ its only in-repo
 mount point, `LightboxProvider.tsx` — no call-site changes needed; all work is
@@ -279,19 +283,11 @@ update the component comments to describe the real mechanism.
   (touch-action honored, no body scroll-through, no native zoom) are only
   verifiable on hardware. The issue will record exactly what to try.
 
-## Open decisions (boxholder)
+## Decisions (resolved by the boxholder, 2026-07-20)
 
-1. **Pinch in v1?** Codex's strongest recommendation was to cut pinch (and the
-   rAF spring) from v1 and ship double-tap zoom + pan + dismiss with CSS
-   transitions only — pinch is where the hard transitions and device-only
-   validation concentrate. The counter (this plan's default): the issue itself
-   predicts pinch's absence "will read as broken" to anyone who double-taps,
-   the transform math is shared, and the reducer makes the extra transitions
-   testable. Both cuts are clean if wanted — pinch is additive rows in the
-   reducer table.
-2. **Both dismiss directions** (as asked) is the default here; down-only is
-   the common-viewer convention and reserves up. No competing use for up
-   exists or is planned.
-3. **Whole-component replacement** (PhotoSwipe-class) was ruled out to protect
-   the existing a11y/provider/z-stack work — flag if you'd rather evaluate
-   that direction seriously instead.
+1. **Pinch in v1: yes.** The boxholder approved the plan's default over
+   Codex's cut-it recommendation — pinch shipped in this implementation.
+2. **Both dismiss directions**: shipped as planned (up and down both close).
+3. **Whole-component replacement** (PhotoSwipe-class) stayed out of scope;
+   this component's a11y/provider/z-stack structure was extended, not
+   replaced.

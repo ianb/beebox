@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-20T02:42:09Z
-Total documents: 198
+Generated: 2026-07-20T16:57:56Z
+Total documents: 199
 
 ## Issues
 
@@ -166,8 +166,8 @@ Referenced by:
 - ../issues/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:2 (mention) — title: "Can directory-scoped rules replace generated CLAUDE.md / @-includes?"
 - ../issues/features/2026-05-28-retrospective-session-scan.md:7 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user 
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:12 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
-- ../issues/features/2026-07-05-writing-skill.md:9 (mention) — Scope: prose, usually exposition — READMEs, docs, `CLAUDE.md`s, issue bodies,
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:14 (mention) — and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
+- ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:55 (mention) — interface (`src/connectors/`, see its CLAUDE.md), or a separate resolver the
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:132 (mention) — box's CLAUDE.md walk-up, `.claude/rules/`, skills/slash commands
 - ../research/backend-alternatives/2026-07-18-synthesis.md:20 (mention) — CLAUDE.md/rules/skills auto-loading, the `claude_code` system-prompt preset, in-process
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -320,7 +320,6 @@ Referenced by:
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/exploration/2026-07-18-directory-scoped-rules-vs-generated-claude-md.md:30 (at-include) — - Engine side: `callback-box/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
-- ../issues/features/2026-07-05-writing-skill.md:12 (mention) — code style (that's `code-style.md`).
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -886,6 +885,7 @@ Referenced by:
 - docs/plans/pdf-intake-design.md:19 (link) — **Intake-time extraction.** When a PDF arrives (`cb import`, capture endpoint, email connector), the intake path runs do
 - ../.claude/skills/cb-codehealth/SKILL.md:154 (mention) — Read `docs/glossary.md` for the domain's real names; don't re-litigate decisions
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:6 (mention) — `docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific mean
+- ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:89 (mention) — checking against the glossary (`callback-box/docs/glossary.md`) — the codebase
 - ../research/external-skills-harvest.md:93 (mention) — Markdown), the CONTEXT.md/ADR coupling (→ `docs/glossary.md` + git history +
 
 References:
@@ -1423,6 +1423,7 @@ Referenced by:
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:78 (mention) — role with a handler procedure (`docs/triage.md`). Could the admin landmark host
+- ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:78 (mention) — (`docs/triage.md`) or a Drive-specific destination — the Drive connector may
 - ../research/pai/README.md:60 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
 
 References:
@@ -2082,6 +2083,13 @@ Referenced by:
 References:
 - → docs/plans/prompt-surface-ia-review.md (mention)
 - → code-style.md (mention)
+
+#### docs/implemented-plans/lightbox-mobile-gestures.md
+
+Title: "Lightbox mobile gestures: double-tap zoom + pan, pinch, swipe-to-dismiss" | 294 lines
+
+Referenced by:
+- ../issues/features/2026-07-20-lightbox-mobile-gestures.md:7 (mention) — design: ../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md
 
 #### docs/implemented-plans/link-validation-fix.md
 

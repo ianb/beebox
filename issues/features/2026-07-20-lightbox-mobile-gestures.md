@@ -3,8 +3,8 @@ title: "Lightbox mobile gestures: double-tap to zoom + pan, swipe up/down to clo
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked for it after using the lightbox on a phone
-needs: [decision, manual-testing]
-design: ../../callback-box/docs/plans/lightbox-mobile-gestures.md
+needs: [manual-testing]
+design: ../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md
 ---
 
 Two mobile gestures wanted in the image lightbox
@@ -69,7 +69,7 @@ matching rather than inventing — muscle memory is the whole point of a gesture
 ## What to try on the phone (manual-testing checklist, 2026-07-20)
 
 Implementation landed (`c326d4a5` + `299297e5`, design in
-`../../callback-box/docs/plans/lightbox-mobile-gestures.md`). Desktop
+`../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md`). Desktop
 pointer-event testing verified the logic; the phone pass is about **feel and
 iOS specifics**:
 
