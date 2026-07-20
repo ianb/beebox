@@ -81,11 +81,21 @@ export class LightboxGestureController {
 
   /** Reset contract: a src swap reuses the component; wipe all gesture state. */
   reset(): void {
-    this.pointers.clear();
+    for (const id of this.pointers.keys()) this.dropPointer(id);
     this.gesture = initialGestureState;
     this.panBase = null;
     this.pinchBase = null;
     this.render.reset();
+  }
+
+  /** Remove a pointer from the map AND release its capture (idempotent). */
+  private dropPointer(id: number): void {
+    this.pointers.delete(id);
+    try {
+      this.els.wrapper.releasePointerCapture(id);
+    } catch (_e) {
+      /* ignore: releasing an already-lost pointer is harmless */
+    }
   }
 
   private latest(id: number): PointerSample | undefined {
@@ -150,12 +160,7 @@ export class LightboxGestureController {
         }
         return;
       case "releasePointer":
-        this.pointers.delete(action.pointerId);
-        try {
-          this.els.wrapper.releasePointerCapture(action.pointerId);
-        } catch (_e) {
-          /* ignore: releasing an already-lost pointer is harmless */
-        }
+        this.dropPointer(action.pointerId);
         return;
       case "cancelSpring":
         this.render.cancelSprings();
@@ -273,6 +278,10 @@ export class LightboxGestureController {
     const point = this.render.toCentered(e.clientX, e.clientY);
     this.pointers.set(e.pointerId, [{ point, time: e.timeStamp }]);
     this.dispatch({ type: "pointerdown", pointerId: e.pointerId, point, time: e.timeStamp });
+    // Map ownership follows reducer acceptance: a pointer the reducer chose
+    // not to track (e.g. a third finger during a pinch) must not linger in the
+    // map, or pinnedPointer() later baselines gestures on a dead touch.
+    if (!(e.pointerId in this.gesture.pointers)) this.pointers.delete(e.pointerId);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -296,6 +305,11 @@ export class LightboxGestureController {
   private onPointerUp = (e: PointerEvent): void => {
     if (!this.pointers.has(e.pointerId)) return;
     const point = this.render.toCentered(e.clientX, e.clientY);
+    // Fold the release position in BEFORE deciding: with coalesced events the
+    // last big delta can arrive only on pointerup, and it must count toward
+    // velocity and the dismiss displacement.
+    this.pushSample(e.pointerId, { point, time: e.timeStamp });
+    this.applyActiveFrame();
     const velocity = estimateVelocity(this.pointers.get(e.pointerId) ?? []);
     this.dispatch({
       type: "pointerup",
@@ -306,11 +320,15 @@ export class LightboxGestureController {
       displacementY: this.render.getDismissY(),
       viewportHeight: this.render.getViewportHeight(),
     });
+    // Safety net alongside the reducer's releasePointer action: no pointerup
+    // path may leave its pointer in the map.
+    if (!(e.pointerId in this.gesture.pointers)) this.dropPointer(e.pointerId);
   };
 
   private onPointerCancel = (e: PointerEvent): void => {
     if (!this.pointers.has(e.pointerId)) return;
     this.dispatch({ type: "pointercancel", pointerId: e.pointerId, time: e.timeStamp });
+    if (!(e.pointerId in this.gesture.pointers)) this.dropPointer(e.pointerId);
   };
 
   private onClickCapture = (e: MouseEvent): void => {

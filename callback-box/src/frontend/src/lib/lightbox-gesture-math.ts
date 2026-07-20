@@ -188,7 +188,9 @@ export function estimateVelocity(samples: readonly PointerSample[]): Point {
 
 /**
  * Dismiss decision on release: a fast enough flick OR a far enough drag closes;
- * anything less springs back.
+ * anything less springs back. A flick only counts when it moves AWAY from rest
+ * (same sign as the displacement) — dragging down then flicking sharply back
+ * toward center is a cancel, not a close.
  */
 export function shouldDismiss({
   velocityY,
@@ -199,8 +201,9 @@ export function shouldDismiss({
   displacementY: number;
   viewportHeight: number;
 }): boolean {
+  const movingAway = displacementY === 0 || Math.sign(velocityY) === Math.sign(displacementY);
   return (
-    Math.abs(velocityY) >= DISMISS_VELOCITY_PX_PER_MS ||
+    (movingAway && Math.abs(velocityY) >= DISMISS_VELOCITY_PX_PER_MS) ||
     Math.abs(displacementY) >= DISMISS_DISPLACEMENT_RATIO * viewportHeight
   );
 }

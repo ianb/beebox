@@ -156,6 +156,29 @@ tap2 = reduceGesture(tap2.state, { type: "pointerup", pointerId: 1, point: { x: 
 => idle [{"type":"toggleZoom","anchor":{"x":4,"y":4}},{"type":"suppressClick"},{"type":"releasePointer","pointerId":1}] null
 ```
 
+A release whose total travel crossed the drag threshold is NOT a tap, even if
+no move event ever classified it (a coalesced gesture can deliver its big
+delta only at pointerup):
+
+```ts
+let bigUp = reduceGesture(initialGestureState, { type: "pointerdown", pointerId: 1, point: { x: 0, y: 0 }, time: 0 });
+bigUp = reduceGesture(bigUp.state, { type: "pointerup", pointerId: 1, point: { x: 0, y: 40 }, time: 30, velocityY: 0, displacementY: 0, viewportHeight: 800 });
+[bigUp.state.mode, JSON.stringify(bigUp.state.lastTap)].join(" ")
+=> idle null
+```
+
+A tap followed by a quick drag does not pair with a tap after it — any
+classified drag (or a pinch promotion) voids the tap history:
+
+```ts
+let td = reduceGesture(initialGestureState, { type: "pointerdown", pointerId: 1, point: { x: 0, y: 0 }, time: 0 });
+td = reduceGesture(td.state, { type: "pointerup", pointerId: 1, point: { x: 0, y: 0 }, time: 30, velocityY: 0, displacementY: 0, viewportHeight: 800 });
+td = reduceGesture(td.state, { type: "pointerdown", pointerId: 1, point: { x: 0, y: 0 }, time: 60 });
+td = reduceGesture(td.state, { type: "pointermove", pointerId: 1, point: { x: 0, y: 30 }, time: 80, atFit: true });
+JSON.stringify(td.state.lastTap)
+=> null
+```
+
 ## Drag-followed-by-click suppression
 
 A completed drag arms a suppression window. A real pointer click (`detail > 0`)

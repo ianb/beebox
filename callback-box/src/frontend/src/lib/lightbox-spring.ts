@@ -6,10 +6,11 @@
  * targets, calling `onFrame` with the live values each frame.
  *
  * The step is the exact critically-damped analytic solution
- * `x(t) = (x0 + (v0 + ω·x0)·t)·e^(−ω·t)`, so there is never overshoot and the
- * carried release velocity is honored. `prefers-reduced-motion` collapses to an
- * immediate jump. Timing primitives are injected so the module has no ambient
- * globals baked in.
+ * `x(t) = (x0 + (v0 + ω·x0)·t)·e^(−ω·t)` — no oscillation, though a carried
+ * velocity pointing through the target crosses it once before settling (the
+ * expected fling-past-and-return feel; callers clamp carried velocity).
+ * `prefers-reduced-motion` collapses to an immediate jump. Timing primitives
+ * are injected so the module has no ambient globals baked in.
  */
 
 /** Default angular frequency (rad/s) — snappy but not abrupt. */

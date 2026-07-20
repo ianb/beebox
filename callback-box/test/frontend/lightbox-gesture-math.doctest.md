@@ -210,6 +210,17 @@ shouldDismiss({ velocityY: 0.1, displacementY: 100, viewportHeight: 800 })
 => false
 ```
 
+A fast flick BACK toward center (velocity opposing the displacement) is a
+cancel, not a close — only away-moving velocity counts:
+
+```ts
+shouldDismiss({ velocityY: -0.8, displacementY: 100, viewportHeight: 800 })
+=> false
+
+shouldDismiss({ velocityY: -0.8, displacementY: -100, viewportHeight: 800 })
+=> true
+```
+
 Fade progress tracks displacement toward the fade ratio (40% of the viewport):
 
 ```ts

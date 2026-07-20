@@ -57,6 +57,9 @@ export class LightboxRenderTarget {
   private containerCenter: Point = { x: 0, y: 0 };
   private transformSpring: SpringHandle | null = null;
   private dismissSpring: SpringHandle | null = null;
+  /** The active settle's completion callback, kept so a mid-flight re-measure
+   *  can restart the spring toward the new bounds with the same completion. */
+  private settleOnDone: (() => void) | null = null;
 
   constructor(elements: LightboxElements) {
     this.els = elements;
@@ -131,6 +134,13 @@ export class LightboxRenderTarget {
         height: window.visualViewport?.height ?? this.els.root.clientHeight,
       },
     };
+    if (this.transformSpring && this.settleOnDone) {
+      // A running settle spring holds a target computed against the OLD
+      // bounds (iOS toolbar collapse, rotation); restart it toward the new
+      // ones or it finishes out of bounds and overwrites the clamp below.
+      this.springSettle({ velocity: { x: 0, y: 0 }, onDone: this.settleOnDone });
+      return;
+    }
     this.transform = clampTransformToBounds(this.transform, this.frame);
     this.writeTransform();
   }
@@ -168,6 +178,7 @@ export class LightboxRenderTarget {
   cancelSprings(): void {
     this.transformSpring?.cancel();
     this.transformSpring = null;
+    this.settleOnDone = null;
     this.dismissSpring?.cancel();
     this.dismissSpring = null;
   }
@@ -191,6 +202,7 @@ export class LightboxRenderTarget {
    */
   springSettle({ velocity, onDone }: { velocity: Point; onDone: () => void }): void {
     this.transformSpring?.cancel();
+    this.settleOnDone = onDone;
     this.clearTransition();
     const from = this.transform;
     const target = settleTarget(from, this.frame);
@@ -211,6 +223,7 @@ export class LightboxRenderTarget {
         this.transform = snapToFit(this.transform);
         this.writeTransform();
         this.transformSpring = null;
+        this.settleOnDone = null;
         onDone();
       },
     });

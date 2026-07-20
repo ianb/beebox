@@ -12,6 +12,7 @@ import {
   CLICK_SUPPRESS_MS,
   classifyAxis,
   isDoubleTap,
+  isTap,
   movedEnough,
   shouldDismiss,
   type Point,
@@ -136,6 +137,9 @@ function onPointerDown(state: GestureState, event: Extract<GestureEvent, { type:
           mode: "pinching",
           pointers: { ...state.pointers, [pointerId]: tracked },
           pinchIds,
+          // A pinch is not a tap; without this, tap → quick pinch → tap could
+          // pair across the pinch as a double-tap.
+          lastTap: null,
         },
         actions,
       );
@@ -161,15 +165,17 @@ function onPointerMove(state: GestureState, event: Extract<GestureEvent, { type:
   const dy = event.point.y - tracked.start.point.y;
   if (!movedEnough(dx, dy)) return result({ ...state, pointers }, []);
 
+  // Any classified drag voids tap history — tap → short drag → tap must not
+  // pair across the drag as a double-tap.
   if (!event.atFit) {
-    return result({ ...state, mode: "panning", pointers }, [{ type: "beginPan" }]);
+    return result({ ...state, mode: "panning", pointers, lastTap: null }, [{ type: "beginPan" }]);
   }
   if (classifyAxis(dx, dy) === "vertical") {
-    return result({ ...state, mode: "dismissing", pointers }, [{ type: "beginDismiss" }]);
+    return result({ ...state, mode: "dismissing", pointers, lastTap: null }, [{ type: "beginDismiss" }]);
   }
   // Horizontal at fit: reserved for future prev/next nav — release, no action.
   return result(
-    { ...state, mode: "idle", pointers: withoutPointer(state.pointers, event.pointerId) },
+    { ...state, mode: "idle", pointers: withoutPointer(state.pointers, event.pointerId), lastTap: null },
     [{ type: "releasePointer", pointerId: event.pointerId }],
   );
 }
@@ -194,6 +200,11 @@ function onTrackedRelease(state: GestureState, input: ReleaseInput): GestureResu
       const base: GestureState = { ...state, mode: "idle", pointers, pinchIds: null };
       const release: GestureAction[] = [{ type: "releasePointer", pointerId }];
       if (snapBackOnly || !tracked || !point) return result({ ...base, lastTap: null }, release);
+      // The release position counts toward tap-vs-drag: a coalesced gesture
+      // whose big delta arrives only at pointerup must not read as a tap.
+      const dxUp = point.x - tracked.start.point.x;
+      const dyUp = point.y - tracked.start.point.y;
+      if (!isTap(dxUp, dyUp)) return result({ ...base, lastTap: null }, release);
       const sample: PointerSample = { point, time };
       if (state.lastTap && isDoubleTap({ prev: state.lastTap, current: sample })) {
         return result(
