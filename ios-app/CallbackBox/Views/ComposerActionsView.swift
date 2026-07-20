@@ -75,6 +75,9 @@ struct ComposerActionsView: View {
                                 HStack {
                                     Text(box.label)
                                     Spacer()
+                                    if box.requiresDeviceUnlock {
+                                        Image(systemName: "lock.fill")
+                                    }
                                     if box.id == store.selectedBox?.id {
                                         Image(systemName: "checkmark")
                                     }

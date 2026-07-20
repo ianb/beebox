@@ -18,6 +18,7 @@ struct NativeComposerView: View {
     var initialDetailedSelection: DraftSelection?
 
     @EnvironmentObject private var store: PairedBoxStore
+    @EnvironmentObject private var boxLockManager: BoxLockManager
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var statusText: String?
     @State private var isPreparingSend = false
@@ -93,6 +94,11 @@ struct NativeComposerView: View {
         .onChange(of: selectedPhotoItems) { _, newValue in
             Task {
                 await loadPhotos(from: newValue)
+            }
+        }
+        .onChange(of: boxLockManager.isLocked(box)) { _, isLocked in
+            if isLocked {
+                dismissPresentedContentForLock()
             }
         }
         .onChange(of: locationShareResult) { _, result in
@@ -589,6 +595,19 @@ struct NativeComposerView: View {
             await appendImage(data: sourceData, sourceMimeType: sourceMimeType)
         }
         selectedPhotoItems = []
+    }
+
+    private func dismissPresentedContentForLock() {
+        showingActions = false
+        showingPairing = false
+        showingCamera = false
+        showingCapture = false
+        showingFileImporter = false
+        detailedSelection = nil
+        focused = false
+        selectedPhotoItems = []
+        dictation.stop()
+        draftStore.setVoiceSelectionContext(transcript: "", active: false)
     }
 
     private func openCamera() {

@@ -4,12 +4,14 @@ import SwiftUI
 struct CallbackBoxApp: App {
     @UIApplicationDelegateAdaptor(CallbackBoxAppDelegate.self) private var appDelegate
     @StateObject private var store = PairedBoxStore()
+    @StateObject private var boxLockManager = BoxLockManager()
     @StateObject private var pairingURLInbox = PairingURLInbox.shared
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(store)
+                .environmentObject(boxLockManager)
                 .onReceive(store.$boxes) { boxes in
                     let runtime = CaptureUploadRuntime.shared
                     runtime.updateBoxes(boxes)

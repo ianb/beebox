@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
+    @EnvironmentObject private var boxLockManager: BoxLockManager
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var composerDraftStore = ComposerDraftStore()
     @StateObject private var pendingEmissionStore = PendingEmissionStore()
@@ -35,78 +36,22 @@ struct RootView: View {
         Group {
             if let box = store.selectedBox {
                 let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
-                ChatWebView(
-                    box: box,
-                    pendingEmissions: pendingEmissionStore.deliveries,
-                    locationShareRequest: locationShareRequest,
-                    screenshotRequest: screenshotRequest,
-                    composerCommandAcknowledgements: composerCommandAcknowledgements,
-                    onSessionChange: { sessionID in
-                        visibleChatBoxID = box.id
-                        visibleChatSessionID = sessionID
-                    },
-                    onEmissionDeliveryAttempt: { emissionID in
-                        Task {
-                            await pendingEmissionStore.markDeliveryAttempt(id: emissionID)
-                        }
-                    },
-                    onEmissionReceipt: { receipt in
-                        Task {
-                            await pendingEmissionStore.handleReceipt(receipt)
-                        }
-                    },
-                    onLocationShareResult: { result in
-                        guard result.requestID == locationShareRequest?.id else {
-                            return
-                        }
-                        locationShareRequest = nil
-                        locationShareResult = result
-                    },
-                    onScreenshotResult: { result in
-                        guard result.requestID == screenshotRequest?.id else {
-                            return
-                        }
-                        screenshotRequest = nil
-                        screenshotResult = result
-                    },
-                    onComposerCommand: { delivery in
-                        switch delivery {
-                        case .command(let command):
-                            Task {
-                                let acknowledgement = await composerDraftStore.applySelectionCommand(
-                                    command,
-                                    boxID: box.id
-                                )
-                                composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
-                                composerCommandAcknowledgements.append(acknowledgement)
-                            }
-                        case .rejection(let acknowledgement):
-                            composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
-                            composerCommandAcknowledgements.append(acknowledgement)
-                        }
-                    },
-                    onComposerCommandAcknowledgementDelivered: { id in
-                        composerCommandAcknowledgements.removeAll { $0.id == id }
+                let locked = boxLockManager.isLocked(box)
+                ZStack {
+                    boxContent(box: box, composerBox: composerBox)
+                        .allowsHitTesting(locked == false)
+                        .accessibilityHidden(locked)
+
+                    if locked {
+                        LockedBoxView(
+                            box: box,
+                            status: boxLockManager.status,
+                            onUnlock: { boxLockManager.unlock(box) },
+                            onCancel: boxLockManager.cancelAuthentication,
+                            onOpenWithoutPasscode: { boxLockManager.openWithoutPasscode(box) },
+                            onManageBoxes: { showingPairSheet = true }
+                        )
                     }
-                )
-                .id(box.id)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    NativeComposerView(
-                        box: composerBox,
-                        draftStore: composerDraftStore,
-                        pendingStore: pendingEmissionStore,
-                        captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
-                        locationShareResult: locationShareResult,
-                        screenshotResult: screenshotResult,
-                        onShareLocation: {
-                            locationShareResult = nil
-                            locationShareRequest = NativeLocationShareRequest()
-                        },
-                        onTakeScreenshot: {
-                            screenshotResult = nil
-                            screenshotRequest = NativeScreenshotRequest()
-                        }
-                    )
                 }
             } else {
                 EmptyBoxView {
@@ -118,6 +63,7 @@ struct RootView: View {
             PairBoxView()
         }
         .onChange(of: store.selectedBox?.id) { _, newBoxID in
+            boxLockManager.relock()
             visibleChatBoxID = newBoxID
             visibleChatSessionID = nil
             locationShareRequest = nil
@@ -138,9 +84,144 @@ struct RootView: View {
             guard phase == .background else {
                 return
             }
+            showingPairSheet = false
+            boxLockManager.relock()
             Task {
                 await composerDraftStore.flush()
             }
+        }
+    }
+
+    private func boxContent(box: PairedBox, composerBox: PairedBox) -> some View {
+        ChatWebView(
+            box: box,
+            pendingEmissions: pendingEmissionStore.deliveries,
+            locationShareRequest: locationShareRequest,
+            screenshotRequest: screenshotRequest,
+            composerCommandAcknowledgements: composerCommandAcknowledgements,
+            onSessionChange: { sessionID in
+                visibleChatBoxID = box.id
+                visibleChatSessionID = sessionID
+            },
+            onEmissionDeliveryAttempt: { emissionID in
+                Task {
+                    await pendingEmissionStore.markDeliveryAttempt(id: emissionID)
+                }
+            },
+            onEmissionReceipt: { receipt in
+                Task {
+                    await pendingEmissionStore.handleReceipt(receipt)
+                }
+            },
+            onLocationShareResult: { result in
+                guard result.requestID == locationShareRequest?.id else {
+                    return
+                }
+                locationShareRequest = nil
+                locationShareResult = result
+            },
+            onScreenshotResult: { result in
+                guard result.requestID == screenshotRequest?.id else {
+                    return
+                }
+                screenshotRequest = nil
+                screenshotResult = result
+            },
+            onComposerCommand: { delivery in
+                handleComposerCommand(delivery, boxID: box.id)
+            },
+            onComposerCommandAcknowledgementDelivered: { id in
+                composerCommandAcknowledgements.removeAll { $0.id == id }
+            }
+        )
+        .id(box.id)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            NativeComposerView(
+                box: composerBox,
+                draftStore: composerDraftStore,
+                pendingStore: pendingEmissionStore,
+                captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
+                locationShareResult: locationShareResult,
+                screenshotResult: screenshotResult,
+                onShareLocation: {
+                    locationShareResult = nil
+                    locationShareRequest = NativeLocationShareRequest()
+                },
+                onTakeScreenshot: {
+                    screenshotResult = nil
+                    screenshotRequest = NativeScreenshotRequest()
+                }
+            )
+        }
+    }
+
+    private func handleComposerCommand(_ delivery: NativeComposerCommandDelivery, boxID: PairedBox.ID) {
+        switch delivery {
+        case .command(let command):
+            Task {
+                let acknowledgement = await composerDraftStore.applySelectionCommand(command, boxID: boxID)
+                composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
+                composerCommandAcknowledgements.append(acknowledgement)
+            }
+        case .rejection(let acknowledgement):
+            composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
+            composerCommandAcknowledgements.append(acknowledgement)
+        }
+    }
+}
+
+private struct LockedBoxView: View {
+    var box: PairedBox
+    var status: BoxLockStatus
+    var onUnlock: () -> Void
+    var onCancel: () -> Void
+    var onOpenWithoutPasscode: () -> Void
+    var onManageBoxes: () -> Void
+    @EnvironmentObject private var store: PairedBoxStore
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 42))
+                .foregroundStyle(.secondary)
+            Text(box.label)
+                .font(.title2.bold())
+            statusContent
+            Menu("Choose Another Box") {
+                ForEach(store.boxes.filter { $0.id != box.id }) { otherBox in
+                    Button(otherBox.label) {
+                        store.select(otherBox)
+                    }
+                }
+            }
+            .disabled(store.boxes.count < 2)
+            Button("Manage Boxes", action: onManageBoxes)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(32)
+        .background(Color(uiColor: .systemBackground))
+    }
+
+    @ViewBuilder
+    private var statusContent: some View {
+        switch status {
+        case .locked:
+            Button("Unlock", action: onUnlock)
+                .buttonStyle(.borderedProminent)
+        case .authenticating:
+            ProgressView("Authenticating…")
+            Button("Cancel", action: onCancel)
+        case .failed:
+            Text("Authentication failed. Try again.")
+                .foregroundStyle(.secondary)
+            Button("Retry", action: onUnlock)
+                .buttonStyle(.borderedProminent)
+        case .passcodeNotSet:
+            Text("This device has no passcode, so it cannot verify your identity.")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+            Button("Open Anyway", action: onOpenWithoutPasscode)
+                .buttonStyle(.borderedProminent)
         }
     }
 }
@@ -168,4 +249,5 @@ private struct EmptyBoxView: View {
 #Preview {
     RootView()
         .environmentObject(PairedBoxStore())
+        .environmentObject(BoxLockManager())
 }
