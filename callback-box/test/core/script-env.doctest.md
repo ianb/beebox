@@ -205,3 +205,33 @@ env.SHOULD_VANISH === undefined
 ```ts cleanup
 await box.cleanup();
 ```
+
+## buildScriptEnv — strips the hub's cross-box trust secrets
+
+The child (`cb serve`) holds `CB_HUB_SECRET` and `CB_DIAG_API_KEY` to verify
+hub-proxied requests, but a box agent spawned under it must NOT inherit them —
+with either an agent could forge hub headers (`x-cb-hub-authenticated-email`,
+`x-cb-hub-auth: off`) or the diag bearer straight to a sibling box's loopback
+port and bypass identity + box ACLs. `ANTHROPIC_API_KEY` is stripped for the
+same don't-inherit-power reason.
+
+```ts
+const box = await makeTmpBox();
+process.env.CB_HUB_SECRET = "hub-secret-should-not-leak";
+process.env.CB_DIAG_API_KEY = "diag-key-should-not-leak";
+process.env.ANTHROPIC_API_KEY = "sk-should-not-leak";
+const env = await buildScriptEnv(box.root);
+delete process.env.CB_HUB_SECRET;
+delete process.env.CB_DIAG_API_KEY;
+delete process.env.ANTHROPIC_API_KEY;
+[env.CB_HUB_SECRET === undefined, env.CB_DIAG_API_KEY === undefined, env.ANTHROPIC_API_KEY === undefined]
+=> [
+  true,
+  true,
+  true
+]
+```
+
+```ts cleanup
+await box.cleanup();
+```

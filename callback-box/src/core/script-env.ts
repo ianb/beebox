@@ -105,6 +105,17 @@ export async function buildScriptEnv(
   // box-spawned subprocess so it can't leak in by accident.
   delete env.ANTHROPIC_API_KEY;
 
+  // Strip the hub's cross-box trust secrets. The child (`cb serve`) needs
+  // CB_HUB_SECRET / CB_DIAG_API_KEY to verify hub-proxied requests, but a box
+  // AGENT spawned under that child must not inherit them: with CB_HUB_SECRET an
+  // agent could forge `x-cb-hub-authenticated-email: <anyone>` (or
+  // `x-cb-hub-auth: off`) straight to a sibling box's loopback port and bypass
+  // identity + box ACLs; CB_DIAG_API_KEY would forge the diagnostic bearer the
+  // same way. Agents authenticate to their OWN box via CB_AGENT_TOKEN (below),
+  // never these — so removing them here closes the escalation with no loss.
+  delete env.CB_HUB_SECRET;
+  delete env.CB_DIAG_API_KEY;
+
   // Priority: live ambient (running server) > box.json publicUrl > PUBLIC_URL env.
   // The live ambient lets a local dev server supply the env vars without
   // requiring publicUrl to be configured in box.json.
