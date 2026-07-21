@@ -46,6 +46,7 @@ import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
 import { resolveBoxEntries, type ResolvedBoxEntry } from "./box-entry.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
+import { serveSite } from "./router-site.js";
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -862,6 +863,18 @@ function createRouterServer(core: RouterCore): http.Server {
     }
     if (afterName.startsWith("/dev/")) {
       await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name), mainRoot: MAIN_ROOT, worktreesRoot: WORKTREES_ROOT });
+      return;
+    }
+
+    // /<name>/site/... — the generated static site (site/dist/), served from
+    // disk so it never cold-starts the worktree.
+    if (afterName.split("?")[0] === "/site") {
+      res.writeHead(301, { location: `/${name}/site/` });
+      res.end();
+      return;
+    }
+    if (afterName.startsWith("/site/")) {
+      await serveSite({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
       return;
     }
 
