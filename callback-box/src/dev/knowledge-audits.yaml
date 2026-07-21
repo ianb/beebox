@@ -3812,27 +3812,28 @@ tests:
   # the save, which is where the link intuition fails.
   #
   # STOCHASTIC — run it several times and read the RATE, not one pass/fail.
-  # Baseline before any fix (2026-07-21, 3 runs): 2 bare / 1 linked (~2/3 bare).
-  # The automated check flips per run (linked -> pass, bare -> fail), so the
-  # fail RATE over N runs is the metric. NOTE: this audit MUTATES the box (the
-  # agent creates a note card each run); the created card is disposable.
+  # Baseline before the prompt fix (2026-07-21, 3 runs): 2 bare / 1 linked
+  # (~2/3 bare). Stochastic — the fail RATE over N runs is the metric, not one
+  # pass/fail. The check flags only the actual bug: a bare card filename/path
+  # as literal text (including backticked or used as a link label), while link
+  # targets (](...)) and ref="..." attributes stay legal — so a bare-<ack>
+  # confirmation with no prose mention correctly passes. NOTE: this audit
+  # MUTATES the box (the agent creates a note card each run); the created card
+  # is disposable.
   - id: chat-reference-card-as-link
     prompt: "Quick, save this before I forget: beta ships in August, hold the pricing page until launch, and move standups to Tuesdays."
     expected_level: knows_directly
     chat_mode: true
     watch_for: >
-      Creates a card for the note, then in its confirmation references that card
-      as a clickable markdown link ([the note](/store/...card)) so the user can
-      tap to open it. FAILS if the confirmation names the card as a bare
-      filename/path (e.g. "saved to Beta_Plan.doc.card" as literal text) — the
-      exact reported bug. The reference is INCIDENTAL: the agent's attention is
-      on the save action, and it names the result in passing, which is where the
-      link intuition lapses. The prompt never mentions links. (The created card's
-      path is agent-chosen, so the check is a proxy for "linked a box path";
-      confirm link-vs-bare by reading the response.)
-    correct_contains_any:
-      - "](/store"
-      - "](store"
-      - "](/box"
-      - "](box"
+      Creates a card for the note. If the confirmation mentions the card in
+      prose, it must be a clickable markdown link with a human label ([the
+      note](/store/...card)) — FAILS if it names the card as a bare
+      filename/path (e.g. "saved to Beta_Plan.doc.card" as literal text), the
+      exact reported bug. A bare <ack ref="..."/> confirmation with no prose
+      mention is fine (the chip is tappable). The reference is INCIDENTAL: the
+      agent's attention is on the save action, and it names the result in
+      passing, which is where the link intuition lapses. The prompt never
+      mentions links.
+    response_not_matches:
+      - '(?<![\w./-])(?<!\]\()(?<!=")[\w./-]+\.[\w-]+\.card\b'
     tags: [chat, links, cards]

@@ -210,6 +210,11 @@ function formatCheckLines(checks: Checks): string[] {
     // Forbidden: pass when *not* found, fail when found.
     checkLines.push(`- ${c.found ? "\u2717" : "\u2713"} Response does NOT contain "${c.forbidden}"`);
   }
+  for (const c of checks.notMatchesChecks) {
+    // Forbidden pattern: pass when *not* matched, fail when matched.
+    const detail = c.found && c.matched ? ` (matched "${c.matched}")` : "";
+    checkLines.push(`- ${c.found ? "✗" : "✓"} Response does NOT match /${c.pattern}/${detail}`);
+  }
   if (checks.containsAnyCheck) {
     const c = checks.containsAnyCheck;
     const detail = c.found && c.matched ? ` (matched "${c.matched}")` : "";

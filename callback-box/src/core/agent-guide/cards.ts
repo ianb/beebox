@@ -123,7 +123,8 @@ warnings you'll see:
   link points at a card that doesn't exist (common after a hand-move — use
   \`cb mv\`, which rewrites refs).
 - **retired \`view:\` scheme** — drop the prefix and reference the plain box path:
-  \`[label](store/x.card)\` to link, \`![label](store/x.card)\` to embed.
+  \`[the trip report](/store/notes/Trip_Report.doc.card)\` to link, \`![the trip
+  report](/store/notes/Trip_Report.doc.card)\` to embed.
 - **duplicate basename** — two cards in one directory share a name; rename one.
 - **\`contains:\` too long** — keep it under 200 characters.
 
