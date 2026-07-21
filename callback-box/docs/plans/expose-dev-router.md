@@ -306,15 +306,15 @@ Verified by C's anonymous-denial probe over Serve.
 
 ## Open design questions
 
-- **Control-plane isolation (2nd-review 2.1 — the top decision, boxholder's
-  call).** Same-origin `/dev` agent content defeats an Origin/CSRF-token check on
-  mutating `/__router/{stop,retry}`. Two ways to keep them safe: **(a)** CSP-
-  sandbox all router-owned agent content so it can't script, keeping remote
-  worktree control behind owner+Origin (lean — preserves the "remote poking"
-  goal); **(b)** make mutating control routes UDS/CLI-only (airtight, but drops
-  remote worktree *mutation* — remote read + box access remain). This is the one
-  finding that trades against the boxholder's stated want (remote control), so
-  it's decided before B.2, not assumed.
+- ~~**Control-plane isolation (2nd-review 2.1).**~~ **DECIDED (boxholder,
+  2026-07-21): option (a)** — CSP-sandbox all router-owned agent content (`/dev`,
+  artifacts: `sandbox`, no `allow-scripts`/`allow-same-origin`) so it can't
+  originate requests, and keep mutating `/__router/{stop,retry}` behind
+  owner-session + `Origin`/`Sec-Fetch-Site`. Remote worktree control is
+  preserved. B.2 must treat the sandbox CSP as load-bearing security (covering
+  every artifact content-type the `/dev` browser can serve), with a test that a
+  sandboxed `/dev` response cannot script a control POST; if any artifact type
+  can't be sandboxed airtight, that route falls back to UDS-only for mutations.
 - **Google OAuth behind the prefix (A.3).** Lean: fix the callback to carry the
   prefix (remote family may want Google). Fallback: local-password-only on
   prefixed origins, documented. Sits in A's later chunk; the requirement (some
