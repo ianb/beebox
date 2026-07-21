@@ -474,16 +474,25 @@ exposable; local CLI uses the socket) and the tailscale docs.
    worktree-root dev assets** (`@vite`/`src`/`node_modules`/HMR) while keeping
    `/<w>/api/boxes` + the picker session-only. This is required for the paired-iOS
    goal, alongside the cookie-Path rewrite.
-6. **B.2b/c** the LIVE wiring remainder: UDS listener +
-   `trustedLocal` tagging (only UDS arrivals — the load-bearing invariant); real
-   `RouterAuthDeps` (resolveRequestIdentity∩getOwnerEmail, the slug→box map,
-   canAccessBox, resolveMobileRequestAuth, agent bearer, Origin/Sec-Fetch);
-   the SINGLE chokepoint calling the gate before all dispatch INCLUDING the WS
-   `upgrade`; deny handling (401 JSON / 403 / login redirect / 404); the
-   `Set-Cookie` Path rewrite for `cb_mobile`/`cb_session`; strip client `x-cb-*`;
-   CSP-sandbox `/dev` responses; DoS boundary; rewire `bin/worktrees`/CLI to the
-   UDS (HMR/WS stay TCP). Break into sub-chunks; Codex-review the wired gate.
-6. **C** `router-guarded` posture + anonymous-denial-over-Serve probe + setup
+6. **B.2b — DONE (`ec3a0369`), iOS session continuity.** Router rewrites the
+   `cb_mobile` `Set-Cookie` Path `/<slug>`→`/<worktree>/<slug>` via the
+   `proxyRes` hook (`bin/router-cookie.ts`, surgically scoped: only that
+   cookie/attr/exact-value; `cb_session` host-wide `Path=/` untouched); a new
+   `worktree-asset` route class lets any box credential (mobile-for-any-box or
+   session) fetch the Vite dev shell (`@vite`/`@fs`/`@id`/`@react-refresh`/
+   `node_modules`/`src`), while `/<w>/api/*` + bare `/<w>/` stay session-only.
+   Verified live (rewritten Set-Cookie, asset-vs-api, cross-worktree denied
+   pre-cold-start). 136 bin tests pass. **Note:** HMR live-reload for a
+   *mobile-only* webview needs a session (its WS rides bare `/<w>/`, which stays
+   session-only) — an accepted dev-nicety limit; the app itself loads + works on
+   a mobile token. Future: classify the `vite-hmr` WS upgrade as a dev asset.
+7. **B.2c** security hardening: CSP-sandbox `/dev` responses (the decided fix
+   for same-origin control-plane CSRF); DoS boundary (guard `router-docs.ts`
+   `decodeURIComponent` + a request-handler rejection boundary); strip client
+   `x-cb-*` the router doesn't own; finding 3.2 (CSRF `{}` fail-closed on TCP
+   control); finding 3.3 (router resolver ignores hub mode); finding 3.1
+   (unauth cold-start) — accept + document.
+8. **C** `router-guarded` posture + anonymous-denial-over-Serve probe + setup
    serves the router; tests.
 7. **Docs** `bin/CLAUDE.md`, tailscale docs, admin `TailscaleSection`
    ("on a dev machine, `cb tailscale setup` exposes the whole authenticated
