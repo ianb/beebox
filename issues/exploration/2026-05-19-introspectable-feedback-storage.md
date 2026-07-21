@@ -17,7 +17,7 @@ The point isn't to enforce a rigid schema — different types need different fie
 
 Connections:
 - [/spark mode — batch harvest of the proactive layer](../features/2026-05-19-spark-mode.md) reads this surface as its input.
-- *Park ignored proactive observations* in [prompt-audits.md](../callback-box/docs/prompt-audits.md#park-ignored-proactive-observations) writes parked items here.
+- *Park ignored proactive observations* in [prompt-audits.md](../../callback-box/docs/prompt-audits.md#park-ignored-proactive-observations) writes parked items here.
 - [Hypothesis tracking](2026-05-19-hypothesis-tracking.md) writes hunches here.
 - [Correction counting → spec promotion](2026-05-19-correction-counting-spec-promotion.md) writes correction events here.
 - [Declared per-box autonomy matrix with encounter queue](2026-05-19-autonomy-matrix.md) writes promotion candidates here.

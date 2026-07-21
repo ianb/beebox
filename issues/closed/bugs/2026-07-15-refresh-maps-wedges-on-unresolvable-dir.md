@@ -8,7 +8,7 @@ area: callback-box
 `refresh-maps` can enter an **unrecoverable deadlock** when the box contains a
 directory that doesn't resolve at the map-state `asOf` commit. Observed on a box
 carrying migration-doubled subtrees (see
-[box-packageify doubled subtrees](2026-07-15-box-packageify-doubled-subtrees.md)),
+[box-packageify doubled subtrees](../../bugs/2026-07-15-box-packageify-doubled-subtrees.md)),
 but the failure mode is general — any directory present on disk but absent from
 git at the stored `asOf` triggers it.
 
@@ -78,6 +78,6 @@ Fixed in `worktree-refresh-maps-convergence`: finalize now stamps only maps it
 can prove were rewritten, and runs as a run-phase shell so a dead agent's
 partial work is still banked. The unresolvable-`asOf` case is now surfaced as an
 explicit anomaly rather than silently inflating the brief. Design and evidence:
-[`callback-box/docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/plans/refresh-maps-convergence.md).
+[`callback-box/docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/implemented-plans/refresh-maps-convergence.md).
 
 Remaining follow-up: [refresh-maps max-turns throughput](../../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md).

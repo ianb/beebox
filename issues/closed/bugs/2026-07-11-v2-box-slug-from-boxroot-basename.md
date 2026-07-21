@@ -62,7 +62,7 @@ the v1-removal fixture step.
 
 Checked prod and local — **`push-subscriptions.json` does not exist in either
 place**, and prod's `.env` has no VAPID keys at all (consistent with
-[web push followup testing](../code-quality/2026-07-04-web-push-followup-testing.md),
+[web push followup testing](../../code-quality/2026-07-04-web-push-followup-testing.md),
 which notes push is shipped but dormant until VAPID keys are set).
 
 That removes the biggest caution above:

@@ -14,7 +14,7 @@ Candidates from ideas already in this file:
 - **Session-end compaction triggering** ([Overnight session compaction with custom compaction message](2026-05-19-overnight-session-compaction.md)). A session-end hook fires the compaction deterministically.
 - **Health-check surfacing at session start** ([Scheduled-task health surfacing](../closed/features/2026-05-19-scheduled-task-health-surfacing.md)). Session-start hook reads task health and prepends to the agent's context if anything's overdue.
 - **Pre-irreversible-action gates** ([Declared per-box autonomy matrix with encounter queue](../exploration/2026-05-19-autonomy-matrix.md)). A hook on irreversible operations triggers confirmation, rather than relying on the agent to check.
-- **Link enforcement** (*Link, don't name* in [prompt-audits.md](../callback-box/docs/prompt-audits.md#link-dont-name) audit). A post-output hook could detect bare resource names and either reject the output or rewrite to link form.
+- **Link enforcement** (*Link, don't name* in [prompt-audits.md](../../callback-box/docs/prompt-audits.md#link-dont-name) audit). A post-output hook could detect bare resource names and either reject the output or rewrite to link form.
 
 Open questions:
 - **Where does the hook live?** In `cb` (the CLI) for operations going through it. In the chat runtime for chat-context hooks. Probably both, with a shared definition format.

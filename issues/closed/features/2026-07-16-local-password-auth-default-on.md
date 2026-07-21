@@ -21,7 +21,7 @@ doctest suite green. Plan + review:
 
 The human-only verification (real login/setup/WS/browse flows + prod hardening)
 lives in its own tracker:
-[manually-verify-local-password-auth](../docs-and-chores/2026-07-19-manually-verify-local-password-auth.md).
+[manually-verify-local-password-auth](../../docs-and-chores/2026-07-19-manually-verify-local-password-auth.md).
 
 ---
 

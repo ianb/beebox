@@ -13,7 +13,7 @@ correctness problem disguised as a budget.
 That's fixed: finalize now runs as a run-phase shell and stamps only the maps it
 can prove were rewritten, so a capped run banks its partial work and the next run
 continues from there (see
-[`docs/plans/refresh-maps-convergence.md`](../../callback-box/docs/plans/refresh-maps-convergence.md)).
+[`docs/plans/refresh-maps-convergence.md`](../../callback-box/docs/implemented-plans/refresh-maps-convergence.md)).
 
 What's left is a genuine throughput question with no measurement behind it: on a
 box with a large brief, 40 turns means N runs to converge, and nobody has checked
