@@ -4,6 +4,7 @@ needs: [decision]
 area: router
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+labels: [soft-launch]
 resolution: implemented
 ---
 

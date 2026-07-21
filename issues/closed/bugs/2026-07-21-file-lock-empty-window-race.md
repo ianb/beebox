@@ -3,6 +3,7 @@ title: "file-lock: cross-process reclaim/release can let two holders acquire the
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+labels: [soft-launch]
 resolution: implemented
 ---
 

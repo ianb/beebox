@@ -3,6 +3,7 @@ title: "Web self-service password change"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 A logged-in user cannot change their own password in the web UI — the only

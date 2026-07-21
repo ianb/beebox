@@ -3,6 +3,7 @@ title: "OAuth callback: wakes/enumerates boxes before auth, and doesn't bind to 
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+labels: [soft-launch]
 resolution: implemented
 ---
 

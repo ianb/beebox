@@ -4,6 +4,7 @@ needs: [decision]
 area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 Boxholder (2026-07-21): "Before release I need to decide on some discussion

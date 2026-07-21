@@ -3,6 +3,7 @@ title: "Device-store write not fully crash-safe; active-check reads outside the 
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+labels: [soft-launch]
 resolution: implemented
 ---
 

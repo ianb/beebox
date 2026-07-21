@@ -3,6 +3,7 @@ title: "Explicit-config Anthropic API key as an alternative to subscription auth
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 Today only Claude subscription auth works: the ambient `ANTHROPIC_API_KEY`

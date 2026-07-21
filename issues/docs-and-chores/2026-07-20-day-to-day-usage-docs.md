@@ -3,6 +3,7 @@ title: "Day-to-day usage docs: the missing genre"
 area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — docs-genre audit for the soft launch
+labels: [soft-launch]
 ---
 
 Genre audit (2026-07-20) of all of `callback-box/docs/`: install is
