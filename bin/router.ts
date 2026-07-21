@@ -50,6 +50,7 @@ import { authorizeRouterRequest, type RouterAuthDeps, type RouterAuthDecision } 
 import { createRouterAuthDeps } from "./router-auth-deps.js";
 import { rewriteMobileCookiePath } from "./router-cookie.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
+import { serveSite } from "./router-site.js";
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -605,6 +606,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>callback-box dev router</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
 <style>
@@ -631,6 +633,11 @@ async function renderIndex(core: RouterCore): Promise<string> {
   .help code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
   footer { margin-top: 1em; font-size: 0.85em; color: #888; }
   footer a { color: #888; }
+  @media (max-width: 480px) {
+    li { flex-wrap: wrap; row-gap: 0.2em; }
+    a.name { min-width: 0; flex: 1 1 100%; }
+    .statuscell { flex: 0 0 auto; }
+  }
 </style>
 </head>
 <body>
@@ -685,6 +692,7 @@ function renderFailedPage(name: string, err: CapturedError): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Worktree ${escapeHtml(name)} — failed to start</title>
 <style>
   body { font: 14px/1.5 system-ui, sans-serif; max-width: 920px; margin: 2em auto; padding: 0 1em; color: #222; }
@@ -1010,6 +1018,18 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     }
     if (afterName.startsWith("/dev/")) {
       await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name), mainRoot: MAIN_ROOT, worktreesRoot: WORKTREES_ROOT });
+      return;
+    }
+
+    // /<name>/site/... — the generated static site (site/dist/), served from
+    // disk so it never cold-starts the worktree.
+    if (afterName.split("?")[0] === "/site") {
+      res.writeHead(301, { location: `/${name}/site/` });
+      res.end();
+      return;
+    }
+    if (afterName.startsWith("/site/")) {
+      await serveSite({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
       return;
     }
 

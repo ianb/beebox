@@ -50,7 +50,7 @@ buried. None blocks the merge.
    failure-path clobber-prevention is now structural (transition-not-set), the
    guard's unique job being `stopping`-vs-`failed` routing; (d) the filed
    name-scoped dashboard-socket hazard
-   ([bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md](../bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md)).
+   ([bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md](../../bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md)).
    Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
 2. **Clerk↔server contract. Decided + done (boxholder decision, 2026-07-12):

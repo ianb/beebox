@@ -28,7 +28,7 @@ personal boxes scanned clean. Detection scan (structure only, no content):
 ```
 
 **Why it matters — it silently wedges `refresh-maps` forever** (see the sibling
-[refresh-maps non-convergence bug](2026-07-15-refresh-maps-wedges-on-unresolvable-dir.md)):
+[refresh-maps non-convergence bug](../closed/bugs/2026-07-15-refresh-maps-wedges-on-unresolvable-dir.md)):
 the doubled dirs don't exist at the map-state `asOf` ref, so the precheck flags
 them dirty on every run and validation never passes. Any box the migration
 corrupted has a permanently-failing refresh-maps.

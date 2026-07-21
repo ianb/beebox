@@ -69,3 +69,34 @@ a prop through the body.** New code that needs the text reads `useInputValue()`
 `MessageList` is also wrapped in `React.memo` as a second line of defense; the
 store is the first. Verify with the render-count probe (commit-hook +
 `actualDuration`) that a keystroke re-renders only the composer subtree.
+
+## The companion pane doesn't re-render on message submit
+
+Same class of problem, one level up from keystrokes. The `InteractiveChat` root
+reads the chat-machine snapshot (`messages`, `streamText`, `liveTurnId`,
+`processBusy`, …), so a send — and every streaming token after it — re-renders
+the root and `InteractiveChatBody`, which parents BOTH the message list and the
+open companion card. The pane's real inputs (`activeView` / `tabs` from
+`useChatTabs`) don't change on a send, so the pane should stay put.
+
+`CompanionViewPanel` (`InteractiveChat-controls.tsx`) is wrapped in `React.memo`
+to hold it still — the same defense as `MessageList`. Memo only holds if EVERY
+prop is referentially stable across a submit, so:
+
+- `onNavigate` is a `useCallback` (`handleCompanionNavigate` in
+  `InteractiveChat-view.tsx`), not an inline arrow.
+- `useCompanionSelection`'s `handleAddSelection` depends on
+  `selections.addSelection` (a stable callback), NOT the whole `selections`
+  object — `useChatSelections` returns a fresh object literal every render.
+- `tabs`/`activePath`/`onSelectTab`/`onCloseTab`/`onClosePanel` come from
+  `useChatTabs` (`[]`-dep callbacks + `panel` state untouched by a send), and
+  `reportActivity` from `useCompanionCard` is a `[]`-dep callback.
+
+**Invariant: keep every `CompanionViewPanel` prop referentially stable across a
+submit** — a new unstable callback/object prop silently re-enables the flicker.
+The memo is standard prop-diffing, so the pane still re-renders correctly when
+you navigate within it or switch cards (those change `activePath`/`tabs`);
+FileView owns its own data subscription, so a card-data change updates the pane
+regardless of the memo. Verify with the render-count probe (drive via
+`bin/browse`, log a render marker in the panel body, submit a message): the
+companion pane's render count must not tick.

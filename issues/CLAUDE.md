@@ -46,8 +46,16 @@ links: same category → bare `<file>.md`; cross-category →
 `[knip-exports](../code-quality/2026-07-04-knip-exports-enforcement.md)`). A doc
 elsewhere links in as `…/issues/<category>/<file>.md`. Links to items that don't
 exist yet are fine as plain text naming the idea. `doc-check` validates every
-link, so moving/reclassifying an item means rewriting its inbound links — from
-other issues AND from `docs/`.
+link, so moving/reclassifying an item breaks its inbound links — from other
+issues AND from `docs/`.
+
+**After moving ANY issue** (closing → `closed/`, reclassifying between category
+dirs, or a rename), run **`pnpm --dir callback-box doc-check --fix`** — it
+re-resolves every broken issue link by its (unique) basename and rewrites the
+path to the file's new location, so you don't hand-edit inbound links. It heals
+moves; a true rename or delete it reports as unfixable (fix those by hand). Issue
+basenames must stay unique (`doc-check` hard-errors on a duplicate) — that's what
+makes the auto-repair reliable.
 
 **External URLs get a title too** — `[Orwell's six rules](https://…)`, not a bare
 URL. A bare URL makes the reader parse a link to find out what it is. (The dev
@@ -64,6 +72,7 @@ title: "Short human title"    # required — the H1 replacement
 needs: [design, decision]     # what must happen before this can be called done
 design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
+labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
 filed-by: agent               # only for non-Ian items
 discovered-in: worktree-foo — while doing X    # pair with filed-by: agent
 resolution: implemented       # closed/ only: implemented | wontfix | superseded
@@ -86,6 +95,14 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   — a year from now "needs testing" alone is useless. An agent should never
   remove this itself; only Ian clears it, by testing. `grep -rl "manual-testing"
   issues/` is the list of things waiting on him.
+- `labels:` is a freeform cross-cutting tag — an optional YAML list of
+  kebab-case strings for grouping issues by effort/epic/theme/sprint, anything
+  the six categories and the `area` field don't capture (multiple allowed). It's
+  orthogonal to `category` (the directory) and `area`: e.g. `labels:
+  [soft-launch]` marks every issue that belongs to the soft-launch effort
+  regardless of which category dir it lives in. Deliberately generic — reach for
+  it whenever a set of issues wants a shared handle. Browsable as a facet in the
+  `dev/issues/` browser.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 

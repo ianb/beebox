@@ -3,6 +3,7 @@ title: "Soft-launch posture: decisions made, gates remaining"
 area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 Record of the 2026-07-20 launch-shape decisions (all made by the boxholder in

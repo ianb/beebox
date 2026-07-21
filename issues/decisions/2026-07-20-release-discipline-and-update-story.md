@@ -4,6 +4,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 Two coupled tensions, boxholder-raised 2026-07-20:

@@ -4,7 +4,7 @@ area: callback-box
 resolution: superseded
 ---
 
-**Closed:** Superseded by [interface-as-cards.md](../../callback-box/docs/plans/interface-as-cards.md) (2026-07 design exploration): subject/view/binding factoring, query vs. instrument cards, the can't-break resolver invariant, beside-claims/inside-annotations, `?create`, chat husks + the companion slot + frame bus/callouts, and a per-surface conversion map. The original sketch is kept below for the record.
+**Closed:** Superseded by [interface-as-cards.md](../../../callback-box/docs/plans/interface-as-cards.md) (2026-07 design exploration): subject/view/binding factoring, query vs. instrument cards, the can't-break resolver invariant, beside-claims/inside-annotations, `?create`, chat husks + the companion slot + frame bus/callouts, and a per-surface conversion map. The original sketch is kept below for the record.
 
 **Superseded by `docs/plans/interface-as-cards.md`** (2026-07 design
 exploration): subject/view/binding factoring, query vs. instrument cards, the

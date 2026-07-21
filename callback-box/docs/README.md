@@ -33,6 +33,29 @@ current truth.
   cross-reference index and narrative showcase. Regenerate with
   `pnpm doc-graph` after moving or renaming docs; never hand-edit.
 
+## Enforcement (`pnpm doc-check`)
+
+The pre-commit hook runs `pnpm doc-check` on any `.md` commit. It fails on a
+broken reference, a live-area orphan (a flat `docs/`, `architecture/`, or
+`scheduled/` doc nothing links to — the plans taxonomy and `reports/` are
+archives and exempt), or a **duplicate basename under `issues/`** — the
+unique-basename invariant that makes issue-link repair possible. Prints nothing
+on success; on failure, fix the links and regenerate the index (`pnpm
+doc-graph`).
+
+`pnpm doc-check --fix` repairs decayed links. When a file moves (an issue
+resolving `bugs/foo.md` → `closed/bugs/foo.md` is the common case) every
+relative link to it breaks. For a link whose literal target no longer resolves,
+if the target's **basename is unique repo-wide** (across tracked `.md`,
+excluding the intentionally-per-directory `NON_UNIQUE_BASENAMES` —
+`CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
+current location. It never guesses: a basename with no match (a true
+rename/delete) or 2+ matches is reported for manual handling, not rewritten.
+Links inside code spans / fenced blocks (syntax illustrations) and generated
+emitter outputs are left untouched. It also prints a non-fatal report of
+repo-wide duplicate basenames — the gap toward making basenames globally
+unique. Mechanism: `src/dev/doc-link-repair.ts`.
+
 ## Naming rules
 
 - **kebab-case filenames.** `README.md` and `CLAUDE.md` are exempt (fixed

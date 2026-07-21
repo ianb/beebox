@@ -16,7 +16,7 @@ Probably function-shaped is the better default, with domain-shaped reserved for 
 
 - Multi-source synthesis ("what's going on with Alice this month" → calendar + email + card-history searches in parallel, main agent stitches).
 - Triage processing — multiple incoming items handled in parallel rather than serially.
-- Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-model-different-prompts perspectives is the iterate-loop theater problem in a different shape (see *Iterative refinement: only with grounded critique* in [prompt-audits.md](../callback-box/docs/prompt-audits.md#iterative-refinement-only-with-grounded-critique) in prompt-audits.md).
+- Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-model-different-prompts perspectives is the iterate-loop theater problem in a different shape (see *Iterative refinement: only with grounded critique* in [prompt-audits.md](../../callback-box/docs/prompt-audits.md#iterative-refinement-only-with-grounded-critique) in prompt-audits.md).
 
 **Where parallelism doesn't help:**
 

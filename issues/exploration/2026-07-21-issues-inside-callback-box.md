@@ -3,6 +3,7 @@ title: "Move the issue system inside callback-box"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 Boxholder (2026-07-21): "Moving the issue system inside callback box

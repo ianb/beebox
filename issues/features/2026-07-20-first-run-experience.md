@@ -4,6 +4,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
+labels: [soft-launch]
 ---
 
 Audited 2026-07-20 by code-reading. What a brand-new user sees after

@@ -3,6 +3,7 @@ title: "Seeded schedules stay disabled until the user activates them"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
+labels: [soft-launch]
 ---
 
 A fresh `cb init` box ships five scheduled scripts with three **enabled**

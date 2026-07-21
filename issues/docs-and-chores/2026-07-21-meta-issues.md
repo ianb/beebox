@@ -3,6 +3,7 @@ title: "Meta issues: tracking issues that aggregate other issues"
 area: issues
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 The boxholder wants meta issues as a first-class idea — "that's a

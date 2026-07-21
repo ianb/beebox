@@ -39,7 +39,7 @@ This is the whole point of the item. Tailscale is **already documented** — as 
 first-class alternative in `callback-box/docs/plans/installation-story.md` and
 as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
 join tailnet, zero open ports) — and has **never once been exercised**
-([installation-remaining-work](2026-07-19-installation-remaining-work.md) item 2:
+([installation-remaining-work](../../features/2026-07-19-installation-remaining-work.md) item 2:
 "documented in `docs/docker-install.md`, never exercised (needs a tailnet + auth
 key)").
 
@@ -64,9 +64,9 @@ Defense in depth, explicitly. **"On the tailnet" must never silently become
 this, since several family members share the tailnet and identity between them
 is the thing that would be lost. Relevant neighbours:
 
-- [local password auth](../closed/features/2026-07-16-local-password-auth-default-on.md)
+- [local password auth](2026-07-16-local-password-auth-default-on.md)
   (shipped) changed what `isAuthEnabled()` means.
-- [per-box lock](2026-07-19-per-box-lock-native-auth.md) is a third axis again
+- [per-box lock](../../features/2026-07-19-per-box-lock-native-auth.md) is a third axis again
   (may this client open *this* box).
 
 Three separate questions — is the box reachable, is the client authenticated, may
@@ -95,7 +95,7 @@ it open this box — and Tailscale answers only the first.
 - **Don't transcribe a vendor's dashboard.** `cb pub setup` printed a manual
   Cloudflare console walkthrough; Cloudflare reorganized and it became a dead end
   that cost real time — see
-  [pub Access setup via API](2026-07-19-pub-access-setup-via-api-not-dashboard.md).
+  [pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
   Prefer Tailscale's CLI/API; where a human step is unavoidable, detect state and
   say what's next, and link the vendor's own doc rather than re-describing their
   UI.
@@ -103,7 +103,7 @@ it open this box — and Tailscale answers only the first.
   already added a divergent one (`~/.cb-publish.env`) that fits neither
   `config/connectors/*.secret.json` nor anything else, and left its connector
   with no credential path on the server. Join
-  [per-box secret management](../decisions/2026-03-15-per-box-secret-management.md)
+  [per-box secret management](../../decisions/2026-03-15-per-box-secret-management.md)
   rather than adding to the pile.
 - Fail-closed by default; a machine that isn't on the tailnet should be
   unreachable, not quietly public.

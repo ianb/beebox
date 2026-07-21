@@ -4,6 +4,7 @@ needs: [decision]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 "Git push confirmation is something to definitely consider" (boxholder,

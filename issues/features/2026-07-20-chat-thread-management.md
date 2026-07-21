@@ -3,6 +3,7 @@ title: "Chat thread management: delete, rename, archive"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
+labels: [soft-launch]
 ---
 
 No thread-lifecycle operation exists at all — audited 2026-07-20: the chat

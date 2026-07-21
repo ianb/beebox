@@ -33,7 +33,7 @@ waiting on one ops step and a verification pass, and it should be treated as
 scheduled work rather than re-triaged as a maybe.
 
 Practical consequence: code touching push is worth keeping correct. The
-[v2 box-slug bug](../bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md) lists
+[v2 box-slug bug](../closed/bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md) lists
 `send-push.ts` among the sites deriving a slug wrongly — fixing that *before*
 push goes live is the right order, since a wrong slug would key subscriptions
 under `"content"` for every box (cross-box delivery) the moment the first one is

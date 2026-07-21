@@ -4,6 +4,7 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
+labels: [soft-launch]
 ---
 
 The launch needs a SECURITY.md-shaped "what this can touch" page (the
