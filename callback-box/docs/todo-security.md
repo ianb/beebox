@@ -25,6 +25,16 @@ Residual, accepted for now:
   tRPC subscription upgrade end to end. Covered by manual verification.
 - **No MFA / password reset.** Recovery is `cb auth set-password` on the host;
   MFA/passkeys are deferred (see the plan's NOT-in-scope).
+- **Cross-process lock lease-steal.** `src/lib/file-lock.ts` is backed by
+  `proper-lockfile` (atomic guard-dir `mkdir` + a 5-min staleness lease). Like
+  every lease-based lock, a holder suspended past the lease (>5 min) can have
+  its lock stolen and then, on resume, delete the new holder's guard — a silent
+  double-acquire. Not reachable by ordinary contention or request flooding; it
+  needs a >5-min process suspension mid-critical-section, and the
+  security-relevant critical section (the mobile device-store read-modify-write)
+  is synchronous and sub-millisecond, so the window is effectively unreachable
+  on the server deploy path. Accepted rather than adding fencing-token CAS or a
+  native `flock` addon (2026-07-21).
 
 ## Google OAuth: shared token with broad scopes
 

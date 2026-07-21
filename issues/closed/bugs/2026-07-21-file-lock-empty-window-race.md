@@ -1,16 +1,43 @@
 ---
 title: "file-lock: cross-process reclaim/release can let two holders acquire the same lock"
-needs: [design, decision]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+resolution: implemented
 ---
 
-**REOPENED 2026-07-21 — the first fix closed the empty-window but MOVED the
-race; the primitive still isn't mutually exclusive.** A second Codex
-adversarial review (targeted at this file, verdict HOLE) found it, verified
-against source. This has now failed adversarial review **twice**, which is
-itself the signal (see "The real recommendation" below).
+**CLOSED 2026-07-21 — resolved via proper-lockfile (commit `7cf6a9c5`), with
+one residual accepted by boxholder decision.** The two *reachable* races are
+gone: the empty-file publication window and the unconditional-unlink
+reclaim/release race (the first two Codex verdicts) — both were hittable by
+ordinary concurrent contention (a device flooding requests) and both are now
+impossible, because exclusion is proper-lockfile's atomic guard-dir `mkdir`
+and there is no hand-rolled unlink-by-path anywhere.
+
+**Accepted residual (boxholder call, 2026-07-21): the lease-steal race.** A
+third Codex pass (verdict HOLE) found the limitation inherent to *every*
+lease/staleness-based lock (proper-lockfile's own README documents it): if a
+holder pauses **>5 min mid-critical-section**, a contender can steal the
+stale lock and the original holder can then silently delete the new holder's
+guard. Boxholder: *"we're overengineering something that's probably not going
+to fail this badly."* Accepted because reachability is near-nil for the
+security-critical caller — the device-store RMW is **synchronous and
+sub-millisecond** (no `await` between acquire and release, verified at
+`pairing.ts:198`), so triggering it needs the process suspended >5 min in a
+microsecond window: it does not happen on the Linux deploy path (no
+mid-syscall hibernation) and is astronomically unlikely on macOS dev (which
+isn't the security boundary). Unlike the first two holes, it cannot be
+reached by request flooding. The stricter fixes considered and declined as
+over-engineering: fencing-token CAS on the device-store write; switching to
+`flock` (native addon). Documented as an accepted limitation in
+`callback-box/docs/todo-security.md` for the SECURITY.md security report.
+
+---
+
+## Original investigation (kept for the record)
+
+**Two prior Codex verdicts were HOLE**; the reimplementation history below is
+why the primitive is now proper-lockfile-backed rather than hand-rolled.
 
 **What the first fix got right (keep):** `writeLockAtomic` writes the holder
 JSON to a temp sibling then hard-`link()`s it onto the path — the lock name

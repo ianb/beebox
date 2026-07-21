@@ -91,15 +91,15 @@ to people; close when the soft launch happens. Builds on
    ([oauth-callback-wake-and-owner-binding](../closed/bugs/2026-07-21-oauth-callback-wake-and-owner-binding.md),
    FIXED), and the device-store write had crash-safety gaps
    ([device-store-crash-safety-and-renewal-race](../closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md),
-   FIXED). **Two remain open — the real pre-launch blockers:**
-   (i) the shared lock primitive still isn't mutually exclusive
-   ([file-lock-empty-window-race](../bugs/2026-07-21-file-lock-empty-window-race.md),
-   HIGH, REOPENED — the first fix closed the empty-window but a second
-   targeted Codex review found the race moved to the reclaim/release
-   `unlink()`, verdict HOLE, verified; failed adversarial review twice → now a
-   `needs: decision` between a proven lock primitive vs a rename-based
-   redesign; still undermines the device-store revoke); and
-   (ii) `pnpm dev` exposes auth-disabled boxes on the LAN
+   FIXED). The lock primitive was reworked onto `proper-lockfile` and is now
+   RESOLVED
+   ([file-lock-empty-window-race](../closed/bugs/2026-07-21-file-lock-empty-window-race.md),
+   FIXED — three Codex passes: the two contention-reachable races are gone;
+   the remaining lease-steal race is inherent to all lease locks, needs a
+   >5-min mid-critical-section suspension against a sub-ms synchronous RMW, and
+   was accepted as near-nil-reachability and documented in `todo-security.md`).
+   **One remains open — the real pre-launch blocker:**
+   `pnpm dev` exposes auth-disabled boxes on the LAN
    ([dev-router-lan-exposure](../bugs/2026-07-21-dev-router-lan-exposure.md),
    HIGH — a regression from this session's own dev-router fix; resolution
    decided (dev-never-open), implementation pending).
