@@ -201,9 +201,17 @@ worktree runs its own code so the wall must be at the shared front door.
   whole surface.
 - **The TCP gate (per route class), fail-closed default = 401/redirect:**
   - **Unauth allowlist (bootstrap):** `/<w>/auth/login`, `/<w>/auth/*` (login,
-    logout, setup, OAuth callback), the login SPA assets, and
-    `POST /<w>/<box>/api/pairing/redeem` (ticket-gated — mirrors
-    `hub-server.ts:457`). Nothing else.
+    logout, setup, OAuth callback), the login SPA assets, and **the pre-auth iOS
+    pairing endpoint** — `POST …/api/pairing/redeem`, matched by REUSING the
+    exported `isPairingRedeemUrl` (`routes/pairing.ts:11`, prefix-agnostic
+    `endsWith`, the same matcher the hub `hub-server.ts:459` and box
+    `server-box-scope.ts:83` already use — do not hand-roll a path). This is the
+    QR-scan bootstrap: the app has no token yet, redeems the ticket
+    (`pairing.ts:20`) for a device token. Nothing else is unauth. (NOTE:
+    `POST …/api/pairing/session`, `pairing.ts:55`, is NOT here — it carries the
+    device-token bearer and goes through the box-routes mobile-auth path below;
+    it's the webview's cookie-remint recovery path, so it depends on the
+    cookie-Path rewrite.)
   - **`/__router/*` control routes + router infra (`/`, `/<w>/dev/`,
     `/__router/dashboard`, and any cold-start):** a valid **owner** session —
     resolved with the exported `resolveRequestIdentity` (`auth.ts:411`, which is
@@ -251,13 +259,19 @@ of this whole plan).** All four legs must hold, verified in the live proof:
      builds `https://<node>.ts.net/<worktree>/<box>` from `getApiBase()`
      (`api-core.ts:64`), so minting from the tailnet settings page gives the app
      the full prefixed URL. No app change.
-  2. *Redeem* — `POST /<w>/<box>/api/pairing/redeem` is in the router's unauth
-     allowlist (ticket is the credential), routed to the target box.
+  2. *Redeem (the pre-auth QR bootstrap)* — `POST …/api/pairing/redeem`, matched
+     by the reused `isPairingRedeemUrl` (`pairing.ts:11`), is in the router's
+     unauth allowlist (the ticket is the credential), routed to the target box
+     which mints the device token (`pairing.ts:20`).
   3. *Per-request auth* — the router validates `Authorization: Bearer <deviceToken>`
      (and `cb_mobile`) via `resolveMobileRequestAuth(targetBoxRoot, headers)` with
-     current code before proxying; a token for box A is rejected for box B.
-  4. *Session continuity* — the router rewrites the mobile/session cookie Path
-     (above) so webview reloads + WS keep the session.
+     current code before proxying; a token for box A is rejected for box B. This
+     also covers `POST …/api/pairing/session` (`pairing.ts:55`), the bearer-gated
+     cookie-remint endpoint.
+  4. *Session continuity* — the router rewrites the `cb_mobile`/`cb_session`
+     `Set-Cookie` Path to the full `/<worktree>/<slug>` (the box child only knows
+     its slug), so the webview reload → `/api/pairing/session` re-mint → cookie
+     loop actually holds and the WebSocket keeps the session.
   - **Cold-start happens only after the gate passes** (fixes finding 3's
     pre-auth start).
 - **DoS guard:** wrap the `/<w>/dev/` path decode (`router-docs.ts:690`) and the
