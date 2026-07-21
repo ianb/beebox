@@ -38,14 +38,14 @@ isHubMode()
 const spoofed = fakeRequest({
   headers: { "x-cb-authenticated-email": "attacker@evil.com", "x-cb-hub-secret": "whatever" },
 });
-JSON.stringify(resolveRequestIdentity(spoofed))
+JSON.stringify(resolveRequestIdentity(spoofed, { openAccess: false }))
 => {"email":null,"name":null,"source":null}
 ```
 
 ```ts continue
 const cookieValue = signSession({ email: "real@example.com", name: "Real User" });
 const withCookie = fakeRequest({ cookies: { [COOKIE_NAME]: cookieValue } });
-JSON.stringify(resolveRequestIdentity(withCookie))
+JSON.stringify(resolveRequestIdentity(withCookie, { openAccess: false }))
 => {"email":"real@example.com","name":"Real User","source":"cookie"}
 ```
 
@@ -61,7 +61,7 @@ isHubMode()
 // This is the core forgery-hole check: a hub-mode box must never fall back
 // to verifying the cookie itself.
 const cookieOnlyInHubMode = fakeRequest({ cookies: { [COOKIE_NAME]: cookieValue } });
-JSON.stringify(resolveRequestIdentity(cookieOnlyInHubMode))
+JSON.stringify(resolveRequestIdentity(cookieOnlyInHubMode, { openAccess: false }))
 => {"email":null,"name":null,"source":null}
 
 const wrongSecret = fakeRequest({
@@ -71,7 +71,7 @@ const wrongSecret = fakeRequest({
 verifyHubSecret(wrongSecret)
 => false
 
-JSON.stringify(resolveRequestIdentity(wrongSecret))
+JSON.stringify(resolveRequestIdentity(wrongSecret, { openAccess: false }))
 => {"email":null,"name":null,"source":null}
 ```
 
@@ -84,7 +84,7 @@ const validHubRequest = fakeRequest({
 verifyHubSecret(validHubRequest)
 => true
 
-JSON.stringify(resolveRequestIdentity(validHubRequest))
+JSON.stringify(resolveRequestIdentity(validHubRequest, { openAccess: false }))
 => {"email":"person@example.com","name":"person@example.com","source":"hub"}
 ```
 
@@ -92,13 +92,13 @@ JSON.stringify(resolveRequestIdentity(validHubRequest))
 
 ```ts continue
 const secretOnly = fakeRequest({ headers: { "x-cb-hub-secret": "hub-secret-abc123" } });
-JSON.stringify(resolveRequestIdentity(secretOnly))
+JSON.stringify(resolveRequestIdentity(secretOnly, { openAccess: false }))
 => {"email":null,"name":null,"source":null}
 
 const secretPlusOff = fakeRequest({
   headers: { "x-cb-hub-secret": "hub-secret-abc123", "x-cb-hub-auth": "off" },
 });
-JSON.stringify(resolveRequestIdentity(secretPlusOff))
+JSON.stringify(resolveRequestIdentity(secretPlusOff, { openAccess: false }))
 => {"email":null,"name":null,"source":"open"}
 ```
 
@@ -113,23 +113,21 @@ verifyHubSecret(noServerSecret)
 => false
 ```
 
-## Standalone open mode: a cookieless request resolves to `source: "open"`
+## Standalone open access: a cookieless request resolves to `source: "open"`
 
-Outside hub mode, when the box is in open mode (the `CB_ALLOW_UNAUTHENTICATED`
-opt-out) and carries no session cookie, the resolver returns `source: "open"` —
-the single place standalone openness is decided, so the openness-recomputing
-call sites can just read `identity.source`. With auth required (opt-out unset),
+Outside hub mode, when the box was constructed with `openAccess: true` and the
+request carries no session cookie, the resolver returns `source: "open"` — the
+single place standalone openness is decided, so the openness-recomputing call
+sites can just read `identity.source`. With auth required (`openAccess: false`),
 the same cookieless request is `source: null` (unauthenticated).
 
 ```ts continue
 delete process.env.CB_HUB_SECRET;
-process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 const openStandalone = fakeRequest({});
-JSON.stringify(resolveRequestIdentity(openStandalone))
+JSON.stringify(resolveRequestIdentity(openStandalone, { openAccess: true }))
 => {"email":null,"name":null,"source":"open"}
 
-delete process.env.CB_ALLOW_UNAUTHENTICATED;
-JSON.stringify(resolveRequestIdentity(openStandalone))
+JSON.stringify(resolveRequestIdentity(openStandalone, { openAccess: false }))
 => {"email":null,"name":null,"source":null}
 ```
 

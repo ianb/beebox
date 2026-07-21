@@ -4,19 +4,16 @@
  *
  * `cb tailscale setup` records which loopback ports it has fronted with
  * `tailscale serve`; `cb tailscale stop` clears them. The record is durable and
- * machine-level (like the hub's config home), so a later restart into open mode
- * can be REFUSED at listen time (`enforceOpenModeAtListen`, `webapp/auth.ts`)
- * rather than silently reopening an unauthenticated box to the whole tailnet —
- * the persisted half of the OpenClaw-#50630 guard the plan calls out.
+ * machine-level (like the hub's config home) — serve-lifecycle bookkeeping so
+ * `cb tailscale stop`/`status` can detect and reconcile drift between the
+ * recorded intent and what `tailscale serve` actually fronts.
  *
  * The file lives at `~/.config/cb/tailscale-exposure.json` in the HOME OF THE
  * ACCOUNT THAT RUNS `cb` (override `CB_TAILSCALE_EXPOSURE_FILE` for tests / a
- * shared location). This is a per-user, machine-local record, NOT a truly
- * machine-global one: the listen-time guard (`assertPortNotExposedInOpenMode`)
- * consults the file of whichever user the SERVER runs as, so `cb tailscale
- * setup` MUST run as that same account — the service account in prod, not root /
- * an admin — or the intent it records lands in a home the server never reads.
- * See `docs/docker-install.md`.
+ * shared location). This is a per-user, machine-local record: `cb tailscale
+ * setup`/`stop` MUST run as the same account the server runs as — the service
+ * account in prod, not root / an admin — or the intent it records lands in a
+ * home the reconciliation never reads. See `docs/docker-install.md`.
  *
  * It carries no secret — only a port, the tailnet DNS name, and a timestamp — so
  * it is a normal-mode file, not the 0600 credential store. Writes are crash-safe
@@ -58,37 +55,6 @@ export class ExposureFileCorruptError extends Error {
   }
 }
 
-/** Thrown at server listen time when open mode is requested while an exposure is
- *  recorded for the port being bound. Serve config is persistent, so a restart
- *  into open mode would otherwise silently reopen an unauthenticated box to the
- *  whole tailnet — the durable half of the auth-posture guard (the
- *  OpenClaw-#50630 analog). A sibling of `OpenModeBindError`; fail closed. */
-export class OpenModeExposureError extends Error {
-  constructor(readonly port: number) {
-    super(
-      `CB_ALLOW_UNAUTHENTICATED is set, but port ${port} is recorded as exposed over Tailscale ` +
-        `in ${exposureFilePath()}. Refusing to start an UNAUTHENTICATED box that Tailscale Serve ` +
-        `is fronting for the whole tailnet. Run \`cb tailscale stop --target ${port}\` to remove the ` +
-        "exposure, or unset CB_ALLOW_UNAUTHENTICATED to require authentication.",
-    );
-    this.name = "OpenModeExposureError";
-  }
-}
-
-/** Thrown at server listen time when open mode is requested but the exposure
- *  file exists and can't be read/parsed — refuse rather than assume nothing is
- *  exposed (fail closed, distinct from {@link OpenModeExposureError}). */
-export class ExposureFileUnreadableError extends Error {
-  constructor(readonly detail: string) {
-    super(
-      "CB_ALLOW_UNAUTHENTICATED is set and the Tailscale exposure file could not be read " +
-        `(${detail}); refusing to start (fail closed). Fix or remove ${exposureFilePath()}, ` +
-        "or unset CB_ALLOW_UNAUTHENTICATED.",
-    );
-    this.name = "ExposureFileUnreadableError";
-  }
-}
-
 export function exposureFilePath(): string {
   return process.env.CB_TAILSCALE_EXPOSURE_FILE ?? path.join(os.homedir(), ".config", "cb", "tailscale-exposure.json");
 }
@@ -99,14 +65,11 @@ export type ExposureReadResult =
   | { ok: false; message: string };
 
 /**
- * Read and validate the exposure file WITHOUT throwing — the shape
- * `enforceOpenModeAtListen` needs so it can fail the server startup closed on a
- * corrupt file rather than crash with an unhandled error. Missing file is
- * `{ ok: true, file: null }`; a read/parse/schema failure is `{ ok: false }`.
- * Synchronous: the listen-time guard is sync and must not consult the file at
- * all on the normal (auth-on) path.
+ * Read and validate the exposure file WITHOUT throwing — the non-throwing core
+ * `loadExposureFile` wraps. Missing file is `{ ok: true, file: null }`; a
+ * read/parse/schema failure is `{ ok: false }`. Synchronous.
  */
-export function readExposureFileSafe(): ExposureReadResult {
+function readExposureFileSafe(): ExposureReadResult {
   const file = exposureFilePath();
   let raw: string;
   try {
@@ -226,20 +189,3 @@ export async function clearExposure(port: number): Promise<void> {
   });
 }
 
-/** Whether `port` is currently recorded as exposed. */
-export function isPortExposed(file: ExposureFile | null, port: number): boolean {
-  return file !== null && file.targets.some((t) => t.port === port);
-}
-
-/**
- * The listen-time guard called from `enforceOpenModeAtListen` (`webapp/auth.ts`)
- * once open mode is confirmed requested. Consults the exposure file SYNCHRONOUSLY
- * (the guard is sync) and throws — fail closed — when the port is recorded as
- * exposed, or when the file exists but is unreadable. A missing file is fine
- * (nothing exposed). Never called on the auth-on path, so it costs nothing there.
- */
-export function assertPortNotExposedInOpenMode(port: number): void {
-  const result = readExposureFileSafe();
-  if (!result.ok) throw new ExposureFileUnreadableError(result.message);
-  if (isPortExposed(result.file, port)) throw new OpenModeExposureError(port);
-}

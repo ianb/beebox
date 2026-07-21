@@ -123,9 +123,9 @@ await server.cleanup();
 ## A box with no `CB_HUB_SECRET` (standalone / non-hub) ignores the hub headers entirely
 
 Same headers that would grant access above do nothing here — the test-server
-helper sets the `CB_ALLOW_UNAUTHENTICATED` opt-out (standalone open mode), so
-the auth hook isn't even installed and every request passes through regardless
-of what `x-cb-*` headers it carries.
+helper constructs with `openAccess: true` (standalone open mode), so the auth
+hook isn't even installed and every request passes through regardless of what
+`x-cb-*` headers it carries.
 
 ```ts
 const openServer = await makeTestServer();

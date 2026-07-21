@@ -241,12 +241,13 @@ function unproven({ port, reason, hadIntent }: { port: number; reason: string; h
 }
 
 /**
- * Remove only this target's serve mapping and clear its exposure intent. The
- * intent is the durable open-mode guard, so it is cleared ONLY after a readback
- * PROVES no matching serve mapping remains (F2): CLI-absent, a spawn/exit
- * failure, or an unparseable readback all keep the intent and exit nonzero.
- * Unrelated serve mappings are preserved — teardown is scoped to exactly the
- * paths that map to this target, never a hardcoded `/` or a `serve reset`.
+ * Remove only this target's serve mapping and clear its exposure record. The
+ * record is teardown bookkeeping (it does not gate server startup — there is no
+ * open mode to guard), so it is cleared ONLY after a readback PROVES no matching
+ * serve mapping remains (F2): CLI-absent, a spawn/exit failure, or an
+ * unparseable readback all keep the record and exit nonzero. Unrelated serve
+ * mappings are preserved — teardown is scoped to exactly the paths that map to
+ * this target, never a hardcoded `/` or a `serve reset`.
  */
 export async function runTailscaleStop(
   deps: TailscaleDeps,

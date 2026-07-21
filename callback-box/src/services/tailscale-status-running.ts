@@ -137,13 +137,16 @@ export async function runningStatus(
         docLink: null,
       };
     case "open":
+      // Defensive against an older/foreign server: current `cb serve`/`cb hub`
+      // can no longer run unauthenticated (the open-mode opt-out was removed),
+      // but a legacy or third-party server on this port might still report it.
       return {
         state: "exposed-unauthenticated",
         ok: false,
         url,
         nextStep:
           `${url} is served to the tailnet but reports open (UNAUTHENTICATED) mode — Serve is live in front of an ` +
-          "unprotected box. Run `cb tailscale stop`, or give the box real auth (unset CB_ALLOW_UNAUTHENTICATED), immediately.",
+          "unprotected box. Run `cb tailscale stop`, or give the box real authentication, immediately.",
         docLink: null,
       };
     case "ambiguous":

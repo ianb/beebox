@@ -13,7 +13,6 @@ import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./compone
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ViewOverlayProvider } from "./components/ViewOverlay";
 import { AppNav } from "./components/AppNav";
-import { OpenModeBanner } from "./components/OpenModeBanner";
 import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
@@ -34,18 +33,13 @@ export { BoxRedirect } from "./pages/BoxSelection";
 enableDebugLogCapture();
 
 /**
- * Root-level layout, above the route tree's `Outlet`. Global, page-agnostic
- * chrome goes here rather than in `AppLayout` (which only wraps box routes,
- * not `/`, `/auth/login`, or `/auth/setup`) — the open-mode banner needs to
- * show on all of those.
+ * Root-level layout, above the route tree's `Outlet`. The place for global,
+ * page-agnostic chrome that must show on `/`, `/auth/login`, and `/auth/setup`
+ * as well as box routes (which `AppLayout` alone wraps). Currently a
+ * pass-through — kept as the seam for such chrome.
  */
 export function RootLayout() {
-  return (
-    <>
-      <OpenModeBanner />
-      <Outlet />
-    </>
-  );
+  return <Outlet />;
 }
 
 /**

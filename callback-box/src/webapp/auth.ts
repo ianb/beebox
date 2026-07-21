@@ -2,10 +2,12 @@
  * Session authentication helpers.
  *
  * Uses signed cookies (HMAC-SHA256) — no server-side session store.
- * Auth is ALWAYS-ON by default: a box requires authentication unless the
- * operator sets a loud, deliberate `CB_ALLOW_UNAUTHENTICATED` opt-out (see
- * `openMode`/`authRequired`). "Is Google configured" no longer means "is this
- * box protected" — Google is just one login method layered on top.
+ * Auth is STRUCTURALLY ALWAYS-ON: a box requires authentication. The only
+ * unauthenticated servers that can exist are test-constructed ones, via the
+ * `openAccess` server-construction option (decorated onto the fastify instance;
+ * see `src/types/fastify.d.ts`) — no CLI path sets it. "Is Google configured"
+ * does not mean "is this box protected" — Google is just one login method
+ * layered on top.
  */
 
 import * as crypto from "node:crypto";
@@ -19,7 +21,6 @@ import { errnoCode } from "../lib/error-guards.js";
 import { getLocalOwnerEmail, getLocalUser } from "./local-users.js";
 import { getLocalUserCached } from "./local-users-cache.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
-import { assertPortNotExposedInOpenMode } from "../services/tailscale-exposure.js";
 
 const COOKIE_NAME = "cb_session";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -55,110 +56,6 @@ function getSessionSecret(): string {
     cachedSecret = generated;
     return cachedSecret;
   }
-}
-
-/** How the `CB_ALLOW_UNAUTHENTICATED` opt-out is configured. */
-export type OpenMode =
-  /** No opt-out (the default): authentication is required. */
-  | "off"
-  /** `=1`: open, but only when the server binds a loopback host. */
-  | "loopback"
-  /** `=network`: open on any bind, including a public interface. */
-  | "network";
-
-/** Thrown at startup when `CB_ALLOW_UNAUTHENTICATED` holds a value that is
- *  neither the loopback opt-out (`1`) nor the network opt-out (`network`).
- *  Fail closed — an unrecognized value is never coerced to "open". */
-export class InvalidOpenModeError extends Error {
-  constructor(readonly value: string) {
-    super(
-      `CB_ALLOW_UNAUTHENTICATED=${JSON.stringify(value)} is not a recognized value. ` +
-        "Use \"1\" (open on a loopback bind only) or \"network\" (open on any bind, including a public one), " +
-        "or unset it to require authentication.",
-    );
-    this.name = "InvalidOpenModeError";
-  }
-}
-
-/** Thrown at listen time when the loopback-only opt-out (`=1`) is combined
- *  with a non-loopback bind — the catastrophic "open on a public interface"
- *  config, which requires the explicit `network` spelling. */
-export class OpenModeBindError extends Error {
-  constructor(readonly host: string) {
-    super(
-      "CB_ALLOW_UNAUTHENTICATED=1 permits open (unauthenticated) mode only on a loopback bind, " +
-        `but this server is binding ${JSON.stringify(host)}. Set CB_ALLOW_UNAUTHENTICATED=network to ` +
-        "deliberately serve an unauthenticated box on a non-loopback interface, or remove the opt-out " +
-        "to require authentication.",
-    );
-    this.name = "OpenModeBindError";
-  }
-}
-
-/**
- * Classify the `CB_ALLOW_UNAUTHENTICATED` opt-out. Unset/empty is `"off"`
- * (auth required); `"1"` is loopback-only open mode; `"network"` is open on
- * any bind. Any other non-empty value throws `InvalidOpenModeError` — the
- * value is never silently coerced (principle #4: never fail open silently).
- */
-export function openMode(): OpenMode {
-  const value = process.env.CB_ALLOW_UNAUTHENTICATED;
-  if (value === undefined || value === "") return "off";
-  if (value === "1") return "loopback";
-  if (value === "network") return "network";
-  throw new InvalidOpenModeError(value);
-}
-
-/**
- * Whether this box requires authentication. `true` unless a valid
- * `CB_ALLOW_UNAUTHENTICATED` opt-out is set — the always-on default. This
- * REPLACES the old `isAuthEnabled()` (`!!GOOGLE_OAUTH_CLIENT_ID`): Google
- * configuration no longer gates the wall.
- */
-export function authRequired(): boolean {
-  return openMode() === "off";
-}
-
-/** A loopback bind host — the opt-out's `=1` tier only permits open mode here. */
-function isLoopbackHost(host: string): boolean {
-  return host === "127.0.0.1" || host === "::1" || host === "localhost";
-}
-
-/**
- * Validate the opt-out against the actual bind host and emit the loud warning,
- * at LISTEN time only (`startServer`/`cb hub`) — never at `createServer`, so
- * injected test servers that never `listen()` stay quiet (noise-is-a-bug).
- *
- * Throws `InvalidOpenModeError` (garbage opt-out value) or `OpenModeBindError`
- * (loopback-only opt-out on a non-loopback bind) so a misconfigured open server
- * fails to start rather than silently exposing an unauthenticated box.
- */
-export function enforceOpenModeAtListen({ host, port }: { host: string; port: number }): void {
-  const mode = openMode();
-  // Zero cost on the normal (auth-on) path: the exposure file is never consulted
-  // unless the operator has explicitly requested open mode.
-  if (mode === "off") return;
-  // Durable half of the auth-posture guard: a persisted Tailscale exposure for
-  // this port means Serve is fronting it to the tailnet, so open mode must NOT
-  // start (a corrupt exposure file refuses too — fail closed). Throws
-  // OpenModeExposureError / ExposureFileUnreadableError.
-  assertPortNotExposedInOpenMode(port);
-  if (mode === "loopback" && !isLoopbackHost(host)) {
-    throw new OpenModeBindError(host);
-  }
-  console.warn(
-    "\n" +
-      "╔══════════════════════════════════════════════════════════════════════╗\n" +
-      "║  WARNING: authentication is DISABLED (CB_ALLOW_UNAUTHENTICATED)         ║\n" +
-      "╠══════════════════════════════════════════════════════════════════════╣\n" +
-      `║  This server is serving an UNAUTHENTICATED box at ${host}:${port}\n` +
-      `║  Opt-out mode: ${mode === "network" ? "network (open on ANY interface, including public)" : "loopback (open on 127.0.0.1/::1 only)"}\n` +
-      "║  Anyone who can reach this port has full access. This is intended only\n" +
-      "║  for local development or a trusted, isolated network. Unset\n" +
-      "║  CB_ALLOW_UNAUTHENTICATED (and use `cb auth create-user` / login) to\n" +
-      "║  require authentication.\n" +
-      "╚══════════════════════════════════════════════════════════════════════╝\n",
-  );
 }
 
 /**
@@ -503,12 +400,18 @@ export interface RequestIdentity {
  * Outside hub mode, the session cookie is the primary source (`source:
  * "cookie"` when present), and the hub headers are IGNORED even if somehow
  * present on the request — trusting them outside hub mode is exactly the
- * spoofing hole this design closes. When there is no cookie and the box is in
- * standalone open mode (`!authRequired()`), the resolver returns `source:
+ * spoofing hole this design closes. When there is no cookie and the server was
+ * constructed with `openAccess: true` (the in-process test seam that replaced
+ * the `CB_ALLOW_UNAUTHENTICATED` opt-out), the resolver returns `source:
  * "open"` — the always-on-auth plan's consolidation of the scattered
- * "auth disabled ⇒ open" recomputation into this one resolver.
+ * "auth disabled ⇒ open" recomputation into this one resolver. `openAccess` is
+ * the caller's per-instance flag (`request.server.openAccess` / the registering
+ * instance), never read from the environment.
  */
-export function resolveRequestIdentity(request: IdentityRequest): RequestIdentity {
+export function resolveRequestIdentity(
+  request: IdentityRequest,
+  { openAccess }: { openAccess: boolean },
+): RequestIdentity {
   if (isHubMode()) {
     if (!verifyHubSecret(request)) return { email: null, name: null, source: null };
     const emailHeader = request.headers[HUB_EMAIL_HEADER];
@@ -522,12 +425,12 @@ export function resolveRequestIdentity(request: IdentityRequest): RequestIdentit
   }
   const user = sessionUserFromRequest(request);
   if (user) return classifyLocalRecord(user);
-  // Standalone open mode (the `CB_ALLOW_UNAUTHENTICATED` opt-out): no cookie and
-  // no wall, so identity is "open" — the SAME source hub mode returns when the
-  // hub advertises `x-cb-hub-auth: off`. This is the ONE place openness is
-  // decided; the openness-recomputing call sites read `identity.source` instead
-  // of re-deriving it (principle #8: one way to do each thing).
-  if (!authRequired()) return { email: null, name: null, source: "open" };
+  // Open access (the `openAccess` construction option): no cookie and no wall,
+  // so identity is "open" — the SAME source hub mode returns when the hub
+  // advertises `x-cb-hub-auth: off`. This is the ONE place openness is decided;
+  // the openness-recomputing call sites read `identity.source` instead of
+  // re-deriving it (principle #8: one way to do each thing).
+  if (openAccess) return { email: null, name: null, source: "open" };
   return { email: null, name: null, source: null };
 }
 

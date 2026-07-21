@@ -27,7 +27,6 @@ import { createFirstUser } from "../../src/webapp/local-users.js";
 import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
 
 process.env.CB_AUTH_SCRYPT_N = "1024";
-delete process.env.CB_ALLOW_UNAUTHENTICATED; // auth required — the default-on wall
 delete process.env.CB_HUB_SECRET; // standalone (non-hub)
 delete process.env.CB_OWNER_EMAIL;
 process.env.CB_SESSION_SECRET = "test-session-secret-for-ws-auth-doctest";
@@ -49,19 +48,19 @@ const rawUpgradeRequest = { headers: { cookie: `${COOKIE_NAME}=${cookie}` } };
 ## The raw-header (WS) path resolves the same identity as the decorated (HTTP) path
 
 ```ts
-JSON.stringify(resolveRequestIdentity(decoratedRequest))
+JSON.stringify(resolveRequestIdentity(decoratedRequest, { openAccess: false }))
 => {"email":"owner@example.com","name":"Owner","source":"cookie"}
 
 // Without the raw-header fallback this would be `source: null` — the authed WS
 // dying at context creation. With it, the cookie-authed upgrade keeps its identity.
-JSON.stringify(resolveRequestIdentity(rawUpgradeRequest))
+JSON.stringify(resolveRequestIdentity(rawUpgradeRequest, { openAccess: false }))
 => {"email":"owner@example.com","name":"Owner","source":"cookie"}
 ```
 
 ## A raw upgrade with no `Cookie` header is unauthenticated (auth required, fails closed)
 
 ```ts
-JSON.stringify(resolveRequestIdentity({ headers: {} }))
+JSON.stringify(resolveRequestIdentity({ headers: {} }, { openAccess: false }))
 => {"email":null,"name":null,"source":null}
 ```
 
@@ -72,7 +71,7 @@ process.env.CB_HUB_SECRET = "hub-secret-xyz";
 // A hub-mode box trusts ONLY secret-gated headers; a raw session cookie on a WS
 // upgrade must NOT authenticate (the cookie secret is symmetric — a box that
 // could verify one could forge one for a sibling).
-JSON.stringify(resolveRequestIdentity(rawUpgradeRequest))
+JSON.stringify(resolveRequestIdentity(rawUpgradeRequest, { openAccess: false }))
 => {"email":null,"name":null,"source":null}
 
 delete process.env.CB_HUB_SECRET;

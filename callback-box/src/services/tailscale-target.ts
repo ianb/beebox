@@ -127,10 +127,13 @@ export function describeRefusal(posture: Exclude<TargetPosture, { kind: "enforce
   const probed = `http://127.0.0.1:${port}/auth/me`;
   switch (posture.kind) {
     case "open":
+      // Defensive against an older/foreign server: current `cb serve`/`cb hub`
+      // can no longer run unauthenticated (the open-mode opt-out was removed),
+      // but a legacy or third-party server on this port might still report it.
       return (
         `REFUSING to expose loopback:${port} — it reports open (UNAUTHENTICATED) mode at ${probed}. ` +
         "Fronting it with Tailscale Serve would hand the whole tailnet an unauthenticated box. " +
-        "Unset CB_ALLOW_UNAUTHENTICATED and give the server real auth first."
+        "Give the server real authentication first."
       );
     case "unreachable":
       return (

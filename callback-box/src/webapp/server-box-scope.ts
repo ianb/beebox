@@ -22,7 +22,6 @@ import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
 import {
-  authRequired,
   isHubMode,
   resolveRequestIdentity,
   getOwnerEmail,
@@ -50,9 +49,9 @@ export function isApiUrl(url: string): boolean {
 
 /**
  * Per-box auth preHandler: verify identity and box-level access. Installed
- * whenever authentication is required (`authRequired()` — the always-on
+ * whenever authentication is required (`!instance.openAccess` — the always-on
  * default) OR this box is running behind a hub (`isHubMode()`); skipped only
- * in standalone open mode (the `CB_ALLOW_UNAUTHENTICATED` opt-out). Lets
+ * in open access (the `openAccess` construction option). Lets
  * static assets and diagnostic-bypass requests
  * through; redirects page navigations to login and 401s API calls —
  * EXCEPT in hub mode, where the box never redirects to its own
@@ -97,7 +96,7 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
       renewMobileSessionCookie(reply, { boxRoot: box.boxRoot, boxSlug: box.slug, auth: mobileAuth });
       return;
     }
-    const identity = resolveRequestIdentity(request);
+    const identity = resolveRequestIdentity(request, { openAccess: instance.openAccess });
     switch (identity.source) {
       case "unavailable":
         // The credential store is corrupt/unreadable: fail CLOSED and DISTINCTLY
@@ -150,7 +149,7 @@ interface BoxScopeDeps {
 async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
   const { box, eventBus, options, frontendPath, frontendExists } = deps;
 
-  if (authRequired() || isHubMode()) {
+  if (!instance.openAccess || isHubMode()) {
     addBoxAuthHook(instance, box);
   }
 
@@ -199,7 +198,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // unauthorized requests before this runs when auth is enabled; we
       // recompute here to fail closed rather than assume it ran (e.g. the
       // WS upgrade path shares this same createContext).
-      const identity = resolveRequestIdentity(req);
+      const identity = resolveRequestIdentity(req, { openAccess: instance.openAccess });
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
       const mobileOk = resolveMobileRequestAuth(box.boxRoot, req.headers) !== null;
       // Fail closed on a corrupt/unreadable credential store (Track D): never
@@ -212,10 +211,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         throw new AuthStoreUnavailableAtContextError();
       }
       // One openness signal: the resolver returns `source: "open"` both in
-      // hub-wide open mode AND in standalone open mode (the
-      // CB_ALLOW_UNAUTHENTICATED opt-out), so this reads it instead of
-      // re-deriving from the gate (principle #8).
-      const openAccess = identity.source === "open";
+      // hub-wide open mode AND in standalone open access (the `openAccess`
+      // construction option), so this reads it instead of re-deriving from the
+      // gate (principle #8).
+      const identityIsOpen = identity.source === "open";
       const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
       return {
         boxRoot: box.boxRoot,
@@ -223,8 +222,8 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         eventBus,
         services: options.services ?? {},
         user,
-        authed: openAccess || user !== null || bearerOk || mobileOk,
-        isOwner: openAccess || (user !== null && user.email === getOwnerEmail()),
+        authed: identityIsOpen || user !== null || bearerOk || mobileOk,
+        isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
       };
     },
   };

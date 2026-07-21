@@ -4,8 +4,8 @@ The local login surface (`src/webapp/routes/auth.ts`): `POST /auth/login` verifi
 credentials and mints the session cookie; `POST /auth/setup` claims the owner
 account with a live setup token. These are ROOT routes (not box-scoped), so the
 doctest injects against the bare Fastify instance rather than the slug-prefixing
-helpers. `CB_AUTH_SCRYPT_N` is lowered so scrypt is fast, and the test helper's
-blanket `CB_ALLOW_UNAUTHENTICATED=1` is removed so real auth is exercised.
+helpers. `CB_AUTH_SCRYPT_N` is lowered so scrypt is fast, and the server is
+constructed with `openAccess: false` so real auth is exercised.
 
 ```ts setup
 import * as os from "node:os";
@@ -18,16 +18,15 @@ import { createFirstUser, getLocalOwnerEmail } from "../../src/webapp/local-user
 
 // Fast scrypt for the doctest (test-only work-factor seam).
 process.env.CB_AUTH_SCRYPT_N = "1024";
-// Exercise REAL auth: undo the test helper's blanket open-mode opt-out, and any
-// configured owner email that would constrain the first account.
-delete process.env.CB_ALLOW_UNAUTHENTICATED;
+// Exercise REAL auth: clear any configured owner email that would constrain the
+// first account (the server itself is constructed with openAccess: false below).
 delete process.env.CB_OWNER_EMAIL;
 
 const authDir = await mkdtemp(path.join(os.tmpdir(), "cb-auth-login-"));
 const AUTH_FILE = path.join(authDir, "auth.json");
 process.env.CB_AUTH_FILE = AUTH_FILE;
 
-const server = await makeTestServer();
+const server = await makeTestServer({ openAccess: false });
 
 // Root-level POST helper (JSON body). Returns the raw inject response so a 204
 // (no body) is observable without trying to parse JSON.

@@ -143,17 +143,19 @@ fronts it with TLS. Which topology applies depends on where `cb` runs:
    --target 3210` removes the mapping.
 
    Run `cb tailscale setup` as the SAME OS account the box server runs as (the
-   service account in prod, not root or an admin). The exposure intent that
-   backs the startup guard is recorded in that account's home
-   (`~/.config/cb/tailscale-exposure.json`, or `CB_TAILSCALE_EXPOSURE_FILE`); a
-   setup run under a different user records the guard where the server never
-   reads it.
+   service account in prod, not root or an admin). The exposure record it writes
+   (`~/.config/cb/tailscale-exposure.json`, or `CB_TAILSCALE_EXPOSURE_FILE`) is
+   bookkeeping for `cb tailscale status`/`stop` — drift detection and scoped
+   teardown of the serve mapping. It does NOT gate server startup (there is no
+   unauthenticated mode left to guard); a setup run under a different user just
+   records the mapping where `status`/`stop` won't find it.
 
-   On the host-daemon path this is fully guarded: setup refuses to expose a
-   server currently running with `CB_ALLOW_UNAUTHENTICATED` (fail closed —
-   Tailscale membership is never treated as authentication), and once a target
-   is recorded as exposed, restarting it in open mode refuses at startup until
-   you run `cb tailscale stop`.
+   On the host-daemon path setup still fails closed: it refuses to expose a
+   server that doesn't report an authenticated posture at its `/auth/me`
+   (Tailscale membership is never treated as authentication). Current `cb
+   serve`/`cb hub` are always authenticated — there is no unauthenticated mode
+   anymore — so this refusal is a guard against pointing setup at the wrong port
+   or at a legacy/foreign server.
 
 **Docker container (`cb` runs inside the container, which has no
 `tailscaled`):** `cb tailscale setup` cannot drive a host daemon it can't
@@ -170,14 +172,12 @@ is tailnet-facing. Follow Tailscale's compose example there for the
 `TS_AUTHKEY` and `TS_SERVE_CONFIG` shape.
 
 **The sidecar path has NO cb-side guard, by construction.** The sidecar
-applies `TS_SERVE_CONFIG` directly; `cb tailscale setup` never runs, no
-exposure intent is written, and the box process reads a different container
-filesystem than any place setup could record one — so neither setup's
-open-mode refusal nor the startup guard protects it. Keeping the box loopback
-only (`127.0.0.1:3210:3210`) with authentication ON is the operator's
-responsibility on this topology: never set `CB_ALLOW_UNAUTHENTICATED` on a box
-the sidecar fronts, since restarting that container in open mode exposes an
-unauthenticated box through the still-running sidecar with nothing to stop it.
+applies `TS_SERVE_CONFIG` directly; `cb tailscale setup` never runs and no
+exposure intent is written, so setup's posture refusal never gets a chance to
+inspect this topology. Authentication is always on, so the box behind the
+sidecar still requires a login — but keep the box loopback only
+(`127.0.0.1:3210:3210`) so the sidecar stays the only tailnet-facing path, and
+rely on the box's own always-on auth wall as the protection here.
 
 ### Box login (on by default)
 

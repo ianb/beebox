@@ -9,7 +9,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { IncomingHttpHeaders } from "node:http";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { authRequired, isHubMode, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
+import { isHubMode, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { transferEndpoint } from "../core/push-subscriptions.js";
 import { z } from "zod";
@@ -189,10 +189,9 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
     }
     return {
       status: "ok",
-      // Machine-visible open-mode signal, alongside the human boot warning and
-      // UI banner — an operator scraping /healthz can alarm on an accidentally
-      // open box.
-      open: !authRequired(),
+      // Machine-visible open-access signal, alongside the UI banner — an
+      // operator scraping /healthz can alarm on an accidentally open box.
+      open: request.server.openAccess,
       boxCount: boxes.length,
       version,
       templateDrift: { total: templateDriftTotal, byBox },
@@ -206,10 +205,10 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // (a pre-auth "what's running here" probe), so it deliberately does not expose
   // the full deploy record or deploy history the way it once did; the rich
   // version detail lives behind auth in the `health.check` tRPC procedure.
-  server.get("/api/build-info", async () => {
+  server.get("/api/build-info", async (request) => {
     const version = await readVersionInfo();
     const buildHash = version.commits["callback-box"]?.hash ?? null;
-    return { buildHash, open: !authRequired() };
+    return { buildHash, open: request.server.openAccess };
   });
 
   // Web Push key rotation (pushsubscriptionchange). Root-level and box-agnostic:
@@ -221,7 +220,7 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // (no identity, and not open mode) gets 401. A logged-in service worker's
   // fetch rides the session cookie, so a real resubscribe still authenticates.
   server.post("/api/push/resubscribe", async (request, reply) => {
-    const identity = resolveRequestIdentity(request);
+    const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
     if (identity.source === "unavailable") {
       return reply.status(503).send({ error: "Authentication temporarily unavailable" });
     }
@@ -244,20 +243,20 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
 
   // Root-level box list endpoint (filtered by user access when auth required)
   server.get("/api/boxes", async (request, reply) => {
-    if (authRequired()) {
+    if (!request.server.openAccess) {
       const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       // Through the shared resolver (FIX 1): a corrupt store answers 503, and a
-      // stale-`gen`/removed-user cookie resolves to no email → authRequired.
-      const identity = resolveRequestIdentity(request);
+      // stale-`gen`/removed-user cookie resolves to no email → auth required.
+      const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
       if (identity.source === "unavailable") {
         return reply.status(503).send({ error: "Authentication temporarily unavailable" });
       }
-      // Fleet-wide open mode reaching a hub child (hub started with the opt-out,
-      // so it injects `x-cb-hub-auth: off` → `source: "open"`): no identity, but
-      // the whole fleet is open, so list every box rather than an empty
-      // auth-required list. In standalone this branch is unreachable (the outer
-      // `!authRequired()` already handled open mode).
+      // Fleet-wide open mode reaching a hub child (hub constructed with
+      // openAccess, so it injects `x-cb-hub-auth: off` → `source: "open"`): no
+      // identity, but the whole fleet is open, so list every box rather than an
+      // empty auth-required list. In standalone this branch is unreachable (the
+      // outer `!request.server.openAccess` already handled open access).
       if (identity.source === "open") {
         return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
       }
@@ -302,8 +301,8 @@ export function registerSpaFallback(
     // shows its own login UI, and /auth/* routes). No `/share` carve-out —
     // there is no share feature in the tree, and an unused hole in the wall is
     // exactly the exception that outlives its rationale (always-on-auth plan).
-    if ((authRequired() || isHubMode()) && url !== "/" && !url.startsWith("/auth/")) {
-      const identity = resolveRequestIdentity(request);
+    if ((!request.server.openAccess || isHubMode()) && url !== "/" && !url.startsWith("/auth/")) {
+      const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
       if (identity.source === "unavailable") {
         // Credential store corrupt/unreadable: fail closed and distinctly (503),
         // never a login redirect that reads as "just sign in" (Track D).

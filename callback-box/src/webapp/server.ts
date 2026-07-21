@@ -14,12 +14,12 @@ import * as fs from "node:fs";
 import { createEventBus } from "../core/event-bus.js";
 import { registerAuthSurface } from "./routes/auth.js";
 import { registerGoogleServicesCallback } from "./routes/admin.js";
-import { isHubMode, enforceOpenModeAtListen } from "./auth.js";
+import { isHubMode } from "./auth.js";
 import { maybeArmFirstRunSetup } from "./setup-token.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
 import { getPublicUrl } from "../lib/public-url.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import type { ServerOptions } from "./server-types.js";
+import type { ServerOptions, InternalServerOptions } from "./server-types.js";
 import { resolveBoxes, killPreviousServer } from "./server-lifecycle.js";
 import { registerBox } from "./server-box-scope.js";
 import {
@@ -38,9 +38,39 @@ export type { BoxSpec, ServerOptions, ServerContext } from "./server-types.js";
 export const DEFAULT_PORT = 3210;
 
 /**
+ * Thrown when something tries to make an `openAccess` (auth-bypassing) server
+ * bind a listening socket. Open access is a test-only construction mode
+ * (`.inject()`-based tests) and must never be reachable over the network.
+ */
+export class OpenAccessListenError extends Error {
+  constructor() {
+    super(
+      "open access is a test-only construction mode and must never listen; " +
+        "if you meant to run a server, remove openAccess (auth is always on)",
+    );
+    this.name = "OpenAccessListenError";
+  }
+}
+
+/**
+ * Guard the one code path that binds a listening socket. `startServer` calls
+ * this before doing any work: an `openAccess` server bypasses the auth wall and
+ * exists only as a `createServer`/test-helper construction seam, so it must
+ * never listen. `openAccess` is absent from the public `ServerOptions` type,
+ * but a runtime (untyped) caller could still smuggle it in — hence the check.
+ * `.inject()` doesn't go through here, so injected open-access tests are
+ * unaffected.
+ */
+export function assertOpenAccessNotListening(options: InternalServerOptions): void {
+  if (options.openAccess === true) {
+    throw new OpenAccessListenError();
+  }
+}
+
+/**
  * Create and configure the Fastify server.
  */
-export async function createServer(options?: ServerOptions): Promise<FastifyInstance> {
+export async function createServer(options?: InternalServerOptions): Promise<FastifyInstance> {
   options = options ?? {};
   const boxes = await resolveBoxes(options);
 
@@ -58,6 +88,12 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
     // the capture silently saved nothing. Matches the 50 MB multipart cap.
     bodyLimit: 50 * 1024 * 1024,
   });
+
+  // Whether this box serves without an authentication wall. Decorated onto the
+  // instance (inherited by every encapsulated box scope) so the auth resolver
+  // and route gates consult a per-instance flag instead of the environment. No
+  // CLI path sets it — only test-constructed servers (`openAccess: true`).
+  server.decorate("openAccess", options.openAccess ?? false);
 
   // Error boundary for raw (non-tRPC) routes. Without this, an uncaught
   // error in a route handler leaves no server-side trace at all — the raw
@@ -183,20 +219,20 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
  */
 export async function startServer(options?: ServerOptions): Promise<void> {
   options = options ?? {};
+  // Fail closed before any side effects: an open-access server is non-listenable
+  // (auth is bypassed only for `.inject()` tests). Guarded here rather than at
+  // the socket bind so a smuggled `openAccess: true` never kills the previous
+  // server or writes a pid file.
+  assertOpenAccessNotListening(options);
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? "localhost";
 
-  // Validate the open-mode opt-out against the actual bind and, if open, emit
-  // the loud multi-line warning — BEFORE binding, so a garbage
-  // CB_ALLOW_UNAUTHENTICATED value or a loopback-only opt-out on a public bind
-  // fails startup rather than quietly serving an unauthenticated box.
-  enforceOpenModeAtListen({ host, port });
-
   // First-run setup: with auth required and zero local users, arm a one-time
-  // setup token and print its claim link. No-op in open mode or once a user
-  // exists. (At listen time, like the open-mode warning — never at createServer,
-  // so injected test servers stay quiet.)
-  maybeArmFirstRunSetup({ publicUrl: getPublicUrl(`http://${host}:${port}`) });
+  // setup token and print its claim link. No-op once a user exists. Auth is
+  // always on here (open access can't reach this path — guarded above), so
+  // `openAccess: false`. (At listen time — never at createServer, so injected
+  // test servers stay quiet.)
+  maybeArmFirstRunSetup({ publicUrl: getPublicUrl(`http://${host}:${port}`), openAccess: false });
 
   const boxes = await resolveBoxes(options);
 
