@@ -7,8 +7,12 @@
  */
 
 import * as fs from "node:fs/promises";
+import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
 import type { SessionUser } from "../auth.js";
+import { getLocalUser } from "../local-users.js";
+import { AuthStoreUnavailableError } from "../local-users-errors.js";
+import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";
 import { resolveSessionLogPath } from "../../core/chat/session/history.js";
 import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
@@ -16,6 +20,7 @@ import {
 } from "../../services/claude-chat-content.js";
 import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 
 // Structural shape only (id/mimeType/dataBase64 present with the right
 // primitive types) — the content-level checks (mime prefix, total byte cap)
@@ -150,6 +155,42 @@ export function escapeXmlAttr(v: string): string {
 }
 
 /**
+ * Resolve the chat sender for a request that carries mobile-device auth rather
+ * than a `cb_session` cookie. A paired device authenticates every native and
+ * mobile-web send, but `getSessionUser` only reads the cookie session — so
+ * without this those sends land in the transcript attributed to nobody.
+ *
+ * The identity is the device record's `createdBy`: the email of whoever paired
+ * the device (`webapp/trpc/routers/pairing.ts` stamps `ctx.user?.email`). We
+ * resolve its display name from the local-user store when there is one, and
+ * fall back to the email otherwise (a Google-only identity, or a name lookup
+ * that hit a corrupt/unreadable store — attribution degrades to the email
+ * rather than failing the send). A device paired in open mode carries no
+ * `createdBy`, so there is genuinely no identity to attribute and we return
+ * `null`, exactly as the cookie path does for an unauthenticated request.
+ */
+export async function resolveMobileSender(boxRoot: string, headers: IncomingHttpHeaders): Promise<SessionUser | null> {
+  const mobile = await resolveMobileRequestAuth(boxRoot, headers);
+  if (!mobile?.createdBy) return null;
+  const email = mobile.createdBy;
+  return { email, name: localUserName(email) ?? email };
+}
+
+/** Display name for an email from the local-user store, or null when there is
+ *  no record or the store can't be read (degrade to the email at the call site). */
+function localUserName(email: string): string | null {
+  try {
+    return getLocalUser(email)?.name ?? null;
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      console.warn(`[chat] could not resolve a display name for ${email} (auth store unavailable); using the email:`, e);
+      return null;
+    }
+    throw e;
+  }
+}
+
+/**
  * Inject user="Name" into the opening <typed> or <speech> tag of a message.
  */
 export function injectUserAttr(message: string, user: SessionUser): string {
@@ -157,6 +198,35 @@ export function injectUserAttr(message: string, user: SessionUser): string {
     /^(<(?:typed|speech)\b)([^>]*>)/,
     `$1 user="${user.name.replace(/"/g, "&quot;")}" user-email="${user.email.replace(/"/g, "&quot;")}"$2`
   );
+}
+
+/** How much of an image's base64 to decode when reading its EXIF orientation —
+ *  the tag lives in the leading APP1 segment, so a bounded prefix suffices. A
+ *  multiple of 4 keeps the base64 slice on a byte boundary. */
+const ORIENTATION_SCAN_BASE64_CHARS = 65536;
+
+/**
+ * Surface a contract violation when an inbound chat image carries a non-trivial
+ * EXIF orientation. The orientation contract (`shared/image-orientation.ts`)
+ * says images are normalized at ingress — the browser transcode bakes
+ * orientation into pixels and native clients redraw upright — so a non-1
+ * orientation here means some client path skipped normalization and the model
+ * may see the photo rotated. The server has no image codec to fix it, so this
+ * logs loudly (visible degradation) rather than silently forwarding it.
+ */
+export function warnOnUnnormalizedImageOrientation(images: NonNullable<SendBody["images"]>): void {
+  for (const img of images) {
+    // Only JPEG carries an EXIF orientation tag; canvas WebP/PNG never do.
+    if (img.mimeType !== "image/jpeg") continue;
+    const prefix = img.dataBase64.slice(0, ORIENTATION_SCAN_BASE64_CHARS);
+    const orientation = readJpegOrientation(new Uint8Array(Buffer.from(prefix, "base64")));
+    if (orientation !== ORIENTATION_NORMAL) {
+      console.warn(
+        `[chat] inbound image #${img.id} carries EXIF orientation ${orientation} (expected ${ORIENTATION_NORMAL}); ` +
+          "a client transcode path skipped orientation normalization — the model may see it rotated",
+      );
+    }
+  }
 }
 
 /**

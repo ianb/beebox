@@ -3,7 +3,20 @@ title: "Hub mobile-auth wall check is presence-only, not verified (S1)"
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+resolution: implemented
 ---
+
+**Closed (implemented).** The presence-only gate is gone: `hasMobileAuth` in
+`src/hub/hub-server.ts` now calls `verifyMobileRequest`
+(`src/core/mobile/request-auth.ts`), which validates the bearer against the
+device store / the `cb_mobile` cookie against its per-box HMAC. Both the HTTP
+catch-all and the WS-upgrade path reject an unverified request BEFORE
+`resolveEndpoint`, so a bogus `Bearer x` no longer cold-starts a box or reveals
+slug validity. The verification landed in commit 44da6cef ("auth: harden
+against Codex review findings"); this closure adds the explicit no-enumeration
+proof — a bogus credential on a real slug answers identically to an unknown slug
+— in `test/hub/hub-server-auth.doctest.md`.
+
 
 `hasMobileAuthAttempt` in `callback-box/src/hub/hub-server.ts` decides whether to let a request past
 the hub's pre-upgrade auth wall by checking only that an `Authorization: Bearer …` header OR a

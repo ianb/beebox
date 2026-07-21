@@ -1,111 +1,140 @@
 /**
- * Machine-local file lock primitive.
+ * Machine-local cross-process file lock primitive.
  *
  * This is the canonical lock for the project. All cross-process locks
  * (wakeup mutex in cli/lib/lock.ts, scheduled-script + lock-group locks
- * in core/schedule-state.ts, reactor mutex in core/reactor/engine.ts) sit
- * on top of it. Don't add a new lock surface elsewhere — extend or wrap
- * this instead.
+ * in core/schedule/state.ts, reactor mutex in core/reactor/engine.ts, the
+ * mobile device-store revoke in core/mobile/pairing.ts, ...) sit on top of
+ * it. Don't add a new lock surface elsewhere — extend or wrap this instead.
  *
- * ## How it works
+ * ## How it works — the exclusion invariant
  *
- * The lock *is* a single JSON file at the caller-chosen path. Acquisition
- * is atomic via `fs.open(path, "wx")` (O_CREAT|O_EXCL). The file body
- * carries the holder's identity:
+ * Mutual exclusion is delegated entirely to **`proper-lockfile`**, a proven
+ * pure-JS advisory lock. Its exclusion mechanism is a single atomic
+ * `mkdir()` of a *guard directory* (`<path>.guard`): `mkdir` fails `EEXIST`
+ * if the directory already exists, and on both POSIX and Windows at most one
+ * caller can create it — so at most one process holds the lock. There is no
+ * hand-rolled "read who owns it, then unlink, then recreate" reclaim path
+ * anywhere in this module; that unconditional-unlink pattern is precisely the
+ * reclaim/release race that the previous home-grown implementation shipped
+ * (and that failed adversarial review twice — see the file-lock-empty-window
+ * -race issue). Stale-holder reclaim is proper-lockfile's own mtime
+ * compare-and-swap (steal only when the guard's mtime is older than the
+ * `stale` threshold), never a delete-by-path.
  *
- *   { pid, bootEpochSeconds, hostname, acquiredAt, metadata }
+ * Alongside the guard directory we write a **diagnostic sidecar file at
+ * `path`** carrying the holder's identity:
  *
- * Liveness is checked directly with `process.kill(pid, 0)` plus a
- * boot-epoch comparison (`Date.now()/1000 - os.uptime()`, ±30s tolerance
- * for NTP jitter). PID-reuse after a reboot is caught by the boot-epoch
- * mismatch. Different hostname → treated as live and never reclaimed.
+ *   { pid, hostname, acquiredAt, metadata }
  *
- * Dead holders self-heal: any read path that finds a holder whose PID is
- * gone (or whose boot epoch differs by more than the tolerance) deletes
- * the file and proceeds. Malformed JSON / missing required fields are
- * treated the same way.
+ * The sidecar is written *after* the guard `mkdir` wins and is read *only*
+ * for diagnostics (`LockHeldError.holder`, `inspectLock`, `scanLocks`). It
+ * NEVER participates in the acquire decision, so no sidecar state — empty,
+ * missing, torn, stale, or concurrently rewritten — can ever admit a second
+ * holder. (This is what kills the old empty-publication window: exclusion no
+ * longer depends on the lock file's *content* being present and parseable.)
  *
- * ## Why not proper-lockfile / mtime staleness?
+ * Every on-disk deletion of lock state happens in exactly one of two safe
+ * ways: (1) proper-lockfile's own `release`, which cancels the refresh timer
+ * and removes the guard dir; or (2) our reclaim path (`scanLocks`), which
+ * removes a dead holder's sidecar+guard *only while atomically holding the
+ * lock* via proper-lockfile. No code path deletes a live foreign holder's
+ * guard directory (the one exception is the deliberate `forceAcquireLock`
+ * steal, which is documented as such and has no production callers).
  *
- * The previous implementation used `proper-lockfile`, which detects stale
- * locks via mtime heartbeats. Two failure modes drove the rewrite:
+ * ## Staleness, crash recovery, and the macOS-sleep tradeoff
  *
- *   1. macOS sleep paused the heartbeat, so live locks looked stale on
- *      wake and got stolen.
- *   2. SIGKILL (e.g. a per-script timeout firing) left orphaned
- *      `.lock.lock` directories that no code path cleaned up.
+ * `stale` is set to {@link STALE_MS} (5 minutes). While the holding process
+ * is alive proper-lockfile refreshes the guard's mtime every `stale/2`
+ * (2.5 min), so a live lock stays fresh for an unbounded hold as long as the
+ * event loop runs — hold duration does NOT need to fit under `stale`. The
+ * threshold governs two things:
  *
- * PID-based liveness is immune to both: process state is the source of
- * truth, no clocks involved.
+ *   - **Crash recovery.** A SIGKILL'd holder (e.g. `cb tick`'s 10-minute
+ *     per-script timeout firing) leaves a guard dir that no exit handler
+ *     cleaned up; the next acquirer reclaims it once its mtime is >5 min old.
+ *     5 min sits comfortably under that 10-min killer, so a wedged run's lock
+ *     always clears before the run itself is force-killed. Callers with short
+ *     acquire budgets (pairing/local-users/transient-state retry ~5 s) will
+ *     fail *loud* rather than block for the full 5 min against a crashed
+ *     holder — a thrown lock error, never a silent double-acquire.
+ *
+ *   - **Sleep tolerance.** proper-lockfile's refresh runs on a `setTimeout`,
+ *     which on macOS is paused during system sleep (see the awake-timeout
+ *     discipline in `src/lib/awake-timeout.ts`). A generous 5-min `stale`
+ *     means a normal brief sleep (lid closed for a few minutes mid-hold) does
+ *     NOT make a live holder's lock look stale to a contender on wake. A sleep
+ *     LONGER than `stale` still can: a live-but-sleeping holder's guard is
+ *     seen stale and may be stolen. When that happens the victim's refresh
+ *     detects the theft on its next tick and fires `onCompromised`, which
+ *     logs LOUDLY (`console.error`) — the degradation is always observable,
+ *     never silent. These locks are held for seconds-to-minutes and released
+ *     long before a machine idles into sleep, so surviving across a real sleep
+ *     is not an expected steady state. This sleep-vs-crash-recovery tension is
+ *     inherent to any mtime-freshness lock; 5 minutes is the chosen balance.
  *
  * ## Scope
  *
  * Single machine. The state directories that consume this primitive
- * (`config/schedules/.state/`, `.cb-lock`, `.cb-reactor.lock`) are
- * gitignored, so cross-machine contention is out of scope. The hostname
- * field is recorded for inspectability and to defensively skip cleanup
- * of locks owned by another host.
+ * (`config/schedules/.state/`, `.cb-lock`, `.cb-reactor.lock`, the device
+ * store's `.lock`) are gitignored, so cross-machine contention is out of
+ * scope. The hostname field is recorded for inspectability only.
  *
- * In-process async serialization (e.g. capture.ts's per-session promise
- * chain) is a different problem — there's no other process to coordinate
- * with, only concurrent async tasks within one Node process. Use a
- * `Map<id, Promise>` for that, not file locks (see `card-lock.ts` and
- * `core/capture/staging-store.ts`).
- *
- * ## Lock table (every lock in the system)
- *
- * Consult this before adding a lock so the new one has an ordering
- * convention to fit into. "cross-proc" = this file's PID-based file lock;
- * "in-proc" = a `Map<key, Promise>` chain within one Node process.
- *
- * | Lock | Kind | Path / key | Scope (what it guards) | Held by | Typical hold |
- * |------|------|-----------|------------------------|---------|-------------|
- * | Reactor mutex | cross-proc | `<box>/.cb-reactor.lock` | one reactor cycle per box | reactor engine (`cb wakeup`) | one cycle (s–min) |
- * | Scheduled-script | cross-proc | `<box>/config/schedules/.state/<script>.lock` (+ lock-group ids) | one run per script / lock-group | scheduler (`cb tick`, `scheduler.trigger`) | one script run |
- * | Chat-active | cross-proc | `<box>/.callback-box/active-chats/<runId>.lock` | signals a live SDK chat run so tick/housekeeping defer | `ChatSession` run | one SDK chat turn |
- * | Push store | cross-proc | `<pushStoreDir>/push-subscriptions.json.lock` | server-wide subscription store RMW | push subscribe/unsubscribe | single RMW (ms) |
- * | Search index | cross-proc | `<box>/.callback-box/<lock file>` | index refresh serialization | `search/refresh.ts` | one index rebuild |
- * | Capture staging | in-proc (`withStagingLock`) | session id | per-`session.json` RMW (concurrent uploads) | capture upload route; entry dropped by `cleanupStagingSession` | single RMW |
- * | Card write | in-proc (`withCardLock`) | `path.resolve(file)` | per-file card/config read-modify-write within one process | tRPC mutations (todos/scheduler/admin), connector thread writes, `answer`/`transcription` core; map self-drains | single RMW |
- * | Git index | git-owned | `<box>/.git/index.lock` | staging/commit | any `git commit` (not ours) | retried once on collision (`lib/git.ts`) |
- *
- * Ordering notes. The cross-process and in-process tiers are orthogonal —
- * different failure models, no shared key space. In-process: `withCardLock`
- * is per file; never nest it on the *same* path (it throws
- * `ReentrantCardLockError` rather than deadlock). A `withCardLock` critical
- * section deliberately spans the git stage+commit that follows the write, so
- * it briefly touches the whole-repo git index — but `withCardLock` only
- * serializes same-file racers, so two *different* cards committing at once
- * can still race on `.git/index.lock` (handled by git.ts's retry, not by
- * these locks; the git-commit race is a separate concern). Avoid holding two
- * `withCardLock` locks on different files in inconsistent order across call
- * sites.
+ * In-process async serialization (concurrent async tasks within ONE Node
+ * process racing on the same file) is a different problem — use
+ * `withCardLock` (`card-lock.ts`), not this. The two layers compose:
+ * card-lock serializes same-process racers; file-lock arbitrates across
+ * processes. See `card-lock.ts` for the full lock table.
  *
  * ## API
  *
- * - `acquireLock(path, metadata)` — atomic; throws LockHeldError if a
- *   live holder owns it. Reclaims dead/malformed holders automatically.
- * - `releaseLock(path)` — idempotent; only deletes the file if the
- *   recorded holder is us (PID + bootEpoch + hostname).
- * - `inspectLock(path)` — read holder; returns null if not held or dead
- *   (cleans up dead as a side effect).
- * - `forceAcquireLock(path, metadata)` — steal whoever owns it.
- * - `scanLocks(dir, suffix)` — read all matching lock files; returns a
- *   map of name → holder for live ones, deletes dead ones.
+ * - `acquireLock(path, metadata)` — non-blocking; throws `LockHeldError` if a
+ *   live holder owns it. Stale/crashed holders are reclaimed by proper-lockfile.
+ * - `releaseLock(path)` — idempotent; releases only a lock THIS process holds
+ *   (tracked per-path). Releasing one we don't hold is a no-op — it can never
+ *   delete a foreign holder's lock.
+ * - `inspectLock(path)` — read the current holder via proper-lockfile's
+ *   `.check()`, or null if not held / stale.
+ * - `forceAcquireLock(path, metadata)` — deliberately evict whoever owns it.
+ * - `scanLocks(dir, suffix)` — map of name → live holder; reclaims dead ones.
  */
 
+import { randomBytes } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
+import * as path from "node:path";
+import * as lockfile from "proper-lockfile";
 import { errnoCode } from "./error-guards.js";
 import { isRecord } from "./is-record.js";
 
+/**
+ * Diagnostic identity of a lock holder. Written to the sidecar file at the
+ * lock path AFTER exclusion is won; consumed only for diagnostics (never for
+ * the acquire decision). Liveness is owned by proper-lockfile, so this no
+ * longer carries the old `bootEpochSeconds`/`token` liveness fields.
+ */
 export interface LockHolder {
   pid: number;
-  bootEpochSeconds: number;
   hostname: string;
   acquiredAt: string;
   metadata: Record<string, unknown>;
 }
+
+/**
+ * Stale threshold for proper-lockfile, in milliseconds. See the module
+ * comment's "Staleness, crash recovery, and the macOS-sleep tradeoff"
+ * section for why 5 minutes.
+ */
+const STALE_MS = 5 * 60 * 1000;
+
+/**
+ * Release functions for locks THIS process currently holds, keyed by lock
+ * path. Populated on acquire, consulted by `releaseLock` so we only ever
+ * release a lock we actually hold — proper-lockfile's release also verifies
+ * continued ownership before removing the guard dir, so this can never delete
+ * a foreign holder's lock.
+ */
+const heldReleases = new Map<string, () => Promise<void>>();
 
 export class LockHeldError extends Error {
   readonly holder: LockHolder;
@@ -116,88 +145,98 @@ export class LockHeldError extends Error {
   }
 }
 
-class LockAcquireFailedError extends Error {
-  constructor(readonly path: string) {
-    super(`Failed to acquire lock at ${path} after retry`);
-    this.name = "LockAcquireFailedError";
-  }
-}
-
 class LockForceAcquireFailedError extends Error {
-  constructor(readonly path: string) {
-    super(`Failed to force-acquire lock at ${path}`);
+  constructor(readonly lockPath: string) {
+    super(`Failed to force-acquire lock at ${lockPath}`);
     this.name = "LockForceAcquireFailedError";
   }
 }
 
-// Tolerance window for boot-epoch comparison. NTP corrections at startup
-// can shift Date.now()-os.uptime() by a few seconds; a real reboot is well
-// outside this window, so we still detect it.
-const BOOT_TOLERANCE_SECONDS = 30;
-
-function currentBootEpochSeconds(): number {
-  return Math.floor(Date.now() / 1000 - os.uptime());
+/** The guard-directory path proper-lockfile mkdir-locks for a given lock path.
+ *  Deliberately does NOT end in the caller's `.lock` suffix, so `scanLocks`'s
+ *  suffix match enumerates only sidecar files, never guard directories. */
+function guardPath(lockPath: string): string {
+  return `${lockPath}.guard`;
 }
 
-function sameBoot(a: number, b: number): boolean {
-  return Math.abs(a - b) <= BOOT_TOLERANCE_SECONDS;
+function lockOptions(lockPath: string): lockfile.LockOptions {
+  return {
+    // Our lock path is not a real resource file (and may not exist), so skip
+    // proper-lockfile's realpath resolution, which would ENOENT on it.
+    realpath: false,
+    stale: STALE_MS,
+    lockfilePath: guardPath(lockPath),
+    onCompromised: makeOnCompromised(lockPath),
+  };
+}
+
+function checkOptions(lockPath: string): lockfile.CheckOptions {
+  return { realpath: false, stale: STALE_MS, lockfilePath: guardPath(lockPath) };
+}
+
+/**
+ * proper-lockfile calls this on the holder's refresh timer when it can no
+ * longer prove it still owns the guard dir (mtime no longer ours — a long
+ * event-loop stall, a system sleep past `stale`, or another process stealing
+ * the stale lock). The default handler THROWS, which would surface as an
+ * unhandled rejection; ours logs loudly instead. This is a real degradation:
+ * any critical section still running under this lock is no longer excluded.
+ */
+function makeOnCompromised(lockPath: string): (err: Error) => void {
+  return (err) => {
+    heldReleases.delete(lockPath);
+    console.error(
+      `[file-lock] COMPROMISED: lost cross-process lock ${lockPath} we believed we held. ` +
+        `proper-lockfile could not refresh its guard within the ${STALE_MS}ms stale window ` +
+        "(likely a long event-loop stall, a system sleep, or another process stealing the " +
+        "stale lock). Any critical section still running under this lock is NO LONGER " +
+        "mutually excluded — investigate for a possible lost update.",
+      err,
+    );
+  };
+}
+
+function isLockedError(e: unknown): boolean {
+  return errnoCode(e) === "ELOCKED";
 }
 
 function makeHolder(metadata: Record<string, unknown>): LockHolder {
   return {
     pid: process.pid,
-    bootEpochSeconds: currentBootEpochSeconds(),
     hostname: os.hostname(),
     acquiredAt: new Date().toISOString(),
     metadata,
   };
 }
 
-function pidExists(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = errnoCode(err);
-    if (code === "ESRCH") return false;
-    // EPERM means the process exists but we can't signal it (different uid).
-    // Anything unexpected — be conservative and treat as live.
-    return true;
-  }
+function isWellFormedHolder(value: unknown): value is LockHolder {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value["pid"] === "number" &&
+    typeof value["hostname"] === "string" &&
+    typeof value["acquiredAt"] === "string" &&
+    typeof value["metadata"] === "object" &&
+    value["metadata"] !== null
+  );
 }
 
 /**
- * Decide whether a recorded lock holder is still alive on this machine.
- * Cross-host holders are always treated as alive (we can't introspect them).
+ * A stand-in holder for the tiny window where a lock is genuinely held (guard
+ * dir exists) but its diagnostic sidecar hasn't been written yet, or is torn.
+ * Exclusion never depends on the sidecar, so a diagnostic read must still
+ * report "held" rather than "free" here.
  */
-function isHolderLive(holder: LockHolder): boolean {
-  if (holder.hostname !== os.hostname()) return true;
-  if (!sameBoot(holder.bootEpochSeconds, currentBootEpochSeconds())) return false;
-  return pidExists(holder.pid);
+function unknownHolder(): LockHolder {
+  return { pid: -1, hostname: os.hostname(), acquiredAt: new Date().toISOString(), metadata: {} };
 }
 
-function isOurs(holder: LockHolder): boolean {
-  return holder.pid === process.pid &&
-    holder.hostname === os.hostname() &&
-    sameBoot(holder.bootEpochSeconds, currentBootEpochSeconds());
-}
-
-function isWellFormedHolder(value: unknown): value is LockHolder {
-  if (!isRecord(value)) return false;
-  return typeof value["pid"] === "number" &&
-    typeof value["bootEpochSeconds"] === "number" &&
-    typeof value["hostname"] === "string" &&
-    typeof value["acquiredAt"] === "string" &&
-    typeof value["metadata"] === "object" && value["metadata"] !== null;
-}
-
-async function readHolder(path: string): Promise<LockHolder | null> {
+/** Read the diagnostic sidecar holder at `path`, or null if absent/unparseable.
+ *  Never influences an acquire — only diagnostics. */
+async function readHolder(lockPath: string): Promise<LockHolder | null> {
   let content: string;
   try {
-    content = await fs.readFile(path, "utf-8");
-  } catch (err) {
-    const code = errnoCode(err);
-    if (code === "ENOENT") return null;
+    content = await fs.readFile(lockPath, "utf-8");
+  } catch (_e) {
     return null;
   }
   const trimmed = content.trim();
@@ -206,144 +245,181 @@ async function readHolder(path: string): Promise<LockHolder | null> {
   try {
     parsed = JSON.parse(trimmed);
   } catch (_e) {
-    // Malformed JSON — treat as no holder so it can be reclaimed.
     return null;
   }
-  if (!isWellFormedHolder(parsed)) return null;
-  return parsed;
+  return isWellFormedHolder(parsed) ? parsed : null;
 }
 
-async function writeExclusive(path: string, holder: LockHolder): Promise<boolean> {
-  let handle: fs.FileHandle;
+/** Write the diagnostic sidecar atomically (temp + rename) so a concurrent
+ *  diagnostic read never sees a torn file. Safe to rename over any prior
+ *  sidecar: we hold the guard dir, so no other holder exists. */
+async function writeSidecar(lockPath: string, holder: LockHolder): Promise<void> {
+  const tmp = `${lockPath}.${randomBytes(8).toString("hex")}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(holder, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+  await fs.rename(tmp, lockPath);
+}
+
+async function unlinkIgnoringMissing(target: string): Promise<void> {
   try {
-    handle = await fs.open(path, "wx");
+    await fs.unlink(target);
   } catch (err) {
-    const code = errnoCode(err);
-    if (code === "EEXIST") return false;
-    throw err;
+    if (errnoCode(err) !== "ENOENT") throw err;
   }
+}
+
+/**
+ * Atomically acquire a lock. Throws `LockHeldError` if a live holder owns it.
+ * Stale/crashed holders are reclaimed by proper-lockfile's mtime compare-and
+ * -swap. Non-blocking (proper-lockfile `retries: 0` default).
+ */
+export async function acquireLock(
+  lockPath: string,
+  metadata: Record<string, unknown>,
+): Promise<LockHolder> {
+  // proper-lockfile mkdir's the guard dir; its parent (== the lock path's
+  // parent) must exist. Callers generally mkdir their state dir already; do it
+  // defensively so acquisition is robust on a cold first run.
+  await fs.mkdir(path.dirname(lockPath), { recursive: true });
+
+  let release: () => Promise<void>;
   try {
-    await handle.writeFile(JSON.stringify(holder, null, 2) + "\n");
+    release = await lockfile.lock(lockPath, lockOptions(lockPath));
+  } catch (e) {
+    if (isLockedError(e)) {
+      throw new LockHeldError((await readHolder(lockPath)) ?? unknownHolder());
+    }
+    throw e;
+  }
+
+  const holder = makeHolder(metadata);
+  try {
+    await writeSidecar(lockPath, holder);
+  } catch (e) {
+    // We hold the guard but couldn't publish the diagnostic sidecar (disk
+    // full, permissions). Release so we don't leave a held-but-undiagnosable
+    // lock, then fail the acquire.
+    await release().catch((releaseErr: unknown) => {
+      console.warn(`[file-lock] failed to release ${lockPath} after sidecar write error:`, releaseErr);
+    });
+    throw e;
+  }
+  heldReleases.set(lockPath, release);
+  return holder;
+}
+
+/**
+ * Release a lock previously acquired by this process. Idempotent, and
+ * foreign-holder-safe: with no recorded release for `path` this is a no-op,
+ * and proper-lockfile's release verifies continued ownership before removing
+ * the guard dir — releasing a lock we no longer hold never deletes someone
+ * else's.
+ */
+export async function releaseLock(lockPath: string): Promise<void> {
+  const release = heldReleases.get(lockPath);
+  heldReleases.delete(lockPath);
+  if (release === undefined) return;
+  try {
+    await release();
+  } catch (e) {
+    // ERELEASED (already released) / ECOMPROMISED (stolen while we slept) are
+    // benign here — the lock isn't ours to remove anymore. Anything else is
+    // unexpected and worth surfacing, but release must not throw to callers.
+    console.warn(`[file-lock] release of ${lockPath} did not complete cleanly:`, e);
+  }
+  // The guard dir is gone (removed by release); drop the diagnostic sidecar
+  // too. Best-effort — a lingering sidecar is harmless (reads gate on the
+  // guard dir, not the sidecar).
+  await unlinkIgnoringMissing(lockPath).catch((e: unknown) => {
+    console.warn(`[file-lock] failed to remove sidecar ${lockPath} on release:`, e);
+  });
+}
+
+/**
+ * Read the current holder of a lock, or null if not held (or stale). Uses
+ * proper-lockfile's `.check()` — no side effects, never blocks a concurrent
+ * acquirer, never steals or deletes.
+ */
+export async function inspectLock(lockPath: string): Promise<LockHolder | null> {
+  const held = await lockfile.check(lockPath, checkOptions(lockPath));
+  if (!held) return null;
+  return (await readHolder(lockPath)) ?? unknownHolder();
+}
+
+/**
+ * Reclaim a lock if it has no live holder. Returns true when reclaimed (it was
+ * free or stale/crashed — sidecar and guard dir are cleaned up), false when a
+ * live holder owns it (`ELOCKED`, untouched). This is the ONLY cleanup path,
+ * and it is race-free: it deletes on-disk state exclusively while atomically
+ * holding the lock via proper-lockfile, so it can never remove a live
+ * holder's guard dir.
+ */
+async function reclaimIfDead(lockPath: string): Promise<boolean> {
+  let release: () => Promise<void>;
+  try {
+    release = await lockfile.lock(lockPath, lockOptions(lockPath));
+  } catch (e) {
+    if (isLockedError(e)) return false; // live holder
+    throw e;
+  }
+  // We hold it now → there was no live holder. Drop the stale sidecar, then
+  // release (proper-lockfile removes the guard dir).
+  try {
+    await unlinkIgnoringMissing(lockPath);
   } finally {
-    await handle.close();
+    await release().catch((e: unknown) => {
+      console.warn(`[file-lock] failed to release reclaimed lock ${lockPath}:`, e);
+    });
   }
   return true;
 }
 
-async function unlinkIgnoringMissing(path: string): Promise<void> {
-  try {
-    await fs.unlink(path);
-  } catch (err) {
-    const code = errnoCode(err);
-    if (code !== "ENOENT") throw err;
-  }
-}
-
 /**
- * Atomically acquire a lock. Throws LockHeldError if a live holder owns it.
- * Dead holders (crashed, killed, post-reboot) are reclaimed automatically.
- */
-export async function acquireLock(
-  path: string,
-  metadata: Record<string, unknown>,
-): Promise<LockHolder> {
-  const holder = makeHolder(metadata);
-
-  if (await writeExclusive(path, holder)) return holder;
-
-  // File exists. Check who owns it.
-  const existing = await readHolder(path);
-  if (existing && isHolderLive(existing)) {
-    throw new LockHeldError(existing);
-  }
-
-  // Existing is dead or malformed. Reclaim and retry once.
-  await unlinkIgnoringMissing(path);
-  if (await writeExclusive(path, holder)) return holder;
-
-  // Race: someone else acquired between our unlink and write.
-  const winner = await readHolder(path);
-  if (winner && isHolderLive(winner)) {
-    throw new LockHeldError(winner);
-  }
-  throw new LockAcquireFailedError(path);
-}
-
-/**
- * Release a lock previously acquired by this process. Idempotent.
- * If the lock is now owned by someone else (we crashed, they reclaimed),
- * we leave their lock alone.
- */
-export async function releaseLock(path: string): Promise<void> {
-  const existing = await readHolder(path);
-  if (existing === null) return;
-  if (!isOurs(existing)) return;
-  await unlinkIgnoringMissing(path);
-}
-
-/**
- * Read the current holder of a lock, or null if not held.
- * Dead holders are cleaned up as a side effect.
- */
-export async function inspectLock(path: string): Promise<LockHolder | null> {
-  const existing = await readHolder(path);
-  if (existing === null) return null;
-  if (!isHolderLive(existing)) {
-    await unlinkIgnoringMissing(path);
-    return null;
-  }
-  return existing;
-}
-
-/**
- * Forcefully take a lock, evicting whatever is there (live or dead).
- * Use only when the caller has decided to override an active holder.
+ * Forcefully take a lock, evicting whatever is there (live or dead). This is
+ * the single deliberate exception to "never delete a foreign holder's guard":
+ * the caller has decided to override an active holder. No production callers
+ * today — used for administrative override.
  */
 export async function forceAcquireLock(
-  path: string,
+  lockPath: string,
   metadata: Record<string, unknown>,
 ): Promise<LockHolder> {
-  await unlinkIgnoringMissing(path);
-  const holder = makeHolder(metadata);
-  if (await writeExclusive(path, holder)) return holder;
-  // Race with another acquirer; one more shot.
-  await unlinkIgnoringMissing(path);
-  if (await writeExclusive(path, holder)) return holder;
-  throw new LockForceAcquireFailedError(path);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    // Evict the current holder's guard dir + sidecar outright, then acquire.
+    await fs.rm(guardPath(lockPath), { recursive: true, force: true });
+    await unlinkIgnoringMissing(lockPath);
+    try {
+      return await acquireLock(lockPath, metadata);
+    } catch (e) {
+      if (isLockedError(e) || e instanceof LockHeldError) continue; // raced another acquirer; retry
+      throw e;
+    }
+  }
+  throw new LockForceAcquireFailedError(lockPath);
 }
 
 /**
- * Scan a directory for lock files matching the given suffix. Returns a map
- * of name (filename without suffix) to live holder. Dead holders are cleaned
- * up as a side effect.
+ * Scan a directory for lock sidecar files matching `suffix`. Returns a map of
+ * name (filename without suffix) → live holder. Dead/stale holders are
+ * reclaimed (sidecar + guard dir removed) as a side effect, via the race-free
+ * `reclaimIfDead` path.
  */
-export async function scanLocks(
-  dir: string,
-  suffix: string,
-): Promise<Map<string, LockHolder>> {
+export async function scanLocks(dir: string, suffix: string): Promise<Map<string, LockHolder>> {
   const result = new Map<string, LockHolder>();
   let entries: string[];
   try {
     entries = await fs.readdir(dir);
   } catch (err) {
-    const code = errnoCode(err);
-    if (code === "ENOENT") return result;
+    if (errnoCode(err) === "ENOENT") return result;
     throw err;
   }
   for (const entry of entries) {
     if (!entry.endsWith(suffix)) continue;
-    const fullPath = `${dir}/${entry}`;
-    const holder = await readHolder(fullPath);
-    if (holder === null) {
-      await unlinkIgnoringMissing(fullPath);
-      continue;
-    }
-    if (!isHolderLive(holder)) {
-      await unlinkIgnoringMissing(fullPath);
-      continue;
-    }
+    const fullPath = path.join(dir, entry);
+    // A single proper-lockfile acquire attempt decides live-vs-dead atomically:
+    // reclaimed (dead) → skip; ELOCKED (live) → report the holder.
+    if (await reclaimIfDead(fullPath)) continue;
     const name = entry.slice(0, -suffix.length);
-    result.set(name, holder);
+    result.set(name, (await readHolder(fullPath)) ?? unknownHolder());
   }
   return result;
 }

@@ -91,7 +91,7 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     // Mobile devices authenticate with either the durable device token in an
     // Authorization header or the short-lived cb_mobile cookie; one resolver
     // decides for every gate (see core/mobile/request-auth.ts).
-    const mobileAuth = resolveMobileRequestAuth(box.boxRoot, request.headers);
+    const mobileAuth = await resolveMobileRequestAuth(box.boxRoot, request.headers);
     if (mobileAuth) {
       renewMobileSessionCookie(reply, { boxRoot: box.boxRoot, boxSlug: box.slug, auth: mobileAuth });
       return;
@@ -190,7 +190,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     // Server-side heartbeat: ping idle WS clients and drop ones that don't
     // pong, freeing sockets held by crashed/NAT-dropped tabs.
     keepAlive: { enabled: true, pingMs: 30_000, pongWaitMs: 5_000 },
-    createContext: ({ req }: CreateFastifyContextOptions): TrpcContext => {
+    createContext: async ({ req }: CreateFastifyContextOptions): Promise<TrpcContext> => {
       // Extract identity via the SAME helper the box auth preHandler uses
       // (`resolveRequestIdentity` — see auth.ts), so tRPC procedures gate on
       // exactly what the preHandler already decided, never a second,
@@ -200,7 +200,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // WS upgrade path shares this same createContext).
       const identity = resolveRequestIdentity(req, { openAccess: instance.openAccess });
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
-      const mobileOk = resolveMobileRequestAuth(box.boxRoot, req.headers) !== null;
+      const mobileOk = (await resolveMobileRequestAuth(box.boxRoot, req.headers)) !== null;
       // Fail closed on a corrupt/unreadable credential store (Track D): never
       // build an authed context off an auth store we couldn't verify against.
       // For HTTP the box preHandler already answered 503 before this ran; this

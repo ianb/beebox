@@ -51,10 +51,10 @@ function single(value: string | string[] | undefined): string | undefined {
  * avoids the device-store read/write that bearer verification performs on
  * every call.
  */
-export function resolveMobileRequestAuth(
+export async function resolveMobileRequestAuth(
   boxRoot: string,
   headers: MobileAuthHeaders,
-): MobileRequestAuth | null {
+): Promise<MobileRequestAuth | null> {
   // Try EVERY cb_mobile value, not just the first. Boxes are path siblings on
   // one origin, so a script under box A can set `cb_mobile=junk; Path=/` and
   // that value rides alongside box B's real cookie on requests to B. Checking
@@ -73,13 +73,13 @@ export function resolveMobileRequestAuth(
     }
   }
 
-  const bearer = resolveMobileBearerIdentity(boxRoot, single(headers.authorization));
+  const bearer = await resolveMobileBearerIdentity(boxRoot, single(headers.authorization));
   if (bearer) return { ...bearer, source: "bearer", expiresAt: null };
 
   return null;
 }
 
 /** Boolean form, for the gates that only need yes/no. */
-export function verifyMobileRequest(boxRoot: string, headers: MobileAuthHeaders): boolean {
-  return resolveMobileRequestAuth(boxRoot, headers) !== null;
+export async function verifyMobileRequest(boxRoot: string, headers: MobileAuthHeaders): Promise<boolean> {
+  return (await resolveMobileRequestAuth(boxRoot, headers)) !== null;
 }

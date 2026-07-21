@@ -3,7 +3,16 @@ title: "Mobile-authenticated chat sends attribute to no user"
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+resolution: implemented
 ---
+
+**Resolved** in worktree `open-source-readiness`: `POST /api/chat/send` now falls
+back to `resolveMobileSender` (`webapp/routes/chat-helpers.ts`) when there is no
+`cb_session` cookie — resolving the request's mobile identity to the paired
+device's `createdBy` email (the strict single-identity option: attribute to the
+user who paired the device; a device paired in open mode carries no `createdBy`
+and stays unattributed, matching the cookie path). Test:
+`test/webapp/routes/chat-mobile-sender.doctest.md`.
 
 Requests authenticated via the mobile device token (bearer or `?mobileToken=`) get `authed: true` in
 tRPC's `createContext` (`callback-box/src/webapp/server-box-scope.ts`), but `user` stays `null` and

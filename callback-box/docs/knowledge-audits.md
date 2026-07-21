@@ -30,6 +30,13 @@ npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or
 npx tsx src/dev/knowledge-audit.ts list
 ```
 
+`--box` accepts either a box package root (`~/src/boxes/test1`) or its
+operational `content/` root (`~/src/boxes/test1/content`) — both resolve to the
+same box, and the context-history ledger keys off the package name either way
+(`src/dev/lib/audit-box.ts`). Pass an absolute path (or `~/…`), never a bare
+name like `test1`, which would resolve inside the monorepo and be refused by the
+nested-box guard.
+
 ## Recording results
 
 After running audits, **update the status comments in `knowledge-audits.yaml`** with the date and results. Each test section (e.g., `# === Don't Drop Important Information ===`) should have a `# Status (YYYY-MM-DD):` comment noting:

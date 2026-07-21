@@ -69,6 +69,18 @@ future edits instead of being easy to read past or accidentally undo.
 URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the
 tRPC WebSocket all flow through the router.
 
+## Dev auth is always-on (login behind the prefix is broken)
+
+Authentication is structurally always-on (open-mode was removed — there is no
+`CB_ALLOW_UNAUTHENTICATED` env path anymore). The per-worktree hub serves the
+login SPA from built dist with root-absolute asset paths (`base="/"`) that 404
+behind the router's `/<worktree>/` prefix (the browser resolves `/assets/…` and
+the `/auth/login` redirect against the router root, dropping the prefix), so the
+login page is an unusable dead end behind the router. This is a known open bug
+needing a proper fix (prefix-aware login SPA / router asset rewrite):
+`../issues/bugs/2026-07-20-dev-router-login-page-broken.md`. Until then, testing
+the login/OAuth flow needs a standalone `cb serve` outside the router.
+
 ## Idle shutdown + self-healing tabs
 
 Only HTTP requests count as worktree activity. WebSocket upgrades never

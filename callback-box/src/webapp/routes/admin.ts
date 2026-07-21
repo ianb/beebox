@@ -9,6 +9,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, type GoogleTokens } from "../../connectors/google-auth.js";
+import { parseOAuthState, consumeGoogleOAuthState } from "../../connectors/google-oauth-state.js";
+import { resolveRequestIdentity } from "../auth.js";
 import { isRecord } from "../../lib/is-record.js";
 import { baseServerUrl } from "../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../lib/public-url.js";
@@ -25,11 +27,16 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
     const query = request.query;
     const code = isRecord(query) && typeof query["code"] === "string" ? query["code"] : undefined;
     const state = isRecord(query) && typeof query["state"] === "string" ? query["state"] : undefined;
-    console.log("[google-oauth] Callback received, state:", state, "code:", code ? "present" : "missing");
-    // State format: "boxSlug" or "boxSlug:returnPath"
-    const colonIdx = (state || "").indexOf(":");
-    const boxSlug = colonIdx !== -1 ? (state || "").slice(0, colonIdx) : (state || "");
-    const returnPath = colonIdx !== -1 ? (state || "").slice(colonIdx + 1) : "admin";
+    console.log("[google-oauth] Callback received, state:", state ? "present" : "missing", "code:", code ? "present" : "missing");
+    // State format: "<boxSlug>:<nonce>". The nonce is a one-time server-minted
+    // secret from the owner-gated setup flow — without a valid one, this
+    // callback (reachable outside the auth wall) must NOT persist tokens.
+    const parsed = parseOAuthState(state);
+    if (!parsed) {
+      console.log("[google-oauth] Missing/malformed state, rejecting");
+      return reply.status(400).send({ error: "Invalid OAuth state" });
+    }
+    const boxSlug = parsed.boxSlug;
     const box = boxes.find((b) => b.slug === boxSlug);
 
     if (!box) {
@@ -37,6 +44,30 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       return reply.status(400).send({ error: `Unknown box: ${boxSlug}` });
     }
 
+    // Verify + consume the nonce. A caller who never passed the owner wall has
+    // no valid nonce; this is the credential-swap / token-fixation gate.
+    const consumed = consumeGoogleOAuthState({ boxRoot: box.boxRoot, nonce: parsed.nonce });
+    if (!consumed) {
+      console.log("[google-oauth] Invalid/expired/replayed state nonce, rejecting");
+      return reply.status(400).send({ error: "Invalid or expired OAuth state" });
+    }
+    // Owner binding: the nonce records WHO initiated the grant (`createdBy`, the
+    // owner's email at mint time). If it was owner-bound, the session completing
+    // the callback must be that SAME identity — otherwise a leaked/stolen state
+    // could be redeemed by any other session that merely has access to the box
+    // (hub mode previously checked only `canAccessBox`, never the initiator).
+    // A nonce minted without an owner (standalone open mode, `createdBy: null`)
+    // has nothing to bind to and falls through — nonce possession is the secret
+    // there. The nonce is already consumed above, so a mismatch fails closed.
+    if (consumed.createdBy) {
+      const completingEmail = resolveRequestIdentity(request, { openAccess: request.server.openAccess }).email;
+      if (completingEmail !== consumed.createdBy) {
+        console.log("[google-oauth] OAuth state owner mismatch, rejecting");
+        return reply.status(403).send({ error: "OAuth state does not belong to the current session" });
+      }
+    }
+
+    const returnPath = consumed.returnPath;
     const returnUrl = `/${boxSlug}/${returnPath}`;
 
     if (!code) {

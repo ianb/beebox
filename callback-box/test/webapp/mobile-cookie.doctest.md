@@ -48,7 +48,7 @@ await server.register(fastifyCookie);
 registerPairingRoutes(server, { boxRoot: box.root, boxSlug: "test" });
 
 const ticket = createMobilePairingTicket(box.root);
-const redeemed = redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "doctest" });
+const redeemed = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "doctest" });
 if (!redeemed) throw new Error("pairing failed");
 
 const minted = await server.inject({
@@ -96,7 +96,7 @@ A revoked device can no longer mint, which is what stops it renewing its way
 past the TTL bound.
 
 ```ts continue
-revokeMobileDevice(box.root, redeemed.deviceId)
+await revokeMobileDevice(box.root, redeemed.deviceId)
 => true
 
 (await server.inject({
@@ -121,15 +121,15 @@ that dropped it would silently weaken cross-user isolation.
 ```ts
 const box2 = await makeTmpBox();
 const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "ada@example.com" });
-const device = redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "doctest" });
+const device = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "doctest" });
 if (!device) throw new Error("pairing failed");
 
-const viaBearer = resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
+const viaBearer = await resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
 JSON.stringify({ deviceId: viaBearer?.deviceId === device.deviceId, createdBy: viaBearer?.createdBy, source: viaBearer?.source })
 => {"deviceId":true,"createdBy":"ada@example.com","source":"bearer"}
 
 const cookie = signMobileSession(box2.root, { deviceId: device.deviceId, createdBy: "ada@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
-const viaCookie = resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
+const viaCookie = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
 JSON.stringify({ deviceId: viaCookie?.deviceId === device.deviceId, createdBy: viaCookie?.createdBy, source: viaCookie?.source })
 => {"deviceId":true,"createdBy":"ada@example.com","source":"cookie"}
 ```
@@ -138,10 +138,10 @@ A request carrying neither resolves to nothing, and a bogus cookie does not
 fall through to some laxer check.
 
 ```ts continue
-resolveMobileRequestAuth(box2.root, {})
+await resolveMobileRequestAuth(box2.root, {})
 => null
 
-resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=forged` })
+await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=forged` })
 => null
 ```
 
@@ -157,7 +157,7 @@ can't authenticate — but crowding out the real cookie is enough to break a
 sibling.
 
 ```ts continue
-const shadowed = resolveMobileRequestAuth(box2.root, {
+const shadowed = await resolveMobileRequestAuth(box2.root, {
   cookie: `${MOBILE_COOKIE_NAME}=junk-from-a-sibling-box; ${MOBILE_COOKIE_NAME}=${cookie}`,
 });
 shadowed?.deviceId === device.deviceId
@@ -167,7 +167,7 @@ shadowed?.deviceId === device.deviceId
 Order doesn't matter — the real cookie wins from either side.
 
 ```ts continue
-const shadowedAfter = resolveMobileRequestAuth(box2.root, {
+const shadowedAfter = await resolveMobileRequestAuth(box2.root, {
   cookie: `${MOBILE_COOKIE_NAME}=${cookie}; ${MOBILE_COOKIE_NAME}=junk-from-a-sibling-box`,
 });
 shadowedAfter?.deviceId === device.deviceId
@@ -177,7 +177,7 @@ shadowedAfter?.deviceId === device.deviceId
 And a pile of junk with no real cookie among it still authenticates nothing.
 
 ```ts continue
-resolveMobileRequestAuth(box2.root, {
+await resolveMobileRequestAuth(box2.root, {
   cookie: `${MOBILE_COOKIE_NAME}=junk-one; ${MOBILE_COOKIE_NAME}=junk-two`,
 })
 => null
@@ -220,7 +220,7 @@ A fresh cookie is left alone, so an active session costs no filesystem access
 per request.
 
 ```ts continue
-const fresh = resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
+const fresh = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
 if (!fresh) throw new Error("expected a session");
 const untouched = fakeReply();
 renewMobileSessionCookie(untouched, { boxRoot: box2.root, boxSlug: "test", auth: fresh });
@@ -232,7 +232,7 @@ Past halfway it re-issues.
 
 ```ts continue
 const agedCookie = signMobileSession(box2.root, { deviceId: device.deviceId, createdBy: null, ttlMs: MOBILE_SESSION_TTL_MS / 4 });
-const aged = resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${agedCookie}` });
+const aged = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${agedCookie}` });
 if (!aged) throw new Error("expected a session");
 const renewed = fakeReply();
 renewMobileSessionCookie(renewed, { boxRoot: box2.root, boxSlug: "test", auth: aged });
@@ -244,7 +244,7 @@ A bearer-authenticated request always (re)issues — verifying the bearer alread
 read the device store, so there's nothing to save by waiting.
 
 ```ts continue
-const bearerAuth = resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
+const bearerAuth = await resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
 if (!bearerAuth) throw new Error("expected a session");
 const issued = fakeReply();
 renewMobileSessionCookie(issued, { boxRoot: box2.root, boxSlug: "test", auth: bearerAuth });
@@ -259,7 +259,7 @@ and on the next renewal attempt the stale cookie is actively cleared rather
 than left to run out.
 
 ```ts continue
-revokeMobileDevice(box2.root, device.deviceId)
+await revokeMobileDevice(box2.root, device.deviceId)
 => true
 
 const afterRevoke = fakeReply();

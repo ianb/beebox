@@ -7,7 +7,7 @@ discovered-in: worktree-orama-semantic-search — researching Orama persistence 
 ---
 
 With embeddings, a real box's search index restores in **~2-3 seconds on
-every `cb search`** (estate: 2,458 cards, ~1k vectors, 34.5MB JSON). Before
+every `cb search`** (a large real box: 2,458 cards, ~1k vectors, 34.5MB JSON). Before
 vectors this was sub-second. The cost is structural in `@orama/orama`:
 vectors persist in BOTH the documents store and the vector index
 (~21KB/embedded doc in JSON), and the whole index restores as one blob per
@@ -31,7 +31,7 @@ Docs/community (searched):
   wild precedent for avoiding double storage is a third-party pattern
   running separate text and vector Orama instances fused app-side.
 
-Formats (benchmarked synthetically AND on the real estate index —
+Formats (benchmarked synthetically AND on that real box's index —
 the synthetic numbers were misleading; trust the real ones):
 - **json** (current): 34.5MB, restore ~2-3s.
 - **binary** (msgpack): FAILS unpatched — the depth-100 encode limit is

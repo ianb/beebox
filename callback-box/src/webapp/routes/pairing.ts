@@ -22,7 +22,7 @@ export function registerPairingRoutes(
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
     }
-    const redeemed = redeemMobilePairingTicket(opts.boxRoot, {
+    const redeemed = await redeemMobilePairingTicket(opts.boxRoot, {
       pairingToken: parsed.data.pairingToken,
       deviceLabel: parsed.data.deviceLabel ?? "iOS companion",
     });
@@ -53,7 +53,7 @@ export function registerPairingRoutes(
    * context uses.
    */
   server.post("/api/pairing/session", async (request, reply) => {
-    const identity = resolveMobileBearerIdentity(opts.boxRoot, request.headers["authorization"]);
+    const identity = await resolveMobileBearerIdentity(opts.boxRoot, request.headers["authorization"]);
     if (!identity) {
       return reply.status(401).send({ error: "Mobile device token is invalid or revoked." });
     }

@@ -3,7 +3,20 @@ title: "Scrolling up to load older chat history falsely shows 'new messages' on 
 filed-by: agent
 discovered-in: main session — boxholder hit it in chat
 area: callback-box
+resolution: implemented
 ---
+
+**Resolved** by extracting the reconcile decision into a pure `decideReconcile`
+(`src/frontend/src/components/chat/scroll-reconcile.ts`) that classifies a
+landed older-history prepend as `hold-prepend` (never `flag-unseen`), and by two
+fixes in the controller (`InteractiveChat-scroll.ts`): the prepend snapshot is
+only consumed once content actually grew (so a zero-growth reconcile in the
+load-older window doesn't leave the real insertion unguarded), and the reader is
+re-anchored to a now-visible message after the prepend so the older block's
+late-decoding images/embeds compensate against that anchor instead of reading as
+new content below. Unit-checked in
+`test/frontend/chat-scroll-reconcile.doctest.md`; manual DOM scenario 5c added to
+`docs/chat-scroll-testing.md`. See the commit referenced in the closing note.
 
 In chat, when you scroll up far enough to load **previously-unshown older history**, the
 scroll-to-bottom **down arrow** lights up its **"new messages"** indicator — even though

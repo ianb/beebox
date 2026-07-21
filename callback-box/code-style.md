@@ -47,7 +47,7 @@ Existing call sites migrate opportunistically as you touch them, not in a sweep.
 
 - **`Promise.allSettled` is the default over `Promise.all`** when the tasks are independent — `all` rejects on the first failure and abandons the rest (a silent drop of the others' results/errors). Use `all` only when a single failure genuinely should abort the batch; otherwise `allSettled` and inspect each outcome.
 - A promise that's neither awaited, returned, `.then`-chained, nor explicitly `void`-ed is a lint error (`no-floating-promises`). `void expr` is the opt-in escape hatch for genuine fire-and-forget — and a `void`-ed promise still needs a `.catch` or a justifying comment, never a silent re-drop.
-- **Cross-process locks go through `src/lib/file-lock.ts`** (PID liveness, sleep, crash recovery) — never a hand-rolled `.lock` file.
+- **Cross-process locks go through `src/lib/file-lock.ts`** (implemented on `proper-lockfile`: atomic guard-dir `mkdir`, mtime-freshness stale recovery) — call `file-lock.ts`, never `proper-lockfile` directly, and never a hand-rolled `.lock` file.
 - **Same-file read-modify-write goes through `withCardLock(path, fn)`** (`src/lib/card-lock.ts`) — the in-process counterpart that serializes overlapping RMW on one file within a Node process (a lost-update bug `file-lock.ts` wouldn't even see, since both racers share a PID). Wrap the whole read-through-write-and-commit span. Don't nest it on the same file (it throws `ReentrantCardLockError` rather than deadlock).
 
 ### Exhaustiveness

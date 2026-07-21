@@ -31,7 +31,9 @@ import {
   extractCardFields,
   escapeXmlAttr,
   injectUserAttr,
+  resolveMobileSender,
   validateImages,
+  warnOnUnnormalizedImageOrientation,
 } from "./chat-helpers.js";
 
 const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -201,12 +203,20 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     if (images && images.length > 0) {
       const invalid = validateImages(images);
       if (invalid) return reply.status(invalid.status).send({ error: invalid.error });
+      // Contract check: images should arrive orientation-normalized (see
+      // shared/image-orientation.ts). Log, don't reject — there is no server
+      // codec to correct it, and rejecting a real photo would be user-hostile.
+      warnOnUnnormalizedImageOrientation(images);
     }
 
     const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, { sessionParam, contextDir, requestSeedFeatures: seedFeatures });
 
-    // Identify the sender from the session (may be null if auth is disabled)
-    const user = getSessionUser(request);
+    // Identify the sender. A cookie session is the desktop/web path; a paired
+    // mobile device authenticates with a bearer token or cb_mobile cookie and
+    // carries no cb_session, so fall back to its `createdBy` identity — without
+    // this, every native and mobile-web send is attributed to nobody. May be
+    // null when auth is disabled or a device was paired in open mode.
+    const user = getSessionUser(request) ?? (await resolveMobileSender(boxRoot, request.headers));
 
     // Slash commands (e.g. /compact) are parsed by the claude CLI when they
     // appear at the very start of the user text — any prefix/suffix would

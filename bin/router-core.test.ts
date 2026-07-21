@@ -130,6 +130,7 @@ function makeChild(pid: number, autoResolve: boolean, rejectOnMicrotask: unknown
 interface SpawnCall {
   command: string;
   args: string[];
+  options: SpawnOptions;
   child: FakeChild;
 }
 
@@ -139,14 +140,14 @@ class FakeSpawner {
   /** When set, every LIFECYCLE child (vite/fastify) rejects on a microtask. */
   rejectLifecycleWith: unknown | undefined = undefined;
 
-  spawn = (command: string, args: string[], _options: SpawnOptions): SpawnedChild => {
+  spawn = (command: string, args: string[], options: SpawnOptions): SpawnedChild => {
     const isDashboard = args.includes("dashboard");
     const child = makeChild(
       this.nextPid++,
       /* autoResolve */ isDashboard, // dashboard commands are awaited; resolve them
       /* rejectOnMicrotask */ isDashboard ? undefined : this.rejectLifecycleWith,
     );
-    this.calls.push({ command, args, child });
+    this.calls.push({ command, args, options, child });
     return child;
   };
 

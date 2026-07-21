@@ -10,6 +10,7 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure } from "../trpc.js";
 import { loadGoogleTokens, getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../connectors/google-auth.js";
+import { createGoogleOAuthState } from "../../../connectors/google-oauth-state.js";
 import { loadBoxConfig } from "../../../core/box/config.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
@@ -49,7 +50,16 @@ export const googleAdminProcedures = {
         input.origin || (await resolveBoxPublicUrl(ctx.boxRoot, { fallback: "http://localhost:3210" })) || "http://localhost:3210";
       const redirectUri = `${baseServerUrl(publicUrl)}/auth/google-services/callback`;
       const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
-      const stateValue = input.returnPath ? `${ctx.boxSlug}:${input.returnPath}` : ctx.boxSlug;
+      // Mint a one-time nonce (behind this owner wall) that the callback must
+      // present back — the callback is reachable outside the auth wall, so the
+      // nonce is what proves an owner initiated the grant. The returnPath rides
+      // in the stored record, not the URL. See google-oauth-state.ts.
+      const stateValue = createGoogleOAuthState({
+        boxRoot: ctx.boxRoot,
+        boxSlug: ctx.boxSlug,
+        returnPath: input.returnPath ?? "admin",
+        createdBy: ctx.user?.email ?? null,
+      });
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
         scope: GOOGLE_SCOPES,

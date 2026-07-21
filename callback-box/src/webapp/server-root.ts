@@ -244,7 +244,7 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // Root-level box list endpoint (filtered by user access when auth required)
   server.get("/api/boxes", async (request, reply) => {
     if (!request.server.openAccess) {
-      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
+      const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       // Through the shared resolver (FIX 1): a corrupt store answers 503, and a
       // stale-`gen`/removed-user cookie resolves to no email → auth required.
@@ -309,7 +309,7 @@ export function registerSpaFallback(
         return reply.status(503).send({ error: "Authentication temporarily unavailable" });
       } else if (identity.source === "open") {
         // Hub-wide auth is off — fall through to the SPA below.
-      } else if (!identity.email && !isMobileSpaRequest(request, opts.boxes)) {
+      } else if (!identity.email && !(await isMobileSpaRequest(request, opts.boxes))) {
         if (isHubMode()) {
           // See addBoxAuthHook's doc comment: a child never redirects to its
           // own /auth/login in hub mode — the hub gates navigation before
@@ -328,16 +328,17 @@ export function registerSpaFallback(
   });
 }
 
-function listMobileAuthorizedBoxes(opts: {
+async function listMobileAuthorizedBoxes(opts: {
   boxes: BoxSpec[];
   headers: IncomingHttpHeaders;
-}): Array<{ slug: string; name: string }> {
-  return opts.boxes
-    .filter((box) => verifyMobileRequest(box.boxRoot, opts.headers))
-    .map((box) => ({ slug: box.slug, name: box.slug }));
+}): Promise<Array<{ slug: string; name: string }>> {
+  const checked = await Promise.all(
+    opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
+  );
+  return checked.filter((c) => c.ok).map(({ box }) => ({ slug: box.slug, name: box.slug }));
 }
 
-function isMobileSpaRequest(request: FastifyRequest, boxes: BoxSpec[]): boolean {
+async function isMobileSpaRequest(request: FastifyRequest, boxes: BoxSpec[]): Promise<boolean> {
   const box = boxForUrl(request.url, boxes);
   if (!box) return false;
   return verifyMobileRequest(box.boxRoot, request.headers);

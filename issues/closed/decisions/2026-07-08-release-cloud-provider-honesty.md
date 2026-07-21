@@ -1,8 +1,14 @@
 ---
 title: "release cloud provider honesty"
 area: callback-box
-needs: [decision]
+resolution: implemented
 ---
+
+**Closed 2026-07-20** — decided in the soft-launch conversation
+([soft-launch posture](../../decisions/2026-07-20-soft-launch-posture.md)):
+disclose plainly. The README front-door gate includes a "what leaves your
+machine" section (point 1 below); swappability (point 2) stays opportunistic,
+not a launch requirement.
 
 From the Rowboat review (`research/rowboat-review.md`, Tier 3). Rowboat markets itself as
 "local-first" and got its top critical HN comment for shipping Deepgram (transcription),

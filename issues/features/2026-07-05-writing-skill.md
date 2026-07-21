@@ -594,6 +594,17 @@ material. The boxholder notes this would incidentally serve making a homepage fo
 this project (which doesn't exist yet), but that's a downstream application and
 explicitly not the driver. Don't design for it.
 
+**Launch writing as the first dogfood (boxholder, 2026-07-21).** The
+soft launch ([posture](../decisions/2026-07-20-soft-launch-posture.md))
+needs writing in the boxholder's own voice — the front-door
+message, and launch pieces in the register "here's what I'm trying to
+do, and here are my open questions." He wants to produce that writing
+*through this practice*, as its first real dogfooding: "I'm excited
+about writing… I wanna do some writing that would dogfood it as part
+of the launch." Open questions in the piece are a feature of that
+register, not a gap to hide. This doesn't change the design driver
+(in-box writing) — it schedules the first serious exercise of it.
+
 Related: [chat-output-vocabulary-ia-pass](../docs-and-chores/2026-06-02-chat-output-vocabulary-ia-pass.md),
 and [memory-writing-guidance](../exploration/2026-05-19-memory-writing-guidance.md)
 (same shape — writing rules for one surface).

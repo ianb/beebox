@@ -13,16 +13,16 @@ export type CaptureOwnerAuthorization =
   | { status: "rejected"; statusCode: 401 | 403 | 503; error: string };
 
 /** Resolve cookie/hub and paired-device credentials to one capture owner. */
-export function resolveCaptureRequestOwner(opts: {
+export async function resolveCaptureRequestOwner(opts: {
   boxRoot: string;
   request: FastifyRequest;
-}): CaptureRequestOwner {
+}): Promise<CaptureRequestOwner> {
   const requestIdentity = resolveRequestIdentity(opts.request, { openAccess: opts.request.server.openAccess });
   if (requestIdentity.email) {
     return { status: "ok", email: requestIdentity.email };
   }
 
-  const mobileIdentity = resolveMobileBearerIdentity(
+  const mobileIdentity = await resolveMobileBearerIdentity(
     opts.boxRoot,
     opts.request.headers["authorization"],
   );
@@ -51,12 +51,12 @@ export function resolveCaptureRequestOwner(opts: {
 }
 
 /** Require the same cookie/mobile owner that created a capture session. */
-export function authorizeCaptureSessionOwner(opts: {
+export async function authorizeCaptureSessionOwner(opts: {
   boxRoot: string;
   request: FastifyRequest;
   createdBy: string | null;
-}): CaptureOwnerAuthorization {
-  const owner = resolveCaptureRequestOwner(opts);
+}): Promise<CaptureOwnerAuthorization> {
+  const owner = await resolveCaptureRequestOwner(opts);
   if (owner.status === "unauthenticated") {
     return { status: "rejected", statusCode: 401, error: "Not authenticated" };
   }

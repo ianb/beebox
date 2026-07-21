@@ -115,9 +115,9 @@ interface UpdateOptions<T> {
  *     lock, so that lock only ever arbitrates *across* processes.
  *   - **The cross-process file lock (`file-lock.ts`) is the INNER lock**, on a
  *     SIBLING `<state-file>.lock` path — NEVER the state file itself, because
- *     `acquireLock()` treats malformed lock-file content as a dead lock and
- *     unlinks/overwrites it, which would destroy real state on first
- *     contention. `google-drive.state.json` is written by both the server and
+ *     `acquireLock()` writes a diagnostic holder sidecar AT the lock path (and
+ *     a `<lock>.guard` dir beside it), which would overwrite real state if the
+ *     state file were used as the lock path. `google-drive.state.json` is written by both the server and
  *     the CLI, so the cross-process half is load-bearing; we take it uniformly
  *     for every connector (one lockfile touch per RMW, all low-frequency
  *     paths). `acquireLock()` throws `LockHeldError` immediately rather than
@@ -135,8 +135,9 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
   // withCardLock is OUTER (see the doc comment): serialize same-process racers
   // before either one reaches the cross-process lock.
   return withCardLock(statePath, async () => {
-    // acquireLock's fs.open("wx") needs the containing dir to exist; on first
-    // run config/connectors/ may be absent.
+    // acquireLock's guard-dir mkdir needs the containing dir to exist; on first
+    // run config/connectors/ may be absent. (acquireLock also mkdirs defensively,
+    // but keep this explicit for the OUTER lock's own reasoning.)
     await fs.mkdir(path.dirname(lockPath), { recursive: true });
 
     for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {

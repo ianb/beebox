@@ -1,8 +1,11 @@
 # File Lock
 
-Machine-local PID-based file lock. Liveness is checked via `process.kill(pid, 0)`
-and a boot-epoch comparison; dead holders (crashed processes, post-reboot stale
-files) are reclaimed automatically.
+Machine-local cross-process file lock, implemented on `proper-lockfile`.
+Mutual exclusion is a single atomic `mkdir` of a guard directory
+(`<path>.guard`); a diagnostic sidecar file at `<path>` carries the holder's
+identity but never participates in the acquire decision. Stale/crashed holders
+are reclaimed via `proper-lockfile`'s mtime freshness (`stale` = 5 min), never
+by an unconditional unlink-by-path.
 
 ```ts setup
 import {
@@ -17,11 +20,30 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { join } from "node:path";
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// The stale window in file-lock.ts is 5 min; "well past stale" backdates a
+// guard dir's mtime beyond it to simulate a crashed holder.
+const STALE_MS = 5 * 60 * 1000;
+function backdatedPast() {
+  return new Date(Date.now() - STALE_MS - 60 * 1000);
+}
+
+// Write a diagnostic sidecar as if another process had published it.
+function foreignSidecar(who, pid) {
+  return JSON.stringify({
+    pid,
+    hostname: os.hostname(),
+    acquiredAt: new Date().toISOString(),
+    metadata: { who },
+  }) + "\n";
+}
 ```
 
 ## acquireLock / releaseLock
 
-### Acquire creates the lock file with our metadata
+### Acquire creates the guard dir + diagnostic sidecar with our metadata
 
 ```ts
 const box = await makeTmpBox();
@@ -30,12 +52,14 @@ const holder = await acquireLock(path, { triggeredBy: "manual" });
 print(`pid: ${holder.pid === process.pid}`);
 print(`hostname: ${holder.hostname === os.hostname()}`);
 print(`triggeredBy: ${holder.metadata.triggeredBy}`);
-print(`file exists: ${await fs.access(path).then(() => true).catch(() => false)}`);
+print(`guard dir: ${await fs.stat(path + ".guard").then((s) => s.isDirectory()).catch(() => false)}`);
+print(`sidecar file: ${await fs.access(path).then(() => true).catch(() => false)}`);
 =>
 pid: true
 hostname: true
 triggeredBy: manual
-file exists: true
+guard dir: true
+sidecar file: true
 ```
 
 ```ts cleanup
@@ -43,15 +67,18 @@ await releaseLock(path);
 await box.cleanup();
 ```
 
-### Release removes the file
+### Release removes both the guard dir and the sidecar
 
 ```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await acquireLock(path, {});
 await releaseLock(path);
-await fs.access(path).then(() => "exists").catch(() => "gone")
-=> gone
+print(`guard: ${await fs.access(path + ".guard").then(() => "exists").catch(() => "gone")}`);
+print(`sidecar: ${await fs.access(path).then(() => "exists").catch(() => "gone")}`);
+=>
+guard: gone
+sidecar: gone
 ```
 
 ```ts cleanup
@@ -98,23 +125,116 @@ await releaseLock(path);
 await box.cleanup();
 ```
 
-### Stale lock with dead PID is reclaimed
+### A live foreign holder (guard dir owned by another process) is not stolen
+
+A fresh guard directory with no in-process release is exactly what another live
+process's `proper-lockfile` would leave. We must see it as held.
 
 ```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
+await fs.mkdir(path + ".guard");
+await fs.writeFile(path, foreignSidecar("other-proc", 4242));
 
-// Write a fake holder pointing to a PID that doesn't exist.
-const deadHolder = {
-  pid: 999999999,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
-  hostname: os.hostname(),
-  acquiredAt: new Date().toISOString(),
-  metadata: { who: "ghost" },
+const caught = await acquireLock(path, { who: "us" }).then(() => null, (e) => e);
+print(`held: ${caught instanceof LockHeldError}`);
+print(`holder pid: ${caught.holder.pid}`);
+print(`holder who: ${caught.holder.metadata.who}`);
+=>
+held: true
+holder pid: 4242
+holder who: other-proc
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+### Many parallel acquisitions: exactly one wins, the rest see LockHeldError
+
+The guard-dir `mkdir` is atomic, so contention on one path can never
+double-acquire. The winner stays alive holding the lock; every other attempt
+rejects with `LockHeldError`.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "test.lock");
+const results = await Promise.allSettled(
+  Array.from({ length: 40 }, (_unused, i) => acquireLock(path, { who: i })),
+);
+const winners = results.filter((r) => r.status === "fulfilled");
+const losers = results.filter((r) => r.status === "rejected");
+print(`winners: ${winners.length}`);
+print(`losers: ${losers.length}`);
+print(`all losers LockHeldError: ${losers.every((r) => r.reason instanceof LockHeldError)}`);
+=>
+winners: 1
+losers: 39
+all losers LockHeldError: true
+```
+
+```ts cleanup
+await releaseLock(path);
+await box.cleanup();
+```
+
+### The reclaim/release handoff yields exactly one holder (the race the old code lost)
+
+This is the scenario the previous home-grown lock failed: a holder releases
+while contenders are mid-retry, and the reclaim must hand the lock to *exactly
+one* of them — never two. The winner holds; the losers keep seeing
+`LockHeldError` until they give up. If the release-then-reacquire path could
+double-acquire, more than one contender would have gotten in.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "test.lock");
+await acquireLock(path, { who: "A" });
+
+let acquiredCount = 0;
+const contend = async (id) => {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try {
+      await acquireLock(path, { who: id });
+      acquiredCount++;
+      return; // won it — HOLD (do not release), so no one else may acquire
+    } catch (e) {
+      if (!(e instanceof LockHeldError)) throw e;
+      await delay(15);
+    }
+  }
 };
-await fs.writeFile(path, JSON.stringify(deadHolder, null, 2) + "\n");
 
-// We should be able to acquire over it.
+const contenders = Array.from({ length: 5 }, (_unused, i) => contend(`c${i}`));
+await delay(60); // let them all bounce off A's held lock
+await releaseLock(path); // A steps aside — exactly one contender may now win
+await Promise.all(contenders);
+acquiredCount
+=> 1
+```
+
+```ts cleanup
+await releaseLock(path); // release whichever contender is now holding `path`
+await box.cleanup();
+```
+
+## Stale / crash recovery
+
+### A crashed holder (stale guard mtime) is reclaimed on the next acquire
+
+A SIGKILL'd process leaves its guard directory behind with a frozen mtime.
+Once that mtime is older than the stale window, the next acquirer reclaims it —
+no PID liveness, no unlink-by-path, just `proper-lockfile`'s mtime steal.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "test.lock");
+const guard = path + ".guard";
+await fs.mkdir(guard);
+const past = backdatedPast();
+await fs.utimes(guard, past, past);
+await fs.writeFile(path, foreignSidecar("ghost", 999999));
+
 const holder = await acquireLock(path, { who: "us" });
 holder.metadata.who
 => us
@@ -125,113 +245,26 @@ await releaseLock(path);
 await box.cleanup();
 ```
 
-### Lock from a previous boot is reclaimed
+### releaseLock never deletes a foreign holder's lock
+
+Releasing a path this process never acquired (no recorded release) is a no-op —
+it can never remove another process's guard directory.
 
 ```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
+await fs.mkdir(path + ".guard");
+await fs.writeFile(path, foreignSidecar("other-proc", 4242));
 
-// Boot epoch from "before reboot" — well outside the tolerance window.
-const oldHolder = {
-  pid: process.pid,  // even if PID matches, mismatched boot means dead
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()) - 86400,
-  hostname: os.hostname(),
-  acquiredAt: new Date(Date.now() - 86400000).toISOString(),
-  metadata: {},
-};
-await fs.writeFile(path, JSON.stringify(oldHolder, null, 2) + "\n");
-
-const holder = await acquireLock(path, { fresh: true });
-holder.metadata.fresh
-=> true
-```
-
-```ts cleanup
 await releaseLock(path);
-await box.cleanup();
-```
-
-### Malformed lock file is reclaimed
-
-```ts
-const box = await makeTmpBox();
-const path = join(box.root, "test.lock");
-await fs.writeFile(path, "not json {{{");
-
-const holder = await acquireLock(path, {});
-holder.pid === process.pid
-=> true
+print(`guard survives: ${await fs.access(path + ".guard").then(() => true).catch(() => false)}`);
+print(`sidecar survives: ${await fs.access(path).then(() => true).catch(() => false)}`);
+=>
+guard survives: true
+sidecar survives: true
 ```
 
 ```ts cleanup
-await releaseLock(path);
-await box.cleanup();
-```
-
-### Empty lock file is reclaimed
-
-```ts
-const box = await makeTmpBox();
-const path = join(box.root, "test.lock");
-await fs.writeFile(path, "");
-
-const holder = await acquireLock(path, {});
-holder.pid === process.pid
-=> true
-```
-
-```ts cleanup
-await releaseLock(path);
-await box.cleanup();
-```
-
-## Cross-host safety
-
-### Lock from a different hostname is NOT reclaimed
-
-```ts
-const box = await makeTmpBox();
-const path = join(box.root, "test.lock");
-const foreignHolder = {
-  pid: 999999999,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
-  hostname: "some-other-machine",
-  acquiredAt: new Date().toISOString(),
-  metadata: {},
-};
-await fs.writeFile(path, JSON.stringify(foreignHolder, null, 2) + "\n");
-
-const caught = await acquireLock(path, {}).then(() => null, (e) => e);
-caught instanceof LockHeldError
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## releaseLock ownership
-
-### Release does not touch a lock owned by a different process
-
-```ts
-const box = await makeTmpBox();
-const path = join(box.root, "test.lock");
-const otherHolder = {
-  pid: process.pid + 1,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
-  hostname: os.hostname(),
-  acquiredAt: new Date().toISOString(),
-  metadata: {},
-};
-await fs.writeFile(path, JSON.stringify(otherHolder, null, 2) + "\n");
-await releaseLock(path);
-await fs.access(path).then(() => "still here").catch(() => "deleted")
-=> still here
-```
-
-```ts cleanup
-await fs.unlink(path);
 await box.cleanup();
 ```
 
@@ -266,26 +299,22 @@ await releaseLock(path);
 await box.cleanup();
 ```
 
-### Cleans up dead lock and returns null
+### A stale (crashed) holder reads as not held
+
+`inspectLock` uses `proper-lockfile`'s `.check()`, which treats a guard whose
+mtime is past the stale window as not held.
 
 ```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
-await fs.writeFile(path, JSON.stringify({
-  pid: 999999999,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
-  hostname: os.hostname(),
-  acquiredAt: new Date().toISOString(),
-  metadata: {},
-}) + "\n");
+const guard = path + ".guard";
+await fs.mkdir(guard);
+const past = backdatedPast();
+await fs.utimes(guard, past, past);
+await fs.writeFile(path, foreignSidecar("ghost", 999999));
 
-const result = await inspectLock(path);
-const stillThere = await fs.access(path).then(() => true).catch(() => false);
-print(`result: ${result}`);
-print(`file: ${stillThere ? "exists" : "gone"}`);
-=>
-result: null
-file: gone
+await inspectLock(path)
+=> null
 ```
 
 ```ts cleanup
@@ -299,14 +328,8 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
-const otherHolder = {
-  pid: process.pid + 1,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
-  hostname: os.hostname(),
-  acquiredAt: new Date().toISOString(),
-  metadata: { from: "victim" },
-};
-await fs.writeFile(path, JSON.stringify(otherHolder, null, 2) + "\n");
+await fs.mkdir(path + ".guard");
+await fs.writeFile(path, foreignSidecar("victim", 4242));
 
 const stolen = await forceAcquireLock(path, { from: "thief" });
 stolen.metadata.from
@@ -358,30 +381,37 @@ await releaseLock(join(dir, "beta.lock"));
 await box.cleanup();
 ```
 
-### Cleans up dead locks during scan
+### Reclaims dead (stale) locks during scan
+
+A live lock is reported; a crashed lock (stale guard mtime) is reclaimed — its
+guard dir and sidecar are removed — and excluded from the result. The reclaim
+happens while atomically holding the lock, so it can never delete a live
+holder's guard.
 
 ```ts
 const box = await makeTmpBox();
 const dir = join(box.root, "locks");
 await fs.mkdir(dir, { recursive: true });
-await acquireLock(join(dir, "alive.lock"), {});
-await fs.writeFile(join(dir, "dead.lock"), JSON.stringify({
-  pid: 999999999,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
-  hostname: os.hostname(),
-  acquiredAt: new Date().toISOString(),
-  metadata: {},
-}) + "\n");
+await acquireLock(join(dir, "alive.lock"), { who: "alive" });
+
+const deadPath = join(dir, "dead.lock");
+await fs.mkdir(deadPath + ".guard");
+const past = backdatedPast();
+await fs.utimes(deadPath + ".guard", past, past);
+await fs.writeFile(deadPath, foreignSidecar("ghost", 999999));
 
 const map = await scanLocks(dir, ".lock");
-const deadStillThere = await fs.access(join(dir, "dead.lock")).then(() => true).catch(() => false);
+const deadGuardGone = await fs.access(deadPath + ".guard").then(() => false).catch(() => true);
+const deadSidecarGone = await fs.access(deadPath).then(() => false).catch(() => true);
 print(`size: ${map.size}`);
 print(`alive present: ${map.has("alive")}`);
-print(`dead file: ${deadStillThere ? "exists" : "gone"}`);
+print(`dead guard: ${deadGuardGone ? "gone" : "exists"}`);
+print(`dead sidecar: ${deadSidecarGone ? "gone" : "exists"}`);
 =>
 size: 1
 alive present: true
-dead file: gone
+dead guard: gone
+dead sidecar: gone
 ```
 
 ```ts cleanup

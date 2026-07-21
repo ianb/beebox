@@ -60,6 +60,30 @@ export interface ProcessedImage {
   byteLength: number;
 }
 
+/**
+ * Decode `blob` to a drawable source with EXIF orientation already baked into
+ * the pixels — the ingress-normalization half of the orientation contract
+ * (`shared/image-orientation.ts`). `createImageBitmap(..., { imageOrientation:
+ * "from-image" })` requests that explicitly rather than depending on the
+ * `<img>`-element default (`image-orientation: from-image`), which not every
+ * engine has always applied; the `<img>` path is the fallback for engines that
+ * reject the options bag, and its default is also from-image. The subsequent
+ * canvas re-encode then emits pixels-upright output with no orientation tag.
+ */
+async function decodeOriented(blob: Blob): Promise<{ source: CanvasImageSource; width: number; height: number }> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(blob, { imageOrientation: "from-image" });
+      return { source: bitmap, width: bitmap.width, height: bitmap.height };
+    } catch (_e) {
+      // Engine rejected the options bag — fall back to the <img> decode below,
+      // whose default image-orientation is also from-image. /* ignore: capability fallback */
+    }
+  }
+  const img = await readImageElement(blob);
+  return { source: img, width: img.naturalWidth, height: img.naturalHeight };
+}
+
 function readImageElement(blob: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
@@ -103,9 +127,9 @@ function blobToBase64(blob: Blob): Promise<string> {
  * PNG, since the canvas can only produce lossy WebP.
  */
 export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
-  const img = await readImageElement(blob);
-  const srcW = img.naturalWidth;
-  const srcH = img.naturalHeight;
+  const decoded = await decodeOriented(blob);
+  const srcW = decoded.width;
+  const srcH = decoded.height;
 
   const scale = Math.min(1, MAX_DIMENSION / Math.max(srcW, srcH));
   const width = Math.round(srcW * scale);
@@ -118,7 +142,9 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new ImageProcessingError(IMG_ERR.canvasContext);
-  ctx.drawImage(img, 0, 0, width, height);
+  // decoded.source has orientation already baked into its pixels, and a canvas
+  // re-encode never writes an EXIF tag — so the output is orientation-normalized.
+  ctx.drawImage(decoded.source, 0, 0, width, height);
 
   // PNG sources stay lossless PNG — canvas WebP is always lossy, so a pasted
   // screenshot/line-art would degrade. Photos take the WebP → JPEG cascade

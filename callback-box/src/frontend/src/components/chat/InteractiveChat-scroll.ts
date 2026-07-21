@@ -32,6 +32,7 @@
  */
 
 import { useRef, useState, useCallback, useEffect } from "react";
+import { decideReconcile } from "./scroll-reconcile";
 
 // Re-engage following once the user scrolls back within this many px of the
 // bottom. Generous on purpose, and never exact equality.
@@ -195,45 +196,54 @@ export function useStickToBottom(): StickToBottom {
     lastScrollTopRef.current = top;
   }, [setPinned, setUnseen, scheduleAnchorCapture]);
 
-  // Both ResizeObservers funnel here. `source` distinguishes a content-height
-  // change (may be new content worth flagging) from a scroller-box change
-  // (chrome below the list resizing — reposition only, never "unseen").
+  // Both ResizeObservers funnel here. The pure `decideReconcile` classifies the
+  // cycle; this function measures the DOM facts it needs and applies the
+  // resulting scroll effect. `source` distinguishes a content-height change
+  // (may be new content worth flagging) from a scroller-box change (chrome below
+  // the list resizing — reposition only, never "unseen").
   const reconcile = useCallback((source: "content" | "scroller") => {
     const el = scrollerElRef.current;
     if (!el) return;
 
-    // A prepend takes precedence: restore the captured bottom-gap so inserting
-    // older messages above doesn't move the user's view.
-    if (source === "content" && prependGapRef.current !== null) {
-      const gap = prependGapRef.current;
-      prependGapRef.current = null;
-      prevScrollHeightRef.current = el.scrollHeight;
-      writeTop(el.scrollHeight - gap, "instant");
-      return;
+    const grew = el.scrollHeight > prevScrollHeightRef.current + PROGRAMMATIC_EPSILON;
+    // A prepend only "lands" once content actually grew — a zero-growth content
+    // reconcile in the load-older window (e.g. the button's "Loading…" label
+    // swap) must not consume the snapshot and leave the real insertion
+    // unguarded.
+    const prepend = source === "content" && prependGapRef.current !== null && grew;
+
+    // Measure the anchor's on-screen shift (only meaningful while detached with
+    // a live anchor, and irrelevant to a prepend which is handled wholesale).
+    // Safari has no native scroll anchoring, so we compensate ourselves.
+    let anchorDelta = 0;
+    const anchor = anchorRef.current;
+    if (!prepend && !pinnedRef.current && anchor && anchor.el.isConnected) {
+      const newTop = anchor.el.getBoundingClientRect().top - el.getBoundingClientRect().top;
+      anchorDelta = newTop - anchor.top;
     }
 
-    const grew = el.scrollHeight > prevScrollHeightRef.current + PROGRAMMATIC_EPSILON;
+    const action = decideReconcile({ source, grew, pinned: pinnedRef.current, prepend, anchorMoved: Math.abs(anchorDelta) > 1 });
     prevScrollHeightRef.current = el.scrollHeight;
 
-    if (pinnedRef.current) {
+    if (action === "hold-prepend") {
+      // Restore the captured bottom-gap so inserting older messages above
+      // doesn't move the view, then re-anchor to a now-visible message: the
+      // older block (with its late-decoding images/embeds) is above the
+      // viewport, so subsequent growth there compensates against this anchor
+      // instead of being misread as new content below (the false-"new messages"
+      // bug this path fixes).
+      const gap = prependGapRef.current ?? 0;
+      prependGapRef.current = null;
+      writeTop(el.scrollHeight - gap, "instant");
+      anchorRef.current = topVisibleChild(el, contentElRef.current);
+    } else if (action === "follow-bottom") {
       writeToBottom("instant");
-      return;
+    } else if (action === "hold-anchor") {
+      // Existing content above reflowed — compensate; not new, don't flag.
+      writeTop(el.scrollTop + anchorDelta, "instant");
+    } else if (action === "flag-unseen") {
+      setUnseen(true);
     }
-    // Detached: if content *above* the captured anchor changed size (a
-    // late-loading image/embed/card), the anchor has moved on screen — shift
-    // scrollTop to put it back, so the user's reading position holds steady.
-    // Safari has no native scroll anchoring, so we do this ourselves.
-    const anchor = anchorRef.current;
-    if (anchor && anchor.el.isConnected) {
-      const newTop = anchor.el.getBoundingClientRect().top - el.getBoundingClientRect().top;
-      const delta = newTop - anchor.top;
-      if (Math.abs(delta) > 1) {
-        writeTop(el.scrollTop + delta, "instant");
-        return; // existing content reflowed, not new — don't flag as unseen
-      }
-    }
-    // Growth below the anchor (or no anchor): genuinely new content arriving.
-    if (source === "content" && grew) setUnseen(true);
   }, [writeTop, writeToBottom, setUnseen]);
 
   const scrollerRef = useCallback((el: HTMLDivElement | null) => {

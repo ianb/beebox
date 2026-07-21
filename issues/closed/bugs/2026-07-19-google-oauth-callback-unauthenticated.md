@@ -3,7 +3,19 @@ title: "Google connector OAuth callback saves centralized tokens without an auth
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #2, pre-existing)
 area: callback-box
+resolution: implemented
 ---
+
+**Closed (implemented).** Fixed by requiring a one-time, server-minted `state`
+nonce on the connector OAuth callback: `googleSetup` (owner-gated) mints and
+persists the nonce (`src/connectors/google-oauth-state.ts`), and the callback
+(`src/webapp/routes/admin.ts`) verifies-and-consumes it before exchanging any
+`code` — a caller who never passed the owner wall has no valid nonce, so no
+token write happens. Nonce is one-time (replay-safe) and short-lived; the
+`returnPath` and initiating owner now travel in the stored record, not the URL.
+See the commit adding `google-oauth-state.ts` plus its doctests
+(`test/connectors/google-oauth-state.doctest.md`,
+`test/webapp/routes/routes-google-oauth-callback.doctest.md`).
 
 Surfaced by a cross-model (Codex) security review of the local-password-auth
 branch; **pre-existing**, not introduced by that work, so it was filed rather

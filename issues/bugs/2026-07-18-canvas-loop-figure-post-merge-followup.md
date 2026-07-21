@@ -97,7 +97,7 @@ and the viewer as one flow — the thing all the parts were built for.
 
 ## Already filed separately (not part of this, cross-linked)
 
-- [knowledge-audit-box-nesting](2026-07-15-knowledge-audit-box-nesting.md) —
-  `--box` crashes on a shape-2 box package root.
+- [knowledge-audit-box-nesting](../closed/bugs/2026-07-15-knowledge-audit-box-nesting.md)
+  — `--box` crashes on a shape-2 box package root. (Resolved.)
 - [figure-compile-cache-and-attach-guard](../code-quality/2026-07-15-figure-compile-cache-and-attach-guard.md)
   — loose `.attach` gate, unbounded compile caches, views-side dep-staleness.

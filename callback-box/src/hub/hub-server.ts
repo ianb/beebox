@@ -143,21 +143,22 @@ function slugForPath(reqPath: string): string | null {
  * `docs/mobile-contract.md`). Verifying here is affordable because the cookie
  * path is pure HMAC with no filesystem access.
  */
-function hasMobileAuth(opts: {
+async function hasMobileAuth(opts: {
   boxRoot: string | undefined;
   headers: http.IncomingHttpHeaders;
-}): boolean {
+}): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
   return verifyMobileRequest(opts.boxRoot, opts.headers);
 }
 
-function listMobileAuthorizedBoxes(opts: {
+async function listMobileAuthorizedBoxes(opts: {
   boxes: BoxSpec[];
   headers: http.IncomingHttpHeaders;
-}): Array<{ slug: string; name: string }> {
-  return opts.boxes
-    .filter((box) => verifyMobileRequest(box.boxRoot, opts.headers))
-    .map((box) => ({ slug: box.slug, name: box.slug }));
+}): Promise<Array<{ slug: string; name: string }>> {
+  const checked = await Promise.all(
+    opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
+  );
+  return checked.filter((c) => c.ok).map(({ box }) => ({ slug: box.slug, name: box.slug }));
 }
 
 /**
@@ -172,7 +173,7 @@ async function respondHubBoxes(opts: {
 }): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
   const { boxes, request, reply } = opts;
   if (request.server.openAccess) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
-  const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
+  const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
   if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
   const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
   if (identity.source === "unavailable") {
@@ -376,9 +377,11 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // path under the "auth" reserved slug, which the generic catch-all below
   // can never route (no box is actually named "auth"). The setup flow
   // (`admin-google.ts`'s `googleSetup`) already encodes which box initiated
-  // it in the OAuth `state` param ("boxSlug" or "boxSlug:returnPath", same
-  // format `routes/admin.ts`'s callback handler parses) -- so the hub reads
-  // just enough of `state` to pick the child, then forwards unchanged. The
+  // it in the OAuth `state` param ("<boxSlug>:<nonce>", where the nonce is a
+  // one-time secret the child's callback verifies — same format
+  // `routes/admin.ts`'s callback handler parses) -- so the hub reads just
+  // enough of `state` (the slug before the first colon) to pick the child,
+  // then forwards unchanged. The
   // child's own handler (still registered on every `cb serve`, per-box) is
   // the one that exchanges the code and saves tokens; the hub only routes
   // and injects the same gated identity headers every proxied request gets.
@@ -390,11 +393,48 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const state = isRecord(query) && typeof query["state"] === "string" ? query["state"] : undefined;
     const colonIdx = (state ?? "").indexOf(":");
     const boxSlug = colonIdx !== -1 ? (state ?? "").slice(0, colonIdx) : (state ?? "");
-    // Routed through the same `resolveEndpoint` helper as every other
-    // proxied route (P2 review fix): a lazy hub's box may have been
-    // idle-collected while the user was slow on Google's consent screen --
-    // without this, the callback 400s as "unknown_box" even though the box
-    // is configured, just not currently running.
+
+    // AUTH BEFORE ANY BOX RESOLUTION. The earlier version called
+    // `resolveEndpoint(boxSlug, ...)` -- which cold-starts a lazy box -- BEFORE
+    // this auth check, using the attacker-controlled `state` slug. That let an
+    // unauthenticated `GET /auth/google-services/callback?state=<slug>:x` wake
+    // an arbitrary configured box, and a real slug (which woke/proxied) was
+    // distinguishable from an unknown one (an immediate `400 unknown_box`) --
+    // a configured-slug oracle plus an unauthenticated box-wake. We authorize
+    // first: an unauthenticated request redirects to login regardless of slug,
+    // so it neither wakes a box nor reveals whether the slug is configured.
+    stripHubHeaders(request.raw.headers);
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret, openAccess });
+    if (!decision.authorized) {
+      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+    }
+
+    // Access check using a WAKE-FREE config lookup (`boxRootBySlug`, built once
+    // at hub start) -- never `resolveEndpoint`, which would cold-start. This
+    // route is a per-box connector callback picked purely from the untrusted
+    // `state` param, and the child's callback handler is registered at server
+    // ROOT ahead of any per-box auth hook, so nothing downstream verifies the
+    // caller may access `boxSlug` -- any signed-in fleet user could otherwise
+    // complete a Google token grant for someone else's box. When hub auth is on
+    // (an email is present), an unknown slug and a box the caller can't access
+    // return the SAME 403 so neither box existence nor access is enumerable.
+    // When hub auth is off (`decideHubAuth` authorized with no email), it's
+    // single-operator open mode -- no fleet to enumerate, pass-through stands.
+    const email = decision.headersToSet[HUB_EMAIL_HEADER];
+    if (email) {
+      const boxRoot = boxRootBySlug.get(boxSlug);
+      const allowed = boxRoot ? await canAccessBox({ boxRoot, email, ownerEmail: getOwnerEmail() }) : false;
+      if (!allowed) {
+        return reply.status(403).send({ error: "forbidden", message: "Not permitted to complete this OAuth callback." });
+      }
+    }
+    Object.assign(request.raw.headers, decision.headersToSet);
+
+    // Only NOW, once the caller is authorized and allowed, is it safe to
+    // cold-start a lazy/idle-collected box (the legitimate recovery case: the
+    // box may have been idle-stopped while the user lingered on Google's
+    // consent screen). An unresolvable slug at this point 400s -- but only to an
+    // already-authorized, already-access-checked caller, so it's no oracle.
     let endpoint: Endpoint | undefined;
     try {
       endpoint = boxSlug ? await resolveEndpoint(boxSlug, endpoints) : undefined;
@@ -404,36 +444,6 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     if (!endpoint) {
       return reply.status(400).send({ error: "unknown_box", message: `Unknown box in OAuth state: ${JSON.stringify(boxSlug)}` });
     }
-
-    stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret, openAccess });
-    if (!decision.authorized) {
-      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
-    }
-
-    // This route is a per-box connector callback picked purely from the
-    // untrusted `state` query param, so unlike the generic catch-all below
-    // (which lands inside the TARGET box's own scope and re-checks
-    // `canAccessBox` there via `addBoxAuthHook`), nothing downstream ever
-    // verifies the caller may access `boxSlug` -- the child's callback
-    // handler is registered at server ROOT, ahead of any per-box auth hook
-    // (see module doc). Any signed-in fleet user could otherwise complete a
-    // Google token grant for someone else's box. Check here, same
-    // fail-closed `canAccessBox` semantics as everywhere else. When hub auth
-    // is off, `decideHubAuth` already authorized above with no email to
-    // check -- pass-through stands (single-operator open mode).
-    const email = decision.headersToSet[HUB_EMAIL_HEADER];
-    if (email) {
-      const boxRoot = boxRootBySlug.get(boxSlug);
-      const allowed = boxRoot ? await canAccessBox({ boxRoot, email, ownerEmail: getOwnerEmail() }) : false;
-      if (!allowed) {
-        return reply.status(403).send({
-          error: "forbidden",
-          message: `${email} may not access box ${JSON.stringify(boxSlug)}`,
-        });
-      }
-    }
-    Object.assign(request.raw.headers, decision.headersToSet);
 
     reply.hijack();
     proxy.web(request.raw, reply.raw, { target: endpoint.origin });
@@ -447,7 +457,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
     const slug = slugForPath(reqPath);
     const mobileAuthed = slug !== null
-      && hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret, openAccess });
@@ -493,12 +503,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // registered on the hub's own instance, so nothing else listens for
   // "upgrade" and this is safe to own outright).
   // eslint-disable-next-line max-params -- Node's http "upgrade" event signature is (req, socket, head)
-  server.on("upgrade", (req: http.IncomingMessage, socket: Socket, head: Buffer) => {
+  const handleUpgrade = async (req: http.IncomingMessage, socket: Socket, head: Buffer): Promise<void> => {
     const reqPath = req.url ?? "/";
     const isWebhook = isWebhookPath(reqPath);
     const slug = slugForPath(reqPath);
     const mobileAuthed = slug !== null
-      && hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret, openAccess });
@@ -531,6 +541,17 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       // This callback fires only from http-proxy's error path (see
       // ws-incoming.js's onOutgoingError) -- never on success -- so an
       // invocation always means the upgrade failed.
+      socket.destroy();
+    });
+  };
+  // Node's "upgrade" listener is sync (its return is ignored); the mobile-auth
+  // check is now async (it may verify a bearer against the device store), so run
+  // the handler as a fire-and-forget async and destroy the socket if it throws
+  // rather than leaving a half-negotiated upgrade dangling.
+  // eslint-disable-next-line max-params -- Node's http "upgrade" event signature is (req, socket, head)
+  server.on("upgrade", (req: http.IncomingMessage, socket: Socket, head: Buffer) => {
+    void handleUpgrade(req, socket, head).catch((e: unknown) => {
+      console.error("[hub] upgrade handler failed:", e);
       socket.destroy();
     });
   });

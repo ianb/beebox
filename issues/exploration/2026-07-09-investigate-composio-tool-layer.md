@@ -24,7 +24,7 @@ integration is real work. Composio trades that for breadth-fast + managed auth.
   their servers proxy the calls). That cuts against our local-first / own-your-data /
   fail-closed-key posture and the source-available release. Is there a self-hostable
   path, or is it inherently a cloud dependency (the same "local-first but…" trap
-  Rowboat took heat for — see `2026-07-08-release-cloud-provider-honesty.md`)?
+  Rowboat took heat for — see [release-cloud-provider-honesty](../closed/decisions/2026-07-08-release-cloud-provider-honesty.md), resolved: disclose plainly)?
 - **Additive vs. replacement.** We already speak MCP. Composio exposes tools via MCP,
   so it could be a *breadth* add-on (long-tail apps we'll never hand-write) *without*
   replacing the core typed connectors (gmail, telegram, rss) we care about

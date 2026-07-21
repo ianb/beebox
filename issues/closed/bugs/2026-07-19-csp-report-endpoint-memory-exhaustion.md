@@ -3,7 +3,16 @@ title: "Unauthenticated /api/csp-report can exhaust memory/disk (no per-report s
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #7, pre-existing)
 area: callback-box
+resolution: implemented
 ---
+
+**Closed (implemented).** Fixed in `src/webapp/routes/api-csp-report.ts` with
+strict fail-closed bounds: a small dedicated body limit (16 KB) on the CSP
+content-type parser (413s anything larger — the server-wide 50 MB JSON limit no
+longer applies), per-field truncation (2 KB) so one report can't write a giant
+line, a per-request report cap (20) on the Reporting-API array, and
+newline-aware rotation that drops a partial line with no newline rather than
+retaining a giant fragment. Proof: `test/webapp/routes/api-csp-report-bounds.doctest.md`.
 
 Surfaced by a cross-model (Codex) security review of the local-password-auth
 branch; **pre-existing**, filed rather than fixed on that branch.
