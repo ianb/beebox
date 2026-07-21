@@ -2,11 +2,12 @@
 #
 # Runs on EVERY push to main (deliberately no path filter — see the plan's
 # Track D: a path filter would let a source edited outside the filtered globs
-# publish a drifted site with no red run) and on manual dispatch. Lands inert
-# while the repo is private: Pages can't publish until the repo is public AND
-# Settings -> Pages -> Source is switched to "GitHub Actions"
-# (issues/docs-and-chores/2026-07-21-pages-site-go-live.md). The workflow just
-# has to be correct for when that flips.
+# publish a drifted site with no red run) and on manual dispatch. The build
+# job always runs (free CI for the site); the deploy job is gated on the repo
+# being public — Pages can't publish from a private repo, and an ungated
+# deploy step fails 404 and emails the owner on every push. Going public also
+# needs Settings -> Pages -> Source switched to "GitHub Actions"
+# (issues/docs-and-chores/2026-07-21-pages-site-go-live.md).
 name: Pages
 
 on:
@@ -58,6 +59,7 @@ jobs:
 
   deploy:
     needs: build
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

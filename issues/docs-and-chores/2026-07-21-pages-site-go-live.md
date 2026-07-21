@@ -9,9 +9,13 @@ labels: [soft-launch]
 The front-door site (principles:
 [github-pages-site](../features/2026-07-20-github-pages-site.md); plan:
 [plan doc](../../callback-box/docs/plans/github-pages-site.md)) builds and
-deploys via a GitHub Actions workflow that lands **inert**: GitHub Pages
-cannot publish from a private repo on a personal plan, so until the repo goes
-public the dev-router route is the only live view.
+deploys via a GitHub Actions workflow whose **deploy job is gated on the repo
+being public** (`if: !github.event.repository.private` — an ungated deploy
+fails 404 and emails the owner on every push to main, observed 2026-07-21).
+The build job runs on every main push regardless, as free CI for the site.
+Until the repo goes public the dev-router route is the only live view; at
+go-public the deploy job un-gates by itself, but still fails until the
+settings flip below is done.
 
 When the repo goes public (or at soft launch), the go-live steps:
 
