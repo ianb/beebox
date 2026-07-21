@@ -10,22 +10,23 @@
 import { useEffect, useState } from "react";
 import { ExternalLink } from "../ui/ExternalLink";
 
-/** The dev router listens here (`bin/router.ts` ROUTER_PORT) and is never a
- *  valid Tailscale target (unauthenticated control routes), so we never suggest
- *  it even when the admin page is viewed on `localhost:3210`. */
+/** The dev router listens here (`bin/router.ts` ROUTER_PORT). We don't pre-fill
+ *  it as a *per-box* `--target`: viewing `/admin` on `localhost:3210` means
+ *  you're on the router, and exposing the *whole* authenticated router is the
+ *  explicit dev-machine path (the note at the bottom of this section), not a
+ *  single-box setup. */
 const DEV_ROUTER_PORT = "3210";
 
 /**
  * The loopback port to pre-fill into `cb tailscale setup --target`, or null.
  *
- * When the admin page is being viewed on a loopback host, the port in the
- * browser's own URL IS the loopback port serving this box — exactly the target
- * to expose. (In dev you can only reach `/admin` through a standalone
- * `cb serve`, since the router's login page 404s behind its prefix, so this
- * port is the serve port, not the router's.) Read in an effect so SSR and the
- * first client render agree (both null) and only the post-mount render fills it
- * in — no hydration mismatch. Null for SSR, non-loopback hosts, the dev router
- * port, and port-less URLs.
+ * When the admin page is viewed on a loopback host, the port in the browser's
+ * own URL IS the loopback port serving this box — exactly the per-box target to
+ * expose. The dev router port (3210) is excluded: on it you'd expose the whole
+ * router (the bottom note), not one box. Read in an effect so SSR and the first
+ * client render agree (both null) and only the post-mount render fills it in —
+ * no hydration mismatch. Null for SSR, non-loopback hosts, the dev router port,
+ * and port-less URLs.
  */
 function useLocalTargetPort(): string | null {
   const [port, setPort] = useState<string | null>(null);
