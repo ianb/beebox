@@ -94,3 +94,12 @@ if echo "$staged" | grep -q '^callback-clerk/'; then
   run_in callback-clerk pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet
   run_in callback-clerk pnpm typecheck
 fi
+
+# The generated site is a top-level package invisible to the callback-box/clerk
+# branches above. No lint-staged here (small package, no config) — lint + type
+# the whole thing. A content-only (.md) commit exits early above, so this only
+# fires when TS/config under site/ changed.
+if echo "$staged" | grep -q '^site/'; then
+  run_in site pnpm lint
+  run_in site pnpm typecheck
+fi

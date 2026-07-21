@@ -1,0 +1,68 @@
+# Build the generated front-door site and deploy it to GitHub Pages.
+#
+# Runs on EVERY push to main (deliberately no path filter — see the plan's
+# Track D: a path filter would let a source edited outside the filtered globs
+# publish a drifted site with no red run) and on manual dispatch. Lands inert
+# while the repo is private: Pages can't publish until the repo is public AND
+# Settings -> Pages -> Source is switched to "GitHub Actions"
+# (issues/docs-and-chores/2026-07-21-pages-site-go-live.md). The workflow just
+# has to be correct for when that flips.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a newer run supersede an in-flight one; don't cancel a running deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check site
+        run: |
+          pnpm --dir site lint
+          pnpm --dir site typecheck
+          pnpm --dir site test
+
+      - name: Build site
+        run: pnpm --dir site build --base /callback-box/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
