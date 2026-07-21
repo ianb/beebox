@@ -138,7 +138,13 @@ export function registerCspReportRoute({ server, logDir }: { server: FastifyInst
     }
   }
 
-  server.post("/api/csp-report", async (request, reply) => {
+  // A per-route bodyLimit bounds the RAW body regardless of content-type — the
+  // content-type-parser bodyLimit above only covers the two CSP types, so
+  // without this an `application/json` POST would fall through to the default
+  // parser under the server-wide 50 MB limit and reopen the memory-exhaustion
+  // vector. This caps every content-type (413 above it) without touching the
+  // global limit other routes need.
+  server.post("/api/csp-report", { bodyLimit: MAX_REPORT_BODY_BYTES }, async (request, reply) => {
     const reports = normalizeReports(request.body);
     if (reports.length > 0) {
       const ts = new Date().toISOString();

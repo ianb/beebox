@@ -91,7 +91,7 @@ to people; close when the soft launch happens. Builds on
    ([dev-router-lan-exposure](../bugs/2026-07-21-dev-router-lan-exposure.md),
    HIGH — a regression from this session's own dev-router fix), the CSP bound
    is bypassable via `application/json`
-   ([csp-report-json-content-type-bypass](../bugs/2026-07-21-csp-report-json-content-type-bypass.md)),
+   ([csp-report-json-content-type-bypass](../closed/bugs/2026-07-21-csp-report-json-content-type-bypass.md)),
    the OAuth callback wakes/enumerates boxes before auth and isn't owner-bound
    ([oauth-callback-wake-and-owner-binding](../bugs/2026-07-21-oauth-callback-wake-and-owner-binding.md)),
    and the device-store write has crash-safety gaps

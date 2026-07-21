@@ -67,6 +67,25 @@ logLines().length === before
 => true
 ```
 
+## An oversized `application/json` body is also rejected (413) — content-type can't bypass the bound
+
+The 16 KB cap must apply regardless of content-type. Sending the same oversized
+payload as `application/json` used to fall through to Fastify's default parser
+under the server-wide 50 MB limit; the per-route `bodyLimit` now bounds the raw
+body for every content-type.
+
+```ts continue
+const beforeJson = logLines().length;
+const hugeJson = JSON.stringify({ "csp-report": { "document-uri": "https://x/" + "C".repeat(20_000) } });
+const jsonStatus = await postCsp("application/json", hugeJson);
+jsonStatus
+=> 413
+
+// Nothing logged from the rejected oversized JSON body.
+logLines().length === beforeJson
+=> true
+```
+
 ## A batch POST logs at most the per-request cap
 
 ```ts continue

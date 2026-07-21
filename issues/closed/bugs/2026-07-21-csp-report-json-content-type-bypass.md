@@ -3,10 +3,22 @@ title: "CSP report body bound is bypassed by application/json content-type"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+resolution: implemented
+---
+
+**RESOLVED (implemented).** Fixed in `src/webapp/routes/api-csp-report.ts` by
+adding a per-route `{ bodyLimit: MAX_REPORT_BODY_BYTES }` (16 KB) to the
+`POST /api/csp-report` handler. The route bodyLimit bounds the RAW body for
+every content-type, so an `application/json` (or any other) POST is 413'd above
+16 KB instead of falling through to Fastify's default parser under the
+server-wide 50 MB limit. The global JSON limit other routes need is untouched.
+Test added in `test/webapp/routes/api-csp-report-bounds.doctest.md`: an oversized
+`application/json` body → 413, nothing logged.
+
 ---
 
 **MED-HIGH. The overnight CSP fix
-([csp-report-endpoint-memory-exhaustion](../closed/bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md))
+([csp-report-endpoint-memory-exhaustion](2026-07-19-csp-report-endpoint-memory-exhaustion.md))
 is incomplete.** Found by Codex (2026-07-21), verified.
 
 The 16 KiB body limit is attached only to the dedicated parser for
