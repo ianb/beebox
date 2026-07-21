@@ -1,5 +1,5 @@
 // The dev router's fail-closed authorization core (Track B, chunk 1 of
-// callback-box/docs/plans/expose-dev-router.md).
+// callback-box/docs/implemented-plans/expose-dev-router.md).
 //
 // This module is PURE: it classifies a request into a route class and decides
 // allow/deny, given the request facts plus INJECTED auth-resolution functions.

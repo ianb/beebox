@@ -1,5 +1,13 @@
 # Make the shared dev router safely exposable over Tailscale
 
+**Status:** implemented 2026-07 — the router is now a fail-closed
+authenticating reverse proxy (`bin/router-auth.ts`, `bin/router-auth-deps.ts`,
+the UDS local channel in `bin/router.ts`) and `cb tailscale setup --target
+<routerPort>` exposes it. Verified by the full test suite plus four Codex
+adversarial reviews (GO for a private tailnet); a live end-to-end exposure
+against the real `tailscaled` (including pairing the iOS app over the tailnet)
+is still the boxholder's acceptance test, not yet run.
+
 Turn the `pnpm dev` router into an **authenticating reverse proxy** — the same
 front-door model the prod `cb hub` already runs — so the whole dev environment
 (all worktrees, all boxes) can be reached from the tailnet by a browser *or* the

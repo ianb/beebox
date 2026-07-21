@@ -1,5 +1,5 @@
 // Tests for the REAL RouterAuthDeps (bin/router-auth-deps.ts) — Track B, chunk
-// 2a of callback-box/docs/plans/expose-dev-router.md. These exercise the wiring
+// 2a of callback-box/docs/implemented-plans/expose-dev-router.md. These exercise the wiring
 // the pure gate (bin/router-auth.ts, covered by bin/router-auth.test.ts) can't:
 // the single slug→box source of truth (duplicate ⇒ fail closed; a non-box
 // segment ⇒ the worktree-root/session sentinel, NOT a deny), the per-box mobile

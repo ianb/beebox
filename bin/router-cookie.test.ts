@@ -1,5 +1,5 @@
 // Tests for the Set-Cookie Path rewrite (bin/router-cookie.ts) — Track B, chunk
-// 2b of callback-box/docs/plans/expose-dev-router.md (iOS session continuity).
+// 2b of callback-box/docs/implemented-plans/expose-dev-router.md (iOS session continuity).
 //
 // Run with:
 //   node --import tsx --test bin/router-cookie.test.ts

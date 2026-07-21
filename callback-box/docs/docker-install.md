@@ -189,8 +189,8 @@ and box it's serving — over the tailnet through one authenticated front door,
 rather than a single box. Setup verifies the router's auth gate is actually
 live (an anonymous request over Serve must get a `401`) before recording the
 exposure, and refuses to expose an ungated router. See `bin/CLAUDE.md` for the
-router's auth model and `callback-box/docs/plans/expose-dev-router.md` for the
-full design (moves to `docs/implemented-plans/` once closed out).
+router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
+full design.
 
 ### Box login (on by default)
 

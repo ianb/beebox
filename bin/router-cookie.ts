@@ -1,6 +1,6 @@
 // Rewrite the `Path` attribute of the box-issued mobile/session cookies so they
 // survive behind the dev router's `/<worktree>/` prefix. Track B, chunk 2b of
-// callback-box/docs/plans/expose-dev-router.md (the iOS session-continuity leg).
+// callback-box/docs/implemented-plans/expose-dev-router.md (the iOS session-continuity leg).
 //
 // The box child sets `cb_mobile` with `Path=/<boxSlug>` (webapp/mobile-cookie.ts)
 // because it only knows its own slug. Behind the router the browser path is

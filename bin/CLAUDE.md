@@ -76,8 +76,7 @@ Authentication is structurally always-on (open-mode was removed — there is no
 authenticates every TCP request before it proxies, serves `/<worktree>/dev/`
 infra, or cold-starts a worktree — the same front-door model `cb hub` already
 runs in prod. Full design and rationale:
-`callback-box/docs/plans/expose-dev-router.md` (moves to
-`callback-box/docs/implemented-plans/` once closed out).
+`callback-box/docs/implemented-plans/expose-dev-router.md`.
 
 - **Login behind the router prefix works.** The old dead-end bug (built login
   SPA served with root-absolute `base="/"` assets that 404'd behind

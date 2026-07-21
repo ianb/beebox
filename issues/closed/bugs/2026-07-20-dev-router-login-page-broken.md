@@ -3,7 +3,19 @@ title: "Hub login page is unusable behind the dev router prefix"
 area: router
 filed-by: agent
 discovered-in: worktree-lightbox-gestures — smoke-testing the lightbox needed auth and the login page couldn't render
+resolution: implemented
 ---
+
+**Closed 2026-07-21** — fixed for real this time by Track A of the
+`expose-dev-router` plan (`callback-box/docs/implemented-plans/expose-dev-router.md`),
+landed as commit `4917fad4` ("Track A DONE (login-behind-prefix bug fixed,
+browser-verified)") plus its constituent commits (`8698f41c`, `c4c29053`,
+`cf9e879e`). The fix took the base-path-aware route this issue's "Boxholder
+flag" section said was NOT taken previously: `X-CB-Base-Prefix` header +
+`validateBasePrefix`/`loginRedirect` (`src/webapp/base-prefix.ts`) reconstruct
+the full path for server-side redirects, and Vite now serves a base-aware
+login SPA in dev so its asset references resolve behind the `/<worktree>/`
+prefix. Browser-verified working behind the prefix.
 
 **Reopened 2026-07-21** — the `CB_ALLOW_UNAUTHENTICATED` workaround was dropped
 when main removed open-mode (commit 8499cc52; auth is now structurally

@@ -4,7 +4,23 @@ area: bin + callback-box
 needs: [decision, design]
 filed-by: agent
 discovered-in: worktree-tailscale-exposure — boxholder testing cb tailscale on the dev machine
+resolution: implemented
 ---
+
+**Closed 2026-07-21** — implemented via Option 1 below, which became the
+`expose-dev-router` plan
+(`callback-box/docs/implemented-plans/expose-dev-router.md`): the shared
+router is now a fail-closed authenticating reverse proxy (Track B,
+`bin/router-auth.ts`/`bin/router-auth-deps.ts`, wired into `bin/router.ts`),
+the login-prefix bug is fixed (Track A, closes
+[dev-router-login-page-broken](../bugs/2026-07-20-dev-router-login-page-broken.md)),
+and `cb tailscale setup --target <routerPort>` now exposes the whole
+authenticated router (Track C), refusing to expose an ungated one. Verified by
+the full test suite plus four adversarial Codex reviews (final verdict GO for
+a private tailnet) and browser/curl/WebSocket acceptance checks on an isolated
+router. **Not yet done:** a live exposure against the real `tailscaled`
+(including pairing the iOS app over the tailnet) — that's the boxholder's
+acceptance test, still outstanding.
 
 The `cb tailscale` tooling works (verified live: `cb tailscale status --target
 3399` against a real tailnet correctly classified a standalone `cb serve` and

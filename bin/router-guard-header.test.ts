@@ -1,5 +1,5 @@
 // The guarded-dev-router self-identification header (Track C of
-// callback-box/docs/plans/expose-dev-router.md). On a denied `/__router/*`
+// callback-box/docs/implemented-plans/expose-dev-router.md). On a denied `/__router/*`
 // control request the router answers with `x-cb-router-guarded: 1` so
 // `cb tailscale setup` can prove the auth gate is live end-to-end over Serve
 // (401 + this header) and tell a guarded router apart from an ungated one

@@ -5,7 +5,7 @@
  * injects `X-CB-Base-Prefix: /<segment>` to tell the backend which single path
  * segment it stripped, so server-side login redirects can rebuild the full
  * browser path the backend never saw (Track A of
- * `docs/plans/expose-dev-router.md`). The Vite dev-proxy strips the
+ * `docs/implemented-plans/expose-dev-router.md`). The Vite dev-proxy strips the
  * `/<worktree>` prefix before the backend, so the backend can't derive it from
  * `request.url` — the fronting proxy is the only party that knows it.
  *
