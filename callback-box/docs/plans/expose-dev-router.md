@@ -501,8 +501,17 @@ exposable; local CLI uses the socket) and the tailscale docs.
    worktree's login page inherently needs its Vite up; the box still demands
    auth. Revisit (centralize login through `/main`) only if the tailnet widens
    beyond trusted devices.
-8. **C** `router-guarded` posture + anonymous-denial-over-Serve probe + setup
-   serves the router; tests.
+8. **C — DONE (`0e0f226f`).** Router emits a benign `x-cb-router-guarded: 1`
+   header on any denied `/__router/*` (self-identification, leaks nothing);
+   `tailscale-target.ts` classifies 401+header → `router-guarded` (allow),
+   200+routerPort → `router` (refuse "update the router"), else the `/auth/me`
+   flow; `tailscale-setup.ts` configures Serve then requires an anonymous served
+   `/__router/status` → 401+header before recording exposure (else tears down +
+   refuses); status reports `guarded:true`. 73 tailscale doctests + 140 bin tests
+   pass. (Deviations, both justified: the router records exposure *after* the
+   served proof — its record is teardown-bookkeeping, not a startup guard, so
+   record-only-proven is correct; a hand-rolled *ungated* served router falls to
+   fail-closed `posture-ambiguous`.)
 9. **Docs** `bin/CLAUDE.md`, tailscale docs, admin `TailscaleSection`
    ("on a dev machine, `cb tailscale setup` exposes the whole authenticated
    router"). Close the login-prefix bug + the expose-dev-checkout issue.
