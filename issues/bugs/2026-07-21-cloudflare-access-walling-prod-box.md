@@ -55,7 +55,7 @@ to the pub worker (`pub-worker.<...>.workers.dev`, path `a/*`).
 
 Putting Cloudflare Access *deliberately* in front of the box is a real option —
 it's defense-in-depth, and it overlaps the
-[Tailscale expose-and-protect](../features/2026-07-20-tailscale-expose-and-protect.md)
+[Tailscale expose-and-protect](../closed/features/2026-07-20-tailscale-expose-and-protect.md)
 goal. But the box is **not built to run behind Access today**: the tRPC/XHR,
 `manifest.webmanifest`, and the tRPC WebSocket all need to authenticate through
 the Access session, and right now they don't (they get 302'd). So Access-in-front
