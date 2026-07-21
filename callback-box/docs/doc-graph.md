@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-21T05:04:54Z
+Generated: 2026-07-21T05:26:42Z
 Total documents: 201
 
 ## Issues
@@ -45,7 +45,7 @@ These references point to files that don't exist.
 
 - **docs/implemented-plans/link-validation-fix.md:530** → `/store/foo/bar.md` (link)
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
-- **docs/knowledge-audits.md:76** → `MAP.md` (at-include)
+- **docs/knowledge-audits.md:83** → `MAP.md` (at-include)
   Context: - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `
 - **docs/reports/user-stories-audit-2026-06-26.md:5334** → `MAP.md` (at-include)
   Context: - Ensure per-dir CLAUDE.md includes are correct: IMPLEMENTED in finalize.ts lines 58-79 with `ensureClaudeMdInDir()` tha
@@ -677,7 +677,7 @@ References:
 
 #### docs/chat-scroll-testing.md
 
-Title: "Chat scroll — manual test procedure" | 130 lines
+Title: "Chat scroll — manual test procedure" | 150 lines
 
 Referenced by:
 - docs/implemented-plans/chat-composer-rerender.md:140 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
@@ -685,6 +685,7 @@ Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:364 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
 - docs/testing.md:519 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
 - src/frontend/src/components/chat/CLAUDE.md:31 (mention) — `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
+- ../issues/closed/bugs/2026-07-19-scroll-up-history-false-new-messages.md:19 (mention) — `docs/chat-scroll-testing.md`. See the commit referenced in the closing note.
 
 References:
 - → docs/testing.md (mention)
@@ -987,7 +988,7 @@ References:
 
 #### docs/knowledge-audits.md
 
-Title: "Knowledge Audits" | 91 lines
+Title: "Knowledge Audits" | 98 lines
 
 Referenced by:
 - CLAUDE.md:164 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
@@ -999,7 +1000,7 @@ Referenced by:
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't 
 - ../.claude/skills/cb-context/SKILL.md:133 (mention) — `docs/knowledge-audits.md`).
 - ../.claude/skills/cb-guide-schemas/SKILL.md:41 (mention) — (`docs/knowledge-audits.md`).
-- ../issues/bugs/2026-07-15-knowledge-audit-box-nesting.md:13 (mention) — `docs/knowledge-audits.md`'s `--box ~/src/boxes/test1` example presumably
+- ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:18 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:32 (link) — ([docs](../../callback-box/docs/knowledge-audits.md)) and the doc-generation
 

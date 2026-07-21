@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
 import { assertStandaloneBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
+import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";
 import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-history.js";
 import { generateDocs } from "../core/docs-gen/index.js";
@@ -66,7 +67,12 @@ program
     const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
     const boxRoot = options.box ?? path.join(process.env.HOME ?? "~", "src/boxes/test1");
 
-    const resolvedBox = path.resolve(boxRoot);
+    // `--box` may name either a v2 package root or its nested operational
+    // (`content/`) root; resolve to the operational root (where `.cb-box`, cards,
+    // and CLAUDE.md live) so generateDocs/runTest target the box itself, and
+    // derive a stable ledger identity. See resolveAuditBox. assertStandaloneBox
+    // accepts either form and still verifies the git repo is the package root.
+    const { operationalRoot: resolvedBox, boxName } = await resolveAuditBox(boxRoot);
 
     // Refuse a box that isn't its own git repo BEFORE generating docs into it.
     // runTest does `git reset --hard` + `git clean -fd` in the box between
@@ -144,7 +150,7 @@ program
     const report = generateReport({
       boxRoot: resolvedBox,
       results,
-      priorHistory: priorHistory[path.basename(resolvedBox)] ?? {},
+      priorHistory: priorHistory[boxName] ?? {},
     });
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-").substring(0, 19);
     const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `audit-report-${timestamp}.md`);
@@ -163,7 +169,7 @@ program
     if (measurements.length > 0) {
       await recordRun({
         historyPath: HISTORY_PATH,
-        box: path.basename(resolvedBox),
+        box: boxName,
         date: new Date().toISOString(),
         boxCommit,
         repoCommit: gitHead(PACKAGE_ROOT),
