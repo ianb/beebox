@@ -442,11 +442,27 @@ exposable; local CLI uses the socket) and the tailscale docs.
    works behind the prefix (verified), which covers the goal; Google-login behind
    the prefix (`auth-google.ts:38` callback URI) is a follow-up — family can use
    local password meanwhile.
-4. **B.1** UDS listener + origin tag + pure `authorizeRouterRequest` + truth-table
-   unit tests.
-5. **B.2** wire the gate into dispatch (allowlist, control/infra owner+CSRF, box
-   ladder, strip `x-cb-*`, gate-before-cold-start) + DoS boundary; rewire
-   `bin/worktrees`/HMR/dashboards to the UDS.
+4. **B.1 — DONE (pure core)** `bin/router-auth.ts` + `bin/router-auth.test.ts`:
+   `classifyRouterRoute` + `authorizeRouterRequest` (injected `RouterAuthDeps`) +
+   19-case truth table. Verified fail-closed (owner-before-CSRF, unknown/dup-slug
+   deny, unknown→404). **Carry-forward to B.2 (flagged, must handle):**
+   (a) the **box picker** (`/<w>/`, `/<w>/api/boxes`) is per-USER (lists boxes by
+   `canAccessBox`), not per-box — B.2's `resolveTargetBoxRoot`/ladder must gate it
+   on an owner/member SESSION, not a per-box mobile token against a "default box";
+   (b) `isCsrfSafe` must ALLOW a legitimate top-level navigation to the
+   dashboard-cold-start (`Sec-Fetch-Site: none`/`same-origin`), or reclassify that
+   GET — don't block real nav; (c) importing `isPairingRedeemUrl` drags
+   `mobile-cookie.ts` into `bin`'s tsconfig (needed a `@fastify/cookie` types
+   entry) — consider extracting the pure matcher to a dep-free module instead.
+5. **B.2** the LIVE wiring (the security-critical enforcement): UDS listener +
+   `trustedLocal` tagging (only UDS arrivals — the load-bearing invariant); real
+   `RouterAuthDeps` (resolveRequestIdentity∩getOwnerEmail, the slug→box map,
+   canAccessBox, resolveMobileRequestAuth, agent bearer, Origin/Sec-Fetch);
+   the SINGLE chokepoint calling the gate before all dispatch INCLUDING the WS
+   `upgrade`; deny handling (401 JSON / 403 / login redirect / 404); the
+   `Set-Cookie` Path rewrite for `cb_mobile`/`cb_session`; strip client `x-cb-*`;
+   CSP-sandbox `/dev` responses; DoS boundary; rewire `bin/worktrees`/CLI to the
+   UDS (HMR/WS stay TCP). Break into sub-chunks; Codex-review the wired gate.
 6. **C** `router-guarded` posture + anonymous-denial-over-Serve probe + setup
    serves the router; tests.
 7. **Docs** `bin/CLAUDE.md`, tailscale docs, admin `TailscaleSection`
