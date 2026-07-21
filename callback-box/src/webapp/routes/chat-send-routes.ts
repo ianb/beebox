@@ -211,7 +211,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     // carries no cb_session, so fall back to its `createdBy` identity — without
     // this, every native and mobile-web send is attributed to nobody. May be
     // null when auth is disabled or a device was paired in open mode.
-    const user = getSessionUser(request) ?? resolveMobileSender(boxRoot, request.headers);
+    const user = getSessionUser(request) ?? (await resolveMobileSender(boxRoot, request.headers));
 
     // Slash commands (e.g. /compact) are parsed by the claude CLI when they
     // appear at the very start of the user text — any prefix/suffix would

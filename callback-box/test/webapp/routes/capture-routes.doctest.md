@@ -223,7 +223,7 @@ the same `createdBy` value used by cookie-authenticated web capture.
 ```ts
 const ctx = await makeTestServer();
 const ticket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "owner@example.com" });
-const paired = redeemMobilePairingTicket(ctx.boxRoot, {
+const paired = await redeemMobilePairingTicket(ctx.boxRoot, {
   pairingToken: ticket.token,
   deviceLabel: "Owner's phone",
 });
@@ -256,7 +256,7 @@ session:
 
 ```ts continue
 const otherTicket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "other@example.com" });
-const otherPaired = redeemMobilePairingTicket(ctx.boxRoot, {
+const otherPaired = await redeemMobilePairingTicket(ctx.boxRoot, {
   pairingToken: otherTicket.token,
   deviceLabel: "Other phone",
 });
@@ -298,7 +298,7 @@ such devices would otherwise share the anonymous resume scope.
 ```ts
 const ctx = await makeTestServer();
 const ticket = createMobilePairingTicket(ctx.boxRoot);
-const paired = redeemMobilePairingTicket(ctx.boxRoot, {
+const paired = await redeemMobilePairingTicket(ctx.boxRoot, {
   pairingToken: ticket.token,
   deviceLabel: "Legacy phone",
 });

@@ -136,21 +136,22 @@ function slugForPath(reqPath: string): string | null {
  * `docs/mobile-contract.md`). Verifying here is affordable because the cookie
  * path is pure HMAC with no filesystem access.
  */
-function hasMobileAuth(opts: {
+async function hasMobileAuth(opts: {
   boxRoot: string | undefined;
   headers: http.IncomingHttpHeaders;
-}): boolean {
+}): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
   return verifyMobileRequest(opts.boxRoot, opts.headers);
 }
 
-function listMobileAuthorizedBoxes(opts: {
+async function listMobileAuthorizedBoxes(opts: {
   boxes: BoxSpec[];
   headers: http.IncomingHttpHeaders;
-}): Array<{ slug: string; name: string }> {
-  return opts.boxes
-    .filter((box) => verifyMobileRequest(box.boxRoot, opts.headers))
-    .map((box) => ({ slug: box.slug, name: box.slug }));
+}): Promise<Array<{ slug: string; name: string }>> {
+  const checked = await Promise.all(
+    opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })),
+  );
+  return checked.filter((c) => c.ok).map(({ box }) => ({ slug: box.slug, name: box.slug }));
 }
 
 /**
@@ -165,7 +166,7 @@ async function respondHubBoxes(opts: {
 }): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
   const { boxes, request, reply } = opts;
   if (!authRequired()) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
-  const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers });
+  const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
   if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
   const identity = resolveRequestIdentity(request);
   if (identity.source === "unavailable") {
@@ -434,7 +435,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
     const slug = slugForPath(reqPath);
     const mobileAuthed = slug !== null
-      && hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret });
@@ -480,12 +481,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // registered on the hub's own instance, so nothing else listens for
   // "upgrade" and this is safe to own outright).
   // eslint-disable-next-line max-params -- Node's http "upgrade" event signature is (req, socket, head)
-  server.on("upgrade", (req: http.IncomingMessage, socket: Socket, head: Buffer) => {
+  const handleUpgrade = async (req: http.IncomingMessage, socket: Socket, head: Buffer): Promise<void> => {
     const reqPath = req.url ?? "/";
     const isWebhook = isWebhookPath(reqPath);
     const slug = slugForPath(reqPath);
     const mobileAuthed = slug !== null
-      && hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret });
@@ -518,6 +519,17 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       // This callback fires only from http-proxy's error path (see
       // ws-incoming.js's onOutgoingError) -- never on success -- so an
       // invocation always means the upgrade failed.
+      socket.destroy();
+    });
+  };
+  // Node's "upgrade" listener is sync (its return is ignored); the mobile-auth
+  // check is now async (it may verify a bearer against the device store), so run
+  // the handler as a fire-and-forget async and destroy the socket if it throws
+  // rather than leaving a half-negotiated upgrade dangling.
+  // eslint-disable-next-line max-params -- Node's http "upgrade" event signature is (req, socket, head)
+  server.on("upgrade", (req: http.IncomingMessage, socket: Socket, head: Buffer) => {
+    void handleUpgrade(req, socket, head).catch((e: unknown) => {
+      console.error("[hub] upgrade handler failed:", e);
       socket.destroy();
     });
   });

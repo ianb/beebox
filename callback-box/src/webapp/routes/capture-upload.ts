@@ -43,7 +43,7 @@ export async function handleCaptureUpload(opts: {
   const { boxRoot, request, reply } = opts;
   const session = await readStagingSession({ boxRoot, id: request.params.id });
   if (!session) return reply.status(404).send({ error: "Session not found" });
-  const authorization = authorizeCaptureSessionOwner({ boxRoot, request, createdBy: session.createdBy });
+  const authorization = await authorizeCaptureSessionOwner({ boxRoot, request, createdBy: session.createdBy });
   if (authorization.status === "rejected") {
     return reply.status(authorization.statusCode).send({ error: authorization.error });
   }

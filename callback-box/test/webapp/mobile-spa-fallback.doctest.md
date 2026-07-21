@@ -36,7 +36,7 @@ registerSpaFallback(server, {
 });
 
 const ticket = createMobilePairingTicket(box.root);
-const redeemed = redeemMobilePairingTicket(box.root, {
+const redeemed = await redeemMobilePairingTicket(box.root, {
   pairingToken: ticket.token,
   deviceLabel: "doctest mobile",
 });

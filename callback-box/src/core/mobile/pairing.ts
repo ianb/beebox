@@ -3,12 +3,28 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../../lib/error-guards.js";
+import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { isRecord } from "../card-io.js";
 
 const MOBILE_DEVICES_RELATIVE_PATH = ".callback-box/mobile-devices.secret.json";
 const PAIRING_TOKEN_BYTES = 32;
 const DEVICE_TOKEN_BYTES = 32;
 const DEFAULT_PAIRING_TTL_MS = 10 * 60 * 1000;
+
+// The device store is written from more than one process: `cb hub` verifies a
+// mobile bearer (stamping `lastUsedAt`) before proxying to the per-box `cb serve`
+// child, which verifies it AGAIN and can also revoke a device. Two processes
+// racing an unsynchronized read-modify-write is a genuine lost update — a
+// bearer verify started before a revoke can write back the pre-revoke record and
+// silently un-revoke the device — and two overlapping `writeFileSync`s can tear
+// the file. Every mutation therefore runs through the cross-process
+// `file-lock.ts` primitive (crash + sleep aware) and lands via temp-file + fsync
+// + atomic rename, exactly as the sibling credential store `webapp/local-users.ts`
+// does. Read-only accessors (`listMobileDevices`, `isMobileDeviceActive`) don't
+// take the lock — a stale-by-one read is harmless — and pairing-ticket creation
+// touches only the in-memory pending map.
+const LOCK_RETRIES = 50;
+const LOCK_RETRY_MS = 100;
 
 interface PendingPairing {
   boxRoot: string;
@@ -74,10 +90,68 @@ function readDeviceStore(boxRoot: string): MobileDeviceStore {
   }
 }
 
+/** Crash-safe replace: write a temp sibling (0600), fsync, atomically rename
+ *  over the target — a kill mid-write leaves either the old or the new complete
+ *  file, never a truncated one. Call only inside `withDeviceStoreLock`. */
 function writeDeviceStore(boxRoot: string, store: MobileDeviceStore): void {
   const file = mobileDevicesPath(boxRoot);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(store, null, 2) + "\n", { mode: 0o600 });
+  const tmp = `${file}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
+  const fd = fs.openSync(tmp, "w", 0o600);
+  try {
+    fs.writeSync(fd, JSON.stringify(store, null, 2) + "\n");
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+  fs.renameSync(tmp, file);
+}
+
+/** Thrown when the device-store lock can't be acquired within the retry budget
+ *  (`LOCK_RETRIES` × `LOCK_RETRY_MS`). A mutation fails loudly rather than
+ *  proceeding unsynchronized. */
+export class MobileDeviceStoreLockError extends Error {
+  constructor(readonly lockPath: string) {
+    super(`Could not acquire the mobile device-store lock at ${lockPath} within the retry budget`);
+    this.name = "MobileDeviceStoreLockError";
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Run a read-modify-write of the device store under the cross-process lock,
+ * retrying briefly under contention (each critical section is one small write).
+ * `fn` receives the freshly-read store and mutates + `writeDeviceStore`s it; the
+ * read happens INSIDE the lock so a concurrent process's committed write is
+ * always visible before we mutate, which is what makes the revoke-vs-lastUsedAt
+ * update safe.
+ */
+async function withDeviceStoreLock<T>(
+  boxRoot: string,
+  fn: (store: MobileDeviceStore) => T,
+): Promise<T> {
+  const lockPath = `${mobileDevicesPath(boxRoot)}.lock`;
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
+    try {
+      await acquireLock(lockPath, { purpose: "mobile-devices" });
+    } catch (e) {
+      if (e instanceof LockHeldError) {
+        await delay(LOCK_RETRY_MS);
+        continue;
+      }
+      throw e;
+    }
+    try {
+      return fn(readDeviceStore(boxRoot));
+    } finally {
+      await releaseLock(lockPath);
+    }
+  }
+  throw new MobileDeviceStoreLockError(lockPath);
 }
 
 function timingSafeStringEqual(a: string, b: string): boolean {
@@ -110,10 +184,10 @@ export function listMobileDevices(boxRoot: string): Array<Omit<MobileDevice, "to
   return readDeviceStore(boxRoot).devices.map(({ tokenHash: _tokenHash, ...device }) => device);
 }
 
-export function redeemMobilePairingTicket(
+export async function redeemMobilePairingTicket(
   boxRoot: string,
   opts: { pairingToken: string; deviceLabel: string },
-): { deviceId: string; deviceToken: string; label: string } | null {
+): Promise<{ deviceId: string; deviceToken: string; label: string } | null> {
   pruneExpiredPairings();
   const tokenHash = hashToken(opts.pairingToken);
   const pending = pendingPairings.get(tokenHash);
@@ -133,9 +207,10 @@ export function redeemMobilePairingTicket(
     createdAt: nowIso(),
     createdBy: pending.createdBy,
   };
-  const store = readDeviceStore(boxRoot);
-  store.devices.push(device);
-  writeDeviceStore(boxRoot, store);
+  await withDeviceStoreLock(boxRoot, (store) => {
+    store.devices.push(device);
+    writeDeviceStore(boxRoot, store);
+  });
   return { deviceId: device.id, deviceToken, label };
 }
 
@@ -144,37 +219,44 @@ export interface MobileBearerIdentity {
   createdBy: string | null;
 }
 
-export function resolveMobileBearerIdentity(
+export async function resolveMobileBearerIdentity(
   boxRoot: string,
   authorization: string | undefined,
-): MobileBearerIdentity | null {
+): Promise<MobileBearerIdentity | null> {
   if (typeof authorization !== "string") return null;
   const prefix = "Bearer ";
   if (!authorization.startsWith(prefix)) return null;
   return resolveMobileTokenIdentity(boxRoot, authorization.slice(prefix.length));
 }
 
-export function verifyMobileBearer(boxRoot: string, authorization: string | undefined): boolean {
-  return resolveMobileBearerIdentity(boxRoot, authorization) !== null;
+export async function verifyMobileBearer(boxRoot: string, authorization: string | undefined): Promise<boolean> {
+  return (await resolveMobileBearerIdentity(boxRoot, authorization)) !== null;
 }
 
-export function verifyMobileToken(boxRoot: string, token: string | undefined): boolean {
-  return resolveMobileTokenIdentity(boxRoot, token) !== null;
+export async function verifyMobileToken(boxRoot: string, token: string | undefined): Promise<boolean> {
+  return (await resolveMobileTokenIdentity(boxRoot, token)) !== null;
 }
 
-function resolveMobileTokenIdentity(boxRoot: string, token: string | undefined): MobileBearerIdentity | null {
+async function resolveMobileTokenIdentity(
+  boxRoot: string,
+  token: string | undefined,
+): Promise<MobileBearerIdentity | null> {
   if (typeof token !== "string" || token.length === 0) return null;
   const suppliedHash = hashToken(token);
-  const store = readDeviceStore(boxRoot);
-  for (const device of store.devices) {
-    if (device.revokedAt) continue;
-    if (timingSafeStringEqual(suppliedHash, device.tokenHash)) {
-      device.lastUsedAt = nowIso();
-      writeDeviceStore(boxRoot, store);
-      return { deviceId: device.id, createdBy: device.createdBy };
+  // The lastUsedAt stamp makes this a read-modify-write, so it runs under the
+  // lock even though most calls are "just checking" — the read happens inside
+  // the lock so a device revoked by another process is always seen here.
+  return withDeviceStoreLock(boxRoot, (store) => {
+    for (const device of store.devices) {
+      if (device.revokedAt) continue;
+      if (timingSafeStringEqual(suppliedHash, device.tokenHash)) {
+        device.lastUsedAt = nowIso();
+        writeDeviceStore(boxRoot, store);
+        return { deviceId: device.id, createdBy: device.createdBy };
+      }
     }
-  }
-  return null;
+    return null;
+  });
 }
 
 /**
@@ -191,13 +273,14 @@ export function isMobileDeviceActive(boxRoot: string, deviceId: string): boolean
   return device !== undefined && !device.revokedAt;
 }
 
-export function revokeMobileDevice(boxRoot: string, deviceId: string): boolean {
-  const store = readDeviceStore(boxRoot);
-  const device = store.devices.find((item) => item.id === deviceId);
-  if (!device || device.revokedAt) return false;
-  device.revokedAt = nowIso();
-  writeDeviceStore(boxRoot, store);
-  return true;
+export async function revokeMobileDevice(boxRoot: string, deviceId: string): Promise<boolean> {
+  return withDeviceStoreLock(boxRoot, (store) => {
+    const device = store.devices.find((item) => item.id === deviceId);
+    if (!device || device.revokedAt) return false;
+    device.revokedAt = nowIso();
+    writeDeviceStore(boxRoot, store);
+    return true;
+  });
 }
 
 function pruneExpiredPairings(): void {

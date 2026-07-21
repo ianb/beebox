@@ -89,7 +89,7 @@ to people; close when the soft launch happens. Builds on
    bugs 100% should be addressed or at least reviewed" — boxholder).
    Fix-before-launch tier beyond gate 1:
    [mobile-chat-unattributed](../closed/bugs/2026-07-17-mobile-chat-unattributed.md),
-   [mobile-device-store-unlocked-rmw](../bugs/2026-07-17-mobile-device-store-unlocked-rmw.md),
+   [mobile-device-store-unlocked-rmw](../closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md),
    [image-orientation-exif-boundaries](../bugs/2026-07-17-image-orientation-exif-boundaries.md),
    and the two landed-but-unverified mobile-web fixes awaiting a real
    phone

@@ -58,7 +58,7 @@ async function startFakeBox() {
 const box = await startFakeBox();
 const mobileBox = await makeTmpBox();
 const mobileTicket = createMobilePairingTicket(mobileBox.root);
-const mobileRedeemed = redeemMobilePairingTicket(mobileBox.root, {
+const mobileRedeemed = await redeemMobilePairingTicket(mobileBox.root, {
   pairingToken: mobileTicket.token,
   deviceLabel: "doctest mobile",
 });

@@ -36,11 +36,11 @@ const box = await makeTmpBox();
 await createFirstUser({ email: "ada@example.com", password: "correct-horse", name: "Ada Lovelace" });
 
 const ticket = createMobilePairingTicket(box.root, { createdBy: "ada@example.com" });
-const device = redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "iPhone" });
+const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "iPhone" });
 device !== null
 => true
 
-const sender = resolveMobileSender(box.root, { authorization: `Bearer ${device.deviceToken}` });
+const sender = await resolveMobileSender(box.root, { authorization: `Bearer ${device.deviceToken}` });
 JSON.stringify(sender)
 => {"email":"ada@example.com","name":"Ada Lovelace"}
 ```
@@ -61,8 +61,8 @@ rather than failing.
 
 ```ts continue
 const ticket2 = createMobilePairingTicket(box.root, { createdBy: "grace@example.com" });
-const device2 = redeemMobilePairingTicket(box.root, { pairingToken: ticket2.token, deviceLabel: "iPad" });
-JSON.stringify(resolveMobileSender(box.root, { authorization: `Bearer ${device2.deviceToken}` }))
+const device2 = await redeemMobilePairingTicket(box.root, { pairingToken: ticket2.token, deviceLabel: "iPad" });
+JSON.stringify(await resolveMobileSender(box.root, { authorization: `Bearer ${device2.deviceToken}` }))
 => {"email":"grace@example.com","name":"grace@example.com"}
 ```
 
@@ -73,8 +73,8 @@ user — matching the cookie path's `null` for an unauthenticated request.
 
 ```ts continue
 const openTicket = createMobilePairingTicket(box.root);
-const openDevice = redeemMobilePairingTicket(box.root, { pairingToken: openTicket.token, deviceLabel: "kiosk" });
-resolveMobileSender(box.root, { authorization: `Bearer ${openDevice.deviceToken}` })
+const openDevice = await redeemMobilePairingTicket(box.root, { pairingToken: openTicket.token, deviceLabel: "kiosk" });
+await resolveMobileSender(box.root, { authorization: `Bearer ${openDevice.deviceToken}` })
 => null
 ```
 
@@ -82,10 +82,10 @@ A request with no mobile credentials at all is also null (nothing to resolve),
 and a bogus bearer token never matches a device.
 
 ```ts continue
-resolveMobileSender(box.root, {})
+await resolveMobileSender(box.root, {})
 => null
 
-resolveMobileSender(box.root, { authorization: "Bearer not-a-real-token" })
+await resolveMobileSender(box.root, { authorization: "Bearer not-a-real-token" })
 => null
 ```
 

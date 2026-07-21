@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-21T04:38:47Z
-Total documents: 199
+Generated: 2026-07-21T04:54:00Z
+Total documents: 200
 
 ## Issues
 
@@ -35,6 +35,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/semantic-search.md** — "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" (533 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (544 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (21 lines)
 
@@ -1112,7 +1113,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 636 lines
+Title: "Cross-Platform Mobile Contract" | 643 lines
 
 Referenced by:
 - CLAUDE.md:142 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1122,6 +1123,7 @@ Referenced by:
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
 - docs/plans/android-companion-app.md:7 (mention) — grounded in the same-day contract inventory (`docs/mobile-contract.md`), the iOS
 - docs/plans/ios-input-plane-parity.md:119 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
+- ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:17 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/code-quality/2026-07-19-mobile-contract-small-cleanups.md:27 (mention) — one so a future Android client has one thing to learn. `docs/mobile-contract.md` §8 lists
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:29 (mention) — web (`docs/mobile-contract.md` §2).
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:11 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
@@ -2984,9 +2986,9 @@ Referenced by:
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-send-hangs-webview-unloaded.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
-- ../issues/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/code-quality/2026-07-17-ios-small-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -3406,6 +3408,14 @@ References:
 - → docs/architecture/CLAUDE.md (mention)
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 13 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

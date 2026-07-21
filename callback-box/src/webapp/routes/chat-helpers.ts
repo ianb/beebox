@@ -168,8 +168,8 @@ export function escapeXmlAttr(v: string): string {
  * `createdBy`, so there is genuinely no identity to attribute and we return
  * `null`, exactly as the cookie path does for an unauthenticated request.
  */
-export function resolveMobileSender(boxRoot: string, headers: IncomingHttpHeaders): SessionUser | null {
-  const mobile = resolveMobileRequestAuth(boxRoot, headers);
+export async function resolveMobileSender(boxRoot: string, headers: IncomingHttpHeaders): Promise<SessionUser | null> {
+  const mobile = await resolveMobileRequestAuth(boxRoot, headers);
   if (!mobile?.createdBy) return null;
   const email = mobile.createdBy;
   return { email, name: localUserName(email) ?? email };

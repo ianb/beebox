@@ -532,13 +532,20 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
 - **S2 — durable token in `?mobileToken=` URL (CLOSED 2026-07).** The carrier is gone: the token
   is header-only and the `cb_mobile` cookie carries what the browser sends on its own. All three
   copies of `mobileTokenFromUrl` are deleted. See `docs/implemented-plans/mobile-token-handshake.md`.
-- **S3 — unlocked device-store RMW + non-atomic write (OPEN).** `verifyMobileToken` does
-  read→mutate-`lastUsedAt`→write with no `withCardLock`/file-lock, racing `revokeMobileDevice`;
-  `writeDeviceStore` is a bare `writeFileSync` (crash mid-write corrupts the store).
+- **S3 — unlocked device-store RMW + non-atomic write (RESOLVED).** Every device-store mutation
+  (`resolveMobileTokenIdentity`'s `lastUsedAt` stamp, `redeemMobilePairingTicket`,
+  `revokeMobileDevice`) now runs through the cross-process `file-lock.ts` primitive
+  (`withDeviceStoreLock`) and lands via temp-file + fsync + atomic rename — the same pattern as
+  `webapp/local-users.ts`. Cross-process matters here because `cb hub` verifies a bearer (stamping
+  `lastUsedAt`) before proxying to the per-box child, which verifies it again and can revoke it, so
+  two processes genuinely race the file. Those functions are now `async`. See
+  `test/core/mobile/pairing-store-concurrency.doctest.md`.
 - **Token in plaintext, not Keychain (OPEN, iOS I6).** `PairedBoxStore` writes `authToken` as
   plaintext JSON in Application Support.
-- **Identity not unified.** Mobile requests are `authed` but `user=null`/`isOwner=false` — native
-  chat sends attribute to nobody (§2.3).
+- **Identity not fully unified.** Mobile requests are `authed` but the tRPC context still carries
+  `user=null`/`isOwner=false`. Chat sends no longer attribute to nobody, though: `POST /api/chat/send`
+  now falls back to `resolveMobileSender`, resolving the paired device's `createdBy` identity
+  (`test/webapp/routes/chat-mobile-sender.doctest.md`). Unifying the tRPC context itself remains open.
 - **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
   redeem 401s on the single-use token (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending

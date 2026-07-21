@@ -124,7 +124,7 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
   server.post<{ Body: { targetSessionId?: string | null } | undefined }>(
     "/api/capture/sessions",
     async (request, reply) => {
-      const owner = resolveCaptureRequestOwner({ boxRoot, request });
+      const owner = await resolveCaptureRequestOwner({ boxRoot, request });
       if (owner.status === "ownerless-mobile") {
         return reply.status(403).send({
           error: "This paired device predates mobile identity. Re-pair it before using Capture.",
@@ -153,7 +153,7 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     if (!parsed.success) {
       return reply.status(400).send({ error: "Invalid resumable capture query" });
     }
-    const owner = resolveCaptureRequestOwner({ boxRoot, request });
+    const owner = await resolveCaptureRequestOwner({ boxRoot, request });
     if (owner.status === "ownerless-mobile") {
       return reply.status(403).send({
         error: "This paired device predates mobile identity. Re-pair it before using Capture.",
@@ -188,7 +188,7 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
       const session = await readStagingSession({ boxRoot, id: request.params.id });
       if (!session) return reply.status(404).send({ error: "Session not found" });
-      const authorization = authorizeCaptureSessionOwner({
+      const authorization = await authorizeCaptureSessionOwner({
         boxRoot,
         request,
         createdBy: session.createdBy,
@@ -210,7 +210,7 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
       const session = await readStagingSession({ boxRoot, id: request.params.id });
       if (!session) return reply.status(404).send({ error: "Session not found" });
-      const authorization = authorizeCaptureSessionOwner({
+      const authorization = await authorizeCaptureSessionOwner({
         boxRoot,
         request,
         createdBy: session.createdBy,

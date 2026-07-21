@@ -18,8 +18,8 @@ export const pairingRouter = router({
 
   revokeDevice: ownerProcedure
     .input(z.object({ deviceId: z.string().min(1) }))
-    .mutation(({ ctx, input }) => {
-      const ok = revokeMobileDevice(ctx.boxRoot, input.deviceId);
+    .mutation(async ({ ctx, input }) => {
+      const ok = await revokeMobileDevice(ctx.boxRoot, input.deviceId);
       if (!ok) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
       }
