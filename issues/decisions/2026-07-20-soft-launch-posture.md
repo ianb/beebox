@@ -114,3 +114,50 @@ to people; close when the soft launch happens. Builds on
 the Pages site, the real-infra install verifications (ACME/DNS, Tailscale
 variant, macOS — the agent-reinterpretation path is the coverage story),
 CI / CONTRIBUTING / issue templates (fast-follows per the release plan).
+
+## Session issue index (this is the meta issue)
+
+Every issue filed or closed in the `open-source-readiness` session
+(all carry `discovered-in: worktree-open-source-readiness`, the
+session tag; the [meta-issues](../docs-and-chores/2026-07-21-meta-issues.md)
+convention itself came out of this session, and this doc is its first
+instance).
+
+Filed — features:
+[inline-bug-submission](../features/2026-07-20-inline-bug-submission.md),
+[agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md),
+[web-password-change](../features/2026-07-20-web-password-change.md),
+[invite-links](../features/2026-07-20-invite-links.md),
+[github-pages-site](../features/2026-07-20-github-pages-site.md),
+[explicit-api-key-config](../features/2026-07-20-explicit-api-key-config.md),
+[export-md-agent-instructions](../features/2026-07-20-export-md-agent-instructions.md),
+[schedules-off-by-default](../features/2026-07-20-schedules-off-by-default.md),
+[chat-thread-management](../features/2026-07-20-chat-thread-management.md),
+[first-run-experience](../features/2026-07-20-first-run-experience.md),
+[agent-containment-allowed-directories](../features/2026-07-20-agent-containment-allowed-directories.md).
+
+Filed — decisions:
+this doc,
+[release-discipline-and-update-story](2026-07-20-release-discipline-and-update-story.md),
+[git-push-confirmation](2026-07-20-git-push-confirmation.md).
+
+Filed — docs-and-chores / exploration:
+[day-to-day-usage-docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md),
+[meta-issues](../docs-and-chores/2026-07-21-meta-issues.md),
+[issues-inside-callback-box](../exploration/2026-07-21-issues-inside-callback-box.md).
+
+Closed this session:
+[google-oauth-callback-unauthenticated](../closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md),
+[csp-report-endpoint-memory-exhaustion](../closed/bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md),
+[hub-mobile-auth-presence-only](../closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md)
+(all fixed),
+[release-cloud-provider-honesty](../closed/decisions/2026-07-08-release-cloud-provider-honesty.md),
+[categorize-issues-into-subdirectories](../closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md).
+
+Substantially updated:
+[writing-skill](../features/2026-07-05-writing-skill.md) (launch
+writing as its first dogfood),
+[first-run-experience](../features/2026-07-20-first-run-experience.md)
+(the menu-of-flows direction), plus the scrub edits (four files) and
+[installation-remaining-work](../features/2026-07-19-installation-remaining-work.md)
+as standing context.
