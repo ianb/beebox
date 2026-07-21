@@ -95,7 +95,7 @@ to people; close when the soft launch happens. Builds on
    the OAuth callback wakes/enumerates boxes before auth and isn't owner-bound
    ([oauth-callback-wake-and-owner-binding](../bugs/2026-07-21-oauth-callback-wake-and-owner-binding.md)),
    and the device-store write has crash-safety gaps
-   ([device-store-crash-safety-and-renewal-race](../bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md)).
+   ([device-store-crash-safety-and-renewal-race](../closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md)).
    The first two are the real pre-launch blockers here.
 2. **[boxes-share-one-origin](2026-07-19-boxes-share-one-origin.md)** —
    either fix or stop claiming isolation in `auth.ts`/docs. Honest-docs is

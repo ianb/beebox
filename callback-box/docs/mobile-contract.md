@@ -137,11 +137,17 @@ cookie** minted from that token.
   `WKHTTPCookieStore.setCookie` before loading — that API's completion handler is
   documented-unreliable and can hang (WebKit bug 185483).
 - **Cookie lifetime and revocation.** The cookie lives one hour and is re-issued on any
-  authenticated response past its halfway point; renewal re-reads the device store, so a revoked
-  device stops renewing at once and its existing cookie is actively cleared. A signed cookie
-  cannot be revoked before it expires, so **revocation takes effect within at most one hour** on
-  an active session. That bound is the deliberate trade for a verification path that costs no
-  filesystem access per request.
+  authenticated response past its halfway point; renewal re-reads the device store
+  (`isMobileDeviceActive`), so once a revoke is committed and visible the next renewal declines
+  to re-issue and actively clears the existing cookie. That revocation-check read is **lock-free
+  and outside `withDeviceStoreLock`** (to keep the renewal path filesystem-cheap): a renewal that
+  reads the pre-revoke store *concurrently* with an in-flight revoke can still mint one more
+  full-TTL cookie, so the precise guarantee is **no cookie is issued more than one TTL (one hour)
+  after a revoke commits** — not that renewal stops on the same instant the revoke lands. A signed
+  cookie also cannot be invalidated before its own `exp`. Both effects collapse to the same bound:
+  **revocation takes effect within at most one hour** on an active session. That bound is the
+  deliberate trade for a verification path that costs no per-request lock. An *unreadable* store
+  (as opposed to genuinely empty) fails closed — the renewal check treats the device as inactive.
 - **Recovery.** A WebKit-initiated reload re-issues the bare URL with no `Authorization` header,
   so a lapsed cookie 401s. The web layer then calls `POST /api/pairing/session` with the token
   from localStorage and retries once (`lib/trpc/index.ts` · `trpcFetch`). This is why the

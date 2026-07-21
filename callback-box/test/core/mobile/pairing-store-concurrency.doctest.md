@@ -19,6 +19,8 @@ import {
   revokeMobileDevice,
   resolveMobileBearerIdentity,
   listMobileDevices,
+  isMobileDeviceActive,
+  DeviceStoreUnreadableError,
 } from "../../../src/core/mobile/pairing.js";
 
 const STORE = ".callback-box/mobile-devices.secret.json";
@@ -98,5 +100,84 @@ fs.readdirSync(path.join(box2.root, ".callback-box")).filter((f) => f.startsWith
 await box.cleanup();
 await box2.cleanup();
 ```
-</content>
-</invoke>
+
+## An unreadable store fails closed — a write never clobbers it
+
+If the store file exists but is corrupt (unparseable), a mutation must NOT
+overwrite it with just the new device (that would silently drop every device it
+failed to load). `readDeviceStore` throws `DeviceStoreUnreadableError`, so the
+redemption aborts and the file is left byte-for-byte intact.
+
+```ts
+const box3 = await makeTmpBox();
+const storeFile = path.join(box3.root, STORE);
+fs.mkdirSync(path.dirname(storeFile), { recursive: true });
+fs.writeFileSync(storeFile, "{ this is not valid json ", "utf-8");
+
+const ticket3 = createMobilePairingTicket(box3.root, { createdBy: "carol@example.com" });
+const caught = await redeemMobilePairingTicket(box3.root, { pairingToken: ticket3.token, deviceLabel: "phone3" })
+  .then(() => null, (e) => e);
+print(`threw unreadable: ${caught instanceof DeviceStoreUnreadableError}`);
+print(`file untouched: ${fs.readFileSync(storeFile, "utf-8") === "{ this is not valid json "}`);
+=>
+threw unreadable: true
+file untouched: true
+```
+
+```ts cleanup
+await box3.cleanup();
+```
+
+## isMobileDeviceActive fails closed on an unreadable store
+
+The lock-free renewal check must deny (return `false`) rather than throw or mint
+a cookie when the store can't be read.
+
+```ts
+const box4 = await makeTmpBox();
+const storeFile4 = path.join(box4.root, STORE);
+fs.mkdirSync(path.dirname(storeFile4), { recursive: true });
+fs.writeFileSync(storeFile4, "corrupt", "utf-8");
+
+isMobileDeviceActive(box4.root, "any-device-id")
+=> false
+```
+
+An absent store is genuinely empty (not unreadable) — no throw, just inactive.
+
+```ts continue
+const box5 = await makeTmpBox();
+isMobileDeviceActive(box5.root, "any-device-id")
+=> false
+```
+
+```ts cleanup
+await box4.cleanup();
+await box5.cleanup();
+```
+
+## Large store round-trips intact (looped writeSync lands the whole buffer)
+
+A store far bigger than a single `writeSync` might return in one call must be
+written completely — the write loops until every byte lands.
+
+```ts
+const box6 = await makeTmpBox();
+let ticket6;
+for (let i = 0; i < 200; i++) {
+  ticket6 = createMobilePairingTicket(box6.root, { createdBy: `user${i}@example.com` });
+  await redeemMobilePairingTicket(box6.root, { pairingToken: ticket6.token, deviceLabel: `device-${i}` });
+}
+const devices6 = listMobileDevices(box6.root);
+print(`count: ${devices6.length}`);
+print(`valid json: ${JSON.parse(fs.readFileSync(path.join(box6.root, STORE), "utf-8")).devices.length === 200}`);
+print(`no temp litter: ${fs.readdirSync(path.join(box6.root, ".callback-box")).filter((f) => f.includes(".tmp-")).length === 0}`);
+=>
+count: 200
+valid json: true
+no temp litter: true
+```
+
+```ts cleanup
+await box6.cleanup();
+```

@@ -3,14 +3,35 @@ title: "Device-store write not fully crash-safe; active-check reads outside the 
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+resolution: implemented
+---
+
+**RESOLVED (implemented).** Fixed in `src/core/mobile/pairing.ts`.
+`writeDeviceStore` now loops `writeSync` until the whole buffer lands (opening
+the temp `wx`), fsyncs the temp, atomically renames, then fsyncs the containing
+directory (`fsyncDir`), and cleans up the temp sibling on any failure.
+`readDeviceStore` now distinguishes genuinely-empty (ENOENT → `{ devices: [] }`)
+from unreadable (other IO error or unparseable JSON → throws the new
+`DeviceStoreUnreadableError`), so a mutation can no longer clobber a store it
+failed to load — the RMW aborts instead. `isMobileDeviceActive` catches that
+error and fails closed (returns `false`). The renewal read stays lock-free by
+design; the one-TTL revocation window it leaves is now stated precisely in
+`docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
+rather than moving the read inside the lock, to keep the per-request renewal path
+free of a cross-process lock — matches the module's deliberate "read-only
+accessors don't take the lock" design). Tests added in
+`test/core/mobile/pairing-store-concurrency.doctest.md`: unreadable store →
+redemption throws and the file is left intact; `isMobileDeviceActive` → `false`
+on corrupt store; 200-device store round-trips with no temp litter.
+
 ---
 
 **MED correctness. Residuals on the device-store fix
-([mobile-device-store-unlocked-rmw](../closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md)).**
+([mobile-device-store-unlocked-rmw](2026-07-17-mobile-device-store-unlocked-rmw.md)).**
 Found by Codex (2026-07-21). The lock+atomic-write landed and closed the
 gross RMW hole; these are the harder-edge robustness gaps. (The lock's own
 mutual-exclusion defect is separate and higher —
-[file-lock-empty-window-race](../closed/bugs/2026-07-21-file-lock-empty-window-race.md).)
+[file-lock-empty-window-race](2026-07-21-file-lock-empty-window-race.md).)
 
 `writeDeviceStore()` (`src/core/mobile/pairing.ts:96`):
 

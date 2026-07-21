@@ -73,38 +73,104 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-function readDeviceStore(boxRoot: string): MobileDeviceStore {
-  try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(mobileDevicesPath(boxRoot), "utf-8"));
-    const rawDevices = isRecord(parsed) && Array.isArray(parsed.devices) ? parsed.devices : [];
-    const devices = rawDevices
-      .map((d) => MobileDeviceSchema.safeParse(d))
-      .filter((r) => r.success)
-      .map((r) => r.data);
-    return { devices };
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("[pairing] failed to read mobile device store:", e);
-    }
-    return { devices: [] };
+/** Thrown when the device store exists but can't be read or parsed. Callers
+ *  fail closed on it — a mutation must NOT overwrite a store it couldn't read
+ *  (that would silently drop every device it failed to load), and a renewal
+ *  check treats "unreadable" as "not active". Distinct from a genuinely-absent
+ *  store (ENOENT → empty), which is the legitimate first-run case. */
+export class DeviceStoreUnreadableError extends Error {
+  constructor(readonly storePath: string, options?: { cause?: unknown }) {
+    super(`Mobile device store at ${storePath} exists but could not be read or parsed`, options);
+    this.name = "DeviceStoreUnreadableError";
   }
 }
 
-/** Crash-safe replace: write a temp sibling (0600), fsync, atomically rename
- *  over the target — a kill mid-write leaves either the old or the new complete
- *  file, never a truncated one. Call only inside `withDeviceStoreLock`. */
+/**
+ * Read the device store, distinguishing "genuinely empty" (ENOENT / first run →
+ * `{ devices: [] }`) from "unreadable" (any other IO error, or unparseable
+ * JSON → throws `DeviceStoreUnreadableError`). Individual devices that fail
+ * schema validation are dropped, but a whole-file read/parse failure fails
+ * closed so a subsequent write can't clobber a store we couldn't load.
+ */
+function readDeviceStore(boxRoot: string): MobileDeviceStore {
+  const file = mobileDevicesPath(boxRoot);
+  let raw: string;
+  try {
+    raw = fs.readFileSync(file, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return { devices: [] };
+    throw new DeviceStoreUnreadableError(file, { cause: e });
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    throw new DeviceStoreUnreadableError(file, { cause: e });
+  }
+  const rawDevices = isRecord(parsed) && Array.isArray(parsed.devices) ? parsed.devices : [];
+  const devices = rawDevices
+    .map((d) => MobileDeviceSchema.safeParse(d))
+    .filter((r) => r.success)
+    .map((r) => r.data);
+  return { devices };
+}
+
+/** fsync a directory so a rename's new dir entry is durable across a crash.
+ *  Platforms that can't fsync a directory (e.g. Windows) surface a benign errno
+ *  we swallow — the atomic rename is still the tear-safety guarantee. */
+function fsyncDir(dir: string): void {
+  let dirFd: number | undefined;
+  try {
+    dirFd = fs.openSync(dir, "r");
+    fs.fsyncSync(dirFd);
+  } catch (e) {
+    const code = errnoCode(e);
+    // EISDIR/EPERM/EINVAL/ENOTSUP: this platform can't fsync a directory handle.
+    // The rename remains atomic; only cross-crash durability of the dir entry is
+    // weakened, which is acceptable on those platforms. Log anything else.
+    if (code !== "EISDIR" && code !== "EPERM" && code !== "EINVAL" && code !== "ENOTSUP") {
+      console.warn("[pairing] failed to fsync device-store directory:", e);
+    }
+  } finally {
+    if (dirFd !== undefined) fs.closeSync(dirFd);
+  }
+}
+
+/** Crash-safe replace: write a temp sibling (0600), fsync it, atomically rename
+ *  over the target, then fsync the directory — a kill mid-write leaves either
+ *  the old or the new complete file, never a truncated one. `writeSync` is
+ *  looped until the whole buffer lands (a single call may short-write), and a
+ *  failure cleans up the temp sibling rather than leaving litter. Call only
+ *  inside `withDeviceStoreLock`. */
 function writeDeviceStore(boxRoot: string, store: MobileDeviceStore): void {
   const file = mobileDevicesPath(boxRoot);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const dir = path.dirname(file);
+  fs.mkdirSync(dir, { recursive: true });
   const tmp = `${file}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
-  const fd = fs.openSync(tmp, "w", 0o600);
+  const payload = Buffer.from(JSON.stringify(store, null, 2) + "\n", "utf-8");
   try {
-    fs.writeSync(fd, JSON.stringify(store, null, 2) + "\n");
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
+    const fd = fs.openSync(tmp, "wx", 0o600);
+    try {
+      let offset = 0;
+      while (offset < payload.length) {
+        offset += fs.writeSync(fd, payload, offset, payload.length - offset);
+      }
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    try {
+      fs.unlinkSync(tmp);
+    } catch (unlinkErr) {
+      if (errnoCode(unlinkErr) !== "ENOENT") {
+        console.warn("[pairing] failed to clean up device-store temp file:", unlinkErr);
+      }
+    }
+    throw e;
   }
-  fs.renameSync(tmp, file);
+  fsyncDir(dir);
 }
 
 /** Thrown when the device-store lock can't be acquired within the retry budget
@@ -267,9 +333,26 @@ async function resolveMobileTokenIdentity(
  * cookie already proved WHICH device it is (it's signed), so renewal only
  * needs to re-check that the device hasn't been revoked since — and must not
  * pay a store write to do it.
+ *
+ * This read is lock-free and outside `withDeviceStoreLock` (deliberately, to
+ * keep the renewal path filesystem-cheap). A renewal that reads the pre-revoke
+ * store concurrently with an in-flight revoke can still mint one more full-TTL
+ * cookie; that one-TTL window is the documented revocation bound (see
+ * docs/mobile-contract.md § Cookie lifetime and revocation). An unreadable
+ * store fails closed here — treat the device as inactive rather than renew.
  */
 export function isMobileDeviceActive(boxRoot: string, deviceId: string): boolean {
-  const device = readDeviceStore(boxRoot).devices.find((item) => item.id === deviceId);
+  let store: MobileDeviceStore;
+  try {
+    store = readDeviceStore(boxRoot);
+  } catch (e) {
+    if (e instanceof DeviceStoreUnreadableError) {
+      console.warn("[pairing] device store unreadable during renewal check; failing closed:", e);
+      return false;
+    }
+    throw e;
+  }
+  const device = store.devices.find((item) => item.id === deviceId);
   return device !== undefined && !device.revokedAt;
 }
 
