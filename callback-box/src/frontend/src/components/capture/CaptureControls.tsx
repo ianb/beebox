@@ -39,8 +39,14 @@ export function CaptureControls(props: CaptureControlsProps) {
         </div>
       ) : null}
       <div className="flex items-center justify-around w-full px-6 py-4">
-        <button onClick={props.onCancel} disabled={!props.sessionId || props.finalizing || !props.hasContent}
-          aria-label="Cancel capture session"
+        {/* Always leaveable: this control is the only exit from the full-screen
+            capture overlay, so it must never be disabled by "nothing to
+            discard" — an empty session was a dead end (no header close, no
+            Escape). handleCancel already no-ops the discard when there's no
+            content/session and just calls onExit. Only `finalizing` gates it,
+            so a Done in flight isn't interrupted. */}
+        <button onClick={props.onCancel} disabled={props.finalizing}
+          aria-label={props.hasContent ? "Discard and exit capture" : "Exit capture"}
           className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center disabled:opacity-30 active:bg-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-danger-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
