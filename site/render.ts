@@ -138,6 +138,8 @@ header .inner {
   display: flex; justify-content: space-between; align-items: center;
 }
 header .home { font-weight: 600; font-size: 0.95rem; text-decoration: none; }
+header .by { font-size: 0.85rem; color: #55554f; }
+header .by a { color: inherit; }
 header nav { display: flex; align-items: center; gap: 0.9rem; }
 header nav a { display: inline-flex; color: #55554f; }
 header nav a:hover { color: #17171a; }
@@ -152,7 +154,7 @@ const CHAT_ICON = "<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M2.
 function headerHtml(base: string): string {
   return `<header>
 <div class="inner">
-<a class="home" href="${escapeHtml(base)}">Callback Box</a>
+<span class="ident"><a class="home" href="${escapeHtml(base)}">Callback Box</a> <span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></span>
 <nav aria-label="Project links">
 <a href="https://github.com/ianb/callback-box" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub">${GITHUB_ICON}</a>
 <a href="https://callback-box.zulipchat.com" target="_blank" rel="noopener noreferrer" aria-label="Zulip community forum" title="Zulip community">${CHAT_ICON}</a>
