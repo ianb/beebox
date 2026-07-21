@@ -17,7 +17,7 @@ export async function resolveCaptureRequestOwner(opts: {
   boxRoot: string;
   request: FastifyRequest;
 }): Promise<CaptureRequestOwner> {
-  const requestIdentity = resolveRequestIdentity(opts.request);
+  const requestIdentity = resolveRequestIdentity(opts.request, { openAccess: opts.request.server.openAccess });
   if (requestIdentity.email) {
     return { status: "ok", email: requestIdentity.email };
   }

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-21T05:26:42Z
-Total documents: 201
+Generated: 2026-07-21T16:29:33Z
+Total documents: 203
 
 ## Issues
 
@@ -30,6 +30,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (57 lines)
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (49 lines)
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (621 lines)
+- **docs/implemented-plans/remove-open-mode.md** — "Remove the unauthenticated-mode operator path" (115 lines)
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (411 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (373 lines)
 - **docs/implemented-plans/semantic-search.md** — "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" (533 lines)
@@ -128,7 +129,7 @@ Referenced by:
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
 - docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/user-stories-audit-2026-06-26.md:1474 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
-- docs/stack-decisions.md:1183 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
+- docs/stack-decisions.md:1192 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:411 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
 - docs/unimplemented-plans/design-vision-superseded.md:61 (mention) — - Small additions like a `CLAUDE.md` file with custom prompts are preferred to elaborate new structures
 - ../.claude/agents/finish.md:56 (mention) — root `CLAUDE.md`/`code-style.md` — also drops you to the full flow.
@@ -298,6 +299,7 @@ Referenced by:
 - docs/implemented-plans/see-as-the-user.md:35 (mention) — - `callback-box/code-style.md` — mechanical rules (no default parameters,
 - docs/implemented-plans/selection-commentary.md:88 (mention) — - `callback-box/code-style.md:36` — *"**No default parameters**: handle
 - docs/implemented-plans/slopo-codehealth-adoption.md:42 (mention) — - **`callback-box/code-style.md`** — style preferences; the centralise-a-cast
+- docs/implemented-plans/tailscale-expose-and-protect.md:57 (mention) — - `callback-box/code-style.md` — no default parameters, injected-deps
 - docs/implemented-plans/user-location.md:60 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/view-render-testing.md:28 (mention) — - `callback-box/code-style.md` — no `any`; custom error classes not
 - docs/implemented-plans/webpage-card-and-commentary.md:48 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params,
@@ -316,6 +318,7 @@ Referenced by:
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:100 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
 - ../CLAUDE.md:39 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:90 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:17 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:37 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:102 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
@@ -413,6 +416,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:76 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/implemented-plans/hub-healthz-box-aggregation.md:313 (mention) — | Hub `/healthz` now 401s a pre-existing unauthenticated monitor | N/A | Behavior change, documented in `deploy/README.m
 - docs/implemented-plans/local-password-auth.md:541 (mention) — `deploy/README.md:196-217` env template gains `CB_AUTH_FILE` (default is
+- docs/implemented-plans/tailscale-expose-and-protect.md:110 (mention) — `cb hub` on the live server (hand-migrated; `deploy/README.md:85` records
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:283 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
@@ -537,11 +541,13 @@ References:
 
 #### docs/agent-install.md
 
-Title: "Installing callback-box with an AI agent" | 97 lines
+Title: "Installing callback-box with an AI agent" | 102 lines
 
 Referenced by:
 - CLAUDE.md:130 (mention) — | Agent-driven install (for a user's AI assistant) | `docs/agent-install.md` |
 - docs/implemented-plans/local-password-auth.md:540 (mention) — `docs/agent-install.md` gain the first-run account step;
+- docs/implemented-plans/remove-open-mode.md:49 (mention) — `docs/agent-install.md`, implemented-plans (historical — leave those).
+- docs/implemented-plans/tailscale-expose-and-protect.md:551 (mention) — surface is `docs/agent-install.md`'s existing "widening exposure is a real
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:25 (link) — handing [the agent install guide](../../callback-box/docs/agent-install.md)
 - ../issues/features/2026-07-19-installation-remaining-work.md:22 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
 - ../issues/features/2026-07-20-export-md-agent-instructions.md:18 (link) — [agent-install](../../callback-box/docs/agent-install.md) (agent adapts
@@ -783,7 +789,7 @@ Referenced by:
 
 #### docs/developer-install.md
 
-Title: "Developer install (from source)" | 143 lines
+Title: "Developer install (from source)" | 142 lines
 
 Referenced by:
 - CLAUDE.md:128 (mention) — | Developer install (from source) | `docs/developer-install.md` |
@@ -791,8 +797,8 @@ Referenced by:
 - docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
 - docs/implemented-plans/local-password-auth.md:539 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:79 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 - ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:65 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 
 References:
 - → docs/docker-install.md (link)
@@ -812,7 +818,7 @@ Referenced by:
 
 #### docs/docker-install.md
 
-Title: "Docker install (local + VPS)" | 197 lines
+Title: "Docker install (local + VPS)" | 245 lines
 
 Referenced by:
 - CLAUDE.md:129 (mention) — | Docker install (local + VPS) | `docs/docker-install.md` |
@@ -820,10 +826,15 @@ Referenced by:
 - docs/agent-install.md:43 (link) — ([docker-install.md](docker-install.md)) is simpler and bundles every
 - docs/developer-install.md:7 (link) — [docker-install.md](docker-install.md).
 - docs/implemented-plans/local-password-auth.md:539 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
+- docs/implemented-plans/remove-open-mode.md:48 (mention) — - Docs mentioning the opt-out: `docs/docker-install.md`,
+- docs/implemented-plans/tailscale-expose-and-protect.md:74 (mention) — - **The documented-but-untested path.** `callback-box/docs/docker-install.md:119`
 - docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:30 (mention) — `docs/docker-install.md`. Interacts with the deferred npm-publish rung
 - ../issues/features/2026-07-19-installation-remaining-work.md:17 (mention) — - Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:26 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
+
+References:
+- → ../issues/features/2026-07-19-installation-remaining-work.md (link)
 
 #### docs/engineering-principles.md
 
@@ -845,9 +856,11 @@ Referenced by:
 - docs/implemented-plans/refresh-maps-convergence.md:62 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
 - docs/implemented-plans/refresh-maps-convergence.review.md:113 (mention) — `docs/engineering-principles.md` (#1 types are structure, #3 validate at
 - docs/implemented-plans/remove-box-shape-v1.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — most load-bearing: **#4
+- docs/implemented-plans/remove-open-mode.md:17 (mention) — - `callback-box/docs/engineering-principles.md` — fail-closed; make invalid
 - docs/implemented-plans/responsive-figures.md:33 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
+- docs/implemented-plans/tailscale-expose-and-protect.md:48 (mention) — - `callback-box/docs/engineering-principles.md` — especially fail-closed /
 - docs/plans/android-companion-app.md:25 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
 - docs/plans/installation-story.md:41 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
@@ -964,12 +977,13 @@ Referenced by:
 - CLAUDE.md:150 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
 - deploy/README.md:38 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
 - docs/implemented-plans/hub-healthz-box-aggregation.md:4 (mention) — canary route all shipped; see `docs/health-checks.md` for the current
+- docs/implemented-plans/tailscale-expose-and-protect.md:414 (mention) — on the server plus a short runbook note in `docs/health-checks.md`'s style
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
 - src/hub/CLAUDE.md:15 (mention) — `docs/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:82 (mention) — (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:30 (mention) — a non-engineer, unlike `health-checks.md` (author's prod runbook).
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:63 (mention) — updates) and `docs/health-checks.md` owns deployed-server runbooks — this admin
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:68 (mention) — (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
 
 References:
 - → deploy/README.md (link)
@@ -1126,7 +1140,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 643 lines
+Title: "Cross-Platform Mobile Contract" | 649 lines
 
 Referenced by:
 - CLAUDE.md:142 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1137,6 +1151,7 @@ Referenced by:
 - docs/plans/android-companion-app.md:7 (mention) — grounded in the same-day contract inventory (`docs/mobile-contract.md`), the iOS
 - docs/plans/ios-input-plane-parity.md:119 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:17 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
+- ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:19 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/code-quality/2026-07-19-mobile-contract-small-cleanups.md:27 (mention) — one so a future Android client has one thing to learn. `docs/mobile-contract.md` §8 lists
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:29 (mention) — web (`docs/mobile-contract.md` §2).
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:11 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
@@ -1313,7 +1328,7 @@ Referenced by:
 
 #### docs/stack-decisions.md
 
-Title: "Stack Decisions" | 1201 lines
+Title: "Stack Decisions" | 1210 lines
 
 Referenced by:
 - docs/README.md:28 (mention) — `stack-decisions.md`; answers *why*, never *how to*.
@@ -1406,15 +1421,17 @@ References:
 
 #### docs/todo-security.md
 
-Title: "Security TODOs" | 49 lines
+Title: "Security TODOs" | 61 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.md:543 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
 - docs/maintenance.md:26 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:40 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
+- ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:33 (mention) — `callback-box/docs/todo-security.md` for the SECURITY.md security report.
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:95 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
-- ../issues/decisions/2026-07-20-soft-launch-posture.md:83 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
+- ../issues/decisions/2026-07-20-soft-launch-posture.md:100 (mention) — was accepted as near-nil-reachability and documented in `todo-security.md`).
+- ../issues/decisions/2026-07-20-soft-launch-posture.md:115 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:27 (link) — [todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
 
 References:
@@ -2167,7 +2184,8 @@ Title: "Local password auth, default-on" | 706 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.review.md:3 (mention) — Adversarial review of `local-password-auth.md` by OpenAI Codex
-- docs/todo-security.md:8 (mention) — `docs/implemented-plans/local-password-auth.md`). A box requires a logged-in identity unless
+- docs/implemented-plans/remove-open-mode.md:20 (mention) — - Precedent: `docs/implemented-plans/local-password-auth.md` (auth default-on;
+- docs/todo-security.md:8 (mention) — `docs/implemented-plans/local-password-auth.md`). A box always requires a
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:3 (mention) — design: ../../callback-box/docs/implemented-plans/local-password-auth.md
 - ../issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md:37 (mention) — `../../callback-box/docs/implemented-plans/local-password-auth.md`.
 
@@ -2257,7 +2275,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 506 lines
 
 Referenced by:
-- docs/mobile-contract.md:531 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:537 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:10 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:12 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:12 (mention) — The cb_mobile cookie work (`../../callback-box/docs/implemented-plans/mobile-token-handshake.md`) removed
@@ -2490,6 +2508,18 @@ References:
 - → docs/adding-schemas.md (mention)
 - → docs/migrations.md (mention)
 
+#### docs/implemented-plans/remove-open-mode.md **[ORPHAN]**
+
+Title: "Remove the unauthenticated-mode operator path" | 115 lines
+
+References:
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/local-password-auth.md (mention)
+- → docs/implemented-plans/tailscale-expose-and-protect.md (mention)
+- → docs/docker-install.md (mention)
+- → docs/agent-install.md (mention)
+- → src/services/CLAUDE.md (mention)
+
 #### docs/implemented-plans/responsive-figures.md **[ORPHAN]**
 
 Title: "Responsive Figures" | 411 lines
@@ -2623,6 +2653,25 @@ Referenced by:
 - docs/plans/docs-reorg.md:81 (mention) — `state-management-comparison.md` (bake-off record, unclear adoption), and
 - docs/stack-decisions.md:157 (mention) — Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. 
 
+#### docs/implemented-plans/tailscale-expose-and-protect.md
+
+Title: "Tailscale expose-and-protect" | 596 lines
+
+Referenced by:
+- docs/implemented-plans/remove-open-mode.md:22 (mention) — `docs/implemented-plans/tailscale-expose-and-protect.md` (whose
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:15 (mention) — `research/openclaw-hermes/`. Design/history: `docs/implemented-plans/tailscale-expose-and-protect.md`
+- ../research/openclaw-hermes/README.md:98 (mention) — | 23 | **Tailscale identity as an app-login accelerator (OpenClaw's post-fix `tailscale` auth mode: Serve identity heade
+
+References:
+- → ../issues/features/2026-07-19-installation-remaining-work.md (link)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/docker-install.md (mention)
+- → deploy/README.md (mention)
+- → docs/plans/installation-story.md (mention)
+- → docs/health-checks.md (mention)
+- → docs/agent-install.md (mention)
+
 #### docs/implemented-plans/user-location.md
 
 Title: "User Location (`cb location get`)" | 496 lines
@@ -2719,7 +2768,7 @@ Title: "Native Android companion app" | 763 lines
 Referenced by:
 - docs/implemented-plans/mobile-parity-sync.md:7 (mention) — the planned Android app (`docs/plans/android-companion-app.md`), and the
 - docs/implemented-plans/mobile-token-handshake.md:342 (mention) — - **Android.** No Android client exists yet; `docs/plans/android-companion-app.md` describes
-- docs/mobile-contract.md:222 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-contract.md:228 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
 - docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:5 (mention) — `callback-box/docs/plans/android-companion-app.md` is build-ready and its
 
@@ -2919,10 +2968,11 @@ References:
 Title: "Installation story, phase 1: developer install + local Docker" | 612 lines
 
 Referenced by:
+- docs/implemented-plans/tailscale-expose-and-protect.md:365 (mention) — `docs/plans/installation-story.md`'s failure-modes table, which treats the
 - docs/plans/source-available-release.md:271 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
+- ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:39 (mention) — first-class alternative in `callback-box/docs/plans/installation-story.md` and
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:13 (link) — [the installation story](../../callback-box/docs/plans/installation-story.md)
 - ../issues/features/2026-07-19-installation-remaining-work.md:3 (mention) — design: ../../callback-box/docs/plans/installation-story.md
-- ../issues/features/2026-07-20-tailscale-expose-and-protect.md:25 (mention) — first-class alternative in `callback-box/docs/plans/installation-story.md` and
 
 References:
 - → docs/plans/source-available-release.md (mention)
@@ -2991,7 +3041,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 149 lines
 
 Referenced by:
-- docs/mobile-contract.md:525 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:531 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:8 (mention) — follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
 - docs/plans/ios-companion-review-2026-07-09.md:3 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
 - ../issues/bugs/2026-07-17-ios-hq-transcription-window-unlocked.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -3480,6 +3530,7 @@ Referenced by:
 - docs/connectors.md:70 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:42 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/capture-mode.md:623 (mention) — `src/services/CLAUDE.md`). Scripted word timestamps + fixture image
+- docs/implemented-plans/remove-open-mode.md:55 (mention) — services convention, `src/services/CLAUDE.md`.)
 - docs/implemented-plans/semantic-search.md:35 (mention) — - `src/services/CLAUDE.md`: *"if a library or function touches external
 - docs/implemented-plans/web-push-notifications.md:194 (mention) — `src/services/CLAUDE.md`): `sendNotification(subscription, payload)` →
 - docs/testing.md:123 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s

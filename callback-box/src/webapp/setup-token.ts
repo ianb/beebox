@@ -20,7 +20,6 @@
  */
 
 import * as crypto from "node:crypto";
-import { authRequired } from "./auth.js";
 import { listUsers } from "./local-users.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
@@ -68,12 +67,12 @@ export function clearSetupToken(): void {
 
 /**
  * At listen time, when auth is required AND the store has zero users, arm a
- * setup token and print the claim link. No-op in open mode (there's no wall) or
- * once a user exists. A corrupt/unreadable store degrades to "no setup link"
+ * setup token and print the claim link. No-op in open access (there's no wall)
+ * or once a user exists. A corrupt/unreadable store degrades to "no setup link"
  * with a loud error — logins will surface the store problem per-request.
  */
-export function maybeArmFirstRunSetup({ publicUrl }: { publicUrl: string }): void {
-  if (!authRequired()) return;
+export function maybeArmFirstRunSetup({ publicUrl, openAccess }: { publicUrl: string; openAccess: boolean }): void {
+  if (openAccess) return;
   let userCount: number;
   try {
     userCount = listUsers().length;

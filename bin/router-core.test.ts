@@ -21,6 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   createRouterCore,
+  listenLoopback,
   type RouterCore,
   type RouterEffects,
   type SpawnOptions,
@@ -312,41 +313,6 @@ test("dedupe: two concurrent ensureRunning(name) share ONE start and one handle"
     assert.equal(h.spawner.lifecycleCalls().length, 2, "one lifecycle pair, not two");
   } finally {
     await h.cleanup();
-  }
-});
-
-test("dev-router hub child defaults to loopback-open auth (login page fix)", async () => {
-  // The per-worktree hub serves the login SPA from built dist with root-absolute
-  // asset paths that 404 behind the router's /<worktree>/ prefix — so the router
-  // defaults CB_ALLOW_UNAUTHENTICATED=1 (loopback-open) to skip the login gate.
-  // See issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md.
-  const prior = process.env.CB_ALLOW_UNAUTHENTICATED;
-  delete process.env.CB_ALLOW_UNAUTHENTICATED;
-  const h = await makeHarness();
-  try {
-    await startReady(h, "wt");
-    // [0]=fastify (the hub), [1]=vite — both share childEnv.
-    const hub = h.spawner.lifecycleCalls()[0]!;
-    assert.equal(hub.options.env?.CB_ALLOW_UNAUTHENTICATED, "1", "hub defaults to loopback-open");
-  } finally {
-    await h.cleanup();
-    if (prior === undefined) delete process.env.CB_ALLOW_UNAUTHENTICATED;
-    else process.env.CB_ALLOW_UNAUTHENTICATED = prior;
-  }
-});
-
-test("an explicit CB_ALLOW_UNAUTHENTICATED is respected, not overridden", async () => {
-  const prior = process.env.CB_ALLOW_UNAUTHENTICATED;
-  process.env.CB_ALLOW_UNAUTHENTICATED = "network";
-  const h = await makeHarness();
-  try {
-    await startReady(h, "wt");
-    const hub = h.spawner.lifecycleCalls()[0]!;
-    assert.equal(hub.options.env?.CB_ALLOW_UNAUTHENTICATED, "network", "explicit value passes through");
-  } finally {
-    await h.cleanup();
-    if (prior === undefined) delete process.env.CB_ALLOW_UNAUTHENTICATED;
-    else process.env.CB_ALLOW_UNAUTHENTICATED = prior;
   }
 });
 
@@ -655,4 +621,24 @@ test("pidfile serialization: a write cannot be clobbered by a concurrent stale r
   const final = files.get("/pids/wt.json");
   assert.ok(final, "N+1's record survives — not clobbered by N's stale unlink");
   assert.equal(JSON.parse(final).vitePid, 300, "the surviving record is N+1's");
+});
+
+// --- listenLoopback: the router must never bind a routable interface --------
+// (docs/implemented-plans/tailscale-expose-and-protect.md Track A: the router's
+// `/__router/*` control routes are unauthenticated, so exposure is a security
+// hole, not a feature. This exercises the real listen path main() uses.)
+
+test("listenLoopback binds 127.0.0.1 only", async () => {
+  const http = await import("node:http");
+  const server = http.createServer();
+  await new Promise<void>((resolve) => {
+    listenLoopback(server, 0, resolve);
+  });
+  try {
+    const addr = server.address();
+    assert.ok(addr && typeof addr === "object", "server has a bound address");
+    assert.equal(addr.address, "127.0.0.1", "bound to loopback, not a routable interface");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

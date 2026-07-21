@@ -62,6 +62,7 @@ import {
   errMessage,
   errnoCode,
   httpStatusOf,
+  listenLoopback,
   type RouterCore,
   type RouterEffects,
   type ResolvedWorktree,
@@ -1049,7 +1050,7 @@ async function main(): Promise<void> {
   } catch (err) {
     log(`startup reclaim failed (continuing): ${errMessage(err)}`);
   }
-  server.listen(ROUTER_PORT, () => {
+  listenLoopback(server, ROUTER_PORT, () => {
     log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
     log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout (root: ${MAIN_ROOT})`);
     log(`idle timeout: ${IDLE_TIMEOUT_MS}ms`);

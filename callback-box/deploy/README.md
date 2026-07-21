@@ -273,10 +273,10 @@ trusted internal header (`x-cb-authenticated-email`, verified by a per-boot `CB_
 — see `src/webapp/auth.ts`); each box still runs its own per-box authorization check
 independently (next section).
 
-> **Escape hatch (avoid in production).** `CB_ALLOW_UNAUTHENTICATED=1` serves a box open on a
-> loopback bind; `=network` is required to serve open on a public interface. Either prints a
-> loud warning on every boot and shows a persistent banner in the UI. It exists for
-> headless/CI/throwaway use, not for a real deployment.
+> **No unauthenticated mode.** Authentication is structurally always-on — the old
+> `CB_ALLOW_UNAUTHENTICATED` operator opt-out was removed (2026-07). No CLI flag, env var, or
+> config field serves a box open; the only unauthenticated servers that can exist are
+> test-constructed ones (an in-process `openAccess` construction option, used only by tests).
 
 ### Enabling Google OAuth (optional)
 

@@ -27,7 +27,6 @@ import {
   signSession,
   getSessionUser,
   getOwnerEmail,
-  authRequired,
   isHubMode,
   resolveRequestIdentity,
   COOKIE_NAME,
@@ -240,11 +239,11 @@ function registerPasswordRoutes(server: FastifyInstance): void {
   });
 
   // Advertise available methods so the SPA renders the right form without probing.
-  server.get("/auth/methods", async () => {
+  server.get("/auth/methods", async (request) => {
     return {
       password: true,
       google: getGoogleClientCreds() !== null,
-      setupRequired: authRequired() && listUsers().length === 0,
+      setupRequired: !request.server.openAccess && listUsers().length === 0,
     };
   });
 
@@ -375,10 +374,11 @@ function registerPasswordRoutes(server: FastifyInstance): void {
 
 /**
  * `GET /auth/me` — always registered. With a session, returns the user and the
- * boxes they can access (unchanged). In open mode (the
- * `CB_ALLOW_UNAUTHENTICATED` opt-out), returns `{ "open": true }` so the SPA can
- * surface the persistent open-mode banner instead of a bogus signed-out state.
- * Otherwise (auth required, no session) returns `401`.
+ * boxes they can access (unchanged). In open access (the `openAccess`
+ * construction option — a test-only server-construction seam, no CLI path sets
+ * it), returns `{ "open": true }` so the SPA treats it as signed-out rather
+ * than misreading it as an error. Otherwise (auth required, no session)
+ * returns `401`.
  */
 function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): void {
   server.get("/auth/me", async (request, reply) => {
@@ -386,7 +386,7 @@ function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): vo
     // distinct auth-store-unavailable outcome apply here too (Track D): a
     // password change or user removal must stop reporting the old session as
     // signed in, and a corrupt store answers 503, not a bogus signed-out 401.
-    const identity = resolveRequestIdentity(request);
+    const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
     if (identity.source === "unavailable") {
       return reply.status(503).send({ error: "Authentication temporarily unavailable" });
     }
@@ -410,7 +410,7 @@ function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): vo
         boxes: accessibleBoxes,
       };
     }
-    if (!authRequired()) {
+    if (request.server.openAccess) {
       return reply.type("application/json").send(JSON.stringify({ open: true }));
     }
     return reply.status(401).send({ error: "Not authenticated" });

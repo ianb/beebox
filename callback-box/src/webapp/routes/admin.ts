@@ -60,7 +60,7 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
     // has nothing to bind to and falls through — nonce possession is the secret
     // there. The nonce is already consumed above, so a mismatch fails closed.
     if (consumed.createdBy) {
-      const completingEmail = resolveRequestIdentity(request).email;
+      const completingEmail = resolveRequestIdentity(request, { openAccess: request.server.openAccess }).email;
       if (completingEmail !== consumed.createdBy) {
         console.log("[google-oauth] OAuth state owner mismatch, rejecting");
         return reply.status(403).send({ error: "OAuth state does not belong to the current session" });

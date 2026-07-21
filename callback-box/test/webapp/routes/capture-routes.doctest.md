@@ -296,25 +296,21 @@ mobile access, but cannot create captures in an authenticated box because all
 such devices would otherwise share the anonymous resume scope.
 
 ```ts
-const ctx = await makeTestServer();
+// "Auth enabled" is now the always-on default; makeTestServer opens the wall by
+// default, so construct with openAccess: false to exercise the authenticated path.
+const ctx = await makeTestServer({ openAccess: false });
 const ticket = createMobilePairingTicket(ctx.boxRoot);
 const paired = await redeemMobilePairingTicket(ctx.boxRoot, {
   pairingToken: ticket.token,
   deviceLabel: "Legacy phone",
 });
 if (!paired) throw new Error("pairing failed");
-// "Auth enabled" is now the always-on default; makeTestServer opts OUT via
-// CB_ALLOW_UNAUTHENTICATED, so delete it to exercise the authenticated path.
-const previousOptOut = process.env.CB_ALLOW_UNAUTHENTICATED;
-delete process.env.CB_ALLOW_UNAUTHENTICATED;
 const created = await ctx.request({
   method: "POST",
   url: "/api/capture/sessions",
   payload: { targetSessionId: "chat-owner" },
   headers: { authorization: `Bearer ${paired.deviceToken}` },
 });
-if (previousOptOut === undefined) delete process.env.CB_ALLOW_UNAUTHENTICATED;
-else process.env.CB_ALLOW_UNAUTHENTICATED = previousOptOut;
 JSON.stringify({ status: created.statusCode, error: created.body.error })
 => {"status":403,"error":"This paired device predates mobile identity. Re-pair it before using Capture."}
 ```

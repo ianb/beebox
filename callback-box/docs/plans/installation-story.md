@@ -466,7 +466,7 @@ whole Docker story this cut.
 | `cb init` dies after writing the marker, before the initial commit (no git identity, ownership refusal) → volume looks initialized | Lifecycle test covers the happy path; readiness check covers the partial state | Readiness requires marker + package.json + HEAD commit; image sets git identity + `safe.directory` | Clear (entrypoint refuses with recovery commands) |
 | Bind-mount UID mismatch → git refuses the box repo (`dubious ownership`) | Manual (documented) | Fixed-UID runtime user + documented `user:` compose override + `safe.directory` | Clear (git's own error + guide section) |
 | Docker entrypoint started against an empty volume | Lifecycle test | Readiness check prints the exact init command, exits nonzero | Clear |
-| Compose accidentally exposes the box publicly on a VPS | No (config, not code) | Default mapping `127.0.0.1:3210:3210`; public access only via explicit Caddy profile or Tailscale | Fail-closed by default |
+| Compose accidentally exposes the box publicly on a VPS | No (config, not code) | Default mapping `127.0.0.1:3210:3210`; public access only via explicit Caddy profile. The Tailscale variant never rebinds this mapping — it keeps loopback and fronts it with `tailscale serve` (`cb tailscale setup`), so the box is never bound off-loopback | Fail-closed by default |
 | Claude credentials volume lost on `docker compose down -v` | No | Named volume (survives `down`; `-v` is explicit destruction); guide warns next to the auth section | Clear-ish (documented; re-login is cheap) |
 | Dev-loop doc promises a flow that doesn't work on a clean clone | The C1 spike IS the test; rollout adds a clean-clone walkthrough | Doc promises only what was exercised | Clear (spike precedes doc) |
 

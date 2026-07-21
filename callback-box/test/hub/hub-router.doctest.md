@@ -30,10 +30,9 @@ const HUB_SECRET = "test-hub-secret-for-router-doctest";
 
 // Most of this file exercises hub-wide OPEN mode (the hub advertises
 // `x-cb-hub-auth: off` to children). Auth is always-on by default now, so open
-// mode is the explicit `CB_ALLOW_UNAUTHENTICATED` opt-out — this replaces the
-// old "GOOGLE_OAUTH_CLIENT_ID unset ⇒ open" signal. The ONE section that needs
-// hub auth actually ON deletes it locally (and restores it after).
-process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+// mode is the explicit `openAccess` construction option — `startHub` below
+// passes `openAccess: true` by default. The ONE section that needs hub auth
+// actually ON constructs its hub with `openAccess: false`.
 // Both hub health routes require this bearer key (mirroring the box server's
 // own /healthz). Set it for the whole doctest; the auth header helper below
 // sends it.
@@ -81,13 +80,14 @@ async function startFakeBox() {
   return { server, sockets, port, origin: `http://127.0.0.1:${port}` };
 }
 
-async function startHub(endpoints, { boxes, getHealth } = {}) {
+async function startHub(endpoints, { boxes, getHealth, openAccess = true } = {}) {
   const sockets = [];
   const server = await createHubServer({
     endpoints,
     getHealth: getHealth ?? (() => ({ status: "ok", boxes: [] })),
     hubSecret: HUB_SECRET,
     boxes: boxes ?? [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
+    openAccess,
   });
   server.on("connection", (socket) => sockets.push(socket));
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -334,9 +334,8 @@ this file) to have a session to check in the first place.
 const ownedBox = await makeTmpBox();
 await ownedBox.write("config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
 
-// Hub auth ON for this section: drop the open-mode opt-out so the hub
+// Hub auth ON for this section: construct the hub with openAccess: false so it
 // verifies the session cookie (the rest of the file runs open).
-delete process.env.CB_ALLOW_UNAUTHENTICATED;
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
 // registerAuthRoutes fails loudly on an ID-without-secret half-config
 // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
@@ -345,6 +344,7 @@ process.env.CB_SESSION_SECRET = "test-session-secret-for-router-doctest";
 
 const authedHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
   boxes: [{ slug: "test1", boxRoot: ownedBox.root }],
+  openAccess: false,
 });
 const requestsBeforeDenial = box.sockets.length;
 
@@ -384,8 +384,6 @@ JSON.stringify({ url: allowedBody.url, email: allowedBody.headers.xCbAuthenticat
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 delete process.env.CB_SESSION_SECRET;
-// Restore open mode for any remaining blocks / consistency with the file's default.
-process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 for (const socket of authedHub.sockets) socket.destroy();
 await new Promise((resolve) => authedHub.server.close(resolve));
 await ownedBox.cleanup();
@@ -427,13 +425,18 @@ from one naming an unknown slug (both redirect to login) — otherwise the route
 is an unauthenticated box-wake plus a configured-slug oracle. Needs hub auth ON.
 
 ```ts continue
-delete process.env.CB_ALLOW_UNAUTHENTICATED;
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
 process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-router-doctest";
 process.env.CB_SESSION_SECRET = "test-session-secret-for-router-doctest";
 
+// Hub auth ON: construct with openAccess: false so the callback verifies a
+// session cookie rather than passing through (auth is structurally always-on
+// now — the only auth-off path is this construction option).
 const preAuthProvider = makeLazyProvider({ slug: "preauthbox", origin: box.origin });
-const preAuthHub = await startHub(preAuthProvider, { boxes: [{ slug: "preauthbox", boxRoot: "/nonexistent/preauthbox" }] });
+const preAuthHub = await startHub(preAuthProvider, {
+  boxes: [{ slug: "preauthbox", boxRoot: "/nonexistent/preauthbox" }],
+  openAccess: false,
+});
 
 // Unauthenticated, REAL configured slug: redirect to login, box NOT woken.
 const knownUnauth = await fetch(`${preAuthHub.base}/auth/google-services/callback?code=abc123&state=preauthbox:admin`, { redirect: "manual" });
@@ -464,7 +467,6 @@ still no wake: 0
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 delete process.env.CB_SESSION_SECRET;
-process.env.CB_ALLOW_UNAUTHENTICATED = "1";
 for (const socket of preAuthHub.sockets) socket.destroy();
 await new Promise((resolve) => preAuthHub.server.close(resolve));
 ```
@@ -658,5 +660,4 @@ for (const socket of hub.sockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
 await new Promise((resolve) => hub.server.close(resolve));
 await new Promise((resolve) => box.server.close(resolve));
-delete process.env.CB_ALLOW_UNAUTHENTICATED;
 ```

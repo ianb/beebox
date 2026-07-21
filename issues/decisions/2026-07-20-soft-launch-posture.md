@@ -33,7 +33,7 @@ to people; close when the soft launch happens. Builds on
   default — with explicit testing provisions (a seeded dev credential +
   automation auth path) rather than disabling the wall. This reverses the
   dev-router login fix's approach and is the resolution for
-  [dev-router-lan-exposure](../bugs/2026-07-21-dev-router-lan-exposure.md):
+  [dev-router-lan-exposure](../closed/bugs/2026-07-21-dev-router-lan-exposure.md):
   close the hole by keeping auth real and fixing login-behind-the-prefix,
   not by loopback-binding.
 - **Contribution stance**: bug reports invited; PRs/feature contribution not
@@ -100,7 +100,7 @@ to people; close when the soft launch happens. Builds on
    was accepted as near-nil-reachability and documented in `todo-security.md`).
    **One remains open — the real pre-launch blocker:**
    `pnpm dev` exposes auth-disabled boxes on the LAN
-   ([dev-router-lan-exposure](../bugs/2026-07-21-dev-router-lan-exposure.md),
+   ([dev-router-lan-exposure](../closed/bugs/2026-07-21-dev-router-lan-exposure.md),
    HIGH — a regression from this session's own dev-router fix; resolution
    decided (dev-never-open), implementation pending).
 2. **[boxes-share-one-origin](2026-07-19-boxes-share-one-origin.md)** —

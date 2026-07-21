@@ -28,16 +28,6 @@ import type { Services } from "../../src/services/index.js";
 
 export const TEST_SLUG = "test";
 
-// Auth is always-on by default now, so a test server is only reachable if it
-// opts out — which is honest: these servers ARE deliberately open. Set the
-// opt-out at MODULE scope (not per createTestServer call) so a doctest that
-// exercises auth itself can `delete process.env.CB_ALLOW_UNAUTHENTICATED` in
-// its own setup block and have that stick — createTestServer never re-sets it,
-// exactly as tests used to toggle GOOGLE_OAUTH_CLIENT_ID. Loopback-only ("1")
-// is enough: injected servers never bind a socket, and any that do bind
-// loopback.
-process.env.CB_ALLOW_UNAUTHENTICATED ??= "1";
-
 export interface TestServerContext {
   server: FastifyInstance;
   boxRoot: string;
@@ -52,6 +42,14 @@ export interface TestServerContext {
 
 export interface TestServerOptions {
   services?: Services;
+  /**
+   * Serve without an auth wall. Defaults to `true` — most route doctests are
+   * deliberately open (they exercise routes, not auth), which the in-process
+   * `openAccess` construction option makes honest (it replaced the old
+   * module-scope `CB_ALLOW_UNAUTHENTICATED` env opt-out). An auth-exercising
+   * doctest passes `openAccess: false` to turn the wall on.
+   */
+  openAccess?: boolean | undefined;
 }
 
 // Filter chat-history backfill noise: every makeTestServer() boots a fresh
@@ -134,10 +132,12 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   // instance the routes emit on (transient events never leave the process).
   const eventBus = createEventBus(boxRoot, { pollInterval: 1000 });
 
-  // Create server pointing at this temp box
+  // Create server pointing at this temp box. Open by default (see
+  // TestServerOptions.openAccess); an auth-exercising doctest passes false.
   const server = await createServer({
     boxes: [{ slug: TEST_SLUG, boxRoot, eventBus }],
     services: opts?.services,
+    openAccess: opts?.openAccess ?? true,
   });
 
   return {

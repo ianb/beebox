@@ -59,7 +59,6 @@ import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
-  authRequired,
   resolveRequestIdentity,
   getOwnerEmail,
   HUB_SECRET_HEADER,
@@ -96,6 +95,14 @@ export interface HubServerOptions {
    * `http://localhost:3210` (the dev router's port, not the hub's).
    */
   baseUrl: string;
+  /**
+   * Serve the whole fleet WITHOUT an authentication wall. Defaults to `false`
+   * (auth always required). No CLI path sets it — `cb hub` never passes it; it
+   * exists only as an in-process test seam (replacing the removed
+   * `CB_ALLOW_UNAUTHENTICATED` env opt-out). When `true`, the hub advertises
+   * `x-cb-hub-auth: off` to its children.
+   */
+  openAccess?: boolean | undefined;
 }
 
 /** First path segment, e.g. `/test1/browse/x` -> `test1`. Mirrors the dev
@@ -165,10 +172,10 @@ async function respondHubBoxes(opts: {
   reply: FastifyReply;
 }): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
   const { boxes, request, reply } = opts;
-  if (!authRequired()) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  if (request.server.openAccess) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
   const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
   if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
-  const identity = resolveRequestIdentity(request);
+  const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
   if (identity.source === "unavailable") {
     return reply.status(503).send({ error: "Authentication temporarily unavailable" });
   }
@@ -222,10 +229,12 @@ function decideHubAuth({
   cookieHeader,
   isWebhook,
   hubSecret,
+  openAccess,
 }: {
   cookieHeader: string | undefined;
   isWebhook: boolean;
   hubSecret: string;
+  openAccess: boolean;
 }): HubAuthDecision {
   // Webhooks are outside the auth wall today (external callers never went
   // through Cloudflare Access either) -- proxy through with just the hub
@@ -236,9 +245,9 @@ function decideHubAuth({
     return { authorized: true, headersToSet: { [HUB_SECRET_HEADER]: hubSecret } };
   }
   // The hub advertises `x-cb-hub-auth: off` to its children ONLY when the hub
-  // itself was started with the `CB_ALLOW_UNAUTHENTICATED` opt-out — i.e.
-  // hub-wide open mode. Google configuration no longer decides this.
-  if (!authRequired()) {
+  // was constructed with `openAccess: true` — i.e. hub-wide open mode. No CLI
+  // path sets it (test seam only); Google configuration never decided this.
+  if (openAccess) {
     return {
       authorized: true,
       headersToSet: { [HUB_SECRET_HEADER]: hubSecret, [HUB_AUTH_OFF_HEADER]: "off" },
@@ -250,7 +259,7 @@ function decideHubAuth({
   // (HMAC + expiry only) skipped. The hub process is never in hub mode
   // (`isHubMode()` false — it mints the secret, it doesn't receive one), so the
   // resolver takes its cookie path here.
-  const identity = resolveRequestIdentity({ headers: { cookie: cookieHeader } });
+  const identity = resolveRequestIdentity({ headers: { cookie: cookieHeader } }, { openAccess });
   if (identity.source === "cookie" && identity.email) {
     return {
       authorized: true,
@@ -272,8 +281,14 @@ function decideHubAuth({
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
   const { endpoints, getHealth, hubSecret, boxes, baseUrl } = options;
+  const openAccess = options.openAccess ?? false;
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
+
+  // Whether the hub serves the fleet without an auth wall. Decorated onto the
+  // instance so the hub's own routes (box picker, /api/boxes) consult a
+  // per-instance flag instead of the environment. No CLI path sets it.
+  app.decorate("openAccess", openAccess);
 
   // The hub's login routes (routes/auth.ts) read the session cookie via
   // @fastify/cookie's request decoration, same as a standalone box server.
@@ -389,7 +404,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // first: an unauthenticated request redirects to login regardless of slug,
     // so it neither wakes a box nor reveals whether the slug is configured.
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret, openAccess });
     if (!decision.authorized) {
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
@@ -445,7 +460,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
 
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret, openAccess });
     if (!isMobilePairingRedeem && !mobileAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
@@ -496,7 +511,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
-    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret });
+    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret, openAccess });
     if (!mobileAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();

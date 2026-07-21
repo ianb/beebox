@@ -24,15 +24,24 @@ import { promisify } from "node:util";
 import { detectBoxTarget, scaffoldPackageRoot } from "../../src/core/box/package.js";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../src/core/box/index.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
+import { signSession } from "../../src/webapp/auth.js";
 
 const execFileP = promisify(execFile);
 
-// Auth is always-on by default now. This e2e serves a box with no login
-// configured and fetches its HTML through the hub, so it must opt into open
-// mode — otherwise the proxied navigation hits the auth wall and redirects to a
-// (non-existent) /auth/login in a loop. The spawned `cb hub` inherits this env,
-// runs hub-wide open, and tells its children `x-cb-hub-auth: off`.
-process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+// Auth is always-on now — there is no open-mode opt-out anymore, so the spawned
+// `cb hub` always enforces the wall. This e2e therefore authenticates for real:
+// a session cookie signed with the shared CB_SESSION_SECRET the hub inherits.
+// The hub verifies the cookie (it holds the session secret) and injects the
+// gated `x-cb-authenticated-email` header to the child; the child authorizes it
+// via `canAccessBox` against CB_OWNER_EMAIL (which the child inherits, but the
+// session secret deliberately does NOT — see child-env.ts). CB_AUTH_FILE points
+// at a nonexistent path so the hub's cookie resolution reads no real local store
+// (a gen-less cookie for an email with no record is a valid Google-only-style
+// identity — source "cookie").
+process.env.CB_SESSION_SECRET = "test-session-secret-for-hub-e2e-doctest";
+process.env.CB_OWNER_EMAIL = "owner@example.com";
+process.env.CB_AUTH_FILE = path.join(os.tmpdir(), "cb-hub-e2e-nonexistent-auth.json");
+const ownerCookie = `cb_session=${signSession({ email: "owner@example.com", name: "Owner" })}`;
 // The hub's /healthz is diag-key-gated; the spawned hub inherits this env.
 const DIAG_KEY = "test-diag-key-for-e2e-doctest";
 process.env.CB_DIAG_API_KEY = DIAG_KEY;
@@ -167,7 +176,9 @@ still proves the request reached the CHILD process, not the hub answering
 on its own behalf:
 
 ```ts continue
-const proxied = await fetch(`http://127.0.0.1:${hubPort}/fixture/some-client-route`);
+const proxied = await fetch(`http://127.0.0.1:${hubPort}/fixture/some-client-route`, {
+  headers: { cookie: ownerCookie },
+});
 proxied.status
 => 200
 

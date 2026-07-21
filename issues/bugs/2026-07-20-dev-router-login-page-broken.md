@@ -3,10 +3,17 @@ title: "Hub login page is unusable behind the dev router prefix"
 area: router
 filed-by: agent
 discovered-in: worktree-lightbox-gestures — smoke-testing the lightbox needed auth and the login page couldn't render
-resolution: implemented
 ---
 
-**Resolved** by taking the fourth fix direction below (dev-router skips hub
+**Reopened 2026-07-21** — the `CB_ALLOW_UNAUTHENTICATED` workaround was dropped
+when main removed open-mode (commit 8499cc52; auth is now structurally
+always-on). Login behind the dev-router prefix is broken again and needs a
+proper fix (prefix-aware login SPA / router asset rewrite) under the
+dev-never-open policy — the "make login actually work behind the prefix"
+directions below, not another auth-skip. The previous "Resolved" note is kept
+below for history but no longer applies.
+
+**Previously resolved** by taking the fourth fix direction below (dev-router skips hub
 auth). The router now spawns each worktree's hub with
 `CB_ALLOW_UNAUTHENTICATED=1` by default (`bin/router-core.ts`, in `childEnv`),
 so dev traffic never hits the broken login SPA: no login redirect (problem 2)

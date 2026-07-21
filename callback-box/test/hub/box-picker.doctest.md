@@ -6,7 +6,7 @@ the frontend bundle isn't built it falls back to a minimal server-rendered list,
 filtered through the SAME fail-closed `allowedEmails` predicate a box uses for
 its own ACL (`canAccessBox`, `src/webapp/box-access.ts`), not a copy of it. When
 hub auth is off, every configured box is listed unconditionally (same "open"
-semantics a standalone box gets with the `CB_ALLOW_UNAUTHENTICATED` opt-out).
+semantics a standalone box gets with the `openAccess` construction option).
 Either way the route is auth-gated: an unauthenticated navigation redirects to
 login.
 
@@ -36,8 +36,12 @@ const boxes = [
 // ACL filtering lives; the SPA-served case gets a real index.html below.
 const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-doctest");
 
-async function startPicker(frontendDist = NO_FRONTEND) {
+async function startPicker(frontendDist = NO_FRONTEND, openAccess = false) {
   const app = Fastify({ logger: false });
+  // The box picker reads `request.server.openAccess` (the in-process seam that
+  // replaced the CB_ALLOW_UNAUTHENTICATED env opt-out); decorate it here as the
+  // real hub does in createHubServer.
+  app.decorate("openAccess", openAccess);
   await app.register(fastifyCookie);
   registerBoxPicker(app, { boxes, frontendDist });
   await app.ready();
@@ -50,11 +54,10 @@ async function startPicker(frontendDist = NO_FRONTEND) {
 ```ts
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-// "Hub auth off" is now the explicit opt-out, not "Google unconfigured".
-process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+// "Hub auth off" is now the explicit openAccess construction option.
 const distDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "picker-dist-"));
 await fs.promises.writeFile(path.join(distDir, "index.html"), `<!doctype html><html><body><div id="root"></div></body></html>`);
-const spaApp = await startPicker(distDir);
+const spaApp = await startPicker(distDir, true);
 const spaRes = await spaApp.inject({ method: "GET", url: "/" });
 spaRes.statusCode
 => 200
@@ -73,8 +76,7 @@ await fs.promises.rm(distDir, { recursive: true, force: true });
 ```ts
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-process.env.CB_ALLOW_UNAUTHENTICATED = "1";
-const openApp = await startPicker();
+const openApp = await startPicker(NO_FRONTEND, true);
 const openRes = await openApp.inject({ method: "GET", url: "/" });
 openRes.statusCode
 => 200
@@ -90,8 +92,7 @@ await openApp.close();
 ## Hub auth on, no session: redirected to login
 
 ```ts
-// Auth is required by default now; clear any opt-out a prior subtest set.
-delete process.env.CB_ALLOW_UNAUTHENTICATED;
+// Auth is required by default now (startPicker's openAccess defaults to false).
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-doctest";
 // Paired secret: an ID-without-secret half-config is now a loud
 // MissingOAuthClientSecretError wherever auth routes register.

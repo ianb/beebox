@@ -4,11 +4,20 @@ needs: [decision]
 area: router
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+resolution: implemented
 ---
+
+**Resolved by main's removal of the `CB_ALLOW_UNAUTHENTICATED` path (commit
+8499cc52) — dev is now structurally always-authenticated.** There is no open
+mode left to expose over the LAN: the router no longer disables auth, so a LAN
+peer reaching the outer router still hits the login wall. The remaining
+follow-ups (fix login-behind-the-prefix for real; add a seeded-dev-credential
+automation auth path) are tracked in
+[dev-router-login-page-broken](../../bugs/2026-07-20-dev-router-login-page-broken.md).
 
 **HIGH, and a regression from this session's own work.** Found by Codex
 (2026-07-21), verified. The dev-router login fix
-([dev-router-login-page-broken](../closed/bugs/2026-07-20-dev-router-login-page-broken.md))
+([dev-router-login-page-broken](../../bugs/2026-07-20-dev-router-login-page-broken.md))
 made `bin/router-core.ts` default every worktree hub to
 `CB_ALLOW_UNAUTHENTICATED=1` (`:334`). That was reasoned as safe because the
 child hub binds `127.0.0.1`. But the **outer router** calls
@@ -38,7 +47,7 @@ The real fork:
 three options above — the fix is to stop disabling auth in dev at all.
 Revert the `CB_ALLOW_UNAUTHENTICATED=1` router default, keep the login wall
 genuinely enforced, and instead (a) fix login-behind-the-prefix for real
-(the [dev-router-login-page-broken](../closed/bugs/2026-07-20-dev-router-login-page-broken.md)
+(the [dev-router-login-page-broken](../../bugs/2026-07-20-dev-router-login-page-broken.md)
 problem the default was papering over) so a human can log in through the dev
 router, and (b) add a testing provision — a seeded dev credential plus an
 automation auth path (bin/browse / tours log in with it) — so headless

@@ -36,6 +36,23 @@ export interface ServerOptions {
   prewarmChat?: boolean | undefined;
 }
 
+/**
+ * The construction options `createServer` actually accepts — the public
+ * `ServerOptions` plus the test-only `openAccess` seam. Deliberately NOT part
+ * of the public `callback-box/server` export surface (exports/server.ts
+ * re-exports only `ServerOptions`), so an embedder can't request an
+ * unauthenticated server through the published types. `openAccess` serves the
+ * box(es) WITHOUT an authentication wall (defaults to `false`); it replaced the
+ * removed `CB_ALLOW_UNAUTHENTICATED` env opt-out, is decorated onto the fastify
+ * instance, and is consulted per-instance by the auth resolver. No CLI path
+ * sets it, and an `openAccess` server is non-listenable (see
+ * `assertOpenAccessNotListening` in server.ts) — it exists only to let
+ * `.inject()`-based tests exercise routes with the wall down.
+ */
+export interface InternalServerOptions extends ServerOptions {
+  openAccess?: boolean | undefined;
+}
+
 export interface ServerContext {
   boxRoot: string;
   server: FastifyInstance;

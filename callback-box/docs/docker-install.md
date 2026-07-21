@@ -118,18 +118,66 @@ started at all.
 
 ### Tailscale-only (no open ports)
 
+> **Status: not yet exercised end-to-end.** The smoke harness
+> (`docker/smoke-docker.sh`, `docker/smoke-vps-install.sh`) does not cover
+> this path. Live proof is tracked in
+> [`issues/features/2026-07-19-installation-remaining-work.md`](../../issues/features/2026-07-19-installation-remaining-work.md)
+> item 2 — treat the steps below as unverified until that item records a run.
+
 To reach the box privately over a [tailnet](https://tailscale.com/) with
-nothing exposed to the public internet:
+nothing exposed to the public internet, `cb tailscale` drives the whole
+setup — the box keeps its normal loopback mapping, and Tailscale Serve
+fronts it with TLS. Which topology applies depends on where `cb` runs:
 
-1. Install Tailscale on the VPS and `tailscale up`.
-2. Change the box's port mapping in `compose.yaml` from `127.0.0.1:3210:3210`
-   to bind the tailnet IP instead, e.g. `100.x.y.z:3210:3210` (your
-   `tailscale ip -4`), and do **not** start the Caddy profile.
-3. `docker compose up -d`.
+**Host-daemon (from-source or VPS-host install, `cb` on the same machine as
+`tailscaled`):**
 
-The box is then reachable at `http://<tailnet-ip>:3210/box/` from any device on
-your tailnet, with zero ports open to the world. (Add TLS via Tailscale Serve
-if you want `https://`.)
+1. [Install Tailscale](https://tailscale.com/download) on the host and run
+   `tailscale up`.
+2. Run `cb tailscale setup --target 3210` (`--target <port>` is required — the
+   port the box is served on). It inspects the real Tailscale and serve state
+   and tells you the single next step — logging in, approving the machine,
+   enabling tailnet HTTPS — looping until the box is reachable at
+   `https://<host>.<tailnet>.ts.net/`. `cb tailscale status --target 3210`
+   is the read-only version of the same inspection; `cb tailscale stop
+   --target 3210` removes the mapping.
+
+   Run `cb tailscale setup` as the SAME OS account the box server runs as (the
+   service account in prod, not root or an admin). The exposure record it writes
+   (`~/.config/cb/tailscale-exposure.json`, or `CB_TAILSCALE_EXPOSURE_FILE`) is
+   bookkeeping for `cb tailscale status`/`stop` — drift detection and scoped
+   teardown of the serve mapping. It does NOT gate server startup (there is no
+   unauthenticated mode left to guard); a setup run under a different user just
+   records the mapping where `status`/`stop` won't find it.
+
+   On the host-daemon path setup still fails closed: it refuses to expose a
+   server that doesn't report an authenticated posture at its `/auth/me`
+   (Tailscale membership is never treated as authentication). Current `cb
+   serve`/`cb hub` are always authenticated — there is no unauthenticated mode
+   anymore — so this refusal is a guard against pointing setup at the wrong port
+   or at a legacy/foreign server.
+
+**Docker container (`cb` runs inside the container, which has no
+`tailscaled`):** `cb tailscale setup` cannot drive a host daemon it can't
+reach — run inside the container it reports `binary-absent` (the generic
+"install Tailscale, then `tailscale up`" step), which is your cue to use the
+sidecar topology below rather than configure Tailscale in-container. The
+supported shape is Tailscale's own
+[sidecar container](https://tailscale.com/kb/1282/docker): a `tailscale`
+service holding the tailnet identity (`TS_AUTHKEY`) and a serve config
+(`TS_SERVE_CONFIG`) that proxies to the box service over the compose
+network, added alongside — not instead of — the existing services. The box
+service keeps its `127.0.0.1:3210:3210` mapping unchanged; only the sidecar
+is tailnet-facing. Follow Tailscale's compose example there for the
+`TS_AUTHKEY` and `TS_SERVE_CONFIG` shape.
+
+**The sidecar path has NO cb-side guard, by construction.** The sidecar
+applies `TS_SERVE_CONFIG` directly; `cb tailscale setup` never runs and no
+exposure intent is written, so setup's posture refusal never gets a chance to
+inspect this topology. Authentication is always on, so the box behind the
+sidecar still requires a login — but keep the box loopback only
+(`127.0.0.1:3210:3210`) so the sidecar stays the only tailnet-facing path, and
+rely on the box's own always-on auth wall as the protection here.
 
 ### Box login (on by default)
 

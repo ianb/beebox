@@ -64,6 +64,7 @@ import {
   extfileCommand,
   locationCommand,
   pushCommand,
+  tailscaleCommand,
 } from "./commands/index.js";
 
 // Validate the environment before any command runs (Track D.8). The CLI
@@ -135,6 +136,7 @@ program.addCommand(handleCommand);
 program.addCommand(extfileCommand);
 program.addCommand(locationCommand);
 program.addCommand(pushCommand);
+program.addCommand(tailscaleCommand);
 
 // ============================================
 // Inspection commands

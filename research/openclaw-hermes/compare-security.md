@@ -110,6 +110,39 @@ Both competitors: Docker-based, opt-in, **off by default**.
   detailed here — worth a follow-up read of the gateway/webapp auth code if this dimension needs
   deeper coverage.
 
+#### OpenClaw's `tailscale` auth mode — mechanics and fail-open history
+
+Filling the gap flagged above (this dimension previously named the mode but not its shape).
+OpenClaw's `tailscale` mode leans on Tailscale Serve rather than reimplementing identity: Serve
+terminates TLS in front of the loopback-bound Gateway and injects `Tailscale-User-Login` (plus
+`-Name`/`-Profile-Pic`) headers, stripping any attacker-supplied headers of the same name first.
+Because the backend sits behind Serve, its TCP peer for every request is Serve's own re-dial to
+localhost — the app can't `whois` its real socket — so OpenClaw independently resolves the
+request's `x-forwarded-for` via the local `tailscale whois` LocalAPI call and accepts the identity
+only when that resolution matches the header, and only for requests that arrive on loopback
+carrying the full expected header set. Off-loopback or partial-header requests are rejected outright
+rather than trusted on the header alone — the header is corroborating evidence, not the credential.
+
+That design has still shipped two fail-open incidents, which is why this plan (see the Tailscale
+expose-and-protect plan, Track E) treats the mode as a cautionary pattern rather than a template to
+copy directly:
+
+- **GHSA-hff7-ccv5-52f8** — tokenless Tailscale header auth, originally scoped to a single WebSocket
+  connection, silently applied to all HTTP routes once the flag was read in a shared code path; fixed
+  by making the behavior default-false. The bug class: an auth mode written for one narrow surface
+  quietly widened its blast radius because nothing scoped it back down.
+- **Issue #50630 (CVSS 9.3)** — `tailscale.mode: serve` combined with `auth.mode: none` had no
+  startup guard and an unconditional `{ ok: true }` branch, so mere tailnet membership silently
+  became authentication with no credential check at all.
+- **Issue #57241** — `serve` mode silently clobbered a previously-set Funnel config on restart,
+  turning a private tailnet-only exposure into a public one without any signal to the operator.
+
+Together these read as one lesson: header-plus-whois cross-checking is a reasonable *identity*
+signal, but the surrounding system needs an explicit, fail-closed startup guard and drift detection
+of its own — the header check alone did not prevent either fail-open incident; both were caused by
+code paths *around* it (scope creep in #1, missing guard in #2, silent config clobber in #3), not
+by the whois cross-check itself being wrong.
+
 ## 2. Confirmations — where CBX already matches instincts seen elsewhere
 
 - **`bypassPermissions` + workdir scoping ≈ their "default full exec" posture.** OpenClaw's
