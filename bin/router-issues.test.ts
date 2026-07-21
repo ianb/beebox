@@ -20,6 +20,9 @@ import {
   rewriteIssueLinks,
   listIssues,
   collectOverlay,
+  parseFilters,
+  matches,
+  deriveFacets,
 } from "./router-issues.js";
 
 // --- parseFrontmatter ---------------------------------------------------------
@@ -112,6 +115,40 @@ test("parseIssueFile: no title anywhere falls back to the slug", () => {
   const issue = parseIssueFile("bugs/2026-01-01-mystery.md", "just body text, no frontmatter or H1");
   assert.equal(issue.frontmatter.title, "2026-01-01-mystery");
   assert.equal(issue.research, "none");
+});
+
+// --- labels facet -------------------------------------------------------------
+
+test("parseIssueFile: labels parsed from a flow list", () => {
+  const src = `---\ntitle: "Tagged"\nlabels: [soft-launch, epic-onboarding]\n---\nbody`;
+  const issue = parseIssueFile("features/2026-01-01-tagged.md", src);
+  assert.deepEqual(issue.frontmatter.labels, ["soft-launch", "epic-onboarding"]);
+});
+
+test("parseIssueFile: labels default to [] when absent", () => {
+  const issue = parseIssueFile("bugs/2026-01-01-plain.md", `---\ntitle: "Plain"\n---\nbody`);
+  assert.deepEqual(issue.frontmatter.labels, []);
+});
+
+test("matches: an issue appears under each of its labels, and not under others", () => {
+  const issue = parseIssueFile(
+    "features/2026-01-01-tagged.md",
+    `---\ntitle: "Tagged"\nlabels: [soft-launch, epic-onboarding]\n---\nbody`,
+  );
+  const under = (label: string): boolean =>
+    matches(issue, parseFilters(new URLSearchParams(`labels=${label}`)), false);
+  assert.equal(under("soft-launch"), true);
+  assert.equal(under("epic-onboarding"), true);
+  assert.equal(under("nope"), false);
+});
+
+test("deriveFacets: lists distinct labels sorted, across issues", () => {
+  const issues = [
+    parseIssueFile("features/2026-01-01-a.md", `---\ntitle: "A"\nlabels: [soft-launch, zeta]\n---\nx`),
+    parseIssueFile("bugs/2026-01-02-b.md", `---\ntitle: "B"\nlabels: [soft-launch, alpha]\n---\nx`),
+    parseIssueFile("bugs/2026-01-03-c.md", `---\ntitle: "C"\n---\nx`),
+  ];
+  assert.deepEqual(deriveFacets(issues).labels, ["alpha", "soft-launch", "zeta"]);
 });
 
 // --- parseNameStatusZ / parseNulPaths ------------------------------------------

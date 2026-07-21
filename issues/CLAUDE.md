@@ -64,6 +64,7 @@ title: "Short human title"    # required — the H1 replacement
 needs: [design, decision]     # what must happen before this can be called done
 design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
+labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
 filed-by: agent               # only for non-Ian items
 discovered-in: worktree-foo — while doing X    # pair with filed-by: agent
 resolution: implemented       # closed/ only: implemented | wontfix | superseded
@@ -86,6 +87,14 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   — a year from now "needs testing" alone is useless. An agent should never
   remove this itself; only Ian clears it, by testing. `grep -rl "manual-testing"
   issues/` is the list of things waiting on him.
+- `labels:` is a freeform cross-cutting tag — an optional YAML list of
+  kebab-case strings for grouping issues by effort/epic/theme/sprint, anything
+  the six categories and the `area` field don't capture (multiple allowed). It's
+  orthogonal to `category` (the directory) and `area`: e.g. `labels:
+  [soft-launch]` marks every issue that belongs to the soft-launch effort
+  regardless of which category dir it lives in. Deliberately generic — reach for
+  it whenever a set of issues wants a shared handle. Browsable as a facet in the
+  `dev/issues/` browser.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 

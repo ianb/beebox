@@ -19,6 +19,7 @@ type Category = (typeof CATEGORIES)[number];
 export interface IssueFrontmatter {
   title: string;
   needs: string[];
+  labels: string[];
   area?: string;
   filedBy?: string;
   discoveredIn?: string;
@@ -156,6 +157,7 @@ export function parseIssueFile(relPath: string, src: string): IssueRecord {
     frontmatter: {
       title,
       needs: asStringList(data.needs),
+      labels: asStringList(data.labels),
       ...(area !== undefined ? { area } : {}),
       ...(filedBy !== undefined ? { filedBy } : {}),
       ...(discoveredIn !== undefined ? { discoveredIn } : {}),
@@ -385,6 +387,7 @@ export function rewriteIssueLinks(md: string, dirPath: string, issuesBase: strin
 function facetChips(fr: IssueFrontmatter, research: ResearchState): string {
   const chips: string[] = [];
   for (const need of fr.needs) chips.push(`<span class="chip chip-needs">needs:${escapeHtml(need)}</span>`);
+  for (const label of fr.labels) chips.push(`<span class="chip chip-label">${escapeHtml(label)}</span>`);
   if (fr.area) chips.push(`<span class="chip chip-area">${escapeHtml(fr.area)}</span>`);
   if (fr.filedBy) chips.push(`<span class="chip chip-filedby">filed:${escapeHtml(fr.filedBy)}</span>`);
   if (research === "awaiting") chips.push(`<span class="chip chip-research">awaiting research</span>`);
@@ -417,6 +420,7 @@ const ISSUES_CSS = `
   .chip { display: inline-block; padding: 0.15em 0.55em; margin: 0.15em 0.3em 0.15em 0; border-radius: 10px; background: #eef1f5; color: #555; font-size: 0.85em; text-decoration: none; }
   .chip-research { background: #fdeee0; color: #a2380a; }
   .chip-research-done { background: #e6f4ea; color: #1e6b34; }
+  .chip-label { background: #ece4fb; color: #5a34a8; }
   .badge { display: inline-block; padding: 0.1em 0.5em; margin: 0.15em 0.3em 0.15em 0; border-radius: 4px; font: 12px ui-monospace, Menlo, monospace; background: #f0f0f0; color: #444; }
   .badge-added { background: #e6f4ea; color: #1e6b34; }
   .badge-deleted { background: #fbe9e7; color: #a23522; }
@@ -448,45 +452,67 @@ const ISSUES_CSS = `
 
 // --- UI: index ----------------------------------------------------------------
 
-interface Filters {
+export interface Filters {
   category?: string;
   area?: string;
   needs?: string;
+  labels?: string;
   research?: string;
   worktreeTouched: boolean;
   status: "open" | "closed" | "all";
 }
 
-function parseFilters(query: URLSearchParams): Filters {
+export function parseFilters(query: URLSearchParams): Filters {
   const status = query.get("status");
   const category = query.get("category");
   const area = query.get("area");
   const needs = query.get("needs");
+  const labels = query.get("labels");
   const research = query.get("research");
   return {
     ...(category !== null ? { category } : {}),
     ...(area !== null ? { area } : {}),
     ...(needs !== null ? { needs } : {}),
+    ...(labels !== null ? { labels } : {}),
     ...(research !== null ? { research } : {}),
     worktreeTouched: query.get("worktree") === "touched",
     status: status === "closed" || status === "all" ? status : "open",
   };
 }
 
-function matches(issue: IssueRecord, f: Filters, touched: boolean): boolean {
+export function matches(issue: IssueRecord, f: Filters, touched: boolean): boolean {
   if (f.category && issue.category !== f.category) return false;
   if (f.area && issue.frontmatter.area !== f.area) return false;
   if (f.needs && !issue.frontmatter.needs.includes(f.needs)) return false;
+  if (f.labels && !issue.frontmatter.labels.includes(f.labels)) return false;
   if (f.research === "awaiting" && issue.research !== "awaiting") return false;
   if (f.worktreeTouched && !touched) return false;
   return true;
 }
 
-function filterChipsHtml(base: string, f: Filters, facets: { categories: string[]; areas: string[]; needs: string[] }): string {
+export interface IssueFacets {
+  categories: string[];
+  areas: string[];
+  needs: string[];
+  labels: string[];
+}
+
+// Derive the distinct facet values from a set of issues. Categories are the
+// fixed taxonomy; areas/needs/labels are collected from frontmatter and sorted.
+export function deriveFacets(issues: IssueRecord[]): IssueFacets {
+  return {
+    categories: [...CATEGORIES],
+    areas: [...new Set(issues.map((i) => i.frontmatter.area).filter((a): a is string => !!a))].sort(),
+    needs: [...new Set(issues.flatMap((i) => i.frontmatter.needs))].sort(),
+    labels: [...new Set(issues.flatMap((i) => i.frontmatter.labels))].sort(),
+  };
+}
+
+function filterChipsHtml(base: string, f: Filters, facets: IssueFacets): string {
   const qs = (overrides: Record<string, string | undefined>): string => {
     const p = new URLSearchParams();
     const merged = {
-      category: f.category, area: f.area, needs: f.needs,
+      category: f.category, area: f.area, needs: f.needs, labels: f.labels,
       research: f.research, worktree: f.worktreeTouched ? "touched" : undefined,
       status: f.status === "open" ? undefined : f.status,
       ...overrides,
@@ -506,13 +532,15 @@ function filterChipsHtml(base: string, f: Filters, facets: { categories: string[
   ).join("");
   const researchChip = `<a class="chip${f.research === "awaiting" ? " active" : ""}" href="${qs({ research: f.research === "awaiting" ? undefined : "awaiting" })}">awaiting research</a>`;
   const worktreeChip = `<a class="chip${f.worktreeTouched ? " active" : ""}" href="${qs({ worktree: f.worktreeTouched ? undefined : "touched" })}">touched by any worktree</a>`;
-  const anyActive = f.category || f.area || f.needs || f.research || f.worktreeTouched || f.status !== "open";
+  const anyActive = f.category || f.area || f.needs || f.labels || f.research || f.worktreeTouched || f.status !== "open";
   const clear = anyActive ? `<a class="clear" href="${base}/issues/">clear all ×</a>` : "";
+  const labelsRow = facets.labels.length ? `<div>${group("labels", "labels", facets.labels, f.labels)}</div>` : "";
   return `<div class="filters">
     <div>status: ${statusGroup} ${researchChip} ${worktreeChip}${clear}</div>
     <div>${group("category", "category", facets.categories, f.category)}</div>
     <div>${group("area", "area", facets.areas, f.area)}</div>
     <div>${group("needs", "needs", facets.needs, f.needs)}</div>
+    ${labelsRow}
   </div>`;
 }
 
@@ -564,11 +592,7 @@ async function renderIssueIndex(base: string, mainIssuesRoot: string, worktreesR
   const worktreeOnlyVisible = worktreeOnly.filter(({ issue }) =>
     (f.status === "all" || (f.status === "closed" ? issue.closed : !issue.closed)) && matches(issue, f, true),
   );
-  const facets = {
-    categories: [...CATEGORIES],
-    areas: [...new Set(issues.map((i) => i.frontmatter.area).filter((a): a is string => !!a))].sort(),
-    needs: [...new Set(issues.flatMap((i) => i.frontmatter.needs))].sort(),
-  };
+  const facets = deriveFacets(issues);
 
   const statusFiltered = issues.filter((i) => f.status === "all" || (f.status === "closed" ? i.closed : !i.closed));
   const visible = statusFiltered.filter((i) => matches(i, f, overlay.byPath.has(i.relPath)));
@@ -614,6 +638,7 @@ ${worktreeOnlyHtml}`;
 function factsTableHtml(fr: IssueFrontmatter, research: ResearchState, closed: boolean): string {
   const rows: Array<[string, string]> = [];
   if (fr.needs.length) rows.push(["needs", fr.needs.join(", ")]);
+  if (fr.labels.length) rows.push(["labels", fr.labels.join(", ")]);
   if (fr.area) rows.push(["area", fr.area]);
   if (fr.filedBy) rows.push(["filed-by", fr.filedBy]);
   if (fr.discoveredIn) rows.push(["discovered-in", fr.discoveredIn]);
