@@ -128,12 +128,30 @@ router in dev, the hub in prod; the backend never derives it from `request.url`)
    `server-root.ts:320`): emits
    `<prefix>/auth/login?returnTo=<prefix><request.url>` — reconstructing the full
    browser path the proxy stripped.
-3. **Prefix-correct login SPA assets by rewriting the served HTML.**
-   `serveLoginSpa` (`routes/auth.ts:195`) ships `dist/index.html` verbatim with
-   absolute `/assets/…` refs; it instead rewrites the asset base to
-   `<prefix>/assets/…` from the same header — uniform across dev (router) and prod
-   (hub), no Vite HTML-serving special case. (A `<base>` tag won't help — the refs
-   are absolute — so it's a scoped rewrite of the asset-path prefix.)
+3. **Prefix-correct login SPA — asset rewrite is necessary but NOT sufficient
+   (browser-check finding, `c4c29053`).** `serveLoginSpa` now rewrites the served
+   HTML's absolute `/assets/`,`/icons/`,`/manifest.webmanifest` refs to
+   `<prefix>/…` from the header (prod-safe: empty prefix ⇒ verbatim bytes). BUT
+   the built bundle is compiled `base="/"`, so `import.meta.env.BASE_URL` is baked
+   to `/`; every client-side `withBase()` (`api-core.ts:49`) drops the prefix, so
+   the login page still client-redirects to root `/auth/login` → router 404 →
+   blank. **Rewriting HTML cannot fix a build-time-baked base.** The dev login
+   navigation must be served by a *base-aware* bundle. DECISION PENDING (below):
+   - **(A) Vite serves the login HTML in dev** — a `bypass` on Vite's `/auth`
+     proxy so `GET /<w>/auth/{login,setup}` returns Vite's own base-aware
+     index.html (`BASE_URL=/<w>/`), while the auth *API* (POST login, `/auth/me`,
+     logout, callback) still proxies to the backend. Dev-only; prod hub unchanged
+     (serves the built bundle at root, where `base=/` is correct via runtime slug
+     derivation). This is the "Vite HTML-serving special case" the plan wrongly
+     ruled out — it's actually required. Localized, low-risk. The committed asset
+     rewrite stays as the prod-safe path for any built bundle served behind a
+     prefix.
+   - **(B) Runtime base derivation** — replace the baked `import.meta.env.BASE_URL`
+     with a base derived from `window.location` across the frontend, so the one
+     built bundle works behind any prefix everywhere (no Vite special case, no
+     asset rewrite). Uniform and arguably the "right" fix, but a broad frontend
+     change touching every `withBase`/BASE_URL site, with prod-regression risk on
+     the existing runtime-slug-derivation.
 4. **Google OAuth behind the prefix.** The callback URI is built from the hub
    base (`auth-google.ts:38`, `hub.ts:87`) — extend it to carry the prefix, or
    document local-password-only for prefixed origins in the transition (open
