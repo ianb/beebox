@@ -136,7 +136,8 @@ router in dev, the hub in prod; the backend never derives it from `request.url`)
    to `/`; every client-side `withBase()` (`api-core.ts:49`) drops the prefix, so
    the login page still client-redirects to root `/auth/login` → router 404 →
    blank. **Rewriting HTML cannot fix a build-time-baked base.** The dev login
-   navigation must be served by a *base-aware* bundle. DECISION PENDING (below):
+   navigation must be served by a *base-aware* bundle. **DECIDED: option (A)**
+   (Fable's call, low-risk/localized; boxholder may redirect to B):
    - **(A) Vite serves the login HTML in dev** — a `bypass` on Vite's `/auth`
      proxy so `GET /<w>/auth/{login,setup}` returns Vite's own base-aware
      index.html (`BASE_URL=/<w>/`), while the auth *API* (POST login, `/auth/me`,
