@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "noEmit": true,
     "lib": ["ES2023"],
-    "types": ["node"]
+    "types": ["node", "@fastify/cookie"]
   },
   "include": ["bin/**/*.ts"],
   "exclude": ["node_modules", "callback-box", "cardworks", "agent-doctest", "canvas-loop", "callback-clerk", "browse"]
