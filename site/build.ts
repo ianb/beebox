@@ -13,6 +13,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { baseFromBranch, normalizeBase } from "./links.js";
 import { parseSource, renderBody, pageShell, type PageFrontmatter } from "./render.js";
+import { writeManifest } from "./sources.js";
 
 const SITE_DIR = import.meta.dirname;
 const CONTENT_DIR = path.join(SITE_DIR, "content");
@@ -149,6 +150,11 @@ async function main(): Promise<void> {
     renderLlmsTxt({ home: home.frontmatter, pages: built, base }),
     "utf8",
   );
+
+  // Input manifest LAST, once all output exists: the dev router compares it
+  // against the current sources to decide whether to auto-rebuild. A partial
+  // build never leaves a manifest that could mask staleness.
+  await writeManifest(SITE_DIR, DIST_DIR);
 
   process.stdout.write(`site: built ${built.length} page(s) → dist/ (base ${base})\n`);
 }

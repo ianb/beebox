@@ -187,24 +187,36 @@ Ordered by implementation dependency, then surface size.
 - **What**: the router serves `site/dist/` statically at
   `/<worktree>/site/`, same never-cold-start *properties* as
   `serveDevArtifact` (`bin/router-docs.ts:609-663`): pure disk reads,
-  `cache-control: no-store`, 404 when `dist/` is absent (with a one-line
-  "run pnpm --dir site build" body — resilient and not silent, principle 4).
-  It's a new handler, not a literal reuse — `serveDevArtifact` renders
-  directory listings (`router-docs.ts:624-650`; Codex review finding), and
-  the site route wants static-site semantics instead: `index.html` at
-  directory paths, no listings.
+  `cache-control: no-store`. It's a new handler, not a literal reuse —
+  `serveDevArtifact` renders directory listings (`router-docs.ts:624-650`;
+  Codex review finding), and the site route wants static-site semantics
+  instead: `index.html` at directory paths, no listings. The 404-with-hint
+  ("run pnpm --dir site build") remains only for a checkout that has no
+  `site/` generator at all (an old worktree) — resilient and not silent
+  (principle 4).
 - **Why**: boxholder requirement — "the site should be viewable on the dev
   router."
-- **Direction**: no on-demand building in the router (keeps the router
-  request-path pure); rebuilds are explicit (`pnpm --dir site build`, plus an
-  optional watch script). The local build derives its base path instead of
-  taking config (Codex review finding — the bare command didn't say where
-  base comes from): branch `worktree-<name>` → `/<name>/site/`, `main` →
-  `/main/site/`, read from git at build time; `--base` overrides for the
-  Pages/custom-domain builds. Router changes ride the usual
-  main-merge-then-restart lifecycle (`bin/CLAUDE.md`).
-- **First chunk**: the route + 404 message + a router test alongside the
-  existing router test setup.
+- **Direction** (boxholder override, 2026-07-21): the original decision was
+  *no on-demand building in the router* (rebuilds explicit). The boxholder hit
+  the 404 hint and ruled **"It should be auto-building somehow"**, then
+  tightened it to **"I don't want stale builds."** So the router **auto-builds
+  on request**, under a **never-serve-stale contract**: the generator writes a
+  content-hash manifest of its exact input set into `dist/.inputs.json`
+  (`site/sources.ts`, the *single* enumeration shared by generator and router
+  so the two can't drift); on each request the router re-hashes the current
+  sources and rebuilds on **any** difference — changed content, added file,
+  removed/renamed file, or a missing/unparseable manifest (in doubt → rebuild,
+  never serve stale). This is content-based, not mtime-based, on purpose: a
+  deletion bumps no mtime and clocks aren't trusted. Builds are **serialized
+  per checkout** (concurrent requests await one build, not parallel spawns),
+  and a build **failure is loud** — HTTP 500 with the build's actual error
+  output, never a silent stale-serve. The build derives its base path from git
+  (branch `worktree-<name>` → `/<name>/site/`, `main` → `/main/site/`);
+  `--base` overrides for the Pages/custom-domain builds. Router changes ride
+  the usual main-merge-then-restart lifecycle (`bin/CLAUDE.md`).
+- **First chunk**: the route + auto-build (content-hash staleness,
+  serialized, 500-on-failure) + the old-worktree 404 hint + a router test
+  alongside the existing router test setup.
 
 ### Track C — v1 content: the letter, links, machine layer
 
@@ -347,7 +359,7 @@ below were the candidates; both are handled in code by Track E's enforcement.
 | Pages workflow build fails on main | n/a (CI itself) | previous deploy stays live | clear — red Actions run |
 | Malformed frontmatter in a nugget/content file | planned | parse errors fail the build with file+line | clear |
 | Markdoc renders odd markdown to broken HTML silently | partial — link-check catches broken hrefs, not layout | accepted residual: visual review on the router | semi-silent, accepted (low stakes, human-reviewed surface) |
-| Router serves stale `dist/` after source edits | no test | `no-store` headers + explicit-rebuild model; 404-with-hint when dist absent | semi-silent, accepted — dev-only surface, same as any build artifact |
+| Router serves stale `dist/` after source edits | yes (`bin/router-site.test.ts`: changed/deleted source and missing-manifest all rebuild) | never-serve-stale contract: router rebuilds on any content-hash difference vs `dist/.inputs.json` before serving (boxholder override, Track B) | clear — stale sources rebuild; a build failure is a loud 500 |
 | Path/PII leak via published repo content | partial — `path-leak-check` catches only literal home-dir paths (`bin/path-leak-check.ts:45-51`), tracked files only | source allowlist limits what can publish to already-public-repo content; the repo itself went through the release PII scrub | semi-silent residual, accepted — publishing mirrors the public repo, adds no new exposure class; a built-artifact scan is deliberate future hygiene, not a gate |
 | `hidden=until-found` unsupported in an old browser | no | depth still expandable by click; content in DOM | silent degradation, accepted |
 

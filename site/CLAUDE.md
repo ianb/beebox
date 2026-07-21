@@ -41,9 +41,18 @@ pnpm --dir site typecheck                # tsc --noEmit
 pnpm --dir site test                     # node --test over *.test.ts
 ```
 
-View on the router at `http://localhost:3210/<worktree>/site/` after a build.
+View on the router at `http://localhost:3210/<worktree>/site/`. An explicit
+build is **optional for router viewing**: the router auto-builds on request when
+`dist/` is missing or its input manifest (`dist/.inputs.json`) doesn't match the
+current sources — content-hash based, so it's never-stale and deletion-correct
+(boxholder: "I don't want stale builds"). Builds are serialized per checkout and
+a failure surfaces as a 500 with the build's error text. The Pages workflow
+still builds explicitly (with `--base /callback-box/`). Run `pnpm --dir site
+build` yourself when you want to see build errors directly.
+
 The build fails closed: malformed frontmatter (named file:line), a broken
-internal link, or a missing source stops it. On success it prints one line.
+internal link, or a missing source stops it. On success it prints one line and
+writes the input manifest last (so a partial build never masks staleness).
 
 ## Layout
 
@@ -54,4 +63,8 @@ internal link, or a missing source stops it. On success it prints one line.
   in execa/highlight.js and a router-issues cycle); this package declares
   `@markdoc/markdoc` itself.
 - `links.ts` — base-path handling and internal-link resolution.
+- `sources.ts` — the single definition of the input source set + content-hash
+  manifest, shared by `build.ts` (writes `dist/.inputs.json`) and
+  `bin/router-site.ts` (compares it to decide whether to auto-rebuild). One
+  enumeration, so the two sides can't drift.
 - `content/` — markdown sources (frontmatter: `title`, `summary`).
