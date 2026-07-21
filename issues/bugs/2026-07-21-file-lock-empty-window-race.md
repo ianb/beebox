@@ -76,6 +76,76 @@ stakes, but a proven primitive would retire those too.
 
 ---
 
+## Implementation (proper-lockfile) — 2026-07-21, awaiting Codex re-review
+
+Took fix direction (2): replaced `file-lock.ts`'s home-grown internals with
+**`proper-lockfile`** (pure-JS, no native addon — chosen over `flock` to avoid a
+node-gyp rebuild liability), preserving the public API
+(`acquireLock`/`releaseLock`/`inspectLock`/`forceAcquireLock`/`scanLocks`,
+`LockHeldError`). Callers (`pairing.ts`, `local-users.ts`, `transient-state.ts`,
+`schedule/state.ts`, `reactor/engine.ts`, `search/refresh.ts`,
+`push-subscriptions.ts`, `question-transition.ts`) are unchanged.
+
+**The new exclusion invariant.** Mutual exclusion is now entirely
+`proper-lockfile`'s atomic `mkdir` of a *guard directory* (`<path>.guard`):
+`mkdir` fails `EEXIST` if it already exists, so at most one process holds the
+lock. There is **no unconditional unlink-by-path anywhere** — the reclaim/release
+race is gone because reclaim is `proper-lockfile`'s mtime compare-and-swap, not a
+read-then-unlink-then-recreate. A **diagnostic sidecar file** at `<path>`
+(`{pid, hostname, acquiredAt, metadata}`) is written *after* the guard `mkdir`
+wins and is read *only* for diagnostics (`LockHeldError.holder`, `inspectLock`,
+`scanLocks`); it never participates in the acquire decision, so no sidecar state
+(empty, missing, torn, stale, concurrently rewritten) can admit a second holder.
+Every on-disk deletion happens either via `proper-lockfile`'s own `release`
+(verifies ownership, cancels refresh timer, removes guard dir) or via
+`scanLocks`'s reclaim, which removes a dead holder's sidecar+guard *only while
+atomically holding the lock*. The one deliberate foreign-guard eviction is
+`forceAcquireLock` (documented; no production callers).
+
+**Stale / onCompromised / sleep decisions.**
+- `stale = 5 min`. While a holder is alive, `proper-lockfile` refreshes the guard
+  mtime every `stale/2` (2.5 min), so a live lock stays fresh for an unbounded
+  hold — hold duration need not fit under `stale`. 5 min sits under `cb tick`'s
+  10-min per-script SIGKILL timeout, so a wedged run's lock always clears before
+  the run is force-killed.
+- `onCompromised` logs LOUDLY (`console.error`) and drops the in-process release
+  entry; it does NOT throw (the default handler throws → unhandled rejection).
+- **macOS-sleep tradeoff (called out for scrutiny):** `proper-lockfile`'s refresh
+  is a `setTimeout`, paused during system sleep. A sleep longer than `stale` can
+  make a live-but-sleeping holder's guard look stale and be stolen. The 5-min
+  threshold means a *normal brief* sleep does not false-trigger; a longer sleep
+  can, but the victim's `onCompromised` fires loudly, so it is observable, never
+  silent (unlike the old silent double-acquire). Callers with short acquire
+  budgets (pairing/local-users/transient-state retry ~5 s) fail *loud* against a
+  crashed holder rather than block the full 5 min — a thrown lock error, never a
+  silent lost update.
+
+**Diagnostic surface changes.** `LockHolder` dropped the `bootEpochSeconds` and
+`token` fields (liveness is now `proper-lockfile`'s job); it keeps
+`{pid, hostname, acquiredAt, metadata}` — the only fields any caller reads
+(`schedule/state.ts` uses `holder.pid`/`acquiredAt`/`metadata`; `LockHeldError`
+uses `holder.pid`). `inspectLock` no longer deletes dead locks (it uses
+`.check()`, side-effect-free; it had no production callers) — dead-lock cleanup
+lives in `scanLocks` and on the next `acquireLock`. When a lock is held but its
+sidecar is momentarily unwritten/torn, diagnostics report a stand-in holder
+(`pid: -1`) rather than "free".
+
+**For the Codex re-review to scrutinize:**
+1. `proper-lockfile`'s release removes the guard dir based on its in-memory
+   registry without re-verifying mtime ownership at release time — so a lock
+   stolen from us during a >`stale` sleep, then released by us, could rmdir the
+   thief's guard (the thief's `onCompromised` then fires loudly). This is the
+   narrowed, loud residual of the sleep tradeoff; is it acceptable?
+2. `scanLocks`/reclaim briefly holds the guard while cleaning a dead/free entry,
+   which can hand a concurrent acquirer a spurious `ELOCKED` for that entry.
+   Acceptable? (Only when the entry was already dead/free; all callers treat
+   `LockHeldError` as non-fatal.)
+3. The sidecar-vs-guard split and the `unknownHolder()` fallback.
+4. `stale = 5 min` vs the callers' ~5 s retry budgets (fail-loud on crashed
+   holder).
+
+---
+
 ## Original report (first Codex round — the empty-window, now fixed)
 
 **HIGH. Found by a Codex cross-model review (2026-07-21), verified against

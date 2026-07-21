@@ -383,15 +383,15 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 const lockFile = path.join(box.root, ".cb-reactor.lock");
-// Write a well-formed lock pointing at our own PID (treated as alive).
-const liveHolder = {
+// Simulate a live holder in another process: a fresh guard directory (what
+// proper-lockfile mkdir-locks) plus its diagnostic sidecar.
+await fs.mkdir(lockFile + ".guard");
+await fs.writeFile(lockFile, JSON.stringify({
   pid: process.pid,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
   hostname: os.hostname(),
   acquiredAt: new Date().toISOString(),
   metadata: { kind: "reactor" },
-};
-await fs.writeFile(lockFile, JSON.stringify(liveHolder));
+}));
 
 const result = await runReactor({
   boxRoot: box.root,
@@ -405,6 +405,7 @@ result.jobsProcessed
 ```
 
 ```ts cleanup
+await fs.rm(lockFile + ".guard", { recursive: true, force: true });
 await fs.unlink(lockFile).catch(() => {});
 await box.cleanup();
 ```
@@ -414,15 +415,17 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 const lockFile = path.join(box.root, ".cb-reactor.lock");
-// Write a holder pointing at a dead PID — reactor should reclaim and run.
-const deadHolder = {
+// Simulate a crashed holder: a guard directory whose mtime is well past the
+// stale window (5 min). proper-lockfile reclaims it on the next acquire.
+await fs.mkdir(lockFile + ".guard");
+const past = new Date(Date.now() - 10 * 60 * 1000);
+await fs.utimes(lockFile + ".guard", past, past);
+await fs.writeFile(lockFile, JSON.stringify({
   pid: 99999999,
-  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
   hostname: os.hostname(),
-  acquiredAt: new Date().toISOString(),
+  acquiredAt: past.toISOString(),
   metadata: { kind: "reactor" },
-};
-await fs.writeFile(lockFile, JSON.stringify(deadHolder));
+}));
 
 await box.write("box/jobs/task.intake.job.card", intakeJob("After stale lock"));
 box.commitAll("Add job");

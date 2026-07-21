@@ -16,7 +16,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | `@anthropic-ai/claude-agent-sdk` drives agent invocation: typed message stream, session resume, in-process hooks, structured output. MCP tools + file checkpointing not yet used. |
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | Doctest system built (runner: `tap`). DI pattern established. |
 | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced react-markdown/remark in 2026-05) for custom tags like `{% quote %}`. See `docs/cards-as-markdown.md`. |
-| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, sanitize-filename, ky. proper-lockfile reverted 2026-04 → `src/lib/file-lock.ts`. date-fns still TODO. html-entities now orphaned (rss connector removed). |
+| 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, sanitize-filename, ky. proper-lockfile reverted 2026-04, re-adopted 2026-07-21 (now backs `src/lib/file-lock.ts`). date-fns still TODO. html-entities now orphaned (rss connector removed). |
 | 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated (`src/frontend/src/machines/`), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
 | 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Superseded by Decision 24. `cb serve --dev` still works for backend-only. |
 | 4 | [TanStack Router](#decision-4-routing--tanstack-router) | Code-based route tree, typed params, `href()` helper for dynamic paths. Replaced react-router-dom (dep removed). |
@@ -1067,7 +1067,7 @@ Not started. highlight.js is used directly. Moving it into the remark pipeline v
 | **date-fns** | Ad-hoc date formatting with manual month/day/hour logic | ❌ **Not done (TODO)** — never landed; not a dependency. Date formatting is still ad-hoc native (`toLocaleDateString`/`Intl`) across ~15 files. See the TODO below. |
 | **html-entities** | Regex-based HTML stripping and entity decoding in `rss.ts` | ⚠️ Adopted, now orphaned — the RSS/news connector (`rss.ts`) was removed, so there are no remaining `src/` imports. `html-entities` is still in `package.json`; candidate for removal. |
 | **sanitize-filename** | Multiple duplicate `safeFilename()` functions | ✅ Done — wraps sanitize-filename with existing alphanumeric/underscore/50-char constraints |
-| ~~**proper-lockfile**~~ | Two separate file-locking implementations | ❌ Reverted 2026-04 — see note below |
+| **proper-lockfile** | Hand-rolled cross-process lock in `src/lib/file-lock.ts` | ✅ Re-adopted 2026-07-21 — `file-lock.ts` is now implemented on it (reverted 2026-04, then re-adopted after the home-grown reclaim race; see note below) |
 | **ky** | Bare `fetch()` with no retry or error normalization | ✅ Done — retry + timeout for external APIs (~11 files) |
 
 ### TODO: adopt date-fns
@@ -1087,14 +1087,23 @@ Each replaces code that was written because the project needed the functionality
 - **ky** adds retry with backoff (critical for connectors hitting rate-limited APIs) while staying close to native fetch
 - **sanitize-filename** handles platform-specific reserved names and characters the custom functions miss
 
-### Reverting proper-lockfile (2026-04)
+### Reverting, then re-adopting proper-lockfile (2026-04 → 2026-07-21)
 
-`proper-lockfile` was adopted to consolidate two hand-rolled lock implementations, but its mtime-heartbeat staleness model failed in practice on this codebase:
+**2026-04 — reverted.** `proper-lockfile` was adopted to consolidate two hand-rolled lock implementations, but its mtime-heartbeat staleness model was judged to fail in practice:
 
 1. **macOS sleep paused the heartbeat**, so live locks looked stale on wake and could be stolen mid-run.
 2. **SIGKILL (per-script timeouts firing) left orphaned `.lock.lock` directories** that no read path cleaned up — once `proper-lockfile` saw one of these, future acquisitions on the same name failed until the directory was manually removed.
 
-Replaced by `src/lib/file-lock.ts`: a JSON lock file whose body records `{pid, bootEpochSeconds, hostname, acquiredAt, metadata}`. Liveness via `process.kill(pid, 0)` plus a boot-epoch comparison — no clocks, no heartbeats, no auxiliary directories. Dead holders self-heal on the next read. See the file's header for full rationale.
+It was replaced by a home-grown `src/lib/file-lock.ts`: a JSON lock file whose body recorded `{pid, bootEpochSeconds, hostname, acquiredAt, token, metadata}`, with liveness via `process.kill(pid, 0)` + a boot-epoch comparison.
+
+**2026-07-21 — re-adopted.** The home-grown lock failed adversarial (Codex) review **twice** once the security-critical mobile device-store revoke came to depend on it: first an empty-file publication window, then (after a fix) an unconditional-unlink reclaim/release race where two processes could both believe they held the lock. A hand-rolled correct cross-process lock is a known-hard problem, so the boxholder chose to adopt the proven primitive rather than attempt a third blind fix. `proper-lockfile` (pure-JS, no native addon — chosen over `flock` to avoid a node-gyp rebuild liability) now backs `file-lock.ts`.
+
+The two 2026-04 objections are handled, not ignored:
+
+- **Orphaned lock dirs on SIGKILL** are reclaimed by `proper-lockfile`'s own mtime-freshness steal on the next acquire (its whole point), and additionally by `scanLocks`'s race-free reclaim path. No manual cleanup needed.
+- **macOS sleep** is a genuine residual tradeoff, mitigated by a generous 5-minute `stale` threshold (a normal brief sleep no longer false-triggers staleness) and made **observable, never silent**: if a live-but-sleeping holder's lock is stolen past the stale window, the victim's `onCompromised` handler logs LOUDLY (`console.error`). This is the inherent sleep-vs-crash-recovery tension of any mtime lock; PID-liveness sidestepped it but shipped a worse (silent double-acquire) failure instead.
+
+`file-lock.ts` keeps the public API (`acquireLock`/`releaseLock`/`inspectLock`/`forceAcquireLock`/`scanLocks`, `LockHeldError`) and writes a diagnostic sidecar file at the lock path (holder `{pid, hostname, acquiredAt, metadata}`) that never participates in the acquire decision. Exclusion is entirely `proper-lockfile`'s atomic guard-dir `mkdir`. See the file's header for the full invariant.
 
 ### Why ky over ofetch
 
