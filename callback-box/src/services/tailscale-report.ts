@@ -52,6 +52,20 @@ export type TailscaleReport =
   | (ReportBase & { state: "posture-ambiguous"; url: string; detail: string })
   | (ReportBase & { state: "ready"; url: string; status: number | null });
 
+/** No usable target: `--target` was omitted/invalid AND no hub config was found
+ *  to auto-detect a port. Built at the command boundary (after discovery) so the
+ *  `status` path still reports through the normal {@link TailscaleReport} +
+ *  exit-code channel rather than a bespoke error. */
+export function ambiguousTarget(detail: string): TailscaleReport {
+  return {
+    state: "ambiguous-target",
+    ok: false,
+    detail,
+    nextStep: "Re-run with `cb tailscale status --target <port>`, or configure a hub so the port can be auto-detected.",
+    docLink: null,
+  };
+}
+
 export function binaryAbsent(): TailscaleReport {
   return {
     state: "binary-absent",

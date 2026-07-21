@@ -212,9 +212,10 @@ export function toBackendState(raw: string): BackendState | null {
   return null;
 }
 
-// ─── Target: for chunk 1 the operator names an explicit loopback port. With no
-// flag we refuse and say so (the plan's refuse-and-list; discovery is a later
-// chunk). ────────────────────────────────────────────────────────────────────
+// ─── Target: the operator may name an explicit loopback port with `--target`,
+// or omit it and let `resolveTargetOrDiscover` (tailscale-discovery.ts) auto-
+// detect the port from the hub config. This pure helper validates the explicit
+// port; the async discovery path wraps it. ───────────────────────────────────
 
 export interface TailscaleTarget {
   port: number;
@@ -229,8 +230,8 @@ export function resolveTarget(target: string | undefined): TargetResolution {
     return {
       ok: false,
       message:
-        "no --target given. Pass the loopback port of the auth-gated cb serve/hub to expose, e.g. `--target 3210`. " +
-        "The dev router is never a valid target.",
+        "no --target given. Pass the loopback port of the cb serve/hub to expose, or omit it to auto-detect " +
+        "the port from the hub config (~/.config/cb/hub.json). The dev router is never a valid target.",
     };
   }
   const port = Number(target.trim());

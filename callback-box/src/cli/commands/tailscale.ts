@@ -17,14 +17,33 @@ import { Command } from "commander";
 
 import { errorMessage } from "../../lib/error-guards.js";
 import { assertNever } from "../../lib/invariant.js";
-import { createRealTailscaleDeps } from "../../services/tailscale.js";
+import { createRealTailscaleDeps, type TailscaleTarget } from "../../services/tailscale.js";
+import { defaultHubConfigPath, resolveTargetOrDiscover } from "../../services/tailscale-discovery.js";
 import {
   runTailscaleSetup,
   runTailscaleStop,
   type SetupIo,
 } from "../../services/tailscale-setup.js";
 import { reportToJson, runTailscaleStatus } from "../../services/tailscale-status.js";
-import type { TailscaleReport } from "../../services/tailscale-report.js";
+import { ambiguousTarget, type TailscaleReport } from "../../services/tailscale-report.js";
+
+/** The `--target` help shared by all three subcommands: optional, auto-detected
+ *  from the hub config when omitted. */
+const TARGET_OPTION_DESC =
+  "The loopback port of the cb serve/hub to expose. Optional — omit to auto-detect from the hub config (~/.config/cb/hub.json).";
+
+/** Resolve `--target`/auto-discovery at the command boundary. Prints the
+ *  discovery announcement (and, on refusal, returns null so the caller reports
+ *  it in its own idiom). The one place the hub-config read happens. */
+async function resolveTargetForCommand(
+  target: string | undefined,
+): Promise<{ ok: true; target: TailscaleTarget } | { ok: false; message: string }> {
+  return resolveTargetOrDiscover({
+    target,
+    hubConfigPath: defaultHubConfigPath(),
+    log: (line) => console.log(line),
+  });
+}
 
 /** A per-state one-line description of the observed condition. */
 function summaryLine(report: TailscaleReport): string {
@@ -82,11 +101,16 @@ export function formatReportHuman(report: TailscaleReport): string {
 
 const statusCommand = new Command("status")
   .description("Inspect Tailscale state for a loopback target and print the single next step to expose it")
-  .option("--target <port>", "Required: the loopback port of the auth-gated cb serve/hub to expose (e.g. 3210)")
+  .option("--target <port>", TARGET_OPTION_DESC)
   .option("--json", "Machine-readable output")
   .action(async (options: { target?: string; json?: boolean }) => {
     try {
-      const report = await runTailscaleStatus(createRealTailscaleDeps(), { target: options.target });
+      const resolved = await resolveTargetForCommand(options.target);
+      // A no-target/no-hub refusal still reports through the normal report +
+      // exit-code channel (as `ambiguous-target`) so `--json` stays consistent.
+      const report = resolved.ok
+        ? await runTailscaleStatus(createRealTailscaleDeps(), { target: resolved.target })
+        : ambiguousTarget(resolved.message);
       if (options.json) {
         console.log(JSON.stringify(reportToJson(report), null, 2));
       } else {
@@ -119,12 +143,18 @@ function createRealSetupIo(wait: boolean): SetupIo {
 
 const setupCommand = new Command("setup")
   .description("Guided loop: configure `tailscale serve` to front an auth-gated loopback cb server, off the public internet")
-  .option("--target <port>", "Required: the loopback port of the auth-gated cb serve/hub to expose (e.g. 3210)")
+  .option("--target <port>", TARGET_OPTION_DESC)
   .option("--no-wait", "Non-interactive: print the next human step and exit nonzero instead of waiting")
   .action(async (options: { target?: string; wait?: boolean }) => {
     try {
+      const resolved = await resolveTargetForCommand(options.target);
+      if (!resolved.ok) {
+        console.log(`✗ ${resolved.message}`);
+        process.exitCode = 1;
+        return;
+      }
       const io = createRealSetupIo(options.wait ?? true);
-      const result = await runTailscaleSetup(createRealTailscaleDeps(), { target: options.target, io });
+      const result = await runTailscaleSetup(createRealTailscaleDeps(), { target: resolved.target, io });
       console.log(result.ok ? `✓ ${result.message}` : `✗ ${result.message}`);
       if (!result.ok) process.exitCode = 1;
     } catch (error) {
@@ -135,10 +165,16 @@ const setupCommand = new Command("setup")
 
 const stopCommand = new Command("stop")
   .description("Remove this target's `tailscale serve` mapping and clear its exposure intent (preserves unrelated mappings)")
-  .option("--target <port>", "Required: the loopback port whose Tailscale exposure to remove (e.g. 3210)")
+  .option("--target <port>", TARGET_OPTION_DESC)
   .action(async (options: { target?: string }) => {
     try {
-      const result = await runTailscaleStop(createRealTailscaleDeps(), { target: options.target });
+      const resolved = await resolveTargetForCommand(options.target);
+      if (!resolved.ok) {
+        console.log(`✗ ${resolved.message}`);
+        process.exitCode = 1;
+        return;
+      }
+      const result = await runTailscaleStop(createRealTailscaleDeps(), { target: resolved.target });
       console.log(result.ok ? `✓ ${result.message}` : `✗ ${result.message}`);
       if (!result.ok) process.exitCode = 1;
     } catch (error) {

@@ -14,33 +14,24 @@
 import { assertNever } from "../lib/invariant.js";
 import {
   parseStatusJson,
-  resolveTarget,
   toBackendState,
   type TailscaleDeps,
+  type TailscaleTarget,
 } from "./tailscale.js";
 import { binaryAbsent, cliError, DOC, type TailscaleReport } from "./tailscale-report.js";
 import { runningStatus } from "./tailscale-status-running.js";
 
 /**
- * Run the read-only `cb tailscale status` state machine against injected deps.
+ * Run the read-only `cb tailscale status` state machine against injected deps
+ * for a concrete loopback target (the CLI resolves `--target`/auto-discovery
+ * into a `TailscaleTarget` via `resolveTargetOrDiscover` before calling in).
  * Returns exactly one {@link TailscaleReport}; the caller formats it and maps
  * `ok` to the process exit code.
  */
 export async function runTailscaleStatus(
   deps: TailscaleDeps,
-  { target }: { target: string | undefined },
+  { target }: { target: TailscaleTarget },
 ): Promise<TailscaleReport> {
-  const resolved = resolveTarget(target);
-  if (!resolved.ok) {
-    return {
-      state: "ambiguous-target",
-      ok: false,
-      detail: resolved.message,
-      nextStep: "Re-run with `cb tailscale status --target <port>`.",
-      docLink: null,
-    };
-  }
-
   // State 1: binary absent.
   const statusRun = await deps.run("tailscale", ["status", "--json"]);
   if (!statusRun.spawned) return binaryAbsent();
@@ -119,7 +110,7 @@ export async function runTailscaleStatus(
         docLink: DOC.up,
       };
     case "Running":
-      return runningStatus(deps, { status, target: resolved.target });
+      return runningStatus(deps, { status, target });
     default:
       return assertNever(backend);
   }
