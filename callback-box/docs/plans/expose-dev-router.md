@@ -429,9 +429,19 @@ exposable; local CLI uses the socket) and the tailscale docs.
 
 ## Implementation order
 
-1. **A.1** `loginRedirect(request, base)` + 5 sites + route doctest.
-2. **A.2** prefix-correct login SPA assets + browser check (closes the login bug).
-3. **A.3** OAuth-behind-prefix (or document local-password-only).
+1. **A.1 — DONE** (`8698f41c`) `X-CB-Base-Prefix` header + `loginRedirect` + 5
+   sites + tests.
+2. **A.2 — DONE** (`c4c29053` SPA asset rewrite, prod-safe; `cf9e879e` Vite
+   serves base-aware login HTML in dev). **Browser-verified**: login form renders
+   behind `/<worktree>/`, path + `returnTo` prefixed, all API calls prefixed, no
+   404s. **Closes the login-behind-prefix bug** (a standalone fix, independent of
+   exposure). Vite 5.4 proxy `bypass` returning `VITE_BASE` diverts `GET
+   /auth/{login,setup}` HTML to Vite's base-injected bundle; auth API still
+   proxies.
+3. **A.3 — DEFERRED (non-blocking)** OAuth-behind-prefix. Local-password login now
+   works behind the prefix (verified), which covers the goal; Google-login behind
+   the prefix (`auth-google.ts:38` callback URI) is a follow-up — family can use
+   local password meanwhile.
 4. **B.1** UDS listener + origin tag + pure `authorizeRouterRequest` + truth-table
    unit tests.
 5. **B.2** wire the gate into dispatch (allowlist, control/infra owner+CSRF, box
