@@ -213,3 +213,34 @@ require `source==="cookie"`, so it fails closed (DoS, not escalation).
 ignore hub mode (or assert CB_HUB_SECRET unset).
 
 **Most important before exposure:** decide 3.1 (unauth cold-start / name oracle).
+
+---
+
+# Fourth review — capstone over the complete feature (Track C + assembly, Codex gpt-5.5, 2026-07-21)
+
+Final adversarial pass over the completed A+B+C. **One Medium finding; everything
+else CONFIRMED sound** — the whole assembly, cross-cutting interactions, and
+prod-safety.
+
+### CONFIRMED
+- The success path cannot be tricked into exposing an ungated router: a
+  pre-Track-B router's 200 status JSON → `ungated` refuse; current `/__router/status`
+  only 200s past the auth chokepoint; the `x-cb-router-guarded` marker is emitted
+  ONLY on denied `/__router/*`.
+- Cross-cutting A/B/C sound: base-prefix is single-segment/no-traversal; the
+  router strips all client `x-cb-*` before injecting its own; prod login serves
+  byte-identical HTML when the header is absent (no prod regression); the cookie
+  rewrite is narrowly scoped (named cookies + exact `Path=/<slug>`).
+
+### 4.1 (Medium) — failed exposure proof + failed teardown could orphan a live mapping — FIXED
+On a failed served proof, `settleRouterExposure` tore down best-effort but never
+verified removal; if teardown also failed, a live Serve mapping fronting an
+unproven router remained, unrecorded. **Fixed (`tailscale-setup.ts`):** read the
+serve config back after teardown; if the mapping can't be proven gone, record
+the exposure intent (so `stop`/`status` track + remove it) and return a loud
+failure — fail closed. Test added (`offCode:1` → mapping survives → intent
+recorded + loud message).
+
+**Go/no-go: GO for a private tailnet** once 4.1 landed (it has). The feature is
+verified sound across four adversarial passes; remaining before ship is docs +
+the live Mac/phone proof (which exercises the real daemon).
