@@ -210,7 +210,9 @@ async function renderDevManifest(name: string, base: string, devRoot: string): P
   const builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
     + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`
     + `<li><a class="title" href="${base}/issues/">🗂️ Issue browser</a>`
-    + `<div class="desc">Browse the monorepo's <code>issues/</code> queue, overlaid with what every active worktree has added, changed, or closed relative to main.</div></li>`;
+    + `<div class="desc">Browse the monorepo's <code>issues/</code> queue, overlaid with what every active worktree has added, changed, or closed relative to main.</div></li>`
+    + `<li><a class="title" href="/${encodeURIComponent(name)}/site/">🌐 Public site preview</a>`
+    + `<div class="desc">This worktree's build of the front-door site (<code>site/dist/</code> — run <code>pnpm --dir site build</code> first). What GitHub Pages will serve.</div></li>`;
 
   let artifactsHtml: string;
   try {
