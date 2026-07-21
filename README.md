@@ -32,6 +32,11 @@ The router serves each checkout by path prefix: `http://localhost:3210/<main|wor
 
 Per-project details are in each project's `CLAUDE.md`.
 
+## Community
+
+Questions and discussion happen on Zulip:
+[callback-box.zulipchat.com](https://callback-box.zulipchat.com/).
+
 ## License
 
 GPLv3 — see [`LICENSE`](LICENSE). This covers callback-box, callback-clerk, and browse.
