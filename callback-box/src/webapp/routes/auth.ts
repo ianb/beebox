@@ -375,9 +375,10 @@ function registerPasswordRoutes(server: FastifyInstance): void {
 /**
  * `GET /auth/me` — always registered. With a session, returns the user and the
  * boxes they can access (unchanged). In open access (the `openAccess`
- * construction option), returns `{ "open": true }` so the SPA can surface the
- * persistent open-mode banner instead of a bogus signed-out state. Otherwise
- * (auth required, no session) returns `401`.
+ * construction option — a test-only server-construction seam, no CLI path sets
+ * it), returns `{ "open": true }` so the SPA treats it as signed-out rather
+ * than misreading it as an error. Otherwise (auth required, no session)
+ * returns `401`.
  */
 function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): void {
   server.get("/auth/me", async (request, reply) => {

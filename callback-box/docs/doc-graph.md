@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-20T23:39:27Z
-Total documents: 201
+Generated: 2026-07-21T15:26:00Z
+Total documents: 202
 
 ## Issues
 
@@ -30,6 +30,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (57 lines)
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (49 lines)
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (621 lines)
+- **docs/implemented-plans/remove-open-mode.md** — "Remove the unauthenticated-mode operator path" (115 lines)
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (411 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (373 lines)
 - **docs/implemented-plans/semantic-search.md** — "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" (533 lines)
@@ -543,6 +544,7 @@ Title: "Installing callback-box with an AI agent" | 102 lines
 Referenced by:
 - CLAUDE.md:130 (mention) — | Agent-driven install (for a user's AI assistant) | `docs/agent-install.md` |
 - docs/implemented-plans/local-password-auth.md:538 (mention) — `docs/agent-install.md` gain the first-run account step;
+- docs/implemented-plans/remove-open-mode.md:49 (mention) — `docs/agent-install.md`, implemented-plans (historical — leave those).
 - docs/implemented-plans/tailscale-expose-and-protect.md:551 (mention) — surface is `docs/agent-install.md`'s existing "widening exposure is a real
 - ../issues/features/2026-07-19-installation-remaining-work.md:22 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
 
@@ -782,7 +784,7 @@ Referenced by:
 
 #### docs/developer-install.md
 
-Title: "Developer install (from source)" | 143 lines
+Title: "Developer install (from source)" | 142 lines
 
 Referenced by:
 - CLAUDE.md:128 (mention) — | Developer install (from source) | `docs/developer-install.md` |
@@ -819,6 +821,7 @@ Referenced by:
 - docs/agent-install.md:43 (link) — ([docker-install.md](docker-install.md)) is simpler and bundles every
 - docs/developer-install.md:7 (link) — [docker-install.md](docker-install.md).
 - docs/implemented-plans/local-password-auth.md:537 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
+- docs/implemented-plans/remove-open-mode.md:48 (mention) — - Docs mentioning the opt-out: `docs/docker-install.md`,
 - docs/implemented-plans/tailscale-expose-and-protect.md:74 (mention) — - **The documented-but-untested path.** `callback-box/docs/docker-install.md:119`
 - docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
@@ -847,6 +850,7 @@ Referenced by:
 - docs/implemented-plans/refresh-maps-convergence.md:62 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
 - docs/implemented-plans/refresh-maps-convergence.review.md:113 (mention) — `docs/engineering-principles.md` (#1 types are structure, #3 validate at
 - docs/implemented-plans/remove-box-shape-v1.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — most load-bearing: **#4
+- docs/implemented-plans/remove-open-mode.md:17 (mention) — - `callback-box/docs/engineering-principles.md` — fail-closed; make invalid
 - docs/implemented-plans/responsive-figures.md:33 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
@@ -1394,7 +1398,7 @@ References:
 
 #### docs/todo-security.md
 
-Title: "Security TODOs" | 49 lines
+Title: "Security TODOs" | 51 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.md:541 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
@@ -2152,7 +2156,8 @@ Title: "Local password auth, default-on" | 704 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.review.md:3 (mention) — Adversarial review of `local-password-auth.md` by OpenAI Codex
-- docs/todo-security.md:8 (mention) — `docs/implemented-plans/local-password-auth.md`). A box requires a logged-in identity unless
+- docs/implemented-plans/remove-open-mode.md:20 (mention) — - Precedent: `docs/implemented-plans/local-password-auth.md` (auth default-on;
+- docs/todo-security.md:8 (mention) — `docs/implemented-plans/local-password-auth.md`). A box always requires a
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:3 (mention) — design: ../../callback-box/docs/implemented-plans/local-password-auth.md
 - ../issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md:37 (mention) — `../../callback-box/docs/implemented-plans/local-password-auth.md`.
 
@@ -2475,6 +2480,18 @@ References:
 - → docs/adding-schemas.md (mention)
 - → docs/migrations.md (mention)
 
+#### docs/implemented-plans/remove-open-mode.md **[ORPHAN]**
+
+Title: "Remove the unauthenticated-mode operator path" | 115 lines
+
+References:
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/local-password-auth.md (mention)
+- → docs/implemented-plans/tailscale-expose-and-protect.md (mention)
+- → docs/docker-install.md (mention)
+- → docs/agent-install.md (mention)
+- → src/services/CLAUDE.md (mention)
+
 #### docs/implemented-plans/responsive-figures.md **[ORPHAN]**
 
 Title: "Responsive Figures" | 411 lines
@@ -2613,6 +2630,7 @@ Referenced by:
 Title: "Tailscale expose-and-protect" | 596 lines
 
 Referenced by:
+- docs/implemented-plans/remove-open-mode.md:22 (mention) — `docs/implemented-plans/tailscale-expose-and-protect.md` (whose
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:15 (mention) — `research/openclaw-hermes/`. Design/history: `docs/implemented-plans/tailscale-expose-and-protect.md`
 - ../research/openclaw-hermes/README.md:98 (mention) — | 23 | **Tailscale identity as an app-login accelerator (OpenClaw's post-fix `tailscale` auth mode: Serve identity heade
 
@@ -3482,6 +3500,7 @@ Referenced by:
 - docs/connectors.md:70 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:42 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/capture-mode.md:623 (mention) — `src/services/CLAUDE.md`). Scripted word timestamps + fixture image
+- docs/implemented-plans/remove-open-mode.md:55 (mention) — services convention, `src/services/CLAUDE.md`.)
 - docs/implemented-plans/semantic-search.md:35 (mention) — - `src/services/CLAUDE.md`: *"if a library or function touches external
 - docs/implemented-plans/web-push-notifications.md:194 (mention) — `src/services/CLAUDE.md`): `sendNotification(subscription, payload)` →
 - docs/testing.md:123 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s

@@ -1,5 +1,9 @@
 # Remove the unauthenticated-mode operator path
 
+**Status:** implemented 2026-07 — `CB_ALLOW_UNAUTHENTICATED` removed; auth is
+structurally always-on; the only unauthenticated servers are test-constructed
+via the in-process `openAccess` seam, which no CLI exposes.
+
 Delete `CB_ALLOW_UNAUTHENTICATED` — the last way an operator can run a box
 without authentication. Auth becomes structurally always-on: the only
 unauthenticated servers that can exist are test-constructed ones, via an
