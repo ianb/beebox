@@ -46,8 +46,16 @@ links: same category → bare `<file>.md`; cross-category →
 `[knip-exports](../code-quality/2026-07-04-knip-exports-enforcement.md)`). A doc
 elsewhere links in as `…/issues/<category>/<file>.md`. Links to items that don't
 exist yet are fine as plain text naming the idea. `doc-check` validates every
-link, so moving/reclassifying an item means rewriting its inbound links — from
-other issues AND from `docs/`.
+link, so moving/reclassifying an item breaks its inbound links — from other
+issues AND from `docs/`.
+
+**After moving ANY issue** (closing → `closed/`, reclassifying between category
+dirs, or a rename), run **`pnpm --dir callback-box doc-check --fix`** — it
+re-resolves every broken issue link by its (unique) basename and rewrites the
+path to the file's new location, so you don't hand-edit inbound links. It heals
+moves; a true rename or delete it reports as unfixable (fix those by hand). Issue
+basenames must stay unique (`doc-check` hard-errors on a duplicate) — that's what
+makes the auto-repair reliable.
 
 **External URLs get a title too** — `[Orwell's six rules](https://…)`, not a bare
 URL. A bare URL makes the reader parse a link to find out what it is. (The dev
