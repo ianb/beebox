@@ -57,9 +57,30 @@ demonstrations of machinery. The candidate menu archetypes:
    interesting" as a menu item; shape TBD (relates to the exploration
    queue's user-model/behavioral-profile cluster).
 
-Each menu item is product work: the flow must genuinely work
-end-to-end for a stranger or it's a broken promise in the first ten
-minutes. Pick few, make them reliable.
+Each menu item is product work, not prompt-and-guide work (boxholder,
+2026-07-21): the flow must genuinely work end-to-end for a stranger or
+it's a broken promise in the first ten minutes. Pick few, make them
+reliable, and **dogfood each one** — "stuff always comes up"; a flow
+nobody has actually cooked/inventoried/built-a-course through doesn't
+count as done.
+
+Mechanism ideas (boxholder, 2026-07-21):
+
+- **An onboarding directory + onboarding landmark.** New users get
+  pushed into it at the start; it holds the how-to-interact/how-to-use
+  instructions and presumably the menu itself. This makes onboarding
+  box *content* (cards + a landmark) rather than app chrome — it uses
+  the landmark navigation system that already exists, is inspectable/
+  editable like everything else, and can retire itself when the user
+  outgrows it.
+- **UI pointing, borrowed from Memory Atlas.** The boxholder's prior
+  project has "a whole system" for the assistant pointing at UI
+  elements; onboarding-scoped instructions could let the agent point
+  at parts of the interface while explaining them. NOTE: the pointing
+  system is NOT described in
+  `research/memory-atlas-architecture-review.md` (checked 2026-07-21)
+  — the knowledge is the boxholder's / the Memory Atlas source; ask
+  him or read that codebase before designing this.
 
 Considered and rejected/demoted (boxholder reactions, recorded so they
 aren't re-proposed):
