@@ -34,6 +34,7 @@ import {
   type SessionUser,
 } from "../auth.js";
 import { canAccessBox } from "../box-access.js";
+import { readBasePrefix } from "../base-prefix.js";
 import type { BoxSpec } from "../server.js";
 import { getGoogleClientCreds } from "../../connectors/google-auth.js";
 import { registerAuthRoutes } from "./auth-google.js";
@@ -188,14 +189,43 @@ function readRawBody(raw: IncomingMessage): Promise<string> {
   });
 }
 
+/**
+ * Rewrite the login SPA's absolute asset references to carry the fronting
+ * proxy's path prefix. The built `index.html` names its bundles by absolute
+ * root path (`"/assets/…"`, `"/icons/…"`, `"/manifest.webmanifest"`), baked by
+ * Vite at base="/"; behind a `/<prefix>` mount the browser would request them
+ * at the origin root, where the dev router reads the first segment as a
+ * worktree name and 404s (a blank `#root`). Rewriting the roots to
+ * `"<prefix>/assets/"` etc. makes them resolve under the mount. Scoped to the
+ * leading-double-quote-anchored roots (attribute values) so it can never
+ * corrupt body text, and only for the exact roots Vite emits. Called ONLY with
+ * a non-empty prefix — the empty-prefix (prod, standalone) path serves the
+ * built HTML byte-for-byte, so prod's served bytes never change.
+ */
+function rewriteSpaAssetBase({ html, prefix }: { html: string; prefix: string }): string {
+  return html
+    .replaceAll("\"/assets/", `"${prefix}/assets/`)
+    .replaceAll("\"/icons/", `"${prefix}/icons/`)
+    .replaceAll("\"/manifest.webmanifest\"", `"${prefix}/manifest.webmanifest"`);
+}
+
 /** Serve the SPA (its frontend router owns the login/setup screens). Bundles are
  *  public pre-auth by design — the client must load before a user can
- *  auth-navigate. Degrades to a minimal built-in page when the bundle isn't
- *  built, the same shape the box picker / SPA fallback use elsewhere. */
-function serveLoginSpa(reply: FastifyReply, frontendDist: string): FastifyReply {
+ *  auth-navigate. Behind a fronting proxy that strips a `/<prefix>` (the dev
+ *  router in dev, the hub for its children), the built HTML's absolute asset
+ *  refs are rewritten to carry that prefix from the trusted `x-cb-base-prefix`
+ *  header; with no prefix the built bytes are served verbatim. Degrades to a
+ *  minimal built-in page when the bundle isn't built, the same shape the box
+ *  picker / SPA fallback use elsewhere. */
+function serveLoginSpa(reply: FastifyReply, { request, frontendDist }: { request: FastifyRequest; frontendDist: string }): FastifyReply {
   const indexHtml = path.join(frontendDist, "index.html");
   if (fs.existsSync(indexHtml)) {
-    return reply.type("text/html").send(fs.readFileSync(indexHtml, "utf-8"));
+    const html = fs.readFileSync(indexHtml, "utf-8");
+    const prefix = readBasePrefix(request.headers);
+    // Empty prefix (prod, standalone `cb serve` — no fronting proxy, no header)
+    // serves the built HTML byte-for-byte: the invariant that keeps prod's
+    // asset paths, and its served bytes, identical to before Track A.
+    return reply.type("text/html").send(prefix === "" ? html : rewriteSpaAssetBase({ html, prefix }));
   }
   return reply.type("text/html").send(
     "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Callback Box — Sign in</title></head>" +
@@ -231,8 +261,8 @@ function registerPasswordRoutes(server: FastifyInstance): void {
   invariant(!isHubMode(), "registerPasswordRoutes must never run in hub mode — the hub owns fleet login");
   const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
 
-  server.get("/auth/login", async (_request, reply) => serveLoginSpa(reply, frontendDist));
-  server.get("/auth/setup", async (_request, reply) => serveLoginSpa(reply, frontendDist));
+  server.get("/auth/login", async (request, reply) => serveLoginSpa(reply, { request, frontendDist }));
+  server.get("/auth/setup", async (request, reply) => serveLoginSpa(reply, { request, frontendDist }));
 
   server.get("/auth/logout", async (_request, reply) => {
     return reply.clearCookie(COOKIE_NAME, { path: "/" }).redirect("/");
