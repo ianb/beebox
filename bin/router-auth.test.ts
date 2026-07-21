@@ -37,6 +37,8 @@ interface FakeConfig {
   mobile: Record<string, boolean>;
   agentBearer: boolean;
   csrfSafe: boolean;
+  /** worktree → whether any valid box credential (session/mobile) is present. */
+  worktreeAsset: Record<string, boolean>;
 }
 
 function makeDeps(overrides: Partial<FakeConfig>): RouterAuthDeps {
@@ -47,6 +49,7 @@ function makeDeps(overrides: Partial<FakeConfig>): RouterAuthDeps {
     mobile: {},
     agentBearer: false,
     csrfSafe: false,
+    worktreeAsset: {},
     ...overrides,
   };
   const keyFor = (target: BoxTarget): string => `${target.targetWorktree}/${target.targetBox ?? "<root>"}`;
@@ -60,6 +63,7 @@ function makeDeps(overrides: Partial<FakeConfig>): RouterAuthDeps {
     resolveMobileForBox: (_headers, boxRoot) => cfg.mobile[boxRoot] ?? false,
     isAgentBearer: () => cfg.agentBearer,
     isCsrfSafe: () => cfg.csrfSafe,
+    resolveWorktreeAsset: (_headers, worktree) => cfg.worktreeAsset[worktree] ?? false,
   };
 }
 
@@ -106,6 +110,16 @@ test("classifier: exhaustive route-shape mapping", () => {
   assert.deepEqual(c("GET", "/main/api/boxes"), { kind: "box", targetWorktree: "main", targetBox: null });
   assert.deepEqual(c("GET", "/main"), { kind: "box", targetWorktree: "main", targetBox: null });
   assert.deepEqual(c("GET", "/main/"), { kind: "box", targetWorktree: "main", targetBox: null });
+
+  // worktree-asset — Vite-served dev assets (GET), reachable by any box credential.
+  assert.deepEqual(c("GET", "/main/@vite/client"), { kind: "worktree-asset", targetWorktree: "main" });
+  assert.deepEqual(c("GET", "/main/@react-refresh"), { kind: "worktree-asset", targetWorktree: "main" });
+  assert.deepEqual(c("GET", "/main/@fs/abs/path.ts"), { kind: "worktree-asset", targetWorktree: "main" });
+  assert.deepEqual(c("GET", "/main/@id/x"), { kind: "worktree-asset", targetWorktree: "main" });
+  assert.deepEqual(c("GET", "/main/src/main.tsx"), { kind: "worktree-asset", targetWorktree: "main" });
+  assert.deepEqual(c("GET", "/main/node_modules/.vite/deps/x.js"), { kind: "worktree-asset", targetWorktree: "main" });
+  // A non-GET to a dev-asset path is NOT a worktree-asset (falls to the box ladder).
+  assert.deepEqual(c("POST", "/main/src/x"), { kind: "box", targetWorktree: "main", targetBox: "src" });
 
   // unknown
   assert.deepEqual(c("GET", "/__router/bogus"), { kind: "unknown" });
@@ -321,6 +335,58 @@ test("TCP box: root-worktree API (/<w>/api, targetBox null) resolves to default 
     deps,
   );
   assert.equal(d.allow, true);
+});
+
+// --- worktree-asset (dev SPA shell, any box credential) ----------------------
+
+test("TCP worktree-asset: any box credential in the worktree → allow", async () => {
+  const deps = makeDeps({ worktreeAsset: { main: true } });
+  const d = await authorizeRouterRequest(
+    req({ method: "GET", url: "/main/@vite/client", headers: { authorization: "Bearer box-a-token" } }),
+    deps,
+  );
+  assert.equal(d.allow, true, "a box mobile token reaches the dev SPA shell");
+});
+
+test("TCP worktree-asset: no credential → 401 (redirect a navigation)", async () => {
+  const deps = makeDeps({ worktreeAsset: {} });
+  const api = await authorizeRouterRequest(
+    req({ method: "GET", url: "/main/@vite/client", headers: JSON_ACCEPT }),
+    deps,
+  );
+  assert.equal(api.allow === false && api.status, 401);
+  assert.equal(api.allow === false && api.reason, "worktree-asset-auth-required");
+  assert.equal(api.allow === false && api.redirectToLogin, false);
+
+  const nav = await authorizeRouterRequest(req({ method: "GET", url: "/main/src/main.tsx", headers: HTML }), deps);
+  assert.equal(nav.allow === false && nav.redirectToLogin, true);
+});
+
+test("TCP worktree-asset: a credential for another worktree does NOT reach these assets", async () => {
+  // Only `other` has a credential; the request targets `main`'s assets.
+  const deps = makeDeps({ worktreeAsset: { other: true } });
+  const d = await authorizeRouterRequest(
+    req({ method: "GET", url: "/main/@vite/client", headers: { authorization: "Bearer other-token" } }),
+    deps,
+  );
+  assert.equal(d.allow, false, "a token scoped to another worktree is not accepted here");
+});
+
+test("TCP picker/API stays session-only: a worktree-asset credential does NOT reach /<w>/api/boxes", async () => {
+  // The SAME worktree grants asset access, but /<w>/api/boxes is box-class
+  // (picker) — it consults the box ladder, never resolveWorktreeAsset.
+  let assetConsulted = false;
+  const base = makeDeps({ boxRoots: {}, worktreeAsset: { main: true } });
+  const deps: RouterAuthDeps = {
+    ...base,
+    resolveWorktreeAsset: () => {
+      assetConsulted = true;
+      return true;
+    },
+  };
+  const d = await authorizeRouterRequest(req({ method: "GET", url: "/main/api/boxes", headers: JSON_ACCEPT }), deps);
+  assert.equal(d.allow, false, "the picker never falls back to the worktree-asset grant");
+  assert.equal(assetConsulted, false, "a box-class route never calls resolveWorktreeAsset");
 });
 
 // --- unknown -----------------------------------------------------------------

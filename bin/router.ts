@@ -48,6 +48,7 @@ import { injectBasePrefix } from "../callback-box/src/webapp/base-prefix.js";
 import { resolveBoxEntries, type ResolvedBoxEntry } from "./box-entry.js";
 import { authorizeRouterRequest, type RouterAuthDeps, type RouterAuthDecision } from "./router-auth.js";
 import { createRouterAuthDeps } from "./router-auth-deps.js";
+import { rewriteMobileCookiePath } from "./router-cookie.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
 import {
   type WorktreeHandle,
@@ -383,6 +384,35 @@ proxy.on("error", (err: Error, _req, res) => {
       /* gone */
     }
   }
+});
+
+/**
+ * The `/<worktree>/<box>` box slug of a proxied request, or null when the path
+ * has no box segment (`/<w>/`, `/<w>/api/...`, `/<w>/@vite/...`). Used only to
+ * scope the Set-Cookie Path rewrite; the rewrite's own exact-`/<slug>` match is
+ * the real guard, so a non-box second segment here is harmless (it never equals
+ * a box cookie's Path).
+ */
+function boxSlugOf(reqPath: string): string | null {
+  const m = reqPath.match(/^\/[^/?#]+\/([^/?#]+)(?:[/?#]|$)/);
+  return m ? m[1]! : null;
+}
+
+// The box child sets `cb_mobile` with `Path=/<slug>` (it only knows its slug);
+// behind the router the browser path is `/<worktree>/<slug>/…`, so the cookie is
+// dropped on reload + the tRPC WebSocket unless the router rewrites its Path.
+// `proxyRes` fires BEFORE http-proxy-3's writeHeaders pass copies proxyRes.headers
+// onto the client response (web-incoming.ts: emit `proxyRes` → run web-outgoing
+// passes), so mutating `proxyRes.headers["set-cookie"]` here is the correct hook.
+// Shared by the TCP and UDS servers (both proxy through this one instance); the
+// rewrite is a no-op for the CLI's UDS traffic and correct for browser traffic.
+proxy.on("proxyRes", (proxyRes, req) => {
+  const reqPath = req.url ?? "";
+  const worktree = parseWorktreeName(reqPath);
+  const boxSlug = worktree ? boxSlugOf(reqPath) : null;
+  if (!worktree || !boxSlug) return;
+  const rewritten = rewriteMobileCookiePath(proxyRes.headers["set-cookie"], { worktree, boxSlug });
+  if (rewritten !== undefined) proxyRes.headers["set-cookie"] = rewritten;
 });
 
 // Proxying consumes the request's body stream, so a naive retry after

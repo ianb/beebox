@@ -52,6 +52,15 @@ export interface BoxTarget {
  *   401 on deny) from the browser pages (which redirect a navigation to login).
  * - `box`: a per-box or root-worktree app request (`/<w>/<box>/...`, `/<w>/api/*`,
  *   `/<w>/`) — the box precedence ladder against the TARGET box.
+ * - `worktree-asset`: a NON-SENSITIVE worktree-root dev asset Vite serves itself
+ *   (`/<w>/@vite/...`, `/<w>/@fs/...`, `/<w>/@id/...`, `/<w>/@react-refresh`,
+ *   `/<w>/node_modules/...`, `/<w>/src/...`) — the dev SPA shell an iOS webview
+ *   needs. Reachable by ANY valid box credential in the worktree (a session, OR a
+ *   per-box mobile token for any box there), NOT the cross-box picker/API which
+ *   stay session-only. These paths never serve box data — Vite owns them, so a
+ *   box literally named `src`/`node_modules` is already unreachable in dev anyway
+ *   (this classification mirrors the proxy's real routing). Built `assets`/`icons`
+ *   are separately in `unauth-allowlist`.
  * - `unknown`: anything else — deny (fail closed).
  */
 export type RouterRoute =
@@ -59,6 +68,7 @@ export type RouterRoute =
   | { kind: "control" }
   | { kind: "control-read"; json: boolean }
   | ({ kind: "box" } & BoxTarget)
+  | { kind: "worktree-asset"; targetWorktree: string }
   | { kind: "unknown" };
 
 /** The identity shapes the injected resolvers return (fields the gate reads). */
@@ -87,6 +97,10 @@ export interface BoxAccessIdentity {
  *   injected here so the ladder's first rung is exercised).
  * - `isCsrfSafe` — Origin / Sec-Fetch-Site same-origin assertion for mutating
  *   control.
+ * - `resolveWorktreeAsset` — true if ANY valid box credential in the worktree is
+ *   present: a session (owner, or a member of any box there), OR a per-box mobile
+ *   token / agent bearer for any box there. Gates the non-sensitive dev assets
+ *   without demanding the cross-box picker's per-user session.
  */
 export interface RouterAuthDeps {
   resolveOwnerSession(headers: RouterHeaders): Awaitable<OwnerIdentity | null>;
@@ -95,6 +109,7 @@ export interface RouterAuthDeps {
   resolveMobileForBox(headers: RouterHeaders, targetBoxRoot: string): Awaitable<boolean>;
   isAgentBearer(headers: RouterHeaders): Awaitable<boolean>;
   isCsrfSafe(headers: RouterHeaders): Awaitable<boolean>;
+  resolveWorktreeAsset(headers: RouterHeaders, targetWorktree: string): Awaitable<boolean>;
 }
 
 /** The request facts the gate reads. `trustedLocal` = arrived on the UDS. */
@@ -124,6 +139,23 @@ function firstSegment(pathname: string): string | null {
   const m = pathname.match(/^\/([^/]+)(?:\/|$)/);
   return m ? m[1]! : null;
 }
+
+/**
+ * The Vite-internal / source-tree first segments under `/<w>/` that Vite serves
+ * itself (NOT proxied to a box): its own module runtime plus the app source and
+ * bundled deps. A box slug can never be one of these — Vite already shadows
+ * them in dev — so treating them as non-sensitive worktree assets matches how
+ * the proxy actually routes. Deliberately narrow (the plan's blessed set): no
+ * wildcards, no `api`/`auth`/box paths, nothing that can serve box data.
+ */
+const VITE_DEV_ASSET_SEGMENTS = new Set<string>([
+  "@vite",
+  "@fs",
+  "@id",
+  "@react-refresh",
+  "node_modules",
+  "src",
+]);
 
 /** Login SPA static-asset prefixes (Track A rewrites these under `<prefix>/`). */
 function isLoginAssetPath(rest: string): boolean {
@@ -185,6 +217,13 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
 
   const seg2Match = rest.match(/^\/([^/]+)(?:\/|$)/);
   const seg2 = seg2Match ? seg2Match[1]! : null;
+
+  // `/<w>/{@vite,@fs,@id,@react-refresh,node_modules,src}/...` — Vite-served dev
+  // assets (GET). Reachable by ANY box credential in the worktree, so an iOS
+  // webview holding only a per-box mobile token can load the dev SPA shell.
+  if (method === "GET" && seg2 !== null && VITE_DEV_ASSET_SEGMENTS.has(seg2)) {
+    return { kind: "worktree-asset", targetWorktree: name };
+  }
 
   // Root-worktree API (`/<w>/api/*`) — box class, no single box slug in the path.
   if (seg2 === "api") return { kind: "box", targetWorktree: name, targetBox: null };
@@ -281,6 +320,13 @@ export async function authorizeRouterRequest(
       if (await deps.resolveMobileForBox(headers, targetBoxRoot)) return { allow: true, route };
       if (await deps.resolveBoxAccessSession(headers, targetBoxRoot)) return { allow: true, route };
       return deny({ status: 401, reason: "box-auth-required", redirectToLogin: nav, route });
+    }
+
+    case "worktree-asset": {
+      // Non-sensitive Vite dev asset: ANY valid box credential in the worktree
+      // (session OR a per-box mobile token/agent bearer for any box there).
+      if (await deps.resolveWorktreeAsset(headers, route.targetWorktree)) return { allow: true, route };
+      return deny({ status: 401, reason: "worktree-asset-auth-required", redirectToLogin: nav, route });
     }
 
     case "unknown":

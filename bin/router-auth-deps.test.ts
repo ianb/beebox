@@ -35,6 +35,9 @@ after(async () => {
 
 const { createRouterAuthDeps } = await import("./router-auth-deps.js");
 const { signSession } = await import("../callback-box/src/webapp/auth.js");
+const { signMobileSession, MOBILE_SESSION_TTL_MS } = await import(
+  "../callback-box/src/core/mobile/mobile-session.js"
+);
 import type { ResolvedBoxEntry } from "./box-entry.js";
 import type { RouterHeaders } from "./router-auth.js";
 
@@ -137,4 +140,46 @@ test("isCsrfSafe: no Sec-Fetch-Site falls back to Origin vs Host", () => {
     "a foreign Origin is a cross-origin POST",
   );
   assert.equal(deps.isCsrfSafe({ origin: "://malformed", host: "box.example.ts.net" }), false);
+});
+
+// --- resolveWorktreeAsset: dev SPA shell reachable by any box credential ------
+
+/** A `cb_mobile` cookie signed with `boxRoot`'s own per-box secret (pure HMAC). */
+function mobileCookie(boxRoot: string): RouterHeaders {
+  const value = signMobileSession(boxRoot, { deviceId: "dev-1", createdBy: "u@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
+  return { cookie: `cb_mobile=${value}` };
+}
+
+test("resolveWorktreeAsset: a per-box mobile token reaches the worktree's dev assets", async () => {
+  const boxA = await fs.mkdtemp(path.join(os.tmpdir(), "router-asset-a-"));
+  const boxB = await fs.mkdtemp(path.join(os.tmpdir(), "router-asset-b-"));
+  try {
+    const deps = createRouterAuthDeps(fakeConfig({ main: [entry("boxa", boxA), entry("boxb", boxB)] }));
+    // A cb_mobile for boxA (any box in the worktree) reaches the dev assets.
+    assert.equal(await deps.resolveWorktreeAsset(mobileCookie(boxA), "main"), true);
+    // The owner session reaches them too (the owner's own dev SPA).
+    assert.equal(await deps.resolveWorktreeAsset(ownerCookie(), "main"), true);
+    // No credential at all → denied.
+    assert.equal(await deps.resolveWorktreeAsset({}, "main"), false);
+  } finally {
+    await fs.rm(boxA, { recursive: true, force: true });
+    await fs.rm(boxB, { recursive: true, force: true });
+  }
+});
+
+test("resolveWorktreeAsset: a mobile token does NOT reach a DIFFERENT worktree's assets", async () => {
+  const boxA = await fs.mkdtemp(path.join(os.tmpdir(), "router-asset-a2-"));
+  const stray = await fs.mkdtemp(path.join(os.tmpdir(), "router-asset-stray-"));
+  try {
+    // boxA belongs to `main`; `other` contains only `stray` (a different secret).
+    const deps = createRouterAuthDeps(
+      fakeConfig({ main: [entry("boxa", boxA)], other: [entry("stray", stray)] }),
+    );
+    assert.equal(await deps.resolveWorktreeAsset(mobileCookie(boxA), "other"), false);
+    // And an unknown worktree fails closed regardless of credential.
+    assert.equal(await deps.resolveWorktreeAsset(mobileCookie(boxA), "ghost"), false);
+  } finally {
+    await fs.rm(boxA, { recursive: true, force: true });
+    await fs.rm(stray, { recursive: true, force: true });
+  }
 });
