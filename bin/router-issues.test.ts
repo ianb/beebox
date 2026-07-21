@@ -18,6 +18,8 @@ import {
   parseNulPaths,
   mergeOverlaySources,
   rewriteIssueLinks,
+  findClosedIssueLinkHrefs,
+  appendClosedIssuePills,
   listIssues,
   collectOverlay,
   parseFilters,
@@ -207,24 +209,69 @@ test("mergeOverlaySources: rename records under both old and new path", () => {
 test("rewriteIssueLinks: same-category link", () => {
   const md = "See [related](foo.md) for context.";
   const out = rewriteIssueLinks(md, "bugs", "/main/dev/issues");
-  assert.equal(out, "See [related](/main/dev/issues/bugs/foo.md) for context.");
+  assert.equal(out.md, "See [related](/main/dev/issues/bugs/foo.md) for context.");
+  assert.equal(out.closedHrefs.size, 0);
 });
 
 test("rewriteIssueLinks: cross-category link", () => {
   const md = "See [related](../features/foo.md).";
   const out = rewriteIssueLinks(md, "bugs", "/main/dev/issues");
-  assert.equal(out, "See [related](/main/dev/issues/features/foo.md).");
+  assert.equal(out.md, "See [related](/main/dev/issues/features/foo.md).");
 });
 
 test("rewriteIssueLinks: preserves anchor, leaves external/absolute/anchor-only links alone", () => {
   const md = "[a](foo.md#section) [b](https://example.com/x.md) [c](/absolute/x.md) [d](#local)";
   const out = rewriteIssueLinks(md, "bugs", "/main/dev/issues");
-  assert.equal(out, "[a](/main/dev/issues/bugs/foo.md#section) [b](https://example.com/x.md) [c](/absolute/x.md) [d](#local)");
+  assert.equal(out.md, "[a](/main/dev/issues/bugs/foo.md#section) [b](https://example.com/x.md) [c](/absolute/x.md) [d](#local)");
+  assert.equal(out.closedHrefs.size, 0);
 });
 
 test("rewriteIssueLinks: leaves non-.md links untouched", () => {
   const md = "[code](../../src/foo.ts)";
-  assert.equal(rewriteIssueLinks(md, "bugs", "/main/dev/issues"), md);
+  assert.equal(rewriteIssueLinks(md, "bugs", "/main/dev/issues").md, md);
+});
+
+test("rewriteIssueLinks: link to a closed issue is rewritten and flagged in closedHrefs", () => {
+  const md = "See [fixed](../closed/bugs/2026-07-19-foo.md) for the postmortem.";
+  const out = rewriteIssueLinks(md, "bugs", "/main/dev/issues");
+  assert.equal(out.md, "See [fixed](/main/dev/issues/closed/bugs/2026-07-19-foo.md) for the postmortem.");
+  assert.deepEqual([...out.closedHrefs], ["/main/dev/issues/closed/bugs/2026-07-19-foo.md"]);
+});
+
+test("rewriteIssueLinks: link to an open issue is not flagged", () => {
+  const md = "See [related](../features/foo.md).";
+  const out = rewriteIssueLinks(md, "bugs", "/main/dev/issues");
+  assert.equal(out.closedHrefs.size, 0);
+});
+
+// --- findClosedIssueLinkHrefs (docs browser) ----------------------------------
+
+test("findClosedIssueLinkHrefs: flags a link resolving under issues/closed/", () => {
+  const md = "See [foo](../issues/closed/bugs/2026-07-19-foo.md) for details.";
+  const hrefs = findClosedIssueLinkHrefs(md, "docs");
+  assert.deepEqual([...hrefs], ["../issues/closed/bugs/2026-07-19-foo.md"]);
+});
+
+test("findClosedIssueLinkHrefs: does not flag an open issue or an external link", () => {
+  const md = "[open](../issues/bugs/2026-07-19-bar.md) [ext](https://example.com/issues/closed/x.md)";
+  const hrefs = findClosedIssueLinkHrefs(md, "docs");
+  assert.equal(hrefs.size, 0);
+});
+
+// --- appendClosedIssuePills ----------------------------------------------------
+
+test("appendClosedIssuePills: appends a pill after a matching link, leaves others alone", () => {
+  const html = '<p>See <a href="/main/dev/issues/closed/bugs/foo.md">fixed</a> and <a href="/main/dev/issues/bugs/open.md">open</a>.</p>';
+  const out = appendClosedIssuePills(html, new Set(["/main/dev/issues/closed/bugs/foo.md"]));
+  assert.equal(
+    out,
+    '<p>See <a href="/main/dev/issues/closed/bugs/foo.md">fixed</a><span class="chip chip-closed-link">closed</span> and <a href="/main/dev/issues/bugs/open.md">open</a>.</p>',
+  );
+});
+
+test("appendClosedIssuePills: no-op when closedHrefs is empty", () => {
+  const html = '<p><a href="/main/dev/issues/bugs/open.md">open</a></p>';
+  assert.equal(appendClosedIssuePills(html, new Set()), html);
 });
 
 // --- fixture-repo integration test for listIssues + collectOverlay -----------

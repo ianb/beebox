@@ -13,7 +13,7 @@ import type http from "node:http";
 import { execa } from "execa";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
-import { serveIssues } from "./router-issues.js";
+import { serveIssues, findClosedIssueLinkHrefs, appendClosedIssuePills } from "./router-issues.js";
 
 const DEV_CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -362,6 +362,7 @@ function renderDocSidebar(base: string, files: string[], currentRel: string, sor
 
 const DOC_BROWSER_CSS = `
   body { max-width: none; padding: 0; }
+  .chip-closed-link { display: inline-block; margin: 0 0 0 0.4em; padding: 0.15em 0.55em; border-radius: 10px; background: #eef1f5; color: #555; font-size: 0.78em; text-decoration: none; }
   nav.crumbs { padding: 0.7em 1.2em; margin: 0; }
   .docwrap { display: flex; align-items: flex-start; gap: 0; }
   aside.docnav { flex: 0 0 20em; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; border-right: 1px solid #eee; padding: 0.5em 0.8em 3em; font: 13px ui-monospace, Menlo, monospace; }
@@ -582,7 +583,12 @@ async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort
     }
     try {
       const src = await fs.readFile(resolved, "utf8");
-      contentHtml = `<p style="color:#888;font:12px ui-monospace,monospace;margin-top:0">${escapeHtml(fileRel)}</p>${renderMarkdownToHtml(src)}`;
+      // Links to issues/ files aren't rewritten here (unlike the issues
+      // browser) — a doc just links wherever it links — so closed-issue
+      // detection resolves against the doc's own directory instead of an
+      // issues-root-relative one.
+      const closedHrefs = findClosedIssueLinkHrefs(src, path.posix.dirname(fileRel.split(path.sep).join("/")));
+      contentHtml = `<p style="color:#888;font:12px ui-monospace,monospace;margin-top:0">${escapeHtml(fileRel)}</p>${appendClosedIssuePills(renderMarkdownToHtml(src), closedHrefs)}`;
       title = path.basename(resolved);
     } catch {
       res.writeHead(404, { "content-type": "text/plain" });
