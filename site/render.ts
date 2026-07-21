@@ -80,6 +80,9 @@ function rewriteLinks(node: RenderableTreeNode, ctx: RewriteContext): void {
       const resolved = resolveInternalHref({ href, pageSitePath: ctx.pageSitePath, base: ctx.base });
       node.attributes["href"] = resolved.href;
       ctx.targets.push(resolved.target);
+    } else if (typeof href === "string" && classifyHref(href) === "external") {
+      node.attributes["target"] = "_blank";
+      node.attributes["rel"] = "noopener noreferrer";
     }
   }
   for (const child of node.children) {

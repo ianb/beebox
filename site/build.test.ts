@@ -97,11 +97,12 @@ test("parseSource: missing required field is named", () => {
 
 // --- render: link rewrite + collect (base-path link integrity) ----------------
 
-test("renderBody: internal links rewrite against base and are collected; externals untouched", () => {
+test("renderBody: internal links rewrite against base and are collected; externals open in a new tab", () => {
   const body = "See [about](/about.md) and [gh](https://github.com/x).";
   const underPages = renderBody(body, { pageSitePath: "index.html", base: "/callback-box/" });
   assert.match(underPages.html, /href="\/callback-box\/about\.html"/);
-  assert.match(underPages.html, /href="https:\/\/github\.com\/x"/);
+  assert.match(underPages.html, /href="https:\/\/github\.com\/x" target="_blank" rel="noopener noreferrer"/);
+  assert.match(underPages.html, /href="\/callback-box\/about\.html"(?![^>]*target=)/);
   assert.deepEqual(underPages.linkTargets, ["about.html"]);
 
   // Same source under the router base: identical target, base-shifted href.
