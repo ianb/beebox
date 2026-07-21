@@ -69,6 +69,23 @@ future edits instead of being easy to read past or accidentally undo.
 URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the
 tRPC WebSocket all flow through the router.
 
+## Dev auth is loopback-open by default
+
+The router spawns each worktree's hub with `CB_ALLOW_UNAUTHENTICATED=1`
+(`router-core.ts`, in `childEnv`), so dev traffic skips the login gate. This is
+deliberate: the hub serves the login SPA from built dist with root-absolute
+asset paths (`base="/"`) that 404 behind the router's `/<worktree>/` prefix (the
+browser resolves `/assets/…` and the `/auth/login` redirect against the router
+root, dropping the prefix), so the login page is an unusable dead end behind the
+router. `CB_ALLOW_UNAUTHENTICATED=1` is loopback-bind-gated and the hub binds
+`127.0.0.1`, so it can't open a public interface; a hub in open mode advertises
+`x-cb-hub-auth: off` to its box children, so no per-box env is needed. An
+explicit `CB_ALLOW_UNAUTHENTICATED` in the environment is respected (it can only
+widen, e.g. `network`). Consequence: dev sessions have no signed-in email
+identity — testing the real login/OAuth flow needs a standalone `cb serve`
+outside the router. Background:
+`../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md`.
+
 ## Idle shutdown + self-healing tabs
 
 Only HTTP requests count as worktree activity. WebSocket upgrades never

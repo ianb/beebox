@@ -129,6 +129,7 @@ function makeChild(pid: number, autoResolve: boolean, rejectOnMicrotask: unknown
 interface SpawnCall {
   command: string;
   args: string[];
+  options: SpawnOptions;
   child: FakeChild;
 }
 
@@ -138,14 +139,14 @@ class FakeSpawner {
   /** When set, every LIFECYCLE child (vite/fastify) rejects on a microtask. */
   rejectLifecycleWith: unknown | undefined = undefined;
 
-  spawn = (command: string, args: string[], _options: SpawnOptions): SpawnedChild => {
+  spawn = (command: string, args: string[], options: SpawnOptions): SpawnedChild => {
     const isDashboard = args.includes("dashboard");
     const child = makeChild(
       this.nextPid++,
       /* autoResolve */ isDashboard, // dashboard commands are awaited; resolve them
       /* rejectOnMicrotask */ isDashboard ? undefined : this.rejectLifecycleWith,
     );
-    this.calls.push({ command, args, child });
+    this.calls.push({ command, args, options, child });
     return child;
   };
 
@@ -311,6 +312,41 @@ test("dedupe: two concurrent ensureRunning(name) share ONE start and one handle"
     assert.equal(h.spawner.lifecycleCalls().length, 2, "one lifecycle pair, not two");
   } finally {
     await h.cleanup();
+  }
+});
+
+test("dev-router hub child defaults to loopback-open auth (login page fix)", async () => {
+  // The per-worktree hub serves the login SPA from built dist with root-absolute
+  // asset paths that 404 behind the router's /<worktree>/ prefix — so the router
+  // defaults CB_ALLOW_UNAUTHENTICATED=1 (loopback-open) to skip the login gate.
+  // See issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md.
+  const prior = process.env.CB_ALLOW_UNAUTHENTICATED;
+  delete process.env.CB_ALLOW_UNAUTHENTICATED;
+  const h = await makeHarness();
+  try {
+    await startReady(h, "wt");
+    // [0]=fastify (the hub), [1]=vite — both share childEnv.
+    const hub = h.spawner.lifecycleCalls()[0]!;
+    assert.equal(hub.options.env?.CB_ALLOW_UNAUTHENTICATED, "1", "hub defaults to loopback-open");
+  } finally {
+    await h.cleanup();
+    if (prior === undefined) delete process.env.CB_ALLOW_UNAUTHENTICATED;
+    else process.env.CB_ALLOW_UNAUTHENTICATED = prior;
+  }
+});
+
+test("an explicit CB_ALLOW_UNAUTHENTICATED is respected, not overridden", async () => {
+  const prior = process.env.CB_ALLOW_UNAUTHENTICATED;
+  process.env.CB_ALLOW_UNAUTHENTICATED = "network";
+  const h = await makeHarness();
+  try {
+    await startReady(h, "wt");
+    const hub = h.spawner.lifecycleCalls()[0]!;
+    assert.equal(hub.options.env?.CB_ALLOW_UNAUTHENTICATED, "network", "explicit value passes through");
+  } finally {
+    await h.cleanup();
+    if (prior === undefined) delete process.env.CB_ALLOW_UNAUTHENTICATED;
+    else process.env.CB_ALLOW_UNAUTHENTICATED = prior;
   }
 });
 

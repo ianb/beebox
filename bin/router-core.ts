@@ -338,6 +338,19 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
       VITE_BASE: baseUrl,
       PORT: String(backendPort),
       NODE_OPTIONS: nodeOptions,
+      // The dev router is loopback-only, and its per-worktree hub serves the
+      // login SPA from built dist with root-absolute asset paths (base="/") —
+      // those 404 behind the router's `/<worktree>/` prefix (the browser
+      // resolves `/assets/…` and the `/auth/login` redirect against the router
+      // root, dropping the prefix), so the login page is a dead end. Default the
+      // hub to loopback-open so dev traffic skips the login gate entirely; a hub
+      // in open mode advertises `x-cb-hub-auth: off` to its box children, so no
+      // per-box env is needed. CB_ALLOW_UNAUTHENTICATED=1 is itself
+      // loopback-bind-gated and the hub binds 127.0.0.1, so this can't open a
+      // public interface. An explicit env value is respected (it can only widen,
+      // e.g. `network`). See
+      // issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md.
+      CB_ALLOW_UNAUTHENTICATED: process.env.CB_ALLOW_UNAUTHENTICATED ?? "1",
     };
     const browseEnv: NodeJS.ProcessEnv = {
       ...process.env,
