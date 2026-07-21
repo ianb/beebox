@@ -116,6 +116,16 @@ export async function buildScriptEnv(
   delete env.CB_HUB_SECRET;
   delete env.CB_DIAG_API_KEY;
 
+  // Strip the session-cookie SIGNING secret too. It's symmetric HMAC (verify ==
+  // forge, see webapp/auth.ts), so an agent that inherited it could mint a valid
+  // `cb_session` for ANY user and bypass login on any box. Server processes read
+  // it from `~/.cb-session-secret` (or their own env), never needing it in an
+  // agent subprocess. (Partial: a same-user agent can still read the 0600 file
+  // directly — true containment is an agent-sandboxing question — but stripping
+  // the env var closes the trivial-inheritance path, consistent with the two
+  // secrets above.)
+  delete env.CB_SESSION_SECRET;
+
   // Priority: live ambient (running server) > box.json publicUrl > PUBLIC_URL env.
   // The live ambient lets a local dev server supply the env vars without
   // requiring publicUrl to be configured in box.json.
