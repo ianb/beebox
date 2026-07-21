@@ -17,6 +17,7 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { resolveRequestIdentity, getOwnerEmail } from "../webapp/auth.js";
 import { filterAccessibleBoxes } from "../webapp/box-access.js";
+import { loginRedirect, stripBasePrefixHeader } from "../webapp/base-prefix.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { invariant } from "../lib/invariant.js";
 
@@ -84,7 +85,12 @@ export function registerBoxPicker(
         return reply.status(503).send({ error: "Authentication temporarily unavailable" });
       }
       if (!identity.email) {
-        return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+        // Hub route: a client must never supply the base prefix, so strip any
+        // copy before redirecting. The hub serves login at its own root and
+        // never strips the slug, so `request.url` already carries it — the
+        // resulting redirect is bare `/auth/login?returnTo=<url>`, unchanged.
+        stripBasePrefixHeader(request.raw.headers);
+        return loginRedirect(request, reply);
       }
       email = identity.email;
     }

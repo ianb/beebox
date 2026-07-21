@@ -44,6 +44,7 @@ import { execa } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
+import { injectBasePrefix } from "../callback-box/src/webapp/base-prefix.js";
 import { resolveBoxEntries, type ResolvedBoxEntry } from "./box-entry.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
 import {
@@ -421,6 +422,11 @@ async function proxyWithRetry(
 ): Promise<void> {
   const bodyLength = replayableBodyLength(req);
   const body = bodyLength === null ? null : await readBody(req);
+  // Tell the fronted worktree which path prefix this router strips, so its
+  // login redirects (and, later, its SPA asset rewrite) can rebuild the full
+  // browser path. `injectBasePrefix` removes any client-supplied copy first —
+  // a client must never set this header (Track A of expose-dev-router.md).
+  injectBasePrefix(req.headers, `/${name}`);
   for (;;) {
     let handle: WorktreeHandle;
     try {

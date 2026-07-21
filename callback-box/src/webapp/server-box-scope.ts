@@ -31,6 +31,7 @@ import { verifyAgentBearer } from "../core/agent/token.js";
 import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
 import { renewMobileSessionCookie } from "./mobile-cookie.js";
 import { canAccessBox } from "./box-access.js";
+import { loginRedirect } from "./base-prefix.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
@@ -126,7 +127,7 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
             "hub-injected identity headers were missing/invalid (spoof or misconfiguration).",
         });
       }
-      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+      return loginRedirect(request, reply);
     }
     if (!(await canAccessBox({ boxRoot: box.boxRoot, email, ownerEmail: getOwnerEmail() }))) {
       return reply.status(403).send({ error: "Not authorized for this box" });
