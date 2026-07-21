@@ -143,6 +143,34 @@ router in dev, the hub in prod; the backend never derives it from `request.url`)
 strip) + `loginRedirect(request)` + migrate the 5 sites + a route doctest
 asserting the emitted `Location`/`returnTo` carry the prefix from the header (and
 stay bare when the header is empty). SPA-asset rewrite + OAuth are chunk 2.
+**DONE (`8698f41c`)** — `src/webapp/base-prefix.ts` (validate fails safe to "";
+explicit `..` reject; single-segment regex so no origin-escape), injected at
+`bin/router.ts` `proxyWithRetry` (`/<name>`) and the prod hub (`/<slug>`), 5
+sites migrated, 11 route-doctest + 3 bin-test assertions green.
+
+**Chunk-1 correction (implementation-confirmed):** the **prod hub serves login at
+its own root and forwards the slug un-stripped**, so `request.url` there already
+carries `/<slug>` — the hub must NOT prefix its own redirect (would double it).
+It strips the client `x-cb-base-prefix` and reads empty for its own redirects,
+injecting `/<slug>` only onto the child. So the prefixed redirect is exercised by
+a box behind the **dev router** (which doesn't strip `x-cb-*`), not by the hub's
+own redirect.
+
+**Chunk-2 design note (the worktree-prefix-through-hub problem, now pinned):** the
+dev browser prefix is two segments — `/<worktree>` for root-level `/auth`/`/api`,
+`/<worktree>/<slug>` for box paths — but the single-segment header holds one, and
+the worktree hub's `stripHubHeaders` deletes the router-injected `/<worktree>`
+before it reaches the child. This is fine because **login is served and
+redirected by the layer that has `/<worktree>`, not the child**: root-level
+`/<worktree>/auth/login` is served by the worktree hub (which receives
+`x-cb-base-prefix: /<worktree>` from the router via Vite, and reads it *before*
+`stripHubHeaders` runs for child-proxying); the child never redirects to login in
+hub mode (`server-root.ts:320` 401s instead). So chunk 2's SPA-asset rewrite +
+`loginRedirect` for the dev case live at the **worktree hub's own login-serving
+path** (read the header, rewrite `/assets/`→`/<worktree>/assets/`, prefix its own
+redirects), while it keeps stripping the header when proxying to children. Prod
+is unaffected (no router ⇒ no header ⇒ base=`/`, which already works via runtime
+slug derivation, `hub-server.ts:333`).
 
 ### Track B — the router as a fail-closed authenticating proxy
 
