@@ -6,7 +6,7 @@
  * callbacks, holding no chat-machine state of their own.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { CloseButton } from "../ui/CloseButton";
 import { ExternalIconLink } from "../ui/ExternalIconLink";
@@ -204,7 +204,7 @@ export interface PanelTab {
  * Tabs are keyed by path: opening a file that's already open reactivates it
  * rather than duplicating a tab, and in-file link clicks open new tabs.
  */
-export function CompanionViewPanel({
+function CompanionViewPanelInner({
   tabs,
   activePath,
   onSelectTab,
@@ -337,6 +337,15 @@ export function CompanionViewPanel({
     </div>
   );
 }
+
+/**
+ * Memoized so a chat-machine snapshot change (message submit, streaming token,
+ * status flip) re-renders the message subtree WITHOUT re-rendering the open
+ * companion card beside it — the pane's inputs (tabs / activePath) don't change
+ * on a send. Memo only holds if every prop is referentially stable across a
+ * submit; callers pass `useCallback`-stable handlers (see InteractiveChat-view).
+ */
+export const CompanionViewPanel = memo(CompanionViewPanelInner);
 
 /**
  * Small "Context: <dir>" link in the chat header for chats that were

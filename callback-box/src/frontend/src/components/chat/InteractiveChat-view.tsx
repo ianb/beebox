@@ -6,8 +6,9 @@
  * wires them into the layout regions.
  */
 
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
+import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
 import { ChatContextDirProvider } from "./chat-context-dir";
 import {
@@ -267,6 +268,18 @@ export function InteractiveChatBody(props: ChatBodyProps) {
     nativeCommandError,
     dismissNativeCommandError,
   } = useCompanionSelection({ nativeComposer, selections, voice });
+  // Stable across a submit so the memoized companion pane doesn't re-render
+  // when the chat machine's snapshot churns (see CompanionViewPanel's memo).
+  const { reportCardActivity } = props;
+  const handleCompanionNavigate = useCallback(
+    (target: ViewTarget, hint?: NavigateHint) => {
+      // A link followed within the pane is active consumption; the detail is
+      // where they navigated to.
+      reportCardActivity("navigated", target.path);
+      onZoomView({ target, label: hint && hint.label ? hint.label : target.path });
+    },
+    [reportCardActivity, onZoomView],
+  );
   return (
     <ChatView
       hasCompanion={Boolean(activeView)}
@@ -278,17 +291,9 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             onSelectTab={onSelectTab}
             onCloseTab={onCloseTab}
             onClosePanel={onClosePanel}
-            onNavigate={(target, hint) => {
-              // A link followed within the pane is active consumption; the
-              // detail is where they navigated to.
-              props.reportCardActivity("navigated", target.path);
-              onZoomView({
-                target,
-                label: hint && hint.label ? hint.label : target.path,
-              });
-            }}
+            onNavigate={handleCompanionNavigate}
             onAddSelection={handleAddSelection}
-            reportActivity={props.reportCardActivity}
+            reportActivity={reportCardActivity}
           />
         ) : null
       }
