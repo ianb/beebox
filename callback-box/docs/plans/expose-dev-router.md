@@ -49,12 +49,12 @@ password (owner); and the paired **iOS app must work** through it.
   box's `.callback-box/mobile-devices.secret.json` (`pairing.ts:288`). Gives
   `authed:true, isOwner:false`, bypasses `canAccessBox` (the per-box token *is*
   the authorization). **Reused** — the router calls it for the target box.
-- **Session verification the router can run.** `auth.ts:299`
-  `getSessionUserFromCookieHeader` (raw Cookie header — fits the router's
-  `http.IncomingMessage`), `:236` `verifySession`, `:454` `classifyLocalRecord`
-  (the **gen-aware** revocation check — must use this, not bare `verifySession`;
-  Codex finding 5), stable secret `auth.ts:30`. Owner check: `local-users.ts:201`
-  `getLocalOwnerEmail`. Box access: `box-access.ts` `canAccessBox`. **Reused.**
+- **Session verification the router can run.** The exported, **gen-aware**
+  `resolveRequestIdentity` (`auth.ts:411`) is the reusable entry (the gen-check
+  `classifyLocalRecord` at `:468` is private — 2nd-review 2.5); owner test via
+  `getOwnerEmail()` (`auth.ts:328`). Stable secret `auth.ts:30`; box access
+  `box-access.ts` `canAccessBox`. **Reused** — the router calls the exported
+  resolver, never the private internals.
 - **Agent + diag bearers, pairing-redeem, the full precedence ladder** —
   `server-box-scope.ts:79-134`: diag bypass → pairing-redeem URL allow → agent
   bearer → mobile auth → session identity → `canAccessBox`. **Reused** as the
@@ -146,32 +146,61 @@ never touches.
 worktree runs its own code so the wall must be at the shared front door.
 
 **Direction.**
-- **Two listeners, one handler.** Keep the TCP loopback listener (Serve-fronted,
-  browsers) and add a UDS listener (e.g. `~/.cache/callback-box/router.sock`,
-  0600). Requests arriving on the **UDS are trusted-local, unauthenticated**
-  (current dev-tool ergonomics: `bin/worktrees`, HMR pings, dashboards — rewired
-  to the socket). Requests on **TCP are untrusted and must authenticate**,
-  regardless of any header — this replaces the spoofable header test with a real
-  capability boundary (Codex's core recommendation). No `Tailscale-User-Login`
-  logic anywhere.
+- **Two listeners, one handler, one central gate.** Keep the TCP loopback
+  listener (Serve-fronted, browsers) and add a UDS listener (e.g.
+  `~/.cache/callback-box/router.sock`, 0600). Requests on the **UDS are
+  trusted-local, unauthenticated** — but only *non-browser* local tooling can use
+  it: `bin/worktrees` and other CLI move to `curl --unix-socket`. **Browser HMR
+  and the tRPC WebSocket stay on TCP** (a browser can't originate a UDS
+  connection; HMR rides the page origin through the router, `vite.config.ts:48`,
+  `bin/router.ts:896`) and authenticate with the local browser session
+  (2nd-review 2.3). Requests on **TCP are untrusted and must authenticate**,
+  regardless of any header — a real capability boundary replacing the spoofable
+  header test. No `Tailscale-User-Login` logic anywhere. The gate is **one
+  chokepoint before all dispatch, including the `upgrade` (WebSocket) handler**
+  (2nd-review 2.7), so Track C's single anonymous probe is representative of the
+  whole surface.
 - **The TCP gate (per route class), fail-closed default = 401/redirect:**
   - **Unauth allowlist (bootstrap):** `/<w>/auth/login`, `/<w>/auth/*` (login,
     logout, setup, OAuth callback), the login SPA assets, and
     `POST /<w>/<box>/api/pairing/redeem` (ticket-gated — mirrors
     `hub-server.ts:457`). Nothing else.
   - **`/__router/*` control routes + router infra (`/`, `/<w>/dev/`,
-    `/__router/dashboard`, and any cold-start):** a valid **owner** session,
-    gen-aware (`classifyLocalRecord`, owner-only per finding 5) **plus CSRF/Origin
-    defense** (finding 6): reject state-changing `/__router/{stop,retry}` unless
-    `Origin`/`Sec-Fetch-Site` proves same-origin-top-level, or require a
-    CSRF token. Read routes (`/__router/status`, `/`) need the owner cookie but
-    not the CSRF token.
-  - **Box routes `/<w>/<box>/...`:** the box precedence ladder, run at the router
-    with current code for the *target* box: agent bearer → per-box mobile auth
+    `/__router/dashboard`, and any cold-start):** a valid **owner** session —
+    resolved with the exported `resolveRequestIdentity` (`auth.ts:411`, which is
+    gen-aware) compared to `getOwnerEmail()` (`auth.ts:328`); *not* the private
+    `classifyLocalRecord` (2nd-review 2.5). **Control-plane CSRF isolation
+    (2nd-review 2.1 — the top decision):** an `Origin`/CSRF-token check is
+    *insufficient by itself* because `/<w>/dev/` serves agent-authored pages on
+    the same authenticated origin (`bin/router.ts:855`), which pass any Origin
+    check and can read a same-origin token. Resolution: serve all router-owned
+    agent content (`/dev`, dev artifacts) with a locked-down CSP (`sandbox`, no
+    `allow-scripts`/`allow-same-origin`) so it cannot originate requests, *and*
+    keep an Origin/`Sec-Fetch-Site` check on mutating `/__router/{stop,retry}`.
+    Fallback if sandboxing can't be made airtight: make the mutating control
+    routes **UDS/CLI-only** (remote read stays, remote worktree *mutation* drops)
+    — see Open questions. Read routes (`/__router/status`, `/`) need the owner
+    cookie, no token.
+  - **Box routes `/<w>/<box>/...` AND root-worktree API `/<w>/api/*`,
+    `/<w>/api/boxes`** (2nd-review 2.6 — Vite proxies root `/<base>/api` after
+    stripping the prefix, `vite.config.ts:105`; box listing has its own
+    mobile/session semantics): the box precedence ladder, run at the router with
+    current code for the *target* box: agent bearer → per-box mobile auth
     (`resolveMobileRequestAuth(targetBoxRoot, headers)`) → session identity whose
     user `canAccessBox(targetBoxRoot)`. Any hit ⇒ proxy through (and the router
     strips client-supplied `x-cb-*`, like `stripHubHeaders`). None ⇒
     401 (API) / `loginRedirect` (navigation).
+    - **Target-box resolution must be the single source of truth** (2nd-review
+      2.4): the auth resolver derives `targetBoxRoot` from the *same* slug→box map
+      the proxy routes by (`bin/router.ts:184`), and **duplicate slugs fail
+      closed** — never auth against one box while the proxy routes the slug to
+      another.
+    - **Prefix-correct mobile cookie** (2nd-review 2.2): the `cb_mobile` cookie is
+      issued `Path=/${boxSlug}` (`mobile-cookie.ts:37`), which the webview loses
+      under the `/<w>/<box>/` mount (initial load sends Bearer; reloads/WS need the
+      cookie). The router-side mobile auth issues a prefix-correct-Path cookie (or
+      `mobile-cookie.ts` grows a base arg). So the iOS *app* needs no change, but
+      the server cookie Path does.
   - **Cold-start happens only after the gate passes** (fixes finding 3's
     pre-auth start).
 - **DoS guard:** wrap the `/<w>/dev/` path decode (`router-docs.ts:690`) and the
@@ -233,7 +262,9 @@ Verified by C's anonymous-denial probe over Serve.
 | Tagged-device / Funnel request (no identity header) hits `/__router/stop` | planned (B truth table: TCP+no-cookie→401) | UDS-vs-TCP capability boundary, not header | clear |
 | Revoked/stale session used at the router | planned | gen-aware `classifyLocalRecord`, not bare verify | clear |
 | Non-owner member reaches control routes | planned | owner-only check | clear |
-| Same-origin CSRF POST to `/__router/stop` from an agent-authored `/dev` page | planned | Origin/Sec-Fetch or CSRF token on mutating control routes | clear |
+| Same-origin CSRF POST to `/__router/stop` from an agent-authored `/dev` page | planned | CSP-sandbox `/dev` content (can't script) + Origin check — OR mutating controls UDS-only (2nd-review 2.1, decision pending) | clear |
+| Webview mobile cookie lost on reload/WS under the `/<w>/<box>/` prefix | planned | router issues a prefix-correct `cb_mobile` Path (2nd-review 2.2) | clear |
+| Router auths a token for box A while the proxy routes the slug to box B | planned | single slug→box source of truth; duplicate slugs fail closed (2nd-review 2.4) | clear |
 | Malformed `%`-encoding under `/<w>/dev/` crashes the shared router | planned | decode guard + handler rejection boundary | clear |
 | Router proxies an old worktree whose box lacks auth | n/a (that's the point) | router front-auth uses current code before proxying | clear |
 | Per-box mobile token replayed against a *different* box | planned (mobile-for-other-box→401) | `resolveMobileRequestAuth` keyed to target box store | clear |
@@ -275,6 +306,15 @@ Verified by C's anonymous-denial probe over Serve.
 
 ## Open design questions
 
+- **Control-plane isolation (2nd-review 2.1 — the top decision, boxholder's
+  call).** Same-origin `/dev` agent content defeats an Origin/CSRF-token check on
+  mutating `/__router/{stop,retry}`. Two ways to keep them safe: **(a)** CSP-
+  sandbox all router-owned agent content so it can't script, keeping remote
+  worktree control behind owner+Origin (lean — preserves the "remote poking"
+  goal); **(b)** make mutating control routes UDS/CLI-only (airtight, but drops
+  remote worktree *mutation* — remote read + box access remain). This is the one
+  finding that trades against the boxholder's stated want (remote control), so
+  it's decided before B.2, not assumed.
 - **Google OAuth behind the prefix (A.3).** Lean: fix the callback to carry the
   prefix (remote family may want Google). Fallback: local-password-only on
   prefixed origins, documented. Sits in A's later chunk; the requirement (some
