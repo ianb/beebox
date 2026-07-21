@@ -85,7 +85,7 @@ to people; close when the soft launch happens. Builds on
    cross-model review (2026-07-21) found the fixes have residual depth, now
    filed and NOT yet resolved: the shared lock primitive isn't actually
    mutually exclusive
-   ([file-lock-empty-window-race](../bugs/2026-07-21-file-lock-empty-window-race.md),
+   ([file-lock-empty-window-race](../closed/bugs/2026-07-21-file-lock-empty-window-race.md),
    HIGH — undermines the device-store revoke), `pnpm dev` exposes
    auth-disabled boxes on the LAN
    ([dev-router-lan-exposure](../bugs/2026-07-21-dev-router-lan-exposure.md),

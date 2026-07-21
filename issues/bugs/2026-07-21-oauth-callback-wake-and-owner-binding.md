@@ -39,7 +39,7 @@ Also noted (same family, lower stakes): single-use is only in-process
 synchronous, not cross-process atomic — two servers sharing one box could both
 read a state before either rewrite (`google-oauth-state.ts:161-169`). Matters
 only if multi-server-per-box is ever supported; relates to the shared
-[file-lock empty-window race](2026-07-21-file-lock-empty-window-race.md).
+[file-lock empty-window race](../closed/bugs/2026-07-21-file-lock-empty-window-race.md).
 
 Fix directions: (a) check auth before `resolveEndpoint` on the callback, or
 resolve without waking (config lookup vs cold-start) until authorized; (b)

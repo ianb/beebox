@@ -4,12 +4,28 @@ needs: [design]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+resolution: implemented
+---
+
+**RESOLVED (implemented).** Fixed in `src/lib/file-lock.ts`. `writeExclusive` was
+replaced with `writeLockAtomic`: the fully-serialized holder JSON is written to
+a unique temp sibling and hard-`link()`ed onto the lock path, so the file is
+never observably empty (link gives O_EXCL against concurrent creators while the
+name only appears already pointing at complete content). Holders now also carry
+a per-acquisition random `token`, and `releaseLock` deletes only a lock whose
+on-disk token matches the one this process recorded on acquire (tracked in an
+in-process `heldTokens` map) — closing the co-PID release-deletion hole where
+PID/host/boot alone couldn't distinguish two acquisitions from one process.
+Regression tests in `test/lib/file-lock.doctest.md`: 40 parallel acquisitions →
+exactly one winner + 39 `LockHeldError`; published lock file is never empty;
+`releaseLock` won't delete a lock re-published under a foreign token.
+
 ---
 
 **HIGH. Found by a Codex cross-model review (2026-07-21), verified against
 source.** This is a pre-existing defect in the cross-process lock primitive,
 surfaced because the mobile device-store fix
-([mobile-device-store-unlocked-rmw](../closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md))
+([mobile-device-store-unlocked-rmw](2026-07-17-mobile-device-store-unlocked-rmw.md))
 now leans on it for a security-critical revoke. It undermines that fix's
 premise.
 

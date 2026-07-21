@@ -185,6 +185,100 @@ await releaseLock(path);
 await box.cleanup();
 ```
 
+### The published lock file is never observably empty (atomic-link publication)
+
+Regression for the empty-publication window: acquisition writes the holder to a
+temp sibling and hard-links it into place, so the lock path only ever appears
+already carrying complete, parseable holder JSON.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "test.lock");
+const holder = await acquireLock(path, { who: "winner" });
+const raw = await fs.readFile(path, "utf-8");
+const parsed = JSON.parse(raw);
+print(`nonempty: ${raw.trim().length > 0}`);
+print(`token matches: ${parsed.token === holder.token}`);
+print(`no leftover temp: ${(await fs.readdir(box.root)).filter((f) => f.endsWith(".tmp")).length === 0}`);
+=>
+nonempty: true
+token matches: true
+no leftover temp: true
+```
+
+```ts cleanup
+await releaseLock(path);
+await box.cleanup();
+```
+
+### Many parallel acquisitions: exactly one wins, the rest see LockHeldError
+
+Concurrent contention on the same path must never double-acquire. With the
+empty-window bug a racing reader could reclaim a winner mid-publication and both
+would believe they held it; here exactly one attempt resolves and every other
+rejects with `LockHeldError`.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "test.lock");
+const results = await Promise.allSettled(
+  Array.from({ length: 40 }, (_unused, i) => acquireLock(path, { who: i })),
+);
+const winners = results.filter((r) => r.status === "fulfilled");
+const losers = results.filter((r) => r.status === "rejected");
+print(`winners: ${winners.length}`);
+print(`losers: ${losers.length}`);
+print(`all losers LockHeldError: ${losers.every((r) => r.reason instanceof LockHeldError)}`);
+=>
+winners: 1
+losers: 39
+all losers LockHeldError: true
+```
+
+```ts cleanup
+await releaseLock(path);
+await box.cleanup();
+```
+
+## Token ownership (co-PID release protection)
+
+### releaseLock will not delete a lock re-published under a different token
+
+A same-PID racer that reclaims and re-publishes the lock has a fresh random
+token. Our `releaseLock` must key on the token we recorded on acquire, not on
+PID/host/boot (which two acquisitions from one process share) — otherwise a
+racing release could delete a live sibling holder's lock. With the pre-token
+implementation `isOurs()` matched on PID/host/boot and this deleted the file.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "test.lock");
+await acquireLock(path, { who: "us" });
+
+// Simulate a co-PID racer that now owns the lock under a DIFFERENT token
+// (same pid/host/boot as us — indistinguishable to the old ownership check).
+const racer = {
+  pid: process.pid,
+  bootEpochSeconds: Math.floor(Date.now() / 1000 - os.uptime()),
+  hostname: os.hostname(),
+  acquiredAt: new Date().toISOString(),
+  token: "some-other-processes-token",
+  metadata: { who: "racer" },
+};
+await fs.writeFile(path, JSON.stringify(racer, null, 2) + "\n");
+
+// Our release must NOT delete the racer's live lock.
+await releaseLock(path);
+const survivor = JSON.parse(await fs.readFile(path, "utf-8"));
+survivor.metadata.who
+=> racer
+```
+
+```ts cleanup
+await fs.unlink(path);
+await box.cleanup();
+```
+
 ## Cross-host safety
 
 ### Lock from a different hostname is NOT reclaimed

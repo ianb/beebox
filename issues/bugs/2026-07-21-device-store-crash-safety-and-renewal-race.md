@@ -10,7 +10,7 @@ discovered-in: worktree-open-source-readiness — Codex review of the overnight 
 Found by Codex (2026-07-21). The lock+atomic-write landed and closed the
 gross RMW hole; these are the harder-edge robustness gaps. (The lock's own
 mutual-exclusion defect is separate and higher —
-[file-lock-empty-window-race](2026-07-21-file-lock-empty-window-race.md).)
+[file-lock-empty-window-race](../closed/bugs/2026-07-21-file-lock-empty-window-race.md).)
 
 `writeDeviceStore()` (`src/core/mobile/pairing.ts:96`):
 

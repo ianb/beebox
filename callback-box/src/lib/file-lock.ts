@@ -10,10 +10,25 @@
  * ## How it works
  *
  * The lock *is* a single JSON file at the caller-chosen path. Acquisition
- * is atomic via `fs.open(path, "wx")` (O_CREAT|O_EXCL). The file body
- * carries the holder's identity:
+ * is atomic *against its own content*: the fully-serialized holder JSON is
+ * written to a unique temp sibling, then hard-`link()`ed into place. `link`
+ * fails EEXIST if the lock already exists (O_EXCL semantics), and the target
+ * name only becomes visible once it already points at fully-written content —
+ * so a contender can NEVER observe the lock file in an empty, mid-publication
+ * state. (The previous `fs.open(path, "wx")`-then-write approach left an empty
+ * file visible between the open and the write; a racing reader saw "no holder"
+ * and both callers acquired. See the file-lock-empty-window-race issue.) The
+ * file body carries the holder's identity:
  *
- *   { pid, bootEpochSeconds, hostname, acquiredAt, metadata }
+ *   { pid, bootEpochSeconds, hostname, acquiredAt, token, metadata }
+ *
+ * `token` is a per-acquisition random value. It is the strong ownership
+ * identity: `releaseLock` deletes the file only when the on-disk token matches
+ * the token this process recorded when it acquired (held in an in-process
+ * map). PID/host/boot alone can't distinguish two acquisitions from the *same*
+ * process, so without the token a racing co-PID release could delete a live
+ * sibling holder's lock. A dead/malformed holder is still reclaimed by the
+ * liveness check; only a *live foreign* holder is protected from deletion.
  *
  * Liveness is checked directly with `process.kill(pid, 0)` plus a
  * boot-epoch comparison (`Date.now()/1000 - os.uptime()`, ±30s tolerance
@@ -85,8 +100,8 @@
  *
  * - `acquireLock(path, metadata)` — atomic; throws LockHeldError if a
  *   live holder owns it. Reclaims dead/malformed holders automatically.
- * - `releaseLock(path)` — idempotent; only deletes the file if the
- *   recorded holder is us (PID + bootEpoch + hostname).
+ * - `releaseLock(path)` — idempotent; only deletes the file if the on-disk
+ *   holder's token matches the one this process recorded on acquire.
  * - `inspectLock(path)` — read holder; returns null if not held or dead
  *   (cleans up dead as a side effect).
  * - `forceAcquireLock(path, metadata)` — steal whoever owns it.
@@ -94,6 +109,7 @@
  *   map of name → holder for live ones, deletes dead ones.
  */
 
+import { randomBytes } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { errnoCode } from "./error-guards.js";
@@ -104,8 +120,23 @@ export interface LockHolder {
   bootEpochSeconds: number;
   hostname: string;
   acquiredAt: string;
+  /**
+   * Per-acquisition random ownership token. Optional so a lock file written by
+   * an older build (or a hand-constructed foreign holder) still parses and is
+   * liveness-checked — a tokenless holder simply can't be matched by our
+   * token-based `releaseLock`, which is the safe (never-delete) direction.
+   */
+  token?: string;
   metadata: Record<string, unknown>;
 }
+
+/**
+ * Tokens of locks THIS process currently holds, keyed by lock path. Populated
+ * on acquire, consulted by `releaseLock` so we only ever delete a lock whose
+ * on-disk token still matches the one we wrote — never a racing co-PID
+ * holder's live lock.
+ */
+const heldTokens = new Map<string, string>();
 
 export class LockHeldError extends Error {
   readonly holder: LockHolder;
@@ -149,6 +180,7 @@ function makeHolder(metadata: Record<string, unknown>): LockHolder {
     bootEpochSeconds: currentBootEpochSeconds(),
     hostname: os.hostname(),
     acquiredAt: new Date().toISOString(),
+    token: randomBytes(16).toString("hex"),
     metadata,
   };
 }
@@ -176,18 +208,14 @@ function isHolderLive(holder: LockHolder): boolean {
   return pidExists(holder.pid);
 }
 
-function isOurs(holder: LockHolder): boolean {
-  return holder.pid === process.pid &&
-    holder.hostname === os.hostname() &&
-    sameBoot(holder.bootEpochSeconds, currentBootEpochSeconds());
-}
-
 function isWellFormedHolder(value: unknown): value is LockHolder {
   if (!isRecord(value)) return false;
+  const token = value["token"];
   return typeof value["pid"] === "number" &&
     typeof value["bootEpochSeconds"] === "number" &&
     typeof value["hostname"] === "string" &&
     typeof value["acquiredAt"] === "string" &&
+    (token === undefined || typeof token === "string") &&
     typeof value["metadata"] === "object" && value["metadata"] !== null;
 }
 
@@ -213,21 +241,29 @@ async function readHolder(path: string): Promise<LockHolder | null> {
   return parsed;
 }
 
-async function writeExclusive(path: string, holder: LockHolder): Promise<boolean> {
-  let handle: fs.FileHandle;
+/**
+ * Publish the lock file atomically against its own content: write the fully
+ * serialized holder to a unique temp sibling, then hard-`link()` it onto the
+ * lock path. The lock name only ever appears already pointing at complete
+ * content, and `link` fails EEXIST if the lock already exists — so this is both
+ * O_EXCL against concurrent creators AND free of the empty-file publication
+ * window that `fs.open(path, "wx")`-then-write had. Returns false on EEXIST
+ * (someone else holds it), true on success. The temp is always unlinked.
+ */
+async function writeLockAtomic(path: string, holder: LockHolder): Promise<boolean> {
+  const tmp = `${path}.${randomBytes(8).toString("hex")}.tmp`;
+  // "wx" on the temp: unique name, so a collision is a real anomaly worth throwing on.
+  await fs.writeFile(tmp, JSON.stringify(holder, null, 2) + "\n", { flag: "wx", mode: 0o600 });
   try {
-    handle = await fs.open(path, "wx");
+    await fs.link(tmp, path);
+    return true;
   } catch (err) {
     const code = errnoCode(err);
     if (code === "EEXIST") return false;
     throw err;
-  }
-  try {
-    await handle.writeFile(JSON.stringify(holder, null, 2) + "\n");
   } finally {
-    await handle.close();
+    await unlinkIgnoringMissing(tmp);
   }
-  return true;
 }
 
 async function unlinkIgnoringMissing(path: string): Promise<void> {
@@ -249,7 +285,7 @@ export async function acquireLock(
 ): Promise<LockHolder> {
   const holder = makeHolder(metadata);
 
-  if (await writeExclusive(path, holder)) return holder;
+  if (await writeLockAtomic(path, holder)) return recordHeld(path, holder);
 
   // File exists. Check who owns it.
   const existing = await readHolder(path);
@@ -259,7 +295,7 @@ export async function acquireLock(
 
   // Existing is dead or malformed. Reclaim and retry once.
   await unlinkIgnoringMissing(path);
-  if (await writeExclusive(path, holder)) return holder;
+  if (await writeLockAtomic(path, holder)) return recordHeld(path, holder);
 
   // Race: someone else acquired between our unlink and write.
   const winner = await readHolder(path);
@@ -269,15 +305,28 @@ export async function acquireLock(
   throw new LockAcquireFailedError(path);
 }
 
+/** Record our ownership token for a freshly-acquired lock and return the holder. */
+function recordHeld(path: string, holder: LockHolder): LockHolder {
+  if (holder.token !== undefined) heldTokens.set(path, holder.token);
+  return holder;
+}
+
 /**
  * Release a lock previously acquired by this process. Idempotent.
  * If the lock is now owned by someone else (we crashed, they reclaimed),
  * we leave their lock alone.
  */
 export async function releaseLock(path: string): Promise<void> {
+  const ourToken = heldTokens.get(path);
+  heldTokens.delete(path);
+  // We only ever recorded a token for a lock we successfully acquired, so no
+  // record means it isn't ours to delete (idempotent no-op / foreign holder).
+  if (ourToken === undefined) return;
   const existing = await readHolder(path);
   if (existing === null) return;
-  if (!isOurs(existing)) return;
+  // A co-PID racer may have reclaimed and re-published under a new token; only
+  // delete the file if it still carries OUR token.
+  if (existing.token !== ourToken) return;
   await unlinkIgnoringMissing(path);
 }
 
@@ -305,10 +354,10 @@ export async function forceAcquireLock(
 ): Promise<LockHolder> {
   await unlinkIgnoringMissing(path);
   const holder = makeHolder(metadata);
-  if (await writeExclusive(path, holder)) return holder;
+  if (await writeLockAtomic(path, holder)) return recordHeld(path, holder);
   // Race with another acquirer; one more shot.
   await unlinkIgnoringMissing(path);
-  if (await writeExclusive(path, holder)) return holder;
+  if (await writeLockAtomic(path, holder)) return recordHeld(path, holder);
   throw new LockForceAcquireFailedError(path);
 }
 
