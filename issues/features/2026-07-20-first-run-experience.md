@@ -81,6 +81,28 @@ Mechanism ideas (boxholder, 2026-07-21):
   `research/memory-atlas-architecture-review.md` (checked 2026-07-21)
   — the knowledge is the boxholder's / the Memory Atlas source; ask
   him or read that codebase before designing this.
+- **Teaching the system's own concepts is onboarding content.** "What
+  is a card" and the other basics belong in the onboarding landmark —
+  the agent understands the system but has to *explain it to the
+  user*, which is its own interesting task. For this audience
+  (developers first) the conceptual material is genuinely useful, not
+  filler.
+- **A strongly conversational onboarding persona — wide knowledge,
+  deep introspection.** The boxholder wants (in general, and here
+  specifically) an onboarding agent that can answer essentially any
+  question about the system by *introspecting* — reading its own
+  config, docs, schemas, state — rather than reciting a script. The
+  onboarding landmark's instructions set this register.
+- **Role-marked users get different instructions.** Mark the admin/
+  owner user, and the agent instructs them differently from an invited
+  member (auth already distinguishes owner from member accounts —
+  `cb auth create-user` vs `add-user`; the agent-facing instruction
+  layer currently doesn't know the difference). An invited member's
+  onboarding is a different, smaller menu than the operator's.
+- **The menu needs a layout system.** Beyond the per-flow product
+  work, something has to present and sequence the menu items — closer
+  to documentation/content structure than engineering; plausibly just
+  cards in the onboarding directory.
 
 Considered and rejected/demoted (boxholder reactions, recorded so they
 aren't re-proposed):
