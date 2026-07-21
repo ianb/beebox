@@ -234,12 +234,30 @@ worktree runs its own code so the wall must be at the shared front door.
       the proxy routes by (`bin/router.ts:184`), and **duplicate slugs fail
       closed** — never auth against one box while the proxy routes the slug to
       another.
-    - **Prefix-correct mobile cookie** (2nd-review 2.2): the `cb_mobile` cookie is
-      issued `Path=/${boxSlug}` (`mobile-cookie.ts:37`), which the webview loses
-      under the `/<w>/<box>/` mount (initial load sends Bearer; reloads/WS need the
-      cookie). The router-side mobile auth issues a prefix-correct-Path cookie (or
-      `mobile-cookie.ts` grows a base arg). So the iOS *app* needs no change, but
-      the server cookie Path does.
+    - **Prefix-correct mobile cookie — the iOS load-bearing detail** (2nd-review
+      2.2): the `cb_mobile` cookie is issued `Path=/${boxSlug}` (`mobile-cookie.ts:37`)
+      = `/test1`, but behind the router the browser path is `/main/test1/…`, so the
+      webview drops it on reloads + the tRPC WebSocket (initial load sends Bearer;
+      everything after depends on the cookie). The box child **only knows its
+      slug**, not `/main`, so it cannot fix its own Path — **the router rewrites the
+      `Set-Cookie` Path** on `cb_mobile` (and `cb_session`) to the full
+      `/<worktree>/<slug>` on responses it proxies. This is a hard requirement, not
+      a nice-to-have: without it the paired app works for one request and then
+      silently loses its session.
+
+**iOS pairing over the exposed router — end-to-end requirement (a primary goal
+of this whole plan).** All four legs must hold, verified in the live proof:
+  1. *Ticket URL* — already correct: `boxBaseUrl()` (`CompanionPairingSection.tsx:18`)
+     builds `https://<node>.ts.net/<worktree>/<box>` from `getApiBase()`
+     (`api-core.ts:64`), so minting from the tailnet settings page gives the app
+     the full prefixed URL. No app change.
+  2. *Redeem* — `POST /<w>/<box>/api/pairing/redeem` is in the router's unauth
+     allowlist (ticket is the credential), routed to the target box.
+  3. *Per-request auth* — the router validates `Authorization: Bearer <deviceToken>`
+     (and `cb_mobile`) via `resolveMobileRequestAuth(targetBoxRoot, headers)` with
+     current code before proxying; a token for box A is rejected for box B.
+  4. *Session continuity* — the router rewrites the mobile/session cookie Path
+     (above) so webview reloads + WS keep the session.
   - **Cold-start happens only after the gate passes** (fixes finding 3's
     pre-auth start).
 - **DoS guard:** wrap the `/<w>/dev/` path decode (`router-docs.ts:690`) and the
@@ -302,7 +320,8 @@ Verified by C's anonymous-denial probe over Serve.
 | Revoked/stale session used at the router | planned | gen-aware `classifyLocalRecord`, not bare verify | clear |
 | Non-owner member reaches control routes | planned | owner-only check | clear |
 | Same-origin CSRF POST to `/__router/stop` from an agent-authored `/dev` page | planned | CSP-sandbox `/dev` content (can't script) + Origin check — OR mutating controls UDS-only (2nd-review 2.1, decision pending) | clear |
-| Webview mobile cookie lost on reload/WS under the `/<w>/<box>/` prefix | planned | router issues a prefix-correct `cb_mobile` Path (2nd-review 2.2) | clear |
+| Webview mobile cookie lost on reload/WS under the `/<w>/<box>/` prefix (paired iOS app silently loses session after one request) | planned | router rewrites `Set-Cookie` Path for `cb_mobile`/`cb_session` to `/<w>/<slug>` (2nd-review 2.2 — hard requirement) | clear |
+| Paired iOS device token for box A replayed against box B over the router | planned | router validates per-box via `resolveMobileRequestAuth(targetBoxRoot,…)` | clear |
 | Router auths a token for box A while the proxy routes the slug to box B | planned | single slug→box source of truth; duplicate slugs fail closed (2nd-review 2.4) | clear |
 | Malformed `%`-encoding under `/<w>/dev/` crashes the shared router | planned | decode guard + handler rejection boundary | clear |
 | Router proxies an old worktree whose box lacks auth | n/a (that's the point) | router front-auth uses current code before proxying | clear |
@@ -405,9 +424,11 @@ redirect. A and B.1 can proceed in parallel.
 - **Live proof (human + tailnet, already available: `banjo-parrotfish.ts.net`,
   phone paired).** `pnpm dev` → `cb tailscale setup` exposes the router → from the
   phone browser: hit `/<w>/<box>/`, get login, log in, reach the box; from the
-  **paired iOS app**: pair/redeem over the tailnet URL and confirm the app reaches
-  the box; confirm anonymous `/__router/stop/<w>` over the tailnet is 401 and
-  works logged-in; confirm `cb tailscale setup` refuses a pre-Track-B router.
+  **paired iOS app (a primary goal)**: mint a ticket from the tailnet settings
+  page, redeem it in the app, confirm the app reaches the box AND survives a
+  reload / keeps its WebSocket (proving the cookie-Path rewrite — all four
+  pairing legs); confirm anonymous `/__router/stop/<w>` over the tailnet is 401
+  and works logged-in; confirm `cb tailscale setup` refuses a pre-Track-B router.
 - **Knowledge audits:** none.
 - **Migration:** none (no on-disk shape change). Behavior changes — router
   authenticates TCP requests; local CLI moves to the UDS; local browser dev now
