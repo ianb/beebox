@@ -1,13 +1,46 @@
 ---
 title: "OAuth callback: wakes/enumerates boxes before auth, and doesn't bind to the initiating owner"
-needs: [decision]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
+resolution: implemented
+---
+
+**RESOLVED (implemented).** Both gaps fixed with the strict option.
+
+**(a)** `src/hub/hub-server.ts` — the Google callback now runs `decideHubAuth`
+FIRST, before any `resolveEndpoint`. An unauthenticated request redirects to
+login regardless of slug (no `resolveEndpoint`, so no lazy cold-start and no
+configured-slug oracle). The access check uses the wake-free `boxRootBySlug`
+map, and when hub auth is on an unknown slug and a forbidden box return the SAME
+403 (message no longer echoes the slug), so neither existence nor access is
+enumerable. `resolveEndpoint` (the legitimate idle-collected cold-start) runs
+only after the caller is authorized and access-checked.
+
+**(b)** `src/webapp/routes/admin.ts` — after consuming the nonce, the callback
+compares `consumed.createdBy` to `resolveRequestIdentity(request).email` and
+rejects a mismatch (403). An owner-bound nonce (any authed mint) can only be
+completed by that same identity; a nonce minted in standalone open mode
+(`createdBy: null`) falls through, since possession of the 256-bit nonce is the
+secret there.
+
+Tests: `test/hub/hub-router.doctest.md` (unauthenticated known vs unknown slug
+both 302→login with `ensureCalls === 0`) and
+`test/webapp/routes/routes-google-oauth-callback.doctest.md` (owner-bound nonce:
+anon→403, stranger→403, initiating owner→302; no tokens written on rejection).
+
+DECISIONS TAKEN (were `needs: [decision]`): (a) resolve-first was a deliberate
+lazy-box convenience — replaced with auth-first + wake-free config lookup, which
+preserves the idle-collected recovery case; (b) enforce owner binding only when
+`createdBy` is set (open mode stays possession-based). RESIDUAL NOT ADDRESSED
+(out of scope, low stakes): the nonce single-use in `google-oauth-state.ts` is
+in-process synchronous, not cross-process atomic — matters only if
+multi-server-per-box is ever supported; left as-is.
+
 ---
 
 **MED. Two residual gaps in the landed gate-1 OAuth fix
-([google-oauth-callback-unauthenticated](../closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md)).**
+([google-oauth-callback-unauthenticated](2026-07-19-google-oauth-callback-unauthenticated.md)).**
 Found by Codex (2026-07-21), both verified against source. The credential-swap
 hole the gate closed (nonce required before token persist) is genuinely
 closed; these are the next layer.
@@ -39,7 +72,7 @@ Also noted (same family, lower stakes): single-use is only in-process
 synchronous, not cross-process atomic — two servers sharing one box could both
 read a state before either rewrite (`google-oauth-state.ts:161-169`). Matters
 only if multi-server-per-box is ever supported; relates to the shared
-[file-lock empty-window race](../closed/bugs/2026-07-21-file-lock-empty-window-race.md).
+[file-lock empty-window race](2026-07-21-file-lock-empty-window-race.md).
 
 Fix directions: (a) check auth before `resolveEndpoint` on the callback, or
 resolve without waking (config lookup vs cold-start) until authorized; (b)

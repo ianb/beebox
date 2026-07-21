@@ -419,6 +419,56 @@ for (const socket of oauthLazyHub.sockets) socket.destroy();
 await new Promise((resolve) => oauthLazyHub.server.close(resolve));
 ```
 
+## The Google-services callback authenticates BEFORE resolving/waking any box
+
+Auth must happen before box resolution: an *unauthenticated* callback naming a
+real configured slug must NOT cold-start that box, and must be indistinguishable
+from one naming an unknown slug (both redirect to login) — otherwise the route
+is an unauthenticated box-wake plus a configured-slug oracle. Needs hub auth ON.
+
+```ts continue
+delete process.env.CB_ALLOW_UNAUTHENTICATED;
+process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-router-doctest";
+process.env.CB_SESSION_SECRET = "test-session-secret-for-router-doctest";
+
+const preAuthProvider = makeLazyProvider({ slug: "preauthbox", origin: box.origin });
+const preAuthHub = await startHub(preAuthProvider, { boxes: [{ slug: "preauthbox", boxRoot: "/nonexistent/preauthbox" }] });
+
+// Unauthenticated, REAL configured slug: redirect to login, box NOT woken.
+const knownUnauth = await fetch(`${preAuthHub.base}/auth/google-services/callback?code=abc123&state=preauthbox:admin`, { redirect: "manual" });
+print(`known status: ${knownUnauth.status}`);
+print(`known → login: ${(knownUnauth.headers.get("location") ?? "").startsWith("/auth/login")}`);
+print(`ensureCalls: ${preAuthProvider.ensureCalls}`);
+=>
+known status: 302
+known → login: true
+ensureCalls: 0
+```
+
+An unknown slug is handled identically — same 302 to login, still no wake — so
+the response reveals nothing about which slugs are configured.
+
+```ts continue
+const unknownUnauth = await fetch(`${preAuthHub.base}/auth/google-services/callback?code=abc123&state=nosuchbox:admin`, { redirect: "manual" });
+print(`unknown status: ${unknownUnauth.status}`);
+print(`unknown → login: ${(unknownUnauth.headers.get("location") ?? "").startsWith("/auth/login")}`);
+print(`still no wake: ${preAuthProvider.ensureCalls}`);
+=>
+unknown status: 302
+unknown → login: true
+still no wake: 0
+```
+
+```ts continue
+delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+delete process.env.CB_SESSION_SECRET;
+process.env.CB_ALLOW_UNAUTHENTICATED = "1";
+for (const socket of preAuthHub.sockets) socket.destroy();
+await new Promise((resolve) => preAuthHub.server.close(resolve));
+```
+
 ## `/api/boxes` is hub-owned, matching the standalone server's shape
 
 With hub auth off (this doctest's default), every configured box is listed

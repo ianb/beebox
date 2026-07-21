@@ -10,6 +10,7 @@
 import type { FastifyInstance } from "fastify";
 import { saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, type GoogleTokens } from "../../connectors/google-auth.js";
 import { parseOAuthState, consumeGoogleOAuthState } from "../../connectors/google-oauth-state.js";
+import { resolveRequestIdentity } from "../auth.js";
 import { isRecord } from "../../lib/is-record.js";
 import { baseServerUrl } from "../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../lib/public-url.js";
@@ -50,6 +51,22 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       console.log("[google-oauth] Invalid/expired/replayed state nonce, rejecting");
       return reply.status(400).send({ error: "Invalid or expired OAuth state" });
     }
+    // Owner binding: the nonce records WHO initiated the grant (`createdBy`, the
+    // owner's email at mint time). If it was owner-bound, the session completing
+    // the callback must be that SAME identity — otherwise a leaked/stolen state
+    // could be redeemed by any other session that merely has access to the box
+    // (hub mode previously checked only `canAccessBox`, never the initiator).
+    // A nonce minted without an owner (standalone open mode, `createdBy: null`)
+    // has nothing to bind to and falls through — nonce possession is the secret
+    // there. The nonce is already consumed above, so a mismatch fails closed.
+    if (consumed.createdBy) {
+      const completingEmail = resolveRequestIdentity(request).email;
+      if (completingEmail !== consumed.createdBy) {
+        console.log("[google-oauth] OAuth state owner mismatch, rejecting");
+        return reply.status(403).send({ error: "OAuth state does not belong to the current session" });
+      }
+    }
+
     const returnPath = consumed.returnPath;
     const returnUrl = `/${boxSlug}/${returnPath}`;
 

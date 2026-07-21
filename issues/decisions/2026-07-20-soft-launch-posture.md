@@ -81,22 +81,24 @@ to people; close when the soft launch happens. Builds on
    [csp-report-endpoint-memory-exhaustion](../closed/bugs/2026-07-19-csp-report-endpoint-memory-exhaustion.md)
    (FIXED),
    [hub-mobile-auth-presence-only](../closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md)
-   (FIXED). All three original gate-1 holes are closed — but a Codex
-   cross-model review (2026-07-21) found the fixes have residual depth, now
-   filed and NOT yet resolved: the shared lock primitive isn't actually
+   (FIXED). All three original gate-1 holes are closed — and a Codex
+   cross-model review (2026-07-21) found four residual-depth issues in those
+   fixes, all now FIXED as well: the shared lock primitive wasn't actually
    mutually exclusive
    ([file-lock-empty-window-race](../closed/bugs/2026-07-21-file-lock-empty-window-race.md),
-   HIGH — undermines the device-store revoke), `pnpm dev` exposes
+   HIGH — undermined the device-store revoke; FIXED), the CSP bound was
+   bypassable via `application/json`
+   ([csp-report-json-content-type-bypass](../closed/bugs/2026-07-21-csp-report-json-content-type-bypass.md),
+   FIXED), the OAuth callback woke/enumerated boxes before auth and wasn't
+   owner-bound
+   ([oauth-callback-wake-and-owner-binding](../closed/bugs/2026-07-21-oauth-callback-wake-and-owner-binding.md),
+   FIXED), and the device-store write had crash-safety gaps
+   ([device-store-crash-safety-and-renewal-race](../closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md),
+   FIXED). One residual from that review is still open: `pnpm dev` exposes
    auth-disabled boxes on the LAN
    ([dev-router-lan-exposure](../bugs/2026-07-21-dev-router-lan-exposure.md),
-   HIGH — a regression from this session's own dev-router fix), the CSP bound
-   is bypassable via `application/json`
-   ([csp-report-json-content-type-bypass](../closed/bugs/2026-07-21-csp-report-json-content-type-bypass.md)),
-   the OAuth callback wakes/enumerates boxes before auth and isn't owner-bound
-   ([oauth-callback-wake-and-owner-binding](../bugs/2026-07-21-oauth-callback-wake-and-owner-binding.md)),
-   and the device-store write has crash-safety gaps
-   ([device-store-crash-safety-and-renewal-race](../closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md)).
-   The first two are the real pre-launch blockers here.
+   HIGH — a regression from this session's own dev-router fix), which is now the
+   real remaining pre-launch blocker here.
 2. **[boxes-share-one-origin](2026-07-19-boxes-share-one-origin.md)** —
    either fix or stop claiming isolation in `auth.ts`/docs. Honest-docs is
    the acceptable launch answer; the fix can follow.

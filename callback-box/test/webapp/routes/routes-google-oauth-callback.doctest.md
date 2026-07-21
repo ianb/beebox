@@ -11,6 +11,7 @@ See `issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md`.
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { createGoogleOAuthState } from "../../../src/connectors/google-oauth-state.js";
+import { signSession, COOKIE_NAME } from "../../../src/webapp/auth.js";
 import { existsSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -71,6 +72,58 @@ replay.statusCode
 => 400
 
 await ctx.cleanup();
+```
+
+## An owner-bound nonce rejects a session that isn't the initiator
+
+When the nonce was minted by an owner (`createdBy` set), the session completing
+the callback must BE that owner. A stolen/leaked state completed by anyone else
+— or by no session at all — is rejected (403) before any token exchange, closing
+the owner-binding gap where hub mode checked only box access, not the initiator.
+
+```ts
+const ctx2 = await makeTestServer();
+const ownerState = createGoogleOAuthState({ boxRoot: ctx2.boxRoot, boxSlug: "test", returnPath: "admin", createdBy: "owner@example.com" });
+
+// Completed with NO session identity → mismatch → 403, no tokens written.
+const anon = await ctx2.rootRequest(cb(`state=${encodeURIComponent(ownerState)}&code=x`));
+print(`anon: ${anon.statusCode}`);
+print(`tokens written: ${existsSync(tokensFile)}`);
+=>
+anon: 403
+tokens written: false
+```
+
+A different signed-in user is likewise rejected (the nonce is single-use, so mint
+a fresh one).
+
+```ts continue
+const strangerState = createGoogleOAuthState({ boxRoot: ctx2.boxRoot, boxSlug: "test", returnPath: "admin", createdBy: "owner@example.com" });
+const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
+const stranger = await ctx2.rootRequest({
+  method: "GET",
+  url: `/auth/google-services/callback?state=${encodeURIComponent(strangerState)}&code=x`,
+  headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` },
+});
+stranger.statusCode
+=> 403
+```
+
+The initiating owner completing the callback clears the gate (no `code` → 302
+back to the box, not a 403).
+
+```ts continue
+const ownerState2 = createGoogleOAuthState({ boxRoot: ctx2.boxRoot, boxSlug: "test", returnPath: "admin", createdBy: "owner@example.com" });
+const ownerCookie = signSession({ email: "owner@example.com", name: "Owner" });
+const owner = await ctx2.server.inject({
+  method: "GET",
+  url: `/auth/google-services/callback?state=${encodeURIComponent(ownerState2)}`,
+  headers: { cookie: `${COOKIE_NAME}=${ownerCookie}` },
+});
+owner.statusCode
+=> 302
+
+await ctx2.cleanup();
 ```
 
 ```ts cleanup

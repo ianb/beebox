@@ -378,11 +378,48 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const state = isRecord(query) && typeof query["state"] === "string" ? query["state"] : undefined;
     const colonIdx = (state ?? "").indexOf(":");
     const boxSlug = colonIdx !== -1 ? (state ?? "").slice(0, colonIdx) : (state ?? "");
-    // Routed through the same `resolveEndpoint` helper as every other
-    // proxied route (P2 review fix): a lazy hub's box may have been
-    // idle-collected while the user was slow on Google's consent screen --
-    // without this, the callback 400s as "unknown_box" even though the box
-    // is configured, just not currently running.
+
+    // AUTH BEFORE ANY BOX RESOLUTION. The earlier version called
+    // `resolveEndpoint(boxSlug, ...)` -- which cold-starts a lazy box -- BEFORE
+    // this auth check, using the attacker-controlled `state` slug. That let an
+    // unauthenticated `GET /auth/google-services/callback?state=<slug>:x` wake
+    // an arbitrary configured box, and a real slug (which woke/proxied) was
+    // distinguishable from an unknown one (an immediate `400 unknown_box`) --
+    // a configured-slug oracle plus an unauthenticated box-wake. We authorize
+    // first: an unauthenticated request redirects to login regardless of slug,
+    // so it neither wakes a box nor reveals whether the slug is configured.
+    stripHubHeaders(request.raw.headers);
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret });
+    if (!decision.authorized) {
+      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+    }
+
+    // Access check using a WAKE-FREE config lookup (`boxRootBySlug`, built once
+    // at hub start) -- never `resolveEndpoint`, which would cold-start. This
+    // route is a per-box connector callback picked purely from the untrusted
+    // `state` param, and the child's callback handler is registered at server
+    // ROOT ahead of any per-box auth hook, so nothing downstream verifies the
+    // caller may access `boxSlug` -- any signed-in fleet user could otherwise
+    // complete a Google token grant for someone else's box. When hub auth is on
+    // (an email is present), an unknown slug and a box the caller can't access
+    // return the SAME 403 so neither box existence nor access is enumerable.
+    // When hub auth is off (`decideHubAuth` authorized with no email), it's
+    // single-operator open mode -- no fleet to enumerate, pass-through stands.
+    const email = decision.headersToSet[HUB_EMAIL_HEADER];
+    if (email) {
+      const boxRoot = boxRootBySlug.get(boxSlug);
+      const allowed = boxRoot ? await canAccessBox({ boxRoot, email, ownerEmail: getOwnerEmail() }) : false;
+      if (!allowed) {
+        return reply.status(403).send({ error: "forbidden", message: "Not permitted to complete this OAuth callback." });
+      }
+    }
+    Object.assign(request.raw.headers, decision.headersToSet);
+
+    // Only NOW, once the caller is authorized and allowed, is it safe to
+    // cold-start a lazy/idle-collected box (the legitimate recovery case: the
+    // box may have been idle-stopped while the user lingered on Google's
+    // consent screen). An unresolvable slug at this point 400s -- but only to an
+    // already-authorized, already-access-checked caller, so it's no oracle.
     let endpoint: Endpoint | undefined;
     try {
       endpoint = boxSlug ? await resolveEndpoint(boxSlug, endpoints) : undefined;
@@ -392,36 +429,6 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     if (!endpoint) {
       return reply.status(400).send({ error: "unknown_box", message: `Unknown box in OAuth state: ${JSON.stringify(boxSlug)}` });
     }
-
-    stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret });
-    if (!decision.authorized) {
-      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
-    }
-
-    // This route is a per-box connector callback picked purely from the
-    // untrusted `state` query param, so unlike the generic catch-all below
-    // (which lands inside the TARGET box's own scope and re-checks
-    // `canAccessBox` there via `addBoxAuthHook`), nothing downstream ever
-    // verifies the caller may access `boxSlug` -- the child's callback
-    // handler is registered at server ROOT, ahead of any per-box auth hook
-    // (see module doc). Any signed-in fleet user could otherwise complete a
-    // Google token grant for someone else's box. Check here, same
-    // fail-closed `canAccessBox` semantics as everywhere else. When hub auth
-    // is off, `decideHubAuth` already authorized above with no email to
-    // check -- pass-through stands (single-operator open mode).
-    const email = decision.headersToSet[HUB_EMAIL_HEADER];
-    if (email) {
-      const boxRoot = boxRootBySlug.get(boxSlug);
-      const allowed = boxRoot ? await canAccessBox({ boxRoot, email, ownerEmail: getOwnerEmail() }) : false;
-      if (!allowed) {
-        return reply.status(403).send({
-          error: "forbidden",
-          message: `${email} may not access box ${JSON.stringify(boxSlug)}`,
-        });
-      }
-    }
-    Object.assign(request.raw.headers, decision.headersToSet);
 
     reply.hijack();
     proxy.web(request.raw, reply.raw, { target: endpoint.origin });
