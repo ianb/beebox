@@ -82,3 +82,9 @@ Boxholder's words quoted; the rest is agent structure.
   [agent-maintained](2026-07-20-agent-maintained-security-report.md)-style
   ongoing loop is a plausible later phase, "not unreasonable" but "we'd have
   to bootstrap it first."
+- **Two derivation tiers** (2026-07-21): "Some of the aspects of the site
+  derived from source will probably be agent-powered, with periodic updates
+  based on git and tracking. So we don't need to wire everything hot" —
+  mechanical checks run every build; agent-derived content is committed,
+  commit-stamped, refreshed periodically, with the build displaying drift
+  rather than regenerating.

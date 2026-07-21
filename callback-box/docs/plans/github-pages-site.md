@@ -280,6 +280,20 @@ Ordered by implementation dependency, then surface size.
   [security report](../../../issues/features/2026-07-20-agent-maintained-security-report.md)
   *proposes* (that system is designed but not yet built — this site is the
   pattern's first implementation, not its second).
+- **Derivation tiers** (boxholder, 2026-07-21: "Some of the aspects of the
+  site derived from source will probably be agent-powered, with periodic
+  updates based on git and tracking. So we don't need to wire everything
+  hot"): two tiers, different freshness contracts.
+  - **Hot (mechanical, every build)**: span re-location, link-check, llms.txt
+    assembly, provenance rendering — cheap, deterministic, runs per push.
+  - **Periodic (agent-powered)**: extraction sessions and any future
+    agent-derived compilations (story digests, summaries) are *committed
+    artifacts* stamped with the commit they were generated from. The build
+    never regenerates them; it mechanically computes and displays their
+    drift ("as of `<commit>`, N commits behind" — git makes this hot-cheap
+    even when regeneration isn't). Refresh is an agent session that reads
+    what changed since its stamp, updates, and commits — the
+    security-report cadence shape, arriving here first.
 - **First chunk**: nugget schema + loader + the three enforcement behaviors
   with tests, exercised by one hand-made fixture nugget. Real extraction
   sessions follow as content work, not code work.
