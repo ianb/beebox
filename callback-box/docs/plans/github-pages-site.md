@@ -28,9 +28,10 @@ exploration.
   ("opinionated in conversation and conservative in the artifact") and the
   structure-vs-words line: *"AI _structure_ can be fine, but AI _words_ not so
   much"* (boxholder, applied to this site explicitly).
-- Precedent: `2026-07-20-agent-maintained-security-report.md` — the
-  committed-prompt → generated-artifact → auditable-process pattern; this
-  site's nugget staleness contract is the same shape.
+- Proposed-pattern kin: `2026-07-20-agent-maintained-security-report.md` —
+  the committed-prompt → generated-artifact → auditable-process shape. That
+  system is designed, not built; the nugget staleness contract would be the
+  pattern's first running instance, so nothing there is load-bearing here.
 - Boxholder feedback memories: bias toward strict / fail-closed; scratch
   artifacts in `scratch/`; TypeScript only.
 
@@ -38,18 +39,26 @@ exploration.
 
 - **Markdoc rendering**: `bin/router-docs.ts:198-202` —
   `renderMarkdownToHtml(src)` wraps `Markdoc.parse → transform →
-  renderers.html` plus `highlightCodeBlocks` (hljs) and `autolinkUrls`.
-  **Reuse** for rendering markdown sources; the site gets its own HTML shell
-  (the router's `renderDevShell` styling is dev-tool chrome, not the site's
-  register). Markdoc is currently declared only in
-  `callback-box/package.json:103` and the frontend — `bin/` imports it via
-  hoisting; the site build must declare its own dependency rather than extend
-  that accident (principle 11).
+  renderers.html`. **Pattern reuse only, not an import** (Codex review
+  finding): that module drags in `execa`, `highlight.js`, and a cycle with
+  `router-issues` (`router-docs.ts:10-16`, `router-issues.ts:8-12`), and
+  both Markdoc and highlight.js reach `bin/` only by hoisting accident
+  (Markdoc declared at `callback-box/package.json:103` and the frontend).
+  The site builds its own small Markdoc pipeline in `site/`, declaring its
+  dependencies explicitly (principle 11); the router's shell styling is
+  dev-tool chrome, not the site's register, so nothing visual is shared
+  either.
 - **Issue frontmatter parser**: `bin/router-issues.ts` — `IssueFrontmatter`
-  (lines 19-27) and a hand-rolled `parseFrontmatter` (≈line 65) covering the
-  YAML subset issues actually use, plus `CATEGORIES` (line 16). **Reuse** by
-  extracting to a shared module both the router and the generator import
-  (principle 8 — one frontmatter parser, not two).
+  (lines 19-27) and a hand-rolled `parseFrontmatter` (≈line 65), plus
+  `CATEGORIES` (line 16). **Rebuild, deliberately** (Codex review finding):
+  that parser is *tolerant by design* — it silently skips invalid lines
+  (`router-issues.ts:83-107`) and treats unterminated frontmatter as no
+  frontmatter (`:65-73`), with a test locking the tolerance in
+  (`router-issues.test.ts:74-79`). Right for a browse tool over hand-edited
+  files; wrong for a publish boundary. The site gets its own strict parse +
+  schema validation (zod) that fails with file+line (principles 3 and 6 —
+  the two surfaces genuinely want different strictness, so principle 8's
+  "one way" doesn't apply across them).
 - **Static serving from disk, no cold start**: `bin/router-docs.ts:609-663`
   (`serveDevArtifact`) is the pattern for the router serving the built site
   straight from disk. **Reuse the pattern** with a new route (see Track B).
@@ -59,10 +68,13 @@ exploration.
   files — a top-level `site/` matches nothing, so site commits never trigger
   the box deploy. No change needed; the Pages deploy is a separate GitHub
   Actions workflow (none exist today — no `.github/` directory).
-- **doc-check**: `callback-box/src/dev/doc-check.ts` sweeps repo-wide markdown
-  for broken references and duplicate issue basenames (its orphan check is
-  scoped to `docs/`-prefixed paths only, line 90). `site/*.md` sources get
-  link validation for free; no orphan burden.
+- **doc-check**: `callback-box/src/dev/doc-check.ts` sweeps markdown for
+  broken references and duplicate issue basenames — but its external-scan
+  root list is a fixed set that does **not** include a top-level `site/`
+  (`doc-graph-data.ts:60-84`; Codex review correction — the plan originally
+  claimed free coverage). The site generator therefore runs its own
+  link-check over `site/content/` sources and built output; extending
+  doc-check's root list is optional hygiene, not load-bearing.
 - **Content hashing / staleness precedent**:
   `callback-box/src/lib/content-hash.ts:9-11` (`contentHash` — sha256/16) and
   the template-stock pattern (`src/core/template-stock-hashes.ts`:
@@ -99,17 +111,24 @@ Verified 2026-07-21 (URLs fetched):
   — mid-sentence expansion needs custom elements/JS with `aria-expanded`, or
   expansion only at clause/paragraph boundaries.
 - **`hidden=until-found`**: collapsed content stays find-in-page-searchable
-  and indexable; supported Chrome 97+, Firefox 139+, Safari 26.2+
+  and indexable
   ([Chrome docs](https://developer.chrome.com/docs/css-ui/hidden-until-found)).
-  This resolves the biggest a11y/searchability objection to telescopic depth.
+  Support is recent and cross-browser per secondary sources, but exact
+  versions weren't pinned down cleanly in review (the Chrome doc says 102+;
+  Firefox/Safari claims came from a secondary article) — **verify current
+  support at Track F's prototype**, and the design degrades gracefully
+  anyway (content stays in the DOM, expandable by click). This resolves the
+  biggest searchability objection to telescopic depth where supported.
 - **llms.txt**: [spec](https://llmstxt.org/) (H1 + blockquote + H2 link
   sections; `llms-full.txt` is convention, not spec). Honest adoption
   picture: major crawlers largely don't fetch it and Google says zero SEO
   effect ([analysis](https://www.digitalapplied.com/blog/google-llms-txt-no-seo-value-lighthouse-audit-2026));
   the real consumers are coding/IDE agents pointed at a site — which is
   exactly this site's stated agent audience, so we adopt it for that use, not
-  for crawlers. Markdown twins (`.md`-suffix URLs) are an informal convention
-  (Cloudflare docs et al.), no formal spec.
+  for crawlers. Markdown twins (`.md`-suffix URLs) are recommended by the
+  llms.txt proposal itself ("same-URL markdown versions") and practiced by
+  Cloudflare docs et al. — a spec recommendation plus convention, so we
+  follow the proposal's shape.
 - **Pages via Actions**: `actions/upload-pages-artifact` +
   `actions/deploy-pages` (permissions `pages: write`, `id-token: write`) is
   the current recommended no-committed-dist path
@@ -143,9 +162,17 @@ Ordered by implementation dependency, then surface size.
 - **Direction**: base path is a build input (`--base /callback-box/` for
   Pages, `--base /<worktree>/site/` for the router, `/` for a custom domain).
   Internal links are emitted resolved against the base — never hand-relative.
-  Shared frontmatter parser extracted from `bin/router-issues.ts` to a module
-  both import. `site/` gets its own `package.json` in the workspace, on the
-  vibe-check preset, declaring `@markdoc/markdoc` explicitly.
+  Frontmatter parsing is site-own and strict (see What already exists).
+  `site/` gets its own `package.json` in the workspace, on the vibe-check
+  preset, declaring `@markdoc/markdoc` (and highlight.js if used) explicitly.
+  **Enforcement wiring is part of this track** (Codex review finding: a new
+  top-level package is invisible to today's gates — the pre-commit
+  dispatcher covers only `callback-box/` and `callback-clerk/`
+  (`.husky/pre-commit:88-95`) and root tsconfig includes only `bin/**/*.ts`
+  (`tsconfig.json:20-21`), so `tsx` would transpile `site/` without ever
+  typechecking it): `site/` gets lint/typecheck/test scripts, the pre-commit
+  dispatcher gains a `site/` branch, and the Pages workflow runs the same
+  checks before building (principle 11).
 - **First chunk**: `site/` package + build.ts rendering one placeholder page
   from `site/content/index.md` to `site/dist/` with base-path handling and a
   link-check pass over the output. No open questions inside.
@@ -153,15 +180,23 @@ Ordered by implementation dependency, then surface size.
 ### Track B — dev-router route
 
 - **What**: the router serves `site/dist/` statically at
-  `/<worktree>/site/`, same never-cold-start pattern as `serveDevArtifact`
-  (`bin/router-docs.ts:609-663`): pure disk reads, `cache-control: no-store`,
-  404 when `dist/` is absent (with a one-line "run pnpm --dir site build"
-  body — resilient and not silent, principle 4).
+  `/<worktree>/site/`, same never-cold-start *properties* as
+  `serveDevArtifact` (`bin/router-docs.ts:609-663`): pure disk reads,
+  `cache-control: no-store`, 404 when `dist/` is absent (with a one-line
+  "run pnpm --dir site build" body — resilient and not silent, principle 4).
+  It's a new handler, not a literal reuse — `serveDevArtifact` renders
+  directory listings (`router-docs.ts:624-650`; Codex review finding), and
+  the site route wants static-site semantics instead: `index.html` at
+  directory paths, no listings.
 - **Why**: boxholder requirement — "the site should be viewable on the dev
   router."
 - **Direction**: no on-demand building in the router (keeps the router
   request-path pure); rebuilds are explicit (`pnpm --dir site build`, plus an
-  optional watch script). Router changes ride the usual
+  optional watch script). The local build derives its base path instead of
+  taking config (Codex review finding — the bare command didn't say where
+  base comes from): branch `worktree-<name>` → `/<name>/site/`, `main` →
+  `/main/site/`, read from git at build time; `--base` overrides for the
+  Pages/custom-domain builds. Router changes ride the usual
   main-merge-then-restart lifecycle (`bin/CLAUDE.md`).
 - **First chunk**: the route + 404 message + a router test alongside the
   existing router test setup.
@@ -193,10 +228,15 @@ Ordered by implementation dependency, then surface size.
   `--base /callback-box/`, `upload-pages-artifact` → `deploy-pages`.
 - **Why**: "We probably should be generating the site on deploy" — no
   committed dist, no gh-pages branch.
-- **Direction**: path-filtered trigger plus `workflow_dispatch` for manual
-  runs. Since nuggets source from `issues/` and docs, the path filter
-  includes those source globs — accepting that issue churn redeploys the
-  site (cheap, and it's what keeps staleness badges current). Build failure
+- **Direction**: **build on every push to `main`** — no path filter — plus
+  `workflow_dispatch` for manual runs. (Codex review finding: a path filter
+  makes the staleness contract silently false — a nugget's source can live
+  anywhere in the allowlisted roots, and an edit outside the filtered globs
+  would leave a drifted nugget published with no stale badge and no red run.
+  "Red Actions run" only covers builds that start.) The build is a static
+  generator over markdown — cheap enough to run per-push; if CI minutes ever
+  matter, the fix is a filter derived from the same source allowlist the
+  generator enforces, never a hand-maintained glob list. Build failure
   leaves the previous deploy live and shows red in Actions (visible, not
   silent).
 - **First chunk**: the workflow, landed together with the rest of the plan
@@ -207,13 +247,22 @@ Ordered by implementation dependency, then surface size.
 ### Track E — nugget pipeline (extraction with reinterpretation)
 
 - **What**: nuggets are committed files (`site/nuggets/<slug>.md`) with
-  frontmatter: `source` (repo-relative path), `span` (the quoted text or
-  anchor), `sourceHash` (contentHash of the span at extraction),
+  frontmatter: `source` (repo-relative path, restricted to a **closed
+  allowlist of publishable roots** — `issues/`, `callback-box/docs/`,
+  `research/`, root `README.md` — enforced by the generator), `span` (a
+  **verbatim excerpt** of the source — the one locator format),
   `status: proposed | reinterpreted | excerpt`, and body = the publishable
-  text (the boxholder's rewrite, or the verbatim excerpt). Extraction is an
+  text (the boxholder's rewrite, or the excerpt itself). Extraction is an
   *editorial session* (agent/subagent grunt work producing `proposed`
   nuggets for the boxholder to reinterpret), never a build step — the build
   only renders.
+- **Span identity** (Codex review finding — "quoted text or anchor" was
+  underspecified): the `span` is raw verbatim text, no normalization, and
+  must match its source **exactly once** at build. Found once → current;
+  found zero times or more than once → stale/ambiguous (visible marker);
+  source file missing or outside the allowlist → build fails. This replaces
+  a separate `sourceHash` field — the excerpt is its own hash, and
+  "excerpt no longer present" is exactly the drift signal we want.
 - **Why**: "extracting ideas from the source, issues, plans, documents" with
   the AI-ideas danger handled by "nuggets that I'm asked to reinterpret."
   And this is the site's substance, not decoration: the extracted ideas are
@@ -223,11 +272,14 @@ Ordered by implementation dependency, then surface size.
   body.
 - **Direction — the enforcement (principle 11)**: the generator **refuses to
   render `status: proposed`** nuggets — the AI-words rule is code, not
-  convention. At build, each nugget's source span is re-hashed:
-  match → renders with provenance ("from `<source>`"); drift → renders with
-  a visible stale marker; source file missing → **build fails** (fail-closed).
-  This is the site's version of the security-report auditable-process
-  pattern.
+  convention. At build, each nugget's span is re-located per the span-identity
+  rule above: unique match → renders with provenance ("from `<source>`");
+  zero/ambiguous → visible stale marker; missing source or non-allowlisted
+  path → **build fails** (fail-closed). This is the same
+  committed-input → auditable-artifact shape the
+  [security report](../../../issues/features/2026-07-20-agent-maintained-security-report.md)
+  *proposes* (that system is designed but not yet built — this site is the
+  pattern's first implementation, not its second).
 - **First chunk**: nugget schema + loader + the three enforcement behaviors
   with tests, exercised by one hand-made fixture nugget. Real extraction
   sessions follow as content work, not code work.
@@ -269,14 +321,15 @@ below were the candidates; both are handled in code by Track E's enforcement.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A `status: proposed` nugget reaches the published site (AI words passing as content) | planned (Track E chunk) | generator refuses to render `proposed` | clear — build lists the refused slugs |
-| Nugget's source span edited after extraction | planned | re-hash at build → visible stale marker | clear — marker on the page + build summary line |
-| Nugget's source file deleted/moved | planned | build fails naming the nugget and missing path | clear |
+| Nugget's source span edited after extraction | planned | span re-located at build; zero/ambiguous match → visible stale marker | clear — marker on the page + build summary line |
+| Nugget's source file deleted/moved, or outside the source allowlist | planned | build fails naming the nugget and path | clear |
+| Nugget source edited on `main` without a site rebuild (stale badge never appears) | n/a (workflow config) | Pages workflow builds on **every** main push — no path filter (Track D) | clear — the contract holds by construction |
 | Base-path mismatch (works on router, broken links on Pages `/callback-box/`) | planned — link-check runs against both base configs | links emitted via base-path resolver only | clear — link-check fails the build |
 | Pages workflow build fails on main | n/a (CI itself) | previous deploy stays live | clear — red Actions run |
 | Malformed frontmatter in a nugget/content file | planned | parse errors fail the build with file+line | clear |
 | Markdoc renders odd markdown to broken HTML silently | partial — link-check catches broken hrefs, not layout | accepted residual: visual review on the router | semi-silent, accepted (low stakes, human-reviewed surface) |
 | Router serves stale `dist/` after source edits | no test | `no-store` headers + explicit-rebuild model; 404-with-hint when dist absent | semi-silent, accepted — dev-only surface, same as any build artifact |
-| Path/PII leak via published repo content | existing — `path-leak-check` pre-commit covers all tracked files incl. `site/` | yes | clear |
+| Path/PII leak via published repo content | partial — `path-leak-check` catches only literal home-dir paths (`bin/path-leak-check.ts:45-51`), tracked files only | source allowlist limits what can publish to already-public-repo content; the repo itself went through the release PII scrub | semi-silent residual, accepted — publishing mirrors the public repo, adds no new exposure class; a built-artifact scan is deliberate future hygiene, not a gate |
 | `hidden=until-found` unsupported in an old browser | no | depth still expandable by click; content in DOM | silent degradation, accepted |
 
 ## Agent-flow / user-flow edge cases
@@ -296,10 +349,12 @@ machinery, so several translate rather than apply directly:
   imperfectly: **ADDRESSED** — the shared parser + build-time validation
   fail with file+line (principle 3).
 - **Fabricated free-form value** — an extraction agent invents an "idea" not
-  in the source: **ADDRESSED structurally** — `source` + `span` +
-  `sourceHash` are required, and the hash must match real file content at
-  build; a fabricated span can't hash-match. The *reinterpretation* step is
-  the human backstop for subtler misreadings.
+  in the source: **PARTIALLY ADDRESSED, honestly bounded** — the required
+  verbatim `span` must uniquely match real file content at build, so a
+  wholly invented citation can't render. What the mechanism *cannot* prove
+  is that the nugget body faithfully represents the span (Codex review
+  point); that is exactly what the mandatory human reinterpretation step is
+  for, and why `proposed` never publishes.
 - **Validation error UX** — build errors name file, line, and the failing
   rule in one line each (no stack-trace noise — "noisy command output is a
   bug"): **ADDRESSED** as a stated requirement of the generator.
