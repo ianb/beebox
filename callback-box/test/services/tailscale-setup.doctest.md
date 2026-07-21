@@ -80,6 +80,9 @@ function makeServeSim(state) {
         return Promise.resolve(cmdOk(""));
       }
       if (args[args.length - 1] === "off") {
+        // `offCode` models a teardown that ERRORS (nonzero) and leaves the
+        // mapping live — the fail-closed case settleRouterExposure must catch.
+        if ((state.offCode ?? 0) !== 0) return Promise.resolve({ spawned: true, code: state.offCode, stdout: "", stderr: "serve off failed" });
         // Like the real CLI, `serve … off` addresses the node's CURRENT
         // hostname (honoring --https=<port>); it cannot remove a mapping
         // stored under a pre-rename hostname.
@@ -379,6 +382,43 @@ const result = await runTailscaleSetup(sim.deps, { target: { port: 3270 }, io: n
   null,
   false
 ]
+```
+
+## Track C: proof fails AND teardown fails → record intent + loud failure (fail closed)
+
+The served proof fails (200, no header) and the `serve … off` teardown itself
+errors, so the mapping may still be LIVE fronting an unproven router. Setup must
+NOT silently orphan it: it records exposure intent (so `stop`/`status` can find
+and remove it) and returns a loud failure — the fail-closed direction.
+
+```ts
+const state = {
+  status: runningStatus,
+  serve: {},
+  routerProbe: guardedRouterProbe,       // loopback: guarded → configure Serve
+  servedRouterProbe: ungatedRouterProbe, // served: 200 → proof FAILS
+  offCode: 1,                            // teardown errors → mapping survives
+};
+const sim = makeServeSim(state);
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3271 }, io: noWaitIo });
+[
+  result.ok,
+  result.message.includes("could NOT be proven torn down"),
+  result.message.includes("cb tailscale stop --target 3271"),
+  state.serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy ?? null, // mapping STILL live
+  loadExposureFile().targets.some((t) => t.port === 3271),                       // intent RECORDED (tracked)
+]
+=> [
+  false,
+  true,
+  true,
+  "http://127.0.0.1:3271",
+  true
+]
+```
+
+```ts cleanup
+await clearExposure(3271);
 ```
 
 ## Track C: setup enables no Funnel for the router either

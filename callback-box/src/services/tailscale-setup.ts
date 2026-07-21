@@ -112,13 +112,32 @@ async function settleRouterExposure(
       message: `Exposed the guarded dev router at ${url} (loopback:${port}). Anonymous \`/__router/status\` over Serve returned 401 — the auth gate is live end-to-end. Serve config + exposure intent recorded.`,
     };
   }
-  const teardown = await tearDownRouterServe(deps);
   const detail = probe.reachable
     ? `the served ${url}__router/status returned ${probe.status ?? "no status"} WITHOUT the guarded-router 401+header`
     : `the served ${url}__router/status did not respond`;
+  await tearDownRouterServe(deps);
+  // Fail CLOSED on the teardown itself: Serve is live at this point, so if the
+  // proof failed we must PROVE the mapping came back down (readback), not assume
+  // it. If it can't be proven gone (teardown errored, or the mapping survives),
+  // a live Serve mapping may still front a NOT-proven-guarded router — record the
+  // exposure intent so `cb tailscale stop`/`status` can find and remove it, and
+  // fail loudly, rather than silently orphaning it.
+  const after = await readServeConfig(deps);
+  const stillMapped = !after.ok || matchingTargetMappings(after.serve, port).length > 0;
+  if (stillMapped) {
+    await recordExposure({ port, dnsName });
+    return {
+      ok: false,
+      message:
+        `REFUSING to expose loopback:${port} — ${detail}, so anonymous access is NOT proven denied over Serve. ` +
+        `The serve mapping could NOT be proven torn down (${after.ok ? "it still fronts the port" : after.reason}) — ` +
+        "it may still be LIVE fronting a router whose gate is unproven. Recorded exposure intent so it is tracked; " +
+        `remove it NOW with \`cb tailscale stop --target ${port}\` (or \`tailscale serve status\`).`,
+    };
+  }
   return {
     ok: false,
-    message: `REFUSING to expose loopback:${port} — ${detail}, so anonymous access is NOT proven denied end-to-end over Serve. ${teardown} No exposure intent recorded.`,
+    message: `REFUSING to expose loopback:${port} — ${detail}, so anonymous access is NOT proven denied end-to-end over Serve. Tore the serve mapping back down (confirmed removed); no exposure recorded.`,
   };
 }
 
