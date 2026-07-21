@@ -2987,6 +2987,146 @@ test1:
       peak: 50120
       added: 3161
       turns: 9
+    - date: 2026-07-21T21:50:33.981Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47090
+      peak: 50112
+      added: 3022
+      turns: 10
+    - date: 2026-07-21T21:51:39.556Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47161
+      peak: 50243
+      added: 3082
+      turns: 8
+    - date: 2026-07-21T21:52:09.726Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47528
+      peak: 50283
+      added: 2755
+      turns: 8
+    - date: 2026-07-21T21:52:35.682Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47161
+      peak: 50199
+      added: 3038
+      turns: 9
+    - date: 2026-07-21T21:53:08.023Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 46999
+      peak: 50323
+      added: 3324
+      turns: 9
+    - date: 2026-07-21T21:54:41.663Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47040
+      peak: 50479
+      added: 3439
+      turns: 9
+    - date: 2026-07-21T21:55:11.456Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47160
+      peak: 49887
+      added: 2727
+      turns: 8
+    - date: 2026-07-21T21:55:48.118Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 46998
+      peak: 50514
+      added: 3516
+      turns: 9
+    - date: 2026-07-21T21:56:22.904Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 46998
+      peak: 50327
+      added: 3329
+      turns: 9
+    - date: 2026-07-21T21:56:58.213Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47160
+      peak: 50684
+      added: 3524
+      turns: 10
+    - date: 2026-07-21T21:57:42.879Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 46998
+      peak: 51333
+      added: 4335
+      turns: 12
+    - date: 2026-07-21T21:58:15.859Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 46998
+      peak: 50294
+      added: 3296
+      turns: 9
+    - date: 2026-07-21T21:58:48.705Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 46998
+      peak: 50336
+      added: 3338
+      turns: 9
+    - date: 2026-07-21T21:59:23.877Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 47160
+      peak: 50450
+      added: 3290
+      turns: 8
+    - date: 2026-07-21T21:59:42.959Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: e4f673c45e05f7fb25888b33206e087541fd46c6
+      initial: 46998
+      peak: 48341
+      added: 1343
+      turns: 5
+    - date: 2026-07-21T22:02:16.867Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: 9f319d78a3b8c8e2382a916206871ec7fac08a74
+      initial: 46941
+      peak: 50314
+      added: 3373
+      turns: 9
+    - date: 2026-07-21T22:02:51.657Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: 9f319d78a3b8c8e2382a916206871ec7fac08a74
+      initial: 46941
+      peak: 50500
+      added: 3559
+      turns: 10
+    - date: 2026-07-21T22:03:15.141Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: 9f319d78a3b8c8e2382a916206871ec7fac08a74
+      initial: 47103
+      peak: 48665
+      added: 1562
+      turns: 6
+    - date: 2026-07-21T22:03:46.213Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: 9f319d78a3b8c8e2382a916206871ec7fac08a74
+      initial: 47103
+      peak: 50354
+      added: 3251
+      turns: 9
+    - date: 2026-07-21T22:04:26.537Z
+      boxCommit: 1f6c43bfa0c3c98d3d14d69c0a13e7c81989d6ef
+      repoCommit: 9f319d78a3b8c8e2382a916206871ec7fac08a74
+      initial: 46941
+      peak: 50922
+      added: 3981
+      turns: 11
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

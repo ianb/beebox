@@ -41,6 +41,7 @@ export interface AgentBehavior {
 export interface AutomatedChecks {
   containsChecks: Array<{ expected: string; found: boolean }>;
   notContainsChecks: Array<{ forbidden: string; found: boolean }>;
+  notMatchesChecks: Array<{ pattern: string; found: boolean; matched?: string }>;
   containsAnyCheck?: { options: string[]; found: boolean; matched?: string | undefined } | undefined;
   cardsContainChecks: Array<{ expected: string; found: boolean; foundIn?: string }>;
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
@@ -348,6 +349,12 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
     found: behavior.responseText.toLowerCase().includes(forbidden.toLowerCase()),
   }));
 
+  const notMatchesChecks = (test.response_not_matches ?? []).map((pattern) => {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- pattern is authored in the committed knowledge-audits.yaml, not runtime input
+    const match = new RegExp(pattern, "i").exec(behavior.responseText);
+    return { pattern, found: match !== null, ...(match && { matched: match[0] }) };
+  });
+
   let containsAnyCheck: AutomatedChecks["containsAnyCheck"];
   if (test.correct_contains_any) {
     const lowerText = behavior.responseText.toLowerCase();
@@ -381,5 +388,5 @@ function runChecks(test: AuditTest, { behavior, newOrModifiedCards }: RunChecksC
     return { expected, found: !!matched, ...(matched && { matchedCommand: matched }) };
   });
 
-  return { containsChecks, notContainsChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks, bashContainsChecks };
+  return { containsChecks, notContainsChecks, notMatchesChecks, containsAnyCheck, cardsContainChecks, shouldReadChecks, shouldNotReadChecks, bashContainsChecks };
 }
