@@ -121,7 +121,7 @@ async function main(): Promise<void> {
     const htmlOut = path.join(DIST_DIR, pageSitePath);
     const twinOut = path.join(DIST_DIR, `${file.stem}.md`);
     await fs.mkdir(path.dirname(htmlOut), { recursive: true });
-    await fs.writeFile(htmlOut, pageShell({ title: frontmatter.title, bodyHtml: html }), "utf8");
+    await fs.writeFile(htmlOut, pageShell({ title: frontmatter.title, bodyHtml: html, base }), "utf8");
     await fs.writeFile(twinOut, twinMarkdown(body), "utf8");
 
     emitted.add(pageSitePath);
