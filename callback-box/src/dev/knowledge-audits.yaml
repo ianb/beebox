@@ -3812,9 +3812,12 @@ tests:
   # the save, which is where the link intuition fails.
   #
   # STOCHASTIC — run it several times and read the RATE, not one pass/fail.
-  # Baseline before the prompt fix (2026-07-21, 3 runs): 2 bare / 1 linked
-  # (~2/3 bare). Stochastic — the fail RATE over N runs is the metric, not one
-  # pass/fail. The check flags only the actual bug: a bare card filename/path
+  # Status (2026-07-21): with the fixed prompts, 0/10 runs bare (3 linked in
+  # prose, 7 ack-only). A same-environment control with the pre-fix prompts
+  # also ran 0/5 bare, so the original ~2/3-bare baseline (3 runs, sibling
+  # session) does NOT reproduce here — treat this audit as a tripwire against
+  # regression, not proof the prompt fix moved the rate.
+  # Stochastic — the fail RATE over N runs is the metric, not one pass/fail. The check flags only the actual bug: a bare card filename/path
   # as literal text (including backticked or used as a link label), while link
   # targets (](...)) and ref="..." attributes stay legal — so a bare-<ack>
   # confirmation with no prose mention correctly passes. NOTE: this audit

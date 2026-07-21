@@ -2,6 +2,7 @@
 title: "Agent writes a bare `Foo.type.card` filename in chat instead of a link"
 area: callback-box
 filed-by: agent
+needs: [manual-testing]
 discovered-in: main session — a box produced `name_of_card.gdoc.card` in a chat response
 ---
 
@@ -9,6 +10,31 @@ A box wrote a bare `name_of_card.gdoc.card` as literal text in a chat reply,
 instead of a markdown link the user could click. Boxholder reports it as a
 **persistent** problem, not a one-off. Investigated; **no prompt changes made
 yet** (deliberately — the framing wants a decision first).
+
+## Fix (2026-07-21, worktree link-card-references-in-prompts)
+
+Applied the "copy the style" approach — pure edits, no new rules, no prompt
+growth: the chat prompt's Links example now models an in-sentence card
+reference with a human-title label (`The dates are in [the beta launch
+plan](/store/notes/Beta_Launch.doc.card)` — `src/core/chat/session/prompts.ts`),
+and the cards-guide validation example uses a real labeled link instead of
+metasyntactic `[label](store/x.card)` (`src/core/agent-guide/cards.ts`). The
+site audit below stands otherwise: every other bare `.card` occurrence is
+type-naming, a directory listing, a CLI arg, or a ref attribute — correctly
+bare.
+
+The `chat-reference-card-as-link` knowledge audit now flags only the actual
+bug via the harness's new `response_not_matches` regex check (a bare card
+filename outside a link target / `ref="…"`); its old link-required check
+wrongly failed the prompt's own preferred bare-`<ack>` confirmation.
+
+**Measurement is inconclusive, so this stays open pending real use:** post-fix
+0/10 runs bare, but a same-environment pre-fix control also ran 0/5 bare — the
+original ~2/3-bare baseline doesn't reproduce there. What to watch for: boxes
+in daily use writing a bare `Foo.type.card` in chat replies (especially save
+confirmations for gdocs). If it stays gone for a while, close; if it persists,
+next levers are a linked exemplar near the gdoc/save surfaces or the output
+validator sketched below.
 
 ## Where the behavior comes from (prompt-surface audit)
 
