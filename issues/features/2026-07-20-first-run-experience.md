@@ -103,6 +103,17 @@ Mechanism ideas (boxholder, 2026-07-21):
   work, something has to present and sequence the menu items — closer
   to documentation/content structure than engineering; plausibly just
   cards in the onboarding directory.
+- **Voice must be demonstrated** (boxholder, 2026-07-21: "I definitely
+  need to demonstrate the voice stuff — hit the controls level").
+  Onboarding shows the user the voice controls, and this may be where
+  the Memory Atlas UI-pointing borrow earns its keep (point at the mic
+  control while explaining it).
+- **Lesson mode** — boxholder is drawn to it as an onboarding/menu
+  flow ("would be cool… I probably shouldn't do it… I do kinda like
+  it. I don't know. Maybe."). Recorded as a live maybe, adjacent to
+  the courseware work
+  (`callback-box/docs/plans/courseware-external-skills-triage.md`,
+  [courseware-image-generation](2026-06-25-courseware-image-generation.md)).
 
 Considered and rejected/demoted (boxholder reactions, recorded so they
 aren't re-proposed):
