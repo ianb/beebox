@@ -486,15 +486,24 @@ exposable; local CLI uses the socket) and the tailscale docs.
    *mobile-only* webview needs a session (its WS rides bare `/<w>/`, which stays
    session-only) — an accepted dev-nicety limit; the app itself loads + works on
    a mobile token. Future: classify the `vite-hmr` WS upgrade as a dev asset.
-7. **B.2c** security hardening: CSP-sandbox `/dev` responses (the decided fix
-   for same-origin control-plane CSRF); DoS boundary (guard `router-docs.ts`
-   `decodeURIComponent` + a request-handler rejection boundary); strip client
-   `x-cb-*` the router doesn't own; finding 3.2 (CSRF `{}` fail-closed on TCP
-   control); finding 3.3 (router resolver ignores hub mode); finding 3.1
-   (unauth cold-start) — accept + document.
+7. **B.2c — DONE (`dd3cc9ee`), security hardening.** CSP-sandbox `/dev`
+   (`Content-Security-Policy: sandbox`, browser-proven to stop inline script →
+   closes same-origin control-plane CSRF); DoS boundary (guarded decode → 400 +
+   a top-level `requestListener().catch` → 500, so no path crashes the shared
+   router — proven `/dev/%zz`→400 with the router staying up); strip ALL client
+   `x-cb-*` at the edge (HTTP + WS upgrade) leaving only the router-injected
+   `x-cb-base-prefix`; finding 3.2 (no-provenance `{}`→CSRF-unsafe, dashboard
+   same-origin link still works); finding 3.3 (`delete process.env.CB_HUB_SECRET`
+   at router start — verified hubs mint their own). 136 bin tests pass.
+   **Finding 3.1 (unauth cold-start / worktree-name oracle) — ACCEPTED +
+   documented:** on a private tailnet (only invited devices) an unauth
+   `/<w>/auth/*` request cold-starting a worktree is low severity and serving a
+   worktree's login page inherently needs its Vite up; the box still demands
+   auth. Revisit (centralize login through `/main`) only if the tailnet widens
+   beyond trusted devices.
 8. **C** `router-guarded` posture + anonymous-denial-over-Serve probe + setup
    serves the router; tests.
-7. **Docs** `bin/CLAUDE.md`, tailscale docs, admin `TailscaleSection`
+9. **Docs** `bin/CLAUDE.md`, tailscale docs, admin `TailscaleSection`
    ("on a dev machine, `cb tailscale setup` exposes the whole authenticated
    router"). Close the login-prefix bug + the expose-dev-checkout issue.
 
