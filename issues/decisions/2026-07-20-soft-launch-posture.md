@@ -23,8 +23,19 @@ to people; close when the soft launch happens. Builds on
   (Docker/compose + optional Caddy, Tailscale as the protect story). No
   platform matrix — for unverified environments, the sanctioned path is
   handing [the agent install guide](../../callback-box/docs/agent-install.md)
-  to the user's agent and letting it reinterpret. The iOS app is the known
-  hard exception to "really easy."
+  to the user's agent and letting it reinterpret.
+- **iOS ships at release** (boxholder, 2026-07-21) — via local builds (no
+  App Store distribution this cut). This escalates
+  [ios-pairing-flow-robustness](../bugs/2026-07-17-ios-pairing-flow-robustness.md)
+  to a gate (the external-URL auto-redeem phishing surface).
+- **Dev is never open** (boxholder, 2026-07-21): local dev **always**
+  requires a username/password login — never `CB_ALLOW_UNAUTHENTICATED` as a
+  default — with explicit testing provisions (a seeded dev credential +
+  automation auth path) rather than disabling the wall. This reverses the
+  dev-router login fix's approach and is the resolution for
+  [dev-router-lan-exposure](../bugs/2026-07-21-dev-router-lan-exposure.md):
+  close the hole by keeping auth real and fixing login-behind-the-prefix,
+  not by loopback-binding.
 - **Contribution stance**: bug reports invited; PRs/feature contribution not
   solicited. The README states this plainly.
   [Inline bug submission](../features/2026-07-20-inline-bug-submission.md)

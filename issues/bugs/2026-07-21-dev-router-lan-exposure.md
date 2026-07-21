@@ -34,8 +34,15 @@ The real fork:
 - Gate the `CB_ALLOW_UNAUTHENTICATED` default on the router's actual bind
   host (loopback bind → open ok; any-interface bind → keep auth).
 
-The third option is probably the right shape: the open-mode default should be
-contingent on the router genuinely being loopback-only, mirroring the
-`enforceOpenModeAtListen` discipline the real `cb serve`/`cb hub` already use.
-Boxholder's call — do not restart the shared router; a code edit is picked up
-on the next restart he does.
+**RESOLVED by boxholder policy (2026-07-21): dev is never open.** None of the
+three options above — the fix is to stop disabling auth in dev at all.
+Revert the `CB_ALLOW_UNAUTHENTICATED=1` router default, keep the login wall
+genuinely enforced, and instead (a) fix login-behind-the-prefix for real
+(the [dev-router-login-page-broken](../closed/bugs/2026-07-20-dev-router-login-page-broken.md)
+problem the default was papering over) so a human can log in through the dev
+router, and (b) add a testing provision — a seeded dev credential plus an
+automation auth path (bin/browse / tours log in with it) — so headless
+tooling authenticates rather than bypassing. Auth stays real; the LAN
+exposure closes because there is no open mode to reach. Do not restart the
+shared router; a code edit is picked up on the next restart the boxholder
+does.
