@@ -454,7 +454,27 @@ exposable; local CLI uses the socket) and the tailscale docs.
    GET — don't block real nav; (c) importing `isPairingRedeemUrl` drags
    `mobile-cookie.ts` into `bin`'s tsconfig (needed a `@fastify/cookie` types
    entry) — consider extracting the pure matcher to a dep-free module instead.
-5. **B.2** the LIVE wiring (the security-critical enforcement): UDS listener +
+5. **B.2a — DONE (`bb35c63c`), the live enforcement core.** UDS listener
+   (`router.sock`, 0600) + TCP; `trustedLocal` = a compile-time constant per
+   listener closure (never a header/peer — invariant holds); real
+   `RouterAuthDeps` (`bin/router-auth-deps.ts`) — gen-aware owner via
+   `resolveRequestIdentity` cookie shim + `getOwnerEmail`, single slug→box map
+   (dup slug → null → 401), per-box `resolveMobileRequestAuth` (+ agent bearer
+   folded in), `canAccessBox` session, `Sec-Fetch-Site`/Origin CSRF; single
+   chokepoint before all dispatch + the WS `upgrade` (try/catch fail-closed);
+   deny → 302 login / JSON 401·403·404; `bin/worktrees` CLI → UDS. Verified live
+   (curl+browser+WS): the full table passes.
+   **Two carry-forwards to B.2b/iOS:** (1) *sound deviation, confirmed* — a
+   non-box worktree segment (`/<w>/@vite/`, `/src/`) maps to a session-gated
+   worktree-root sentinel (NOT 401), else the logged-in owner's own dev SPA would
+   break; a *duplicate* slug still → 401 (the real fail-closed case). (2)
+   *iOS-over-dev requirement* — those worktree-root dev assets are currently
+   session-only, so an iOS webview holding only a per-box mobile token can't load
+   the dev SPA shell; **B.2b must let any valid box credential fetch non-sensitive
+   worktree-root dev assets** (`@vite`/`src`/`node_modules`/HMR) while keeping
+   `/<w>/api/boxes` + the picker session-only. This is required for the paired-iOS
+   goal, alongside the cookie-Path rewrite.
+6. **B.2b/c** the LIVE wiring remainder: UDS listener +
    `trustedLocal` tagging (only UDS arrivals — the load-bearing invariant); real
    `RouterAuthDeps` (resolveRequestIdentity∩getOwnerEmail, the slug→box map,
    canAccessBox, resolveMobileRequestAuth, agent bearer, Origin/Sec-Fetch);
