@@ -2916,6 +2916,77 @@ test1:
       peak: 42536
       added: 4160
       turns: 12
+  chat-reference-card-as-link:
+    - date: 2026-07-21T21:30:46.379Z
+      boxCommit: b5fa1de4948d2ab0cf935ad13320b7187eabbe6a
+      repoCommit: 201324afda67ad1acb49a91a2be5a4db3a54d03a
+      initial: 46941
+      peak: 47932
+      added: 991
+      turns: 4
+    - date: 2026-07-21T21:34:07.802Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 201324afda67ad1acb49a91a2be5a4db3a54d03a
+      initial: 46992
+      peak: 49550
+      added: 2558
+      turns: 5
+    - date: 2026-07-21T21:35:36.198Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 201324afda67ad1acb49a91a2be5a4db3a54d03a
+      initial: 46781
+      peak: 49817
+      added: 3036
+      turns: 10
+    - date: 2026-07-21T21:36:12.951Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 201324afda67ad1acb49a91a2be5a4db3a54d03a
+      initial: 46943
+      peak: 66006
+      added: 19063
+      turns: 15
+    - date: 2026-07-21T21:36:52.773Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 201324afda67ad1acb49a91a2be5a4db3a54d03a
+      initial: 46781
+      peak: 69883
+      added: 23102
+      turns: 19
+    - date: 2026-07-21T21:37:23.141Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 201324afda67ad1acb49a91a2be5a4db3a54d03a
+      initial: 46781
+      peak: 50887
+      added: 4106
+      turns: 11
+    - date: 2026-07-21T21:38:00.983Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 201324afda67ad1acb49a91a2be5a4db3a54d03a
+      initial: 46781
+      peak: 59057
+      added: 12276
+      turns: 17
+    - date: 2026-07-21T21:40:07.374Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 0ebd8b0dc06c0a644472ab2e660bdbadd4fed853
+      initial: 46797
+      peak: 49840
+      added: 3043
+      turns: 9
+    - date: 2026-07-21T21:40:33.442Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 0ebd8b0dc06c0a644472ab2e660bdbadd4fed853
+      initial: 46797
+      peak: 49594
+      added: 2797
+      turns: 8
+    - date: 2026-07-21T21:41:04.927Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 0ebd8b0dc06c0a644472ab2e660bdbadd4fed853
+      initial: 46959
+      peak: 50120
+      added: 3161
+      turns: 9
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
