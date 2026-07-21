@@ -20,6 +20,7 @@ import {
 } from "../../services/claude-chat-content.js";
 import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 
 // Structural shape only (id/mimeType/dataBase64 present with the right
 // primitive types) — the content-level checks (mime prefix, total byte cap)
@@ -197,6 +198,35 @@ export function injectUserAttr(message: string, user: SessionUser): string {
     /^(<(?:typed|speech)\b)([^>]*>)/,
     `$1 user="${user.name.replace(/"/g, "&quot;")}" user-email="${user.email.replace(/"/g, "&quot;")}"$2`
   );
+}
+
+/** How much of an image's base64 to decode when reading its EXIF orientation —
+ *  the tag lives in the leading APP1 segment, so a bounded prefix suffices. A
+ *  multiple of 4 keeps the base64 slice on a byte boundary. */
+const ORIENTATION_SCAN_BASE64_CHARS = 65536;
+
+/**
+ * Surface a contract violation when an inbound chat image carries a non-trivial
+ * EXIF orientation. The orientation contract (`shared/image-orientation.ts`)
+ * says images are normalized at ingress — the browser transcode bakes
+ * orientation into pixels and native clients redraw upright — so a non-1
+ * orientation here means some client path skipped normalization and the model
+ * may see the photo rotated. The server has no image codec to fix it, so this
+ * logs loudly (visible degradation) rather than silently forwarding it.
+ */
+export function warnOnUnnormalizedImageOrientation(images: NonNullable<SendBody["images"]>): void {
+  for (const img of images) {
+    // Only JPEG carries an EXIF orientation tag; canvas WebP/PNG never do.
+    if (img.mimeType !== "image/jpeg") continue;
+    const prefix = img.dataBase64.slice(0, ORIENTATION_SCAN_BASE64_CHARS);
+    const orientation = readJpegOrientation(new Uint8Array(Buffer.from(prefix, "base64")));
+    if (orientation !== ORIENTATION_NORMAL) {
+      console.warn(
+        `[chat] inbound image #${img.id} carries EXIF orientation ${orientation} (expected ${ORIENTATION_NORMAL}); ` +
+          "a client transcode path skipped orientation normalization — the model may see it rotated",
+      );
+    }
+  }
 }
 
 /**

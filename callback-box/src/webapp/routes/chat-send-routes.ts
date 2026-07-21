@@ -33,6 +33,7 @@ import {
   injectUserAttr,
   resolveMobileSender,
   validateImages,
+  warnOnUnnormalizedImageOrientation,
 } from "./chat-helpers.js";
 
 const MESSAGE_ID_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -202,6 +203,10 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     if (images && images.length > 0) {
       const invalid = validateImages(images);
       if (invalid) return reply.status(invalid.status).send({ error: invalid.error });
+      // Contract check: images should arrive orientation-normalized (see
+      // shared/image-orientation.ts). Log, don't reject — there is no server
+      // codec to correct it, and rejecting a real photo would be user-hostile.
+      warnOnUnnormalizedImageOrientation(images);
     }
 
     const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, { sessionParam, contextDir, requestSeedFeatures: seedFeatures });
