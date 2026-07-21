@@ -7,8 +7,12 @@
  */
 
 import * as fs from "node:fs/promises";
+import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
 import type { SessionUser } from "../auth.js";
+import { getLocalUser } from "../local-users.js";
+import { AuthStoreUnavailableError } from "../local-users-errors.js";
+import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";
 import { resolveSessionLogPath } from "../../core/chat/session/history.js";
 import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
@@ -147,6 +151,42 @@ export function escapeXmlAttr(v: string): string {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+/**
+ * Resolve the chat sender for a request that carries mobile-device auth rather
+ * than a `cb_session` cookie. A paired device authenticates every native and
+ * mobile-web send, but `getSessionUser` only reads the cookie session — so
+ * without this those sends land in the transcript attributed to nobody.
+ *
+ * The identity is the device record's `createdBy`: the email of whoever paired
+ * the device (`webapp/trpc/routers/pairing.ts` stamps `ctx.user?.email`). We
+ * resolve its display name from the local-user store when there is one, and
+ * fall back to the email otherwise (a Google-only identity, or a name lookup
+ * that hit a corrupt/unreadable store — attribution degrades to the email
+ * rather than failing the send). A device paired in open mode carries no
+ * `createdBy`, so there is genuinely no identity to attribute and we return
+ * `null`, exactly as the cookie path does for an unauthenticated request.
+ */
+export function resolveMobileSender(boxRoot: string, headers: IncomingHttpHeaders): SessionUser | null {
+  const mobile = resolveMobileRequestAuth(boxRoot, headers);
+  if (!mobile?.createdBy) return null;
+  const email = mobile.createdBy;
+  return { email, name: localUserName(email) ?? email };
+}
+
+/** Display name for an email from the local-user store, or null when there is
+ *  no record or the store can't be read (degrade to the email at the call site). */
+function localUserName(email: string): string | null {
+  try {
+    return getLocalUser(email)?.name ?? null;
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) {
+      console.warn(`[chat] could not resolve a display name for ${email} (auth store unavailable); using the email:`, e);
+      return null;
+    }
+    throw e;
+  }
 }
 
 /**

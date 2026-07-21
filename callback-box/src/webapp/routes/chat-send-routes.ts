@@ -31,6 +31,7 @@ import {
   extractCardFields,
   escapeXmlAttr,
   injectUserAttr,
+  resolveMobileSender,
   validateImages,
 } from "./chat-helpers.js";
 
@@ -205,8 +206,12 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
 
     const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, { sessionParam, contextDir, requestSeedFeatures: seedFeatures });
 
-    // Identify the sender from the session (may be null if auth is disabled)
-    const user = getSessionUser(request);
+    // Identify the sender. A cookie session is the desktop/web path; a paired
+    // mobile device authenticates with a bearer token or cb_mobile cookie and
+    // carries no cb_session, so fall back to its `createdBy` identity — without
+    // this, every native and mobile-web send is attributed to nobody. May be
+    // null when auth is disabled or a device was paired in open mode.
+    const user = getSessionUser(request) ?? resolveMobileSender(boxRoot, request.headers);
 
     // Slash commands (e.g. /compact) are parsed by the claude CLI when they
     // appear at the very start of the user text — any prefix/suffix would

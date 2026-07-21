@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-20T23:41:54Z
+Generated: 2026-07-21T04:38:47Z
 Total documents: 199
 
 ## Issues
@@ -2951,7 +2951,7 @@ Referenced by:
 - docs/plans/ios-companion-review-2026-07-09.md:15 (mention) — Cross-referencing the plan (`ios-companion-app.md`): this work is **Tracks A, C, D, G, H partially built ahead of their 
 - docs/plans/ios-companion-review-2026-07-17.md:144 (mention) — - **The plan's hardest question is still unresolved.** `ios-companion-app.md` named **device-token/web-session convergen
 - docs/plans/publish-pages.md:30 (mention) — - **Precedents (denser than docs):** the Telegram webhook (`src/webapp/routes/telegram.ts`) as the "external service wit
-- ../issues/bugs/2026-07-17-mobile-chat-unattributed.md:14 (mention) — The `ios-companion-app.md` plan already calls identity unification the hardest problem in its
+- ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:23 (mention) — The `ios-companion-app.md` plan already calls identity unification the hardest problem in its
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -2984,9 +2984,9 @@ Referenced by:
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-send-hangs-webview-unloaded.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
-- ../issues/bugs/2026-07-17-mobile-chat-unattributed.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/code-quality/2026-07-17-ios-small-cleanups.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
