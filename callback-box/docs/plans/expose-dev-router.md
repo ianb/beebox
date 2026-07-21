@@ -1,368 +1,343 @@
 # Make the shared dev router safely exposable over Tailscale
 
-Let the whole `pnpm dev` router (all worktrees, all boxes) be reached from the
-tailnet — phone, other machines — as one server, protected by the always-on
-admin password. This deliberately reverses the current "the dev router is never
-a valid Tailscale target" stance, and pays for that reversal with two
-protections it lacks today: an authenticated control plane and an auth entry
-point that actually works behind the router's `/<worktree>/` path prefix.
+Turn the `pnpm dev` router into an **authenticating reverse proxy** — the same
+front-door model the prod `cb hub` already runs — so the whole dev environment
+(all worktrees, all boxes) can be reached from the tailnet by a browser *or* the
+paired iOS app, with the router validating credentials (using current code)
+before it proxies or serves anything. Then let `cb tailscale setup` expose it.
 
-Supersedes the "expose a dev checkout" issue
-(`issues/features/2026-07-21-expose-dev-checkout-over-tailscale.md`), whose
-Option 1 this is, with the whole-router + authenticated-control-plane decisions
-made (boxholder, 2026-07-21: "Exposing the whole router might be nice, for
-remote poking … since I can control these sessions remotely too"; control routes
-chosen to sit "behind the password too").
+This is the reshape of the first-draft plan, which its Codex review found unsafe
+(`expose-dev-router.review.md`): gating only `/__router/*` left the router's own
+`/`, `/<worktree>/dev/`, cold-start, and output-leak surface unauthenticated,
+and "downstream per-worktree auth is enough" is false because each worktree runs
+its own (possibly old, auth-less) checkout code. The fix both findings force is
+the same: **the shared front door must authenticate, not delegate.**
+
+Boxholder decisions folded in: whole-router exposure; control routes behind the
+password (owner); and the paired **iOS app must work** through it.
 
 ## Stated preferences this plan trades against
 
-- `callback-box/docs/engineering-principles.md` — **fail-closed /
-  resilient-not-silent** is the spine: the network layer must never become the
-  auth layer (the exact failure OpenClaw shipped, per the prior tailscale plan),
-  so every new reachable path either requires the password or is refused;
-  **validate-at-boundaries** (parse the Cookie header + verify HMAC at the router
-  boundary); **exhaustiveness** (the new `TargetPosture` member and the
-  control-route gate enumerate their cases).
-- `callback-box/CLAUDE.md:106`: *"Read before writing… This project has specific
-  conventions that differ from defaults."* — and the "don't add features beyond
-  what the task requires" rule bounds this to exposure + its protections, not a
-  tailnet-identity SSO (explicitly out of scope).
-- `callback-box/code-style.md` — no default params, max 2 positional, no `any`,
-  blessed cast helpers; the router's defensive budget (`bin/router.ts` is the
-  model, per code-style's "process-supervision code keeps the biggest defensive
-  budget").
-- **Precedent — the just-shipped `tailscale-expose-and-protect` plan**
-  (`docs/implemented-plans/`): its auth-posture guard, `TargetPosture` union, and
-  "Tailscale membership is never authentication" principle are the direct base
-  this extends.
+- `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
+  the spine: the front door denies by default and the network layer never
+  becomes the identity layer; **validate-at-boundaries** (auth resolved at the
+  router edge with current code); **don't-be-resilient-to-the-impossible**
+  (the local channel is a real capability, not a spoofable header).
+- `callback-box/CLAUDE.md` — "Read before writing"; the "don't add features
+  beyond the task" rule bounds this to exposure + its auth, not tailnet-identity
+  SSO.
+- `code-style.md` — no default params, max-2-positional, no `any`, blessed cast
+  helpers; the router's large defensive budget (code-style: "process-supervision
+  code keeps the biggest defensive budget").
+- **Precedent (the spine): the prod hub's front-door auth**, `src/hub/hub-server.ts`
+  — `decideHubAuth`/`hasMobileAuth`/`stripHubHeaders`/`verifyMobileRequest` +
+  lazy cold-start. The router adopts this; reuse over reinvention.
+- **Precedent: the box preHandler** `src/webapp/server-box-scope.ts:62`
+  (`addBoxAuthHook`) — the exact credential-precedence ladder the router mirrors.
 
 ## What already exists
 
-- **The router's unauthenticated control plane.** `bin/router.ts:696`
-  (`/__router/status` → full worktree/PID/port JSON), `:741` (`/__router/retry/`),
-  `:763` (`/__router/stop/` — `await core.stopWorktree(name)`, destructive),
-  `:789` (`/__router/dashboard/` — cold-starts a worktree). All dispatch by plain
-  `req.url` string match with no header/cookie/token check, ahead of
-  `parseWorktreeName` (`:842`). **Rebuilt**: these gain an auth gate (Track B).
-- **The router is already loopback-bound.** `bin/router.ts:1053`
-  `listenLoopback(server, ROUTER_PORT, …)` → `bin/router-core.ts:178`
-  `server.listen(port, "127.0.0.1", …)`. **Reused** — load-bearing: the only
-  off-machine path into the router is Tailscale Serve, which is what makes the
-  header-based origin test (below) sound.
-- **The proxy forwards raw headers.** `bin/router.ts:406`
-  (`proxy.web(req, res, options, …)` with the raw `req`) — so the router can read
-  `req.headers["tailscale-user-login"]` at dispatch and it still flows to the
-  box. **Reused.**
-- **Session verification the router can reuse.** `callback-box/src/webapp/auth.ts:236`
-  `verifySession(cookie)`, `:299` `getSessionUserFromCookieHeader(header)` (takes
-  a raw Cookie header — exactly what `bin/router.ts`'s `http.IncomingMessage`
-  has, no Fastify `.cookies` needed), `:30` `getSessionSecret()` reading the
-  **stable** `~/.cb-session-secret` (env `CB_SESSION_SECRET` or a persisted
-  0600 file — machine-wide, so a separate process verifies cookies the hub
-  minted). Local users: `local-users.ts:87` (`~/.cb-auth.json`), `:201`
-  `getLocalOwnerEmail()`, `:215` `getLocalUser()`. **Reused** — the router
-  imports these, following the existing `bin/`→`callback-box/src` precedent
-  (`bin/doctor.ts:61`, `bin/snapshot-clerk-contract.ts:30`). See the qualitative
-  caveat in Failure modes.
-- **Per-worktree Vite base (already prefix-correct).** `bin/router-core.ts:347`
-  (`const baseUrl = \`/${name}/\``), `:355` (`VITE_BASE`), consumed at
-  `callback-box/src/frontend/vite.config.ts:25,58`. So the *running SPA* under
-  `/<worktree>/` already loads its assets and does its client-side 401 redirect
-  base-aware (`src/frontend/src/api-core.ts:49` `withBase`, `src/frontend/src/lib/trpc/index.ts:36`).
-  **Reused** — Track A only fixes the *entry* paths that bypass this.
-- **The broken auth entry behind the prefix.** The *built* login SPA is served
-  base=`/` (`src/webapp/routes/auth.ts:195` `serveLoginSpa`, `:234`
-  `/auth/login`; `src/hub/hub-server.ts:332` comment + `:343`), and every
-  server-side unauth redirect is root-absolute: `hub-server.ts:409,468`,
-  `box-picker.ts:87`, `server-box-scope.ts:129`, `server-root.ts:320` (all
-  `reply.redirect(\`/auth/login?returnTo=…\`)`, no `/<worktree>/` prefix). Filed
-  as `issues/bugs/2026-07-20-dev-router-login-page-broken.md`. **Rebuilt** in
-  Track A — it's the prerequisite: you cannot obtain a `cb_session` over the
-  tailnet until login works behind the prefix.
-- **The router-target guard.** `callback-box/src/services/tailscale-target.ts:77`
-  `looksLikeRouter(probe)` (matches `routerPort` + `worktrees` in
-  `/__router/status` JSON), `:106` invoked first in `classifyTargetPosture`,
-  `:149` refusal, union at `:85`. **Rebuilt** in Track C — the unconditional
-  `"router"` refusal becomes conditional on the control plane being gated.
-- **`Tailscale-User-Login` is read nowhere yet** (grep: zero source hits). New
-  code.
+- **The hub is already an authenticating proxy.** `src/hub/hub-server.ts`:
+  `hasMobileAuth`/`verifyMobileRequest` fully verify mobile bearer/cookie before
+  proxying or cold-starting (closed risk S1, per mobile-contract); `decideHubAuth`
+  (228) gates; `stripHubHeaders` (206) removes client-supplied `x-cb-*`;
+  `isMobilePairingRedeem` (457) allows the unauth bootstrap; the session redirect
+  at :409/:468. **Reused as the template** — the router grows the equivalent.
+- **One mobile auth resolver, per-box, reusable.** `src/core/mobile/request-auth.ts:54`
+  `resolveMobileRequestAuth(boxRoot, headers)` — `cb_mobile` cookie then
+  `Authorization: Bearer <deviceToken>`, validated (timing-safe) against that
+  box's `.callback-box/mobile-devices.secret.json` (`pairing.ts:288`). Gives
+  `authed:true, isOwner:false`, bypasses `canAccessBox` (the per-box token *is*
+  the authorization). **Reused** — the router calls it for the target box.
+- **Session verification the router can run.** `auth.ts:299`
+  `getSessionUserFromCookieHeader` (raw Cookie header — fits the router's
+  `http.IncomingMessage`), `:236` `verifySession`, `:454` `classifyLocalRecord`
+  (the **gen-aware** revocation check — must use this, not bare `verifySession`;
+  Codex finding 5), stable secret `auth.ts:30`. Owner check: `local-users.ts:201`
+  `getLocalOwnerEmail`. Box access: `box-access.ts` `canAccessBox`. **Reused.**
+- **Agent + diag bearers, pairing-redeem, the full precedence ladder** —
+  `server-box-scope.ts:79-134`: diag bypass → pairing-redeem URL allow → agent
+  bearer → mobile auth → session identity → `canAccessBox`. **Reused** as the
+  router's per-box gate spec.
+- **`bin/`→`callback-box/src` import is precedented** (`bin/doctor.ts:61`,
+  `bin/snapshot-clerk-contract.ts:30`). The router importing these current-code
+  resolvers is the finding-4 fix: it authenticates with main's code even when
+  proxying an old worktree's box.
+- **The router's unauthenticated surface (all to be gated).** `bin/router.ts:696/741/763/789`
+  (`/__router/*`), `:512` (`/` worktree list), `:855` (`/<worktree>/dev/` via
+  `router-docs.ts` — cross-worktree markdown/issues/artifacts), `:868` (pre-auth
+  cold-start), `:605` (leaked build output). `router-docs.ts:690` unguarded
+  `decodeURIComponent` (pre-auth DoS). **Rebuilt behind the gate.**
+- **iOS is already prefix-aware.** `PairedBox.baseURL` includes the slug
+  (`ios-app/.../Models/PairedBox.swift:47`; local test box pairs to
+  `http://127.0.0.1:3210/main/test1`, `PairedBoxStore.swift:100`). **No app
+  change** for a `/<worktree>/<box>/` mount. The per-box lock is device-local UI
+  only (`BoxLockManager.swift`), no server effect.
+- **Router is loopback-bound** (`bin/router.ts:1053` `listenLoopback`). Reused —
+  Serve is the only off-machine path, but per Codex we do NOT lean on that for
+  the local/remote split (below).
 
 ## Prior art (external)
 
-Searched during the prior tailscale plan and re-confirmed here:
-
-- **Tailscale Serve injects and strips `Tailscale-User-Login`.**
-  <https://tailscale.com/kb/1242/tailscale-serve> (and the identity-header demo
-  <https://github.com/tailscale-dev/id-headers-demo>): Serve injects the header
-  and strips any client-supplied copy, so its *presence* on a loopback-bound
-  backend reliably means "arrived via Serve" — the basis for Track B's origin
-  test. Absent for tagged-device and Funnel traffic (we don't Funnel).
-- **OpenClaw's fail-open incidents** (GHSA-hff7-ccv5-52f8; issue #50630, CVSS
-  9.3) — the cautionary base: network membership silently became auth, and a
-  header-auth path leaked from a WebSocket scope to all routes. This plan's gate
-  keeps the password as the wall and uses the header only as an origin signal,
-  never as identity — the anti-#50630 shape.
-- **Reverse proxies gating on trusted injected headers** (Tailscale's own
-  `proxy-to-grafana`, `X-Webauth-User` + `whitelist=127.0.0.1`): the pattern of
-  "trust the header only because the backend is unreachable except through the
-  proxy" is exactly our loopback-bound-router + Serve situation.
-- No prior art *within the repo* for `bin/` performing auth — this is the first
-  behavioral-security code in the router (flagged in Failure modes).
+- **Tailscale Serve identity headers are unreliable as an origin signal** —
+  absent for tagged devices and Funnel (<https://tailscale.com/kb/1242/tailscale-serve>).
+  This is *why* the redesign abandons header-presence gating (first-draft's fatal
+  flaw) for a fail-closed "authenticate all network traffic; local unauth via a
+  non-network channel."
+- **Unix-domain-socket as the local trust boundary** — the standard pattern for
+  "local tools bypass, network must auth" (Docker's socket, tailscaled's LocalAPI
+  socket). A browser cannot originate a UDS request, so it's a real capability
+  boundary, not a spoofable marker. Node `net`/`http` `server.listen(path)`
+  supports it.
+- **OpenClaw fail-open incidents** (GHSA-hff7-ccv5-52f8, #50630) — the standing
+  cautionary base; the password/mobile-token stays the identity, never the
+  network.
+- Searched, none found: a Node reverse proxy that authenticates per-downstream
+  with pluggable cookie+bearer+per-target-token schemes — this is bespoke, but
+  it's the hub's existing shape generalized.
 
 ## Tracks / scope
 
-Ordered by dependency: A (auth entry) unblocks any authenticated tailnet access;
-B (control-plane gate) is the core protection; C (guard relax + expose) can only
-be proven safe once A and B hold.
+Ordered by dependency: A unblocks any authenticated *use*; B is the front door
+itself; C exposes only once A+B verify.
 
-### Track A — prefix-safe auth entry
+### Track A — prefix-safe auth entry (also fixes local dev today)
 
-**What.** Make the login page and every server-side `→ /auth/login` redirect
-work behind the router's `/<worktree>/` prefix, so a tailnet visitor with no
-cookie can actually reach a login form and get a `cb_session`.
+**What.** Make login (SPA + every server redirect + Google OAuth callback) work
+behind the router's `/<worktree>/` prefix, so a browser with no cookie can reach
+a login form and return to where it was.
 
-**Why this needs to change.** Today the built login SPA references `/assets/…`
-(base=`/`) which the router reads as a worktree name → 404 blank page
-(`hub-server.ts:332` comment), and the server redirects drop the prefix
-(`server-box-scope.ts:129` et al.) → the router 404s "worktree `auth` not
-found." Auth is structurally always-on, so *every* first tailnet hit lands here.
-Without this, the exposed router is unreachable-when-logged-out, i.e. unusable.
+**Why.** Auth is always-on; the built login SPA is base=`/` (assets 404 behind
+the prefix) and the five server redirects drop the prefix
+(`server-box-scope.ts:129` et al.), so login behind the router is a dead end
+(`issues/bugs/2026-07-20-dev-router-login-page-broken.md`) — today's local dev is
+already broken by this, not just the tailnet case.
 
-**Direction.** Two coordinated fixes:
-1. **Prefix-aware login redirects.** The five server-side redirect sites build
-   `returnTo` from `request.url` (which *includes* the `/<worktree>/` prefix as
-   the router proxied it) but hardcode the destination `/auth/login`. Derive the
-   prefix from the incoming request's base and emit
-   `<prefix>/auth/login?returnTo=…`. In hub mode the hub knows the box slug; under
-   the dev router the prefix is the first path segment. Centralize in one helper
-   (`loginRedirect(request)`), replacing the five ad-hoc `reply.redirect` calls —
-   consolidation per code-style, one way to build the redirect.
-2. **Prefix-correct login SPA assets.** Serve the login SPA such that its asset
-   references resolve under the prefix. Two candidate mechanisms, settled in the
-   first chunk: (a) serve login through the same Vite-base machinery the app
-   already uses (so `VITE_BASE` prefixes its assets), or (b) a router-level
-   rewrite that maps `/<worktree>/assets/*` → the shared dist assets. Lean (a):
-   it reuses the working path rather than adding a rewrite layer.
+**Direction.** (Corrected per Codex finding 7 — Vite strips `VITE_BASE` before
+proxying, so the backend can't derive the prefix from `request.url`; it must come
+from injected config.)
+1. **Prefix from config, not URL.** The prefix is already injected as `VITE_BASE`
+   (`router-core.ts:355`) and known to the hub as the box slug. Thread it to a
+   single `loginRedirect(request, base)` helper replacing the five ad-hoc
+   redirects; `returnTo` is prefixed with the same base.
+2. **Prefix-correct login SPA assets.** Serve the login HTML through the
+   base-aware path (Vite serves/transforms the login GET while `/api`/`/auth`
+   POST stay proxied), or a per-base asset rewrite — mechanism settled in chunk 2
+   against a browser check. `serveLoginSpa` (`routes/auth.ts:195`) currently
+   ships `dist/index.html` verbatim; that changes.
+3. **Google OAuth behind the prefix.** The callback URI is built from the hub
+   base (`auth-google.ts:38`, `hub.ts:87`) — extend it to carry the prefix, or
+   document local-password-only for prefixed origins in the transition. (Open
+   question — lean: fix the callback, since remote family login may want Google.)
 
-**First implementation chunk.** The `loginRedirect(request)` helper + migrate the
-five call sites + a route doctest asserting the emitted Location carries the
-prefix for a prefixed request and stays bare for an unprefixed one. (SPA-asset
-mechanism is the second chunk — it needs the browser-level check.)
+**First chunk.** `loginRedirect(request, base)` + thread `base` + migrate 5 sites
++ a route doctest asserting the emitted Location and `returnTo` carry the base.
 
-### Track B — authenticated router control plane
+### Track B — the router as a fail-closed authenticating proxy
 
-**What.** Gate `/__router/status|retry|stop|dashboard` so a request arriving via
-Tailscale Serve must carry a valid `cb_session` for a known local user;
-unauthenticated Serve requests get 401; local-direct requests (no Serve header)
-are unchanged.
+**What.** Every request on the TCP listener (which Serve fronts, and which local
+browsers also use) must pass an auth gate — run with current code — before the
+router proxies, serves infra, or cold-starts. Local, non-browser tooling keeps
+unauthenticated access via a **separate Unix-domain-socket listener** that Serve
+never touches.
 
-**Why this needs to change.** These routes stop/restart/inspect every worktree
-with zero auth (`bin/router.ts:763` calls `core.stopWorktree`). Exposing the
-router without gating them hands every tailnet client a worktree kill switch —
-the precise "network presence ≠ authorization" failure this project refuses.
+**Why.** Codex findings 1–4: header-presence is fail-open (tagged/Funnel);
+`/`, `/<worktree>/dev/`, cold-start and output-leak are unauth surface; and each
+worktree runs its own code so the wall must be at the shared front door.
 
 **Direction.**
-- **Origin test.** At `/__router/*` dispatch (`bin/router.ts:679`), read
-  `req.headers["tailscale-user-login"]`. Present ⇒ the request arrived via Serve
-  (Serve injects it and strips client copies, and the router is loopback-bound so
-  Serve is the *only* off-machine path) ⇒ **remote**. Absent ⇒ local-direct.
-  Explicitly NOT `req.socket.remoteAddress`: Serve re-dials loopback, so a
-  tailnet request also presents `127.0.0.1` — peer IP cannot distinguish them
-  (correcting the investigation's suggestion).
-- **Gate.** For a remote `/__router/*` request, parse `req.headers.cookie` and
-  call `getSessionUserFromCookieHeader` (`auth.ts:299`); require a non-null
-  session whose email resolves via `getLocalUser` (`local-users.ts:215`). Fail →
-  401 (JSON for status, an HTML "log in first" nudge for the POST forms).
-  Local-direct requests skip the gate (preserves current dev ergonomics — the
-  chosen "localhost still direct").
-- **The password is the wall; the tailnet header is only the origin signal.** We
-  do not derive identity from `Tailscale-User-Login` (defense-in-depth, not SSO —
-  scope boundary). The router reading the symmetric session secret is acceptable
-  for the same reason the hub does: it's the trusted front-most process. (The
-  verify=forge property of the symmetric secret, `auth.ts:381`, is why we don't
-  hand this capability to box *children* — the router is not a child.)
+- **Two listeners, one handler.** Keep the TCP loopback listener (Serve-fronted,
+  browsers) and add a UDS listener (e.g. `~/.cache/callback-box/router.sock`,
+  0600). Requests arriving on the **UDS are trusted-local, unauthenticated**
+  (current dev-tool ergonomics: `bin/worktrees`, HMR pings, dashboards — rewired
+  to the socket). Requests on **TCP are untrusted and must authenticate**,
+  regardless of any header — this replaces the spoofable header test with a real
+  capability boundary (Codex's core recommendation). No `Tailscale-User-Login`
+  logic anywhere.
+- **The TCP gate (per route class), fail-closed default = 401/redirect:**
+  - **Unauth allowlist (bootstrap):** `/<w>/auth/login`, `/<w>/auth/*` (login,
+    logout, setup, OAuth callback), the login SPA assets, and
+    `POST /<w>/<box>/api/pairing/redeem` (ticket-gated — mirrors
+    `hub-server.ts:457`). Nothing else.
+  - **`/__router/*` control routes + router infra (`/`, `/<w>/dev/`,
+    `/__router/dashboard`, and any cold-start):** a valid **owner** session,
+    gen-aware (`classifyLocalRecord`, owner-only per finding 5) **plus CSRF/Origin
+    defense** (finding 6): reject state-changing `/__router/{stop,retry}` unless
+    `Origin`/`Sec-Fetch-Site` proves same-origin-top-level, or require a
+    CSRF token. Read routes (`/__router/status`, `/`) need the owner cookie but
+    not the CSRF token.
+  - **Box routes `/<w>/<box>/...`:** the box precedence ladder, run at the router
+    with current code for the *target* box: agent bearer → per-box mobile auth
+    (`resolveMobileRequestAuth(targetBoxRoot, headers)`) → session identity whose
+    user `canAccessBox(targetBoxRoot)`. Any hit ⇒ proxy through (and the router
+    strips client-supplied `x-cb-*`, like `stripHubHeaders`). None ⇒
+    401 (API) / `loginRedirect` (navigation).
+  - **Cold-start happens only after the gate passes** (fixes finding 3's
+    pre-auth start).
+- **DoS guard:** wrap the `/<w>/dev/` path decode (`router-docs.ts:690`) and the
+  request handler in a rejection boundary so a malformed request can't crash the
+  shared router (finding 3).
+- **Identity, not network, is the wall.** The password (session) or the per-box
+  device token authorizes; nothing is trusted for being "on the tailnet."
 
-**Vocabulary lock-ins.** Header name `Tailscale-User-Login` (vendor-fixed);
-helper `routerRequestIsRemote(req)` and `authorizeRouterControl(req)`.
+**Vocabulary lock-ins.** UDS path `router.sock`; `authorizeRouterRequest(req, {targetBox})`
+returning a discriminated `{allow}|{deny, reason}`; `TRUSTED_LOCAL` = arrived-on-UDS.
 
-**First implementation chunk.** `routerRequestIsRemote` + `authorizeRouterControl`
-as pure-ish functions (inject the header/cookie strings, not the raw req, so
-they're unit-testable in `bin/*.test.ts` node:test style like `router-core.test.ts`),
-wired into the four control routes; tests: remote+no-cookie → 401, remote+valid
-cookie → allowed, remote+expired/forged cookie → 401, local (no header) →
-allowed. No open questions.
+**First chunk.** The UDS listener + the TCP/UDS origin tag + a pure
+`authorizeRouterRequest` over injected (headers, method, url, targetBoxRoot,
+trustedLocal) with the full truth table as `bin/*.test.ts` node:test cases:
+UDS→allow; TCP owner-cookie→control allow; TCP member/no-cookie→control 401; TCP
+revoked-gen→401; TCP valid mobile bearer for box→box allow; TCP mobile-for-other-box→401;
+TCP pairing-redeem→allow; TCP `/`/`dev` without owner→401; CSRF-less POST
+`/__router/stop`→reject. Wiring into the live dispatch is chunk 2.
 
-### Track C — relax the router-target guard and expose
+### Track C — verify the gate, then expose
 
-**What.** Let `cb tailscale setup` accept the router as a target, but only after
-positively verifying the control plane is gated; then `tailscale serve` the whole
-router root.
+**What.** `cb tailscale setup` accepts the router as a target only after
+positively proving the TCP gate denies anonymous access; then serves the router.
 
-**Why this needs to change.** `tailscale-target.ts:106` refuses any router
-unconditionally. Once B ships, a gated router is safe to expose, and the tooling
-must recognize that — but must *not* relax into exposing an *ungated* router
-(e.g. an older build without Track B).
+**Why.** Never expose a router build lacking Track B (finding 2 — the old
+two-probe check proved nothing).
 
 **Direction.**
-- **Positive verification, not a flag.** Add a `TargetPosture` member (union at
-  `tailscale-target.ts:85`), e.g. `{ kind: "router-guarded" }` vs the existing
-  `"router"`. The classifier probes `/__router/status` **twice**: once plain
-  (confirms it's a router) and once with a synthetic `Tailscale-User-Login:
-  probe@local` header — a gated router returns 401 to the second, an ungated one
-  returns 200 status JSON. 401-on-synthetic-header ⇒ `router-guarded` (allow);
-  200 ⇒ `router` (refuse, with a message pointing at this plan/Track B). This
-  makes "is it safe" an observed property, not an operator assertion — the
-  anti-#50630 discipline.
-- **Serve the whole router root** (`tailscale serve --bg --https=443 --set-path=/
-  → 127.0.0.1:<ROUTER_PORT>`). Whole-router exposure (decided), so no path
-  scoping. The existing setup guards (no-Funnel, exposure-intent transaction,
-  stop teardown) apply unchanged.
-- **The box-serving paths need no new router gate**: `/<worktree>/<box>/…` proxies
-  to the box, which already enforces the password (once Track A lets login
-  through). Only the router's *own* control routes needed B.
+- **Proof by anonymous denial, over Serve.** After configuring Serve, the setup
+  verification probes the **served** `https://<node>.ts.net/__router/status`
+  (real Serve path, not a synthetic-header loopback probe) with **no credentials**
+  and requires **401**. A 200 (ungated router, or Serve not injecting/isolating
+  as expected) ⇒ refuse and tear down. This tests the actual end-to-end path a
+  tagged device would use. Add a `TargetPosture` member (`tailscale-target.ts:85`)
+  `{ kind: "router-guarded" }`; the existing `/auth/me` probe is replaced for the
+  router case by this anonymous-`/__router/status`-must-401 probe (the router has
+  no `/auth/me`).
+- **Serve the whole router root** (`--set-path=/ → 127.0.0.1:<ROUTER_PORT>`);
+  existing no-Funnel + exposure-intent + stop guards apply. Because the gate is
+  fail-closed, whole-router exposure is now safe (findings 3/4 addressed by B).
 
-**First implementation chunk.** The `router-guarded` posture + the two-probe
-classifier change + tests (gated router → allowed, ungated → refused, non-router
-→ unchanged), using the existing fake-deps probe harness.
+**First chunk.** The `router-guarded` posture + anonymous-denial probe + tests
+(gated→exposed, ungated→refused+torndown, non-router unchanged).
 
 ## Subplans
 
-None. Track A overlaps the filed login-prefix bug, but it's not a separate design
-question — the direction (prefix-aware redirects + base-correct login assets) is
-settled here; the bug issue is its tracking record, closed when A lands.
+None. Track A subsumes the login-prefix bug (its direction is settled here). The
+UDS local-channel is a design *decision* inside B, not a separate research plan.
 
 ## Failure modes
 
-**Critical gap (resolved in-plan):** exposing an *ungated* router — if Track C
-shipped without B, or against an old router build, the control plane would be
-tailnet-reachable unauthenticated. Resolved by the two-probe positive
-verification (C): setup refuses unless the synthetic-header probe proves the gate
-is live. Tested both ways.
+**Critical gap (resolved):** the whole-router unauth surface + per-worktree-code
+exposure (findings 3/4) — resolved by B making the shared front door authenticate
+every TCP request with current code before proxying/serving/cold-starting.
+Verified by C's anonymous-denial probe over Serve.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Remote `/__router/stop` with no/expired/forged cookie | planned (B) | 401 via `authorizeRouterControl` | clear |
-| Serve omits/renames `Tailscale-User-Login` (version drift) → remote request looks local → gate skipped | planned | absence ⇒ treated as local ⇒ **fail-open risk**; see note | needs the mitigation below |
-| A local process omits the header to reach `/__router/*` | n/a | allowed by design (local = trusted; already has machine access) | clear |
-| Login redirect still drops prefix for some route | planned (A) | centralized `loginRedirect` covers all five sites | clear |
-| Login SPA assets 404 behind prefix | planned (A, browser check) | base-correct serving | clear |
-| Router imports `callback-box/src/webapp/auth` → build/coupling break, or the security import drifts | typecheck + B tests | precedented import path; **qualitative** escalation (first behavioral-security code in `bin/`) flagged for review | clear |
-| `cb tailscale setup` exposes a router lacking Track B | planned (C, two-probe) | refuse unless synthetic-header probe returns 401 | clear |
-| Session secret differs between router and hub (env `CB_SESSION_SECRET` set for one, not the other) → router can't verify valid cookies | planned | both read the same source; if divergent, verify fails → 401 (fail-closed, not open) | clear |
-
-**The one real fail-open to close:** the origin test treats *absent*
-`Tailscale-User-Login` as local. If a future Serve config didn't inject it, a
-remote request would be treated as local and skip the gate. Mitigation, folded
-into Track C's verification and setup: setup configures Serve itself and then
-proves via the synthetic-header probe that the running config *does* surface the
-header end-to-end before it will expose — and documents that the gate depends on
-Serve's inject-and-strip contract. This converts a silent assumption into a
-checked precondition. (An alternative stricter gate — require auth for
-`/__router/*` unless the peer is proven local by a non-spoofable channel — is
-rejected because loopback peer is exactly what Serve masks; there is no such
-channel here.)
+| Tagged-device / Funnel request (no identity header) hits `/__router/stop` | planned (B truth table: TCP+no-cookie→401) | UDS-vs-TCP capability boundary, not header | clear |
+| Revoked/stale session used at the router | planned | gen-aware `classifyLocalRecord`, not bare verify | clear |
+| Non-owner member reaches control routes | planned | owner-only check | clear |
+| Same-origin CSRF POST to `/__router/stop` from an agent-authored `/dev` page | planned | Origin/Sec-Fetch or CSRF token on mutating control routes | clear |
+| Malformed `%`-encoding under `/<w>/dev/` crashes the shared router | planned | decode guard + handler rejection boundary | clear |
+| Router proxies an old worktree whose box lacks auth | n/a (that's the point) | router front-auth uses current code before proxying | clear |
+| Per-box mobile token replayed against a *different* box | planned (mobile-for-other-box→401) | `resolveMobileRequestAuth` keyed to target box store | clear |
+| Pairing-redeem abused (anon POST) | n/a | ticket single-use/10-min/owner-minted; invalid ⇒ rejected by box | clear (accepted, ticket is the credential) |
+| UDS file world-accessible / stale | planned | 0600, unlink-on-start; a same-user process reaching UDS is already trusted | clear |
+| Local browser dev now needs login (ergonomic change) | n/a | intended (auth always-on); 30-day cookie; documented | clear (accepted) |
+| Serve stops injecting isolation and TCP becomes publicly reachable via Funnel | planned (C anon-denial) + setup no-Funnel invariant | gate is fail-closed regardless | clear |
+| Google OAuth callback breaks behind prefix | planned (A.3) | callback carries prefix, or local-password-only documented | clear |
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field**, **Stale ref**, **Two agents on one card**,
-  **Fabricated free-form value** — N/A: no card vocabulary; this is
-  router/auth/CLI infrastructure. The analogous concurrency (two processes
-  serving one box) is the *motivation* (single exposed server), addressed by
-  exposing the router rather than a parallel `cb serve`.
-- **Hand-edit drift** — a boxholder running raw `tailscale serve` against the
-  router bypasses `cb tailscale setup`'s two-probe check. ADDRESSED partially:
-  `cb tailscale status` reports the router as a target and its guarded/ungated
-  posture, so drift is visible; DEFERRED: we don't prevent a hand-run serve of an
-  ungated router (documented, like all raw-CLI escape hatches).
-- **Validation error UX** — ADDRESSED: the 401 bodies name the cause ("log in at
-  <prefix>/auth/login"); the setup refusal for an ungated router names Track B.
-- **Partial migration / transition state** — ADDRESSED: the tracks are ordered so
-  the guard (C) only opens after the gate (B) exists, and C's probe refuses any
-  router where B isn't live — so a half-applied rollout fails closed, never open.
+- **Wrong tag / stale ref / two agents on a card / fabricated value** — N/A: no
+  card vocabulary; router/auth/CLI infrastructure. The concurrency motivation
+  (two servers on one box) is *why* we expose the one router, not a parallel serve.
+- **Hand-edit drift** — a raw `tailscale serve` of an ungated router bypasses C's
+  check. ADDRESSED (visible): `cb tailscale status` reports the router's
+  guarded/ungated posture. DEFERRED: not prevented (documented, like all raw-CLI
+  escape hatches).
+- **Validation error UX** — ADDRESSED: 401 bodies name the cause + login URL; the
+  setup refusal names Track B.
+- **Partial migration / transition** — ADDRESSED: C refuses any router where B's
+  gate isn't live (anonymous probe returns 401), so a half-rollout fails closed.
 
 ## NOT in scope
 
-- **Tailnet identity as box login (SSO).** The password stays the identity;
-  `Tailscale-User-Login` is only an origin signal. Mapping tailnet users to
-  `~/.cb-auth.json` accounts is the deferred idea recorded in the OpenClaw
-  dispositions — a separate plan. (Rejecting it here keeps the anti-#50630
-  boundary crisp.)
-- **Per-worktree scoped exposure.** Whole-router was chosen; path-scoping the
-  Serve mapping to one worktree is not built (and would reintroduce prefix-asset
-  complexity).
-- **Exposing prod's `cb hub` this way.** Prod is a different topology (single hub,
-  no router); its tailnet story is the already-shipped hub-target path.
-- **Remote control of Claude Code sessions.** "control these sessions remotely"
-  is served by Claude Code's own remote features, not the callback-box router;
-  this plan exposes the dev *apps* + worktree supervision, not the agent sessions.
-- **Rate-limiting / lockout on the router 401 path.** The password's scrypt
-  cost + the tailnet boundary are the current defense; a brute-force lockout is a
-  separate hardening item.
+- **Tailnet identity as login (SSO).** Password/device-token stay the identity;
+  no `Tailscale-User-Login` mapping (deferred OpenClaw disposition).
+- **Unifying mobile-device identity with user accounts.** Mobile stays
+  `authed:true,isOwner:false` per box (mobile-contract's structural gap) — not
+  this plan's job.
+- **Keychain storage for the iOS device token / token expiry** (mobile-contract
+  I6/lifecycle) — separate mobile hardening.
+- **Exposing prod's `cb hub`** — already has its tailnet path; prod is a single
+  checkout, not the multi-worktree router.
+- **Rate-limit/lockout on the 401 path** — scrypt cost + tailnet boundary are the
+  current defense; brute-force lockout is separate hardening.
+- **Remote-controlling Claude Code sessions** — served by Claude Code's own
+  remote features; this exposes the dev apps + worktree supervision.
 
 ## Open design questions
 
-- **Login-SPA asset mechanism (A.2): Vite-base reuse vs router rewrite.** Lean
-  Vite-base reuse (fewer moving parts). Settled in A's second chunk before code —
-  the *requirement* (assets resolve under the prefix, verified in a browser) is
-  fixed; only the mechanism is open, and it sits in chunk 2, not chunk 1.
-- **Should `/__router/status` (read-only) use a softer gate than the mutating
-  routes?** The chosen answer is uniform (all four gated the same) per the
-  boxholder's "behind the password too"; recording the considered alternative
-  (status readable, mutations gated) as explicitly declined.
+- **Google OAuth behind the prefix (A.3).** Lean: fix the callback to carry the
+  prefix (remote family may want Google). Fallback: local-password-only on
+  prefixed origins, documented. Sits in A's later chunk; the requirement (some
+  login method works behind the prefix) is fixed — local-password already does
+  once A.1/A.2 land.
+- **CSRF mechanism (B): `Sec-Fetch-Site`/`Origin` check vs a minted token.** Lean:
+  `Origin`/`Sec-Fetch-Site` same-origin assertion on mutating `/__router/*` (no
+  token plumbing, and these are same-origin form POSTs today) — decided inside B
+  before code; only the mechanism is open, the requirement (mutations aren't
+  CSRF-able) is fixed.
+- **Do local browsers use TCP (login) or can they use the UDS?** Browsers can't
+  originate UDS, so local browser dev logs in (accepted). Recorded as considered.
 
 ## Knowledge audits
 
-Skip, with rationale: this introduces no *box-agent-facing* concept — no card
-tag, schema, or rule a box agent must recall. The new surface is operator/CLI
-(`cb tailscale` accepting the router) and dev-infra (router auth), documented in
-`bin/CLAUDE.md` (the "Dev auth is always-on" section gets updated: login behind
-the prefix now works, and the router is exposable) and the tailscale docs. No
-`knows_directly` entry applies.
+Skip, with rationale: no box-agent-facing concept (no card tag/schema/rule an
+agent must recall). New surface is operator/CLI + dev-infra, documented in
+`bin/CLAUDE.md` (the "Dev auth is always-on / login broken behind prefix" section
+gets rewritten: login works behind the prefix; the router authenticates and is
+exposable; local CLI uses the socket) and the tailscale docs.
 
 ## Implementation order
 
-1. **Track A chunk 1** — `loginRedirect` helper + 5 call sites + route doctest.
-2. **Track A chunk 2** — prefix-correct login SPA assets + a browser check
-   (closes the login-prefix bug).
-3. **Track B** — origin test + control-plane auth gate + `bin/` unit tests.
-4. **Track C** — `router-guarded` posture + two-probe classifier + setup serves
-   the router root; tests.
-5. **Docs** — `bin/CLAUDE.md` (login works behind prefix; router exposable),
-   `docs/docker-install.md`/tailscale docs (dev-router exposure), admin
-   `TailscaleSection` note that on a dev machine the whole router is what gets
-   exposed. Close the login-prefix bug issue and the expose-dev-checkout issue.
+1. **A.1** `loginRedirect(request, base)` + 5 sites + route doctest.
+2. **A.2** prefix-correct login SPA assets + browser check (closes the login bug).
+3. **A.3** OAuth-behind-prefix (or document local-password-only).
+4. **B.1** UDS listener + origin tag + pure `authorizeRouterRequest` + truth-table
+   unit tests.
+5. **B.2** wire the gate into dispatch (allowlist, control/infra owner+CSRF, box
+   ladder, strip `x-cb-*`, gate-before-cold-start) + DoS boundary; rewire
+   `bin/worktrees`/HMR/dashboards to the UDS.
+6. **C** `router-guarded` posture + anonymous-denial-over-Serve probe + setup
+   serves the router; tests.
+7. **Docs** `bin/CLAUDE.md`, tailscale docs, admin `TailscaleSection`
+   ("on a dev machine, `cb tailscale setup` exposes the whole authenticated
+   router"). Close the login-prefix bug + the expose-dev-checkout issue.
 
-Dependencies: C requires B (the two-probe check needs the gate to exist);
-authenticated tailnet *use* requires A (no login entry otherwise). B and A are
-independent and could land in either order, but both precede C.
+Dependencies: C requires B (anon probe needs the gate live). Authenticated *use*
+over the tailnet requires A (login entry). B needs A.1 for its navigation-deny
+redirect. A and B.1 can proceed in parallel.
 
 ## Rollout shape
 
-- **Test posture (tests first).** Track A: a route doctest pinning the prefixed
-  vs bare `Location` from `loginRedirect`, plus a browser/tour check that the
-  login page renders (not a blank `#root`) behind `/<worktree>/`. Track B: `bin/`
-  node:test unit tests over `routerRequestIsRemote`/`authorizeRouterControl`
-  (the four-cell truth table: {remote,local} × {valid,invalid cookie}) — the
-  security behavior is the done-when. Track C: fake-deps classifier tests (gated
-  → allowed, ungated → refused, non-router unchanged) extending the existing
-  `tailscale-target` doctest. The Failure-modes "planned" rows enumerate the
-  required assertions.
-- **Live proof (needs a human + real tailnet).** After the unit/route tests:
-  `pnpm dev`, `tailscale serve` the router via `cb tailscale setup`, then from the
-  phone (a) load `/<worktree>/<box>/`, get the login page (Track A), log in,
-  reach the box; (b) confirm `/__router/stop/<wt>` over the tailnet is 401 when
-  logged out and works when logged in (Track B); (c) confirm `cb tailscale setup`
-  refuses a router built without Track B (Track C). This is the first end-to-end
-  exercise; the tailnet + phone are already available (`banjo-parrotfish.ts.net`).
-- **Knowledge audits:** none (see above).
-- **Migration:** none — no on-disk data shape changes. Behavior change: the dev
-  router becomes a valid `cb tailscale` target and its control routes require
-  auth over the tailnet; both are additive (local dev unchanged).
+- **Tests first.** A: route doctest on prefixed `Location`/`returnTo` + a browser
+  check the login page renders behind `/<w>/`. B: `bin/` node:test truth table
+  over `authorizeRouterRequest` (the security done-when — every Failure-modes
+  "planned" row is an assertion), plus a UDS-vs-TCP integration test. C: fake-deps
+  classifier + an anonymous-`/__router/status`→401 assertion.
+- **Live proof (human + tailnet, already available: `banjo-parrotfish.ts.net`,
+  phone paired).** `pnpm dev` → `cb tailscale setup` exposes the router → from the
+  phone browser: hit `/<w>/<box>/`, get login, log in, reach the box; from the
+  **paired iOS app**: pair/redeem over the tailnet URL and confirm the app reaches
+  the box; confirm anonymous `/__router/stop/<w>` over the tailnet is 401 and
+  works logged-in; confirm `cb tailscale setup` refuses a pre-Track-B router.
+- **Knowledge audits:** none.
+- **Migration:** none (no on-disk shape change). Behavior changes — router
+  authenticates TCP requests; local CLI moves to the UDS; local browser dev now
+  logs in — all additive/documented, none touching box data.
 
 ## Codex cross-review
 
-Mandatory before implementation — this reverses a security stance and puts the
-first auth code in `bin/`. The review targets: the origin-test fail-open
-(header-absence), the symmetric-secret exposure to the router process, the
-two-probe verification's completeness, and Track A's redirect/asset coverage of
-every entry path.
+Mandatory again before implementation — the reshape is larger and more
+security-critical than the draft. Targets: the UDS/TCP boundary (can any network
+path present as UDS-local?), the per-box mobile gate at the router (target-box
+resolution + `x-cb-*` stripping), CSRF coverage of every mutating route, the
+anonymous-denial probe's soundness over real Serve, and OAuth-behind-prefix.
