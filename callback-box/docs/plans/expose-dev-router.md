@@ -113,25 +113,36 @@ the prefix) and the five server redirects drop the prefix
 (`issues/bugs/2026-07-20-dev-router-login-page-broken.md`) — today's local dev is
 already broken by this, not just the tailnet case.
 
-**Direction.** (Corrected per Codex finding 7 — Vite strips `VITE_BASE` before
-proxying, so the backend can't derive the prefix from `request.url`; it must come
-from injected config.)
-1. **Prefix from config, not URL.** The prefix is already injected as `VITE_BASE`
-   (`router-core.ts:355`) and known to the hub as the box slug. Thread it to a
-   single `loginRedirect(request, base)` helper replacing the five ad-hoc
-   redirects; `returnTo` is prefixed with the same base.
-2. **Prefix-correct login SPA assets.** Serve the login HTML through the
-   base-aware path (Vite serves/transforms the login GET while `/api`/`/auth`
-   POST stay proxied), or a per-base asset rewrite — mechanism settled in chunk 2
-   against a browser check. `serveLoginSpa` (`routes/auth.ts:195`) currently
-   ships `dist/index.html` verbatim; that changes.
-3. **Google OAuth behind the prefix.** The callback URI is built from the hub
+**Direction — mechanism now pinned** (Codex finding 7 + the Vite-proxy trace:
+`vite.config.ts:41` `stripBase` removes `/<worktree>` before the backend sees the
+request, so the prefix must be injected by whatever fronts the box — the dev
+router in dev, the hub in prod; the backend never derives it from `request.url`).
+1. **A trusted `X-CB-Base-Prefix` header, injected by the fronting proxy.** The
+   dev router (which alone knows `/<worktree>`, `bin/router.ts` `name`) and the
+   prod hub (which knows the box slug) each inject `X-CB-Base-Prefix: <prefix>` on
+   every proxied request, after stripping any client-supplied copy (the hub
+   already strips client `x-cb-*`, `stripHubHeaders`; the router gains the same
+   for this header). Empty when there is no prefix (bare `cb serve`).
+2. **`loginRedirect(request)` helper** replacing the five ad-hoc redirects
+   (`hub-server.ts:409,468`, `box-picker.ts:87`, `server-box-scope.ts:129`,
+   `server-root.ts:320`): emits
+   `<prefix>/auth/login?returnTo=<prefix><request.url>` — reconstructing the full
+   browser path the proxy stripped.
+3. **Prefix-correct login SPA assets by rewriting the served HTML.**
+   `serveLoginSpa` (`routes/auth.ts:195`) ships `dist/index.html` verbatim with
+   absolute `/assets/…` refs; it instead rewrites the asset base to
+   `<prefix>/assets/…` from the same header — uniform across dev (router) and prod
+   (hub), no Vite HTML-serving special case. (A `<base>` tag won't help — the refs
+   are absolute — so it's a scoped rewrite of the asset-path prefix.)
+4. **Google OAuth behind the prefix.** The callback URI is built from the hub
    base (`auth-google.ts:38`, `hub.ts:87`) — extend it to carry the prefix, or
-   document local-password-only for prefixed origins in the transition. (Open
-   question — lean: fix the callback, since remote family login may want Google.)
+   document local-password-only for prefixed origins in the transition (open
+   sub-question 4; local-password already works once 1–3 land).
 
-**First chunk.** `loginRedirect(request, base)` + thread `base` + migrate 5 sites
-+ a route doctest asserting the emitted Location and `returnTo` carry the base.
+**First chunk.** The `X-CB-Base-Prefix` injection (router + hub, with client-copy
+strip) + `loginRedirect(request)` + migrate the 5 sites + a route doctest
+asserting the emitted `Location`/`returnTo` carry the prefix from the header (and
+stay bare when the header is empty). SPA-asset rewrite + OAuth are chunk 2.
 
 ### Track B — the router as a fail-closed authenticating proxy
 
