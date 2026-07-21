@@ -103,3 +103,69 @@ The independent `CB_SESSION_SECRET` strip (finding 8) should land regardless.
 - No alternate dispatch path reaches the four control operations (all precede
   `parseWorktreeName`).
 - `bin/`→`callback-box/src` import is precedented.
+
+---
+
+# Second review (post-reshape, Codex gpt-5.5, 2026-07-21)
+
+The reshape (authenticating reverse proxy) cleared the first review's fatal
+flaws — **no critical/fail-open findings this round**. Remaining are one design
+decision and implementable refinements; all folded into the plan.
+
+### 2.1 (High) — CSRF plan doesn't close finding 6: same-origin `/dev` content
+`/dev/` serves agent-authored pages on the SAME authenticated origin as the
+control routes (`bin/router.ts:855`, `router-docs.ts:673`); a malicious `/dev`
+page passes `Origin`/`Sec-Fetch` and can POST the existing stop/retry forms
+(`bin/router.ts:526,650`), and a CSRF token is readable by same-origin JS.
+**Disposition: accept — the KEY decision.** Resolution in-plan: serve all
+router-served agent content (`/dev`, dev artifacts) with a locked-down CSP
+(`sandbox`, no `allow-scripts`, no `allow-same-origin`) so it cannot originate
+requests, keeping owner-session + CSRF/Origin on mutating controls; **fallback**
+if sandboxing proves incomplete: make `/__router/{stop,retry}` UDS/CLI-only
+(loses remote worktree *mutation*, keeps remote read + box access). Flagged as
+the top open question for the boxholder.
+
+### 2.2 (High) — mobile `cb_mobile` cookie Path breaks under the prefix
+Issued `Path=/${boxSlug}` (`mobile-cookie.ts:37`), but behind the router the
+path is `/<worktree>/<box>/…`, so reloads/WS in the webview lose the cookie
+(initial load sends Bearer, reloads depend on the cookie). **Disposition:
+accept.** The router-side mobile auth (or `mobile-cookie.ts`) must issue a
+prefix-correct Path. Added to Track B + failure modes.
+
+### 2.3 (High) — browser HMR can't move to the UDS
+Only CLI (`bin/worktrees`) can use `curl --unix-socket`; browser HMR/WS must stay
+on TCP (`vite.config.ts:48`, `bin/router.ts:896`) and authenticate with the
+local browser session. **Disposition: accept — corrected** (B.1: HMR stays TCP +
+logged-in; only CLI → UDS).
+
+### 2.4 (Medium) — slug→box resolution must be one source of truth
+Router builds the slug map at startup, duplicate slugs overwrite
+(`bin/router.ts:184`), slug derivation tolerates missing markers
+(`bin/box-entry.ts:66`). Auth must resolve the target box via the SAME map the
+proxy routes by, or reject duplicate slugs fail-closed — else auth verifies a
+token for one box while the proxy routes elsewhere. **Disposition: accept.**
+
+### 2.5 (Medium) — `classifyLocalRecord` is private
+Not exported (`auth.ts:468`). Use the exported `resolveRequestIdentity`
+(`auth.ts:411`) + compare to `getOwnerEmail()` (`auth.ts:328`). **Disposition:
+accept — citation corrected in the plan.**
+
+### 2.6 (Medium) — missing root-worktree API class (`/<w>/api/boxes`)
+Vite proxies root `/<base>/api` + `/<base>/auth` after stripping the prefix
+(`vite.config.ts:105`); `/api/boxes` (box listing, own mobile/session semantics,
+`hub-server.ts:330`) isn't in B's route classes. **Disposition: accept — add a
+root-worktree API class.**
+
+### 2.7 (Medium) — Track C proves one route at one instant
+The anon-`/__router/status`→401 probe over Serve fixes the old flaw, but only
+implies the whole surface is gated if B installs ONE central chokepoint before
+all dispatch AND the `upgrade` handler. Serve targets TCP (not UDS), so the probe
+hits the TCP listener — correct. **Disposition: accept — B must be a single
+pre-dispatch gate incl. WS upgrade; emphasized.**
+
+### 2.8 (Low) — Track A still open (login SPA verbatim, OAuth no prefix)
+Already marked open in the plan. No change.
+
+**Most important before implementation:** decide the control-plane isolation
+(2.1) — CSP-sandbox `/dev` vs. UDS-only mutations. Everything else is a
+folded-in refinement.
