@@ -1,0 +1,26 @@
+{
+  "name": "site",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "description": "Generated public front-door site for callback-box. Static output to site/dist/, deployed to GitHub Pages and viewable on the dev router. See site/CLAUDE.md.",
+  "scripts": {
+    "build": "tsx build.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test *.test.ts"
+  },
+  "dependencies": {
+    "@markdoc/markdoc": "^0.5.7",
+    "yaml": "^2.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@ianbicking/personal-vibe-check": "workspace:*",
+    "@types/node": "^24.0.0",
+    "eslint": "^9.39.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  }
+}
