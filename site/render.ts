@@ -117,7 +117,7 @@ body {
   margin: 0;
   color: #17171a;
   background: #fbfbf9;
-  font-family: Charter, "Sitka Text", Georgia, Cambria, "Times New Roman", serif;
+  font-family: "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", Helvetica, Ubuntu, Arial, sans-serif;
   line-height: 1.55;
 }
 main { max-width: 65ch; margin: 4rem auto 6rem; padding: 0 1.25rem; }
