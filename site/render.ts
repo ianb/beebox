@@ -110,9 +110,11 @@ function escapeHtml(s: string): string {
 }
 
 // Spare register: readable ~65ch column, a humanist system font stack (no
-// Courier/monospace body), near-black on near-white, no colors/hero/logo/JS,
+// Courier/monospace body), near-black on near-white, no colors/hero/logo,
 // and no external requests (fonts included) so the page is CSP-clean and
-// viewable offline. This is the settled v1 look — do not embellish.
+// viewable offline. JS is inline and minimal (the copy button on code
+// blocks) — never external, never load-bearing for reading the page. This
+// is the settled v1 look — do not embellish.
 const SHELL_CSS = `
 :root { color-scheme: light; }
 html { font-size: 18px; }
@@ -130,7 +132,14 @@ h2 { font-size: 1.35rem; }
 p, ul, ol { margin: 0.9rem 0; }
 a { color: #17171a; text-underline-offset: 2px; }
 code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.85em; }
-pre { overflow-x: auto; padding: 0.9rem 1rem; background: #f2f2ee; border-radius: 4px; }
+pre { overflow-x: auto; padding: 0.9rem 1rem; background: #f2f2ee; border-radius: 4px; position: relative; }
+pre .copy {
+  position: absolute; top: 0.45rem; right: 0.5rem;
+  font: 600 0.7rem/1.6 inherit; font-family: inherit;
+  color: #55554f; background: #fbfbf9; border: 1px solid #d8d8d2; border-radius: 3px;
+  padding: 0 0.5rem; cursor: pointer;
+}
+pre .copy:hover { color: #17171a; }
 hr { border: none; border-top: 1px solid #d8d8d2; margin: 2.5rem 0; }
 header { border-bottom: 1px solid #e6e6e0; }
 header .inner {
@@ -150,6 +159,24 @@ header nav svg { width: 20px; height: 20px; fill: currentColor; }
 // and a plain chat bubble for the Zulip community link.
 const GITHUB_ICON = "<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.66 7.66 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z\"/></svg>";
 const CHAT_ICON = "<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M2.5 1h11A1.5 1.5 0 0 1 15 2.5v8a1.5 1.5 0 0 1-1.5 1.5H6.7l-3.35 3.03A.75.75 0 0 1 2.1 14.5V12h.4v.01A1.5 1.5 0 0 1 1 10.5v-8A1.5 1.5 0 0 1 2.5 1Zm1.25 3.75a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Zm0 3a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z\"/></svg>";
+
+// Adds a "copy" button to each code block. Inline, tiny, and non-load-bearing:
+// with JS off the block is still selectable text.
+const COPY_SCRIPT = `
+for (const pre of document.querySelectorAll("pre")) {
+  const btn = document.createElement("button");
+  btn.className = "copy";
+  btn.type = "button";
+  btn.textContent = "copy";
+  btn.addEventListener("click", async () => {
+    const code = pre.querySelector("code");
+    await navigator.clipboard.writeText((code ?? pre).innerText.trim());
+    btn.textContent = "copied";
+    setTimeout(() => { btn.textContent = "copy"; }, 1500);
+  });
+  pre.append(btn);
+}
+`.trim();
 
 function headerHtml(base: string): string {
   return `<header>
@@ -178,6 +205,7 @@ ${headerHtml(params.base)}
 <main>
 ${params.bodyHtml}
 </main>
+<script>${COPY_SCRIPT}</script>
 </body>
 </html>
 `;

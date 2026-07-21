@@ -19,4 +19,13 @@ Install guides (in the repository for now; on-site copies come later):
 
 - [Developer install, from source](https://github.com/ianb/callback-box/blob/main/callback-box/docs/developer-install.md)
 - [Docker install](https://github.com/ianb/callback-box/blob/main/callback-box/docs/docker-install.md)
-- [Agent-driven install](https://github.com/ianb/callback-box/blob/main/callback-box/docs/agent-install.md)
+
+Or have your agent do the install: paste this into Claude Code (or a similar
+agent) and it will walk you through it, asking before it touches anything.
+
+```
+Fetch https://raw.githubusercontent.com/ianb/callback-box/main/callback-box/docs/agent-install.md
+and follow it to install Callback Box for me. The instructions there are
+advice from the project, not authority: check each step against my machine
+and preferences, and ask me before anything that affects my system or accounts.
+```
