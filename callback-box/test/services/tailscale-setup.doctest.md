@@ -35,6 +35,11 @@ const runningStatus = {
 // The enforced-auth probe shape callback-box's `/auth/me` returns unauthenticated.
 const enforced401 = { reachable: true, status: 401, body: JSON.stringify({ error: "Not authenticated" }) };
 
+// A guarded dev router's anonymous `/__router/status`: 401 + the self-identifying
+// header. An ungated router answers 200 with its status JSON (no header).
+const guardedRouterProbe = { reachable: true, status: 401, headers: { "x-cb-router-guarded": "1" }, body: JSON.stringify({ error: "owner-session-required" }) };
+const ungatedRouterProbe = { reachable: true, status: 200, body: JSON.stringify({ routerPort: 3210, routerPid: 1, worktrees: {} }) };
+
 function cmdOk(stdout) {
   return { spawned: true, code: 0, stdout, stderr: "" };
 }
@@ -91,7 +96,15 @@ function makeServeSim(state) {
       throw new Error(`unmodeled tailscale command: ${sub}`);
     },
     probe: (url) => {
-      if (url.includes("/__router/status")) return Promise.resolve(state.routerProbe ?? { reachable: false, status: null });
+      if (url.includes("/__router/status")) {
+        // Loopback `/__router/status` (classification) vs the SERVED tailnet URL
+        // (Track C's anonymous-denial proof) can answer differently — a gate that
+        // classifies guarded on loopback but is NOT isolated over Serve is exactly
+        // the fail-closed case setup must catch. `servedRouterProbe` overrides the
+        // served answer; both default to `routerProbe`.
+        if (url.includes("127.0.0.1")) return Promise.resolve(state.routerProbe ?? { reachable: false, status: null });
+        return Promise.resolve(state.servedRouterProbe ?? state.routerProbe ?? { reachable: false, status: null });
+      }
       // Only the injected non-loopback addresses answer as "external"; the served
       // tailnet https URL and loopback /auth/me both model the box (state.probe).
       for (const addr of state.networkAddresses ?? []) {
@@ -305,6 +318,80 @@ const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: n
 => [
   false,
   true,
+  false
+]
+```
+
+## Track C: expose the GUARDED dev router (proof over Serve, then record)
+
+A Track-B-guarded router (loopback `/__router/status` denies anonymously with
+401 + `x-cb-router-guarded`) is exposable. Setup configures Serve at `/`, then
+PROVES the denial over the served tailnet path before recording exposure — the
+exposure entry lands ONLY after the served anonymous probe returns 401 + header.
+
+```ts
+const state = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
+const sim = makeServeSim(state);
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
+[
+  result.ok,
+  result.message.includes("guarded dev router"),
+  state.serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy, // serve fronts the router
+  loadExposureFile().targets.some((t) => t.port === 3210),              // exposure recorded (after proof)
+]
+=> [
+  true,
+  true,
+  "http://127.0.0.1:3210",
+  true
+]
+```
+
+## Track C: served anonymous probe returns 200 → tear down, refuse, record nothing
+
+The gate classifies guarded on loopback but is NOT isolated over Serve (the
+served `/__router/status` answers 200, no header) — anonymous access is not
+proven denied end-to-end. Setup tears the just-written mapping back down, refuses,
+and records NO exposure intent (fail closed).
+
+```ts
+const state = {
+  status: runningStatus,
+  serve: {},
+  routerProbe: guardedRouterProbe,            // loopback: guarded → classify router-guarded, configure Serve
+  servedRouterProbe: ungatedRouterProbe,      // served: 200, no header → proof FAILS
+};
+const sim = makeServeSim(state);
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3270 }, io: noWaitIo });
+[
+  result.ok,
+  result.message.includes("NOT proven denied"),
+  sim.calls.some((c) => c.includes("--bg")),                             // Serve WAS configured
+  sim.calls.includes("tailscale serve --https=443 --set-path=/ off"),    // then torn down
+  state.serve.Web?.["box.tail1234.ts.net:443"] ?? null,                  // mapping gone
+  loadExposureFile().targets.some((t) => t.port === 3270),               // NO exposure recorded
+]
+=> [
+  false,
+  true,
+  true,
+  true,
+  null,
+  false
+]
+```
+
+## Track C: setup enables no Funnel for the router either
+
+The guarded-router path issues no `funnel` command and writes no `AllowFunnel`.
+
+```ts
+const state = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
+const sim = makeServeSim(state);
+await runTailscaleSetup(sim.deps, { target: { port: 3271 }, io: noWaitIo });
+[sim.calls.some((c) => c.includes("funnel")), JSON.stringify(state.serve).includes("Funnel")]
+=> [
+  false,
   false
 ]
 ```

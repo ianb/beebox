@@ -755,16 +755,31 @@ function loginWorktree(url: string): string {
  * status (401 / 403 / 404). Nothing here cold-starts or serves — the deny is
  * terminal, upstream of all dispatch.
  */
-function writeDeny(req: http.IncomingMessage, res: http.ServerResponse, decision: RouterAuthDecision & { allow: false }): void {
+export function writeDeny(req: http.IncomingMessage, res: http.ServerResponse, decision: RouterAuthDecision & { allow: false }): void {
   const url = req.url || "/";
+  // Self-identify as a GUARDED dev router on denials of our own `/__router/*`
+  // control routes (Track C, expose-dev-router.md): a benign marker so
+  // `cb tailscale setup` can prove the gate is live end-to-end over Serve
+  // (401 + this header) and distinguish us from an ungated router (200, no
+  // header) or a non-router. Leaks nothing a bare curl doesn't already learn.
+  const guardHeaders = routerGuardHeaders(url);
   if (decision.redirectToLogin) {
     const location = `/${loginWorktree(url)}/auth/login?returnTo=${encodeURIComponent(url)}`;
-    res.writeHead(302, { location });
+    res.writeHead(302, { location, ...guardHeaders });
     res.end();
     return;
   }
-  res.writeHead(decision.status, { "content-type": "application/json; charset=utf-8" });
+  res.writeHead(decision.status, { "content-type": "application/json; charset=utf-8", ...guardHeaders });
   res.end(`${JSON.stringify({ error: decision.reason })}\n`);
+}
+
+/** The `x-cb-router-guarded: 1` marker for a denial of a `/__router/*` control
+ *  route, else no extra headers. Pure over the request path so it is unit-tested
+ *  directly (bin/router-guard-header.test.ts). */
+export function routerGuardHeaders(url: string): Record<string, string> {
+  const q = url.indexOf("?");
+  const pathname = q === -1 ? url : url.slice(0, q);
+  return pathname === "/__router" || pathname.startsWith("/__router/") ? { "x-cb-router-guarded": "1" } : {};
 }
 
 // --- HTTP + WebSocket server ------------------------------------------

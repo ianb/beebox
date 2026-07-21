@@ -50,7 +50,7 @@ export type TailscaleReport =
   | (ReportBase & { state: "probe-failed"; url: string; status: number | null })
   | (ReportBase & { state: "exposed-unauthenticated"; url: string })
   | (ReportBase & { state: "posture-ambiguous"; url: string; detail: string })
-  | (ReportBase & { state: "ready"; url: string; status: number | null });
+  | (ReportBase & { state: "ready"; url: string; status: number | null; guarded: boolean });
 
 /** No usable target: `--target` was omitted/invalid AND no hub config was found
  *  to auto-detect a port. Built at the command boundary (after discovery) so the

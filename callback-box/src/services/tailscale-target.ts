@@ -4,18 +4,21 @@
  * Before Tailscale Serve is pointed at a loopback port — and again when `status`
  * reports a live mapping — we must PROVE the loopback target is an auth-gated
  * callback-box, not something we'd hand the whole tailnet unauthenticated. This
- * module is the single fail-closed classifier both callers share. Three refusals
- * on top of the open/enforced/ambiguous auth-posture read:
+ * module is the single fail-closed classifier both callers share.
  *
- *   - **router**: the loopback port is the dev router (`/__router/status`
- *     answers its own status JSON) — never a valid target.
+ * Two postures clear exposure: `{ kind: "enforced" }` (a normal auth-gated cb
+ * serve/hub) and `{ kind: "router-guarded" }` (a Track-B dev router whose gate
+ * denies anonymous `/__router/*` with 401 + the `x-cb-router-guarded` header).
+ * Everything else fails closed:
+ *
+ *   - **router**: the loopback port is an UNGATED dev router (`/__router/status`
+ *     answers 200 with its status JSON, a pre-Track-B build) — refuse and tell
+ *     the operator to update the router so its gate is live.
  *   - **non-loopback**: the same port also answers on a non-internal interface,
  *     so the server is bound to a public address, not just 127.0.0.1.
  *   - **ambiguous**: `/auth/me` did not match the EXACT shapes callback-box
  *     emits (open `{open:true}`, a `{error:…}` 401, or an authenticated-user
  *     body) — refuse rather than assume it is protected.
- *
- * Only `{ kind: "enforced" }` clears exposure. Everything else fails closed.
  */
 
 import { isRecord } from "../lib/is-record.js";
@@ -74,8 +77,30 @@ function isAuthenticatedMeBody(body: Record<string, unknown>): boolean {
   );
 }
 
-/** Does a `/__router/status` probe carry the dev router's status JSON? */
-function looksLikeRouter(probe: ProbeResult): boolean {
+/**
+ * The benign marker the Track-B dev router sets on its OWN anonymous 401 for a
+ * `/__router/*` control route (`bin/router.ts`). It identifies "a guarded
+ * callback dev router" and leaks nothing (a bare curl already learns the server
+ * type). An UNGATED old router has no such header — it answers `/__router/status`
+ * 200 with its status JSON. This lets the tailscale tooling distinguish a guarded
+ * router (401 + header ⇒ the gate is live) from an ungated one (200) from a
+ * non-router (anything else).
+ */
+export const ROUTER_GUARDED_HEADER = "x-cb-router-guarded";
+
+function hasRouterGuardedHeader(probe: ProbeResult): boolean {
+  return probe.headers?.[ROUTER_GUARDED_HEADER] === "1";
+}
+
+/** A `/__router/status` probe against a Track-B-guarded router: the fail-closed
+ *  gate denies the anonymous request with 401 AND the self-identifying header. */
+export function looksLikeGuardedRouter(probe: ProbeResult): boolean {
+  return probe.reachable && probe.status === 401 && hasRouterGuardedHeader(probe);
+}
+
+/** Does a `/__router/status` probe carry an UNGATED dev router's status JSON?
+ *  (200 + `routerPort` + `worktrees` — a pre-Track-B build with no auth gate.) */
+export function looksLikeUngatedRouter(probe: ProbeResult): boolean {
   if (!probe.reachable || probe.status !== 200) return false;
   const body = parseJsonBody(probe.body);
   if (body === null) return false;
@@ -84,6 +109,7 @@ function looksLikeRouter(probe: ProbeResult): boolean {
 
 export type TargetPosture =
   | { kind: "enforced" }
+  | { kind: "router-guarded" }
   | { kind: "open" }
   | { kind: "unreachable" }
   | { kind: "ambiguous" }
@@ -103,8 +129,13 @@ function loopbackHost(address: string): string {
 export async function classifyTargetPosture(deps: TailscaleDeps, port: number): Promise<TargetPosture> {
   const loopback = `http://127.0.0.1:${port}`;
 
-  // 1. Router rejection — the dev router is never a valid target.
-  if (looksLikeRouter(await deps.probe(`${loopback}/__router/status`))) return { kind: "router" };
+  // 1. Router detection. A Track-B-guarded router (anonymous 401 + the
+  //    self-identifying header) is now an ALLOWED target — its fail-closed gate
+  //    is live, so Serve fronting it hands the tailnet nothing unauthenticated.
+  //    An UNGATED router (200 status JSON, pre-Track-B) is still refused.
+  const routerProbe = await deps.probe(`${loopback}/__router/status`);
+  if (looksLikeGuardedRouter(routerProbe)) return { kind: "router-guarded" };
+  if (looksLikeUngatedRouter(routerProbe)) return { kind: "router" };
 
   // 2. Auth posture on loopback.
   const gate = classifyAuthPosture(await deps.probe(`${loopback}/auth/me`));
@@ -122,8 +153,13 @@ export async function classifyTargetPosture(deps: TailscaleDeps, port: number): 
   return { kind: "ambiguous" };
 }
 
-/** The human refusal message for a non-`enforced` posture. */
-export function describeRefusal(posture: Exclude<TargetPosture, { kind: "enforced" }>, port: number): string {
+/** The human refusal message for a posture that is NOT exposable. `enforced` and
+ *  `router-guarded` are the two exposable postures, so they are excluded here —
+ *  the caller handles them before reaching a refusal. */
+export function describeRefusal(
+  posture: Exclude<TargetPosture, { kind: "enforced" } | { kind: "router-guarded" }>,
+  port: number,
+): string {
   const probed = `http://127.0.0.1:${port}/auth/me`;
   switch (posture.kind) {
     case "open":
@@ -148,9 +184,10 @@ export function describeRefusal(posture: Exclude<TargetPosture, { kind: "enforce
       );
     case "router":
       return (
-        `REFUSING to expose loopback:${port} — it answers \`/__router/status\` with the dev router's own ` +
-        "status JSON. The dev router fronts every worktree and is never a valid Tailscale target; " +
-        "point --target at a specific auth-gated cb serve/hub port instead."
+        `REFUSING to expose loopback:${port} — it answers \`/__router/status\` 200 with the dev router's own ` +
+        "status JSON, which means this router is NOT running the Track-B auth gate (a pre-Track-B build). " +
+        "Update/rebuild the router so its gate denies anonymous access (a guarded router answers `/__router/status` " +
+        "with 401), then re-run `cb tailscale setup` — a guarded dev router is exposable, an ungated one is not."
       );
     case "non-loopback":
       return (
