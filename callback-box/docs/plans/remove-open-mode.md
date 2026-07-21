@@ -72,7 +72,7 @@ full test migration, green suite.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| A stale `CB_ALLOW_UNAUTHENTICATED` in someone's env silently ignored (expected auth-off, got auth) | planned | startup logs a one-line notice naming the removal when the var is set | clear |
+| A stale `CB_ALLOW_UNAUTHENTICATED` in someone's env silently ignored (expected auth-off, got auth) | n/a | none, deliberately — single-operator install, boxholder waived the notice (2026-07-21); the var is simply unread | accepted |
 | A test that relied on module-scope env open-mode now runs auth-on and 401s | covered by suite run | migrated to the option | clear |
 | Hub child receives auth-off header from a non-test hub | impossible by construction (no CLI path sets openAccess) | n/a | n/a |
 | tailscale setup probes an older server still exposing `{open:true}` | exists (kept) | refusal branch kept | clear |
@@ -106,5 +106,5 @@ Docs updated in the same change.
 ## Implementation order / rollout
 
 Single chunk on this worktree branch; full suite + typecheck + lint green;
-Codex diff review (auth surface) before merge. No data migration. Startup
-notice covers the only transition case (a stale env var).
+Codex diff review (auth surface) before merge. No data migration; a stale
+env var is simply unread (accepted, see failure table).
