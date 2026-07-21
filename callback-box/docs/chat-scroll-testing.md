@@ -107,6 +107,26 @@ bin/browse eval '(()=>{const c=document.querySelector("[data-testid=chat-scrolle
 bin/browse eval '(()=>{const b=document.querySelector("button[aria-label=\"Scroll to latest messages\"]");return "btn="+!!b;})()'   # expect btn=true
 ```
 
+### 5c. Loading older history must NOT flag "new messages"
+Regression for the false down-arrow badge on scroll-up. Open a chat with enough
+history to paginate (a "Show N earlier messages" button at the top), scroll up,
+click it, and let the older block settle. The button must appear (you're
+detached) but must **not** take its accented "new messages" state — old history
+prepended above the viewport is not new content below the reader. The pure
+decision is unit-checked in `test/frontend/chat-scroll-reconcile.doctest.md`
+(`prepend` → `hold-prepend`, never `flag-unseen`); this scenario confirms the
+DOM path.
+```bash
+bin/browse open "/chat?session=<session-with-paginated-history>"
+# scroll up to reveal the "Show N earlier messages" button, then click it:
+bin/browse click "text=Show"
+sleep 1
+bin/browse eval '(()=>{const b=document.querySelector("button[aria-label=\"Scroll to latest messages\"]");return JSON.stringify({btn:!!b,emph:!!(b&&b.querySelector("span"))});})()'
+# expect {btn:true, emph:false}  — present (detached) but NOT accented (no new content)
+```
+Contrast: a genuinely new message arriving while scrolled up *must* still flag —
+re-run scenario 3 to confirm the down-arrow still lights for a real append.
+
 ### 6. Real-turn finalize (no flash)
 Send a real message and watch the streamed bubble become the finalized message
 with no flash/jump. A per-frame recorder helps, but note its `flashed` flag goes
