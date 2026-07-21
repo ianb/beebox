@@ -133,8 +133,8 @@ to people; close when the soft launch happens. Builds on
    [day-to-day usage docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md)
    are the docs half of the same gap.
 8. **[Discussion channel](2026-07-21-discussion-channel.md)** — boxholder
-   flagged "before release I need to decide." Cheap to decide and stand up;
-   agent lean is GitHub Discussions only for the soft cut.
+   wants **live** discussion (not async), disliking Discord; decision
+   deferred. Field is Zulip (lead) vs Matrix. Cheap to stand up once picked.
 
 ## Explicitly not gates
 

@@ -25,10 +25,19 @@ The choice follows from *what* about Discord grates:
   statement, but more setup + moderation burden.
 - Rejected implicitly: Discord (disliked).
 
-**Agent recommendation:** start with **GitHub Discussions only**. Lowest
-effort, honest, already where the repo lives, matches "not promoting hard."
-Add Zulip later *only if* the group wants real-time — don't run two channels
-at launch (a quiet second channel reads worse than none). Interacts with the
-contribution stance (bug reports invited, PRs not) and the personal register
-— the channel should feel like a small door next to the code, not a product
+**Requirement (boxholder, 2026-07-21): live discussion, not async.** So a
+forum (GitHub Discussions) is out as the primary — it's the wrong shape.
+Live-but-not-Discord candidates:
+
+- **Zulip** — live chat with real threading (topics), the strongest
+  anti-Discord on organization; free hosted OSS tier, self-hostable
+  (on-thesis). Lead candidate.
+- **Matrix/Element** — live, federated, loudest own-your-data statement;
+  more setup + moderation burden.
+- Discord — disliked, out.
+
+Decision deferred by the boxholder ("just file it, we can decide later").
+GitHub Discussions may still make sense as a *secondary* async record (it's
+where bug reports live), but the primary is live chat. Interacts with the
+personal register — the channel should feel like a small room, not a product
 community.
