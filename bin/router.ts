@@ -436,6 +436,22 @@ async function readBody(req: http.IncomingMessage): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+// The spoof wall (expose-dev-router B.2c / finding: strip client `x-cb-*`).
+// The router injects exactly ONE trusted `x-cb-*` header — `x-cb-base-prefix`
+// (via injectBasePrefix). Every other `x-cb-*` (x-cb-authenticated-email,
+// x-cb-hub-secret, x-cb-hub-auth, x-cb-diag, …) is an identity/authorization
+// header the worktree hub or box trusts; a client on the exposed TCP listener
+// must never be able to forge one and have it reach Vite/the hub. So we delete
+// ALL incoming `x-cb-*` at the router edge before proxying (mirrors the hub's
+// own `stripHubHeaders`). `injectBasePrefix` then re-sets the one the router
+// legitimately owns. Defense-in-depth: the hub strips again downstream.
+const CB_HEADER_PREFIX = "x-cb-";
+function stripClientCbHeaders(headers: http.IncomingHttpHeaders): void {
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase().startsWith(CB_HEADER_PREFIX)) delete headers[key];
+  }
+}
+
 /** One proxy attempt. Resolves with the proxy error, or undefined on success. */
 function proxyOnce(
   req: http.IncomingMessage,
@@ -460,10 +476,13 @@ async function proxyWithRetry(
 ): Promise<void> {
   const bodyLength = replayableBodyLength(req);
   const body = bodyLength === null ? null : await readBody(req);
-  // Tell the fronted worktree which path prefix this router strips, so its
-  // login redirects (and, later, its SPA asset rewrite) can rebuild the full
-  // browser path. `injectBasePrefix` removes any client-supplied copy first —
-  // a client must never set this header (Track A of expose-dev-router.md).
+  // Strip ALL client-supplied `x-cb-*` first (the spoof wall), so a forged
+  // identity/hub-secret header can never reach the worktree. Then inject the one
+  // header the router legitimately owns: `x-cb-base-prefix`, telling the fronted
+  // worktree which path prefix this router strips so its login redirects (and
+  // SPA asset rewrite) can rebuild the full browser path. injectBasePrefix also
+  // strips any client copy of that one header before setting it (Track A).
+  stripClientCbHeaders(req.headers);
   injectBasePrefix(req.headers, `/${name}`);
   for (;;) {
     let handle: WorktreeHandle;
@@ -762,7 +781,13 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
   const { authDeps, trustedLocal } = gate;
   const refusedUpgradeLogAt = new Map<string, number>();
 
-  const server = http.createServer(async (req, res) => {
+  // The per-request dispatch. Wrapped below in a `.catch` rejection boundary so
+  // NO thrown/rejected error from any path (auth gate, dev-serving, proxy,
+  // cold-start) can escape to an unhandledRejection and crash the SHARED router
+  // — it becomes a 500 for that one request instead (expose-dev-router B.2c /
+  // finding 3, DoS boundary). The auth gate and the /dev decode have their own
+  // narrower guards (a 403/400); this is the outermost backstop for the rest.
+  const requestListener = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
     // A client that hangs up mid-request (tab closed, navigated away, gave up
     // waiting on a ~4s worktree cold start) makes node's abortIncoming emit
     // ECONNRESET on the request. With no listener here it escapes to the
@@ -993,6 +1018,22 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     }
 
     await proxyWithRetry(req, res, name, 5, core);
+  };
+
+  const server = http.createServer((req, res) => {
+    void requestListener(req, res).catch((err: unknown) => {
+      log(`unhandled request error for ${req.url ?? "?"}: ${errMessage(err)}`);
+      if (!res.headersSent) {
+        res.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+        res.end(`${JSON.stringify({ error: "internal-router-error" })}\n`);
+      } else {
+        try {
+          res.end();
+        } catch {
+          /* response already torn down */
+        }
+      }
+    });
   });
 
   // WebSocket upgrades never cold-start a worktree. Clients auto-reconnect on
@@ -1021,6 +1062,11 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       socket.destroy();
       return;
     }
+    // The spoof wall on the upgrade path too: strip client `x-cb-*` before the
+    // socket is proxied to Vite/the hub (expose-dev-router B.2c). The WS carries
+    // the browser session on TCP; it needs no router-injected `x-cb-*`, so this
+    // is a pure strip with no re-injection.
+    stripClientCbHeaders(req.headers);
     const name = parseWorktreeName(reqUrl);
     if (!name) {
       socket.destroy();
@@ -1132,6 +1178,21 @@ function updateTabTitle(core: RouterCore): void {
 // --- Boot + shutdown (main-only; not run on import) --------------------
 
 async function main(): Promise<void> {
+  // The router must NEVER be in hub mode (expose-dev-router B.2c / finding 3.3).
+  // Its owner-session resolver runs through resolveRequestIdentity, whose branch
+  // is env-driven by CB_HUB_SECRET (auth.ts isHubMode): were it set in the
+  // router's env, the resolver would take the hub-header identity path instead
+  // of the gen-aware cookie path. The deps already fail closed (they accept only
+  // source==="cookie"), but we harden by removing the env var outright.
+  //
+  // Safe for the child hubs it spawns: verified that `cb hub` MINTS its own
+  // per-boot secret (crypto.randomBytes, cli/commands/hub.ts) and never reads
+  // CB_HUB_SECRET from its inherited env; its Supervisor then sets each
+  // `cb serve` child's CB_HUB_SECRET explicitly from that minted secret
+  // (hub/supervisor.ts buildChildEnv). So the router's env copy is unused by
+  // any descendant — deleting it changes nothing downstream.
+  delete process.env.CB_HUB_SECRET;
+
   const effects = createRealEffects();
   const core = createRouterCore(effects, {
     idleTimeoutMs: IDLE_TIMEOUT_MS,

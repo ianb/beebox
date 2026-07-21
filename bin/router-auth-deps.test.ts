@@ -128,7 +128,12 @@ test("isCsrfSafe: Sec-Fetch-Site same-origin / none → safe; cross-site / same-
 
 test("isCsrfSafe: no Sec-Fetch-Site falls back to Origin vs Host", () => {
   const deps = createRouterAuthDeps(fakeConfig({}));
-  assert.equal(deps.isCsrfSafe({}), true, "no Origin at all (curl / top-level nav) is safe");
+  // No Sec-Fetch-Site AND no Origin = no provenance at all ⇒ fail closed
+  // (finding 3.2). Legitimate local tooling uses the UDS (trustedLocal, which
+  // bypasses CSRF); a real browser always sends Sec-Fetch-Site; a same-origin
+  // nav to the control routes carries Sec-Fetch-Site: same-origin/none. So a
+  // provenance-less request is exactly the CSRF-shaped case we must reject.
+  assert.equal(deps.isCsrfSafe({}), false, "no provenance at all ⇒ unsafe (was permissive; 3.2)");
   assert.equal(
     deps.isCsrfSafe({ origin: "https://box.example.ts.net", host: "box.example.ts.net" }),
     true,
