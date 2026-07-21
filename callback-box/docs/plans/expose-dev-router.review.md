@@ -169,3 +169,47 @@ Already marked open in the plan. No change.
 **Most important before implementation:** decide the control-plane isolation
 (2.1) — CSP-sandbox `/dev` vs. UDS-only mutations. Everything else is a
 folded-in refinement.
+
+---
+
+# Third review — the WIRED gate (Track B.2a, Codex gpt-5.5, 2026-07-21)
+
+Adversarial review of the live enforcement (bin/router-auth.ts, router-auth-deps.ts,
+the router.ts chokepoint/listeners/upgrade). **All critical properties CONFIRMED;
+no critical/high findings.** Three medium/low, all addressable.
+
+### CONFIRMED (Codex verified against source)
+- `trustedLocal` is listener-derived ONLY (TCP=false, UDS=true, captured in the
+  handler closure; never a header/Origin/remoteAddress). UDS is chmod 0600.
+- HTTP + WS chokepoints complete: the gate runs before status/dev/control/
+  cold-start/proxy AND before `proxy.ws`; resolver exceptions fail closed.
+- Owner session is gen-aware + store-unavailable-fail-closed + owner-only.
+- Per-box mobile isolation holds; duplicate slugs deny; target root == the map
+  the proxy routes by.
+- No open redirect / header injection in the deny path (`returnTo` encoded,
+  Location is a path).
+
+### 3.1 (Medium) — unauth `/<w>/auth/*` cold-starts arbitrary worktrees
+The allowlist permits `/<w>/auth/*` pre-auth, and the router then
+`ensureRunning(<w>)` to proxy it — so an unauthenticated tailnet device can wake
+any known worktree (and unknown names fail differently → a name oracle). Not an
+auth bypass (the box still needs auth), but not "no unauth cold-start." **Disposition:
+DECISION** — on a private tailnet (only invited devices) this is low severity and
+serving the login page inherently needs the worktree's Vite up; options are
+(accept+document) vs (centralize login via /main / a router-served shell so unauth
+can't wake arbitrary worktrees). Boxholder's call.
+
+### 3.2 (Medium) — CSRF fallback too permissive when Sec-Fetch-Site AND Origin absent
+`isCsrfSafe({})` returns safe (router-auth-deps.ts:146). Modern browsers +
+SameSite=Lax largely cover it, but an older client with the owner cookie could hit
+the GET `/__router/dashboard/<name>` cold-start. **Disposition: harden in B.2c** —
+`{}` (no provenance) ⇒ UNSAFE for TCP control (local tooling uses the UDS, which
+bypasses CSRF anyway); reach the dashboard via a same-origin link, not direct nav.
+
+### 3.3 (Low) — router relies on CB_HUB_SECRET being absent from its env
+If it weren't, `resolveRequestIdentity` would take hub mode; but the router deps
+require `source==="cookie"`, so it fails closed (DoS, not escalation).
+**Disposition: cheap hardening in B.2c** — the router resolver should explicitly
+ignore hub mode (or assert CB_HUB_SECRET unset).
+
+**Most important before exposure:** decide 3.1 (unauth cold-start / name oracle).
