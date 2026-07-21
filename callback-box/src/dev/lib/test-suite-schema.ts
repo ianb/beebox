@@ -16,6 +16,12 @@ export const auditTestSchema = z.object({
   correct_contains_any: z.array(z.string()).optional(),
   /** Substrings that must NOT appear in the agent's response. */
   response_not_contains: z.array(z.string()).optional(),
+  /**
+   * Regexes (case-insensitive) that must NOT match the agent's response —
+   * for forbidden shapes a substring can't express (e.g. a bare card
+   * filename outside a markdown link target or ref attribute).
+   */
+  response_not_matches: z.array(z.string()).optional(),
   cards_contain: z.array(z.string()).optional(),
   should_read: z.array(z.string()).optional(),
   should_not_read: z.array(z.string()).optional(),

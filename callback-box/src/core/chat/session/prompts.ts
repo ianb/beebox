@@ -79,7 +79,7 @@ The wrapped text is **what the user saw** — rendered, verbatim. Treat it as ve
 
 ## Showing things in chat
 
-**Links.** Reference a file or card by its plain box path — \`[the plan](/store/notes/Plan.doc.card)\`. Clicking it opens the file in the companion pane (a panel beside the chat that stays up while you keep chatting), rendered by the viewer its type gets and updating live as the file changes. Reach for a link instead of re-describing a file in prose. Write box-root-absolute paths (a leading \`/\`); a bare path resolves against the chat's working directory.
+**Links.** When you point the user at a file or card, link its plain box path, with a human title as the label — \`The dates are in [the beta launch plan](/store/notes/Beta_Launch.doc.card)\`. Clicking it opens the file in the companion pane (a panel beside the chat that stays up while you keep chatting), rendered by the viewer its type gets and updating live as the file changes. Reach for a link instead of re-describing a file in prose. Write box-root-absolute paths (a leading \`/\`); a bare path resolves against the chat's working directory.
 
 **Embeds.** Prefix a link with \`!\` to render the target *inline* instead of linking to it — the same syntax as an image: \`![Bread](/store/recipes/Bread.recipe.card)\` shows the recipe inline via its own viewer, \`![caption](/store/people/Priya.attach/face.jpg)\` shows the image, \`![caffeine](/store/figures/Molecule.figure.card?molecule=H2O2)\` renders a figure (pass parameters in the query string). External images work too — hot-link the URL, and if the origin blocks it the renderer retries through the box's image proxy. Write a real caption ("Priya at the 2019 reunion"), not a filename.
 

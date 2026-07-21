@@ -31,21 +31,26 @@ export function useCompanionSelection(
     transcriptRef.current = voice.transcription.transcript;
     transcribingRef.current = voice.isTranscribing;
   });
+  // Depend on the stable `addSelection` callback, NOT the whole `selections`
+  // object — useChatSelections returns a fresh object literal every render, so
+  // depending on it would rebuild this handler each render and defeat the
+  // memoized companion pane (which takes this as a prop).
+  const { addSelection } = selections;
   const handleAddSelection = useCallback((selection: AddSelectionInput) => {
     if (nativeComposer) {
       addNativeSelection(selection);
       return;
     }
     if (!transcribingRef.current) {
-      selections.addSelection(selection, { anchor: null, spokenWords: null });
+      addSelection(selection, { anchor: null, spokenWords: null });
       return;
     }
     const transcript = transcriptRef.current;
-    selections.addSelection(selection, {
+    addSelection(selection, {
       anchor: lastWords(transcript, 8),
       spokenWords: countWords(transcript),
     });
-  }, [addNativeSelection, nativeComposer, selections]);
+  }, [addNativeSelection, nativeComposer, addSelection]);
   return {
     handleAddSelection,
     nativeCommandError,
