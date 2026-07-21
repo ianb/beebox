@@ -69,17 +69,40 @@ future edits instead of being easy to read past or accidentally undo.
 URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the
 tRPC WebSocket all flow through the router.
 
-## Dev auth is always-on (login behind the prefix is broken)
+## The router is a fail-closed authenticating proxy
 
 Authentication is structurally always-on (open-mode was removed — there is no
-`CB_ALLOW_UNAUTHENTICATED` env path anymore). The per-worktree hub serves the
-login SPA from built dist with root-absolute asset paths (`base="/"`) that 404
-behind the router's `/<worktree>/` prefix (the browser resolves `/assets/…` and
-the `/auth/login` redirect against the router root, dropping the prefix), so the
-login page is an unusable dead end behind the router. This is a known open bug
-needing a proper fix (prefix-aware login SPA / router asset rewrite):
-`../issues/bugs/2026-07-20-dev-router-login-page-broken.md`. Until then, testing
-the login/OAuth flow needs a standalone `cb serve` outside the router.
+`CB_ALLOW_UNAUTHENTICATED` env path anymore), and the router itself now
+authenticates every TCP request before it proxies, serves `/<worktree>/dev/`
+infra, or cold-starts a worktree — the same front-door model `cb hub` already
+runs in prod. Full design and rationale:
+`callback-box/docs/plans/expose-dev-router.md` (moves to
+`callback-box/docs/implemented-plans/` once closed out).
+
+- **Login behind the router prefix works.** The old dead-end bug (built login
+  SPA served with root-absolute `base="/"` assets that 404'd behind
+  `/<worktree>/`) is fixed — Vite serves a base-aware login page in dev, and
+  every server redirect carries the prefix. No more standalone `cb serve`
+  workaround needed to test login/OAuth.
+- **Two listeners, one gate.** The router listens on both a TCP loopback
+  socket (browsers, Tailscale) and a Unix-domain socket at
+  `~/.cache/callback-box/router.sock` (or `$CALLBACK_STATE_DIR/router.sock` for
+  an isolated test router). The UDS is the trusted-local, **unauthenticated**
+  channel — a browser can't originate a UDS connection, so it's a real
+  capability boundary, not a spoofable header. `bin/worktrees` and other local
+  CLI tools talk to the router over the UDS. **Every TCP request must
+  authenticate** — owner session for `/__router/*` control routes plus the `/`
+  worktree list and `/<w>/dev/` infra, per-box mobile/session auth for box
+  routes — regardless of any Tailscale identity header (those are absent for
+  tagged devices/Funnel and are never trusted). The practical upshot: **local
+  browser dev now requires logging in once**, same as a deployed box.
+- **`cb tailscale setup --target <routerPort>`** (e.g. `--target 3210`) exposes
+  the *whole* router — every worktree and box — over the tailnet through this
+  one authenticated front door. Before recording the exposure, setup verifies
+  the gate is actually live: it hits the served `/__router/status` over Serve
+  with no credentials and requires a `401` (a `200` means an ungated router or
+  a Serve misconfiguration, and setup refuses + tears down rather than exposing
+  it). `cb tailscale status` reports whether an exposed router is guarded.
 
 ## Idle shutdown + self-healing tabs
 
@@ -90,7 +113,10 @@ router refuses upgrades for non-running worktrees with a 503 and the
 client retries later. HMR rides the page origin (no `hmr.clientPort` in
 vite.config — the browser never learns Vite's internal port), so a stale
 tab heals itself: Vite's client pings the router while the tab is
-visible, the ping restarts the worktree, and the tab reloads. The
+visible, the ping restarts the worktree, and the tab reloads. HMR and the
+tRPC WebSocket are TCP traffic like any other request, so they authenticate
+through the same gate (a logged-in browser session) — see the router-auth
+section above. The
 frontend also sends a once-a-minute HEAD heartbeat while visible
 (`useDevWorktreeKeepalive`) so a tab you're looking at doesn't idle out
 under you; hidden tabs go quiet and their worktree stops after 5 min —

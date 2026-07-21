@@ -92,6 +92,13 @@ export function TailscaleSection() {
         stand, or <code className={CODE}>cb tailscale stop</code> to take the box back off
         the network.
       </p>
+
+      <p className="text-sm text-warm-600 mt-4">
+        On a dev machine, point this at the shared dev router instead of a single box —{" "}
+        <code className={CODE}>cb tailscale setup --target &lt;router-port&gt;</code> (e.g.{" "}
+        <code className={CODE}>3210</code>) exposes the whole authenticated router, every
+        worktree and box, over the tailnet. One login gets you all of it, remotely.
+      </p>
     </div>
   );
 }
