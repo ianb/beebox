@@ -21,9 +21,9 @@ import {
   loopbackProxyPort,
   parseServeConfig,
   parseStatusJson,
-  resolveTarget,
   type ServeConfigJson,
   type TailscaleDeps,
+  type TailscaleTarget,
 } from "./tailscale.js";
 import { classifyTargetPosture, describeRefusal } from "./tailscale-target.js";
 import { runTailscaleStatus } from "./tailscale-status.js";
@@ -136,15 +136,13 @@ async function finishReady(
  */
 export async function runTailscaleSetup(
   deps: TailscaleDeps,
-  { target, io }: { target: string | undefined; io: SetupIo },
+  { target, io }: { target: TailscaleTarget; io: SetupIo },
 ): Promise<TailscaleActionResult> {
-  const resolved = resolveTarget(target);
-  if (!resolved.ok) return { ok: false, message: resolved.message };
-  const port = resolved.target.port;
+  const port = target.port;
 
   let configuredThisRun = false;
   for (let step = 0; step < MAX_SETUP_STEPS; step++) {
-    const report = await runTailscaleStatus(deps, { target: String(port) });
+    const report = await runTailscaleStatus(deps, { target });
     switch (report.state) {
       // States 1–4 and a downed box: one human action, then wait-and-recheck.
       case "binary-absent":
@@ -251,11 +249,9 @@ function unproven({ port, reason, hadIntent }: { port: number; reason: string; h
  */
 export async function runTailscaleStop(
   deps: TailscaleDeps,
-  { target }: { target: string | undefined },
+  { target }: { target: TailscaleTarget },
 ): Promise<TailscaleActionResult> {
-  const resolved = resolveTarget(target);
-  if (!resolved.ok) return { ok: false, message: resolved.message };
-  const port = resolved.target.port;
+  const port = target.port;
   const hadIntent = loadExposureFile().targets.some((t) => t.port === port);
 
   const statusRun = await deps.run("tailscale", ["status", "--json"]);

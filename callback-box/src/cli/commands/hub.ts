@@ -9,7 +9,13 @@
 
 import { Command } from "commander";
 import * as crypto from "node:crypto";
-import { loadHubConfig, defaultHubConfigPath, HubConfigError } from "../../hub/hub-config.js";
+import {
+  loadHubConfig,
+  defaultHubConfigPath,
+  HubConfigError,
+  DEFAULT_HUB_PORT,
+  DEFAULT_HUB_HOST,
+} from "../../hub/hub-config.js";
 import { Supervisor } from "../../hub/supervisor.js";
 import { resolveBoxRoot } from "../../hub/child-spawn.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
@@ -22,11 +28,6 @@ import type { BoxSpec } from "../../webapp/server-types.js";
 function describeError(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
-
-/** No strong precedent for a hub default port (it's a new, prod-only
- *  concept distinct from the dev router's 3210) — chosen simply to avoid
- *  the box server's own `DEFAULT_PORT` (3210) and common dev ports. */
-const DEFAULT_HUB_PORT = 4310;
 
 export const hubCommand = new Command("hub")
   .description("Start the hub: supervises per-box processes and routes /<slug>/... to them")
@@ -50,7 +51,7 @@ export const hubCommand = new Command("hub")
     }
 
     const port = config.port ?? DEFAULT_HUB_PORT;
-    const host = config.host ?? "127.0.0.1";
+    const host = config.host ?? DEFAULT_HUB_HOST;
 
     // Fresh per boot -- never persisted, never logged. The only channels
     // that see it are each child's env (Supervisor) and the hub's own

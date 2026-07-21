@@ -134,13 +134,13 @@ fronts it with TLS. Which topology applies depends on where `cb` runs:
 
 1. [Install Tailscale](https://tailscale.com/download) on the host and run
    `tailscale up`.
-2. Run `cb tailscale setup --target 3210` (`--target <port>` is required — the
-   port the box is served on). It inspects the real Tailscale and serve state
-   and tells you the single next step — logging in, approving the machine,
+2. Run `cb tailscale setup` — it auto-detects the hub port from the hub config
+   (`~/.config/cb/hub.json`); pass `--target <port>` only for a
+   non-standard/standalone `cb serve`. It inspects the real Tailscale and serve
+   state and tells you the single next step — logging in, approving the machine,
    enabling tailnet HTTPS — looping until the box is reachable at
-   `https://<host>.<tailnet>.ts.net/`. `cb tailscale status --target 3210`
-   is the read-only version of the same inspection; `cb tailscale stop
-   --target 3210` removes the mapping.
+   `https://<host>.<tailnet>.ts.net/`. `cb tailscale status` is the read-only
+   version of the same inspection; `cb tailscale stop` removes the mapping.
 
    Run `cb tailscale setup` as the SAME OS account the box server runs as (the
    service account in prod, not root or an admin). The exposure record it writes

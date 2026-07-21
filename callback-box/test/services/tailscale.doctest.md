@@ -45,29 +45,10 @@ const authed200 = {
   body: JSON.stringify({ email: "a@b.c", name: "A", isOwner: true, boxes: [] }),
 };
 
-const state = (deps, target) => runTailscaleStatus(deps, { target }).then((r) => r.state);
-```
-
-## Target selection: refuse with no `--target`
-
-With no `--target` flag the tool refuses (chunk 1 does not build discovery
-beyond refuse-and-list): the operator must name the loopback port.
-
-```ts
-await state(createFakeTailscaleDeps({ status: runningStatus }), undefined)
-=> ambiguous-target
-```
-
-A non-numeric or out-of-range target is refused the same way:
-
-```ts
-await state(createFakeTailscaleDeps({ status: runningStatus }), "not-a-port")
-=> ambiguous-target
-```
-
-```ts
-await state(createFakeTailscaleDeps({ status: runningStatus }), "99999")
-=> ambiguous-target
+// `runTailscaleStatus` receives an already-resolved concrete target (the CLI
+// turns `--target`/auto-discovery into a `{ port }` via `resolveTargetOrDiscover`
+// — see tailscale-discovery.doctest.md). This helper mirrors that boundary.
+const state = (deps, port) => runTailscaleStatus(deps, { target: { port } }).then((r) => r.state);
 ```
 
 ## State 1: binary absent
@@ -78,7 +59,7 @@ at the platform install doc.
 ```ts
 const report = await runTailscaleStatus(
   createFakeTailscaleDeps({ binaryPresent: false }),
-  { target: "3210" },
+  { target: { port: 3210 } },
 );
 [report.state, report.ok, report.docLink]
 => [
@@ -95,7 +76,7 @@ error) is a DISTINCT `cli-error` — it must never be read as empty config and
 trigger a write.
 
 ```ts
-await state(createFakeTailscaleDeps({ status: "", statusCode: 1 }), "3210")
+await state(createFakeTailscaleDeps({ status: "", statusCode: 1 }), 3210)
 => cli-error
 ```
 
@@ -103,7 +84,7 @@ An empty serve config is only accepted at exit 0 — a nonzero serve exit is
 cli-error, not "unconfigured":
 
 ```ts
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: "", serveCode: 1 }), "3210")
+await state(createFakeTailscaleDeps({ status: runningStatus, serve: "", serveCode: 1 }), 3210)
 => cli-error
 ```
 
@@ -114,12 +95,12 @@ Invalid JSON, or JSON missing a field the machine depends on (`BackendState`,
 undefined-propagation.
 
 ```ts
-await state(createFakeTailscaleDeps({ status: "not json at all" }), "3210")
+await state(createFakeTailscaleDeps({ status: "not json at all" }), 3210)
 => unrecognized-status-output
 ```
 
 ```ts
-await state(createFakeTailscaleDeps({ status: { Self: { DNSName: "x." } } }), "3210")
+await state(createFakeTailscaleDeps({ status: { Self: { DNSName: "x." } } }), 3210)
 => unrecognized-status-output
 ```
 
@@ -152,7 +133,7 @@ NOT assumed working — it reaches the explicit unknown branch. This is distinct
 from schema drift: the shape parsed fine, the value is unrecognized.
 
 ```ts
-await state(createFakeTailscaleDeps({ status: bs("TeleportingSideways") }), "3210")
+await state(createFakeTailscaleDeps({ status: bs("TeleportingSideways") }), 3210)
 => unknown-backend-state
 ```
 
@@ -174,14 +155,14 @@ is `null`:
 doc for the headless path):
 
 ```ts
-await state(createFakeTailscaleDeps({ status: bs("NoState") }), "3210")
+await state(createFakeTailscaleDeps({ status: bs("NoState") }), 3210)
 => needs-login
 ```
 
 ```ts
 const report = await runTailscaleStatus(
   createFakeTailscaleDeps({ status: bs("NeedsLogin") }),
-  { target: "3210" },
+  { target: { port: 3210 } },
 );
 [report.state, report.docLink]
 => [
@@ -197,7 +178,7 @@ Each remaining not-running state has its own distinct branch — `InUseOtherUser
 const cases = ["NeedsMachineAuth", "Stopped", "Starting", "InUseOtherUser"];
 const states = [];
 for (const b of cases) {
-  states.push(await state(createFakeTailscaleDeps({ status: bs(b) }), "3210"));
+  states.push(await state(createFakeTailscaleDeps({ status: bs(b) }), 3210));
 };
 states.join(", ")
 => needs-machine-auth, stopped, starting, in-use-other-user
@@ -209,7 +190,7 @@ states.join(", ")
 toggle is off — a real one-time human step, linked to the admin console.
 
 ```ts
-await state(createFakeTailscaleDeps({ status: { ...runningStatus, CertDomains: [] } }), "3210")
+await state(createFakeTailscaleDeps({ status: { ...runningStatus, CertDomains: [] } }), 3210)
 => https-disabled
 ```
 
@@ -219,7 +200,7 @@ from an empty host:
 ```ts
 await state(
   createFakeTailscaleDeps({ status: { BackendState: "Running", Self: { DNSName: "", TailscaleIPs: null }, CertDomains: ["x"] } }),
-  "3210",
+  3210,
 )
 => unrecognized-status-output
 ```
@@ -229,7 +210,7 @@ await state(
 Serve unconfigured (empty config prints `{}`) means setup hasn't run yet:
 
 ```ts
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: {} }), "3210")
+await state(createFakeTailscaleDeps({ status: runningStatus, serve: {} }), 3210)
 => serve-unconfigured
 ```
 
@@ -239,7 +220,7 @@ Serve pointing at a *different* loopback port is drift, not a match:
 const wrongServe = {
   Web: { "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:9999" } } } },
 };
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: wrongServe }), "3210")
+await state(createFakeTailscaleDeps({ status: runningStatus, serve: wrongServe }), 3210)
 => serve-drift
 ```
 
@@ -254,7 +235,7 @@ const funnelServe = {
 };
 const report = await runTailscaleStatus(
   createFakeTailscaleDeps({ status: runningStatus, serve: funnelServe, probe: enforced401 }),
-  { target: "3210" },
+  { target: { port: 3210 } },
 );
 [report.state, report.ok]
 => [
@@ -272,7 +253,7 @@ const foregroundFunnel = {
   ...correctServe,
   Foreground: { "sess-1": { AllowFunnel: { "box.tail1234.ts.net:443": true } } },
 };
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: foregroundFunnel, probe: enforced401 }), "3210")
+await state(createFakeTailscaleDeps({ status: runningStatus, serve: foregroundFunnel, probe: enforced401 }), 3210)
 => funnel-enabled
 ```
 
@@ -294,7 +275,7 @@ await state(createFakeTailscaleDeps({ status: runningStatus, serve: foregroundFu
 Unparseable serve output is its own drift-distinct state:
 
 ```ts
-await state(createFakeTailscaleDeps({ status: runningStatus, serve: "<garbage>" }), "3210")
+await state(createFakeTailscaleDeps({ status: runningStatus, serve: "<garbage>" }), 3210)
 => unrecognized-serve-output
 ```
 
@@ -336,7 +317,7 @@ the report is `ready` (the only `ok: true` state) and names the working URL.
 ```ts
 const report = await runTailscaleStatus(
   createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: enforced401 }),
-  { target: "3210" },
+  { target: { port: 3210 } },
 );
 [report.state, report.ok, report.state === "ready" ? report.url : null]
 => [
@@ -352,7 +333,7 @@ distinct failing state, not `ready`:
 ```ts
 await state(
   createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: { reachable: false, status: null } }),
-  "3210",
+  3210,
 )
 => probe-failed
 ```
@@ -368,7 +349,7 @@ await state(
     serve: correctServe,
     probe: { reachable: true, status: 200, body: JSON.stringify({ open: true }) },
   }),
-  "3210",
+  3210,
 )
 => exposed-unauthenticated
 ```
@@ -383,7 +364,7 @@ await state(
     serve: correctServe,
     probe: { reachable: true, status: 200, body: JSON.stringify({ hello: "world" }) },
   }),
-  "3210",
+  3210,
 )
 => posture-ambiguous
 ```
@@ -396,7 +377,7 @@ the per-state fields.
 ```ts
 const report = await runTailscaleStatus(
   createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: authed200 }),
-  { target: "3210" },
+  { target: { port: 3210 } },
 );
 JSON.stringify(reportToJson(report), null, 2)
 =>
@@ -415,7 +396,7 @@ JSON.stringify(reportToJson(report), null, 2)
 ```ts
 const report = await runTailscaleStatus(
   createFakeTailscaleDeps({ binaryPresent: false }),
-  { target: "3210" },
+  { target: { port: 3210 } },
 );
 formatReportHuman(report)
 =>
@@ -430,7 +411,7 @@ Only `ready` gets the `✓` glyph:
 ```ts
 const report = await runTailscaleStatus(
   createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe: enforced401 }),
-  { target: "3210" },
+  { target: { port: 3210 } },
 );
 formatReportHuman(report).split("\n")[0]
 => ✓ tailscale: ready

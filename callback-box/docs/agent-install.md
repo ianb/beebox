@@ -61,10 +61,11 @@ Points you should put to your user rather than decide yourself:
    security surface — surface it, explain the options in
    [docker-install.md](docker-install.md), and follow their call. For the
    Tailscale option specifically, don't transcribe steps: run `cb
-   tailscale status --target <port>` to see the current state and next step,
-   and `cb tailscale setup --target <port>` to drive the guided setup loop —
-   both require `--target <port>` (they refuse without it) and inspect real
-   state rather than assuming it.
+   tailscale status` to see the current state and next step, and `cb
+   tailscale setup` to drive the guided setup loop — both auto-detect the
+   loopback port from the hub config (pass `--target <port>` only for a
+   non-standard/standalone `cb serve`) and inspect real state rather than
+   assuming it.
 5. **Optional provider keys.** Speech-to-text, image description, and
    push notifications each want a key (see `.env.example`). All optional
    — features degrade without them. If the user wants them, have them put

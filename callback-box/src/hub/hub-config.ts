@@ -92,6 +92,17 @@ export type BoxEntry = z.infer<typeof boxEntrySchema>;
 /** Default idle timeout for a lazy hub — mirrors the dev router's `IDLE_TIMEOUT_MS`. */
 export const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
+/** No strong precedent for a hub default port (it's a new, prod-only concept
+ *  distinct from the dev router's 3210) — chosen simply to avoid the box
+ *  server's own `DEFAULT_PORT` (3210) and common dev ports. Lives here (not in
+ *  `cli/commands/hub.ts`) so non-CLI callers — e.g. the Tailscale target
+ *  auto-discovery in `src/services/tailscale-discovery.ts` — can resolve the
+ *  same defaults a bootless `hub.json` implies without importing the CLI layer. */
+export const DEFAULT_HUB_PORT = 4310;
+
+/** Default bind host for a hub whose `hub.json` omits `host` — loopback only. */
+export const DEFAULT_HUB_HOST = "127.0.0.1";
+
 export interface HubConfig {
   port: number | undefined;
   host: string | undefined;

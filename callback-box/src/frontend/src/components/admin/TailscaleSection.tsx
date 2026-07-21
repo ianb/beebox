@@ -31,9 +31,12 @@ export function TailscaleSection() {
         </li>
         <li>
           On the machine running this box, run{" "}
-          <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale setup --target &lt;port&gt;</code>.
-          It checks what&rsquo;s already set up, walks you through each remaining step, and
-          prints your private <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">https://…ts.net</code>{" "}
+          <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale setup</code>{" "}
+          (it auto-detects the port; pass{" "}
+          <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">--target &lt;port&gt;</code>{" "}
+          only for a non-standard setup). It checks what&rsquo;s already set up, walks you
+          through each remaining step, and prints your private{" "}
+          <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">https://…ts.net</code>{" "}
           address when it&rsquo;s ready.
         </li>
         <li>
@@ -44,7 +47,7 @@ export function TailscaleSection() {
 
       <p className="text-sm text-warm-600">
         Run{" "}
-        <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale status --target &lt;port&gt;</code>{" "}
+        <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale status</code>{" "}
         any time to see where things stand, or{" "}
         <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale stop</code>{" "}
         to take the box back off the network.

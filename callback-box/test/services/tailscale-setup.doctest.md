@@ -146,7 +146,7 @@ Serve unconfigured, auth enforced: setup configures serve, re-verifies to
 ```ts
 const state = { status: runningStatus, serve: {}, probe: enforced401 };
 const sim = makeServeSim(state);
-const result = await runTailscaleSetup(sim.deps, { target: "3210", io: noWaitIo });
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
 [result.ok, result.message.includes("https://box.tail1234.ts.net/")]
 => [
   true,
@@ -188,7 +188,7 @@ If the `tailscale serve` write fails AFTER intent is recorded, the intent STAYS
 ```ts
 const state = { status: runningStatus, serve: {}, probe: enforced401, bgCode: 1 };
 const sim = makeServeSim(state);
-const result = await runTailscaleSetup(sim.deps, { target: "3230", io: noWaitIo });
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3230 }, io: noWaitIo });
 [
   result.ok,                                              // the serve write failed
   sim.calls.some((c) => c.includes("--bg")),             // it WAS attempted
@@ -206,8 +206,8 @@ const result = await runTailscaleSetup(sim.deps, { target: "3230", io: noWaitIo 
 ```ts
 const state = { status: runningStatus, serve: {}, probe: enforced401 };
 const sim = makeServeSim(state);
-await runTailscaleSetup(sim.deps, { target: "3211", io: noWaitIo });
-const first = await runTailscaleSetup(sim.deps, { target: "3211", io: noWaitIo });
+await runTailscaleSetup(sim.deps, { target: { port: 3211 }, io: noWaitIo });
+const first = await runTailscaleSetup(sim.deps, { target: { port: 3211 }, io: noWaitIo });
 [first.ok, loadExposureFile().targets.filter((t) => t.port === 3211).length]
 => [
   true,
@@ -226,7 +226,7 @@ const foreign = {
 };
 const state = { status: runningStatus, serve: foreign, probe: enforced401 };
 const sim = makeServeSim(state);
-await runTailscaleSetup(sim.deps, { target: "3212", io: noWaitIo });
+await runTailscaleSetup(sim.deps, { target: { port: 3212 }, io: noWaitIo });
 [
   state.serve.Web?.["box.tail1234.ts.net:8443"]?.Handlers?.["/"]?.Proxy,
   state.serve.Web?.["box.tail1234.ts.net:443"]?.Handlers?.["/"]?.Proxy,
@@ -249,7 +249,7 @@ const state = {
   probe: { reachable: true, status: 200, body: JSON.stringify({ open: true }) },
 };
 const sim = makeServeSim(state);
-const result = await runTailscaleSetup(sim.deps, { target: "3220", io: noWaitIo });
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3220 }, io: noWaitIo });
 [
   result.ok,
   result.message.includes("UNAUTHENTICATED"),
@@ -268,13 +268,13 @@ const result = await runTailscaleSetup(sim.deps, { target: "3220", io: noWaitIo 
 
 ```ts
 const unreachable = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: false, status: null } });
-const r1 = await runTailscaleSetup(unreachable.deps, { target: "3221", io: noWaitIo });
+const r1 = await runTailscaleSetup(unreachable.deps, { target: { port: 3221 }, io: noWaitIo });
 
 const generic401 = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: true, status: 401, body: "Unauthorized" } });
-const r2 = await runTailscaleSetup(generic401.deps, { target: "3222", io: noWaitIo });
+const r2 = await runTailscaleSetup(generic401.deps, { target: { port: 3222 }, io: noWaitIo });
 
 const randomEmail = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: true, status: 200, body: JSON.stringify({ email: "x" }) } });
-const r3 = await runTailscaleSetup(randomEmail.deps, { target: "3223", io: noWaitIo });
+const r3 = await runTailscaleSetup(randomEmail.deps, { target: { port: 3223 }, io: noWaitIo });
 
 [r1.ok, r1.message.includes("nothing answered"), r2.ok, r3.ok, r2.message.includes("recognizable"), r3.message.includes("recognizable")]
 => [
@@ -300,7 +300,7 @@ const state = {
   routerProbe: { reachable: true, status: 200, body: JSON.stringify({ routerPort: 3210, routerPid: 1, idleTimeoutMs: 1, worktrees: {} }) },
 };
 const sim = makeServeSim(state);
-const result = await runTailscaleSetup(sim.deps, { target: "3210", io: noWaitIo });
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
 [result.ok, result.message.includes("dev router"), sim.calls.some((c) => c.includes("--bg"))]
 => [
   false,
@@ -323,7 +323,7 @@ const state = {
   externalProbe: { reachable: true, status: 401, body: JSON.stringify({ error: "x" }) },
 };
 const sim = makeServeSim(state);
-const result = await runTailscaleSetup(sim.deps, { target: "3240", io: noWaitIo });
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3240 }, io: noWaitIo });
 [result.ok, result.message.includes("10.0.0.5"), loadExposureFile().targets.some((t) => t.port === 3240)]
 => [
   false,
@@ -341,7 +341,7 @@ and returns a failing result rather than waiting.
 const logged = [];
 const io = { interactive: false, log: (l) => logged.push(l), waitForContinue: () => Promise.resolve() };
 const sim = makeServeSim({ status: { BackendState: "NeedsLogin", Self: null, CertDomains: null }, serve: {}, probe: { reachable: false, status: null } });
-const result = await runTailscaleSetup(sim.deps, { target: "3224", io });
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3224 }, io });
 [result.ok, logged.some((l) => l.startsWith("Next:")), result.message.includes("re-run")]
 => [
   false,
@@ -363,7 +363,7 @@ const io = {
   log: () => {},
   waitForContinue: () => { state.status = runningStatus; return Promise.resolve(); },
 };
-const result = await runTailscaleSetup(sim.deps, { target: "3225", io });
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3225 }, io });
 [result.ok, result.message.includes("https://box.tail1234.ts.net/")]
 => [
   true,
@@ -381,8 +381,8 @@ const foreign = {
 };
 const state = { status: runningStatus, serve: foreign, probe: enforced401 };
 const sim = makeServeSim(state);
-await runTailscaleSetup(sim.deps, { target: "3226", io: noWaitIo });
-const stop = await runTailscaleStop(sim.deps, { target: "3226" });
+await runTailscaleSetup(sim.deps, { target: { port: 3226 }, io: noWaitIo });
+const stop = await runTailscaleStop(sim.deps, { target: { port: 3226 } });
 [
   stop.ok,
   state.serve.Web?.["box.tail1234.ts.net:443"], // our mapping gone
@@ -415,7 +415,7 @@ const serve = {
 };
 const sim = makeServeSim({ status: runningStatus, serve, probe: enforced401 });
 await recordExposure({ port: 3250, dnsName: "box.tail1234.ts.net" });
-const stop = await runTailscaleStop(sim.deps, { target: "3250" });
+const stop = await runTailscaleStop(sim.deps, { target: { port: 3250 } });
 [
   stop.ok,
   sim.calls.includes("tailscale serve --https=443 --set-path=/foo off"), // exactly /foo
@@ -451,7 +451,7 @@ const serve = {
 };
 const sim = makeServeSim({ status: runningStatus, serve, probe: enforced401 });
 await recordExposure({ port: 3260, dnsName: "box.tail1234.ts.net" });
-const stop = await runTailscaleStop(sim.deps, { target: "3260" });
+const stop = await runTailscaleStop(sim.deps, { target: { port: 3260 } });
 [
   stop.ok,                                                              // proof failed: fail closed
   stop.message.includes("still present"),
@@ -482,7 +482,7 @@ mapping is gone, so it keeps the intent (fail closed) and exits nonzero.
 ```ts
 await recordExposure({ port: 3260, dnsName: "box.tail1234.ts.net" });
 const sim = makeServeSim({ status: runningStatus, serve: {}, probe: enforced401, binaryPresent: false });
-const stop = await runTailscaleStop(sim.deps, { target: "3260" });
+const stop = await runTailscaleStop(sim.deps, { target: { port: 3260 } });
 [stop.ok, stop.message.includes("KEEPING"), loadExposureFile().targets.some((t) => t.port === 3260)]
 => [
   false,
@@ -495,7 +495,7 @@ const stop = await runTailscaleStop(sim.deps, { target: "3260" });
 
 ```ts
 const sim = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: false, status: null } });
-const stop = await runTailscaleStop(sim.deps, { target: "3299" });
+const stop = await runTailscaleStop(sim.deps, { target: { port: 3299 } });
 [stop.ok, stop.message.includes("nothing to stop")]
 => [
   true,
