@@ -33,19 +33,28 @@ struct ComposerTextView: UIViewRepresentable {
 
     func updateUIView(_ textView: UITextView, context: Context) {
         context.coordinator.parent = self
-        if textView.text != text {
-            textView.text = text
-        }
-        let desiredSelection = selection.clamped(to: text)
-        if textView.selectedRange != desiredSelection {
-            textView.selectedRange = desiredSelection
-        }
+        Self.reconcileTextAndSelection(in: textView, text: text, selection: selection)
         if isFocused, textView.isFirstResponder == false {
             textView.becomeFirstResponder()
         } else if isFocused == false, textView.isFirstResponder {
             textView.resignFirstResponder()
         }
         context.coordinator.updateHeight(for: textView)
+    }
+
+    static func reconcileTextAndSelection(
+        in textView: UITextView,
+        text: String,
+        selection: NSRangeValue
+    ) {
+        guard textView.text != text else {
+            return
+        }
+        textView.text = text
+        let desiredSelection = selection.clamped(to: text)
+        if textView.selectedRange != desiredSelection {
+            textView.selectedRange = desiredSelection
+        }
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {

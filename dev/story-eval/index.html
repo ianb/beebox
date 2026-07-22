@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story-eval review</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b1b1b;
+    --muted: #6b6b6b;
+    --faint: #8f8f8f;
+    --line: #e0e0e0;
+    --line-strong: #c7c7c7;
+    --panel: #f7f7f6;
+    --quote-bg: #f2f2f0;
+    --accent: #2f6f4f;          /* focus / keep */
+    --accent-weak: #e6efe9;
+    --drop: #9a3b3b;            /* drop */
+    --drop-weak: #f3e6e6;
+    --chip-on: #3a3a3a;
+    --radius: 6px;
+    --col: 72ch;
+    font-size: 15px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  body { padding-bottom: 6rem; }
+
+  header.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 0.6rem max(1rem, calc((100vw - var(--col)) / 2));
+  }
+  .topbar-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem 1.25rem; }
+  h1 { font-size: 1rem; font-weight: 650; margin: 0; letter-spacing: 0.01em; }
+  .docpick { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .docpick button {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--fg);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .docpick button[aria-pressed="true"] {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    align-items: center;
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .progress b { color: var(--fg); font-weight: 650; }
+  .help {
+    font-size: 0.76rem;
+    color: var(--faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .help kbd {
+    font-family: inherit;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 0.28rem;
+    color: var(--fg);
+  }
+  .autosave {
+    font-size: 0.74rem;
+    color: var(--faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: nowrap;
+  }
+  .autosave.fail { color: var(--muted); }
+  .actions { margin-left: auto; display: flex; gap: 0.4rem; }
+  .actions button {
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.22rem 0.7rem;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--fg);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .actions button:hover { border-color: var(--fg); }
+
+  main {
+    max-width: var(--col);
+    margin: 0 auto;
+    padding: 1.25rem 1rem;
+  }
+
+  .group {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.85rem 0.95rem 0.95rem;
+    margin: 0 0 1rem;
+    scroll-margin-top: 6rem;
+    background: var(--bg);
+  }
+  .group.focused {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-weak);
+  }
+  .group.focused::before {
+    content: "\25B6";  /* ▶ caret marking the focused item */
+    position: absolute;
+    left: -1.15rem;
+    top: 0.95rem;
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+  .group.decided-keep { border-left: 4px solid var(--accent); }
+  .group.decided-drop { border-left: 4px solid var(--drop); opacity: 0.72; }
+
+  .group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .group-id { font-size: 0.72rem; color: var(--faint); font-family: ui-monospace, Menlo, monospace; }
+  .decision-badges { display: flex; gap: 0.35rem; font-size: 0.75rem; }
+  .decision-badges .bkeep, .decision-badges .bdrop {
+    padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid transparent; cursor: pointer;
+    font: inherit; font-size: 0.75rem; background: var(--panel); color: var(--muted);
+  }
+  .group.decided-keep .bkeep { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); font-weight: 650; }
+  .group.decided-drop .bdrop { background: var(--drop-weak); color: var(--drop); border-color: var(--drop); font-weight: 650; }
+
+  blockquote.span {
+    margin: 0 0 0.65rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--quote-bg);
+    border-left: 3px solid var(--line-strong);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: 0.92rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  blockquote.span code { background: rgba(0,0,0,0.05); padding: 0 0.2rem; border-radius: 3px; }
+
+  .glosses { display: flex; flex-direction: column; gap: 0.55rem; }
+  .gloss {
+    border-top: 1px dashed var(--line);
+    padding-top: 0.5rem;
+  }
+  .gloss-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.2rem; }
+  .blind-label {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.4rem; height: 1.4rem; flex: none;
+    border: 1px solid var(--line-strong); border-radius: 50%;
+    font-weight: 650; font-size: 0.8rem;
+  }
+  .gloss-text { font-size: 0.9rem; }
+  .attrs { font-size: 0.74rem; color: var(--muted); margin-top: 0.25rem; display: flex; flex-wrap: wrap; gap: 0.3rem 0.7rem; }
+  .attrs .tag { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 0 0.3rem; }
+  .attrs .conf-generous { color: #8a6d1f; }
+  .attrs .spancheck-bad { color: var(--drop); font-weight: 650; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+  .chip {
+    font: inherit; font-size: 0.74rem;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--bg); color: var(--muted);
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--chip-on); color: var(--bg); border-color: var(--chip-on);
+  }
+  .chips .chip-scope { font-size: 0.7rem; color: var(--faint); align-self: center; margin-right: 0.1rem; }
+
+  .similar-toggle {
+    font: inherit; font-size: 0.74rem;
+    margin-top: 0.4rem; padding: 0.05rem 0.5rem;
+    background: none; border: 1px dashed var(--line-strong); border-radius: 999px;
+    color: var(--muted); cursor: pointer; align-self: flex-start;
+  }
+  .similar-toggle:hover { border-color: var(--fg); color: var(--fg); }
+  .similar-box { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.2rem; }
+  .similar-box[hidden] { display: none; }
+  .similar-box .gloss { border-top-style: dotted; opacity: 0.9; }
+
+  .note-wrap { margin-top: 0.5rem; }
+  .note-wrap textarea {
+    width: 100%; font: inherit; font-size: 0.85rem;
+    border: 1px solid var(--line-strong); border-radius: var(--radius);
+    padding: 0.4rem 0.5rem; resize: vertical; min-height: 2.4rem;
+    background: var(--bg); color: var(--fg);
+  }
+  .note-wrap[hidden] { display: none; }
+
+  .doc-source {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .empty { color: var(--muted); font-style: italic; padding: 2rem 0; }
+  .toast {
+    position: fixed; bottom: 1.1rem; left: 50%; transform: translateX(-50%);
+    background: var(--fg); color: var(--bg);
+    padding: 0.45rem 0.9rem; border-radius: var(--radius);
+    font-size: 0.82rem; opacity: 0; transition: opacity 0.18s; pointer-events: none; z-index: 20;
+  }
+  .toast.show { opacity: 0.95; }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --fg: #e8e8e6; --muted: #a2a2a0; --faint: #7d7d7b;
+      --line: #333; --line-strong: #474747; --panel: #232323; --quote-bg: #242423;
+      --accent: #6bbd8e; --accent-weak: #23342b; --drop: #d98a8a; --drop-weak: #382626;
+      --chip-on: #cfcfcf;
+    }
+    blockquote.span code { background: rgba(255,255,255,0.08); }
+    .chip[aria-pressed="true"] { color: #1a1a1a; }
+    .docpick button[aria-pressed="true"] { color: #1a1a1a; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-row">
+    <h1>Story-eval review</h1>
+    <nav class="docpick" id="docpick" aria-label="Document"></nav>
+    <div class="actions">
+      <button id="btn-export" title="Download verdicts JSON (e)">Export</button>
+      <button id="btn-copy" title="Copy verdicts JSON to clipboard">Copy</button>
+    </div>
+  </div>
+  <div class="meta-row">
+    <span class="progress" id="progress"></span>
+    <span class="help">
+      <kbd>j</kbd>/<kbd>k</kbd> down/up &middot;
+      <kbd>y</kbd> keep &middot; <kbd>n</kbd> drop &middot; <kbd>t</kbd> note &middot; <kbd>e</kbd> export
+      &middot; click chips to flag
+    </span>
+    <span class="autosave" id="autosave" aria-live="polite"></span>
+  </div>
+</header>
+<main id="main"><p class="empty">Loading run data&hellip;</p></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/*
+ * Story-eval review app (Track C of the github-pages-site story-extraction subplan).
+ * Static, no build step, no external requests. Served straight from disk by the dev
+ * router at /<worktree>/dev/story-eval/ — so all data fetches use RELATIVE paths and
+ * work under any router prefix.
+ *
+ * LIMITATION (v1, deliberate): this app does NOT render whole source documents with
+ * span-anchored highlighting (the subplan's "span-anchored doc view"). The dev route
+ * serves only the dev/ directory, so the repo-relative source docs named in each run
+ * JSON are not fetchable here, and no markdown twin lives beside them. Instead each
+ * nugget's verbatim `span` IS shown as the source excerpt (a quote block). A proper
+ * doc view needs a data change: the ingest step embedding the source doc text into the
+ * run file. Tracked as a follow-up; not built now.
+ */
+
+// --- Manifest: every run file. Adding a run = editing this list. ---
+const MANIFEST = [
+  "runs/run-001/v1-cloud-honesty.json",
+  "runs/run-001/v2-cloud-honesty.json",
+  "runs/run-001/v3-cloud-honesty.json",
+  "runs/run-001/v1-knowledge-audits.json",
+  "runs/run-001/v2-knowledge-audits.json",
+  "runs/run-001/v3-knowledge-audits.json",
+  "runs/run-001/v1-cards-rfc.json",
+  "runs/run-001/v2-cards-rfc.json",
+  "runs/run-001/v3-cards-rfc.json",
+  "runs/run-002/v1-engineering-principles.json",
+  "runs/run-002/v2-engineering-principles.json",
+  "runs/run-002/v3-engineering-principles.json",
+  "runs/run-003/v1-activities-retro.json",
+  "runs/run-003/v2-activities-retro.json",
+  "runs/run-003/v3-activities-retro.json",
+  "runs/run-003/v1-openclaw-research.json",
+  "runs/run-003/v2-openclaw-research.json",
+  "runs/run-003/v3-openclaw-research.json",
+];
+
+// Blind label mapping. DELIBERATELY BLIND: the boxholder never sees v-numbers on
+// screen, only A/B/C, so prompt-variant identity can't bias his verdicts. The mapping
+// is consistent across the whole app and is included in the export so the ingesting
+// agent can score which variant a verdict lands on.
+const BLIND_MAP = { v1: "A", v2: "B", v3: "C" };
+
+const CHIPS = ["too-expansive", "misinterpretation", "boring", "bad"];
+
+// Persisted-verdict migrations: old chip value -> new. Applied on load so a
+// mid-triage localStorage state isn't lost or duplicated when a chip is renamed.
+const CHIP_RENAMES = { "tediously-conventional": "boring" };
+
+// Friendly doc key + label derived from the source path. Order = picker order.
+const DOC_LABELS = {
+  "cloud-honesty": "cloud-honesty",
+  "knowledge-audits": "knowledge-audits",
+  "cards-rfc": "cards-rfc",
+  "engineering-principles": "engineering-principles",
+  "activities-retro": "activities-retro",
+  "openclaw-research": "openclaw-research",
+};
+const DOC_ORDER = Object.keys(DOC_LABELS);
+
+const STORAGE_KEY = "story-eval-verdicts-v1";
+
+// ---------- span-overlap + grouping ----------
+function normalizeSpan(s) {
+  return s.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function longestCommonSubstringLen(a, b) {
+  if (!a.length || !b.length) return 0;
+  let prev = new Array(b.length + 1).fill(0);
+  let best = 0;
+  for (let i = 1; i <= a.length; i++) {
+    const cur = new Array(b.length + 1).fill(0);
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        cur[j] = prev[j - 1] + 1;
+        if (cur[j] > best) best = cur[j];
+      }
+    }
+    prev = cur;
+  }
+  return best;
+}
+
+// Two spans overlap if identical, one contains the other, or they share >= 50% of the
+// shorter span's characters (longest common substring / shorter length).
+function spansOverlap(a, b) {
+  const x = normalizeSpan(a);
+  const y = normalizeSpan(b);
+  if (x === y) return true;
+  if (x.includes(y) || y.includes(x)) return true;
+  const shorter = Math.min(x.length, y.length);
+  if (shorter === 0) return false;
+  return longestCommonSubstringLen(x, y) / shorter >= 0.5;
+}
+
+// Greedy single-linkage clustering: a nugget joins a group if its span overlaps any
+// member. Deterministic given input order. This is the FIRST, conservative pass.
+function groupNuggets(nuggets) {
+  const groups = [];
+  for (const n of nuggets) {
+    let target = null;
+    for (const g of groups) {
+      if (g.members.some((m) => spansOverlap(m.span, n.span))) {
+        target = g;
+        break;
+      }
+    }
+    if (target) target.members.push(n);
+    else groups.push({ members: [n] });
+  }
+  return groups;
+}
+
+// --- similarity used for the aggressive second-pass merge ---
+// Fraction of the shorter span shared as a contiguous run (0..1).
+function spanLcsRatio(a, b) {
+  const x = normalizeSpan(a);
+  const y = normalizeSpan(b);
+  const shorter = Math.min(x.length, y.length);
+  if (shorter === 0) return 0;
+  return longestCommonSubstringLen(x, y) / shorter;
+}
+
+function tokenize(s) {
+  return new Set(normalizeSpan(s).split(/[^a-z0-9]+/).filter(Boolean));
+}
+
+// Token-set Jaccard similarity (0..1). Empty-vs-empty counts as identical.
+function jaccard(aTokens, bTokens) {
+  if (aTokens.size === 0 && bTokens.size === 0) return 1;
+  let inter = 0;
+  for (const t of aTokens) if (bTokens.has(t)) inter++;
+  const union = aTokens.size + bTokens.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+const GLOSS_SIM_THRESHOLD = 0.5; // token Jaccard for "same thought re-worded"
+const SPAN_MERGE_THRESHOLD = 0.3; // span LCS ratio for the loosened group merge
+
+function glossesSimilar(m, n) {
+  return jaccard(tokenize(m.gloss), tokenize(n.gloss)) >= GLOSS_SIM_THRESHOLD;
+}
+
+// Second pass: merge groups so one story beat = one group. Two groups merge when any
+// cross-group member pair has near-duplicate glosses (Jaccard >= 0.5) OR a span LCS
+// overlap >= 0.3 (looser than the first pass's 0.5). Union-find keeps it transitive
+// and deterministic (roots follow first-seen order).
+function mergeGroups(groups) {
+  const parent = groups.map((_, i) => i);
+  const find = (x) => {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  const union = (a, b) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+  for (let i = 0; i < groups.length; i++) {
+    for (let j = i + 1; j < groups.length; j++) {
+      if (groupsShouldMerge(groups[i], groups[j])) union(i, j);
+    }
+  }
+  const byRoot = new Map();
+  for (let i = 0; i < groups.length; i++) {
+    const r = find(i);
+    if (!byRoot.has(r)) byRoot.set(r, { members: [] });
+    byRoot.get(r).members.push(...groups[i].members);
+  }
+  return [...byRoot.values()];
+}
+
+function groupsShouldMerge(a, b) {
+  for (const m of a.members) {
+    for (const n of b.members) {
+      if (glossesSimilar(m, n)) return true;
+      if (spanLcsRatio(m.span, n.span) >= SPAN_MERGE_THRESHOLD) return true;
+    }
+  }
+  return false;
+}
+
+// Two members are the "same beat" (fold-together) if they quote near-identical spans
+// OR carry near-duplicate glosses. Measured on the run data, the converging variants
+// re-word the same beat with only ~0.13-0.38 gloss token-Jaccard, so gloss-Jaccard
+// alone never folds them — the span-identity arm is what actually collapses the
+// A/B/C triplets (which is exactly the visible "examples all basically the same").
+function sameBeat(m, n) {
+  return spansOverlap(m.span, n.span) || glossesSimilar(m, n);
+}
+
+// Cluster a group's glosses by sameBeat, single-linkage. Each cluster is returned
+// longest-gloss-first so the representative is [0].
+function clusterGlosses(members) {
+  const clusters = [];
+  for (const m of members) {
+    let target = null;
+    for (const c of clusters) {
+      if (c.some((x) => sameBeat(x, m))) {
+        target = c;
+        break;
+      }
+    }
+    if (target) target.push(m);
+    else clusters.push([m]);
+  }
+  for (const c of clusters) c.sort((a, b) => b.gloss.length - a.gloss.length);
+  return clusters;
+}
+
+function djb2(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+// Expose for a node sanity check when loaded as a module (browser ignores this).
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    spansOverlap, groupNuggets, mergeGroups, groupsShouldMerge, clusterGlosses, sameBeat,
+    glossesSimilar, spanLcsRatio, jaccard, tokenize, normalizeSpan, longestCommonSubstringLen,
+  };
+}
+
+// ---------- state ----------
+const state = {
+  byDoc: {},        // docKey -> [nugget...]
+  groupsByDoc: {},  // docKey -> [ {id, span (longest), members:[nugget]} ]
+  docPathByKey: {}, // docKey -> repo-relative source document path (from the run files)
+  currentDoc: null,
+  focusIndex: 0,
+  verdicts: loadVerdicts(),
+};
+
+function loadVerdicts() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const v = parsed && typeof parsed === "object" ? parsed : {};
+    if (migrateChipNames(v)) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(v));
+      } catch (e) {
+        console.warn("story-eval: chip migration could not be persisted", e);
+      }
+    }
+    return v;
+  } catch (e) {
+    console.warn("story-eval: could not read verdicts from localStorage", e);
+    return {};
+  }
+}
+
+// Rewrite renamed chip values in a persisted verdict store (see CHIP_RENAMES).
+// Returns true if anything changed. Merges rather than duplicates when both the old
+// and new value are already present.
+function renameChipsIn(chips) {
+  if (!chips || typeof chips !== "object") return false;
+  let changed = false;
+  for (const [oldName, newName] of Object.entries(CHIP_RENAMES)) {
+    if (chips[oldName]) {
+      chips[newName] = chips[newName] || chips[oldName];
+      delete chips[oldName];
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function migrateChipNames(store) {
+  let changed = false;
+  for (const doc of Object.keys(store)) {
+    const groups = store[doc];
+    if (!groups || typeof groups !== "object") continue;
+    for (const gid of Object.keys(groups)) {
+      const rec = groups[gid];
+      if (!rec || typeof rec !== "object") continue;
+      if (renameChipsIn(rec.chips)) changed = true;
+      if (rec.glosses && typeof rec.glosses === "object") {
+        for (const bl of Object.keys(rec.glosses)) {
+          if (renameChipsIn(rec.glosses[bl]?.chips)) changed = true;
+        }
+      }
+    }
+  }
+  return changed;
+}
+
+function saveVerdicts() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.verdicts));
+  } catch (e) {
+    console.error("story-eval: could not persist verdicts to localStorage", e);
+    toast("Warning: could not save (localStorage full or blocked)");
+  }
+  scheduleAutosave();
+}
+
+// ---------- router-backed autosave (best-effort, never blocking) ----------
+// On every change we (debounced) POST the same JSON the export produces to the
+// router's "save" endpoint, which atomically writes it to a working file on
+// disk. This is a durability BACKUP: localStorage stays the live store and manual
+// export (e) is unchanged. The endpoint only exists once this router change has
+// reached main and the shared router restarted; before then — and on any old
+// router — the POST fails and we show a quiet "unavailable" hint. Failures are
+// never noisy and never block triage.
+const AUTOSAVE_DEBOUNCE_MS = 2000;
+let autosaveTimer = null;
+let autosaveInFlight = false;
+let autosavePending = false;
+
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(runAutosave, AUTOSAVE_DEBOUNCE_MS);
+}
+
+async function runAutosave() {
+  if (autosaveInFlight) {
+    autosavePending = true; // coalesce: fire once more after the current POST lands
+    return;
+  }
+  autosaveInFlight = true;
+  try {
+    // Relative URL: resolves to /<prefix>/dev/story-eval/save under any router prefix.
+    const res = await fetch("save", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildExport()),
+    });
+    setAutosaveStatus(res.ok ? "ok" : "fail");
+  } catch {
+    setAutosaveStatus("fail");
+  } finally {
+    autosaveInFlight = false;
+    if (autosavePending) {
+      autosavePending = false;
+      scheduleAutosave();
+    }
+  }
+}
+
+function setAutosaveStatus(kind) {
+  const el = document.getElementById("autosave");
+  if (!el) return;
+  if (kind === "ok") {
+    const t = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    el.textContent = `autosaved ${t}`;
+    el.className = "autosave";
+  } else {
+    el.textContent = "autosave unavailable — export with e";
+    el.className = "autosave fail";
+  }
+}
+
+// verdict record for a group, created on demand
+function groupVerdict(doc, groupId) {
+  state.verdicts[doc] ??= {};
+  state.verdicts[doc][groupId] ??= { decision: null, chips: {}, note: "", glosses: {} };
+  return state.verdicts[doc][groupId];
+}
+
+function docKeyFromPath(path) {
+  const m = path.match(/v\d+-([a-z0-9-]+)\.json$/i);
+  return m ? m[1] : path;
+}
+
+// ---------- load ----------
+async function load() {
+  const results = await Promise.allSettled(
+    MANIFEST.map(async (path) => {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+      const data = await res.json();
+      const docKey = docKeyFromPath(path);
+      state.docPathByKey[docKey] = data.doc;
+      for (const nugget of data.nuggets) {
+        nugget._variant = data.variant;
+        nugget._run = data.run;
+        nugget._blind = BLIND_MAP[data.variant] ?? data.variant;
+        (state.byDoc[docKey] ??= []).push(nugget);
+      }
+      return docKey;
+    })
+  );
+
+  const failures = results.filter((r) => r.status === "rejected");
+  if (failures.length) {
+    for (const f of failures) console.error("story-eval: load failed:", f.reason);
+  }
+
+  for (const docKey of Object.keys(state.byDoc)) {
+    // Two passes: conservative span-overlap grouping, then the aggressive merge so
+    // one story beat = one group. Group id stays djb2-of-longest-span (ids may shift
+    // for newly-merged groups — acceptable; stale stored keys just go inert).
+    const merged = mergeGroups(groupNuggets(state.byDoc[docKey]));
+    state.groupsByDoc[docKey] = merged.map((g) => {
+      const longest = g.members.reduce((a, b) => (b.span.length > a.span.length ? b : a), g.members[0]);
+      return { id: djb2(normalizeSpan(longest.span)), span: longest.span, members: g.members };
+    });
+  }
+
+  buildDocPicker();
+  const hashDoc = location.hash.slice(1);
+  const firstDoc = (state.groupsByDoc[hashDoc]?.length && hashDoc)
+    || DOC_ORDER.find((d) => state.groupsByDoc[d]?.length)
+    || Object.keys(state.groupsByDoc)[0];
+  selectDoc(firstDoc, { failures: failures.length });
+}
+
+function buildDocPicker() {
+  const nav = document.getElementById("docpick");
+  nav.innerHTML = "";
+  for (const docKey of DOC_ORDER) {
+    const groups = state.groupsByDoc[docKey];
+    if (!groups) continue;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = `${DOC_LABELS[docKey]} (${groups.length})`;
+    btn.setAttribute("aria-pressed", "false");
+    btn.addEventListener("click", () => selectDoc(docKey));
+    btn.dataset.doc = docKey;
+    nav.appendChild(btn);
+  }
+}
+
+function selectDoc(docKey, opts = {}) {
+  state.currentDoc = docKey;
+  state.focusIndex = 0;
+  // The doc is a hash URL, so reload/back/forward keep your place.
+  if (location.hash.slice(1) !== docKey) location.hash = docKey;
+  for (const btn of document.querySelectorAll("#docpick button")) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.doc === docKey));
+  }
+  render();
+  window.scrollTo(0, 0);
+  if (opts.failures) toast(`${opts.failures} run file(s) failed to load — see console`);
+}
+
+window.addEventListener("hashchange", () => {
+  const docKey = location.hash.slice(1);
+  if (docKey && docKey !== state.currentDoc && state.groupsByDoc[docKey]?.length) selectDoc(docKey);
+});
+
+// ---------- render ----------
+function esc(s) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+// Render inline `code` spans in a span/gloss; escape everything else.
+function renderInline(s) {
+  return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function render() {
+  const main = document.getElementById("main");
+  const docKey = state.currentDoc;
+  const groups = state.groupsByDoc[docKey] || [];
+  main.innerHTML = "";
+
+  if (!groups.length) {
+    main.innerHTML = '<p class="empty">No nuggets for this document.</p>';
+    updateProgress();
+    return;
+  }
+
+  const docPath = state.docPathByKey[docKey];
+  if (docPath) {
+    const src = document.createElement("p");
+    src.className = "doc-source";
+    src.innerHTML = `All nuggets below were extracted from <code>${esc(docPath)}</code>; every quoted span is verbatim from that file.`;
+    main.appendChild(src);
+  }
+
+  groups.forEach((group, idx) => {
+    main.appendChild(renderGroup(docKey, group, idx));
+  });
+
+  updateProgress();
+  focusGroup(state.focusIndex, { scroll: false });
+}
+
+function renderGroup(docKey, group, idx) {
+  const v = groupVerdict(docKey, group.id);
+  const el = document.createElement("section");
+  el.className = "group";
+  el.dataset.idx = String(idx);
+  el.id = `group-${group.id}`;
+  applyDecisionClass(el, v.decision);
+
+  // head: id + keep/drop badges
+  const head = document.createElement("div");
+  head.className = "group-head";
+  head.innerHTML = `<span class="group-id">#${idx + 1} &middot; ${esc(group.id)} &middot; ${group.members.length} gloss${group.members.length === 1 ? "" : "es"}</span>`;
+  const badges = document.createElement("div");
+  badges.className = "decision-badges";
+  const keepBtn = mkBadge("bkeep", "keep", () => setDecision(idx, "keep"));
+  const dropBtn = mkBadge("bdrop", "drop", () => setDecision(idx, "drop"));
+  badges.append(keepBtn, dropBtn);
+  head.appendChild(badges);
+  el.appendChild(head);
+
+  // span quote (longest member span = source excerpt)
+  const bq = document.createElement("blockquote");
+  bq.className = "span";
+  bq.innerHTML = renderInline(group.span);
+  el.appendChild(bq);
+
+  // group-level critique chips
+  el.appendChild(renderChips(docKey, group.id, "group", null, v.chips));
+
+  // glosses, blind-labeled. The prompt variants converge, so cluster near-duplicate
+  // glosses and show ONE representative per cluster; the rest fold behind a
+  // "+N similar" toggle (default collapsed). Chips work on the representative and,
+  // once expanded, on each folded gloss.
+  const glossWrap = document.createElement("div");
+  glossWrap.className = "glosses";
+  for (const cluster of clusterGlosses(group.members)) {
+    glossWrap.appendChild(renderGloss(docKey, group.id, cluster[0], v));
+    if (cluster.length > 1) {
+      const others = cluster.slice(1);
+      const box = document.createElement("div");
+      box.className = "similar-box";
+      box.hidden = true;
+      for (const other of others) box.appendChild(renderGloss(docKey, group.id, other, v));
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "similar-toggle";
+      const label = (open) => (open ? `hide ${others.length} similar` : `+${others.length} similar`);
+      toggle.textContent = label(false);
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.addEventListener("click", () => {
+        box.hidden = !box.hidden;
+        toggle.textContent = label(!box.hidden);
+        toggle.setAttribute("aria-expanded", String(!box.hidden));
+      });
+      glossWrap.appendChild(toggle);
+      glossWrap.appendChild(box);
+    }
+  }
+  el.appendChild(glossWrap);
+
+  // note field (toggle with t)
+  const noteWrap = document.createElement("div");
+  noteWrap.className = "note-wrap";
+  noteWrap.hidden = !v.note;
+  const ta = document.createElement("textarea");
+  ta.placeholder = "note (free text)";
+  ta.value = v.note || "";
+  ta.addEventListener("input", () => {
+    groupVerdict(docKey, group.id).note = ta.value;
+    saveVerdicts();
+  });
+  noteWrap.appendChild(ta);
+  el.appendChild(noteWrap);
+
+  el.addEventListener("mousedown", (e) => {
+    if (e.target.closest("textarea")) return;
+    setFocus(idx);
+  });
+  return el;
+}
+
+function mkBadge(cls, label, onClick) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = cls;
+  b.textContent = label;
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function renderGloss(docKey, groupId, nugget, v) {
+  const el = document.createElement("div");
+  el.className = "gloss";
+
+  const head = document.createElement("div");
+  head.className = "gloss-head";
+  head.innerHTML =
+    `<span class="blind-label" title="blind variant label">${esc(nugget._blind)}</span>` +
+    `<span class="gloss-text">${renderInline(nugget.gloss)}</span>`;
+  el.appendChild(head);
+
+  // attributes: tags, criteria, confidence, spanCheck (only if not ok)
+  const attrs = document.createElement("div");
+  attrs.className = "attrs";
+  const tagHtml = (nugget.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join(" ");
+  const critHtml = `criteria: ${(nugget.criteria || []).join(", ")}`;
+  const confCls = nugget.confidence === "generous" ? "conf-generous" : "";
+  const confHtml = `<span class="${confCls}">${esc(nugget.confidence || "")}</span>`;
+  let html = `${tagHtml} <span>${critHtml}</span> ${confHtml}`;
+  if (nugget.spanCheck && nugget.spanCheck !== "ok") {
+    html += ` <span class="spancheck-bad">spanCheck: ${esc(nugget.spanCheck)}</span>`;
+  }
+  attrs.innerHTML = html;
+  el.appendChild(attrs);
+
+  // per-gloss critique chips, keyed by blind label
+  v.glosses[nugget._blind] ??= { chips: {} };
+  el.appendChild(renderChips(docKey, groupId, "gloss", nugget._blind, v.glosses[nugget._blind].chips));
+
+  return el;
+}
+
+function renderChips(docKey, groupId, scope, blind, chipState) {
+  const wrap = document.createElement("div");
+  wrap.className = "chips";
+  const scopeLabel = document.createElement("span");
+  scopeLabel.className = "chip-scope";
+  scopeLabel.textContent = scope === "group" ? "group:" : "";
+  if (scope === "group") wrap.appendChild(scopeLabel);
+  for (const chip of CHIPS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = chip;
+    b.setAttribute("aria-pressed", String(!!chipState[chip]));
+    b.addEventListener("click", () => {
+      const target =
+        scope === "group"
+          ? groupVerdict(docKey, groupId).chips
+          : (groupVerdict(docKey, groupId).glosses[blind] ??= { chips: {} }).chips;
+      if (target[chip]) delete target[chip];
+      else target[chip] = true;
+      b.setAttribute("aria-pressed", String(!!target[chip]));
+      saveVerdicts();
+    });
+    wrap.appendChild(b);
+  }
+  return wrap;
+}
+
+function applyDecisionClass(el, decision) {
+  el.classList.remove("decided-keep", "decided-drop");
+  if (decision === "keep") el.classList.add("decided-keep");
+  else if (decision === "drop") el.classList.add("decided-drop");
+}
+
+// ---------- interactions ----------
+function currentGroups() {
+  return state.groupsByDoc[state.currentDoc] || [];
+}
+
+function setDecision(idx, decision) {
+  const groups = currentGroups();
+  const group = groups[idx];
+  if (!group) return;
+  const v = groupVerdict(state.currentDoc, group.id);
+  v.decision = v.decision === decision ? null : decision; // toggle off if repeated
+  saveVerdicts();
+  const el = document.querySelector(`.group[data-idx="${idx}"]`);
+  if (el) applyDecisionClass(el, v.decision);
+  updateProgress();
+  // auto-advance on a fresh decision
+  if (v.decision && idx < groups.length - 1) setFocus(idx + 1);
+}
+
+function setFocus(idx, opts = {}) {
+  state.focusIndex = idx;
+  focusGroup(idx, opts);
+}
+
+function focusGroup(idx, opts = {}) {
+  const groups = currentGroups();
+  if (!groups.length) return;
+  state.focusIndex = Math.max(0, Math.min(idx, groups.length - 1));
+  document.querySelectorAll(".group").forEach((el) => {
+    const on = Number(el.dataset.idx) === state.focusIndex;
+    el.classList.toggle("focused", on);
+    if (on && opts.scroll !== false) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+}
+
+function updateProgress() {
+  const groups = currentGroups();
+  const total = groups.length;
+  let decided = 0;
+  const dv = state.verdicts[state.currentDoc] || {};
+  for (const g of groups) {
+    if (dv[g.id]?.decision) decided++;
+  }
+  document.getElementById("progress").innerHTML =
+    `<b>${decided}</b> / ${total} triaged` + (total ? ` &middot; group <b>${state.focusIndex + 1}</b>` : "");
+}
+
+function openNote() {
+  // Always open + focus, never toggle-hide: a note is deleted by clearing its text.
+  const groups = currentGroups();
+  const group = groups[state.focusIndex];
+  if (!group) return;
+  const el = document.querySelector(`.group[data-idx="${state.focusIndex}"] .note-wrap`);
+  if (!el) return;
+  el.hidden = false;
+  el.querySelector("textarea").focus();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("textarea, input")) {
+    // Enter finishes/closes the note (Shift+Enter still inserts a newline); Escape
+    // also closes. The note is already persisted on every input event, so blur alone
+    // commits it.
+    if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
+      e.preventDefault();
+      e.target.blur();
+    }
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const groups = currentGroups();
+  switch (e.key) {
+    case "j":
+    case "ArrowDown":
+      e.preventDefault();
+      setFocus(state.focusIndex + 1);
+      updateProgress();
+      break;
+    case "k":
+    case "ArrowUp":
+      e.preventDefault();
+      setFocus(state.focusIndex - 1);
+      updateProgress();
+      break;
+    case "y":
+      e.preventDefault();
+      if (groups.length) setDecision(state.focusIndex, "keep");
+      break;
+    case "n":
+      e.preventDefault();
+      if (groups.length) setDecision(state.focusIndex, "drop");
+      break;
+    case "t":
+      e.preventDefault();
+      openNote();
+      break;
+    case "e":
+      e.preventDefault();
+      exportVerdicts();
+      break;
+    default:
+      break;
+  }
+});
+
+// ---------- export ----------
+function buildExport() {
+  const docs = {};
+  for (const docKey of Object.keys(state.groupsByDoc)) {
+    const groups = state.groupsByDoc[docKey];
+    const dv = state.verdicts[docKey] || {};
+    docs[docKey] = groups.map((g) => {
+      const rec = dv[g.id] || { decision: null, chips: {}, note: "", glosses: {} };
+      return {
+        groupId: g.id,
+        span: g.span,
+        decision: rec.decision ?? null,
+        groupChips: Object.keys(rec.chips || {}),
+        note: rec.note || "",
+        // per-gloss: reveal the underlying variant so the ingesting agent can score.
+        glosses: g.members.map((n) => ({
+          blind: n._blind,
+          variant: n._variant,
+          run: n._run,
+          slug: n.slug,
+          chips: Object.keys(rec.glosses?.[n._blind]?.chips || {}),
+        })),
+      };
+    });
+  }
+  return {
+    tool: "story-eval",
+    exportedAt: new Date().toISOString(),
+    // blind-label -> variant, so the boxholder never sees it on screen but the
+    // ingesting agent can attribute verdicts back to prompt variants.
+    blindMap: BLIND_MAP,
+    docs,
+  };
+}
+
+function exportVerdicts() {
+  const payload = JSON.stringify(buildExport(), null, 2);
+  const date = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([payload], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `story-eval-verdicts-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast("Exported verdicts JSON");
+}
+
+async function copyVerdicts() {
+  const payload = JSON.stringify(buildExport(), null, 2);
+  try {
+    await navigator.clipboard.writeText(payload);
+    toast("Copied verdicts JSON to clipboard");
+  } catch (e) {
+    console.warn("story-eval: clipboard write failed, falling back", e);
+    // Fallback: select-in-textarea copy for non-secure contexts.
+    const ta = document.createElement("textarea");
+    ta.value = payload;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      toast("Copied verdicts JSON to clipboard");
+    } catch (e2) {
+      console.error("story-eval: copy failed", e2);
+      toast("Copy failed — use Export instead");
+    }
+    ta.remove();
+  }
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+document.getElementById("btn-export").addEventListener("click", exportVerdicts);
+document.getElementById("btn-copy").addEventListener("click", copyVerdicts);
+
+load().catch((e) => {
+  console.error("story-eval: fatal load error", e);
+  document.getElementById("main").innerHTML =
+    '<p class="empty">Failed to load run data — see console.</p>';
+});
+</script>
+</body>
+</html>

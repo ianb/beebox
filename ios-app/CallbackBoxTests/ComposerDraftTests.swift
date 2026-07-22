@@ -1,5 +1,38 @@
 import XCTest
+import UIKit
 @testable import CallbackBox
+
+@MainActor
+final class ComposerTextViewTests: XCTestCase {
+    func testUserDrivenTextMatchDoesNotReplayStaleSelection() {
+        let textView = UITextView()
+        textView.text = "swiped"
+        textView.selectedRange = NSRange(location: 6, length: 0)
+
+        ComposerTextView.reconcileTextAndSelection(
+            in: textView,
+            text: "swiped",
+            selection: NSRangeValue(location: 0, length: 0)
+        )
+
+        XCTAssertEqual(textView.selectedRange, NSRange(location: 6, length: 0))
+    }
+
+    func testProgrammaticTextReplacementAlsoPlacesSelection() {
+        let textView = UITextView()
+        textView.text = "draft"
+        textView.selectedRange = NSRange(location: 2, length: 0)
+
+        ComposerTextView.reconcileTextAndSelection(
+            in: textView,
+            text: "draft [file1]",
+            selection: NSRangeValue(location: 13, length: 0)
+        )
+
+        XCTAssertEqual(textView.text, "draft [file1]")
+        XCTAssertEqual(textView.selectedRange, NSRange(location: 13, length: 0))
+    }
+}
 
 final class ComposerDraftReducerTests: XCTestCase {
     func testVoiceCompositionStateTransitionsAreExplicit() {

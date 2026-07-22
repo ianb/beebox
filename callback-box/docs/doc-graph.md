@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-21T23:40:47Z
-Total documents: 206
+Generated: 2026-07-22T16:43:08Z
+Total documents: 207
 
 ## Issues
 
@@ -121,6 +121,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:84 (mention) — - **Reality/tension** — CLAUDE.md:1 (the sentence agents actually load): "A
 - docs/plans/docs-reorg.gap-analysis.md:36 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/plans/docs-reorg.md:5 (mention) — convention docs → CLAUDE.md slimming → cb-guide-* skills → design
+- docs/plans/github-pages-site-story-extraction.subplan.md:56 (mention) — per CLAUDE.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/github-pages-site.md:29 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/ios-companion-app.md:25 (mention) — - `callback-box/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file u
 - docs/plans/ios-companion-review-2026-07-09.md:56 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
@@ -471,6 +472,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:24 (mention) — `docs/activities-retrospective.md`).
 - docs/plans/docs-reorg.md:230 (mention) — `activities-design.md` + `activities-retrospective.md` pair (the model for
 - docs/plans/narration-mode.md:5 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
+- ../dev/story-eval/runs/run-003/self-review.md:5 (mention) — two docs chosen for actual story density: `activities-retrospective.md`
 - ../research/openclaw-hermes/deep-cbx-retro.md:11 (mention) — line-by-line below). Note: `callback-box/docs/activities-retrospective.md` is an
 
 References:
@@ -868,6 +870,7 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
 - docs/implemented-plans/tailscale-expose-and-protect.md:48 (mention) — - `callback-box/docs/engineering-principles.md` — especially fail-closed /
 - docs/plans/android-companion-app.md:25 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
+- docs/plans/github-pages-site-story-extraction.subplan.md:36 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/github-pages-site.md:22 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/installation-story.md:41 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
@@ -876,7 +879,9 @@ Referenced by:
 - docs/plans/publish-pages.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
+- ../dev/story-eval/runs/run-002/self-review.md:3 (mention) — 3 variants × `callback-box/docs/engineering-principles.md` (159 lines, a new
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
+- ../issues/decisions/2026-07-22-config-untrusted-principle-drift.md:6 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of engineering-principles.md
 - ../research/gstack/notes/design-consultation.md:34 (mention) — ★ Probably the single most portable idea in gstack. Worth a CLAUDE.md note or its own principle in `engineering-principl
 - ../research/gstack/notes/plan-eng-review.md:183 (mention) — - ★ **Stated preferences as the review spine: yes, and a real artifact to develop.** Would want to write out callback's 
 - ../research/gstack/overlap-with-ideas.md:60 (mention) — user-flow edge-cases checklist, engineering-principles.md)
@@ -1016,6 +1021,7 @@ Referenced by:
 - docs/engineering-principles.md:159 (link) — ([`docs/knowledge-audits.md`](knowledge-audits.md)).
 - docs/maintenance.md:61 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/plans/docs-reorg.md:119 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
+- docs/plans/github-pages-site-story-extraction.subplan.md:166 (mention) — `callback-box/docs/knowledge-audits.md` (distinctive-practice doc),
 - docs/reports/user-stories-audit-2026-06-26.md:5670 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/knowledge-audits.md` |
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't 
@@ -1953,7 +1959,9 @@ Referenced by:
 - docs/implemented-plans/attach-directories-superseded.md:5 (link) — **Status:** Draft. Phase 1 of the [cards-as-markdown RFC](./cards-as-markdown-rfc.md), but designed to ship independentl
 - docs/implemented-plans/remove-cardworks-and-xml.md:117 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
 - docs/migrations.md:285 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/plans/github-pages-site-story-extraction.subplan.md:167 (mention) — `callback-box/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
 - docs/stack-decisions.md:805 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
+- ../issues/features/2026-07-22-embed-json-schema-in-card-docs.md:5 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
 
 References:
 - → docs/cards-as-markdown.md (mention)
@@ -2982,11 +2990,27 @@ References:
 - → docs/plans/docs-reorg.gap-analysis.md (mention)
 - → docs/maintenance.md (mention)
 
-#### docs/plans/github-pages-site.md
+#### docs/plans/github-pages-site-story-extraction.subplan.md
 
-Title: "GitHub Pages front-door site" | 481 lines
+Title: "Story extraction: rubric, prompts, and the A/B review loop" | 275 lines
 
 Referenced by:
+- docs/plans/github-pages-site.md:319 (link) — [github-pages-site-story-extraction.subplan.md](github-pages-site-story-extraction.subplan.md)
+
+References:
+- → docs/plans/github-pages-site.md (link)
+- → ../issues/features/2026-07-05-writing-skill.md (link)
+- → docs/engineering-principles.md (mention)
+- → CLAUDE.md (mention)
+- → docs/knowledge-audits.md (mention)
+- → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
+
+#### docs/plans/github-pages-site.md
+
+Title: "GitHub Pages front-door site" | 486 lines
+
+Referenced by:
+- docs/plans/github-pages-site-story-extraction.subplan.md:3 (link) — **Status:** active — subplan of [github-pages-site](github-pages-site.md)
 - ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:11 (link) — [plan doc](../../callback-box/docs/plans/github-pages-site.md)) builds and
 
 References:
@@ -2997,6 +3021,7 @@ References:
 - → docs/agent-install.md (mention)
 - → docs/plans/README.md (mention)
 - → ../issues/features/2026-07-20-agent-maintained-security-report.md (link)
+- → docs/plans/github-pages-site-story-extraction.subplan.md (link)
 - → ../issues/features/2026-07-17-regenerable-app-demo-video.md (link)
 
 #### docs/plans/input-widget.md

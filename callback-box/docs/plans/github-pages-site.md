@@ -314,6 +314,11 @@ Ordered by implementation dependency, then surface size.
 - **First chunk**: nugget schema + loader + the three enforcement behaviors
   with tests, exercised by one hand-made fixture nugget. Real extraction
   sessions follow as content work, not code work.
+- **Subplan**: the extraction rubric, prompt A/B evaluation, and review app
+  are designed in
+  [github-pages-site-story-extraction.subplan.md](github-pages-site-story-extraction.subplan.md)
+  (2026-07-21) — that loop earns trust in the prompts before any full-corpus
+  extraction feeds this track.
 
 ### Track F — fisheye / telescopic presentation
 

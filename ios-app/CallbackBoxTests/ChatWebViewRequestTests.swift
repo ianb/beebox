@@ -64,6 +64,49 @@ final class ChatWebViewRequestTests: XCTestCase {
     }
 
     @MainActor
+    func testSameOriginNewWindowLoadsInCurrentContext() {
+        let url = URL(string: "https://box.example.com/test1/browse/card")!
+        var loadedURL: URL?
+        var externalURL: URL?
+        let coordinator = makeCoordinator(
+            timeout: 60,
+            evaluate: { _, completion in completion(nil) },
+            openExternalURL: { externalURL = $0 },
+            loadInCurrentContext: { _, request in loadedURL = request.url }
+        )
+        coordinator.handleNewWindowRequest(URLRequest(url: url), url: url, in: WKWebView())
+
+        XCTAssertEqual(loadedURL, url)
+        XCTAssertNil(externalURL)
+    }
+
+    @MainActor
+    func testExternalNewWindowUsesSystemBrowser() {
+        let url = URL(string: "https://example.org/source")!
+        var loadedURL: URL?
+        var externalURL: URL?
+        let coordinator = makeCoordinator(
+            timeout: 60,
+            evaluate: { _, completion in completion(nil) },
+            openExternalURL: { externalURL = $0 },
+            loadInCurrentContext: { _, request in loadedURL = request.url }
+        )
+        coordinator.handleNewWindowRequest(URLRequest(url: url), url: url, in: WKWebView())
+
+        XCTAssertNil(loadedURL)
+        XCTAssertEqual(externalURL, url)
+    }
+
+    func testNonWebNewWindowFailsClosedToSystemHandler() {
+        let destination = ChatWebView.newWindowDestination(
+            for: URL(string: "mailto:person@example.com")!,
+            allowedOrigin: nil
+        )
+
+        XCTAssertEqual(destination, .browser)
+    }
+
+    @MainActor
     func testUnacknowledgedEmissionTimesOutAsRejected() async {
         let emission = makeEmission()
         let timedOut = expectation(description: "receipt timeout")
@@ -126,7 +169,9 @@ final class ChatWebViewRequestTests: XCTestCase {
         timeout: TimeInterval,
         onAttempt: @escaping (UUID) -> Void = { _ in },
         onReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
-        evaluate: @escaping (String, @escaping (Error?) -> Void) -> Void
+        evaluate: @escaping (String, @escaping (Error?) -> Void) -> Void,
+        openExternalURL: @escaping (URL) -> Void = { _ in },
+        loadInCurrentContext: @escaping (WKWebView, URLRequest) -> Void = { _, _ in }
     ) -> ChatWebView.Coordinator {
         ChatWebView.Coordinator(
             allowedOrigin: "https://box.example.com",
@@ -139,7 +184,9 @@ final class ChatWebViewRequestTests: XCTestCase {
             onComposerCommandAcknowledgementDelivered: { _ in },
             receiptTimeoutDelay: timeout,
             pageLoaded: true,
-            evaluateEmission: evaluate
+            evaluateEmission: evaluate,
+            openExternalURL: openExternalURL,
+            loadInCurrentContext: loadInCurrentContext
         )
     }
 }

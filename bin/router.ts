@@ -51,6 +51,7 @@ import { createRouterAuthDeps } from "./router-auth-deps.js";
 import { rewriteMobileCookiePath } from "./router-cookie.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
+import { serveStoryEvalSave } from "./router-story-eval.js";
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -1014,6 +1015,13 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     if (afterName.split("?")[0] === "/dev") {
       res.writeHead(301, { location: `/${name}/dev/` });
       res.end();
+      return;
+    }
+    // POST /<name>/dev/story-eval/save — autosave the review app's verdicts to a
+    // fixed working file on disk. Must precede the generic /dev/ disk-serve below
+    // (which only handles GET reads). Never cold-starts the worktree.
+    if (afterName.split("?")[0] === "/dev/story-eval/save") {
+      await serveStoryEvalSave({ req, res, repoRoot: worktreeRoot(name) });
       return;
     }
     if (afterName.startsWith("/dev/")) {
