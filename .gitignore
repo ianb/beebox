@@ -54,3 +54,9 @@ scratch/*
 # Prompt viewer generated data (regenerate with `pnpm prompt-viewer` in
 # callback-box). The size ledger (size-ledger.jsonl) and index.html are tracked.
 dev/prompts/data.json
+
+# Story-eval review app autosave: the router writes the boxholder's in-progress
+# verdicts here on every change. A live working file, not a deliverable — the
+# committed dated verdict files (dev/story-eval/verdicts/YYYY-MM-DD-*.json) stay
+# tracked. Ignore only the file, never the directory.
+dev/story-eval/verdicts/autosave.json
