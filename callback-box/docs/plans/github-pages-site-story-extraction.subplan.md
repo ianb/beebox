@@ -237,9 +237,14 @@ next human touchpoint.
 - **Model for extraction**: start Opus everywhere; once a prompt is trusted,
   test whether Sonnet matches on the same seeds (cost matters at full-corpus
   scale). Lean: decide on evidence from run 2+, not now.
-- **Where triage verdicts ultimately live** — committed JSON is the working
-  answer; whether they deserve durable retention after prompts stabilize is
-  an elicitation-phase question.
+- ~~**Where triage verdicts ultimately live**~~ — DECIDED (boxholder,
+  2026-07-22): the triage *process* is not tracked. Extraction runs and
+  verdict exports are local working files (gitignored:
+  `dev/story-eval/runs/`, `dev/story-eval/verdicts/`); only **outcomes**
+  commit — promoted nuggets, rubric/prompt revisions, and learnings folded
+  into this subplan. (Runs 001–003 and the pass-1 verdicts predate the
+  decision and remain in git history; untracked going forward. No history
+  surgery, per the standing 2026-07-05 decision.)
 - **When a "trusted" prompt is trusted enough** — the boxholder calls it; no
   numeric threshold (house rule: no scoring).
 
