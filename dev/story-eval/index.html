@@ -176,6 +176,17 @@
   }
   .chips .chip-scope { font-size: 0.7rem; color: var(--faint); align-self: center; margin-right: 0.1rem; }
 
+  .similar-toggle {
+    font: inherit; font-size: 0.74rem;
+    margin-top: 0.4rem; padding: 0.05rem 0.5rem;
+    background: none; border: 1px dashed var(--line-strong); border-radius: 999px;
+    color: var(--muted); cursor: pointer; align-self: flex-start;
+  }
+  .similar-toggle:hover { border-color: var(--fg); color: var(--fg); }
+  .similar-box { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.2rem; }
+  .similar-box[hidden] { display: none; }
+  .similar-box .gloss { border-top-style: dotted; opacity: 0.9; }
+
   .note-wrap { margin-top: 0.5rem; }
   .note-wrap textarea {
     width: 100%; font: inherit; font-size: 0.85rem;
@@ -268,7 +279,11 @@ const MANIFEST = [
 // agent can score which variant a verdict lands on.
 const BLIND_MAP = { v1: "A", v2: "B", v3: "C" };
 
-const CHIPS = ["too-expansive", "misinterpretation", "tediously-conventional", "bad"];
+const CHIPS = ["too-expansive", "misinterpretation", "boring", "bad"];
+
+// Persisted-verdict migrations: old chip value -> new. Applied on load so a
+// mid-triage localStorage state isn't lost or duplicated when a chip is renamed.
+const CHIP_RENAMES = { "tediously-conventional": "boring" };
 
 // Friendly doc key + label derived from the source path. Order = picker order.
 const DOC_LABELS = {
@@ -316,7 +331,7 @@ function spansOverlap(a, b) {
 }
 
 // Greedy single-linkage clustering: a nugget joins a group if its span overlaps any
-// member. Deterministic given input order.
+// member. Deterministic given input order. This is the FIRST, conservative pass.
 function groupNuggets(nuggets) {
   const groups = [];
   for (const n of nuggets) {
@@ -333,6 +348,106 @@ function groupNuggets(nuggets) {
   return groups;
 }
 
+// --- similarity used for the aggressive second-pass merge ---
+// Fraction of the shorter span shared as a contiguous run (0..1).
+function spanLcsRatio(a, b) {
+  const x = normalizeSpan(a);
+  const y = normalizeSpan(b);
+  const shorter = Math.min(x.length, y.length);
+  if (shorter === 0) return 0;
+  return longestCommonSubstringLen(x, y) / shorter;
+}
+
+function tokenize(s) {
+  return new Set(normalizeSpan(s).split(/[^a-z0-9]+/).filter(Boolean));
+}
+
+// Token-set Jaccard similarity (0..1). Empty-vs-empty counts as identical.
+function jaccard(aTokens, bTokens) {
+  if (aTokens.size === 0 && bTokens.size === 0) return 1;
+  let inter = 0;
+  for (const t of aTokens) if (bTokens.has(t)) inter++;
+  const union = aTokens.size + bTokens.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+const GLOSS_SIM_THRESHOLD = 0.5; // token Jaccard for "same thought re-worded"
+const SPAN_MERGE_THRESHOLD = 0.3; // span LCS ratio for the loosened group merge
+
+function glossesSimilar(m, n) {
+  return jaccard(tokenize(m.gloss), tokenize(n.gloss)) >= GLOSS_SIM_THRESHOLD;
+}
+
+// Second pass: merge groups so one story beat = one group. Two groups merge when any
+// cross-group member pair has near-duplicate glosses (Jaccard >= 0.5) OR a span LCS
+// overlap >= 0.3 (looser than the first pass's 0.5). Union-find keeps it transitive
+// and deterministic (roots follow first-seen order).
+function mergeGroups(groups) {
+  const parent = groups.map((_, i) => i);
+  const find = (x) => {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  const union = (a, b) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+  for (let i = 0; i < groups.length; i++) {
+    for (let j = i + 1; j < groups.length; j++) {
+      if (groupsShouldMerge(groups[i], groups[j])) union(i, j);
+    }
+  }
+  const byRoot = new Map();
+  for (let i = 0; i < groups.length; i++) {
+    const r = find(i);
+    if (!byRoot.has(r)) byRoot.set(r, { members: [] });
+    byRoot.get(r).members.push(...groups[i].members);
+  }
+  return [...byRoot.values()];
+}
+
+function groupsShouldMerge(a, b) {
+  for (const m of a.members) {
+    for (const n of b.members) {
+      if (glossesSimilar(m, n)) return true;
+      if (spanLcsRatio(m.span, n.span) >= SPAN_MERGE_THRESHOLD) return true;
+    }
+  }
+  return false;
+}
+
+// Two members are the "same beat" (fold-together) if they quote near-identical spans
+// OR carry near-duplicate glosses. Measured on the run data, the converging variants
+// re-word the same beat with only ~0.13-0.38 gloss token-Jaccard, so gloss-Jaccard
+// alone never folds them — the span-identity arm is what actually collapses the
+// A/B/C triplets (which is exactly the visible "examples all basically the same").
+function sameBeat(m, n) {
+  return spansOverlap(m.span, n.span) || glossesSimilar(m, n);
+}
+
+// Cluster a group's glosses by sameBeat, single-linkage. Each cluster is returned
+// longest-gloss-first so the representative is [0].
+function clusterGlosses(members) {
+  const clusters = [];
+  for (const m of members) {
+    let target = null;
+    for (const c of clusters) {
+      if (c.some((x) => sameBeat(x, m))) {
+        target = c;
+        break;
+      }
+    }
+    if (target) target.push(m);
+    else clusters.push([m]);
+  }
+  for (const c of clusters) c.sort((a, b) => b.gloss.length - a.gloss.length);
+  return clusters;
+}
+
 function djb2(str) {
   let h = 5381;
   for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
@@ -341,7 +456,10 @@ function djb2(str) {
 
 // Expose for a node sanity check when loaded as a module (browser ignores this).
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { spansOverlap, groupNuggets, normalizeSpan, longestCommonSubstringLen };
+  module.exports = {
+    spansOverlap, groupNuggets, mergeGroups, groupsShouldMerge, clusterGlosses, sameBeat,
+    glossesSimilar, spanLcsRatio, jaccard, tokenize, normalizeSpan, longestCommonSubstringLen,
+  };
 }
 
 // ---------- state ----------
@@ -358,11 +476,54 @@ function loadVerdicts() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
+    const v = parsed && typeof parsed === "object" ? parsed : {};
+    if (migrateChipNames(v)) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(v));
+      } catch (e) {
+        console.warn("story-eval: chip migration could not be persisted", e);
+      }
+    }
+    return v;
   } catch (e) {
     console.warn("story-eval: could not read verdicts from localStorage", e);
     return {};
   }
+}
+
+// Rewrite renamed chip values in a persisted verdict store (see CHIP_RENAMES).
+// Returns true if anything changed. Merges rather than duplicates when both the old
+// and new value are already present.
+function renameChipsIn(chips) {
+  if (!chips || typeof chips !== "object") return false;
+  let changed = false;
+  for (const [oldName, newName] of Object.entries(CHIP_RENAMES)) {
+    if (chips[oldName]) {
+      chips[newName] = chips[newName] || chips[oldName];
+      delete chips[oldName];
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function migrateChipNames(store) {
+  let changed = false;
+  for (const doc of Object.keys(store)) {
+    const groups = store[doc];
+    if (!groups || typeof groups !== "object") continue;
+    for (const gid of Object.keys(groups)) {
+      const rec = groups[gid];
+      if (!rec || typeof rec !== "object") continue;
+      if (renameChipsIn(rec.chips)) changed = true;
+      if (rec.glosses && typeof rec.glosses === "object") {
+        for (const bl of Object.keys(rec.glosses)) {
+          if (renameChipsIn(rec.glosses[bl]?.chips)) changed = true;
+        }
+      }
+    }
+  }
+  return changed;
 }
 
 function saveVerdicts() {
@@ -410,7 +571,11 @@ async function load() {
   }
 
   for (const docKey of Object.keys(state.byDoc)) {
-    state.groupsByDoc[docKey] = groupNuggets(state.byDoc[docKey]).map((g) => {
+    // Two passes: conservative span-overlap grouping, then the aggressive merge so
+    // one story beat = one group. Group id stays djb2-of-longest-span (ids may shift
+    // for newly-merged groups — acceptable; stale stored keys just go inert).
+    const merged = mergeGroups(groupNuggets(state.byDoc[docKey]));
+    state.groupsByDoc[docKey] = merged.map((g) => {
       const longest = g.members.reduce((a, b) => (b.span.length > a.span.length ? b : a), g.members[0]);
       return { id: djb2(normalizeSpan(longest.span)), span: longest.span, members: g.members };
     });
@@ -505,11 +670,34 @@ function renderGroup(docKey, group, idx) {
   // group-level critique chips
   el.appendChild(renderChips(docKey, group.id, "group", null, v.chips));
 
-  // glosses, blind-labeled
+  // glosses, blind-labeled. The prompt variants converge, so cluster near-duplicate
+  // glosses and show ONE representative per cluster; the rest fold behind a
+  // "+N similar" toggle (default collapsed). Chips work on the representative and,
+  // once expanded, on each folded gloss.
   const glossWrap = document.createElement("div");
   glossWrap.className = "glosses";
-  for (const nugget of group.members) {
-    glossWrap.appendChild(renderGloss(docKey, group.id, nugget, v));
+  for (const cluster of clusterGlosses(group.members)) {
+    glossWrap.appendChild(renderGloss(docKey, group.id, cluster[0], v));
+    if (cluster.length > 1) {
+      const others = cluster.slice(1);
+      const box = document.createElement("div");
+      box.className = "similar-box";
+      box.hidden = true;
+      for (const other of others) box.appendChild(renderGloss(docKey, group.id, other, v));
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "similar-toggle";
+      const label = (open) => (open ? `hide ${others.length} similar` : `+${others.length} similar`);
+      toggle.textContent = label(false);
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.addEventListener("click", () => {
+        box.hidden = !box.hidden;
+        toggle.textContent = label(!box.hidden);
+        toggle.setAttribute("aria-expanded", String(!box.hidden));
+      });
+      glossWrap.appendChild(toggle);
+      glossWrap.appendChild(box);
+    }
   }
   el.appendChild(glossWrap);
 
@@ -668,7 +856,13 @@ function toggleNote() {
 
 document.addEventListener("keydown", (e) => {
   if (e.target.matches("textarea, input")) {
-    if (e.key === "Escape") e.target.blur();
+    // Enter finishes/closes the note (Shift+Enter still inserts a newline); Escape
+    // also closes. The note is already persisted on every input event, so blur alone
+    // commits it.
+    if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
+      e.preventDefault();
+      e.target.blur();
+    }
     return;
   }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
