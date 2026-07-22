@@ -82,6 +82,13 @@
     padding: 0 0.28rem;
     color: var(--fg);
   }
+  .autosave {
+    font-size: 0.74rem;
+    color: var(--faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: nowrap;
+  }
+  .autosave.fail { color: var(--muted); }
   .actions { margin-left: auto; display: flex; gap: 0.4rem; }
   .actions button {
     font: inherit;
@@ -251,6 +258,7 @@
       <kbd>y</kbd> keep &middot; <kbd>n</kbd> drop &middot; <kbd>t</kbd> note &middot; <kbd>e</kbd> export
       &middot; click chips to flag
     </span>
+    <span class="autosave" id="autosave" aria-live="polite"></span>
   </div>
 </header>
 <main id="main"><p class="empty">Loading run data&hellip;</p></main>
@@ -557,6 +565,63 @@ function saveVerdicts() {
   } catch (e) {
     console.error("story-eval: could not persist verdicts to localStorage", e);
     toast("Warning: could not save (localStorage full or blocked)");
+  }
+  scheduleAutosave();
+}
+
+// ---------- router-backed autosave (best-effort, never blocking) ----------
+// On every change we (debounced) POST the same JSON the export produces to the
+// router's "save" endpoint, which atomically writes it to a working file on
+// disk. This is a durability BACKUP: localStorage stays the live store and manual
+// export (e) is unchanged. The endpoint only exists once this router change has
+// reached main and the shared router restarted; before then — and on any old
+// router — the POST fails and we show a quiet "unavailable" hint. Failures are
+// never noisy and never block triage.
+const AUTOSAVE_DEBOUNCE_MS = 2000;
+let autosaveTimer = null;
+let autosaveInFlight = false;
+let autosavePending = false;
+
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(runAutosave, AUTOSAVE_DEBOUNCE_MS);
+}
+
+async function runAutosave() {
+  if (autosaveInFlight) {
+    autosavePending = true; // coalesce: fire once more after the current POST lands
+    return;
+  }
+  autosaveInFlight = true;
+  try {
+    // Relative URL: resolves to /<prefix>/dev/story-eval/save under any router prefix.
+    const res = await fetch("save", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildExport()),
+    });
+    setAutosaveStatus(res.ok ? "ok" : "fail");
+  } catch {
+    setAutosaveStatus("fail");
+  } finally {
+    autosaveInFlight = false;
+    if (autosavePending) {
+      autosavePending = false;
+      scheduleAutosave();
+    }
+  }
+}
+
+function setAutosaveStatus(kind) {
+  const el = document.getElementById("autosave");
+  if (!el) return;
+  if (kind === "ok") {
+    const t = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    el.textContent = `autosaved ${t}`;
+    el.className = "autosave";
+  } else {
+    el.textContent = "autosave unavailable — export with e";
+    el.className = "autosave fail";
   }
 }
 
