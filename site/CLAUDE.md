@@ -68,3 +68,8 @@ writes the input manifest last (so a partial build never masks staleness).
   `bin/router-site.ts` (compares it to decide whether to auto-rebuild). One
   enumeration, so the two sides can't drift.
 - `content/` — markdown sources (frontmatter: `title`, `summary`).
+- `story/ingest.ts` — story-extraction ingest CLI (`pnpm --dir site ingest`,
+  `--help`): validates raw extraction JSON (strict zod), verifies every span
+  appears verbatim in its source (fabrication = hard error), and writes the
+  review app's run files into `dev/story-eval/runs/<run>/` with `docText`
+  embedded. See the story-extraction subplan, Track B.

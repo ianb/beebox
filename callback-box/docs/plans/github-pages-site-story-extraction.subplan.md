@@ -127,8 +127,15 @@ scales to the point where nobody reads everything, revisit.
   (blind-labeled), and nuggets.
 - **Why**: the span check is the honesty boundary — without it, "extraction"
   can quietly become invention.
-- **First chunk**: ingest.ts + zod schema + span check + tests (valid run
-  ingests; fabricated span rejected named; duplicate-match span flagged).
+- **First chunk** — **shipped 2026-07-22** (`site/story/ingest.ts` + tests):
+  zod-strict validation (criteria 1–8 integers, kebab-case slug/tags,
+  confidence enum), verbatim span check (0 → hard error naming the nugget;
+  >1 → `spanCheck: "ambiguous"`), run files carry an embedded `docText`, and
+  build-everything-before-writing keeps a fabrication fail-closed. Tests cover
+  valid ingest, fabricated-span-rejected-by-name, ambiguous flag, criterion 12
+  rejected, malformed tags, and docText embedding. Verified by re-ingesting
+  run-003's v1-activities-retro (output matches the committed file modulo
+  `docText`).
 
 ### Track C — the review app
 
