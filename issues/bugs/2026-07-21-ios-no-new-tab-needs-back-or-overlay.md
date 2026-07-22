@@ -3,7 +3,28 @@ title: "iOS: 'open in a new tab' does nothing — needs in-place nav (+ back) or
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it trying to focus a card on iOS
+needs: [manual-testing]
 ---
+
+## Implemented 2026-07-21
+
+The native wrapper now handles WebKit new-window requests at one boundary:
+
+- same-origin links load in the existing `WKWebView`, preserving its history and
+  existing edge-swipe back gesture;
+- cross-origin and non-web links go to the system URL handler instead of taking
+  the box WebView away from the app;
+- no individual web affordances need native-shell detection or special cases.
+
+Automated coverage exercises the same-origin, cross-origin, and non-web routing
+decisions and their side effects. The full iOS test suite and a signing-free
+simulator build pass.
+
+Manual verification remains: in the native app, try an internal “Open as full
+page” / “Open in browse view” link and confirm it replaces the current view and
+edge-swipe returns; then try an external Markdown/source link and confirm it
+opens outside the app. The separate mobile “expand the tab” layout idea below
+is not part of this bug fix.
 
 On iOS (the native `WKWebView` wrapper) you can't open things in a new tab — e.g.
 tapping "open as full page" to focus a card does nothing. The web app leans on
