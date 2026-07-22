@@ -16,32 +16,30 @@
  *   GET  /auth/callback — exchange code for token, set session cookie
  */
 
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { IncomingMessage } from "node:http";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { z } from "zod";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { invariant } from "../../lib/invariant.js";
-import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import {
-  signSession,
   getSessionUser,
   getOwnerEmail,
   isHubMode,
   resolveRequestIdentity,
   COOKIE_NAME,
-  SESSION_MAX_AGE_MS,
-  type SessionUser,
 } from "../auth.js";
 import { canAccessBox } from "../box-access.js";
 import { readBasePrefix } from "../base-prefix.js";
 import type { BoxSpec } from "../server.js";
 import { getGoogleClientCreds } from "../../connectors/google-auth.js";
 import { registerAuthRoutes } from "./auth-google.js";
-import { canonicalizeEmail, createFirstUser, listUsers, verifyPassword } from "../local-users.js";
-import { AuthStoreUnavailableError, OwnerEmailMismatchError, UserExistsError } from "../local-users-errors.js";
-import { CONCURRENCY_RETRY_MS, loginThrottle } from "../login-throttle.js";
-import { checkSetupToken, clearSetupToken } from "../setup-token.js";
+import { listUsers } from "../local-users.js";
+import { AuthStoreUnavailableError } from "../local-users-errors.js";
+import {
+  renderLoginPage,
+  renderSetupPage,
+  sanitizeReturnTo,
+  type LoginPageState,
+  type SetupErrorKind,
+} from "../login-page.js";
+import { handleLoginPost, handleSetupPost } from "./auth-password-post.js";
 
 export interface AuthRoutesOptions {
   boxes: BoxSpec[];
@@ -94,160 +92,35 @@ export async function registerAuthSurface(server: FastifyInstance, options: Auth
   registerAuthMe(server, options);
 }
 
-// Bounded inputs (FIX 4 — DoS): email at the RFC-max 254, password 1024, name
-// 200, token 256. Caps the parsed fields on top of the raw-body cap below.
-const loginBodySchema = z.object({ email: z.string().max(254), password: z.string().max(1024) });
-const setupBodySchema = z.object({
-  email: z.string().max(254),
-  name: z.string().max(200),
-  password: z.string().max(1024),
-  token: z.string().max(256),
-});
-
-/** Cap on the raw request body these auth routes will read — they carry tiny
- *  JSON, so anything larger is abuse. Also bounds the hub raw-body read below. */
-const MAX_AUTH_BODY_BYTES = 16 * 1024;
-/** Cap the raw-body read (hub path only) so a client that opens the connection
- *  and then dribbles/stalls the body can't hold the request open indefinitely
- *  (a slow-loris on the hub's own login endpoint). Prod's reverse proxy also
- *  bounds this, but the read defends itself regardless. */
-const MAX_AUTH_BODY_READ_MS = 10_000;
-
-/** Truncate a user-supplied string before logging so a failed/throttled attempt
- *  can't amplify log volume with a giant "email" (FIX 4). */
-function forLog(value: string): string {
-  return value.length > 128 ? `${value.slice(0, 128)}…` : value;
+/** Map the `?error=` query on the bare setup page to a known error kind. */
+function parseSetupError(raw: string | undefined): SetupErrorKind | null {
+  if (raw === "token" || raw === "exists" || raw === "mismatch" || raw === "generic") return raw;
+  return null;
 }
 
-/**
- * Read the JSON body for an auth POST, working in BOTH server modes (FIX 2):
- *
- * - **Standalone**: Fastify's JSON content-type parser already populated
- *   `request.body`, so it's returned as-is (the path stays byte-identical).
- * - **Behind `cb hub`**: the hub installs a wildcard content-type parser that
- *   `done(null)`s WITHOUT reading the stream (so it can proxy raw bodies to
- *   children), leaving `request.body` undefined for the hub's OWN routes. Here
- *   the still-readable `request.raw` stream is drained (bounded by
- *   `MAX_AUTH_BODY_BYTES`) and JSON-parsed.
- *
- * Throws (oversize or invalid JSON) — the caller answers 400.
- */
-async function readJsonBody(request: FastifyRequest): Promise<unknown> {
-  // `request.body !== undefined` — NOT `isRecord(...)` — is the correct test for
-  // "a content-type parser already consumed the stream". Standalone, Fastify's
-  // JSON parser populates `body` for EVERY valid JSON value (array, null,
-  // string, number, object); an `isRecord` check would misread those as
-  // unparsed and then wait on stream events that already fired, stalling until
-  // the read timeout. Behind the hub, the wildcard parser leaves `body`
-  // undefined without draining, so we read the raw stream. A non-object body
-  // (e.g. `[]`) falls through to the Zod safeParse below, which rejects it fast.
-  if (request.body !== undefined) return request.body;
-  const raw = await readRawBody(request.raw);
-  return JSON.parse(raw);
-}
-
-class AuthBodyTooLargeError extends Error {
-  constructor() {
-    super(`Auth request body exceeds ${MAX_AUTH_BODY_BYTES} bytes.`);
-    this.name = "AuthBodyTooLargeError";
+/** Whether the bare login page should show the first-run setup hint: auth is on
+ *  and no account exists yet. A corrupt store degrades to "no hint" (login itself
+ *  surfaces the store problem per-request). */
+function computeSetupRequired(request: FastifyRequest): boolean {
+  if (request.server.openAccess) return false;
+  try {
+    return listUsers().length === 0;
+  } catch (e) {
+    if (e instanceof AuthStoreUnavailableError) return false;
+    throw e;
   }
 }
 
-class AuthBodyReadTimeoutError extends Error {
-  constructor() {
-    super(`Auth request body not received within ${MAX_AUTH_BODY_READ_MS}ms.`);
-    this.name = "AuthBodyReadTimeoutError";
-  }
-}
-
-function readRawBody(raw: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let size = 0;
-    const timer = setTimeout(() => {
-      raw.destroy();
-      reject(new AuthBodyReadTimeoutError());
-    }, MAX_AUTH_BODY_READ_MS);
-    raw.on("data", (chunk: Buffer) => {
-      size += chunk.length;
-      if (size > MAX_AUTH_BODY_BYTES) {
-        clearTimeout(timer);
-        raw.destroy();
-        reject(new AuthBodyTooLargeError());
-        return;
-      }
-      chunks.push(chunk);
-    });
-    raw.on("end", () => {
-      clearTimeout(timer);
-      resolve(Buffer.concat(chunks).toString("utf-8"));
-    });
-    raw.on("error", (e) => {
-      clearTimeout(timer);
-      reject(e);
-    });
-  });
-}
-
-/**
- * Rewrite the login SPA's absolute asset references to carry the fronting
- * proxy's path prefix. The built `index.html` names its bundles by absolute
- * root path (`"/assets/…"`, `"/icons/…"`, `"/manifest.webmanifest"`), baked by
- * Vite at base="/"; behind a `/<prefix>` mount the browser would request them
- * at the origin root, where the dev router reads the first segment as a
- * worktree name and 404s (a blank `#root`). Rewriting the roots to
- * `"<prefix>/assets/"` etc. makes them resolve under the mount. Scoped to the
- * leading-double-quote-anchored roots (attribute values) so it can never
- * corrupt body text, and only for the exact roots Vite emits. Called ONLY with
- * a non-empty prefix — the empty-prefix (prod, standalone) path serves the
- * built HTML byte-for-byte, so prod's served bytes never change.
- */
-function rewriteSpaAssetBase({ html, prefix }: { html: string; prefix: string }): string {
-  return html
-    .replaceAll("\"/assets/", `"${prefix}/assets/`)
-    .replaceAll("\"/icons/", `"${prefix}/icons/`)
-    .replaceAll("\"/manifest.webmanifest\"", `"${prefix}/manifest.webmanifest"`);
-}
-
-/** Serve the SPA (its frontend router owns the login/setup screens). Bundles are
- *  public pre-auth by design — the client must load before a user can
- *  auth-navigate. Behind a fronting proxy that strips a `/<prefix>` (the dev
- *  router in dev, the hub for its children), the built HTML's absolute asset
- *  refs are rewritten to carry that prefix from the trusted `x-cb-base-prefix`
- *  header; with no prefix the built bytes are served verbatim. Degrades to a
- *  minimal built-in page when the bundle isn't built, the same shape the box
- *  picker / SPA fallback use elsewhere. */
-function serveLoginSpa(reply: FastifyReply, { request, frontendDist }: { request: FastifyRequest; frontendDist: string }): FastifyReply {
-  const indexHtml = path.join(frontendDist, "index.html");
-  if (fs.existsSync(indexHtml)) {
-    const html = fs.readFileSync(indexHtml, "utf-8");
-    const prefix = readBasePrefix(request.headers);
-    // Empty prefix (prod, standalone `cb serve` — no fronting proxy, no header)
-    // serves the built HTML byte-for-byte: the invariant that keeps prod's
-    // asset paths, and its served bytes, identical to before Track A.
-    return reply.type("text/html").send(prefix === "" ? html : rewriteSpaAssetBase({ html, prefix }));
-  }
-  return reply.type("text/html").send(
-    "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Callback Box — Sign in</title></head>" +
-      "<body style=\"font-family:system-ui,sans-serif;max-width:640px;margin:2rem auto;padding:0 1rem\">" +
-      "<h1>Sign in</h1><p>The frontend bundle is not built. Build it with " +
-      "<code>pnpm build:frontend</code>, or create the first account on the host with " +
-      "<code>cb auth create-user</code>.</p></body></html>",
-  );
-}
-
-/** Sign a session for `user` and set the `cb_session` cookie — the SAME options
- *  the Google callback uses (`path:/`, httpOnly, `secure` iff https, sameSite
- *  lax, the 30-day max-age). Signs via `signSession` only, so the cookie shape
- *  stays the single one Track D extends with `gen`. */
-function setSessionCookie(reply: FastifyReply, { request, user }: { request: FastifyRequest; user: SessionUser }): void {
-  reply.setCookie(COOKIE_NAME, signSession(user), {
-    path: "/",
-    httpOnly: true,
-    secure: request.protocol === "https",
-    sameSite: "lax",
-    maxAge: SESSION_MAX_AGE_MS / 1000,
-  });
+/** Assemble the bare login page's server-rendered state from a GET request. */
+function loginPageState(request: FastifyRequest, query: { returnTo?: string; error?: string }): LoginPageState {
+  const prefix = readBasePrefix(request.headers);
+  return {
+    prefix,
+    returnTo: sanitizeReturnTo({ raw: query.returnTo, prefix }),
+    error: query.error === "1",
+    googleConfigured: getGoogleClientCreds() !== null,
+    setupRequired: computeSetupRequired(request),
+  };
 }
 
 /**
@@ -256,19 +129,38 @@ function setSessionCookie(reply: FastifyReply, { request, user }: { request: Fas
  * a loud failure rather than a silent security hole (a hub-mode child hosting
  * credential verification would be exactly the drift the header-gating exists to
  * prevent).
+ *
+ * The login/setup GETs serve fully self-contained, server-rendered HTML (no
+ * external or gated assets — see `login-page.ts`), so a logged-out user gets a
+ * working login page even behind the authenticating dev router. The POSTs
+ * (`auth-password-post.ts`) accept both the bare page's form submission and the
+ * SPA/programmatic JSON API.
  */
 function registerPasswordRoutes(server: FastifyInstance): void {
   invariant(!isHubMode(), "registerPasswordRoutes must never run in hub mode — the hub owns fleet login");
-  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
 
-  server.get("/auth/login", async (request, reply) => serveLoginSpa(reply, { request, frontendDist }));
-  server.get("/auth/setup", async (request, reply) => serveLoginSpa(reply, { request, frontendDist }));
+  // Accept the bare pages' `application/x-www-form-urlencoded` POSTs. This parser
+  // `done(null)`s WITHOUT draining (the SAME shape the hub's `*` parser uses), so
+  // the handler reads the still-readable raw stream itself and the hub's raw-body
+  // proxying is unaffected. Without it, a standalone box would 415 a form POST.
+  // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
+  server.addContentTypeParser("application/x-www-form-urlencoded", (_request, _payload, done) => done(null));
+
+  server.get<{ Querystring: { returnTo?: string; error?: string } }>("/auth/login", async (request, reply) => {
+    return reply.type("text/html").send(renderLoginPage(loginPageState(request, request.query)));
+  });
+  server.get<{ Querystring: { token?: string; error?: string } }>("/auth/setup", async (request, reply) => {
+    const prefix = readBasePrefix(request.headers);
+    return reply
+      .type("text/html")
+      .send(renderSetupPage({ prefix, token: request.query.token ?? null, error: parseSetupError(request.query.error) }));
+  });
 
   server.get("/auth/logout", async (_request, reply) => {
     return reply.clearCookie(COOKIE_NAME, { path: "/" }).redirect("/");
   });
 
-  // Advertise available methods so the SPA renders the right form without probing.
+  // Advertise available methods so any programmatic caller reads the same shape.
   server.get("/auth/methods", async (request) => {
     return {
       password: true,
@@ -277,129 +169,8 @@ function registerPasswordRoutes(server: FastifyInstance): void {
     };
   });
 
-  server.post("/auth/login", async (request, reply) => {
-    let body: unknown;
-    try {
-      body = await readJsonBody(request);
-    } catch (_e) {
-      /* ignore: oversize/unparseable auth body is untrusted input — answer 400
-         without logging, so a malformed request can't amplify logs (FIX 2/4). */
-      return reply.status(400).send({ error: "Invalid request" });
-    }
-    const parsed = loginBodySchema.safeParse(body);
-    if (!parsed.success) return reply.status(400).send({ error: "Invalid request" });
-    const email = canonicalizeEmail(parsed.data.email);
-    const ip = request.ip;
-
-    const decision = loginThrottle.check({ ip, email, now: Date.now() });
-    if (!decision.allowed) {
-      console.warn(`[auth] throttled login for ${JSON.stringify(forLog(email))} from ${ip}`);
-      return reply.status(429).send({ error: "Too many attempts, please wait", retryAfterMs: decision.retryAfterMs });
-    }
-    if (!loginThrottle.acquireHashSlot()) {
-      console.warn(`[auth] login verification capacity reached; rejecting ${JSON.stringify(forLog(email))} from ${ip}`);
-      return reply.status(429).send({ error: "Server busy, please retry", retryAfterMs: CONCURRENCY_RETRY_MS });
-    }
-
-    let user;
-    try {
-      user = await verifyPassword({ email, password: parsed.data.password });
-    } catch (e) {
-      if (e instanceof AuthStoreUnavailableError) {
-        console.error("[auth] login failed — credential store unavailable:", e);
-        return reply.status(503).send({ error: "Login temporarily unavailable" });
-      }
-      throw e;
-    } finally {
-      loginThrottle.releaseHashSlot();
-    }
-
-    if (!user) {
-      loginThrottle.recordFailure({ ip, email, now: Date.now() });
-      console.warn(`[auth] failed login for ${JSON.stringify(forLog(email))} from ${ip}`);
-      // Unknown user and wrong password answer identically — no user enumeration.
-      return reply.status(401).send({ error: "Invalid credentials" });
-    }
-    loginThrottle.recordSuccess({ ip, email });
-    setSessionCookie(reply, { request, user: { email: user.email, name: user.name } });
-    return reply.status(204).send();
-  });
-
-  server.post("/auth/setup", async (request, reply) => {
-    let body: unknown;
-    try {
-      body = await readJsonBody(request);
-    } catch (_e) {
-      /* ignore: oversize/unparseable auth body is untrusted input — answer 400
-         without logging, so a malformed request can't amplify logs (FIX 2/4). */
-      return reply.status(400).send({ error: "Invalid request" });
-    }
-    const parsed = setupBodySchema.safeParse(body);
-    if (!parsed.success) return reply.status(400).send({ error: "Invalid request" });
-
-    let existingUsers: number;
-    try {
-      existingUsers = listUsers().length;
-    } catch (e) {
-      if (e instanceof AuthStoreUnavailableError) {
-        console.error("[auth] setup failed — credential store unavailable:", e);
-        return reply.status(503).send({ error: "Setup temporarily unavailable" });
-      }
-      throw e;
-    }
-    // Once an account exists, setup is permanently closed.
-    if (existingUsers > 0) {
-      return reply
-        .status(410)
-        .send({ error: "Setup already complete", message: "An account already exists; sign in at /auth/login." });
-    }
-
-    const email = canonicalizeEmail(parsed.data.email);
-    const ip = request.ip;
-    const now = Date.now();
-
-    const decision = loginThrottle.check({ ip, email, now });
-    if (!decision.allowed) {
-      console.warn(`[auth] throttled setup for ${JSON.stringify(forLog(email))} from ${ip}`);
-      return reply.status(429).send({ error: "Too many attempts, please wait", retryAfterMs: decision.retryAfterMs });
-    }
-
-    const tokenStatus = checkSetupToken({ token: parsed.data.token, now });
-    if (tokenStatus !== "valid") {
-      loginThrottle.recordFailure({ ip, email, now });
-      if (tokenStatus === "mismatch") {
-        console.warn(`[auth] setup rejected — invalid token from ${ip}`);
-        return reply.status(403).send({ error: "Invalid setup token" });
-      }
-      // "expired" | "absent": the one-time capability is gone.
-      return reply.status(410).send({
-        error: "Setup token expired",
-        message: "Restart the server to print a fresh setup link, or run `cb auth create-user` on the host.",
-      });
-    }
-
-    // Setup hashes a password too (createFirstUser → scrypt), so it must take the
-    // SAME global concurrency slot login does (FIX 6) — otherwise concurrent
-    // setup POSTs bypass the ~128MB-per-hash cap and can OOM the process.
-    if (!loginThrottle.acquireHashSlot()) {
-      console.warn(`[auth] setup verification capacity reached; rejecting ${JSON.stringify(forLog(email))} from ${ip}`);
-      return reply.status(429).send({ error: "Server busy, please retry", retryAfterMs: CONCURRENCY_RETRY_MS });
-    }
-    try {
-      const owner = await createFirstUser({ email, name: parsed.data.name, password: parsed.data.password });
-      clearSetupToken();
-      loginThrottle.recordSuccess({ ip, email });
-      setSessionCookie(reply, { request, user: { email: owner.email, name: owner.name } });
-      return reply.status(204).send();
-    } catch (e) {
-      // Lost the O_EXCL race (a second setup won): the winner already created it.
-      if (e instanceof UserExistsError) return reply.status(409).send({ error: "An account already exists" });
-      if (e instanceof OwnerEmailMismatchError) return reply.status(400).send({ error: e.message });
-      throw e;
-    } finally {
-      loginThrottle.releaseHashSlot();
-    }
-  });
+  server.post("/auth/login", async (request, reply) => handleLoginPost(request, reply));
+  server.post("/auth/setup", async (request, reply) => handleSetupPost(request, reply));
 }
 
 /**
