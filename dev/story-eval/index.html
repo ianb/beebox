@@ -220,8 +220,8 @@
   <div class="meta-row">
     <span class="progress" id="progress"></span>
     <span class="help">
-      <kbd>j</kbd>/<kbd>&darr;</kbd> next &middot; <kbd>&uarr;</kbd> prev &middot;
-      <kbd>k</kbd> keep &middot; <kbd>d</kbd> drop &middot; <kbd>t</kbd> note &middot; <kbd>e</kbd> export
+      <kbd>j</kbd>/<kbd>k</kbd> down/up &middot;
+      <kbd>y</kbd> keep &middot; <kbd>d</kbd> drop &middot; <kbd>t</kbd> note &middot; <kbd>e</kbd> export
       &middot; click chips to flag
     </span>
   </div>
@@ -680,12 +680,13 @@ document.addEventListener("keydown", (e) => {
       setFocus(state.focusIndex + 1);
       updateProgress();
       break;
+    case "k":
     case "ArrowUp":
       e.preventDefault();
       setFocus(state.focusIndex - 1);
       updateProgress();
       break;
-    case "k":
+    case "y":
       e.preventDefault();
       if (groups.length) setDecision(state.focusIndex, "keep");
       break;
