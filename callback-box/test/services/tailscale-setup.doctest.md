@@ -60,6 +60,21 @@ const setPathOf = (args) => {
 function makeServeSim(state) {
   state.serve = state.serve ?? {};
   const calls = [];
+  const sleeps = [];
+  // `servedRouterProbe` may be a SEQUENCE (array): one ProbeResult per served
+  // `/__router/status` call, falling back to the last element when exhausted —
+  // models the first-serve cert race (`{reachable:false}` a few times, then the
+  // guarded 401). A single value keeps answering the same, as before.
+  let servedIdx = 0;
+  const nextServed = () => {
+    const sp = state.servedRouterProbe;
+    if (Array.isArray(sp)) {
+      const v = sp[Math.min(servedIdx, sp.length - 1)];
+      servedIdx++;
+      return v;
+    }
+    return sp ?? state.routerProbe ?? { reachable: false, status: null };
+  };
   const hostPort = () => `${(state.status.Self?.DNSName ?? "").replace(/\.$/, "")}:443`;
   const deps = {
     run: (cmd, args) => {
@@ -106,7 +121,7 @@ function makeServeSim(state) {
         // the fail-closed case setup must catch. `servedRouterProbe` overrides the
         // served answer; both default to `routerProbe`.
         if (url.includes("127.0.0.1")) return Promise.resolve(state.routerProbe ?? { reachable: false, status: null });
-        return Promise.resolve(state.servedRouterProbe ?? state.routerProbe ?? { reachable: false, status: null });
+        return Promise.resolve(nextServed());
       }
       // Only the injected non-loopback addresses answer as "external"; the served
       // tailnet https URL and loopback /auth/me both model the box (state.probe).
@@ -116,8 +131,11 @@ function makeServeSim(state) {
       return Promise.resolve(state.probe ?? { reachable: false, status: null });
     },
     networkInterfaces: () => state.networkAddresses ?? [],
+    // Instant sleep; record durations so a test can prove the retry loop did
+    // (or did NOT) spin.
+    sleep: (ms) => { sleeps.push(ms); return Promise.resolve(); },
   };
-  return { deps, calls };
+  return { deps, calls, sleeps };
 }
 
 // Non-interactive I/O: `--no-wait`. Never blocks on a prompt.
@@ -350,6 +368,46 @@ const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: n
 ]
 ```
 
+## Track C: first-serve cert race → retry the served probe until guarded → succeed
+
+The FIRST `tailscale serve --https=443` triggers Let's Encrypt cert issuance, so
+the served `/__router/status` is unreachable for a few seconds before the gate
+answers. Setup RETRIES the served probe (sleeping via the injected seam — instant
+here) instead of falsely concluding "never became reachable"; once the guarded
+401+header lands it records exposure and succeeds.
+
+```ts
+const state = {
+  status: runningStatus,
+  serve: {},
+  routerProbe: guardedRouterProbe, // loopback: guarded → configure Serve
+  // served: unreachable twice (cert provisioning), then the guarded 401+header.
+  servedRouterProbe: [
+    { reachable: false, status: null },
+    { reachable: false, status: null },
+    guardedRouterProbe,
+  ],
+};
+const sim = makeServeSim(state);
+const result = await runTailscaleSetup(sim.deps, { target: { port: 3272 }, io: noWaitIo });
+[
+  result.ok,
+  result.message.includes("guarded dev router"),
+  sim.sleeps.length,                                        // retried past 2 unreachable probes
+  loadExposureFile().targets.some((t) => t.port === 3272),  // exposure recorded after proof
+]
+=> [
+  true,
+  true,
+  2,
+  true
+]
+```
+
+```ts cleanup
+await clearExposure(3272);
+```
+
 ## Track C: served anonymous probe returns 200 → tear down, refuse, record nothing
 
 The gate classifies guarded on loopback but is NOT isolated over Serve (the
@@ -373,6 +431,7 @@ const result = await runTailscaleSetup(sim.deps, { target: { port: 3270 }, io: n
   sim.calls.includes("tailscale serve --https=443 --set-path=/ off"),    // then torn down
   state.serve.Web?.["box.tail1234.ts.net:443"] ?? null,                  // mapping gone
   loadExposureFile().targets.some((t) => t.port === 3270),               // NO exposure recorded
+  sim.sleeps.length,                                                     // reachable-but-wrong: NO retry spin
 ]
 => [
   false,
@@ -380,7 +439,8 @@ const result = await runTailscaleSetup(sim.deps, { target: { port: 3270 }, io: n
   true,
   true,
   null,
-  false
+  false,
+  0
 ]
 ```
 
