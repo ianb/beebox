@@ -1,13 +1,49 @@
 /**
- * Tailscale section: static instructions for reaching this box privately over a
+ * Tailscale section: instructions for reaching this box privately over a
  * tailnet. Informational only — `cb tailscale status/setup/stop` run on the
  * server host, not the browser, so this section points at those commands and
- * Tailscale's own docs rather than driving them live.
+ * Tailscale's own docs rather than driving them live. The one dynamic bit: when
+ * the page is viewed on a loopback address we fill in `--target` from the URL's
+ * own port (see `useLocalTargetPort`).
  */
 
+import { useEffect, useState } from "react";
 import { ExternalLink } from "../ui/ExternalLink";
 
+/** The dev router listens here (`bin/router.ts` ROUTER_PORT). We don't pre-fill
+ *  it as a *per-box* `--target`: viewing `/admin` on `localhost:3210` means
+ *  you're on the router, and exposing the *whole* authenticated router is the
+ *  explicit dev-machine path (the note at the bottom of this section), not a
+ *  single-box setup. */
+const DEV_ROUTER_PORT = "3210";
+
+/**
+ * The loopback port to pre-fill into `cb tailscale setup --target`, or null.
+ *
+ * When the admin page is viewed on a loopback host, the port in the browser's
+ * own URL IS the loopback port serving this box — exactly the per-box target to
+ * expose. The dev router port (3210) is excluded: on it you'd expose the whole
+ * router (the bottom note), not one box. Read in an effect so SSR and the first
+ * client render agree (both null) and only the post-mount render fills it in —
+ * no hydration mismatch. Null for SSR, non-loopback hosts, the dev router port,
+ * and port-less URLs.
+ */
+function useLocalTargetPort(): string | null {
+  const [port, setPort] = useState<string | null>(null);
+  useEffect(() => {
+    const { hostname, port: locPort } = window.location;
+    const isLoopback =
+      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
+    if (isLoopback && locPort !== "" && locPort !== DEV_ROUTER_PORT) setPort(locPort);
+  }, []);
+  return port;
+}
+
+const CODE = "text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded";
+
 export function TailscaleSection() {
+  const localPort = useLocalTargetPort();
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center gap-2 mb-2">
@@ -31,13 +67,20 @@ export function TailscaleSection() {
         </li>
         <li>
           On the machine running this box, run{" "}
-          <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale setup</code>{" "}
-          (it auto-detects the port; pass{" "}
-          <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">--target &lt;port&gt;</code>{" "}
-          only for a non-standard setup). It checks what&rsquo;s already set up, walks you
-          through each remaining step, and prints your private{" "}
-          <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">https://…ts.net</code>{" "}
-          address when it&rsquo;s ready.
+          {localPort !== null ? (
+            <>
+              <code className={CODE}>cb tailscale setup --target {localPort}</code>{" "}
+              (port {localPort}, detected from this page&rsquo;s address).
+            </>
+          ) : (
+            <>
+              <code className={CODE}>cb tailscale setup</code> (it auto-detects the port; pass{" "}
+              <code className={CODE}>--target &lt;port&gt;</code> only for a non-standard setup).
+            </>
+          )}{" "}
+          It checks what&rsquo;s already set up, walks you through each remaining step, and
+          prints your private <code className={CODE}>https://…ts.net</code> address when
+          it&rsquo;s ready.
         </li>
         <li>
           To let family members in, invite them to your tailnet.{" "}
@@ -46,11 +89,16 @@ export function TailscaleSection() {
       </ol>
 
       <p className="text-sm text-warm-600">
-        Run{" "}
-        <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale status</code>{" "}
-        any time to see where things stand, or{" "}
-        <code className="text-xs bg-warm-100 text-warm-800 px-1 py-0.5 rounded">cb tailscale stop</code>{" "}
-        to take the box back off the network.
+        Run <code className={CODE}>cb tailscale status</code> any time to see where things
+        stand, or <code className={CODE}>cb tailscale stop</code> to take the box back off
+        the network.
+      </p>
+
+      <p className="text-sm text-warm-600 mt-4">
+        On a dev machine, point this at the shared dev router instead of a single box —{" "}
+        <code className={CODE}>cb tailscale setup --target &lt;router-port&gt;</code> (e.g.{" "}
+        <code className={CODE}>3210</code>) exposes the whole authenticated router, every
+        worktree and box, over the tailnet. One login gets you all of it, remotely.
       </p>
     </div>
   );

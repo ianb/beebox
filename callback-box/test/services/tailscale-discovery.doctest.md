@@ -151,7 +151,7 @@ const discovered = await resolveTargetOrDiscover({ target: undefined, hubConfigP
 const deps = createFakeTailscaleDeps({
   status: runningStatus,
   serve: {},
-  probe: { reachable: true, status: 200, body: JSON.stringify({ routerPort: 3210, worktrees: {} }) },
+  routerProbe: { reachable: true, status: 200, body: JSON.stringify({ routerPort: 3210, worktrees: {} }) },
 });
 const result = discovered.ok
   ? await runTailscaleSetup(deps, { target: discovered.target, io: noWaitIo })

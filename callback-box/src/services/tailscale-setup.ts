@@ -25,7 +25,7 @@ import {
   type TailscaleDeps,
   type TailscaleTarget,
 } from "./tailscale.js";
-import { classifyTargetPosture, describeRefusal } from "./tailscale-target.js";
+import { classifyTargetPosture, describeRefusal, looksLikeGuardedRouter } from "./tailscale-target.js";
 import { runTailscaleStatus } from "./tailscale-status.js";
 
 /** Injected operator I/O so the guided loop is testable without a real TTY. */
@@ -60,13 +60,85 @@ async function configureServe(deps: TailscaleDeps, port: number): Promise<Tailsc
   return { ok: true, message: "configured" };
 }
 
-/** Guard the two probe-then-record paths: refuse unless the loopback target is
- *  proven to be an auth-enforcing callback-box (not the router, not a
- *  non-loopback bind, not open/ambiguous). Fail closed on everything else. */
-async function ensureEnforced(deps: TailscaleDeps, port: number): Promise<TailscaleActionResult | null> {
+/** The two postures that clear exposure — a normal auth-enforcing cb serve/hub,
+ *  or the Track-B-guarded dev router (its gate denies anonymous access). */
+type ExposablePosture = "enforced" | "router-guarded";
+type ExposableOutcome = { ok: true; posture: ExposablePosture } | { ok: false; message: string };
+
+/** Classify the loopback target into an exposable posture, or a refusal. Fail
+ *  closed on everything that is neither an enforced cb nor a guarded router. */
+async function classifyExposable(deps: TailscaleDeps, port: number): Promise<ExposableOutcome> {
   const posture = await classifyTargetPosture(deps, port);
-  if (posture.kind !== "enforced") return { ok: false, message: describeRefusal(posture, port) };
-  return null;
+  if (posture.kind === "enforced") return { ok: true, posture: "enforced" };
+  if (posture.kind === "router-guarded") return { ok: true, posture: "router-guarded" };
+  return { ok: false, message: describeRefusal(posture, port) };
+}
+
+/** Best-effort removal of the `--https=443 --set-path=/` mapping this run wrote
+ *  for the router — used when the over-Serve proof fails. Returns a human note
+ *  (whether it came down, or must be removed manually). */
+async function tearDownRouterServe(deps: TailscaleDeps): Promise<string> {
+  const off = await deps.run("tailscale", ["serve", "--https=443", "--set-path=/", "off"]);
+  if (!off.spawned) {
+    return "Could NOT tear the serve mapping down (`tailscale` not on PATH) — remove it manually with `tailscale serve status`.";
+  }
+  if (off.code !== 0) {
+    return `Could NOT tear the serve mapping down (\`tailscale serve … off\` exited ${off.code ?? "null"}) — remove it manually with \`tailscale serve status\`.`;
+  }
+  return "Tore the serve mapping back down (nothing left exposed).";
+}
+
+/**
+ * The router's anonymous-denial-over-Serve PROOF (Track C): Serve is already
+ * fronting the loopback router port, so probe the SERVED
+ * `https://<dnsName>/__router/status` with NO credentials and REQUIRE a 401 plus
+ * the `x-cb-router-guarded` header. Only that confirmed guarded denial records
+ * exposure intent. A 200 (ungated router) or a missing header (the gate is not
+ * live end-to-end, or Serve is not isolating) means anonymous access is NOT
+ * denied over the real tailnet path — tear the just-written mapping back down and
+ * refuse WITHOUT recording. Serve is live here, so refusing-and-tearing-down is
+ * the fail-closed direction.
+ */
+async function settleRouterExposure(
+  deps: TailscaleDeps,
+  { port, dnsName }: { port: number; dnsName: string },
+): Promise<TailscaleActionResult> {
+  const url = `https://${dnsName}/`;
+  const probe = await deps.probe(`${url}__router/status`);
+  if (looksLikeGuardedRouter(probe)) {
+    await recordExposure({ port, dnsName });
+    return {
+      ok: true,
+      message: `Exposed the guarded dev router at ${url} (loopback:${port}). Anonymous \`/__router/status\` over Serve returned 401 — the auth gate is live end-to-end. Serve config + exposure intent recorded.`,
+    };
+  }
+  const detail = probe.reachable
+    ? `the served ${url}__router/status returned ${probe.status ?? "no status"} WITHOUT the guarded-router 401+header`
+    : `the served ${url}__router/status did not respond`;
+  await tearDownRouterServe(deps);
+  // Fail CLOSED on the teardown itself: Serve is live at this point, so if the
+  // proof failed we must PROVE the mapping came back down (readback), not assume
+  // it. If it can't be proven gone (teardown errored, or the mapping survives),
+  // a live Serve mapping may still front a NOT-proven-guarded router — record the
+  // exposure intent so `cb tailscale stop`/`status` can find and remove it, and
+  // fail loudly, rather than silently orphaning it.
+  const after = await readServeConfig(deps);
+  const stillMapped = !after.ok || matchingTargetMappings(after.serve, port).length > 0;
+  if (stillMapped) {
+    await recordExposure({ port, dnsName });
+    return {
+      ok: false,
+      message:
+        `REFUSING to expose loopback:${port} — ${detail}, so anonymous access is NOT proven denied over Serve. ` +
+        `The serve mapping could NOT be proven torn down (${after.ok ? "it still fronts the port" : after.reason}) — ` +
+        "it may still be LIVE fronting a router whose gate is unproven. Recorded exposure intent so it is tracked; " +
+        `remove it NOW with \`cb tailscale stop --target ${port}\` (or \`tailscale serve status\`).`,
+    };
+  }
+  return {
+    ok: false,
+    message: `REFUSING to expose loopback:${port} — ${detail}, so anonymous access is NOT proven denied end-to-end over Serve. Tore the serve mapping back down (confirmed removed); no exposure recorded.`,
+  };
 }
 
 const MAX_SETUP_STEPS = 12;
@@ -106,8 +178,19 @@ async function writeServeWithIntent(
       },
     };
   }
-  const refusal = await ensureEnforced(deps, port);
-  if (refusal) return { done: refusal };
+  const exposable = await classifyExposable(deps, port);
+  if (!exposable.ok) return { done: { ok: false, message: exposable.message } };
+
+  if (exposable.posture === "router-guarded") {
+    // The router case is proven over Serve, not on loopback: configure Serve
+    // first, then require the served anonymous 401+header BEFORE recording. On a
+    // failed proof `settleRouterExposure` tears the mapping down and records
+    // nothing, so we return its terminal result directly (no F1 pre-record).
+    const configured = await configureServe(deps, port);
+    if (!configured.ok) return { done: configured };
+    return { done: await settleRouterExposure(deps, { port, dnsName }) };
+  }
+
   // F1: record intent BEFORE mutating Serve. Over-recording is the fail-closed
   // direction — if the write/verify then fails, intent STAYS and the startup
   // guard, a re-run, or `stop` heals it (never a live mapping with no guard).
@@ -123,9 +206,13 @@ async function finishReady(
   deps: TailscaleDeps,
   { port, url }: { port: number; url: string },
 ): Promise<TailscaleActionResult> {
-  const refusal = await ensureEnforced(deps, port);
-  if (refusal) return refusal;
-  await recordExposure({ port, dnsName: new URL(url).hostname });
+  const exposable = await classifyExposable(deps, port);
+  if (!exposable.ok) return { ok: false, message: exposable.message };
+  const dnsName = new URL(url).hostname;
+  // The router re-proves the anonymous denial over Serve (and records only on
+  // that proof); a normal enforced cb records idempotently.
+  if (exposable.posture === "router-guarded") return settleRouterExposure(deps, { port, dnsName });
+  await recordExposure({ port, dnsName });
   return { ok: true, message: `Exposed at ${url} (loopback:${port}). Serve config + exposure intent recorded.` };
 }
 

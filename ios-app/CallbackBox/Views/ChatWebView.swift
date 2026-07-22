@@ -53,6 +53,11 @@ enum NativeComposerCommandDelivery {
 }
 
 struct ChatWebView: UIViewRepresentable {
+    enum NewWindowDestination: Equatable {
+        case currentContext
+        case browser
+    }
+
     var box: PairedBox
     var pendingEmissions: [NativeChatEmission]
     var locationShareRequest: NativeLocationShareRequest?
@@ -107,6 +112,7 @@ struct ChatWebView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
         webView.load(request())
         return webView
@@ -147,7 +153,7 @@ struct ChatWebView: UIViewRepresentable {
         )
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
         var allowedOrigin: String?
         var onSessionChange: (String?) -> Void
         var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
@@ -169,6 +175,8 @@ struct ChatWebView: UIViewRepresentable {
         private var pageLoaded: Bool
         private let receiptTimeoutDelay: TimeInterval
         private let evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)?
+        private let openExternalURL: (URL) -> Void
+        private let loadInCurrentContext: (WKWebView, URLRequest) -> Void
 
         init(
             allowedOrigin: String?,
@@ -181,7 +189,11 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
             receiptTimeoutDelay: TimeInterval = 35,
             pageLoaded: Bool = false,
-            evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil
+            evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
+            openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
+            loadInCurrentContext: @escaping (WKWebView, URLRequest) -> Void = { webView, request in
+                webView.load(request)
+            }
         ) {
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
@@ -194,6 +206,8 @@ struct ChatWebView: UIViewRepresentable {
             self.receiptTimeoutDelay = receiptTimeoutDelay
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
+            self.openExternalURL = openExternalURL
+            self.loadInCurrentContext = loadInCurrentContext
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -222,6 +236,10 @@ struct ChatWebView: UIViewRepresentable {
             decidePolicyFor navigationAction: WKNavigationAction,
             decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
         ) {
+            if navigationAction.targetFrame == nil {
+                decisionHandler(.allow)
+                return
+            }
             guard navigationAction.targetFrame?.isMainFrame != false, let url = navigationAction.request.url else {
                 decisionHandler(.allow)
                 return
@@ -231,7 +249,29 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             decisionHandler(.cancel)
-            UIApplication.shared.open(url)
+            openExternalURL(url)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            guard navigationAction.targetFrame == nil, let url = navigationAction.request.url else {
+                return nil
+            }
+            handleNewWindowRequest(navigationAction.request, url: url, in: webView)
+            return nil
+        }
+
+        func handleNewWindowRequest(_ request: URLRequest, url: URL, in webView: WKWebView) {
+            switch ChatWebView.newWindowDestination(for: url, allowedOrigin: allowedOrigin) {
+            case .currentContext:
+                loadInCurrentContext(webView, request)
+            case .browser:
+                openExternalURL(url)
+            }
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -497,6 +537,16 @@ struct ChatWebView: UIViewRepresentable {
             return "\(scheme)://\(host):\(port)"
         }
         return "\(scheme)://\(host)"
+    }
+
+    static func newWindowDestination(for url: URL, allowedOrigin: String?) -> NewWindowDestination {
+        if url.scheme == "about" {
+            return .currentContext
+        }
+        guard let allowedOrigin, origin(from: url) == allowedOrigin else {
+            return .browser
+        }
+        return .currentContext
     }
 
     /// Script-message payloads arrive as a dictionary from legacy direct

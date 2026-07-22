@@ -49,6 +49,13 @@ export interface ProbeResult {
    * chunk-1 fakes and callers that only need reachability stay unchanged.
    */
   body?: string | null;
+  /**
+   * Response headers, lowercased. Track C reads `x-cb-router-guarded` off a
+   * `/__router/status` probe to distinguish a Track-B-guarded dev router (401 +
+   * this header) from an ungated one (200) from a non-router. Optional so fakes
+   * and callers that don't need headers stay unchanged.
+   */
+  headers?: Record<string, string> | undefined;
 }
 
 export type ProbeEndpoint = (url: string) => Promise<ProbeResult>;
@@ -95,7 +102,9 @@ export function createRealProbe(): ProbeEndpoint {
       } catch (_e) {
         body = null;
       }
-      return { reachable: true, status: res.status, body };
+      const headers: Record<string, string> = {};
+      for (const [key, value] of res.headers) headers[key.toLowerCase()] = value;
+      return { reachable: true, status: res.status, body, headers };
     } catch (_e) {
       // Network-level failure (DNS, TLS, connection refused) — the endpoint is
       // simply not reachable; an expected state-machine branch, not a crash.

@@ -44,7 +44,11 @@ import { execa } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
+import { injectBasePrefix } from "../callback-box/src/webapp/base-prefix.js";
 import { resolveBoxEntries, type ResolvedBoxEntry } from "./box-entry.js";
+import { authorizeRouterRequest, type RouterAuthDeps, type RouterAuthDecision } from "./router-auth.js";
+import { createRouterAuthDeps } from "./router-auth-deps.js";
+import { rewriteMobileCookiePath } from "./router-cookie.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
@@ -88,6 +92,12 @@ const LOG_DIR = path.join(STATE_DIR, "logs");
 const PID_DIR = path.join(STATE_DIR, "pids");
 const BROWSE_DIR = path.join(STATE_DIR, "browse");
 const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
+// The local trust boundary (plan Track B): a SECOND listener on a Unix-domain
+// socket. Requests arriving on it are `trustedLocal` (unauthenticated) because a
+// browser cannot originate a UDS connection — a real capability boundary, not a
+// spoofable header. Local CLI (bin/worktrees) talks to the router through this;
+// everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
+const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 
 const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
 
@@ -378,6 +388,35 @@ proxy.on("error", (err: Error, _req, res) => {
   }
 });
 
+/**
+ * The `/<worktree>/<box>` box slug of a proxied request, or null when the path
+ * has no box segment (`/<w>/`, `/<w>/api/...`, `/<w>/@vite/...`). Used only to
+ * scope the Set-Cookie Path rewrite; the rewrite's own exact-`/<slug>` match is
+ * the real guard, so a non-box second segment here is harmless (it never equals
+ * a box cookie's Path).
+ */
+function boxSlugOf(reqPath: string): string | null {
+  const m = reqPath.match(/^\/[^/?#]+\/([^/?#]+)(?:[/?#]|$)/);
+  return m ? m[1]! : null;
+}
+
+// The box child sets `cb_mobile` with `Path=/<slug>` (it only knows its slug);
+// behind the router the browser path is `/<worktree>/<slug>/…`, so the cookie is
+// dropped on reload + the tRPC WebSocket unless the router rewrites its Path.
+// `proxyRes` fires BEFORE http-proxy-3's writeHeaders pass copies proxyRes.headers
+// onto the client response (web-incoming.ts: emit `proxyRes` → run web-outgoing
+// passes), so mutating `proxyRes.headers["set-cookie"]` here is the correct hook.
+// Shared by the TCP and UDS servers (both proxy through this one instance); the
+// rewrite is a no-op for the CLI's UDS traffic and correct for browser traffic.
+proxy.on("proxyRes", (proxyRes, req) => {
+  const reqPath = req.url ?? "";
+  const worktree = parseWorktreeName(reqPath);
+  const boxSlug = worktree ? boxSlugOf(reqPath) : null;
+  if (!worktree || !boxSlug) return;
+  const rewritten = rewriteMobileCookiePath(proxyRes.headers["set-cookie"], { worktree, boxSlug });
+  if (rewritten !== undefined) proxyRes.headers["set-cookie"] = rewritten;
+});
+
 // Proxying consumes the request's body stream, so a naive retry after
 // ECONNREFUSED re-sends the request with no body — the upstream then waits
 // forever for JSON that never arrives (this wedged chat sends that raced an
@@ -397,6 +436,22 @@ async function readBody(req: http.IncomingMessage): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(chunk as Buffer);
   return Buffer.concat(chunks);
+}
+
+// The spoof wall (expose-dev-router B.2c / finding: strip client `x-cb-*`).
+// The router injects exactly ONE trusted `x-cb-*` header — `x-cb-base-prefix`
+// (via injectBasePrefix). Every other `x-cb-*` (x-cb-authenticated-email,
+// x-cb-hub-secret, x-cb-hub-auth, x-cb-diag, …) is an identity/authorization
+// header the worktree hub or box trusts; a client on the exposed TCP listener
+// must never be able to forge one and have it reach Vite/the hub. So we delete
+// ALL incoming `x-cb-*` at the router edge before proxying (mirrors the hub's
+// own `stripHubHeaders`). `injectBasePrefix` then re-sets the one the router
+// legitimately owns. Defense-in-depth: the hub strips again downstream.
+const CB_HEADER_PREFIX = "x-cb-";
+function stripClientCbHeaders(headers: http.IncomingHttpHeaders): void {
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase().startsWith(CB_HEADER_PREFIX)) delete headers[key];
+  }
 }
 
 /** One proxy attempt. Resolves with the proxy error, or undefined on success. */
@@ -423,6 +478,14 @@ async function proxyWithRetry(
 ): Promise<void> {
   const bodyLength = replayableBodyLength(req);
   const body = bodyLength === null ? null : await readBody(req);
+  // Strip ALL client-supplied `x-cb-*` first (the spoof wall), so a forged
+  // identity/hub-secret header can never reach the worktree. Then inject the one
+  // header the router legitimately owns: `x-cb-base-prefix`, telling the fronted
+  // worktree which path prefix this router strips so its login redirects (and
+  // SPA asset rewrite) can rebuild the full browser path. injectBasePrefix also
+  // strips any client copy of that one header before setting it (Track A).
+  stripClientCbHeaders(req.headers);
+  injectBasePrefix(req.headers, `/${name}`);
   for (;;) {
     let handle: WorktreeHandle;
     try {
@@ -680,12 +743,75 @@ function worktreeRoot(name: string): string {
   return name === "main" ? MAIN_ROOT : path.join(WORKTREES_ROOT, name);
 }
 
+// --- Auth gate: deny handling -----------------------------------------
+
+/**
+ * The worktree segment to route a login redirect through. Login lives under a
+ * worktree (`/<w>/auth/login`), so a bare router-infra path (`/`, `/dev`,
+ * `/__router/*`) has none — fall back to `main`. A box or `/<w>/dev/` path
+ * carries its own worktree in the first segment.
+ */
+function loginWorktree(url: string): string {
+  const first = parseWorktreeName(url);
+  if (!first || first === "dev" || first === "__router") return "main";
+  return first;
+}
+
+/**
+ * Write the response for a denied (non-`trustedLocal`) request. A denied browser
+ * NAVIGATION (302 → the prefixed login page, carrying `returnTo`) so the user can
+ * log in and come back; everything else gets a small JSON body at the gate's
+ * status (401 / 403 / 404). Nothing here cold-starts or serves — the deny is
+ * terminal, upstream of all dispatch.
+ */
+export function writeDeny(req: http.IncomingMessage, res: http.ServerResponse, decision: RouterAuthDecision & { allow: false }): void {
+  const url = req.url || "/";
+  // Self-identify as a GUARDED dev router on denials of our own `/__router/*`
+  // control routes (Track C, expose-dev-router.md): a benign marker so
+  // `cb tailscale setup` can prove the gate is live end-to-end over Serve
+  // (401 + this header) and distinguish us from an ungated router (200, no
+  // header) or a non-router. Leaks nothing a bare curl doesn't already learn.
+  const guardHeaders = routerGuardHeaders(url);
+  if (decision.redirectToLogin) {
+    const location = `/${loginWorktree(url)}/auth/login?returnTo=${encodeURIComponent(url)}`;
+    res.writeHead(302, { location, ...guardHeaders });
+    res.end();
+    return;
+  }
+  res.writeHead(decision.status, { "content-type": "application/json; charset=utf-8", ...guardHeaders });
+  res.end(`${JSON.stringify({ error: decision.reason })}\n`);
+}
+
+/** The `x-cb-router-guarded: 1` marker for a denial of a `/__router/*` control
+ *  route, else no extra headers. Pure over the request path so it is unit-tested
+ *  directly (bin/router-guard-header.test.ts). */
+export function routerGuardHeaders(url: string): Record<string, string> {
+  const q = url.indexOf("?");
+  const pathname = q === -1 ? url : url.slice(0, q);
+  return pathname === "/__router" || pathname.startsWith("/__router/") ? { "x-cb-router-guarded": "1" } : {};
+}
+
 // --- HTTP + WebSocket server ------------------------------------------
 
-function createRouterServer(core: RouterCore): http.Server {
+/**
+ * Build one HTTP+WS server bound to the SINGLE auth gate. `trustedLocal` is a
+ * compile-time constant of the server instance — true for the UDS server, false
+ * for the TCP one — never derived from a header or `req.socket.remoteAddress`
+ * (Tailscale Serve re-dials loopback, so a 127.0.0.1 TCP peer is NOT local). A
+ * connection can only reach the handler of the server it landed on, so which
+ * listener accepted it is the whole story.
+ */
+function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; trustedLocal: boolean }): http.Server {
+  const { authDeps, trustedLocal } = gate;
   const refusedUpgradeLogAt = new Map<string, number>();
 
-  const server = http.createServer(async (req, res) => {
+  // The per-request dispatch. Wrapped below in a `.catch` rejection boundary so
+  // NO thrown/rejected error from any path (auth gate, dev-serving, proxy,
+  // cold-start) can escape to an unhandledRejection and crash the SHARED router
+  // — it becomes a 500 for that one request instead (expose-dev-router B.2c /
+  // finding 3, DoS boundary). The auth gate and the /dev decode have their own
+  // narrower guards (a 403/400); this is the outermost backstop for the rest.
+  const requestListener = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
     // A client that hangs up mid-request (tab closed, navigated away, gave up
     // waiting on a ~4s worktree cold start) makes node's abortIncoming emit
     // ECONNRESET on the request. With no listener here it escapes to the
@@ -701,6 +827,28 @@ function createRouterServer(core: RouterCore): http.Server {
     });
 
     const url = req.url || "/";
+
+    // THE single chokepoint. Runs BEFORE all routing/proxy/cold-start/dev-serving
+    // — nothing below executes for a denied request. UDS arrivals (trustedLocal)
+    // bypass every resolver; TCP arrivals authenticate with current code.
+    let decision: RouterAuthDecision;
+    try {
+      decision = await authorizeRouterRequest(
+        { trustedLocal, method: req.method || "GET", url, headers: req.headers },
+        authDeps,
+      );
+    } catch (err) {
+      // A resolver threw (e.g. a filesystem fault). Fail CLOSED — never fall
+      // through to dispatch on an unresolved auth decision.
+      log(`auth gate error for ${url}: ${errMessage(err)}`);
+      res.writeHead(403, { "content-type": "application/json; charset=utf-8" });
+      res.end(`${JSON.stringify({ error: "auth-gate-error" })}\n`);
+      return;
+    }
+    if (!decision.allow) {
+      writeDeny(req, res, decision);
+      return;
+    }
 
     if (url === "/__router/status" || url === "/__router/status/") {
       res.writeHead(200, { "content-type": "application/json" });
@@ -913,6 +1061,22 @@ function createRouterServer(core: RouterCore): http.Server {
     }
 
     await proxyWithRetry(req, res, name, 5, core);
+  };
+
+  const server = http.createServer((req, res) => {
+    void requestListener(req, res).catch((err: unknown) => {
+      log(`unhandled request error for ${req.url ?? "?"}: ${errMessage(err)}`);
+      if (!res.headersSent) {
+        res.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+        res.end(`${JSON.stringify({ error: "internal-router-error" })}\n`);
+      } else {
+        try {
+          res.end();
+        } catch {
+          /* response already torn down */
+        }
+      }
+    });
   });
 
   // WebSocket upgrades never cold-start a worktree. Clients auto-reconnect on
@@ -923,6 +1087,29 @@ function createRouterServer(core: RouterCore): http.Server {
   // real HTTP request arrives — a page load, an API call, or Vite's HMR ping.
   server.on("upgrade", async (req, socket, head) => {
     const reqUrl = req.url || "/";
+    // WS must authenticate too (2nd-review 2.7): the same chokepoint runs on the
+    // upgrade. A denied upgrade destroys the socket. Over TCP a browser's cookie
+    // rides the upgrade headers; over UDS trustedLocal bypasses the resolvers.
+    let decision: RouterAuthDecision;
+    try {
+      decision = await authorizeRouterRequest(
+        { trustedLocal, method: req.method || "GET", url: reqUrl, headers: req.headers },
+        authDeps,
+      );
+    } catch (err) {
+      log(`auth gate error on WS upgrade for ${reqUrl}: ${errMessage(err)}`);
+      socket.destroy();
+      return;
+    }
+    if (!decision.allow) {
+      socket.destroy();
+      return;
+    }
+    // The spoof wall on the upgrade path too: strip client `x-cb-*` before the
+    // socket is proxied to Vite/the hub (expose-dev-router B.2c). The WS carries
+    // the browser session on TCP; it needs no router-injected `x-cb-*`, so this
+    // is a pure strip with no re-injection.
+    stripClientCbHeaders(req.headers);
     const name = parseWorktreeName(reqUrl);
     if (!name) {
       socket.destroy();
@@ -987,6 +1174,28 @@ async function acquireRouterPidFile(): Promise<void> {
   await fs.writeFile(ROUTER_PID_FILE, String(process.pid));
 }
 
+// --- Unix-domain-socket listener (the trusted-local channel) ----------
+
+/**
+ * Bind the UDS listener. Unlinks any stale socket first (a crashed prior router
+ * leaves the file behind), then `chmod 0600` so only this user can connect —
+ * the socket file IS the local capability. Rejects if the bind fails for a
+ * reason other than a stale file we already cleared.
+ */
+async function listenUnixSocket(server: http.Server, sockPath: string): Promise<void> {
+  await fs.mkdir(path.dirname(sockPath), { recursive: true });
+  await fs.unlink(sockPath).catch(() => {}); // remove a stale socket from a dead router
+  await new Promise<void>((resolve, reject) => {
+    const onError = (err: unknown): void => reject(err instanceof Error ? err : new Error(String(err)));
+    server.once("error", onError);
+    server.listen(sockPath, () => {
+      server.removeListener("error", onError);
+      resolve();
+    });
+  });
+  await fs.chmod(sockPath, 0o600);
+}
+
 // --- Logging + terminal tab title -------------------------------------
 
 function log(msg: string): void {
@@ -1012,6 +1221,21 @@ function updateTabTitle(core: RouterCore): void {
 // --- Boot + shutdown (main-only; not run on import) --------------------
 
 async function main(): Promise<void> {
+  // The router must NEVER be in hub mode (expose-dev-router B.2c / finding 3.3).
+  // Its owner-session resolver runs through resolveRequestIdentity, whose branch
+  // is env-driven by CB_HUB_SECRET (auth.ts isHubMode): were it set in the
+  // router's env, the resolver would take the hub-header identity path instead
+  // of the gen-aware cookie path. The deps already fail closed (they accept only
+  // source==="cookie"), but we harden by removing the env var outright.
+  //
+  // Safe for the child hubs it spawns: verified that `cb hub` MINTS its own
+  // per-boot secret (crypto.randomBytes, cli/commands/hub.ts) and never reads
+  // CB_HUB_SECRET from its inherited env; its Supervisor then sets each
+  // `cb serve` child's CB_HUB_SECRET explicitly from that minted secret
+  // (hub/supervisor.ts buildChildEnv). So the router's env copy is unused by
+  // any descendant — deleting it changes nothing downstream.
+  delete process.env.CB_HUB_SECRET;
+
   const effects = createRealEffects();
   const core = createRouterCore(effects, {
     idleTimeoutMs: IDLE_TIMEOUT_MS,
@@ -1024,7 +1248,13 @@ async function main(): Promise<void> {
     log,
     onStateChange: () => updateTabTitle(core),
   });
-  const server = createRouterServer(core);
+  // One auth gate, two listeners: the TCP server (Serve-fronted, must
+  // authenticate) and the UDS server (trusted-local, unauthenticated). Both share
+  // ONE handler-building function and ONE RouterAuthDeps — the only difference is
+  // the `trustedLocal` flag baked into each server instance.
+  const authDeps = createRouterAuthDeps({ resolveWorktree, resolveBoxEntries });
+  const server = createRouterServer(core, { authDeps, trustedLocal: false });
+  const localServer = createRouterServer(core, { authDeps, trustedLocal: true });
 
   let shuttingDown = false;
   const shutdown = async (reason: string): Promise<void> => {
@@ -1036,9 +1266,11 @@ async function main(): Promise<void> {
     // drain can still reach ensureRunning() and cold-start a fresh generation
     // after cleanup has already run for everything else.
     server.close();
+    localServer.close();
     setTimeout(() => process.exit(0), KILL_GRACE_MS + 500).unref();
     await core.stopAllChildren();
     await fs.unlink(ROUTER_PID_FILE).catch(() => {});
+    await fs.unlink(ROUTER_SOCK).catch(() => {});
     process.exit(0);
   };
 
@@ -1078,6 +1310,8 @@ async function main(): Promise<void> {
   } catch (err) {
     log(`startup reclaim failed (continuing): ${errMessage(err)}`);
   }
+  await listenUnixSocket(localServer, ROUTER_SOCK);
+  log(`trusted-local socket at ${ROUTER_SOCK} (mode 0600; unauthenticated, local CLI)`);
   listenLoopback(server, ROUTER_PORT, () => {
     log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
     log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout (root: ${MAIN_ROOT})`);

@@ -55,6 +55,7 @@ import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
+import { loginRedirect, injectBasePrefix } from "../webapp/base-prefix.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
@@ -205,7 +206,8 @@ async function resolveEndpoint(slug: string, endpoints: EndpointProvider): Promi
 
 const HUB_HEADER_PREFIX = "x-cb-";
 
-/** The spoof wall: no client-supplied `x-cb-*` header ever reaches a box.
+/** The spoof wall: no client-supplied `x-cb-*` header ever reaches a box —
+ *  this includes `x-cb-base-prefix` (Track A), which only the hub may inject.
  *  Mutates `headers` in place (both the Fastify proxy path and the raw WS
  *  upgrade path hand this the same `http.IncomingMessage.headers` object). */
 function stripHubHeaders(headers: http.IncomingHttpHeaders): void {
@@ -406,7 +408,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret, openAccess });
     if (!decision.authorized) {
-      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+      return loginRedirect(request, reply);
     }
 
     // Access check using a WAKE-FREE config lookup (`boxRootBySlug`, built once
@@ -465,10 +467,16 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
-      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+      return loginRedirect(request, reply);
     }
     if (!isMobilePairingRedeem && !mobileAuthed) {
       Object.assign(request.raw.headers, decision.headersToSet);
+      // Tell the child which path prefix fronts it, so its own login-SPA asset
+      // rewrite (Track A chunk 2) can rebuild absolute asset paths. The hub
+      // serves `/<slug>/...` to a child mounted under `/<slug>` (no stripping),
+      // so the box's URL prefix IS its slug. `stripHubHeaders` above already
+      // removed any client copy; this is the trusted injection.
+      if (slug !== null) injectBasePrefix(request.raw.headers, `/${slug}`);
     }
 
     // A lazy hub's box may be "stopped" (idle-collected or never yet

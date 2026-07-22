@@ -692,10 +692,34 @@ export async function serveDev(params: {
   // static artifacts) inherits it; nothing overrides cache-control to anything
   // weaker. Edits show on reload with no server restart.
   res.setHeader("Cache-Control", "no-store, max-age=0");
+  // SECURITY (expose-dev-router B.2c / review 2.1): /dev serves AGENT-authored
+  // markdown/HTML/artifacts on the SAME authenticated origin as the mutating
+  // `/__router/{stop,retry}` control routes. Without isolation a careless or
+  // malicious /dev page could script a same-origin POST that stops a worktree.
+  // A bare `sandbox` directive (no `allow-scripts`, no `allow-same-origin`) is
+  // the decided fix: a sandboxed document can neither run JS nor issue
+  // same-origin requests, which closes the CSRF vector while leaving the page
+  // fully viewable (inline CSS/styling is unaffected by `sandbox`). Set here so
+  // EVERY response serveDev emits — manifest, doc browser, rendered .md, dir
+  // index, static artifacts, the issue browser — inherits it; nothing below
+  // writes a Content-Security-Policy, so this survives each `writeHead`.
+  res.setHeader("Content-Security-Policy", "sandbox");
   const base = `/${name}/dev`;
   const devRoot = path.join(repoRoot, "dev");
   const [pathOnly = ""] = rest.split("?");
-  const rel = decodeURIComponent(pathOnly.slice("/dev".length)); // "" | "/" | "/docs/..." | "/foo.html"
+  // A malformed `%`-escape (e.g. `/dev/%zz`) makes decodeURIComponent throw a
+  // URIError. Unguarded it would reject this async handler and — absent the
+  // router.ts request-boundary — could crash the SHARED router (taking down
+  // every worktree). Guard it to a 400 for this one request (DoS boundary,
+  // expose-dev-router B.2c / finding 3).
+  let rel: string; // "" | "/" | "/docs/..." | "/foo.html"
+  try {
+    rel = decodeURIComponent(pathOnly.slice("/dev".length));
+  } catch (e) {
+    res.writeHead(400, { "content-type": "text/plain" });
+    res.end(`bad request: malformed percent-encoding in path (${e instanceof Error ? e.message : String(e)})\n`);
+    return;
+  }
 
   if (rel === "" || rel === "/") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });

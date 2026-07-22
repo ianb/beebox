@@ -17,6 +17,7 @@ import {
 } from "../../src/services/tailscale.js";
 import { createFakeTailscaleDeps } from "../../src/services/tailscale-fake.js";
 import { runTailscaleStatus, reportToJson } from "../../src/services/tailscale-status.js";
+import { classifyTargetPosture, describeRefusal } from "../../src/services/tailscale-target.js";
 import { formatReportHuman } from "../../src/cli/commands/tailscale.js";
 
 // Real `tailscale status --json` emits Self and CertDomains WITHOUT omitempty —
@@ -36,6 +37,12 @@ const runningStatus = {
 const correctServe = {
   Web: { "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3210" } } } },
 };
+
+// A guarded dev router's anonymous `/__router/status` reply: 401 + the
+// self-identifying header (its Track-B gate denies unauthenticated access). An
+// ungated (pre-Track-B) router answers 200 with its own status JSON, no header.
+const guardedRouterProbe = { reachable: true, status: 401, headers: { "x-cb-router-guarded": "1" }, body: JSON.stringify({ error: "owner-session-required" }) };
+const ungatedRouterProbe = { reachable: true, status: 200, body: JSON.stringify({ routerPort: 3210, routerPid: 1, worktrees: {} }) };
 
 // The two enforced-auth probe shapes callback-box's `/auth/me` produces.
 const enforced401 = { reachable: true, status: 401, body: JSON.stringify({ error: "Not authenticated" }) };
@@ -386,6 +393,7 @@ JSON.stringify(reportToJson(report), null, 2)
   "ok": true,
   "url": "https://box.tail1234.ts.net/",
   "status": 200,
+  "guarded": false,
   "nextStep": "«*»",
   "docLink": null
 }
@@ -415,4 +423,81 @@ const report = await runTailscaleStatus(
 );
 formatReportHuman(report).split("\n")[0]
 => ✓ tailscale: ready
+```
+
+## Track C: router-guarded target classification
+
+`classifyTargetPosture` reads the loopback `/__router/status` FIRST. A guarded
+router (anonymous 401 + `x-cb-router-guarded`) is now an ALLOWED posture — its
+fail-closed gate is live, so Serve fronting it exposes nothing unauthenticated.
+
+```ts
+const deps = createFakeTailscaleDeps({ routerProbe: guardedRouterProbe });
+(await classifyTargetPosture(deps, 3210)).kind
+=> router-guarded
+```
+
+An UNGATED router (200 + `routerPort`/`worktrees`, a pre-Track-B build) is still
+refused — but the message now says to UPDATE the router so its gate is live,
+not "never a valid target":
+
+```ts
+const deps = createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe });
+const posture = await classifyTargetPosture(deps, 3210);
+[posture.kind, describeRefusal(posture, 3210).includes("Update/rebuild the router")]
+=> [
+  "router",
+  true
+]
+```
+
+A 401 on `/__router/status` WITHOUT the header is not treated as a guarded
+router — it falls through to the `/auth/me` posture read (here enforced):
+
+```ts
+const deps = createFakeTailscaleDeps({
+  routerProbe: { reachable: true, status: 401, body: "Unauthorized" },
+  probe: enforced401,
+});
+(await classifyTargetPosture(deps, 3210)).kind
+=> enforced
+```
+
+A normal cb serve/hub (no router shape on `/__router/status`) reads its
+`/auth/me` posture as before:
+
+```ts
+(await classifyTargetPosture(createFakeTailscaleDeps({ probe: enforced401 }), 3210)).kind
+=> enforced
+```
+
+## Track C: status reports a served guarded router as ready
+
+When Serve fronts the router loopback port and the SERVED `/__router/status`
+denies anonymously (401 + header), status is `ready` with `guarded: true` — it
+proved the gate over the real Serve path, not `/auth/me` (the router has none).
+
+```ts
+const report = await runTailscaleStatus(
+  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe }),
+  { target: { port: 3210 } },
+);
+[report.state, report.ok, report.state === "ready" ? report.guarded : null, report.state === "ready" ? report.url : null]
+=> [
+  "ready",
+  true,
+  true,
+  "https://box.tail1234.ts.net/"
+]
+```
+
+The human summary names the guarded router and the anonymous-denied probe:
+
+```ts
+const report = await runTailscaleStatus(
+  createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe }),
+  { target: { port: 3210 } },
+);
+formatReportHuman(report).split("\n")[1]
+=>   serve is fronting the guarded dev router; anonymous https://box.tail1234.ts.net/__router/status was denied (401)
 ```

@@ -33,8 +33,13 @@ export interface FakeTailscaleOptions {
   serve?: unknown;
   /** Exit code for `tailscale serve status --json` (default 0). Nonzero ⇒ cli-error. */
   serveCode?: number;
-  /** What the injected probe returns for every probed URL. */
+  /** What the injected probe returns for a non-`/__router/status` URL (`/auth/me`). */
   probe?: ProbeResult;
+  /** What the injected probe returns for a `/__router/status` URL (loopback or
+   *  served). Lets a test model a guarded router (401 + `x-cb-router-guarded`),
+   *  an ungated router (200 status JSON), or a non-router (default: unreachable,
+   *  which falls through to the `/auth/me` posture). */
+  routerProbe?: ProbeResult;
   /** Non-loopback interface addresses the bind guard enumerates (default none). */
   networkAddresses?: string[];
 }
@@ -70,7 +75,12 @@ export function createFakeTailscaleDeps(options: FakeTailscaleOptions): Tailscal
       const invocation = `tailscale ${sub}`;
       throw new UnexpectedTailscaleCommandError(invocation);
     },
-    probe: () => Promise.resolve(options.probe ?? { reachable: false, status: null }),
+    probe: (url) => {
+      if (url.includes("/__router/status")) {
+        return Promise.resolve(options.routerProbe ?? { reachable: false, status: null });
+      }
+      return Promise.resolve(options.probe ?? { reachable: false, status: null });
+    },
     networkInterfaces,
   };
 }

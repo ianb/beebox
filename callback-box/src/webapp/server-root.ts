@@ -18,6 +18,7 @@ import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
 import { loadBoxSchemas } from "../schemas/registry.js";
 import { getEngineVersionReport } from "../core/engine-version.js";
 import { filterAccessibleBoxes } from "./box-access.js";
+import { loginRedirect } from "./base-prefix.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
@@ -317,7 +318,7 @@ export function registerSpaFallback(
           // bypassed the hub (spoof or misconfiguration).
           return reply.status(401).send({ error: "Not authenticated (hub mode)" });
         }
-        return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(url)}`);
+        return loginRedirect(request, reply);
       }
     }
 

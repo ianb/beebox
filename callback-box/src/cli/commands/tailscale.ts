@@ -85,7 +85,9 @@ function summaryLine(report: TailscaleReport): string {
     case "posture-ambiguous":
       return report.detail;
     case "ready":
-      return `serve is fronting the target; ${report.url}auth/me responded (${report.status ?? "no status"})`;
+      return report.guarded
+        ? `serve is fronting the guarded dev router; anonymous ${report.url}__router/status was denied (${report.status ?? "no status"})`
+        : `serve is fronting the target; ${report.url}auth/me responded (${report.status ?? "no status"})`;
     default:
       return assertNever(report);
   }

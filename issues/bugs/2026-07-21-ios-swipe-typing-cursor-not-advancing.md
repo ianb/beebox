@@ -3,7 +3,25 @@ title: "iOS: swipe-typing (QuickPath) leaves the cursor behind instead of advanc
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder swipe-typing in the native iOS composer
+needs: [manual-testing]
 ---
+
+## Implemented 2026-07-21
+
+`ComposerTextView` now trusts the native `UITextView` selection whenever its
+text already matches the SwiftUI model. It only imposes the bound selection
+when applying an external/programmatic text replacement, so the stale half of a
+user-driven text/selection update can no longer pull the caret backward.
+
+Regression tests cover both sides of the rule: a stale model selection does not
+override the native caret after user input, while a programmatic text change
+still restores its intended selection. The full iOS test suite and a
+signing-free simulator build pass.
+
+Manual verification remains on a real iPhone: swipe two consecutive words,
+accept an autocorrect replacement and continue typing, and dictate a phrase and
+continue typing. In each case the caret and subsequent input should remain after
+the newly inserted text.
 
 Swipe-typing a word on the iOS keyboard (QuickPath / glide typing) inserts the
 word but the cursor doesn't properly advance past it — so the next swiped word

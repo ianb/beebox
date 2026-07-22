@@ -179,6 +179,19 @@ sidecar still requires a login — but keep the box loopback only
 (`127.0.0.1:3210:3210`) so the sidecar stays the only tailnet-facing path, and
 rely on the box's own always-on auth wall as the protection here.
 
+### Exposing a local dev environment
+
+The steps above are for a single deployed box (`cb serve`/`cb hub`). A
+from-source checkout running the shared dev router (`pnpm dev`, monorepo
+root) is a different target: `cb tailscale setup --target <router-port>`
+(the router's port, e.g. `3210`) exposes the *whole* router — every worktree
+and box it's serving — over the tailnet through one authenticated front door,
+rather than a single box. Setup verifies the router's auth gate is actually
+live (an anonymous request over Serve must get a `401`) before recording the
+exposure, and refuses to expose an ungated router. See `bin/CLAUDE.md` for the
+router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
+full design.
+
 ### Box login (on by default)
 
 The box requires a login. Create the first (owner) account with

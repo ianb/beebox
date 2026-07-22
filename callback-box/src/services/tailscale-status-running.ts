@@ -16,7 +16,7 @@ import {
   type TailscaleTarget,
 } from "./tailscale.js";
 import { binaryAbsent, cliError, DOC, type TailscaleReport } from "./tailscale-report.js";
-import { classifyAuthPosture } from "./tailscale-target.js";
+import { classifyAuthPosture, looksLikeGuardedRouter } from "./tailscale-target.js";
 import { assertNever } from "../lib/invariant.js";
 
 /** The Running-backend branch: HTTPS cert → serve config → probe. */
@@ -110,11 +110,26 @@ export async function runningStatus(
     };
   }
 
-  // State 6: serve is correct — probe the LIVE served endpoint (`/auth/me`, not
-  // `/`, which can 200 as a login SPA) and classify its posture with the SAME
-  // strictness setup uses. Serve is live here, so an open/unrecognized posture
-  // is a serious failing state — never a healthy "ready".
+  // State 6: serve is correct — probe the LIVE served endpoint. First check the
+  // guarded-dev-router path (anonymous `/__router/status` must be 401 + the
+  // self-identifying header); a guarded router is a healthy `ready`. A normal cb
+  // serve/hub answers `/__router/status` with a non-guarded response and falls
+  // through to the `/auth/me` posture read below. Serve is live here, so an
+  // open/unrecognized posture is a serious failing state — never a healthy "ready".
   const url = `https://${dnsName}/`;
+  const routerProbe = await deps.probe(`https://${dnsName}/__router/status`);
+  if (looksLikeGuardedRouter(routerProbe)) {
+    return {
+      state: "ready",
+      ok: true,
+      url,
+      status: routerProbe.status,
+      guarded: true,
+      nextStep: `The guarded dev router is reachable at ${url} and denies anonymous \`/__router/status\` (401) over Serve (proves the local serve path only; live acceptance comes from a second device on the tailnet).`,
+      docLink: null,
+    };
+  }
+
   const probe = await deps.probe(`https://${dnsName}/auth/me`);
   const posture = classifyAuthPosture(probe);
   switch (posture) {
@@ -124,6 +139,7 @@ export async function runningStatus(
         ok: true,
         url,
         status: probe.status,
+        guarded: false,
         nextStep: `Reachable at ${url} (proves the local serve path only; live acceptance comes from a second device on the tailnet).`,
         docLink: null,
       };
