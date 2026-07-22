@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { InteractiveChat } from "../components/chat/InteractiveChat";
 import { useEmissionStoreInstance } from "../components/chat/input-store";
+import { isNativeShell } from "../components/chat/native-post";
 import { getDefaultChatSession } from "../api";
 import { href, toSearch } from "../lib/routing";
 
@@ -67,7 +68,11 @@ export function ChatPage() {
   const companion = search.companion;
   const card = search.card;
   const embedded = String(search.embed) === "1";
-  const nativeComposer = String(search.nativeComposer) === "1";
+  // The `?nativeComposer=1` param only rides the initial chat URL; after an
+  // in-app navigation it's gone, which un-suppressed the web composer under the
+  // native one. Detect the native shell by its always-present bridge instead, so
+  // the flag survives navigation. The param stays as a fast-path / legacy signal.
+  const nativeComposer = String(search.nativeComposer) === "1" || isNativeShell();
   const openCaptureOnMount = String(search.capture) === "1";
   const [resolved, setResolved] = useState<string | null>(null);
 
