@@ -205,6 +205,13 @@
   }
   .note-wrap[hidden] { display: none; }
 
+  .doc-source {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
   .empty { color: var(--muted); font-style: italic; padding: 2rem 0; }
   .toast {
     position: fixed; bottom: 1.1rem; left: 50%; transform: translateX(-50%);
@@ -483,6 +490,7 @@ if (typeof module !== "undefined" && module.exports) {
 const state = {
   byDoc: {},        // docKey -> [nugget...]
   groupsByDoc: {},  // docKey -> [ {id, span (longest), members:[nugget]} ]
+  docPathByKey: {}, // docKey -> repo-relative source document path (from the run files)
   currentDoc: null,
   focusIndex: 0,
   verdicts: loadVerdicts(),
@@ -572,6 +580,7 @@ async function load() {
       if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
       const data = await res.json();
       const docKey = docKeyFromPath(path);
+      state.docPathByKey[docKey] = data.doc;
       for (const nugget of data.nuggets) {
         nugget._variant = data.variant;
         nugget._run = data.run;
@@ -599,7 +608,10 @@ async function load() {
   }
 
   buildDocPicker();
-  const firstDoc = DOC_ORDER.find((d) => state.groupsByDoc[d]?.length) || Object.keys(state.groupsByDoc)[0];
+  const hashDoc = location.hash.slice(1);
+  const firstDoc = (state.groupsByDoc[hashDoc]?.length && hashDoc)
+    || DOC_ORDER.find((d) => state.groupsByDoc[d]?.length)
+    || Object.keys(state.groupsByDoc)[0];
   selectDoc(firstDoc, { failures: failures.length });
 }
 
@@ -622,12 +634,20 @@ function buildDocPicker() {
 function selectDoc(docKey, opts = {}) {
   state.currentDoc = docKey;
   state.focusIndex = 0;
+  // The doc is a hash URL, so reload/back/forward keep your place.
+  if (location.hash.slice(1) !== docKey) location.hash = docKey;
   for (const btn of document.querySelectorAll("#docpick button")) {
     btn.setAttribute("aria-pressed", String(btn.dataset.doc === docKey));
   }
   render();
+  window.scrollTo(0, 0);
   if (opts.failures) toast(`${opts.failures} run file(s) failed to load — see console`);
 }
+
+window.addEventListener("hashchange", () => {
+  const docKey = location.hash.slice(1);
+  if (docKey && docKey !== state.currentDoc && state.groupsByDoc[docKey]?.length) selectDoc(docKey);
+});
 
 // ---------- render ----------
 function esc(s) {
@@ -648,6 +668,14 @@ function render() {
     main.innerHTML = '<p class="empty">No nuggets for this document.</p>';
     updateProgress();
     return;
+  }
+
+  const docPath = state.docPathByKey[docKey];
+  if (docPath) {
+    const src = document.createElement("p");
+    src.className = "doc-source";
+    src.innerHTML = `All nuggets below were extracted from <code>${esc(docPath)}</code>; every quoted span is verbatim from that file.`;
+    main.appendChild(src);
   }
 
   groups.forEach((group, idx) => {
@@ -861,14 +889,15 @@ function updateProgress() {
     `<b>${decided}</b> / ${total} triaged` + (total ? ` &middot; group <b>${state.focusIndex + 1}</b>` : "");
 }
 
-function toggleNote() {
+function openNote() {
+  // Always open + focus, never toggle-hide: a note is deleted by clearing its text.
   const groups = currentGroups();
   const group = groups[state.focusIndex];
   if (!group) return;
   const el = document.querySelector(`.group[data-idx="${state.focusIndex}"] .note-wrap`);
   if (!el) return;
-  el.hidden = !el.hidden;
-  if (!el.hidden) el.querySelector("textarea").focus();
+  el.hidden = false;
+  el.querySelector("textarea").focus();
 }
 
 document.addEventListener("keydown", (e) => {
@@ -907,7 +936,7 @@ document.addEventListener("keydown", (e) => {
       break;
     case "t":
       e.preventDefault();
-      toggleNote();
+      openNote();
       break;
     case "e":
       e.preventDefault();
