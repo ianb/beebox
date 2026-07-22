@@ -258,6 +258,30 @@ no owner created: true
 done
 ```
 
+## A decoy content-type whose essence is JSON takes the JSON path (no form double-read)
+
+`isFormRequest` compares the exact MIME essence, not a substring — so
+`application/json; x=application/x-www-form-urlencoded` (which Fastify parses as
+JSON, consuming the stream) is treated as JSON. Were it substring-matched, the
+form path would call `readFormBody` on the drained stream and hang to the 10s
+timeout, breaking the "JSON callers unchanged" guarantee.
+
+```ts
+await resetAuth();
+await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
+loginThrottle.reset();
+
+const decoy = await server.server.inject({
+  method: "POST",
+  url: "/auth/login",
+  headers: { "content-type": "application/json; x=application/x-www-form-urlencoded" },
+  payload: JSON.stringify({ email: "owner@example.com", password: "wrong" }),
+});
+// A JSON 401 (not a 302 redirect) proves the JSON path was taken.
+JSON.stringify({ status: decoy.statusCode, body: decoy.json() })
+=> {"status":401,"body":{"error":"Invalid credentials"}}
+```
+
 ```ts cleanup
 await server.cleanup();
 await rm(authDir, { recursive: true, force: true });

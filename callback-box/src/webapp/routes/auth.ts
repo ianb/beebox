@@ -85,7 +85,7 @@ export interface AuthRoutesOptions {
  * that from becoming a second, drifting copy of the login flow.
  */
 export async function registerAuthSurface(server: FastifyInstance, options: AuthRoutesOptions): Promise<void> {
-  registerPasswordRoutes(server);
+  await registerPasswordRoutes(server);
   if (process.env.GOOGLE_OAUTH_CLIENT_ID) {
     await server.register(registerAuthRoutes, options);
   }
@@ -136,15 +136,8 @@ function loginPageState(request: FastifyRequest, query: { returnTo?: string; err
  * (`auth-password-post.ts`) accept both the bare page's form submission and the
  * SPA/programmatic JSON API.
  */
-function registerPasswordRoutes(server: FastifyInstance): void {
+async function registerPasswordRoutes(server: FastifyInstance): Promise<void> {
   invariant(!isHubMode(), "registerPasswordRoutes must never run in hub mode — the hub owns fleet login");
-
-  // Accept the bare pages' `application/x-www-form-urlencoded` POSTs. This parser
-  // `done(null)`s WITHOUT draining (the SAME shape the hub's `*` parser uses), so
-  // the handler reads the still-readable raw stream itself and the hub's raw-body
-  // proxying is unaffected. Without it, a standalone box would 415 a form POST.
-  // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
-  server.addContentTypeParser("application/x-www-form-urlencoded", (_request, _payload, done) => done(null));
 
   server.get<{ Querystring: { returnTo?: string; error?: string } }>("/auth/login", async (request, reply) => {
     return reply.type("text/html").send(renderLoginPage(loginPageState(request, request.query)));
@@ -169,8 +162,19 @@ function registerPasswordRoutes(server: FastifyInstance): void {
     };
   });
 
-  server.post("/auth/login", async (request, reply) => handleLoginPost(request, reply));
-  server.post("/auth/setup", async (request, reply) => handleSetupPost(request, reply));
+  // The form-accepting POSTs live in their OWN encapsulated plugin so the
+  // `application/x-www-form-urlencoded` parser is confined to this context and
+  // NEVER leaks to sibling/box routes. The parser `done(null)`s WITHOUT draining
+  // (the SAME shape the hub's `*` parser uses), so the handler reads the
+  // still-readable raw stream itself; without it a standalone box would 415 a
+  // form POST. Scoping matters: a root-level parser would make every unrelated
+  // box POST (capture, chat) run with an unread body — real regressions.
+  await server.register(async (formScope) => {
+    // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
+    formScope.addContentTypeParser("application/x-www-form-urlencoded", (_request, _payload, done) => done(null));
+    formScope.post("/auth/login", async (request, reply) => handleLoginPost(request, reply));
+    formScope.post("/auth/setup", async (request, reply) => handleSetupPost(request, reply));
+  });
 }
 
 /**

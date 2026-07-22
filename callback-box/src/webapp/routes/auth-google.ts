@@ -11,6 +11,8 @@ import type { FastifyInstance } from "fastify";
 import { OAuth2Client } from "google-auth-library";
 import { isRecord } from "../../lib/is-record.js";
 import { signSession, COOKIE_NAME, SESSION_MAX_AGE_MS } from "../auth.js";
+import { readBasePrefix } from "../base-prefix.js";
+import { sanitizeReturnTo } from "../login-page.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { getGoogleClientCreds } from "../../connectors/google-auth.js";
 import type { AuthRoutesOptions } from "./auth.js";
@@ -43,7 +45,10 @@ export async function registerAuthRoutes(
   server.get<{ Querystring: { returnTo?: string } }>(
     "/auth/google",
     async (request, reply) => {
-      const returnTo = request.query.returnTo || "/";
+      // Sanitize BEFORE it becomes OAuth `state` — only a same-origin path is
+      // honored, closing an open redirect (`?returnTo=https://evil` → `state` →
+      // raw redirect in the callback). Fails safe to `<prefix>/`.
+      const returnTo = sanitizeReturnTo({ raw: request.query.returnTo, prefix: readBasePrefix(request.headers) });
       const authorizeUrl = oauth2Client.generateAuthUrl({
         scope: ["openid", "email", "profile"],
         state: returnTo,
@@ -107,7 +112,10 @@ export async function registerAuthRoutes(
       }
 
       const sessionValue = signSession({ email, name: displayName, ...(picture ? { picture } : {}) });
-      const returnTo = request.query.state || "/";
+      // Re-sanitize the state on the way out: even a hand-crafted `state` (the
+      // value round-trips through Google and is attacker-controllable) can only
+      // ever redirect to a same-origin path, never off-origin.
+      const returnTo = sanitizeReturnTo({ raw: request.query.state, prefix: readBasePrefix(request.headers) });
 
       return reply
         .setCookie(COOKIE_NAME, sessionValue, {

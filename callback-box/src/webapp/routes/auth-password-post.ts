@@ -126,10 +126,16 @@ async function readFormBody(request: FastifyRequest): Promise<URLSearchParams> {
 }
 
 /** True when the POST body arrived as an HTML form submission (bare page) rather
- *  than the SPA/programmatic JSON API. */
+ *  than the SPA/programmatic JSON API. Compares the exact MIME essence (the part
+ *  before any `;` parameters) — NOT a substring — so a decoy content-type like
+ *  `application/json; x=application/x-www-form-urlencoded` (which Fastify parses
+ *  as JSON, consuming the stream) is correctly treated as JSON here rather than
+ *  routed to `readFormBody` on an already-drained stream. */
 function isFormRequest(request: FastifyRequest): boolean {
   const contentType = request.headers["content-type"];
-  return typeof contentType === "string" && contentType.includes("application/x-www-form-urlencoded");
+  if (typeof contentType !== "string") return false;
+  const essence = contentType.split(";", 1)[0]?.trim().toLowerCase();
+  return essence === "application/x-www-form-urlencoded";
 }
 
 /** Login page's error re-render target: the bare page with `error=1` and the
