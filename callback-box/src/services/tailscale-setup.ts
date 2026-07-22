@@ -21,6 +21,7 @@ import {
   loopbackProxyPort,
   parseServeConfig,
   parseStatusJson,
+  type ProbeResult,
   type ServeConfigJson,
   type TailscaleDeps,
   type TailscaleTarget,
@@ -99,12 +100,33 @@ async function tearDownRouterServe(deps: TailscaleDeps): Promise<string> {
  * refuse WITHOUT recording. Serve is live here, so refusing-and-tearing-down is
  * the fail-closed direction.
  */
+/**
+ * Poll the SERVED `/__router/status` to absorb first-serve TLS cert
+ * provisioning. The FIRST `tailscale serve --https=443` on a tailnet triggers
+ * Let's Encrypt cert issuance (a few seconds), during which the HTTPS handshake
+ * fails and the probe comes back `!reachable`. Retry ONLY that case: a
+ * REACHABLE probe (guarded 401 OR an ungated 200) is a definitive answer — an
+ * ungated router will never become guarded, so we must not spin on it. Budget:
+ * 6 attempts over ≤13s (delays 2s,2s,3s,3s,3s), then return the last probe.
+ */
+async function pollServedRouter(deps: TailscaleDeps, statusUrl: string): Promise<ProbeResult> {
+  const retryDelaysMs = [2000, 2000, 3000, 3000, 3000];
+  let probe = await deps.probe(statusUrl);
+  for (const delayMs of retryDelaysMs) {
+    if (probe.reachable) break;
+    await deps.sleep(delayMs);
+    probe = await deps.probe(statusUrl);
+  }
+  return probe;
+}
+
 async function settleRouterExposure(
   deps: TailscaleDeps,
   { port, dnsName }: { port: number; dnsName: string },
 ): Promise<TailscaleActionResult> {
   const url = `https://${dnsName}/`;
-  const probe = await deps.probe(`${url}__router/status`);
+  const statusUrl = `${url}__router/status`;
+  const probe = await pollServedRouter(deps, statusUrl);
   if (looksLikeGuardedRouter(probe)) {
     await recordExposure({ port, dnsName });
     return {
@@ -113,8 +135,8 @@ async function settleRouterExposure(
     };
   }
   const detail = probe.reachable
-    ? `the served ${url}__router/status returned ${probe.status ?? "no status"} WITHOUT the guarded-router 401+header`
-    : `the served ${url}__router/status did not respond`;
+    ? `the served ${statusUrl} returned ${probe.status ?? "no status"} WITHOUT the guarded-router 401+header`
+    : `the served ${statusUrl} never became reachable after retries — Tailscale HTTPS certs may still be provisioning; try again in a minute`;
   await tearDownRouterServe(deps);
   // Fail CLOSED on the teardown itself: Serve is live at this point, so if the
   // proof failed we must PROVE the mapping came back down (readback), not assume
