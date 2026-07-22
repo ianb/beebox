@@ -102,6 +102,7 @@
   }
 
   .group {
+    position: relative;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 0.85rem 0.95rem 0.95rem;
@@ -112,6 +113,14 @@
   .group.focused {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-weak);
+  }
+  .group.focused::before {
+    content: "\25B6";  /* ▶ caret marking the focused item */
+    position: absolute;
+    left: -1.15rem;
+    top: 0.95rem;
+    font-size: 0.8rem;
+    color: var(--accent);
   }
   .group.decided-keep { border-left: 4px solid var(--accent); }
   .group.decided-drop { border-left: 4px solid var(--drop); opacity: 0.72; }
