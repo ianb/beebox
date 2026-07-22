@@ -136,6 +136,13 @@ scales to the point where nobody reads everything, revisit.
   rejected, malformed tags, and docText embedding. Verified by re-ingesting
   run-003's v1-activities-retro (output matches the committed file modulo
   `docText`).
+- **Coverage ledger** — **shipped 2026-07-22** (`site/story/coverage.ts` +
+  tests): since the run dirs are now gitignored, `coverage.json` is the one
+  tracked record of which docs have been scanned (runs, variants, nugget
+  totals) and whether the scanned content still matches disk — `scanned-text`
+  provenance when a run embedded `docText`, honest `current-file` fallback for
+  older runs. `--check` reports drift (nonzero exit). First real run: 37 docs,
+  all current.
 
 ### Track C — the review app
 

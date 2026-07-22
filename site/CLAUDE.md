@@ -73,3 +73,8 @@ writes the input manifest last (so a partial build never masks staleness).
   appears verbatim in its source (fabrication = hard error), and writes the
   review app's run files into `dev/story-eval/runs/<run>/` with `docText`
   embedded. See the story-extraction subplan, Track B.
+- `story/coverage.ts` — coverage-ledger CLI (`pnpm --dir site coverage`,
+  `--check`): scans the (gitignored) run dirs and regenerates the tracked
+  `story/coverage.json` — which docs were scanned, in which runs/variants, and
+  whether the scanned content still matches disk (`--check` reports drift,
+  nonzero exit if any). The ledger is the only committed record of the runs.
