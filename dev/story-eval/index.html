@@ -232,7 +232,7 @@
     <span class="progress" id="progress"></span>
     <span class="help">
       <kbd>j</kbd>/<kbd>k</kbd> down/up &middot;
-      <kbd>y</kbd> keep &middot; <kbd>d</kbd> drop &middot; <kbd>t</kbd> note &middot; <kbd>e</kbd> export
+      <kbd>y</kbd> keep &middot; <kbd>n</kbd> drop &middot; <kbd>t</kbd> note &middot; <kbd>e</kbd> export
       &middot; click chips to flag
     </span>
   </div>
@@ -271,6 +271,12 @@ const MANIFEST = [
   "runs/run-002/v1-engineering-principles.json",
   "runs/run-002/v2-engineering-principles.json",
   "runs/run-002/v3-engineering-principles.json",
+  "runs/run-003/v1-activities-retro.json",
+  "runs/run-003/v2-activities-retro.json",
+  "runs/run-003/v3-activities-retro.json",
+  "runs/run-003/v1-openclaw-research.json",
+  "runs/run-003/v2-openclaw-research.json",
+  "runs/run-003/v3-openclaw-research.json",
 ];
 
 // Blind label mapping. DELIBERATELY BLIND: the boxholder never sees v-numbers on
@@ -291,6 +297,8 @@ const DOC_LABELS = {
   "knowledge-audits": "knowledge-audits",
   "cards-rfc": "cards-rfc",
   "engineering-principles": "engineering-principles",
+  "activities-retro": "activities-retro",
+  "openclaw-research": "openclaw-research",
 };
 const DOC_ORDER = Object.keys(DOC_LABELS);
 
@@ -884,7 +892,7 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       if (groups.length) setDecision(state.focusIndex, "keep");
       break;
-    case "d":
+    case "n":
       e.preventDefault();
       if (groups.length) setDecision(state.focusIndex, "drop");
       break;
