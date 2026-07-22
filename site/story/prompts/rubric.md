@@ -24,16 +24,32 @@ Claim one or more criterion numbers per nugget:
    the practice itself is telling.
 7. **Cross-cutting accumulator** — an instance too small to stand alone but
    part of an aggregate that matters (tag it so instances can pile up; e.g.
-   one lint rule never makes the cut, "all the lint rules" might).
+   one lint rule never makes the cut, "all the lint rules" might). Worked
+   example: a doc mentions that YAML parsing runs in strictest JSON-only
+   mode — alone, a config detail; tagged `strictness-posture`, it joins the
+   no-default-parameters lint rule and fail-closed auth as one story about
+   a project-wide bias toward strict. Seed accumulator tags (extend
+   freely): `strictness-posture`, `git-as-database`, `agent-legibility`,
+   `honest-cost` (the project's habit of arguing against itself in its own
+   documents).
 8. **Future-shaping** — tensions or intentions that say what the project is
    becoming.
 
-Err **generous**: emit a candidate you're unsure about rather than dropping
-it, and mark it `"confidence": "generous"`. Precision gets tuned later;
-missed material is the worse failure this round.
+Err **generous** at the margin: emit a candidate you're unsure about rather
+than dropping it, and mark it `"confidence": "generous"`. But generosity
+means keeping borderline *beats*, not slicing one beat into several nuggets:
+
+- **One nugget per story beat.** If two candidate nuggets would appear in
+  the same paragraph of a story, they're one beat — merge them (widen the
+  span or pick the strongest sentence) rather than emitting slices.
+- **Budget by document size**: a ~30-line document usually holds 1–3 beats;
+  ~100 lines, 3–8; ~500+, scale accordingly. Exceeding the budget is
+  allowed only when the extra nuggets are genuinely distinct beats.
 
 Avoid the known failure modes: **tediously conventional** nuggets (true of
-any project — "it has tests", "docs matter"), **span sprawl** (grabbing whole
+any project — "it has tests", "docs matter"; a principles doc stating a
+standard industry piety is NOT a nugget unless the document gives it an
+unusual twist, force, or consequence), **span sprawl** (grabbing whole
 sections when a sentence carries the idea), and **misreading** (a gloss the
 span doesn't support).
 
