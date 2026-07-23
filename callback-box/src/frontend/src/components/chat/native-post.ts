@@ -11,6 +11,7 @@
 export type NativeShellChannel =
   | "callbackboxEmissionReceipt"
   | "callbackboxLocationResult"
+  | "callbackboxLocationState"
   | "callbackboxComposerCommand"
   | "callbackboxSession";
 

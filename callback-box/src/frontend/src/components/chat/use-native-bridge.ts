@@ -1,9 +1,15 @@
 import { useEffect } from "react";
 import type { Emission } from "../../input/emission";
 import type { Receipt } from "../../input/targets/receipts";
-import { captureAndStore, isGeolocationAvailable } from "../../lib/location-share";
+import {
+  captureAndStore,
+  isGeolocationAvailable,
+  loadLocationShareState,
+  saveLocationShareState,
+  type LocationShareState,
+} from "../../lib/location-share";
 import { parseNativeEmissionDetail } from "./native-emission";
-import type { NativeShellChannel } from "./native-post";
+import type { NativeShellChannel, NativeShellWindow } from "./native-post";
 import { postNativeMessage } from "./native-post";
 
 declare global {
@@ -43,12 +49,13 @@ export function useNativeLocationBridge(opts: { enabled: boolean; boxSlug: strin
   const { enabled, boxSlug } = opts;
   useEffect(() => {
     if (!enabled) return;
+    postNativeLocationState(loadLocationShareState(boxSlug).enabled, window);
     for (const detail of drainNativeLocationQueue()) {
-      void handleNativeLocationRequest(detail, boxSlug);
+      void handleNativeLocationRequest(detail, { boxSlug });
     }
     const listener = () => {
       for (const detail of drainNativeLocationQueue()) {
-        void handleNativeLocationRequest(detail, boxSlug);
+        void handleNativeLocationRequest(detail, { boxSlug });
       }
     };
     window.addEventListener("callbackbox:native-share-location", listener);
@@ -76,33 +83,87 @@ async function handleNativeEmission(
   }
 }
 
-async function handleNativeLocationRequest(detail: unknown, boxSlug: string | undefined): Promise<void> {
-  const requestId = nativeRequestId(detail);
-  if (requestId === null) return;
-  if (!isGeolocationAvailable()) {
-    postNativeLocationResult({ id: requestId, success: false, message: "Location is unavailable." });
+export interface NativeLocationResult {
+  id: string;
+  success: boolean;
+  enabled: boolean;
+  message: string;
+}
+
+export interface NativeLocationBridgeDependencies {
+  isAvailable: () => boolean;
+  loadState: (boxSlug: string | undefined) => LocationShareState;
+  saveState: (boxSlug: string | undefined, state: LocationShareState) => void;
+  captureAndStore: (boxSlug: string | undefined, now: number) => Promise<void>;
+  now: () => number;
+  postResult: (result: NativeLocationResult) => void;
+}
+
+const nativeLocationDependencies: NativeLocationBridgeDependencies = {
+  isAvailable: isGeolocationAvailable,
+  loadState: loadLocationShareState,
+  saveState: saveLocationShareState,
+  captureAndStore,
+  now: Date.now,
+  postResult: postNativeLocationResult,
+};
+
+export async function handleNativeLocationRequest(
+  detail: unknown,
+  context: { boxSlug: string | undefined; dependencies?: NativeLocationBridgeDependencies }
+): Promise<void> {
+  const dependencies = context.dependencies ?? nativeLocationDependencies;
+  const request = nativeLocationRequest(detail);
+  if (request === null) return;
+  const state = dependencies.loadState(context.boxSlug);
+  if (state.enabled) {
+    dependencies.saveState(context.boxSlug, { enabled: false, lastCapturedAt: null });
+    dependencies.postResult(locationResult({ id: request.id, success: true, enabled: false }));
+    return;
+  }
+  if (!dependencies.isAvailable()) {
+    dependencies.postResult(
+      locationResult({ id: request.id, success: false, enabled: false, message: "Location is unavailable." })
+    );
     return;
   }
   try {
-    await captureAndStore(boxSlug, Date.now());
-    postNativeLocationResult({ id: requestId, success: true, message: "Location shared." });
+    await dependencies.captureAndStore(context.boxSlug, dependencies.now());
+    dependencies.postResult(locationResult({ id: request.id, success: true, enabled: true }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Location sharing failed.";
-    postNativeLocationResult({ id: requestId, success: false, message });
+    dependencies.postResult(locationResult({ id: request.id, success: false, enabled: false, message }));
   }
 }
 
-function nativeRequestId(detail: unknown): string | null {
+function nativeLocationRequest(detail: unknown): { id: string; action: "toggle" } | null {
   if (typeof detail !== "object" || detail === null || !("id" in detail)) return null;
-  return typeof detail.id === "string" && detail.id.trim() !== "" ? detail.id : null;
+  if (typeof detail.id !== "string" || detail.id.trim() === "") return null;
+  if (!("action" in detail)) return { id: detail.id, action: "toggle" };
+  if (detail.action !== "toggle") return null;
+  return { id: detail.id, action: detail.action };
+}
+
+function locationResult(opts: {
+  id: string;
+  success: boolean;
+  enabled: boolean;
+  message?: string;
+}): NativeLocationResult {
+  const message = opts.message ?? (opts.enabled ? "Location sharing is on." : "Location sharing is off.");
+  return { id: opts.id, success: opts.success, enabled: opts.enabled, message };
 }
 
 function postNativeReceipt(receipt: Receipt): void {
   postNativeMessage(window, { channel: "callbackboxEmissionReceipt", payload: receipt });
 }
 
-function postNativeLocationResult(result: { id: string; success: boolean; message: string }): void {
+function postNativeLocationResult(result: NativeLocationResult): void {
   postNativeMessage(window, { channel: "callbackboxLocationResult", payload: result });
+}
+
+export function postNativeLocationState(enabled: boolean, shell: NativeShellWindow): void {
+  postNativeMessage(shell, { channel: "callbackboxLocationState", payload: { enabled } });
 }
 
 function drainNativeEmissionQueue(): unknown[] {

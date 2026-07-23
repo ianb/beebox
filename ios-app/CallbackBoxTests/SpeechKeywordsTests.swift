@@ -165,6 +165,7 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
             )
             XCTAssertEqual(payload["id"] as? String, expected["id"] as? String, "\(name): id")
             XCTAssertEqual(payload["success"] as? Bool, expected["success"] as? Bool, "\(name): success")
+            XCTAssertEqual(payload["enabled"] as? Bool, expected["enabled"] as? Bool, "\(name): enabled")
             XCTAssertEqual(payload["message"] as? String, expected["message"] as? String, "\(name): message")
             decoded += 1
         }

@@ -34,6 +34,7 @@ struct NativeLocationShareRequest: Equatable, Identifiable {
 struct NativeLocationShareResult: Equatable {
     var requestID: NativeLocationShareRequest.ID
     var success: Bool
+    var enabled: Bool?
     var message: String
 }
 
@@ -67,6 +68,7 @@ struct ChatWebView: UIViewRepresentable {
     var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
     var onLocationShareResult: (NativeLocationShareResult) -> Void
+    var onLocationSharingStateChange: (Bool) -> Void
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -81,6 +83,7 @@ struct ChatWebView: UIViewRepresentable {
         onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
         onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in },
+        onLocationSharingStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in }
@@ -94,6 +97,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         self.onEmissionReceipt = onEmissionReceipt
         self.onLocationShareResult = onLocationShareResult
+        self.onLocationSharingStateChange = onLocationSharingStateChange
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -105,6 +109,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "callbackboxSession")
         configuration.userContentController.add(context.coordinator, name: "callbackboxEmissionReceipt")
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationResult")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxLocationState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxComposerCommand")
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
@@ -123,6 +128,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         context.coordinator.onEmissionReceipt = onEmissionReceipt
         context.coordinator.onLocationShareResult = onLocationShareResult
+        context.coordinator.onLocationSharingStateChange = onLocationSharingStateChange
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -147,6 +153,7 @@ struct ChatWebView: UIViewRepresentable {
             onEmissionDeliveryAttempt: onEmissionDeliveryAttempt,
             onEmissionReceipt: onEmissionReceipt,
             onLocationShareResult: onLocationShareResult,
+            onLocationSharingStateChange: onLocationSharingStateChange,
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered
@@ -159,6 +166,7 @@ struct ChatWebView: UIViewRepresentable {
         var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
         var onEmissionReceipt: (NativeEmissionReceipt) -> Void
         var onLocationShareResult: (NativeLocationShareResult) -> Void
+        var onLocationSharingStateChange: (Bool) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -184,6 +192,7 @@ struct ChatWebView: UIViewRepresentable {
             onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void,
             onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void,
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
+            onLocationSharingStateChange: @escaping (Bool) -> Void,
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
@@ -200,6 +209,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
             self.onEmissionReceipt = onEmissionReceipt
             self.onLocationShareResult = onLocationShareResult
+            self.onLocationSharingStateChange = onLocationSharingStateChange
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -281,6 +291,10 @@ struct ChatWebView: UIViewRepresentable {
             }
             if message.name == "callbackboxLocationResult" {
                 receiveLocationResult(message.body)
+                return
+            }
+            if message.name == "callbackboxLocationState" {
+                receiveLocationState(message.body)
                 return
             }
             if message.name == "callbackboxComposerCommand" {
@@ -386,7 +400,7 @@ struct ChatWebView: UIViewRepresentable {
             }
             inflightLocationRequestID = request.id
             startLocationRequestTimeout(for: request.id)
-            let script = "window.callbackboxNativeShareLocation(\"\(request.id.uuidString)\");"
+            let script = "window.callbackboxNativeShareLocation(\"\(request.id.uuidString)\", \"toggle\");"
             webView.evaluateJavaScript(script) { [weak self] _, error in
                 guard error != nil else {
                     return
@@ -397,6 +411,7 @@ struct ChatWebView: UIViewRepresentable {
                 self?.onLocationShareResult(NativeLocationShareResult(
                     requestID: request.id,
                     success: false,
+                    enabled: nil,
                     message: "The chat page could not request location."
                 ))
             }
@@ -409,6 +424,7 @@ struct ChatWebView: UIViewRepresentable {
                 let requestID = UUID(uuidString: idString),
                 requestID == inflightLocationRequestID,
                 let success = payload["success"] as? Bool,
+                let enabled = payload["enabled"] as? Bool,
                 let message = payload["message"] as? String
             else {
                 return
@@ -419,8 +435,16 @@ struct ChatWebView: UIViewRepresentable {
             onLocationShareResult(NativeLocationShareResult(
                 requestID: requestID,
                 success: success,
+                enabled: enabled,
                 message: message
             ))
+        }
+
+        private func receiveLocationState(_ body: Any) {
+            guard let enabled = ChatWebView.locationSharingEnabled(from: body) else {
+                return
+            }
+            onLocationSharingStateChange(enabled)
         }
 
         private func startLocationRequestTimeout(for requestID: NativeLocationShareRequest.ID) {
@@ -433,6 +457,7 @@ struct ChatWebView: UIViewRepresentable {
                 self.onLocationShareResult(NativeLocationShareResult(
                     requestID: requestID,
                     success: false,
+                    enabled: nil,
                     message: "Location sharing timed out."
                 ))
             }
@@ -549,6 +574,10 @@ struct ChatWebView: UIViewRepresentable {
         return .currentContext
     }
 
+    static func locationSharingEnabled(from body: Any) -> Bool? {
+        dictionaryPayload(from: body)?["enabled"] as? Bool
+    }
+
     /// Script-message payloads arrive as a dictionary from legacy direct
     /// `webkit.messageHandlers` posts and as a JSON string from the neutral
     /// `callbackboxNativePost` transport; accept both.
@@ -617,8 +646,8 @@ struct ChatWebView: UIViewRepresentable {
             window.callbackboxNativeQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-emission', { detail }));
           };
-          window.callbackboxNativeShareLocation = (id) => {
-            const detail = { id };
+          window.callbackboxNativeShareLocation = (id, action = 'toggle') => {
+            const detail = { id, action };
             window.callbackboxNativeLocationQueue.push(detail);
             window.dispatchEvent(new CustomEvent('callbackbox:native-share-location', { detail }));
           };
