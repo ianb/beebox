@@ -317,17 +317,23 @@ the contract.
 - **Drift:** SILENT→LOUD (no receipt → native 35s timeout → user sees "not confirmed").
 - **Benign field drift:** native ignores `deduplicated` on `sent` receipts.
 
-### 4.3 Location request (native → web) + result (web → native)
+### 4.3 Location preference toggle (native → web) + state/result (web → native)
 
-- **Request wire shape:** `window.callbackboxNativeShareLocation("<requestId UUID>")` pushes
-  `{ id }` onto `window.callbackboxNativeLocationQueue` and dispatches
+- **Request wire shape:** `window.callbackboxNativeShareLocation("<requestId UUID>", "toggle")` pushes
+  `{ id, action: "toggle" }` onto `window.callbackboxNativeLocationQueue` and dispatches
   `CustomEvent('callbackbox:native-share-location', { detail })`.
 - **Result wire shape** (web → native on `callbackboxLocationResult`):
-  `{ id: string, success: boolean, message: string }`.
+  `{ id: string, success: boolean, enabled: boolean, message: string }`.
+- **State wire shape** (web → native on `callbackboxLocationState`): `{ enabled: boolean }`.
+  The web posts this when the native bridge mounts so the native menu reflects the persisted
+  per-box preference without initiating a location capture.
+- **Consent semantics:** toggle-on captures and stores a fix before returning `enabled:true`;
+  toggle-off persists disabled without reading location. The web-owned localStorage preference
+  remains the single source of truth for both composers.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native request + result decode | `ios-app/CallbackBox/Views/ChatWebView.swift` — `callbackboxNativeShareLocation` script, `receiveLocationResult` (15s timeout) |
+| native request + state/result decode | `ios-app/CallbackBox/Views/ChatWebView.swift` — `callbackboxNativeShareLocation` script, `receiveLocationState`, `receiveLocationResult` (15s timeout) |
   | web handle | `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeLocationBridge`, `handleNativeLocationRequest` (→ `captureAndStore(boxSlug, Date.now())`), `postNativeLocationResult`, `drainNativeLocationQueue` |
 - **Drift:** request → SILENT→LOUD (15s native timeout); result → LOUD (status message shown).
 
@@ -474,8 +480,8 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | W2 | Session report | web→native | `callbackboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
 | B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `callbackboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
-| B3 | Location request | native→web | `callbackboxNativeShareLocation("<uuid>")`, queue `callbackboxNativeLocationQueue`, event `callbackbox:native-share-location`, detail `{id}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
-| B4 | Location result | web→native | `{id,success,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
+| B3 | Location toggle | native→web | `callbackboxNativeShareLocation("<uuid>","toggle")`, queue `callbackboxNativeLocationQueue`, event `callbackbox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
+| B4 | Location state/result | web→native | state `{enabled}` via `callbackboxLocationState`; result `{id,success,enabled,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
 | B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
 | B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `callbackboxNativeComposerCommandAck`, queue + `callbackbox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD / SILENT if float-WAV mis-decoded — **I8** |

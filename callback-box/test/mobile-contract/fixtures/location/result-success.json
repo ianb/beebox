@@ -3,11 +3,13 @@
   "input": {
     "id": "11111111-1111-1111-1111-111111111111",
     "success": true,
-    "message": "Location shared."
+    "enabled": true,
+    "message": "Location sharing is on."
   },
   "expected": {
     "id": "11111111-1111-1111-1111-111111111111",
     "success": true,
-    "message": "Location shared."
+    "enabled": true,
+    "message": "Location sharing is on."
   }
 }

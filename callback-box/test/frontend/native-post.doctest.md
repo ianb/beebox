@@ -57,7 +57,7 @@ const legacyShell: NativeShellWindow = {
 };
 postNativeMessage(legacyShell, {
   channel: "callbackboxLocationResult",
-  payload: { id: "req-1", success: true, message: "Location shared." },
+  payload: { id: "req-1", success: true, enabled: true, message: "Location sharing is on." },
 });
 const bothShell: NativeShellWindow = {
   callbackboxNativePost: (channel, payload) => neutralCalls.push({ channel, payload }),
@@ -65,10 +65,10 @@ const bothShell: NativeShellWindow = {
 };
 postNativeMessage(bothShell, {
   channel: "callbackboxLocationResult",
-  payload: { id: "req-2", success: false, message: "Denied." },
+  payload: { id: "req-2", success: false, enabled: false, message: "Denied." },
 });
 JSON.stringify({ legacy: legacyCalls, neutral: neutralCalls.map((c) => c.channel) })
-=> {"legacy":[{"id":"req-1","success":true,"message":"Location shared."}],"neutral":["callbackboxLocationResult"]}
+=> {"legacy":[{"id":"req-1","success":true,"enabled":true,"message":"Location sharing is on."}],"neutral":["callbackboxLocationResult"]}
 ```
 
 A shell exposing neither surface (a plain browser tab) is a silent no-op —

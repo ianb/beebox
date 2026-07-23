@@ -8,12 +8,13 @@ struct ComposerActionsView: View {
     var canCapture: Bool
     var canTakePhoto: Bool
     var canPasteImage: Bool
+    var locationSharingEnabled: Bool
     var onCapture: () -> Void
     var onTakePhoto: () -> Void
     var onPasteImage: () -> Void
     var onChooseFile: () -> Void
     var onScreenshot: () -> Void
-    var onShareLocation: () -> Void
+    var onToggleLocationSharing: () -> Void
     var onPairBox: () -> Void
     var onDismiss: () -> Void
 
@@ -60,8 +61,17 @@ struct ComposerActionsView: View {
                         Label("Screenshot", systemImage: "rectangle.dashed.badge.record")
                     }
 
-                    Button(action: onShareLocation) {
-                        Label("Share Location", systemImage: "location")
+                    Button(action: onToggleLocationSharing) {
+                        HStack {
+                            Label(
+                                locationSharingEnabled ? "Sharing Location" : "Share Location",
+                                systemImage: locationSharingEnabled ? "location.fill" : "location"
+                            )
+                            if locationSharingEnabled {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
                     }
                 }
 

@@ -106,6 +106,11 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertEqual(destination, .browser)
     }
 
+    func testLocationSharingStateDecodesNeutralBridgePayload() {
+        XCTAssertEqual(ChatWebView.locationSharingEnabled(from: #"{"enabled":true}"#), true)
+        XCTAssertNil(ChatWebView.locationSharingEnabled(from: #"{"enabled":"yes"}"#))
+    }
+
     @MainActor
     func testUnacknowledgedEmissionTimesOutAsRejected() async {
         let emission = makeEmission()
@@ -179,6 +184,7 @@ final class ChatWebViewRequestTests: XCTestCase {
             onEmissionDeliveryAttempt: onAttempt,
             onEmissionReceipt: onReceipt,
             onLocationShareResult: { _ in },
+            onLocationSharingStateChange: { _ in },
             onScreenshotResult: { _ in },
             onComposerCommand: { _ in },
             onComposerCommandAcknowledgementDelivered: { _ in },
