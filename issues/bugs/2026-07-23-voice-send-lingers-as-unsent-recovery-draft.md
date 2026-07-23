@@ -8,55 +8,61 @@ discovered-in: main session — boxholder, repeatedly, sending voice messages
 After submitting a voice message, it still shows up as an unsent message offered
 for recovery. Repeated / reliable, not a one-off.
 
-## Mechanism
+## Mechanism (confirmed — the persisted clear is debounced and dropped on quick navigation)
+
+Boxholder's key observation: *"it's if I navigate away too quickly after
+finishing. But the message is sent and I can see it's sent, so it's just too
+conservative about deciding it's been sent."* That pins it.
 
 The "recover an unsent message" surface restores a **persisted emission draft**
-kept in localStorage by `hooks/useEmissionPersistence.ts` (`savePersistedEmission`).
-That draft mirrors the emission store: the persist subscriber debounces writes,
-and when the draft goes empty (`isEmptyDraft`, `:124`/`:149`) it clears the
-persisted copy. So a normal **typed** send works because sending resets the store
-to empty → the subscriber removes the persisted draft.
+kept in localStorage by `hooks/useEmissionPersistence.ts`. Writes are
+**debounced** via `hooks/usePersistScheduler.ts`, which flushes synchronously
+**only on `visibilitychange` → hidden** (tab-hide / app-switch) — and its cleanup
+merely removes that listener; **there is no flush on unmount or in-app
+navigation** (`usePersistScheduler.ts:60-63`).
 
-The **voice** send path (`components/chat/InteractiveChat-voice.ts`) dispatches
-the emission and calls `clearDraftRef.current()`, but the persisted draft
-survives. Two hypotheses, both plausible; a repro is needed to pick:
+The sequence:
 
-1. **HQ / narration re-population (leading suspect).** After
-   `dispatchEmission(...)` + `clearDraftRef.current()`, the path does
-   `composerSend({ type: "START_HQ", text: joinTranscript(priorInput, text) })`
-   (`InteractiveChat-voice.ts:137`) — it puts the just-sent text *back* into the
-   composer for the high-quality transcription pass. That re-populates the store,
-   so the persist subscriber saves the sent text again → it lingers as a
-   recoverable "unsent" draft. This fits the earlier report where **narration
-   mode was active** in the screenshot. The HQ text is in-flight transcription,
-   not an unsent user draft, and shouldn't be persisted as one.
-2. **Debounce race.** Persistence writes are debounced (`PERSIST_DEBOUNCE_MS`).
-   The pre-send save (fired while dictating) lands; the post-send *clear* is
-   scheduled but a reload / the recovery check reads localStorage before it
-   flushes. Typed send may dodge this via a synchronous path or timing that voice
-   doesn't share.
+1. Dictating → a debounced save persists the draft to localStorage.
+2. Send → the store resets to empty → a debounced *clear* (empty-draft →
+   remove persisted) is **scheduled**, not run.
+3. You navigate away (a route change — the tab stays *visible*, so it is NOT a
+   tab-hide) before `PERSIST_DEBOUNCE_MS` elapses → the component unmounts / the
+   store instance changes and the pending debounced clear is **canceled, never
+   flushed**.
+4. The dictation-time draft from step 1 survives on disk → recovery offers it as
+   "unsent," even though the message went through fine.
+
+So the send is correct; the clear-on-send just loses a race with navigation
+because it's debounced and only flushes on tab-hide, not on nav/unmount. Typed
+send hits the same code but you rarely navigate away in the debounce window right
+after typing; voice + "send and immediately move on" hits it constantly.
 
 ## Fix direction
 
-- On a voice send, clear the persisted emission the **same way a typed send does**
-  and **flush synchronously** (bypass the debounce) so there's no window where the
-  sent draft is still on disk.
-- Ensure the HQ/narration re-population is **excluded from persistence** — the
-  second-pass text is transcription state, not a user draft, so mark it
-  non-persistable (or clear the persisted key at send and don't let the HQ
-  re-populate rewrite it). This is likely the real fix.
-- Check ordering: dispatch → persist-clear(flush) → HQ start, so the HQ text
-  can't re-save the persisted draft.
+- **Clear the persisted draft synchronously on send** — an empty-draft-after-send
+  is a definitive event, not keystroke-frequency; it should bypass the debounce
+  and `removePersistedEmission` *now*. (Debounce is for the save-while-typing
+  case, not the clear.)
+- And/or **flush pending writes on unmount and on in-app navigation**, not only on
+  tab-hide — add a flush to the scheduler's cleanup (`usePersistScheduler.ts:63`)
+  so a scheduled clear can't be silently dropped.
+- The synchronous-clear-on-send is the smaller, more targeted fix and makes
+  navigation timing irrelevant.
+
+(The earlier HQ/narration-re-population theory is a possible secondary
+contributor but not the cause the boxholder describes — the message *is* sent and
+visible; it's purely the persisted-draft clear not landing before navigation.)
 
 ## Repro / verify
 
-Send a voice message (try both narration mode ON and OFF — hypothesis 1 predicts
-narration reproduces it, plain voice may not), then reload / reopen and confirm
-no unsent-message recovery is offered. This is a good `cb-debug` candidate — the
-loop is: dictate → send → inspect the persisted-emission localStorage key (should
-be absent/empty immediately after send). Pin which hypothesis before fixing.
+Dictate → send → **immediately navigate away** (switch session/landmark/route)
+within the debounce window → return and confirm no unsent-message recovery is
+offered. Good `cb-debug` loop: after send-then-nav, the persisted-emission
+localStorage key should be gone. Then confirm the tab-hide flush and normal
+persistence still work.
 
-Web frontend (the persistence + voice path), not shell-specific — but note the
-recovery banner has shown on iOS
+Web frontend (persistence + scheduler), not shell-specific — but the recovery
+banner has shown on iOS
 ([both-composers regression](2026-07-22-ios-both-composers-nativecomposer-flag-lost-on-nav.md)
 screenshot), so verify there too.
