@@ -23,6 +23,19 @@ export interface NativeShellWindow {
   };
 }
 
+/**
+ * True when running inside a native shell (iOS/Android WebView). Keys off the
+ * document-start bridge function, which the shell injects on EVERY page load
+ * (`ChatWebView.swift` `startupScript()`), so it survives in-app navigation —
+ * unlike the initial-URL `?nativeComposer=1` param, which is lost the moment the
+ * WebView navigates same-origin and left the native + web composers both showing.
+ * SSR-safe; the global `Window` augmentation in `use-native-bridge.ts` types the
+ * property.
+ */
+export function isNativeShell(): boolean {
+  return typeof window !== "undefined" && typeof window.callbackboxNativePost === "function";
+}
+
 export function postNativeMessage(
   shell: NativeShellWindow,
   { channel, payload }: { channel: NativeShellChannel; payload: unknown }
