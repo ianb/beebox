@@ -16,6 +16,14 @@ The fix isn't to shrink the desktop split; it's a **different interaction model
 on mobile**: viewing a document and chatting are *modes*, not simultaneous panes,
 and the feedback channel shifts from a transcript to **voice in / callouts out**.
 
+**Scope: this is general mobile, not iOS.** The constraint is a narrow viewport,
+so it applies equally to mobile web in a browser, the installed PWA, and the iOS
+*and* Android native wrappers. The layout work lives in the web frontend
+(`InteractiveChat` / the companion split) and benefits every mobile surface; the
+iOS references below are just where some pieces (a native composer, native
+transcription) happen to be implemented, not the scope of the problem. Build the
+modal model in the responsive web layout first; the native shells inherit it.
+
 ## The model
 
 - **Modal, not split.** On a phone, opening a card gives it the screen. The chat
@@ -23,8 +31,9 @@ and the feedback channel shifts from a transcript to **voice in / callouts out**
   talking to the agent. Switching back to the full transcript is a deliberate
   mode change, not an always-present column.
 - **Voice-first input.** While reading/working a document you're not typing a
-  transcript; you speak. The native composer already foregrounds the mic — mobile
-  should assume voice is the primary input in document mode.
+  transcript; you speak. Mobile should assume voice is the primary input in
+  document mode — this is the web composer's mic / mobile Web Speech path, not an
+  iOS-only capability (the iOS native transcription is one implementation of it).
 - **Callouts as the feedback surface.** With the transcript hidden, the agent's
   responses surface as `{% callout %}` / ack-style signals near the composer — a
   glanceable "here's what I did / here's the answer," not a scrolling history you
@@ -60,9 +69,10 @@ used — one thing in focus at a time — where desktop rewards side-by-side.
   mode instead. Reconcile with `ViewOverlay` (the dismissible sheet) — is
   document-mode the overlay expanded to full-screen-with-composer, or a distinct
   layout?
-- **Voice reliability.** Leaning on voice raises the stakes on the native
-  transcription path (HQ transcription window, the iOS composer) — those need to
-  be solid for this model to work.
+- **Voice reliability.** Leaning on voice raises the stakes on the whole mobile
+  voice-input path — the web composer's mic and mobile Web Speech, and the native
+  transcription where a wrapper provides it — all need to be solid for this model
+  to work.
 - **Detecting mobile vs desktop** cleanly so the two models diverge without a
   squeezed-desktop middle state.
 
