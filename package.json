@@ -39,7 +39,11 @@
     "overrides": {
       "whatwg-url": "^14",
       "wxt>vite": "^8.0.16",
-      "@wxt-dev/module-react>@vitejs/plugin-react": "^6.0.2"
+      "@wxt-dev/module-react>@vitejs/plugin-react": "^6.0.2",
+      "undici": "^7.28.0",
+      "js-yaml": "^4.3.0",
+      "tmp": "^0.2.7",
+      "hono": "^4.12.27"
     },
     "peerDependencyRules": {
       "allowedVersions": {
