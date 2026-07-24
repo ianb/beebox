@@ -13,7 +13,54 @@ import type http from "node:http";
 import { execa } from "execa";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
+import { z } from "zod";
 import { serveIssues, findClosedIssueLinkHrefs, appendClosedIssuePills } from "./router-issues.js";
+
+// Per-worktree extra cards for the /dev/ manifest, declared in the worktree's
+// tracked `dev/tools.json` and served straight from disk — so a worktree can add
+// its own tools without a router-code change + main-merge. Universal tools (doc
+// browser, issue browser, site preview) stay in code; this is for the rest.
+const devToolSchema = z
+  .object({
+    title: z.string().min(1),
+    href: z.string().min(1),
+    desc: z.string().default(""),
+    emoji: z.string().default("🔧"),
+  })
+  .strict();
+const devToolsFileSchema = z.object({ tools: z.array(devToolSchema) }).strict();
+
+// href is worktree-root-relative (`dev/story-eval/index.html`) → `/<name>/…`;
+// an absolute URL (http/https) passes through for linking external dashboards.
+function resolveToolHref(name: string, href: string): string {
+  if (/^https?:\/\//.test(href)) return href;
+  return `/${encodeURIComponent(name)}/${href.replace(/^\/+/, "")}`;
+}
+
+export async function renderWorktreeToolCards(name: string, devRoot: string): Promise<string> {
+  let raw: string;
+  try {
+    raw = await fs.readFile(path.join(devRoot, "tools.json"), "utf8");
+  } catch {
+    return ""; // no tools.json → no extra cards (the common case)
+  }
+  let parsed: z.infer<typeof devToolsFileSchema>;
+  try {
+    parsed = devToolsFileSchema.parse(JSON.parse(raw));
+  } catch (e) {
+    // Malformed hand-edited config: degrade visibly (skip the cards, log loudly)
+    // rather than 500 the whole dev index.
+    console.warn(`[dev] ${name}/dev/tools.json is invalid, ignoring it:`, e instanceof Error ? e.message : e);
+    return "";
+  }
+  return parsed.tools
+    .map(
+      (t) =>
+        `<li><a class="title" href="${escapeHtml(resolveToolHref(name, t.href))}">${escapeHtml(`${t.emoji} ${t.title}`)}</a>`
+        + `<div class="desc">${escapeHtml(t.desc)}</div></li>`,
+    )
+    .join("");
+}
 
 const DEV_CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -215,21 +262,13 @@ async function renderDevManifest(name: string, base: string, devRoot: string): P
     + `<li><a class="title" href="/${encodeURIComponent(name)}/site/">🌐 Public site preview</a>`
     + `<div class="desc">This worktree's build of the front-door site (<code>site/dist/</code> — run <code>pnpm --dir site build</code> first). What GitHub Pages will serve.</div></li>`;
 
-  // The story-eval nugget-review app is a self-contained page, not a directory
-  // listing — surface it directly where it exists rather than as a bare folder row.
-  const hasStoryEval = await fs
-    .access(path.join(devRoot, "story-eval", "index.html"))
-    .then(() => true)
-    .catch(() => false);
-  if (hasStoryEval) {
-    builtinHtml += `<li><a class="title" href="${base}/story-eval/index.html">🔎 Story-eval review</a>`
-      + `<div class="desc">Triage extracted story nuggets: keep/drop, chips, notes. Blind A/B/C prompt-variant glosses per source span.</div></li>`;
-  }
+  // Per-worktree extras declared in dev/tools.json (read live from disk).
+  builtinHtml += await renderWorktreeToolCards(name, devRoot);
 
   let artifactsHtml: string;
   try {
     const dirents = (await fs.readdir(devRoot, { withFileTypes: true }))
-      .filter((d) => !d.name.startsWith(".") && d.name !== "README.md")
+      .filter((d) => !d.name.startsWith(".") && d.name !== "README.md" && d.name !== "tools.json")
       .sort((a, b) =>
         a.isDirectory() === b.isDirectory() ? a.name.localeCompare(b.name) : a.isDirectory() ? -1 : 1,
       );
