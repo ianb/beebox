@@ -13,6 +13,7 @@ struct RootView: View {
     @State private var locationShareRequest: NativeLocationShareRequest?
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var locationSharingEnabled = false
+    @State private var narrationEnabled = false
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
@@ -72,6 +73,7 @@ struct RootView: View {
             locationShareRequest = nil
             locationShareResult = nil
             locationSharingEnabled = false
+            narrationEnabled = false
             screenshotRequest = nil
             screenshotResult = nil
             composerCommandAcknowledgements = []
@@ -116,6 +118,9 @@ struct RootView: View {
             screenshotRequest: screenshotRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             onSessionChange: { sessionID in
+                if visibleChatSessionID != sessionID {
+                    narrationEnabled = false
+                }
                 visibleChatBoxID = box.id
                 visibleChatSessionID = sessionID
             },
@@ -142,6 +147,9 @@ struct RootView: View {
             onLocationSharingStateChange: { enabled in
                 locationSharingEnabled = enabled
             },
+            onNarrationStateChange: { enabled in
+                narrationEnabled = enabled
+            },
             onScreenshotResult: { result in
                 guard result.requestID == screenshotRequest?.id else {
                     return
@@ -163,6 +171,7 @@ struct RootView: View {
                 draftStore: composerDraftStore,
                 pendingStore: pendingEmissionStore,
                 captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
+                narrationEnabled: narrationEnabled,
                 locationSharingEnabled: locationSharingEnabled,
                 locationShareResult: locationShareResult,
                 screenshotResult: screenshotResult,

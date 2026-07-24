@@ -63,6 +63,14 @@ export function useNativeLocationBridge(opts: { enabled: boolean; boxSlug: strin
   }, [enabled, boxSlug]);
 }
 
+export function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: boolean }) {
+  const { enabled, narrationEnabled } = opts;
+  useEffect(() => {
+    if (!enabled) return;
+    postNativeNarrationState(narrationEnabled, window);
+  }, [enabled, narrationEnabled]);
+}
+
 async function handleNativeEmission(
   detail: unknown,
   dispatchEmission: (emission: Emission) => Promise<Receipt>
@@ -164,6 +172,10 @@ function postNativeLocationResult(result: NativeLocationResult): void {
 
 export function postNativeLocationState(enabled: boolean, shell: NativeShellWindow): void {
   postNativeMessage(shell, { channel: "callbackboxLocationState", payload: { enabled } });
+}
+
+export function postNativeNarrationState(enabled: boolean, shell: NativeShellWindow): void {
+  postNativeMessage(shell, { channel: "callbackboxNarrationState", payload: { enabled } });
 }
 
 function drainNativeEmissionQueue(): unknown[] {

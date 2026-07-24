@@ -8,6 +8,7 @@ struct NativeComposerView: View {
     @ObservedObject var draftStore: ComposerDraftStore
     @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
+    var narrationEnabled: Bool
     var locationSharingEnabled: Bool
     var locationShareResult: NativeLocationShareResult?
     var screenshotResult: NativeScreenshotResult?
@@ -387,6 +388,19 @@ struct NativeComposerView: View {
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
         let audioURL = dictation.consumeRecordedAudioURL()
+        switch NativeVoiceKeywordSendPlan.make(
+            liveTranscript: intent.processedTranscript,
+            narrationEnabled: narrationEnabled
+        ) {
+        case .live(let text):
+            if let audioURL {
+                try? FileManager.default.removeItem(at: audioURL)
+            }
+            enqueueMessage(text: text, origin: .voice, diarized: false)
+            return
+        case .hq:
+            break
+        }
         let priorInput = dictation.consumeKeywordSeedText()
         let snapshot = draftStore.draft
         let sendingBox = box
