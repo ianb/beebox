@@ -59,6 +59,10 @@
     color: var(--bg);
     border-color: var(--fg);
   }
+  /* Fully triaged: green accent + a leading check. Works with aria-pressed too. */
+  .docpick button.done { border-color: var(--accent); color: var(--accent); }
+  .docpick button.done::before { content: "✓ "; }
+  .docpick button.done[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
   .meta-row {
     display: flex;
     flex-wrap: wrap;
@@ -773,6 +777,24 @@ async function load() {
   selectDoc(firstDoc, { failures: failures.length });
 }
 
+// How many groups in a doc carry a keep/drop decision (triage progress).
+function triagedCount(docKey) {
+  const dv = state.verdicts[docKey] || {};
+  let n = 0;
+  for (const g of state.groupsByDoc[docKey] || []) if (dv[g.id]?.decision) n++;
+  return n;
+}
+
+// Refresh one doc's picker button label + fully-triaged marker.
+function updateDocPickerButton(docKey) {
+  const btn = document.querySelector(`#docpick button[data-doc="${docKey}"]`);
+  if (!btn) return;
+  const total = (state.groupsByDoc[docKey] || []).length;
+  const done = triagedCount(docKey);
+  btn.textContent = `${DOC_LABELS[docKey]} ${done}/${total}`;
+  btn.classList.toggle("done", total > 0 && done === total);
+}
+
 function buildDocPicker() {
   const nav = document.getElementById("docpick");
   nav.innerHTML = "";
@@ -781,11 +803,11 @@ function buildDocPicker() {
     if (!groups) continue;
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.textContent = `${DOC_LABELS[docKey]} (${groups.length})`;
     btn.setAttribute("aria-pressed", "false");
     btn.addEventListener("click", () => selectDoc(docKey));
     btn.dataset.doc = docKey;
     nav.appendChild(btn);
+    updateDocPickerButton(docKey);
   }
 }
 
@@ -1045,6 +1067,7 @@ function updateProgress() {
   }
   document.getElementById("progress").innerHTML =
     `<b>${decided}</b> / ${total} triaged` + (total ? ` &middot; group <b>${state.focusIndex + 1}</b>` : "");
+  updateDocPickerButton(state.currentDoc);
 }
 
 function openNote() {
