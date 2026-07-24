@@ -6,5 +6,6 @@
       "href": "dev/story-eval/index.html",
       "desc": "Triage extracted story nuggets: keep/drop, chips, notes. Blind A/B/C prompt-variant glosses per source span."
     }
-  ]
+  ],
+  "scripted": ["story-eval"]
 }
