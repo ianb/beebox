@@ -12,6 +12,8 @@ struct RootView: View {
     @State private var visibleChatBoxID: PairedBox.ID?
     @State private var locationShareRequest: NativeLocationShareRequest?
     @State private var locationShareResult: NativeLocationShareResult?
+    @State private var locationSharingEnabled = false
+    @State private var narrationEnabled = false
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
@@ -70,6 +72,8 @@ struct RootView: View {
             visibleChatSessionID = nil
             locationShareRequest = nil
             locationShareResult = nil
+            locationSharingEnabled = false
+            narrationEnabled = false
             screenshotRequest = nil
             screenshotResult = nil
             composerCommandAcknowledgements = []
@@ -114,6 +118,9 @@ struct RootView: View {
             screenshotRequest: screenshotRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             onSessionChange: { sessionID in
+                if visibleChatSessionID != sessionID {
+                    narrationEnabled = false
+                }
                 visibleChatBoxID = box.id
                 visibleChatSessionID = sessionID
             },
@@ -132,7 +139,16 @@ struct RootView: View {
                     return
                 }
                 locationShareRequest = nil
+                if let enabled = result.enabled {
+                    locationSharingEnabled = enabled
+                }
                 locationShareResult = result
+            },
+            onLocationSharingStateChange: { enabled in
+                locationSharingEnabled = enabled
+            },
+            onNarrationStateChange: { enabled in
+                narrationEnabled = enabled
             },
             onScreenshotResult: { result in
                 guard result.requestID == screenshotRequest?.id else {
@@ -155,9 +171,11 @@ struct RootView: View {
                 draftStore: composerDraftStore,
                 pendingStore: pendingEmissionStore,
                 captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
+                narrationEnabled: narrationEnabled,
+                locationSharingEnabled: locationSharingEnabled,
                 locationShareResult: locationShareResult,
                 screenshotResult: screenshotResult,
-                onShareLocation: {
+                onToggleLocationSharing: {
                     locationShareResult = nil
                     locationShareRequest = NativeLocationShareRequest()
                 },

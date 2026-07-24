@@ -3,7 +3,32 @@ title: "iOS: location is effectively always shared — the native path bypasses 
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder: location seems always shared on iOS, not clearly toggleable
+needs: [manual-testing]
 ---
+
+## Implemented 2026-07-22
+
+The native Add menu's existing location row is now the missing control. It
+reads the web-owned per-box preference and renders either “Share Location” or
+“Sharing Location” with a checkmark. Tapping while off captures a fix and only
+then reports sharing on; tapping while on persists off without reading
+location.
+
+The web bridge proactively sends the stored state to the native shell when it
+mounts, and that state synchronization performs no capture. Toggle results now
+carry the authoritative `enabled` value; transport failures preserve the last
+known UI state rather than falsely displaying off. The mobile contract and
+shared fixtures document the new request, state, and result shapes.
+
+Turning sharing off stops future captures/refreshes; as on the web, it does not
+delete the last fix already stored by the box.
+
+Automated verification covers state synchronization, enable and disable side
+effects, shared wire fixtures, native decoding, and the full web and iOS test
+suites. Manual verification remains on a real iPhone: confirm the row initially
+matches the stored state, enabling prompts/captures and gains the checkmark,
+disabling removes the checkmark without a permission prompt, and the state
+survives closing/reopening the menu and the app.
 
 On iOS, location appears to always be shared, with no clear way to turn it off.
 The web app has a proper opt-in toggle; the native path doesn't honor it.

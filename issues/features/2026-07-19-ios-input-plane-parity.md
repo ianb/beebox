@@ -55,6 +55,11 @@ This issue is the cold-start handoff for the next implementation session.
   HQ work, HQ failure sends the preserved live transcript, audio interruption
   leaves editable text, and later drafts/sends cannot clobber or pass the
   earlier preparation.
+- Narration routing now matches the web composer: the web session publishes its
+  narration flag to the native shell, ordinary iOS keyword sends use the live
+  Apple transcript without uploading audio, and narration-enabled sends retain
+  the durable HQ transcription path. A session change fails closed to ordinary
+  local transcription until the new web session publishes its state.
 - Track 6 has a DEBUG fixture host for all thirteen planned states plus a
   repeatable screenshot script. Portrait sweeps passed on current and compact
   iPhones and iPad across light/dark and large accessibility text, including
@@ -117,7 +122,10 @@ target state, final message assembly, and dispatch.
 - Real-phone acceptance for camera, iCloud Photos, Files, paste permission,
   screenshot, location, dictation keywords, audio interruption, background and
   force-quit restoration, offline retry, navigation during send, and two quick
-  sends while the target is busy.
+  sends while the target is busy. Verify both narration modes explicitly:
+  narration off must send the editable Apple transcript without showing HQ
+  preparation, while narration on must retain HQ transcription and its live
+  transcript fallback.
 
 ## Close only when
 

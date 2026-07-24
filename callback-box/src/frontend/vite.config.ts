@@ -1,5 +1,4 @@
 import { resolve as resolvePath } from "node:path";
-import type { IncomingMessage } from "node:http";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
@@ -45,42 +44,6 @@ const stripBase = (incoming: string) =>
   BASE_PREFIX && incoming.startsWith(BASE_PREFIX)
     ? incoming.slice(BASE_PREFIX.length)
     : incoming;
-
-// The login/setup pages are SPA *navigations*, not API calls, and in dev they
-// must NOT be proxied to the backend. The backend serves its BUILT login bundle
-// (`serveLoginSpa`), compiled at base="/", so `import.meta.env.BASE_URL` is baked
-// to "/"; behind the router's `/<worktree>/` prefix every client-side
-// `withBase()` (frontend/api-core.ts) then drops the prefix — assets 404 and the
-// page client-redirects to root `/auth/login`, rendering a blank `#root`
-// (browser-check finding, plan Track A item 3, DECIDED option A). A build-time
-// base can't be repaired by rewriting the served HTML, so we let Vite serve its
-// OWN base-aware `index.html` for these two GETs instead: Vite's dev bundle
-// derives `BASE_URL` from this config's `base` (= VITE_BASE = `/<worktree>/`),
-// so `withBase()` targets `/<worktree>/auth/...`, not root.
-//
-// Mechanism: the proxy `bypass` (vite 5.4.21) — returning a string sets
-// `req.url` to it and hands the request to Vite's own middleware chain
-// (base → html-fallback → indexHtml/`transformIndexHtml`), which serves the
-// transformed, base-injected `index.html`. Returning VITE_BASE (the base root)
-// is what html-fallback resolves to `index.html`. Returning `undefined` lets the
-// request proxy to the backend unchanged.
-//
-// Scope is deliberately narrow so ONLY the two HTML navigations bypass: a GET
-// whose path (after stripping BASE_PREFIX, ignoring any `?query`) is exactly
-// `/auth/login` or `/auth/setup`, AND that accepts `text/html`. Everything else
-// on `/auth/*` — POST /auth/login, /auth/me, /auth/methods, /auth/logout,
-// /auth/callback, and any non-HTML GET — returns `undefined` and proxies to the
-// backend, its auth API, unchanged. Dev-only; prod's `serveLoginSpa` (the
-// asset-rewrite path for a built bundle behind a prefix) is untouched.
-const bypassLoginToViteHtml = (req: IncomingMessage): string | undefined => {
-  if (req.method !== "GET") return undefined;
-  if (req.headers.accept?.includes("text/html") !== true) return undefined;
-  const url = req.url;
-  if (url === undefined) return undefined;
-  const pathname = stripBase(url.split("?", 1).join(""));
-  if (pathname === "/auth/login" || pathname === "/auth/setup") return VITE_BASE;
-  return undefined;
-};
 
 // HMR deliberately has NO host/port config: with nothing set, Vite's client
 // connects its HMR WebSocket (and sends its reconnect pings) to the page's
@@ -147,15 +110,15 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: stripBase,
       },
-      // Root-level auth (e.g. /auth/me, /auth/login, /auth/logout). The
-      // `bypass` diverts ONLY the GET /auth/{login,setup} HTML navigations to
-      // Vite's own base-aware index.html (see `bypassLoginToViteHtml`); every
-      // other /auth/* request (the auth API) proxies to the backend unchanged.
+      // Root-level auth (/auth/login, /auth/setup, /auth/me, /auth/methods,
+      // /auth/logout, /auth/callback, the POSTs). All of it proxies straight to
+      // the backend: the login/setup pages are now self-contained server-rendered
+      // HTML (base-aware via the x-cb-base-prefix header), so there's no SPA
+      // navigation to divert to Vite — the earlier `bypass` is gone.
       [`^${BASE_PREFIX}/auth`]: {
         target: backendTarget,
         changeOrigin: true,
         rewrite: stripBase,
-        bypass: bypassLoginToViteHtml,
       },
       // Per-box API: /<base>/<box>/api/...
       [`^${BASE_PREFIX}/[^/]+/api/`]: {

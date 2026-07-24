@@ -8,9 +8,11 @@ struct NativeComposerView: View {
     @ObservedObject var draftStore: ComposerDraftStore
     @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
+    var narrationEnabled: Bool
+    var locationSharingEnabled: Bool
     var locationShareResult: NativeLocationShareResult?
     var screenshotResult: NativeScreenshotResult?
-    var onShareLocation: () -> Void
+    var onToggleLocationSharing: () -> Void
     var onTakeScreenshot: () -> Void
     var automaticallyResumeVoicePreparations = true
     var voiceStateOverride: VoiceCompositionState?
@@ -130,12 +132,13 @@ struct NativeComposerView: View {
                 canCapture: captureAvailable,
                 canTakePhoto: UIImagePickerController.isSourceTypeAvailable(.camera),
                 canPasteImage: UIPasteboard.general.hasImages,
+                locationSharingEnabled: locationSharingEnabled,
                 onCapture: openCapture,
                 onTakePhoto: openCamera,
                 onPasteImage: pasteImage,
                 onChooseFile: openFileImporter,
                 onScreenshot: takeScreenshot,
-                onShareLocation: shareLocation,
+                onToggleLocationSharing: toggleLocationSharing,
                 onPairBox: openPairing,
                 onDismiss: { showingActions = false }
             )
@@ -385,6 +388,19 @@ struct NativeComposerView: View {
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
         let audioURL = dictation.consumeRecordedAudioURL()
+        switch NativeVoiceKeywordSendPlan.make(
+            liveTranscript: intent.processedTranscript,
+            narrationEnabled: narrationEnabled
+        ) {
+        case .live(let text):
+            if let audioURL {
+                try? FileManager.default.removeItem(at: audioURL)
+            }
+            enqueueMessage(text: text, origin: .voice, diarized: false)
+            return
+        case .hq:
+            break
+        }
         let priorInput = dictation.consumeKeywordSeedText()
         let snapshot = draftStore.draft
         let sendingBox = box
@@ -739,10 +755,10 @@ struct NativeComposerView: View {
         }
     }
 
-    private func shareLocation() {
+    private func toggleLocationSharing() {
         showingActions = false
-        statusText = "Requesting location..."
-        onShareLocation()
+        statusText = locationSharingEnabled ? "Turning location sharing off..." : "Requesting location..."
+        onToggleLocationSharing()
     }
 
     private func appendCameraImage(_ image: UIImage) async {

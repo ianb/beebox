@@ -10,10 +10,10 @@ import { rewriteMobileCookiePath } from "./router-cookie.js";
 
 const WT = { worktree: "main", boxSlug: "test1" };
 
-test("cb_mobile: Path=/<slug> is rewritten to /<worktree>/<slug>, other attrs intact", () => {
+test("cb_mobile: Path=/<slug> is rewritten to the worktree base /<worktree> (covers dev assets), other attrs intact", () => {
   const input = "cb_mobile=abc.def; Path=/test1; HttpOnly; Secure; SameSite=Lax; Max-Age=3600";
   const [out] = rewriteMobileCookiePath(input, WT)!;
-  assert.equal(out, "cb_mobile=abc.def; Path=/main/test1; HttpOnly; Secure; SameSite=Lax; Max-Age=3600");
+  assert.equal(out, "cb_mobile=abc.def; Path=/main; HttpOnly; Secure; SameSite=Lax; Max-Age=3600");
 });
 
 test("cb_session with host-wide Path=/ is left untouched (already works behind any prefix)", () => {
@@ -24,7 +24,7 @@ test("cb_session with host-wide Path=/ is left untouched (already works behind a
 
 test("cb_session with a non-root Path=/<slug> WOULD be rewritten (future-proofing)", () => {
   const [out] = rewriteMobileCookiePath("cb_session=xyz; Path=/test1; HttpOnly", WT)!;
-  assert.equal(out, "cb_session=xyz; Path=/main/test1; HttpOnly");
+  assert.equal(out, "cb_session=xyz; Path=/main; HttpOnly");
 });
 
 test("an unrelated cookie is never touched, even with Path=/<slug>", () => {
@@ -42,11 +42,11 @@ test("only the box's OWN Path is rewritten — a different Path is left alone", 
 test("Path attribute is matched case- and space-insensitively", () => {
   assert.equal(
     rewriteMobileCookiePath("cb_mobile=abc; path=/test1; HttpOnly", WT)![0],
-    "cb_mobile=abc; Path=/main/test1; HttpOnly",
+    "cb_mobile=abc; Path=/main; HttpOnly",
   );
   assert.equal(
     rewriteMobileCookiePath("cb_mobile=abc;PATH = /test1;HttpOnly", WT)![0],
-    "cb_mobile=abc;Path=/main/test1;HttpOnly",
+    "cb_mobile=abc;Path=/main;HttpOnly",
   );
 });
 
@@ -56,11 +56,11 @@ test("an array of Set-Cookie headers is rewritten per-entry; a plain string is n
     WT,
   );
   assert.deepEqual(out, [
-    "cb_mobile=a; Path=/main/test1; HttpOnly",
+    "cb_mobile=a; Path=/main; HttpOnly",
     "cb_session=b; Path=/; HttpOnly",
     "other=c; Path=/test1",
   ]);
-  assert.deepEqual(rewriteMobileCookiePath("cb_mobile=a; Path=/test1", WT), ["cb_mobile=a; Path=/main/test1"]);
+  assert.deepEqual(rewriteMobileCookiePath("cb_mobile=a; Path=/test1", WT), ["cb_mobile=a; Path=/main"]);
 });
 
 test("a cb_mobile with no Path attribute is left unchanged", () => {

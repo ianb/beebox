@@ -19,6 +19,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 
 import { isRecord } from "../lib/is-record.js";
+import { sleep } from "../lib/sleep.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -72,6 +73,12 @@ export interface TailscaleDeps {
   run: RunCommand;
   probe: ProbeEndpoint;
   networkInterfaces: ListNetworkAddresses;
+  /**
+   * Sleep between polls. A seam so setup's first-serve TLS-cert-provisioning
+   * retry (Let's Encrypt takes a few seconds on the FIRST `serve --https=443`)
+   * waits for real against the daemon but is INSTANT under the fake.
+   */
+  sleep: (ms: number) => Promise<void>;
 }
 
 export function createRealRun(): RunCommand {
@@ -127,7 +134,12 @@ export function createRealNetworkInterfaces(): ListNetworkAddresses {
 }
 
 export function createRealTailscaleDeps(): TailscaleDeps {
-  return { run: createRealRun(), probe: createRealProbe(), networkInterfaces: createRealNetworkInterfaces() };
+  return {
+    run: createRealRun(),
+    probe: createRealProbe(),
+    networkInterfaces: createRealNetworkInterfaces(),
+    sleep: (ms) => sleep(ms),
+  };
 }
 
 // ─── Boundary schemas: only the fields the machine reads, `.passthrough()` so a

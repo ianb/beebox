@@ -35,6 +35,23 @@ final class ComposerTextViewTests: XCTestCase {
 }
 
 final class ComposerDraftReducerTests: XCTestCase {
+    func testVoiceKeywordSendUsesLiveTranscriptWhenNarrationIsOff() {
+        XCTAssertEqual(
+            NativeVoiceKeywordSendPlan.make(
+                liveTranscript: "native words <send-message phrase=\"send now\" />",
+                narrationEnabled: false
+            ),
+            .live(text: "native words <send-message phrase=\"send now\" />")
+        )
+    }
+
+    func testVoiceKeywordSendUsesHQPreparationWhenNarrationIsOn() {
+        XCTAssertEqual(
+            NativeVoiceKeywordSendPlan.make(liveTranscript: "native words", narrationEnabled: true),
+            .hq
+        )
+    }
+
     func testVoiceCompositionStateTransitionsAreExplicit() {
         var state = VoiceCompositionState.idle
         VoiceCompositionReducer.reduce(&state, .requestPermission)

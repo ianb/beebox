@@ -137,21 +137,32 @@ function validateReceipt(fx) {
 ```
 
 ```ts setup
-// ── location: request {id} (native→web), result {id,success,message} (web→native) ──
+// ── location: toggle request, result, and unsolicited current state ──
 function validateLocation(fx) {
   if (fx.variant === "request") {
     const rawId = fx.input.id;
-    const got = typeof rawId === "string" && rawId.length > 0 ? { id: rawId } : null;
+    const action = fx.input.action;
+    const got = typeof rawId === "string" && rawId.length > 0 && action === "toggle" ? { id: rawId, action } : null;
     return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
   }
   if (fx.variant === "result") {
     const r = fx.input;
-    if (typeof r.id !== "string" || typeof r.success !== "boolean" || typeof r.message !== "string") {
+    if (typeof r.id !== "string" || typeof r.success !== "boolean" || typeof r.enabled !== "boolean" || typeof r.message !== "string") {
       return { ok: false, detail: `malformed location result ${JSON.stringify(r)}` };
     }
     return deepEqual(r, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(r)}` };
   }
+  if (fx.variant === "state") {
+    const r = fx.input;
+    const got = typeof r.enabled === "boolean" ? { enabled: r.enabled } : null;
+    return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
+  }
   return { ok: false, detail: `unknown location variant ${JSON.stringify(fx.variant)}` };
+}
+
+function validateNarrationState(fx) {
+  const got = typeof fx.input.enabled === "boolean" ? { enabled: fx.input.enabled } : null;
+  return deepEqual(got, fx.expected) ? { ok: true } : { ok: false, detail: `got ${JSON.stringify(got)}` };
 }
 
 // ── pairing-url: a contract-faithful parse of callbackbox://pair (contract §1.1) ──
@@ -283,12 +294,21 @@ runFamily("receipt", validateReceipt)
 
 ## location
 
-Request `{id}` (valid and a malformed non-string id that yields no request) and
-result `{id,success,message}` (granted and denied).
+Toggle request `{id,action}`, result `{id,success,enabled,message}`, and the
+unsolicited current-state payload.
 
 ```ts
 runFamily("location", validateLocation)
-=> {"family":"location","cases":4,"pass":4}
+=> {"family":"location","cases":5,"pass":5}
+```
+
+## narration-state
+
+The current session's narration flag is mirrored to native without ambiguity:
+
+```ts
+runFamily("narration-state", validateNarrationState)
+=> {"family":"narration-state","cases":2,"pass":2}
 ```
 
 ## pairing-url

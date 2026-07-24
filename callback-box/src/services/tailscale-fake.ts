@@ -82,5 +82,7 @@ export function createFakeTailscaleDeps(options: FakeTailscaleOptions): Tailscal
       return Promise.resolve(options.probe ?? { reachable: false, status: null });
     },
     networkInterfaces,
+    // Instant no-op: the cert-provisioning retry must not actually wait in tests.
+    sleep: () => Promise.resolve(),
   };
 }

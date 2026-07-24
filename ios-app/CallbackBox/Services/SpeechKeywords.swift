@@ -282,6 +282,15 @@ enum VoicePreparationResolver {
     }
 }
 
+enum NativeVoiceKeywordSendPlan: Equatable {
+    case live(text: String)
+    case hq
+
+    static func make(liveTranscript: String, narrationEnabled: Bool) -> NativeVoiceKeywordSendPlan {
+        narrationEnabled ? .hq : .live(text: liveTranscript)
+    }
+}
+
 private struct Choice {
     var words: [String]
 

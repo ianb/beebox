@@ -99,6 +99,10 @@ const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 // everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
 const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 
+// Verbose worktree-lifecycle logging (e.g. WS-upgrade refusals to idle-stopped
+// worktrees — designed behavior, not anomalies, so silent by default).
+const ROUTER_DEBUG = process.env.CB_ROUTER_DEBUG === "1";
+
 const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
 
 // The /dev/ space: a place the *dev-repo agent* (Claude Code, not a box) builds
@@ -1130,10 +1134,12 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     }
     const ready = handle ? readyLifecycle(handle) : null;
     if (!handle || !ready) {
-      const last = refusedUpgradeLogAt.get(name) ?? 0;
-      if (Date.now() - last > 60_000) {
-        refusedUpgradeLogAt.set(name, Date.now());
-        log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
+      if (ROUTER_DEBUG) {
+        const last = refusedUpgradeLogAt.get(name) ?? 0;
+        if (Date.now() - last > 60_000) {
+          refusedUpgradeLogAt.set(name, Date.now());
+          log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
+        }
       }
       socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
       return;

@@ -78,11 +78,15 @@ infra, or cold-starts a worktree — the same front-door model `cb hub` already
 runs in prod. Full design and rationale:
 `callback-box/docs/implemented-plans/expose-dev-router.md`.
 
-- **Login behind the router prefix works.** The old dead-end bug (built login
-  SPA served with root-absolute `base="/"` assets that 404'd behind
-  `/<worktree>/`) is fixed — Vite serves a base-aware login page in dev, and
-  every server redirect carries the prefix. No more standalone `cb serve`
-  workaround needed to test login/OAuth.
+- **Login behind the router prefix works.** The login/setup pages are
+  self-contained, server-rendered HTML (a plain `<form>` + inline `<style>`, no
+  script/asset references — `callback-box/src/webapp/login-page.ts`), so a
+  logged-out browser gets a working login page with zero gated resources — the
+  gate never 401s a bundle that never loads. Form action, OAuth link, and every
+  server redirect carry the `/<worktree>/` prefix (from `x-cb-base-prefix`). This
+  replaced the old React-SPA login page, whose Vite dev modules (`/src/…`,
+  `/@vite/…`) the gate 401'd behind the prefix, dead-ending login. No standalone
+  `cb serve` workaround needed to test login/OAuth.
 - **Two listeners, one gate.** The router listens on both a TCP loopback
   socket (browsers, Tailscale) and a Unix-domain socket at
   `~/.cache/callback-box/router.sock` (or `$CALLBACK_STATE_DIR/router.sock` for
@@ -109,7 +113,8 @@ Only HTTP requests count as worktree activity. WebSocket upgrades never
 cold-start a worktree (clients auto-reconnect on timers; honoring them
 would let abandoned background tabs resurrect worktrees forever) — the
 router refuses upgrades for non-running worktrees with a 503 and the
-client retries later. HMR rides the page origin (no `hmr.clientPort` in
+client retries later (silent by default; `CB_ROUTER_DEBUG=1` logs these
+refusals). HMR rides the page origin (no `hmr.clientPort` in
 vite.config — the browser never learns Vite's internal port), so a stale
 tab heals itself: Vite's client pings the router while the tab is
 visible, the ping restarts the worktree, and the tab reloads. HMR and the
