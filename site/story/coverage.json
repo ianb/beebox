@@ -1,6 +1,6 @@
 {
   "note": "Coverage ledger for story extraction: which repo docs have been scanned, in which runs/variants, and whether the scanned content still matches disk. The runs themselves (dev/story-eval/runs/) are gitignored — this ledger is the only tracked record. Regenerate with `pnpm --dir site coverage`; find docs needing a re-scan with `pnpm --dir site coverage --check`.",
-  "generatedAt": "2026-07-24T13:12:27.714Z",
+  "generatedAt": "2026-07-24T13:20:29.407Z",
   "docs": [
     {
       "doc": "callback-box/docs/activities-design.md",
@@ -320,7 +320,7 @@
         "v1",
         "v2"
       ],
-      "nuggetCount": 10,
+      "nuggetCount": 18,
       "scannedContentHash": "c639182e477a9041",
       "hashSource": "scanned-text",
       "current": true
