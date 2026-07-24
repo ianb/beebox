@@ -99,6 +99,13 @@ const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 // everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
 const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 
+// Verbose lifecycle logging (WS-upgrade refusals to stopped worktrees, etc.).
+// Off by default: those events are the DESIGNED idle/self-heal behavior, not
+// anomalies, so at steady log level they're pure noise (a background tab
+// retrying its WebSocket against an idle-stopped worktree drips one line/min
+// forever). Set CB_ROUTER_DEBUG=1 when actually debugging worktree lifecycle.
+const ROUTER_DEBUG = process.env.CB_ROUTER_DEBUG === "1";
+
 const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
 
 // The /dev/ space: a place the *dev-repo agent* (Claude Code, not a box) builds
@@ -1130,10 +1137,12 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     }
     const ready = handle ? readyLifecycle(handle) : null;
     if (!handle || !ready) {
-      const last = refusedUpgradeLogAt.get(name) ?? 0;
-      if (Date.now() - last > 60_000) {
-        refusedUpgradeLogAt.set(name, Date.now());
-        log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
+      if (ROUTER_DEBUG) {
+        const last = refusedUpgradeLogAt.get(name) ?? 0;
+        if (Date.now() - last > 60_000) {
+          refusedUpgradeLogAt.set(name, Date.now());
+          log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
+        }
       }
       socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
       return;
