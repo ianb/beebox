@@ -28,7 +28,16 @@ const devToolSchema = z
     emoji: z.string().default("🔧"),
   })
   .strict();
-const devToolsFileSchema = z.object({ tools: z.array(devToolSchema) }).strict();
+// `scripted`: dev/ subdirectory names (e.g. "story-eval") that are trusted,
+// first-party, committed interactive apps — they get a relaxed sandbox
+// (`allow-scripts allow-same-origin`) so their JS + localStorage + same-origin
+// fetch work. Everything else stays under the bare `sandbox` default. This
+// reopens the CSRF-on-control-routes vector ONLY for these reviewed pages
+// (boxholder decision 2026-07-24) — never for arbitrary agent-authored HTML.
+const devToolsFileSchema = z
+  .object({ tools: z.array(devToolSchema), scripted: z.array(z.string()).default([]) })
+  .strict();
+type DevTools = z.infer<typeof devToolsFileSchema>;
 
 // href is worktree-root-relative (`dev/story-eval/index.html`) → `/<name>/…`;
 // an absolute URL (http/https) passes through for linking external dashboards.
@@ -37,29 +46,42 @@ function resolveToolHref(name: string, href: string): string {
   return `/${encodeURIComponent(name)}/${href.replace(/^\/+/, "")}`;
 }
 
-export async function renderWorktreeToolCards(name: string, devRoot: string): Promise<string> {
+// Read + strictly validate a worktree's dev/tools.json. Absent → empty; malformed
+// hand-edited config → empty + a loud warn (never 500 the dev index, never
+// silently grant script permission). One parse feeds both the manifest cards and
+// the sandbox-exemption decision so the two can't drift.
+export async function readDevTools(name: string, devRoot: string): Promise<DevTools> {
   let raw: string;
   try {
     raw = await fs.readFile(path.join(devRoot, "tools.json"), "utf8");
   } catch {
-    return ""; // no tools.json → no extra cards (the common case)
+    return { tools: [], scripted: [] };
   }
-  let parsed: z.infer<typeof devToolsFileSchema>;
   try {
-    parsed = devToolsFileSchema.parse(JSON.parse(raw));
+    return devToolsFileSchema.parse(JSON.parse(raw));
   } catch (e) {
-    // Malformed hand-edited config: degrade visibly (skip the cards, log loudly)
-    // rather than 500 the whole dev index.
     console.warn(`[dev] ${name}/dev/tools.json is invalid, ignoring it:`, e instanceof Error ? e.message : e);
-    return "";
+    return { tools: [], scripted: [] };
   }
-  return parsed.tools
+}
+
+export async function renderWorktreeToolCards(name: string, devRoot: string): Promise<string> {
+  const { tools } = await readDevTools(name, devRoot);
+  return tools
     .map(
       (t) =>
         `<li><a class="title" href="${escapeHtml(resolveToolHref(name, t.href))}">${escapeHtml(`${t.emoji} ${t.title}`)}</a>`
         + `<div class="desc">${escapeHtml(t.desc)}</div></li>`,
     )
     .join("");
+}
+
+// Does the served dev-relative path (`/story-eval/index.html`) fall inside a
+// `scripted` app directory? Exact prefix match on the first path segment only,
+// so "story-eval" never matches "story-eval-evil".
+export function isScriptedDevPath(rel: string, scripted: string[]): boolean {
+  const seg = rel.replace(/^\/+/, "").split("/")[0] ?? "";
+  return scripted.includes(seg);
 }
 
 const DEV_CONTENT_TYPES: Record<string, string> = {
@@ -754,6 +776,9 @@ export async function serveDev(params: {
   // EVERY response serveDev emits — manifest, doc browser, rendered .md, dir
   // index, static artifacts, the issue browser — inherits it; nothing below
   // writes a Content-Security-Policy, so this survives each `writeHead`.
+  // EXEMPTION (boxholder 2026-07-24): paths inside a `scripted` app declared in
+  // the worktree's tracked dev/tools.json get `allow-scripts allow-same-origin`
+  // instead — see the relaxation below, once `rel` is known.
   res.setHeader("Content-Security-Policy", "sandbox");
   const base = `/${name}/dev`;
   const devRoot = path.join(repoRoot, "dev");
@@ -770,6 +795,13 @@ export async function serveDev(params: {
     res.writeHead(400, { "content-type": "text/plain" });
     res.end(`bad request: malformed percent-encoding in path (${e instanceof Error ? e.message : String(e)})\n`);
     return;
+  }
+  // Relax the sandbox for a trusted first-party interactive app (opt-in via
+  // dev/tools.json `scripted`). Only these reviewed pages regain scripting +
+  // same-origin; the bare-sandbox default above still governs every other path.
+  const { scripted } = await readDevTools(name, devRoot);
+  if (isScriptedDevPath(rel, scripted)) {
+    res.setHeader("Content-Security-Policy", "sandbox allow-scripts allow-same-origin");
   }
 
   if (rel === "" || rel === "/") {
