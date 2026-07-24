@@ -207,12 +207,23 @@ export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
  * has dropped in the tracked dev/ directory.
  */
 async function renderDevManifest(name: string, base: string, devRoot: string): Promise<string> {
-  const builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
+  let builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
     + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`
     + `<li><a class="title" href="${base}/issues/">🗂️ Issue browser</a>`
     + `<div class="desc">Browse the monorepo's <code>issues/</code> queue, overlaid with what every active worktree has added, changed, or closed relative to main.</div></li>`
     + `<li><a class="title" href="/${encodeURIComponent(name)}/site/">🌐 Public site preview</a>`
     + `<div class="desc">This worktree's build of the front-door site (<code>site/dist/</code> — run <code>pnpm --dir site build</code> first). What GitHub Pages will serve.</div></li>`;
+
+  // The story-eval nugget-review app is a self-contained page, not a directory
+  // listing — surface it directly where it exists rather than as a bare folder row.
+  const hasStoryEval = await fs
+    .access(path.join(devRoot, "story-eval", "index.html"))
+    .then(() => true)
+    .catch(() => false);
+  if (hasStoryEval) {
+    builtinHtml += `<li><a class="title" href="${base}/story-eval/index.html">🔎 Story-eval review</a>`
+      + `<div class="desc">Triage extracted story nuggets: keep/drop, chips, notes. Blind A/B/C prompt-variant glosses per source span.</div></li>`;
+  }
 
   let artifactsHtml: string;
   try {
