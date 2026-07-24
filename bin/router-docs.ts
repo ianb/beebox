@@ -78,10 +78,11 @@ export function renderDevShell(title: string, breadcrumbs: string, body: string,
   ul.dir a { text-decoration: none; min-width: 22em; }
   ul.dir a:hover { text-decoration: underline; }
   ul.dir .size { color: #999; }
-  .cards { list-style: none; padding: 0; }
-  .cards li { padding: 0.9em 1em; margin: 0.6em 0; border: 1px solid #e3e3e3; border-radius: 8px; background: #fbfbfb; }
+  .cards { list-style: none; padding: 0; margin: 0.6em 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.7em; }
+  .cards li { display: flex; flex-direction: column; padding: 0.9em 1em; margin: 0; border: 1px solid #e3e3e3; border-radius: 8px; background: #fbfbfb; }
+  .cards li:hover { border-color: #c7d4ea; background: #fcfdff; }
   .cards a.title { font-weight: 600; font-size: 1.05em; text-decoration: none; }
-  .cards .desc { color: #666; font-size: 0.9em; margin-top: 0.2em; }
+  .cards .desc { color: #666; font-size: 0.9em; margin-top: 0.35em; }
   .empty { color: #888; font-style: italic; }
 ${extraCss}</style>
 </head>
