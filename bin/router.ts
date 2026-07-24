@@ -99,11 +99,8 @@ const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 // everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
 const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 
-// Verbose lifecycle logging (WS-upgrade refusals to stopped worktrees, etc.).
-// Off by default: those events are the DESIGNED idle/self-heal behavior, not
-// anomalies, so at steady log level they're pure noise (a background tab
-// retrying its WebSocket against an idle-stopped worktree drips one line/min
-// forever). Set CB_ROUTER_DEBUG=1 when actually debugging worktree lifecycle.
+// Verbose worktree-lifecycle logging (e.g. WS-upgrade refusals to idle-stopped
+// worktrees — designed behavior, not anomalies, so silent by default).
 const ROUTER_DEBUG = process.env.CB_ROUTER_DEBUG === "1";
 
 const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
