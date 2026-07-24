@@ -29,15 +29,35 @@ const devToolSchema = z
   })
   .strict();
 // `scripted`: dev/ subdirectory names (e.g. "story-eval") that are trusted,
-// first-party, committed interactive apps — they get a relaxed sandbox
-// (`allow-scripts allow-same-origin`) so their JS + localStorage + same-origin
-// fetch work. Everything else stays under the bare `sandbox` default. This
-// reopens the CSRF-on-control-routes vector ONLY for these reviewed pages
-// (boxholder decision 2026-07-24) — never for arbitrary agent-authored HTML.
+// first-party interactive apps — files served from inside one get a relaxed
+// sandbox (`allow-scripts allow-same-origin`) so their JS + localStorage +
+// same-origin fetch work. Everything else stays under the bare `sandbox`
+// default. This reopens the CSRF-on-control-routes vector ONLY for pages
+// physically inside these directories (boxholder decision 2026-07-24) — see
+// the SECURITY LIMITATIONS note below. Each entry must be a single safe path
+// segment (no "/", no "." / ".." — enforced so `path.join(devRoot, dir)` can
+// never escape devRoot and matching can't shadow the /docs//issues/ routes).
+const scriptedDirSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, "scripted entries must be a single dev/ subdirectory name");
 const devToolsFileSchema = z
-  .object({ tools: z.array(devToolSchema), scripted: z.array(z.string()).default([]) })
+  .object({ tools: z.array(devToolSchema), scripted: z.array(scriptedDirSchema).max(64).default([]) })
   .strict();
 type DevTools = z.infer<typeof devToolsFileSchema>;
+
+// SECURITY LIMITATIONS of the scripted-app exemption (accepted 2026-07-24, but
+// on the record):
+//   - "Trusted first-party" == "present in the worktree on disk". This grant is
+//     applied to the LIVE file, not a git-reviewed blob, so an agent/process
+//     with repo write can grant itself scripting. That's the same trust level as
+//     editing router.ts, so it's the accepted boundary — not a stronger claim.
+//   - `allow-same-origin allow-scripts` gives the page the FULL owner-authenticated
+//     origin: it can POST /__router/stop, reach every worktree's box API, and read
+//     origin-wide storage. Path prefixes are NOT an isolation boundary. The only
+//     safe long-term fix is a separate content origin for scripted apps — filed as
+//     issues/features/2026-07-24-dev-scripted-apps-separate-origin.md.
 
 // href is worktree-root-relative (`dev/story-eval/index.html`) → `/<name>/…`;
 // an absolute URL (http/https) passes through for linking external dashboards.
@@ -76,12 +96,17 @@ export async function renderWorktreeToolCards(name: string, devRoot: string): Pr
     .join("");
 }
 
-// Does the served dev-relative path (`/story-eval/index.html`) fall inside a
-// `scripted` app directory? Exact prefix match on the first path segment only,
-// so "story-eval" never matches "story-eval-evil".
-export function isScriptedDevPath(rel: string, scripted: string[]): boolean {
-  const seg = rel.replace(/^\/+/, "").split("/")[0] ?? "";
-  return scripted.includes(seg);
+// Does the REAL (symlink-resolved) filesystem path of the file we're about to
+// serve sit inside one of the `scripted` app directories? Keyed on the resolved
+// absolute path — NOT the raw URL segment — so encoded traversal
+// (`story-eval%2F..%2Fpayload.html` → devRoot/payload.html) and symlinks can't
+// win the grant for content outside the app dir. `scripted` entries are
+// schema-validated single segments, so `path.join` can't escape devRoot.
+export function isPathInScriptedApp(realResolved: string, devRoot: string, scripted: string[]): boolean {
+  return scripted.some((dir) => {
+    const appRoot = path.join(devRoot, dir);
+    return realResolved === appRoot || realResolved.startsWith(appRoot + path.sep);
+  });
 }
 
 const DEV_CONTENT_TYPES: Record<string, string> = {
@@ -681,7 +706,14 @@ async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort
 
 // --- static artifacts from the worktree's tracked dev/ directory -------------
 
-async function serveDevArtifact(base: string, devRoot: string, rel: string, pathOnly: string, res: http.ServerResponse): Promise<void> {
+async function serveDevArtifact(
+  base: string,
+  devRoot: string,
+  rel: string,
+  pathOnly: string,
+  scripted: string[],
+  res: http.ServerResponse,
+): Promise<void> {
   const resolved = path.resolve(devRoot, `.${rel || "/"}`);
   if (resolved !== devRoot && !resolved.startsWith(devRoot + path.sep)) {
     res.writeHead(403, { "content-type": "text/plain" });
@@ -695,6 +727,32 @@ async function serveDevArtifact(base: string, devRoot: string, rel: string, path
     res.writeHead(404, { "content-type": "text/plain" });
     res.end(`not found in dev/: ${rel}\n`);
     return;
+  }
+  // Resolve symlinks and RE-check containment: the lexical guard above only sees
+  // the path text, but fs.stat/readFile follow symlinks, so a link inside dev/
+  // could otherwise serve bytes from anywhere readable. Compare realpath-to-
+  // realpath (devRoot itself may sit behind a symlink, e.g. macOS /var →
+  // /private/var). realResolved is also what the scripted-app grant is keyed on.
+  let realResolved: string;
+  let realDevRoot: string;
+  try {
+    realResolved = await fs.realpath(resolved);
+    realDevRoot = await fs.realpath(devRoot);
+  } catch {
+    res.writeHead(404, { "content-type": "text/plain" });
+    res.end(`not found in dev/: ${rel}\n`);
+    return;
+  }
+  if (realResolved !== realDevRoot && !realResolved.startsWith(realDevRoot + path.sep)) {
+    res.writeHead(403, { "content-type": "text/plain" });
+    res.end("forbidden\n");
+    return;
+  }
+  // Relax the sandbox ONLY when the real file lives inside a scripted app dir.
+  // Set before any writeHead below so it carries onto the response; the bare
+  // `sandbox` default (set in serveDev) governs everything else.
+  if (isPathInScriptedApp(realResolved, realDevRoot, scripted)) {
+    res.setHeader("Content-Security-Policy", "sandbox allow-scripts allow-same-origin");
   }
   if (stat.isDirectory()) {
     if (!pathOnly.endsWith("/")) {
@@ -773,12 +831,18 @@ export async function serveDev(params: {
   // the decided fix: a sandboxed document can neither run JS nor issue
   // same-origin requests, which closes the CSRF vector while leaving the page
   // fully viewable (inline CSS/styling is unaffected by `sandbox`). Set here so
-  // EVERY response serveDev emits — manifest, doc browser, rendered .md, dir
-  // index, static artifacts, the issue browser — inherits it; nothing below
-  // writes a Content-Security-Policy, so this survives each `writeHead`.
-  // EXEMPTION (boxholder 2026-07-24): paths inside a `scripted` app declared in
-  // the worktree's tracked dev/tools.json get `allow-scripts allow-same-origin`
-  // instead — see the relaxation below, once `rel` is known.
+  // every response THIS FUNCTION emits — manifest, doc browser, rendered .md, dir
+  // index, static artifacts, the issue browser — inherits it (nothing below
+  // writes a Content-Security-Policy, so it survives each `writeHead`), including
+  // the decode-error / traversal / 404 / 500 paths. (Two /dev responses bypass
+  // this function and carry no CSP: the `/<name>/dev`→`/dev/` redirect in
+  // router.ts and the story-eval save route — both non-executable, an empty
+  // redirect and fixed JSON.)
+  // EXEMPTION (boxholder 2026-07-24): files physically inside a `scripted` app
+  // dir (dev/tools.json) get `allow-scripts allow-same-origin` — applied in
+  // serveDevArtifact, keyed on the resolved on-disk path (see its
+  // SECURITY LIMITATIONS note; this is a real reduction, accepted for trusted
+  // first-party apps only).
   res.setHeader("Content-Security-Policy", "sandbox");
   const base = `/${name}/dev`;
   const devRoot = path.join(repoRoot, "dev");
@@ -796,13 +860,11 @@ export async function serveDev(params: {
     res.end(`bad request: malformed percent-encoding in path (${e instanceof Error ? e.message : String(e)})\n`);
     return;
   }
-  // Relax the sandbox for a trusted first-party interactive app (opt-in via
-  // dev/tools.json `scripted`). Only these reviewed pages regain scripting +
-  // same-origin; the bare-sandbox default above still governs every other path.
+  // The scripted-app sandbox relaxation happens in serveDevArtifact, keyed on
+  // the resolved on-disk path (not this raw `rel`) so it can't be won by encoded
+  // traversal or symlinks. Router-generated routes below (manifest, /docs/,
+  // /issues/) never get it — they stay bare `sandbox`.
   const { scripted } = await readDevTools(name, devRoot);
-  if (isScriptedDevPath(rel, scripted)) {
-    res.setHeader("Content-Security-Policy", "sandbox allow-scripts allow-same-origin");
-  }
 
   if (rel === "" || rel === "/") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -830,5 +892,5 @@ export async function serveDev(params: {
     await serveIssues({ base, mainRoot, worktreesRoot, rel: rel.slice("/issues".length), query: new URLSearchParams(query), res });
     return;
   }
-  await serveDevArtifact(base, devRoot, rel, pathOnly, res);
+  await serveDevArtifact(base, devRoot, rel, pathOnly, scripted, res);
 }
