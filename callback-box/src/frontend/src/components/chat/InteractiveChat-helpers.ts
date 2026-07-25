@@ -94,6 +94,7 @@ export function formatTimePassed(ms: number): string | null {
  */
 export const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Default (Opus)", model: null },
+  { label: "Opus 5", model: MODEL_ID.opus5 },
   { label: "Sonnet 5", model: MODEL_ID.sonnet },
   { label: "Opus 4.8", model: MODEL_ID.opus },
   { label: "Fable 5", model: MODEL_ID.fable },

@@ -12,6 +12,7 @@
 export const MODEL_ID = {
   haiku: "claude-haiku-4-5-20251001",
   sonnet: "claude-sonnet-5",
+  opus5: "claude-opus-5",
   opus: "claude-opus-4-8",
   fable: "claude-fable-5",
   opus1m: "claude-opus-4-8[1m]",
