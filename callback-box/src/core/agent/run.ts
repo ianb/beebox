@@ -16,6 +16,7 @@ import { startPromptLogger, type PromptLogger } from "./prompt-logger.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
 import { checkClaudeAuth, ClaudeAuthError } from "./auth-preflight.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
+import { normalizeModelId } from "../../shared/model-ids.js";
 import type { AgentResult, AgentResultBase } from "./types.js";
 
 export interface RunAgentOptions {
@@ -72,7 +73,7 @@ function buildQueryOptions(
     maxTurns,
     ...(binaryPath !== null && { pathToClaudeCodeExecutable: binaryPath }),
     ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),
-    ...(options.model !== undefined && { model: options.model }),
+    ...(options.model !== undefined && { model: normalizeModelId(options.model) }),
     ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),
     // Create-with-id: only valid on a fresh session (the SDK rejects
     // `sessionId` combined with `resume` unless forking).
