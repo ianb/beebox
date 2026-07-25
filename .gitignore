@@ -62,3 +62,6 @@ dev/prompts/data.json
 # tracked as real code.
 dev/story-eval/runs/
 dev/story-eval/verdicts/
+
+# OpenGrep SARIF/JSON scan output
+.opengrep-out/
