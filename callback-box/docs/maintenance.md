@@ -20,6 +20,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Dead-code sweep | `pnpm lint:knip` | Before releases; when code feels accumulated | Console |
 | Supplemental lint | `pnpm lint:oxlint` | Periodic | Console |
 | Circular deps | `pnpm lint:circular` | After big refactors | Console |
+| Security regression scan | `pnpm security:opengrep` (monorepo root) | Before releases; when touching auth/subprocess/temp/prompt boundaries | Console (`--sarif` for a file) |
 | Doc images | `pnpm generate:doc-images` | After editing architecture diagrams or prompts | `docs/architecture/images/` |
 | Box data migrations | `cb migrate` (per box) | After adding a new migrator to `src/core/migrations.ts` | Box working tree |
 | Broken-ref cleanup | `npx tsx scripts/clean-broken-refs.ts <boxRoot>` | One-off; when `cb validate` shows ref errors that pre-date a migration | Box working tree |
@@ -116,6 +117,12 @@ Catches patterns ESLint misses (ambiguous constructors, useless spreads, identic
 Madge-based detection of cyclic imports. Type-only cycles (`import type`) are acceptable; value cycles are not.
 
 **When to run:** after large refactors that move shared code around. A new value-import cycle is almost always a sign that a module needs to be split.
+
+### Security regression scan — `pnpm security:opengrep` (monorepo root)
+
+Runs the [OpenGrep](https://opengrep.dev) rulepack at `security/opengrep/precise.yml` — self-incident security-regression guards, one per real past security/isolation bug in our own code. A *separate* engine from ESLint: it matches multi-statement dataflow shapes (`resolve → guard → return`) that per-node lint selectors can't, so it complements the lint gate rather than duplicating it. See `security/opengrep/README.md` for the discipline and how to add a rule.
+
+**When to run:** before releases, and whenever you touch a security-sensitive boundary (auth/allowlists, subprocess spawning, temp-file/symlink handling, prompt construction with untrusted content). `pnpm security:opengrep --error` gates non-zero on findings; `--changed` scopes to files changed vs `origin/main`; `--sarif` writes `.opengrep-out/precise.sarif`. Requires `opengrep` installed (`curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/v1.25.0/install.sh | bash -s -- -v v1.25.0`). Not part of the per-commit gate by decision — see `issues/exploration/2026-07-25-opengrep-self-cve-scanner.md`.
 
 ### Doc images — `npm run generate:doc-images`
 
