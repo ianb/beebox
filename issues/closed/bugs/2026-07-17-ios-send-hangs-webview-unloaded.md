@@ -1,9 +1,16 @@
 ---
 title: "iOS native send hangs forever (and loses the message) if the webview isn't loaded yet"
 area: callback-box
+resolution: implemented
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 ---
+
+Resolved by the durable pending-emission queue in `0e7549de`. A native send is
+persisted before delivery, remains queued while the page is unloaded, and is
+delivered with the same ID from `didFinish`; navigation clears only inflight
+transport state and replays the durable pending emission. XCTest covers
+navigation followed by same-ID redelivery and receipt timeout rejection.
 
 `NativeComposerView.send` in `ios-app/CallbackBox/Views/NativeComposerView.swift` clears the typed
 text and attached images and shows the sending spinner *before* delivery is attempted.

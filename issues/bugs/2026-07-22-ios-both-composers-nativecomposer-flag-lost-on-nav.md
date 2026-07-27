@@ -1,9 +1,22 @@
 ---
 title: "Regression: iOS shows both native + web composers after navigating (nativeComposer=1 lost on nav)"
 area: callback-box
+needs: [manual-testing]
 filed-by: agent
 discovered-in: main session — boxholder on iOS, a landmark chat
 ---
+
+## Implemented 2026-07-23
+
+Commit `9ccf1b68` makes the injected native bridge authoritative for native-shell
+detection, with `nativeComposer=1` retained as an initial-load fallback. Because
+the bridge is installed at document start on every navigation, internal
+same-origin navigation can no longer make the web composer reappear.
+
+Automated coverage exercises native-shell detection through the bridge. Manual
+verification remains on a real iPhone: load the initial chat, navigate into a
+landmark and switch sessions, confirm only the native composer remains visible,
+then send and confirm the native receipt is acknowledged.
 
 In the iOS app, **both** the native composer (top dock) and the web composer
 (bottom "Type…" bar) show at once — see screenshot. Send also fails ("The chat

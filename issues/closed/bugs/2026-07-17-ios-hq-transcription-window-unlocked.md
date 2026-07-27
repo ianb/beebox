@@ -1,9 +1,16 @@
 ---
 title: "iOS HQ-transcription window in the native composer isn't locked"
 area: callback-box
+resolution: implemented
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 ---
+
+Resolved by the durable voice-preparation work in `6a270305`. Keyword sends now
+persist the draft and audio snapshot before editable composition resumes; later
+sends queue behind an earlier preparation, and relaunch resumes the same
+preparation without clobbering later work. The voice reducer and pending-store
+tests cover preparation state and ordering.
 
 `NativeComposerView`'s keyword-send path (the function that kicks off HQ transcription, in
 `ios-app/CallbackBox/Views/NativeComposerView.swift`) launches a `Task` that awaits the multi-second
