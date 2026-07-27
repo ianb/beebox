@@ -126,6 +126,28 @@ final class ComposerDraftReducerTests: XCTestCase {
         XCTAssertEqual(dictation.state, .idle)
     }
 
+    @MainActor
+    func testCancellationDuringDictationStartupIsExpected() {
+        XCTAssertTrue(
+            SpeechDictation.isExpectedCancellation(
+                CancellationError(),
+                taskWasCancelled: false
+            )
+        )
+        XCTAssertTrue(
+            SpeechDictation.isExpectedCancellation(
+                CocoaError(.fileReadUnknown),
+                taskWasCancelled: true
+            )
+        )
+        XCTAssertFalse(
+            SpeechDictation.isExpectedCancellation(
+                CocoaError(.fileReadUnknown),
+                taskWasCancelled: false
+            )
+        )
+    }
+
     func testVoicePreparationResolutionPreservesFallbackAndRebuildsHQText() {
         let preparation = VoicePreparation(
             id: UUID(),

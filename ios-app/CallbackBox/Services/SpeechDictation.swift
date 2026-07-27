@@ -277,9 +277,22 @@ final class SpeechDictation: ObservableObject {
             VoiceCompositionReducer.reduce(&state, .permissionGranted)
         } catch {
             endRecording(cancelTranscription: true)
+            if Self.isExpectedCancellation(error, taskWasCancelled: Task.isCancelled) {
+                if state == .requestingPermission {
+                    VoiceCompositionReducer.reduce(&state, .reset)
+                }
+                return
+            }
             errorMessage = error.localizedDescription
             VoiceCompositionReducer.reduce(&state, .fail(message: error.localizedDescription))
         }
+    }
+
+    static func isExpectedCancellation(
+        _ error: Error,
+        taskWasCancelled: Bool
+    ) -> Bool {
+        taskWasCancelled || error is CancellationError
     }
 
     private func receiveRecognizedSpeech(_ spoken: String, generation: UUID) {
