@@ -1,0 +1,11 @@
+# Paths OpenGrep skips (security/opengrep). node_modules is default-ignored;
+# these are our build outputs, vendored code, and non-source trees.
+node_modules/
+dist/
+build/
+.opengrep-out/
+coverage/
+*.min.js
+pnpm-lock.yaml
+callback-box/deploy/
+research/

@@ -1,0 +1,530 @@
+{
+  "note": "Coverage ledger for story extraction: which repo docs have been scanned, in which runs/variants, and whether the scanned content still matches disk. The runs themselves (dev/story-eval/runs/) are gitignored — this ledger is the only tracked record. Regenerate with `pnpm --dir site coverage`; find docs needing a re-scan with `pnpm --dir site coverage --check`.",
+  "generatedAt": "2026-07-22T20:46:13.651Z",
+  "docs": [
+    {
+      "doc": "callback-box/docs/activities-design.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 14,
+      "scannedContentHash": "e4a77e47930e2017",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/activities-retrospective.md",
+      "runs": [
+        "run-003"
+      ],
+      "variants": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "nuggetCount": 7,
+      "scannedContentHash": "3728364262bc3966",
+      "hashSource": "current-file",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/design/README.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 11,
+      "scannedContentHash": "74c2285c25e9d008",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/engineering-principles.md",
+      "runs": [
+        "run-002"
+      ],
+      "variants": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "nuggetCount": 22,
+      "scannedContentHash": "878eae272a22cc16",
+      "hashSource": "current-file",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/implemented-plans/attach-directories-superseded.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 13,
+      "scannedContentHash": "0c65b849e41da9d9",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/implemented-plans/box-retrospectives.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 17,
+      "scannedContentHash": "8b4030d032585481",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/implemented-plans/boxes-as-packages-v2.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 36,
+      "scannedContentHash": "b9d1b9759c60c36a",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/implemented-plans/capture-mode.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 18,
+      "scannedContentHash": "db616c53ab36099d",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/implemented-plans/cards-as-markdown-rfc.md",
+      "runs": [
+        "run-001"
+      ],
+      "variants": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "nuggetCount": 59,
+      "scannedContentHash": "22360ab4f02c773d",
+      "hashSource": "current-file",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/knowledge-audits.md",
+      "runs": [
+        "run-001"
+      ],
+      "variants": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "nuggetCount": 26,
+      "scannedContentHash": "1387f7091e0e82a2",
+      "hashSource": "current-file",
+      "current": true
+    },
+    {
+      "doc": "callback-box/docs/todo-security.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 7,
+      "scannedContentHash": "d4f3fcac3845a9e7",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 16,
+      "scannedContentHash": "1bf8d4c0eccf5d43",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 10,
+      "scannedContentHash": "8dbf793db1419c25",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/closed/decisions/2026-07-08-release-cloud-provider-honesty.md",
+      "runs": [
+        "run-001"
+      ],
+      "variants": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "nuggetCount": 18,
+      "scannedContentHash": "1dfec8f738b7d90f",
+      "hashSource": "current-file",
+      "current": true
+    },
+    {
+      "doc": "issues/closed/decisions/2026-07-15-single-export-should-ignore-types.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 9,
+      "scannedContentHash": "e4c67640c6e17f88",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-03-15-per-box-secret-management.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 4,
+      "scannedContentHash": "b11781460f93e240",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-05-21-glossary-proper-nouns.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 2,
+      "scannedContentHash": "30914f39deee2904",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-05-27-bin-browse-wrapper-future.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 6,
+      "scannedContentHash": "f277d881a05fe2d6",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-04-box-registry-manifests.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 4,
+      "scannedContentHash": "4fdda6fc4c25ba43",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-07-cb-render-vs-bin-browse.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 7,
+      "scannedContentHash": "054f4b69b940755c",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-10-boxes-dead-callback-box-symlinks.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 9,
+      "scannedContentHash": "feb9f43cea49d322",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-10-orama-vector-index-restore-cost.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 10,
+      "scannedContentHash": "c639182e477a9041",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-19-boxes-share-one-origin.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 9,
+      "scannedContentHash": "61152b1ab58b79ac",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-20-git-push-confirmation.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 5,
+      "scannedContentHash": "34e283b542c6696b",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-20-release-discipline-and-update-story.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 6,
+      "scannedContentHash": "a7507be6cc7442da",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-20-soft-launch-posture.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 24,
+      "scannedContentHash": "08ecfa9f0faff174",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-21-discussion-channel.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 8,
+      "scannedContentHash": "749229799de74102",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "issues/decisions/2026-07-22-config-untrusted-principle-drift.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 4,
+      "scannedContentHash": "3a761ca97947441e",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/backend-alternatives/README.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 13,
+      "scannedContentHash": "f0adccb851823cdc",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/courseware-external-skills-triage.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 17,
+      "scannedContentHash": "1e64a5e1240f018f",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/external-skills-harvest.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 16,
+      "scannedContentHash": "c1255472c65fe9e7",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/hoversource-review.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 7,
+      "scannedContentHash": "df20000af114c60e",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/memory-atlas-architecture-review.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 11,
+      "scannedContentHash": "f41576816db06852",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/openclaw-architecture-review.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 12,
+      "scannedContentHash": "7289cdaecfca23b5",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/openclaw-hermes/README.md",
+      "runs": [
+        "run-003"
+      ],
+      "variants": [
+        "v1",
+        "v2",
+        "v3"
+      ],
+      "nuggetCount": 22,
+      "scannedContentHash": "3a455a20679fe17b",
+      "hashSource": "current-file",
+      "current": true
+    },
+    {
+      "doc": "research/rowboat-review.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 13,
+      "scannedContentHash": "0da45d62e04e728e",
+      "hashSource": "scanned-text",
+      "current": true
+    },
+    {
+      "doc": "research/writing-practice/README.md",
+      "runs": [
+        "run-004"
+      ],
+      "variants": [
+        "v1",
+        "v2"
+      ],
+      "nuggetCount": 16,
+      "scannedContentHash": "1438ec90668739f4",
+      "hashSource": "scanned-text",
+      "current": true
+    }
+  ]
+}

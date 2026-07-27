@@ -55,8 +55,13 @@ scratch/*
 # callback-box). The size ledger (size-ledger.jsonl) and index.html are tracked.
 dev/prompts/data.json
 
-# Story-eval review app autosave: the router writes the boxholder's in-progress
-# verdicts here on every change. A live working file, not a deliverable — the
-# committed dated verdict files (dev/story-eval/verdicts/YYYY-MM-DD-*.json) stay
-# tracked. Ignore only the file, never the directory.
-dev/story-eval/verdicts/autosave.json
+# Story-eval triage process is NOT tracked (boxholder, 2026-07-22): extraction
+# runs and triage verdicts are local working files — only OUTCOMES are
+# committed (promoted nuggets in site/, rubric/prompt revisions, distilled
+# learnings folded into the subplan). The app + prompts + ingest tool stay
+# tracked as real code.
+dev/story-eval/runs/
+dev/story-eval/verdicts/
+
+# OpenGrep SARIF/JSON scan output
+.opengrep-out/

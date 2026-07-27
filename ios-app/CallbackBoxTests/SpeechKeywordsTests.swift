@@ -172,6 +172,19 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         XCTAssertGreaterThan(decoded, 0, "no location result fixtures decoded")
     }
 
+    func testNarrationStateFixturesDecodeThroughNativeSeam() throws {
+        let fixtures = try MobileContractFixtures.load("narration-state")
+        XCTAssertFalse(fixtures.isEmpty, "no narration state fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            let enabled = ChatWebView.narrationEnabled(
+                from: try MobileContractFixtures.jsonString(from: input)
+            )
+            XCTAssertEqual(enabled, expected["enabled"] as? Bool, "\(name): enabled")
+        }
+    }
+
     func testV2EmissionFixturesDecodeStrictly() throws {
         let fixtures = try MobileContractFixtures.load("emission")
         var decodedV2 = 0

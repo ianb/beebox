@@ -127,8 +127,22 @@ scales to the point where nobody reads everything, revisit.
   (blind-labeled), and nuggets.
 - **Why**: the span check is the honesty boundary — without it, "extraction"
   can quietly become invention.
-- **First chunk**: ingest.ts + zod schema + span check + tests (valid run
-  ingests; fabricated span rejected named; duplicate-match span flagged).
+- **First chunk** — **shipped 2026-07-22** (`site/story/ingest.ts` + tests):
+  zod-strict validation (criteria 1–8 integers, kebab-case slug/tags,
+  confidence enum), verbatim span check (0 → hard error naming the nugget;
+  >1 → `spanCheck: "ambiguous"`), run files carry an embedded `docText`, and
+  build-everything-before-writing keeps a fabrication fail-closed. Tests cover
+  valid ingest, fabricated-span-rejected-by-name, ambiguous flag, criterion 12
+  rejected, malformed tags, and docText embedding. Verified by re-ingesting
+  run-003's v1-activities-retro (output matches the committed file modulo
+  `docText`).
+- **Coverage ledger** — **shipped 2026-07-22** (`site/story/coverage.ts` +
+  tests): since the run dirs are now gitignored, `coverage.json` is the one
+  tracked record of which docs have been scanned (runs, variants, nugget
+  totals) and whether the scanned content still matches disk — `scanned-text`
+  provenance when a run embedded `docText`, honest `current-file` fallback for
+  older runs. `--check` reports drift (nonzero exit). First real run: 37 docs,
+  all current.
 
 ### Track C — the review app
 
@@ -237,9 +251,14 @@ next human touchpoint.
 - **Model for extraction**: start Opus everywhere; once a prompt is trusted,
   test whether Sonnet matches on the same seeds (cost matters at full-corpus
   scale). Lean: decide on evidence from run 2+, not now.
-- **Where triage verdicts ultimately live** — committed JSON is the working
-  answer; whether they deserve durable retention after prompts stabilize is
-  an elicitation-phase question.
+- ~~**Where triage verdicts ultimately live**~~ — DECIDED (boxholder,
+  2026-07-22): the triage *process* is not tracked. Extraction runs and
+  verdict exports are local working files (gitignored:
+  `dev/story-eval/runs/`, `dev/story-eval/verdicts/`); only **outcomes**
+  commit — promoted nuggets, rubric/prompt revisions, and learnings folded
+  into this subplan. (Runs 001–003 and the pass-1 verdicts predate the
+  decision and remain in git history; untracked going forward. No history
+  surgery, per the standing 2026-07-05 decision.)
 - **When a "trusted" prompt is trusted enough** — the boxholder calls it; no
   numeric threshold (house rule: no scoring).
 

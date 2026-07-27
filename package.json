@@ -14,6 +14,7 @@
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
     "commit-blocklist-check": "node --import tsx bin/commit-blocklist-check.ts",
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
+    "security:opengrep": "bash security/opengrep/run.sh",
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts",
     "snapshot:clerk-contract": "node --import tsx bin/snapshot-clerk-contract.ts",
     "typecheck": "tsc --noEmit",
@@ -39,7 +40,11 @@
     "overrides": {
       "whatwg-url": "^14",
       "wxt>vite": "^8.0.16",
-      "@wxt-dev/module-react>@vitejs/plugin-react": "^6.0.2"
+      "@wxt-dev/module-react>@vitejs/plugin-react": "^6.0.2",
+      "undici": "^7.28.0",
+      "js-yaml": "^4.3.0",
+      "tmp": "^0.2.7",
+      "hono": "^4.12.27"
     },
     "peerDependencyRules": {
       "allowedVersions": {

@@ -17,6 +17,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
+import { boxTmpDir } from "../../lib/box-tmp.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { handleStagingUploadReplay } from "./upload-replay.js";
 import { StagingPathError, StagingSessionGoneError } from "./staging-errors.js";
@@ -91,7 +92,7 @@ const StagingSessionSchema = z.object({
 export type StagingSession = z.infer<typeof StagingSessionSchema>;
 
 export function stagingBaseDir(boxRoot: string): string {
-  return path.join(boxRoot, "tmp", "capture-staging");
+  return path.join(boxTmpDir(boxRoot), "capture-staging");
 }
 
 export function stagingSessionDir(boxRoot: string, id: string): string {

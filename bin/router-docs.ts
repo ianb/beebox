@@ -13,7 +13,101 @@ import type http from "node:http";
 import { execa } from "execa";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
+import { z } from "zod";
 import { serveIssues, findClosedIssueLinkHrefs, appendClosedIssuePills } from "./router-issues.js";
+
+// Per-worktree extra cards for the /dev/ manifest, declared in the worktree's
+// tracked `dev/tools.json` and served straight from disk — so a worktree can add
+// its own tools without a router-code change + main-merge. Universal tools (doc
+// browser, issue browser, site preview) stay in code; this is for the rest.
+const devToolSchema = z
+  .object({
+    title: z.string().min(1),
+    href: z.string().min(1),
+    desc: z.string().default(""),
+    emoji: z.string().default("🔧"),
+  })
+  .strict();
+// `scripted`: dev/ subdirectory names (e.g. "story-eval") that are trusted,
+// first-party interactive apps — files served from inside one get a relaxed
+// sandbox (`allow-scripts allow-same-origin`) so their JS + localStorage +
+// same-origin fetch work. Everything else stays under the bare `sandbox`
+// default. This reopens the CSRF-on-control-routes vector ONLY for pages
+// physically inside these directories (boxholder decision 2026-07-24) — see
+// the SECURITY LIMITATIONS note below. Each entry must be a single safe path
+// segment (no "/", no "." / ".." — enforced so `path.join(devRoot, dir)` can
+// never escape devRoot and matching can't shadow the /docs//issues/ routes).
+const scriptedDirSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, "scripted entries must be a single dev/ subdirectory name");
+const devToolsFileSchema = z
+  .object({ tools: z.array(devToolSchema), scripted: z.array(scriptedDirSchema).max(64).default([]) })
+  .strict();
+type DevTools = z.infer<typeof devToolsFileSchema>;
+
+// SECURITY LIMITATIONS of the scripted-app exemption (accepted 2026-07-24, but
+// on the record):
+//   - "Trusted first-party" == "present in the worktree on disk". This grant is
+//     applied to the LIVE file, not a git-reviewed blob, so an agent/process
+//     with repo write can grant itself scripting. That's the same trust level as
+//     editing router.ts, so it's the accepted boundary — not a stronger claim.
+//   - `allow-same-origin allow-scripts` gives the page the FULL owner-authenticated
+//     origin: it can POST /__router/stop, reach every worktree's box API, and read
+//     origin-wide storage. Path prefixes are NOT an isolation boundary. The only
+//     safe long-term fix is a separate content origin for scripted apps — filed as
+//     issues/features/2026-07-24-dev-scripted-apps-separate-origin.md.
+
+// href is worktree-root-relative (`dev/story-eval/index.html`) → `/<name>/…`;
+// an absolute URL (http/https) passes through for linking external dashboards.
+function resolveToolHref(name: string, href: string): string {
+  if (/^https?:\/\//.test(href)) return href;
+  return `/${encodeURIComponent(name)}/${href.replace(/^\/+/, "")}`;
+}
+
+// Read + strictly validate a worktree's dev/tools.json. Absent → empty; malformed
+// hand-edited config → empty + a loud warn (never 500 the dev index, never
+// silently grant script permission). One parse feeds both the manifest cards and
+// the sandbox-exemption decision so the two can't drift.
+export async function readDevTools(name: string, devRoot: string): Promise<DevTools> {
+  let raw: string;
+  try {
+    raw = await fs.readFile(path.join(devRoot, "tools.json"), "utf8");
+  } catch {
+    return { tools: [], scripted: [] };
+  }
+  try {
+    return devToolsFileSchema.parse(JSON.parse(raw));
+  } catch (e) {
+    console.warn(`[dev] ${name}/dev/tools.json is invalid, ignoring it:`, e instanceof Error ? e.message : e);
+    return { tools: [], scripted: [] };
+  }
+}
+
+export async function renderWorktreeToolCards(name: string, devRoot: string): Promise<string> {
+  const { tools } = await readDevTools(name, devRoot);
+  return tools
+    .map(
+      (t) =>
+        `<li><a class="title" href="${escapeHtml(resolveToolHref(name, t.href))}">${escapeHtml(`${t.emoji} ${t.title}`)}</a>`
+        + `<div class="desc">${escapeHtml(t.desc)}</div></li>`,
+    )
+    .join("");
+}
+
+// Does the REAL (symlink-resolved) filesystem path of the file we're about to
+// serve sit inside one of the `scripted` app directories? Keyed on the resolved
+// absolute path — NOT the raw URL segment — so encoded traversal
+// (`story-eval%2F..%2Fpayload.html` → devRoot/payload.html) and symlinks can't
+// win the grant for content outside the app dir. `scripted` entries are
+// schema-validated single segments, so `path.join` can't escape devRoot.
+export function isPathInScriptedApp(realResolved: string, devRoot: string, scripted: string[]): boolean {
+  return scripted.some((dir) => {
+    const appRoot = path.join(devRoot, dir);
+    return realResolved === appRoot || realResolved.startsWith(appRoot + path.sep);
+  });
+}
 
 const DEV_CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -78,10 +172,11 @@ export function renderDevShell(title: string, breadcrumbs: string, body: string,
   ul.dir a { text-decoration: none; min-width: 22em; }
   ul.dir a:hover { text-decoration: underline; }
   ul.dir .size { color: #999; }
-  .cards { list-style: none; padding: 0; }
-  .cards li { padding: 0.9em 1em; margin: 0.6em 0; border: 1px solid #e3e3e3; border-radius: 8px; background: #fbfbfb; }
+  .cards { list-style: none; padding: 0; margin: 0.6em 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.7em; }
+  .cards li { display: flex; flex-direction: column; padding: 0.9em 1em; margin: 0; border: 1px solid #e3e3e3; border-radius: 8px; background: #fbfbfb; }
+  .cards li:hover { border-color: #c7d4ea; background: #fcfdff; }
   .cards a.title { font-weight: 600; font-size: 1.05em; text-decoration: none; }
-  .cards .desc { color: #666; font-size: 0.9em; margin-top: 0.2em; }
+  .cards .desc { color: #666; font-size: 0.9em; margin-top: 0.35em; }
   .empty { color: #888; font-style: italic; }
 ${extraCss}</style>
 </head>
@@ -207,17 +302,20 @@ export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
  * has dropped in the tracked dev/ directory.
  */
 async function renderDevManifest(name: string, base: string, devRoot: string): Promise<string> {
-  const builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
+  let builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
     + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`
     + `<li><a class="title" href="${base}/issues/">🗂️ Issue browser</a>`
     + `<div class="desc">Browse the monorepo's <code>issues/</code> queue, overlaid with what every active worktree has added, changed, or closed relative to main.</div></li>`
     + `<li><a class="title" href="/${encodeURIComponent(name)}/site/">🌐 Public site preview</a>`
     + `<div class="desc">This worktree's build of the front-door site (<code>site/dist/</code> — run <code>pnpm --dir site build</code> first). What GitHub Pages will serve.</div></li>`;
 
+  // Per-worktree extras declared in dev/tools.json (read live from disk).
+  builtinHtml += await renderWorktreeToolCards(name, devRoot);
+
   let artifactsHtml: string;
   try {
     const dirents = (await fs.readdir(devRoot, { withFileTypes: true }))
-      .filter((d) => !d.name.startsWith(".") && d.name !== "README.md")
+      .filter((d) => !d.name.startsWith(".") && d.name !== "README.md" && d.name !== "tools.json")
       .sort((a, b) =>
         a.isDirectory() === b.isDirectory() ? a.name.localeCompare(b.name) : a.isDirectory() ? -1 : 1,
       );
@@ -608,7 +706,14 @@ async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort
 
 // --- static artifacts from the worktree's tracked dev/ directory -------------
 
-async function serveDevArtifact(base: string, devRoot: string, rel: string, pathOnly: string, res: http.ServerResponse): Promise<void> {
+async function serveDevArtifact(
+  base: string,
+  devRoot: string,
+  rel: string,
+  pathOnly: string,
+  scripted: string[],
+  res: http.ServerResponse,
+): Promise<void> {
   const resolved = path.resolve(devRoot, `.${rel || "/"}`);
   if (resolved !== devRoot && !resolved.startsWith(devRoot + path.sep)) {
     res.writeHead(403, { "content-type": "text/plain" });
@@ -622,6 +727,32 @@ async function serveDevArtifact(base: string, devRoot: string, rel: string, path
     res.writeHead(404, { "content-type": "text/plain" });
     res.end(`not found in dev/: ${rel}\n`);
     return;
+  }
+  // Resolve symlinks and RE-check containment: the lexical guard above only sees
+  // the path text, but fs.stat/readFile follow symlinks, so a link inside dev/
+  // could otherwise serve bytes from anywhere readable. Compare realpath-to-
+  // realpath (devRoot itself may sit behind a symlink, e.g. macOS /var →
+  // /private/var). realResolved is also what the scripted-app grant is keyed on.
+  let realResolved: string;
+  let realDevRoot: string;
+  try {
+    realResolved = await fs.realpath(resolved);
+    realDevRoot = await fs.realpath(devRoot);
+  } catch {
+    res.writeHead(404, { "content-type": "text/plain" });
+    res.end(`not found in dev/: ${rel}\n`);
+    return;
+  }
+  if (realResolved !== realDevRoot && !realResolved.startsWith(realDevRoot + path.sep)) {
+    res.writeHead(403, { "content-type": "text/plain" });
+    res.end("forbidden\n");
+    return;
+  }
+  // Relax the sandbox ONLY when the real file lives inside a scripted app dir.
+  // Set before any writeHead below so it carries onto the response; the bare
+  // `sandbox` default (set in serveDev) governs everything else.
+  if (isPathInScriptedApp(realResolved, realDevRoot, scripted)) {
+    res.setHeader("Content-Security-Policy", "sandbox allow-scripts allow-same-origin");
   }
   if (stat.isDirectory()) {
     if (!pathOnly.endsWith("/")) {
@@ -700,9 +831,18 @@ export async function serveDev(params: {
   // the decided fix: a sandboxed document can neither run JS nor issue
   // same-origin requests, which closes the CSRF vector while leaving the page
   // fully viewable (inline CSS/styling is unaffected by `sandbox`). Set here so
-  // EVERY response serveDev emits — manifest, doc browser, rendered .md, dir
-  // index, static artifacts, the issue browser — inherits it; nothing below
-  // writes a Content-Security-Policy, so this survives each `writeHead`.
+  // every response THIS FUNCTION emits — manifest, doc browser, rendered .md, dir
+  // index, static artifacts, the issue browser — inherits it (nothing below
+  // writes a Content-Security-Policy, so it survives each `writeHead`), including
+  // the decode-error / traversal / 404 / 500 paths. (Two /dev responses bypass
+  // this function and carry no CSP: the `/<name>/dev`→`/dev/` redirect in
+  // router.ts and the story-eval save route — both non-executable, an empty
+  // redirect and fixed JSON.)
+  // EXEMPTION (boxholder 2026-07-24): files physically inside a `scripted` app
+  // dir (dev/tools.json) get `allow-scripts allow-same-origin` — applied in
+  // serveDevArtifact, keyed on the resolved on-disk path (see its
+  // SECURITY LIMITATIONS note; this is a real reduction, accepted for trusted
+  // first-party apps only).
   res.setHeader("Content-Security-Policy", "sandbox");
   const base = `/${name}/dev`;
   const devRoot = path.join(repoRoot, "dev");
@@ -720,6 +860,11 @@ export async function serveDev(params: {
     res.end(`bad request: malformed percent-encoding in path (${e instanceof Error ? e.message : String(e)})\n`);
     return;
   }
+  // The scripted-app sandbox relaxation happens in serveDevArtifact, keyed on
+  // the resolved on-disk path (not this raw `rel`) so it can't be won by encoded
+  // traversal or symlinks. Router-generated routes below (manifest, /docs/,
+  // /issues/) never get it — they stay bare `sandbox`.
+  const { scripted } = await readDevTools(name, devRoot);
 
   if (rel === "" || rel === "/") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -747,5 +892,5 @@ export async function serveDev(params: {
     await serveIssues({ base, mainRoot, worktreesRoot, rel: rel.slice("/issues".length), query: new URLSearchParams(query), res });
     return;
   }
-  await serveDevArtifact(base, devRoot, rel, pathOnly, res);
+  await serveDevArtifact(base, devRoot, rel, pathOnly, scripted, res);
 }

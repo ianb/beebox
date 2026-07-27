@@ -113,7 +113,8 @@ Only HTTP requests count as worktree activity. WebSocket upgrades never
 cold-start a worktree (clients auto-reconnect on timers; honoring them
 would let abandoned background tabs resurrect worktrees forever) — the
 router refuses upgrades for non-running worktrees with a 503 and the
-client retries later. HMR rides the page origin (no `hmr.clientPort` in
+client retries later (silent by default; `CB_ROUTER_DEBUG=1` logs these
+refusals). HMR rides the page origin (no `hmr.clientPort` in
 vite.config — the browser never learns Vite's internal port), so a stale
 tab heals itself: Vite's client pings the router while the tab is
 visible, the ping restarts the worktree, and the tab reloads. HMR and the

@@ -8,7 +8,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as os from "node:os";
 import { randomUUID } from "node:crypto";
 import {
   runCommand,
@@ -17,6 +16,7 @@ import {
 import type { EventBus } from "../../core/event-bus.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 
 /**
  * Output line for streaming command execution.
@@ -79,7 +79,7 @@ interface RegisterCommandRoutesOptions {
 export async function registerCommandRoutes(
   options: RegisterCommandRoutesOptions
 ): Promise<void> {
-  const { server } = options;
+  const { server, boxRoot } = options;
   // POST /api/upload - Upload a file to temp storage
   server.post("/api/upload", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -92,9 +92,9 @@ export async function registerCommandRoutes(
       const buffer = await data.toBuffer();
       const mimetype = data.mimetype;
 
-      // Create temp directory if needed
-      const tempDir = path.join(os.tmpdir(), "callback-box-uploads");
-      await fs.mkdir(tempDir, { recursive: true });
+      // Write into the box's swept temp dir — never shared host tmp, which
+      // would collide across boxes on one host and leak uploads outside the box.
+      const tempDir = await ensureBoxTmpDir(boxRoot);
 
       // Determine file extension from mimetype
       const ext = mimetypeToExtension(mimetype);

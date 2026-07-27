@@ -48,4 +48,26 @@ export default [
       "@typescript-eslint/return-await": "off",
     },
   },
+  {
+    // Box-request handlers must not stash data in the shared host temp dir:
+    // multiple boxes on one host collide on a fixed `os.tmpdir()` path, and
+    // user content lands outside the box it belongs to. Use the box-scoped,
+    // swept `<boxRoot>/tmp/` via `ensureBoxTmpDir(boxRoot)`/`boxTmpDir(boxRoot)`
+    // from `src/lib/box-tmp.ts`. (CLI/dev tooling under src/cli, src/dev, and
+    // build scratch under src/webapp/views legitimately use host tmp and are
+    // out of scope.) Uses `no-restricted-properties`, not the preset's
+    // `no-restricted-syntax`, so the repo-wide `as`-cast ban still applies here.
+    files: ["src/webapp/routes/**/*.ts", "src/webapp/trpc/**/*.ts"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "os",
+          property: "tmpdir",
+          message:
+            "Box-request handlers must not use host os.tmpdir(). Use ensureBoxTmpDir(boxRoot) / boxTmpDir(boxRoot) from src/lib/box-tmp.ts — the box-scoped, swept <boxRoot>/tmp/.",
+        },
+      ],
+    },
+  },
 ];

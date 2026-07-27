@@ -16,6 +16,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["*.ts"],
+  "include": ["*.ts", "story/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -49,6 +49,11 @@ import { resolveBoxEntries, type ResolvedBoxEntry } from "./box-entry.js";
 import { authorizeRouterRequest, type RouterAuthDeps, type RouterAuthDecision } from "./router-auth.js";
 import { createRouterAuthDeps } from "./router-auth-deps.js";
 import { rewriteMobileCookiePath } from "./router-cookie.js";
+import {
+  bootstrapMobileSessionCookie,
+  mobileBootstrapTarget,
+  type MobileBootstrapTarget,
+} from "./router-mobile-bootstrap.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
@@ -98,6 +103,10 @@ const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 // spoofable header. Local CLI (bin/worktrees) talks to the router through this;
 // everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
 const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
+
+// Verbose worktree-lifecycle logging (e.g. WS-upgrade refusals to idle-stopped
+// worktrees — designed behavior, not anomalies, so silent by default).
+const ROUTER_DEBUG = process.env.CB_ROUTER_DEBUG === "1";
 
 const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
 
@@ -475,6 +484,7 @@ async function proxyWithRetry(
   name: string,
   retriesLeft: number,
   core: RouterCore,
+  mobileBootstrap: MobileBootstrapTarget | null,
 ): Promise<void> {
   const bodyLength = replayableBodyLength(req);
   const body = bodyLength === null ? null : await readBody(req);
@@ -486,6 +496,7 @@ async function proxyWithRetry(
   // strips any client copy of that one header before setting it (Track A).
   stripClientCbHeaders(req.headers);
   injectBasePrefix(req.headers, `/${name}`);
+  let bootstrapPending = mobileBootstrap;
   for (;;) {
     let handle: WorktreeHandle;
     try {
@@ -508,6 +519,27 @@ async function proxyWithRetry(
     const ready = readyLifecycle(handle);
     let err: (Error & { code?: string }) | undefined;
     if (ready) {
+      if (bootstrapPending) {
+        const target = bootstrapPending;
+        bootstrapPending = null;
+        try {
+          const cookies = await bootstrapMobileSessionCookie({
+            ...target,
+            backendPort: ready.backendPort,
+          });
+          if (!cookies) {
+            res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
+            res.end("Mobile session bootstrap failed.\n");
+            return;
+          }
+          res.setHeader("set-cookie", cookies);
+        } catch (error) {
+          log(`[${name}] mobile session bootstrap failed: ${errMessage(error)}`);
+          res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+          res.end("Mobile session bootstrap failed.\n");
+          return;
+        }
+      }
       err = await proxyOnce(req, res, { frontendPort: ready.frontendPort, body });
     } else {
       const notReady: Error & { code?: string } = new Error(`worktree ${name} not ready`);
@@ -1060,7 +1092,7 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       return;
     }
 
-    await proxyWithRetry(req, res, name, 5, core);
+    await proxyWithRetry(req, res, name, 5, core, mobileBootstrapTarget(req, decision));
   };
 
   const server = http.createServer((req, res) => {
@@ -1130,10 +1162,12 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     }
     const ready = handle ? readyLifecycle(handle) : null;
     if (!handle || !ready) {
-      const last = refusedUpgradeLogAt.get(name) ?? 0;
-      if (Date.now() - last > 60_000) {
-        refusedUpgradeLogAt.set(name, Date.now());
-        log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
+      if (ROUTER_DEBUG) {
+        const last = refusedUpgradeLogAt.get(name) ?? 0;
+        if (Date.now() - last > 60_000) {
+          refusedUpgradeLogAt.set(name, Date.now());
+          log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
+        }
       }
       socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
       return;
