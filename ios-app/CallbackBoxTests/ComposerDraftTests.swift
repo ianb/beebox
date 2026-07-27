@@ -148,6 +148,51 @@ final class ComposerDraftReducerTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testCancelledStartupCannotClearNewerStartupHandle() async {
+        var permissionRequests: [CheckedContinuation<Bool, Never>] = []
+        var completedStartups = 0
+        let dictation = SpeechDictation(
+            permissionRequester: {
+                await withCheckedContinuation { continuation in
+                    permissionRequests.append(continuation)
+                }
+            },
+            startupDidFinish: {
+                completedStartups += 1
+            }
+        )
+
+        dictation.toggle(currentText: "")
+        await waitUntil { permissionRequests.count == 1 }
+        dictation.stop()
+        dictation.toggle(currentText: "")
+        await waitUntil { permissionRequests.count == 2 }
+
+        permissionRequests[0].resume(returning: true)
+        await waitUntil { completedStartups == 1 }
+
+        XCTAssertTrue(dictation.hasPendingStart)
+        XCTAssertEqual(dictation.state, .requestingPermission)
+        dictation.toggle(currentText: "")
+        await Task.yield()
+        XCTAssertEqual(permissionRequests.count, 2)
+        permissionRequests[1].resume(returning: false)
+        await waitUntil { completedStartups == 2 }
+        XCTAssertFalse(dictation.hasPendingStart)
+    }
+
+    @MainActor
+    private func waitUntil(_ condition: @MainActor () -> Bool) async {
+        for _ in 0..<100 {
+            if condition() {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for the dictation startup state")
+    }
+
     func testVoicePreparationResolutionPreservesFallbackAndRebuildsHQText() {
         let preparation = VoicePreparation(
             id: UUID(),

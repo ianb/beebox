@@ -50,11 +50,14 @@ final class SpeechDictation: ObservableObject {
     @Published var errorMessage: String?
 
     private let audioEngine = AVAudioEngine()
+    private let permissionRequester: (@MainActor () async -> Bool)?
+    private let startupDidFinish: @MainActor () -> Void
     private let legacyRecognizer = SFSpeechRecognizer(locale: Locale.current)
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var analyzerSession: LiveSpeechRecognitionSession?
     private var startTask: Task<Void, Never>?
+    private var startupGeneration: UUID?
     private var recognitionGeneration: UUID?
     private var seedText = ""
     private var firedKeywordKey: String?
@@ -64,7 +67,12 @@ final class SpeechDictation: ObservableObject {
     private var keywordSeedText = ""
     private var interruptionObserver: NSObjectProtocol?
 
-    init() {
+    init(
+        permissionRequester: (@MainActor () async -> Bool)? = nil,
+        startupDidFinish: @escaping @MainActor () -> Void = {}
+    ) {
+        self.permissionRequester = permissionRequester
+        self.startupDidFinish = startupDidFinish
         interruptionObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification,
             object: nil,
@@ -86,6 +94,10 @@ final class SpeechDictation: ObservableObject {
         state == .recording
     }
 
+    var hasPendingStart: Bool {
+        startTask != nil
+    }
+
     func toggle(currentText: String) {
         if isRecording {
             stop()
@@ -94,14 +106,17 @@ final class SpeechDictation: ObservableObject {
         guard startTask == nil else {
             return
         }
+        let generation = UUID()
+        startupGeneration = generation
         startTask = Task {
-            await start(currentText: currentText)
+            await start(currentText: currentText, generation: generation)
         }
     }
 
     func stop() {
         startTask?.cancel()
         startTask = nil
+        startupGeneration = nil
         preparationMessage = nil
         endRecording(cancelTranscription: false)
         if state == .requestingPermission {
@@ -186,24 +201,28 @@ final class SpeechDictation: ObservableObject {
         return value
     }
 
-    private func start(currentText: String) async {
+    private func start(currentText: String, generation startupID: UUID) async {
         defer {
-            startTask = nil
-            preparationMessage = nil
+            if startupGeneration == startupID {
+                startTask = nil
+                startupGeneration = nil
+                preparationMessage = nil
+            }
+            startupDidFinish()
         }
         errorMessage = nil
         keywordIntent = nil
         firedKeywordKey = nil
         endRecording(cancelTranscription: true)
         VoiceCompositionReducer.reduce(&state, .requestPermission)
-        guard await requestPermissions() else {
+        let permissionsGranted = await requestPermissions()
+        guard startupGeneration == startupID, Task.isCancelled == false else {
+            return
+        }
+        guard permissionsGranted else {
             let message = "Enable microphone and speech recognition permissions to dictate."
             errorMessage = message
             VoiceCompositionReducer.reduce(&state, .fail(message: message))
-            return
-        }
-        guard Task.isCancelled == false else {
-            VoiceCompositionReducer.reduce(&state, .reset)
             return
         }
 
@@ -217,15 +236,14 @@ final class SpeechDictation: ObservableObject {
 
             let inputNode = audioEngine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
-            let generation = UUID()
-            recognitionGeneration = generation
+            let recognitionID = UUID()
+            recognitionGeneration = recognitionID
             let modernSession = await makeAnalyzerSession(
                 naturalFormat: format,
-                generation: generation
+                generation: recognitionID
             )
-            guard Task.isCancelled == false else {
+            guard startupGeneration == startupID, Task.isCancelled == false else {
                 modernSession?.cancel()
-                VoiceCompositionReducer.reduce(&state, .reset)
                 return
             }
 
@@ -244,11 +262,14 @@ final class SpeechDictation: ObservableObject {
                 legacyRequest = request
                 recognitionTask = legacyRecognizer.recognitionTask(with: request) { [weak self] result, error in
                     Task { @MainActor in
-                        guard let self, self.recognitionGeneration == generation else {
+                        guard let self, self.recognitionGeneration == recognitionID else {
                             return
                         }
                         if let result {
-                            self.receiveRecognizedSpeech(result.bestTranscription.formattedString, generation: generation)
+                            self.receiveRecognizedSpeech(
+                                result.bestTranscription.formattedString,
+                                generation: recognitionID
+                            )
                         }
                         if error != nil || result?.isFinal == true {
                             self.endRecording(cancelTranscription: false)
@@ -276,6 +297,9 @@ final class SpeechDictation: ObservableObject {
             try audioEngine.start()
             VoiceCompositionReducer.reduce(&state, .permissionGranted)
         } catch {
+            guard startupGeneration == startupID else {
+                return
+            }
             endRecording(cancelTranscription: true)
             if Self.isExpectedCancellation(error, taskWasCancelled: Task.isCancelled) {
                 if state == .requestingPermission {
@@ -347,6 +371,9 @@ final class SpeechDictation: ObservableObject {
     }
 
     private func requestPermissions() async -> Bool {
+        if let permissionRequester {
+            return await permissionRequester()
+        }
         async let speechAllowed = requestSpeechPermission()
         async let microphoneAllowed = requestMicrophonePermission()
         let permissions = await (speechAllowed, microphoneAllowed)
