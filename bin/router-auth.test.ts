@@ -107,7 +107,7 @@ test("classifier: exhaustive route-shape mapping", () => {
   // box
   assert.deepEqual(c("GET", "/main/test1/"), { kind: "box", targetWorktree: "main", targetBox: "test1" });
   assert.deepEqual(c("GET", "/main/test1/browse/x"), { kind: "box", targetWorktree: "main", targetBox: "test1" });
-  assert.deepEqual(c("GET", "/main/api/boxes"), { kind: "box", targetWorktree: "main", targetBox: null });
+  assert.deepEqual(c("GET", "/main/api/boxes"), { kind: "worktree-box-list", targetWorktree: "main" });
   assert.deepEqual(c("GET", "/main"), { kind: "box", targetWorktree: "main", targetBox: null });
   assert.deepEqual(c("GET", "/main/"), { kind: "box", targetWorktree: "main", targetBox: null });
 
@@ -328,10 +328,10 @@ test("TCP box: unresolvable/duplicate slug fails closed → 401, no per-box auth
   assert.equal(boxAuthAttempted, false, "no box-auth runs once the target is unresolvable");
 });
 
-test("TCP box: root-worktree API (/<w>/api, targetBox null) resolves to default box and authorizes", async () => {
+test("TCP box: other root-worktree API (/<w>/api, targetBox null) resolves to picker and authorizes", async () => {
   const deps = makeDeps({ boxRoots: { "main/<root>": ROOT }, boxAccess: { [ROOT]: { email: "u@example.com" } } });
   const d = await authorizeRouterRequest(
-    req({ method: "GET", url: "/main/api/boxes", headers: JSON_ACCEPT }),
+    req({ method: "GET", url: "/main/api/build-info", headers: JSON_ACCEPT }),
     deps,
   );
   assert.equal(d.allow, true);
@@ -372,21 +372,19 @@ test("TCP worktree-asset: a credential for another worktree does NOT reach these
   assert.equal(d.allow, false, "a token scoped to another worktree is not accepted here");
 });
 
-test("TCP picker/API stays session-only: a worktree-asset credential does NOT reach /<w>/api/boxes", async () => {
-  // The SAME worktree grants asset access, but /<w>/api/boxes is box-class
-  // (picker) — it consults the box ladder, never resolveWorktreeAsset.
-  let assetConsulted = false;
-  const base = makeDeps({ boxRoots: {}, worktreeAsset: { main: true } });
-  const deps: RouterAuthDeps = {
-    ...base,
-    resolveWorktreeAsset: () => {
-      assetConsulted = true;
-      return true;
-    },
-  };
+test("TCP box list: a mobile credential for any box in the worktree reaches /<w>/api/boxes", async () => {
+  // The hub filters this response back to the box authorized by the credential;
+  // the router must let the request reach that filtering boundary.
+  const deps = makeDeps({ worktreeAsset: { main: true } });
   const d = await authorizeRouterRequest(req({ method: "GET", url: "/main/api/boxes", headers: JSON_ACCEPT }), deps);
-  assert.equal(d.allow, false, "the picker never falls back to the worktree-asset grant");
-  assert.equal(assetConsulted, false, "a box-class route never calls resolveWorktreeAsset");
+  assert.equal(d.allow, true);
+});
+
+test("TCP box list: no credential in the worktree → 401", async () => {
+  const deps = makeDeps({ worktreeAsset: {} });
+  const d = await authorizeRouterRequest(req({ method: "GET", url: "/main/api/boxes", headers: JSON_ACCEPT }), deps);
+  assert.equal(d.allow, false);
+  assert.equal(d.allow === false && d.reason, "worktree-box-list-auth-required");
 });
 
 // --- unknown -----------------------------------------------------------------

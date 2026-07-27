@@ -50,23 +50,27 @@ export interface BoxTarget {
  *   index, the `/<w>/dev/` browser) — owner session, no CSRF requirement.
  *   `json` distinguishes the machine endpoint (`/__router/status`, always a JSON
  *   401 on deny) from the browser pages (which redirect a navigation to login).
- * - `box`: a per-box or root-worktree app request (`/<w>/<box>/...`, `/<w>/api/*`,
- *   `/<w>/`) — the box precedence ladder against the TARGET box.
+ * - `worktree-box-list`: the hub's `GET /<w>/api/boxes` endpoint. Reachable by
+ *   any valid credential in the worktree because the hub performs the
+ *   credential-to-box filtering before returning the list.
+ * - `box`: a per-box or root-worktree app request (`/<w>/<box>/...`, other
+ *   `/<w>/api/*`, `/<w>/`) — the box precedence ladder against the TARGET box.
  * - `worktree-asset`: a NON-SENSITIVE worktree-root dev asset Vite serves itself
  *   (`/<w>/@vite/...`, `/<w>/@fs/...`, `/<w>/@id/...`, `/<w>/@react-refresh`,
  *   `/<w>/node_modules/...`, `/<w>/src/...`) — the dev SPA shell an iOS webview
  *   needs. Reachable by ANY valid box credential in the worktree (a session, OR a
- *   per-box mobile token for any box there), NOT the cross-box picker/API which
- *   stay session-only. These paths never serve box data — Vite owns them, so a
- *   box literally named `src`/`node_modules` is already unreachable in dev anyway
- *   (this classification mirrors the proxy's real routing). Built `assets`/`icons`
- *   are separately in `unauth-allowlist`.
+ *   per-box mobile token for any box there), NOT the cross-box picker or other
+ *   root APIs, which stay session-only. These paths never serve box data —
+ *   Vite owns them, so a box literally named `src`/`node_modules` is already
+ *   unreachable in dev anyway (this classification mirrors the proxy's real
+ *   routing). Built `assets`/`icons` are separately in `unauth-allowlist`.
  * - `unknown`: anything else — deny (fail closed).
  */
 export type RouterRoute =
   | { kind: "unauth-allowlist" }
   | { kind: "control" }
   | { kind: "control-read"; json: boolean }
+  | { kind: "worktree-box-list"; targetWorktree: string }
   | ({ kind: "box" } & BoxTarget)
   | { kind: "worktree-asset"; targetWorktree: string }
   | { kind: "unknown" };
@@ -100,7 +104,9 @@ export interface BoxAccessIdentity {
  * - `resolveWorktreeAsset` — true if ANY valid box credential in the worktree is
  *   present: a session (owner, or a member of any box there), OR a per-box mobile
  *   token / agent bearer for any box there. Gates the non-sensitive dev assets
- *   without demanding the cross-box picker's per-user session.
+ *   without demanding the cross-box picker's per-user session. The box-list
+ *   route reuses this resolver only as a worktree credential gate; the hub
+ *   still filters the response to boxes authorized by that credential.
  */
 export interface RouterAuthDeps {
   resolveOwnerSession(headers: RouterHeaders): Awaitable<OwnerIdentity | null>;
@@ -225,6 +231,13 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
     return { kind: "worktree-asset", targetWorktree: name };
   }
 
+  // The hub filters this list to boxes authorized by the request credential.
+  // It must therefore be reachable before the frontend knows which box slug
+  // that credential belongs to.
+  if (method === "GET" && rest === "/api/boxes") {
+    return { kind: "worktree-box-list", targetWorktree: name };
+  }
+
   // Root-worktree API (`/<w>/api/*`) — box class, no single box slug in the path.
   if (seg2 === "api") return { kind: "box", targetWorktree: name, targetBox: null };
 
@@ -320,6 +333,15 @@ export async function authorizeRouterRequest(
       if (await deps.resolveMobileForBox(headers, targetBoxRoot)) return { allow: true, route };
       if (await deps.resolveBoxAccessSession(headers, targetBoxRoot)) return { allow: true, route };
       return deny({ status: 401, reason: "box-auth-required", redirectToLogin: nav, route });
+    }
+
+    case "worktree-box-list": {
+      // The hub is the data-authorization boundary for this endpoint: it
+      // verifies the same credential against every configured box and returns
+      // only matches. The router only establishes that the credential belongs
+      // to this worktree so the request can reach that filter.
+      if (await deps.resolveWorktreeAsset(headers, route.targetWorktree)) return { allow: true, route };
+      return deny({ status: 401, reason: "worktree-box-list-auth-required", redirectToLogin: nav, route });
     }
 
     case "worktree-asset": {
