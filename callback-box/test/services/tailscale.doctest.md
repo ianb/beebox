@@ -14,6 +14,7 @@ import {
   loopbackProxyPort,
   hasFunnelForTarget,
   toBackendState,
+  deriveTailscaleBaseUrl,
 } from "../../src/services/tailscale.js";
 import { createFakeTailscaleDeps } from "../../src/services/tailscale-fake.js";
 import { runTailscaleStatus, reportToJson } from "../../src/services/tailscale-status.js";
@@ -500,4 +501,45 @@ const report = await runTailscaleStatus(
 );
 formatReportHuman(report).split("\n")[1]
 =>   serve is fronting the guarded dev router; anonymous https://box.tail1234.ts.net/__router/status was denied (401)
+```
+
+## `deriveTailscaleBaseUrl`: the admin settings page's Tailscale URL
+
+Pure helper behind the `admin.tailscaleBaseUrl` tRPC query — turns a parsed
+`serve status --json` payload into the box's public `https://…` URL, or null
+when there's no `Web` mapping.
+
+No `Web` section at all (not exposed):
+
+```ts
+deriveTailscaleBaseUrl({})
+=> null
+```
+
+A single HTTPS host — the port suffix is dropped:
+
+```ts
+deriveTailscaleBaseUrl(correctServe)
+=> https://box.tail1234.ts.net
+```
+
+Multiple hosts: prefers the one whose handler proxies to loopback (the box's
+own front) over an unrelated non-loopback mapping:
+
+```ts
+deriveTailscaleBaseUrl({
+  Web: {
+    "unrelated.example.ts.net:443": { Handlers: { "/": { Proxy: "http://192.168.1.5:9000" } } },
+    "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3210" } } },
+  },
+})
+=> https://box.tail1234.ts.net
+```
+
+A host with no Handlers at all (unusual, but the schema allows it) still
+counts as an exposed HTTPS mapping and falls back to "first host":
+
+```ts
+deriveTailscaleBaseUrl({ Web: { "box.tail1234.ts.net:443": {} } })
+=> https://box.tail1234.ts.net
 ```

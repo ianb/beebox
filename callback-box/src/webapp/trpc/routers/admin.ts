@@ -13,6 +13,7 @@ import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
@@ -279,5 +280,26 @@ export const adminRouter = router({
   claudeLogout: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authLogout();
+  }),
+
+  /**
+   * The box's current Tailscale URL, or null when it isn't exposed. Shells
+   * out to `tailscale serve status --json`, so this is fail-safe by design —
+   * every failure mode (CLI absent, nonzero exit, unparseable JSON, no `Web`
+   * mapping) degrades to `{ baseUrl: null }` rather than throwing, since the
+   * settings page must never block on this. Owner-gated: it reveals whether
+   * (and where) the box is reachable off the tailnet.
+   */
+  tailscaleBaseUrl: ownerProcedure.query(async () => {
+    try {
+      const run = await createRealTailscaleDeps().run("tailscale", ["serve", "status", "--json"]);
+      if (!run.spawned || run.code !== 0) return { baseUrl: null };
+      const parsed = parseServeConfig(run.stdout);
+      if (!parsed.ok) return { baseUrl: null };
+      return { baseUrl: deriveTailscaleBaseUrl(parsed.value) };
+    } catch (e) {
+      console.warn("tailscaleBaseUrl: failed to read Tailscale serve status (treating as not exposed):", e);
+      return { baseUrl: null };
+    }
   }),
 });
