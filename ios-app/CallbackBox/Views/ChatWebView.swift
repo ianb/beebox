@@ -107,8 +107,7 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.allowsInlineMediaPlayback = true
+        let configuration = Self.makeConfiguration()
         configuration.userContentController.add(context.coordinator, name: "callbackboxSession")
         configuration.userContentController.add(context.coordinator, name: "callbackboxEmissionReceipt")
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationResult")
@@ -125,6 +124,13 @@ struct ChatWebView: UIViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.load(request())
         return webView
+    }
+
+    static func makeConfiguration() -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        return configuration
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {

@@ -146,6 +146,8 @@ final class SpeechDictation: ObservableObject {
         analyzerSession?.cancel()
         analyzerSession = nil
         hasDictatedText = false
+        errorMessage = nil
+        preparationMessage = nil
         transcript = ""
         keywordIntent = nil
         firedKeywordKey = nil

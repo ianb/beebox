@@ -34,7 +34,52 @@ final class ComposerTextViewTests: XCTestCase {
     }
 }
 
+final class NativeComposerLayoutTests: XCTestCase {
+    func testStatusOnlyContextDoesNotUseCappedScrollContainer() {
+        XCTAssertFalse(
+            NativeComposerView.contextNeedsScrolling(
+                pendingCount: 0,
+                voicePreparationCount: 0,
+                imageCount: 0,
+                fileCount: 0,
+                selectionCount: 0
+            )
+        )
+    }
+
+    func testAttachmentContextRemainsCappedAndScrollable() {
+        XCTAssertTrue(
+            NativeComposerView.contextNeedsScrolling(
+                pendingCount: 0,
+                voicePreparationCount: 0,
+                imageCount: 1,
+                fileCount: 0,
+                selectionCount: 0
+            )
+        )
+    }
+}
+
 final class ComposerDraftReducerTests: XCTestCase {
+    func testLiveDictationMovesCaretToNewestTranscript() {
+        var draft = ComposerDraft.empty
+        ComposerDraftReducer.reduce(&draft, .setText("older words"))
+        ComposerDraftReducer.reduce(
+            &draft,
+            .setSelection(NSRangeValue(location: 0, length: 0))
+        )
+
+        ComposerDraftReducer.reduce(
+            &draft,
+            .setDictationTranscript("older words followed by the newest spoken words")
+        )
+
+        XCTAssertEqual(
+            draft.selection,
+            NSRangeValue(location: (draft.text as NSString).length, length: 0)
+        )
+    }
+
     func testVoiceKeywordSendUsesLiveTranscriptWhenNarrationIsOff() {
         XCTAssertEqual(
             NativeVoiceKeywordSendPlan.make(
@@ -68,6 +113,17 @@ final class ComposerDraftReducerTests: XCTestCase {
         XCTAssertEqual(state, .failed(message: "interrupted"))
         VoiceCompositionReducer.reduce(&state, .reset)
         XCTAssertEqual(state, .idle)
+    }
+
+    @MainActor
+    func testResettingDictationClearsInterruptionNotice() {
+        let dictation = SpeechDictation()
+        dictation.failPreparation("Dictation was interrupted.")
+
+        dictation.resetDictationState()
+
+        XCTAssertNil(dictation.errorMessage)
+        XCTAssertEqual(dictation.state, .idle)
     }
 
     func testVoicePreparationResolutionPreservesFallbackAndRebuildsHQText() {

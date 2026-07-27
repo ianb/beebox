@@ -1,0 +1,23 @@
+---
+title: "iOS native and web-view runtime errors are not observable"
+needs: [design]
+area: callback-box
+filed-by: agent
+discovered-in: main — diagnosing automatic speech playback failures in the iOS app
+---
+
+When behavior fails only inside the iOS shell, there is no durable, user-accessible
+diagnostic record. Xcode's console helps only while a development build is attached,
+and browser-side errors inside `WKWebView` are not available after the fact. Automatic
+speech playback, for example, can visibly skip through a queue without leaving
+anything the user can inspect or share.
+
+A design should decide how to capture and export a small, privacy-conscious diagnostic
+bundle. It should consider Swift task and audio-session failures, `WKWebView`
+navigation/process failures, selected JavaScript errors and rejected media playback,
+timestamped app state transitions, redaction of box URLs and credentials, rotation,
+retention, and an explicit user action to copy or share the result.
+
+This should not become unrestricted console capture: transcripts, message text,
+device tokens, and box content are sensitive. The work is large enough to design
+separately from any individual playback fix.

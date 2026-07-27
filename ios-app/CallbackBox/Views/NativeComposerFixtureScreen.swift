@@ -50,7 +50,7 @@ struct NativeComposerFixtureScreen: View {
                     onToggleLocationSharing: {},
                     onTakeScreenshot: {},
                     automaticallyResumeVoicePreparations: false,
-                    voiceStateOverride: fixture == "recording" ? .recording : nil,
+                    voiceStateOverride: fixtureVoiceState,
                     initiallyFocused: fixture == "keyboard-shown",
                     initialDetailedSelection: fixture == "selection-detail" ? fixtureSelection : nil
                 )
@@ -133,7 +133,19 @@ struct NativeComposerFixtureScreen: View {
                 message: "Expired attachment"
             )
         case "recording":
-            return draft(text: "This live transcript remains editable while dictation is active")
+            var value = draft(text: "")
+            ComposerDraftReducer.reduce(
+                &value,
+                .setDictationTranscript(
+                    """
+                    Earlier spoken words fill the first line of the live transcript.
+                    More dictated detail keeps the native editor growing.
+                    The transcript is now taller than the editor can display.
+                    Newest spoken words stay visible at the bottom.
+                    """
+                )
+            )
+            return value
         default:
             return .empty
         }
@@ -166,6 +178,19 @@ struct NativeComposerFixtureScreen: View {
             audioFilename: nil,
             createdAt: Date()
         )]
+    }
+
+    private var fixtureVoiceState: VoiceCompositionState? {
+        switch fixture {
+        case "recording":
+            return .recording
+        case "interrupted":
+            return .failed(
+                message: "Dictation was interrupted. Your live transcript is ready to edit or send."
+            )
+        default:
+            return nil
+        }
     }
 
     private var fixtureSelection: DraftSelection {

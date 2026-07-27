@@ -37,7 +37,14 @@ struct NativeComposerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if hasComposerContext {
+            if let visibleStatusText {
+                Text(visibleStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+            }
+            if hasScrollableComposerContext {
                 ScrollView(.vertical, showsIndicators: true) {
                     composerContext
                 }
@@ -68,7 +75,7 @@ struct NativeComposerView: View {
             dictation.noteManualTextChange(newValue)
         }
         .onChange(of: dictation.transcript) { _, newValue in
-            draftStore.setText(newValue)
+            draftStore.setDictationTranscript(newValue)
             draftStore.setVoiceSelectionContext(transcript: newValue, active: dictation.isRecording)
         }
         .onChange(of: dictation.isRecording) { _, isRecording in
@@ -179,13 +186,6 @@ struct NativeComposerView: View {
 
     private var composerContext: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let visibleStatusText {
-                Text(visibleStatusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
-            }
             if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
                 PendingEmissionList(
                     emissions: pendingStore.pending,
@@ -229,20 +229,43 @@ struct NativeComposerView: View {
     }
 
     private var visibleStatusText: String? {
-        dictation.errorMessage
+        voiceStateOverrideMessage
+            ?? dictation.errorMessage
             ?? dictation.preparationMessage
             ?? statusText
             ?? draftStore.restoreNotice
             ?? pendingStore.notice
     }
 
-    private var hasComposerContext: Bool {
-        visibleStatusText != nil
-            || pendingStore.pending.isEmpty == false
-            || pendingStore.voicePreparations.isEmpty == false
-            || draftStore.draft.images.isEmpty == false
-            || draftStore.draft.files.isEmpty == false
-            || draftStore.draft.selections.isEmpty == false
+    private var voiceStateOverrideMessage: String? {
+        guard case .failed(let message) = voiceStateOverride else {
+            return nil
+        }
+        return message
+    }
+
+    private var hasScrollableComposerContext: Bool {
+        Self.contextNeedsScrolling(
+            pendingCount: pendingStore.pending.count,
+            voicePreparationCount: pendingStore.voicePreparations.count,
+            imageCount: draftStore.draft.images.count,
+            fileCount: draftStore.draft.files.count,
+            selectionCount: draftStore.draft.selections.count
+        )
+    }
+
+    static func contextNeedsScrolling(
+        pendingCount: Int,
+        voicePreparationCount: Int,
+        imageCount: Int,
+        fileCount: Int,
+        selectionCount: Int
+    ) -> Bool {
+        pendingCount > 0
+            || voicePreparationCount > 0
+            || imageCount > 0
+            || fileCount > 0
+            || selectionCount > 0
     }
 
     private var textEntry: some View {

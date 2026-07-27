@@ -63,6 +63,13 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertEqual(request.url, box.chatURL)
     }
 
+    func testConfigurationAllowsAutomaticSpeechPlayback() {
+        let configuration = ChatWebView.makeConfiguration()
+
+        XCTAssertTrue(configuration.allowsInlineMediaPlayback)
+        XCTAssertEqual(configuration.mediaTypesRequiringUserActionForPlayback, [])
+    }
+
     @MainActor
     func testSameOriginNewWindowLoadsInCurrentContext() {
         let url = URL(string: "https://box.example.com/test1/browse/card")!
