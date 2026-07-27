@@ -71,6 +71,14 @@ export function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnab
   }, [enabled, narrationEnabled]);
 }
 
+export function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing: boolean }) {
+  const { enabled, playing } = opts;
+  useEffect(() => {
+    if (!enabled) return;
+    postNativeSpeechPlaybackState(playing, window);
+  }, [enabled, playing]);
+}
+
 async function handleNativeEmission(
   detail: unknown,
   dispatchEmission: (emission: Emission) => Promise<Receipt>
@@ -176,6 +184,10 @@ export function postNativeLocationState(enabled: boolean, shell: NativeShellWind
 
 export function postNativeNarrationState(enabled: boolean, shell: NativeShellWindow): void {
   postNativeMessage(shell, { channel: "callbackboxNarrationState", payload: { enabled } });
+}
+
+export function postNativeSpeechPlaybackState(playing: boolean, shell: NativeShellWindow): void {
+  postNativeMessage(shell, { channel: "callbackboxSpeechPlaybackState", payload: { playing } });
 }
 
 function drainNativeEmissionQueue(): unknown[] {

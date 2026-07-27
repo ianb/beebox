@@ -9,6 +9,7 @@ struct NativeComposerView: View {
     @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
     var narrationEnabled: Bool
+    var speechPlaybackActive: Bool
     var locationSharingEnabled: Bool
     var locationShareResult: NativeLocationShareResult?
     var screenshotResult: NativeScreenshotResult?
@@ -33,6 +34,7 @@ struct NativeComposerView: View {
     @State private var showingFileImporter = false
     @State private var detailedSelection: DraftSelection?
     @State private var activeVoicePreparationIDs: Set<UUID> = []
+    @State private var voiceTurn = NativeVoiceTurnState()
     @StateObject private var dictation = SpeechDictation()
 
     var body: some View {
@@ -87,12 +89,16 @@ struct NativeComposerView: View {
             }
             handleKeywordIntent(newValue)
         }
+        .onChange(of: speechPlaybackActive) { _, playing in
+            applyVoiceTurn(.speechPlaybackChanged(playing: playing))
+        }
         .onChange(of: pendingStore.voicePreparations) { _, preparations in
             if automaticallyResumeVoicePreparations {
                 resumeVoicePreparations(preparations)
             }
         }
         .onAppear {
+            applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             if initiallyFocused {
                 focused = true
             }
@@ -130,7 +136,7 @@ struct NativeComposerView: View {
             }
         }
         .onDisappear {
-            dictation.stop()
+            applyVoiceTurn(.microphoneStopped)
             draftStore.setVoiceSelectionContext(transcript: "", active: false)
         }
         .sheet(isPresented: $showingActions) {
@@ -299,12 +305,12 @@ struct NativeComposerView: View {
             ProgressView()
                 .frame(width: 58, height: 58)
                 .background(.quaternary, in: Circle())
-        } else if isVoiceRecording {
+        } else if voiceTurn.isActive || isVoiceRecording {
             composerButton(
                 systemImage: "stop.fill",
-                accessibilityLabel: "Stop dictation",
+                accessibilityLabel: "Stop continuous dictation",
                 foregroundStyle: .red,
-                action: { dictation.stop() }
+                action: { applyVoiceTurn(.microphoneStopped) }
             )
         } else if hasTextContent {
             composerButton(
@@ -336,7 +342,7 @@ struct NativeComposerView: View {
         composerButton(
             systemImage: "mic.fill",
             accessibilityLabel: "Start dictation",
-            action: { dictation.toggle(currentText: text) }
+            action: { applyVoiceTurn(.microphoneStarted) }
         )
     }
 
@@ -348,7 +354,7 @@ struct NativeComposerView: View {
         guard captureAvailable else {
             return
         }
-        dictation.stop()
+        applyVoiceTurn(.microphoneStopped)
         focused = false
         showingActions = false
         DispatchQueue.main.async {
@@ -379,7 +385,7 @@ struct NativeComposerView: View {
         guard sendDisabled == false else {
             return
         }
-        dictation.stop()
+        applyVoiceTurn(.microphoneStopped)
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         enqueueMessage(text: message, origin: origin, diarized: false)
     }
@@ -391,16 +397,18 @@ struct NativeComposerView: View {
             sendKeywordIntent(intent)
         case .cancel:
             selectedPhotoItems = []
+            applyVoiceTurn(.microphoneStopped)
             dictation.resetDictationState()
             statusText = "Message cancelled."
             Task {
                 await draftStore.discardCurrentDraft()
             }
         case .micOff:
-            dictation.stop()
+            applyVoiceTurn(.microphoneStopped)
             statusText = "Microphone off."
         case .erase:
             selectedPhotoItems = []
+            applyVoiceTurn(.microphoneStopped)
             dictation.resetDictationState()
             statusText = "Message erased."
             Task {
@@ -410,6 +418,9 @@ struct NativeComposerView: View {
     }
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
+        if intent.action == .sendClose {
+            applyVoiceTurn(.voiceMessageSent(closeMicrophone: true))
+        }
         let audioURL = dictation.consumeRecordedAudioURL()
         switch NativeVoiceKeywordSendPlan.make(
             liveTranscript: intent.processedTranscript,
@@ -419,7 +430,12 @@ struct NativeComposerView: View {
             if let audioURL {
                 try? FileManager.default.removeItem(at: audioURL)
             }
-            enqueueMessage(text: text, origin: .voice, diarized: false)
+            enqueueMessage(
+                text: text,
+                origin: .voice,
+                diarized: false,
+                voiceKeywordAction: intent.action
+            )
             return
         case .hq:
             break
@@ -449,6 +465,7 @@ struct NativeComposerView: View {
                 focused = false
                 isPreparingSend = false
                 statusText = nil
+                applyVoiceTurn(.voiceMessageSent(closeMicrophone: intent.action == .sendClose))
                 resumeVoicePreparation(preparation, box: sendingBox)
             } catch {
                 isPreparingSend = false
@@ -508,7 +525,8 @@ struct NativeComposerView: View {
     private func enqueueMessage(
         text: String,
         origin: NativeChatEmission.Origin,
-        diarized: Bool
+        diarized: Bool,
+        voiceKeywordAction: SpeechKeywordAction? = nil
     ) {
         let snapshot = draftStore.draft
         let sendingBoxID = box.id
@@ -529,6 +547,9 @@ struct NativeComposerView: View {
                 focused = false
                 isPreparingSend = false
                 statusText = nil
+                if let voiceKeywordAction {
+                    applyVoiceTurn(.voiceMessageSent(closeMicrophone: voiceKeywordAction == .sendClose))
+                }
             } catch {
                 isPreparingSend = false
                 statusText = "An attachment could not be read."
@@ -538,6 +559,17 @@ struct NativeComposerView: View {
 
     private var isSending: Bool {
         isPreparingSend || draftStore.isReady == false
+    }
+
+    private func applyVoiceTurn(_ event: NativeVoiceTurnEvent) {
+        switch voiceTurn.handle(event) {
+        case .none:
+            break
+        case .startDictation:
+            dictation.startIfNeeded(currentText: text)
+        case .stopDictation:
+            dictation.stop()
+        }
     }
 
     private var hasSendableContent: Bool {
@@ -645,7 +677,7 @@ struct NativeComposerView: View {
         detailedSelection = nil
         focused = false
         selectedPhotoItems = []
-        dictation.stop()
+        applyVoiceTurn(.microphoneStopped)
         draftStore.setVoiceSelectionContext(transcript: "", active: false)
     }
 

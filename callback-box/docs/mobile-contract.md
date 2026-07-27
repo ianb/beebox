@@ -349,7 +349,19 @@ the contract.
 - **Drift:** fail-local — absent or malformed state leaves native narration off, avoiding an
   unintended audio upload.
 
-### 4.5 Companion selection command (web → native) + durability acknowledgement
+### 4.5 Speech playback state (web → native)
+
+- **Wire shape:** `{ playing: boolean }` on `callbackboxSpeechPlaybackState`.
+- **Semantics:** the web posts changes to its actual speech playback state. An active native
+  continuous-dictation turn pauses while `playing:true` and resumes when the final queued speech
+  segment reports `playing:false`. The microphone remains active while waiting for speech to begin;
+  an explicit stop or `send and close` prevents the later resume.
+- **Anchors:** web `use-native-bridge.ts` — `useNativeSpeechPlaybackBridge`; native
+  `Views/ChatWebView.swift` — `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` —
+  `applyVoiceTurn`.
+- **Drift:** fail-local — absent or malformed state does not alter native microphone state.
+
+### 4.6 Companion selection command (web → native) + durability acknowledgement
 
 - **Command wire shape** (web posts on `callbackboxComposerCommand`):
   ```json
@@ -497,6 +509,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
 | B6 | Composer command acknowledgement | native→web | accepted `{version:1,id,accepted:true}` or rejected `{version:1,id,accepted:false,reason}` via `callbackboxNativeComposerCommandAck`, queue + `callbackbox:native-composer-command-ack` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandAcknowledgement`; `Views/ChatWebView.swift` · `deliverComposerCommandAcknowledgements` | `native-composer-command.ts` · `nativeComposerCommandAcknowledgementFromDetail`; `use-native-composer-commands.ts` | LOUD |
 | B7 | Narration state | web→native | `{enabled}` via `callbackboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
+| B8 | Speech playback state | web→native | `{playing}` via `callbackboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD / SILENT if float-WAV mis-decoded — **I8** |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
@@ -536,7 +549,8 @@ without the other is a contract break.
   `callbackbox:native-composer-command-ack` — native-authored startup script in
   `Views/ChatWebView.swift` ↔ `use-native-bridge.ts` / `use-native-composer-commands.ts`.
 - **Script-message channel names** `callbackboxSession` / `callbackboxEmissionReceipt` /
-  `callbackboxLocationResult` / `callbackboxComposerCommand` — `Views/ChatWebView.swift`
+  `callbackboxLocationResult` / `callbackboxLocationState` / `callbackboxNarrationState` /
+  `callbackboxSpeechPlaybackState` / `callbackboxComposerCommand` — `Views/ChatWebView.swift`
   (`userContentController.add`) ↔ `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the

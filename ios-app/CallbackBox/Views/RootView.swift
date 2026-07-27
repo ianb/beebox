@@ -14,6 +14,7 @@ struct RootView: View {
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var locationSharingEnabled = false
     @State private var narrationEnabled = false
+    @State private var speechPlaybackActive = false
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
@@ -74,6 +75,7 @@ struct RootView: View {
             locationShareResult = nil
             locationSharingEnabled = false
             narrationEnabled = false
+            speechPlaybackActive = false
             screenshotRequest = nil
             screenshotResult = nil
             composerCommandAcknowledgements = []
@@ -120,6 +122,7 @@ struct RootView: View {
             onSessionChange: { sessionID in
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
+                    speechPlaybackActive = false
                 }
                 visibleChatBoxID = box.id
                 visibleChatSessionID = sessionID
@@ -150,6 +153,9 @@ struct RootView: View {
             onNarrationStateChange: { enabled in
                 narrationEnabled = enabled
             },
+            onSpeechPlaybackStateChange: { playing in
+                speechPlaybackActive = playing
+            },
             onScreenshotResult: { result in
                 guard result.requestID == screenshotRequest?.id else {
                     return
@@ -172,6 +178,7 @@ struct RootView: View {
                 pendingStore: pendingEmissionStore,
                 captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
                 narrationEnabled: narrationEnabled,
+                speechPlaybackActive: speechPlaybackActive,
                 locationSharingEnabled: locationSharingEnabled,
                 locationShareResult: locationShareResult,
                 screenshotResult: screenshotResult,

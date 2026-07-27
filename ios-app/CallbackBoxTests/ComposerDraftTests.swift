@@ -60,6 +60,41 @@ final class NativeComposerLayoutTests: XCTestCase {
     }
 }
 
+final class NativeVoiceTurnTests: XCTestCase {
+    func testPlainVoiceSendListensWhileWaitingAndPausesOnlyForSpeech() {
+        var turn = NativeVoiceTurnState()
+
+        XCTAssertEqual(turn.handle(.microphoneStarted), .startDictation)
+        XCTAssertEqual(turn.handle(.voiceMessageSent(closeMicrophone: false)), .startDictation)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .stopDictation)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
+        XCTAssertTrue(turn.isActive)
+    }
+
+    func testSendAndCloseDoesNotResumeAfterSpeech() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+
+        XCTAssertEqual(
+            turn.handle(.voiceMessageSent(closeMicrophone: true)),
+            .stopDictation
+        )
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .none)
+        XCTAssertFalse(turn.isActive)
+    }
+
+    func testStartingDuringSpeechWaitsForPlaybackToFinish() {
+        var turn = NativeVoiceTurnState()
+
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .none)
+        XCTAssertEqual(turn.handle(.microphoneStarted), .none)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
+        XCTAssertTrue(turn.isActive)
+    }
+}
+
 final class ComposerDraftReducerTests: XCTestCase {
     func testLiveDictationMovesCaretToNewestTranscript() {
         var draft = ComposerDraft.empty

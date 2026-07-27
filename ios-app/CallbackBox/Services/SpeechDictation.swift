@@ -2,6 +2,51 @@ import AVFAudio
 import Foundation
 import Speech
 
+enum NativeVoiceTurnCommand: Equatable {
+    case none
+    case startDictation
+    case stopDictation
+}
+
+enum NativeVoiceTurnEvent: Equatable {
+    case microphoneStarted
+    case microphoneStopped
+    case voiceMessageSent(closeMicrophone: Bool)
+    case speechPlaybackChanged(playing: Bool)
+}
+
+struct NativeVoiceTurnState: Equatable {
+    private(set) var isActive = false
+    private var speechPlaybackActive = false
+
+    mutating func handle(_ event: NativeVoiceTurnEvent) -> NativeVoiceTurnCommand {
+        switch event {
+        case .microphoneStarted:
+            isActive = true
+            return speechPlaybackActive ? .none : .startDictation
+        case .microphoneStopped:
+            isActive = false
+            return .stopDictation
+        case .voiceMessageSent(let closeMicrophone):
+            if closeMicrophone {
+                isActive = false
+                return .stopDictation
+            }
+            isActive = true
+            return speechPlaybackActive ? .none : .startDictation
+        case .speechPlaybackChanged(let playing):
+            guard playing != speechPlaybackActive else {
+                return .none
+            }
+            speechPlaybackActive = playing
+            guard isActive else {
+                return .none
+            }
+            return playing ? .stopDictation : .startDictation
+        }
+    }
+}
+
 enum VoiceCompositionState: Equatable {
     case idle
     case requestingPermission
@@ -101,6 +146,13 @@ final class SpeechDictation: ObservableObject {
     func toggle(currentText: String) {
         if isRecording {
             stop()
+            return
+        }
+        startIfNeeded(currentText: currentText)
+    }
+
+    func startIfNeeded(currentText: String) {
+        guard isRecording == false else {
             return
         }
         guard startTask == nil else {

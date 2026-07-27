@@ -185,6 +185,19 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         }
     }
 
+    func testSpeechPlaybackStateFixturesDecodeThroughNativeSeam() throws {
+        let fixtures = try MobileContractFixtures.load("speech-playback-state")
+        XCTAssertFalse(fixtures.isEmpty, "no speech playback state fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            let playing = ChatWebView.speechPlaybackActive(
+                from: try MobileContractFixtures.jsonString(from: input)
+            )
+            XCTAssertEqual(playing, expected["playing"] as? Bool, "\(name): playing")
+        }
+    }
+
     func testV2EmissionFixturesDecodeStrictly() throws {
         let fixtures = try MobileContractFixtures.load("emission")
         var decodedV2 = 0

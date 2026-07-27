@@ -46,6 +46,7 @@ struct NativeComposerFixtureScreen: View {
                     pendingStore: pendingStore,
                     captureAvailable: true,
                     narrationEnabled: false,
+                    speechPlaybackActive: false,
                     locationSharingEnabled: false,
                     onToggleLocationSharing: {},
                     onTakeScreenshot: {},

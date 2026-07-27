@@ -41,6 +41,7 @@ import {
   useNativeEmissionBridge,
   useNativeLocationBridge,
   useNativeNarrationBridge,
+  useNativeSpeechPlaybackBridge,
 } from "./use-native-bridge";
 
 /**
@@ -191,6 +192,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     emissionStore, resetAttachments: attach.resetAttachments,
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
   });
+  useNativeSpeechPlaybackBridge({ enabled: usesNativeShell, playing: voice.speechPlayback.isPlaying });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
   // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
