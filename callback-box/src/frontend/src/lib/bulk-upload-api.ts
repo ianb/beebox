@@ -1,5 +1,5 @@
 /**
- * Bulk file-upload API client (`docs/plans/bulk-file-upload.md`, Track 2).
+ * Bulk file-upload API client (`docs/implemented-plans/bulk-file-upload.md`, Track 2).
  *
  * Thin, zod-validated wrappers over the raw-Fastify `/api/bulk/` routes
  * (`webapp/routes/bulk-upload.ts`): create a batch bound to a target chat,

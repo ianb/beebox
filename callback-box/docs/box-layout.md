@@ -100,7 +100,7 @@ failed="M">` message. The chat agent files each item out (destination card attac
 scope, `store/`, or `box/inbox/`) and deletes the card + attach dir once
 everything is placed — there is no terminal "filed" status, deletion *is* the
 completion signal, and `tmp-upload/` must not accumulate either. Plan:
-`docs/plans/bulk-file-upload.md`; agent duties:
+`docs/implemented-plans/bulk-file-upload.md`; agent duties:
 `docs/generated/card-upload-batch.md`.
 
 ## Marker and runtime files (root)

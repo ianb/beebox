@@ -64,7 +64,7 @@ export type StagingFile = z.infer<typeof StagingFileSchema>;
 /**
  * Which pipeline owns a staging session. `capture` (default) is the recorded
  * photo/voice batch that becomes a capture-session card; `bulk` is a bulk
- * file-upload batch (`docs/plans/bulk-file-upload.md`) that becomes an
+ * file-upload batch (`docs/implemented-plans/bulk-file-upload.md`) that becomes an
  * `upload-batch` card. Old manifests predate the field and parse as `capture`.
  */
 const StagingSessionKindSchema = z.enum(["capture", "bulk"]);

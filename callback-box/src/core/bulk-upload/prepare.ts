@@ -1,5 +1,5 @@
 /**
- * Bulk-upload preparation (Track 1 of `docs/plans/bulk-file-upload.md`).
+ * Bulk-upload preparation (Track 1 of `docs/implemented-plans/bulk-file-upload.md`).
  *
  * Turns a bulk staging session into a committed `upload-batch` document under
  * the target chat's `tmp-upload/`: it **copies** (never moves — parity with

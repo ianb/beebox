@@ -479,7 +479,7 @@ See §1.3 (full request/response/errors).
 ### 5.6 Bulk file-upload batch (`/api/bulk/...`)
 
 - **Direction:** native → box (also driven by the web overlay). **Deferred for iOS** behind the
-  uploader boundary (`docs/plans/bulk-file-upload.md` §4) — no native client ships yet, but the
+  uploader boundary (`docs/implemented-plans/bulk-file-upload.md` §4) — no native client ships yet, but the
   server contract is uploader-agnostic and carries bearer auth like every other native call, so a
   future native uploader implements exactly these rows. Auth: cookie OR `Authorization: Bearer
   <token>`, owner-scoped per session (same `authorizeCaptureSessionOwner` ownership as capture).

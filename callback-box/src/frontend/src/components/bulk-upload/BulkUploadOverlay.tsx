@@ -1,5 +1,5 @@
 /**
- * Full-screen bulk file-upload overlay (`docs/plans/bulk-file-upload.md`,
+ * Full-screen bulk file-upload overlay (`docs/implemented-plans/bulk-file-upload.md`,
  * Track 2 / Direction §4).
  *
  * Launched from the chat composer's Add menu ("Upload files…") and bound to the

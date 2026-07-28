@@ -68,7 +68,7 @@ export function resolveStagedFile(opts: { boxRoot: string; id: string; filename:
 /**
  * Create a staging session. `kind` defaults to `"capture"` (the recorded
  * photo/voice batch); pass `kind: "bulk"` plus an initial `expectedItems`
- * registry for a bulk file-upload batch (`docs/plans/bulk-file-upload.md`),
+ * registry for a bulk file-upload batch (`docs/implemented-plans/bulk-file-upload.md`),
  * whose finalize path reads `files` + `expectedItems` rather than the capture
  * media arrays.
  */

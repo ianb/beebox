@@ -1,6 +1,6 @@
 /**
  * Durable, fail-loud read/write of a staging session's `session.json`
- * manifest (Track 0 of `docs/plans/bulk-file-upload.md`).
+ * manifest (Track 0 of `docs/implemented-plans/bulk-file-upload.md`).
  *
  * Writes go through a temp-file-then-rename so a crash mid-write can never
  * leave a truncated/corrupt manifest on disk. Reads never return `null`

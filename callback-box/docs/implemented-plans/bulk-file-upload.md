@@ -1,6 +1,6 @@
 # Bulk file upload
 
-**Status:** active — implementation complete on the worktree branch 2026-07-28 (Tracks 0–2, 4 + a post-build adversarial hardening pass); verified end-to-end twice in the live app; awaiting merge via /finish. Track 3 (iOS) deferred to its own future plan.
+**Status:** implemented 2026-07 — Tracks 0–2 and 4 shipped (staging hardening; bulk staging sessions/routes/streaming; upload-batch schema + prepare/deliver/finalize with reconciliation; web overlay; docs + knowledge audits), plus a post-build adversarial hardening pass; verified end-to-end twice in the live app. Track 3 (iOS) is deliberately deferred out of v1 to its own future plan, not unfinished work here.
 
 Let a user dump many files (order of 100 MB / dozens of items — camera-roll
 batches, document folders) into a box at once. The upload surface only gets the

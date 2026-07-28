@@ -24,7 +24,7 @@ app exists.
 | Native emission bridge with delivery receipts (35 s timeout, restore-on-rejected) | done | planned (Track 3) |
 | Text composer | done | planned (Track 3) |
 | Photo attachments (picker + camera, unlimited selection, EXIF baked upright) | done | planned (Track 3) |
-| Bulk file-upload batch (many-file drop → `<upload>` message → chat-agent filing) | not planned yet — web overlay ships (`docs/plans/bulk-file-upload.md`), deferred behind a dedicated iOS uploader boundary rather than a parameterized `CaptureUploadCoordinator`; server contract in `docs/mobile-contract.md` §5.6 (`/api/bulk/...`) is uploader-agnostic and ready | not planned until an iOS uploader ships |
+| Bulk file-upload batch (many-file drop → `<upload>` message → chat-agent filing) | not planned yet — web overlay ships (`docs/implemented-plans/bulk-file-upload.md`), deferred behind a dedicated iOS uploader boundary rather than a parameterized `CaptureUploadCoordinator`; server contract in `docs/mobile-contract.md` §5.6 (`/api/bulk/...`) is uploader-agnostic and ready | not planned until an iOS uploader ships |
 | Voice: live on-device partial transcription | done (SpeechAnalyzer / SFSpeechRecognizer) | **divergent** — record-only; Android `SpeechRecognizer` holds the mic exclusively, so no live partials alongside the recording (plan Track 4) |
 | Voice: spoken keyword commands (e.g. "send") | done | **divergent** — requires live partials; same reason as above |
 | Voice: HQ server transcription upload | done (float WAV — format question tracked in `issues/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`) | planned (Track 4, 16 kHz mono 16-bit PCM WAV) |

@@ -1,5 +1,5 @@
 /**
- * Bulk-upload queue + per-item state machine (`docs/plans/bulk-file-upload.md`,
+ * Bulk-upload queue + per-item state machine (`docs/implemented-plans/bulk-file-upload.md`,
  * Track 2).
  *
  * Owns one bulk staging session bound to the launching chat, the per-item

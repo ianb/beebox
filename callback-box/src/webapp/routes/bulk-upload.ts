@@ -1,5 +1,5 @@
 /**
- * Bulk file-upload routes (`docs/plans/bulk-file-upload.md`, Track 1).
+ * Bulk file-upload routes (`docs/implemented-plans/bulk-file-upload.md`, Track 1).
  *
  * A bulk batch is a staging session of `kind: "bulk"` with a predeclared item
  * registry: creating it binds a REQUIRED target chat + context dir, uploads
