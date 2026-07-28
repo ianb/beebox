@@ -487,6 +487,10 @@ See §1.3 (full request/response/errors).
   - `GET /api/bulk/sessions/:id` — resume/status: `{ sessionId, state, targetSessionId, registered:
     BulkItem[], received: [{ itemId, name, size }] }`.
   - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch.
+  - `POST /api/bulk/sessions/:id/finalize` — seal + fire the background prepare→deliver worker. Req
+    `{ failedItems?: [{ id?, name, reason }] }`. Res `{ sessionId, staged: true }`. **503** if the box
+    has no chat runtime. Returns immediately; the batch lands an `upload-batch` card under the chat's
+    `tmp-upload/` and an `<upload>` message is injected.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -552,6 +556,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | U3 | `POST /api/bulk/sessions/:id/items/:itemId/upload` | native/web→box | octet-stream body, `X-Upload-Filename` + `X-Upload-Original-Name`/`-Mime-Type`; res `{success,filename,itemId,size,sha256}` | — (deferred) | `routes/bulk-upload.ts`; `core/capture/staging-stream.ts` · `addFileStreamed` | LOUD (400/409/413) |
 | U4 | `GET /api/bulk/sessions/:id` | native/web→box | res `{sessionId,state,targetSessionId,registered,received}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
 | U5 | `DELETE /api/bulk/sessions/:id` | native/web→box | res `{success}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
+| U6 | `POST /api/bulk/sessions/:id/finalize` | native/web→box | req `{failedItems?}`; res `{sessionId,staged}` | — (deferred) | `routes/bulk-upload.ts`; `core/bulk-upload/worker.ts` · `prepareAndDeliverBulkBatch` | LOUD (503 no runtime) |
 
 ---
 

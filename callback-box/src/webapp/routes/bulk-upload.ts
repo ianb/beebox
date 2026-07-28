@@ -27,6 +27,8 @@ import {
   createStagingSession,
   readStagingSession,
   registerBulkItems,
+  setBulkFailedItems,
+  sealStagingSession,
   cleanupStagingSession,
   isBulkSession,
   type StagingBulkItem,
@@ -34,10 +36,12 @@ import {
 import { addFileStreamed } from "../../core/capture/staging-stream.js";
 import { StagingPathError, StagingSessionGoneError, StagingUploadReplayConflictError } from "../../core/capture/staging-errors.js";
 import { isStagingLimitError } from "../../core/capture/staging-limits.js";
+import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker.js";
 import {
   authorizeCaptureSessionOwner,
   resolveCaptureRequestOwner,
 } from "../capture-request-owner.js";
+import { getChatRuntime } from "../chat-runtime.js";
 
 const BulkItemSchema = z.object({
   id: z.string().min(1),
@@ -54,6 +58,12 @@ const CreateBulkBodySchema = z.object({
 
 const RegisterItemsBodySchema = z.object({
   items: z.array(BulkItemSchema).min(1),
+});
+
+const FinalizeBodySchema = z.object({
+  failedItems: z
+    .array(z.object({ id: z.string().optional(), name: z.string(), reason: z.string() }))
+    .optional(),
 });
 
 const BULK_CAPABILITIES = {
@@ -108,7 +118,7 @@ async function loadOwnedBulkSession(opts: {
 }
 
 export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutesOptions): Promise<void> {
-  const { server, boxRoot } = options;
+  const { server, boxRoot, eventBus } = options;
 
   await server.register(async (instance) => {
     // Don't drain the body so item uploads can stream `request.raw` straight to
@@ -234,6 +244,44 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
         if (!session) return reply;
         await cleanupStagingSession({ boxRoot, id: session.id });
         return { success: true };
+      },
+    );
+
+    // POST /api/bulk/sessions/:id/finalize — seal the batch and fire the
+    // background prepare→deliver worker (Track 1), returning immediately. The
+    // uploader's `failedItems` report is persisted so a resume rebuilds the same
+    // batch. A CAS seal means two concurrent finalize POSTs can't both fire.
+    instance.post<{ Params: { id: string }; Body: unknown }>(
+      "/api/bulk/sessions/:id/finalize",
+      async (request: IdRequest, reply) => {
+        const session = await loadOwnedBulkSession({ boxRoot, request, reply, id: request.params.id });
+        if (!session) return reply;
+        const parsed = FinalizeBodySchema.safeParse(request.body ?? {});
+        if (!parsed.success) return reply.status(400).send({ error: "Invalid finalize body" });
+
+        const runtime = getChatRuntime(boxRoot);
+        if (!runtime) {
+          console.error(`[bulk] No chat runtime for box; cannot finalize batch ${session.id}`);
+          return reply.status(503).send({ error: "Chat runtime unavailable" });
+        }
+
+        const seal = await sealStagingSession({ boxRoot, id: session.id });
+        if (seal.sealed) {
+          if (parsed.data.failedItems !== undefined) {
+            await setBulkFailedItems({ boxRoot, id: session.id, failedItems: parsed.data.failedItems });
+          }
+          void prepareAndDeliverBulkBatch({
+            boxRoot,
+            id: session.id,
+            eventBus,
+            registry: runtime.registry,
+            wireSession: runtime.wireSession,
+          }).catch(async (err: unknown) => {
+            console.error(`[bulk] Preparation of ${session.id} failed:`, err);
+            await markBulkPreparationFailed({ boxRoot, id: session.id });
+          });
+        }
+        return { sessionId: session.id, staged: true };
       },
     );
   });

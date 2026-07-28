@@ -3,8 +3,9 @@
 The bulk routes stage a batch of files into the box: create binds a required
 target chat, uploads stream one registered item at a time (hash + byte-count
 computed server-side as the body streams), and a status/resume endpoint lists
-registered vs received items. Finalize + delivery are covered separately in
-`test/webapp/routes/bulk-upload-finalize.doctest.md`.
+registered vs received items. Finalize returns immediately after sealing; the
+full prepare→deliver worker (retry, at-most-once, reconciliation) is covered in
+`test/core/bulk-upload/worker.doctest.md`.
 
 ```ts setup
 import { createHash } from "node:crypto";
@@ -236,6 +237,37 @@ const ctx = await makeTestServer();
 const res = await uploadItem(ctx, { sessionId: "no-such", itemId: "a", filename: "x.bin", data: Buffer.from("X") });
 res.statusCode
 => 404
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Finalize seals the session and returns staged
+
+Finalize returns immediately with `staged: true` (the prepare→deliver worker
+runs in the background) and CAS-seals the session so it stops accepting uploads:
+
+```ts
+const ctx = await makeTestServer();
+const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "a.pdf" }] });
+const sessionId = created.body.sessionId;
+await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.pdf", data: Buffer.from("AAAA") });
+
+const done = await ctx.request({
+  method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+  payload: { failedItems: [] },
+});
+JSON.stringify({ status: done.statusCode, staged: done.body.staged, sessionId: done.body.sessionId === sessionId })
+=> {"status":200,"staged":true,"sessionId":true}
+```
+
+A further upload after finalize is refused — the session is no longer open:
+
+```ts continue
+const late = await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-late.bin", data: Buffer.from("X") });
+late.statusCode
+=> 409
 ```
 
 ```ts cleanup

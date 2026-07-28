@@ -23,6 +23,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAndCommitPaths } from "../../lib/git.js";
+import { humanBytes } from "../../lib/human-bytes.js";
 import { computeEntry, emptyManifest, saveManifest } from "../asset-manifest.js";
 import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
 import {
@@ -43,7 +44,7 @@ export class NotABulkSessionError extends Error {
 /** An item the uploader reported as failed at finalize (supplied by the caller). */
 export interface BulkFailedItem {
   /** Predeclared registry item id, when the uploader knows it. */
-  id?: string;
+  id?: string | undefined;
   name: string;
   reason: string;
 }
@@ -56,6 +57,8 @@ export interface PreparedBulkBatch {
   attachRelDir: string;
   counts: { registered: number; received: number; missing: number; failed: number };
   totalBytes: number;
+  /** The batch's one-line summary — the card body and the `<upload>` wrapper body. */
+  summary: string;
 }
 
 /**
@@ -87,13 +90,23 @@ export async function prepareBulkBatch(opts: {
   const cardAbsPath = path.join(boxRoot, cardRelPath);
   const attachAbsDir = path.join(boxRoot, attachRelDir);
   const manifestRelPath = `${attachRelDir}/manifest.json`;
+  const gitignoreRelPath = `${attachRelDir}/.gitignore`;
 
   const summary = await buildBatchSummary({ boxRoot, session, cardAbsPath, attachAbsDir, failedItems });
 
-  // Commit the card + manifest (never the blobs). Idempotent: a clean re-run
-  // commits nothing; a real git failure throws loudly and leaves staging intact.
+  // Bulk lands ARBITRARY extensions (.zip, .csv, extensionless, …), which the
+  // box's extension-based asset gitignore doesn't cover — so an uncovered blob
+  // would show as untracked forever and a stray `git add -A` could commit it,
+  // defeating the manifest model. A batch-local `.gitignore` ignores everything
+  // in the scope except its own manifest + itself, regardless of extension
+  // (see docs/asset-manifests.md, issue bulk-upload-arbitrary-ext-gitignore).
+  await writeAttachGitignore(attachAbsDir);
+
+  // Commit the card + manifest + local .gitignore (never the blobs). Idempotent:
+  // a clean re-run commits nothing; a real git failure throws loudly and leaves
+  // staging intact.
   await stageAndCommitPaths(boxRoot, {
-    paths: [cardRelPath, manifestRelPath],
+    paths: [cardRelPath, manifestRelPath, gitignoreRelPath],
     message: `Upload batch: ${batchSlug}`,
     trailers: { "Created-By": "bulk-upload" },
   });
@@ -109,7 +122,21 @@ export async function prepareBulkBatch(opts: {
       failed: summary.failed.length,
     },
     totalBytes: summary.totalBytes,
+    summary: summary.summary,
   };
+}
+
+/** Contents of a batch attach scope's local `.gitignore`. */
+const ATTACH_GITIGNORE = `# Bulk-upload blobs are tracked via manifest.json (size + sha256), not committed
+# directly, regardless of extension. See docs/asset-manifests.md.
+*
+!.gitignore
+!manifest.json
+`;
+
+/** Write the batch-local `.gitignore` (idempotent — always the same content). */
+async function writeAttachGitignore(attachAbsDir: string): Promise<void> {
+  await fs.writeFile(path.join(attachAbsDir, ".gitignore"), ATTACH_GITIGNORE);
 }
 
 interface BatchSummary {
@@ -117,6 +144,8 @@ interface BatchSummary {
   missing: string[];
   failed: Array<{ name: string; reason: string }>;
   totalBytes: number;
+  /** The one-line card body summary (regenerated fresh, or recovered from the card). */
+  summary: string;
 }
 
 /**
@@ -179,6 +208,7 @@ async function buildBatchSummary(opts: {
 
   const totalBytes = received.reduce((n, r) => n + r.size, 0);
   const endedAt = latestUploadedAt(session) ?? session.createdAt;
+  const summary = summarizeBatch({ received: received.length, missing: missing.length, failed: failed.length, totalBytes });
 
   const cardContent = createUploadBatchTemplate({
     batchId: bulkBatchSlug({ startedAt: session.createdAt, id: session.id }),
@@ -189,23 +219,25 @@ async function buildBatchSummary(opts: {
     received,
     missing,
     failed,
-    summary: summarizeBatch({ received: received.length, missing: missing.length, failed: failed.length, totalBytes }),
+    summary,
   });
   await fs.writeFile(cardAbsPath, cardContent);
 
-  return { received, missing, failed, totalBytes };
+  return { received, missing, failed, totalBytes, summary };
 }
 
 /** Recover the summary from an already-written card (idempotent re-run). */
 async function recoverSummaryFromCard(cardAbsPath: string): Promise<BatchSummary> {
-  const parsed = parseUploadBatch(await fs.readFile(cardAbsPath, "utf-8"));
-  if (parsed === null) return { received: [], missing: [], failed: [], totalBytes: 0 };
+  const content = await fs.readFile(cardAbsPath, "utf-8");
+  const parsed = parseUploadBatch(content);
+  if (parsed === null) return { received: [], missing: [], failed: [], totalBytes: 0, summary: "" };
   const fm = parsed.frontmatter;
   return {
     received: (fm.received ?? []).map((r) => (r.mimetype !== undefined ? { name: r.name, size: r.size, mimetype: r.mimetype } : { name: r.name, size: r.size })),
     missing: (fm.missing ?? []).map((m) => m.name),
     failed: (fm.failed ?? []).map((f) => ({ name: f.name, reason: f.reason })),
     totalBytes: fm["total-bytes"],
+    summary: parsed.body.trim(),
   };
 }
 
@@ -267,20 +299,6 @@ function summarizeBatch(opts: { received: number; missing: number; failed: numbe
   if (opts.missing > 0) parts.push(`${opts.missing} missing`);
   if (opts.failed > 0) parts.push(`${opts.failed} failed`);
   return `${parts.join("; ")}.`;
-}
-
-/** Compact byte size like `112 MB` / `4.2 KB`. */
-function humanBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let value = bytes / 1024;
-  let i = 0;
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024;
-    i += 1;
-  }
-  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
-  return `${rounded} ${units[i]}`;
 }
 
 async function fileExists(absPath: string): Promise<boolean> {

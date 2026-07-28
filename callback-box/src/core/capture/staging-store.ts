@@ -22,33 +22,16 @@ import { StagingPathError, StagingSessionGoneError } from "./staging-errors.js";
 import { M4ASegmentFileCountError, StagingAudioFormatMismatchError, type CaptureAudioFormat } from "./audio-format.js";
 import { readStagingSession, writeStagingSession } from "./staging-manifest-io.js";
 import {
-  stagingBaseDir,
-  stagingSessionDir,
-  isCaptureSession,
-  isBulkSession,
-  type StagingSession,
-  type StagingSessionState,
-  type StagingSessionKind,
-  type StagingSegment,
-  type StagingPhoto,
-  type StagingFile,
-  type StagingBulkItem,
+  stagingBaseDir, stagingSessionDir, isCaptureSession, isBulkSession,
+  type StagingSession, type StagingSessionState, type StagingSessionKind, type StagingSegment,
+  type StagingPhoto, type StagingFile, type StagingBulkItem, type StagingBulkFailedItem,
 } from "./staging-schema.js";
 
 export {
-  readStagingSession,
-  writeStagingSession,
-  stagingBaseDir,
-  stagingSessionDir,
-  isCaptureSession,
-  isBulkSession,
-  type StagingSession,
-  type StagingSessionState,
-  type StagingSessionKind,
-  type StagingSegment,
-  type StagingPhoto,
-  type StagingFile,
-  type StagingBulkItem,
+  readStagingSession, writeStagingSession, stagingBaseDir, stagingSessionDir,
+  isCaptureSession, isBulkSession,
+  type StagingSession, type StagingSessionState, type StagingSessionKind, type StagingSegment,
+  type StagingPhoto, type StagingFile, type StagingBulkItem, type StagingBulkFailedItem,
 };
 
 /**
@@ -281,6 +264,25 @@ export async function addFile(params: AddFileParams): Promise<void> {
       const file: StagingFile = { filename, uploadedAt, originalName, mimeType };
       if (itemId !== undefined) file.itemId = itemId;
       session.files.push(file);
+    },
+  });
+}
+
+/**
+ * Persist the uploader's finalize-time failed-item report onto a bulk session
+ * so a crash-and-resume rebuilds the batch card with the same `failed` list
+ * (rather than silently re-classifying those items as merely missing).
+ */
+export async function setBulkFailedItems(opts: {
+  boxRoot: string;
+  id: string;
+  failedItems: StagingBulkFailedItem[];
+}): Promise<void> {
+  await mutateSession({
+    boxRoot: opts.boxRoot,
+    id: opts.id,
+    mutate: (session) => {
+      session.failedItems = opts.failedItems;
     },
   });
 }

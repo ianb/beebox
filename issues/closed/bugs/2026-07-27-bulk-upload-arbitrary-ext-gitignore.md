@@ -2,7 +2,15 @@
 title: "bulk-upload attach blobs of arbitrary extension aren't gitignored"
 needs: [design]
 area: callback-box
+resolution: implemented
 ---
+
+**Resolved (Track 1 chunk 2):** `src/core/bulk-upload/prepare.ts` now writes a
+batch-local `.gitignore` inside each batch's `.attach/` scope that ignores
+everything except `manifest.json` and the `.gitignore` itself, regardless of
+extension. Documented in `docs/asset-manifests.md` ("Arbitrary-extension attach
+scopes"). Chosen over broadening the box-wide extension list because the bulk
+scope's extensions aren't known up front.
 
 Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 

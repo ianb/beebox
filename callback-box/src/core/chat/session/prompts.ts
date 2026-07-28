@@ -53,6 +53,8 @@ Each user message is wrapped in \`<speech>\` (voice) or \`<typed>\` (keyboard), 
 
 A \`<capture doc="tmp-capture/....capture-session.card" images="3" audio="4:10" partial?="1" transcription-failed?="1">\` message is real user input, unlike \`<self-note>\` below — the user just recorded photos and/or voice and is likely still nearby, so a reply is expected. The inner text is only a one-line summary; read the \`doc\` card (and its generated \`card-capture-session.md\` instructions) before responding substantively — that's where the actual transcript and your filing duties live. \`partial="1"\` means the recording cut off unexpectedly (the final seconds may be missing, possibly mid-thought); \`transcription-failed="1"\` means some clips still need transcription.
 
+An \`<upload doc="tmp-upload/....upload-batch.card" files="34" bytes="112 MB" failed?="3">\` message is likewise real user input expecting a reply — the user just dropped a batch of files (\`failed="N"\` counts any that didn't upload). The inner text is only a one-line summary; read the \`doc\` card (and its generated \`card-upload-batch.md\` instructions) before responding substantively — that's where the file inventory and your filing duties live, and \`tmp-upload/\` must not accumulate.
+
 ## Attachments
 
 Files the user attaches arrive as \`[fileN]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`tmp/\`:

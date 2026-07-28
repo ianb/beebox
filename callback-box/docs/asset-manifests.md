@@ -190,6 +190,28 @@ normally (they aren't assets — they're just files); the user gets an
 advisory on commit if they stage a >1MB binary outside an attach scope
 ("consider moving it into an attach scope or `git rm`-ing it").
 
+### Arbitrary-extension attach scopes (batch-local `.gitignore`)
+
+The extension list above covers the media capture ever lands, but a bulk
+file-upload batch lands **arbitrary** extensions (`.zip`, `.csv`, `.pptx`,
+extensionless files). Those blobs wouldn't match the box `.gitignore`, so they'd
+show as untracked forever and a stray `git add -A` could commit them — exactly
+what the manifest model prevents. So the bulk-upload prepare step
+(`src/core/bulk-upload/prepare.ts`) writes a **batch-local `.gitignore`** inside
+each batch's `.attach/` scope that ignores everything in the scope except its own
+`manifest.json` and the `.gitignore` itself, regardless of extension:
+
+```
+*
+!.gitignore
+!manifest.json
+```
+
+The `.gitignore` is a committed control file (tracked alongside the card +
+manifest); the blobs stay out of git. This is the sanctioned pattern for an
+attach scope whose asset extensions aren't known up front — reach for it rather
+than growing the box-wide extension list for one-off types.
+
 ## Failure cases
 
 | Case | Hook behavior | Recovery |
