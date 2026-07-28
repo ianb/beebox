@@ -83,6 +83,9 @@ voice-launch turns out to matter.
 
 ## Related
 
+- [Roku TV dashboard display](2026-07-27-roku-tv-dashboard-display.md) — sibling
+  surface; shares the device-scoped display-feed core (delivered as an HTML URL
+  here, an image feed there).
 - [GitHub Pages / story-eval site](../features/2026-07-20-github-pages-site.md) —
   other external-surface display work.
 - Device-scoped auth overlaps the mobile device-token model
