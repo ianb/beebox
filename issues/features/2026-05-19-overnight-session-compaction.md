@@ -1,8 +1,26 @@
 ---
 title: "overnight session compaction"
-needs: [design]
+design: ../../callback-box/docs/plans/session-digests.md
 area: callback-box
 ---
+
+**Designed 2026-07-28** as [session digests](../../callback-box/docs/plans/session-digests.md).
+The plan covers the engine, the size gate, and titling; it deliberately defers
+the fan-out to the four sinks listed below, none of which exist yet. Note the
+vocabulary decision there: the subsystem is called **digest**, not "compaction"
+— that word is already taken for the SDK's context-window compaction.
+
+Two requirements added by the boxholder beyond the original filing:
+
+- **Only sessions with enough *uncompacted* size get digested** — the gate is a
+  watermark on new material, not a once-ever boolean. Measurement in the plan:
+  ~90% of box transcripts are single-turn non-chat invocations, and any
+  threshold in 4k–8k rendered chars selects the same ~5% set.
+- **Sessions get generated titles, updatable over time.** Information-dense,
+  unique to the chat, one line. Written for a **semi-public audience** —
+  session lists surface where the conversation itself never does, and a title
+  lands in git and is pushed to the box's remote while the transcript never
+  leaves `~/.claude`.
 
 Chat sessions currently leave transcripts but no synthesized residue. A nightly (or end-of-session-plus-delay) compaction pass would extract what's worth keeping: decisions made, action items, hunches formed, things learned about the boxholder, things to follow up on. The standard auto-compaction in chat systems is generic; for callback-box it should be driven by a *custom compaction message* shaped to extract the things this system cares about, not generic compression.
 
