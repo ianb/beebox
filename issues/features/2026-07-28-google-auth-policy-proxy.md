@@ -15,6 +15,15 @@ that advertises to each client exactly what it's allowed to see and do.
 This is the unifying answer to the whole Google-auth thread — see "Why this ties
 it together" below.
 
+> **Direction settled (2026-07-28):** carry **Tier 1** (token custody + proxy +
+> refresh) with **self-hosted Nango** rather than rebuilding auth-broker plumbing
+> (Composio rejected — cloud custody + breach + lock-in; see
+> [research](../../research/google-auth-connect-approaches.md)). Build only the
+> **Tier 2** differentiated layer — escape-proof filtering, capability
+> advertisement, per-client policy — on top. First concrete step when this is
+> picked up: a **Nango self-hosted spike** wiring one Google connection through
+> its auth+proxy.
+
 ## The core idea
 
 - **One stable Google connection, many box clients.** The proxy owns the Google
