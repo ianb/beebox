@@ -463,6 +463,38 @@ See §1.3 (full request/response/errors).
   | box handler | `src/webapp/routes/chat-send-routes.ts`; `src/webapp/routes/chat-helpers.ts` — `sendBodySchema`, `validateImages` |
 - **Drift:** LOUD (400) / SILENT dedup.
 
+### 5.6 Bulk file-upload batch (`/api/bulk/...`)
+
+- **Direction:** native → box (also driven by the web overlay). **Deferred for iOS** behind the
+  uploader boundary (`docs/plans/bulk-file-upload.md` §4) — no native client ships yet, but the
+  server contract is uploader-agnostic and carries bearer auth like every other native call, so a
+  future native uploader implements exactly these rows. Auth: cookie OR `Authorization: Bearer
+  <token>`, owner-scoped per session (same `authorizeCaptureSessionOwner` ownership as capture).
+- **Endpoints:**
+  - `POST /api/bulk/sessions` — create a batch. Req `{ targetSessionId: string /* required */,
+    contextDir?: string, items?: BulkItem[] }` where `BulkItem = { id: string, name: string, size?:
+    number, mimetype?: string }`. Res `{ sessionId, startedAt, capabilities: { acceptedUploadEncodings:
+    ["raw-body-v1"] } }`. A missing/empty `targetSessionId` is **400** (a batch with no chat to
+    deliver into is invalid at creation).
+  - `POST /api/bulk/sessions/:id/items` — append to the item registry. Req `{ items: BulkItem[] }`.
+    Res `{ registered: number }`.
+  - `POST /api/bulk/sessions/:id/items/:itemId/upload` — stream one item's bytes. `Content-Type:
+    application/octet-stream` (raw body, **streamed** to disk — never multipart); headers
+    `X-Upload-Filename` (required; the staged idempotency key), `X-Upload-Original-Name`,
+    `X-Upload-Mime-Type`, `X-Upload-Uploaded-At`. Res `{ success, filename, itemId, size, sha256 }`
+    (size + sha256 **server-computed** while streaming). An unregistered `itemId` is **400**; a byte
+    over the staging cap **413**; a same-filename/different-bytes retry **409**.
+  - `GET /api/bulk/sessions/:id` — resume/status: `{ sessionId, state, targetSessionId, registered:
+    BulkItem[], received: [{ itemId, name, size }] }`.
+  - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch.
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | box handler | `src/webapp/routes/bulk-upload.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
+  | native caller | — (deferred; a future native uploader) |
+- **Drift:** LOUD (400/409/413/404 all surface; incomplete uploads leave the item in the registry's
+  missing list, which finalize reports).
+
 ---
 
 ## 6. Server-side "mobile" awareness
@@ -515,6 +547,11 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
+| U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,contextDir?,items?}`; res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
+| U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
+| U3 | `POST /api/bulk/sessions/:id/items/:itemId/upload` | native/web→box | octet-stream body, `X-Upload-Filename` + `X-Upload-Original-Name`/`-Mime-Type`; res `{success,filename,itemId,size,sha256}` | — (deferred) | `routes/bulk-upload.ts`; `core/capture/staging-stream.ts` · `addFileStreamed` | LOUD (400/409/413) |
+| U4 | `GET /api/bulk/sessions/:id` | native/web→box | res `{sessionId,state,targetSessionId,registered,received}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
+| U5 | `DELETE /api/bulk/sessions/:id` | native/web→box | res `{success}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
 
 ---
 
@@ -667,6 +704,8 @@ callback-box/src/webapp/mobile-cookie.ts
 callback-box/src/webapp/routes/pairing.ts
 callback-box/src/webapp/routes/chat-audio-routes.ts
 callback-box/src/webapp/routes/chat-uploads.ts
+callback-box/src/webapp/routes/bulk-upload.ts
+callback-box/src/core/capture/staging-stream.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/CallbackBox/Views/ChatWebView.swift

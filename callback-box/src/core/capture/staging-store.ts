@@ -78,6 +78,8 @@ export async function createStagingSession(opts: {
   createdBy: string | null;
   kind?: StagingSessionKind;
   expectedItems?: StagingBulkItem[];
+  /** Box-relative target-chat context dir (bulk sessions only). */
+  contextDir?: string;
 }): Promise<StagingSession> {
   const { boxRoot, targetSessionId, createdBy } = opts;
   const kind = opts.kind ?? "capture";
@@ -97,7 +99,10 @@ export async function createStagingSession(opts: {
     files: [],
     totalBytes: 0,
   };
-  if (kind === "bulk") session.expectedItems = opts.expectedItems ?? [];
+  if (kind === "bulk") {
+    session.expectedItems = opts.expectedItems ?? [];
+    if (opts.contextDir !== undefined) session.contextDir = opts.contextDir;
+  }
   await writeStagingSession({ boxRoot, session });
   return session;
 }

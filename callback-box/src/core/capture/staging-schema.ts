@@ -48,10 +48,16 @@ export type StagingPhoto = z.infer<typeof StagingPhotoSchema>;
  * registry item (`expectedItems`) — set on bulk-upload sessions so finalize can
  * tell a received item from one that never arrived. Absent on capture-mode file
  * uploads, which have no predeclared registry.
+ *
+ * `size`/`sha256` are server-computed while the body streams to disk (bulk
+ * streaming uploads, `addFileStreamed`), so limit-enforcement and the batch
+ * manifest never trust a client-claimed size. Absent on capture's buffered
+ * photo/audio/file writes.
  */
 const StagingFileSchema = z.object({
   filename: z.string(), uploadedAt: z.string(), originalName: z.string(), mimeType: z.string(),
   itemId: z.string().optional(),
+  size: z.number().optional(), sha256: z.string().optional(),
 });
 export type StagingFile = z.infer<typeof StagingFileSchema>;
 
@@ -80,6 +86,19 @@ const StagingBulkItemSchema = z.object({
 export type StagingBulkItem = z.infer<typeof StagingBulkItemSchema>;
 
 /**
+ * An item the uploader reported as failed at finalize, persisted onto the bulk
+ * session (before the seal) so a crash-and-resume rebuilds the batch card with
+ * the same `failed` list rather than silently re-classifying those items as
+ * merely missing. `id` links back to a registry item when the uploader knows it.
+ */
+const StagingBulkFailedItemSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  reason: z.string(),
+});
+export type StagingBulkFailedItem = z.infer<typeof StagingBulkFailedItemSchema>;
+
+/**
  * `createdBy` is the identifier (email) of the authenticated user who started
  * the capture, or `null` when unauthenticated (auth-disabled dev). The resume
  * query filters on this so one box user can never resume/submit another's
@@ -105,6 +124,14 @@ export const StagingSessionSchema = z.object({
   segments: z.array(StagingSegmentSchema), photos: z.array(StagingPhotoSchema), files: z.array(StagingFileSchema),
   /** Predeclared bulk-upload item registry (bulk sessions only). */
   expectedItems: z.array(StagingBulkItemSchema).optional(),
+  /**
+   * Box-relative context dir of the target chat, captured at bulk-session
+   * creation so preparation places `tmp-upload/<slug>/` under the same chat the
+   * overlay launched from — durable across a restart (bulk sessions only).
+   */
+  contextDir: z.string().optional(),
+  /** Uploader-reported failed items, recorded at finalize (bulk sessions only). */
+  failedItems: z.array(StagingBulkFailedItemSchema).optional(),
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
 });
 export type StagingSession = z.infer<typeof StagingSessionSchema>;
