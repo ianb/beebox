@@ -87,6 +87,28 @@ export function useNativeResponseBridge(opts: { enabled: boolean; active: boolea
   }, [enabled, active]);
 }
 
+/**
+ * All five native-shell bridges in one call — InteractiveChat's root has no
+ * per-bridge logic of its own, so grouping them here keeps that function
+ * under the max-lines-per-function budget the same way ChatModeOverlays does
+ * for the composer overlays.
+ */
+export function useNativeBridges(opts: {
+  enabled: boolean;
+  dispatchEmission: (emission: Emission) => Promise<Receipt>;
+  boxSlug: string | undefined;
+  narrationEnabled: boolean;
+  responseActive: boolean;
+  speechPlaying: boolean;
+}) {
+  const { enabled, dispatchEmission, boxSlug, narrationEnabled, responseActive, speechPlaying } = opts;
+  useNativeEmissionBridge({ enabled, dispatchEmission });
+  useNativeLocationBridge({ enabled, boxSlug });
+  useNativeNarrationBridge({ enabled, narrationEnabled });
+  useNativeResponseBridge({ enabled, active: responseActive });
+  useNativeSpeechPlaybackBridge({ enabled, playing: speechPlaying });
+}
+
 async function handleNativeEmission(
   detail: unknown,
   dispatchEmission: (emission: Emission) => Promise<Receipt>

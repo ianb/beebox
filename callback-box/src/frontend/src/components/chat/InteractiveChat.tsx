@@ -38,13 +38,7 @@ import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
 import { BulkUploadOverlay } from "../bulk-upload/BulkUploadOverlay";
 import { useScreenshotRequests } from "./screenshot-request-handler";
-import {
-  useNativeEmissionBridge,
-  useNativeLocationBridge,
-  useNativeNarrationBridge,
-  useNativeResponseBridge,
-  useNativeSpeechPlaybackBridge,
-} from "./use-native-bridge";
+import { useNativeBridges } from "./use-native-bridge";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -207,10 +201,6 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     (emission: Emission) => { void dispatchEmission(emission); },
     [dispatchEmission]
   );
-  useNativeEmissionBridge({ enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission });
-  useNativeLocationBridge({ enabled: usesNativeShell, boxSlug });
-  useNativeNarrationBridge({ enabled: usesNativeShell, narrationEnabled: model.narrationEnabled });
-  useNativeResponseBridge({ enabled: usesNativeShell, active: snapshot.value === "streaming" });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
@@ -220,7 +210,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     emissionStore, resetAttachments: attach.resetAttachments,
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
   });
-  useNativeSpeechPlaybackBridge({ enabled: usesNativeShell, playing: voice.speechPlayback.isPlaying });
+  useNativeBridges({
+    enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug,
+    narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
+    speechPlaying: voice.speechPlayback.isPlaying });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
   // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
