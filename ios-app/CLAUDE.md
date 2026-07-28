@@ -167,7 +167,7 @@ For deterministic composer layout checks, launch a DEBUG build with
 `--composer-fixture=<state>`. Supported states are `empty`, `typing`,
 `multiline`, `many-attachments`, `uploading`, `failed-upload`,
 `selection-detail`, `recording`, `hq-preparation`, `two-pending`,
-`interrupted`, `rejected-send`, `expired-attachment`, and `keyboard-shown`. The fixture uses
+`sending`, `interrupted`, `rejected-send`, `expired-attachment`, and `keyboard-shown`. The fixture uses
 the production composer with isolated stores and no web/server dependency.
 After installing the build, `ios-app/scripts/capture-composer-fixtures` captures
 the complete state set for a simulator and restores its status-bar override.

@@ -15,6 +15,7 @@ states=(
   recording
   interrupted
   hq-preparation
+  sending
   two-pending
   rejected-send
   expired-attachment

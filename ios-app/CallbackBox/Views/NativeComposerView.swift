@@ -197,6 +197,7 @@ struct NativeComposerView: View {
                     composerContext
                 }
                 .frame(maxHeight: 220)
+                .fixedSize(horizontal: false, vertical: true)
                 .scrollBounceBehavior(.basedOnSize)
             }
 
