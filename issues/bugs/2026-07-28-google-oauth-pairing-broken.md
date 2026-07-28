@@ -21,24 +21,34 @@ Boxholder reports *"pairing with Google seems to be broken, and oauth pairs are
 broken."* Not yet reproduced to a single root cause — this issue records the
 diagnosis so far and the one artifact needed to pin it.
 
-## The fix + why it "keeps breaking"
+## Actual OAuth app state (from the console) + the real options
 
-The recurring "it broke again" is almost certainly the **OAuth consent screen
-Publishing status = "Testing"**: in Testing mode, Google **expires refresh tokens
-after 7 days**, so the connection silently dies about weekly and needs
-re-authorization — at which point you hit the scary unverified screen again.
+The app is **External · In production · Unverified**, 7/100 OAuth user cap,
+"Make internal" greyed out (personal `@gmail.com`, no Workspace org). So:
 
-- **Immediate fix (console, no verification needed):** OAuth consent screen →
-  set **Publishing status → "In production."** Even *unverified*, production apps
-  don't get the 7-day refresh-token expiry (that's a Testing-mode-only limit), so
-  the connection persists. You'll still see the "unverified app" warning until
-  verification, but it's click-through and the connection lasts.
-- **To remove the warning entirely (a decision, heavier):** submit the app for
-  **Google OAuth verification**. With restricted scopes (gmail/drive) this can
-  require a privacy policy, domain verification, and an annual third-party
-  security assessment — a real burden for a personal/self-hosted tool. Deciding
-  whether that's worth it (vs. living with the click-through) is the `decision`
-  this issue now carries.
+- It is **already in production** — the Testing-mode **7-day refresh-token
+  expiry does not apply** (an earlier theory here; corrected). The "unverified
+  app" screen appears purely because it's unverified while requesting restricted
+  scopes; it's click-through and (being production) tokens persist. Any recurring
+  breakage is NOT testing-mode expiry — most likely occasional Google revocation
+  of an unverified app's tokens, or a one-off re-consent.
+- **Verification is possible but heavy.** Restricted scopes (gmail read/compose,
+  full drive) require the **CASA annual security assessment** ($500–$4,500/yr, no
+  free self-scan tier anymore) plus privacy policy, domain verification, a demo
+  video, and per-scope justification — redone every 12 months. Overkill for a
+  personal/family tool.
+- **The clean "no warning, no verification, no cap" path is a Workspace Internal
+  app** — but `Make internal` is disabled because there's no Workspace/Cloud
+  Identity org. It would require standing up Google Workspace for the domain and
+  using `@<domain>` accounts (not `@gmail.com`).
+- **Least-privilege scopes** (`drive.file` instead of full `drive`, etc.) reduce
+  the restricted footprint and Google's revocation appetite even without
+  verifying — the tractable code-side lever.
+
+**Recommendation:** don't pursue verification. Stay External/Production/Unverified
+(works via the one-time click-through, well under the 100-user cap); optionally
+trim scopes. Revisit a Workspace Internal app only if the warning/robustness
+becomes a real ongoing problem.
 
 ### Optional code-side follow-ups (reduce the pain, not required)
 
