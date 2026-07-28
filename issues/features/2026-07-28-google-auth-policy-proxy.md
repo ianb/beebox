@@ -42,6 +42,37 @@ it together" below.
   screens**, but **cannot edit their own policy**. A compromised or escaping box
   can point you at where to grant more, but can't grant itself more.
 
+## Two-tier OAuth (the box authorizes to the proxy, not Google)
+
+There are **two distinct OAuth flows**:
+
+- **Tier 1 — proxy ↔ Google.** The real Google OAuth, held **once** at the proxy.
+  This is the *only* place Google's consent screen, restricted scopes, and
+  verification/CASA burden apply. The unverified-app friction is borne here, one
+  time, not per box.
+- **Tier 2 — box ↔ proxy.** A **separate OAuth flow** where the proxy is the
+  **authorization server** and each box is a registered client. The box "connects
+  Google" by authorizing to *the proxy* — so a box never sees Google's consent or
+  verification screens at all; it just gets a proxy-issued token.
+
+This maps onto standard OAuth cleanly, which is the appeal:
+
+- **Per-client policy = OAuth client registration + scopes** at the proxy. Each
+  box's capabilities (labels it may see, draft-not-send, read-not-write) are the
+  scopes of *its* proxy grant.
+- **"Advertise exactly what you're getting" = scopes + token introspection.** The
+  box can introspect its proxy token to learn its own view limits — the
+  capability advertisement rides the same OAuth machinery, no bespoke channel.
+- **Privilege separation falls out of it.** A box can *request* scopes and
+  deep-link the user to the proxy's grant screen, but only the proxy admin
+  approves them — the box can't widen its own token.
+- **Revocation is per-box at the proxy** — kill one box's access without touching
+  the Google grant or the other boxes.
+- **Reuse question:** is Tier 2 a full OAuth flow, or does it reuse callback-box's
+  existing session/device-token auth against the proxy? OAuth gives introspection
+  + scopes for free; the device-token model is simpler but would need the
+  capability-advertisement bolted on. Decide during design.
+
 ## Why this ties the whole thread together
 
 - **Auth lifecycle** — one grant to keep alive instead of N per-box grants; the
