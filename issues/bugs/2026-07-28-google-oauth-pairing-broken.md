@@ -1,14 +1,57 @@
 ---
-title: "Google OAuth pairing / login appears broken"
+title: "Google OAuth: unverified-app screen + Testing-mode token expiry (not a code bug)"
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it
-needs: [manual-testing]
+needs: [decision]
 ---
+
+**Update 3 — RESOLVED as not-a-code-bug (2026-07-28).** Boxholder traced the full
+flow. The authorize URL carried the **canonical, registered** redirect_uri
+(`.../auth/google-services/callback`), so redirect_uri_mismatch is out. The
+actual block was Google's **"Google hasn't verified this app"** interstitial
+(restricted scopes: gmail.readonly, gmail.compose, drive, spreadsheets, calendar,
+documents.readonly). Clicking **Advanced → continue (unsafe) → consent** connected
+successfully. So the connect flow *works*; the friction (and likely the recurring
+"it broke again") is Google OAuth **publishing/verification state**, not
+callback-box code. Details + fix below; the remaining work is a decision (verify
+the app vs. stay unverified) plus optional code follow-ups.
 
 Boxholder reports *"pairing with Google seems to be broken, and oauth pairs are
 broken."* Not yet reproduced to a single root cause — this issue records the
 diagnosis so far and the one artifact needed to pin it.
+
+## The fix + why it "keeps breaking"
+
+The recurring "it broke again" is almost certainly the **OAuth consent screen
+Publishing status = "Testing"**: in Testing mode, Google **expires refresh tokens
+after 7 days**, so the connection silently dies about weekly and needs
+re-authorization — at which point you hit the scary unverified screen again.
+
+- **Immediate fix (console, no verification needed):** OAuth consent screen →
+  set **Publishing status → "In production."** Even *unverified*, production apps
+  don't get the 7-day refresh-token expiry (that's a Testing-mode-only limit), so
+  the connection persists. You'll still see the "unverified app" warning until
+  verification, but it's click-through and the connection lasts.
+- **To remove the warning entirely (a decision, heavier):** submit the app for
+  **Google OAuth verification**. With restricted scopes (gmail/drive) this can
+  require a privacy policy, domain verification, and an annual third-party
+  security assessment — a real burden for a personal/self-hosted tool. Deciding
+  whether that's worth it (vs. living with the click-through) is the `decision`
+  this issue now carries.
+
+### Optional code-side follow-ups (reduce the pain, not required)
+
+- **Least-privilege scopes.** The connector requests several *restricted* scopes
+  (`drive` full, `gmail.readonly`, `gmail.compose`). Narrowing where possible
+  (e.g. `drive.file` instead of full `drive`) shrinks the restricted-scope
+  footprint, softens the warnings, and eases any future verification. Trade-off:
+  `drive.file` only sees app-created/opened files — interacts with the
+  "boxes can't create new Google Drive docs" item.
+- **Surface token expiry clearly.** If/while in Testing mode, the 7-day expiry
+  makes the connection look "broken." The connector could detect an expired/
+  revoked refresh token and show a clear "reconnect Google" prompt rather than
+  failing quietly.
 
 ## Two distinct Google OAuth flows (which one is broken matters)
 
