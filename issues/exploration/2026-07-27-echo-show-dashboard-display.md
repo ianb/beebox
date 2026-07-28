@@ -81,6 +81,71 @@ Recommendation to explore first: the wall-display dashboard view + device-scoped
 read-only auth, decoupled from Alexa. Revisit an APL skill separately if
 voice-launch turns out to matter.
 
+## Research round 2 (2026-07-27): getting a *custom web page* to actually stick
+
+Deeper dig, aimed at the boxholder's actual goal — *regularly and easily show a
+personalized custom web page*. Good news: the persistence problem that made path
+1 look weak is **solvable**, and the fix is something callback-box can own.
+
+### The Silk timeout is real — but there's a known keepalive hack
+
+Silk on the Echo Show returns to the home screen after inactivity (reports range
+from ~45s to ~10–15 min), and **Amazon support confirms the timeout can't be
+disabled**
+([Amazon forum](https://amazonforum.my.site.com/s/question/0D54P00006zStneSAC/is-it-possible-to-keep-echo-show-from-automatically-closing-the-web-browser-silk-or-firefox),
+[Tom's Guide](https://www.tomsguide.com/opinion/i-got-the-echo-show-15-and-its-great-except-for-this-one-flaw)).
+Since Amazon also killed Fully-Kiosk sideloading, the surviving workaround is a
+**muted background-audio loop embedded in the page** — Silk counts audio
+playback as activity and keeps the tab open indefinitely. The self-hosted
+dashboard project *Homepage* documents exactly this
+([keep-silk-open discussion](https://github.com/gethomepage/homepage/discussions/2853)).
+
+**This is the key unlock:** our own display page can include a tiny muted-audio
+keepalive so it holds *itself* open on the Echo Show. Persistence stops being an
+Amazon fight and becomes a ~10-line feature in the dashboard view we build. The
+only remaining manual step is opening the URL once (and re-opening after a
+reboot); a Silk bookmark / homepage makes that a couple taps.
+
+So **path 1 is genuinely viable for "a custom web page"**: a device-scoped,
+read-only, display-optimized dashboard page + a muted-audio keepalive, opened
+once in Silk. And because the Echo Show is a **touchscreen**, that page is
+actually *interactive* (tap to drill in) — unlike a TV kiosk, which is the
+boxholder's stated frustration with the TV route.
+
+### Fallback with zero browser fiddling: render-to-image → Photo Frame
+
+If even "open the URL once" is too much, the Echo Show's native **Photo Frame /
+ambient mode** shows an Amazon Photos album full-screen, clock/UI removed, and is
+persistent by design
+([Echo Show as a photo frame](https://www.techhive.com/article/831563/amazon-echo-show-photo-frame.html)).
+Approach: `cb render` the dashboard to an image, push it to an Amazon Photos
+album, let ambient mode cycle it. Persistence is free and requires no browser —
+but it's a **static image, not interactive**, refreshes slowly (album re-pull,
+not real-time), and Amazon Photos has no clean upload API (automation is the
+awkward part). Good "glance a few times a day" option; not a live page.
+
+### Most-native, most-persistent, but not a web page: APL Widgets
+
+Since Oct 2023, **Alexa APL Widgets** put a persistent, glanceable tile on the
+Echo Show home screen (no timeout; Echo Show 15 has a standing Widget Panel),
+with quick touch actions
+([APL Widgets](https://developer.amazon.com/en-US/docs/alexa/alexa-presentation-language/about-widgets-and-apl.html),
+[how-to](https://developer.amazon.com/en-US/blogs/alexa/alexa-skills-kit/2023/10/alexa-apl-widgets-october-2023)).
+Truly always-on and interactive — but it's **APL, not HTML**, so we'd rebuild a
+constrained slice of the dashboard in APL and ship+maintain a skill. Highest
+effort, least layout freedom, only worth it for deep native integration.
+
+### Verdict for the stated goal
+
+For *"regularly and easily display a custom web page,"* the winner is **path 1
+with the muted-audio keepalive**: it literally shows our web page, it's touch-
+interactive, and callback-box can make it robust by building (a) a device-token
+read-only display view and (b) the keepalive into that view. The image→Photo-
+Frame route is the fallback when "open the URL once" is unacceptable; APL Widgets
+only if we want a native home-screen tile. All three still reduce to the same
+core deliverable: a **device-scoped, read-only dashboard feed** — HTML for
+paths 1/3, an image for path 2.
+
 ## Related
 
 - [Roku TV dashboard display](2026-07-27-roku-tv-dashboard-display.md) — sibling
