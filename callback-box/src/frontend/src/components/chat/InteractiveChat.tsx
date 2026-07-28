@@ -36,6 +36,7 @@ import type { EmissionStore } from "../../input/emission-store";
 import type { Emission } from "../../input/emission";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
+import { BulkUploadOverlay } from "../bulk-upload/BulkUploadOverlay";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import {
   useNativeEmissionBridge,
@@ -105,6 +106,31 @@ interface InteractiveChatProps {
   openCaptureOnMount?: boolean;
 }
 
+/**
+ * The two full-screen composer overlays (capture, bulk upload), grouped so the
+ * InteractiveChat body carries one line rather than their gating. Both are
+ * suppressed for native shells; bulk additionally requires a server-assigned
+ * session id (its batch binds to a target chat).
+ */
+function ChatModeOverlays({ captureMode, bulkUploadMode, usesNativeShell, sessionId, effectiveContextDir, onExitCapture, onExitBulkUpload }: {
+  captureMode: boolean;
+  bulkUploadMode: boolean;
+  usesNativeShell: boolean;
+  sessionId: string | null;
+  effectiveContextDir: string | null;
+  onExitCapture: () => void;
+  onExitBulkUpload: () => void;
+}) {
+  return (
+    <>
+      {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} /> : null}
+      {bulkUploadMode && !usesNativeShell && sessionId !== null ? (
+        <BulkUploadOverlay targetSessionId={sessionId} contextDir={effectiveContextDir ?? ""} onExit={onExitBulkUpload} />
+      ) : null}
+    </>
+  );
+}
+
 export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount }: InteractiveChatProps) {
   const isEmbedded = embedded === true;
   const usesNativeComposer = nativeComposer === true;
@@ -141,6 +167,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // it lives in root state; the overlay's recording-timer ticks stay in its own
   // subtree. Seeded from the `?capture=1` deep link, consumed once.
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
+  const [bulkUploadMode, setBulkUploadMode] = useState(false);
   // Server-derived pending capture bubbles (survive reload; refined live below).
   const { bubbles: captureBubbleList, applyCaptureStatus, retry: handleCaptureRetry } = useCaptureBubbles(sessionId);
   const screenshots = useScreenshotRequests(sessionId);
@@ -284,11 +311,11 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       embedded={isEmbedded}
       nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
-      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell}
-      captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
+      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
+      onUploadFiles={() => setBulkUploadMode(true)} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       />
-      {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
+      <ChatModeOverlays captureMode={captureMode} bulkUploadMode={bulkUploadMode} usesNativeShell={usesNativeShell} sessionId={sessionId} effectiveContextDir={effectiveContextDir} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={() => setBulkUploadMode(false)} />
     </InputStoreProvider>
   );
 }

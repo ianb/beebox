@@ -99,6 +99,9 @@ interface ChatBodyProps {
    * a capture can't misdirect into another chat (X1).
    */
   captureDisabledReason?: string | undefined;
+  /** Open the bulk file-upload overlay; the reason (when set) disables the menu item (no session id yet). */
+  onUploadFiles: () => void;
+  uploadFilesDisabledReason?: string | undefined;
   /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
   screenshots: ScreenshotRequestController;
 }
@@ -186,7 +189,7 @@ function ComposerRegion(props: ChatBodyProps) {
   const {
     model, voice, recoveredDictation, expiredAttachmentsNotice, attach, selections, actions, isStreaming, processBusy, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled,
-    captureDisabledReason,
+    captureDisabledReason, onUploadFiles, uploadFilesDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange, addImageFiles } = attach;
@@ -239,6 +242,7 @@ function ComposerRegion(props: ChatBodyProps) {
           onEnterCapture={onEnterCapture}
           captureEnabled={captureEnabled}
           captureDisabledReason={captureDisabledReason}
+          onUploadFiles={onUploadFiles} uploadFilesDisabledReason={uploadFilesDisabledReason}
           narrationEnabled={model.narrationEnabled}
         />
       }

@@ -142,7 +142,8 @@ export function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles, addImageFiles, onEnterCapture, captureEnabled, captureDisabledReason, narrationEnabled,
+  onPaste, onDrop, onAttachFiles, addImageFiles, onEnterCapture, captureEnabled, captureDisabledReason,
+  onUploadFiles, uploadFilesDisabledReason, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -172,6 +173,10 @@ export function ChatInputArea({
   captureEnabled: boolean;
   /** When set, the capture affordance renders disabled with this tooltip (X1). */
   captureDisabledReason?: string | undefined;
+  /** Open the full-screen bulk file-upload overlay. */
+  onUploadFiles: () => void;
+  /** When set, the "Upload files…" item renders disabled with this reason (no chat session id yet). */
+  uploadFilesDisabledReason?: string | undefined;
   narrationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke
@@ -216,6 +221,9 @@ export function ChatInputArea({
             </MenuItem>
           ) : null}
           <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
+          <MenuItem onClick={onUploadFiles} disabled={uploadFilesDisabledReason !== undefined}>
+            {uploadFilesDisabledReason !== undefined ? `Upload files… (${uploadFilesDisabledReason.toLowerCase()})` : "Upload files…"}
+          </MenuItem>
           <ScreenshotMenuItem addImageFiles={addImageFiles} />
           <ShareLocationMenuItem />
         </Dropdown>

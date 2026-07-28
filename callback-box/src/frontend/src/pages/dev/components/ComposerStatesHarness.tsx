@@ -164,6 +164,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       addImageFiles={() => Promise.resolve(0)}
       onEnterCapture={noop}
       captureEnabled
+      onUploadFiles={noop}
       narrationEnabled={spec.narrationEnabled}
     />
   );
