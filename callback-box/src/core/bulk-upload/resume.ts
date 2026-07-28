@@ -17,7 +17,7 @@ import * as fs from "node:fs/promises";
 import type { EventBus } from "../event-bus.js";
 import type { ChatSession } from "../chat/session/index.js";
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
-import { stagingBaseDir, readStagingSession, isBulkSession } from "../capture/staging-store.js";
+import { stagingBaseDir, readStagingSession, isBulkSession, cleanupStagingSession } from "../capture/staging-store.js";
 import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "./worker.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -42,6 +42,13 @@ export async function resumeBulkSessions(deps: {
     const session = await readStagingSession({ boxRoot, id });
     if (session === null) continue;
     if (!isBulkSession(session)) continue; // Capture sessions resume via their own path.
+    // A `delivered` batch finished delivery but its staging teardown didn't land
+    // (a swallowed cleanup failure). Retry the delete — the session.json stays on
+    // `delivered` if it fails again, so a later resume/sweep keeps retrying.
+    if (session.state === "delivered") {
+      await cleanupStagingSession({ boxRoot, id });
+      continue;
+    }
     if (session.state !== "sealed" && session.state !== "preparing" && session.state !== "delivering") continue;
 
     console.warn(`[bulk] Resuming staged bulk batch ${id} (state=${session.state})`);

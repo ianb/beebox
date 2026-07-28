@@ -131,6 +131,33 @@ JSON.stringify({ discardedIsEmpty: result.discarded[0] === emptyOld.id, abandone
 await box.cleanup();
 ```
 
+## A `delivered` batch with leaked staging is torn down
+
+Delivery cleans up staging, but if that teardown was swallowed the session sits
+on disk in state `delivered`. The sweep revisits it and retries the delete
+(logging + retrying next cycle if it fails again), so staging never leaks:
+
+```ts
+const box = await makeTmpBox();
+const delivered = await makeBulk(box.root, { state: "delivered", withFile: true });
+
+const result = await sweepBulkBatches({ boxRoot: box.root });
+JSON.stringify({
+  cleaned: result.cleaned,
+  gone: (await readStagingSession({ boxRoot: box.root, id: delivered.id })) === null,
+})
+=> {"cleaned":["«*»"],"gone":true}
+```
+
+```ts continue
+JSON.stringify({ cleanedIsDelivered: result.cleaned[0] === delivered.id })
+=> {"cleanedIsDelivered":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Unfiled ≥7-day batches are surfaced to their target chat via self-note
 
 A `delivered` upload-batch card still under a `tmp-upload/` past the stale age is

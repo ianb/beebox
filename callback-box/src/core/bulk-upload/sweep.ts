@@ -63,6 +63,8 @@ export interface BulkSweepResult {
   discarded: string[];
   /** Open ids idle past the window, surfaced (not auto-finalized). */
   abandoned: string[];
+  /** `delivered` ids whose leaked staging this pass tore down. */
+  cleaned: string[];
   /** Box-relative delivered batch cards under `tmp-upload/` past the stale age. */
   unfiled: string[];
 }
@@ -71,10 +73,18 @@ export interface BulkSweepResult {
 export async function sweepBulkBatches(deps: BulkSweepDeps): Promise<BulkSweepResult> {
   const { boxRoot, firePreparation, notifyUnfiled } = deps;
   const now = getBoxTime(boxRoot).getTime();
-  const result: BulkSweepResult = { refired: [], discarded: [], abandoned: [], unfiled: [] };
+  const result: BulkSweepResult = { refired: [], discarded: [], abandoned: [], cleaned: [], unfiled: [] };
 
   const sessions = (await listStagingSessions({ boxRoot })).filter(isBulkSession);
   for (const session of sessions) {
+    // A `delivered` batch whose staging teardown failed after delivery — retry
+    // the delete (cleanup logs on failure and leaves session.json on `delivered`,
+    // so the next sweep keeps retrying until it lands).
+    if (session.state === "delivered") {
+      await cleanupStagingSession({ boxRoot, id: session.id });
+      result.cleaned.push(session.id);
+      continue;
+    }
     if (session.state === "sealed" || session.state === "preparing") {
       if (firePreparation) {
         result.refired.push(session.id);
