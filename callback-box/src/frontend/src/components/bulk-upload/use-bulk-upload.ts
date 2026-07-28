@@ -82,6 +82,21 @@ function describeFailure(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Derive the summary counts from the item list (pure). */
+function computeCounts(items: BulkItemView[]): BulkUploadCounts {
+  let uploaded = 0;
+  let failed = 0;
+  let pending = 0;
+  let totalBytes = 0;
+  for (const it of items) {
+    totalBytes += it.size;
+    if (it.state === "uploaded") uploaded++;
+    else if (it.state === "failed") failed++;
+    else pending++;
+  }
+  return { uploaded, failed, pending, inFlight: pending > 0, total: items.length, totalBytes };
+}
+
 export function useBulkUpload(opts: {
   targetSessionId: string;
 }): BulkUploadController {
@@ -97,10 +112,26 @@ export function useBulkUpload(opts: {
   const activeRef = useRef(0);
   const pumpRef = useRef<() => void>(() => {});
   const sessionPromiseRef = useRef<Promise<string> | null>(null);
+  // Item ids the server has acknowledged in the registry — a retry re-registers
+  // any that never made it (their register call was the thing that failed).
+  const registeredRef = useRef<Set<string>>(new Set());
+  // One controller aborts every in-flight upload on cancel/unmount. Lazily
+  // (re)created so a resumable batch after a failed cancel still uploads.
+  const abortRef = useRef<AbortController | null>(null);
+  const getSignal = useCallback((): AbortSignal => {
+    if (!abortRef.current) abortRef.current = new AbortController();
+    return abortRef.current.signal;
+  }, []);
 
   const ensureSession = useCallback((): Promise<string> => {
     if (!sessionPromiseRef.current) {
-      sessionPromiseRef.current = createBulkSession({ targetSessionId }).then((r) => r.sessionId);
+      const p = createBulkSession({ targetSessionId }).then((r) => r.sessionId);
+      // Clear the cache on rejection so a later addFiles/retry re-attempts create
+      // (otherwise every later call awaits the same permanently-rejected promise).
+      p.catch(() => {
+        if (sessionPromiseRef.current === p) sessionPromiseRef.current = null;
+      });
+      sessionPromiseRef.current = p;
     }
     return sessionPromiseRef.current;
   }, [targetSessionId]);
@@ -109,13 +140,17 @@ export function useBulkUpload(opts: {
     async (id: string): Promise<void> => {
       const file = filesRef.current.get(id);
       if (!file) return; // cancelled/forgotten
+      const signal = getSignal();
       activeRef.current++;
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, state: "uploading", reason: undefined } : it)));
       try {
         const sessionId = await ensureSession();
-        await uploadBulkItem({ sessionId, itemId: id, file });
+        await uploadBulkItem({ sessionId, itemId: id, file, signal });
         setItems((prev) => prev.map((it) => (it.id === id ? { ...it, state: "uploaded", reason: undefined } : it)));
       } catch (e) {
+        // A deliberate cancel/unmount aborted this request — leave the row as-is
+        // (the whole overlay is tearing down or the batch is being discarded).
+        if (signal.aborted) return;
         const reason = describeFailure(e);
         console.error(`[bulk] Upload failed (${file.name}): ${reason}`);
         setItems((prev) => prev.map((it) => (it.id === id ? { ...it, state: "failed", reason } : it)));
@@ -124,7 +159,7 @@ export function useBulkUpload(opts: {
         pumpRef.current();
       }
     },
-    [ensureSession],
+    [ensureSession, getSignal],
   );
 
   const pump = useCallback((): void => {
@@ -168,7 +203,7 @@ export function useBulkUpload(opts: {
         try {
           const sessionId = await ensureSession();
           await registerBulkItems({ sessionId, items: descriptors });
-          for (const { id } of fresh) enqueue(id);
+          for (const { id } of fresh) { registeredRef.current.add(id); enqueue(id); }
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           console.error("[bulk] Registering items failed:", message);
@@ -187,42 +222,58 @@ export function useBulkUpload(opts: {
 
   const retry = useCallback(
     (id: string): void => {
-      if (!filesRef.current.has(id)) return;
+      const file = filesRef.current.get(id);
+      if (!file) return;
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, state: "queued", reason: undefined } : it)));
-      enqueue(id);
+      // Already-registered items just re-queue; one whose registration never
+      // landed must re-register first (that call was what failed).
+      if (registeredRef.current.has(id)) {
+        enqueue(id);
+        return;
+      }
+      void (async () => {
+        try {
+          const sessionId = await ensureSession();
+          await registerBulkItems({
+            sessionId,
+            items: [{ id, name: file.name, size: file.size, mimetype: file.type || undefined }],
+          });
+          registeredRef.current.add(id); enqueue(id);
+        } catch (e) {
+          console.error("[bulk] Re-register on retry failed:", e instanceof Error ? e.message : String(e));
+          setItems((prev) =>
+            prev.map((it) => (it.id === id ? { ...it, state: "failed", reason: "Could not register with server" } : it)),
+          );
+        }
+      })();
     },
-    [enqueue],
+    [ensureSession, enqueue],
   );
 
   const cancel = useCallback(async (): Promise<void> => {
     queueRef.current = [];
+    // Abort in-flight uploads, then discard server-side. Reset the controller so a
+    // batch that stays open (a failed DELETE throws → overlay keeps it) can upload.
+    abortRef.current?.abort();
+    abortRef.current = null;
     const sessionId = await sessionPromiseRef.current;
     if (sessionId) await cancelBulkSession(sessionId);
   }, []);
+
+  // Abort any in-flight uploads when the overlay unmounts.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const finalize = useCallback(async (): Promise<void> => {
     const sessionId = await ensureSession();
     const failedItems = items
       .filter((it) => it.state === "failed")
-      .map((it) => ({ name: it.name, reason: it.reason ?? "upload failed" }));
+      .map((it) => ({ id: it.id, name: it.name, reason: it.reason ?? "upload failed" }));
     await finalizeBulkSession({ sessionId, failedItems });
   }, [ensureSession, items]);
 
   const clearError = useCallback((): void => setError(null), []);
 
-  const counts = useMemo((): BulkUploadCounts => {
-    let uploaded = 0;
-    let failed = 0;
-    let pending = 0;
-    let totalBytes = 0;
-    for (const it of items) {
-      totalBytes += it.size;
-      if (it.state === "uploaded") uploaded++;
-      else if (it.state === "failed") failed++;
-      else pending++;
-    }
-    return { uploaded, failed, pending, inFlight: pending > 0, total: items.length, totalBytes };
-  }, [items]);
+  const counts = useMemo((): BulkUploadCounts => computeCounts(items), [items]);
 
   return { items, counts, error, clearError, addFiles, retry, cancel, finalize };
 }

@@ -28,6 +28,8 @@ export interface BulkItemDescriptor {
 
 /** A named upload failure carried to finalize (never silent — plan §4). */
 export interface BulkFailedItem {
+  /** The registry item id, so the server matches it back by id (not just name). */
+  id?: string;
   name: string;
   reason: string;
 }

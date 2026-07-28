@@ -95,11 +95,17 @@ export function BulkUploadOverlay({ targetSessionId, onExit }: {
       setConfirmingCancel(true);
       return;
     }
+    setActionError(null);
     try {
       await bulk.cancel();
     } catch (e) {
-      // A failed discard just leaves staging for the sweep to reap — log, exit.
-      console.error("[bulk] Cancel failed:", e instanceof Error ? e.message : String(e));
+      // The server-side discard failed — surface it and keep the overlay OPEN.
+      // The batch stays staged/resumable; silently closing would strand it and
+      // hide the failure. In-flight uploads were already aborted client-side.
+      const message = e instanceof Error ? e.message : String(e);
+      console.error("[bulk] Cancel failed:", message);
+      setActionError(message);
+      return;
     }
     onExit();
   }, [bulk, confirmingCancel, onExit]);
