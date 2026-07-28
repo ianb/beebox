@@ -480,13 +480,14 @@ See §1.3 (full request/response/errors).
     path (a client-supplied dir would be a path-traversal vector), and any `contextDir` in the body is
     ignored.
   - `POST /api/bulk/sessions/:id/items` — append to the item registry. Req `{ items: BulkItem[] }`.
-    Res `{ registered: number }`.
+    Res `{ registered: number }`. **409** once the session is sealed (finalize froze the registry).
   - `POST /api/bulk/sessions/:id/items/:itemId/upload` — stream one item's bytes. `Content-Type:
     application/octet-stream` (raw body, **streamed** to disk — never multipart); headers
     `X-Upload-Filename` (required; the staged idempotency key), `X-Upload-Original-Name`,
     `X-Upload-Mime-Type`, `X-Upload-Uploaded-At`. Res `{ success, filename, itemId, size, sha256 }`
     (size + sha256 **server-computed** while streaming). An unregistered `itemId` is **400**; a byte
-    over the staging cap **413**; a same-filename/different-bytes retry **409**.
+    over the staging cap **413**; a same-filename/different-bytes retry **409**; a commit that races
+    finalize (session sealed under the lock, or an item unregistered under the lock) **409**.
   - `GET /api/bulk/sessions/:id` — resume/status: `{ sessionId, state, targetSessionId, registered:
     BulkItem[], received: [{ itemId, name, size }] }`.
   - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch.

@@ -21,7 +21,12 @@ import { type Readable } from "node:stream";
 import * as path from "node:path";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits, MAX_STAGED_BYTES, StagingByteLimitError } from "./staging-limits.js";
-import { StagingSessionGoneError, StagingUploadReplayConflictError } from "./staging-errors.js";
+import {
+  StagingSessionGoneError,
+  StagingUploadReplayConflictError,
+  StagingSessionNotOpenError,
+  StagingItemNotRegisteredError,
+} from "./staging-errors.js";
 import {
   withStagingLock,
   resolveStagedFile,
@@ -93,6 +98,14 @@ export async function addFileStreamed(params: AddFileStreamedParams): Promise<Ad
     return await withStagingLock(id, async () => {
       const session = await readStagingSession({ boxRoot, id });
       if (!session) throw new StagingSessionGoneError(id);
+
+      // The seal is a barrier: re-check state + registration UNDER the lock so a
+      // finalize that raced past the route's pre-lock checks can't slip a commit
+      // into a sealed batch (or register an item the seal already froze out).
+      if (session.state !== "open") throw new StagingSessionNotOpenError(id, session.state);
+      if (itemId !== undefined && !(session.expectedItems ?? []).some((it) => it.id === itemId)) {
+        throw new StagingItemNotRegisteredError(itemId);
+      }
 
       const existing = session.files.find((f) => f.filename === filename);
       if (existing) {

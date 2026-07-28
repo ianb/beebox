@@ -18,7 +18,7 @@ import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { handleStagingUploadReplay } from "./upload-replay.js";
-import { StagingPathError, StagingSessionGoneError } from "./staging-errors.js";
+import { StagingPathError, StagingSessionGoneError, StagingSessionNotOpenError } from "./staging-errors.js";
 import { M4ASegmentFileCountError, StagingAudioFormatMismatchError, type CaptureAudioFormat } from "./audio-format.js";
 import { readStagingSession, writeStagingSession } from "./staging-manifest-io.js";
 import {
@@ -122,6 +122,10 @@ export async function registerBulkItems(opts: {
     boxRoot,
     id,
     mutate: (session) => {
+      // Registration is a mutation of the batch; the seal freezes it. Assert
+      // `open` under the lock so a finalize racing this append can't slip an item
+      // into a sealed registry (the route pre-checks, this is the barrier).
+      if (session.state !== "open") throw new StagingSessionNotOpenError(id, session.state);
       const registry = session.expectedItems ?? [];
       for (const item of items) {
         const existing = registry.findIndex((r) => r.id === item.id);

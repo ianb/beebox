@@ -6,18 +6,35 @@ stage as raw files; audio chunks group under their recording segment. The
 lifecycle is `open → sealed → …` and a cancel tears the directory down.
 
 ```ts setup
+import { Readable } from "node:stream";
 import {
   createStagingSession,
   readStagingSession,
   addAudioChunk,
   addPhoto,
   addFile,
+  registerBulkItems,
   setStagingState,
   sealStagingSession,
   cleanupStagingSession,
   stagingSessionIsEmpty,
 } from "../../../src/core/capture/staging-store.js";
+import { addFileStreamed } from "../../../src/core/capture/staging-stream.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+
+async function streamOrThrow(boxRoot, opts) {
+  try {
+    await addFileStreamed({
+      boxRoot, id: opts.id, filename: opts.filename,
+      uploadedAt: "2026-07-27T14:00:00.000Z", originalName: opts.filename,
+      mimeType: "application/octet-stream", itemId: opts.itemId,
+      source: Readable.from([Buffer.from(opts.bytes ?? "DATA")]),
+    });
+    return "ok";
+  } catch (error) {
+    return error.name;
+  }
+}
 ```
 
 ## Create → upload segments → seal lifecycle
@@ -228,6 +245,64 @@ await setStagingState({ boxRoot: box.root, id: session.id, state: "failed:delive
 await setStagingState({ boxRoot: box.root, id: session.id, state: "delivering" });
 (await sealStagingSession({ boxRoot: box.root, id: session.id })).alreadySealed
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The seal is a barrier: a commit racing finalize is rejected, temp file cleaned
+
+A streamed upload re-checks the session state AND item registration *under the
+lock* at commit time. A finalize that sealed the session between the route's
+pre-lock check and the commit can't slip bytes into a sealed batch — the commit
+throws, no file is added, and the streaming temp file is cleaned up (no
+`.upload-tmp-*` leak):
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
+  contextDir: "", expectedItems: [{ id: "a", name: "x.bin" }],
+});
+
+// Seal (as a concurrent finalize would), then attempt the commit.
+await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
+const sealedResult = await streamOrThrow(box.root, { id: session.id, filename: "s-a.bin", itemId: "a" });
+const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+const dirFiles = await box.list(`tmp/capture-staging/${session.id}`);
+const landed = dirFiles.includes(`tmp/capture-staging/${session.id}/s-a.bin`);
+const tmpLeak = dirFiles.includes(".upload-tmp-");
+JSON.stringify({ sealedResult, files: after.files.length, landed, tmpLeak })
+=> {"sealedResult":"StagingSessionNotOpenError","files":0,"landed":false,"tmpLeak":false}
+```
+
+An unregistered `itemId` is likewise rejected under the lock (registration is
+the record of what may arrive):
+
+```ts continue
+const openBox = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
+  contextDir: "", expectedItems: [{ id: "a", name: "x.bin" }],
+});
+const ghostResult = await streamOrThrow(box.root, { id: openBox.id, filename: "s-g.bin", itemId: "ghost" });
+ghostResult
+=> StagingItemNotRegisteredError
+```
+
+Registration itself is frozen by the seal — appending an item to a sealed
+session throws rather than mutating the frozen registry:
+
+```ts continue
+let registerResult = "ok";
+try {
+  await registerBulkItems({ boxRoot: box.root, id: session.id, items: [{ id: "late", name: "late.bin" }] });
+} catch (error) {
+  registerResult = error.name;
+}
+const registerOutcome = registerResult;
+registerOutcome
+=> StagingSessionNotOpenError
 ```
 
 ```ts cleanup

@@ -34,7 +34,13 @@ import {
   type StagingBulkItem,
 } from "../../core/capture/staging-store.js";
 import { addFileStreamed } from "../../core/capture/staging-stream.js";
-import { StagingPathError, StagingSessionGoneError, StagingUploadReplayConflictError } from "../../core/capture/staging-errors.js";
+import {
+  StagingPathError,
+  StagingSessionGoneError,
+  StagingUploadReplayConflictError,
+  StagingSessionNotOpenError,
+  StagingItemNotRegisteredError,
+} from "../../core/capture/staging-errors.js";
 import { isStagingLimitError } from "../../core/capture/staging-limits.js";
 import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker.js";
 import {
@@ -89,6 +95,19 @@ interface RegisterBulkUploadRoutesOptions {
 
 type IdRequest = FastifyRequest<{ Params: { id: string } }>;
 
+/**
+ * Shadow the parent box scope's buffering octet-stream parser with a
+ * non-draining one, so item uploads can stream `request.raw` straight to disk
+ * (never buffering a ~50 MB file in memory). `done(null)` leaves the raw stream
+ * readable in the handler — the same pattern `routes/auth.ts` and the hub `*`
+ * parser use.
+ */
+function installOctetStreamPassthrough(instance: FastifyInstance): void {
+  instance.removeContentTypeParser("application/octet-stream");
+  // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
+  instance.addContentTypeParser("application/octet-stream", (_request, _payload, done) => done(null));
+}
+
 /** Read a single string header, or undefined when absent/duplicated. */
 function header(request: FastifyRequest, name: string): string | undefined {
   const value = request.headers[name];
@@ -124,14 +143,7 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
   const { server, boxRoot, eventBus } = options;
 
   await server.register(async (instance) => {
-    // Don't drain the body so item uploads can stream `request.raw` straight to
-    // disk (never buffering a ~50 MB file in memory). `done(null)` leaves the
-    // raw stream readable in the handler — the same non-draining pattern
-    // `routes/auth.ts` and the hub `*` parser use — and shadows the parent box
-    // scope's buffering octet-stream parser for the routes registered here.
-    instance.removeContentTypeParser("application/octet-stream");
-    // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
-    instance.addContentTypeParser("application/octet-stream", (_request, _payload, done) => done(null));
+    installOctetStreamPassthrough(instance);
 
     // POST /api/bulk/sessions — create a bulk batch bound to a target chat.
     instance.post<{ Body: unknown }>("/api/bulk/sessions", async (request, reply) => {
@@ -179,7 +191,13 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
         }
         const parsed = RegisterItemsBodySchema.safeParse(request.body ?? {});
         if (!parsed.success) return reply.status(400).send({ error: "items must be a non-empty array" });
-        await registerBulkItems({ boxRoot, id: session.id, items: parsed.data.items });
+        try {
+          await registerBulkItems({ boxRoot, id: session.id, items: parsed.data.items });
+        } catch (error) {
+          // The seal froze the registry between the pre-lock check and the lock.
+          if (error instanceof StagingSessionNotOpenError) return reply.status(409).send({ error: error.message });
+          throw error;
+        }
         const updated = await readStagingSession({ boxRoot, id: session.id });
         return { registered: updated?.expectedItems?.length ?? 0 };
       },
@@ -218,6 +236,9 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
           if (error instanceof StagingPathError) return reply.status(400).send({ error: "Invalid filename" });
           if (isStagingLimitError(error)) return reply.status(413).send({ error: error.message });
           if (error instanceof StagingUploadReplayConflictError) return reply.status(409).send({ error: error.message });
+          // Seal-barrier races (session sealed / item unregistered under the lock).
+          if (error instanceof StagingSessionNotOpenError) return reply.status(409).send({ error: error.message });
+          if (error instanceof StagingItemNotRegisteredError) return reply.status(409).send({ error: error.message });
           if (error instanceof StagingSessionGoneError) return reply.status(404).send({ error: "Session not found" });
           throw error;
         }
