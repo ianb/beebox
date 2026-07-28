@@ -80,6 +80,49 @@ This **validates the bet**; the friction is the price everyone in this camp pays
 - **reject** — a callback-box-hosted shared OAuth app (forces mandatory CASA +
   100-user cap + makes us everyone's token custodian).
 
+## Downsides of the broker options (Composio vs Nango, 2026)
+
+At personal/family scale the **dollar** cost is a near-non-issue (both free tiers
+cover a handful of connections) — the real axes are **custody/security** and
+**lock-in**.
+
+**Composio — poor fit for our posture:**
+- **Cloud-only token custody, and they were breached.** Composio holds tokens on
+  their cloud (they've since added a customer-key "Zero Trust Proxy KMS"), but
+  there is a documented **[Composio breach](https://www.scalekit.com/blog/composio-breach-agent-security)** —
+  a concrete proof point that handing a SaaS your Google tokens carries real tail
+  risk. Disqualifying for a "your data, your box" tool.
+- **Per-tool-call pricing** ([pricing](https://aisotools.com/pricing/composio)):
+  free 20K calls/mo, $29 → 200K, $229 → 2M, then **$0.299/1K overage**. Agentic
+  multi-step workflows burn calls unpredictably; fine at family scale, ugly at
+  volume.
+- **Lock-in / flexibility** ([alternatives](https://www.arcade.dev/blog/composio-alternatives/)):
+  you adopt Composio's action catalog and **can't connect external MCP servers**;
+  no real self-hosting. Their action abstraction replaces our connectors.
+
+**Nango — the plausible adopt, with one caveat:**
+- **Free self-hosted gives exactly Auth + Proxy** ([self-host docs](https://nango.dev/docs/guides/platform/self-hosting)) —
+  which is *precisely* the commodity primitive we'd want (token vault + refresh +
+  a proxy) with **tokens staying on our infra**. Inspectable, customizable (MIT
+  core).
+- **Caveat: the sync engine + managed features are enterprise-gated** — "prod
+  data syncs on self-hosted need an enterprise license"; the free self-hosted
+  edition is deliberately Auth+Proxy-only (the community has asked them to
+  clarify: [issue #5536](https://github.com/NangoHQ/nango/issues/5536)). **This
+  is fine for us** — callback-box has its own connectors/sync; we'd use Nango
+  only for the auth/proxy layer, not its sync product.
+- **Ops burden** is real but trivial at our scale (~1 Google integration); the
+  "maintenance grows past 20–30 integrations" warning doesn't apply.
+- Cloud pricing (if ever): free 10 connections/100k proxy req; paid tiers
+  ~$50–$249/mo ([review](https://makerstack.co/reviews/nango-review/)) — but
+  self-hosted-free is the relevant path.
+
+**Bottom line for callback-box:** Composio is the wrong shape (cloud custody +
+breach + lock-in + per-call billing). **Nango's free self-hosted Auth+Proxy is
+the one worth a spike** — it keeps tokens local and hands us the commodity
+plumbing, leaving only our differentiated policy/filtering/advertisement layer to
+build. The enterprise-gated sync engine is irrelevant since we don't use it.
+
 ## Net
 
 The honest answer to "what do others do": **the self-hosted ones do exactly what
