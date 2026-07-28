@@ -42,6 +42,7 @@ import {
   resolveCaptureRequestOwner,
 } from "../capture-request-owner.js";
 import { getChatRuntime } from "../chat-runtime.js";
+import { startBulkUploadLifecycle } from "./bulk-upload-lifecycle.js";
 
 const BulkItemSchema = z.object({
   id: z.string().min(1),
@@ -285,4 +286,8 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
       },
     );
   });
+
+  // Resume mid-flight batches on startup + start the periodic reconciliation /
+  // abandonment / unfiled-batch sweep. The chat runtime is registered first.
+  startBulkUploadLifecycle({ server, boxRoot, eventBus });
 }

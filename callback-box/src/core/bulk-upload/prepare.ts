@@ -1,29 +1,25 @@
 /**
- * Bulk-upload preparation worker (Track 1 of `docs/plans/bulk-file-upload.md`).
+ * Bulk-upload preparation (Track 1 of `docs/plans/bulk-file-upload.md`).
  *
  * Turns a bulk staging session into a committed `upload-batch` document under
- * the target chat's `tmp-upload/`. It **copies** (never moves) the staged files
- * into the batch's attach scope, writes that scope's asset `manifest.json`,
- * writes the summary card, and commits the card + manifest (blobs stay out of
- * git, per `docs/asset-manifests.md`). Staging is deliberately NOT deleted here
- * — parity with capture, which retains staging until delivery is confirmed
- * (delivery is a later chunk).
+ * the target chat's `tmp-upload/`: it **copies** (never moves — parity with
+ * capture, which retains staging until delivery is confirmed) the staged files
+ * into the batch's attach scope, writes that scope's asset `manifest.json` + a
+ * batch-local `.gitignore`, writes the summary card, and commits card + manifest
+ * + gitignore (blobs stay out of git, per `docs/asset-manifests.md`).
  *
- * Idempotence: the batch slug is derived from the session's stable `createdAt`
- * plus its id, so a re-run after a crash targets the SAME directory. The card is
- * written last, so its existence marks completion — a re-run whose card already
- * exists skips the copy/manifest/write and re-commits (a no-op when clean),
- * never producing a second batch. Filename sanitization + collision dedupe are
- * deterministic over the staged-file order, so a rebuild yields identical names.
- *
- * A commit failure throws loudly; nothing is deleted, so the whole run is
- * safe to retry.
+ * Idempotence: the batch slug is derived from the session's stable `createdAt` +
+ * id, so a crash re-run targets the SAME dir. The card is written last, so its
+ * existence marks completion — a re-run whose card exists skips the copy/write
+ * and re-commits (a no-op when clean), never a second batch. Sanitization +
+ * collision dedupe are deterministic over staged-file order. A commit failure
+ * throws loudly; nothing is deleted, so the whole run is safe to retry.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAndCommitPaths } from "../../lib/git.js";
-import { humanBytes } from "../../lib/human-bytes.js";
+import { sanitizeFilename, dedupeName, summarizeBatch } from "./batch-format.js";
 import { computeEntry, emptyManifest, saveManifest } from "../asset-manifest.js";
 import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
 import {
@@ -83,8 +79,7 @@ export async function prepareBulkBatch(opts: {
   if (!isBulkSession(session)) throw new NotABulkSessionError(id);
 
   const batchSlug = bulkBatchSlug({ startedAt: session.createdAt, id });
-  const uploadRelDir = contextDir !== "" ? `${contextDir}/tmp-upload` : "tmp-upload";
-  const batchRelDir = `${uploadRelDir}/${batchSlug}`;
+  const batchRelDir = bulkBatchRelDir({ startedAt: session.createdAt, id, contextDir });
   const cardRelPath = `${batchRelDir}/Batch.upload-batch.card`;
   const attachRelDir = `${batchRelDir}/Batch.upload-batch.attach`;
   const cardAbsPath = path.join(boxRoot, cardRelPath);
@@ -151,9 +146,9 @@ interface BatchSummary {
 /**
  * Build (or, on an idempotent re-run, recover) the batch's received/missing/
  * failed summary. When the card doesn't yet exist this copies the staged files
- * into the attach scope, writes the manifest, and writes the card (written last
- * as the completion marker). When it already exists, the card is parsed back
- * rather than rewriting bytes (which would change mtimes and defeat idempotence).
+ * into the attach scope, writes the manifest, and writes the card (last, as the
+ * completion marker); when it exists the card is parsed back rather than
+ * rewriting bytes (which would change mtimes and defeat idempotence).
  */
 async function buildBatchSummary(opts: {
   boxRoot: string;
@@ -248,57 +243,24 @@ function bulkBatchSlug(opts: { startedAt: string; id: string }): string {
   return `upload-${formattedDate}-${opts.id.slice(0, 8)}`;
 }
 
+/** Box-relative batch dir: `<contextDir>/tmp-upload/<slug>` (root when contextDir is ""). */
+export function bulkBatchRelDir(opts: { startedAt: string; id: string; contextDir: string }): string {
+  const slug = bulkBatchSlug({ startedAt: opts.startedAt, id: opts.id });
+  const uploadRelDir = opts.contextDir !== "" ? `${opts.contextDir}/tmp-upload` : "tmp-upload";
+  return `${uploadRelDir}/${slug}`;
+}
+
+/** Box-relative path of a batch's `upload-batch` card, derived from the session. */
+export function bulkBatchCardRelPath(opts: { startedAt: string; id: string; contextDir: string }): string {
+  return `${bulkBatchRelDir(opts)}/Batch.upload-batch.card`;
+}
+
 /** Latest `uploadedAt` across the staged files, or `null` when there are none. */
 function latestUploadedAt(session: StagingSession): string | null {
   return session.files.reduce<string | null>(
     (latest, f) => (latest === null || f.uploadedAt > latest ? f.uploadedAt : latest),
     null,
   );
-}
-
-/**
- * Sanitize a client-claimed filename to a safe on-disk name, preserving the
- * extension. Strips any path components and collapses unsafe characters to `-`.
- */
-function sanitizeFilename(name: string): string {
-  const base = name.split(/[/\\]/).pop() ?? name;
-  const dot = base.lastIndexOf(".");
-  const rawStem = dot > 0 ? base.slice(0, dot) : base;
-  const rawExt = dot > 0 ? base.slice(dot + 1) : "";
-  const stem = rawStem
-    .replace(/[^\w.-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[.-]+|[.-]+$/g, "");
-  const ext = rawExt.replace(/[^\dA-Za-z]/g, "");
-  const safeStem = stem.length > 0 ? stem : "file";
-  return ext.length > 0 ? `${safeStem}.${ext}` : safeStem;
-}
-
-/** Dedupe a filename against `used`, inserting `-2`, `-3`, … before the extension. */
-function dedupeName(name: string, used: Set<string>): string {
-  if (!used.has(name)) {
-    used.add(name);
-    return name;
-  }
-  const dot = name.lastIndexOf(".");
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  const ext = dot > 0 ? name.slice(dot) : "";
-  let n = 2;
-  let candidate = `${stem}-${n}${ext}`;
-  while (used.has(candidate)) {
-    n += 1;
-    candidate = `${stem}-${n}${ext}`;
-  }
-  used.add(candidate);
-  return candidate;
-}
-
-/** Short human summary for the card body. */
-function summarizeBatch(opts: { received: number; missing: number; failed: number; totalBytes: number }): string {
-  const parts = [`${opts.received} file${opts.received === 1 ? "" : "s"} uploaded (${humanBytes(opts.totalBytes)})`];
-  if (opts.missing > 0) parts.push(`${opts.missing} missing`);
-  if (opts.failed > 0) parts.push(`${opts.failed} failed`);
-  return `${parts.join("; ")}.`;
 }
 
 async function fileExists(absPath: string): Promise<boolean> {
