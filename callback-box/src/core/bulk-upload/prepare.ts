@@ -1,0 +1,293 @@
+/**
+ * Bulk-upload preparation worker (Track 1 of `docs/plans/bulk-file-upload.md`).
+ *
+ * Turns a bulk staging session into a committed `upload-batch` document under
+ * the target chat's `tmp-upload/`. It **copies** (never moves) the staged files
+ * into the batch's attach scope, writes that scope's asset `manifest.json`,
+ * writes the summary card, and commits the card + manifest (blobs stay out of
+ * git, per `docs/asset-manifests.md`). Staging is deliberately NOT deleted here
+ * — parity with capture, which retains staging until delivery is confirmed
+ * (delivery is a later chunk).
+ *
+ * Idempotence: the batch slug is derived from the session's stable `createdAt`
+ * plus its id, so a re-run after a crash targets the SAME directory. The card is
+ * written last, so its existence marks completion — a re-run whose card already
+ * exists skips the copy/manifest/write and re-commits (a no-op when clean),
+ * never producing a second batch. Filename sanitization + collision dedupe are
+ * deterministic over the staged-file order, so a rebuild yields identical names.
+ *
+ * A commit failure throws loudly; nothing is deleted, so the whole run is
+ * safe to retry.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { stageAndCommitPaths } from "../../lib/git.js";
+import { computeEntry, emptyManifest, saveManifest } from "../asset-manifest.js";
+import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
+import {
+  readStagingSession,
+  stagingSessionDir,
+  isBulkSession,
+  type StagingSession,
+} from "../capture/staging-store.js";
+
+/** The staging session named for bulk preparation is not a `kind: "bulk"` session. */
+export class NotABulkSessionError extends Error {
+  constructor(id: string) {
+    super(`Staging session ${id} is not a bulk-upload session`);
+    this.name = "NotABulkSessionError";
+  }
+}
+
+/** An item the uploader reported as failed at finalize (supplied by the caller). */
+export interface BulkFailedItem {
+  /** Predeclared registry item id, when the uploader knows it. */
+  id?: string;
+  name: string;
+  reason: string;
+}
+
+export interface PreparedBulkBatch {
+  batchSlug: string;
+  /** Box-relative path of the written `upload-batch` card. */
+  cardRelPath: string;
+  /** Box-relative attach-scope dir holding the blobs + `manifest.json`. */
+  attachRelDir: string;
+  counts: { registered: number; received: number; missing: number; failed: number };
+  totalBytes: number;
+}
+
+/**
+ * Prepare (copy + card + attach manifest + commit) one bulk staging session.
+ * Returns the batch summary, or `null` if the session vanished before prepare
+ * ran (cleaned up / cancelled). Throws {@link NotABulkSessionError} if the id
+ * names a non-bulk session.
+ */
+export async function prepareBulkBatch(opts: {
+  boxRoot: string;
+  id: string;
+  /** Box-relative target context dir; `""`/absent lands at the box root. */
+  contextDir: string;
+  /** Items the uploader reported failing (name + reason), for the `failed` list. */
+  failedItems?: BulkFailedItem[];
+}): Promise<PreparedBulkBatch | null> {
+  const { boxRoot, id, contextDir } = opts;
+  const failedItems = opts.failedItems ?? [];
+
+  const session = await readStagingSession({ boxRoot, id });
+  if (session === null) return null;
+  if (!isBulkSession(session)) throw new NotABulkSessionError(id);
+
+  const batchSlug = bulkBatchSlug({ startedAt: session.createdAt, id });
+  const uploadRelDir = contextDir !== "" ? `${contextDir}/tmp-upload` : "tmp-upload";
+  const batchRelDir = `${uploadRelDir}/${batchSlug}`;
+  const cardRelPath = `${batchRelDir}/Batch.upload-batch.card`;
+  const attachRelDir = `${batchRelDir}/Batch.upload-batch.attach`;
+  const cardAbsPath = path.join(boxRoot, cardRelPath);
+  const attachAbsDir = path.join(boxRoot, attachRelDir);
+  const manifestRelPath = `${attachRelDir}/manifest.json`;
+
+  const summary = await buildBatchSummary({ boxRoot, session, cardAbsPath, attachAbsDir, failedItems });
+
+  // Commit the card + manifest (never the blobs). Idempotent: a clean re-run
+  // commits nothing; a real git failure throws loudly and leaves staging intact.
+  await stageAndCommitPaths(boxRoot, {
+    paths: [cardRelPath, manifestRelPath],
+    message: `Upload batch: ${batchSlug}`,
+    trailers: { "Created-By": "bulk-upload" },
+  });
+
+  return {
+    batchSlug,
+    cardRelPath,
+    attachRelDir,
+    counts: {
+      registered: session.expectedItems?.length ?? 0,
+      received: summary.received.length,
+      missing: summary.missing.length,
+      failed: summary.failed.length,
+    },
+    totalBytes: summary.totalBytes,
+  };
+}
+
+interface BatchSummary {
+  received: UploadBatchReceived[];
+  missing: string[];
+  failed: Array<{ name: string; reason: string }>;
+  totalBytes: number;
+}
+
+/**
+ * Build (or, on an idempotent re-run, recover) the batch's received/missing/
+ * failed summary. When the card doesn't yet exist this copies the staged files
+ * into the attach scope, writes the manifest, and writes the card (written last
+ * as the completion marker). When it already exists, the card is parsed back
+ * rather than rewriting bytes (which would change mtimes and defeat idempotence).
+ */
+async function buildBatchSummary(opts: {
+  boxRoot: string;
+  session: StagingSession;
+  cardAbsPath: string;
+  attachAbsDir: string;
+  failedItems: BulkFailedItem[];
+}): Promise<BatchSummary> {
+  const { boxRoot, session, cardAbsPath, attachAbsDir, failedItems } = opts;
+
+  if (await fileExists(cardAbsPath)) return recoverSummaryFromCard(cardAbsPath);
+
+  const sessionDir = stagingSessionDir(boxRoot, session.id);
+  await fs.mkdir(attachAbsDir, { recursive: true });
+
+  const manifest = emptyManifest();
+  const received: UploadBatchReceived[] = [];
+  const usedNames = new Set<string>();
+  const arrivedKeys = new Set<string>();
+
+  for (const file of session.files) {
+    const destName = dedupeName(sanitizeFilename(file.originalName || file.filename), usedNames);
+    const destAbs = path.join(attachAbsDir, destName);
+    await fs.copyFile(path.join(sessionDir, file.filename), destAbs);
+    const entry = await computeEntry(destAbs);
+    manifest.files[destName] = entry;
+
+    const item: UploadBatchReceived = { name: destName, size: entry.size };
+    if (file.mimeType !== "") item.mimetype = file.mimeType;
+    received.push(item);
+
+    if (file.itemId !== undefined) arrivedKeys.add(`id:${file.itemId}`);
+    arrivedKeys.add(`name:${file.originalName}`);
+  }
+
+  await saveManifest(attachAbsDir, manifest);
+
+  const failed = failedItems.map((f) => ({ name: f.name, reason: f.reason }));
+  const failedKeys = new Set<string>();
+  for (const f of failedItems) {
+    if (f.id !== undefined) failedKeys.add(`id:${f.id}`);
+    failedKeys.add(`name:${f.name}`);
+  }
+
+  const missing = (session.expectedItems ?? [])
+    .filter((it) => {
+      const arrived = arrivedKeys.has(`id:${it.id}`) || arrivedKeys.has(`name:${it.name}`);
+      const isFailed = failedKeys.has(`id:${it.id}`) || failedKeys.has(`name:${it.name}`);
+      return !arrived && !isFailed;
+    })
+    .map((it) => it.name);
+
+  const totalBytes = received.reduce((n, r) => n + r.size, 0);
+  const endedAt = latestUploadedAt(session) ?? session.createdAt;
+
+  const cardContent = createUploadBatchTemplate({
+    batchId: bulkBatchSlug({ startedAt: session.createdAt, id: session.id }),
+    startedAt: session.createdAt,
+    endedAt,
+    registered: session.expectedItems?.length ?? 0,
+    totalBytes,
+    received,
+    missing,
+    failed,
+    summary: summarizeBatch({ received: received.length, missing: missing.length, failed: failed.length, totalBytes }),
+  });
+  await fs.writeFile(cardAbsPath, cardContent);
+
+  return { received, missing, failed, totalBytes };
+}
+
+/** Recover the summary from an already-written card (idempotent re-run). */
+async function recoverSummaryFromCard(cardAbsPath: string): Promise<BatchSummary> {
+  const parsed = parseUploadBatch(await fs.readFile(cardAbsPath, "utf-8"));
+  if (parsed === null) return { received: [], missing: [], failed: [], totalBytes: 0 };
+  const fm = parsed.frontmatter;
+  return {
+    received: (fm.received ?? []).map((r) => (r.mimetype !== undefined ? { name: r.name, size: r.size, mimetype: r.mimetype } : { name: r.name, size: r.size })),
+    missing: (fm.missing ?? []).map((m) => m.name),
+    failed: (fm.failed ?? []).map((f) => ({ name: f.name, reason: f.reason })),
+    totalBytes: fm["total-bytes"],
+  };
+}
+
+/** Deterministic `upload-YYYYMMDDTHHMM-<shortId>` slug (mirrors capture's). */
+function bulkBatchSlug(opts: { startedAt: string; id: string }): string {
+  const datePart = new Date(opts.startedAt).toISOString().slice(0, 16).replace(/[:-]/g, "");
+  const formattedDate = `${datePart.slice(0, 8)}T${datePart.slice(9, 13)}`;
+  return `upload-${formattedDate}-${opts.id.slice(0, 8)}`;
+}
+
+/** Latest `uploadedAt` across the staged files, or `null` when there are none. */
+function latestUploadedAt(session: StagingSession): string | null {
+  return session.files.reduce<string | null>(
+    (latest, f) => (latest === null || f.uploadedAt > latest ? f.uploadedAt : latest),
+    null,
+  );
+}
+
+/**
+ * Sanitize a client-claimed filename to a safe on-disk name, preserving the
+ * extension. Strips any path components and collapses unsafe characters to `-`.
+ */
+function sanitizeFilename(name: string): string {
+  const base = name.split(/[/\\]/).pop() ?? name;
+  const dot = base.lastIndexOf(".");
+  const rawStem = dot > 0 ? base.slice(0, dot) : base;
+  const rawExt = dot > 0 ? base.slice(dot + 1) : "";
+  const stem = rawStem
+    .replace(/[^\w.-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[.-]+|[.-]+$/g, "");
+  const ext = rawExt.replace(/[^\dA-Za-z]/g, "");
+  const safeStem = stem.length > 0 ? stem : "file";
+  return ext.length > 0 ? `${safeStem}.${ext}` : safeStem;
+}
+
+/** Dedupe a filename against `used`, inserting `-2`, `-3`, … before the extension. */
+function dedupeName(name: string, used: Set<string>): string {
+  if (!used.has(name)) {
+    used.add(name);
+    return name;
+  }
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : "";
+  let n = 2;
+  let candidate = `${stem}-${n}${ext}`;
+  while (used.has(candidate)) {
+    n += 1;
+    candidate = `${stem}-${n}${ext}`;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
+/** Short human summary for the card body. */
+function summarizeBatch(opts: { received: number; missing: number; failed: number; totalBytes: number }): string {
+  const parts = [`${opts.received} file${opts.received === 1 ? "" : "s"} uploaded (${humanBytes(opts.totalBytes)})`];
+  if (opts.missing > 0) parts.push(`${opts.missing} missing`);
+  if (opts.failed > 0) parts.push(`${opts.failed} failed`);
+  return `${parts.join("; ")}.`;
+}
+
+/** Compact byte size like `112 MB` / `4.2 KB`. */
+function humanBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let i = 0;
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024;
+    i += 1;
+  }
+  const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
+  return `${rounded} ${units[i]}`;
+}
+
+async function fileExists(absPath: string): Promise<boolean> {
+  try {
+    await fs.access(absPath);
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}

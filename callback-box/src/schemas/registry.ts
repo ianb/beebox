@@ -25,6 +25,7 @@ import { ImageSchema } from "./image.js";
 import { AudioSchema } from "./audio.js";
 import { FileSchema } from "./file.js";
 import { CaptureSessionSchema } from "./capture-session.js";
+import { UploadBatchSchema } from "./upload-batch.js";
 import { RecordSchema } from "./record.js";
 import { RecipeSchema } from "./recipe.js";
 import { EmailThreadSchema } from "./email-thread.js";
@@ -109,6 +110,7 @@ export const cardSchemas: CardSchema[] = [
   WebpageSchema,
   ExtfileSchema,
   CaptureSessionSchema,
+  UploadBatchSchema,
   ImageSchema,
   AudioSchema,
   FileSchema,
