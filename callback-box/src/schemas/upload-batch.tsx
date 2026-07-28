@@ -62,6 +62,18 @@ const FailedItem = z.object({
 const uploadBatchFields = {
   status: UploadBatchStatus.default("new"),
   "batch-id": z.string(),
+  /**
+   * The chat session this batch was uploaded into, persisted at prepare time so
+   * the unfiled-batch sweep notifies the ORIGINAL target chat (not a chat
+   * reconstructed from the context dir's most-recent history entry). Optional:
+   * legacy cards predate it and fall back to the most-active session.
+   */
+  "target-session": z.string().optional(),
+  /**
+   * Set once the unfiled-batch sweep has surfaced this batch as a self-note, so
+   * it notifies at most once ever (rather than re-firing every sweep cycle).
+   */
+  "sweep-notified": z.string().optional(),
   time: BatchTime.optional(),
   counts: BatchCounts,
   /** Server-computed sum of every received file's size, in bytes. */
@@ -145,6 +157,8 @@ nothing regenerates it.
 const UploadBatchObject = z.object({
   status: UploadBatchStatus.default("new"),
   "batch-id": z.string(),
+  "target-session": z.string().optional(),
+  "sweep-notified": z.string().optional(),
   time: BatchTime.optional(),
   counts: BatchCounts,
   "total-bytes": z.number(),
@@ -188,6 +202,8 @@ export interface UploadBatchReceived {
  */
 export function createUploadBatchTemplate(options: {
   batchId: string;
+  /** The chat session this batch was uploaded into (for the unfiled sweep's self-note). */
+  targetSessionId?: string | null;
   startedAt: string;
   endedAt?: string | null;
   registered: number;
@@ -203,6 +219,7 @@ export function createUploadBatchTemplate(options: {
   const fields: Record<string, unknown> = {
     status: "new",
     "batch-id": options.batchId,
+    ...(options.targetSessionId ? { "target-session": options.targetSessionId } : {}),
     time,
     counts: {
       registered: options.registered,

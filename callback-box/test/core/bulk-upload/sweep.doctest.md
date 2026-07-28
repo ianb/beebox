@@ -158,19 +158,19 @@ JSON.stringify({ cleanedIsDelivered: result.cleaned[0] === delivered.id })
 await box.cleanup();
 ```
 
-## Unfiled ≥7-day batches are surfaced to their target chat via self-note
+## Unfiled ≥7-day batches are surfaced to their target chat via self-note, once
 
 A `delivered` upload-batch card still under a `tmp-upload/` past the stale age is
-handed to `notifyUnfiled` with its resolved target session (mapped from the
-enclosing context dir); a recent one is not.
+handed to `notifyUnfiled` with the ORIGINAL target session persisted on the card
+(`target-session`, written at prepare time — not reconstructed from the context
+dir's history); a recent one is not.
 
 ```ts
-const box = await makeTmpBox();
-await appendHistory(box.root, { sessionId: "s-x", contextDir: "store/x" });
+const box = await makeTmpBox({ git: true });
 
 async function writeBatchCard(relDir, startedAt) {
   const card = createUploadBatchTemplate({
-    batchId: "upload-x", startedAt, registered: 1, totalBytes: 6,
+    batchId: "upload-x", targetSessionId: "s-target", startedAt, registered: 1, totalBytes: 6,
     received: [{ name: "a.pdf", size: 6 }], missing: [], failed: [], summary: "1 file uploaded (6 B).",
   }).replace("status: new", "status: delivered");
   await mkdir(box.path(relDir), { recursive: true });
@@ -188,7 +188,18 @@ JSON.stringify({
   session: notified[0]?.sessionId,
   aged: (notified[0]?.ageDays ?? 0) > 1000,
 })
-=> {"count":1,"path":"store/x/tmp-upload/upload-old/Batch.upload-batch.card","session":"s-x","aged":true}
+=> {"count":1,"path":"store/x/tmp-upload/upload-old/Batch.upload-batch.card","session":"s-target","aged":true}
+```
+
+The batch is marked `sweep-notified` (committed), so a SECOND sweep does not
+re-fire the self-note — it notifies at most once ever, not every cycle:
+
+```ts continue
+const notified2 = [];
+await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified2.push(b) });
+const marked = (await box.read("store/x/tmp-upload/upload-old/Batch.upload-batch.card")).includes("sweep-notified:");
+JSON.stringify({ secondSweep: notified2.length, marked })
+=> {"secondSweep":0,"marked":true}
 ```
 
 ```ts cleanup

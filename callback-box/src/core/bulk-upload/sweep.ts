@@ -25,9 +25,12 @@
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
-import { getBoxTime } from "../../lib/time.js";
+import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
 import { parseUploadBatch } from "../../schemas/upload-batch.js";
-import { loadHistoryEntries } from "../chat/session/history.js";
+import { parseCardText, serializeCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { withCardLock } from "../../lib/card-lock.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
 import { listStagingSessions, cleanupStagingSession, isBulkSession } from "../capture/staging-store.js";
 import { bulkBatchCardRelPath } from "./prepare.js";
@@ -120,6 +123,12 @@ export async function sweepBulkBatches(deps: BulkSweepDeps): Promise<BulkSweepRe
   const unfiled = await findStaleTmpUploadCards({ boxRoot, now });
   result.unfiled = unfiled.map((u) => u.cardRelPath);
   for (const batch of unfiled) {
+    // Mark-once BEFORE notifying: persist a committed `sweep-notified` timestamp
+    // so `findStaleTmpUploadCards` skips this card on every later sweep — the
+    // self-note fires at most ONCE ever, not every cycle. (A failed injection
+    // won't retry, an accepted trade-off: the card still exists and is
+    // independently discoverable, and re-firing every 10 min is the worse fault.)
+    await markBatchSweepNotified({ boxRoot, cardRelPath: batch.cardRelPath });
     if (notifyUnfiled) notifyUnfiled(batch);
   }
   if (unfiled.length > 0 && !notifyUnfiled) {
@@ -129,6 +138,32 @@ export async function sweepBulkBatches(deps: BulkSweepDeps): Promise<BulkSweepRe
   }
 
   return result;
+}
+
+/** Stamp `sweep-notified` on a batch card and commit it (once-ever guard). */
+async function markBatchSweepNotified(opts: { boxRoot: string; cardRelPath: string }): Promise<void> {
+  const { boxRoot, cardRelPath } = opts;
+  const cardAbsPath = path.join(boxRoot, cardRelPath);
+  try {
+    const changed = await withCardLock(cardAbsPath, async () => {
+      const content = await fs.readFile(cardAbsPath, "utf-8");
+      const parsed = parseCardText(content, { source: cardAbsPath, schemas: await createCardSchemaMap() });
+      if (parsed.fields["sweep-notified"] !== undefined) return false;
+      parsed.fields["sweep-notified"] = getBoxTimeISO(boxRoot);
+      await fs.writeFile(cardAbsPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
+      return true;
+    });
+    if (!changed) return;
+    await stageAndCommitPaths(boxRoot, {
+      paths: [cardRelPath],
+      message: `Upload batch sweep-notified: ${path.basename(path.dirname(cardRelPath))}`,
+      trailers: { "Created-By": "bulk-upload" },
+    });
+  } catch (e) {
+    // Best-effort: a failed mark means the batch may notify again next sweep —
+    // preferable to throwing and aborting the whole sweep.
+    console.error(`[bulk] Failed to mark ${cardRelPath} sweep-notified:`, e);
+  }
 }
 
 /** Whether a `delivering` batch's `<upload>` message is already in its transcript. */
@@ -147,44 +182,33 @@ async function deliveredMessageLanded(opts: {
 
 /**
  * Box-relative paths of `delivered` upload-batch cards under any `tmp-upload/`
- * whose `time.start` is older than the stale age, paired with the chat session
- * that owns the enclosing context dir (null → the notifier falls back to
- * most-active). Reference is the card's own `time.start` (deterministic under
- * `CB_TIME`), not file mtime (which git operations reset).
+ * whose `time.start` is older than the stale age and that haven't been
+ * sweep-notified yet, paired with the ORIGINAL target chat persisted on the card
+ * (`target-session`; null → the notifier falls back to most-active, e.g. a legacy
+ * card predating the field). Reference is the card's own `time.start`
+ * (deterministic under `CB_TIME`), not file mtime (which git operations reset).
  */
 async function findStaleTmpUploadCards(opts: { boxRoot: string; now: number }): Promise<UnfiledBatch[]> {
   const { boxRoot, now } = opts;
-  const entries = await loadHistoryEntries(boxRoot);
-  const dirToSession = new Map<string, string>();
-  for (const e of entries) dirToSession.set(e.contextDir ?? "", e.id);
 
   const stale: UnfiledBatch[] = [];
   for (const dir of await findTmpUploadDirs(boxRoot, boxRoot)) {
     for (const card of await batchCardsIn(dir)) {
       const parsed = parseUploadBatch(await fs.readFile(card, "utf-8").catch(() => ""));
       if (parsed === null || parsed.frontmatter.status !== "delivered") continue;
+      if (parsed.frontmatter["sweep-notified"] !== undefined) continue; // Already surfaced once.
       const startedAt = parsed.frontmatter.time?.start;
       if (startedAt === undefined) continue;
       const ageMs = now - new Date(startedAt).getTime();
       if (ageMs < TMP_UPLOAD_STALE_MS) continue;
-      const relPath = path.relative(boxRoot, card);
-      const contextDir = contextDirOfBatchCard(relPath);
       stale.push({
-        cardRelPath: relPath,
-        sessionId: contextDir === null ? null : dirToSession.get(contextDir) ?? null,
+        cardRelPath: path.relative(boxRoot, card),
+        sessionId: parsed.frontmatter["target-session"] ?? null,
         ageDays: Math.floor(ageMs / (24 * 60 * 60 * 1000)),
       });
     }
   }
   return stale.toSorted((a, b) => a.cardRelPath.localeCompare(b.cardRelPath));
-}
-
-/** The context dir enclosing a `.../tmp-upload/<slug>/...card` path, or null. */
-function contextDirOfBatchCard(relPath: string): string | null {
-  const marker = "/tmp-upload/";
-  const idx = relPath.indexOf(marker);
-  if (idx !== -1) return relPath.slice(0, idx);
-  return relPath.startsWith("tmp-upload/") ? "" : null;
 }
 
 /** `upload-batch` card absolute paths directly inside a batch dir under `dir`. */

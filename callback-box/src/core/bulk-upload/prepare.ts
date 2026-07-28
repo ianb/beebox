@@ -231,6 +231,7 @@ async function buildBatchSummary(opts: {
 
   const cardContent = createUploadBatchTemplate({
     batchId: bulkBatchSlug({ startedAt: session.createdAt, id: session.id }),
+    targetSessionId: session.targetSessionId,
     startedAt: session.createdAt,
     endedAt,
     registered: session.expectedItems?.length ?? 0,
