@@ -18,6 +18,8 @@ import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { engineHealthChecks } from "./health-engine.js";
+import { googleAuthHealthChecks } from "./health-google.js";
+import { getBoxTime } from "../../../lib/time.js";
 
 export interface HealthCheck {
   name: string;
@@ -293,6 +295,8 @@ export async function runHealthChecks(
       : "Claude Code is not logged in — agent operations (chat, reactor, procedures) will not work. Run `claude auth login` on this machine",
     severity: "error",
   });
+
+  checks.push(...(await googleAuthHealthChecks(boxRoot, { now: getBoxTime(boxRoot) })));
 
   checks.push(...(await engineHealthChecks(boxRoot)));
 

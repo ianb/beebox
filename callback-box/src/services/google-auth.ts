@@ -6,6 +6,7 @@
  */
 
 import type { OAuth2Client } from "google-auth-library";
+import { classifyRefreshFailure } from "../connectors/google-auth-status.js";
 
 class AccessTokenUnavailableError extends Error {
   constructor() {
@@ -23,10 +24,29 @@ export interface GoogleAuthService {
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
-export function createGoogleAuthService(client: OAuth2Client): GoogleAuthService {
+/**
+ * Wrap an OAuth2Client as the token source for every Google API call.
+ *
+ * This is the one chokepoint where a dead grant surfaces: `getAccessToken()`
+ * refreshes lazily, and every Google service (gmail, drive/sheets/docs,
+ * calendar) obtains its bearer token here. Pass `boxRoot` so an `invalid_grant`
+ * can be recorded against the right token file — omitting it still classifies
+ * and rethrows, it just can't persist for a legacy per-box credential.
+ */
+export function createGoogleAuthService(
+  client: OAuth2Client,
+  opts?: { boxRoot?: string | undefined },
+): GoogleAuthService {
   return {
     async getAccessToken() {
-      const { token } = await client.getAccessToken();
+      let token: string | null | undefined;
+      try {
+        ({ token } = await client.getAccessToken());
+      } catch (e) {
+        const expired = await classifyRefreshFailure(e, { boxRoot: opts?.boxRoot });
+        if (expired) throw expired;
+        throw e;
+      }
       if (!token) throw new AccessTokenUnavailableError();
       return token;
     },

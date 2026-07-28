@@ -116,11 +116,35 @@ The redirect URI in your OAuth client must exactly match the one you're using. F
 
 ### Token expired / invalid_grant
 
-Re-authorize:
+Google grants die on their own. If your OAuth consent screen is in **Testing**
+mode, refresh tokens expire every **7 days**; an unverified **Production** app
+can also have its grant revoked. This is a property of BYO Google credentials,
+not a defect in the box.
+
+The box detects it and says so rather than failing quietly. When a token refresh
+comes back `invalid_grant`:
+
+- `cb health` (and the dashboard's health warnings) report
+  `google-auth: Google authorization expired or was revoked … Reconnect at
+  /<box>/admin?reconnect=google`.
+- The boxholder gets **one** notification per breakage over whatever channels
+  are configured (Telegram, Web Push), with the same link. There's no re-nag —
+  the health condition persists until it's fixed.
+- Gmail, Calendar and Drive sync pause; the rest of the box keeps working.
+
+Reconnect from the admin page's Google Services section (**Re-authorize**), or
+from the CLI:
 
 ```bash
 cb google-auth --reauth
 ```
+
+Either way, the new grant clears the condition automatically.
+
+The state is stored with the credential, so on a server sharing one
+`CB_GOOGLE_TOKENS_FILE` across boxes, reconnecting once fixes every box.
+
+Design notes: [`plans/google-auth-reauth-health.md`](plans/google-auth-reauth-health.md).
 
 ### Adding more calendars
 

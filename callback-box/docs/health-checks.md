@@ -12,6 +12,30 @@ The hub exposes two diagnostic endpoints, both requiring the `CB_DIAG_API_KEY` b
 
 Why the canary exists at all: during the 2026-07-16 Node 22→24 upgrade every box child crash-looped on a better-sqlite3 ABI mismatch while the old `/healthz` returned a constant 200 — the deploy verified "healthy" while no box could serve a request. The passive verdict now catches a crash-looping box; the canary catches a break on boxes that were never started.
 
+## google-auth (is the Google grant still alive?)
+
+`cb health`'s box-checks section and the dashboard's health warnings both carry a
+`google-auth` check. It reports one of three things: nothing at all (Google isn't
+configured for this deployment, or this box never connected it), `Google
+authorization is live (last verified …)`, or a **warning** that the authorization
+expired or was revoked with a `/<box>/admin?reconnect=google` link. It's a
+`warning`, not an `error`: Google features pause, the rest of the box works, and
+`cb health`'s exit code stays 0.
+
+The check is a pure reader — it never makes a network call, so it's safe to poll.
+What keeps it honest is a forced token refresh (`probeGoogleAuthIfStale`) that
+the scheduler daemon runs at most about **once a day**; the freshness stamp lives
+in the shared token record, so on a multi-box server the first box to tick each
+day probes and the rest skip. Ordinary Google usage refreshes the stamp for free.
+A box with no scheduler running will show a stale `last verified` rather than a
+wrong verdict.
+
+On a flip to broken, the boxholder gets one notification per breakage over
+Telegram/Web Push. Reconnecting (admin page, or `cb google-auth --reauth`) clears
+the state and re-arms the alert for a future relapse. Operator-facing detail is
+in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
+notes in [`plans/google-auth-reauth-health.md`](plans/google-auth-reauth-health.md).
+
 ## claude-update (nightly Claude Code self-update)
 
 ### Why this exists
