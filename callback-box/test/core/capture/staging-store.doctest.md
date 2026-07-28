@@ -247,6 +247,21 @@ await setStagingState({ boxRoot: box.root, id: session.id, state: "delivering" }
 => true
 ```
 
+The uploader's failed-item report rides in the SAME atomic seal write — a fresh
+session seals to `sealed` and records `failedItems` in one mutation (no window
+where a sealed batch lacks its failed list):
+
+```ts continue
+const withFailed = await createStagingSession({
+  boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk",
+  contextDir: "", expectedItems: [{ id: "a", name: "a.bin" }],
+});
+await sealStagingSession({ boxRoot: box.root, id: withFailed.id, failedItems: [{ id: "a", name: "a.bin", reason: "timed out" }] });
+const sealedWithFailed = await readStagingSession({ boxRoot: box.root, id: withFailed.id });
+JSON.stringify({ state: sealedWithFailed.state, failed: sealedWithFailed.failedItems })
+=> {"state":"sealed","failed":[{"id":"a","name":"a.bin","reason":"timed out"}]}
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

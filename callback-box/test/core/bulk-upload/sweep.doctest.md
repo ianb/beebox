@@ -15,7 +15,6 @@ import {
   createStagingSession,
   addFile,
   setStagingState,
-  setBulkFailedItems,
   readStagingSession,
   writeStagingSession,
 } from "../../../src/core/capture/staging-store.js";

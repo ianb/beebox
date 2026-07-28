@@ -18,8 +18,7 @@ import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/ses
 import {
   createStagingSession,
   addFile,
-  setStagingState,
-  setBulkFailedItems,
+  sealStagingSession,
   readStagingSession,
 } from "../../../src/core/capture/staging-store.js";
 import { prepareAndDeliverBulkBatch } from "../../../src/core/bulk-upload/worker.js";
@@ -48,8 +47,8 @@ async function stageSealedBulk(boxRoot, opts) {
     boxRoot, id: staged.id, filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z",
     originalName: "report.pdf", mimeType: "application/pdf", itemId: "a", buffer: Buffer.from("PDFPDF"),
   });
-  if (opts.failedItems) await setBulkFailedItems({ boxRoot, id: staged.id, failedItems: opts.failedItems });
-  await setStagingState({ boxRoot, id: staged.id, state: "sealed" });
+  // Seal (carrying any failed-item report in the same atomic write, as finalize does).
+  await sealStagingSession({ boxRoot, id: staged.id, failedItems: opts.failedItems });
   return staged.id;
 }
 

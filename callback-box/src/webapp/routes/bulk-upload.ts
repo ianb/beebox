@@ -27,7 +27,6 @@ import {
   createStagingSession,
   readStagingSession,
   registerBulkItems,
-  setBulkFailedItems,
   sealStagingSession,
   cleanupStagingSession,
   isBulkSession,
@@ -294,11 +293,11 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
           return reply.status(503).send({ error: "Chat runtime unavailable" });
         }
 
-        const seal = await sealStagingSession({ boxRoot, id: session.id });
+        // The uploader's failed-item report rides IN the CAS seal — one atomic
+        // write, so a resume can never see a sealed batch whose failed list
+        // wasn't recorded yet.
+        const seal = await sealStagingSession({ boxRoot, id: session.id, failedItems: parsed.data.failedItems });
         if (seal.sealed) {
-          if (parsed.data.failedItems !== undefined) {
-            await setBulkFailedItems({ boxRoot, id: session.id, failedItems: parsed.data.failedItems });
-          }
           void prepareAndDeliverBulkBatch({
             boxRoot,
             id: session.id,

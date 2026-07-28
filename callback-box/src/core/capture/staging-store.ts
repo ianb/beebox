@@ -289,25 +289,6 @@ export async function addFile(params: AddFileParams): Promise<void> {
   });
 }
 
-/**
- * Persist the uploader's finalize-time failed-item report onto a bulk session
- * so a crash-and-resume rebuilds the batch card with the same `failed` list
- * (rather than silently re-classifying those items as merely missing).
- */
-export async function setBulkFailedItems(opts: {
-  boxRoot: string;
-  id: string;
-  failedItems: StagingBulkFailedItem[];
-}): Promise<void> {
-  await mutateSession({
-    boxRoot: opts.boxRoot,
-    id: opts.id,
-    mutate: (session) => {
-      session.failedItems = opts.failedItems;
-    },
-  });
-}
-
 /** Transition the session's lifecycle state (seal/preparing/delivered/failed). */
 export async function setStagingState(opts: {
   boxRoot: string;
@@ -364,14 +345,17 @@ export interface SealResult {
  * (Track 5) uses it so a session that raced into `failed:*` between the sweep's
  * list and its seal is NOT auto-retried (the plan bars auto-retrying failures).
  * `partial: true` marks the session partial as part of the same atomic seal.
+ * `failedItems` (bulk only) is persisted IN the same CAS write, so the seal and
+ * the uploader's failed-item report are one atomic mutation (no crash window).
  */
 export async function sealStagingSession(opts: {
   boxRoot: string;
   id: string;
   partial?: boolean;
   requireOpen?: boolean;
+  failedItems?: StagingBulkFailedItem[] | undefined;
 }): Promise<SealResult> {
-  const { boxRoot, id, partial, requireOpen } = opts;
+  const { boxRoot, id, partial, requireOpen, failedItems } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
@@ -380,6 +364,7 @@ export async function sealStagingSession(opts: {
     if (!fireEligible) return { sealed: false, alreadySealed: true };
     session.state = "sealed";
     if (partial === true) session.partial = true;
+    if (failedItems !== undefined) session.failedItems = failedItems;
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
     return { sealed: true, alreadySealed: false };
