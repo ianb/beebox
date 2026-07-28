@@ -84,9 +84,8 @@ function describeFailure(e: unknown): string {
 
 export function useBulkUpload(opts: {
   targetSessionId: string;
-  contextDir: string;
 }): BulkUploadController {
-  const { targetSessionId, contextDir } = opts;
+  const { targetSessionId } = opts;
 
   const [items, setItems] = useState<BulkItemView[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -101,10 +100,10 @@ export function useBulkUpload(opts: {
 
   const ensureSession = useCallback((): Promise<string> => {
     if (!sessionPromiseRef.current) {
-      sessionPromiseRef.current = createBulkSession({ targetSessionId, contextDir }).then((r) => r.sessionId);
+      sessionPromiseRef.current = createBulkSession({ targetSessionId }).then((r) => r.sessionId);
     }
     return sessionPromiseRef.current;
-  }, [targetSessionId, contextDir]);
+  }, [targetSessionId]);
 
   const startUpload = useCallback(
     async (id: string): Promise<void> => {

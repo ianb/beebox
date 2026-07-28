@@ -72,10 +72,13 @@ function bulkUrl(path: string): string {
   return `${getApiBase()}/bulk${path}`;
 }
 
-/** Create a bulk batch bound to a target chat + context dir. */
+/**
+ * Create a bulk batch bound to a target chat. The batch's context dir is derived
+ * SERVER-SIDE from `targetSessionId` (the client never supplies a box path — a
+ * client-supplied dir would be a path-traversal vector).
+ */
 export async function createBulkSession(opts: {
   targetSessionId: string;
-  contextDir: string;
   items?: BulkItemDescriptor[];
 }): Promise<{ sessionId: string }> {
   const res = await fetch(
@@ -85,7 +88,6 @@ export async function createBulkSession(opts: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         targetSessionId: opts.targetSessionId,
-        contextDir: opts.contextDir,
         items: opts.items ?? [],
       }),
     }),

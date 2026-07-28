@@ -472,10 +472,13 @@ See §1.3 (full request/response/errors).
   <token>`, owner-scoped per session (same `authorizeCaptureSessionOwner` ownership as capture).
 - **Endpoints:**
   - `POST /api/bulk/sessions` — create a batch. Req `{ targetSessionId: string /* required */,
-    contextDir?: string, items?: BulkItem[] }` where `BulkItem = { id: string, name: string, size?:
+    items?: BulkItem[] }` where `BulkItem = { id: string, name: string, size?:
     number, mimetype?: string }`. Res `{ sessionId, startedAt, capabilities: { acceptedUploadEncodings:
     ["raw-body-v1"] } }`. A missing/empty `targetSessionId` is **400** (a batch with no chat to
-    deliver into is invalid at creation).
+    deliver into is invalid at creation). The batch's context dir is derived **server-side** from
+    `targetSessionId` (via the session→directory history binding) — the client never supplies a box
+    path (a client-supplied dir would be a path-traversal vector), and any `contextDir` in the body is
+    ignored.
   - `POST /api/bulk/sessions/:id/items` — append to the item registry. Req `{ items: BulkItem[] }`.
     Res `{ registered: number }`.
   - `POST /api/bulk/sessions/:id/items/:itemId/upload` — stream one item's bytes. `Content-Type:
@@ -551,7 +554,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
-| U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,contextDir?,items?}`; res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
+| U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
 | U3 | `POST /api/bulk/sessions/:id/items/:itemId/upload` | native/web→box | octet-stream body, `X-Upload-Filename` + `X-Upload-Original-Name`/`-Mime-Type`; res `{success,filename,itemId,size,sha256}` | — (deferred) | `routes/bulk-upload.ts`; `core/capture/staging-stream.ts` · `addFileStreamed` | LOUD (400/409/413) |
 | U4 | `GET /api/bulk/sessions/:id` | native/web→box | res `{sessionId,state,targetSessionId,registered,received}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |

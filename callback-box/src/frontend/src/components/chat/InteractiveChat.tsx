@@ -112,12 +112,11 @@ interface InteractiveChatProps {
  * suppressed for native shells; bulk additionally requires a server-assigned
  * session id (its batch binds to a target chat).
  */
-function ChatModeOverlays({ captureMode, bulkUploadMode, usesNativeShell, sessionId, effectiveContextDir, onExitCapture, onExitBulkUpload }: {
+function ChatModeOverlays({ captureMode, bulkUploadMode, usesNativeShell, sessionId, onExitCapture, onExitBulkUpload }: {
   captureMode: boolean;
   bulkUploadMode: boolean;
   usesNativeShell: boolean;
   sessionId: string | null;
-  effectiveContextDir: string | null;
   onExitCapture: () => void;
   onExitBulkUpload: () => void;
 }) {
@@ -125,7 +124,7 @@ function ChatModeOverlays({ captureMode, bulkUploadMode, usesNativeShell, sessio
     <>
       {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} /> : null}
       {bulkUploadMode && !usesNativeShell && sessionId !== null ? (
-        <BulkUploadOverlay targetSessionId={sessionId} contextDir={effectiveContextDir ?? ""} onExit={onExitBulkUpload} />
+        <BulkUploadOverlay targetSessionId={sessionId} onExit={onExitBulkUpload} />
       ) : null}
     </>
   );
@@ -315,7 +314,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       onUploadFiles={() => setBulkUploadMode(true)} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       />
-      <ChatModeOverlays captureMode={captureMode} bulkUploadMode={bulkUploadMode} usesNativeShell={usesNativeShell} sessionId={sessionId} effectiveContextDir={effectiveContextDir} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={() => setBulkUploadMode(false)} />
+      <ChatModeOverlays captureMode={captureMode} bulkUploadMode={bulkUploadMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={() => setBulkUploadMode(false)} />
     </InputStoreProvider>
   );
 }

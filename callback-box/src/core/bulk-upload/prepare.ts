@@ -37,6 +37,29 @@ export class NotABulkSessionError extends Error {
   }
 }
 
+/** A batch's resolved directory escapes the box root (poisoned `contextDir`). */
+export class BulkBatchPathError extends Error {
+  constructor(batchRelDir: string) {
+    super(`Bulk batch dir escapes the box root: ${batchRelDir}`);
+    this.name = "BulkBatchPathError";
+  }
+}
+
+/**
+ * Defense-in-depth containment guard: the batch dir MUST resolve to inside the
+ * box root. `contextDir` is server-derived (never client-supplied) since the
+ * traversal fix, but a poisoned on-disk session manifest is still untrusted
+ * input — a batch dir that escapes is a broken invariant, not a fallback case.
+ * Mirrors the containment idiom in `webapp/routes/chat-uploads.ts`.
+ */
+function assertBatchDirContained(opts: { boxRoot: string; batchRelDir: string }): void {
+  const boxResolved = path.resolve(opts.boxRoot);
+  const resolved = path.resolve(path.join(opts.boxRoot, opts.batchRelDir));
+  if (resolved !== boxResolved && !resolved.startsWith(boxResolved + path.sep)) {
+    throw new BulkBatchPathError(opts.batchRelDir);
+  }
+}
+
 /** An item the uploader reported as failed at finalize (supplied by the caller). */
 export interface BulkFailedItem {
   /** Predeclared registry item id, when the uploader knows it. */
@@ -80,6 +103,7 @@ export async function prepareBulkBatch(opts: {
 
   const batchSlug = bulkBatchSlug({ startedAt: session.createdAt, id });
   const batchRelDir = bulkBatchRelDir({ startedAt: session.createdAt, id, contextDir });
+  assertBatchDirContained({ boxRoot, batchRelDir });
   const cardRelPath = `${batchRelDir}/Batch.upload-batch.card`;
   const attachRelDir = `${batchRelDir}/Batch.upload-batch.attach`;
   const cardAbsPath = path.join(boxRoot, cardRelPath);

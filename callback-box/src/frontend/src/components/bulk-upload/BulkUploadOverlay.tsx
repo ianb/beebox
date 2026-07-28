@@ -3,8 +3,9 @@
  * Track 2 / Direction §4).
  *
  * Launched from the chat composer's Add menu ("Upload files…") and bound to the
- * launching chat via `targetSessionId` + `contextDir`, so the delivered
- * `<upload>` message lands in this conversation. Files are picked or dropped,
+ * launching chat via `targetSessionId` (the batch's context dir is derived
+ * server-side from that id), so the delivered `<upload>` message lands in this
+ * conversation. Files are picked or dropped,
  * streamed through a bounded-concurrency queue (`useBulkUpload`), and shown as a
  * per-item state list. "Done" seals the batch (naming any failures — deliver
  * immediately, never silent) and returns to chat, where the `<upload>` message
@@ -56,12 +57,11 @@ function ItemRow({ item, onRetry }: { item: BulkItemView; onRetry: (id: string) 
   );
 }
 
-export function BulkUploadOverlay({ targetSessionId, contextDir, onExit }: {
+export function BulkUploadOverlay({ targetSessionId, onExit }: {
   targetSessionId: string;
-  contextDir: string;
   onExit: () => void;
 }) {
-  const bulk = useBulkUpload({ targetSessionId, contextDir });
+  const bulk = useBulkUpload({ targetSessionId });
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [finalizing, setFinalizing] = useState(false);

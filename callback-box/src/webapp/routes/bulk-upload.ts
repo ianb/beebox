@@ -41,6 +41,7 @@ import {
   authorizeCaptureSessionOwner,
   resolveCaptureRequestOwner,
 } from "../capture-request-owner.js";
+import { getDirectoryForSession } from "../../core/chat/session/history.js";
 import { getChatRuntime } from "../chat-runtime.js";
 import { startBulkUploadLifecycle } from "./bulk-upload-lifecycle.js";
 
@@ -52,8 +53,9 @@ const BulkItemSchema = z.object({
 });
 
 const CreateBulkBodySchema = z.object({
+  // No `contextDir`: it's derived server-side from `targetSessionId` (a
+  // client-supplied dir would be a path-traversal vector — see below).
   targetSessionId: z.string().min(1),
-  contextDir: z.string().optional(),
   items: z.array(BulkItemSchema).optional(),
 });
 
@@ -150,13 +152,18 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
         return reply.status(400).send({ error: "A bulk upload requires a target chat session id" });
       }
       const items: StagingBulkItem[] = parsed.data.items ?? [];
+      // Derive the target's box-relative context dir SERVER-SIDE from the bound
+      // chat (never from the request body — a client-supplied dir concatenated
+      // into box paths is a path-traversal vector). Mirrors how capture's
+      // `resolveCaptureDeliveryTarget` resolves placement via history.
+      const contextDir = (await getDirectoryForSession(boxRoot, parsed.data.targetSessionId)) ?? "";
       const session = await createStagingSession({
         boxRoot,
         targetSessionId: parsed.data.targetSessionId,
         createdBy: owner.email,
         kind: "bulk",
         expectedItems: items,
-        contextDir: parsed.data.contextDir ?? "",
+        contextDir,
       });
       return { sessionId: session.id, startedAt: session.createdAt, capabilities: BULK_CAPABILITIES };
     });

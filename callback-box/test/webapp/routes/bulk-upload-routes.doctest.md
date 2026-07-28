@@ -12,6 +12,19 @@ import { createHash } from "node:crypto";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
+import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/session/history.js";
+
+// Bind a session→dir in history. The server fires a one-shot history backfill at
+// boot that can clobber a single append; re-append until it sticks (the backfill
+// writes `migrated: true` once, after which the binding is durable).
+async function bindSession(ctx, sessionId, contextDir) {
+  for (let i = 0; i < 100; i++) {
+    await appendHistory(ctx.boxRoot, { sessionId, contextDir });
+    if ((await getDirectoryForSession(ctx.boxRoot, sessionId)) === contextDir) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  throw new Error(`could not bind ${sessionId} in history`);
+}
 
 function sha256(text) {
   return createHash("sha256").update(Buffer.from(text)).digest("hex");
@@ -49,12 +62,13 @@ JSON.stringify({ status: noTarget.statusCode, error: noTarget.body.error })
 ```
 
 With a target chat + an initial registry, create returns the new session id and
-its upload capabilities:
+its upload capabilities. The batch's context dir is NOT taken from the request —
+it's derived server-side from the target chat's recorded binding:
 
 ```ts continue
+await bindSession(ctx, "chat-abc", "store/photos");
 const created = await createBatch(ctx, {
   targetSessionId: "chat-abc",
-  contextDir: "store/photos",
   items: [
     { id: "a", name: "report.pdf", size: 6, mimetype: "application/pdf" },
     { id: "b", name: "photo.png", size: 5, mimetype: "image/png" },
@@ -70,7 +84,7 @@ JSON.stringify({
 ```
 
 The staging manifest is a `kind: "bulk"` session carrying the registry + the
-target context dir:
+server-derived target context dir:
 
 ```ts continue
 const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
@@ -81,6 +95,21 @@ JSON.stringify({
   registered: manifest.expectedItems.map((i) => i.id),
 })
 => {"kind":"bulk","target":"chat-abc","contextDir":"store/photos","registered":["a","b"]}
+```
+
+A client-supplied `contextDir` in the body is ignored (path-traversal defense):
+a target with no recorded binding lands at the box root regardless of what the
+body claims:
+
+```ts continue
+const sneaky = await createBatch(ctx, {
+  targetSessionId: "chat-unbound",
+  contextDir: "../../../etc",
+  items: [{ id: "a", name: "x.pdf" }],
+});
+const sneakyManifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sneaky.body.sessionId}/session.json`));
+JSON.stringify({ status: sneaky.statusCode, contextDir: sneakyManifest.contextDir })
+=> {"status":200,"contextDir":""}
 ```
 
 ```ts cleanup
