@@ -15,23 +15,39 @@ three pieces, and **the dashboard itself is the greater issue.**
 
 ## 1. The dashboard (the greater issue — needs design)
 
-A personalized, display-optimized dashboard of what the boxholder cares about.
-`src/frontend/src/pages/DashboardPage.tsx` + `components/dashboard/` exist as a
-starting point, but the open questions are the substance:
+**Not** the existing app-coded `src/frontend/src/pages/DashboardPage.tsx` /
+`components/dashboard/` — that's explicitly the wrong model. The dashboard is
+**a new card type with a custom card-attached view**, and the **box agent
+actively manages the display at a fairly intimate level.** The personalization
+comes from the *agent curating the card*, not from app code or a config screen.
 
-- **What's on it, and how is it personalized?** Which cards/landmarks/questions/
-  status/upcoming items — and is the selection configured (a box config card? a
-  saved layout?) or derived? This is where most of the design work is.
-- **Display-optimized layout** — glanceable, larger type, wall-distance
-  readable, degrades to the Echo Show's aspect ratios (Show 5/8/10/15 differ).
-- **Read-only + touch drill-in** — the Echo Show is a touchscreen, so tapping a
-  tile can open detail; but it's a display, not the full app (no composer, no
-  destructive actions from the ambient view).
+Concretely (design to be worked out):
+
+- **A new box-local card type** (e.g. a `dashboard` card, schema under the box's
+  `config/schemas/`), whose body/fields describe what to show and how — the
+  agent writes and continuously updates it.
+- **A custom view attached to that card** — a view-widget (the
+  `callback-box/view-widgets` specifier; views are `?view=…` on the card's
+  `browse/<path>`, per our card-attached-view model) that renders the card as the
+  display surface. This is the "custom web page" the Echo Show points at.
+- **Agent-managed at an intimate level** — the agent decides what belongs on the
+  dashboard right now (priorities, what's stale, what to surface), and keeps the
+  card current on wakeups / as things change. The design question is how much the
+  card encodes *content* vs. *layout intent*, and how the agent is prompted to
+  tend it — this is closer to the "arrange context, don't automate judgment"
+  posture than to a fixed template.
+
+Still true regardless of the above:
+- **Display-optimized rendering** — glanceable, larger type, wall-distance
+  readable, degrades across Echo Show aspect ratios (Show 5/8/10/15 differ).
+- **Read-only + touch drill-in** — the Show is a touchscreen, so a tile can open
+  detail, but it's a display, not the full app (no composer, no destructive
+  actions from the ambient view).
 - **Refresh** — live-ish (SSE/poll) vs. periodic; a wall panel doesn't need
   per-keystroke reactivity.
 
-This piece deserves its own design pass; it's not just "the existing dashboard
-at a URL."
+This is the substantial, design-first piece: a card type + its view + the
+agent-tending model, not "the existing dashboard at a URL."
 
 ## 2. Auth for a shared, always-on device
 
