@@ -33,7 +33,7 @@ import { withCardLock } from "../../lib/card-lock.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { prepareBulkBatch, type PreparedBulkBatch } from "./prepare.js";
+import { prepareBulkBatch, bulkBatchSlug, bulkBatchCardRelPath } from "./prepare.js";
 import { buildUploadWrapper, resolveBulkDeliveryTarget } from "./deliver.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -94,8 +94,6 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
     return;
   }
 
-  const priorState = session.state;
-
   // No most-active fallback: the batch is bound to a specific chat. A target
   // that no longer resolves is a broken invariant — fail loudly, stay retryable.
   const target =
@@ -112,12 +110,34 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
     return;
   }
 
+  // At-most-once, probed FIRST: the batch card path is deterministic, so before
+  // mutating any state (a `delivering`→`preparing` reset would erase the "we
+  // already sent" signal and re-send on the next crash), check whether a prior
+  // run's `<upload>` message already landed. If the card exists AND its message
+  // is in the transcript, finish the bookkeeping without re-sending — exactly one
+  // <upload> ever reaches the chat. A first finalize has no card yet → skipped.
+  const contextDir = session.contextDir ?? "";
+  const cardRelPath = bulkBatchCardRelPath({ startedAt: session.createdAt, id, contextDir });
+  const batchSlug = bulkBatchSlug({ startedAt: session.createdAt, id });
+  if (await fileExists(path.join(boxRoot, cardRelPath))) {
+    const landed = await userMessageAlreadyLanded({
+      boxRoot,
+      sessionId: target.sessionId,
+      docPath: cardRelPath,
+      logPrefix: "bulk",
+    });
+    if (landed) {
+      await finishBulkDelivery({ boxRoot, id, cardRelPath, batchSlug });
+      return;
+    }
+  }
+
   await setStagingState({ boxRoot, id, state: "preparing" });
 
   const prepared = await prepareBulkBatch({
     boxRoot,
     id,
-    contextDir: session.contextDir ?? "",
+    contextDir,
     failedItems,
   });
   if (prepared === null) return; // Session vanished mid-prepare.
@@ -129,22 +149,6 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
     failedCount: prepared.counts.failed,
     summary: prepared.summary,
   });
-
-  // Resuming mid-delivery: a prior run may have sent (or enqueued+drained)
-  // before persisting `delivered`. If the message already landed, finish the
-  // bookkeeping without re-sending (no duplicate <upload> message).
-  if (priorState === "delivering") {
-    const landed = await userMessageAlreadyLanded({
-      boxRoot,
-      sessionId: target.sessionId,
-      docPath: prepared.cardRelPath,
-      logPrefix: "bulk",
-    });
-    if (landed) {
-      await finishBulkDelivery({ boxRoot, id, prepared });
-      return;
-    }
-  }
 
   // Mark `delivering` BEFORE send/enqueue so a crash between send and the
   // `delivered` write is recoverable via the at-most-once probe above.
@@ -176,7 +180,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   // transcript before cleanup, and re-delivers if a crash lost the queue. A
   // completed non-busy send is durably in the transcript → finish now.
   if (queued) return;
-  await finishBulkDelivery({ boxRoot, id, prepared });
+  await finishBulkDelivery({ boxRoot, id, cardRelPath: prepared.cardRelPath, batchSlug: prepared.batchSlug });
 }
 
 /**
@@ -186,12 +190,23 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
 async function finishBulkDelivery(opts: {
   boxRoot: string;
   id: string;
-  prepared: PreparedBulkBatch;
+  cardRelPath: string;
+  batchSlug: string;
 }): Promise<void> {
-  const { boxRoot, id, prepared } = opts;
-  await markUploadBatchDelivered({ boxRoot, cardRelPath: prepared.cardRelPath, batchSlug: prepared.batchSlug });
+  const { boxRoot, id, cardRelPath, batchSlug } = opts;
+  await markUploadBatchDelivered({ boxRoot, cardRelPath, batchSlug });
   await setStagingState({ boxRoot, id, state: "delivered" });
   await cleanupStagingSession({ boxRoot, id });
+}
+
+/** True when a file exists at `absPath`. */
+async function fileExists(absPath: string): Promise<boolean> {
+  try {
+    await fs.access(absPath);
+    return true;
+  } catch (_e) {
+    return false;
+  }
 }
 
 /** Flip the committed batch card `new` → `delivered` under the card lock, then

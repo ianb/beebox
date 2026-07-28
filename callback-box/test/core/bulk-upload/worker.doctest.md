@@ -19,6 +19,7 @@ import {
   createStagingSession,
   addFile,
   sealStagingSession,
+  setStagingState,
   readStagingSession,
 } from "../../../src/core/capture/staging-store.js";
 import { prepareAndDeliverBulkBatch } from "../../../src/core/bulk-upload/worker.js";
@@ -226,6 +227,64 @@ JSON.stringify({
   delivered: (await box.read(cardRel)).includes("status: delivered"),
 })
 => {"enqueued":1,"sends":0,"uploadLines":1,"stagingGone":true,"delivered":true}
+```
+
+```ts cleanup
+eventBus.close();
+await box.cleanup();
+```
+
+## At-most-once: a crash that reset state to `preparing` after delivery still doesn't re-send
+
+The dangerous window the reorder closes: a resume that already delivered but whose
+state was reset to `preparing` before the transcript probe (a crash mid-prepare).
+Because the probe now runs FIRST — off the deterministic card path, before any
+state mutation — the already-landed message is detected and the batch just
+finishes bookkeeping, never a second `<upload>`.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await appendHistory(box.root, { sessionId: "s-known" });
+const id = await stageSealedBulk(box.root, { target: "s-known" });
+
+const logPath = await resolveSessionLogPath(box.root, "s-known");
+await mkdir(dirname(logPath), { recursive: true });
+await writeFile(logPath, "");
+
+// First run: busy agent enqueues (message drains into the transcript); staging
+// stays retained in `delivering`.
+let busy = true;
+const session = {
+  isBusy: () => busy,
+  enqueue: async (input) => { await appendFile(logPath, JSON.stringify({ type: "user", text: input.text }) + "\n"); },
+  getSessionId: () => "s-known",
+  send: async () => { throw new Error("send should not be called"); },
+};
+const eventBus = createEventBus(box.root);
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+(await readStagingSession({ boxRoot: box.root, id })).state
+=> delivering
+```
+
+Force the state to `preparing` (exactly what the old reset-then-probe order left
+behind) and re-fire with a live send counter. The probe finds the `<upload>`
+already in the transcript, so no send happens and the batch finishes:
+
+```ts continue
+await setStagingState({ boxRoot: box.root, id, state: "preparing" });
+busy = false;
+let sends = 0;
+session.send = async () => { sends += 1; return true; };
+await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry: mockRegistry(session) });
+
+const cardRel = await batchCardRel(box);
+JSON.stringify({
+  sends,
+  uploadLines: (await readFile(logPath, "utf-8")).split("\n").filter((l) => l.includes("<upload ")).length,
+  stagingGone: (await readStagingSession({ boxRoot: box.root, id })) === null,
+  delivered: (await box.read(cardRel)).includes("status: delivered"),
+})
+=> {"sends":0,"uploadLines":1,"stagingGone":true,"delivered":true}
 ```
 
 ```ts cleanup

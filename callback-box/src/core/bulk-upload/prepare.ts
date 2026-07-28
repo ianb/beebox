@@ -261,7 +261,7 @@ async function recoverSummaryFromCard(cardAbsPath: string): Promise<BatchSummary
 }
 
 /** Deterministic `upload-YYYYMMDDTHHMM-<shortId>` slug (mirrors capture's). */
-function bulkBatchSlug(opts: { startedAt: string; id: string }): string {
+export function bulkBatchSlug(opts: { startedAt: string; id: string }): string {
   const datePart = new Date(opts.startedAt).toISOString().slice(0, 16).replace(/[:-]/g, "");
   const formattedDate = `${datePart.slice(0, 8)}T${datePart.slice(9, 13)}`;
   return `upload-${formattedDate}-${opts.id.slice(0, 8)}`;
