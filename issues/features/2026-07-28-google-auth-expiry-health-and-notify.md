@@ -3,13 +3,13 @@ title: "Detect dead Google auth in health + notify the user with a clear re-auth
 area: callback-box
 filed-by: agent
 needs: [manual-testing]
-design: ../../callback-box/docs/plans/google-auth-reauth-health.md
+design: ../../callback-box/docs/implemented-plans/google-auth-reauth-health.md
 discovered-in: main session — boxholder, after the Google OAuth thread
 ---
 
 **Implemented** on `worktree-google-reauth-health` — design and the decisions
 behind it are in
-[google-auth-reauth-health](../../callback-box/docs/plans/google-auth-reauth-health.md).
+[google-auth-reauth-health](../../callback-box/docs/implemented-plans/google-auth-reauth-health.md).
 
 Still needs manual testing, which an agent can't do: **revoke the box's Google
 grant** (myaccount.google.com → Security → Third-party apps → remove access, or

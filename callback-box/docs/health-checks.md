@@ -34,7 +34,7 @@ On a flip to broken, the boxholder gets one notification per breakage over
 Telegram/Web Push. Reconnecting (admin page, or `cb google-auth --reauth`) clears
 the state and re-arms the alert for a future relapse. Operator-facing detail is
 in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
-notes in [`plans/google-auth-reauth-health.md`](plans/google-auth-reauth-health.md).
+notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
 
 ## claude-update (nightly Claude Code self-update)
 

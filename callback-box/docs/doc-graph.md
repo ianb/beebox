@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-28T13:40:25Z
-Total documents: 208
+Generated: 2026-07-28T23:34:34Z
+Total documents: 209
 
 ## Issues
 
@@ -555,6 +555,7 @@ Referenced by:
 - docs/implemented-plans/remove-open-mode.md:49 (mention) — `docs/agent-install.md`, implemented-plans (historical — leave those).
 - docs/implemented-plans/tailscale-expose-and-protect.md:551 (mention) — surface is `docs/agent-install.md`'s existing "widening exposure is a real
 - docs/plans/github-pages-site.md:225 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
+- ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:52 (mention) — - `docs/developer-install.md`, `docs/docker-install.md`, `docs/agent-install.md`
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:26 (link) — handing [the agent install guide](../../callback-box/docs/agent-install.md)
 - ../issues/features/2026-07-19-installation-remaining-work.md:22 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
 - ../issues/features/2026-07-20-export-md-agent-instructions.md:19 (link) — [agent-install](../../callback-box/docs/agent-install.md) (agent adapts
@@ -800,7 +801,7 @@ Referenced by:
 
 #### docs/developer-install.md
 
-Title: "Developer install (from source)" | 142 lines
+Title: "Developer install (from source)" | 144 lines
 
 Referenced by:
 - CLAUDE.md:128 (mention) — | Developer install (from source) | `docs/developer-install.md` |
@@ -809,6 +810,7 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:539 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:79 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
+- ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:11 (mention) — (`developer-install.md`, `docker-install.md`), and added to the agent's
 - ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
 
 References:
@@ -829,7 +831,7 @@ Referenced by:
 
 #### docs/docker-install.md
 
-Title: "Docker install (local + VPS)" | 258 lines
+Title: "Docker install (local + VPS)" | 259 lines
 
 Referenced by:
 - CLAUDE.md:129 (mention) — | Docker install (local + VPS) | `docs/docker-install.md` |
@@ -841,6 +843,7 @@ Referenced by:
 - docs/implemented-plans/tailscale-expose-and-protect.md:74 (mention) — - **The documented-but-untested path.** `callback-box/docs/docker-install.md:119`
 - docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
+- ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:11 (mention) — (`developer-install.md`, `docker-install.md`), and added to the agent's
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:31 (mention) — `docs/docker-install.md`. Interacts with the deferred npm-publish rung
 - ../issues/features/2026-07-19-installation-remaining-work.md:17 (mention) — - Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
 
@@ -975,25 +978,30 @@ References:
 
 #### docs/google-setup.md
 
-Title: "Google Cloud Console Setup" | 138 lines
+Title: "Google Cloud Console Setup" | 162 lines
 
 Referenced by:
 - docs/gmail-setup.md:14 (mention) — If the server doesn't show the Google Services section at all, OAuth client credentials haven't been configured server-w
 - docs/google-drive.md:7 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
+- docs/health-checks.md:36 (link) — in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
+- docs/implemented-plans/google-auth-reauth-health.md:127 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
 - docs/plans/docs-reorg.md:210 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
+- ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:23 (mention) — - `docs/google-setup.md` already walks an operator through consent screen +
 
 References:
 - → docs/gmail-setup.md (mention)
 - → docs/google-drive.md (mention)
 - → docs/calendar.md (mention)
+- → docs/implemented-plans/google-auth-reauth-health.md (link)
 
 #### docs/health-checks.md
 
-Title: "Health Checks" | 70 lines
+Title: "Health Checks" | 94 lines
 
 Referenced by:
 - CLAUDE.md:150 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
 - deploy/README.md:38 (link) — localhost (see [`../docs/health-checks.md`](../docs/health-checks.md)): it polls
+- docs/implemented-plans/google-auth-reauth-health.md:127 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:4 (mention) — canary route all shipped; see `docs/health-checks.md` for the current
 - docs/implemented-plans/tailscale-expose-and-protect.md:414 (mention) — on the server plus a short runbook note in `docs/health-checks.md`'s style
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
@@ -1005,6 +1013,8 @@ Referenced by:
 
 References:
 - → deploy/README.md (link)
+- → docs/google-setup.md (link)
+- → docs/implemented-plans/google-auth-reauth-health.md (link)
 - → docs/server-operations.md (link)
 
 #### docs/image-orientation.md
@@ -1324,7 +1334,7 @@ Title: "Server Operations" | 225 lines
 
 Referenced by:
 - CLAUDE.md:156 (mention) — | Server operations | `docs/server-operations.md` |
-- docs/health-checks.md:19 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
+- docs/health-checks.md:43 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:499 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/plans/docs-reorg.md:91 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
@@ -2104,7 +2114,7 @@ References:
 Title: "Make the shared dev router safely exposable over Tailscale" | 568 lines
 
 Referenced by:
-- docs/docker-install.md:192 (mention) — router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
+- docs/docker-install.md:193 (mention) — router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
 - docs/implemented-plans/expose-dev-router.review.md:4 (mention) — `expose-dev-router.md`, 2026-07-21. **Verdict: unsafe as written — do not
 - ../bin/CLAUDE.md:79 (mention) — `callback-box/docs/implemented-plans/expose-dev-router.md`.
 - ../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md:10 (mention) — `expose-dev-router` plan (`callback-box/docs/implemented-plans/expose-dev-router.md`),
@@ -2165,6 +2175,22 @@ Referenced by:
 
 References:
 - → docs/connectors.md (mention)
+
+#### docs/implemented-plans/google-auth-reauth-health.md
+
+Title: "Dead Google auth as a first-class health + notify condition" | 138 lines
+
+Referenced by:
+- docs/google-setup.md:147 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+- docs/health-checks.md:37 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+- ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:6 (mention) — design: ../../callback-box/docs/implemented-plans/google-auth-reauth-health.md
+- ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:12 (link) — [google-auth-reauth-health](../../callback-box/docs/implemented-plans/google-auth-reauth-health.md).
+
+References:
+- → ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md (link)
+- → ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md (link)
+- → docs/google-setup.md (mention)
+- → docs/health-checks.md (mention)
 
 #### docs/implemented-plans/hub-healthz-box-aggregation.md
 
