@@ -205,6 +205,37 @@ JSON.stringify({ registered: reg.body.registered, upload: ok.statusCode })
 await ctx.cleanup();
 ```
 
+## Reserved control-file names are rejected (400)
+
+The staging filename (`X-Upload-Filename`) can't claim the session's own control
+files: `session.json` (the manifest — overwriting it would silently substitute
+content), a `session.json.`-prefixed sibling, `.gitignore`, or any dot-leading
+hidden name is refused before any bytes land.
+
+```ts
+const ctx = await makeTestServer();
+const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
+const sessionId = created.body.sessionId;
+
+const names = ["session.json", "session.json.corrupt", ".gitignore", ".hidden"];
+const codes = [];
+for (const name of names) codes.push((await uploadItem(ctx, { sessionId, itemId: "a", filename: name, data: Buffer.from("X") })).statusCode);
+JSON.stringify(codes)
+=> [400,400,400,400]
+```
+
+The manifest is untouched — the upload never overwrote it:
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+JSON.stringify({ kind: manifest.kind, files: manifest.files.length })
+=> {"kind":"bulk","files":0}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 ## Exceeding the per-session byte cap returns 413
 
 Seeding the accumulated bytes to the cap makes a single-byte upload tip it over,

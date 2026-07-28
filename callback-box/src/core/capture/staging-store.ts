@@ -35,11 +35,28 @@ export {
 };
 
 /**
+ * Reject staged filenames that would collide with the session's own control
+ * files. `session.json` (and its `.corrupt`/`.tmp-*` siblings under the
+ * `session.json.` prefix) is the manifest — letting an upload claim it would
+ * overwrite the manifest with attacker-controlled bytes (silent content
+ * substitution). A batch-local `.gitignore` guards the attach scope, and any
+ * dot-leading name is a hidden/control file with no legitimate staging use.
+ */
+function assertStagingFilename(filename: string): void {
+  const reserved =
+    filename === "session.json" ||
+    filename.startsWith("session.json.") ||
+    filename.startsWith(".");
+  if (reserved) throw new StagingPathError(filename);
+}
+
+/**
  * Resolve an upload filename inside the session directory, refusing any path
- * that escapes it. The route validates first for a clean 400; this re-guards
- * as a defense-in-depth invariant.
+ * that escapes it OR claims a reserved control-file name. The route validates
+ * first for a clean 400; this re-guards as a defense-in-depth invariant.
  */
 export function resolveStagedFile(opts: { boxRoot: string; id: string; filename: string }): string {
+  assertStagingFilename(opts.filename);
   const dir = path.resolve(stagingSessionDir(opts.boxRoot, opts.id));
   const resolved = path.resolve(dir, opts.filename);
   if (resolved !== dir && !resolved.startsWith(dir + path.sep)) {
