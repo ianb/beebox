@@ -26,7 +26,10 @@ Three requirements added by the boxholder beyond the original filing:
 - **Summaries extend rather than regenerate.** Not just a preference: the
   transcript renderer elides the middle over 40k chars, and 73% of
   review-eligible sessions are already past that cap — so a from-scratch
-  re-read literally cannot see the middle of the conversation.
+  re-read literally cannot see the middle of the conversation. The accumulating
+  record lives in a **new global card field, `contains-evidence`** (optional on
+  every card type, like `contains` itself); `contains` stays one sentence,
+  regenerated from it.
 
 Chat sessions currently leave transcripts but no synthesized residue. A nightly (or end-of-session-plus-delay) compaction pass would extract what's worth keeping: decisions made, action items, hunches formed, things learned about the boxholder, things to follow up on. The standard auto-compaction in chat systems is generic; for callback-box it should be driven by a *custom compaction message* shaped to extract the things this system cares about, not generic compression.
 

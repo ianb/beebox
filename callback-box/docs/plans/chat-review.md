@@ -5,9 +5,15 @@
 A nightly pass that reads chat sessions which have accumulated enough *new*
 material since it last read them, and writes back to the session's husk card:
 a **title** (an information-dense one-liner replacing the current
-first-message-snippet label), a **`contains`** sentence, and a **running
+first-message-snippet label), a one-sentence **`contains`**, and a **running
 account** of what the conversation amounted to — decisions, open threads,
 follow-ups.
+
+The account needs somewhere to live that isn't `contains` (which is capped at
+one sentence and embedded for search), so the plan also adds one new **global
+card field, `contains-evidence`** — optional on every card type, holding the
+detail a card's `contains` was derived from. Generic by design; chat review is
+just its first consumer.
 
 The pass is **incremental**: it keeps a cursor into the transcript, reads only
 the span past the cursor, and *extends* the account it wrote last time rather
@@ -27,7 +33,7 @@ this plan resolves that issue's `needs: [design]`.
     transcript, model failure, leak-scan rejection) must leave the session
     usable and say so, not fail the run and not fail silently.
   - **#8 One way to do each thing.** There are currently *two* session-list
-    codepaths with different labelling behaviour (Track C). Adding a title
+    codepaths with different labelling behaviour (Track D). Adding a title
     without unifying them would make it three.
   - **#10 Testability is architectural.** The reviewer goes behind an interface
     with a scripted fake, as `RetroObserver` already does
@@ -100,11 +106,41 @@ session, not an ongoing one, and it is not worth engineering around.
   can be found inside this card; the prime retrieval field for search and
   listings"*, each `z.string().optional()` on every card type. So
   `src/schemas/chat.ts:16-22` not listing them is correct, not a gap.
-  **Reuse both; add no fields.**
+  **Reuse both.** (A third global field is *added* — see Track B.)
+- `src/core/search/contains-update.ts:118-131` `setContains` — the single write
+  path for `contains`: it rewrites the frontmatter, recomputes the basis, and
+  rebases the staleness sidecar in one place. **Reuse**, extended to carry
+  evidence (Track B), rather than having chat review write frontmatter directly
+  and leave the sidecar inconsistent.
+
+**`contains` is not a plain string field — the surrounding machinery constrains
+this design.** Found while checking whether an accumulating `contains` was
+viable:
+
+- `src/core/card-lint.ts:227-228` — *"Soft budget for the `contains` field — one
+  concise sentence, not a summary essay"*, `CONTAINS_MAX_CHARS = 200`, warning
+  above that. An accumulating `contains` would breach this on the second pass.
+  This is the hard confirmation of the earlier critique.
+- `src/core/search/query.ts:21-22` — `contains` is embedded and searched with
+  `BOOST = { contains: 3, title: 2 }`, and the hybrid cutoff `SIMILARITY = 0.35`
+  was *empirically validated* against real embeddings (lines 24-35: *"query↔target
+  `contains` cosines ran 0.467-0.682, off-target median 0.161 / max 0.470"*).
+  Anything that changes what gets embedded perturbs a tuned, measured surface.
+- `src/core/search/contains-state.ts:40` —
+  `BASIS_EXCLUDED_FIELDS = new Set(["contains", "title", "type", "status"])`,
+  the fields that *"never count toward the contains basis"*, because (lines 9-11)
+  they are *"the derived fields"* and including them would flag a still-true
+  `contains` as stale. A new derived field that is not added here creates a
+  staleness loop — see Track B.
+- `src/connectors/preserve-agent-fields.ts:15` — `AGENT_FIELDS = ["contains"]`,
+  re-injected before a connector sync rebuilds a card. `src/connectors/CLAUDE.md:19`
+  spells out the consequence: *"Adding a new agent-owned field to a
+  connector-managed card type means adding it to that list, not just writing it
+  once and hoping the next sync leaves it alone."*
 - `src/publish/leak-scan.ts` — a **pure** function over a text file map
   returning `LeakFinding[]` for home-dir paths, non-allowlisted emails,
   credential shapes and absolute URLs. **Reuse** as the mechanical backstop on
-  generated titles (Track B), by handing it a one-entry map.
+  generated titles (Track C), by handing it a one-entry map.
 - `src/schemas/scheduled-script.tsx:48` `ScheduledScriptSchema` + `cb tick`
   (`src/cli/commands/tick.ts`) — how a nightly job is expressed. Shipped
   schedules are **defined in code**, not as template card files:
@@ -153,7 +189,7 @@ session, not an ongoing one, and it is not worth engineering around.
 
 `src/frontend/src/api-chat.ts:158` (`trpcClient.chat.sessions.query()`) is the
 title-blind one, and it is what `SessionListButton.tsx` renders. Generated titles
-are invisible in the chat history dropdown until Track C lands.
+are invisible in the chat history dropdown until Track D lands.
 
 ---
 
@@ -185,7 +221,7 @@ are invisible in the chat history dropdown until Track C lands.
   [When Prompts Leak Secrets](https://www.keysight.com/blogs/en/tech/nwvs/2025/08/04/pii-disclosure-in-user-request) —
   which is a different problem (scrubbing tokens *before* the model sees them,
   not asking the model to write a *discreet* label about content it has fully
-  read). This empty search is itself a finding: the reviewer prompt (Track B) is
+  read). This empty search is itself a finding: the reviewer prompt (Track C) is
   the artifact carrying the whole requirement, with no external design to copy.
   It should be iterated against real transcripts, not written once.
 - **The project's own precedent says the regex backstop cannot carry this.**
@@ -215,8 +251,8 @@ runs) sharing `~/.claude/projects/`.
 **Vocabulary lock-ins.**
 
 - The subsystem is **chat review** — `cb chat review`,
-  `src/core/chat/review/`, `.callback-box/chat-review/`, and a `## Review`
-  section on the husk.
+  `src/core/chat/review/`, `.callback-box/chat-review/`, and the husk's
+  `contains-evidence` field.
 - It is **never called "compaction"** in code, comments, or docs.
   That word is already taken for the SDK's context-window compaction:
   `src/cli/lib/session-text.ts:22-27` `isCompactionSummary()` detects *"This
@@ -274,7 +310,7 @@ const CursorSchema = z.object({
 const ReviewSessionStateSchema = z.object({
   /** Keyed by consumer; "metadata" is the only one this plan ships. */
   cursors: z.record(z.string(), CursorSchema),
-  /** sha256 of the title we wrote, so a hand-edit is detectable. See Track B. */
+  /** sha256 of the title we wrote, so a hand-edit is detectable. See Track C. */
   titleHash: z.string().nullable(),
   /** Consecutive failures; at MAX_REVIEW_ATTEMPTS the session is skipped. */
   attempts: z.number().int(),
@@ -310,7 +346,75 @@ verifiable.
 
 ---
 
-### Track B — The reviewer: title, `contains`, and the running account
+### Track B — A new global card field: `contains-evidence`
+
+**What.** Add `contains-evidence` to `GLOBAL_CARD_FIELDS` — an optional field on
+every card type holding the accumulated detail its one-sentence `contains` was
+derived from. Generic, like `contains` itself; most cards will never set it.
+
+**Why this needs to change.** Chat review needs somewhere to accumulate the
+running account, and `contains` cannot be that place — `CONTAINS_MAX_CHARS = 200`
+(`src/core/card-lint.ts:228`) makes an accumulating `contains` a lint warning by
+the second pass, and it would degrade the embedded retrieval surface that
+`query.ts:24-35` tuned and measured. The generic framing is deliberate: any card
+whose `contains` is derived from something can show its work, and the field
+carries no chat-specific structure.
+
+**Vocabulary lock-in.** The key is **`contains-evidence`** — kebab-case, matching
+every multi-word frontmatter key in the codebase (`context-dir`, `not-before`,
+`lock-group`, `create-after-success`, `answered-at`, …; a scan of `src/schemas/`
+found no camelCase or snake_case key). Type `z.string().optional()`, same as
+`contains`.
+
+**Direction.** The field is optional and unused by default. Wiring it correctly
+means four edits beyond the declaration, each forced by machinery above:
+
+1. `src/cards/schema.ts` `GLOBAL_CARD_FIELDS` — the declaration, with a doc
+   comment stating it is *derived detail backing `contains`*, not a second
+   summary.
+2. **`src/core/search/contains-state.ts:40` `BASIS_EXCLUDED_FIELDS`** — add
+   `"contains-evidence"`. **This is load-bearing, and omitting it is a silent
+   bug:** the basis hash is what decides whether a card's `contains` went stale.
+   Evidence is derived *alongside* `contains`, so if it counted toward the basis,
+   every review pass that extended the evidence would move the basis, flag the
+   just-written `contains` as stale, and invite a rewrite that moves the basis
+   again. A self-sustaining staleness loop, on the exact cards the review touches
+   most.
+3. `src/connectors/preserve-agent-fields.ts:15` `AGENT_FIELDS` — add
+   `"contains-evidence"`, per the rule quoted from `src/connectors/CLAUDE.md:19`.
+   Chat husks are not connector-managed, so this does not matter *today*; it is
+   the field's general contract, and the alternative is a field that silently
+   survives on some card types and not others.
+4. `src/core/search/contains-update.ts` `setContains` — accept optional evidence
+   and write both fields in the one call that already rebases the sidecar, so
+   there is one write path rather than two (principle #8).
+
+**Not searched, not embedded.** `contains-evidence` is deliberately *not* added
+to `TEXT_PROPERTIES` or `BOOST` (`src/core/search/query.ts:22,43`). The vector
+half's cutoff was validated against `contains`-shaped text — one sentence per
+card — and admitting a long accumulating field would change both the embedding
+corpus and the score distribution that `SIMILARITY = 0.35` was fitted to. It is
+backing detail, not a retrieval surface. Recorded as an open question rather than
+a closed one, since it is a plausible future want.
+
+**No lint budget.** `lintContainsLength` stays scoped to `contains`. An evidence
+field is *expected* to be long; the cap that matters is the per-consumer one
+(chat review's ~40-item account, Track C).
+
+**No hand-edit protection**, per the boxholder: `contains` and its evidence are
+machine-maintained and not expected to be hand-edited, unlike `title`. Stated
+here as an assumption the design rests on, so that if hand-editing does emerge,
+this is the line to revisit.
+
+**First implementation chunk.** The declaration plus the four wirings, a lint
+doctest asserting the 200-char budget still applies to `contains` and not to
+`contains-evidence`, and a search doctest asserting that setting
+`contains-evidence` does **not** mark a card's `contains` stale — the regression
+anchor for the staleness loop.
+
+---
+
+### Track C — The reviewer: title, `contains`, and the running account
 
 **What.** One tool-less structured LLM call per qualifying session, receiving the
 previous account and *only the new span*, returning an updated title, `contains`,
@@ -332,17 +436,26 @@ Where each output lives, and why:
 | Output | Home | Extends? |
 |---|---|---|
 | `title` | husk `title` (global field) | Replaced when stale, else kept |
-| `contains` | husk `contains` (global field) | **Regenerated from the account** each pass |
-| the account | husk body, `## Review` section | **Extends** — the previous list is input |
+| `contains` | husk `contains` (global field) | **Regenerated from the evidence** each pass |
+| the account | husk `contains-evidence` (global field, Track B) | **Extends** — the previous account is input |
 
-`contains` is regenerated rather than accumulated, and that is a deliberate
-departure worth naming. The requirement — that re-summarizing must not lose what
-earlier passes knew — is satisfied by the *account* extending. Deriving the
-one-sentence `contains` from the accumulated account (never from a re-read of an
-elided transcript) means it inherits that completeness while staying what the
-global field is documented to be: *"one sentence … the prime retrieval field for
-search and listings"*. An accumulating `contains` would grow into a paragraph and
-degrade the listing surface it exists to serve.
+`contains` is regenerated rather than accumulated. The requirement — that
+re-summarizing must not lose what earlier passes knew — is satisfied by the
+*evidence* extending. Deriving the one-sentence `contains` from the accumulated
+evidence (never from a re-read of an elided transcript) means it inherits that
+completeness while staying what the global field is documented to be and what
+`CONTAINS_MAX_CHARS = 200` enforces: one sentence, the prime retrieval field.
+
+The account lives in `contains-evidence` rather than a `## Review` section of the
+husk body, which is a simplification worth naming: there is no body splicing, no
+section-boundary parsing, no risk of clobbering surrounding prose the boxholder
+wrote, and the husk body stays entirely the boxholder's. The husk schema already
+describes the body as theirs — *"use the body for durable notes about the
+conversation"* (`src/schemas/chat.ts:31`) — and this keeps that true.
+
+Chat review is the first consumer of `contains-evidence`, and the prompt
+instructs that it **should** be set here even though the field is optional in
+general.
 
 Output shape:
 
@@ -366,9 +479,6 @@ delta format could only append, which would leave the account accumulating
 contradictions. The model is instructed to carry forward, revise, or drop, and
 to merge the least durable items when the list exceeds a cap (~40) so it cannot
 grow without bound.
-
-Only the `## Review` section of the husk body is replaced; anything the
-boxholder or an agent wrote outside it is preserved.
 
 **Sensitivity is the prompt's job, and the prompt is the deliverable.** Titles
 must read as if written for a semi-public audience, because session lists surface
@@ -400,9 +510,9 @@ Prompt rules (the artifact to iterate; first draft):
 
 `contains` is held to the same standard and the same audience — it feeds search
 and listings, so it is *more* exposed than the title, not less. The account is
-held to a looser standard: it lives in the husk body, which is not a listing
-surface, but it is still git-tracked and pushed, so the "no third-party names,
-no identifiers" rules apply there too.
+held to a looser standard: `contains-evidence` is not a listing surface and is
+not embedded for search, but it is still git-tracked and pushed, so the "no
+third-party names, no identifiers" rules apply there too.
 
 **Mechanical backstop.** Generated `title` and `contains` go through
 `src/publish/leak-scan.ts` as a one-entry file map. A finding of kind `email`,
@@ -440,13 +550,13 @@ previous account and the same material) rather than skipping it forever.
 
 **First implementation chunk.** `src/core/chat/review/reviewer.ts` (interface +
 SDK implementation + prompt), `husk-write.ts` (husk read-modify-write through
-`withCardLock` per code-style, including `## Review` section splicing), `run.ts`
+`withCardLock` per code-style, writing through the extended `setContains`), `run.ts`
 (orchestration), `cb chat review run [--max-sessions] [--dry-run]` mirroring
 `src/cli/commands/retro.ts:68-118`.
 
 ---
 
-### Track C — One session-list codepath
+### Track D — One session-list codepath
 
 **What.** Make `chat.sessions` title-aware, so generated titles actually appear
 in the chat history dropdown.
@@ -471,7 +581,7 @@ route doctest asserting a husk title wins over a first-message snippet in
 
 ---
 
-### Track D — The nightly schedule
+### Track E — The nightly schedule
 
 **What.** Ship a default schedule so boxes can run the review overnight.
 
@@ -517,16 +627,17 @@ distinctiveness at once, that becomes a subplan then.
 |---|---|---|---|
 | Title accurately names a private topic (health, money, a third party) in a way no regex can catch | No — not testable | Prompt rules; boxholder can edit the husk title | **Silent** — accepted residual risk, see below |
 | Transcript rewritten below the cursor (SDK auto-compaction, `--resume` fork, `~/.claude` cleared) | Yes — Track A doctest with a shrinking fixture | Zero the cursor, keep the account, re-review | Clear (`console.warn`) |
-| Model drops or contradicts earlier account items when extending | Yes — Track B doctest asserting prior items survive an empty new span | Prompt instructs carry-forward-or-revise; prior account is in the prompt | Partially silent — the account is human-readable on the husk, so drift is visible on inspection |
-| Account grows without bound over a long-lived session | Yes — Track B doctest at the cap | ~40-item cap; model merges least-durable items | Clear (the cap is visible in the output) |
+| Model drops or contradicts earlier account items when extending | Yes — Track C doctest asserting prior items survive an empty new span | Prompt instructs carry-forward-or-revise; prior account is in the prompt | Partially silent — the account is human-readable on the husk, so drift is visible on inspection |
+| Account grows without bound over a long-lived session | Yes — Track C doctest at the cap | ~40-item cap; model merges least-durable items | Clear (the cap is visible in the output) |
 | Husk written but cursor write fails (crash between) | No | Ordering: husk first, cursor second → the span is re-reviewed, not skipped | Clear by construction |
-| Transcript deleted between eligibility and render | Yes — Track B doctest | Skip the session, no cursor write, retried next run | Clear (warn), matches `retro/scan.ts:65-68` |
-| Model returns a title that fails leak-scan | Yes — Track B doctest | Keep previous title, still write `contains` and account | Clear (warn naming the finding kind) |
+| Transcript deleted between eligibility and render | Yes — Track C doctest | Skip the session, no cursor write, retried next run | Clear (warn), matches `retro/scan.ts:65-68` |
+| Model returns a title that fails leak-scan | Yes — Track C doctest | Keep previous title, still write `contains` and account | Clear (warn naming the finding kind) |
 | Model call fails or exceeds budget | Yes — fake throws | `attempts += 1`; at `MAX_REVIEW_ATTEMPTS` the session is skipped permanently and reported | Clear, mirrors `retro/state.ts:19` |
-| Boxholder hand-edits a title; review overwrites it | Yes — Track B doctest asserting hands-off | `titleHash` comparison | Clear — and it is the *absence* of an action |
+| Boxholder hand-edits a title; review overwrites it | Yes — Track C doctest asserting hands-off | `titleHash` comparison | Clear — and it is the *absence* of an action |
 | Husk missing for a session (never created, or deleted as editorial removal) | Yes | Skip; do not resurrect a husk the boxholder deleted | Clear (debug-level; deletion is intentional) |
 | Two runs concurrently (manual `cb chat review run` during the scheduled one) | No | `withCardLock` on the husk; `lockGroup` on the schedule card | Partially silent — see below |
-| `## Review` splice clobbers the boxholder's own body prose | Yes — Track B doctest with pre-existing body | Only the `## Review` section is replaced | Clear |
+| `contains-evidence` counted toward the contains basis → every pass flags the just-written `contains` stale, forever | Yes — Track B search doctest | `BASIS_EXCLUDED_FIELDS` includes it | **Silent if missed** — no error, just a permanently-stale card; the doctest is the only guard |
+| A connector sync rebuilds a card and drops its `contains-evidence` | No — no connector-managed card sets it today | `AGENT_FIELDS` re-injects it | Clear (the field would visibly vanish) |
 
 **Accepted residual risk — title discretion.** No mechanism can verify a
 generated title is discreet enough, because the judgement is about content the
@@ -547,11 +658,15 @@ the realistic case.
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field** — **ADDRESSED.** No new fields and no new tags:
-  `title` and `contains` are `GLOBAL_CARD_FIELDS`, so there is no new choice for
-  an agent to get wrong. The adjacent hazard — an agent writing prose into the
-  husk body outside the `## Review` section — is harmless by design (that prose
-  is preserved).
+- **Wrong tag / wrong field** — **PARTIALLY ADDRESSED.** `title` and `contains`
+  are existing global fields, but `contains-evidence` is genuinely new, and a new
+  optional field on *every* card type is a new way for an agent to be wrong: the
+  plausible error is treating it as a second `contains` (a free-form summary) or
+  as general scratch space. Mitigations: the field's doc comment in
+  `GLOBAL_CARD_FIELDS` states it is derived detail backing `contains`, and the
+  knowledge audit below tests exactly this confusion. The husk *body* stays
+  entirely the boxholder's, so there is no longer any agent-vs-machine contention
+  over it at all.
 - **Stale ref** — **ADDRESSED.** The husk's `session` field may point at a
   transcript that is gone; `listChatHusks` tolerates this and `chat.ts:157-159`
   skips such sessions (*"log missing — session was cleaned up; nothing to
@@ -627,8 +742,9 @@ the realistic case.
   every eligible session, which *is* the backfill — under the same gate, so short
   old sessions stay snippet-labelled. Intended outcome, not a shortfall.
 - **A UI for browsing or editing accounts.** The husk card renders today
-  (`src/frontend/src/components/chat-husk/ChatHuskView.tsx`) and the `## Review`
-  section renders as markdown within it. A dedicated surface is not required for
+  (`src/frontend/src/components/chat-husk/ChatHuskView.tsx`); whether it shows
+  `contains-evidence`, and whether *any* card renderer should, is a display
+  question for whenever a second consumer of the field appears. Not required for
   the feature to be useful.
 - **Deleting or trimming transcripts.** Space-reclaiming compaction is not what
   this is; `~/.claude` is untouched.
@@ -637,16 +753,20 @@ the realistic case.
 
 ## Open design questions
 
-- **Should a hand-edited *account* also be protected, the way the title is?**
-  The title has `titleHash`; the `## Review` section does not, so a boxholder who
-  corrects a confabulated note would see it overwritten next pass. Hashing the
-  section is the same cheap trick, but it would also freeze the account
-  permanently on first correction, which defeats the point of an extending
-  record. **Lean:** ship without it, and instead feed the *current* section
-  (whatever it now says, corrections included) back as the model's input — a
-  correction then propagates forward instead of being reverted, which is the
-  behaviour actually wanted. Worth confirming this reads as intended once there
-  are real accounts to look at.
+- **Should `contains-evidence` be searchable or embedded?** Ruled out for now
+  (Track B): the vector half's `SIMILARITY = 0.35` cutoff was fitted against
+  one-sentence `contains` text, and admitting a long accumulating field would
+  change both the embedding corpus and the score distribution it was validated
+  on. **Lean:** keep it out until someone wants it, and if they do, re-run the
+  validation in `docs/plans/semantic-search.md` § Rollout rather than adding it
+  to `TEXT_PROPERTIES` and hoping.
+- **Hand-edited `contains-evidence`.** The boxholder's stated expectation is that
+  `contains` and its evidence are machine-maintained and not hand-edited (unlike
+  `title`, which has `titleHash` protection). So there is no protection, by
+  design. It does, however, fall out well if it happens: the *current* field value
+  is what gets fed back as the model's input, so a correction propagates forward
+  rather than being reverted. **Lean:** leave as is; revisit only if hand-editing
+  turns out to be common.
 - **Should `contains` regeneration be gated on the account having changed?**
   Rewriting an identical sentence every pass dirties the card and the git history
   for nothing. **Lean:** yes, skip the write when the generated value equals the
@@ -664,10 +784,13 @@ the realistic case.
 
 This plan introduces one agent-facing concept and touches a second:
 
-1. **New:** the husk `title` and `## Review` section are machine-maintained, and
-   hand-edits to the title are respected. An agent that rewrites husk titles in
-   bulk would fight the review; an agent that believes titles are purely manual
-   would not know a nightly pass exists.
+1. **New:** `contains-evidence` as a global field, and the fact that the husk
+   `title` and `contains` are machine-maintained while hand-edits to the title
+   are respected. An agent that rewrites husk titles in bulk would fight the
+   review; an agent that believes titles are purely manual would not know a
+   nightly pass exists. `contains-evidence` carries its own risk: a brand-new
+   optional field on every card type that an agent could mistake for a second
+   `contains` or for scratch space.
 2. **Existing, now load-bearing:** `src/schemas/chat.ts:31` already instructs
    *"set `title` and `contains` once the conversation has a topic"*. That needs a
    clause saying the nightly chat review also maintains them and that a hand-set
@@ -686,6 +809,13 @@ entries — `id`, `prompt`, `expected_level`, `watch_for`, `correct_contains`,
     correct_contains: ["review", "hand"]
     tags: [chat, cards, chat-review]
 
+  - id: contains-evidence-purpose
+    prompt: "What is the `contains-evidence` field for, and when should I set it?"
+    expected_level: knows_directly
+    watch_for: "Says it holds the detail `contains` was derived from — NOT a second summary or scratch space"
+    correct_contains: ["contains"]
+    tags: [cards, search, chat-review]
+
   - id: chat-review-vs-compaction
     prompt: "What does 'compaction' refer to in this codebase?"
     expected_level: knows_directly
@@ -694,9 +824,9 @@ entries — `id`, `prompt`, `expected_level`, `watch_for`, `correct_contains`,
     tags: [vocabulary, chat-review]
 ```
 
-Both land **run**, not just written: `pnpm knowledge-audit run --box <absolute
-path to a test box> --filter chat-review`, with the status comment recorded in
-`knowledge-audits.yaml` before the plan completes. (Note: `--box` takes a *path*;
+All three land **run**, not just written: `pnpm knowledge-audit run --box
+<absolute path to a test box> --filter chat-review`, with the status comment
+recorded in `knowledge-audits.yaml` before the plan completes. (Note: `--box` takes a *path*;
 a bare name resolves inside the monorepo.)
 
 ---
@@ -706,21 +836,27 @@ a bare name resolves inside the monorepo.)
 1. **Track A** — `src/core/chat/review/state.ts`, `eligibility.ts`, the
    `renderSessionCompact` offset parameter and its move to a shared home, `cb
    chat review status`. No LLM. Independently verifiable; unblocks everything.
-2. **Track B** — `reviewer.ts` (interface + fake + SDK impl + prompt),
-   `husk-write.ts`, `run.ts`, `cb chat review run`. Depends on A.
-3. **Prompt iteration** — run `cb chat review run --dry-run` and then a real run
-   against the test box's transcripts, read the titles and accounts, revise the
+2. **Track B** — `contains-evidence`: the `GLOBAL_CARD_FIELDS` declaration and
+   its four wirings (`BASIS_EXCLUDED_FIELDS`, `AGENT_FIELDS`, `setContains`,
+   lint scoping). Independent of A; must precede C. Touches shared card and
+   search infrastructure, so it lands as its own commit with its own tests
+   rather than buried inside the reviewer.
+3. **Track C** — `reviewer.ts` (interface + fake + SDK impl + prompt),
+   `husk-write.ts`, `run.ts`, `cb chat review run`. Depends on A and B.
+4. **Prompt iteration** — run `cb chat review run --dry-run` and then a real run
+   against the test box's transcripts, read the titles and evidence, revise the
    prompt. This is where the sensitivity requirement is actually met or missed,
    and where extension quality first becomes observable; budget real time for it
-   rather than treating it as a code chunk. Depends on B.
-4. **Track C** — unify session-list labelling. Independent of A/B in code, but
-   sequenced after B so the doctest can assert against a title the review could
+   rather than treating it as a code chunk. Depends on C.
+5. **Track D** — unify session-list labelling. Independent of A/B/C in code, but
+   sequenced after C so the doctest can assert against a title the review could
    plausibly have written. Without this, nothing is visible in the UI.
-5. **Track D** — the `DEFAULT_SCHEDULES` entry + `docs/scheduler.md` mention.
+6. **Track E** — the `DEFAULT_SCHEDULES` entry + `docs/scheduler.md` mention.
    Last, because it turns on work the earlier chunks made correct.
-6. **Docs + audits** — a `docs/chat-review.md` reference doc (the "how it works
-   now" half), the `src/schemas/chat.ts` instructions clause from the Knowledge
-   audits section, and the two audits **run**.
+7. **Docs + audits** — a `docs/chat-review.md` reference doc (the "how it works
+   now" half), a `contains-evidence` line wherever `contains` is documented for
+   agents, the `src/schemas/chat.ts` instructions clause from the Knowledge
+   audits section, and the three audits **run**.
 
 ---
 
@@ -736,6 +872,11 @@ CLAUDE.md):
   the disk itself.
 - `test/core/chat/review/state.doctest.md` — **pure**. Missing file, corrupt
   JSON, schema mismatch; each starts fresh with a warning.
+- `test/core/card-lint-contains.doctest.md` — **pure**. The 200-char budget fires
+  on a long `contains` and does **not** fire on a long `contains-evidence`.
+- `test/core/search/contains-evidence-basis.doctest.md` — **filesystem**. Writing
+  `contains-evidence` does not mark the card's `contains` stale. This is the
+  regression anchor for the staleness loop, which has no other guard.
 - `test/core/chat/render-span.doctest.md` — **pure**. Offset rendering: offset 0
   matches today's whole-transcript output (the regression anchor for retro's
   unchanged call site), a mid-transcript offset yields only later entries, an
@@ -744,25 +885,28 @@ CLAUDE.md):
   scripted fake reviewer. Happy path; **prior account items survive a pass whose
   new span adds nothing** (the extension regression anchor); hand-edited title
   left alone; leak-scan rejection keeps the old title but still writes the
-  account; pre-existing husk body prose preserved outside `## Review`; transcript
-  vanishing mid-run; account cap enforced.
+  evidence; the husk body is untouched throughout; transcript vanishing mid-run;
+  account cap enforced.
 - `test/webapp/chat-sessions-label.doctest.md` — **route**
   (`makeTestServer()`). A husk title wins over the first-message snippet in
-  `chat.sessions` — the assertion that Track C landed.
+  `chat.sessions` — the assertion that Track D landed.
 
 **Done-when**, as checkable assertions: `cb chat review status` reports 0 ready
 on a box with only single-turn transcripts; a session that grows past 6,000 new
 rendered chars reports ready and, after `cb chat review run`, has a non-empty
-husk `title` and `contains` and a `## Review` section; running again immediately
-reports 0 sessions; growing the session further and re-running *extends* the
-account rather than replacing it; editing the title by hand and re-running leaves
-it unchanged; the chat history dropdown shows the generated title.
+husk `title`, `contains`, and `contains-evidence`; running again immediately
+reports 0 sessions; growing the session further and re-running *extends*
+`contains-evidence` rather than replacing it, while `contains` stays one
+sentence under 200 chars; the husk body is byte-identical throughout; editing the
+title by hand and re-running leaves it unchanged; the chat history dropdown shows
+the generated title.
 
-**Knowledge audits** — both entries above land with the plan, run, with status
-comments recorded. Neither is deferred.
+**Knowledge audits** — all three entries above land with the plan, run, with
+status comments recorded. None is deferred.
 
-**Migration** — none. No card shape changes (`title`/`contains` are global
-optional fields), no on-disk data moves, no existing state file is rewritten. The
+**Migration** — none. `contains-evidence` is a new *optional* global field, so
+every existing card on every box stays valid without touching it, and no on-disk
+data moves. No existing state file is rewritten. The
 review state file is created on first run. A box that never enables the schedule
 sees no behaviour change; a box that enables it sees titles improve on the ~5% of
 sessions long enough to qualify, and can turn it back off with the schedule
@@ -770,5 +914,5 @@ card's `enabled` toggle without leaving anything half-migrated.
 
 **Template rollout** — the new schedule card is net-new, so it installs cleanly on
 every box via `installTemplateFile`'s fresh-install branch and needs no tracker
-seeding (see Track D). It ships `enabled: false`; turning it on is a per-box
+seeding (see Track E). It ships `enabled: false`; turning it on is a per-box
 decision.
