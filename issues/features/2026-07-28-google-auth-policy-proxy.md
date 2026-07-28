@@ -65,10 +65,16 @@ it together" below.
 - **Where it runs + trust model.** A new always-on service beside the hub? It
   becomes the token custodian and the policy root of trust — its own auth,
   storage, and hardening story.
-- **Protocol shape.** MCP is the obvious fit — a **policy-enforcing MCP server**
-  whose capability discovery *is* the "advertise exactly what you're getting"
-  mechanism, superset semantics layered on Google's APIs. Decide: MCP vs a
-  bespoke protocol; how capability/limitation metadata is expressed.
+- **Protocol shape (NOT MCP).** Our connectors are direct integrations
+  (`src/connectors/`), not MCP — so the proxy is not "an MCP server," and boxes
+  consume it through the **same connector mechanisms we already have**. The
+  natural shape is: the proxy **mirrors Google's own API surface** (so a connector
+  changes little more than its base URL — proxy instead of `googleapis.com`),
+  plus a thin **extension for the capability/limitation metadata** (the "advertise
+  exactly what you're getting" part) that connectors learn to read. The
+  "superset of Google's protocols" the boxholder described *is* Google's API +
+  that capability layer. (MCP could be a separate, optional external exposure
+  later, but it's not the mechanism boxes use here.)
 - **Capability grammar.** How to express "labels X,Y read-only", "draft-not-send",
   "calendar read, no write" per client, in a form both the proxy enforces and
   the client can render/understand.
