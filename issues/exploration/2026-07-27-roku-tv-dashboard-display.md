@@ -10,6 +10,22 @@ get box content up on the **Roku TVs**, ideally an always-on glanceable
 dashboard. Roku is a different beast, though — the Echo Show's "just open a URL"
 path does **not** exist here.
 
+## Boxholder assessment (2026-07-27): Roku-native is likely not worth it
+
+After the research below, the boxholder's read is that the **Roku dev experience
+is too hard to justify** — BrightScript + SceneGraph is a niche proprietary
+language, no browser/webview, per-device sideloading, and a slow
+edit-package-upload loop, all to render what's essentially a static frame. Don't
+pursue a native Roku channel unless that calculus changes.
+
+**The escape hatch:** the pain is *Roku-specific*, not "TV"-specific. Any
+**browser-capable HDMI device** on the same TV avoids all of it and reuses the
+[Echo Show](2026-07-27-echo-show-dashboard-display.md) path (dashboard URL +
+kiosk) with zero Roku code — e.g. a Fire TV Stick (has the Silk browser), a
+cheap Android TV box, or a Raspberry Pi in kiosk mode. If a TV dashboard is
+wanted, that's the route; the Roku-native notes below are kept only for
+reference.
+
 ## Research (2026-07-27)
 
 ### The decisive difference: Roku has no web browser
