@@ -116,6 +116,48 @@ JSON.stringify({ status: sneaky.statusCode, contextDir: sneakyManifest.contextDi
 await ctx.cleanup();
 ```
 
+## Duplicate item ids are rejected at creation and registration (400)
+
+The registry is keyed by id, so a duplicate id in one request — or a new id
+colliding with one already registered — is refused (an update-in-place would
+silently overwrite the earlier item's claims):
+
+```ts
+const ctx = await makeTestServer();
+const dupeCreate = await createBatch(ctx, {
+  targetSessionId: "chat-1",
+  items: [{ id: "a", name: "x.pdf" }, { id: "a", name: "y.pdf" }],
+});
+JSON.stringify({ status: dupeCreate.statusCode, error: dupeCreate.body.error })
+=> {"status":400,"error":"Duplicate item id in registry: a"}
+```
+
+```ts continue
+const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
+const collide = await ctx.request({
+  method: "POST", url: `/api/bulk/sessions/${created.body.sessionId}/items`,
+  payload: { items: [{ id: "a", name: "again.pdf" }, { id: "a", name: "again2.pdf" }] },
+});
+JSON.stringify({ status: collide.statusCode, error: collide.body.error })
+=> {"status":400,"error":"Duplicate item id in registry: a"}
+```
+
+Re-registering an EXISTING id (idempotent append while the picker streams) is
+still fine:
+
+```ts continue
+const reAdd = await ctx.request({
+  method: "POST", url: `/api/bulk/sessions/${created.body.sessionId}/items`,
+  payload: { items: [{ id: "a", name: "x.pdf" }] },
+});
+JSON.stringify({ status: reAdd.statusCode, registered: reAdd.body.registered })
+=> {"status":200,"registered":1}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 ## Streaming an upload records a server-computed size + sha256
 
 The bytes stream to disk; the manifest entry carries the server-computed size

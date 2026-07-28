@@ -478,9 +478,12 @@ See §1.3 (full request/response/errors).
     deliver into is invalid at creation). The batch's context dir is derived **server-side** from
     `targetSessionId` (via the session→directory history binding) — the client never supplies a box
     path (a client-supplied dir would be a path-traversal vector), and any `contextDir` in the body is
-    ignored.
+    ignored. Item id/name/mimetype are length-capped (512); a duplicate id in the request, or more
+    than 500 items, is **400**.
   - `POST /api/bulk/sessions/:id/items` — append to the item registry. Req `{ items: BulkItem[] }`.
-    Res `{ registered: number }`. **409** once the session is sealed (finalize froze the registry).
+    Res `{ registered: number }`. A duplicate id in the request, a new id colliding with one already
+    registered, or exceeding the 500-item registry cap is **400**. **409** once the session is sealed
+    (finalize froze the registry). Re-sending an existing id is idempotent.
   - `POST /api/bulk/sessions/:id/items/:itemId/upload` — stream one item's bytes. `Content-Type:
     application/octet-stream` (raw body, **streamed** to disk — never multipart); headers
     `X-Upload-Filename` (required; the staged idempotency key), `X-Upload-Original-Name`,

@@ -204,8 +204,12 @@ async function buildBatchSummary(opts: {
     if (file.mimeType !== "") item.mimetype = file.mimeType;
     received.push(item);
 
+    // Match arrival by itemId — every bulk upload carries the registry id, so
+    // id is authoritative. Name is only a fallback for a file that somehow lacks
+    // an itemId (two registry items can share a name; matching by name alone
+    // would wrongly mark BOTH arrived when only one did).
     if (file.itemId !== undefined) arrivedKeys.add(`id:${file.itemId}`);
-    arrivedKeys.add(`name:${file.originalName}`);
+    else arrivedKeys.add(`name:${file.originalName}`);
   }
 
   await saveManifest(attachAbsDir, manifest);
@@ -224,6 +228,9 @@ async function buildBatchSummary(opts: {
       return !arrived && !isFailed;
     })
     .map((it) => it.name);
+  // NB: `arrived` above resolves by id first (see arrivedKeys construction) — the
+  // name branch only catches the itemId-less fallback, so same-named registry
+  // items are told apart correctly.
 
   const totalBytes = received.reduce((n, r) => n + r.size, 0);
   const endedAt = latestUploadedAt(session) ?? session.createdAt;
