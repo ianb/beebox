@@ -33,6 +33,41 @@ the boxholder saw is the missing piece.
   happen *before* the request reaches the app, or logs to the box-local
   `client-debug.log` instead.
 
+## Update (2026-07-28): reproduced on a prod box — failed on Google's end
+
+Boxholder retried on one of the prod boxes; it **failed on Google's own page** (not
+callback-box, not a Cloudflare Access page). The `callback-hub` journal logged
+nothing for the attempt — consistent with Google rejecting at the *authorize*
+step, before any redirect back to `/auth/…/callback`. That rules out Cloudflare
+Access (it shows its own page) and app-side token exchange. It's a **Google-side
+rejection**, overwhelmingly likely **`redirect_uri_mismatch`**.
+
+The redirect_uri that box sends (connector flow, `admin-google.ts:48-51`):
+
+```
+https://<host>/auth/google-services/callback
+```
+
+built as `` `${baseServerUrl(publicUrl)}/auth/google-services/callback` ``, where
+`publicUrl` = **`input.origin` (the live browser origin) first**, then box.json
+(`https://<host>/<box>`), then env. `baseServerUrl()` strips the box-slug
+segment → server root. Login flow sends `https://<host>/auth/callback`.
+
+**Design smell (root of the fragility):** deriving the redirect_uri from the
+*browser origin* means **any origin the box is reached through — the canonical
+host, the dev router, a Tailscale URL, an alternate subdomain — produces a
+different redirect_uri**, and Google rejects every one that isn't registered.
+The redirect_uri should be derived from a single canonical configured URL, not
+whatever origin the request happened to arrive on.
+
+**Fix is almost certainly console-side:** confirm both exact URIs
+(`https://<host>/auth/google-services/callback` and `https://<host>/auth/callback`)
+are in the OAuth client's *Authorized redirect URIs* in the Google Cloud console.
+Google's `redirect_uri_mismatch` page names the exact rejected URI — that string
+confirms it in one step. Secondary Google-end causes if it's *not* a mismatch:
+OAuth consent screen in "Testing" without the user as a test user, an unverified
+app, or a deleted/rotated OAuth client.
+
 ## Suspects (ranked, given "no server-side error" + heavy recent auth churn)
 
 1. **Cloudflare Access intercepting the callback.** Google's redirect back to
