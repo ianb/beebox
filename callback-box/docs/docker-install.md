@@ -5,8 +5,9 @@ box locally as a developer install and, unchanged, on a cheap VPS as the cloud
 install. Everything lives in `callback-box/docker/`.
 
 The image bakes in the host requirements that make a from-source install
-fiddly: Node 24, the four system binaries the agent expects (`pandoc`,
-`imagemagick`/`magick`, `poppler-utils`, plus `git`/`git-lfs`), the native
+fiddly: Node 24, the system binaries the agent expects (`pandoc`,
+`imagemagick`/`magick`, `poppler-utils`, the Excel reader `python3-openpyxl` +
+`xlsx2csv`, plus `git`/`git-lfs`), the native
 Claude Code CLI, and the callback-box engine itself. You supply a box (a git
 repo you own, bind-mounted at `./data/box`) and a Claude login.
 

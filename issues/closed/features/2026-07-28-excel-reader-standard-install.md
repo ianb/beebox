@@ -3,7 +3,17 @@ title: "Make an Excel/.xlsx reader part of the standard install"
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder request
+resolution: implemented
 ---
+
+**Closed (implemented) 2026-07-28.** `python3-openpyxl` + `xlsx2csv` added to
+provisioning (`deploy/setup-server.sh` apt line, `docker/Dockerfile`), documented
+(`developer-install.md`, `docker-install.md`), and added to the agent's
+"always available" contract (`src/core/agent-guide/chat.ts`). Installed live on
+the prod server (Ubuntu 24.04, via apt) and on the local dev machine (via pip —
+no brew formula exists). Legacy `.xls` left unsupported by decision (openpyxl is
+`.xlsx`-only; LibreOffice too heavy). The cosmetic `xlsx2csv` SyntaxWarning on
+the apt-packaged 0.7.8 is a known upstream issue; openpyxl is the clean primary.
 
 Box agents run Claude Code and shell out to CLI/Python tools, and the standard
 install already provisions a document toolchain for that — but **nothing can read

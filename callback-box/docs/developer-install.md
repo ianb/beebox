@@ -23,15 +23,17 @@ server), the Docker path is simpler: see
   ```
 - **pnpm**, via [corepack](https://nodejs.org/api/corepack.html):
   `corepack enable` (the root `package.json` pins the exact pnpm version).
-- **System binaries** the agent uses for document/image handling —
-  `pandoc`, `imagemagick`, `poppler-utils`, `git-lfs`:
+- **System binaries** the agent uses for document/image/spreadsheet handling —
+  `pandoc`, `imagemagick`, `poppler-utils`, `git-lfs`, plus an Excel reader
+  (`openpyxl` + the `xlsx2csv` CLI, for `.xlsx`):
 
   ```bash
-  # macOS
+  # macOS — openpyxl/xlsx2csv have no brew formula, install them via pip
   brew install pandoc imagemagick poppler git-lfs
+  python3 -m pip install --break-system-packages openpyxl xlsx2csv
 
   # Debian/Ubuntu
-  sudo apt-get install pandoc imagemagick poppler-utils git-lfs
+  sudo apt-get install pandoc imagemagick poppler-utils git-lfs python3-openpyxl xlsx2csv
   ```
 
   On Debian/Ubuntu the `imagemagick` package is ImageMagick 6, which ships

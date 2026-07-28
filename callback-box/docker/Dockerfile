@@ -54,11 +54,11 @@ ARG CB_GIT_EMAIL="callback-box@box.example.com"
 
 # System binaries the agent is promised as "always available on the box host"
 # (src/core/agent-guide/chat.ts): pandoc, imagemagick (magick), poppler-utils
-# (pdftotext/pdfimages). Plus git + git-lfs (per-box LFS filters) and curl/ca
-# for the Claude installer.
+# (pdftotext/pdfimages), and the Excel reader python3-openpyxl + xlsx2csv (.xlsx).
+# Plus git + git-lfs (per-box LFS filters) and curl/ca for the Claude installer.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-       pandoc imagemagick poppler-utils git git-lfs curl ca-certificates \
+       pandoc imagemagick poppler-utils python3-openpyxl xlsx2csv git git-lfs curl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
   # Debian ships ImageMagick 6 (`convert`); the agent contract and our scripts
   # call `magick` (IM7). Symlink so both names work (same as setup-server.sh).

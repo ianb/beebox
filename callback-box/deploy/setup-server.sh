@@ -16,7 +16,7 @@ echo "=== Callback Box Server Setup ==="
 echo "Installing system packages..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick
+apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv
 
 # Ubuntu 24.04 ships ImageMagick 6 (`convert`); homebrew + IM7 use `magick`.
 # Symlink so scripts written for `magick` work on prod without branching.
