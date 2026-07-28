@@ -39,6 +39,7 @@ import {
   sealStagingSession,
   cleanupStagingSession,
   stagingSessionIsEmpty,
+  isCaptureSession,
 } from "./staging-store.js";
 
 /** No-activity window after which an open capture is swept into a partial finalize. */
@@ -87,7 +88,9 @@ export async function sweepAbandonedCaptures(deps: SweepDeps): Promise<SweepResu
   const now = getBoxTime(boxRoot).getTime();
   const result: SweepResult = { sealed: [], refired: [], discarded: [], staleFailed: [], staleTmpCaptureCards: [] };
 
-  const sessions = await listStagingSessions({ boxRoot });
+  // Capture-only: bulk-upload sessions have their own finalize/abandonment
+  // handling and must never be swept into a partial *capture*.
+  const sessions = (await listStagingSessions({ boxRoot })).filter(isCaptureSession);
   for (const session of sessions) {
     // Re-fire sessions already sealed/mid-flight, regardless of age (X2): a
     // wakeup seal or a dead worker leaves them with nothing to advance them.

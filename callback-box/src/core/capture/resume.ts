@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import type { EventBus } from "../event-bus.js";
 import type { ChatSession } from "../chat/session/index.js";
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
-import { stagingBaseDir, readStagingSession } from "./staging-store.js";
+import { stagingBaseDir, readStagingSession, isCaptureSession } from "./staging-store.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -38,6 +38,8 @@ export async function resumeStagingSessions(deps: {
   for (const id of ids) {
     const session = await readStagingSession({ boxRoot, id });
     if (session === null) continue;
+    // Capture-only resume: bulk-upload sessions resume through their own path.
+    if (!isCaptureSession(session)) continue;
     if (session.state !== "sealed" && session.state !== "preparing" && session.state !== "delivering") continue;
 
     console.warn(`[capture] Resuming staged capture ${id} (state=${session.state})`);

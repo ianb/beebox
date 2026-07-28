@@ -24,11 +24,15 @@ import { readStagingSession, writeStagingSession } from "./staging-manifest-io.j
 import {
   stagingBaseDir,
   stagingSessionDir,
+  isCaptureSession,
+  isBulkSession,
   type StagingSession,
   type StagingSessionState,
+  type StagingSessionKind,
   type StagingSegment,
   type StagingPhoto,
   type StagingFile,
+  type StagingBulkItem,
 } from "./staging-schema.js";
 
 export {
@@ -36,11 +40,15 @@ export {
   writeStagingSession,
   stagingBaseDir,
   stagingSessionDir,
+  isCaptureSession,
+  isBulkSession,
   type StagingSession,
   type StagingSessionState,
+  type StagingSessionKind,
   type StagingSegment,
   type StagingPhoto,
   type StagingFile,
+  type StagingBulkItem,
 };
 
 /**
@@ -57,12 +65,22 @@ export function resolveStagedFile(opts: { boxRoot: string; id: string; filename:
   return resolved;
 }
 
+/**
+ * Create a staging session. `kind` defaults to `"capture"` (the recorded
+ * photo/voice batch); pass `kind: "bulk"` plus an initial `expectedItems`
+ * registry for a bulk file-upload batch (`docs/plans/bulk-file-upload.md`),
+ * whose finalize path reads `files` + `expectedItems` rather than the capture
+ * media arrays.
+ */
 export async function createStagingSession(opts: {
   boxRoot: string;
   targetSessionId: string | null;
   createdBy: string | null;
+  kind?: StagingSessionKind;
+  expectedItems?: StagingBulkItem[];
 }): Promise<StagingSession> {
   const { boxRoot, targetSessionId, createdBy } = opts;
+  const kind = opts.kind ?? "capture";
   const id = crypto.randomUUID();
   await fs.mkdir(stagingSessionDir(boxRoot, id), { recursive: true });
   const now = getBoxTimeISO(boxRoot);
@@ -72,14 +90,42 @@ export async function createStagingSession(opts: {
     lastActivityAt: now,
     targetSessionId,
     createdBy,
+    kind,
     state: "open",
     segments: [],
     photos: [],
     files: [],
     totalBytes: 0,
   };
+  if (kind === "bulk") session.expectedItems = opts.expectedItems ?? [];
   await writeStagingSession({ boxRoot, session });
   return session;
+}
+
+/**
+ * Append to a bulk session's predeclared item registry (items may be registered
+ * while the picker still streams). Idempotent per `id`: an item whose `id` is
+ * already registered updates in place rather than duplicating.
+ */
+export async function registerBulkItems(opts: {
+  boxRoot: string;
+  id: string;
+  items: StagingBulkItem[];
+}): Promise<void> {
+  const { boxRoot, id, items } = opts;
+  await mutateSession({
+    boxRoot,
+    id,
+    mutate: (session) => {
+      const registry = session.expectedItems ?? [];
+      for (const item of items) {
+        const existing = registry.findIndex((r) => r.id === item.id);
+        if (existing !== -1) registry[existing] = item;
+        else registry.push(item);
+      }
+      session.expectedItems = registry;
+    },
+  });
 }
 
 /**
@@ -215,17 +261,21 @@ export interface AddFileParams {
   uploadedAt: string;
   originalName: string;
   mimeType: string;
+  /** Predeclared bulk-registry item id this file fulfils (bulk sessions only). */
+  itemId?: string | undefined;
   buffer: Buffer;
 }
 
 export async function addFile(params: AddFileParams): Promise<void> {
-  const { boxRoot, id, filename, uploadedAt, originalName, mimeType, buffer } = params;
+  const { boxRoot, id, filename, uploadedAt, originalName, mimeType, itemId, buffer } = params;
   await mutateSession({
     boxRoot,
     id,
     media: { filename, buffer },
     mutate: (session) => {
-      session.files.push({ filename, uploadedAt, originalName, mimeType });
+      const file: StagingFile = { filename, uploadedAt, originalName, mimeType };
+      if (itemId !== undefined) file.itemId = itemId;
+      session.files.push(file);
     },
   });
 }

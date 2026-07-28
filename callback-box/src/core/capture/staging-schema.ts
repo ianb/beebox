@@ -10,6 +10,7 @@
 import * as path from "node:path";
 import { z } from "zod";
 import { boxTmpDir } from "../../lib/box-tmp.js";
+import { assertNever } from "../../lib/invariant.js";
 import { CaptureAudioFormatSchema } from "./audio-format.js";
 
 /**
@@ -42,11 +43,41 @@ const StagingPhotoSchema = z.object({
 });
 export type StagingPhoto = z.infer<typeof StagingPhotoSchema>;
 
-/** A disk-uploaded file. */
+/**
+ * A disk-uploaded file. `itemId` links the file back to a predeclared bulk
+ * registry item (`expectedItems`) — set on bulk-upload sessions so finalize can
+ * tell a received item from one that never arrived. Absent on capture-mode file
+ * uploads, which have no predeclared registry.
+ */
 const StagingFileSchema = z.object({
   filename: z.string(), uploadedAt: z.string(), originalName: z.string(), mimeType: z.string(),
+  itemId: z.string().optional(),
 });
 export type StagingFile = z.infer<typeof StagingFileSchema>;
+
+/**
+ * Which pipeline owns a staging session. `capture` (default) is the recorded
+ * photo/voice batch that becomes a capture-session card; `bulk` is a bulk
+ * file-upload batch (`docs/plans/bulk-file-upload.md`) that becomes an
+ * `upload-batch` card. Old manifests predate the field and parse as `capture`.
+ */
+const StagingSessionKindSchema = z.enum(["capture", "bulk"]);
+export type StagingSessionKind = z.infer<typeof StagingSessionKindSchema>;
+
+/**
+ * A predeclared bulk-upload item: a stable client-generated `id` plus the
+ * client-claimed `name`/`size`/`mimetype`. Registered up front (and appended
+ * while the picker streams) so finalize can compute a truthful
+ * received/missing/failed split even after a tab dies mid-batch — the registry
+ * is the only record of what was *supposed* to arrive. Bulk sessions only.
+ */
+const StagingBulkItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  size: z.number().optional(),
+  mimetype: z.string().optional(),
+});
+export type StagingBulkItem = z.infer<typeof StagingBulkItemSchema>;
 
 /**
  * `createdBy` is the identifier (email) of the authenticated user who started
@@ -69,11 +100,43 @@ export type StagingFile = z.infer<typeof StagingFileSchema>;
 export const StagingSessionSchema = z.object({
   id: z.string(), createdAt: z.string(), lastActivityAt: z.string(),
   targetSessionId: z.string().nullable(), createdBy: z.string().nullable().default(null),
+  kind: StagingSessionKindSchema.default("capture"),
   state: StagingSessionStateSchema,
   segments: z.array(StagingSegmentSchema), photos: z.array(StagingPhotoSchema), files: z.array(StagingFileSchema),
+  /** Predeclared bulk-upload item registry (bulk sessions only). */
+  expectedItems: z.array(StagingBulkItemSchema).optional(),
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
 });
 export type StagingSession = z.infer<typeof StagingSessionSchema>;
+
+/**
+ * True for a capture-pipeline session. Written as an exhaustive switch so
+ * adding a `kind` fails to compile here — forcing every enumerator/resume path
+ * (`sweep.ts`, `resume.ts`, `pending.ts`) to decide how the new pipeline is
+ * filtered rather than silently inheriting a `kind !== "capture"` string check.
+ */
+export function isCaptureSession(session: StagingSession): boolean {
+  switch (session.kind) {
+    case "capture":
+      return true;
+    case "bulk":
+      return false;
+    default:
+      return assertNever(session.kind);
+  }
+}
+
+/** True for a bulk-upload-pipeline session (the complement of {@link isCaptureSession}). */
+export function isBulkSession(session: StagingSession): boolean {
+  switch (session.kind) {
+    case "capture":
+      return false;
+    case "bulk":
+      return true;
+    default:
+      return assertNever(session.kind);
+  }
+}
 
 export function stagingBaseDir(boxRoot: string): string {
   return path.join(boxTmpDir(boxRoot), "capture-staging");
