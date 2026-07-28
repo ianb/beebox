@@ -1,6 +1,6 @@
 # Bulk file upload
 
-**Status:** active — reviewed by the boxholder 2026-07-27; decisions recorded under Open design questions (now Resolved); implementation in progress
+**Status:** active — implementation complete on the worktree branch 2026-07-28 (Tracks 0–2, 4 + a post-build adversarial hardening pass); verified end-to-end twice in the live app; awaiting merge via /finish. Track 3 (iOS) deferred to its own future plan.
 
 Let a user dump many files (order of 100 MB / dozens of items — camera-roll
 batches, document folders) into a box at once. The upload surface only gets the
