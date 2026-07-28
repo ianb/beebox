@@ -26,6 +26,8 @@ declare global {
     __speechState?: {
       isPlaying: boolean;
       playingMessageId: string | null;
+      statusMessageId: string | null;
+      segmentStates: Record<number, "waiting" | "playing" | "failed">;
       remainingCount: number;
     };
     /** Imperative playback handles, for the dev test harness. */

@@ -19,54 +19,19 @@ import { logSpeechEvent } from "./speech-test-log";
 import { isTTSVoice, type TTSVoice } from "./speech-parsing";
 import { RequestError } from "../errors";
 import { invariant } from "@shared/invariant";
+import type { PrefetchHandle, ResolvedSpeechKey, SpeechOptions, VoiceConfig } from "./tts-types";
+import { PlaybackError, PlaybackStoppedError } from "./tts-errors";
 
-/** Thrown when playback is stopped before/while a queued utterance plays. */
-class PlaybackStoppedError extends Error {
-  constructor() {
-    super("Playback stopped");
-    this.name = "PlaybackStoppedError";
-  }
-}
-
-/** Wraps a non-Error value thrown during playback so callers always get an Error. */
-class PlaybackError extends Error {
-  constructor(detail: string) {
-    super(detail);
-    this.name = "PlaybackError";
-  }
-}
+export type { PrefetchHandle, VoiceConfig } from "./tts-types";
 
 const DEFAULT_VOICE: TTSVoice = "marin";
 const DEFAULT_INSTRUCTIONS = "Fast and concise, but with a friendly lilting tone.";
-
-export interface VoiceConfig {
-  voice: TTSVoice;
-  baseInstructions: string;
-}
-
-interface SpeechOptions {
-  instructions?: string;
-  voice?: TTSVoice;
-  overrideInstructions?: boolean;
-  prefetch?: PrefetchHandle;
-}
-
-export interface PrefetchHandle {
-  buffer: Promise<ArrayBuffer>;
-  abort: () => void;
-}
 
 interface SpeechQueueItem {
   text: string;
   options?: SpeechOptions;
   resolve: () => void;
   reject: (error: Error) => void;
-}
-
-interface ResolvedKey {
-  key: string;
-  instructions: string;
-  voice: string;
 }
 
 class TTSClient {
@@ -244,7 +209,10 @@ class TTSClient {
       this.currentAbort = prefetch.abort;
       const buffer = await prefetch.buffer;
       this.currentAbort = null;
-      await this.playBuffer(buffer, item.text);
+      await this.playBuffer(buffer, {
+        text: item.text,
+        onPlaybackStarted: item.options?.onPlaybackStarted,
+      });
       return;
     }
 
@@ -254,12 +222,18 @@ class TTSClient {
     const cached = this.cache.get(resolved.key);
     if (cached) {
       logSpeechEvent("cacheHit", { label: this.label(item.text), key: resolved.key });
-      await this.playBuffer(cached, item.text);
+      await this.playBuffer(cached, {
+        text: item.text,
+        onPlaybackStarted: item.options?.onPlaybackStarted,
+      });
       return;
     }
 
     if (supportsMediaSource()) {
-      await this.streamAndPlay(item.text, resolved);
+      await this.streamAndPlay(item.text, {
+        resolved,
+        onPlaybackStarted: item.options?.onPlaybackStarted,
+      });
       return;
     }
 
@@ -267,14 +241,26 @@ class TTSClient {
     this.currentAbort = () => ac.abort();
     const buffer = await this.fetchAudio(item.text, { options: item.options, signal: ac.signal });
     this.currentAbort = null;
-    await this.playBuffer(buffer, item.text);
+    await this.playBuffer(buffer, {
+      text: item.text,
+      onPlaybackStarted: item.options?.onPlaybackStarted,
+    });
   }
 
-  private async playBuffer(buffer: ArrayBuffer, text: string): Promise<void> {
-    const { stop, finished } = playAudioBlob(buffer, { label: this.label(text) });
+  private async playBuffer(
+    buffer: ArrayBuffer,
+    opts: { text: string; onPlaybackStarted?: () => void },
+  ): Promise<void> {
+    const { stop, finished } = playAudioBlob(
+      buffer,
+      { label: this.label(opts.text), onPlaying: opts.onPlaybackStarted },
+    );
     this.currentStop = stop;
-    await finished;
-    this.currentStop = null;
+    try {
+      await finished;
+    } finally {
+      this.currentStop = null;
+    }
   }
 
   /**
@@ -282,8 +268,12 @@ class TTSClient {
    * full buffer, and cache it once the download completes. A stop mid-download
    * leaves the buffer incomplete (null) so nothing partial is cached.
    */
-  private async streamAndPlay(text: string, resolved: ResolvedKey): Promise<void> {
+  private async streamAndPlay(
+    text: string,
+    opts: { resolved: ResolvedSpeechKey; onPlaybackStarted?: () => void },
+  ): Promise<void> {
     const label = this.label(text);
+    const { resolved } = opts;
     const ac = new AbortController();
     this.currentAbort = () => ac.abort();
     logSpeechEvent("download.start", { label, streaming: true, key: resolved.key });
@@ -307,7 +297,10 @@ class TTSClient {
       throw new RequestError(message);
     }
 
-    const { stop, finished, buffer } = playAudioStream(body, { label });
+    const { stop, finished, buffer } = playAudioStream(
+      body,
+      { label, onPlaying: opts.onPlaybackStarted },
+    );
     this.currentStop = stop;
 
     const full = await buffer;
@@ -315,11 +308,14 @@ class TTSClient {
       this.cache.set(resolved.key, full);
       logSpeechEvent("download.complete", { label, key: resolved.key });
     }
-    await finished;
-    this.currentStop = null;
+    try {
+      await finished;
+    } finally {
+      this.currentStop = null;
+    }
   }
 
-  private async resolveKey(text: string, options?: SpeechOptions): Promise<ResolvedKey> {
+  private async resolveKey(text: string, options?: SpeechOptions): Promise<ResolvedSpeechKey> {
     // Wait for personality voice config to load before reading voiceConfig —
     // otherwise the first utterance after page load uses the hard-coded
     // default (and would be cached under the wrong key).

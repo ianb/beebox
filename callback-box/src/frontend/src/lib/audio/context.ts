@@ -18,6 +18,20 @@
 import { withBase } from "../../api";
 import { logSpeechEvent } from "./speech-test-log";
 
+class BufferedSpeechPlaybackError extends Error {
+  constructor() {
+    super("Buffered speech audio failed during playback");
+    this.name = "BufferedSpeechPlaybackError";
+  }
+}
+
+class StreamingSpeechPlaybackError extends Error {
+  constructor() {
+    super("Streaming speech audio failed during playback");
+    this.name = "StreamingSpeechPlaybackError";
+  }
+}
+
 let sharedAudio: HTMLAudioElement | null = null;
 
 export function isIOS(): boolean {
@@ -123,7 +137,10 @@ export function playAudioUrl(url: string, opts?: { volume?: number; label?: stri
  * response). Creates a blob URL and plays through the shared element on iOS.
  * `finished` resolves on natural end OR when stop() is called.
  */
-export function playAudioBlob(buffer: ArrayBuffer, opts?: { mimeType?: string; label?: string }): Playback {
+export function playAudioBlob(
+  buffer: ArrayBuffer,
+  opts?: { mimeType?: string; label?: string; onPlaying?: () => void },
+): Playback {
   const mimeType = opts && opts.mimeType ? opts.mimeType : "audio/mpeg";
   const label = opts ? opts.label : undefined;
   const blob = new Blob([buffer], { type: mimeType });
@@ -132,10 +149,13 @@ export function playAudioBlob(buffer: ArrayBuffer, opts?: { mimeType?: string; l
   let stopped = false;
   let settle: () => void = () => {};
 
-  const finished = new Promise<void>((resolve) => {
+  const finished = new Promise<void>((resolve, reject) => {
     settle = resolve;
     try { audio.pause(); } catch (_e) { /* ignore */ }
-    audio.onplaying = () => logSpeechEvent("audio.start", { label });
+    audio.onplaying = () => {
+      logSpeechEvent("audio.start", { label });
+      opts?.onPlaying?.();
+    };
     audio.onended = () => {
       URL.revokeObjectURL(url);
       logSpeechEvent("audio.end", { label });
@@ -144,14 +164,14 @@ export function playAudioBlob(buffer: ArrayBuffer, opts?: { mimeType?: string; l
     audio.onerror = (e) => {
       URL.revokeObjectURL(url);
       console.error("[audio] playAudioBlob error:", e);
-      resolve();
+      reject(new BufferedSpeechPlaybackError());
     };
     audio.src = url;
     audio.volume = 1;
     audio.play().catch((e) => {
       URL.revokeObjectURL(url);
       console.error("[audio] playAudioBlob play() rejected:", e);
-      resolve();
+      reject(e instanceof Error ? e : new Error(String(e)));
     });
   });
 
@@ -206,7 +226,7 @@ function appendChunk(sourceBuffer: SourceBuffer, chunk: Uint8Array): Promise<voi
  */
 export function playAudioStream(
   stream: ReadableStream<Uint8Array>,
-  opts?: { mimeType?: string; label?: string },
+  opts?: { mimeType?: string; label?: string; onPlaying?: () => void },
 ): StreamPlayback {
   const mimeType = opts && opts.mimeType ? opts.mimeType : "audio/mpeg";
   const label = opts ? opts.label : undefined;
@@ -219,8 +239,12 @@ export function playAudioStream(
   let stopped = false;
 
   let settleFinished: () => void = () => {};
+  let rejectFinished: (error: Error) => void = () => {};
   let settleBuffer: (b: ArrayBuffer | null) => void = () => {};
-  const finished = new Promise<void>((resolve) => { settleFinished = resolve; });
+  const finished = new Promise<void>((resolve, reject) => {
+    settleFinished = resolve;
+    rejectFinished = reject;
+  });
   const buffer = new Promise<ArrayBuffer | null>((resolve) => { settleBuffer = resolve; });
 
   function assemble(): ArrayBuffer {
@@ -237,7 +261,10 @@ export function playAudioStream(
     try { URL.revokeObjectURL(url); } catch (_e) { /* ignore */ }
   }
 
-  audio.onplaying = () => logSpeechEvent("audio.start", { label, streaming: true });
+  audio.onplaying = () => {
+    logSpeechEvent("audio.start", { label, streaming: true });
+    opts?.onPlaying?.();
+  };
   audio.onended = () => {
     cleanup();
     logSpeechEvent("audio.end", { label });
@@ -247,7 +274,7 @@ export function playAudioStream(
     cleanup();
     console.error("[audio] playAudioStream audio error:", e);
     settleBuffer(null);
-    settleFinished();
+    rejectFinished(new StreamingSpeechPlaybackError());
   };
 
   mediaSource.addEventListener(
@@ -259,7 +286,7 @@ export function playAudioStream(
       } catch (e) {
         console.error("[audio] addSourceBuffer failed:", e);
         settleBuffer(null);
-        settleFinished();
+        rejectFinished(e instanceof Error ? e : new Error(String(e)));
         cleanup();
         return;
       }
@@ -282,6 +309,7 @@ export function playAudioStream(
         } catch (e) {
           console.error("[audio] playAudioStream pump error:", e);
           settleBuffer(null);
+          rejectFinished(e instanceof Error ? e : new Error(String(e)));
         }
       })();
     },
@@ -293,7 +321,7 @@ export function playAudioStream(
   audio.play().catch((e) => {
     console.warn("[audio] playAudioStream play() rejected:", e);
     settleBuffer(null);
-    settleFinished();
+    rejectFinished(e instanceof Error ? e : new Error(String(e)));
   });
 
   return {

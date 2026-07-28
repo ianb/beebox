@@ -31,6 +31,8 @@ export interface MockTtsRequest {
   chunkMs?: number | undefined;
   /** Bytes per streamed chunk. */
   chunkSize?: number | undefined;
+  /** Return a deterministic generation failure when the speech contains this text. */
+  failText?: string | undefined;
 }
 
 
@@ -49,6 +51,9 @@ function pickFixture(req: MockTtsRequest): string {
 }
 
 export function serveMockTts(reply: FastifyReply, req: MockTtsRequest): FastifyReply {
+  if (req.failText && req.text.includes(req.failText)) {
+    return reply.status(503).send({ error: "mock TTS generation failure" });
+  }
   const file = join(FIXTURE_DIR, pickFixture(req));
   if (!existsSync(file)) {
     return reply

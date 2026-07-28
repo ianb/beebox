@@ -18,6 +18,7 @@ import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel } from "./capture-bubble";
 import { invariant } from "@shared/invariant";
+import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -120,6 +121,8 @@ export function dataItemKey(d: DataItem): string {
 export interface SpeechPlaybackState {
   isPlaying: boolean;
   playingMessageId: string | null;
+  statusMessageId: string | null;
+  segmentStates: Record<number, SpeechSegmentState>;
   playingSegmentIndex: number | null;
   remainingCount: number;
 }
@@ -253,6 +256,10 @@ function GroupItem({
     const isStreamId = typeof pid === "string" && pid.startsWith("stream");
     const playingThis = speechPlayback.isPlaying &&
       (pid === groupUuid || (isStreamId && groupIndex === lastAssistantGroupIndex));
+    const statusId = speechPlayback.statusMessageId;
+    const statusIsStream = typeof statusId === "string" && statusId.startsWith("stream");
+    const statusThis = statusId === groupUuid
+      || (statusIsStream && groupIndex === lastAssistantGroupIndex);
     body = (
       <div className="py-0.5">
         <AssistantMessage
@@ -260,6 +267,7 @@ function GroupItem({
           debugView={debugView}
           speechPlaying={playingThis}
           speechActiveIndex={playingThis ? speechPlayback.playingSegmentIndex : null}
+          speechSegmentStates={statusThis ? speechPlayback.segmentStates : {}}
           anySpeechPlaying={speechPlayback.isPlaying}
           speechCanSkip={Boolean(speechPlayback.isPlaying && speechPlayback.remainingCount > 1)}
           onStopSpeech={handleStopSpeech}
