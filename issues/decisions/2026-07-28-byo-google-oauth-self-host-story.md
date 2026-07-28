@@ -56,8 +56,24 @@ BYO-only; the alternative contradicts the project's privacy posture.
    project steps (or at least a checklist the box agent can hand the operator),
    to cut the ~15-minute setup friction.
 
+## Competitive context (2026-07-28 research)
+
+[How comparable systems connect Google](../../research/google-auth-connect-approaches.md)
+confirms this bet: **OpenClaw and the popular self-hosted Google MCP servers all
+do BYO too**, and eat the same unverified-app / 7-day-token friction — it's a
+universal BYO condition, not a callback-box defect. The only frictionless
+alternative is a **managed auth broker** (Composio/Arcade/Nango/Pipedream) that
+owns the OAuth app and vaults tokens — which trades away local token custody.
+Finding: keep BYO as default; consider an **opt-in broker path** (ideally
+self-hostable **Nango**, which keeps creds on your infra) for convenience-first
+operators. Transferable UX ideas from OpenClaw: one plugin/one OAuth for all
+Google services, chat-driven grant, and a "Desktop app" loopback client to dodge
+redirect_uri registration.
+
 ## Related
 
 - [google-oauth-pairing-broken](../bugs/2026-07-28-google-oauth-pairing-broken.md)
   — where the verification/unverified-app friction was diagnosed.
+- [investigate-composio-tool-layer](../exploration/2026-07-09-investigate-composio-tool-layer.md)
+  — the managed-broker option.
 - Per-box secret management overlaps how creds are supplied.
