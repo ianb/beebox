@@ -24,7 +24,11 @@ LOG="$HOME/Library/Logs/callback-box-sdk-update.log"
 
 # launchd starts with a minimal PATH; pick up the usual tool homes.
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-if ! command -v pnpm >/dev/null 2>&1 && [ -s "$HOME/.nvm/nvm.sh" ]; then
+# Gate on `node`, not `pnpm`: pnpm comes from Homebrew (already on PATH above)
+# but is a node script, so a found-pnpm/missing-node environment made every run
+# die with `env: node: No such file or directory` — a non-zero exit the check
+# below read as "behind", spawning a headless agent daily for nothing.
+if ! command -v node >/dev/null 2>&1 && [ -s "$HOME/.nvm/nvm.sh" ]; then
   # shellcheck disable=SC1091
   . "$HOME/.nvm/nvm.sh"
 fi
