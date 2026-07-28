@@ -123,6 +123,55 @@ the one worth a spike** — it keeps tokens local and hands us the commodity
 plumbing, leaving only our differentiated policy/filtering/advertisement layer to
 build. The enterprise-gated sync engine is irrelevant since we don't use it.
 
+## What Nango provides — and the slice callback-box would actually use
+
+Nango's full surface (900+ APIs): **Auth/OAuth** (flows, token refresh, scopes,
+provider quirks, encrypted credential storage) · **Proxy** (automatic credential
+injection + rate-limit backoff + retries) · **Syncs** (keep external data current,
+2-way, RAG) · **Actions** (read/write ops) · **Webhooks** (receive/forward) ·
+**Unified models** (normalize across APIs) · **Observability** (logs/metrics/
+alerts per connection) · **Connect UI** (drop-in account-linking) · **agent
+tool/MCP schemas** · multi-tenant isolation ([docs](https://nango.dev/docs/introduction)).
+
+**We'd use only Auth + Proxy.** Syncs / unified models / webhooks / RAG are
+Nango's headline value but **callback-box already does that itself** (connectors →
+card materialization), and they're the enterprise-gated part of self-hosted
+anyway. So most of Nango is irrelevant to us — which is fine; the two we want are
+in the free self-hosted tier.
+
+### Benefits of Nango's Auth+Proxy over our direct access (today)
+
+Direct access today = our own `google-auth.ts` OAuth + refresh, tokens stored per
+box, each box calling `googleapis.com` directly. Adopting Nango's auth+proxy buys:
+
+1. **No OAuth/refresh plumbing to own.** Nango runs the token refresh/expiry/
+   provider-quirk loop — retiring most of `google-auth.ts` and shrinking the
+   [reauth-health feature](../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md)
+   (Nango exposes connection status we can read instead of detecting `invalid_grant`
+   ourselves).
+2. **Tokens live in the proxy, not the box** — the box calls Nango's proxy, which
+   injects the credential and forwards. This **is Tier-1 of the policy-proxy**
+   ([google-auth-policy-proxy](../issues/features/2026-07-28-google-auth-policy-proxy.md)):
+   the escape boundary + central custody, for free, self-hosted, tokens on our infra.
+3. **Rate-limit backoff, retries, observability** per connection — for free vs.
+   hand-rolled.
+4. **Multi-provider runway** — 900+ APIs, so a future Microsoft/Notion/GitHub
+   integration reuses the same auth+proxy instead of a new bespoke OAuth each time.
+
+### What Nango does NOT give us (still our layer to build)
+
+- **Escape-proof per-client content filtering** (label filtering as a boundary) —
+  Nango's proxy is pass-through credential injection, not content policy.
+- **Capability advertisement** (the box introspects its constrained view).
+- **Per-client capability policy** (draft-not-send per box) — Nango's scoped
+  action functions get *partway* (which actions a connection may call) but not
+  general content filtering + advertisement.
+
+**Upshot:** Nango can carry **Tier 1** (custody + proxy + refresh) of the
+policy-proxy for free/self-hosted, halving that project; **Tier 2** (filtering,
+capability advertisement, per-client policy) is the differentiated part we'd
+still build on top.
+
 ## Net
 
 The honest answer to "what do others do": **the self-hosted ones do exactly what
