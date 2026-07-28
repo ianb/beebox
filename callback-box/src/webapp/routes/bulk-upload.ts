@@ -49,6 +49,7 @@ import {
 import { getDirectoryForSession } from "../../core/chat/session/history.js";
 import { getChatRuntime } from "../chat-runtime.js";
 import { startBulkUploadLifecycle } from "./bulk-upload-lifecycle.js";
+import { beginStream, endStream } from "./bulk-upload-stream-gate.js";
 
 /** Bound client-supplied id/name/mimetype strings (X9 — untrusted lengths). */
 const MAX_ITEM_FIELD_LENGTH = 512;
@@ -214,6 +215,55 @@ async function handleCreateBulkSession(opts: {
   return { sessionId: session.id, startedAt: session.createdAt, capabilities: BULK_CAPABILITIES };
 }
 
+/** Stream one registered item's bytes to staging (hash + byte-count server-side). */
+async function handleUploadBulkItem(opts: {
+  boxRoot: string;
+  request: FastifyRequest<{ Params: { id: string; itemId: string } }>;
+  reply: FastifyReply;
+}): Promise<unknown> {
+  const { boxRoot, request, reply } = opts;
+  const { id, itemId } = request.params;
+  const session = await loadOwnedBulkSession({ boxRoot, request, reply, id });
+  if (!session) return reply;
+  if (session.state !== "open") {
+    return reply.status(409).send({ error: `Session is ${session.state}; uploads are only accepted while it is open` });
+  }
+  const registered = (session.expectedItems ?? []).some((it) => it.id === itemId);
+  if (!registered) return reply.status(400).send({ error: new UnregisteredBulkItemError(itemId).message });
+  const filename = header(request, "x-upload-filename");
+  if (!filename) return reply.status(400).send({ error: "X-Upload-Filename header required" });
+
+  const gate = beginStream(id, itemId);
+  if (gate === "duplicate") return reply.status(409).send({ error: "This item is already uploading" });
+  if (gate === "too-many") {
+    return reply.status(409).send({ error: "Too many concurrent uploads for this batch; retry shortly" });
+  }
+  try {
+    const result = await addFileStreamed({
+      boxRoot,
+      id,
+      filename,
+      uploadedAt: header(request, "x-upload-uploaded-at") ?? getBoxTimeISO(boxRoot),
+      originalName: header(request, "x-upload-original-name") ?? filename,
+      mimeType: header(request, "x-upload-mime-type") ?? "application/octet-stream",
+      itemId,
+      source: request.raw,
+    });
+    return { success: true, filename, itemId, size: result.size, sha256: result.sha256 };
+  } catch (error) {
+    if (error instanceof StagingPathError) return reply.status(400).send({ error: "Invalid filename" });
+    if (isStagingLimitError(error)) return reply.status(413).send({ error: error.message });
+    if (error instanceof StagingUploadReplayConflictError) return reply.status(409).send({ error: error.message });
+    // Seal-barrier races (session sealed / item unregistered under the lock).
+    if (error instanceof StagingSessionNotOpenError) return reply.status(409).send({ error: error.message });
+    if (error instanceof StagingItemNotRegisteredError) return reply.status(409).send({ error: error.message });
+    if (error instanceof StagingSessionGoneError) return reply.status(404).send({ error: "Session not found" });
+    throw error;
+  } finally {
+    endStream(id, itemId);
+  }
+}
+
 export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutesOptions): Promise<void> {
   const { server, boxRoot, eventBus } = options;
 
@@ -253,43 +303,8 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
     // POST /api/bulk/sessions/:id/items/:itemId/upload — stream one item's bytes.
     instance.post<{ Params: { id: string; itemId: string } }>(
       "/api/bulk/sessions/:id/items/:itemId/upload",
-      async (request: FastifyRequest<{ Params: { id: string; itemId: string } }>, reply) => {
-        const { id, itemId } = request.params;
-        const session = await loadOwnedBulkSession({ boxRoot, request, reply, id });
-        if (!session) return reply;
-        if (session.state !== "open") {
-          return reply.status(409).send({ error: `Session is ${session.state}; uploads are only accepted while it is open` });
-        }
-        const registered = (session.expectedItems ?? []).some((it) => it.id === itemId);
-        if (!registered) {
-          return reply.status(400).send({ error: new UnregisteredBulkItemError(itemId).message });
-        }
-        const filename = header(request, "x-upload-filename");
-        if (!filename) return reply.status(400).send({ error: "X-Upload-Filename header required" });
-
-        try {
-          const result = await addFileStreamed({
-            boxRoot,
-            id,
-            filename,
-            uploadedAt: header(request, "x-upload-uploaded-at") ?? getBoxTimeISO(boxRoot),
-            originalName: header(request, "x-upload-original-name") ?? filename,
-            mimeType: header(request, "x-upload-mime-type") ?? "application/octet-stream",
-            itemId,
-            source: request.raw,
-          });
-          return { success: true, filename, itemId, size: result.size, sha256: result.sha256 };
-        } catch (error) {
-          if (error instanceof StagingPathError) return reply.status(400).send({ error: "Invalid filename" });
-          if (isStagingLimitError(error)) return reply.status(413).send({ error: error.message });
-          if (error instanceof StagingUploadReplayConflictError) return reply.status(409).send({ error: error.message });
-          // Seal-barrier races (session sealed / item unregistered under the lock).
-          if (error instanceof StagingSessionNotOpenError) return reply.status(409).send({ error: error.message });
-          if (error instanceof StagingItemNotRegisteredError) return reply.status(409).send({ error: error.message });
-          if (error instanceof StagingSessionGoneError) return reply.status(404).send({ error: "Session not found" });
-          throw error;
-        }
-      },
+      (request: FastifyRequest<{ Params: { id: string; itemId: string } }>, reply) =>
+        handleUploadBulkItem({ boxRoot, request, reply }),
     );
 
     // GET /api/bulk/sessions/:id — resume/status: registered vs received items.

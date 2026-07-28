@@ -490,7 +490,9 @@ See §1.3 (full request/response/errors).
     `X-Upload-Mime-Type`, `X-Upload-Uploaded-At`. Res `{ success, filename, itemId, size, sha256 }`
     (size + sha256 **server-computed** while streaming). An unregistered `itemId` is **400**; a byte
     over the staging cap **413**; a same-filename/different-bytes retry **409**; a commit that races
-    finalize (session sealed under the lock, or an item unregistered under the lock) **409**.
+    finalize (session sealed under the lock, or an item unregistered under the lock) **409**; a second
+    concurrent stream for the same item, or more than 8 concurrent streams for the session, **409**
+    (retry shortly).
   - `GET /api/bulk/sessions/:id` — resume/status: `{ sessionId, state, targetSessionId, registered:
     BulkItem[], received: [{ itemId, name, size }] }`.
   - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch.
