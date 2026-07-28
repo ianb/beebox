@@ -91,6 +91,42 @@ This maps onto standard OAuth cleanly, which is the appeal:
   ([config-untrusted-principle-drift](../decisions/2026-07-22-config-untrusted-principle-drift.md))
   tension by moving the enforcement out of the box.
 
+## How much of this is just Composio/Nango? (be honest — it's a lot)
+
+The **auth-broker core is commodity** — holding one grant, per-client connected
+accounts, a token vault with refresh, a layer between agent and Google. That's
+exactly what **Composio** does (SaaS) and what **Nango** does (open-source,
+self-hostable). Building that plumbing ourselves would be reinventing it.
+
+What is **genuinely different** (the part worth our own code):
+
+1. **Self-hosted token custody.** Composio-SaaS holds your Google tokens on *its*
+   cloud — the opposite of "your data, your box." Only **Nango** matches the
+   self-hosted requirement, so if we adopt anything it's Nango, not Composio.
+2. **Threat model: the proxy as an escape-proof boundary against an *untrusted*
+   box agent.** Composio/Nango assume the calling app is the trusted principal;
+   their scoping is about what the app *should* call, not defense against a box
+   that tries to widen its own view. Our whole point is that the box agent can
+   escape in-box config, so filtering must live on the far side of the boundary.
+   That security framing is ours, not theirs.
+3. **Reuse our own connectors against a Google-mirroring proxy** — not adopt
+   Composio's action SDK / tool abstraction. We keep `src/connectors/` and
+   repoint them; that's a different integration paradigm than "call Composio's
+   actions."
+4. **Capability advertisement + privilege separation** — the box introspects its
+   own limited view and can direct-but-not-edit its policy. Composio exposes
+   available actions to an agent; it doesn't center "here is the filtered slice
+   you're allowed and you can't change it."
+
+**So the real decision is build-vs-adopt, not build-from-scratch:** likely
+*don't* rebuild the token-vault/refresh plumbing — evaluate **self-hosted Nango**
+for Tier 1 + token custody, and put the callback-box-specific **policy
+enforcement + capability advertisement + connector fit** on top. A thin bespoke
+proxy is only justified if mirroring Google's API for our existing connectors
+(§ protocol shape) turns out simpler than bending Nango to it. Fold this into
+[investigate-composio-tool-layer](../exploration/2026-07-09-investigate-composio-tool-layer.md),
+which is the same evaluation from the other direction.
+
 ## Design questions (large — this is a new trust anchor)
 
 - **Where it runs + trust model.** A new always-on service beside the hub? It
