@@ -5,6 +5,11 @@ filed-by: agent
 discovered-in: main session — boxholder asked to research
 ---
 
+> **Outcome:** the boxholder chose path 1 (web page + muted-audio keepalive). The
+> buildable feature is filed at
+> [Always-on personalized dashboard view for the Echo Show](../features/2026-07-27-echo-show-display-dashboard-view.md);
+> this item stays as the research/rationale behind that choice.
+
 The boxholder wants box content up on an **Echo Show** screen — ideally a nice
 always-on dashboard. Open question whether that needs an **Alexa app/skill** at
 all, or whether it's better framed as a **display-optimized dashboard view** the
