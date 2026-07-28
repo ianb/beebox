@@ -3127,6 +3127,29 @@ test1:
       peak: 50922
       added: 3981
       turns: 11
+  upload-message-meaning:
+    - date: 2026-07-28T02:56:27.422Z
+      boxCommit: 20a70b9b38318115af6245e9cc169b21abebd849
+      repoCommit: 08fbb0ecc36217e65b66dff5d75fb9c1135abdb7
+      initial: 47130
+      peak: 50110
+      added: 2980
+      turns: 5
+  upload-batch-found-outside-chat:
+    - date: 2026-07-28T02:56:27.422Z
+      boxCommit: 20a70b9b38318115af6245e9cc169b21abebd849
+      repoCommit: 08fbb0ecc36217e65b66dff5d75fb9c1135abdb7
+      initial: 41230
+      peak: 48138
+      added: 6908
+      turns: 18
+    - date: 2026-07-28T02:58:20.503Z
+      boxCommit: 136d0659efe256618a3e2d5ec8971819c30a7e84
+      repoCommit: 08fbb0ecc36217e65b66dff5d75fb9c1135abdb7
+      initial: 41247
+      peak: 45106
+      added: 3859
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

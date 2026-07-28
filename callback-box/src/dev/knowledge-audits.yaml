@@ -3742,6 +3742,78 @@ tests:
     correct_contains_any: ["cut off", "cut short", "missing", "mid-thought", "incomplete"]
     tags: [capture, chat, behavioral]
 
+  # === Bulk file upload ===
+  #
+  # docs/plans/bulk-file-upload.md Track 4. An `<upload doc="..." files="N"
+  # bytes="..." failed="M">` chat message is the bulk sibling of `<capture>` —
+  # documented alongside it in CHAT_SYSTEM_PROMPT (prompts.ts), so this entry
+  # needs chat_mode: true. The filing duties (including the "ask before filing
+  # an unintroduced batch" rule, boxholder decision 2026-07-27) live in the
+  # upload-batch schema's instructions (src/schemas/upload-batch.tsx), surfaced
+  # to the agent as docs/generated/card-upload-batch.md. The second entry below
+  # is the non-chat case: a chat-agent-only concept (schema instructions say
+  # filing is chat-agent-only) discovered by an agent poking around the box
+  # outside any chat turn — tmp-upload/ is a landing zone parallel to
+  # tmp-capture/ and must not accumulate.
+  #
+  # Status (2026-07-27): 2/2 pass on the bulk-file-upload worktree's test1
+  # clone. upload-message-meaning passed first try (1 read of the generated
+  # card-upload-batch.md, correctly named both the real-user-input framing and
+  # the ask-first rule). upload-batch-found-outside-chat FAILED its first run
+  # (0 words, 18 turns) — not a prompt-surface gap: the box actually had a
+  # real leftover tmp-upload/ batch from the Track 1/2 E2E verification (filed
+  # to box/inbox/ as file cards but never deleted, a genuine loose end from
+  # that verification pass), and the agent went down a real remediation
+  # rabbit hole (git mv, cb rm, hashing files) instead of answering the
+  # hypothetical, running out of turns before replying. Fixed by cleaning up
+  # that stray artifact in the box (`git rm -r tmp-upload`, box commit
+  # 136d0659) rather than touching the audit; re-run passed cleanly (1 read,
+  # 7 turns, correctly named the landing-zone convention, the
+  # already-filed-by-hand check, and the question-card fallback for
+  # ambiguous destinations).
+
+  - id: upload-message-meaning
+    prompt: >
+      A message arrives in chat with no other text from the user: `<upload
+      doc="tmp-upload/batch-20260710T0900-ab12.upload-batch.card" files="34"
+      bytes="112 MB" failed="3">34 files uploaded (112 MB); 3 more failed to
+      upload.</upload>`. What is this, and what do you do first?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Says this is real, first-class user input (parallel to `<capture>`) and
+      a reply is expected — not a background/system note. Says the filing
+      duties live in the `doc` card's schema instructions (upload-batch), so
+      it should read that card before responding substantively rather than
+      just the one-line inner summary. Critically: because the batch arrived
+      with no accompanying text explaining what it's for or where it goes, the
+      agent should ask the boxholder before filing anything — not start
+      placing files unprompted.
+    correct_contains_any: ["user input", "real user", "reply is expected", "expects a reply"]
+    correct_contains: ["ask"]
+    tags: [bulk-upload, chat, behavioral]
+
+  - id: upload-batch-found-outside-chat
+    prompt: >
+      Doing unrelated work in this box — not processing a chat turn — you
+      notice a directory `tmp-upload/batch-20260705T1200-cd34/` still present
+      under one of the chat context directories, holding an `upload-batch`
+      card and its attach scope. What does this mean, and what should you do?
+    expected_level: discoverable
+    should_read: ["docs/generated/card-upload-batch.md"]
+    watch_for: >
+      Recognizes tmp-upload/ as a landing zone (the bulk-upload sibling of
+      tmp-capture/) that must not accumulate — a card still sitting there
+      means the batch's filing was never finished. Reads the card (and its
+      generated instructions) to see the file inventory, then either files
+      the remainder itself (only if the destination is genuinely unambiguous)
+      or raises a note/question rather than silently ignoring or deleting it.
+      Filing an upload batch is chat-agent-only work per the schema's own
+      division of duties, so a non-chat agent finding one mid-batch should
+      not assume it can just finish the job unprompted.
+    correct_contains: ["tmp-upload"]
+    tags: [bulk-upload, navigation]
+
   # === Calendar: authoring .ics events ===
   #
   # The calendar skill is de-templated (Track 1 of remove-box-shape-v1): it no

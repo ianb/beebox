@@ -50,12 +50,15 @@ overclaims corrected).
   manifest); `src/core/capture/staging-limits.ts:13-14`:
   `MAX_STAGED_BYTES = 1024 * 1024 * 1024; MAX_STAGED_ITEMS = 500`, enforced
   under a per-session lock, mapped to 413 (`capture-upload.ts:127`).
-  **Reused**, with two hardening items this plan adds: `session.json` is
-  written with a plain `writeFile` (`staging-store.ts:132`) and any
-  read/parse/schema error is swallowed to `null`
-  (`staging-store.ts:120-130` `catch (_e) { return null; }`) — a corrupt
-  manifest silently strands the whole batch. Bulk needs temp-file+rename
-  writes and a non-silent corrupt-manifest path (principle #4).
+  **Reused**, with two hardening items this plan adds: `session.json` was
+  written with a plain `writeFile` and any read/parse/schema error was
+  swallowed to `null` (`catch (_e) { return null; }`) — a corrupt manifest
+  silently strands the whole batch. Bulk needs temp-file+rename writes and a
+  non-silent corrupt-manifest path (principle #4). **Done in Track 0**: this
+  logic moved to `src/core/capture/staging-manifest-io.ts`
+  (`readStagingSession`/`writeStagingSession`), which now does exactly that —
+  temp-file+rename writes, and a corrupt manifest gets a loud `console.error`
+  plus quarantine to `session.json.corrupt` instead of a silent `null`.
 - **Upload route** — `src/webapp/routes/capture-upload.ts` already accepts
   `X-Capture-Kind: file` items, one HTTP call per item, per-capture-session
   owner auth (`capture-request-owner.ts`), and replay/idempotency handling
@@ -262,13 +265,16 @@ files-only capture session is Open question 1.)
 
 Ordered by implementation dependency.
 
-**Track 0 — Staging hardening (shared with capture).**
-- *Why*: bulk leans on staging as durable; today it isn't (silent-null
-  manifests, non-atomic writes).
+**Track 0 — Staging hardening (shared with capture). DONE (`0ef4d69c`).**
+- *Why*: bulk leans on staging as durable; before this track it wasn't
+  (silent-null manifests, non-atomic writes).
 - *Direction*: temp-file+rename `session.json` writes; corrupt manifest →
-  quarantine + `console.error` with box/session context, never silent `null`
-  (`staging-store.ts:120-132`). Benefits capture too.
-- *First chunk*: exactly that, with doctests.
+  quarantine + `console.error` with box/session context, never silent `null`.
+  Benefits capture too.
+- *First chunk*: exactly that, with doctests. Shipped as
+  `src/core/capture/staging-manifest-io.ts` (the plain-`writeFile`/silent-`null`
+  logic this track replaced previously lived in `staging-store.ts`, since split
+  up).
 
 **Track 1 — Core: batch sessions, prepare, deliver (backend).**
 - *Direction*: `kind` + predeclared item registry on staging sessions;
@@ -315,12 +321,12 @@ scope statement above bounds it enough to stay inline.
 | Item upload fails mid-batch (network drop) | Track 2 doctests / Track 3 coordinator tests | Bounded-queue retry; server knows the item is missing via the predeclared registry | Clear: item state + named in `failed` list |
 | Tab/app dies after some uploads, before finalize | Track 1 doctest (resume listing) | Batch enumerable + resumable (registry says what's missing); staging retained | Clear: "resume batch" affordance; sweep surfaces abandoned staging |
 | Batch exceeds 1 GiB / 500 items | existing (`staging-limits`) | 413 (`capture-upload.ts:127`) | Clear: item error in overlay |
-| Single file > 50 MB multipart cap | new doctest | 413; item marked failed, batch continues | Clear: item error with size |
+| Single file exceeds the batch cap | new doctest | 413; item marked failed, batch continues | Clear: item error with size — see Implementation notes: bulk has no separate per-file cap, only the shared 1 GiB batch cap |
 | Finalize crashes after commit, before deliver | Track 1 doctest | Retryable (`failed:deliver` shape) + at-most-once probe | Clear: retried; never double-delivers |
 | Message enqueued to busy agent, server crashes before drain | Track 1 doctest | Reconciliation: `delivered` batch with no transcript hit → re-deliver at startup/sweep | Clear: eventually delivered |
 | Target chat gone at delivery | Track 1 doctest | Fail loudly, batch stays retryable (no most-active fallback for bulk) | Clear: error surfaced, nothing misdelivered |
 | Filename collision within batch | new doctest | Numeric-suffix dedupe in prepare; manifest records both | Clear |
-| Corrupt/unparseable `session.json` | Track 0 doctest | Quarantine + logged error (today: silent `null`, `staging-store.ts:120`) | Clear after Track 0 |
+| Corrupt/unparseable `session.json` | Track 0 doctest | Quarantine + logged error (`staging-manifest-io.ts`; was silent `null` in the pre-Track-0 `staging-store.ts`) | Clear after Track 0 |
 | Commit of batch card/manifest fails | route-tier doctest | Finalize fails loudly; staging retained (copy, not move) | Clear |
 | Agent never files the batch | sweep doctest | Sweep ≥7 days → self-note to the chat agent (not just `console.warn`) | Clear |
 | iOS force-quit mid-batch | deferred with Track 3 | (deferred — the item registry already makes missing items detectable server-side) | n/a in v1 |
@@ -370,8 +376,9 @@ retained staging and the reconciliation pass respectively.
 - **Changing the single-file attach flow** — untouched; bulk is a sibling.
 - **Automatic/background filing by a non-chat procedure** — agent-in-the-loop
   filing is the point.
-- **Raising the 50 MB per-file / 1 GiB per-batch caps** — current caps cover
-  the stated scenario.
+- **Raising the 1 GiB per-batch cap** — current cap covers the stated scenario.
+  (The 50 MB per-file multipart cap named in the first draft turned out to be
+  capture-specific — see Implementation notes.)
 - **Android** — no shell exists; contract rows keep it implementable.
 
 ## Open design questions — RESOLVED (boxholder, 2026-07-27)
@@ -390,11 +397,35 @@ filing (folded into Direction §3 duties).
 ## Knowledge audits
 
 New agent-facing concepts: the `<upload …>` message, `upload-batch` duties,
-`tmp-upload/` must-not-accumulate. Plan: two `knows_directly` entries in
-`src/dev/knowledge-audits.yaml` — (a) what an `<upload>` message is and where
-duties live; (b) what to do with an unfiled `tmp-upload/` batch found outside
-chat. Run via `pnpm knowledge-audit run` before the plan completes; statuses
-recorded in the yaml.
+`tmp-upload/` must-not-accumulate. Two `knows_directly`/`discoverable` entries
+landed in `src/dev/knowledge-audits.yaml` (`=== Bulk file upload ===` section):
+`upload-message-meaning` (what the message is, including the ask-before-filing
+rule for an unintroduced batch) and `upload-batch-found-outside-chat` (a stray
+`tmp-upload/` batch discovered outside a chat turn). Both pass as of
+2026-07-27 — see the yaml's status comment for the one real finding along the
+way (a genuinely leftover `tmp-upload/` batch in the test box from this
+plan's own E2E verification, cleaned up rather than papering over the audit).
+
+## Implementation notes
+
+Two places where the shipped code diverges from this plan's original text,
+recorded here rather than silently left stale:
+
+- **No per-file multipart cap for bulk.** The plan's failure-mode table
+  originally named a "single file > 50 MB multipart cap" inherited from
+  capture's buffered upload route. Bulk's upload route
+  (`src/webapp/routes/bulk-upload.ts`) streams the raw request body straight to
+  a temp file (`addFileStreamed`, `src/core/capture/staging-stream.ts`) instead
+  of buffering a multipart body in memory, so that capture-specific 50 MB
+  per-file cap (`capture-upload.ts`'s multipart limit) never applied to bulk in
+  the first place. Only the shared `MAX_STAGED_BYTES` (1 GiB) batch cap from
+  `staging-limits.ts` bounds a bulk item.
+- **`<upload>` wrapper byte formatting.** `buildUploadWrapper`
+  (`src/core/bulk-upload/deliver.ts`) renders `bytes` via `humanBytes()` —
+  spaced, human units (`bytes="112 MB"`), not a raw byte count — and omits the
+  `failed` attribute entirely when the batch has zero failures (a clean batch
+  carries no `failed` marker at all, rather than `failed="0"`). Both are
+  doctested exact as vocabulary lock-ins.
 
 ## Implementation order
 

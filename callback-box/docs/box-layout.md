@@ -92,6 +92,17 @@ them out — `tmp-capture/` must not accumulate. Flow reference:
 `docs/implemented-plans/capture-mode.md`; agent duties:
 `docs/generated/card-capture-session.md`.
 
+A bulk file-upload batch (dozens of items / ~100 MB dropped at once — camera-roll
+batches, document folders) lands the same way, as a sibling `tmp-upload/`
+directory inside the target chat's context area: an `upload-batch` card + attach
+scope, delivered to chat as a first-class `<upload doc="..." files="N" bytes="..."
+failed="M">` message. The chat agent files each item out (destination card attach
+scope, `store/`, or `box/inbox/`) and deletes the card + attach dir once
+everything is placed — there is no terminal "filed" status, deletion *is* the
+completion signal, and `tmp-upload/` must not accumulate either. Plan:
+`docs/plans/bulk-file-upload.md`; agent duties:
+`docs/generated/card-upload-batch.md`.
+
 ## Marker and runtime files (root)
 
 | File | Purpose |
