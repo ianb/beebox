@@ -128,6 +128,11 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertNil(ChatWebView.speechPlaybackActive(from: #"{"playing":"yes"}"#))
     }
 
+    func testResponseStateDecodesNeutralBridgePayload() {
+        XCTAssertEqual(ChatWebView.responseActive(from: #"{"active":true}"#), true)
+        XCTAssertNil(ChatWebView.responseActive(from: #"{"active":"yes"}"#))
+    }
+
     @MainActor
     func testUnacknowledgedEmissionTimesOutAsRejected() async {
         let emission = makeEmission()
@@ -204,6 +209,7 @@ final class ChatWebViewRequestTests: XCTestCase {
             onLocationSharingStateChange: { _ in },
             onNarrationStateChange: { _ in },
             onSpeechPlaybackStateChange: { _ in },
+            onResponseStateChange: { _ in },
             onScreenshotResult: { _ in },
             onComposerCommand: { _ in },
             onComposerCommandAcknowledgementDelivered: { _ in },

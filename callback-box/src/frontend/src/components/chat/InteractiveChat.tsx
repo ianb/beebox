@@ -41,6 +41,7 @@ import {
   useNativeEmissionBridge,
   useNativeLocationBridge,
   useNativeNarrationBridge,
+  useNativeResponseBridge,
   useNativeSpeechPlaybackBridge,
 } from "./use-native-bridge";
 
@@ -183,6 +184,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   useNativeEmissionBridge({ enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission });
   useNativeLocationBridge({ enabled: usesNativeShell, boxSlug });
   useNativeNarrationBridge({ enabled: usesNativeShell, narrationEnabled: model.narrationEnabled });
+  useNativeResponseBridge({ enabled: usesNativeShell, active: snapshot.value === "streaming" });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});

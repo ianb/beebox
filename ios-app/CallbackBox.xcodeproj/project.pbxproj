@@ -24,6 +24,14 @@
 		B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */; };
 		C83000012C3C000100000001 /* BoxLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000022C3C000100000001 /* BoxLockManager.swift */; };
 		C83000032C3C000100000001 /* BoxLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83000042C3C000100000001 /* BoxLockTests.swift */; };
+		D94000012C3C000100000001 /* NativeEarcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = D94000112C3C000100000001 /* NativeEarcons.swift */; };
+		D94000022C3C000100000001 /* beeprising.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000122C3C000100000001 /* beeprising.wav */; };
+		D94000032C3C000100000001 /* tick2.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000132C3C000100000001 /* tick2.wav */; };
+		D94000042C3C000100000001 /* book-close.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000142C3C000100000001 /* book-close.wav */; };
+		D94000052C3C000100000001 /* recording-start.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000152C3C000100000001 /* recording-start.mp3 */; };
+		D94000062C3C000100000001 /* recording-stop.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D94000162C3C000100000001 /* recording-stop.mp3 */; };
+		D94000072C3C000100000001 /* recording-error.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000172C3C000100000001 /* recording-error.wav */; };
+		D94000082C3C000100000001 /* krell-alarm-7.wav in Resources */ = {isa = PBXBuildFile; fileRef = D94000182C3C000100000001 /* krell-alarm-7.wav */; };
 		5A1000072C3C000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000182C3C000100000001 /* Assets.xcassets */; };
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
@@ -80,6 +88,14 @@
 		B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerFixtureScreen.swift; sourceTree = "<group>"; };
 		C83000022C3C000100000001 /* BoxLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockManager.swift; sourceTree = "<group>"; };
 		C83000042C3C000100000001 /* BoxLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxLockTests.swift; sourceTree = "<group>"; };
+		D94000112C3C000100000001 /* NativeEarcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeEarcons.swift; sourceTree = "<group>"; };
+		D94000122C3C000100000001 /* beeprising.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = beeprising.wav; sourceTree = "<group>"; };
+		D94000132C3C000100000001 /* tick2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = tick2.wav; sourceTree = "<group>"; };
+		D94000142C3C000100000001 /* book-close.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "book-close.wav"; sourceTree = "<group>"; };
+		D94000152C3C000100000001 /* recording-start.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-start.mp3"; sourceTree = "<group>"; };
+		D94000162C3C000100000001 /* recording-stop.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "recording-stop.mp3"; sourceTree = "<group>"; };
+		D94000172C3C000100000001 /* recording-error.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "recording-error.wav"; sourceTree = "<group>"; };
+		D94000182C3C000100000001 /* krell-alarm-7.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "krell-alarm-7.wav"; sourceTree = "<group>"; };
 		5A1000172C3C000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5A1000182C3C000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
@@ -146,6 +162,7 @@
 				5A1000432C3C000100000001 /* Services */,
 				5A1000422C3C000100000001 /* Views */,
 				5A1000182C3C000100000001 /* Assets.xcassets */,
+				D94000202C3C000100000001 /* Earcons */,
 				5A1000172C3C000100000001 /* Info.plist */,
 			);
 			path = CallbackBox;
@@ -213,8 +230,23 @@
 				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
 				5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */,
 				5A10003A2C3C000100000001 /* CaptureAcquisition.swift */,
+				D94000112C3C000100000001 /* NativeEarcons.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		D94000202C3C000100000001 /* Earcons */ = {
+			isa = PBXGroup;
+			children = (
+				D94000122C3C000100000001 /* beeprising.wav */,
+				D94000132C3C000100000001 /* tick2.wav */,
+				D94000142C3C000100000001 /* book-close.wav */,
+				D94000152C3C000100000001 /* recording-start.mp3 */,
+				D94000162C3C000100000001 /* recording-stop.mp3 */,
+				D94000172C3C000100000001 /* recording-error.wav */,
+				D94000182C3C000100000001 /* krell-alarm-7.wav */,
+			);
+			path = ../../callback-box/src/frontend/public/earcons;
 			sourceTree = "<group>";
 		};
 		5A1001122C3C000100000001 /* CallbackBoxTests */ = {
@@ -316,6 +348,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A1000072C3C000100000001 /* Assets.xcassets in Resources */,
+				D94000022C3C000100000001 /* beeprising.wav in Resources */,
+				D94000032C3C000100000001 /* tick2.wav in Resources */,
+				D94000042C3C000100000001 /* book-close.wav in Resources */,
+				D94000052C3C000100000001 /* recording-start.mp3 in Resources */,
+				D94000062C3C000100000001 /* recording-stop.mp3 in Resources */,
+				D94000072C3C000100000001 /* recording-error.wav in Resources */,
+				D94000082C3C000100000001 /* krell-alarm-7.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -345,6 +384,7 @@
 				B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */,
 				B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */,
 				C83000012C3C000100000001 /* BoxLockManager.swift in Sources */,
+				D94000012C3C000100000001 /* NativeEarcons.swift in Sources */,
 				B72000192C3C000100000001 /* ComposerTextView.swift in Sources */,
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,

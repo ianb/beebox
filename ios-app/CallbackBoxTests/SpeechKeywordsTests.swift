@@ -198,6 +198,19 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
         }
     }
 
+    func testResponseStateFixturesDecodeThroughNativeSeam() throws {
+        let fixtures = try MobileContractFixtures.load("response-state")
+        XCTAssertFalse(fixtures.isEmpty, "no response state fixtures found")
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any], "\(name): missing input")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): missing expected")
+            let active = ChatWebView.responseActive(
+                from: try MobileContractFixtures.jsonString(from: input)
+            )
+            XCTAssertEqual(active, expected["active"] as? Bool, "\(name): active")
+        }
+    }
+
     func testV2EmissionFixturesDecodeStrictly() throws {
         let fixtures = try MobileContractFixtures.load("emission")
         var decodedV2 = 0

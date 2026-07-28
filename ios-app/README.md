@@ -25,6 +25,8 @@ Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
   and `SFSpeechRecognizer` remains the iOS 17–25 fallback. The first use of a
   locale may download its system-managed model. A recorded WAV is still kept in
   parallel for the box's HQ transcription and diarization pass at send time.
+- Native speech uses the web chat's earcon files, volumes, and timing for
+  recording start/stop/failure, send/wait feedback, and idle listening.
 
 Once Xcode is installed, open:
 

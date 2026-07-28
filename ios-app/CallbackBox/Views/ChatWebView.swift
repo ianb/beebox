@@ -71,6 +71,7 @@ struct ChatWebView: UIViewRepresentable {
     var onLocationSharingStateChange: (Bool) -> Void
     var onNarrationStateChange: (Bool) -> Void
     var onSpeechPlaybackStateChange: (Bool) -> Void
+    var onResponseStateChange: (Bool) -> Void
     var onScreenshotResult: (NativeScreenshotResult) -> Void
     var onComposerCommand: (NativeComposerCommandDelivery) -> Void
     var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -88,6 +89,7 @@ struct ChatWebView: UIViewRepresentable {
         onLocationSharingStateChange: @escaping (Bool) -> Void = { _ in },
         onNarrationStateChange: @escaping (Bool) -> Void = { _ in },
         onSpeechPlaybackStateChange: @escaping (Bool) -> Void = { _ in },
+        onResponseStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
         onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void = { _ in },
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in }
@@ -104,6 +106,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onLocationSharingStateChange = onLocationSharingStateChange
         self.onNarrationStateChange = onNarrationStateChange
         self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
+        self.onResponseStateChange = onResponseStateChange
         self.onScreenshotResult = onScreenshotResult
         self.onComposerCommand = onComposerCommand
         self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -117,6 +120,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxNarrationState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxSpeechPlaybackState")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxResponseState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxComposerCommand")
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
@@ -145,6 +149,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onLocationSharingStateChange = onLocationSharingStateChange
         context.coordinator.onNarrationStateChange = onNarrationStateChange
         context.coordinator.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
+        context.coordinator.onResponseStateChange = onResponseStateChange
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -172,6 +177,7 @@ struct ChatWebView: UIViewRepresentable {
             onLocationSharingStateChange: onLocationSharingStateChange,
             onNarrationStateChange: onNarrationStateChange,
             onSpeechPlaybackStateChange: onSpeechPlaybackStateChange,
+            onResponseStateChange: onResponseStateChange,
             onScreenshotResult: onScreenshotResult,
             onComposerCommand: onComposerCommand,
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered
@@ -187,6 +193,7 @@ struct ChatWebView: UIViewRepresentable {
         var onLocationSharingStateChange: (Bool) -> Void
         var onNarrationStateChange: (Bool) -> Void
         var onSpeechPlaybackStateChange: (Bool) -> Void
+        var onResponseStateChange: (Bool) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
         var onComposerCommand: (NativeComposerCommandDelivery) -> Void
         var onComposerCommandAcknowledgementDelivered: (String) -> Void
@@ -215,6 +222,7 @@ struct ChatWebView: UIViewRepresentable {
             onLocationSharingStateChange: @escaping (Bool) -> Void,
             onNarrationStateChange: @escaping (Bool) -> Void,
             onSpeechPlaybackStateChange: @escaping (Bool) -> Void,
+            onResponseStateChange: @escaping (Bool) -> Void,
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
             onComposerCommand: @escaping (NativeComposerCommandDelivery) -> Void,
             onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void,
@@ -234,6 +242,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onLocationSharingStateChange = onLocationSharingStateChange
             self.onNarrationStateChange = onNarrationStateChange
             self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
+            self.onResponseStateChange = onResponseStateChange
             self.onScreenshotResult = onScreenshotResult
             self.onComposerCommand = onComposerCommand
             self.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
@@ -327,6 +336,10 @@ struct ChatWebView: UIViewRepresentable {
             }
             if message.name == "callbackboxSpeechPlaybackState" {
                 receiveSpeechPlaybackState(message.body)
+                return
+            }
+            if message.name == "callbackboxResponseState" {
+                receiveResponseState(message.body)
                 return
             }
             if message.name == "callbackboxComposerCommand" {
@@ -493,6 +506,13 @@ struct ChatWebView: UIViewRepresentable {
             onSpeechPlaybackStateChange(playing)
         }
 
+        private func receiveResponseState(_ body: Any) {
+            guard let active = ChatWebView.responseActive(from: body) else {
+                return
+            }
+            onResponseStateChange(active)
+        }
+
         private func startLocationRequestTimeout(for requestID: NativeLocationShareRequest.ID) {
             let timeout = DispatchWorkItem { [weak self] in
                 guard let self, self.inflightLocationRequestID == requestID else {
@@ -630,6 +650,10 @@ struct ChatWebView: UIViewRepresentable {
 
     static func speechPlaybackActive(from body: Any) -> Bool? {
         dictionaryPayload(from: body)?["playing"] as? Bool
+    }
+
+    static func responseActive(from body: Any) -> Bool? {
+        dictionaryPayload(from: body)?["active"] as? Bool
     }
 
     /// Script-message payloads arrive as a dictionary from legacy direct
