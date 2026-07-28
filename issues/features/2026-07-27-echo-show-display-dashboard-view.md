@@ -49,16 +49,54 @@ Still true regardless of the above:
 This is the substantial, design-first piece: a card type + its view + the
 agent-tending model, not "the existing dashboard at a URL."
 
-## 2. Auth for a shared, always-on device
+## 2. Auth for a shared, always-on device (the hard part)
 
-A kitchen Echo Show can't do OAuth and must not hold a full owner session. Needs
-a **device-scoped, read-only, long-lived display token** — reuse the mobile
-device-token / pairing model already in `src/core/mobile/` (`request-auth.ts`,
-`mobile-session.ts`, `pairing.ts`) and `src/webapp/routes/pairing.ts` /
-`server-box-scope.ts`, but scoped down to *read-only display* rather than full
-mobile capability. The token rides in the URL (so Silk can be pointed at it once
-and bookmarked) or a paired-device cookie. Reachable over Tailscale or a public
-box URL.
+A kitchen Echo Show can't do OAuth and must not hold a full owner session. This
+is the genuinely hard piece. Both viable options ultimately rest on the *same*
+trust primitive — **an unguessable secret grants read access** — so the real
+choice is **where the private data lives** and **whether the page is live**.
+
+### Option A — external published page (box never exposed)
+
+Reuse the publish-pages pipeline (`src/publish/` — `cb pub`, `manifest.ts`,
+`submission.ts`, `pub-worker-meta.ts`, `leak-scan.ts`, `setup.ts`;
+`docs/plans/publish-pages.md`). The box **renders the dashboard and publishes a
+static artifact**; the Echo Show fetches that. The box's fail-closed auth is
+never touched.
+
+- **Cost:** you deliberately put **private personalized data on an external host**
+  (behind URL secrecy). `leak-scan` guards that boundary for *public* content,
+  but a personal dashboard is *intended*-private, so it can't protect you here.
+- It's a **snapshot** — no live data, **no touch drill-in** — and wiring the
+  publish pipeline to a frequently-refreshed private page is the "hard to
+  implement" part.
+- **Wins only if** the hard requirement is "the box must never be reachable from
+  the display at all."
+
+### Option B — live page, read-only device token (recommended, scoped hard)
+
+Extend the mobile device-token / pairing model in `src/core/mobile/`
+(`request-auth.ts`, `mobile-session.ts`, `pairing.ts`) + `routes/pairing.ts` /
+`server-box-scope.ts`. **Not a novel hole:** paired phones already authenticate
+with a box-scoped device token (`cb_mobile`) instead of OAuth. A display token is
+a **strictly narrower sibling** — read-only, unlocks *only* the one dashboard-card
+view, revocable, per-device, rate-limited. Blast radius of a leak = "someone sees
+the dashboard," not "controls the box" — arguably the least-privileged credential
+in the system. Token rides in the URL so Silk can bookmark it once; stays **live
+and touch-interactive**.
+
+**Lean: B, scoped hard.** Keeps data on the box (where revocation/access controls
+already live), less capability than a credential we already trust on phones, and
+preserves the live+touch properties that make the Echo Show better than a TV.
+"Scary" shrinks once you write down what the token can actually do.
+
+### Wrinkle either way: Cloudflare Access
+
+The prod box currently sits behind a Cloudflare Access wall
+([cloudflare-access-walling-prod-box](../bugs/2026-07-21-cloudflare-access-walling-prod-box.md)).
+**B** needs the token route to pass *through* Access (or an Access bypass for that
+one path); **A** sidesteps Access by living on the pub host. Pin this down before
+building.
 
 Related: [mobile device token no expiry](../code-quality/2026-07-19-mobile-device-token-no-expiry.md)
 — a display token wants a deliberate lifetime policy from the start.
