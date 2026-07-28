@@ -1,6 +1,6 @@
 # Bulk file upload
 
-**Status:** active — proposal, revised after a Codex cross-review; not yet reviewed by the boxholder
+**Status:** active — reviewed by the boxholder 2026-07-27; decisions recorded under Open design questions (now Resolved); implementation in progress
 
 Let a user dump many files (order of 100 MB / dozens of items — camera-roll
 batches, document folders) into a box at once. The upload surface only gets the
@@ -219,7 +219,11 @@ infrastructure:
      card's remaining-list as it goes; delete card + dir when empty;
      `tmp-upload/` must not accumulate; if not finishable in one turn, say so
      and continue later. A batch found missing (already filed) is done — no
-     error theater.
+     error theater. **And: a batch that arrives without introduction — no
+     accompanying user text explaining what the files are or where they
+     should go — gets questions first, not filing.** Ask what the batch is
+     for before operating on the files; only proceed unprompted when the
+     destination is genuinely unambiguous (boxholder decision, 2026-07-27).
 
 4. **Entry surfaces.**
    - **Web (v1 core)**: "Upload files…" in the composer's Add dropdown
@@ -229,11 +233,15 @@ infrastructure:
      failed — no byte progress in v1), bounded-concurrency upload queue,
      retry-failed, Done → finalize. Finalize failure surfaces inline; nothing
      is lost (batch stays staged/resumable).
-   - **iOS (Track 3, after core ships in the worktree)**: "Upload files…"
-     composer action → native pickers → eager per-item temp-file + background
-     task creation → generalized coordinator → finalize. New/changed HTTP or
-     bridge surface gets `docs/mobile-contract.md` rows + anchors in the same
-     commits.
+   - **iOS: deferred behind an explicit uploader boundary** (boxholder
+     decision, 2026-07-27). The server contract — batch session + item
+     registry + per-item uploads + finalize — is uploader-agnostic; web is
+     one uploader, and iOS may later get a *dedicated* native uploader built
+     for robustness at this scale (eager background-task creation, its own
+     lifecycle) rather than a parameterized `CaptureUploadCoordinator`. That
+     work gets its own plan when taken up; nothing in v1 may assume the web
+     uploader is the only client (no browser-only assumptions in the batch
+     endpoints).
    - **Not** a standalone page in v1 (see NOT in scope).
 
 ### Vocabulary lock-ins
@@ -282,15 +290,13 @@ Ordered by implementation dependency.
 - *First chunk*: overlay with picker + bounded queue + item states + finalize
   happy path, exercised via `bin/browse`.
 
-**Track 3 — iOS.**
-- *Direction*: composer action → `PhotosPicker`/`fileImporter` → per-item
-  file-representation import that creates each background upload task eagerly
-  (durability starts at task creation; force-quit cancels — document both in
-  the contract) → coordinator generalized with a manifest `kind` field
-  (`CaptureModels.swift:190`) and kind-filtered resume
-  (`NativeCaptureController.swift:537`) → finalize → contract rows/anchors.
-  Photos first, documents second.
-- *First chunk*: photos-only path behind the composer action.
+**Track 3 — iOS: deferred (own plan later).** See Direction §4. The findings
+that scoped it stay recorded there for whoever picks it up: import must
+create background tasks eagerly per item (`CaptureAcquisition.swift:219` is
+sequential in-memory today), force-quit cancels created tasks, the local
+manifest needs a `kind` (`CaptureModels.swift:190`), resume needs kind
+filtering (`NativeCaptureController.swift:537`), and a dedicated uploader —
+not a parameterized capture coordinator — is on the table.
 
 **Track 4 — Agent knowledge + docs.**
 - *Direction*: knowledge audits (below), `docs/box-layout.md` update,
@@ -317,7 +323,7 @@ scope statement above bounds it enough to stay inline.
 | Corrupt/unparseable `session.json` | Track 0 doctest | Quarantine + logged error (today: silent `null`, `staging-store.ts:120`) | Clear after Track 0 |
 | Commit of batch card/manifest fails | route-tier doctest | Finalize fails loudly; staging retained (copy, not move) | Clear |
 | Agent never files the batch | sweep doctest | Sweep ≥7 days → self-note to the chat agent (not just `console.warn`) | Clear |
-| iOS force-quit mid-batch | manual + coordinator tests | Created tasks are cancelled by iOS; registry shows missing on next launch → resume | Clear: resume prompt |
+| iOS force-quit mid-batch | deferred with Track 3 | (deferred — the item registry already makes missing items detectable server-side) | n/a in v1 |
 
 No unresolved critical gaps: the two from the first draft (unfinalized-batch
 loss; busy-queue notification loss) are handled by the item registry +
@@ -368,29 +374,18 @@ retained staging and the reconciliation pass respectively.
   the stated scenario.
 - **Android** — no shell exists; contract rows keep it implementable.
 
-## Open design questions
+## Open design questions — RESOLVED (boxholder, 2026-07-27)
 
-1. **New `upload-batch` vocabulary vs a files-only capture session.** The
-   Codex review's minimal version reuses the capture card + `<capture>`
-   message outright (files-only capture) and adds batch vocabulary only if
-   usage proves it necessary. Lean: still a separate `upload-batch` card —
-   capture's duties (annotate/OCR, file the card *as a unit*) are wrong for a
-   heterogeneous dump that gets filed piecewise, and its transcript body is
-   meaningless here; bending `<capture>` semantics costs more prompt-surface
-   confusion than one new tag. But this is the fork most worth the
-   boxholder's call, since it sets the vocabulary.
-2. **iOS in v1 or fast-follow.** Codex recommends cutting iOS from v1
-   entirely; the boxholder flagged mobile as mattering a lot. Lean: keep
-   Track 3 in the plan (the plan ships as one unit from this worktree
-   anyway), but sequence it strictly after Tracks 0–2 prove the pipeline, and
-   accept that its first chunk may reveal a needed subplan for the
-   coordinator generalization.
-3. **Landing dir name**: `tmp-upload/` (proposed, parallels `tmp-capture/`)
-   vs reusing `tmp-capture/`. Lean: separate dir — different card type,
-   different duties, keeps capture's sweep/docs unambiguous.
-4. **Web overlay Done-with-failures**: block until retried/dismissed, or
-   deliver immediately with `failed` named in the message. Lean: deliver
-   immediately, never silent.
+1. **`upload-batch` vocabulary**: approved — separate card type, not a
+   files-only capture session.
+2. **iOS**: deferred out of v1, behind the uploader boundary (Direction §4);
+   possibly a *dedicated* iOS uploader later, as its own plan.
+3. **Landing dir name**: `tmp-upload/` (planner's lean, unobjected).
+4. **Done-with-failures**: deliver immediately with `failed` named in the
+   message (planner's lean, unobjected).
+
+Plus one addition from review: unintroduced batches get questions before
+filing (folded into Direction §3 duties).
 
 ## Knowledge audits
 
@@ -410,10 +405,10 @@ recorded in the yaml.
    `buildUploadWrapper` + finalize route + reconciliation + prompt addition +
    sweep→self-note — route-tier doctests.
 4. Track 2: web overlay end-to-end (verify in the real app via `bin/browse`).
-5. Track 3: iOS (photos, then documents) + mobile-contract rows.
-6. Track 4: docs, parity-matrix correction, knowledge audits (run).
+5. Track 4: docs, parity-matrix correction, knowledge audits (run).
 
-Dependencies: 2–3 need 1 (and 0); 4 needs 3; 5 needs 3 (not 4); 6 last.
+Dependencies: Track 1 needs Track 0; Track 2 needs Track 1; Track 4 last.
+(Track 3/iOS deferred out of v1.)
 
 ## Rollout shape
 
