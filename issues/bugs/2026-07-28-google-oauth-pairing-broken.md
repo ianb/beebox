@@ -68,6 +68,48 @@ confirms it in one step. Secondary Google-end causes if it's *not* a mismatch:
 OAuth consent screen in "Testing" without the user as a test user, an unverified
 app, or a deleted/rotated OAuth client.
 
+## Update 2 (2026-07-28): redirect_uri_mismatch RULED OUT — look at consent/verification
+
+Checked the Google Cloud console (boxholder screenshot) + traced the real code
+path. `redirect_uri_mismatch` is **not** it:
+
+- Both canonical URIs **are registered**: `https://<host>/auth/callback` (login)
+  and `https://<host>/auth/google-services/callback` (connector).
+- `CB_PUBLIC_URL=https://<host>` (canonical, no slug) is present in **both** the
+  hub and every per-box `cb serve` child — so the login redirect_uri is
+  canonical for every box (the one registered `/<slug>/auth/callback` URI in the
+  console is legacy cruft, not something the current code emits).
+- The frontend calls `googleSetup.mutate({})` with **no `origin`**
+  (`useGoogleServices.ts:87`), so `input.origin` is always `undefined`. The
+  connector redirect_uri therefore comes from box.json publicUrl →
+  `baseServerUrl()` strips the slug → **canonical** `.../auth/google-services/callback`
+  for every box, regardless of access origin.
+
+So the redirect_uri we send is the registered one. The "failed on Google's end"
+is almost certainly **not** the redirect URI. Most likely, given the connector
+requests **restricted scopes** (Gmail/Calendar/Drive):
+
+1. **OAuth consent screen / app-verification wall** — an unverified app
+   requesting restricted scopes, or a consent screen in **Testing** mode where
+   the account isn't an added **test user** → Google blocks with "Access
+   blocked: … hasn't completed verification" / "app is being tested."
+2. **`invalid_client`** — the OAuth client ID/secret rotated or the client was
+   deleted/disabled in the console.
+3. **Project / OAuth client mismatch** — the creds in prod env belong to a
+   different project than the one whose consent screen is configured.
+
+**Need the exact text of Google's error page** (the error code / blue box / "error
+details") to pick between these — the fix differs per case. It is NOT a
+callback-box code bug in the redirect_uri path.
+
+## Latent smell (still worth fixing, but NOT the cause here)
+
+The connector redirect_uri *can* be derived from `input.origin` (a browser-
+supplied value) if a caller passes one; today no caller does, so it's dormant.
+Deriving an OAuth redirect_uri from a client-supplied origin is a smell worth
+removing (always use the canonical configured server URL), but it is not
+responsible for this failure.
+
 ## Suspects (ranked, given "no server-side error" + heavy recent auth churn)
 
 1. **Cloudflare Access intercepting the callback.** Google's redirect back to
