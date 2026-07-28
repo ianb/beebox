@@ -136,6 +136,47 @@ proxy is only justified if mirroring Google's API for our existing connectors
 [investigate-composio-tool-layer](../exploration/2026-07-09-investigate-composio-tool-layer.md),
 which is the same evaluation from the other direction.
 
+## What supporting Nango as an option takes (the seam already exists)
+
+The Google integration is already shaped for this — every service depends on the
+tiny `GoogleAuthService` interface (`src/services/google-auth.ts`, just
+`getAccessToken(): Promise<string>`), and each service (`google-calendar.ts`,
+`google-drive.ts`, `google-gmail.ts`) reaches Google through one
+`createAuthedApi(baseUrl, auth)` transport. So Nango is a **new implementation +
+config switch**, not a rewrite. Two levels:
+
+**Level A — Nango as token source (small; retires our OAuth/refresh):**
+1. New `GoogleAuthService` impl `createNangoGoogleAuth({ nangoHost, secretKey,
+   providerConfigKey, connectionId })` whose `getAccessToken()` pulls the current
+   (Nango-refreshed) token from Nango's connection API. **The calendar/drive/gmail
+   services are unchanged** — they depend only on the interface (this is exactly
+   the services real/fake pattern; add a third real variant).
+2. **Config switch** `google.mode: direct | nango` (+ Nango params) at the point
+   where the auth service is constructed today.
+3. **Connect flow branch** — a "connect via Nango" path (Nango Connect session →
+   store the connection id) alongside the current OAuth initiate/callback
+   (`admin-google.ts`, `routes/admin.ts`, `routes/auth-google.ts`).
+4. **Token storage conditional** — `google-oauth-state.ts` stores a Nango
+   connection ref in nango mode, not Google tokens.
+5. **Reauth/health** reads Nango connection status instead of catching
+   `invalid_grant` (folds into
+   [reauth-health](2026-07-28-google-auth-expiry-health-and-notify.md)).
+6. **Scopes/consent move to Nango's provider config** — `GOOGLE_SCOPES` + the
+   box's OAuth client become direct-mode-only.
+   - *Trade-off:* Level A still returns the token to the box, so it outsources
+     custody/refresh but is **not** the escape boundary yet.
+
+**Level B — Nango proxy (medium; the escape boundary / Tier 1):** route the
+service HTTP through Nango's proxy so the Google token never reaches the box.
+Because all traffic funnels through `createAuthedApi`, this is a **transport
+variant in one helper** — map each Google base URL + path to a Nango proxy call
+(the fiddly bit: calendar/gmail/drive/sheets/docs each have their own host, all
+behind one Nango provider config). This is what earns the escape-proof property;
+Level A is the stepping stone.
+
+Fakes already exist (`createFakeGoogleAuth`), so service doctests are unaffected;
+add a doctest for the Nango auth impl against a fake Nango.
+
 ## Design questions (large — this is a new trust anchor)
 
 - **Where it runs + trust model.** A new always-on service beside the hub? It
