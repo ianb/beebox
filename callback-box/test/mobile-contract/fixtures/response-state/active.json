@@ -1,0 +1,8 @@
+{
+  "input": {
+    "active": true
+  },
+  "expected": {
+    "active": true
+  }
+}

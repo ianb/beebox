@@ -15,6 +15,7 @@ struct RootView: View {
     @State private var locationSharingEnabled = false
     @State private var narrationEnabled = false
     @State private var speechPlaybackActive = false
+    @State private var responseActive = false
     @State private var screenshotRequest: NativeScreenshotRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
@@ -76,6 +77,7 @@ struct RootView: View {
             locationSharingEnabled = false
             narrationEnabled = false
             speechPlaybackActive = false
+            responseActive = false
             screenshotRequest = nil
             screenshotResult = nil
             composerCommandAcknowledgements = []
@@ -123,6 +125,7 @@ struct RootView: View {
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
                     speechPlaybackActive = false
+                    responseActive = false
                 }
                 visibleChatBoxID = box.id
                 visibleChatSessionID = sessionID
@@ -156,6 +159,9 @@ struct RootView: View {
             onSpeechPlaybackStateChange: { playing in
                 speechPlaybackActive = playing
             },
+            onResponseStateChange: { active in
+                responseActive = active
+            },
             onScreenshotResult: { result in
                 guard result.requestID == screenshotRequest?.id else {
                     return
@@ -179,6 +185,7 @@ struct RootView: View {
                 captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
                 narrationEnabled: narrationEnabled,
                 speechPlaybackActive: speechPlaybackActive,
+                responseActive: responseActive,
                 locationSharingEnabled: locationSharingEnabled,
                 locationShareResult: locationShareResult,
                 screenshotResult: screenshotResult,

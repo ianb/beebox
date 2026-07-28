@@ -88,6 +88,7 @@ enum VoiceCompositionReducer {
 @MainActor
 final class SpeechDictation: ObservableObject {
     @Published private(set) var state: VoiceCompositionState = .idle
+    @Published private(set) var interruptionCount = 0
     @Published private(set) var hasDictatedText = false
     @Published private(set) var keywordIntent: SpeechKeywordResult?
     @Published private(set) var preparationMessage: String?
@@ -283,7 +284,11 @@ final class SpeechDictation: ObservableObject {
 
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            try audioSession.setCategory(
+                .playAndRecord,
+                mode: .measurement,
+                options: [.defaultToSpeaker, .duckOthers]
+            )
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
             let inputNode = audioEngine.inputNode
@@ -444,6 +449,7 @@ final class SpeechDictation: ObservableObject {
         endRecording(cancelTranscription: true)
         errorMessage = message
         VoiceCompositionReducer.reduce(&state, .fail(message: message))
+        interruptionCount += 1
     }
 
     private func requestSpeechPermission() async -> Bool {

@@ -10,6 +10,7 @@ struct NativeComposerView: View {
     var captureAvailable: Bool
     var narrationEnabled: Bool
     var speechPlaybackActive: Bool
+    var responseActive: Bool
     var locationSharingEnabled: Bool
     var locationShareResult: NativeLocationShareResult?
     var screenshotResult: NativeScreenshotResult?
@@ -35,42 +36,15 @@ struct NativeComposerView: View {
     @State private var detailedSelection: DraftSelection?
     @State private var activeVoicePreparationIDs: Set<UUID> = []
     @State private var voiceTurn = NativeVoiceTurnState()
+    @State private var earconState = NativeEarconState()
     @StateObject private var dictation = SpeechDictation()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let visibleStatusText {
-                Text(visibleStatusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
-            }
-            if hasScrollableComposerContext {
-                ScrollView(.vertical, showsIndicators: true) {
-                    composerContext
-                }
-                .frame(maxHeight: 220)
-                .scrollBounceBehavior(.basedOnSize)
-            }
+        presentedComposer
+    }
 
-            HStack(alignment: .bottom, spacing: 10) {
-                composerButton(
-                    systemImage: "plus",
-                    accessibilityLabel: "Add",
-                    action: { showingActions = true }
-                )
-                .disabled(isSending)
-
-                textEntry
-
-                trailingControl
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 5)
-            .offset(y: 10)
-        }
+    private var composerLifecycle: some View {
+        composerSurface
         .background(.regularMaterial)
         .ignoresSafeArea(.container, edges: .bottom)
         .onChange(of: draftStore.draft.text) { _, newValue in
@@ -79,9 +53,18 @@ struct NativeComposerView: View {
         .onChange(of: dictation.transcript) { _, newValue in
             draftStore.setDictationTranscript(newValue)
             draftStore.setVoiceSelectionContext(transcript: newValue, active: dictation.isRecording)
+            applyEarcon(.transcriptChanged(
+                hasText: newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ))
         }
         .onChange(of: dictation.isRecording) { _, isRecording in
             draftStore.setVoiceSelectionContext(transcript: dictation.transcript, active: isRecording)
+        }
+        .onChange(of: dictation.state) { _, state in
+            applyEarcon(.dictationStateChanged(state))
+        }
+        .onChange(of: dictation.interruptionCount) {
+            applyEarcon(.recordingInterrupted)
         }
         .onChange(of: dictation.keywordIntent) { _, newValue in
             guard let newValue else {
@@ -92,6 +75,9 @@ struct NativeComposerView: View {
         .onChange(of: speechPlaybackActive) { _, playing in
             applyVoiceTurn(.speechPlaybackChanged(playing: playing))
         }
+        .onChange(of: responseActive) { _, active in
+            applyEarcon(.responseActiveChanged(active))
+        }
         .onChange(of: pendingStore.voicePreparations) { _, preparations in
             if automaticallyResumeVoicePreparations {
                 resumeVoicePreparations(preparations)
@@ -99,6 +85,7 @@ struct NativeComposerView: View {
         }
         .onAppear {
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
+            applyEarcon(.responseActiveChanged(responseActive))
             if initiallyFocused {
                 focused = true
             }
@@ -137,8 +124,14 @@ struct NativeComposerView: View {
         }
         .onDisappear {
             applyVoiceTurn(.microphoneStopped)
+            applyEarcon(.cancelWaiting)
+            NativeEarconPlayer.shared.stopAllTimers()
             draftStore.setVoiceSelectionContext(transcript: "", active: false)
         }
+    }
+
+    private var presentedComposer: some View {
+        composerLifecycle
         .sheet(isPresented: $showingActions) {
             ComposerActionsView(
                 selectedPhotoItems: $selectedPhotoItems,
@@ -187,6 +180,43 @@ struct NativeComposerView: View {
         }
         .sheet(item: $detailedSelection) { selection in
             SelectionDetailView(selection: selection)
+        }
+    }
+
+    private var composerSurface: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let visibleStatusText {
+                Text(visibleStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
+            }
+            if hasScrollableComposerContext {
+                ScrollView(.vertical, showsIndicators: true) {
+                    composerContext
+                }
+                .frame(maxHeight: 220)
+                .fixedSize(horizontal: false, vertical: true)
+                .scrollBounceBehavior(.basedOnSize)
+            }
+
+            HStack(alignment: .bottom, spacing: 10) {
+                composerButton(
+                    systemImage: "plus",
+                    accessibilityLabel: "Add",
+                    action: { showingActions = true }
+                )
+                .disabled(isSending)
+
+                textEntry
+
+                trailingControl
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 5)
+            .offset(y: 10)
         }
     }
 
@@ -310,7 +340,7 @@ struct NativeComposerView: View {
                 systemImage: "stop.fill",
                 accessibilityLabel: "Stop continuous dictation",
                 foregroundStyle: .red,
-                action: { applyVoiceTurn(.microphoneStopped) }
+                action: stopMicrophoneWithEarcon
             )
         } else if hasTextContent {
             composerButton(
@@ -342,7 +372,7 @@ struct NativeComposerView: View {
         composerButton(
             systemImage: "mic.fill",
             accessibilityLabel: "Start dictation",
-            action: { applyVoiceTurn(.microphoneStarted) }
+            action: requestMicrophone
         )
     }
 
@@ -385,7 +415,11 @@ struct NativeComposerView: View {
         guard sendDisabled == false else {
             return
         }
-        applyVoiceTurn(.microphoneStopped)
+        if voiceTurn.isActive || isVoiceRecording {
+            stopMicrophoneWithEarcon()
+        } else {
+            applyVoiceTurn(.microphoneStopped)
+        }
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
         enqueueMessage(text: message, origin: origin, diarized: false)
     }
@@ -404,6 +438,7 @@ struct NativeComposerView: View {
                 await draftStore.discardCurrentDraft()
             }
         case .micOff:
+            applyEarcon(.microphoneStopped)
             applyVoiceTurn(.microphoneStopped)
             statusText = "Microphone off."
         case .erase:
@@ -418,6 +453,7 @@ struct NativeComposerView: View {
     }
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
+        applyEarcon(.voiceMessageSent(responseAlreadyActive: responseActive))
         if intent.action == .sendClose {
             applyVoiceTurn(.voiceMessageSent(closeMicrophone: true))
         }
@@ -468,6 +504,7 @@ struct NativeComposerView: View {
                 applyVoiceTurn(.voiceMessageSent(closeMicrophone: intent.action == .sendClose))
                 resumeVoicePreparation(preparation, box: sendingBox)
             } catch {
+                applyEarcon(.cancelWaiting)
                 isPreparingSend = false
                 let message = "The voice message could not be saved."
                 statusText = message
@@ -551,6 +588,9 @@ struct NativeComposerView: View {
                     applyVoiceTurn(.voiceMessageSent(closeMicrophone: voiceKeywordAction == .sendClose))
                 }
             } catch {
+                if voiceKeywordAction != nil {
+                    applyEarcon(.cancelWaiting)
+                }
                 isPreparingSend = false
                 statusText = "An attachment could not be read."
             }
@@ -570,6 +610,20 @@ struct NativeComposerView: View {
         case .stopDictation:
             dictation.stop()
         }
+    }
+
+    private func applyEarcon(_ event: NativeEarconEvent) {
+        NativeEarconPlayer.shared.execute(earconState.handle(event))
+    }
+
+    private func requestMicrophone() {
+        applyEarcon(.microphoneRequested)
+        applyVoiceTurn(.microphoneStarted)
+    }
+
+    private func stopMicrophoneWithEarcon() {
+        applyEarcon(.microphoneStopped)
+        applyVoiceTurn(.microphoneStopped)
     }
 
     private var hasSendableContent: Bool {

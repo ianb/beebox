@@ -1,3 +1,4 @@
+import AVFAudio
 import XCTest
 import UIKit
 @testable import CallbackBox
@@ -95,6 +96,106 @@ final class NativeVoiceTurnTests: XCTestCase {
     }
 }
 
+final class NativeEarconStateTests: XCTestCase {
+    func testFreshRecordingGetsStartCueButAutomaticResumeStaysQuiet() {
+        var state = NativeEarconState()
+
+        XCTAssertEqual(state.handle(.microphoneRequested), [])
+        XCTAssertEqual(
+            state.handle(.dictationStateChanged(.recording)),
+            [.play(.recordingStart)]
+        )
+        XCTAssertEqual(state.handle(.dictationStateChanged(.editableResult)), [.stopStillListening])
+        XCTAssertEqual(state.handle(.dictationStateChanged(.recording)), [])
+    }
+
+    func testStartFailureAndMidRecordingFailureUseDistinctWebCues() {
+        var startup = NativeEarconState()
+        _ = startup.handle(.microphoneRequested)
+        XCTAssertEqual(
+            startup.handle(.dictationStateChanged(.failed(message: "denied"))),
+            [.play(.recordingError), .stopStillListening]
+        )
+
+        var interrupted = NativeEarconState()
+        _ = interrupted.handle(.microphoneRequested)
+        _ = interrupted.handle(.dictationStateChanged(.recording))
+        XCTAssertEqual(
+            interrupted.handle(.recordingInterrupted),
+            [.play(.recordingDropped), .stopStillListening]
+        )
+    }
+
+    func testSendTicksUntilObservedResponseFinishes() {
+        var state = NativeEarconState()
+
+        XCTAssertEqual(
+            state.handle(.voiceMessageSent(responseAlreadyActive: false)),
+            [.play(.send), .startWaitingTicks]
+        )
+        XCTAssertEqual(state.handle(.responseActiveChanged(false)), [])
+        XCTAssertEqual(state.handle(.responseActiveChanged(true)), [])
+        XCTAssertEqual(
+            state.handle(.responseActiveChanged(false)),
+            [.stopWaitingTicks]
+        )
+    }
+
+    func testSendDuringActiveResponseStopsAtItsNextFinishedEdge() {
+        var state = NativeEarconState()
+
+        _ = state.handle(.voiceMessageSent(responseAlreadyActive: true))
+        XCTAssertEqual(
+            state.handle(.responseActiveChanged(false)),
+            [.stopWaitingTicks]
+        )
+    }
+
+    func testStillListeningTimerRestartsWithEachTranscriptUpdate() {
+        var state = NativeEarconState()
+        _ = state.handle(.dictationStateChanged(.recording))
+
+        XCTAssertEqual(
+            state.handle(.transcriptChanged(hasText: true)),
+            [.restartStillListening]
+        )
+        XCTAssertEqual(
+            state.handle(.transcriptChanged(hasText: true)),
+            [.restartStillListening]
+        )
+        XCTAssertEqual(
+            state.handle(.transcriptChanged(hasText: false)),
+            [.stopStillListening]
+        )
+    }
+
+    func testEarconsUseTheSameFilesAndVolumesAsWeb() {
+        XCTAssertEqual(NativeEarcon.send.resource, .init(filename: "beeprising.wav", volume: 0.3))
+        XCTAssertEqual(NativeEarcon.tick.resource, .init(filename: "tick2.wav", volume: 0.6))
+        XCTAssertEqual(NativeEarcon.stillListening.resource, .init(filename: "book-close.wav", volume: 0.3))
+        XCTAssertEqual(NativeEarcon.recordingStart.resource, .init(filename: "recording-start.mp3", volume: 0.7))
+        XCTAssertEqual(NativeEarcon.recordingStop.resource, .init(filename: "recording-stop.mp3", volume: 0.7))
+        XCTAssertEqual(NativeEarcon.recordingError.resource, .init(filename: "recording-error.wav", volume: 0.7))
+        XCTAssertEqual(NativeEarcon.recordingDropped.resource, .init(filename: "krell-alarm-7.wav", volume: 0.7))
+    }
+
+    func testAppBundleContainsEveryEarconResource() throws {
+        let bundle = Bundle(for: NativeEarconPlayer.self)
+        for earcon in NativeEarcon.allCases {
+            let resource = earcon.resource
+            let file = resource.filename as NSString
+            let url = try XCTUnwrap(
+                bundle.url(
+                    forResource: file.deletingPathExtension,
+                    withExtension: file.pathExtension
+                ),
+                resource.filename
+            )
+            XCTAssertNoThrow(try AVAudioPlayer(contentsOf: url), resource.filename)
+        }
+    }
+}
+
 final class ComposerDraftReducerTests: XCTestCase {
     func testLiveDictationMovesCaretToNewestTranscript() {
         var draft = ComposerDraft.empty
@@ -159,6 +260,7 @@ final class ComposerDraftReducerTests: XCTestCase {
 
         XCTAssertNil(dictation.errorMessage)
         XCTAssertEqual(dictation.state, .idle)
+        XCTAssertEqual(dictation.interruptionCount, 0)
     }
 
     @MainActor

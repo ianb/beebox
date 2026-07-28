@@ -47,6 +47,7 @@ struct NativeComposerFixtureScreen: View {
                     captureAvailable: true,
                     narrationEnabled: false,
                     speechPlaybackActive: false,
+                    responseActive: false,
                     locationSharingEnabled: false,
                     onToggleLocationSharing: {},
                     onTakeScreenshot: {},
@@ -154,6 +155,8 @@ struct NativeComposerFixtureScreen: View {
 
     private var fixturePending: [PendingEmission] {
         switch fixture {
+        case "sending":
+            [pending(index: 1, state: .awaitingReceipt(attempt: 1, sentAt: Date()))]
         case "two-pending":
             [pending(index: 1, state: .awaitingReceipt(attempt: 1, sentAt: Date())), pending(index: 2, state: .awaitingWebView)]
         case "rejected-send":
