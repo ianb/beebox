@@ -236,11 +236,108 @@ await box.cleanup();
 
 ## Reading an unknown session returns null
 
+Missing (ENOENT) is a silently-absent session — no quarantine, no log:
+
 ```ts
 const box = await makeTmpBox();
 const missing = await readStagingSession({ boxRoot: box.root, id: "does-not-exist" });
 missing
 => null
+
+(await box.list("tmp/capture-staging").catch(() => "")).includes(".corrupt")
+=> false
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## `session.json` is written atomically (temp-file + rename)
+
+A write never leaves a bare `session.json.tmp-*` file behind — only the
+final `session.json`, holding valid JSON that reads back as the same session:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
+const entries = await box.list(`tmp/capture-staging/${session.id}`);
+JSON.stringify({
+  onlyFinalManifest: entries === `tmp/capture-staging/${session.id}/session.json`,
+  noLeftoverTmp: !entries.includes(".tmp-"),
+})
+=> {"onlyFinalManifest":true,"noLeftoverTmp":true}
+
+const reread = await readStagingSession({ boxRoot: box.root, id: session.id });
+reread.id === session.id
+=> true
+
+reread.targetSessionId
+=> chat-1
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A corrupt manifest is quarantined, logged, and read as null
+
+Invalid JSON in `session.json` is not indistinguishable from an absent
+session: the read logs a `console.error`, renames the bad file to
+`session.json.corrupt` (preserving it for inspection), and returns `null`
+rather than silently stranding the staged bytes next to it:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+await box.write(`tmp/capture-staging/${session.id}/session.json`, "{ not valid json");
+const errors: string[] = [];
+const originalError = console.error;
+console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
+const result = await readStagingSession({ boxRoot: box.root, id: session.id });
+console.error = originalError;
+result
+=> null
+
+errors.length
+=> 1
+
+errors[0].includes(session.id)
+=> true
+
+const fileLines = (await box.list(`tmp/capture-staging/${session.id}`)).split("\n");
+JSON.stringify({
+  corruptExists: fileLines.includes(`tmp/capture-staging/${session.id}/session.json.corrupt`),
+  originalExists: fileLines.includes(`tmp/capture-staging/${session.id}/session.json`),
+})
+=> {"corruptExists":true,"originalExists":false}
+```
+
+A schema-invalid manifest (valid JSON, wrong shape) quarantines the same way,
+and a repeated read against the already-quarantined session doesn't blow up
+on a missing file — it's ENOENT again, silent:
+
+```ts continue
+await box.write(`tmp/capture-staging/${session.id}/session.json.corrupt`, "");
+await box.write(`tmp/capture-staging/${session.id}/session.json`, JSON.stringify({ not: "a session" }));
+console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
+const schemaResult = await readStagingSession({ boxRoot: box.root, id: session.id });
+console.error = originalError;
+schemaResult
+=> null
+
+errors.length
+=> 2
+
+const filesAfter = await box.list(`tmp/capture-staging/${session.id}`);
+filesAfter.includes(`tmp/capture-staging/${session.id}/session.json.corrupt`)
+=> true
+
+const secondRead = await readStagingSession({ boxRoot: box.root, id: session.id });
+secondRead
+=> null
+
+errors.length
+=> 2
 ```
 
 ```ts cleanup
