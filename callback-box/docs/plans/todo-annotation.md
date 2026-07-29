@@ -313,8 +313,10 @@ CLI is the agent's query primitive.
 **Direction.** `cb todos` is **designed for agent consumption** (boxholder
 call — agents consume it and present to the human): deterministic ordering
 (path, then line), filters (`--status`, `--assigned`, `--glob`, `--on-plate`,
-`--json`), every row carrying its locator and id. Default output: open todos
-on the plate. Mutation is *not* a command: the agent edits the annotation in
+`--json`), every row carrying its locator and id. Default output: all `open`
+todos grouped by plate-state (quiet ones visible in their own group — nothing
+hidden by default); `--on-plate` narrows to on-plate + escalated (as-built
+reconciliation, 2026-07-28). Mutation is *not* a command: the agent edits the annotation in
 the card (normal card-edit path — validation, git history, locks — for free).
 Parse failures are counted and reported ("2 cards failed to parse and may
 hide todos: …"), never swallowed silently (resilient-not-silent; this is
