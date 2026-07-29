@@ -334,8 +334,23 @@ are the query — `glob` (default: the card's own directory subtree), optional
 `status`/`assigned` filters — plus a core renderer registered for the type
 (the `registerFileType` mechanism `src/frontend/src/renderers/todo-list.tsx`
 already uses) that calls a tRPC `todos.list` procedure (thin wrapper over
-the collector) and renders the plate-state groups. A stock template creates
-the box-wide instance (e.g. `store/plate.todo-view.card`, `glob: "**"`).
+the collector) and renders the plate-state groups.
+
+Two mechanism details pinned by the narrow cross-review pass:
+
+- **Omitted `glob` resolves from the card's path at read time, not in the
+  schema.** `cardSchema` never sees the card's path, so "default to the
+  card's own subtree" cannot be a schema default (a static `"**"` would make
+  project-local instances silently box-wide). The renderer has `data.path`
+  (`file-type-registry.ts`); it passes the card path to `todos.list`, which
+  resolves an omitted `glob` server-side to `<card's directory>/**`. The
+  schema keeps `glob` optional with no default.
+- **The stock instance is provisioned, not just templated.** The template
+  registry only generates card content — it has no destination path or
+  provisioning hook. The box-wide instance (`store/plate.todo-view.card`,
+  explicit `glob: "**"`) is seeded by `cb init`'s stock-template pass with
+  that destination, and rolls out to existing boxes via the template tracker
+  (`config/template-versions.json`) like other stock cards.
 
 **Why this shape.** It fits the "views attach to cards" model —
 `src/core/views/doc.ts:12`: *"A view is always attached to a card type …
