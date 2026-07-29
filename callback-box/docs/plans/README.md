@@ -61,7 +61,7 @@ an actual plan in this directory.
 
 ## Wiring
 
-- **`finish`** files shipped plans automatically: step 5 of
+- **`finish`** files shipped plans automatically: step 6 of
   `.claude/agents/finish.md` ("Reconcile planning docs with reality")
   moves implemented plans to `docs/implemented-plans/`, parks abandoned
   ones in `docs/unimplemented-plans/` with a README disposition row, and

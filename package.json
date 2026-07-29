@@ -18,6 +18,7 @@
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts",
     "snapshot:clerk-contract": "node --import tsx bin/snapshot-clerk-contract.ts",
     "typecheck": "tsc --noEmit",
+    "lint": "pnpm -r lint",
     "test": "node --import tsx --test bin/*.test.ts"
   },
   "dependencies": {
