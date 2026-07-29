@@ -114,6 +114,11 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const utils = trpc.useUtils();
   const statusQuery = trpc.status.status.useQuery();
   const pendingQuestions = statusQuery.data ? statusQuery.data.counts.pendingQuestions : 0;
+  // Open on-plate todo count (escalated + on-plate) — the plan's one
+  // app-level todo affordance (docs/plans/todo-annotation.md Track 4),
+  // mirroring pendingQuestions above: same status payload, same
+  // invalidation, only rendered when nonzero.
+  const onPlateTodos = statusQuery.data ? statusQuery.data.counts.onPlateTodos : 0;
 
   useBusSubscription({
     onEvent: useCallback(
@@ -166,6 +171,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
           </div>
           <div className="flex items-center gap-2">
             <QuestionsBadge base={base} count={pendingQuestions} />
+            <PlateBadge base={base} count={onPlateTodos} />
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="p-1.5 rounded hover:bg-white/10"
@@ -222,6 +228,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
           </Link>
         ))}
         <div className="ml-auto flex items-center gap-2">
+          <PlateBadge base={base} count={onPlateTodos} />
           <ErrorBadge onToggleDebugLog={onToggleDebugLog} />
           <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
         </div>
@@ -257,6 +264,28 @@ function QuestionsBadge({ base, count }: { base: string; count: number }) {
       aria-label={`${count} pending question${count !== 1 ? "s" : ""}`}
     >
       <span aria-hidden="true">?</span>
+      {count}
+    </Link>
+  );
+}
+
+/**
+ * Open on-plate todo count (escalated + on-plate) — links to the stock
+ * box-wide `todo-view` card ("The Plate", `store/plate.todo-view.card`),
+ * per the plan's one app-level todo affordance
+ * (`docs/plans/todo-annotation.md` Track 4). Zero renders nothing, same as
+ * `QuestionsBadge`.
+ */
+function PlateBadge({ base, count }: { base: string; count: number }) {
+  if (count === 0) return null;
+  return (
+    <Link
+      to={href(`${base}/browse/store/plate.todo-view.card`)}
+      className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
+      title={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
+      aria-label={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
+    >
+      <span aria-hidden="true">☑</span>
       {count}
     </Link>
   );

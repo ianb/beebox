@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
 import { detectBoxTarget, scaffoldV2Box } from "../../core/box/package.js";
 import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
@@ -127,6 +127,12 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const briefingInstalled = await installBriefing(boxRoot);
   if (briefingInstalled) {
     console.log("\nInstalled briefing.briefing.card");
+  }
+
+  // Install the box-wide todo-view stock instance ("the plate")
+  const todoViewInstalled = await installTodoView(boxRoot);
+  if (todoViewInstalled) {
+    console.log("\nInstalled store/plate.todo-view.card");
   }
 
   // Install the root landmark so the Landmarks page can offer
