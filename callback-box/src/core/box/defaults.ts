@@ -290,6 +290,26 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     runs: "cb procedure run process-retrospective",
     source: "Weekly Monday-morning sweep; enable per box once trialed",
   },
+  {
+    name: "chat-review",
+    description:
+      "Nightly chat review: title and summarize chat sessions that have grown enough to be worth re-reading",
+    cron: "0 4 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    // Ships ENABLED for all boxes (boxholder's call, 2026-07-28 — "we built it
+    // to try it"). Note what that means: generateDocs() re-syncs templates on
+    // every reactor cycle and chat-session start, so this turns on everywhere
+    // at once, and the pass writes generated prose onto git-tracked cards that
+    // get pushed off the machine. `enabled` is a box-owned field, so a box that
+    // turns it off keeps it off across template updates.
+    enabled: true,
+    // Shares retro's group: both walk every transcript under ~/.claude, and
+    // there is no reason to have them do it concurrently.
+    lockGroup: "retro",
+    runs: "cb chat review run",
+    source: "Nightly sweep; opt in per box",
+  },
 ];
 
 /**

@@ -18,6 +18,14 @@ export function ChatHuskView({ data }: RendererProps) {
   const session = typeof fm["session"] === "string" ? fm["session"] : "";
   const contextDir = typeof fm["context-dir"] === "string" ? fm["context-dir"] : "";
   const title = typeof fm["title"] === "string" && fm["title"] !== "" ? fm["title"] : null;
+  // What the nightly chat review wrote. Surfaced here because this is the only
+  // place the boxholder can notice it going wrong — a hallucinated decision or
+  // an indiscreet summary is otherwise invisible outside the raw file.
+  const contains = typeof fm["contains"] === "string" && fm["contains"] !== "" ? fm["contains"] : null;
+  const account =
+    typeof fm["contains-evidence"] === "string" && fm["contains-evidence"] !== ""
+      ? fm["contains-evidence"]
+      : null;
 
   if (session === "") {
     return (
@@ -41,8 +49,21 @@ export function ChatHuskView({ data }: RendererProps) {
           ) : null}
           <Text as="div" size="xs" tone="muted">session {session}</Text>
         </Stack>
+        {contains !== null ? (
+          <Text as="div" size="sm">{contains}</Text>
+        ) : null}
         {data.body && data.body.trim() !== "" ? (
           <Text as="div" size="sm" tone="subtle">{data.body.trim()}</Text>
+        ) : null}
+        {account !== null ? (
+          <details>
+            <summary className="cursor-pointer text-sm text-warm-600">
+              What came of this conversation
+            </summary>
+            <Text as="div" size="sm" tone="subtle">
+              <pre className="whitespace-pre-wrap font-sans mt-2">{account}</pre>
+            </Text>
+          </details>
         ) : null}
         <Link
           to={href(`/${boxSlug}/chat`)}

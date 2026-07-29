@@ -3190,6 +3190,30 @@ test1:
       peak: 43867
       added: 1386
       turns: 4
+  chat-husk-title-ownership:
+    - date: 2026-07-29T01:48:10.734Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 9ba0f53d0ddfa45bf80bba4cbeb03f798878c81a
+      initial: 41202
+      peak: 42900
+      added: 1698
+      turns: 5
+  contains-evidence-purpose:
+    - date: 2026-07-29T01:48:10.734Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 9ba0f53d0ddfa45bf80bba4cbeb03f798878c81a
+      initial: 41325
+      peak: 47497
+      added: 6172
+      turns: 11
+  chat-review-vs-compaction:
+    - date: 2026-07-29T01:48:10.734Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 9ba0f53d0ddfa45bf80bba4cbeb03f798878c81a
+      initial: 41159
+      peak: 48868
+      added: 7709
+      turns: 15
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

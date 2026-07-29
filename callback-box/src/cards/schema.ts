@@ -72,6 +72,11 @@ export type FieldDecl = ZodType | BodyField;
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
  *   the prime retrieval field for search and listings.
+ * - `contains-evidence` — the accumulated detail `contains` was derived from,
+ *   so a one-sentence summary can show its work. NOT a second summary and not
+ *   scratch space: it is what someone (or something) read in order to write
+ *   `contains`. Unlike `contains` it is uncapped, not embedded, and not
+ *   searched — see core/search/query.ts. Most cards never set it.
  * - `todos` — a list of todo entries for intentions that don't belong to any
  *   particular sentence of the body (see `src/shared/todo-model.ts`, the
  *   frontmatter counterpart to the `{% todo %}` Markdoc tag).
@@ -79,6 +84,7 @@ export type FieldDecl = ZodType | BodyField;
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),
   contains: z.string().optional(),
+  "contains-evidence": z.string().optional(),
   todos: TodosFieldSchema,
 };
 
@@ -280,7 +286,15 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
 >
   ? { type: TTag }
     & InferFieldsRecord<TFields>
-    & Omit<{ title?: string; contains?: string; todos?: TodoEntry[] }, keyof TFields>
+    & Omit<
+      {
+        title?: string;
+        contains?: string;
+        "contains-evidence"?: string;
+        todos?: TodoEntry[];
+      },
+      keyof TFields
+    >
   : never;
 
 /**

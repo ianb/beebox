@@ -15,7 +15,7 @@ import {
 import { appendLedgerEntries, loadEvidenceHashes, type LedgerEntry } from "./ledger.js";
 import { evidenceHash } from "./observations.js";
 import type { RetroObserver } from "./observer.js";
-import { renderSessionCompact } from "./render.js";
+import { renderSessionCompact } from "../chat/transcript-render.js";
 import { writeRunReport, type RetroRunReportData } from "./report.js";
 import { loadRetroState, saveRetroState, type RetroState } from "./state.js";
 
