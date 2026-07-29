@@ -2,7 +2,7 @@
 title: "parseSessionLog silently truncates transcripts at 10,000 entries"
 area: callback-box
 filed-by: agent
-discovered-in: worktree-compacting — while designing chat review (docs/plans/chat-review.md)
+discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
 ---
 
 `parseSessionLog` (`callback-box/src/cli/lib/session.ts:317`) defaults `limit`

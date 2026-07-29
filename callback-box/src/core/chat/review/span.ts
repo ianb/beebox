@@ -12,7 +12,7 @@
  * get rewritten (auto-compaction, `--resume` forks), so this is a real case,
  * not a theoretical one.
  *
- * See docs/plans/chat-review.md § Track A.
+ * See docs/implemented-plans/chat-review.md § Track A.
  */
 
 import type { SessionEntry } from "../../../cli/lib/session.js";

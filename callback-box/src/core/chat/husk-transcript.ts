@@ -6,7 +6,7 @@
  * path from cwd. No history-file lookup is involved.
  *
  * Extracted from `webapp/trpc/routers/chat.ts` when chat review became a
- * second caller (docs/plans/chat-review.md § Track A).
+ * second caller (docs/implemented-plans/chat-review.md § Track A).
  */
 
 import * as path from "node:path";

@@ -10,7 +10,7 @@
  * re-reads the conversation from the top, because `renderSessionCompact` elides
  * the middle of anything over 40k chars and most sessions long enough to review
  * are past that — a from-scratch re-read would quietly drop the middle of the
- * conversation. See docs/plans/chat-review.md § Why incremental.
+ * conversation. See docs/implemented-plans/chat-review.md § Why incremental.
  */
 
 import { z } from "zod";

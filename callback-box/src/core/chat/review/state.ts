@@ -9,7 +9,7 @@
  * past the threshold, so what's recorded is the boundary of what has already
  * been read, not a finished flag.
  *
- * See docs/plans/chat-review.md § Track A.
+ * See docs/implemented-plans/chat-review.md § Track A.
  */
 
 import * as fs from "node:fs/promises";

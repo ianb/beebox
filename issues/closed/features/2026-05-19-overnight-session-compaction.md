@@ -1,10 +1,17 @@
 ---
 title: "overnight session compaction"
-design: ../../callback-box/docs/plans/chat-review.md
+design: ../../../callback-box/docs/implemented-plans/chat-review.md
 area: callback-box
+resolution: implemented
 ---
 
-**Designed 2026-07-28** as [chat review](../../callback-box/docs/plans/chat-review.md).
+**Resolved 2026-07-28** — implemented under the name **chat review** (not
+"compaction"; that word was reserved for the SDK's context-window compaction).
+See [docs/chat-review.md](../../../callback-box/docs/chat-review.md) for the
+current reference and [the design doc](../../../callback-box/docs/implemented-plans/chat-review.md)
+for rationale/history. Landed on `main` via the `worktree-compacting` branch.
+
+**Designed 2026-07-28** as [chat review](../../../callback-box/docs/implemented-plans/chat-review.md).
 The plan covers the engine, the size gate, and titling; it deliberately defers
 the fan-out to the four sinks listed below, none of which exist yet. Note the
 vocabulary decision there: the subsystem is **chat review**, never "compaction"
@@ -35,10 +42,10 @@ Chat sessions currently leave transcripts but no synthesized residue. A nightly 
 
 This is also the *engine* that would update several other ideas in this file. None of them update themselves; something has to look back at recent sessions and extract from them:
 
-- [Session hot-context with explicit TTL](2026-05-19-session-hot-context.md) — what's pending, what was in progress
-- [Hypothesis tracking](../exploration/2026-05-19-hypothesis-tracking.md) — hunches formed during the session
-- [Behavioral profile: autonomy-vs-escalation calibration](../exploration/2026-05-19-behavioral-profile.md) — observed autonomy/escalation calibration moments
-- [Memory-writing guidance for the boxholder agent](../exploration/2026-05-19-memory-writing-guidance.md) — new facts about people, preferences, situations
+- [Session hot-context with explicit TTL](../../features/2026-05-19-session-hot-context.md) — what's pending, what was in progress
+- [Hypothesis tracking](../../exploration/2026-05-19-hypothesis-tracking.md) — hunches formed during the session
+- [Behavioral profile: autonomy-vs-escalation calibration](../../exploration/2026-05-19-behavioral-profile.md) — observed autonomy/escalation calibration moments
+- [Memory-writing guidance for the boxholder agent](../../exploration/2026-05-19-memory-writing-guidance.md) — new facts about people, preferences, situations
 
 Tiered closure (the tip's idea) is worth applying:
 

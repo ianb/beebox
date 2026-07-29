@@ -1,6 +1,7 @@
 # Chat review: size-gated overnight compaction and generated titles
 
-**Status:** active — designed 2026-07-28, revised after cross-model review; nothing implemented
+**Status:** implemented 2026-07-28 — see [docs/chat-review.md](../chat-review.md) for the
+current reference; this doc is the design history and rationale.
 
 A nightly pass that reads chat sessions which have accumulated enough *new*
 material since it last read them, and writes back to the session's husk card:
@@ -20,7 +21,7 @@ field, `contains-evidence`** — optional on every card type, holding the detail
 card's `contains` was derived from. Generic by design; chat review is its first
 consumer.
 
-Filed as [overnight session compaction](../../../issues/features/2026-05-19-overnight-session-compaction.md);
+Filed as [overnight session compaction](../../../issues/closed/features/2026-05-19-overnight-session-compaction.md);
 this plan resolves that issue's `needs: [design]`.
 
 **Revision note (2026-07-28).** A first draft of this plan was reviewed by

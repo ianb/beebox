@@ -11,7 +11,7 @@
  * private topic passes it. The prompt, the husk view, and the boxholder's
  * ability to edit are the real controls.
  *
- * See docs/plans/chat-review.md § Track C.
+ * See docs/implemented-plans/chat-review.md § Track C.
  */
 
 import { promises as fs } from "node:fs";

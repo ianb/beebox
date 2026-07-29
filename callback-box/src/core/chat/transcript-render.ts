@@ -1,6 +1,6 @@
 /**
  * Compact transcript rendering, shared by the retrospective observer and the
- * nightly chat review (docs/plans/chat-review.md).
+ * nightly chat review (docs/implemented-plans/chat-review.md).
  *
  * Same register as `cb feedback`'s session-context block: user and agent text
  * plus one-line tool summaries, tool results skipped (noise without signal).

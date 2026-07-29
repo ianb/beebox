@@ -12,7 +12,7 @@
  * quiescence window, holds at least REVIEW_MIN_USER_TURNS real user turns, and
  * its unread span renders to at least REVIEW_CHAR_THRESHOLD characters.
  *
- * See docs/plans/chat-review.md § Track A.
+ * See docs/implemented-plans/chat-review.md § Track A.
  */
 
 import * as fs from "node:fs/promises";

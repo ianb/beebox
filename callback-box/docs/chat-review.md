@@ -6,7 +6,7 @@ and writes back to each session's husk card: a **title**, a one-sentence
 (`contains-evidence`).
 
 Design rationale and the measurements behind the thresholds:
-[docs/plans/chat-review.md](plans/chat-review.md).
+[docs/implemented-plans/chat-review.md](implemented-plans/chat-review.md).
 
 ## Running it
 

@@ -15,7 +15,7 @@
  *   on the husk, and just advances the journal instead of asking the model to
  *   fold the same material in twice.
  *
- * See docs/plans/chat-review.md § Track C.
+ * See docs/implemented-plans/chat-review.md § Track C.
  */
 
 import * as path from "node:path";
