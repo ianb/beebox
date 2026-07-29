@@ -18,11 +18,39 @@ Measured 2026-07-28 across `ai-class`, `ia-review`, `personal`, `box-family`,
 | ≤ 27 days | alive |
 | ≥ 28 days | **dead** |
 
-24 of 27 sampled husks were already dead. Machine-wide, the oldest surviving
-transcript of 1,989 was exactly 30 days old — a retention sweep, not attrition.
+Machine-wide, the oldest surviving transcript of 1,989 was exactly 30 days old —
+a retention sweep, not attrition. (Prod confirmed the same on 2026-07-29: no
+`~/.claude/settings.json` at all, oldest top-level transcript exactly 30 days
+old. Retention has since been raised to 60 days on both, and
+`deploy/setup-server.sh` now provisions it.)
 
 This isn't a migration artifact to clean up once. It is the **steady state**, and
 nothing in the system acknowledges it.
+
+## "Transcript gone" is ambiguous — two different causes
+
+**Correction to the original measurement.** The "24 of 27 husks dead" figure was
+scoped to one laptop, and conflated two unrelated situations:
+
+1. **Expired** — the transcript existed here and was pruned by retention.
+2. **Ran elsewhere** — the session happened on another machine and its transcript
+   was never here at all. Transcripts don't sync; `~/.claude/projects/**` is
+   per-machine, while husks travel with the box through git.
+
+The estate husk was my example of (1) and is actually (2): session `05975df0` has
+no transcript on the laptop and a live 1.2 MB one on prod, because that
+conversation happened on the server. So an unknown share of those 24 are alive
+somewhere else.
+
+Whatever handles stale husks has to tell these apart, because the right response
+differs: an expired transcript is gone forever and the husk is all that remains,
+while a ran-elsewhere transcript is fine and the husk is merely un-reviewable
+*here*. Marking the second as expired would be a lie, and archiving it would hide
+a live conversation.
+
+See also [the journal is machine-local](../bugs/2026-07-29-chat-review-journal-is-machine-local.md),
+which is the same sync asymmetry biting chat review's correctness rather than its
+coverage.
 
 ## What's wrong today
 
