@@ -8,10 +8,14 @@
  * (no click-to-done in v1), each item linking to its source card at card
  * granularity (no line-anchored deep links yet).
  *
- * When the card's frontmatter omits `status`, the query defaults to `open`
- * (mirroring `cb todos`'s own default) — plate-state groups (escalated/
- * on-plate/quiet/parked) are about open todos; a card that explicitly wants
- * `done`/`dropped` in its scope gets those under their own group.
+ * When the card's frontmatter omits `status`, the query defaults to
+ * `["open", "parked"]` — every plate-state group an `open` todo can land in
+ * (escalated/on-plate/quiet) PLUS `parked`, so the parked group is actually
+ * reachable on the stock plate without a card author having to list
+ * `parked` explicitly (defaulting to `open` alone made it permanently
+ * empty — `parked` is a status, not a plate-state, so it was never
+ * included). `done`/`dropped` stay excluded by default; a card that
+ * explicitly wants those in scope lists them in `status:`.
  */
 
 import { useParams } from "@tanstack/react-router";
@@ -25,10 +29,10 @@ import { Badge } from "./ui/Badge";
 import { TextLink } from "./ui/TextLink";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { cbSource, cbSourceItem } from "../lib/source-tag";
-import { isTodoStatus } from "@shared/todo-model";
+import { resolveTodoViewStatusFilter } from "./todo-view-card-logic";
 import type { RendererProps } from "../renderers";
 import type { RouterOutput } from "../lib/trpc";
-import type { TodoStatus, TodoPlateState } from "@shared/todo-model";
+import type { TodoPlateState } from "@shared/todo-model";
 
 type TodoListOutput = RouterOutput["todos"]["list"];
 type CollectedTodo = TodoListOutput["todos"][number];
@@ -46,13 +50,6 @@ const GROUP_ORDER: ReadonlyArray<{ state: TodoPlateState; label: string }> = [
 function stringField(fm: Record<string, unknown>, key: string): string | undefined {
   const value = fm[key];
   return typeof value === "string" ? value : undefined;
-}
-
-function statusListField(fm: Record<string, unknown>): TodoStatus[] | undefined {
-  const value = fm["status"];
-  if (!Array.isArray(value)) return undefined;
-  const statuses = value.filter((v): v is TodoStatus => typeof v === "string" && isTodoStatus(v));
-  return statuses.length > 0 ? statuses : undefined;
 }
 
 /** Stable React list key for one collected todo: card path + its locator (body line or frontmatter index). */
@@ -129,7 +126,7 @@ export function TodoViewCard({ data }: RendererProps) {
   const fm = data.frontmatter ?? {};
   const glob = stringField(fm, "glob");
   const assigned = stringField(fm, "assigned");
-  const status = statusListField(fm) ?? ["open"];
+  const status = resolveTodoViewStatusFilter(fm);
 
   const query = trpc.todos.list.useQuery({
     cardPath: data.path,

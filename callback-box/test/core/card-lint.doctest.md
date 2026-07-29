@@ -684,6 +684,31 @@ result.results[0]!.warnings[0]!.message
 => Markdoc body issue at line 1 (todo): Attribute 'status' must match one of ["open","done","dropped","parked"]. Got 'Done' instead.
 ```
 
+The same attribution holds for a **multi-line block** `{% todo %}` (opening
+tag, body text, closing tag on separate lines) — Markdoc's `ValidateError.lines`
+for a block tag is a 4-element span (`[open, ..., ..., close]`), whose LAST
+element must match a tag span's end line, not its second element (a
+regression: `collectTagSpans` used to record `lines[1]` as the end, which is
+only correct for a one-line span, so a multi-line block tag's error fell back
+to attribution `(body)` and the collector below never flagged the card):
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/notes/Multiline.doc.card",
+  '---\ntype: doc\ntitle: Plan\n---\n{% todo status="Done" %}\nShip the thing\n{% /todo %}\n',
+);
+const result = await lintCardsDispatch(
+  [box.path("store/notes/Multiline.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message
+=> Markdoc body issue at line 1 (todo): Attribute 'status' must match one of ["open","done","dropped","parked"]. Got 'Done' instead.
+```
+
 A body with a valid `{% todo %}` (or no tags at all) lints clean:
 
 ```ts

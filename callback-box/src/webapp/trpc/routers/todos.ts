@@ -15,7 +15,7 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { type TodoItem, type TodoItemStatusType, TodoListSchema } from "../../../schemas/todo-list.js";
-import { collectTodos } from "../../../core/todo/collect.js";
+import { collectTodos, isUnsafeGlobPattern } from "../../../core/todo/collect.js";
 import type { TodoCollectionResult } from "../../../core/todo/collect-types.js";
 import { TODO_STATUSES } from "../../../shared/todo-model.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
@@ -126,6 +126,28 @@ export const todosRouter = router({
       status: z.array(z.enum(TODO_STATUSES)).optional(),
       assigned: z.string().optional(),
       onPlate: z.boolean().optional(),
+    }).superRefine((val, ctx) => {
+      // Fail closed on a path-traversal / absolute-path input rather than
+      // letting it reach the collector as an uncaught throw (which would
+      // surface as an opaque 500) or, worse, silently resolve outside the
+      // box root. `glob` is a raw pattern handed to the `glob` package
+      // (absolute patterns bypass `cwd` entirely); `cardPath` only ever
+      // needs the `..`-segment check since `boxRelativePath` already strips
+      // any leading slashes before it becomes part of a pattern.
+      if (val.glob !== undefined && isUnsafeGlobPattern(val.glob)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["glob"],
+          message: `glob must stay within the box root — no absolute paths or ".." segments (got "${val.glob}")`,
+        });
+      }
+      if (val.cardPath !== undefined && boxRelativePath(val.cardPath).split("/").includes("..")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["cardPath"],
+          message: `cardPath must stay within the box root — no ".." segments (got "${val.cardPath}")`,
+        });
+      }
     }))
     .query(async ({ input, ctx }): Promise<TodoCollectionResult & { effectiveGlob: string }> => {
       const glob = resolveGlob(input);

@@ -77,6 +77,12 @@ function buildBodyTodo(input: { path: string; node: Node; lineOffset: number; ct
   const attrs = node.attributes;
   const id = stringAttr(attrs["id"]);
   const statusRaw = stringAttr(attrs["status"]);
+  // `collectBodyTodos` already returned `ok: false` above for any `todo`-
+  // attributed validate error, which includes an out-of-enum `status` (the
+  // tag schema declares `matches: [...TODO_STATUSES]`) — so by the time we
+  // get here `statusRaw` is either absent or already a valid `TodoStatus`.
+  // The `isTodoStatus` check is not a silent-coercion fallback for a bad
+  // value slipping through; it's TypeScript narrowing for the absent case.
   const status = statusRaw !== undefined && isTodoStatus(statusRaw) ? statusRaw : "open";
   const assigned = stringAttr(attrs["assigned"]);
   const by = stringAttr(attrs["by"]);

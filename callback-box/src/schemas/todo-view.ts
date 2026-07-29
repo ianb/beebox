@@ -40,8 +40,9 @@ renderer runs it every time the card is opened.
   project-local plate. The box-wide instance
   (\`store/plate.todo-view.card\`) sets \`glob: "**"\` explicitly.
 - \`status:\` — restrict to specific statuses (\`open\`, \`done\`, \`dropped\`,
-  \`parked\`). Omit to see every status; the renderer still groups by
-  plate-state within whatever statuses are included.
+  \`parked\`). **Omit** to see \`open\` + \`parked\` — every plate-state group
+  (escalated / on-plate / quiet / parked); \`done\`/\`dropped\` stay out of
+  the default view. List them explicitly to include them.
 - \`assigned:\` — restrict to todos with a matching \`assigned\` attribute
   (exact match, e.g. \`"agent"\`).
 

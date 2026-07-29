@@ -149,3 +149,89 @@ const result4 = await runTodoReviewSweep(box2.root);
 JSON.stringify(result4.stirring.map((t) => t.id))
 => ["fix-new-start"]
 ```
+
+## Durability: a still-pending job must not let the baseline swallow an unreported item
+
+If a `todo-review` job from an earlier pass is still pending, `queueReviewJob`
+declines to queue a second one. The baseline must NOT advance past a
+newly-stirring item computed during that skipped pass — otherwise the item is
+folded into `lastSweepDateEpoch` and never makes it into any job at all, even
+once the pending job is finally cleared and a fresh sweep runs (this was the
+bug: the baseline used to be saved unconditionally, before the code even knew
+whether a job got queued).
+
+```ts
+const box5 = await seedBox();
+setTime("2026-07-28T12:00:00.000Z");
+await box5.write(
+  "store/d.memo.card",
+  memo('{% todo id="s1" start="2026-07-28" due="2026-08-15" %}First stirring item{% /todo %}\n')
+);
+const sweep1 = await runTodoReviewSweep(box5.root);
+sweep1.jobPath !== null
+=> true
+```
+
+A second stirring item crosses the very next day, while sweep1's job is still
+sitting unprocessed:
+
+```ts continue
+setTime("2026-07-29T12:00:00.000Z");
+await box5.write(
+  "store/e.memo.card",
+  memo('{% todo id="s2" start="2026-07-29" due="2026-08-15" %}Second stirring item{% /todo %}\n')
+);
+const sweep2 = await runTodoReviewSweep(box5.root);
+sweep2.jobPath
+=> null
+
+JSON.stringify(sweep2.stirring.map((t) => t.id))
+=> ["s2"]
+```
+
+The pending job now clears (`cb finish`), and a third sweep runs. Without the
+durability fix, sweep2 would already have advanced the baseline past
+2026-07-29, and `"s2"` would silently vanish here — never having appeared in
+any job a human or agent actually saw:
+
+```ts continue
+await fs.rm(path.join(box5.root, sweep1.jobPath));
+const sweep3 = await runTodoReviewSweep(box5.root);
+sweep3.jobPath !== null
+=> true
+
+JSON.stringify(sweep3.stirring.map((t) => t.id))
+=> ["s2"]
+```
+
+```ts cleanup
+await box5.cleanup();
+```
+
+## Staleness compares box-local calendar days, not a raw UTC instant
+
+`Pacific/Kiritimati` is UTC+14 — far enough ahead of UTC that a `CB_TIME`
+instant late in one UTC day already reads as the NEXT calendar day locally.
+A `created` date exactly 45 UTC-instant-days before that raw instant is
+46 box-local calendar days old (one more full day has turned over locally)
+— comparing `created` against `now.getTime()` (a UTC instant) instead of the
+box's own `todayEpoch` would call this todo not-yet-stale a day early
+relative to the box's own calendar, the same class of bug the plate-state
+truth table already guards against for `start`/`due`.
+
+```ts
+const boxTz = await makeTmpBox({ git: true });
+await boxTz.write("config/box.json", JSON.stringify({ timezone: "Pacific/Kiritimati" }));
+setTime("2026-07-28T23:00:00.000Z"); // 2026-07-29, 13:00 local in Pacific/Kiritimati
+await boxTz.write(
+  "store/f.memo.card",
+  memo('{% todo id="just-turned-stale" created="2026-06-13" %}Undated, aging{% /todo %}\n')
+);
+const tzResult = await runTodoReviewSweep(boxTz.root);
+JSON.stringify(tzResult.stale.map((t) => t.id))
+=> ["just-turned-stale"]
+```
+
+```ts cleanup
+await boxTz.cleanup();
+```

@@ -93,8 +93,15 @@ export function collectTagSpans(ast: Node): TagSpan[] {
   for (const node of ast.walk()) {
     if (node.type !== "tag") continue;
     const lines = node.lines;
-    if (!Array.isArray(lines) || typeof lines[0] !== "number" || typeof lines[1] !== "number") continue;
-    spans.push({ tag: node.tag === undefined ? "unknown-tag" : node.tag, startLine: lines[0], endLine: lines[1] });
+    // A `ValidateError`'s `lines` is the tag's full span, ending at its LAST
+    // element (`[0,1]` for a one-line inline tag; `[0,1,2,3]` for a
+    // multi-line block tag with an opening line, body lines, and a closing
+    // line) — never `lines[1]`, which is only the end of a one-line span and
+    // silently mis-locates every multi-line block tag (`tagNameFor` below
+    // compares against this same last-element convention).
+    const endLine = lines[lines.length - 1];
+    if (!Array.isArray(lines) || typeof lines[0] !== "number" || typeof endLine !== "number") continue;
+    spans.push({ tag: node.tag === undefined ? "unknown-tag" : node.tag, startLine: lines[0], endLine });
   }
   return spans;
 }

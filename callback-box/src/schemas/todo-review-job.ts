@@ -33,7 +33,18 @@ export const TodoReviewJobSchema = cardSchema("todo-review-job", {
   fields: {
     status: z.string().default("pending"),
     source: z.string().default("todo-review"),
-    priority: z.enum(["normal", "low"]).default("low"),
+    // `normal`, not `low`: `cb wakeup` always runs the reactor with
+    // `skipLowPriority: true` (src/cli/commands/wakeup.ts), which skips a
+    // cycle entirely when every pending job is low-priority. A `low`
+    // review job on an otherwise-idle box would then never be picked up —
+    // and, being pending, would suppress the next sweep's job too (Track
+    // 5b's "deterministic hook, not a hope" needs the job to actually
+    // reach the reactor eventually). `chat-job`/`question-followup-job`
+    // (no `priority` field at all, defaulting to `normal` in
+    // `job-discovery.ts`) are the precedent for "must eventually process";
+    // `low` (contains-backfill's own choice) is for genuinely-optional
+    // background filler that's fine riding along other work indefinitely.
+    priority: z.enum(["normal", "low"]).default("normal"),
     description: z.string(),
     escalated: z.array(TodoReviewItemSchema).default([]),
     stirring: z.array(TodoReviewItemSchema).default([]),
@@ -100,7 +111,7 @@ export function createTodoReviewJobTemplate(options: {
   const fields: Record<string, unknown> = {
     status: "pending",
     source: "todo-review",
-    priority: "low",
+    priority: "normal",
     description: `Todo review sweep: ${parts.join(", ")}.`,
     escalated,
     stirring,

@@ -41,13 +41,53 @@ import { formatTodoLocation, plateInputFor } from "./collect-types.js";
 // cross-module dependency for).
 const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"];
 
+/**
+ * A `glob`/`cardPath` input that could resolve outside the box root: an
+ * OS-absolute pattern (the `glob` package honors these verbatim, ignoring
+ * `cwd`) or any `..` path segment. Thrown by the collector — every consumer
+ * (`todos.list`'s zod input, `cb todos --glob`) shares this one guard rather
+ * than each re-deriving it, so the box-root boundary can't drift out of sync
+ * between them.
+ */
+export class UnsafeTodoGlobError extends Error {
+  constructor(pattern: string) {
+    super(`glob must stay within the box root — no absolute paths or ".." segments (got "${pattern}")`);
+    this.name = "UnsafeTodoGlobError";
+  }
+}
+
+/** True when `pattern` is an OS-absolute path or contains a `..` segment — see {@link UnsafeTodoGlobError}. */
+export function isUnsafeGlobPattern(pattern: string): boolean {
+  return path.isAbsolute(pattern) || pattern.split("/").includes("..");
+}
+
+/** Throws {@link UnsafeTodoGlobError} if `pattern` could resolve outside the box root. */
+export function assertSafeGlobPattern(pattern: string): void {
+  if (isUnsafeGlobPattern(pattern)) throw new UnsafeTodoGlobError(pattern);
+}
+
 export async function collectTodos(boxRoot: string, options?: CollectTodosOptions): Promise<TodoCollectionResult> {
   const pattern = options?.glob ?? "**/*.card";
-  const absPaths = await glob(pattern, {
+  assertSafeGlobPattern(pattern);
+  const boxRootResolved = path.resolve(boxRoot);
+  const rawAbsPaths = await glob(pattern, {
     cwd: boxRoot,
     nodir: true,
     absolute: true,
     ignore: CARD_GLOB_IGNORE,
+  });
+  // Defense-in-depth: even a pattern that passed `assertSafeGlobPattern`
+  // shouldn't be able to produce a match outside the box root (e.g. a
+  // symlinked card directory) — verify containment on the resolved paths
+  // before anything is read, rather than trusting the pattern alone.
+  const absPaths = rawAbsPaths.filter((absPath) => {
+    const resolved = path.resolve(absPath);
+    const rel = path.relative(boxRootResolved, resolved);
+    const contained = rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+    if (!contained) {
+      console.warn(`[todo-collector] dropping out-of-box glob match for pattern "${pattern}": ${absPath}`);
+    }
+    return contained;
   });
   const schemas = await createCardSchemaMap(boxRoot);
   const ctx: LoadCardContext = { cardSchemas: schemas };
@@ -81,8 +121,22 @@ async function collectOneCard(input: {
   const { absPath, relPath, ctx, plateCtx, todos, issues } = input;
   const type = typeFromFilename(absPath);
   if (type === undefined || !ctx.cardSchemas.has(type)) {
-    // Not a recognized card type — out of the todo collector's remit (an
-    // unrecognized/untyped `.card` is already surfaced by `cb validate`).
+    // A card whose type can't be schema-loaded at all (an unparseable
+    // filename, or a `type` with no registered schema — a deleted
+    // box-local schema, a typo'd filename) is reported as visible-invalid
+    // rather than silently skipped: "any globbed card that cannot be
+    // schema-loaded is reported" is what the plan's visible-invalid
+    // guarantee means (`docs/plans/todo-annotation.md`, Failure modes
+    // table) — a schema that goes missing shouldn't be able to hide a
+    // card's todos forever with zero signal.
+    issues.push({
+      kind: "unknown-type",
+      path: relPath,
+      message:
+        type === undefined
+          ? "card filename doesn't match the Name.<type>.card pattern"
+          : `no registered schema for card type "${type}"`,
+    });
     return;
   }
 

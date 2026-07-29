@@ -50,10 +50,15 @@ export interface CollectedTodo {
  *   attributed to a `{% todo %}`/`{% see-also %}` tag (an unrelated body
  *   validation error elsewhere is out of the todo collector's remit — it
  *   already surfaces via `cb validate`/card-lint).
+ * - `unknown-type` — the file matched the glob and is named like a card
+ *   (`Name.<type>.card`) but `<type>` has no registered schema, so it can't
+ *   be loaded/scanned at all. Reported rather than silently skipped — a
+ *   card whose schema went missing (a deleted box-local schema, a typo'd
+ *   filename) could otherwise hide its todos forever with no signal.
  * - `duplicate-id` — the same `id` was used by more than one todo box-wide.
  */
 export interface TodoCollectionIssue {
-  kind: "load" | "parse" | "validate" | "duplicate-id";
+  kind: "load" | "parse" | "validate" | "unknown-type" | "duplicate-id";
   /** Card path for load/parse/validate; comma-joined locations for duplicate-id. */
   path: string;
   message: string;

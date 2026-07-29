@@ -145,6 +145,48 @@ badStatusResult.issues[0].message
 => line 1: Attribute 'status' must match one of ["open","done","dropped","parked"]. Got 'Done' instead.
 ```
 
+## A multi-line `{% todo %}` block with an invalid `status` is also visible-invalid, not silently coerced to `open`
+
+Regression coverage for the `collectTagSpans`/`tagNameFor` line-attribution
+bug: a **multi-line block** `{% todo %}` (opening tag, body, closing tag on
+separate lines) used to fall through the "which tag does this validate error
+belong to" match (it compared against `lines[1]`, correct only for a one-line
+span) and get attributed to `(body)` instead of `todo` — so
+`collect-body.ts`'s `todoErrors` filter never caught it, and the invalid
+`status` was silently coerced to `"open"` instead of becoming a visible-invalid
+result.
+
+```ts continue
+await box.write(
+  "store/bad-status-multiline.memo.card",
+  memo("", '{% todo status="Done" %}\nBad status, multi-line\n{% /todo %}\n')
+);
+const badStatusMultiline = await collectTodos(box.root, { glob: "store/bad-status-multiline.memo.card" });
+badStatusMultiline.todos.length
+=> 0
+
+JSON.stringify(badStatusMultiline.issues.map((i) => i.kind))
+=> ["validate"]
+```
+
+## A card whose type has no registered schema is a visible `unknown-type` issue, not a silent skip
+
+```ts continue
+await box.write(
+  "store/unknown-type.memmo.card",
+  memo("", '{% todo %}Never collected — unregistered type{% /todo %}\n')
+);
+const unknownTypeResult = await collectTodos(box.root, { glob: "store/unknown-type.memmo.card" });
+unknownTypeResult.todos.length
+=> 0
+
+unknownTypeResult.issues[0].kind
+=> unknown-type
+
+unknownTypeResult.issues[0].message
+=> no registered schema for card type "memmo"
+```
+
 ## Unparseable frontmatter is a visible `load` issue
 
 ```ts continue
@@ -186,6 +228,30 @@ await box.write("other/c.memo.card", memo("", '{% todo id="outside-scope" %}Not 
 const scoped = await collectTodos(box.root, { glob: "store/dup1.memo.card" });
 scoped.todos.map((t) => t.id).join(", ")
 => shared
+```
+
+## A malformed box timezone degrades instead of crashing the whole collector
+
+`config/box.json`'s `timezone` is hand-editable; a typo'd IANA zone (e.g.
+`"America/Chciago"`) used to make `Intl.DateTimeFormat` throw a bare
+`RangeError` the moment plate-state derivation ran for ANY todo — taking
+down `collectTodos` (and everything built on it: `cb todos`, `todos.list`,
+the badge, the review sweep) rather than just that one box's timezone
+display. `loadBoxTimezone` now validates and falls back to the host
+timezone with a warning instead of throwing.
+
+```ts continue
+const badTzBox = await makeTmpBox();
+await badTzBox.write("config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
+await badTzBox.write(
+  "store/x.memo.card",
+  memo("", '{% todo id="survives" %}Should still collect{% /todo %}\n')
+);
+const badTzResult = await collectTodos(badTzBox.root);
+badTzResult.todos.map((t) => t.id).join(", ")
+=> survives
+
+await badTzBox.cleanup();
 ```
 
 ## Deterministic ordering: path, then locator
