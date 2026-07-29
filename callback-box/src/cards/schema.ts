@@ -1,6 +1,7 @@
 import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
 import { isRecord } from "../lib/is-record.js";
+import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -71,10 +72,14 @@ export type FieldDecl = ZodType | BodyField;
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
  *   the prime retrieval field for search and listings.
+ * - `todos` — a list of todo entries for intentions that don't belong to any
+ *   particular sentence of the body (see `src/shared/todo-model.ts`, the
+ *   frontmatter counterpart to the `{% todo %}` Markdoc tag).
  */
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),
   contains: z.string().optional(),
+  todos: TodosFieldSchema,
 };
 
 /**
@@ -273,7 +278,9 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
   infer TTag,
   infer TFields
 >
-  ? { type: TTag } & InferFieldsRecord<TFields> & Omit<{ title?: string; contains?: string }, keyof TFields>
+  ? { type: TTag }
+    & InferFieldsRecord<TFields>
+    & Omit<{ title?: string; contains?: string; todos?: TodoEntry[] }, keyof TFields>
   : never;
 
 /**

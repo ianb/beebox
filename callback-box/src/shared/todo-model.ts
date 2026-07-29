@@ -15,6 +15,7 @@
  * frozen-clock-testable function.
  */
 
+import { z } from "zod";
 import { assertNever, invariant } from "./invariant.js";
 
 /** The closed status vocabulary. Absence on a todo means `"open"`. */
@@ -180,6 +181,79 @@ export function validateTodoAttributes(attrs: TodoAttributes): TodoValidationErr
 
   return errors;
 }
+
+/**
+ * Zod shape for one `see-also` entry inside a frontmatter `todos:` list
+ * entry — mirrors the `{% see-also %}` Markdoc tag's rule (`markdoc-config.ts`):
+ * exactly one of `ref` / `href`, plus an optional `note` (the tag's body text
+ * has no frontmatter equivalent, so `note` stands in for it).
+ */
+export const TodoSeeAlsoEntrySchema = z
+  .object({
+    ref: z.string().optional(),
+    href: z.string().optional(),
+    note: z.string().optional(),
+  })
+  .superRefine((entry, ctx) => {
+    const hasRef = entry.ref !== undefined && entry.ref !== "";
+    const hasHref = entry.href !== undefined && entry.href !== "";
+    if (hasRef && hasHref) {
+      ctx.addIssue({
+        code: "custom",
+        message: "todos `see-also` entry takes exactly one of `ref` or `href`, not both",
+      });
+    } else if (!hasRef && !hasHref) {
+      ctx.addIssue({
+        code: "custom",
+        message: "todos `see-also` entry requires exactly one of `ref` or `href`",
+      });
+    }
+  });
+
+export type TodoSeeAlsoEntry = z.infer<typeof TodoSeeAlsoEntrySchema>;
+
+/**
+ * Zod shape for one entry of the universal frontmatter `todos:` field
+ * (`src/cards/schema.ts` `GLOBAL_CARD_FIELDS`). Keys mirror the `{% todo %}`
+ * tag's attributes exactly (same names, same `TODO_STATUSES` enum); `text` is
+ * the one thing the tag gets for free from its body and the frontmatter
+ * shape must name explicitly. Date/provenance rules are NOT restated here —
+ * `superRefine` delegates to {@link validateTodoAttributes}, the tag's own
+ * validator, so the two capture forms share one rule set (code-style: one
+ * source of truth).
+ */
+export const TodoEntrySchema = z
+  .object({
+    text: z.string(),
+    id: z.string().optional(),
+    assigned: z.string().optional(),
+    by: z.string().optional(),
+    created: z.string().optional(),
+    start: z.string().optional(),
+    due: z.string().optional(),
+    status: z.enum(TODO_STATUSES).optional(),
+    "see-also": z.array(TodoSeeAlsoEntrySchema).optional(),
+  })
+  .superRefine((entry, ctx) => {
+    for (const error of validateTodoAttributes({
+      by: entry.by,
+      created: entry.created,
+      due: entry.due,
+      start: entry.start,
+    })) {
+      ctx.addIssue({ code: "custom", message: error.message });
+    }
+  });
+
+export type TodoEntry = z.infer<typeof TodoEntrySchema>;
+
+/**
+ * Zod shape for the universal frontmatter `todos:` field itself — an
+ * optional list of {@link TodoEntry}. Injected into every card's frontmatter
+ * schema by `GLOBAL_CARD_FIELDS` (`src/cards/schema.ts`), same precedence
+ * rule as `title`/`contains`: a schema declaring its own `todos` field wins.
+ */
+export const TodosFieldSchema = z.array(TodoEntrySchema).optional();
 
 /**
  * Plate-state derivation truth table (box-local, per the plan): for an
