@@ -71,10 +71,16 @@ export type FieldDecl = ZodType | BodyField;
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
  *   the prime retrieval field for search and listings.
+ * - `contains-evidence` — the accumulated detail `contains` was derived from,
+ *   so a one-sentence summary can show its work. NOT a second summary and not
+ *   scratch space: it is what someone (or something) read in order to write
+ *   `contains`. Unlike `contains` it is uncapped, not embedded, and not
+ *   searched — see core/search/query.ts. Most cards never set it.
  */
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),
   contains: z.string().optional(),
+  "contains-evidence": z.string().optional(),
 };
 
 /**
@@ -261,7 +267,8 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
   infer TTag,
   infer TFields
 >
-  ? { type: TTag } & InferFieldsRecord<TFields> & Omit<{ title?: string; contains?: string }, keyof TFields>
+  ? { type: TTag } & InferFieldsRecord<TFields>
+    & Omit<{ title?: string; contains?: string; "contains-evidence"?: string }, keyof TFields>
   : never;
 
 /**

@@ -26,6 +26,8 @@ import {
   tailForMinUserMessages,
 } from "../../../cli/lib/session.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { listChatHusks } from "../../../core/chat/husk.js";
+import { resolveSessionLabel } from "../../../core/chat/session-label.js";
 
 export const chatSessionProcedures = {
   // Load + slice a session's conversation history.
@@ -63,28 +65,38 @@ export const chatSessionProcedures = {
       }
     }),
 
-  // List web-chat sessions with first-user-snippet labels, most-recent first.
+  // List web-chat sessions, most-recent first. Labels resolve through the
+  // shared order (husk title > first-message snippet > id prefix), so a title
+  // written by hand or by the nightly chat review shows up here — this query
+  // used to skip husks entirely and was the reason generated titles were
+  // invisible in the history dropdown.
   sessions: publicProcedure.query(async ({ ctx }) => {
     const ids = await loadHistory(ctx.boxRoot);
     const mostActive = await getMostActive(ctx.boxRoot);
+    const titlesBySession = new Map(
+      (await listChatHusks(ctx.boxRoot)).map((husk) => [husk.session, husk.title]),
+    );
 
     const sessions = await Promise.all(
       ids.map(async (sessionId) => {
         const logPath = await resolveSessionLogPath(ctx.boxRoot, sessionId);
-        let label = sessionId.slice(0, 8);
         let lastUsedAt = new Date(0).toISOString();
         try {
           const stat = await fs.stat(logPath);
           lastUsedAt = stat.mtime.toISOString();
           const meta = await getSessionMetadata({ sessionId, logPath });
-          if (meta.firstUserSnippet) label = meta.firstUserSnippet;
           if (meta.endTime) lastUsedAt = meta.endTime.toISOString();
         } catch (e) {
           if (errnoCode(e) !== "ENOENT") {
-            console.warn(`[chat] session ${sessionId} log unreadable, keeping id-prefix label:`, e);
+            console.warn(`[chat] session ${sessionId} log unreadable:`, e);
           }
-          // JSONL missing or unreadable — keep id-prefix label.
+          // JSONL missing or unreadable — resolveSessionLabel falls back too.
         }
+        const label = await resolveSessionLabel({
+          sessionId,
+          logPath,
+          title: titlesBySession.get(sessionId),
+        });
         return { sessionId, source: "chat", label, lastUsedAt, isActive: sessionId === mostActive };
       }),
     );

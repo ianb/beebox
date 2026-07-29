@@ -12,7 +12,7 @@ import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { discoverSessions } from "../../../src/core/retro/discovery.js";
-import { renderSessionCompact } from "../../../src/core/retro/render.js";
+import { renderSessionCompact } from "../../../src/core/chat/transcript-render.js";
 import { renderRunReport } from "../../../src/core/retro/report.js";
 import {
   emptyRetroState,

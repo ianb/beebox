@@ -84,22 +84,23 @@ export interface UpdateContainsResult {
   unchanged: boolean;
 }
 
-export async function updateContainsField(
+/**
+ * Write a card's derived contains fields and re-base the staleness sidecar.
+ *
+ * The shared primitive under both `cb contains update` and the nightly chat
+ * review. It exists because writing `contains-evidence` alone is a real case:
+ * an accumulating account grows on a pass where the one-sentence `contains`
+ * stays accurate. A "write only when `contains` changed" rule would drop that
+ * update silently, so the card is written when *either* field differs.
+ *
+ * Both fields are optional — omit one to leave it untouched. The sidecar is
+ * re-based on every call, including the no-write path, because identical text
+ * is the acknowledgment path for a stale flag.
+ */
+export async function setDerivedContains(
   boxRoot: string,
-  { relPath, text }: { relPath: string; text: string }
+  { relPath, contains, evidence }: { relPath: string; contains?: string; evidence?: string }
 ): Promise<UpdateContainsResult> {
-  if (text.trim() === "") {
-    throw new EmptyContainsTextError();
-  }
-  const kind = cardTypeFromPath(relPath);
-  if (kind === undefined) {
-    throw new NotACardPathError(relPath);
-  }
-  const searchable = await getSearchableTypes(boxRoot);
-  if (!searchable.includes(kind)) {
-    throw new NotSearchableKindError(kind, { validKinds: searchable.toSorted() });
-  }
-
   const absPath = path.join(boxRoot, relPath);
   let content: string;
   try {
@@ -116,19 +117,49 @@ export async function updateContainsField(
     throw new MalformedFrontmatterError(relPath);
   }
   const fields = parsedFrontmatter;
-  const unchanged = fields["contains"] === text;
+  const containsChanged = contains !== undefined && fields["contains"] !== contains;
+  const evidenceChanged = evidence !== undefined && fields["contains-evidence"] !== evidence;
+  const unchanged = !containsChanged && !evidenceChanged;
   if (!unchanged) {
-    fields["contains"] = text;
+    if (containsChanged) fields["contains"] = contains;
+    if (evidenceChanged) fields["contains-evidence"] = evidence;
     await fs.writeFile(absPath, renderFrontmatterBlock(fields, split.body));
   }
 
+  // Re-base against whatever `contains` the card now carries — which is the
+  // caller's text when they set one, and the card's existing text when they
+  // only extended the evidence.
   const ctx = await buildLoadContext(boxRoot);
-  const { basis, contains } = await computeBasisForCardPath(boxRoot, { relPath, ctx });
-  if (basis === null || contains !== text) {
+  const { basis, contains: liveContains } = await computeBasisForCardPath(boxRoot, { relPath, ctx });
+  if (basis === null || (contains !== undefined && liveContains !== contains)) {
     throw new InvalidAfterUpdateError(relPath);
   }
   const state = await loadContainsState(boxRoot);
-  rebaseContains(state, { cardPath: relPath, contains: text, basis });
+  rebaseContains(state, { cardPath: relPath, contains: liveContains, basis });
   await saveContainsState(boxRoot, state);
   return { unchanged };
+}
+
+/**
+ * `cb contains update`'s entry point: the CLI-shaped guards (non-empty text,
+ * a real card path, a searchable card type) in front of
+ * {@link setDerivedContains}. Kept as a thin wrapper so there is one write
+ * path and the two cannot disagree about the sidecar.
+ */
+export async function updateContainsField(
+  boxRoot: string,
+  { relPath, text }: { relPath: string; text: string }
+): Promise<UpdateContainsResult> {
+  if (text.trim() === "") {
+    throw new EmptyContainsTextError();
+  }
+  const kind = cardTypeFromPath(relPath);
+  if (kind === undefined) {
+    throw new NotACardPathError(relPath);
+  }
+  const searchable = await getSearchableTypes(boxRoot);
+  if (!searchable.includes(kind)) {
+    throw new NotSearchableKindError(kind, { validKinds: searchable.toSorted() });
+  }
+  return setDerivedContains(boxRoot, { relPath, contains: text });
 }

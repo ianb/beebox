@@ -36,8 +36,21 @@ const STATE_FILENAME = "contains-state.json";
 // fallback), not just the literal field. Old sidecars rebuild via heal.
 const STATE_VERSION = 2;
 
-/** Fields that never count toward the contains basis. */
-const BASIS_EXCLUDED_FIELDS = new Set(["contains", "title", "type", "status"]);
+/**
+ * Fields that never count toward the contains basis — the derived ones. If a
+ * field that is written *because* `contains` was rewritten counted toward the
+ * basis, writing it would move the basis and flag the just-written `contains`
+ * stale. (`contains-evidence` is derived alongside `contains`; note the basis
+ * only reaches frontmatter for card types with no body — see
+ * computeContainsBasis — so for bodied cards this is policy, not a live bug.)
+ */
+const BASIS_EXCLUDED_FIELDS = new Set([
+  "contains",
+  "contains-evidence",
+  "title",
+  "type",
+  "status",
+]);
 
 const containsCardStateSchema = z.object({
   /** The card's `contains` text ("" when the card has none yet). */

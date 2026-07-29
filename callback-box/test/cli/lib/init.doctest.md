@@ -54,6 +54,7 @@ const { packageRoot, boxRoot } = await fullInit(tmp);
 
 await listFiles(boxRoot, "config/schedules")
 =>
+chat-review.scheduled-script.card
 check-calendar.scheduled-script.card
 check-email.scheduled-script.card
 gc-procedure-runs.scheduled-script.card

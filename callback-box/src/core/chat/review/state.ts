@@ -1,0 +1,130 @@
+/**
+ * Chat-review journal state — which transcript spans have been folded into
+ * each session's account, and who owns each husk's title.
+ *
+ * Persisted at `.callback-box/chat-review/state.json` (box-local machine
+ * state, like the retro walker's). Unlike retro's state
+ * (`core/retro/state.ts`), which is a terminal "done, never look again"
+ * predicate, this is a *journal*: a session is re-read every time it grows
+ * past the threshold, so what's recorded is the boundary of what has already
+ * been read, not a finished flag.
+ *
+ * See docs/plans/chat-review.md § Track A.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { z } from "zod";
+import { errnoCode } from "../../../lib/error-guards.js";
+
+const STATE_FILE = ".callback-box/chat-review/state.json";
+
+/** Reviewer attempts per session before it is skipped permanently. */
+export const MAX_REVIEW_ATTEMPTS = 2;
+
+/** The journal consumer this plan ships. Others (fan-out sinks) would key alongside. */
+export const METADATA_CONSUMER = "metadata";
+
+const AppliedSpanSchema = z.object({
+  /** sha256(sessionId + endUuid + prefixHash) — the idempotency key. */
+  spanId: z.string(),
+  /** uuid of the last entry folded into the account. Authoritative. */
+  endUuid: z.string(),
+  /** Index of that entry when written. Advisory only — a rewrite moves it. */
+  endIndex: z.number().int(),
+  /** sha256 over every entry uuid up to and including endUuid. Detects rewrites. */
+  prefixHash: z.string(),
+  at: z.string(),
+});
+
+/**
+ * Who last wrote a husk's title.
+ *
+ * - `unmanaged` — we have never written one (includes the first-message
+ *   snippet `ensureChatHusk` may have set). Ours to replace.
+ * - `generated` — we wrote the current title. Ours to replace when stale.
+ * - `manual` — a human or another agent changed it. Never written again.
+ *
+ * The transition to `manual` is one-way and re-checked every pass, so an edit
+ * made before the session was ever reviewed is still honoured.
+ */
+const TitleOwnerSchema = z.enum(["unmanaged", "generated", "manual"]);
+
+const ReviewSessionStateSchema = z.object({
+  /** Applied spans keyed by consumer; see METADATA_CONSUMER. */
+  applied: z.record(z.string(), AppliedSpanSchema),
+  titleOwner: TitleOwnerSchema,
+  /** sha256 of the title we last wrote; null when we never have. */
+  titleHash: z.string().nullable(),
+  /** Consecutive reviewer failures. At MAX_REVIEW_ATTEMPTS the session is skipped. */
+  attempts: z.number().int(),
+});
+
+const ReviewStateSchema = z.object({
+  lastRunAt: z.string().nullable(),
+  sessions: z.record(z.string(), ReviewSessionStateSchema),
+});
+
+export type AppliedSpan = z.infer<typeof AppliedSpanSchema>;
+export type TitleOwner = z.infer<typeof TitleOwnerSchema>;
+export type ReviewSessionState = z.infer<typeof ReviewSessionStateSchema>;
+export type ReviewState = z.infer<typeof ReviewStateSchema>;
+
+export function emptyReviewState(): ReviewState {
+  return { lastRunAt: null, sessions: {} };
+}
+
+/** A session with no journal entry yet — the bootstrap shape. */
+export function emptySessionState(): ReviewSessionState {
+  return { applied: {}, titleOwner: "unmanaged", titleHash: null, attempts: 0 };
+}
+
+/** This session's state, or the bootstrap shape when it has none. */
+export function sessionState(state: ReviewState, sessionId: string): ReviewSessionState {
+  return state.sessions[sessionId] ?? emptySessionState();
+}
+
+/** True when the session has failed enough times to stop trying. */
+export function isSessionExhausted(state: ReviewState, sessionId: string): boolean {
+  return sessionState(state, sessionId).attempts >= MAX_REVIEW_ATTEMPTS;
+}
+
+/**
+ * Load journal state, treating a missing file as a fresh start. A corrupt or
+ * schema-mismatched file also starts fresh (with a warning) — the worst case
+ * is one extra review per session, which the husk's `review-span` marker
+ * makes a no-op anyway.
+ */
+export async function loadReviewState(boxRoot: string): Promise<ReviewState> {
+  const filePath = path.join(boxRoot, STATE_FILE);
+  let text: string;
+  try {
+    text = await fs.readFile(filePath, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`chat-review: could not read ${STATE_FILE}, starting fresh:`, e);
+    }
+    return emptyReviewState();
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (e) {
+    console.warn(`chat-review: ${STATE_FILE} is not valid JSON, starting fresh:`, e);
+    return emptyReviewState();
+  }
+
+  const parsed = ReviewStateSchema.safeParse(raw);
+  if (!parsed.success) {
+    console.warn(`chat-review: ${STATE_FILE} did not match the expected shape, starting fresh`);
+    return emptyReviewState();
+  }
+  return parsed.data;
+}
+
+export async function saveReviewState(boxRoot: string, state: ReviewState): Promise<void> {
+  const filePath = path.join(boxRoot, STATE_FILE);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+}

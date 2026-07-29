@@ -270,6 +270,25 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     runs: "cb procedure run process-retrospective",
     source: "Weekly Monday-morning sweep; enable per box once trialed",
   },
+  {
+    name: "chat-review",
+    description:
+      "Nightly chat review: title and summarize chat sessions that have grown enough to be worth re-reading",
+    cron: "0 4 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    // Ships DISABLED, unlike process-retrospective. This pass writes generated
+    // prose (titles, summaries) onto git-tracked cards that get pushed off the
+    // machine, and a title is written for a semi-public audience — that is a
+    // judgement call a boxholder should opt into, not inherit from a template
+    // update. See docs/plans/chat-review.md § Track E.
+    enabled: false,
+    // Shares retro's group: both walk every transcript under ~/.claude, and
+    // there is no reason to have them do it concurrently.
+    lockGroup: "retro",
+    runs: "cb chat review run",
+    source: "Nightly sweep; opt in per box",
+  },
 ];
 
 /**

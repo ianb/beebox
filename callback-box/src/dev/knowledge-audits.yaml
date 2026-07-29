@@ -3912,3 +3912,29 @@ tests:
     response_not_matches:
       - '(?<![\w./-])(?<!\]\()(?<!=")[\w./-]+\.[\w-]+\.card\b'
     tags: [chat, links, cards]
+
+  # === Chat Review ===
+  #
+  # Status: pending first run — added with the chat-review implementation
+  # (docs/plans/chat-review.md). Run: pnpm knowledge-audit run --box <path> --filter chat-review
+
+  - id: chat-husk-title-ownership
+    prompt: "Who sets the title on a chat husk card, and what happens if I edit one by hand?"
+    expected_level: knows_directly
+    watch_for: "Says the nightly chat review maintains it AND that a hand-edited title is left alone"
+    correct_contains: ["review", "hand"]
+    tags: [chat, cards, chat-review]
+
+  - id: contains-evidence-purpose
+    prompt: "What is the `contains-evidence` field for, and when should I set it?"
+    expected_level: knows_directly
+    watch_for: "Says it holds the detail `contains` was derived from — NOT a second summary or scratch space"
+    correct_contains: ["contains"]
+    tags: [cards, search, chat-review]
+
+  - id: chat-review-vs-compaction
+    prompt: "What does 'compaction' refer to in this codebase?"
+    expected_level: knows_directly
+    watch_for: "Names the SDK context-window meaning, and does NOT confuse it with chat review"
+    correct_contains: ["context"]
+    tags: [vocabulary, chat-review]
