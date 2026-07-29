@@ -94,6 +94,21 @@ su - "$CB_USER" -c 'curl -fsSL https://claude.ai/install.sh | bash'
 # Add native install location to callback user's PATH
 su - "$CB_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
+# Transcript retention. Claude Code prunes ~/.claude/projects/**/*.jsonl on a
+# timer whose default is 30 days. Transcripts are the raw material the nightly
+# chat review mines into husk cards (docs/chat-review.md) — once one expires the
+# conversation is unrecoverable, so a session not reviewed inside the window is
+# never reviewable. 60 days doubles the margin for a box that goes quiet.
+echo "Setting Claude Code transcript retention for $CB_USER..."
+su - "$CB_USER" -c 'mkdir -p ~/.claude && python3 - <<'"'"'PY'"'"'
+import json, os, pathlib
+p = pathlib.Path(os.path.expanduser("~/.claude/settings.json"))
+d = json.loads(p.read_text()) if p.exists() else {}
+d["cleanupPeriodDays"] = 60
+p.write_text(json.dumps(d, indent=2) + "\n")
+PY'
+
+
 # ── Code directory permissions ───────────────────────────────────────
 echo "Setting read permissions on $INSTALL_DIR for $CB_USER..."
 chmod -R o+rX "$INSTALL_DIR"
