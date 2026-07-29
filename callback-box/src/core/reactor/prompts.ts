@@ -34,8 +34,12 @@ For each job:
 - Do NOT add Co-Authored-By trailers to commits — the system adds appropriate trailers automatically`;
 }
 
-export function buildReactorUserPrompt(jobPaths: string[], jobDescriptions: string[]): string {
-  return `Please process the following ${jobPaths.length} job(s):
+export function buildReactorUserPrompt(
+  jobPaths: string[],
+  { jobDescriptions, ambientLine }: { jobDescriptions: string[]; ambientLine?: string | null },
+): string {
+  const ambientBlock = ambientLine !== null && ambientLine !== undefined ? `${ambientLine}\n\n` : "";
+  return `${ambientBlock}Please process the following ${jobPaths.length} job(s):
 
 ${jobDescriptions.join("\n\n")}
 

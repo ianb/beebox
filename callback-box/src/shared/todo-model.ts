@@ -281,8 +281,15 @@ export interface TodoPlateContext {
  * falls on when read in `timeZone`. `Intl.DateTimeFormat`'s `"en-CA"`
  * locale formats as `YYYY-MM-DD` directly, avoiding hand-rolled
  * offset arithmetic (which DST transitions would make wrong).
+ *
+ * Exported for callers that need to compare a wall-clock instant against
+ * `start`/`due`-shaped calendar epochs on the same basis this module
+ * uses internally (e.g. the review sweep's "crossed `start` since the
+ * last sweep" baseline, which must be a calendar-day comparison, not a
+ * raw-epoch one — a sweep that runs mid-afternoon must not undercount a
+ * `start` dated earlier that same box-local day).
  */
-function boxLocalDateEpoch(now: Date, timeZone: string): number {
+export function boxLocalDateEpoch(now: Date, timeZone: string): number {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",

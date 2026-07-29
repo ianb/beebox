@@ -43,8 +43,8 @@ prompt.includes("do not need to re-read")
 ```ts
 const prompt = buildReactorUserPrompt(
   ["box/jobs/task1.job.card", "box/jobs/task2.job.card"],
-  ["### box/jobs/task1.job.card\n```\ndo thing 1\n```",
-   "### box/jobs/task2.job.card\n```\ndo thing 2\n```"],
+  { jobDescriptions: ["### box/jobs/task1.job.card\n```\ndo thing 1\n```",
+   "### box/jobs/task2.job.card\n```\ndo thing 2\n```"] },
 );
 prompt.includes("2 job(s)")
 => true
@@ -64,12 +64,37 @@ prompt.includes("cb finish")
 ```ts
 const prompt = buildReactorUserPrompt(
   ["box/jobs/only.job.card"],
-  ["### box/jobs/only.job.card\n```\nsolo task\n```"],
+  { jobDescriptions: ["### box/jobs/only.job.card\n```\nsolo task\n```"] },
 );
 prompt.includes("1 job(s)")
 => true
 
 prompt.includes("solo task")
+=> true
+```
+
+### Ambient todo line, when given, leads the prompt
+
+```ts
+const promptWithAmbient = buildReactorUserPrompt(
+  ["box/jobs/only.job.card"],
+  {
+    jobDescriptions: ["### box/jobs/only.job.card\n```\nsolo task\n```"],
+    ambientLine: "3 open todos on the plate (1 escalated) — `cb todos`",
+  },
+);
+promptWithAmbient.startsWith("3 open todos on the plate (1 escalated)")
+=> true
+```
+
+### No ambient line, when omitted or null
+
+```ts
+const promptNoAmbient = buildReactorUserPrompt(
+  ["box/jobs/only.job.card"],
+  { jobDescriptions: ["### box/jobs/only.job.card\n```\nsolo task\n```"], ambientLine: null },
+);
+promptNoAmbient.startsWith("Please process")
 => true
 ```
 

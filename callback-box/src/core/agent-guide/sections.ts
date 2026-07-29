@@ -27,6 +27,7 @@ export const SECTION = {
   ABOUT_CARDS: "ABOUT_CARDS",
   CARD_TYPES: "CARD_TYPES",
   QUESTIONS: "QUESTIONS",
+  TODOS: "TODOS",
 
   // Output vocabulary — verbatim quotes and provenance (the `ref`/`href` home).
   DIRECT_QUOTES: "DIRECT_QUOTES",

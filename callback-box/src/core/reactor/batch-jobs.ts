@@ -17,6 +17,7 @@ import { parseCardText, CardIOError } from "../card-io.js";
 import { collectInlineRefs } from "../../cards/index.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent/index.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
+import { computeTodoAmbientLine } from "../todo/ambient-summary.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -38,7 +39,8 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
   }
 
   const systemPrompt = buildReactorSystemPrompt(boxRoot);
-  const userPrompt = buildReactorUserPrompt(jobPaths, jobDescriptions);
+  const ambientLine = await computeTodoAmbientLine(boxRoot);
+  const userPrompt = buildReactorUserPrompt(jobPaths, { jobDescriptions, ambientLine });
 
   if (dryRun) {
     onLog?.("\n[DRY RUN] Would run agent with prompt:\n");
