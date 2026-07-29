@@ -48,12 +48,25 @@ holds only per-machine, not per-box.
 The husk is also a git-tracked file being rewritten on two machines, so this is a
 merge-conflict generator on top of being semantically wrong.
 
-## Not currently firing, but only by luck
+## Not currently firing — and the reason is structural, not luck
 
-Today the nightly schedule runs where the scheduler daemon runs. If only one
-machine per box has it enabled, there is one writer. Nothing enforces that —
-`enabled: true` ships to every box on every checkout, so a laptop clone with a
-running scheduler starts a second writer silently.
+Measured 2026-07-29:
+
+- **All six prod boxes have local clones** (`ai-class`, `birch`, `box-family`,
+  `estate`, `personal`, `tech-talk`), so the shared-husk half of the setup is
+  the normal state, not an oddity.
+- **Only prod runs a scheduler.** `launchctl` on the laptop lists only
+  `com.callback-box.sdk-update` — no `cb tick`, no scheduler daemon. So there is
+  exactly one automatic writer per box today.
+
+That single-writer property is what keeps this latent, and nothing enforces it:
+`enabled: true` ships to every checkout of every box, so the day a laptop runs a
+scheduler — or someone runs `cb chat review run` by hand on a box prod also
+reviews — there are two writers and the divergence above starts.
+
+A manual local run during the 2026-07-28 eval did **not** trigger it: prod has
+neither that session's transcript nor its husk (the conversation ran on the
+laptop and the husk is still untracked there), so the two sides never met.
 
 ## Options, unsettled
 
