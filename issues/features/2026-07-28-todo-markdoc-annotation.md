@@ -4,7 +4,13 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder idea
 needs: [design]
+design: ../../callback-box/docs/plans/todo-annotation.md
 ---
+
+> **Design written (2026-07-28):** goals-first design in
+> [todo-annotation](../../callback-box/docs/plans/todo-annotation.md)
+> (worktree-todo-annotation), Codex-cross-reviewed. The plan supersedes the
+> mechanism sketch below.
 
 Want a **`{% todo %}` annotation** that's somewhat universal — the same shape as
 the existing `{% quote %}` tag — that **surrounds "the item"** and carries
