@@ -1,6 +1,6 @@
 # Frontmatter `todos:` — the universal field
 
-Load-path doctests for `docs/plans/todo-annotation.md` Track 2: the optional
+Load-path doctests for `docs/implemented-plans/todo-annotation.md` Track 2: the optional
 `todos:` frontmatter field joins `title`/`contains` in `GLOBAL_CARD_FIELDS`
 (`src/cards/schema.ts`). One entry shape (`text` required, the rest mirroring
 the `{% todo %}` tag's attributes and `TODO_STATUSES` enum), validated by the

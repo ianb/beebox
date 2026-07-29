@@ -895,7 +895,8 @@ tests:
 
   # === Todo Annotation ({% todo %}) ===
   #
-  # New agent-facing concepts from docs/plans/todo-annotation.md (Track 6).
+  # New agent-facing concepts from docs/implemented-plans/todo-annotation.md
+  # (Track 6).
   # Distinct from the "=== Todo Lists ===" section above, which tests the
   # older, largely-unused todo-list card type — these test the universal
   # capture-in-place {% todo %} tag, cb todos, and the todo-view card.

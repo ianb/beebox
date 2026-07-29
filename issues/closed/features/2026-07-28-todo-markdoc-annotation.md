@@ -4,12 +4,12 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder idea
 needs: [design]
-design: ../../../callback-box/docs/plans/todo-annotation.md
+design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
 resolution: implemented
 ---
 
 > **Closed (2026-07-28):** implemented per
-> [todo-annotation](../../../callback-box/docs/plans/todo-annotation.md)
+> [todo-annotation](../../../callback-box/docs/implemented-plans/todo-annotation.md)
 > (worktree-todo-annotation), commits `01307f98..b5aa6378` (the seven
 > plan-chunk commits — tags + rendering, universal body Markdoc validation,
 > frontmatter `todos:`, collector + `cb todos`, review sweep + agent
@@ -17,7 +17,7 @@ resolution: implemented
 > The mechanism sketch below is superseded by the plan.
 
 > **Design written (2026-07-28):** goals-first design in
-> [todo-annotation](../../../callback-box/docs/plans/todo-annotation.md)
+> [todo-annotation](../../../callback-box/docs/implemented-plans/todo-annotation.md)
 > (worktree-todo-annotation), Codex-cross-reviewed. The plan supersedes the
 > mechanism sketch below.
 

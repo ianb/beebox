@@ -1,5 +1,5 @@
 /**
- * The `todo-review` sweep (`docs/plans/todo-annotation.md` Track 5b): a
+ * The `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track 5b): a
  * deterministic wakeup-housekeeping hook, following the `question-aging.ts`
  * precedent — resurfacing needs a call site, not just guidance.
  *

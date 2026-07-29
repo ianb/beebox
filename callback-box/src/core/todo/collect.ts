@@ -1,5 +1,5 @@
 /**
- * The todo collector (`docs/plans/todo-annotation.md`, Track 3): glob every
+ * The todo collector (`docs/implemented-plans/todo-annotation.md`, Track 3): glob every
  * card in a box, parse each body once, and merge the two capture forms
  * (`{% todo %}` tags via `collect-body.ts`; frontmatter `todos:` entries,
  * already Zod-validated at load) into one deterministically ordered list.
@@ -126,7 +126,7 @@ async function collectOneCard(input: {
     // box-local schema, a typo'd filename) is reported as visible-invalid
     // rather than silently skipped: "any globbed card that cannot be
     // schema-loaded is reported" is what the plan's visible-invalid
-    // guarantee means (`docs/plans/todo-annotation.md`, Failure modes
+    // guarantee means (`docs/implemented-plans/todo-annotation.md`, Failure modes
     // table) — a schema that goes missing shouldn't be able to hide a
     // card's todos forever with zero signal.
     issues.push({

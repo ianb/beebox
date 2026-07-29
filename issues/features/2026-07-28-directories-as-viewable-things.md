@@ -7,7 +7,7 @@ needs: [design]
 ---
 
 Two related wants surfaced while designing the
-[todo-annotation](../../callback-box/docs/plans/todo-annotation.md) surface,
+[todo-annotation](../../callback-box/docs/implemented-plans/todo-annotation.md) surface,
 both deferred because they're a big thing on their own:
 
 1. **See a card's todo view from inside the card itself** — the aggregated

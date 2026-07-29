@@ -190,7 +190,7 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
 
 /**
  * Install the box-wide `todo-view` stock instance if missing
- * (`docs/plans/todo-annotation.md` Track 4's "provisioned, not just
+ * (`docs/implemented-plans/todo-annotation.md` Track 4's "provisioned, not just
  * templated" pin): `store/plate.todo-view.card`, explicit `glob: "**"` so
  * it stays box-wide even though it doesn't live at the box root (an omitted
  * `glob` would scope to `store/**` per `todos.list`'s directory-subtree

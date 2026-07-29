@@ -1,6 +1,6 @@
 /**
  * `cb todos` — read/query-only surface over the todo collector
- * (`core/todo/collect.ts`, `docs/plans/todo-annotation.md` Track 3).
+ * (`core/todo/collect.ts`, `docs/implemented-plans/todo-annotation.md` Track 3).
  *
  * Designed for agent consumption (the plan's boxholder call): deterministic,
  * locator-carrying rows; a human-compact-but-parseable default listing

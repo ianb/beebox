@@ -6,7 +6,7 @@
  * commentary cards got that check — via their own schema `validate` hook
  * (`src/schemas/commentary.tsx`) — so a `{% todo status="Done" %}` typo or a
  * `source-ref-xor-href` violation in an ordinary memo was silent
- * (`docs/plans/todo-annotation.md`, Track 1 chunk 2 — "a prerequisite for
+ * (`docs/implemented-plans/todo-annotation.md`, Track 1 chunk 2 — "a prerequisite for
  * every validation claim"). Findings surface as **warnings**, not errors:
  * this is a brand-new universal check, and an existing-box survey hasn't
  * yet justified flipping it to commit-blocking (see the plan's Track 1
@@ -73,7 +73,7 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
  * (`core/todo/collect-body.ts`) can reuse the same "which tag does this
  * validate error belong to" attribution logic rather than re-deriving it —
  * it needs to tell a `{% todo %}`/`{% see-also %}` validation error apart
- * from an unrelated one in the same body (`docs/plans/todo-annotation.md`,
+ * from an unrelated one in the same body (`docs/implemented-plans/todo-annotation.md`,
  * Track 3).
  */
 export interface TagSpan {

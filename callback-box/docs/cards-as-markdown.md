@@ -86,7 +86,7 @@ human-facing display surface: it's a live query (a `glob` plus optional
 `status`/`assigned` filters) rendered as plate-state groups, and — per "views
 attach to cards" — dropping one in a directory gives that subtree its own
 plate. `store/plate.todo-view.card` is the box-wide instance. Full design
-record: `docs/plans/todo-annotation.md`.
+record: `docs/implemented-plans/todo-annotation.md`.
 
 ## Attachments
 

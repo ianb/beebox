@@ -96,7 +96,7 @@ async function runHousekeeping(boxRoot: string): Promise<void> {
     console.log("  Nothing to clean up");
   }
 
-  // Todo-review sweep (docs/plans/todo-annotation.md Track 5b): computes
+  // Todo-review sweep (docs/implemented-plans/todo-annotation.md Track 5b): computes
   // escalated/stirring/stale sets and, when nonempty, queues a job the
   // reactor cycle below (step 5) picks up this same run — mirrors the
   // contains-backfill job's "housekeeping step queues a job" pattern.

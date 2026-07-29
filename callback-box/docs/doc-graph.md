@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-29T02:32:43Z
-Total documents: 211
+Generated: 2026-07-29T11:51:01Z
+Total documents: 212
 
 ## Issues
 
@@ -109,6 +109,7 @@ Referenced by:
 - docs/implemented-plans/selection-commentary.md:445 (mention) — explained will be misread; CLAUDE.md's "improving these instructions" loop
 - docs/implemented-plans/semantic-search.md:45 (mention) — - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — degraded
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:23 (mention) — `CLAUDE.md`. We share what Track 2 forces us to share. We do not
+- docs/implemented-plans/todo-annotation.md:125 (mention) — CLAUDE.md that @-imports MAP.md"). **Reused** as the channel for
 - docs/implemented-plans/user-location.md:255 (mention) — CLAUDE.md default; the raw-route carve-out doesn't apply. (An earlier
 - docs/implemented-plans/view-render-testing.md:258 (mention) — of the orphan-prone dev machinery in CLAUDE.md — no router, no Vite, no Fastify,
 - docs/implemented-plans/web-push-notifications.md:192 (mention) — prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
@@ -306,6 +307,7 @@ Referenced by:
 - docs/implemented-plans/selection-commentary.md:88 (mention) — - `callback-box/code-style.md:36` — *"**No default parameters**: handle
 - docs/implemented-plans/slopo-codehealth-adoption.md:42 (mention) — - **`callback-box/code-style.md`** — style preferences; the centralise-a-cast
 - docs/implemented-plans/tailscale-expose-and-protect.md:57 (mention) — - `callback-box/code-style.md` — no default parameters, injected-deps
+- docs/implemented-plans/todo-annotation.md:58 (mention) — - `callback-box/code-style.md` — exhaustiveness (`assertNever` over status),
 - docs/implemented-plans/user-location.md:60 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/implemented-plans/view-render-testing.md:28 (mention) — - `callback-box/code-style.md` — no `any`; custom error classes not
 - docs/implemented-plans/webpage-card-and-commentary.md:48 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params,
@@ -643,7 +645,7 @@ Title: "Card validation hooks" | 29 lines
 
 Referenced by:
 - CLAUDE.md:42 (mention) — **Validation**: Cards validate on load; `cb validate` checks all cards, a file list, or `--staged`. `cb init` installs p
-- docs/cards-as-markdown.md:56 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
+- docs/cards-as-markdown.md:121 (mention) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/plans/docs-reorg.md:320 (mention) — `docs/card-validation.md`); findability quick wins (Guides rows,
 
 References:
@@ -653,7 +655,7 @@ References:
 
 #### docs/cards-as-markdown.md
 
-Title: "Cards as Markdown" | 65 lines
+Title: "Cards as Markdown" | 130 lines
 
 Referenced by:
 - CLAUDE.md:42 (mention) — **Validation**: Cards validate on load; `cb validate` checks all cards, a file list, or `--staged`. `cb init` installs p
@@ -665,6 +667,7 @@ Referenced by:
 - docs/implemented-plans/design-md-retired-sections.md:12 (mention) — `../cards-as-markdown.md`. Attachments and transcript-plus-original-audio
 - docs/implemented-plans/mvp-implementation-guide.md:7 (mention) — > markdown now, `../cards-as-markdown.md`), the "tailing phase" / `cb tail`
 - docs/implemented-plans/remove-cardworks-and-xml.md:417 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
+- docs/implemented-plans/todo-annotation.md:435 (mention) — `docs/cards-as-markdown.md` gains the tag reference; the issue file closes
 - docs/migrations.md:285 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/docs-reorg.md:112 (mention) — 7. `cards-as-markdown.md` — 2,552 lines of resolved RFC with ~50
 - docs/stack-decisions.md:18 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
@@ -676,6 +679,7 @@ References:
 - → docs/adding-schemas.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/README.md (mention)
+- → docs/implemented-plans/todo-annotation.md (mention)
 - → docs/card-validation.md (mention)
 
 #### docs/chat-review.md
@@ -893,6 +897,7 @@ Referenced by:
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
 - docs/implemented-plans/tailscale-expose-and-protect.md:48 (mention) — - `callback-box/docs/engineering-principles.md` — especially fail-closed /
+- docs/implemented-plans/todo-annotation.md:50 (mention) — - `callback-box/docs/engineering-principles.md` — especially
 - docs/plans/android-companion-app.md:25 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
 - docs/plans/github-pages-site-story-extraction.subplan.md:36 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/github-pages-site.md:22 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
@@ -929,6 +934,7 @@ Title: "Example names" | 53 lines
 
 Referenced by:
 - CLAUDE.md:116 (mention) — - **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by an
+- docs/implemented-plans/todo-annotation.md:56 (mention) — hardcode personal names" (examples below use the `docs/example-names.md`
 - docs/plans/source-available-release.md:65 (mention) — - **Fictional example roster — reuse.** `docs/example-names.md` and
 - ../issues/features/2026-07-22-modeled-demo-family-box.md:34 (mention) — (`callback-box/docs/example-names.md`) — never real names — and kept
 
@@ -1292,6 +1298,7 @@ Title: "Questions" | 335 lines
 Referenced by:
 - CLAUDE.md:154 (mention) — | Questions subsystem design | `docs/questions.md` |
 - docs/implemented-plans/questions-end-to-end.md:461 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
+- docs/implemented-plans/todo-annotation.md:64 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
 - docs/triage.md:133 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:14 (mention) — See `docs/questions.md` § Aging.
 - ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:14 (mention) — maintainer doc at `docs/questions.md`. See that plan for the full track
@@ -1443,6 +1450,7 @@ Referenced by:
 - docs/implemented-plans/rest-to-trpc-consolidation.md:383 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
 - docs/implemented-plans/see-as-the-user.md:575 (mention) — - **Tests first as design tool** (`docs/testing.md`): B0's extraction is
 - docs/implemented-plans/slopo-codehealth-adoption.md:56 (mention) — - **`docs/testing.md`** — tests are not for coverage (`docs/testing.md:11`:
+- docs/implemented-plans/todo-annotation.md:585 (mention) — - **Tests first, as a design tool** (`docs/testing.md`): pure-function
 - docs/implemented-plans/view-render-testing.md:31 (mention) — - `callback-box/docs/testing.md` — tests as a design tool; doctests are the
 - docs/implemented-plans/web-push-notifications.md:482 (mention) — - **Test posture.** Doctests as a design tool (`docs/testing.md`): the load-bearing
 - docs/plans/docs-reorg.gap-analysis.md:53 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
@@ -2814,6 +2822,28 @@ References:
 - → docs/plans/installation-story.md (mention)
 - → docs/health-checks.md (mention)
 - → docs/agent-install.md (mention)
+
+#### docs/implemented-plans/todo-annotation.md
+
+Title: "`{% todo %}` — universal todo annotation" | 595 lines
+
+Referenced by:
+- docs/cards-as-markdown.md:89 (mention) — record: `docs/implemented-plans/todo-annotation.md`.
+- ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:7 (mention) — design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
+- ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:12 (link) — > [todo-annotation](../../../callback-box/docs/implemented-plans/todo-annotation.md)
+- ../issues/exploration/2026-07-28-ad-hoc-agent-views.md:10 (link) — [todo-annotation plan](../../callback-box/docs/implemented-plans/todo-annotation.md)), the
+- ../issues/features/2026-07-28-directories-as-viewable-things.md:10 (link) — [todo-annotation](../../callback-box/docs/implemented-plans/todo-annotation.md) surface,
+
+References:
+- → docs/engineering-principles.md (mention)
+- → docs/example-names.md (mention)
+- → code-style.md (mention)
+- → docs/questions.md (mention)
+- → CLAUDE.md (mention)
+- → docs/cards-as-markdown.md (mention)
+- → ../issues/exploration/2026-07-28-ad-hoc-agent-views.md (link)
+- → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
+- → docs/testing.md (mention)
 
 #### docs/implemented-plans/user-location.md
 

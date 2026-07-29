@@ -104,7 +104,7 @@ export const todosRouter = router({
   /**
    * `todos.list` — thin query wrapper over the collector
    * (`core/todo/collect.ts`), the `todo-view` card's data source
-   * (`docs/plans/todo-annotation.md` Track 4).
+   * (`docs/implemented-plans/todo-annotation.md` Track 4).
    *
    * Glob resolution (one of the plan's two pinned mechanism details):
    * an explicit `glob` wins; otherwise, given `cardPath`, the glob becomes

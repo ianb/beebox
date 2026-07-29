@@ -57,7 +57,7 @@ export interface BrowseFile {
 /**
  * Box-wide count of open todos that are on the plate NOW — `escalated` (past
  * due) plus `on-plate` (started, or undated) — feeding the header badge
- * (`docs/plans/todo-annotation.md` Track 4, "the questions-style header
+ * (`docs/implemented-plans/todo-annotation.md` Track 4, "the questions-style header
  * badge"). Mirrors `pendingQuestions`: a plain count on the same status
  * payload the nav already polls, rather than a separate procedure.
  */

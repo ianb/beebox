@@ -1,6 +1,6 @@
 /**
  * Todo review job card schema — a job created by the wakeup `todo-review`
- * sweep (`src/core/todo/review-sweep.ts`, `docs/plans/todo-annotation.md`
+ * sweep (`src/core/todo/review-sweep.ts`, `docs/implemented-plans/todo-annotation.md`
  * Track 5b) when it finds open todos needing attention.
  *
  * The sweep only computes three sets (escalated / stirring / stale); this

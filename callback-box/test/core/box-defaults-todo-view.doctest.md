@@ -1,6 +1,6 @@
 # `installTodoView` — the box-wide `todo-view` stock instance
 
-`docs/plans/todo-annotation.md` Track 4 pins the box-wide plate as
+`docs/implemented-plans/todo-annotation.md` Track 4 pins the box-wide plate as
 **provisioned, not just templated**: `store/plate.todo-view.card`, explicit
 `glob: "**"`, installed by `cb init`'s stock-template pass
 (`installTodoView`, `src/core/box/defaults.ts`) and tracked in

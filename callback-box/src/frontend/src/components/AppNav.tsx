@@ -115,7 +115,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const statusQuery = trpc.status.status.useQuery();
   const pendingQuestions = statusQuery.data ? statusQuery.data.counts.pendingQuestions : 0;
   // Open on-plate todo count (escalated + on-plate) — the plan's one
-  // app-level todo affordance (docs/plans/todo-annotation.md Track 4),
+  // app-level todo affordance (docs/implemented-plans/todo-annotation.md Track 4),
   // mirroring pendingQuestions above: same status payload, same
   // invalidation, only rendered when nonzero.
   const onPlateTodos = statusQuery.data ? statusQuery.data.counts.onPlateTodos : 0;
@@ -273,7 +273,7 @@ function QuestionsBadge({ base, count }: { base: string; count: number }) {
  * Open on-plate todo count (escalated + on-plate) — links to the stock
  * box-wide `todo-view` card ("The Plate", `store/plate.todo-view.card`),
  * per the plan's one app-level todo affordance
- * (`docs/plans/todo-annotation.md` Track 4). Zero renders nothing, same as
+ * (`docs/implemented-plans/todo-annotation.md` Track 4). Zero renders nothing, same as
  * `QuestionsBadge`.
  */
 function PlateBadge({ base, count }: { base: string; count: number }) {

@@ -2,7 +2,7 @@
  * Todos: authoring a `{% todo %}` or frontmatter `todos:` entry, when to
  * reach for one over a question card, `cb todos` as the query path, and
  * the tending rules the review sweep's job cards depend on (Track 5c,
- * `docs/plans/todo-annotation.md`).
+ * `docs/implemented-plans/todo-annotation.md`).
  */
 
 import { SECTION, xref } from "./sections.js";

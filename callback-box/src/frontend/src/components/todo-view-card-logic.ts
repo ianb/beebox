@@ -1,5 +1,5 @@
 /**
- * Pure logic for `TodoViewCard` (`docs/plans/todo-annotation.md` Track 4),
+ * Pure logic for `TodoViewCard` (`docs/implemented-plans/todo-annotation.md` Track 4),
  * split out of the `.tsx` component so it's doctestable without a React
  * render harness (this repo has no component-render test setup — see
  * sibling pure-logic modules like `chat/scroll-reconcile.ts`).

@@ -1,6 +1,6 @@
 # The todo collector (`core/todo/collect.ts`)
 
-Filesystem-tier doctests for `docs/plans/todo-annotation.md` Track 3:
+Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md` Track 3:
 `collectTodos(boxRoot)` globs every card, parses each body once against the
 shared Markdoc vocabulary, and merges both capture forms (`{% todo %}` tags,
 frontmatter `todos:` entries) into one deterministically ordered list —

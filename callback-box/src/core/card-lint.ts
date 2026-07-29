@@ -21,7 +21,7 @@
  *
  * Every card with a markdown body also gets a universal Markdoc parse+
  * validate pass here (`body-markdoc-lint.ts`), warning-severity
- * (`docs/plans/todo-annotation.md`, Track 1 chunk 2) — skipped for a schema
+ * (`docs/implemented-plans/todo-annotation.md`, Track 1 chunk 2) — skipped for a schema
  * that sets `ownMarkdocValidation` (commentary already runs it at error
  * severity via its own `validate` hook; running it again here would
  * double-report the same violation).
@@ -175,7 +175,7 @@ async function lintFrontmatterCard(input: {
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
-  // Universal Markdoc body validation (docs/plans/todo-annotation.md, Track 1
+  // Universal Markdoc body validation (docs/implemented-plans/todo-annotation.md, Track 1
   // chunk 2): every card with a markdown body gets Markdoc parse+validate,
   // warning-first — except a schema that already runs its own (commentary),
   // which sets `ownMarkdocValidation` so the same violation isn't reported

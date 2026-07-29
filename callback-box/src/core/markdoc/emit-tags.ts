@@ -11,7 +11,7 @@
  * walker. To avoid a value-import cycle with the walker, the children-emitting
  * callback is passed in rather than imported.
  *
- * `todo`/`see-also` (`docs/plans/todo-annotation.md`) join the universal
+ * `todo`/`see-also` (`docs/implemented-plans/todo-annotation.md`) join the universal
  * group alongside `quote`/`source`: a `todo` emits its text behind a
  * compact checklist-style status marker (☐ open / ✔ done / ✘ dropped /
  * ⏸ parked, with `done`/`dropped` also struck) rather than dropping the

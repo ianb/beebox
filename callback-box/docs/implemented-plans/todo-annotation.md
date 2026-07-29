@@ -1,5 +1,10 @@
 # `{% todo %}` — universal todo annotation
 
+**Status:** implemented 2026-07 — all six rollout tracks shipped (tag/rendering,
+body-lint, frontmatter field, collector/CLI, review sweep, todo-view card);
+retiring the `todo-list` schema is explicitly out of scope and tracked as a
+separate follow-up issue.
+
 A universal Markdoc annotation that marks any content in any card body (or a
 card's frontmatter) as an open todo, plus the machinery that makes such
 annotations trustworthy: a collector/query command, human-facing surfaces, and

@@ -1,6 +1,6 @@
 # The todo-review sweep (`core/todo/review-sweep.ts`)
 
-Filesystem-tier doctests for `docs/plans/todo-annotation.md` Track 5b:
+Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md` Track 5b:
 `runTodoReviewSweep(boxRoot)` computes three sets of open todos (escalated /
 stirring / stale) and, when any is nonempty, queues a `todo-review-job` card
 — the compact brief that reaches the reactor. All-empty does nothing at all;

@@ -1,6 +1,6 @@
 # The ambient todo line (`core/todo/ambient-summary.ts`)
 
-`computeTodoAmbientLine(boxRoot)` (`docs/plans/todo-annotation.md` Track 5a)
+`computeTodoAmbientLine(boxRoot)` (`docs/implemented-plans/todo-annotation.md` Track 5a)
 is the runtime-computed, only-when-nonzero one-liner injected into chat and
 reactor agent context — never persisted (see the module doc for why a
 MAP.md-style count doesn't work here).

@@ -1,6 +1,6 @@
 /**
  * TodoViewCard — card renderer for `todo-view` cards
- * (`docs/plans/todo-annotation.md` Track 4).
+ * (`docs/implemented-plans/todo-annotation.md` Track 4).
  *
  * A `todo-view` card is a live query, not authored content: its frontmatter
  * (`glob`/`status`/`assigned`) drives `trpc.todos.list`, and this component

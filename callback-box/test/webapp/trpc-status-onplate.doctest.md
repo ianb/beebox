@@ -1,6 +1,6 @@
 # `status.status` — `counts.onPlateTodos`
 
-`docs/plans/todo-annotation.md` Track 4's header-badge count: open todos that
+`docs/implemented-plans/todo-annotation.md` Track 4's header-badge count: open todos that
 are `escalated` or `on-plate` NOW, box-wide — added to the same `status.status`
 payload the pending-questions count already lives on (`AppNav`'s `PlateBadge`
 reads it the same way `QuestionsBadge` reads `pendingQuestions`). `quiet`

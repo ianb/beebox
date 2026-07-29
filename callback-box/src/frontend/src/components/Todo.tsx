@@ -1,6 +1,6 @@
 /**
  * Todo tag — capture-in-place, machine-legible intention
- * (`docs/plans/todo-annotation.md`).
+ * (`docs/implemented-plans/todo-annotation.md`).
  *
  * `{% todo id="..." status="..." assigned="..." due="..." start="..." %}
  * …{% /todo %}` marks any span as a todo. Read-only rendering in v1 — no

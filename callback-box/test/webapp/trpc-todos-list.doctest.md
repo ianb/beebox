@@ -1,6 +1,6 @@
 # `todos.list` — the `todo-view` card's data source
 
-Route-tier doctests for `docs/plans/todo-annotation.md` Track 4:
+Route-tier doctests for `docs/implemented-plans/todo-annotation.md` Track 4:
 `todos.list` is a thin query wrapper over the collector
 (`core/todo/collect.ts`). Its glob resolution is one of the plan's two pinned
 mechanism details: an explicit `glob` always wins; otherwise a `cardPath`

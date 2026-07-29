@@ -78,7 +78,7 @@ await box.cleanup();
 
 ## A `todo-review-job` alone is processed under `skipLowPriority`, not stuck forever
 
-The wakeup `todo-review` sweep (`docs/plans/todo-annotation.md` Track 5b) is
+The wakeup `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track 5b) is
 meant to be a "deterministic hook, not a hope" — but `cb wakeup` always runs
 the reactor with `skipLowPriority: true`, and the discover stage above skips
 a cycle entirely when every pending job is low-priority. A `todo-review-job`
