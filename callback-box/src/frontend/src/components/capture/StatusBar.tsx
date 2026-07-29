@@ -2,6 +2,10 @@
  * Top status bar for the capture page: recording indicator + elapsed
  * timer on the left, per-kind upload counts (audio/photos/files) plus
  * upload/gallery/settings icons on the right.
+ *
+ * Uploads run one at a time, so the in-flight transfer's percentage is shown
+ * alongside the counts — a full-resolution photo on a weak uplink is genuinely
+ * slow, and without a moving number that is indistinguishable from a hang.
  */
 
 interface StatusBarProps {
@@ -20,11 +24,18 @@ interface StatusBarProps {
   filesUploading: number;
   filesUploaded: number;
   filesFailed: number;
+  /** Percent complete of the transfer currently on the wire, if any. */
+  activeUploadPercent: number | null;
   showSettings: boolean;
   onToggleSettings: () => void;
   onPickGallery: () => void;
   onPickFile: () => void;
   onRetryFailed: () => void;
+}
+
+/** " 42%" for the in-flight transfer, or nothing while the size is unknown. */
+function percentLabel(percent: number | null): string {
+  return percent === null ? "" : ` ${String(percent)}%`;
 }
 
 export function StatusBar(props: StatusBarProps) {
@@ -57,7 +68,7 @@ export function StatusBar(props: StatusBarProps) {
         {props.photoTotal > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.photosUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.photosUploaded}/{props.photoTotal}</span></>
+              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.photosUploaded}/{props.photoTotal}{percentLabel(props.activeUploadPercent)}</span></>
             ) : props.photosFailed > 0 ? (
               <>
                 <span className="text-danger-light">&#10007;</span>
@@ -73,7 +84,7 @@ export function StatusBar(props: StatusBarProps) {
         {props.fileTotal > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.filesUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files</span></>
+              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files{percentLabel(props.activeUploadPercent)}</span></>
             ) : props.filesFailed > 0 ? (
               <>
                 <span className="text-danger-light">&#10007;</span>

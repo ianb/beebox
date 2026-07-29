@@ -112,7 +112,8 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
   const { videoDevices, audioDevices, devicePrefs, updateDevicePref } = devices;
   const { galleryRef, uploadRef, pickFromGallery, pickFileToUpload, handleGallerySelect, handleFileSelect } = inputs;
   const { cameraOn, flashing, startCamera, toggleCamera, flipCamera } = camera;
-  const { setShowSettings, setError, toggleRecording, takePhoto, retryFailedUploads, handleDone, handleCancel } = actions;
+  const { setShowSettings, setError, toggleRecording, takePhoto, retryFailedUploads } = actions;
+  const { skipPendingUploads, handleDone, handleCancel } = actions;
 
   return (
     <CaptureShell>
@@ -121,6 +122,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         audioTotal={counts.audioTotal} audioUploading={counts.audioUploading} audioUploaded={counts.audioUploaded} audioFailed={counts.audioFailed}
         photoTotal={counts.photoTotal} photosUploading={counts.photosUploading} photosUploaded={counts.photosUploaded} photosFailed={counts.photosFailed}
         fileTotal={counts.fileTotal} filesUploading={counts.filesUploading} filesUploaded={counts.filesUploaded} filesFailed={counts.filesFailed}
+        activeUploadPercent={uploads.activeUpload ? uploads.activeUpload.percent : null}
         showSettings={showSettings}
         onToggleSettings={() => setShowSettings((p) => !p)}
         onPickGallery={pickFromGallery} onPickFile={pickFileToUpload} onRetryFailed={retryFailedUploads}
@@ -151,10 +153,11 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
       <input ref={uploadRef} type="file" multiple hidden onChange={handleFileSelect} />
 
       <CaptureControls
-        sessionId={sessionId} recording={recording} uploadsInProgress={counts.uploadsInProgress} finalizing={finalizing}
+        sessionId={sessionId} recording={recording} finalizing={finalizing} pendingUploads={counts.pendingUploads}
         hasContent={counts.photoTotal > 0 || counts.audioTotal > 0 || counts.fileTotal > 0}
         photosFailed={counts.photosFailed} audioFailed={counts.audioFailed} filesFailed={counts.filesFailed}
-        onDone={() => void handleDone()} onCancel={() => void handleCancel()} onToggleRecording={() => void toggleRecording()} onRetryFailed={retryFailedUploads}
+        onDone={() => void handleDone()} onCancel={() => void handleCancel()} onToggleRecording={() => void toggleRecording()}
+        onRetryFailed={retryFailedUploads} onSkipPending={skipPendingUploads}
       />
     </CaptureShell>
   );

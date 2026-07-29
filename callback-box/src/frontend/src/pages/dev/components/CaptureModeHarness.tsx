@@ -15,12 +15,13 @@
  * the product — only mounted under /dev/capture-mode in dev builds (router.tsx).
  */
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureLiveStatus } from "../../../components/chat/capture-bubble";
 import { CaptureChip } from "../../../components/chat/CaptureChip";
 import { CaptureOverlay } from "../../../components/capture/CaptureOverlay";
 import { CaptureApiProvider, type CaptureApi } from "../../capture/capture-api-context";
 import { parseCaptureWrapper } from "../../../components/chat/capture-message";
+import { UploadAbortedError } from "../../../lib/binary-upload";
 
 const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
 
@@ -33,8 +34,58 @@ const BUBBLE_STATES: Array<{ label: string; model: CaptureBubbleModel }> = [
   { label: "photos only", model: { id: "b5", state: "preparing", counts: { photos: 3, files: 0, audioSegments: 0 } } },
 ];
 
+/** How the fake transport behaves — the field conditions worth reproducing. */
+interface FakeUploadBehavior {
+  /** Seconds each upload takes, ticking progress the whole way. */
+  seconds: number;
+  /** Fail every upload (after its full duration), as a dead link would. */
+  fail: boolean;
+}
+
+const PROGRESS_TICK_MS = 200;
+
+/**
+ * The live transport knobs, read at upload time so toggling the controls
+ * affects the next transfer (that's how you watch a healthy queue turn into a
+ * failing one without reopening the overlay). Module-level rather than a ref:
+ * this harness is a singleton dev page, and the mutable box has nothing to do
+ * with rendering.
+ */
+const fakeBehavior: FakeUploadBehavior = { seconds: 4, fail: false };
+
+/**
+ * A faithful upload double: it takes real time, reports real progress, and
+ * honours the abort signal. An instant-resolving fake cannot show any of the
+ * behaviour that actually broke in the field — serialization, the percentage
+ * readout, Done-while-uploads-are-pending, or Skip.
+ */
+async function fakeUpload(opts: {
+  behavior: FakeUploadBehavior;
+  signal: AbortSignal | undefined;
+  onProgress: ((event: { loaded: number; total: number }) => void) | undefined;
+}): Promise<void> {
+  const { behavior, signal, onProgress } = opts;
+  const total = 8 * 1024 * 1024;
+  const ticks = Math.max(1, Math.round((behavior.seconds * 1000) / PROGRESS_TICK_MS));
+  for (let tick = 1; tick <= ticks; tick++) {
+    await new Promise((r) => setTimeout(r, PROGRESS_TICK_MS));
+    if (signal?.aborted) throw new UploadAbortedError();
+    onProgress?.({ loaded: Math.round((total * tick) / ticks), total });
+  }
+  if (behavior.fail) throw new FakeUploadError();
+}
+
+/** The fake transport's stand-in for a link that never completes a transfer. */
+class FakeUploadError extends Error {
+  constructor() {
+    super("Fake upload failed (dev harness)");
+    this.name = "FakeUploadError";
+  }
+}
+
 /** In-memory fake so the overlay mounts with no mic/camera/backend. */
-function makeFakeApi(log: (line: string) => void): CaptureApi {
+function makeFakeApi(opts: { log: (line: string) => void }): CaptureApi {
+  const { log } = opts;
   return {
     createCaptureSession: async (targetSessionId) => {
       log(`createCaptureSession(target=${String(targetSessionId)})`);
@@ -49,7 +100,20 @@ function makeFakeApi(log: (line: string) => void): CaptureApi {
     },
     finalizeCaptureSession: async (id) => { log(`finalize(${id})`); },
     cancelCaptureSession: async (id) => { log(`cancel(${id})`); },
-    uploadCaptureFile: async (opts) => { log(`upload(${opts.kind} ${opts.filename})`); },
+    uploadCaptureFile: async (uploadOpts) => {
+      log(`upload start (${uploadOpts.kind} ${uploadOpts.filename})`);
+      try {
+        await fakeUpload({
+          behavior: fakeBehavior,
+          signal: uploadOpts.signal,
+          onProgress: uploadOpts.onProgress,
+        });
+        log(`upload ok    (${uploadOpts.filename})`);
+      } catch (e) {
+        log(`upload ${e instanceof UploadAbortedError ? "abort" : "FAIL "} (${uploadOpts.filename})`);
+        throw e;
+      }
+    },
   };
 }
 
@@ -94,9 +158,37 @@ const DELIVERED_WRAPPERS = [
 function OverlayDemo() {
   const [open, setOpen] = useState(false);
   const [log, setLog] = useState<string[]>([]);
-  const api = makeFakeApi((line) => setLog((prev) => [...prev.slice(-6), line]));
+  const [seconds, setSeconds] = useState(4);
+  const [fail, setFail] = useState(false);
+  useEffect(() => {
+    fakeBehavior.seconds = seconds;
+    fakeBehavior.fail = fail;
+  }, [seconds, fail]);
+  const appendLog = useCallback((line: string) => setLog((prev) => [...prev.slice(-9), line]), []);
+  // Stable identity across renders — the capture hooks memoize on it, and a
+  // fresh api object each render would re-enqueue work.
+  const api = useMemo(() => makeFakeApi({ log: appendLog }), [appendLog]);
   return (
     <div className="border border-warm-300 rounded-lg p-4 bg-warm-50">
+      <p className="text-xs text-warm-600 mb-2">
+        Uploads are serialized, so with a slow transport you can add several files
+        from the paperclip and watch them go one at a time with a live percentage.
+        Press Done mid-flight for the &ldquo;waiting for N uploads / Skip them&rdquo; path.
+      </p>
+      <div className="flex flex-wrap items-center gap-3 mb-2 text-sm text-warm-700">
+        <label className="flex items-center gap-1.5">
+          seconds per upload
+          <input
+            type="number" min={0} max={60} value={seconds}
+            onChange={(e) => setSeconds(Number(e.target.value))}
+            className="w-16 px-1.5 py-0.5 rounded border border-warm-300"
+          />
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input type="checkbox" checked={fail} onChange={(e) => setFail(e.target.checked)} />
+          fail every upload
+        </label>
+      </div>
       <button onClick={() => setOpen(true)} className="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary-dark">
         Open capture overlay
       </button>

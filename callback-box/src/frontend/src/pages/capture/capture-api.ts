@@ -6,10 +6,11 @@
  *
  * Deliberate-REST inventory (Track L.12e — no tRPC equivalent exists in
  * src/webapp/trpc/routers/*; the backend has no capture-session router):
- * - `uploadCaptureFile` — POST /api/capture/sessions/:id/upload. Multipart
- *   body plus custom `X-Capture-*` headers (filename/source/timestamps),
- *   an `AbortSignal.timeout` and manual retry/backoff loop. Not a tRPC
- *   candidate on its own merits (multipart + non-JSON transport needs).
+ * - `uploadCaptureFile` — POST /api/capture/sessions/:id/upload. Raw
+ *   octet-stream body plus custom `X-Capture-*` headers (filename/source/
+ *   timestamps), sent over XHR for upload progress and stall detection, with a
+ *   manual retry/backoff loop. Not a tRPC candidate on its own merits (binary
+ *   body + progress reporting are exactly what tRPC can't carry).
  * - `createCaptureSession`, `finalizeCaptureSession`, `cancelCaptureSession`
  *   — POST/POST/DELETE against the same `/api/capture/sessions[/:id...]`
  *   family, each individually a plain JSON-ish call with no special
@@ -28,7 +29,13 @@
 
 import { getApiBase } from "../../api";
 import { RequestError } from "../../lib/errors";
-import { withMobileAuth } from "../../lib/mobile-auth";
+import { withMobileAuth, mobileAuthHeaders } from "../../lib/mobile-auth";
+import {
+  uploadBinary,
+  UploadAbortedError,
+  UploadResponseError,
+  type UploadProgressEvent,
+} from "../../lib/binary-upload";
 
 // --- Resume session id (localStorage, keyed by box) ---
 //
@@ -167,70 +174,116 @@ interface UploadFileOptions {
   segmentStartedAt?: string;
   originalName?: string;
   mimeType?: string;
+  /** Aborts the transfer (Done's "skip pending", or cancelling capture). */
+  signal?: AbortSignal | undefined;
+  onProgress?: ((event: UploadProgressEvent) => void) | undefined;
 }
 
 const MAX_UPLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
-const UPLOAD_TIMEOUT_MS = 30_000;
+
+/**
+ * Abort only after no byte has moved for this long — NOT after a fixed total
+ * elapsed time. A full-resolution photo on a weak mobile uplink can legitimately
+ * take minutes; the old 30s wall-clock deadline made those uploads structurally
+ * impossible (they aborted mid-transfer, retried from byte zero, and re-spent
+ * the same scarce bandwidth until the retries ran out).
+ */
+const UPLOAD_STALL_TIMEOUT_MS = 20_000;
+
+/** One staged upload gave up. `reason` carries the last transport failure. */
+export class CaptureUploadError extends Error {
+  readonly filename: string;
+  readonly reason: string;
+  constructor(opts: { filename: string; reason: string; attempts: number }) {
+    super(`Upload of ${opts.filename} failed after ${String(opts.attempts)} attempts: ${opts.reason}`);
+    this.name = "CaptureUploadError";
+    this.filename = opts.filename;
+    this.reason = opts.reason;
+  }
+}
+
+/** What to do with a failed attempt. */
+export type UploadFailureVerdict =
+  /** The caller cancelled — stop, and don't dress it up as a failure. */
+  | "abort"
+  /** Transient: another attempt could genuinely succeed. */
+  | "retry"
+  /** The server rejected this request on its merits; retrying repeats it. */
+  | "fatal";
+
+/**
+ * Classify one failed attempt.
+ *
+ * A stall is retryable (the link may recover) but a *slow* transfer never
+ * reaches here at all — `uploadBinary` only aborts when no byte has moved,
+ * which is the distinction the old fixed 30s deadline could not draw. 408/429
+ * are the server asking us to come back; other 4xx are our own bad request and
+ * would fail identically on every retry.
+ */
+export function classifyUploadFailure(error: unknown): UploadFailureVerdict {
+  if (error instanceof UploadAbortedError) return "abort";
+  if (error instanceof UploadResponseError) {
+    if (error.status === 408 || error.status === 429) return "retry";
+    return error.status >= 500 ? "retry" : "fatal";
+  }
+  return "retry";
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 export async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
   const { sessionId, kind, filename, blob, startedAt, source } = options;
-  const { segmentId, segmentStartedAt, originalName, mimeType } = options;
+  const { segmentId, segmentStartedAt, originalName, mimeType, signal, onProgress } = options;
+
+  const headers: Record<string, string> = {
+    ...mobileAuthHeaders(),
+    "X-Capture-Filename": filename,
+    "X-Capture-Kind": kind,
+    "X-Capture-Started-At": startedAt,
+    "X-Capture-Source": source,
+  };
+  if (segmentId) headers["X-Capture-Segment-Id"] = segmentId;
+  if (segmentStartedAt) headers["X-Capture-Segment-Started-At"] = segmentStartedAt;
+  if (originalName) headers["X-Capture-Original-Name"] = originalName;
+  if (mimeType) headers["X-Capture-Mime-Type"] = mimeType;
+
+  const url = `${getApiBase()}/capture/sessions/${sessionId}/upload`;
+  let lastFailure = "unknown";
 
   for (let attempt = 0; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
     if (attempt > 0) {
       const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
-      console.warn(`[capture] Retrying upload ${filename} (attempt ${attempt + 1}/${MAX_UPLOAD_RETRIES + 1}) after ${delay}ms`);
+      console.warn(`[capture] Retrying upload ${filename} (attempt ${attempt + 1}/${MAX_UPLOAD_RETRIES + 1}) after ${delay}ms: ${lastFailure}`);
       await new Promise((r) => setTimeout(r, delay));
     }
 
-    const formData = new FormData();
-    formData.append("file", blob, filename);
-
-    const headers: Record<string, string> = {
-      "X-Capture-Filename": filename,
-      "X-Capture-Kind": kind,
-      "X-Capture-Started-At": startedAt,
-      "X-Capture-Source": source,
-    };
-    if (segmentId) headers["X-Capture-Segment-Id"] = segmentId;
-    if (segmentStartedAt) headers["X-Capture-Segment-Started-At"] = segmentStartedAt;
-    if (originalName) headers["X-Capture-Original-Name"] = originalName;
-    if (mimeType) headers["X-Capture-Mime-Type"] = mimeType;
-
-    let res: Response;
     try {
-      res = await fetch(`${getApiBase()}/capture/sessions/${sessionId}/upload`, withMobileAuth({
-        method: "POST",
+      await uploadBinary({
+        url,
+        body: blob,
         headers,
-        body: formData,
-        signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
-      }));
-    } catch (networkErr) {
-      // Network error (offline, DNS failure, etc.) — retry
+        stallTimeoutMs: UPLOAD_STALL_TIMEOUT_MS,
+        signal,
+        onProgress,
+      });
+      return;
+    } catch (e) {
+      const verdict = classifyUploadFailure(e);
+      // A deliberate abort is the caller's decision, not a transport failure —
+      // retrying it would defeat the very cancel it came from.
+      if (verdict === "abort") throw e;
+      if (verdict === "fatal") throw new RequestError(errorText(e));
+      lastFailure = errorText(e);
       if (attempt < MAX_UPLOAD_RETRIES) continue;
-      const msg = networkErr instanceof Error ? networkErr.message : String(networkErr);
-      const message = `Upload failed (network error after ${MAX_UPLOAD_RETRIES + 1} attempts): ${msg}`;
-      throw new RequestError(message);
+      throw new CaptureUploadError({
+        filename,
+        reason: lastFailure,
+        attempts: MAX_UPLOAD_RETRIES + 1,
+      });
     }
-
-    if (res.ok) return;
-
-    // 4xx errors (except 408/429) are not retryable
-    if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
-      let detail = "";
-      try { detail = await res.text(); } catch (_e) { /* ignore */ }
-      const message = `Upload failed (${res.status}): ${detail || res.statusText}`;
-      throw new RequestError(message);
-    }
-
-    // 5xx or 408/429 — retry
-    if (attempt < MAX_UPLOAD_RETRIES) continue;
-
-    let detail = "";
-    try { detail = await res.text(); } catch (_e) { /* ignore */ }
-    const message = `Upload failed (${res.status} after ${MAX_UPLOAD_RETRIES + 1} attempts): ${detail || res.statusText}`;
-    throw new RequestError(message);
   }
 }
 

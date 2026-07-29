@@ -64,7 +64,7 @@ export function useCaptureSession(opts: {
   const uploads = useCaptureUploads();
   const { videoDevices, devicePrefs, refreshDevices, setVideoDevices, setAudioDevices } = devices;
   const { setPhotoStates, setFileStates, uploadPhoto, uploadFile, handleChunk } = uploads;
-  const { awaitPending, clearPendingAndFailed } = uploads;
+  const { awaitPending, abortPending, clearPendingAndFailed } = uploads;
 
   const camera = useCaptureCamera({
     videoDeviceId: devicePrefs.videoDeviceId, videoDevices, isMobile, setError, refreshDevices,
@@ -165,8 +165,19 @@ export function useCaptureSession(opts: {
     if (sessionId) uploads.retryFailedUploads(sessionId);
   }, [sessionId, uploads]);
 
+  // Abandon whatever is still on the wire and let the pending Done proceed with
+  // what has landed. Aborted transfers settle as failures, so the `awaitPending`
+  // that `handleDone` is sitting on resolves immediately after this.
+  const skipPendingUploads = useCallback(() => {
+    abortPending();
+  }, [abortPending]);
+
   // Seal the staging session (fires background preparation → delivery) and exit
   // capture mode. A server-derived pending bubble takes over from here.
+  //
+  // Done is never blocked on uploads being finished (see CaptureControls): it
+  // waits for outstanding transfers, showing the count and a Skip affordance,
+  // so a slow link delays the seal but a broken one doesn't trap the user.
   const handleDone = useCallback(async () => {
     if (!sessionId || finalizing) return;
     setFinalizing(true);
@@ -209,7 +220,7 @@ export function useCaptureSession(opts: {
     actions: {
       setShowSettings, setError,
       toggleRecording, takePhoto,
-      retryFailedUploads, handleDone, handleCancel,
+      retryFailedUploads, skipPendingUploads, handleDone, handleCancel,
     },
   };
 }
