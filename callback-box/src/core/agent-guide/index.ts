@@ -22,6 +22,7 @@ import {
   cardTypesSection,
   questionsSection,
 } from "./cards.js";
+import { todosSection } from "./todos.js";
 import { gitHistorySection, whereToRecordSection } from "./behavior.js";
 import { landmarksSection } from "./landmarks.js";
 import { secretsSection } from "./secrets.js";
@@ -62,6 +63,7 @@ This guide is for every agent working in this box — chat, background jobs, and
     aboutCardsSection(),
     cardTypesSection(allCardSchemas),
     questionsSection(),
+    todosSection(),
     directoryLayoutSection(),
     boxCodeLocationSection(shape),
     landmarksSection(),

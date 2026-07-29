@@ -142,6 +142,22 @@ await box.write("config/schedules/.state/sync-notes.json", JSON.stringify({
 => undefined
 ```
 
+The `todos` extra (Track 5a's ambient line) rides on every send, unlike
+`health` — no gate — but only when there's actually something on the plate.
+
+```ts continue
+(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).todos
+=> undefined
+
+await box.write(
+  "store/errand.memo.card",
+  '---\nstatus: new\ncreated: 2026-06-01T10:00:00Z\n---\n{% todo id="call-vet" %}Call the vet{% /todo %}\n'
+);
+
+(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).todos
+=> 1 open todo on the plate — `cb todos`
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

@@ -24,6 +24,7 @@ export { TelegramMessageSchema } from "./telegram-message.js";
 export { ChatThreadSchema } from "./chat-thread.js";
 export { ChatJobSchema } from "./chat-job.js";
 export { TodoListSchema } from "./todo-list.js";
+export { TodoViewSchema } from "./todo-view.js";
 export { GsheetSchema } from "./gsheet.js";
 export { LandmarkSchema } from "./landmark.js";
 
@@ -46,6 +47,7 @@ export type { TelegramMessageFields } from "./telegram-message.js";
 export type { ChatThreadFields, ChatThreadEntry, ChatThreadMessage, ChatThreadSeen } from "./chat-thread.js";
 export type { ChatJobFields } from "./chat-job.js";
 export type { TodoListFields, TodoItem, TodoItemStatusType } from "./todo-list.js";
+export type { TodoViewFields } from "./todo-view.js";
 export type { GsheetFields } from "./gsheet.js";
 export type { DocFields } from "./doc.js";
 export type { GdocFields, GdocLossyType } from "./gdoc.js";
@@ -71,6 +73,7 @@ export { createTelegramMessageTemplate } from "./telegram-message.js";
 export { createChatThreadTemplate, createMessageEntry } from "./chat-thread.js";
 export { createChatJobTemplate } from "./chat-job.js";
 export { createTodoListTemplate } from "./todo-list.js";
+export { createTodoViewTemplate } from "./todo-view.js";
 export { createGsheetTemplate } from "./gsheet.js";
 export { createLandmarkTemplate, parseLandmarkFields } from "./landmark.js";
 export type {

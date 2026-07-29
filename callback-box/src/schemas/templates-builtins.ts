@@ -18,6 +18,8 @@ import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
 import { createScheduledScriptTemplate } from "./scheduled-script.js";
 import { createTodoListTemplate } from "./todo-list.js";
+import { createTodoViewTemplate } from "./todo-view.js";
+import { TODO_STATUSES } from "../shared/todo-model.js";
 import { createBriefingTemplate } from "./briefing.js";
 import { createPersonTemplate } from "./person.js";
 import { createPlaceTemplate } from "./place.js";
@@ -153,6 +155,27 @@ registerTemplate({
     if (args.details) opts.details = args.details;
     if (args.items) opts.items = args.items;
     return createTodoListTemplate(opts);
+  },
+});
+
+registerTemplate({
+  name: "todo-view",
+  description: "A todos display surface — the box-wide plate, or a project-local subtree instance",
+  cardTypes: ["todo-view"],
+  defaultForTypes: ["todo-view"],
+  argsSchema: z.object({
+    title: z.string().optional().describe("Display title for the view"),
+    glob: z.string().optional().describe("Glob scoping which cards to scan (default: this card's own directory subtree)"),
+    status: z.array(z.enum(TODO_STATUSES)).optional().describe("Restrict to specific statuses (default: all)"),
+    assigned: z.string().optional().describe("Restrict to todos with this exact `assigned` value"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createTodoViewTemplate>[0] = {};
+    if (args.title) opts.title = args.title;
+    if (args.glob) opts.glob = args.glob;
+    if (args.status) opts.status = args.status;
+    if (args.assigned) opts.assigned = args.assigned;
+    return createTodoViewTemplate(opts);
   },
 });
 

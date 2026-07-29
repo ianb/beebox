@@ -20,6 +20,7 @@ import {
   loadScheduleHealth,
   summarizeScheduleHealth,
 } from "./schedule/health-box.js";
+import { computeTodoAmbientLine } from "./todo/ambient-summary.js";
 
 function phaseOfDay(hour: number): string {
   if (hour >= 5 && hour < 12) return "morning";
@@ -124,6 +125,7 @@ interface SnapshotContext {
   localTime: string;
   lastActivity?: string;
   health?: string;
+  todos?: string;
 }
 
 /**
@@ -246,6 +248,19 @@ export async function buildSnapshotContext(
     } catch (e) {
       console.warn(`[session-context] schedule health summary failed: ${e instanceof Error ? e.message : e}`);
     }
+  }
+
+  // Ambient todo count (Track 5a): rides on every message, like health —
+  // unlike health it's not gated/rate-limited, since it's a plain fact
+  // ("N on the plate right now"), not a nag that needs de-duplicating.
+  // Computed fresh each send (never persisted — see ambient-summary.ts);
+  // a collector scan per chat message is the accepted cost for v1 box
+  // sizes, same tradeoff schedule-health already makes for its own scan.
+  try {
+    const todos = await computeTodoAmbientLine(boxRoot);
+    if (todos !== null) out.todos = todos;
+  } catch (e) {
+    console.warn(`[session-context] todo ambient summary failed: ${e instanceof Error ? e.message : e}`);
   }
 
   if (!sessionStart) return out;

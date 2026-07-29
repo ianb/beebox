@@ -31,6 +31,8 @@ import { makeSourceComponents } from "./Source";
 import { makeBriefingComponents } from "./BriefingTags";
 import { makeRecipeComponents } from "./RecipeTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
+import { makeTodoComponents } from "./Todo";
+import { makeSeeAlsoComponent } from "./SeeAlso";
 import { Image } from "./ui/Image";
 import { VideoEmbed } from "./ui/VideoEmbed";
 import { detectVideoEmbed } from "../lib/video-url";
@@ -260,6 +262,8 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
   const briefing = makeBriefingComponents();
   const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
+  const { TodoInline, TodoBlock } = makeTodoComponents();
+  const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -330,6 +334,9 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     Silence: cast(Silence),
     RedactedInline: cast(RedactedInline),
     RedactedBlock: cast(RedactedBlock),
+    TodoInline: cast(TodoInline),
+    TodoBlock: cast(TodoBlock),
+    SeeAlso: cast(SeeAlso),
   };
   return { config, components };
 }

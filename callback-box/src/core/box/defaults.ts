@@ -16,6 +16,7 @@ import { createInitialGuideTemplate } from "../../schemas/guide.js";
 import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../../schemas/personality.js";
 import { createBriefingTemplate } from "../../schemas/briefing.js";
+import { createTodoViewTemplate } from "../../schemas/todo-view.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../../schemas/landmark.js";
 import { installTemplateFile, type InstallResult } from "../install-template-file.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -183,6 +184,25 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
     boxRoot,
     relPath: "briefing.briefing.card",
     templateContent: createBriefingTemplate(),
+  });
+  return result.outcome === "fresh";
+}
+
+/**
+ * Install the box-wide `todo-view` stock instance if missing
+ * (`docs/implemented-plans/todo-annotation.md` Track 4's "provisioned, not just
+ * templated" pin): `store/plate.todo-view.card`, explicit `glob: "**"` so
+ * it stays box-wide even though it doesn't live at the box root (an omitted
+ * `glob` would scope to `store/**` per `todos.list`'s directory-subtree
+ * resolution rule — this card wants the whole box).
+ *
+ * @returns Whether a new template was installed
+ */
+export async function installTodoView(boxRoot: string): Promise<boolean> {
+  const result = await installTemplateFile({
+    boxRoot,
+    relPath: "store/plate.todo-view.card",
+    templateContent: createTodoViewTemplate({ glob: "**", title: "The Plate" }),
   });
   return result.outcome === "fresh";
 }
