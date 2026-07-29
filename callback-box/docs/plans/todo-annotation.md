@@ -24,7 +24,7 @@ justified by these, not the other way around.
    Tasks, Logseq) fails by default here: an annotation with no surfacing
    metadata becomes permanently invisible — the todo graveyard. Design rule
    derived from that: **an undated open todo is on the plate *now*; quiet
-   states are explicit (`someday`), never an accident of missing metadata.**
+   states are explicit (`parked`), never an accident of missing metadata.**
 3. **Machine-legible for aggregation.** One collector reads every todo across
    the box; everything else (views, agent queries, ambient context, the
    Echo Show dashboard feed —
@@ -143,7 +143,8 @@ corpus and general knowledge (2026-07-28, this session):
   attributes with enumerated `status` instead.
 - **GTD / OmniFocus** — the review loop is the part humans skip; only systems
   with a forcing function avoid staleness → Goal 4 assigns that loop to the
-  agent. `someday` is GTD's someday/maybe semantic.
+  agent. `parked` carries GTD's someday/maybe semantic under a plainer name
+  (boxholder call: "someday" didn't read; "parking lot" was his own word).
 - **OpenClaw commitments** (`research/openclaw-hermes/deep-openclaw-commitments.md`,
   deep-dive in-corpus) — the closest agent-managed precedent. Adopted:
   provenance field distinguishing agent-inferred from user-stated; treating
@@ -186,10 +187,10 @@ todo on the plate now):
 - `id` — short human-scale slug for cross-reference (`see-also` from
   elsewhere, agent naming it in chat). Unique box-wide (enforced by the
   collector, not per-card lint — uniqueness is cross-file). Never a UUID.
-- `status` — `String`, `matches: ["open", "done", "dropped", "someday"]`.
+- `status` — `String`, `matches: ["open", "done", "dropped", "parked"]`.
   Absence = `open` (the common case costs zero typing). `done` = completed
   (git history timestamps the transition); `dropped` = deliberately not doing;
-  `someday` = parked off the plate, excluded from default surfaces, present in
+  `parked` = deliberately off the plate, excluded from default surfaces, present in
   the full list.
 - `assigned` — plain string; absence = the boxholder. `"agent"` marks agent
   work (Goal 5). No person-card ref in v1 (see NOT in scope).
@@ -217,7 +218,7 @@ legitimately means "the containing document." Body = the reason.
 not a block interruption.
 
 Rendering by status: open = live treatment (badge + metadata chips for
-due/start/assigned); done = struck; someday = dimmed; dropped = struck and
+due/start/assigned); done = struck; parked = dimmed; dropped = struck and
 gray. Inline vs block via the `node.inline` split (`quote` precedent). The
 `ref` → `sourceRef` React rename applies to `see-also`
 (`markdoc-config.ts:176-181` precedent). Read-only rendering in v1 (no
@@ -225,7 +226,7 @@ click-to-toggle; see Open questions).
 
 **Vocabulary lock-ins:** tag names `todo`, `see-also`; attribute names `id`,
 `status`, `assigned`, `by`, `created`, `due`, `start`; status values `open`,
-`done`, `dropped`, `someday`. `see-also` is todo-scoped in v1 but named
+`done`, `dropped`, `parked`. `see-also` is todo-scoped in v1 but named
 generically on purpose — it may later be allowed in other contexts.
 
 **Shared model module:** `src/shared/todo-model.ts` — the status list
@@ -271,7 +272,7 @@ todos:
     due: 2026-08-15
   - text: "Ask Marcus about the quote"
     assigned: agent
-    status: someday
+    status: parked
 ```
 
 `text` required; the other keys mirror Track 1's attributes exactly (same
@@ -333,7 +334,7 @@ card/view consumes the same procedure later — this track feeds it, doesn't
 build it.
 
 **Why.** Goal 2 — the "what's on my plate" surface is where trust is earned.
-Grouped by plate-state (escalated / on plate / quiet / someday), each item
+Grouped by plate-state (escalated / on plate / quiet / parked), each item
 linking to its card (**card-level navigation in v1** — `ViewTarget` has no
 line/fragment field; line-anchored deep links are a fast-follow, not a v1
 promise).
@@ -418,7 +419,7 @@ follow-up migration item, not a subplan (nothing here depends on it).
 | Duplicate `id` across cards | planned (Track 3 doctest) | collector reports as error | clear |
 | Frontmatter `todos:` wrong shape | planned (Track 2 doctest) | Zod at card load (existing boundary) | clear |
 | Malformed tag syntax (`{%todo%}` no spaces) parses as plain text | none | none — Markdoc sees ordinary text | **silent** — accepted risk, with a cheap mitigation: a card-lint warning for `{%`-adjacent-to-non-space in bodies is a one-regex check; include it in Track 1 |
-| Undated todo floods the plate (over-capture) | n/a (behavioral) | `someday` is the explicit relief valve; tending loop proposes parking | clear |
+| Undated todo floods the plate (over-capture) | n/a (behavioral) | `parked` is the explicit relief valve; tending loop proposes parking | clear |
 | Agent-authored todo text carries injected instructions | n/a (prompt posture) | guide language: todo text is data at consumption sites | documented |
 | Collector cost on large boxes (full-body parse per run) | none | glob scoping bounds it; accepted for v1 box sizes | clear (slow, not wrong) |
 
@@ -481,18 +482,17 @@ follow-up migration item, not a subplan (nothing here depends on it).
 
 ## Open design questions
 
-- **Click-to-done UI.** A checkbox toggle on the todos page (and in rendered
-  cards) editing the `status` attribute in place would be the single biggest
-  human-UX win, but it introduces a renderer→card write path (the retired
-  `todosRouter.updateItem` is precedent that it's tractable). Lean: defer to
-  a fast-follow once the read path has earned trust; the agent can mark
-  things done conversationally in the meantime.
-- **Frontmatter key name.** `todos:` (list) vs the boxholder's spoken
-  `todo:`. Lean `todos:` — it's a list; matches the plural collector
-  vocabulary.
-- **Do `someday` items appear in MAP.md summaries?** Lean no — quiet means
-  quiet; they show in `cb todos --status someday` and the page's someday
-  group only.
+All settled with the boxholder (2026-07-28):
+
+- **Click-to-done UI** — decided: no direct-change UI in v1 (rendering is
+  read-only; the agent marks things done conversationally). A fast-follow
+  candidate once the read path has earned trust; moved to NOT in scope.
+- **Frontmatter key name** — decided: `todos:` (it's a list; matches the
+  collector vocabulary).
+- **Parking-lot status name** — decided: `parked` (GTD's "someday/maybe"
+  semantic; the GTD term itself didn't read). Parked items don't appear in
+  ambient summaries — quiet means quiet; they show in
+  `cb todos --status parked` and the page's parked group only.
 
 ## Knowledge audits
 
@@ -500,7 +500,7 @@ New agent-facing concepts → audits land run, per the `{% quote %}` precedent:
 
 1. `knows_directly`: the `{% todo %}` shape — wrapper tag, metadata in
    attributes, absence-of-status = open.
-2. `knows_directly`: the status vocabulary (`done`/`dropped`/`someday`) and
+2. `knows_directly`: the status vocabulary (`done`/`dropped`/`parked`) and
    that `start`, not `due`, is the surfacing trigger.
 3. `knows_directly`: `cb todos` exists and is the query path; mutation is
    editing the card.
