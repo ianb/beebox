@@ -16,10 +16,13 @@ cb chat review run --dry-run     # which ones, and how much is new
 cb chat review run               # do it
 ```
 
-Boxes get a `chat-review` scheduled script (nightly, 04:00) installed by
-`cb init`, shipping **disabled**. Turning it on is a per-box decision — the pass
-writes generated prose onto git-tracked cards that get pushed off the machine.
-Flip `enabled: true` in `config/schedules/chat-review.scheduled-script.card`.
+Boxes get a `chat-review` scheduled script (nightly at 04:00, `lockGroup: retro`)
+installed by `cb init` at
+`config/schedules/chat-review.scheduled-script.card`, shipping **enabled**.
+
+To turn it off for a box, set `enabled: false` on that card. `enabled` is a
+box-owned field, so the setting survives template updates rather than being
+re-flipped by the next sync.
 
 ## What qualifies
 

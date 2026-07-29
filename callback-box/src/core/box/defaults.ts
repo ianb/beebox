@@ -277,12 +277,13 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 4 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Ships DISABLED, unlike process-retrospective. This pass writes generated
-    // prose (titles, summaries) onto git-tracked cards that get pushed off the
-    // machine, and a title is written for a semi-public audience — that is a
-    // judgement call a boxholder should opt into, not inherit from a template
-    // update. See docs/plans/chat-review.md § Track E.
-    enabled: false,
+    // Ships ENABLED for all boxes (boxholder's call, 2026-07-28 — "we built it
+    // to try it"). Note what that means: generateDocs() re-syncs templates on
+    // every reactor cycle and chat-session start, so this turns on everywhere
+    // at once, and the pass writes generated prose onto git-tracked cards that
+    // get pushed off the machine. `enabled` is a box-owned field, so a box that
+    // turns it off keeps it off across template updates.
+    enabled: true,
     // Shares retro's group: both walk every transcript under ~/.claude, and
     // there is no reason to have them do it concurrently.
     lockGroup: "retro",
