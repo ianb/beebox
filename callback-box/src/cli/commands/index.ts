@@ -57,3 +57,4 @@ export { extfileCommand } from "./extfile.js";
 export { locationCommand } from "./location.js";
 export { pushCommand } from "./push.js";
 export { tailscaleCommand } from "./tailscale.js";
+export { todosCommand } from "./todos.js";

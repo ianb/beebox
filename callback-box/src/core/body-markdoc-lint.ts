@@ -67,7 +67,16 @@ export function lintBodyMarkdoc(bodyText: string): LintIssue[] {
     });
 }
 
-interface TagSpan {
+/**
+ * A tag node's authored name and source line span. Exported (alongside
+ * `collectTagSpans`/`tagNameFor`) so the todo collector
+ * (`core/todo/collect-body.ts`) can reuse the same "which tag does this
+ * validate error belong to" attribution logic rather than re-deriving it —
+ * it needs to tell a `{% todo %}`/`{% see-also %}` validation error apart
+ * from an unrelated one in the same body (`docs/plans/todo-annotation.md`,
+ * Track 3).
+ */
+export interface TagSpan {
   tag: string;
   startLine: number;
   endLine: number;
@@ -79,7 +88,7 @@ interface TagSpan {
  * name, so this lets a validate error be attributed back to the tag that
  * produced it (matched by exact line-span equality — see `tagNameFor`).
  */
-function collectTagSpans(ast: Node): TagSpan[] {
+export function collectTagSpans(ast: Node): TagSpan[] {
   const spans: TagSpan[] = [];
   for (const node of ast.walk()) {
     if (node.type !== "tag") continue;
@@ -91,7 +100,7 @@ function collectTagSpans(ast: Node): TagSpan[] {
 }
 
 /** Display name for the tag a validate error's line span belongs to; "body" when no tag matches (e.g. an undefined-node error at the document root). */
-function tagNameFor(spans: TagSpan[], errorLines: number[]): string {
+export function tagNameFor(spans: TagSpan[], errorLines: number[]): string {
   const start = errorLines[0];
   const end = errorLines[errorLines.length - 1];
   if (typeof start !== "number" || typeof end !== "number") return "body";
