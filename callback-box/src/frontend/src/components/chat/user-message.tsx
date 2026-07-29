@@ -191,9 +191,15 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoom
     if (allEmpty && !hasImages && !hasFiles) return null;
   }
 
-  // Show task-notification messages as collapsed system info
+  // Show task-notification messages as collapsed system info — but only when
+  // there's something to report. A background command that finished cleanly
+  // ("completed", exit 0) is a non-event; success doesn't need noting, so we
+  // render nothing and keep the transcript quiet. Only non-success terminal
+  // states (failed/stopped/killed) get a marker. (Debug view still shows the
+  // raw text via the normal path below, so nothing is lost for inspection.)
   const taskNotification = parseTaskNotification(allTexts.join("\n"));
   if (taskNotification && !debugView) {
+    if (taskNotification.status === "completed") return null;
     return <TaskNotificationMessage notification={taskNotification} />;
   }
 

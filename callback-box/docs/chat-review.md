@@ -64,23 +64,36 @@ session for history that predates the feature. Every later span is a nightly
 increment far below the cap, so this affects backfill quality only, not ongoing
 accuracy.
 
-## Titles are written for a semi-public audience
+## Titles are written for a semi-public audience — and only titles
 
-Session lists surface where the conversation never does — a shared screen, a
-screenshot, someone glancing over. And the exposure is asymmetric: the transcript
-lives outside the box and is never pushed, while the title lands on a git-tracked
-card and goes to the box's remote, where it stays in history even if edited
-later.
+Discretion applies to the **title alone**. That is not an oversight in the other
+fields; it is the point.
+
+A title is the one output that gets read out of context. Chat lists surface on a
+shared screen, in a screenshot, over someone's shoulder — and the exposure is
+asymmetric besides: the transcript lives outside the box and is never pushed,
+while the title lands on a git-tracked card that goes to the box's remote and
+stays in history even if edited later.
 
 So the reviewer is told to name the *subject and shape* of a conversation rather
 than its contents, to name a category at most for anything private, and to never
-include other people's names, amounts, diagnoses, addresses, or identifiers —
-while still being distinctive enough to find the conversation again.
+put other people's names, amounts, diagnoses, addresses, or identifiers in a
+title — while still being distinctive enough to find the conversation again.
 
-`title`, `contains` and the account are all run through the publication
-[leak scan](../src/publish/leak-scan.ts) before they are written; a field
-carrying an email address, credential shape, or home path is dropped and
-reported. That catches mechanical leaks only. A title that accurately names a
+**`contains` and `contains-evidence` are the opposite.** They are the durable
+record of a conversation whose transcript will eventually expire, so they should
+be as explicit and specific as they need to be — names, amounts, decisions, the
+actual property, the actual question. Sanitizing them would destroy the thing's
+value; anything left out is simply lost once the transcript goes. The prompt says
+so in as many words, because a model reading title rules first will otherwise
+carry them over.
+
+The leak scan is scoped the same way. A **title** is rejected for an address, an
+email, or a credential shape. **`contains` and the account** are rejected only
+for a credential — that is secret hygiene, not discretion: an API key in a
+git-tracked card is a problem regardless of who reads it.
+
+And the scan catches mechanical leaks only. A title that accurately names a
 private topic passes every regex there is — the prompt, the husk card view, and
 your ability to edit are the real controls.
 

@@ -28,15 +28,28 @@ import type { ReviewOutput } from "./reviewer.js";
 import type { TitleOwner } from "./state.js";
 
 /**
- * Leak kinds that reject a generated string. `external-url` is excluded: a
- * conversation legitimately about a website will name it, and that is not a
- * leak the way an address or a key is.
+ * What rejects a generated string, per field.
+ *
+ * **Titles** are the only output written for a semi-public audience — they are
+ * what shows up in a chat list, read out of context by someone who may not be
+ * entitled to the details. So a title carrying an address, an email, or a key is
+ * dropped.
+ *
+ * **`contains` and the account are deliberately NOT held to that standard.**
+ * They are the durable record of a conversation whose transcript eventually
+ * expires; sanitizing them destroys the value. A colleague's email or a street
+ * address is legitimate content there. Only a credential is rejected, and that
+ * is secret hygiene rather than discretion — an API key in a git-tracked card is
+ * a problem no matter who reads it.
+ *
+ * `external-url` never rejects: a conversation about a website will name it.
  */
-const REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>([
+const TITLE_REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>([
   "home-path",
   "email",
   "credential",
 ]);
+const RECORD_REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>(["credential"]);
 
 /** Base class so callers can catch every husk-write failure at once. */
 export class HuskWriteError extends Error {
@@ -124,11 +137,14 @@ export function resolveTitleOwner(args: {
 }
 
 /** True when the string is clean enough to commit. Rejections are reported, not silent. */
-function passesLeakScan(field: string, args: { text: string; ownerEmail: string | null }): boolean {
-  const { text, ownerEmail } = args;
+function passesLeakScan(
+  field: string,
+  args: { text: string; ownerEmail: string | null; kinds: ReadonlySet<LeakKind> },
+): boolean {
+  const { text, ownerEmail, kinds } = args;
   if (text === "") return true;
   const result = scanBundle(new Map([[field, text]]), { ownerEmail, allowedEmails: [] });
-  const blocking = result.findings.filter((f) => REJECTING_KINDS.has(f.kind));
+  const blocking = result.findings.filter((f) => kinds.has(f.kind));
   for (const finding of blocking) {
     console.warn(
       `chat-review: dropped generated ${field} — leak scan found ${finding.kind} (${finding.detail})`,
@@ -173,11 +189,17 @@ export async function applyReviewToHusk(
 
   const account = renderAccount(output.notes);
   const titleOffered = output.title !== "";
-  const titleClean = titleOffered && passesLeakScan("title", { text: output.title, ownerEmail });
+  const titleClean =
+    titleOffered
+    && passesLeakScan("title", { text: output.title, ownerEmail, kinds: TITLE_REJECTING_KINDS });
   if (titleOffered && !titleClean) rejected.push("title");
-  const containsOk = passesLeakScan("contains", { text: output.contains, ownerEmail });
+  const containsOk = passesLeakScan("contains", {
+    text: output.contains, ownerEmail, kinds: RECORD_REJECTING_KINDS,
+  });
   if (!containsOk) rejected.push("contains");
-  const accountOk = passesLeakScan("contains-evidence", { text: account, ownerEmail });
+  const accountOk = passesLeakScan("contains-evidence", {
+    text: account, ownerEmail, kinds: RECORD_REJECTING_KINDS,
+  });
   if (!accountOk) rejected.push("contains-evidence");
 
   return withCardLock(absPath, async () => {

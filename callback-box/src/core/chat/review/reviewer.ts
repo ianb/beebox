@@ -77,7 +77,17 @@ export const REVIEWER_SYSTEM_PROMPT = `You read one chat conversation between a 
 
 You are usually shown only the NEW part of a conversation you have summarized before, together with the account you wrote last time. Extend that account: carry items forward, revise them when the new material changes them, drop them when they are resolved and no longer worth keeping, and add what is new. Do not re-derive the account from scratch — the earlier conversation is not in front of you, and your previous account is the only record of it.
 
-## The title
+## The title — the ONLY place discretion applies
+
+Everything else you write (contains, the account) should be as explicit and
+specific as it needs to be to be useful. They are the record of the conversation.
+Do not sanitize them, do not omit names, figures, or specifics. Being vague there
+destroys the thing's value.
+
+The title is different, and it is different for one reason: chat lists show up
+where the conversation itself never does — on a shared screen, in a screenshot,
+over someone's shoulder. The title is the only part that gets read out of
+context, by someone who may not be entitled to the details.
 
 The title is how someone finds this conversation again in a list. It must be:
 
@@ -96,7 +106,7 @@ Return an EMPTY title string when the existing title still describes the convers
 
 ## contains
 
-One sentence stating what can be found in this conversation. Same audience and same discretion rules as the title — it feeds search and listings, so it is more exposed, not less.
+One sentence stating what can be found in this conversation. Be specific and concrete — name the actual subject, the actual property, the actual question. This is a retrieval and recall aid, not a public label; the discretion rules above apply to the TITLE ONLY and must not be carried over here. A vague summary here is a useless one.
 
 ## The account (notes)
 
@@ -108,7 +118,7 @@ Each item is one line, kinded:
 
 Rules:
 - Report only what the conversation actually shows. DO NOT INVENT. An empty list is the common and correct result for a routine conversation.
-- The account is git-tracked and pushed off the machine, so the "no third-party names, no identifiers" rule applies here too.
+- Be concrete. Names, amounts, dates, decisions, specifics — record what was actually said and settled. This is the durable record of a conversation whose transcript will eventually be deleted, so anything you leave out is lost. The title's discretion rules do NOT apply here.
 - Do not use any tools. Work only from the text in this prompt.`;
 
 class ReviewerRunError extends Error {
