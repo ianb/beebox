@@ -654,3 +654,106 @@ const result = await lintCardsDispatch(
 result.totalWarnings
 => 0
 ```
+
+## Universal Markdoc body validation: an invalid `{% todo %}` status warns
+
+Every card with a markdown body is now parsed and run through
+`Markdoc.validate` against the shared vocabulary (`docs/plans/
+todo-annotation.md`, Track 1 chunk 2) — not just commentary. A `status`
+value outside the enum is a **warning** (this new pass is warning-first
+until an existing-box survey justifies flipping it to error), naming the
+line, the tag, and the Markdoc message:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/notes/Plan.doc.card",
+  "---\ntype: doc\ntitle: Plan\n---\n{% todo status=\"Done\" %}Ship the thing{% /todo %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/notes/Plan.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message
+=> Markdoc body issue at line 1 (todo): Attribute 'status' must match one of ["open","done","dropped","parked"]. Got 'Done' instead.
+```
+
+A body with a valid `{% todo %}` (or no tags at all) lints clean:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/notes/Plan2.doc.card",
+  "---\ntype: doc\ntitle: Plan\n---\n{% todo id=\"ship-it\" due=\"2026-08-01\" %}Ship the thing{% /todo %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/notes/Plan2.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 0
+```
+
+## Universal Markdoc body validation: a body that fails to parse warns, not silently
+
+Malformed tag syntax (an unquoted attribute value that breaks Markdoc's own
+tag grammar) doesn't hide the card's todos — it's reported as a warning
+naming the parse failure, never swallowed (the opposite posture from
+`body-refs.ts`'s ref walker, which is fine losing a few ref warnings to a
+rare parse failure precisely because this pass is the backstop that still
+reports it):
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/notes/Broken.doc.card",
+  "---\ntype: doc\ntitle: Broken\n---\n{% todo status=oops %}Ship the thing{%/todo%}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/notes/Broken.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+
+result.totalWarnings > 0
+=> true
+
+result.results[0]!.warnings.some(w => w.message.includes("Markdoc body issue"))
+=> true
+```
+
+## Commentary cards don't double-report Markdoc violations
+
+Commentary already runs `Markdoc.validate` on its body at **error**
+severity, via its own schema `validate` hook (`ownMarkdocValidation: true`
+tells the generic pass to skip it). A commentary body that violates the
+shared vocabulary (here, `{% source %}`'s ref-xor-href rule) is reported
+exactly once — as the schema's own error — not again as a generic warning:
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/review/a.doc.card", "---\ntype: doc\ntitle: A\n---\nA.\n");
+await box.write(
+  "store/review/Dup.attach/Dup.commentary.card",
+  "---\ntype: commentary\n---\n{% source ref=\"../a.doc.card\" href=\"https://example.com\" %}both{% /source %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Dup.attach/Dup.commentary.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 1
+
+result.totalWarnings
+=> 0
+
+result.results[0]!.errors[0]!.message
+=> {% source %} takes at most one of `ref` or `href`, not both
+```

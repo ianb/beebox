@@ -18,6 +18,13 @@
  * it lives on each schema as a `validate` hook, invoked generically below.
  * The ref-existence walk stays here because it is box-aware (resolves refs
  * against the box root), which the self-contained hook deliberately lacks.
+ *
+ * Every card with a markdown body also gets a universal Markdoc parse+
+ * validate pass here (`body-markdoc-lint.ts`), warning-severity
+ * (`docs/plans/todo-annotation.md`, Track 1 chunk 2) — skipped for a schema
+ * that sets `ownMarkdocValidation` (commentary already runs it at error
+ * severity via its own `validate` hook; running it again here would
+ * double-report the same violation).
  */
 
 import { readFile } from "node:fs/promises";
@@ -32,6 +39,7 @@ import {
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
+import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
@@ -167,6 +175,14 @@ async function lintFrontmatterCard(input: {
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
+  // Universal Markdoc body validation (docs/plans/todo-annotation.md, Track 1
+  // chunk 2): every card with a markdown body gets Markdoc parse+validate,
+  // warning-first — except a schema that already runs its own (commentary),
+  // which sets `ownMarkdocValidation` so the same violation isn't reported
+  // twice at two severities.
+  if (parsed.schema.ownMarkdocValidation !== true && typeof bodyField === "string") {
+    warnings.push(...lintBodyMarkdoc(bodyField));
+  }
   // Type-specific box-aware checks: progress entries and lesson-plan segments
   // name concept-map node ids, which can't be verified self-contained (the map
   // is in another card) nor by the generic ref walk (a node id isn't a file

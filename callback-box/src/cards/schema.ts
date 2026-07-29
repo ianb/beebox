@@ -165,6 +165,16 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    */
   validate?: (input: CardValidateInput) => LintIssue[];
   /**
+   * Set when this schema's own {@link validate} hook already runs
+   * `Markdoc.validate` on the card's body (e.g. commentary — see
+   * `src/schemas/commentary.tsx`). The generic body-Markdoc pass in
+   * `card-lint.ts` skips a card whose schema declares this, so the same
+   * violation isn't reported twice (once at this schema's own severity,
+   * once again as the generic warning). Omit for every other schema — the
+   * generic pass is what gives them Markdoc validation at all.
+   */
+  ownMarkdocValidation?: boolean;
+  /**
    * A parse-time cross-field refinement applied to the whole frontmatter object
    * (after `fields` + global fields are assembled). Unlike {@link validate}
    * (which runs at lint time and returns issues), this is enforced by
@@ -210,6 +220,8 @@ export interface CardSchema<
   readonly instructions?: string;
   /** Self-contained validation hook (see {@link CardSchemaConfig.validate}). */
   readonly validate?: (input: CardValidateInput) => LintIssue[];
+  /** Whether this schema's own `validate` hook already runs Markdoc validation on the body (see {@link CardSchemaConfig.ownMarkdocValidation}). */
+  readonly ownMarkdocValidation?: boolean;
   /** Template reconciliation policy (see {@link CardSchemaConfig.templateMerge}). */
   readonly templateMerge?: TemplateMergePolicy;
 }
@@ -344,6 +356,9 @@ export function cardSchema<
   }
   if (config.validate !== undefined) {
     resolved = { ...resolved, validate: config.validate };
+  }
+  if (config.ownMarkdocValidation !== undefined) {
+    resolved = { ...resolved, ownMarkdocValidation: config.ownMarkdocValidation };
   }
   if (config.templateMerge !== undefined) {
     resolved = { ...resolved, templateMerge: config.templateMerge };
