@@ -47,6 +47,20 @@
  *    list item's first text run and rewrites it to a `Task` tag, since
  *    Markdoc's CommonMark base doesn't handle GFM task lists itself and
  *    has no plugin surface for adding them.
+ *  - `todo` — universal capture-in-place annotation (`docs/plans/
+ *    todo-annotation.md`). Wrapper, inline or block via the `quote`
+ *    precedent. All attributes optional; `status` is the closed
+ *    `TODO_STATUSES` enum from `todo-model.ts` (absence = `open`). The
+ *    `validate()` rule enforces date shape (`created`/`due`/`start`),
+ *    the relative-`start`-requires-`due` and `start`-after-`due` rules,
+ *    and `created` required when `by="agent"` — all delegated to the
+ *    shared `todo-model.ts` so the rules live in one place.
+ *  - `see-also` — nests inside `todo`, points at supporting context.
+ *    Exactly one of `ref` / `href` is required (stricter than `source`'s
+ *    at-most-one — a target-less see-also is meaningless). Same
+ *    `ref` → `sourceRef` rename as `source`. Renders footnote-style
+ *    regardless of inline/block, so the transform emits a single
+ *    `SeeAlso` tag rather than an Inline/Block split.
  *
  * Add new tags here. Use Markdoc's `attributes` schema for typed/validated
  * attributes — `Markdoc.validate(ast, config)` then catches misuse at parse
@@ -55,6 +69,7 @@
 
 import Markdoc from "@markdoc/markdoc";
 import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
+import { TODO_STATUSES, validateTodoAttributes } from "./todo-model.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
 // module under Node's ESM loader (used by the doctest runner); the frontend
@@ -323,6 +338,87 @@ const silence: Schema = {
   },
 };
 
+/** Narrow a raw Markdoc attribute value to `string | undefined` (never `""`-vs-absent ambiguity beyond what Markdoc itself gives us). */
+function stringAttr(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+const todo: Schema = {
+  attributes: {
+    // Short human-scale slug for cross-reference (`see-also` elsewhere, an
+    // agent naming it in chat). Uniqueness is enforced box-wide by the
+    // collector (Track 3), not here — that's a cross-file property.
+    id: { type: String },
+    // Absence = "open" (the common case costs zero typing).
+    status: { type: String, matches: [...TODO_STATUSES] },
+    // Plain string; absence = the boxholder. `"agent"` marks agent work.
+    assigned: { type: String },
+    // Provenance; absence = boxholder-authored, `"agent"` = agent-authored.
+    by: { type: String },
+    created: { type: String },
+    due: { type: String },
+    start: { type: String },
+  },
+  validate(node) {
+    const attrs = {
+      by: stringAttr(node.attributes["by"]),
+      created: stringAttr(node.attributes["created"]),
+      due: stringAttr(node.attributes["due"]),
+      start: stringAttr(node.attributes["start"]),
+    };
+    return validateTodoAttributes(attrs).map(({ id, message }) => ({
+      id,
+      level: "error" as const,
+      message,
+    }));
+  },
+  transform(node, config) {
+    const attributes = node.transformAttributes(config);
+    const children = node.transformChildren(config);
+    return new Tag(node.inline ? "TodoInline" : "TodoBlock", attributes, children);
+  },
+};
+
+const seeAlso: Schema = {
+  attributes: {
+    ref: { type: String },
+    href: { type: String },
+  },
+  validate(node) {
+    const ref = stringAttr(node.attributes["ref"]);
+    const href = stringAttr(node.attributes["href"]);
+    const hasRef = ref !== undefined && ref !== "";
+    const hasHref = href !== undefined && href !== "";
+    if (hasRef && hasHref) {
+      return [
+        {
+          id: "see-also-ambiguous-target",
+          level: "error",
+          message: "{% see-also %} takes exactly one of `ref` or `href`, not both",
+        },
+      ];
+    }
+    if (!hasRef && !hasHref) {
+      return [
+        {
+          id: "see-also-missing-target",
+          level: "error",
+          message: "{% see-also %} requires exactly one of `ref` or `href`",
+        },
+      ];
+    }
+    return [];
+  },
+  transform(node, config) {
+    // `ref` → `sourceRef` rename, same as `source` (React reserves `ref`).
+    // Always a single `SeeAlso` tag — the footnote-style rendering doesn't
+    // depend on `node.inline`, unlike the `quote`/`source` inline/block split.
+    const { ref, ...rest }: { ref?: string; [key: string]: unknown } = node.transformAttributes(config);
+    const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
+    return new Tag("SeeAlso", renamed, node.transformChildren(config));
+  },
+};
+
 /**
  * `item` node override that recognises GFM task-list markers. If the first
  * rendered child is a string starting with `[ ] ` / `[x] ` / `[X] `, that
@@ -370,6 +466,8 @@ export const markdocConfig: Config = {
     task,
     image: captureImage,
     silence,
+    todo,
+    "see-also": seeAlso,
   },
   nodes: { item },
 };
