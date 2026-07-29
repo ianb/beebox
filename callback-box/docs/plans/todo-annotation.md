@@ -482,6 +482,13 @@ follow-up migration item, not a subplan (nothing here depends on it).
   runtime-injected instead (Track 5a).
 - **Line-anchored deep links from the todos page** — `ViewTarget` has no
   line/fragment field; card-level navigation in v1, anchors as a fast-follow.
+- **Ad hoc (card-less) views** — the agent showing a one-off surface without
+  minting a card; deferred to
+  [ad-hoc-agent-views](../../../issues/exploration/2026-07-28-ad-hoc-agent-views.md).
+- **In-place todo lenses and directory viewability** — `?view=todos` on any
+  card or directory (directories aren't view-attachable today); deferred to
+  [directories-as-viewable-things](../../../issues/features/2026-07-28-directories-as-viewable-things.md).
+  The interim stand-in is a `todo-view` card dropped in the directory.
 - **Retiring the `todo-list` schema** — superseded by this design but its
   removal is a data migration on real boxes (cb-migration territory); file as
   a follow-up issue when this plan lands.
