@@ -3915,8 +3915,11 @@ tests:
 
   # === Chat Review ===
   #
-  # Status: pending first run — added with the chat-review implementation
-  # (docs/plans/chat-review.md). Run: pnpm knowledge-audit run --box <path> --filter chat-review
+  # Status (2026-07-28): all 3 pass. Added with the chat-review implementation
+  # (docs/plans/chat-review.md). Note chat-review-vs-compaction read 1 file
+  # rather than answering purely from context — it passes, but it is the
+  # weakest of the three and worth re-checking if the vocabulary drifts.
+  # Run: pnpm knowledge-audit run --box <path> --filter chat-review
 
   - id: chat-husk-title-ownership
     prompt: "Who sets the title on a chat husk card, and what happens if I edit one by hand?"
