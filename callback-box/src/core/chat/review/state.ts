@@ -56,8 +56,14 @@ const ReviewSessionStateSchema = z.object({
   titleOwner: TitleOwnerSchema,
   /** sha256 of the title we last wrote; null when we never have. */
   titleHash: z.string().nullable(),
-  /** Consecutive reviewer failures. At MAX_REVIEW_ATTEMPTS the session is skipped. */
+  /** Consecutive failures on `failedSpanId`. At MAX_REVIEW_ATTEMPTS that span is given up on. */
   attempts: z.number().int(),
+  /**
+   * The span those attempts failed on. Scoping the give-up to one span means
+   * new conversation is always tried afresh — a provider outage can't retire a
+   * session permanently.
+   */
+  failedSpanId: z.string().optional(),
 });
 
 const ReviewStateSchema = z.object({
@@ -84,16 +90,16 @@ export function sessionState(state: ReviewState, sessionId: string): ReviewSessi
   return state.sessions[sessionId] ?? emptySessionState();
 }
 
-/** True when the session has failed enough times to stop trying. */
-export function isSessionExhausted(state: ReviewState, sessionId: string): boolean {
-  return sessionState(state, sessionId).attempts >= MAX_REVIEW_ATTEMPTS;
-}
-
 /**
  * Load journal state, treating a missing file as a fresh start. A corrupt or
- * schema-mismatched file also starts fresh (with a warning) — the worst case
- * is one extra review per session, which the husk's `review-span` marker
- * makes a no-op anyway.
+ * schema-mismatched file also starts fresh (with a warning).
+ *
+ * The cost of starting fresh is bounded but not zero: a session whose
+ * transcript has not grown re-derives the same span id, matches the husk's
+ * `review-span` marker, and costs nothing. One that HAS grown is re-read from
+ * the top as a bootstrap, so material already in the account is summarized
+ * again — the account absorbs it (the model is given the account and asked to
+ * revise, not append), but it is a real model call, not a no-op.
  */
 export async function loadReviewState(boxRoot: string): Promise<ReviewState> {
   const filePath = path.join(boxRoot, STATE_FILE);

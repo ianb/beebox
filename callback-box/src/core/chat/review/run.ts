@@ -25,8 +25,11 @@ import { discoverSessions, QUIESCENCE_MS, type QualifiedSession } from "./discov
 import { appliedSpanFor, computeSpanId, prefixHash } from "./span.js";
 import { applyReviewToHusk, readHuskFields } from "./husk-write.js";
 import type { ChatReviewer } from "./reviewer.js";
+import { contentHash } from "../../../lib/content-hash.js";
+import { resolveTitleOwner } from "./husk-write.js";
 import {
   loadReviewState,
+  MAX_REVIEW_ATTEMPTS,
   METADATA_CONSUMER,
   saveReviewState,
   sessionState,
@@ -53,8 +56,16 @@ export interface RunSummary {
   /** Sessions whose transcript was rewritten under us. */
   rewritten: number;
   reviewerFailures: number;
+  /** Sessions that threw outside the reviewer (unreadable husk, write failure). */
+  sessionErrors: number;
+  /** Sessions skipped because the same span already failed MAX_REVIEW_ATTEMPTS times. */
+  exhausted: number;
   /** Generated fields dropped by the leak scan, as "<session>:<field>". */
   rejected: string[];
+  /** Discovery counters, surfaced so a quiet run still says what it saw. */
+  missingTranscripts: number;
+  deferredActive: number;
+  belowThreshold: number;
   /** Qualified sessions beyond --max-sessions; they wait for the next run. */
   overflow: number;
 }
@@ -66,15 +77,24 @@ function emptySummary(): RunSummary {
     bootstrapped: 0,
     rewritten: 0,
     reviewerFailures: 0,
+    sessionErrors: 0,
+    exhausted: 0,
     rejected: [],
+    missingTranscripts: 0,
+    deferredActive: 0,
+    belowThreshold: 0,
     overflow: 0,
   };
 }
 
 /** Record a reviewer failure so a session that keeps failing eventually stops being tried. */
-function recordFailure(state: ReviewState, args: { sessionId: string }): void {
+function recordFailure(state: ReviewState, args: { sessionId: string; spanId: string }): void {
   const previous = sessionState(state, args.sessionId);
-  state.sessions[args.sessionId] = { ...previous, attempts: previous.attempts + 1 };
+  state.sessions[args.sessionId] = {
+    ...previous,
+    attempts: previous.attempts + 1,
+    failedSpanId: args.spanId,
+  };
 }
 
 async function reviewOne(
@@ -106,6 +126,13 @@ async function reviewOne(
   const husk = await readHuskFields(boxRoot, session.huskPath);
   const previous = sessionState(state, session.sessionId);
 
+  // Give up only on the span that kept failing. New material is a new span, so
+  // a couple of nights of provider trouble can't retire a session for good.
+  if (previous.attempts >= MAX_REVIEW_ATTEMPTS && previous.failedSpanId === spanId) {
+    summary.exhausted += 1;
+    return;
+  }
+
   // Already folded in by a run that died before advancing the journal.
   if (husk.reviewSpan === spanId) {
     summary.alreadyApplied += 1;
@@ -116,9 +143,22 @@ async function reviewOne(
       now: options.now,
     });
     if (applied !== null) {
+      // Re-derive title provenance as well. Losing the journal must not lose
+      // the fact that we wrote the title we are looking at — otherwise the
+      // field reverts to "unmanaged" and a later hand edit could be clobbered.
+      const owner = resolveTitleOwner({
+        currentTitle: husk.title,
+        snippetTitle: session.snippetTitle,
+        storedOwner: previous.titleOwner,
+        storedHash: previous.titleHash,
+      });
       state.sessions[session.sessionId] = {
         ...previous,
         applied: { ...previous.applied, [METADATA_CONSUMER]: applied },
+        titleOwner: owner,
+        titleHash: owner === "generated" && husk.title !== null
+          ? contentHash(husk.title)
+          : previous.titleHash,
         attempts: 0,
       };
     }
@@ -136,7 +176,7 @@ async function reviewOne(
     });
   } catch (e) {
     console.warn(`chat-review: reviewer failed for ${session.sessionId}:`, e);
-    recordFailure(state, { sessionId: session.sessionId });
+    recordFailure(state, { sessionId: session.sessionId, spanId });
     summary.reviewerFailures += 1;
     return;
   }
@@ -145,27 +185,33 @@ async function reviewOne(
     relPath: session.huskPath,
     output,
     spanId,
-    currentTitle: husk.title,
+    snippetTitle: session.snippetTitle,
     storedOwner: previous.titleOwner,
     storedHash: previous.titleHash,
     ownerEmail: options.ownerEmail,
   });
   for (const field of written.rejected) summary.rejected.push(`${session.sessionId}:${field}`);
 
-  const applied = appliedSpanFor({
-    sessionId: session.sessionId,
-    entries: session.entries,
-    endIndex: span.endIndex,
-    now: options.now,
-  });
+  // A span whose account was rejected was NOT folded in, so it must stay
+  // unclaimed and be retried — but count the attempt, or a model that keeps
+  // producing leaky output would be retried every night forever.
+  const applied = written.spanApplied
+    ? appliedSpanFor({
+        sessionId: session.sessionId,
+        entries: session.entries,
+        endIndex: span.endIndex,
+        now: options.now,
+      })
+    : null;
   state.sessions[session.sessionId] = {
     ...previous,
     ...(applied !== null ? { applied: { ...previous.applied, [METADATA_CONSUMER]: applied } } : {}),
     titleOwner: written.titleOwner,
     titleHash: written.titleHash,
-    attempts: 0,
+    attempts: written.spanApplied ? 0 : previous.attempts + 1,
+    ...(written.spanApplied ? {} : { failedSpanId: spanId }),
   };
-  summary.reviewed += 1;
+  if (written.spanApplied) summary.reviewed += 1;
 }
 
 /**
@@ -188,12 +234,23 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
     const summary = emptySummary();
     summary.overflow = discovery.qualified.length - planned.length;
 
+    // One unreadable transcript or unwritable husk must not cost the night's
+    // other sessions, nor the journal advances already earned.
     for (const session of planned) {
-      await reviewOne(session, { boxRoot, options, state, summary });
+      try {
+        await reviewOne(session, { boxRoot, options, state, summary });
+      } catch (e) {
+        console.error(`chat-review: session ${session.sessionId} failed:`, e);
+        recordFailure(state, { sessionId: session.sessionId, spanId: "" });
+        summary.sessionErrors += 1;
+      }
     }
 
     state.lastRunAt = options.now.toISOString();
     await saveReviewState(boxRoot, state);
+    summary.missingTranscripts = discovery.missingTranscripts;
+    summary.deferredActive = discovery.deferredActive.length;
+    summary.belowThreshold = discovery.belowThreshold;
     return summary;
   } finally {
     await releaseLock(lockPath);

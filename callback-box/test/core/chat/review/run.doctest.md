@@ -14,6 +14,7 @@ import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { runChatReview } from "../../../../src/core/chat/review/run.js";
 import { loadReviewState } from "../../../../src/core/chat/review/state.js";
+import { getSessionMetadata } from "../../../../src/cli/lib/session.js";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
@@ -205,6 +206,69 @@ state.sessions["sess5678"].titleOwner
 await box.cleanup();
 ```
 
+## A title typed before the first review is not clobbered
+
+At first review there is no stored hash, but the husk may already carry a title:
+either the first-message snippet `ensureChatHusk` writes, or something the
+boxholder typed. They have to be told apart — the snippet is reproducible, so
+anything else is a person's.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+const huskPath = await seed(box, {
+  sessionId: "sesspre", husk: "title: Notes on the roof leak\n", entries: [bulk("p1"), bulk("p2")],
+});
+
+await runChatReview(box.root, {
+  reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
+});
+const card = await readFile(box.path(huskPath), "utf8");
+[card.includes("title: Notes on the roof leak"), card.includes("Sorting out a recurring")].join(",")
+=> true,false
+```
+
+The rest of the review still lands, and the field is marked `manual` from here on.
+
+```ts continue
+card.includes("contains: Working through a repeated billing error")
+=> true
+
+(await loadReviewState(box.root)).sessions["sesspre"].titleOwner
+=> manual
+```
+
+An auto-set snippet title, by contrast, is ours to replace — otherwise the
+feature could never improve the titles it exists to improve.
+
+```ts continue
+const box2 = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
+const husk2 = await seed(box2, {
+  sessionId: "sesssnip", husk: "", entries: [bulk("q1"), bulk("q2")],
+});
+
+// The exact snippet ensureChatHusk would have written, derived the same way.
+const meta = await getSessionMetadata({
+  sessionId: "sesssnip",
+  logPath: getSessionLogPath(box2.root, "sesssnip"),
+  snippetMaxLen: 80,
+});
+await writeFile(box2.path(husk2),
+  `---\nsession: sesssnip\ntitle: ${meta.firstUserSnippet}\n---\n\n`);
+await runChatReview(box2.root, {
+  reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
+});
+(await readFile(box2.path(husk2), "utf8")).includes("title: Sorting out a recurring billing problem")
+=> true
+
+await box2.cleanup();
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Leak-scanned fields are dropped, not committed
 
 A generated title carrying an email address is rejected; the rest of the review
@@ -232,6 +296,24 @@ const card = await readFile(box.path(huskPath), "utf8");
 => false,true
 ```
 
+A rejected field means the span was **not** fully folded in, so the marker is
+withheld and the journal does not advance — the material is retried rather than
+lost. (It counts as an attempt, so a model that keeps leaking is eventually
+given up on rather than retried nightly forever.)
+
+```ts continue
+card.includes("review-span:")
+=> false
+
+const state = await loadReviewState(box.root);
+JSON.stringify({
+  reviewed: summary.reviewed,
+  journalled: state.sessions["sess9999"].applied["metadata"] === undefined,
+  attempts: state.sessions["sess9999"].attempts,
+})
+=> {"reviewed":0,"journalled":true,"attempts":1}
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
@@ -257,6 +339,11 @@ await runChatReview(box.root, {
   reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
 });
 const afterFirst = await readFile(box.path(huskPath), "utf8");
+
+// The marker and the account it claims landed together — the marker is never
+// written without them, so it can never certify an account that isn't there.
+[afterFirst.includes("review-span:"), afterFirst.includes("contains-evidence:")].join(",")
+=> true,true
 
 // Simulate the crash: the husk write landed, the journal did not.
 await writeFile(box.path(".callback-box/chat-review/state.json"),

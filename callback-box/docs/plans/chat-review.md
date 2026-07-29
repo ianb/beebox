@@ -547,11 +547,14 @@ const ReviewOutputSchema = z.object({
 });
 ```
 
-Schema rejection is a retry, not a failure; a run that exhausts retries counts as
-an attempt and is reported. Deterministic truncation is the backstop for the one
-constraint a schema cannot express (the 4-9 word guideline stays prose in the
-prompt, since enforcing it mechanically would produce worse titles than accepting
-a ten-word one).
+Schema rejection surfaces as a typed failure from `invokeStructured`, which
+counts as an attempt and is reported. **[rev2]** An earlier draft claimed a
+retry-then-deterministic-truncation path; neither exists —
+`agent/index.ts:138` validates and returns, it does not retry, and no truncation
+was written. The honest behaviour is: violating output fails the session for that
+night and is retried on the next, against the same span. The 4-9 word guideline
+stays prose in the prompt, since enforcing it mechanically would produce worse
+titles than accepting a ten-word one.
 
 `notes` is returned whole rather than as a delta because a new span can *change* an
 earlier item — an open thread gets resolved, a decision reversed. A delta could

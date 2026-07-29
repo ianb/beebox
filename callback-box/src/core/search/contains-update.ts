@@ -99,7 +99,23 @@ export interface UpdateContainsResult {
  */
 export async function setDerivedContains(
   boxRoot: string,
-  { relPath, contains, evidence }: { relPath: string; contains?: string; evidence?: string }
+  {
+    relPath,
+    contains,
+    evidence,
+    alsoSet,
+  }: {
+    relPath: string;
+    contains?: string;
+    evidence?: string;
+    /**
+     * Further frontmatter keys to write in the SAME file write. Exists so a
+     * caller that must land several fields together — notably chat review,
+     * whose `review-span` marker claims the account was updated — cannot end
+     * up with a half-applied card if it crashes between two writes.
+     */
+    alsoSet?: Record<string, string>;
+  }
 ): Promise<UpdateContainsResult> {
   const absPath = path.join(boxRoot, relPath);
   let content: string;
@@ -119,10 +135,13 @@ export async function setDerivedContains(
   const fields = parsedFrontmatter;
   const containsChanged = contains !== undefined && fields["contains"] !== contains;
   const evidenceChanged = evidence !== undefined && fields["contains-evidence"] !== evidence;
-  const unchanged = !containsChanged && !evidenceChanged;
+  const extras = Object.entries(alsoSet ?? {});
+  const extrasChanged = extras.some(([key, value]) => fields[key] !== value);
+  const unchanged = !containsChanged && !evidenceChanged && !extrasChanged;
   if (!unchanged) {
     if (containsChanged) fields["contains"] = contains;
     if (evidenceChanged) fields["contains-evidence"] = evidence;
+    for (const [key, value] of extras) fields[key] = value;
     await fs.writeFile(absPath, renderFrontmatterBlock(fields, split.body));
   }
 

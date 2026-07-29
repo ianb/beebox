@@ -49,7 +49,6 @@ function describeSkips(result: DiscoveryResult): string[] {
   if (result.missingTranscripts > 0) {
     lines.push(`  husks whose transcript is gone: ${String(result.missingTranscripts)}`);
   }
-  if (result.exhausted > 0) lines.push(`  skipped after repeated failures: ${String(result.exhausted)}`);
   return lines;
 }
 
@@ -113,11 +112,16 @@ const runCommand = new Command("run")
       throw e;
     }
 
-    if (summary.reviewed === 0 && summary.alreadyApplied === 0) {
-      console.log("no sessions reviewed");
-      return;
-    }
     const parts = [`reviewed ${String(summary.reviewed)} session(s)`];
+    // A quiet night still reports what it looked at — "nothing happened" and
+    // "every transcript was missing" must not print the same thing.
+    if (summary.deferredActive > 0) parts.push(`${String(summary.deferredActive)} still active`);
+    if (summary.belowThreshold > 0) parts.push(`${String(summary.belowThreshold)} below threshold`);
+    if (summary.missingTranscripts > 0) {
+      parts.push(`${String(summary.missingTranscripts)} husk(s) with no transcript`);
+    }
+    if (summary.exhausted > 0) parts.push(`${String(summary.exhausted)} given up on`);
+    if (summary.sessionErrors > 0) parts.push(`${String(summary.sessionErrors)} error(s)`);
     if (summary.bootstrapped > 0) parts.push(`${String(summary.bootstrapped)} read from the top`);
     if (summary.rewritten > 0) parts.push(`${String(summary.rewritten)} transcript(s) rewritten`);
     if (summary.alreadyApplied > 0) {

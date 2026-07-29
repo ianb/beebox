@@ -117,6 +117,41 @@ resolveSpan(mutated, applied).entries.map((e) => e.uuid).join(",")
 => u-z,u-b,u-c
 ```
 
+## The content changed but every uuid stayed the same
+
+The subtler rewrite. Identity is unchanged all the way through the boundary, so
+a uuid-only hash would call this history untouched and skip the edited material
+forever. The prefix hash covers rendered content, so it does not.
+
+```ts
+const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
+
+// Same uuids, same positions, same count — different words.
+const edited = [entry("u-a", "first, REVISED"), b, c];
+edited.map((e) => e.uuid).join(",")
+=> u-a,u-b,u-c
+
+resolveSpan(edited, applied).bootstrap
+=> prefix-rewritten
+```
+
+## An entry with no uuid can't anchor a journal
+
+`parseSessionLog` defaults a missing uuid to `""`, which is not an identity —
+several entries could carry it. Rather than resolve to the wrong one, such a
+boundary is refused at both ends: no journal entry is written, and one that
+somehow exists forces a bootstrap.
+
+```ts
+appliedSpanFor({ sessionId: "s1", entries: [entry("", "anonymous")], endIndex: 0, now: NOW })
+=> null
+
+resolveSpan([a, b], {
+  spanId: "x", endUuid: "", endIndex: 0, prefixHash: "y", at: "2026-07-28T04:00:00Z",
+}).bootstrap
+=> boundary-missing
+```
+
 ## Span ids are stable, and distinguish what they should
 
 The id is the idempotency key written to the husk, so identical inputs must

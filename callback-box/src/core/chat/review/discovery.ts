@@ -21,7 +21,7 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { invariant } from "../../../lib/invariant.js";
 import { listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
-import { isSessionExhausted, METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
+import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
 import { resolveSpan, spanSize, type ResolvedSpan } from "./span.js";
 
 /**
@@ -56,6 +56,11 @@ export interface QualifiedSession {
   span: ResolvedSpan;
   /** Pre-elision rendered length of the span. */
   spanChars: number;
+  /**
+   * The title `ensureChatHusk` would derive from this transcript. Lets the
+   * reviewer tell an untouched auto-title from one a person typed.
+   */
+  snippetTitle: string | null;
 }
 
 export interface DiscoveryResult {
@@ -69,8 +74,6 @@ export interface DiscoveryResult {
   tooFewTurns: number;
   /** Husks whose transcript is gone — nothing to read, husk left alone. */
   missingTranscripts: number;
-  /** Skipped: failed MAX_REVIEW_ATTEMPTS times already. */
-  exhausted: number;
 }
 
 export interface DiscoverOptions {
@@ -86,7 +89,6 @@ function emptyResult(): DiscoveryResult {
     belowThreshold: 0,
     tooFewTurns: 0,
     missingTranscripts: 0,
-    exhausted: 0,
   };
 }
 
@@ -129,7 +131,7 @@ async function qualifyHusk(
     return null;
   }
 
-  const meta = await getSessionMetadata({ sessionId: husk.session, logPath });
+  const meta = await getSessionMetadata({ sessionId: husk.session, logPath, snippetMaxLen: 80 });
   if (meta.userTurns < REVIEW_MIN_USER_TURNS) {
     result.tooFewTurns += 1;
     return null;
@@ -157,6 +159,7 @@ async function qualifyHusk(
     entries,
     span,
     spanChars,
+    snippetTitle: meta.firstUserSnippet?.trim() || null,
   };
 }
 
@@ -168,10 +171,9 @@ export async function discoverSessions(
   const result = emptyResult();
 
   for (const husk of husks) {
-    if (isSessionExhausted(options.state, husk.session)) {
-      result.exhausted += 1;
-      continue;
-    }
+    // Exhaustion is NOT checked here: it is scoped to a particular span, and
+    // the span isn't known until the transcript is parsed. runChatReview makes
+    // that call, so growth always gets a fresh attempt.
     const qualified = await qualifyHusk(husk, { boxRoot, options, result });
     if (qualified !== null) result.qualified.push(qualified);
   }

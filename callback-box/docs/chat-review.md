@@ -82,8 +82,14 @@ your ability to edit are the real controls.
 
 **A title you set by hand wins permanently.** The pass hashes the title it
 writes; if the husk's title no longer matches, it records the field as `manual`
-and never touches it again. This is checked every pass, so an edit made before
-the session was ever reviewed is honoured too.
+and never touches it again. This is re-derived every pass, from the card as it
+is at write time, so an edit made *during* a run is honoured too.
+
+An edit made before the session was ever reviewed is also honoured — with one
+discriminator worth knowing. At first review there is no hash yet, and the husk
+may already carry the first-message snippet that `ensureChatHusk` wrote at
+session start. That snippet is reproducible, so it is recognized and replaced;
+any *other* title on the card is treated as yours and left alone.
 
 `contains` and `contains-evidence` are machine-owned and rewritten each pass —
 though a correction propagates forward rather than being reverted, since the

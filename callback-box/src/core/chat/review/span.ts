@@ -36,10 +36,19 @@ export interface ResolvedSpan {
   bootstrap: BootstrapReason | null;
 }
 
-/** sha256 over entry uuids up to and including `endIndex`. */
+/**
+ * sha256 over the uuid AND rendered content of every entry up to `endIndex`.
+ *
+ * Content matters, not just identity: the SDK can rewrite an entry's text while
+ * keeping its uuid, and a uuid-only hash would call that history unchanged and
+ * skip the rewritten material. Hashing what we actually read makes any edit
+ * before the boundary a mismatch, which forces a re-read.
+ */
 export function prefixHash(entries: SessionEntry[], endIndex: number): string {
-  const uuids = entries.slice(0, endIndex + 1).map((entry) => entry.uuid);
-  return contentHash(uuids.join("\n"));
+  const parts = entries
+    .slice(0, endIndex + 1)
+    .map((entry) => `${entry.uuid}\u0000${renderEntries([entry])}`);
+  return contentHash(parts.join("\n"));
 }
 
 /**
@@ -72,6 +81,12 @@ export function resolveSpan(
     return { entries, endIndex: entries.length - 1, bootstrap: "no-journal" };
   }
 
+  // `parseSessionLog` defaults a missing uuid to "" (cli/lib/session-entry.ts),
+  // so an empty boundary is not an identity at all — several entries could
+  // match it. Treat it as unusable rather than resolving to the wrong one.
+  if (applied.endUuid === "") {
+    return { entries, endIndex: entries.length - 1, bootstrap: "boundary-missing" };
+  }
   const boundary = entries.findIndex((entry) => entry.uuid === applied.endUuid);
   if (boundary === -1) {
     return { entries, endIndex: entries.length - 1, bootstrap: "boundary-missing" };
@@ -109,7 +124,9 @@ export function appliedSpanFor(args: {
 }): AppliedSpan | null {
   const { sessionId, entries, endIndex, now } = args;
   const endEntry = entries[endIndex];
-  if (endEntry === undefined) return null;
+  // No boundary identity means no journal entry — the next run bootstraps,
+  // which is correct-but-wasteful rather than silently wrong.
+  if (endEntry === undefined || endEntry.uuid === "") return null;
   const prefix = prefixHash(entries, endIndex);
   return {
     spanId: computeSpanId({ sessionId, endUuid: endEntry.uuid, prefixHash: prefix }),

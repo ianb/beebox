@@ -14,7 +14,6 @@ session, and the applied-span id on the husk turns even that into a no-op.
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import {
   emptyReviewState,
-  isSessionExhausted,
   loadReviewState,
   MAX_REVIEW_ATTEMPTS,
   saveReviewState,
@@ -30,20 +29,29 @@ JSON.stringify(sessionState(state, "never-seen"))
 => {"applied":{},"titleOwner":"unmanaged","titleHash":null,"attempts":0}
 ```
 
-## Failures accumulate until the session is left alone
+## Giving up is scoped to one span, not the whole session
 
-A session whose reviewer keeps failing eventually stops being retried, so one
-broken transcript can't burn a model call every night forever.
+A session whose reviewer keeps failing stops being retried — but only for the
+span that failed. `failedSpanId` records which one, so new conversation always
+gets a fresh attempt and a couple of nights of provider trouble can't retire a
+session for good.
 
 ```ts
-const state = emptyReviewState();
-state.sessions["flaky"] = { applied: {}, titleOwner: "unmanaged", titleHash: null, attempts: 1 };
-isSessionExhausted(state, "flaky")
-=> false
+MAX_REVIEW_ATTEMPTS
+=> 2
 
-state.sessions["flaky"].attempts = MAX_REVIEW_ATTEMPTS;
-isSessionExhausted(state, "flaky")
-=> true
+const state = emptyReviewState();
+state.sessions["flaky"] = {
+  applied: {}, titleOwner: "unmanaged", titleHash: null,
+  attempts: MAX_REVIEW_ATTEMPTS, failedSpanId: "span-abc",
+};
+// The run gives up only when both the count AND the span match.
+const s = sessionState(state, "flaky");
+JSON.stringify({
+  sameSpan: s.attempts >= MAX_REVIEW_ATTEMPTS && s.failedSpanId === "span-abc",
+  newSpan: s.attempts >= MAX_REVIEW_ATTEMPTS && s.failedSpanId === "span-xyz",
+})
+=> {"sameSpan":true,"newSpan":false}
 ```
 
 ## Round-trips through disk

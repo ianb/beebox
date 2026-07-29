@@ -17,7 +17,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { renderFrontmatterBlock, splitCardContent } from "../../../cards/index.js";
+import { splitCardContent } from "../../../cards/index.js";
 import { isRecord } from "../../card-io.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { contentHash } from "../../../lib/content-hash.js";
@@ -53,13 +53,6 @@ class HuskUnreadableError extends HuskWriteError {
   }
 }
 
-class HuskFrontmatterError extends HuskWriteError {
-  constructor(relPath: string) {
-    super(`chat-review: husk ${relPath} frontmatter is not a YAML mapping`);
-    this.name = "HuskFrontmatterError";
-  }
-}
-
 export interface HuskFields {
   title: string | null;
   account: string | null;
@@ -68,6 +61,8 @@ export interface HuskFields {
 
 export interface WriteResult {
   titleWritten: boolean;
+  /** True when the span was fully applied and the marker written. */
+  spanApplied: boolean;
   /** New owner after the write — `manual` when a hand-edit was detected. */
   titleOwner: TitleOwner;
   /** sha256 of the title now on the card, or null when it has none. */
@@ -101,22 +96,31 @@ export function renderAccount(notes: ReviewOutput["notes"]): string {
 }
 
 /**
- * Resolve who owns the husk title *now*, re-checked every pass so an edit made
- * before the session was ever reviewed is still honoured.
+ * Resolve who owns the husk title *now*.
+ *
+ * Re-derived on every pass rather than trusted from state, so a hand edit is
+ * honoured however it arrived. The subtle case is the FIRST review: state has
+ * no hash yet, but the husk may already carry a title — either the
+ * first-message snippet `ensureChatHusk` wrote, or something the boxholder
+ * typed. Those must be told apart, or we either never improve auto-titles or
+ * silently clobber human ones. The snippet is reproducible, so comparing
+ * against it is the discriminator.
  */
 export function resolveTitleOwner(args: {
   currentTitle: string | null;
+  /** What `ensureChatHusk` would have derived from the transcript, if anything. */
+  snippetTitle: string | null;
   storedOwner: TitleOwner;
   storedHash: string | null;
 }): TitleOwner {
   if (args.storedOwner === "manual") return "manual";
-  if (args.storedHash === null) {
-    // We have never written a title. Whatever is there (nothing, or the
-    // first-message snippet ensureChatHusk set) is ours to replace.
-    return "unmanaged";
-  }
   if (args.currentTitle === null) return "unmanaged";
-  return contentHash(args.currentTitle) === args.storedHash ? "generated" : "manual";
+  if (args.storedHash !== null) {
+    return contentHash(args.currentTitle) === args.storedHash ? "generated" : "manual";
+  }
+  // First review. An untouched snippet title is ours to replace; anything else
+  // on the card was put there by a person.
+  return args.currentTitle === args.snippetTitle ? "unmanaged" : "manual";
 }
 
 /** True when the string is clean enough to commit. Rejections are reported, not silent. */
@@ -134,15 +138,21 @@ function passesLeakScan(field: string, args: { text: string; ownerEmail: string 
 }
 
 /**
- * Apply a review to a husk. Title, `review-span` and the derived contains
- * fields land in one locked section so a concurrent in-process writer cannot
- * interleave.
+ * Apply a review to a husk, in a single card write.
  *
- * Two file writes happen inside the lock: this function sets `title` and
- * `review-span`, then `setDerivedContains` sets `contains`/`contains-evidence`
- * and re-bases the staleness sidecar. Deliberate — it keeps `setDerivedContains`
- * the single place that knows how to keep the sidecar honest, rather than
- * duplicating that logic to save one write.
+ * Everything the pass produces — `title`, `contains`, `contains-evidence` and
+ * the `review-span` marker — lands in one write, because `review-span` is the
+ * claim that the account was extended. Written separately (or first), a crash
+ * in between would leave the marker without the account, and the next run would
+ * see the marker, believe the span was folded in, and skip it forever.
+ *
+ * For the same reason the marker is written ONLY when every generated field
+ * survived the leak scan. A rejected account means the span was not folded in,
+ * so it must stay unclaimed and be retried.
+ *
+ * The husk is re-read under the lock and title ownership resolved from that
+ * live value, never from the snapshot discovery took — the model call in
+ * between is long enough for a person to retitle the chat.
  */
 export async function applyReviewToHusk(
   boxRoot: string,
@@ -150,7 +160,8 @@ export async function applyReviewToHusk(
     relPath: string;
     output: ReviewOutput;
     spanId: string;
-    currentTitle: string | null;
+    /** What `ensureChatHusk` would derive from the transcript; see resolveTitleOwner. */
+    snippetTitle: string | null;
     storedOwner: TitleOwner;
     storedHash: string | null;
     ownerEmail: string | null;
@@ -158,48 +169,47 @@ export async function applyReviewToHusk(
 ): Promise<WriteResult> {
   const { relPath, output, spanId, ownerEmail } = args;
   const absPath = path.join(boxRoot, relPath);
-  const owner = resolveTitleOwner(args);
   const rejected: string[] = [];
 
   const account = renderAccount(output.notes);
-  const titleOk =
-    output.title !== "" && passesLeakScan("title", { text: output.title, ownerEmail });
-  if (output.title !== "" && !titleOk) rejected.push("title");
+  const titleOffered = output.title !== "";
+  const titleClean = titleOffered && passesLeakScan("title", { text: output.title, ownerEmail });
+  if (titleOffered && !titleClean) rejected.push("title");
   const containsOk = passesLeakScan("contains", { text: output.contains, ownerEmail });
   if (!containsOk) rejected.push("contains");
   const accountOk = passesLeakScan("contains-evidence", { text: account, ownerEmail });
   if (!accountOk) rejected.push("contains-evidence");
 
-  // Only write a title when the model offered one, it survived the scan, and a
-  // human has not taken the field over.
-  const writeTitle = titleOk && owner !== "manual";
-
   return withCardLock(absPath, async () => {
-    let content: string;
-    try {
-      content = await fs.readFile(absPath, "utf8");
-    } catch (e) {
+    const live = await readHuskFields(boxRoot, relPath).catch((e: unknown) => {
       throw new HuskUnreadableError(relPath, { detail: errorMessage(e) });
-    }
-    const split = splitCardContent(content);
-    const parsed: unknown = split.hasFrontmatter ? (parseYaml(split.frontmatterText) ?? {}) : {};
-    if (!isRecord(parsed)) {
-      throw new HuskFrontmatterError(relPath);
-    }
-    if (writeTitle) parsed["title"] = output.title;
-    parsed["review-span"] = spanId;
-    await fs.writeFile(absPath, renderFrontmatterBlock(parsed, split.body));
+    });
+    const owner = resolveTitleOwner({
+      currentTitle: live.title,
+      snippetTitle: args.snippetTitle,
+      storedOwner: args.storedOwner,
+      storedHash: args.storedHash,
+    });
+    const writeTitle = titleClean && owner !== "manual";
+
+    // The span counts as folded in only if the account it produced was written.
+    const spanApplied = rejected.length === 0;
 
     await setDerivedContains(boxRoot, {
       relPath,
       ...(containsOk ? { contains: output.contains } : {}),
       ...(accountOk ? { evidence: account } : {}),
+      alsoSet: {
+        ...(writeTitle ? { title: output.title } : {}),
+        ...(spanApplied ? { "review-span": spanId } : {}),
+      },
     });
 
     return {
       titleWritten: writeTitle,
       titleOwner: writeTitle ? "generated" : owner,
-      titleHash: writeTitle ? contentHash(output.title) : args.storedHash,
+      titleHash: writeTitle ? contentHash(output.title) : (owner === "manual" ? null : args.storedHash),
+      spanApplied,
       rejected,
     } satisfies WriteResult;
   });
