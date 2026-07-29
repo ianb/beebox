@@ -10,6 +10,13 @@
  * isolate the (large, vocabulary-specific) tag switch from the core node
  * walker. To avoid a value-import cycle with the walker, the children-emitting
  * callback is passed in rather than imported.
+ *
+ * `todo`/`see-also` (`docs/plans/todo-annotation.md`) join the universal
+ * group alongside `quote`/`source`: a `todo` emits its text behind a
+ * compact checklist-style status marker (☐ open / ✔ done / ✘ dropped /
+ * ⏸ parked, with `done`/`dropped` also struck) rather than dropping the
+ * status metadata; a `see-also` emits its text plus a `[→ ref]`-style
+ * citation, the same bracketed shape `source` already uses.
  */
 
 import type { Node } from "@markdoc/markdoc";
@@ -70,11 +77,38 @@ export function emitTag(ctx: TagCtx): void {
   ctx.emitChildren(node, out);
 }
 
-/** Universal tags usable across vocabularies: `quote`, `source`. */
+/** Universal tags usable across vocabularies: `quote`, `source`, `todo`, `see-also`. */
 function emitUniversalTag(ctx: TagCtx): boolean {
   const { node, out } = ctx;
   const attrs = node.attributes;
   switch (node.tag ?? "") {
+    case "todo": {
+      // Compact checklist-style marker by status (absence = open); `done`/
+      // `dropped` strike the text. Nested content (e.g. a `see-also`) is
+      // already rendered by the recursive `emitChildren` call `childText`
+      // makes, so it flows into the same line — mirrors `quote`'s
+      // buf-then-trim pattern rather than restating a walk here.
+      const text = childText(ctx);
+      const status = str(attrs, "status");
+      const struck = status === "done" || status === "dropped";
+      const marker =
+        status === "done" ? "✔" : status === "dropped" ? "✘" : status === "parked" ? "⏸" : "☐";
+      const rendered = struck ? `~~${text}~~` : text;
+      const suffix = status === "parked" ? " (parked)" : status === "dropped" ? " (dropped)" : "";
+      const line = `${marker} ${rendered}${suffix}`;
+      out.push(node.inline ? line : `${line}\n\n`);
+      return true;
+    }
+    case "see-also": {
+      // Footnote-style reference, same bracketed-citation shape as
+      // `source`'s `[→ ref]` marker (no inline/block split — `see-also`
+      // always transforms to a single `SeeAlso` tag).
+      const text = childText(ctx);
+      const target = str(attrs, "ref") || str(attrs, "href");
+      const cite = target === "" ? "" : ` [→ ${displayFromRef(target)}]`;
+      out.push(`${text}${cite}`);
+      return true;
+    }
     case "quote": {
       // Markdown blockquote. If a `from` attribute is present, append
       // attribution.

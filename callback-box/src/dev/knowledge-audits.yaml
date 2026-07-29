@@ -893,6 +893,67 @@ tests:
       for agents. The agent should not confuse the two or suggest using
       jobs for human tasks.
 
+  # === Todo Annotation ({% todo %}) ===
+  #
+  # New agent-facing concepts from docs/plans/todo-annotation.md (Track 6).
+  # Distinct from the "=== Todo Lists ===" section above, which tests the
+  # older, largely-unused todo-list card type — these test the universal
+  # capture-in-place {% todo %} tag, cb todos, and the todo-view card.
+  #
+  # Status (2026-07-28): 5/5 pass on first run (knows_directly, 0 files
+  # read / 0 searches each, ~42-43k ctx) against the always-on agent-guide
+  # todos section (src/core/agent-guide/todos.ts) landed in an earlier
+  # chunk of this plan — no doc/prompt changes needed.
+
+  - id: todo-annotation-tag-shape
+    prompt: "How would you mark a sentence in a memo's body as something you need to follow up on later — a lightweight capture-in-place annotation, not a whole new card?"
+    expected_level: knows_directly
+    watch_for: "Names the {% todo %} Markdoc tag: a wrapper around the text, metadata lives in attributes (not a separate structured record), and a bare {% todo %}…{% /todo %} with no attributes is already a valid open todo"
+    correct_contains: ["{% todo"]
+    tags: [todos, markdoc]
+
+  - id: todo-annotation-status-and-start
+    prompt: >
+      A {% todo %} has due="2026-08-01" but no start attribute. Is it
+      visible on the plate today, or only once it gets closer to the due
+      date? And what are the other status values besides the default?
+    expected_level: knows_directly
+    watch_for: >
+      Says due-without-start is on the plate immediately (no lead-time
+      opinion, not "hide until due"); names done/dropped/parked as the
+      other status values; says start, not due, is the primary surfacing
+      trigger when both are present.
+    correct_contains_any: ["start", "parked"]
+    tags: [todos, markdoc]
+
+  - id: todo-annotation-cb-todos
+    prompt: "How do you see every open todo across the box, and how do you mark one done?"
+    expected_level: knows_directly
+    watch_for: >
+      Names `cb todos` as the query path (not a browsing UI or a search).
+      Marking one done is editing the {% todo %} tag's status attribute (or
+      the frontmatter todos: entry) directly — there is no `cb todos`
+      mutation subcommand.
+    correct_contains: ["cb todos"]
+    tags: [todos, cli]
+
+  - id: todo-annotation-vs-question
+    prompt: "You're processing a card and you're not sure whether to create a {% todo %} or a question card. What's the difference?"
+    expected_level: knows_directly
+    watch_for: "A todo is work to do (on someone's plate); a question is blocked on a human decision the agent can't make on its own"
+    correct_contains_any: ["question", "blocked"]
+    tags: [todos, questions]
+
+  - id: todo-annotation-todo-view-card
+    prompt: "You want a project directory to show its own list of open todos, scoped to just that project. What do you do?"
+    expected_level: knows_directly
+    watch_for: >
+      Creates (or points to) a todo-view card in that directory — subtree-
+      scoped by the omitted-glob default — and links to it like any other
+      card, no new link syntax.
+    correct_contains: ["todo-view"]
+    tags: [todos, cards]
+
   # === Recording Knowledge ===
 
   - id: briefing-is-writable

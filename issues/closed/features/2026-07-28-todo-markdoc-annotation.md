@@ -4,11 +4,20 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder idea
 needs: [design]
-design: ../../callback-box/docs/plans/todo-annotation.md
+design: ../../../callback-box/docs/plans/todo-annotation.md
+resolution: implemented
 ---
 
+> **Closed (2026-07-28):** implemented per
+> [todo-annotation](../../../callback-box/docs/plans/todo-annotation.md)
+> (worktree-todo-annotation), commits `01307f98..b5aa6378` (the seven
+> plan-chunk commits — tags + rendering, universal body Markdoc validation,
+> frontmatter `todos:`, collector + `cb todos`, review sweep + agent
+> guidance, `todos.list` + `todo-view` surface, docs + knowledge audits).
+> The mechanism sketch below is superseded by the plan.
+
 > **Design written (2026-07-28):** goals-first design in
-> [todo-annotation](../../callback-box/docs/plans/todo-annotation.md)
+> [todo-annotation](../../../callback-box/docs/plans/todo-annotation.md)
 > (worktree-todo-annotation), Codex-cross-reviewed. The plan supersedes the
 > mechanism sketch below.
 
@@ -65,6 +74,6 @@ related concept. This needs a decision before building:
   annotation, todos scattered across any card body become aggregatable: the box
   agent (or a view) could collect every open `{% todo %}` in the box into one
   place. That aggregation is where the value is, and it's a natural feed for the
-  [Echo Show dashboard view](2026-07-27-echo-show-display-dashboard-view.md)
+  [Echo Show dashboard view](../../features/2026-07-27-echo-show-display-dashboard-view.md)
   (a "what's on my plate" tile). Worth designing the attributes with that
   collection in mind (a stable `id`, a queryable `status`).
