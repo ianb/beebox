@@ -9,7 +9,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure } from "../trpc.js";
-import { loadGoogleTokens, getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../connectors/google-auth.js";
+import { getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../connectors/google-auth.js";
+import { loadGoogleTokens } from "../../../connectors/google-token-store.js";
 import { createGoogleOAuthState } from "../../../connectors/google-oauth-state.js";
 import { loadBoxConfig } from "../../../core/box/config.js";
 import { baseServerUrl } from "../../base-server-url.js";
@@ -20,7 +21,13 @@ export const googleAdminProcedures = {
     const creds = getGoogleClientCreds();
     if (!creds) {
       const enabledServices: Record<string, boolean> = {};
-      return { available: false, hasTokens: false, scopes: GOOGLE_SCOPES, enabledServices };
+      return {
+        available: false,
+        hasTokens: false,
+        needsReauthSince: null,
+        scopes: GOOGLE_SCOPES,
+        enabledServices,
+      };
     }
     const tokens = await loadGoogleTokens(ctx.boxRoot);
     const config = await loadBoxConfig(ctx.boxRoot);
@@ -30,6 +37,10 @@ export const googleAdminProcedures = {
     return {
       available: true,
       hasTokens: !!(tokens && tokens.refreshToken),
+      // A stored refresh token that Google has since rejected — the tokens are
+      // present but dead, so "Connected" would be a lie. See
+      // docs/plans/google-auth-reauth-health.md.
+      needsReauthSince: tokens?.needsReauthSince ?? null,
       scopes: GOOGLE_SCOPES,
       enabledServices,
     };

@@ -2,9 +2,23 @@
 title: "Detect dead Google auth in health + notify the user with a clear re-authorize CTA"
 area: callback-box
 filed-by: agent
-needs: [design]
+needs: [manual-testing]
+design: ../../callback-box/docs/implemented-plans/google-auth-reauth-health.md
 discovered-in: main session — boxholder, after the Google OAuth thread
 ---
+
+**Implemented** on `worktree-google-reauth-health` — design and the decisions
+behind it are in
+[google-auth-reauth-health](../../callback-box/docs/implemented-plans/google-auth-reauth-health.md).
+
+Still needs manual testing, which an agent can't do: **revoke the box's Google
+grant** (myaccount.google.com → Security → Third-party apps → remove access, or
+wait out a Testing-mode 7-day expiry), then confirm that (a) the next
+Gmail/Calendar/Drive sync flips the state, (b) `cb health` shows the
+`google-auth` warning, (c) exactly one Telegram/push notification arrives with
+the reconnect link, (d) the admin page says "Needs re-authorization" rather than
+"Connected", and (e) re-authorizing clears all of it. The daily probe path needs
+a box left idle overnight with the grant already dead.
 
 Google auth can stop working silently: BYO operators whose consent screen is in
 **Testing** mode get **refresh tokens that expire every 7 days**, and even

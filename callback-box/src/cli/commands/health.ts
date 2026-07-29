@@ -1,11 +1,18 @@
 /**
- * cb health - Scheduled-task health: which tasks are failing, overdue,
- * blocked, or invalid, and whether the scheduler daemon is alive.
+ * cb health - Box health in two sections:
  *
- * The always-available view of the same evaluation that feeds the
- * session-start snapshot and proactive alerts (schedule-health-box.ts).
- * Exit code 1 when anything is failing/overdue/invalid, so scripts can
- * gate on it.
+ *  - **Scheduled tasks** — which are failing, overdue, blocked, or invalid, and
+ *    whether the scheduler daemon is alive. The always-available view of the
+ *    same evaluation that feeds the session-start snapshot and proactive alerts
+ *    (schedule-health-box.ts).
+ *  - **Box checks** — the permissions/credentials/engine sweep behind the
+ *    dashboard's health warnings (`runHealthChecks`), including whether the
+ *    Google authorization is still live.
+ *
+ * Exit code 1 when a task is failing/overdue/invalid or a box check fails at
+ * `error` severity, so scripts can gate on it. Warnings (a dead Google grant
+ * among them) are reported but don't fail the command — they degrade features,
+ * they don't stop the box.
  */
 
 import { Command } from "commander";
@@ -19,6 +26,7 @@ import {
 } from "../../core/schedule/health-box.js";
 import type { TaskHealth } from "../../core/schedule/health.js";
 import { loadRunningScripts, type ScriptLock } from "../../core/schedule/state.js";
+import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health.js";
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",
@@ -101,8 +109,24 @@ function printHealth(
   }
 }
 
+function printBoxChecks(checks: HealthCheck[]): void {
+  console.log("");
+  console.log("Box checks:");
+  const failures = checks.filter((c) => !c.ok);
+  if (failures.length === 0) {
+    console.log(`  ✓ all ${String(checks.length)} checks pass`);
+    return;
+  }
+  for (const check of failures) {
+    const glyph = check.severity === "error" ? "✗" : "!";
+    console.log(`  ${glyph} ${check.name.padEnd(22)} ${check.message}`);
+  }
+  const passing = checks.length - failures.length;
+  if (passing > 0) console.log(`  (${String(passing)} other checks pass)`);
+}
+
 export const healthCommand = new Command("health")
-  .description("Show scheduled-task health (failing, overdue, blocked tasks)")
+  .description("Show box health: scheduled tasks plus permission/credential checks")
   .option("--json", "Machine-readable output")
   .option("--all", "Include disabled/expired tasks")
   .option("--box <path>", "Box root path (defaults to current directory)")
@@ -111,15 +135,18 @@ export const healthCommand = new Command("health")
     const now = getBoxTime(boxRoot);
     const health = await loadScheduleHealth(boxRoot, now);
     const running = await loadRunningScripts(boxRoot);
+    const boxChecks = await runHealthChecks(boxRoot);
 
     if (options.json) {
       const runningJson = [...running].map(([name, lock]) => ({ name, ...lock }));
-      console.log(JSON.stringify({ ...health, running: runningJson }, null, 2));
+      console.log(JSON.stringify({ ...health, running: runningJson, boxChecks }, null, 2));
     } else {
       printHealth(health, { now, all: options.all === true, running });
+      printBoxChecks(boxChecks);
     }
 
-    if (health.tasks.some(isUnhealthy) || health.scheduler.status === "stale") {
+    const checkFailed = boxChecks.some((c) => !c.ok && c.severity === "error");
+    if (health.tasks.some(isUnhealthy) || health.scheduler.status === "stale" || checkFailed) {
       process.exitCode = 1;
     }
   });

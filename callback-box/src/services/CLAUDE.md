@@ -111,7 +111,7 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 |------|-----------|-------------|-------------|
 | `telegram.ts` | `TelegramService` | `createTelegramService(token)` | `createFakeTelegram({ username })` |
 | `claude-cli.ts` | `ClaudeCliService` | `createClaudeCliService()` | `createFakeClaudeCli({ loggedIn? })` |
-| `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client)` | `createFakeGoogleAuth({ accessToken? })` |
+| `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client, { boxRoot? })` | `createFakeGoogleAuth({ accessToken? })` |
 | `google-calendar.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
 | `google-gmail.ts` | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments? })` |
 | `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |

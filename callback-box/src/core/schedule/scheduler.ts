@@ -13,6 +13,7 @@ import { runTick, type TickResult } from "../../cli/commands/tick.js";
 import { getStatus, isRepo } from "../../lib/git.js";
 import { touchSchedulerHeartbeat } from "./health-box.js";
 import { checkHealthAndAlert } from "./health-alert.js";
+import { checkGoogleAuthAndAlert } from "./google-auth-alert.js";
 import {
   loadBoxesConfig,
   saveBoxesConfig,
@@ -228,6 +229,29 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
         await writeBoxLog(boxPath, {
           ts: new Date().toISOString(),
           event: "health-alert",
+          box: boxPath,
+          error: errorMessage(err),
+        });
+      }
+
+      // Google grant liveness: refreshes the verdict ~daily and alerts once per
+      // breakage. Separate from the task-health alert above so a failure in
+      // either doesn't suppress the other.
+      try {
+        const alert = await checkGoogleAuthAndAlert(boxPath, { now: new Date() });
+        if (alert) {
+          await writeBoxLog(boxPath, {
+            ts: new Date().toISOString(),
+            event: "google-auth-alert",
+            box: boxPath,
+            since: alert.alertedForSince,
+            delivered: alert.delivered,
+          });
+        }
+      } catch (err) {
+        await writeBoxLog(boxPath, {
+          ts: new Date().toISOString(),
+          event: "google-auth-alert",
           box: boxPath,
           error: errorMessage(err),
         });

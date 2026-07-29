@@ -35,7 +35,7 @@ export const calendarRouter = router({
           message: "Google auth not configured. Run: cb google-auth",
         });
       }
-      svc = createGoogleCalendarService(createGoogleAuthService(auth));
+      svc = createGoogleCalendarService(createGoogleAuthService(auth, { boxRoot: ctx.boxRoot }));
     }
     const available = await fetchAvailableCalendars(svc);
 

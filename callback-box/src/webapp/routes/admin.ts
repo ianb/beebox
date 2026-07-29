@@ -8,7 +8,8 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, type GoogleTokens } from "../../connectors/google-auth.js";
+import { getGoogleClientCreds, createOAuth2Client } from "../../connectors/google-auth.js";
+import { saveGoogleTokens, type GoogleTokens } from "../../connectors/google-token-store.js";
 import { parseOAuthState, consumeGoogleOAuthState } from "../../connectors/google-oauth-state.js";
 import { resolveRequestIdentity } from "../auth.js";
 import { isRecord } from "../../lib/is-record.js";

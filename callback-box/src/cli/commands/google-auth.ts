@@ -15,12 +15,11 @@ import open from "open";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { isRecord } from "../../lib/is-record.js";
 import {
-  loadGoogleTokens,
-  saveGoogleTokens,
   getGoogleClientCreds,
   createOAuth2Client,
   GOOGLE_SCOPES,
 } from "../../connectors/google-auth.js";
+import { loadGoogleTokens, saveGoogleTokens } from "../../connectors/google-token-store.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 export const googleAuthCommand = new Command("google-auth")

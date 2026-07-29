@@ -19,7 +19,7 @@ async function getDriveService(boxRoot: string, injected?: GoogleDriveService): 
       message: "Google auth not configured. Run: cb google-auth",
     });
   }
-  const authService = createGoogleAuthService(auth);
+  const authService = createGoogleAuthService(auth, { boxRoot });
   return createGoogleDriveService(authService);
 }
 

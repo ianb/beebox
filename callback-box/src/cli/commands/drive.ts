@@ -39,7 +39,7 @@ async function requireDriveService(boxRoot: string): Promise<GoogleDriveService>
     console.error("Google auth not configured. Run: cb google-auth");
     process.exit(1);
   }
-  const authService = createGoogleAuthService(auth);
+  const authService = createGoogleAuthService(auth, { boxRoot });
   return createGoogleDriveService(authService);
 }
 

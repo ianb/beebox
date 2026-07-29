@@ -66,7 +66,8 @@ alternative is a **managed auth broker** (Composio/Arcade/Nango/Pipedream) that
 owns the OAuth app and vaults tokens — which trades away local token custody.
 Finding: keep BYO as default; consider an **opt-in broker path** (ideally
 self-hostable **Nango**, which keeps creds on your infra) for convenience-first
-operators. Transferable UX ideas from OpenClaw: one plugin/one OAuth for all
+operators. **Boxholder leaning confirmed 2026-07-28: Nango is the chosen broker**
+if/when we add one (Composio rejected — cloud custody + breach + lock-in). Transferable UX ideas from OpenClaw: one plugin/one OAuth for all
 Google services, chat-driven grant, and a "Desktop app" loopback client to dodge
 redirect_uri registration.
 

@@ -145,7 +145,7 @@ class GmailConnector implements Connector {
     const auth = await getGoogleAuth(this.boxRoot);
     if (!auth) return null;
 
-    const authService = createGoogleAuthService(auth);
+    const authService = createGoogleAuthService(auth, { boxRoot: this.boxRoot });
     return createGoogleGmailService(authService);
   }
 

@@ -4,6 +4,16 @@ area: callback-box
 needs: [investigate]
 ---
 
+> **Update (2026-07-28) — for the auth-broker / token-custody angle, resolved
+> toward self-hosted Nango, not Composio.** After the Google-OAuth thread
+> ([research](../../research/google-auth-connect-approaches.md)): Composio is
+> cloud-only custody (+ a documented breach) with per-tool-call pricing and
+> catalog lock-in — wrong for our "your data, your box" posture. **Nango's free
+> self-hosted Auth+Proxy** keeps tokens local and can carry Tier-1 of the
+> [policy proxy](../features/2026-07-28-google-auth-policy-proxy.md). This item's
+> broader "Composio as a general tool layer" question still stands, but the
+> auth/custody sub-question is answered: prefer Nango self-hosted.
+
 Surfaced from the Rowboat review (`research/rowboat-review.md`): Rowboat leans on
 **Composio** (`@composio/core`, ~125 refs) as its integration layer instead of
 hand-building connectors.
