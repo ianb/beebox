@@ -18,17 +18,42 @@ whether uncommitted changes are intentional, scope/verification notes). If
 something you'd need to proceed wasn't passed and can't be safely inferred, return
 BLOCKED asking for it — don't guess.
 
-## Test failures are NEVER acceptable
+## Test failures block the merge
 
 The single most important rule (applies whenever the worktree touched code —
-i.e. anything but the docs-only fast path below, which includes any `.doctest.md`
-change):
+i.e. anything but the docs-only fast path below; a `.doctest.md` change is
+code, not docs, so it gets the full flow):
 
 > If `pnpm test` reports ANY failure — anywhere in the suite, in any file, for
-> any reason — you do not proceed and you do not merge. "Was failing before",
-> "flaky", "unrelated file", "infra broken" are NOT exits from this rule. Either
-> the failure is yours to fix, or it's a real bug — and if you can't confidently
+> any reason — you do not proceed and you do not merge, with exactly one
+> narrow exit: the tracked-flake protocol below. "Was failing before",
+> "unrelated file", "infra broken" are NOT exits from this rule. Either the
+> failure is yours to fix, or it's a real bug — and if you can't confidently
 > fix it, return `RESULT: BLOCKED` with the failing output.
+
+### The tracked-flake protocol (the only exit)
+
+Some suite tests flake under parallel load. On a failure, do NOT brute-force a
+green run by re-running the full suite in a loop (past runs wasted 5+ minutes
+this way). Instead:
+
+1. Re-run ONLY the failing test file in isolation.
+2. Grep `issues/` for a tracked flake matching this exact test AND failure
+   signature.
+3. You get at most **one** full-suite re-run, total, per finish.
+
+Proceed past the failure only if ALL of these hold: the isolated re-run
+passes; the failure matches a flake tracked in `issues/`; this branch touched
+neither that test nor the code it exercises; and your single full-suite re-run
+is fully green. Name the flake and its issue file in your report. If the flake
+isn't filed yet but everything else holds (isolated pass, branch untouched),
+file it in `issues/bugs/` (per `issues/CLAUDE.md`) as part of this finish and
+say so in the report — flakes get fixed and retested in isolation later, never
+silently ignored. Anything else → `RESULT: BLOCKED` with the failing output.
+
+**Never run the test suite in the main checkout** (`~/src/callback-box`) — it's
+shared state other sessions may be using. All verification happens in this
+worktree.
 
 ### The docs-only fast path
 
@@ -121,6 +146,39 @@ pnpm typecheck
 pnpm lint
 ```
 
+#### Where verification lives (don't re-derive this)
+
+Per-path map — run what the diff touches, nothing more:
+
+- `callback-box/` → `pnpm test` / `pnpm typecheck` / `pnpm lint` in
+  `callback-box/`. This is the "full suite" above.
+- Root `bin/`, `dev/` → root `pnpm test` (bin/*.test.ts) + root
+  `pnpm typecheck`. Root `pnpm lint` fans out to every package's own lint
+  (`pnpm -r lint`); `bin/` and `dev/` themselves deliberately have no ESLint
+  rules (root `eslint.config.mjs` says so) — don't go spelunking for more.
+- `site/` → its own `pnpm test` / `pnpm typecheck` / `pnpm lint` in `site/`.
+- `personal-vibe-check/`, `agent-doctest/`, `canvas-loop/`, `callback-clerk/`
+  → each has its own scripts; run them only if the diff touches that package.
+- `issues/`, `research/`, root docs → nothing beyond the pre-commit checks
+  that run on commit (doc-check etc.).
+
+Capture expensive command output (the full suite, any long build) to a temp
+file **outside the worktree** and re-parse the FILE if your first parse missed
+— never re-run the command to fix your own parsing. If you pipe (e.g. through
+`tee`), preserve the command's exit status (`${PIPESTATUS[0]}`) — a pipe
+returns the last command's status and can mask a failed suite.
+
+#### Re-verification after the tier is green
+
+Later commits in this same finish (Track O fixes, plan-doc moves, issue
+closes) re-verify by what they touch — not the full tier again:
+
+- Only `.md` (no `.doctest.md`) → `doc-check` (pre-commit runs it anyway);
+  no suite re-run.
+- `.doctest.md` → re-run the affected doctests.
+- Comment-only source edits → that package's lint + typecheck.
+- Any semantic code change → the full tier for that package again.
+
 ### 5. Diff-scoped review pass (Track O)
 
 *(Skipped on the docs-only fast path — no code changed.)*
@@ -135,6 +193,26 @@ Already graduated (do NOT re-check — lint owns them now): switch/if-chain
 exhaustiveness (`switch-exhaustiveness-check` is live), and floating/misused
 promises (`no-floating-promises` + `no-misused-promises` are live). A clean
 `pnpm lint` is the check for those.
+
+**Run the mechanical scan first** — one scripted pass over the diff, not ad-hoc
+exploration (past runs that improvised here took 3–4× longer for the same
+coverage):
+
+```bash
+D=$(mktemp); git diff main...HEAD > "$D"
+grep -nE '^\+.*(as unknown as|as never|JSON\.parse\([^)]*\) as )' "$D"      # item 1
+grep -nE '^\+.*(\.catch\([^)]*\)\s*=>\s*\{\s*\}|catch\s*\{\s*\})' "$D"      # item 2
+grep -nE '^\+.*process\.env' "$D"                                            # item 5
+grep -nE '^\+.*fastify\.(get|post|put|delete|patch)\(' "$D"                  # item 4
+grep -nE '^\+(export )?(async )?function ' "$D"                              # item 3 candidates
+grep -nE '^\+(export )?interface ' "$D"                                      # items 7/8 candidates
+```
+
+Open files and read code ONLY where a grep hits, or where the diff adds new
+helpers/interfaces/types or ref-resolution/card-write call sites (items 3, 6,
+7, 8 need judgment on candidates; item 9 is a read of the changed `.md` hunks
+already in `$D`, not a repo crawl). A clean scan with no new helpers or types
+means this step is done — say so in the report.
 
 Active checklist — for each new occurrence in the diff, the finding is "fix it or
 justify it in a comment"; a genuine violation you can't fix confidently is a
@@ -207,10 +285,16 @@ cd ~/src/callback-box/feedback-review
 pnpm dlx tsx collect.ts --resolve <feedback-file-basename>.md
 ```
 
-Give it the source box if the caller provided one. **If the script would block on
-interactive input you can't supply, do NOT hang** — abort that command and note
-in your report that the feedback item still needs resolving (the human/main
-thread can do it post-merge). This step never blocks the merge; it's cleanup.
+Give it the source box if the caller provided one. Two distinct failure modes:
+
+- **The reference is unclear** — you can't confidently identify which feedback
+  file the caller means, or whether this work actually resolves it → return
+  `RESULT: BLOCKED` asking for clarification. Don't guess and don't silently
+  skip.
+- **The item is clear but the script misbehaves** (fails, or would block on
+  interactive input you can't supply) — do NOT hang: abort the command and
+  note in your report that the item still needs resolving (the main thread can
+  do it post-merge). A mechanical script failure never blocks the merge.
 
 Skip entirely if the work wasn't tied to a feedback item.
 
@@ -242,21 +326,43 @@ report should say which parts you addressed. Ambiguous whether an issue is fully
 resolved? Leave it open and name it in the report rather than guessing — a
 wrongly-closed issue is worse than a stale one, because nobody looks again.
 
+Never close an issue whose frontmatter carries `needs: [manual-testing]` —
+only Ian clears that flag, no matter how done the code looks. Leave it open
+and name it in the report.
+
+After moving ANY issue file, run `pnpm --dir callback-box doc-check --fix`
+from the monorepo root — it re-resolves inbound links to the moved file by
+basename. Don't rely on the pre-commit hook failing later.
+
 Skip entirely if the work wasn't tied to a filed issue.
 
-### 8. Merge the worktree branch into main
+### 8. Finalization gate, then merge into main
 
-You're INSIDE the worktree, so operate on the main checkout with `-C`:
+Steps 5–7b may have changed files *after* the green verification tier. Before
+merging, all three must hold:
+
+1. **Worktree clean**: `git status --porcelain` is empty — every change from
+   steps 5–7b committed (or BLOCKED if something ambiguous is sitting there).
+2. **Post-green commits re-verified** per the path-precise rule in step 4 (a
+   Track O code fix means the full tier ran again after it; a doc move means
+   doc-check ran).
+3. **Main checkout clean and on `main`**: `git -C ~/src/callback-box status
+   --porcelain` is empty.
+
+Then merge — fast-forward only. You're INSIDE the worktree, so operate on the
+main checkout with `-C`:
 
 ```bash
 MONO=~/src/callback-box
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git -C "$MONO" merge "$BRANCH"
+git -C "$MONO" merge --ff-only "$BRANCH"
 ```
 
-This should fast-forward (you merged main in at step 3). The monorepo
-`post-merge` hook triggers the deploy. If git reports conflicts here, something's
-off (step 3 should have caught them) — **return BLOCKED**.
+You merged main in at step 3, so this fast-forwards unless `main` moved during
+this run (e.g. another finish landed). If `--ff-only` refuses: go back to step
+3 (merge the new main in, re-verify), then return here — never create a merge
+commit from the main checkout. The monorepo `post-merge` hook triggers the
+deploy.
 
 ### 9. Report
 

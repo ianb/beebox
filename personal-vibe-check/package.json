@@ -56,7 +56,6 @@
   "license": "MIT",
   "author": "Ian Bicking",
   "scripts": {
-    "lint": "eslint src/",
     "format": "prettier --write \"**/*.{mjs,json}\"",
     "format:check": "prettier --check \"**/*.{mjs,json}\"",
     "lint:oxlint": "oxlint -A no-unused-vars",
