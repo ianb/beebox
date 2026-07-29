@@ -54,9 +54,12 @@ no longer matches, the pass re-reads from the top and **keeps the existing
 account** — it is now the only record of what the rewrite destroyed.
 
 The first review of an already-long session reads it whole (elided if huge),
-rather than replaying its history span by span. That bootstrap pass is lossy in
-the middle for very long pre-existing sessions; every later span is a nightly
-increment, far below the cap.
+rather than replaying its history span by span. So for a session that was already
+long when the feature arrived, the account starts out missing the middle — a
+deliberate trade, since recovering it would cost a dozen-plus model calls per
+session for history that predates the feature. Every later span is a nightly
+increment far below the cap, so this affects backfill quality only, not ongoing
+accuracy.
 
 ## Titles are written for a semi-public audience
 
