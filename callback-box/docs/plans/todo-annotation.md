@@ -226,8 +226,9 @@ click-to-toggle; see Open questions).
 
 **Vocabulary lock-ins:** tag names `todo`, `see-also`; attribute names `id`,
 `status`, `assigned`, `by`, `created`, `due`, `start`; status values `open`,
-`done`, `dropped`, `parked`. `see-also` is todo-scoped in v1 but named
-generically on purpose — it may later be allowed in other contexts.
+`done`, `dropped`, `parked`; the frontmatter key `todos`; the card type
+`todo-view` (Track 4). `see-also` is todo-scoped in v1 but named generically
+on purpose — it may later be allowed in other contexts.
 
 **Shared model module:** `src/shared/todo-model.ts` — the status list
 (`TODO_STATUSES`), the `TodoStatus` union, date/relative-`start` parsing, and
@@ -325,22 +326,40 @@ a trust system). Duplicate `id`s are reported as errors.
 derived plate-state around a frozen `CB_TIME`, parse-failure reporting,
 duplicate-id detection), then the CLI wrapper.
 
-### Track 4 — human surfaces
+### Track 4 — human surfaces: the `todo-view` card
 
-**What.** A tRPC `todos.list` procedure (thin wrapper over the collector,
-glob/filter params) + a todos page in the frontend, following the questions
-pattern (`QuestionsPage`, `status.questions` badge). The Echo Show dashboard
-card/view consumes the same procedure later — this track feeds it, doesn't
-build it.
+**What.** The collected-todos surface **is a card** (boxholder decision,
+2026-07-28): a small core card type, `todo-view`, whose frontmatter fields
+are the query — `glob` (default: the card's own directory subtree), optional
+`status`/`assigned` filters — plus a core renderer registered for the type
+(the `registerFileType` mechanism `src/frontend/src/renderers/todo-list.tsx`
+already uses) that calls a tRPC `todos.list` procedure (thin wrapper over
+the collector) and renders the plate-state groups. A stock template creates
+the box-wide instance (e.g. `store/plate.todo-view.card`, `glob: "**"`).
 
-**Why.** Goal 2 — the "what's on my plate" surface is where trust is earned.
+**Why this shape.** It fits the "views attach to cards" model —
+`src/core/views/doc.ts:12`: *"A view is always attached to a card type …
+There is no card-less 'standalone' view"* — and it recovers what standalone
+wildcard views were for without un-deprecating them: **the wildcard lives in
+the card, not in a view or a link.** Because the surface has a card path,
+linking to it is a plain card ref from anywhere (nav, landmarks, other
+cards, chat) — no new link syntax. It multi-instantiates: a
+`todos.todo-view.card` dropped in a project directory is that project's
+plate, subtree-scoped by default; the agent creates and tends these like any
+card. The Echo Show dashboard is the same model (card + view) and its todo
+tile consumes the same `todos.list`. (test1's legacy `src/views/todos.tsx`
+predates the standalone-view removal; the card type replaces it.)
+
 Grouped by plate-state (escalated / on plate / quiet / parked), each item
 linking to its card (**card-level navigation in v1** — `ViewTarget` has no
 line/fragment field; line-anchored deep links are a fast-follow, not a v1
-promise).
+promise). Read-only rendering (no click-to-done in v1). The questions-style
+header badge (open on-plate count via the status procedure) is the one
+app-level affordance.
 
-**First implementation chunk:** `todos.list` procedure + page skeleton with
-plate-state grouping; badge count wired like questions.
+**First implementation chunk:** `todos.list` procedure + the `todo-view`
+schema + renderer with plate-state grouping; then the stock template and the
+badge.
 
 ### Track 5 — ambient agent context + agent guidance + tending
 
@@ -506,6 +525,8 @@ New agent-facing concepts → audits land run, per the `{% quote %}` precedent:
    editing the card.
 4. `knows_directly`: todo-vs-question boundary (work to do vs blocked on a
    human decision).
+5. `knows_directly`: the `todo-view` card is the display surface — creating
+   one in a directory makes a subtree-scoped plate; link to it like any card.
 
 Execute `pnpm knowledge-audit run --box <test-box> --filter todo` and record
 status comments before the plan completes.
@@ -522,7 +543,8 @@ status comments before the plan completes.
 4. **Collector + `cb todos`** (Track 3) — depends on 1–3; substrate for 5+6.
 5. **Review sweep + ambient injection + agent guide** (Track 5) — depends
    on 4; the sweep is the trust-critical piece and lands before the page.
-6. **tRPC + todos page** (Track 4) — depends on 4.
+6. **tRPC `todos.list` + `todo-view` card type + renderer + stock template**
+   (Track 4) — depends on 4.
 7. **Docs + knowledge audits + emit-tags handling; close the issue**
    (Track 6).
 
