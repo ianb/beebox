@@ -3150,6 +3150,70 @@ test1:
       peak: 45106
       added: 3859
       turns: 7
+  todo-annotation-tag-shape:
+    - date: 2026-07-29T04:34:08.445Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: b5aa637837d57f4af57df735fe7cedf6ef1824ff
+      initial: 42677
+      peak: 42677
+      added: 0
+      turns: 2
+  todo-annotation-status-and-start:
+    - date: 2026-07-29T04:34:08.445Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: b5aa637837d57f4af57df735fe7cedf6ef1824ff
+      initial: 42512
+      peak: 44262
+      added: 1750
+      turns: 5
+  todo-annotation-cb-todos:
+    - date: 2026-07-29T04:34:08.445Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: b5aa637837d57f4af57df735fe7cedf6ef1824ff
+      initial: 42635
+      peak: 43071
+      added: 436
+      turns: 3
+  todo-annotation-vs-question:
+    - date: 2026-07-29T04:34:08.445Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: b5aa637837d57f4af57df735fe7cedf6ef1824ff
+      initial: 42486
+      peak: 42486
+      added: 0
+      turns: 2
+  todo-annotation-todo-view-card:
+    - date: 2026-07-29T04:34:08.445Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: b5aa637837d57f4af57df735fe7cedf6ef1824ff
+      initial: 42481
+      peak: 43867
+      added: 1386
+      turns: 4
+  chat-husk-title-ownership:
+    - date: 2026-07-29T01:48:10.734Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 9ba0f53d0ddfa45bf80bba4cbeb03f798878c81a
+      initial: 41202
+      peak: 42900
+      added: 1698
+      turns: 5
+  contains-evidence-purpose:
+    - date: 2026-07-29T01:48:10.734Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 9ba0f53d0ddfa45bf80bba4cbeb03f798878c81a
+      initial: 41325
+      peak: 47497
+      added: 6172
+      turns: 11
+  chat-review-vs-compaction:
+    - date: 2026-07-29T01:48:10.734Z
+      boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
+      repoCommit: 9ba0f53d0ddfa45bf80bba4cbeb03f798878c81a
+      initial: 41159
+      peak: 48868
+      added: 7709
+      turns: 15
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

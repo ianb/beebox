@@ -284,6 +284,7 @@ export {
   installPersonality,
   installRootLandmark,
   installBriefing,
+  installTodoView,
   installSchedules,
 } from "./defaults.js";
 

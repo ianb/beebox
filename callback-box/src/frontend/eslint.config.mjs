@@ -101,6 +101,9 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/location-share.ts",
   "src/components/chat/native-emission.ts",
   "src/machines/chat-actors.ts",
+  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // resolution): imports @shared/todo-model by raw relative path.
+  "src/components/todo-view-card-logic.ts",
 ];
 
 export default [

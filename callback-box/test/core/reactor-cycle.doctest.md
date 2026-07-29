@@ -13,6 +13,7 @@ import { finishJob } from "../../src/core/finish-job.js";
 import { createFakeAgent } from "../helpers/fake-agent.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createIntakeJobTemplate } from "../../src/schemas/index.js";
+import { createTodoReviewJobTemplate } from "../../src/schemas/todo-review-job.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -73,6 +74,43 @@ JSON.stringify({ ...skipped, invoked })
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## A `todo-review-job` alone is processed under `skipLowPriority`, not stuck forever
+
+The wakeup `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track 5b) is
+meant to be a "deterministic hook, not a hope" — but `cb wakeup` always runs
+the reactor with `skipLowPriority: true`, and the discover stage above skips
+a cycle entirely when every pending job is low-priority. A `todo-review-job`
+that shipped as `priority: low` would then never get processed on an
+otherwise-idle box (no other jobs pending), and — being left pending —
+would suppress the next sweep's job too. `createTodoReviewJobTemplate`
+creates it `priority: normal` for exactly this reason: it must eventually
+reach an agent even when it's the only job around.
+
+```ts
+const boxTodo = await makeTmpBox({ git: true });
+await boxTodo.write(
+  "box/jobs/review.todo-review.job.card",
+  createTodoReviewJobTemplate({ escalated: [], stirring: [{ locator: "a.memo.card:1", text: "Stirring item", detail: "started 2026-07-28" }], stale: [] }),
+);
+boxTodo.commitAll("queue todo-review job");
+
+let todoInvoked = 0;
+const todoFactory = (opts) => {
+  todoInvoked += 1;
+  return createFakeAgent({ name: opts.name, act: async ({ boxRoot }) => {
+    await finishJob({ boxRoot, jobRelPath: "box/jobs/review.todo-review.job.card" });
+    return { success: true };
+  } });
+};
+const todoResult = await runOneCycle({ ...cycleParams(boxTodo.root, todoFactory), skipLowPriority: true });
+JSON.stringify({ ...todoResult, invoked: todoInvoked })
+=> {"success":true,"jobsProcessed":1,"jobsRemaining":0,"invoked":1}
+```
+
+```ts cleanup
+await boxTodo.cleanup();
 ```
 
 ## The processed count survives concurrent job additions

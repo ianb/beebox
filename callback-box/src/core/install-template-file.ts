@@ -69,6 +69,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
   /^config\/.+\.(?:guide|orig-guide)\.card$/,
   /^config\/.+\.(?:personality|orig-personality)\.card$/,
+  /^store\/plate\.todo-view\.card$/,
   /^config\/_template-updates\/.+$/,
   // The install tracker: installTemplateFile rewrites it when it records a
   // hash, so it commits with the template change instead of leaving dirt.

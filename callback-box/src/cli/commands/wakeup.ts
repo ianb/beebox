@@ -3,7 +3,8 @@
  *
  * Full wakeup flow:
  * 1. Run preprocessors on inbox items (transcription, etc.)
- * 2. Run housekeeping (sweep stale tmp uploads, refill root landmark)
+ * 2. Run housekeeping (sweep stale tmp uploads, refill root landmark,
+ *    run the todo-review sweep)
  * 3. Run on-wakeup scheduled scripts
  * 4. Run connectors (pull external data, create jobs)
  *    4a. Clean up stale jobs whose refs all point at deleted files
@@ -25,6 +26,7 @@ import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
 import { installRootLandmark } from "../../core/box/index.js";
 import { getBoxTime } from "../../lib/time.js";
 import { runOnWakeupScripts } from "./tick-utils.js";
+import { runTodoReviewSweep } from "../../core/todo/review-sweep.js";
 import { runReactor } from "../../core/reactor/index.js";
 import { runConnectors } from "./wakeup-connectors.js";
 import {
@@ -93,6 +95,22 @@ async function runHousekeeping(boxRoot: string): Promise<void> {
   if (swept === 0 && rootLandmarkPath === null) {
     console.log("  Nothing to clean up");
   }
+
+  // Todo-review sweep (docs/implemented-plans/todo-annotation.md Track 5b): computes
+  // escalated/stirring/stale sets and, when nonempty, queues a job the
+  // reactor cycle below (step 5) picks up this same run — mirrors the
+  // contains-backfill job's "housekeeping step queues a job" pattern.
+  try {
+    const sweep = await runTodoReviewSweep(boxRoot);
+    if (sweep.jobPath !== null) {
+      console.log(
+        `  Todo review: queued ${sweep.jobPath} (${sweep.escalated.length} escalated, ${sweep.stirring.length} stirring, ${sweep.stale.length} stale)`,
+      );
+    }
+  } catch (e) {
+    console.error("  Todo review sweep failed:", e);
+  }
+
   console.log("");
 }
 

@@ -38,3 +38,53 @@ const withBadTag = "foo\n\n{% /* a comment */ %}\n\nbar\n";
 JSON.stringify(emitBodyAsMarkdown(withBadTag))
 => "foo\n\nbar\n\n"
 ```
+
+## `{% todo %}` emits a checklist-style status marker, not just the text
+
+`todo` (`markdoc/emit-tags.ts`'s universal group) is a *handled* tag, unlike
+the degrading groups above — this section pins its markdown shape since no
+other doctest exercises the backend emitter's tag dispatch for it. Absence
+of `status` is `open` (`☐`); `done`/`dropped` also strike the text.
+
+```ts
+JSON.stringify(emitBodyAsMarkdown("{% todo %}\n\nCall the vet\n\n{% /todo %}"))
+=> "☐ Call the vet\n\n"
+
+JSON.stringify(emitBodyAsMarkdown('{% todo status="done" %}\n\nCall the vet\n\n{% /todo %}'))
+=> "✔ ~~Call the vet~~\n\n"
+
+JSON.stringify(emitBodyAsMarkdown('{% todo status="dropped" %}\n\nCall the vet\n\n{% /todo %}'))
+=> "✘ ~~Call the vet~~ (dropped)\n\n"
+
+JSON.stringify(emitBodyAsMarkdown('{% todo status="parked" %}\n\nCall the vet\n\n{% /todo %}'))
+=> "⏸ Call the vet (parked)\n\n"
+```
+
+Inline form emits with no trailing blank line, same as `quote`/`source`:
+
+```ts
+JSON.stringify(emitBodyAsMarkdown("Remember to {% todo %}call the vet{% /todo %} today."))
+=> "Remember to ☐ call the vet today.\n\n"
+```
+
+## `{% see-also %}` emits its text plus a `[→ ref]`-style citation
+
+Same bracketed-citation shape `source` already uses for `ref`/`href` — no
+inline/block split (`see-also` always transforms to one `SeeAlso` tag).
+
+```ts
+JSON.stringify(emitBodyAsMarkdown('{% see-also ref="people/dana.person.card" %}Dana offered to pick it up{% /see-also %}'))
+=> "Dana offered to pick it up [→ dana]\n\n"
+
+JSON.stringify(emitBodyAsMarkdown('{% see-also href="https://example.com/thread" %}the original request{% /see-also %}'))
+=> "the original request [→ thread]\n\n"
+```
+
+A `todo` with a nested `see-also` emits both, the marker prefixing the
+whole accumulated block:
+
+```ts
+const nested = '{% todo id="vet-refill" %}\n\nCall the vet\n\n{% see-also ref="people/dana.person.card" %}Dana offered to pick it up{% /see-also %}\n\n{% /todo %}';
+JSON.stringify(emitBodyAsMarkdown(nested))
+=> "☐ Call the vet\n\nDana offered to pick it up [→ dana]\n\n"
+```

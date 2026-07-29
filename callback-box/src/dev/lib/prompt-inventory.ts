@@ -52,7 +52,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
     title: "Reactor User Prompt (template)",
     source: "src/core/reactor/prompts.ts → buildReactorUserPrompt()",
     scope: "The user message sent to the batch job agent. Job descriptions (XML + inlined refs + schema instructions) are interpolated into this template.",
-    text: buildReactorUserPrompt(["<job-paths>"], ["<job-descriptions>"]),
+    text: buildReactorUserPrompt(["<job-paths>"], { jobDescriptions: ["<job-descriptions>"] }),
   });
 
   entries.push({

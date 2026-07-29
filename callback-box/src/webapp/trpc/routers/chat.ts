@@ -20,8 +20,8 @@ import {
 } from "../../../core/chat/session/history.js";
 import { listChatHusks } from "../../../core/chat/husk.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
-import { getSessionMetadata } from "../../../cli/lib/session.js";
-import { getSessionLogPath } from "../../../core/chat/session/transcript-paths.js";
+import { huskTranscriptPath } from "../../../core/chat/husk-transcript.js";
+import { resolveSessionLabel } from "../../../core/chat/session-label.js";
 
 const FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -144,12 +144,7 @@ async function loadAllSessions(
   const husks = await listChatHusks(boxRoot);
   const rows: SessionRow[] = [];
   for (const husk of husks) {
-    // The husk's own binding locates the transcript (the SDK's cwd at
-    // session creation) — no history-file lookup.
-    const cwd = husk.contextDir !== undefined && husk.contextDir !== ""
-      ? path.join(boxRoot, husk.contextDir)
-      : boxRoot;
-    const logPath = getSessionLogPath(cwd, husk.session);
+    const logPath = huskTranscriptPath(boxRoot, husk);
     let mtime: Date;
     try {
       const stat = await fs.stat(logPath);
@@ -159,16 +154,11 @@ async function loadAllSessions(
       continue;
     }
 
-    let label = husk.title ?? husk.session.slice(0, 8);
-    if (husk.title === undefined) {
-      try {
-        const meta = await getSessionMetadata({ sessionId: husk.session, logPath, snippetMaxLen: 400 });
-        if (meta.firstUserSnippet) label = meta.firstUserSnippet;
-      } catch (e) {
-        console.warn(`Could not read metadata for session ${husk.session}, using id-prefix label:`, e);
-        // keep the id-prefix fallback
-      }
-    }
+    const label = await resolveSessionLabel({
+      sessionId: husk.session,
+      logPath,
+      title: husk.title,
+    });
 
     rows.push({
       sessionId: husk.session,

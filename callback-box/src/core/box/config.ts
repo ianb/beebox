@@ -52,12 +52,41 @@ export async function isGoogleServiceAllowed(boxRoot: string, service: GoogleSer
   return config.googleServices?.[service] === true;
 }
 
+/** True when `Intl.DateTimeFormat` accepts `timeZone` as a valid IANA zone — the only reliable way to validate one (no static zone list ships with Node). */
+function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
 /**
- * Load the box timezone (or null if not configured).
+ * Load the box timezone (or null if not configured or malformed).
+ *
+ * A typo'd zone (e.g. `"America/Chciago"`) makes `Intl.DateTimeFormat`
+ * throw `RangeError` the moment anything tries to use it — and every
+ * plate-state/timezone-aware call site in the todo system (the collector,
+ * `cb todos`, `todos.list`, the review sweep, session-context's ambient
+ * timezone line) does exactly that. Validating HERE, at the one place the
+ * raw config value enters the system, means a bad value degrades to the
+ * host's own timezone (still wrong, but visibly so — via the warning below
+ * — and non-fatal) instead of taking down every one of those call sites
+ * with an uncaught `RangeError`. Per the resilient-not-silent boundary rule:
+ * loud + degraded, never silent + crashed.
  */
 export async function loadBoxTimezone(boxRoot: string): Promise<string | null> {
   const config = await loadBoxConfig(boxRoot);
-  return config.timezone ?? null;
+  const timezone = config.timezone;
+  if (timezone === undefined) return null;
+  if (!isValidTimeZone(timezone)) {
+    console.warn(
+      `Box config timezone "${timezone}" is not a valid IANA timezone — falling back to the host timezone.`,
+    );
+    return null;
+  }
+  return timezone;
 }
 
 /**

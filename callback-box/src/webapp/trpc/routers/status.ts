@@ -12,6 +12,7 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
+import { collectTodos } from "../../../core/todo/collect.js";
 import type { CardInfo } from "../../../core/state.js";
 
 /** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
@@ -53,6 +54,18 @@ export interface BrowseFile {
   name: string;
 }
 
+/**
+ * Box-wide count of open todos that are on the plate NOW — `escalated` (past
+ * due) plus `on-plate` (started, or undated) — feeding the header badge
+ * (`docs/implemented-plans/todo-annotation.md` Track 4, "the questions-style header
+ * badge"). Mirrors `pendingQuestions`: a plain count on the same status
+ * payload the nav already polls, rather than a separate procedure.
+ */
+async function countOnPlateTodos(boxRoot: string): Promise<number> {
+  const { todos } = await collectTodos(boxRoot);
+  return todos.filter((t) => t.plateState === "escalated" || t.plateState === "on-plate").length;
+}
+
 export const statusRouter = router({
   status: publicProcedure.query(async ({ ctx }) => {
     const state = await getSystemState(ctx.boxRoot);
@@ -65,6 +78,7 @@ export const statusRouter = router({
         inbox: state.inbox.length,
         questions: state.questions.length,
         pendingQuestions: state.questions.filter((q) => q.status === "pending").length,
+        onPlateTodos: await countOnPlateTodos(state.boxRoot),
       },
     };
   }),

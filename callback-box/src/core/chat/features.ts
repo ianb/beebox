@@ -124,16 +124,19 @@ export function mergeSeedFeatures(input: {
 /**
  * Attributes the system writes into the snapshot that the agent can
  * never set back via a delta tag. `local-time`/`channel`, plus
- * `open-card` (companion-pane state), ride on every message;
- * `last-activity`/`health` only on the first message of a new session
- * (see `session-context.ts`). Companion-pane activity rides as
- * `<card-activity>` child elements, not attributes (see `card-activity.ts`).
+ * `open-card` (companion-pane state), ride on every message; so does
+ * `todos` (Track 5a's ambient count — recomputed fresh each send, only
+ * present when nonzero); `last-activity`/`health` only on the first
+ * message of a new session (see `session-context.ts`). Companion-pane
+ * activity rides as `<card-activity>` child elements, not attributes
+ * (see `card-activity.ts`).
  */
 const READ_ONLY_ATTRS = new Set([
   "local-time",
   "channel",
   "last-activity",
   "health",
+  "todos",
   "open-card",
 ]);
 
@@ -155,6 +158,7 @@ export function composeChatAppSnapshot(input: {
   channel?: string;
   lastActivity?: string;
   health?: string;
+  todos?: string;
   openCard?: string;
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
   activityChildren?: string;
@@ -171,6 +175,7 @@ export function composeChatAppSnapshot(input: {
     ["channel", input.channel],
     ["last-activity", input.lastActivity],
     ["health", input.health],
+    ["todos", input.todos],
     ["open-card", input.openCard],
   ];
   for (const [name, value] of contextAttrs) {

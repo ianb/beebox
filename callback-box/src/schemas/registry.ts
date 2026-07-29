@@ -41,9 +41,11 @@ import { ChatSchema } from "./chat.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
 import { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
+import { TodoReviewJobSchema } from "./todo-review-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
 import { TodoListSchema } from "./todo-list.js";
+import { TodoViewSchema } from "./todo-view.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
 import { PlaceSchema } from "./place.js";
@@ -80,6 +82,7 @@ export const cardSchemas: CardSchema[] = [
   PersonSchema,
   PlaceSchema,
   TodoListSchema,
+  TodoViewSchema,
   QuestionSchema,
   RecipeSchema,
   CommentarySchema,
@@ -118,6 +121,7 @@ export const cardSchemas: CardSchema[] = [
   IntakeJobSchema,
   ChatJobSchema,
   ContainsBackfillJobSchema,
+  TodoReviewJobSchema,
   QuestionFollowupJobSchema,
   ProcedureRunSchema,
   ChatSchema,

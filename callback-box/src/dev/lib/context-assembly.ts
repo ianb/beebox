@@ -190,7 +190,7 @@ async function systemPromptLayers(
       name: "Reactor user prompt (template)",
       source: "src/core/reactor/prompts.ts",
       loading: "situational",
-      text: buildReactorUserPrompt(["<job-path>"], ["<job-description>"]),
+      text: buildReactorUserPrompt(["<job-path>"], { jobDescriptions: ["<job-description>"] }),
     },
   ];
 }

@@ -18,6 +18,13 @@ const chatFields = {
   session: z.string(),
   /** Box-relative directory the chat is bound to ("" = box root). */
   "context-dir": z.string().optional(),
+  /**
+   * Id of the last transcript span the nightly chat review folded into
+   * `contains-evidence`. Machine-owned; it makes a re-apply after a crash
+   * between the card write and the journal write detectable, so the account
+   * can't be extended twice with the same material.
+   */
+  "review-span": z.string().optional(),
   body: body(z.string()),
 };
 
@@ -28,7 +35,9 @@ export const ChatSchema: CardSchema = cardSchema("chat", {
 
 A \`chat\` card is the durable face of a web chat session — created automatically when a session starts, under \`store/chat/web/\`. The \`session\` field is the association (renaming the file is safe and encouraged once the topic is clear: \`cb mv\` to a meaningful name).
 
-Editorial fields are yours to maintain: set \`title\` and \`contains\` once the conversation has a topic, add refs in the body to cards the chat discussed ("decided in this chat: [ref]"), and use the body for durable notes about the conversation. Don't record activity timestamps or message counts — runtime state stays off the card.`,
+A nightly **chat review** pass maintains \`title\`, \`contains\` and \`contains-evidence\` (a running account of what the conversation amounted to) on sessions that have grown enough to be worth re-reading. **A title you set by hand wins permanently** — the review detects the edit and never touches that field again. \`contains\`/\`contains-evidence\` are machine-owned; \`review-span\` is bookkeeping, leave it alone.
+
+The body is yours: add refs to cards the chat discussed ("decided in this chat: [ref]") and durable notes about the conversation. The review never touches it. Don't record activity timestamps or message counts — runtime state stays off the card.`,
 });
 
 /** Starter husk content. `title` included only when known (often not, at assignment time). */
