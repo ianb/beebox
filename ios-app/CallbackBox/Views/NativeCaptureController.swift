@@ -174,51 +174,54 @@ final class NativeCaptureController: ObservableObject {
         }
     }
 
+    /// Set by ``skipPendingUploads`` to break ``finish``'s wait. A capture on a
+    /// weak uplink can legitimately take many minutes, so the wait has no
+    /// deadline of its own — the user's explicit skip is the only thing that
+    /// cuts it short.
+    private var skipPendingRequested = false
+
     func finish() async {
         guard let sessionID else { return }
         if audioRecorder.isRecording {
             await audioRecorder.stop()
         }
+        skipPendingRequested = false
         surfaceState.phase = .sealing
         await refreshSurface(preservingPhase: true)
 
-        for _ in 0..<120 {
+        // Wait for outstanding uploads with NO fixed deadline. The old version
+        // gave up after 120 × 250ms and told the user "Try Done again in a
+        // moment" — but on the slow link that causes the wait in the first
+        // place, that moment never arrives, so Done became unpressable
+        // forever. Now the wait persists (with a live count on screen) and
+        // ``skipPendingUploads`` is the escape.
+        while skipPendingRequested == false {
             guard let manifest = try? await store.loadManifest(boxID: box.id, sessionID: sessionID) else {
+                surfaceState.phase = .failed(message: "The local capture record could not be read.")
+                return
+            }
+            if manifest.pendingItemCount == 0 {
                 break
             }
-            let pending = manifest.items.contains { item in
-                switch item.state {
-                case .local, .uploading, .recording:
-                    true
-                case .uploaded, .failed:
-                    false
-                }
-            }
-            if pending == false {
-                break
-            }
+            await refreshSurface(preservingPhase: true)
             try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+
+        if skipPendingRequested {
+            // Stop the transfers before sealing: a background task still
+            // uploading into a sealed session gets a 409 and its bytes are
+            // wasted — on exactly the constrained link the user is escaping.
+            await uploadRuntime.cancel(boxID: box.id, sessionID: sessionID)
         }
 
         guard let manifest = try? await store.loadManifest(boxID: box.id, sessionID: sessionID) else {
             surfaceState.phase = .failed(message: "The local capture record could not be read.")
             return
         }
-        let stillPending = manifest.items.contains { item in
-            switch item.state {
-            case .local, .uploading, .recording:
-                true
-            case .uploaded, .failed:
-                false
-            }
-        }
-        if stillPending {
-            surfaceState.phase = .active
-            showError("Uploads are still finishing. Try Done again in a moment.", retryable: false)
-            await refreshSurface(preservingPhase: true)
-            return
-        }
-        if manifest.items.contains(where: { if case .failed = $0.state { true } else { false } }) {
+        // A skip deliberately seals with failures present, so only an
+        // unsolicited failure sends the user back to decide.
+        if skipPendingRequested == false,
+           manifest.items.contains(where: { if case .failed = $0.state { true } else { false } }) {
             surfaceState.phase = .active
             showError("Some items did not upload.", retryable: true)
             await refreshSurface()
@@ -227,10 +230,21 @@ final class NativeCaptureController: ObservableObject {
         await finalize(sessionID: sessionID)
     }
 
+    /// Abandon whatever is still uploading and seal with what the box already
+    /// has. Mirrors the web capture surface's "Skip them".
+    func skipPendingUploads() {
+        skipPendingRequested = true
+    }
+
     func submitUploadedItems() async {
         guard let sessionID, surfaceState.counts.uploaded > 0 else { return }
+        // Same reasoning as the skip path above — cancel before sealing so the
+        // in-flight tasks don't keep spending the uplink on bytes the sealed
+        // session will reject.
+        await uploadRuntime.cancel(boxID: box.id, sessionID: sessionID)
         await finalize(sessionID: sessionID)
     }
+
 
     func cancel() async {
         guard let sessionID else {
@@ -518,10 +532,11 @@ final class NativeCaptureController: ObservableObject {
             case .audio: counts.audioSegments += 1
             }
             switch item.state {
+            case .local: counts.queued += 1
             case .uploading: counts.uploading += 1
             case .uploaded: counts.uploaded += 1
             case .failed: counts.failed += 1
-            case .recording, .local: break
+            case .recording: break
             }
         }
         surfaceState.counts = counts
@@ -595,6 +610,7 @@ struct NativeCaptureScreen: View {
             onOpenSettings: { controller.openSettings() },
             onFinish: { Task { await controller.finish() } },
             onSubmitUploadedItems: { Task { await controller.submitUploadedItems() } },
+            onSkipPendingUploads: { controller.skipPendingUploads() },
             onSendFollowUp: { Task { await controller.sendRemainingAsFollowUp() } },
             onDiscardRemaining: { Task { await controller.discardRemaining() } }
         )

@@ -1,12 +1,12 @@
 # Upload queue
 
-`UploadQueue` bounds how many uploads run at once, with a priority lane for
+`UploadQueue` bounds how many uploads run at once, with a separate lane for
 small near-live work (audio chunks) that must not wait behind a large photo.
 
-Serializing is the whole point: six concurrent multi-megabyte uploads share one
+Bounding is the whole point: six concurrent multi-megabyte uploads share one
 uplink, so on a weak link none of them finishes before any per-request deadline
-— they abort together and retry from byte zero. One at a time, each transfer
-gets the whole pipe and stays done.
+— they abort together and retry from byte zero. One bulk transfer at a time, and
+each gets essentially the whole pipe and stays done.
 
 ```ts setup
 import { UploadQueue } from "../../src/frontend/src/lib/upload-queue.js";
@@ -32,7 +32,7 @@ not start until the first has finished:
 
 ```ts
 const log = [];
-const q = new UploadQueue({ concurrency: 1 });
+const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
 const a = makeTask("a", log), b = makeTask("b", log), c = makeTask("c", log);
 
 const all = Promise.all([
@@ -64,59 +64,104 @@ log.join(",")
 => start:a,end:a,start:b,end:b,start:c,end:c
 ```
 
-## Priority jumps the queue but never preempts
+## The small lane runs alongside the bulk lane
 
-`a` is already running when a priority task arrives, so `a` is left alone — an
-in-flight XHR cannot be paused without discarding the bytes it already sent,
-which is the exact waste the queue exists to prevent. The priority task instead
-goes ahead of the ordinary work still waiting:
+An audio chunk does not wait for the photo that is already uploading. Inside a
+single shared lane, "priority" could only jump the *waiting* line — a 40 KB chunk
+behind a 10 MB photo would still sit out the whole photo, which on the link that
+motivated this is minutes. Its own slot is what actually keeps audio near-live:
 
 ```ts
 const log = [];
-const q = new UploadQueue({ concurrency: 1 });
-const a = makeTask("photo-a", log), b = makeTask("photo-b", log);
+const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
+const photo = makeTask("photo", log);
 const audio = makeTask("audio", log);
 
 const all = Promise.all([
-  q.run(a.run, { priority: false }),
-  q.run(b.run, { priority: false }),
+  q.run(photo.run, { priority: false }),
   q.run(audio.run, { priority: true }),
 ]);
 await settle();
-a.release(); await settle();
 log.join(",")
-=> start:photo-a,end:photo-a,start:audio
+=> start:photo,start:audio
 ```
+
+Both are outstanding, one in each lane:
+
+```ts continue
+[q.inFlight, q.queued].join("/")
+=> 2/0
+```
+
+The audio finishes while the photo is still going — the point of the split:
 
 ```ts continue
 audio.release(); await settle();
-b.release(); await settle();
-await all;
 log.join(",")
-=> start:photo-a,end:photo-a,start:audio,end:audio,start:photo-b,end:photo-b
+=> start:photo,start:audio,end:audio
 ```
 
-Two priority tasks keep their own arrival order rather than stacking in
-reverse — audio chunks must land in the sequence they were recorded:
+```ts continue
+photo.release(); await settle();
+await all;
+log.join(",")
+=> start:photo,start:audio,end:audio,end:photo
+```
+
+A steady stream of small uploads cannot starve the bulk lane, because they draw
+on different capacity. Here three audio chunks queue up in their own lane while
+the photo proceeds untouched:
 
 ```ts
 const log = [];
-const q = new UploadQueue({ concurrency: 1 });
-const blocker = makeTask("blocker", log);
-const first = makeTask("audio-1", log), second = makeTask("audio-2", log);
+const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
+const photo = makeTask("photo", log);
+const chunks = [makeTask("audio-1", log), makeTask("audio-2", log), makeTask("audio-3", log)];
 
 const all = Promise.all([
-  q.run(blocker.run, { priority: false }),
-  q.run(first.run, { priority: true }),
-  q.run(second.run, { priority: true }),
+  q.run(photo.run, { priority: false }),
+  ...chunks.map((c) => q.run(c.run, { priority: true })),
 ]);
 await settle();
-blocker.release(); await settle();
-first.release(); await settle();
-second.release(); await settle();
+[log.join(","), q.queued].join(" | ")
+=> start:photo,start:audio-1 | 2
+```
+
+The photo is free to finish first even though audio work is still backed up:
+
+```ts continue
+photo.release(); await settle();
+log.join(",")
+=> start:photo,start:audio-1,end:photo
+```
+
+```ts continue
+for (const c of chunks) { c.release(); await settle(); }
 await all;
 log.join(",")
-=> start:blocker,end:blocker,start:audio-1,end:audio-1,start:audio-2,end:audio-2
+=> start:photo,start:audio-1,end:photo,end:audio-1,start:audio-2,end:audio-2,start:audio-3,end:audio-3
+```
+
+Within the small lane, chunks keep their arrival order — audio must land in the
+sequence it was recorded:
+
+```ts
+const log = [];
+const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
+const first = makeTask("audio-1", log), second = makeTask("audio-2", log), third = makeTask("audio-3", log);
+
+const all = Promise.all([
+  q.run(first.run, { priority: true }),
+  q.run(second.run, { priority: true }),
+  q.run(third.run, { priority: true }),
+]);
+await settle();
+first.release(); await settle();
+second.release(); await settle();
+third.release(); await settle();
+await all;
+log.join(",")
+=> start:audio-1,end:audio-1,start:audio-2,end:audio-2,start:audio-3,end:audio-3
 ```
 
 ## A failing task releases its slot
@@ -126,7 +171,7 @@ keeps moving. (An upload that gave up must not wedge every upload behind it.)
 
 ```ts
 const log = [];
-const q = new UploadQueue({ concurrency: 1 });
+const q = new UploadQueue({ concurrency: 1, priorityConcurrency: 1 });
 const failing = q.run(() => Promise.reject(new Error("boom")), { priority: false });
 const after = q.run(() => { log.push("ran-after"); return Promise.resolve("ok"); }, { priority: false });
 
@@ -142,11 +187,11 @@ const caught = await failing.then(() => "resolved", (e) => `rejected:${e.message
 
 ## Higher concurrency still bounds the fan-out
 
-The class is not hard-wired to 1 — a concurrency of 2 admits exactly two:
+The bulk lane is not hard-wired to 1 — a concurrency of 2 admits exactly two:
 
 ```ts
 const log = [];
-const q = new UploadQueue({ concurrency: 2 });
+const q = new UploadQueue({ concurrency: 2, priorityConcurrency: 1 });
 const a = makeTask("a", log), b = makeTask("b", log), c = makeTask("c", log);
 const all = Promise.all([
   q.run(a.run, { priority: false }),

@@ -433,3 +433,82 @@ errors.length
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A sealed session refuses new media
+
+The upload route checks `state === "open"` before it reads the request body, so a
+finalize can seal the session while the bytes are still arriving — and aborting
+the client's request cannot help, because the server may already hold the whole
+body. Without a barrier the media would append after preparation had already
+snapshotted the manifest, and then be discarded along with the staging directory.
+
+So the store re-asserts it under the lock. A sealed session rejects every kind of
+media add:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-1", createdBy: null,
+});
+await addPhoto({
+  boxRoot: box.root, id: session.id, filename: "photo-001.jpg",
+  capturedAt: "2026-07-29T12:00:00.000Z", source: "camera-user",
+  buffer: Buffer.from("BEFORE"),
+});
+const seal = await sealStagingSession({ boxRoot: box.root, id: session.id });
+[seal.sealed, seal.alreadySealed].join("/")
+=> true/false
+```
+
+```ts continue
+async function addOrFail(fn) {
+  try { await fn(); return "accepted"; } catch (error) { return error.name; }
+}
+
+const photo = await addOrFail(() => addPhoto({
+  boxRoot: box.root, id: session.id, filename: "photo-002.jpg",
+  capturedAt: "2026-07-29T12:00:01.000Z", source: "camera-user",
+  buffer: Buffer.from("LATE"),
+}));
+const audio = await addOrFail(() => addAudioChunk({
+  boxRoot: box.root, id: session.id, segmentId: "seg-1",
+  segmentStartedAt: "2026-07-29T12:00:00.000Z", filename: "audio-0-001.webm",
+  buffer: Buffer.from("LATE"),
+}));
+const file = await addOrFail(() => addFile({
+  boxRoot: box.root, id: session.id, filename: "file-001-notes.txt",
+  uploadedAt: "2026-07-29T12:00:02.000Z", originalName: "notes.txt",
+  mimeType: "text/plain", buffer: Buffer.from("LATE"),
+}));
+[photo, audio, file].join(",")
+=> StagingSessionNotOpenError,StagingSessionNotOpenError,StagingSessionNotOpenError
+```
+
+The manifest is untouched by the rejected adds — it still holds only the photo
+that landed while the session was open, and no stray bytes were written:
+
+```ts continue
+const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+[after.photos.length, after.segments.length, after.files.length].join("/")
+=> 1/0/0
+```
+
+```ts continue
+const staged = await box.list(`tmp/capture-staging/${session.id}`);
+staged.includes("photo-002.jpg")
+=> false
+```
+
+Lifecycle transitions themselves still work on a sealed session — the barrier is
+specific to *media*, so preparation can keep moving the state forward:
+
+```ts continue
+await setStagingState({ boxRoot: box.root, id: session.id, state: "delivered" });
+const delivered = await readStagingSession({ boxRoot: box.root, id: session.id });
+delivered.state
+=> delivered
+```
+
+```ts cleanup
+await box.cleanup();
+```

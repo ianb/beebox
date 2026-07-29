@@ -197,6 +197,20 @@ struct CaptureManifest: Codable, Equatable, Sendable {
     var startedAt: String
     var items: [CaptureItem]
 
+    /// Items still owed to the box: staged, uploading, or mid-recording.
+    /// `finish()` waits on this, so a settled state (`uploaded`/`failed`) must
+    /// never count — one that did would make the wait unending.
+    var pendingItemCount: Int {
+        items.filter { item in
+            switch item.state {
+            case .local, .uploading, .recording:
+                true
+            case .uploaded, .failed:
+                false
+            }
+        }.count
+    }
+
     init(boxID: UUID, sessionID: CaptureSessionID, targetSessionID: String?, startedAt: String) {
         version = Self.currentVersion
         self.boxID = boxID

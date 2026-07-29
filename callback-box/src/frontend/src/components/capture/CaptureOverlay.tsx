@@ -123,6 +123,7 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         photoTotal={counts.photoTotal} photosUploading={counts.photosUploading} photosUploaded={counts.photosUploaded} photosFailed={counts.photosFailed}
         fileTotal={counts.fileTotal} filesUploading={counts.filesUploading} filesUploaded={counts.filesUploaded} filesFailed={counts.filesFailed}
         activeUploadPercent={uploads.activeUpload ? uploads.activeUpload.percent : null}
+        finalizing={finalizing}
         showSettings={showSettings}
         onToggleSettings={() => setShowSettings((p) => !p)}
         onPickGallery={pickFromGallery} onPickFile={pickFileToUpload} onRetryFailed={retryFailedUploads}
@@ -142,7 +143,9 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         // Failures already surface via the overlay's `error` state
         // (useCaptureCamera/useCaptureSession's own try/catch); voided here
         // only to satisfy the sync attribute type.
-        onTap={() => void (cameraOn ? takePhoto() : startCamera())}
+        // Closed while finalizing: a photo taken after Done would upload into a
+        // session that is being sealed, and be discarded server-side.
+        onTap={() => { if (!finalizing) void (cameraOn ? takePhoto() : startCamera()); }}
         onToggleCamera={() => void toggleCamera()}
         onFlipCamera={() => void flipCamera()}
       />

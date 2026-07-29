@@ -6,15 +6,20 @@
  * Split out of `useCaptureUploads` (which owns the per-kind bookkeeping) so
  * each stays within its line budget and the queueing policy has one home.
  *
- * Serial by design (`concurrency: 1`). Six concurrent multi-megabyte photos
- * share one uplink, so on a weak link none completes before any per-request
- * deadline — they abort together, retry from byte zero, and spend the link
- * re-sending bytes. One at a time, each transfer gets the whole pipe and stays
- * done. Audio chunks take the priority lane: small, near-live, and they must
- * not wait behind a 10 MB photo.
+ * One bulk transfer at a time (`concurrency: 1`). Six concurrent multi-megabyte
+ * photos share one uplink, so on a weak link none completes before any
+ * per-request deadline — they abort together, retry from byte zero, and spend
+ * the link re-sending bytes. One at a time, each transfer gets essentially the
+ * whole pipe and stays done.
+ *
+ * Audio chunks run in the queue's separate small lane (`priority: true`) rather
+ * than sharing the bulk slot. A 40 KB chunk queued behind a 10 MB photo would
+ * wait out the entire photo — minutes on the link that motivated this — so
+ * "priority" inside one lane would not have kept audio near-live. Its own slot
+ * does, and the split also means a steady chunk stream can't starve photos.
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { UploadQueue } from "../../lib/upload-queue";
 
 /** The one transfer currently on the wire, for the status bar's progress read. */
@@ -32,7 +37,7 @@ export interface UploadRunContext {
 
 export interface EnqueueOptions {
   filename: string;
-  /** Jump ahead of waiting ordinary uploads (audio chunks). */
+  /** Run in the small dedicated lane rather than the bulk one (audio chunks). */
   priority: boolean;
   send: (context: UploadRunContext) => Promise<void>;
   onSuccess: () => void;
@@ -42,7 +47,8 @@ export interface EnqueueOptions {
 export interface UploadRunner {
   activeUpload: ActiveUpload | null;
   enqueue: (options: EnqueueOptions) => void;
-  /** Resolves once every accepted upload has settled (success or failure). */
+  /** Resolves once every accepted upload has settled (success or failure),
+   *  including any enqueued while the drain was already waiting. */
   awaitPending: () => Promise<void>;
   /** Abort queued and in-flight transfers; their promises settle as failures. */
   abortPending: () => void;
@@ -55,7 +61,7 @@ export interface UploadRunner {
 
 export function useUploadRunner(): UploadRunner {
   const [activeUpload, setActiveUpload] = useState<ActiveUpload | null>(null);
-  const queueRef = useRef<UploadQueue>(new UploadQueue({ concurrency: 1 }));
+  const queueRef = useRef<UploadQueue>(new UploadQueue({ concurrency: 1, priorityConcurrency: 1 }));
   const pending = useRef<Promise<void>[]>([]);
   const abortRef = useRef<AbortController>(new AbortController());
 
@@ -80,9 +86,18 @@ export function useUploadRunner(): UploadRunner {
   // Every queued promise settles — failures are captured as state by
   // `onFailure`, not rejected — so this resolves even while uploads are
   // failing, and never leaves Done waiting on a rejection.
+  //
+  // Loops rather than awaiting one snapshot: an upload can be enqueued WHILE
+  // the drain waits (the recorder's tail chunk is the normal case), and a
+  // single `Promise.all` over the array as it was would neither await that
+  // late arrival nor notice it — and then the reset would discard it, letting
+  // finalize seal ahead of media the user had every reason to expect.
   const awaitPending = useCallback(async () => {
-    await Promise.all(pending.current);
-    pending.current = [];
+    while (pending.current.length > 0) {
+      const inFlight = pending.current;
+      pending.current = [];
+      await Promise.all(inFlight);
+    }
   }, []);
 
   const rearm = useCallback(() => {
@@ -101,6 +116,15 @@ export function useUploadRunner(): UploadRunner {
   }, []);
 
   const clearActive = useCallback(() => setActiveUpload(null), []);
+
+  // Abort on unmount. The overlay can go away without Done or Cancel — a route
+  // change, or a parent dropping it — and a multi-minute XHR would otherwise
+  // keep running with its watchdog interval and listeners attached, pushing
+  // state into a hook nobody is rendering.
+  // Reads the ref at teardown, not at mount: `abortPending`/`clearPending`
+  // swap in a fresh controller, so a captured one would be the spent scope and
+  // would abort nothing.
+  useEffect(() => () => abortRef.current.abort(), []);
 
   return { activeUpload, enqueue, awaitPending, abortPending, clearPending, rearm, clearActive };
 }
