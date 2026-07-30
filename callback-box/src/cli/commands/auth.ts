@@ -26,8 +26,10 @@ import {
   setPassword,
   removeUser,
   listUsers,
+  authFilePath,
   type LocalUser,
 } from "../../webapp/local-users.js";
+import { detectAgentContext } from "../../lib/agent-context.js";
 import {
   AuthStoreUnavailableError,
   LastOwnerRemovalError,
@@ -161,10 +163,51 @@ function formatUserLine(user: LocalUser): string {
   return `${user.role}\t${user.email}\t${user.name}\t${user.created}`;
 }
 
+/**
+ * Refuse an irreversible credential change when the caller looks like an agent,
+ * unless a human explicitly sanctioned it with `--agent-confirmed`.
+ *
+ * The failure this prevents (2026-07-30): an agent hit a login wall while
+ * driving the browser for a test, ran `set-password` to manufacture credentials,
+ * and only afterwards found out the auth file is GLOBAL — one file behind every
+ * local box, not per-box like the rest of a box's state. It reset the
+ * boxholder's real password (scrypt, unrecoverable) and revoked their live
+ * sessions, to get past a wall that turned out not to be what was blocking it
+ * anyway.
+ *
+ * The message therefore does two jobs: state the blast radius the agent
+ * probably has not checked, and name the correct move — ask, rather than
+ * engineer around missing credentials.
+ */
+function refuseIfUnconfirmedAgent(opts: { action: string; agentConfirmed: boolean | undefined }): void {
+  if (opts.agentConfirmed === true) return;
+  const context = detectAgentContext();
+  if (!context.isAgent) return;
+  console.error(
+    [
+      `Refusing to ${opts.action}: this looks like an agent session (${context.reason}).`,
+      "",
+      `The local auth file (${authFilePath()}) is GLOBAL — it backs every local`,
+      "box on this machine, not just the box you are standing in. Changing a password",
+      "also revokes that user's live sessions, and the old password cannot be recovered",
+      "(it is stored only as a scrypt hash).",
+      "",
+      "If the person you are working for explicitly asked you to do this, re-run with",
+      "--agent-confirmed.",
+      "",
+      "If you are trying to authenticate so you can test something: stop and ask them",
+      "instead. Needing credentials you were not given is a question for a human, not",
+      "an obstacle to work around.",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
 // --- subcommand bodies (exported for direct testing) --------------------------
 
-export async function runCreateUser(opts: { email?: string; name?: string; passwordFile?: string }): Promise<void> {
+export async function runCreateUser(opts: { email?: string; name?: string; passwordFile?: string; agentConfirmed?: boolean }): Promise<void> {
   try {
+    refuseIfUnconfirmedAgent({ action: "create an account", agentConfirmed: opts.agentConfirmed });
     const email = opts.email ?? (await promptText("Owner email: "));
     const name = opts.name ?? (await promptText("Owner name: "));
     const password = await resolvePassword({ passwordFile: opts.passwordFile, confirm: true });
@@ -176,8 +219,9 @@ export async function runCreateUser(opts: { email?: string; name?: string; passw
   }
 }
 
-export async function runAddUser(opts: { email?: string; name?: string; passwordFile?: string }): Promise<void> {
+export async function runAddUser(opts: { email?: string; name?: string; passwordFile?: string; agentConfirmed?: boolean }): Promise<void> {
   try {
+    refuseIfUnconfirmedAgent({ action: "add an account", agentConfirmed: opts.agentConfirmed });
     const email = opts.email ?? (await promptText("Member email: "));
     const name = opts.name ?? (await promptText("Member name: "));
     const password = await resolvePassword({ passwordFile: opts.passwordFile, confirm: true });
@@ -189,8 +233,9 @@ export async function runAddUser(opts: { email?: string; name?: string; password
   }
 }
 
-export async function runSetPassword(opts: { email?: string; passwordFile?: string }): Promise<void> {
+export async function runSetPassword(opts: { email?: string; passwordFile?: string; agentConfirmed?: boolean }): Promise<void> {
   try {
+    refuseIfUnconfirmedAgent({ action: "change a password", agentConfirmed: opts.agentConfirmed });
     const email = opts.email ?? (await promptText("Email: "));
     const password = await resolvePassword({ passwordFile: opts.passwordFile, confirm: true });
     const user = await setPassword({ email, password });
@@ -210,8 +255,9 @@ export function runList(): void {
   for (const user of users) console.log(formatUserLine(user));
 }
 
-export async function runRemoveUser(opts: { email?: string }): Promise<void> {
+export async function runRemoveUser(opts: { email?: string; agentConfirmed?: boolean }): Promise<void> {
   try {
+    refuseIfUnconfirmedAgent({ action: "remove an account", agentConfirmed: opts.agentConfirmed });
     const email = opts.email ?? (await promptText("Email to remove: "));
     await removeUser({ email });
     console.log(`Removed ${email}.`);
@@ -231,7 +277,8 @@ authCommand
   .option("--email <email>", "Owner email")
   .option("--name <name>", "Owner display name")
   .option("--password-file <path>", "Read the password from a file instead of prompting")
-  .action(async (options: { email?: string; name?: string; passwordFile?: string }) => {
+  .option("--agent-confirmed", "Proceed even though this looks like an agent session — only when a human explicitly asked")
+  .action(async (options: { email?: string; name?: string; passwordFile?: string ; agentConfirmed?: boolean }) => {
     await runCreateUser(options);
   });
 
@@ -241,7 +288,8 @@ authCommand
   .option("--email <email>", "Member email")
   .option("--name <name>", "Member display name")
   .option("--password-file <path>", "Read the password from a file instead of prompting")
-  .action(async (options: { email?: string; name?: string; passwordFile?: string }) => {
+  .option("--agent-confirmed", "Proceed even though this looks like an agent session — only when a human explicitly asked")
+  .action(async (options: { email?: string; name?: string; passwordFile?: string ; agentConfirmed?: boolean }) => {
     await runAddUser(options);
   });
 
@@ -250,7 +298,8 @@ authCommand
   .description("Change a user's password (revokes their outstanding sessions)")
   .option("--email <email>", "User email")
   .option("--password-file <path>", "Read the password from a file instead of prompting")
-  .action(async (options: { email?: string; passwordFile?: string }) => {
+  .option("--agent-confirmed", "Proceed even though this looks like an agent session — only when a human explicitly asked")
+  .action(async (options: { email?: string; passwordFile?: string ; agentConfirmed?: boolean }) => {
     await runSetPassword(options);
   });
 
@@ -265,6 +314,7 @@ authCommand
   .command("remove-user")
   .description("Remove a member account (refuses to remove the owner)")
   .option("--email <email>", "User email")
-  .action(async (options: { email?: string }) => {
+  .option("--agent-confirmed", "Proceed even though this looks like an agent session — only when a human explicitly asked")
+  .action(async (options: { email?: string; agentConfirmed?: boolean }) => {
     await runRemoveUser(options);
   });
