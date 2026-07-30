@@ -319,9 +319,15 @@ them (a pointer file served as an image) is silent data-shaped garbage
    absent content or a broken checkout. Report the count, and for each
    the expected size and hash parsed out of the pointer (finding 4).
 6. The `git-annex` branch has no unflushed journal (finding 8).
-7. No asset has been sitting in `tmp-capture/` longer than N days
-   (Track G) — the one window where content is in neither git nor the
-   annex.
+
+**Scope discipline: these are configuration assertions only.** Every
+one asks "is git-annex set up correctly in this repository" and every
+one has a fixed, one-time remedy. Nothing about box *content* belongs
+here — a check that varies with how much work is pending is an
+operational condition, not a misconfiguration, and it goes through
+`runHealthChecks` instead (Track G). This matters because of the
+startup gate below: anything in this list can take a box offline, so
+the list must contain only things that *should*.
 
 Assertion 5 is the load-bearing one and is shared with Track D — one
 predicate, `isAnnexPointer(bytes)`, used by both the health check and
@@ -462,11 +468,32 @@ Two consequences that must be handled rather than assumed:
 
 1. **A staged asset is in neither git nor the annex.** That is true
    today too, but under this plan it becomes the *only* unprotected
-   window, so it needs to be visible instead of implicit. Track C gains
-   a seventh assertion: **no asset has been sitting in `tmp-capture/`
-   longer than N days.** estate has 2 such files right now, both from
-   2026-07-29 and both among the 38 with no second copy anywhere — so
-   this is a live condition, not a hypothetical.
+   window, so it needs to be visible instead of implicit.
+
+   This is an **operational** condition, not a configuration one — it
+   varies with how far behind triage is, and it has no one-time fix. So
+   it goes in `runHealthChecks`
+   (`src/webapp/trpc/routers/health.ts:24-29`), which already carries
+   the `"error" | "warning"` severity split, feeds both `cb health` and
+   the dashboard's warnings, and exits non-zero only on `error`. Not in
+   `cb doctor annex` (Track C), and emphatically not in the `cb serve`
+   startup gate: a triage backlog must never take a box offline.
+
+   ```typescript
+   {
+     name: "unfiled captures",
+     ok: oldestUnfiledDays < UNFILED_CAPTURE_WARN_DAYS,
+     severity: "warning",
+     message: `${count} capture(s) unfiled for over ${UNFILED_CAPTURE_WARN_DAYS} days
+       (oldest ${oldestUnfiledDays}d). Their bytes are in neither git nor the annex —
+       file them with cb mv.`,
+   }
+   ```
+
+   Threshold: **7 days** (boxholder decision, 2026-07-30). estate has 2
+   such files right now, both from 2026-07-29 and both among the 38
+   with no second copy anywhere — so this is a live condition, not a
+   hypothetical.
 2. **The bulk-upload batch-local `.gitignore`
    (`docs/asset-manifests.md:193-213`, written by
    `src/core/bulk-upload/prepare.ts`) must be removed** during
@@ -475,10 +502,11 @@ Two consequences that must be handled rather than assumed:
    layer down. Bulk upload lands arbitrary extensions, which is exactly
    what `include=*.attach/*` handles without an extension list.
 
-**First implementation chunk.** The gitignore rule plus assertion 7,
-with a filesystem doctest: an asset in `tmp-capture/` is not annexed
-and is reported by dwell-time; the same asset after `cb mv` to a store
-path is annexed on the next commit.
+**First implementation chunk.** The gitignore rule plus the
+`unfiled captures` health check, with a filesystem doctest: an asset in
+`tmp-capture/` is not annexed and is reported once past 7 days; the
+same asset after `cb mv` to a store path is annexed on the next commit
+and drops off the check.
 
 ### Track H — docs and knowledge audits
 
@@ -514,7 +542,7 @@ not.
 | `git annex get` in a clone with unsynced location log | Yes | Track F syncs first | Clear |
 | Asset still gitignored after migration | Yes (doctest asserts it is annexed) | Track B's `unignore` | Clear |
 | Bulk-upload batch `.gitignore` survives migration, so its blobs never annex | Yes (doctest on a batch scope) | Track G — `unignore` removes batch-local files | Clear |
-| Capture sits in `tmp-capture/` unannexed and un-backed-up | Yes | Track C assertion 7 reports dwell time | Clear — **and live today**: 2 estate files since 2026-07-29 |
+| Capture sits in `tmp-capture/` unannexed and un-backed-up | Yes | Track G — `unfiled captures` warning in `runHealthChecks` past 7 days | Clear — **and live today**: 2 estate files since 2026-07-29 |
 | Our pre-commit hook shadows annex's | Yes (hook-generation doctest) | Track E calls `git annex pre-commit` | Clear |
 | Agent runs `git annex drop` | No | `numcopies=1` makes drop refuse by default | Clear — refuses |
 | Box committed with `--no-verify` | Yes (pre-existing) | Next non-skipped commit catches up; `largefiles` applies at `git add`, not at hook time, so assets are annexed regardless | Clear |
@@ -579,12 +607,6 @@ rather than let "on git-annex" read as "safe".
    `--incremental-schedule=30d`, letting git-annex pace it. Wants a
    real measurement of what a full 9 GB pass costs before committing —
    the number is unknown and the box is shared with live wakeups.
-2. **The tmp-capture dwell-time threshold.** Track C assertion 7 says
-   "no asset has been in `tmp-capture/` longer than N days."
-   Lean: N=7, matching the `tmp/` upload sweep's existing 7-day window
-   (`src/core/housekeeping.ts:18-19`). Wants one look at real triage
-   latency across boxes before fixing the number.
-
 Resolved during design, recorded so the reasoning isn't relitigated:
 
 - **`cb doctor annex` blocks `cb serve` startup** (boxholder decision,
@@ -592,6 +614,17 @@ Resolved during design, recorded so the reasoning isn't relitigated:
   serving — the setup is one-time and belongs at the beginning, and a
   box quietly serving pointer files is worse than a box that refuses to
   start with a message naming the fix.
+- **`cb doctor annex` is configuration-only** (boxholder decision,
+  2026-07-30). Content-dependent conditions go to `runHealthChecks`,
+  not into the doctor and therefore not into the startup gate. The
+  unfiled-capture check was drafted as a seventh doctor assertion and
+  moved for this reason — sitting in a gated list, a triage backlog
+  would have refused to start the box, which is the exact failure the
+  separation prevents.
+- **Unfiled-capture warning threshold: 7 days** (boxholder decision,
+  2026-07-30), matching the `tmp/` upload sweep's existing window
+  (`src/core/housekeeping.ts:18-19`). `warning` severity, so it reports
+  without failing `cb health`.
 - **Mixed git-annex versions are fine** (Ubuntu 10.20240129 / Homebrew
   10.20260717, boxholder decision). Both handle repo version 10; no
   cross-version test gate.
@@ -629,14 +662,15 @@ a bare `--box test1` resolves inside the monorepo.)
 4. **B2** — convert `personal-test` (the rehearsal — 3,016 assets,
    271 MB, and its 3,018 unclaimed files stop being a problem by
    construction). *Depends on B1.*
-5. **C2** — `cb doctor annex`, assertions 1–6, plus the `cb serve`
-   startup gate. *Depends on C1, B2.* (Assertion 7 lands with G.)
+5. **C2** — `cb doctor annex`, all six configuration assertions, plus
+   the `cb serve` startup gate. *Depends on C1, B2.*
 6. **D** — absence handling: webapp route, renderers, agent reads.
    *Depends on C1.*
 7. **E** — hook generation + `fsck` in housekeeping. *Depends on B1.*
 8. **F** — worktree clone hook. *Depends on B2, and on D so a
    partially-fetched worktree degrades legibly.*
-9. **G** — capture-staging gitignore rule + assertion 7 + doctest.
+9. **G** — capture-staging gitignore rule + the `unfiled captures`
+   health check + doctest.
    *Depends on C2; must land before B3 so converting estate doesn't
    annex its two pending captures.*
 10. **B3** — convert prod boxes, smallest first: `box-family` (8
@@ -669,8 +703,9 @@ tool. Named up front:
   coverage to assert the generated hook calls `git annex pre-commit`
   and no longer calls `cb attachments verify`.
 - `test/core/capture/staging-not-annexed.doctest.md` — filesystem tier:
-  an asset in `tmp-capture/` is unannexed and reported by dwell-time;
-  the same asset after `cb mv` is annexed on the next commit (Track G).
+  an asset in `tmp-capture/` is unannexed and raises the `unfiled
+  captures` warning past 7 days; the same asset after `cb mv` is
+  annexed on the next commit and clears the warning (Track G).
 - `test/cli/serve-annex-gate.doctest.md` — `cb serve` refuses to start
   on a box failing any `cb doctor annex` assertion, and the message
   names the assertion and its remedy.
