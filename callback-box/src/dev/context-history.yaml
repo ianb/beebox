@@ -3165,6 +3165,27 @@ test1:
       peak: 42716
       added: 0
       turns: 2
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42694
+      peak: 42694
+      added: 0
+      turns: 2
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42512
+      peak: 44274
+      added: 1762
+      turns: 5
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42512
+      peak: 42512
+      added: 0
+      turns: 2
   todo-annotation-status-and-start:
     - date: 2026-07-29T04:34:08.445Z
       boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
@@ -3179,6 +3200,27 @@ test1:
       initial: 42711
       peak: 46507
       added: 3796
+      turns: 6
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42524
+      peak: 46870
+      added: 4346
+      turns: 10
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42524
+      peak: 45781
+      added: 3257
+      turns: 6
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42686
+      peak: 46698
+      added: 4012
       turns: 6
   todo-annotation-cb-todos:
     - date: 2026-07-29T04:34:08.445Z
@@ -3195,6 +3237,27 @@ test1:
       peak: 43237
       added: 403
       turns: 3
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42485
+      peak: 42887
+      added: 402
+      turns: 3
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42485
+      peak: 42485
+      added: 0
+      turns: 2
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42485
+      peak: 42485
+      added: 0
+      turns: 1
   todo-annotation-vs-question:
     - date: 2026-07-29T04:34:08.445Z
       boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
@@ -3208,6 +3271,27 @@ test1:
       repoCommit: 8331820f92ee55800cd7a7b7341bc7efb0071358
       initial: 42685
       peak: 42685
+      added: 0
+      turns: 2
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42660
+      peak: 42660
+      added: 0
+      turns: 2
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42498
+      peak: 42498
+      added: 0
+      turns: 2
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42498
+      peak: 42498
       added: 0
       turns: 2
   todo-annotation-todo-view-card:
@@ -3225,6 +3309,27 @@ test1:
       peak: 44107
       added: 1265
       turns: 4
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42655
+      peak: 44412
+      added: 1757
+      turns: 3
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42493
+      peak: 46392
+      added: 3899
+      turns: 6
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42655
+      peak: 47113
+      added: 4458
+      turns: 6
   chat-husk-title-ownership:
     - date: 2026-07-29T01:48:10.734Z
       boxCommit: b0f09282bdabf3c5583adf1b587809796e96bc1b
@@ -3271,6 +3376,27 @@ test1:
       peak: 47956
       added: 5205
       turns: 12
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42547
+      peak: 51037
+      added: 8490
+      turns: 22
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42547
+      peak: 49167
+      added: 6620
+      turns: 14
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42547
+      peak: 52771
+      added: 10224
+      turns: 23
   todo-application-question-not-todo:
     - date: 2026-07-29T13:13:53.463Z
       boxCommit: c39e8c1c01fa547092cdc68c87cbd58ceff1abda
@@ -3300,6 +3426,34 @@ test1:
       peak: 59749
       added: 16834
       turns: 29
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42566
+      peak: 59055
+      added: 16489
+      turns: 28
+    - date: 2026-07-30T01:15:37.274Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42566
+      peak: 58365
+      added: 15799
+      turns: 30
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42566
+      peak: 63629
+      added: 21063
+      turns: 45
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42728
+      peak: 60897
+      added: 18169
+      turns: 27
   todo-application-query-plate:
     - date: 2026-07-29T13:13:53.463Z
       boxCommit: c39e8c1c01fa547092cdc68c87cbd58ceff1abda
@@ -3322,6 +3476,27 @@ test1:
       peak: 48526
       added: 5860
       turns: 15
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42641
+      peak: 50191
+      added: 7550
+      turns: 16
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42479
+      peak: 49767
+      added: 7288
+      turns: 12
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 42479
+      peak: 48550
+      added: 6071
+      turns: 10
   todo-application-scoped-surface:
     - date: 2026-07-29T13:13:53.463Z
       boxCommit: c39e8c1c01fa547092cdc68c87cbd58ceff1abda
@@ -3344,6 +3519,27 @@ test1:
       peak: 38637
       added: 14299
       turns: 36
+    - date: 2026-07-30T01:11:21.655Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 24252
+      peak: 37332
+      added: 13080
+      turns: 29
+    - date: 2026-07-30T01:23:06.404Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 24252
+      peak: 38111
+      added: 13859
+      turns: 30
+    - date: 2026-07-30T01:33:50.775Z
+      boxCommit: 44f48494cb303aca44121a7854c5a56dc4298de5
+      repoCommit: 1c679dbba2c250b26fea2835345acbd2311c6582
+      initial: 24252
+      peak: 41661
+      added: 17409
+      turns: 44
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

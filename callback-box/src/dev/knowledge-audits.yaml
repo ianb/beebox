@@ -975,6 +975,21 @@ tests:
   # boxes with existing todo-list cards may keep attracting new
   # intentions to the old mechanism until agents see enough examples of
   # the new one.
+  #
+  # Status (2026-07-30, after retiring todo-list): reran the full 9
+  # (5 recall + 4 application) against the migrated test1 box — 9/9 pass.
+  # The reworded todos.ts guidance ("the suggested way to make a todo list
+  # is a simple .doc.card with embedded {% todo %} items" — the
+  # `todo-list`-specific carve-out language is gone now that the type no
+  # longer exists) caused no regression on any of the 5 recall audits.
+  # Two flaky failures surfaced across reruns, both audit-mechanics (turn
+  # budget), not guidance gaps — the agent's actual behavior was correct
+  # both times (verified via files-read: it had created the right card)
+  # but a truncated final reply missed the text-match check because it ran
+  # out of turns before narrating a summary: todo-application-question-not-todo
+  # (max_turns 15→25) and todo-application-scoped-surface (max_turns 15→25,
+  # only on a later rerun — passed clean on the first run of the day). Both
+  # pass reliably after the bump; see each audit's own notes.
 
   - id: todo-application-capture-in-passing
     prompt: >
@@ -1022,7 +1037,7 @@ tests:
       which doesn't apply to unattended job processing.
     correct_contains_any: ["question"]
     response_not_contains: ["{% todo"]
-    max_turns: 15
+    max_turns: 25
     tags: [todos, questions, application]
     notes: >
       Inverse of todo-application-capture-in-passing. Pass condition is
@@ -1035,6 +1050,14 @@ tests:
       correctly applied the Questions section's own "in chat, just ask"
       carve-out and answered inline instead of persisting a card — not a
       knowledge gap, an ambiguous prompt. See section status comment.
+      max_turns raised 15→25 2026-07-30 (todo-list retirement rerun): the
+      agent read the intake guide plus question/memo card docs and created
+      both a memo and a question card (correctly, no {% todo %} tag) but
+      ran out of budget before narrating a final summary, so the truncated
+      14-word reply never said "question" — failed the text check on a
+      cut-off response, not a knowledge gap (confirmed by files-read: it had
+      already created `box/questions/Storage_Unit_Winter.question.card`).
+      Passed cleanly after the bump with a full narrated response.
 
   - id: todo-application-query-plate
     prompt: "What should the boxholder be focusing on right now?"
@@ -1085,14 +1108,20 @@ tests:
       list card — a hand list goes stale the moment a new todo is added
       elsewhere in the project; a todo-view card doesn't.
     correct_contains: ["todo-view"]
-    max_turns: 15
+    max_turns: 25
     tags: [todos, application, cards]
     notes: >
       Fixture seeds two open todos so there's something real to surface.
       Pass condition is choosing the live-query card unprompted — the
       prompt never says "todo" or "todo-view." Failure mode: a memo or
       note titled something like "Open Items" that just restates the two
-      todos as static text.
+      todos as static text. max_turns raised 15→25 2026-07-30: on a rerun
+      the agent legitimately explored landmarks/maps in addition to
+      creating+validating the card (30 turns) and ran out of budget before
+      writing its final narration — created the right card
+      (`Open_Items.todo-view.card`, confirmed via files-read) but the
+      truncated reply never said "todo-view", failing the text check. Audit-
+      mechanics bug (turn budget), not a guidance gap.
 
   # === Recording Knowledge ===
 
