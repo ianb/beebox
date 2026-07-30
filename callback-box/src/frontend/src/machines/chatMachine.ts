@@ -294,6 +294,17 @@ export const chatMachine = setup({
         pending: context.pendingMessages.length,
       }),
       on: {
+        // Ignore REFRESH here for the same reason `streaming` does, one state
+        // later: `chat-complete` (→ REFRESH) lands a beat AFTER STREAM_RESULT
+        // already put us here, and the global handler would clear streamText
+        // mid-flight — unmounting the streamed bubble, so the list collapses to
+        // the user message for a whole roundtrip (the finalize scroll-jump) —
+        // and restart the in-flight fetchHistory, doubling that gap. The fetch
+        // already running is authoritative: waitForTranscriptEntry
+        // (core/chat/session/transcript-sync.ts) holds `result`/`done` until
+        // the turn is durable, and onDone swaps messages in + clears streamText
+        // atomically. See test/frontend/chat-machine-finalize.doctest.md.
+        REFRESH: { actions: () => logFsm("refresh-ignored-refreshing") },
         SEND: {
           actions: [
             ({ event, context }) => logFsm("send-from-refreshing", {

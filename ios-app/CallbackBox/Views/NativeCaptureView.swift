@@ -18,12 +18,29 @@ struct NativeCaptureSurfaceCounts: Equatable {
     var photos = 0
     var files = 0
     var audioSegments = 0
+    /// Staged locally, not yet handed to a background upload task.
+    var queued = 0
     var uploading = 0
     var uploaded = 0
     var failed = 0
 
     var totalItems: Int {
         photos + files + audioSegments
+    }
+
+    /// Everything still owed to the box. `queued` counts because a `.local`
+    /// item is pending work the user cannot see any other way — leaving it out
+    /// let Done sail past the "some items have not uploaded" prompt and into a
+    /// wait it could not escape.
+    var pending: Int {
+        queued + uploading
+    }
+
+    /// Whether Done must ask the user what to do rather than sealing straight
+    /// away. True while anything is still owed to the box or has failed — the
+    /// prompt is what makes those two outcomes escapable.
+    var needsFinishPrompt: Bool {
+        failed > 0 || pending > 0
     }
 }
 
@@ -77,6 +94,7 @@ struct NativeCaptureView<Preview: View>: View {
     var onOpenSettings: () -> Void
     var onFinish: () -> Void
     var onSubmitUploadedItems: () -> Void
+    var onSkipPendingUploads: () -> Void
     var onSendFollowUp: () -> Void
     var onDiscardRemaining: () -> Void
 
@@ -122,9 +140,10 @@ struct NativeCaptureView<Preview: View>: View {
             if state.counts.uploaded > 0 {
                 Button("Submit Uploaded Items", action: onSubmitUploadedItems)
             }
+            Button("Wait for Them", action: onFinish)
             Button("Stay Here", role: .cancel) {}
         } message: {
-            Text("You can retry, or submit only the items the box has received.")
+            Text("You can retry, wait for the uploads to finish, or submit only the items the box has received.")
         }
         .onChange(of: selectedPhotos) { _, items in
             guard items.isEmpty == false else {
@@ -161,6 +180,7 @@ struct NativeCaptureView<Preview: View>: View {
                 if state.isBusy {
                     ProgressView()
                         .frame(width: 44, height: 44)
+                        .accessibilityLabel(state.phase == .sealing ? "Finishing capture" : "Working")
                 } else {
                     Button(action: finish) {
                         Image(systemName: "checkmark")
@@ -170,6 +190,21 @@ struct NativeCaptureView<Preview: View>: View {
                     .disabled(state.canFinish == false)
                     .accessibilityLabel("Finish capture")
                 }
+            }
+
+            if state.phase == .sealing && state.counts.pending > 0 {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.up.circle")
+                    Text(pendingUploadSummary)
+                        .font(.footnote)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button("Skip Them", action: onSkipPendingUploads)
+                        .font(.footnote.bold())
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
             }
 
             if let banner = state.banner {
@@ -335,6 +370,11 @@ struct NativeCaptureView<Preview: View>: View {
         }
     }
 
+    private var pendingUploadSummary: String {
+        let pending = state.counts.pending
+        return pending == 1 ? "Waiting for 1 upload." : "Waiting for \(pending) uploads."
+    }
+
     private func requestCancel() {
         if state.counts.totalItems == 0 {
             onCancel()
@@ -344,7 +384,10 @@ struct NativeCaptureView<Preview: View>: View {
     }
 
     private func finish() {
-        if state.counts.failed > 0 || state.counts.uploading > 0 {
+        // `needsFinishPrompt` covers items still staged locally, not just ones
+        // actively uploading — otherwise Done slipped straight into a wait with
+        // no way out.
+        if state.counts.needsFinishPrompt {
             showingFinishChoices = true
         } else {
             onFinish()
@@ -390,6 +433,7 @@ private struct CaptureChromeButtonStyle: ButtonStyle {
         onOpenSettings: {},
         onFinish: {},
         onSubmitUploadedItems: {},
+        onSkipPendingUploads: {},
         onSendFollowUp: {},
         onDiscardRemaining: {}
     )
@@ -422,6 +466,7 @@ struct NativeCaptureFixtureScreen: View {
             onOpenSettings: {},
             onFinish: {},
             onSubmitUploadedItems: {},
+            onSkipPendingUploads: {},
             onSendFollowUp: {},
             onDiscardRemaining: {}
         )

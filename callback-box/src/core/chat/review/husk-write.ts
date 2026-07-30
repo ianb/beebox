@@ -28,28 +28,21 @@ import type { ReviewOutput } from "./reviewer.js";
 import type { TitleOwner } from "./state.js";
 
 /**
- * What rejects a generated string, per field.
+ * What rejects a generated string.
  *
- * **Titles** are the only output written for a semi-public audience — they are
- * what shows up in a chat list, read out of context by someone who may not be
- * entitled to the details. So a title carrying an address, an email, or a key is
- * dropped.
+ * **Only a credential.** That is secret hygiene, not editorial judgement — an
+ * API key in a git-tracked card is a problem no matter who reads it or which
+ * field it landed in.
  *
- * **`contains` and the account are deliberately NOT held to that standard.**
- * They are the durable record of a conversation whose transcript eventually
- * expires; sanitizing them destroys the value. A colleague's email or a street
- * address is legitimate content there. Only a credential is rejected, and that
- * is secret hygiene rather than discretion — an API key in a git-tracked card is
- * a problem no matter who reads it.
- *
- * `external-url` never rejects: a conversation about a website will name it.
+ * An earlier version also rejected emails and home paths from titles, on the
+ * theory that a title is a semi-public surface. That was the wrong model. The
+ * thing to keep out of a title is anything that would *embarrass* someone
+ * reading it over the boxholder's shoulder — and no regex detects that, while
+ * names, addresses and figures are all perfectly fine in a title. So the
+ * editorial judgement lives entirely in the prompt, where it can be exercised,
+ * rather than half here in a filter that catches the wrong things.
  */
-const TITLE_REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>([
-  "home-path",
-  "email",
-  "credential",
-]);
-const RECORD_REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>(["credential"]);
+const REJECTING_KINDS: ReadonlySet<LeakKind> = new Set<LeakKind>(["credential"]);
 
 /** Base class so callers can catch every husk-write failure at once. */
 export class HuskWriteError extends Error {
@@ -137,14 +130,11 @@ export function resolveTitleOwner(args: {
 }
 
 /** True when the string is clean enough to commit. Rejections are reported, not silent. */
-function passesLeakScan(
-  field: string,
-  args: { text: string; ownerEmail: string | null; kinds: ReadonlySet<LeakKind> },
-): boolean {
-  const { text, ownerEmail, kinds } = args;
+function passesLeakScan(field: string, args: { text: string; ownerEmail: string | null }): boolean {
+  const { text, ownerEmail } = args;
   if (text === "") return true;
   const result = scanBundle(new Map([[field, text]]), { ownerEmail, allowedEmails: [] });
-  const blocking = result.findings.filter((f) => kinds.has(f.kind));
+  const blocking = result.findings.filter((f) => REJECTING_KINDS.has(f.kind));
   for (const finding of blocking) {
     console.warn(
       `chat-review: dropped generated ${field} — leak scan found ${finding.kind} (${finding.detail})`,
@@ -191,15 +181,11 @@ export async function applyReviewToHusk(
   const titleOffered = output.title !== "";
   const titleClean =
     titleOffered
-    && passesLeakScan("title", { text: output.title, ownerEmail, kinds: TITLE_REJECTING_KINDS });
+    && passesLeakScan("title", { text: output.title, ownerEmail });
   if (titleOffered && !titleClean) rejected.push("title");
-  const containsOk = passesLeakScan("contains", {
-    text: output.contains, ownerEmail, kinds: RECORD_REJECTING_KINDS,
-  });
+  const containsOk = passesLeakScan("contains", { text: output.contains, ownerEmail });
   if (!containsOk) rejected.push("contains");
-  const accountOk = passesLeakScan("contains-evidence", {
-    text: account, ownerEmail, kinds: RECORD_REJECTING_KINDS,
-  });
+  const accountOk = passesLeakScan("contains-evidence", { text: account, ownerEmail });
   if (!accountOk) rejected.push("contains-evidence");
 
   return withCardLock(absPath, async () => {

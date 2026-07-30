@@ -52,6 +52,7 @@
 		5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003C2C3C000100000001 /* NativeCaptureController.swift */; };
 		5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */; };
 		5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001132C3C000100000001 /* CaptureModelsTests.swift */; };
+		5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */; };
 		5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001142C3C000100000001 /* CaptureAPITests.swift */; };
 		5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */; };
 		5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000001 /* CaptureStoreTests.swift */; };
@@ -118,6 +119,7 @@
 		5A1001102C3C000100000001 /* CallbackBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CallbackBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywordsTests.swift; sourceTree = "<group>"; };
 		5A1001132C3C000100000001 /* CaptureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModelsTests.swift; sourceTree = "<group>"; };
+		5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureFinishTests.swift; sourceTree = "<group>"; };
 		5A1001142C3C000100000001 /* CaptureAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPITests.swift; sourceTree = "<group>"; };
 		5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebViewRequestTests.swift; sourceTree = "<group>"; };
 		5A1001152C3C000100000001 /* CaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStoreTests.swift; sourceTree = "<group>"; };
@@ -255,6 +257,7 @@
 				C83000042C3C000100000001 /* BoxLockTests.swift */,
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
 				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
+				5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */,
 				5A1001142C3C000100000001 /* CaptureAPITests.swift */,
 				5A1001152C3C000100000002 /* ChatWebViewRequestTests.swift */,
 				5A1001152C3C000100000001 /* CaptureStoreTests.swift */,
@@ -413,6 +416,7 @@
 			files = (
 				5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */,
 				5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */,
+				5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */,
 				5A1001032C3C000100000001 /* CaptureAPITests.swift in Sources */,
 				5A1001042C3C000100000002 /* ChatWebViewRequestTests.swift in Sources */,
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,

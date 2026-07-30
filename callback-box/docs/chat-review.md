@@ -64,38 +64,47 @@ session for history that predates the feature. Every later span is a nightly
 increment far below the cap, so this affects backfill quality only, not ongoing
 accuracy.
 
-## Titles are written for a semi-public audience — and only titles
+## Titles hold back; everything else doesn't
 
-Discretion applies to the **title alone**. That is not an oversight in the other
-fields; it is the point.
+The one editorial constraint applies to the **title**, and it is narrower than it
+sounds.
 
-A title is the one output that gets read out of context. Chat lists surface on a
-shared screen, in a screenshot, over someone's shoulder — and the exposure is
-asymmetric besides: the transcript lives outside the box and is never pushed,
-while the title lands on a git-tracked card that goes to the box's remote and
-stays in history even if edited later.
+Titles appear in lists, and lists get read in contexts the conversation never
+anticipated — a shared screen, someone reading over your shoulder, a screenshot.
+So the test the reviewer is given is **not** "is this private?" but **"would the
+boxholder wince if someone nearby read this?"**
 
-So the reviewer is told to name the *subject and shape* of a conversation rather
-than its contents, to name a category at most for anything private, and to never
-put other people's names, amounts, diagnoses, addresses, or identifiers in a
-title — while still being distinctive enough to find the conversation again.
+That distinction matters, because the obvious reading — strip names, strip
+figures, strip places — is wrong. Those are exactly what makes a title findable
+again, and removing them costs real value while protecting nothing anyone cared
+about. `Road trip to Keene, July 8-11` and `Indigo's custodial account paperwork`
+are good titles.
 
-**`contains` and `contains-evidence` are the opposite.** They are the durable
-record of a conversation whose transcript will eventually expire, so they should
-be as explicit and specific as they need to be — names, amounts, decisions, the
-actual property, the actual question. Sanitizing them would destroy the thing's
-value; anything left out is simply lost once the transcript goes. The prompt says
-so in as many words, because a model reading title rules first will otherwise
-carry them over.
+What the reviewer is told to avoid is the wince: health problems, money trouble,
+conflict with a named person, anything intimate, anything that reflects badly on
+someone or reveals a judgement about them. When a conversation genuinely is about
+one of those, it names the *shape* rather than the *sting* — enough to find it
+again, not enough to embarrass anyone reading it cold. Most conversations need
+none of this and just get a clear specific title.
 
-The leak scan is scoped the same way. A **title** is rejected for an address, an
-email, or a credential shape. **`contains` and the account** are rejected only
-for a credential — that is secret hygiene, not discretion: an API key in a
-git-tracked card is a problem regardless of who reads it.
+**`contains` and `contains-evidence` get no such treatment.** They are the durable
+record of a conversation whose transcript expires on a retention timer, so they
+should be as explicit and specific as they need to be — names, amounts, decisions,
+the actual property, the actual question. Anything left out is lost once the
+transcript goes.
 
-And the scan catches mechanical leaks only. A title that accurately names a
-private topic passes every regex there is — the prompt, the husk card view, and
-your ability to edit are the real controls.
+Separately from any of that, a title is a human-readable label rather than a data
+dump — no email addresses, URLs, ids or long numbers. Not because those are
+sensitive, but because they read as noise in a list and crowd out the words that
+help you recognise the conversation. That's a titling-quality rule, and it lives
+in the prompt alongside the length and case guidance.
+
+The leak scan rejects exactly one thing, in any field: a **credential** shape.
+That is secret hygiene, not editorial judgement — an API key in a git-tracked card
+is a problem regardless of who reads it. Emails, addresses and names are not
+rejected. Nothing mechanical can detect a title that embarrasses, so that
+judgement lives in the prompt rather than half in a filter catching the wrong
+things — and your ability to retitle a husk by hand is the real backstop.
 
 ## Editing what it writes
 

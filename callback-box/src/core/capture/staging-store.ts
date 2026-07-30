@@ -171,6 +171,14 @@ function releaseStagingLock(id: string): void {
  * the per-session caps (X3) against the incoming bytes, writes the file, and
  * accumulates `totalBytes` — all under the same lock, so concurrent uploads
  * can't each pass the check and jointly overshoot.
+ *
+ * A media add also re-asserts `state === "open"` INSIDE the lock. The upload
+ * route pre-checks it, but that check happens before the request body is read,
+ * so a finalize can seal the session while the bytes are still arriving. Without
+ * this barrier the media appends to a sealed session — after preparation has
+ * already snapshotted the manifest — and is then silently discarded with the
+ * staging directory. Aborting the client's request cannot prevent it: the server
+ * may already hold the whole body. The seal has to be the authority.
  */
 async function mutateSession(opts: {
   boxRoot: string;
@@ -183,6 +191,7 @@ async function mutateSession(opts: {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
     if (media) {
+      if (session.state !== "open") throw new StagingSessionNotOpenError(id, session.state);
       const mediaPath = resolveStagedFile({ boxRoot, id, filename: media.filename });
       if (await handleStagingUploadReplay({ session, mediaPath, ...media })) {
         session.lastActivityAt = getBoxTimeISO(boxRoot);

@@ -128,6 +128,22 @@ Contrast: a genuinely new message arriving while scrolled up *must* still flag �
 re-run scenario 3 to confirm the down-arrow still lights for a real append.
 
 ### 6. Real-turn finalize (no flash)
+The sharpest instrument here is a MutationObserver on the content wrapper, not a
+scroll sample — the failure mode is a *content collapse*, and the scroll jump is
+downstream of it. Record `childList` mutations alongside `scrollHeight` across a
+real turn's completion:
+```bash
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");const c=s.querySelector(".max-w-5xl");window.__m=[];new MutationObserver(rs=>{let a=0,r=0;for(const x of rs){a+=x.addedNodes.length;r+=x.removedNodes.length;}window.__m.push([Math.round(performance.now()),`+${a}-${r}`,c.children.length,s.scrollHeight,Math.round(s.scrollTop)]);}).observe(c,{childList:true});return "watching";})()'
+# send a real message, wait for it to finish, then:
+bin/browse eval 'JSON.stringify(window.__m)'
+```
+Finalize must be ONE mutation that keeps the child count flat and `scrollHeight`
+monotonic (`+1-1`, kids unchanged). A `+0-1` that drops `scrollHeight` — the
+turn briefly gone, leaving the user message at the bottom — is the regression
+`chat-machine-finalize.doctest.md` guards: something cleared `streamText` before
+the finalized entry arrived.
+
+
 Send a real message and watch the streamed bubble become the finalized message
 with no flash/jump. A per-frame recorder helps, but note its `flashed` flag goes
 true on *subsequent* turns from the legitimate turn-start throbber (an empty
