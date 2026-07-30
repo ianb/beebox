@@ -84,10 +84,16 @@ Executed against git-annex 10.20260717 (Homebrew; Ubuntu 24.04 ships
 ambiguous and several of them changed the design.
 
 **1. Our automated commit flow needs no changes.** With
-`annex.largefiles=include=*.attach/*`, a plain `git add -A && git
-commit` puts assets in the annex and cards in git. The reactor's
-existing commit path is untouched, and no code has to learn `git annex
-add`.
+`annex.largefiles` set, a plain `git add -A && git commit` routes
+matching files into the annex and everything else into git. The
+reactor's existing commit path is untouched, and no code has to learn
+`git annex add`.
+
+> **Caveat, and the plan's worst near-miss.** This was first run with
+> `include=*.attach/*` and a card *beside* an attach scope, and read as
+> "cards stay in git." Re-run with a card *inside* a scope — the shape
+> every real box actually has — that selector annexes the card. See
+> finding 10 and Track B's classifier section.
 
 **2. `git annex init` does not clobber our hook.** With `cb init`'s
 `.git/hooks/pre-commit` already present it prints *"pre-commit hook
@@ -124,7 +130,7 @@ Measured both ways:
 | `annex.thin=false` | separate copy (link count 1), 2× disk | **Yes** — *"Bad file content; moved to .git/annex/bad/SHA256E-s200000--34ca…"*, quarantined |
 
 Thin would be a **regression** against today's manifest system, which
-does catch in-place modification (`asset-manifest-scan.ts:42`
+does catch in-place modification (`asset-manifest-scan.ts:43`
 `hash-mismatch`; `docs/asset-manifests.md:220`). Hence `annex.thin=false`,
 and hence the disk prerequisite.
 
@@ -146,9 +152,26 @@ the health check should verify the branch is current. Track F.
 check, or adjust numcopies.)"* Not exercised this iteration — recorded
 because it is the mechanism the remote iteration depends on.
 
+**10. The extension-allowlist classifier is correct against the real
+box shape.** Re-run with
+`include=*.attach/*.jpg or include=*.attach/*.png or include=*.attach/*.frozen`
+against a fixture mirroring estate:
+
+| file | result |
+|---|---|
+| `photos.attach/photo-001.attach/photo-001.jpg` (nested child scope) | **annexed** |
+| `photos.attach/attachments/inline.png` (plain subdir) | **annexed** |
+| `photos.attach/photo-001.image.card` (card *inside* the scope) | in git |
+| `photos.attach/manifest.json` | in git |
+| `photos.attach/msg-001.body.txt` | in git |
+| `note.memo.card` (outside any scope) | in git |
+
+Also establishes that git-annex globs let `*` cross `/`, so a
+mid-pattern `.attach/` anchors the scope and no `**` is needed.
+
 ## What already exists
 
-- **`src/core/asset-manifest.ts`** (142 lines) and
+- **`src/core/asset-manifest.ts`** (141 lines) and
   **`src/core/asset-manifest-scan.ts`** (348 lines) — the manifest
   format, hashing, and directory walk. **Retired**, not reused.
   git-annex's key (`SHA256E-s<size>--<hash>`) carries the same
@@ -246,44 +269,108 @@ annexed assets.
 
 **Why this needs to change.** This is the plan.
 
+**The classifier — an extension allowlist, not a path glob.**
+
+An earlier draft used `annex.largefiles=include=*.attach/*`, on the
+reasoning that everything in an attach scope is an asset. **That is
+wrong and would have been destructive.** Attach scopes legitimately
+hold committed non-assets: on prod estate, **1,844 tracked files live
+inside `.attach/` scopes** — 1,206 `.card`, 397 `.json`, 145 `.md`, 81
+`.txt`, 8 `.xlsx`, 6 `.csv`. Capture writes child cards *into* the
+parent scope (`src/core/capture/write-cards.ts`), and the existing scan
+excludes them explicitly — `src/core/asset-manifest-scan.ts:116`:
+`if (d.name.endsWith(".card")) continue;`. A path glob would have
+turned 1,206 committed cards into annex pointers on the first
+conversion, handing pointer text to every card parser.
+
+The correct source of truth already exists:
+`ASSET_GITIGNORE_EXTENSIONS` (`src/core/commands/attachments-gitignore.ts:57-76`)
+— **the** list, already rendered into two places, and already including
+`frozen`. This plan renders it into a third form and deletes one:
+
+```
+include=*.attach/*.jpg or include=*.attach/*.jpeg or … or include=*.attach/*.frozen
+```
+
+Verified against the real box shape: with this expression, an asset
+nested in a child scope (`photos.attach/photo-001.attach/photo-001.jpg`)
+and one in a plain subdirectory (`photos.attach/attachments/inline.png`)
+both annex, while `photos.attach/photo-001.image.card`,
+`photos.attach/manifest.json`, and `photos.attach/msg-001.body.txt` all
+stay ordinary git files. (git-annex globs let `*` cross `/`, so the
+mid-pattern `.attach/` anchors the scope without needing `**`.)
+
+**The `.frozen` lesson is load-bearing.** That same file's comment
+(`attachments-gitignore.ts:51-55`) records why an allowlist is
+dangerous: *"an omission here means the bytes get committed directly —
+which is how frozen web pages (`page.frozen`, up to 41MB apiece) ended
+up in box history before 2026-07-19."* Under annex the same omission
+has the same consequence, so the allowlist ships **with** a guard: a
+file in an attach scope over 1 MB whose extension is not in the list is
+a **commit-blocking error**, not today's advisory. That converts the
+class of bug that has already bitten once into something that cannot
+recur silently. It is also why the plan does not adopt a
+`largerthan=`-only rule: size alone would annex a large `.md` or a big
+`manifest.json`.
+
 **Direction.** Per box, in order of increasing size (`personal-test`
-first as the rehearsal, `estate` last):
+first as the rehearsal, `estate` last and gated — see Track B3):
 
 ```bash
 git annex init "<box-slug>"
-git annex config --set annex.largefiles 'include=*.attach/*'
+git annex config --set annex.largefiles "$(cb attachments largefiles-expr)"
 git config annex.thin false            # local, per clone — see below
+cb attachments migrate --verify-only   # every asset claimed + hash-clean (see below)
 cb attachments unignore                # removes the asset patterns (finding 7)
 git add -A                             # largefiles routes assets into the annex
-git commit -m "Move assets onto git-annex"
-git rm --cached <every manifest.json> && rm <every manifest.json>
+cb attachments verify-annex-keys       # every manifest sha256 == its annex key
+git rm --cached <manifests>            # only manifests cb itself resolved
+git commit -m "Move assets onto git-annex"   # ONE commit: pointers + removals
 git annex fsck                         # verify every object
 ```
+
+**Two verification steps flank the conversion, and both are required.**
+`git annex fsck` proves an object matches the key git-annex derived
+from it *at migration time* — it cannot detect that the bytes were
+already corrupt before conversion. Only the manifest holds an
+independent, earlier claim about what those bytes should be
+(`asset-manifest-scan.ts` reports `hash-mismatch` and `missing-file`
+for exactly this). So: verify the manifests are clean *before*
+converting, compare every manifest sha256 against the resulting annex
+key *after*, and only then delete the manifests. Deleting the
+independent record before checking it against the new one would bless
+whatever corruption already existed.
 
 **Configuration lock-ins**, and where each lives:
 
 | setting | value | scope | propagates to clones? |
 |---|---|---|---|
-| `annex.largefiles` | `include=*.attach/*` | `git annex config` | **yes** (git-annex branch) |
+| `annex.largefiles` | rendered from `ASSET_GITIGNORE_EXTENSIONS` | `git annex config` | **yes** (git-annex branch) |
 | `annex.thin` | `false` | `git config` | **no** — per clone |
 | `numcopies` | 1 | `git annex numcopies` | yes |
 
 `annex.thin` not propagating is a trap: a clone silently gets
-git-annex's default. The health check must assert it per repository
-(Track C), which is a case where a per-clone setting genuinely cannot
-be made declarative and enforcement has to substitute (#11,
+git-annex's default. Track C repairs it per repository on every `cb
+serve` / `cb init`, which is a case where a per-clone setting genuinely
+cannot be made declarative and enforcement has to substitute (#11,
 "enforcement beats convention").
 
-The extension list in `docs/asset-manifests.md:169-186` is *replaced*
-by one path-shaped expression. That is a real simplification: the
-batch-local `.gitignore` workaround for arbitrary extensions
-(`docs/asset-manifests.md:193-213`, written because bulk upload lands
-`.zip`/`.csv`/extensionless files) becomes unnecessary — `include=*.attach/*`
-is extension-blind by construction.
+`cb attachments unignore` removes the asset extension block from the
+box `.gitignore`, but **keeps two things**: the capture staging rule
+(Track G) and — for bulk-upload batch scopes — swaps the batch-local
+`.gitignore` for a batch-local `.gitattributes` (Track G).
 
-`cb attachments unignore` removes the asset extension list and the
-bulk-upload batch-local files, but **keeps one rule**: the capture
-staging path, which stays ignored deliberately (Track G).
+**The migration is a script, not a runbook.** The commands above are
+the shape; the implementation is `cb attachments to-annex`, which:
+requires a clean working tree; resolves manifests it wrote rather than
+globbing `manifest.json` (boxes contain unrelated manifests —
+`src/publish/manifest.ts`, `src/core/search/manifest.ts`,
+`src/frontend/public/manifest.webmanifest`); preflights free bytes
+against the box's asset total before touching anything; and lands
+pointers *and* manifest removals in a single commit so there is no
+committed intermediate state where both records exist. On ENOSPC it
+aborts with the phase recorded, and `git annex uninit` plus a hard
+reset returns the box to its pre-migration state.
 
 **Assets already in git history stay there.** estate's `.git` is 9.9 GB
 of pre-migration blobs. Annexing adds pointer commits; it does not
@@ -291,10 +378,15 @@ remove history. Reclaiming that is `git filter-repo`, still out of
 scope — and now *more* firmly so, because until the remote iteration
 that history remains the only off-box copy of 8.88 GB.
 
-**First implementation chunk.** `cb attachments unignore` (the inverse
-of `attachments-gitignore.ts`), plus a filesystem doctest converting a
-`makeTmpBox()` fixture end to end and asserting assets are annexed,
-cards are not, and manifests are gone.
+**First implementation chunk.** `cb attachments largefiles-expr`
+(rendering `ASSET_GITIGNORE_EXTENSIONS`) plus `cb attachments
+unignore`, with a filesystem doctest built on **the estate shape, not a
+synthetic one**: a `makeTmpBox()` fixture holding a child `.card`
+inside a scope, a nested child scope, a plain `attachments/`
+subdirectory, a `manifest.json`, and a `.txt` body — asserting exactly
+which become pointers. The earlier draft's classifier passed a
+synthetic test because the test never nested a card inside a scope;
+this fixture is the regression guard.
 
 ### Track C — `cb doctor annex`, the health check
 
@@ -306,7 +398,7 @@ misconfigurations produce a working tree that *looks* fine, and one of
 them (a pointer file served as an image) is silent data-shaped garbage
 — a #4 violation if undetected.
 
-**Direction.** Six checks. Most of them describe a state the box can
+**Direction.** Seven checks. Most of them describe a state the box can
 simply *put right*, so the command's default is **repair, not report** —
 `cb doctor annex` fixes what it can, logs each repair, and reports only
 what it cannot fix. `--check` is the read-only mode for scripts.
@@ -319,6 +411,12 @@ what it cannot fix. `--check` is the read-only mode for scripts.
 | 4 | `annex.largefiles` set | `git annex config --set` | cheap |
 | 5 | no pointer masquerading as content | **no** — see below | — |
 | 6 | `git-annex` branch journal flushed | `git annex merge` | cheap |
+| 7 | this repo's pre-commit hook actually invokes `git annex pre-commit` | rewrite if we own the hook; **no** if it's foreign | cheap |
+
+Check 7 exists because the installer deliberately leaves a
+non-managed pre-commit hook untouched
+(`src/core/install-validation-hooks.ts:438`), so hook integration
+cannot be assumed from the fact that `cb init` ran.
 
 Check 3's repair is the one to get right: **`git config annex.thin
 false` alone is cosmetic.** Measured — after flipping the config, an
@@ -393,7 +491,7 @@ that merely starts with a slash. No open questions.
 present locally, and surface that distinctly.
 
 **Why this needs to change.** Today a manifest entry without its file
-is a hard error (`asset-manifest-scan.ts:35`, `missing-file`). Under
+is a hard error (`asset-manifest-scan.ts:36`, `missing-file`). Under
 annex it is routine — a fresh clone has every pointer and no content.
 Without this track, every image in a fresh worktree renders as
 whatever the browser makes of 101 bytes of text.
@@ -411,13 +509,38 @@ whatever the browser makes of 101 bytes of text.
   primary audience of these messages
   (`docs/asset-manifests.md:146`).
 
-The audit is bounded: every read goes through an attach-scope path
-resolution (`src/shared/attach-path.ts`), so the enumeration is
-"callers of that", not "every `readFile` in the codebase."
+**The audit is not bounded, and an earlier draft was wrong to claim it
+was.** That draft said every read funnels through
+`src/shared/attach-path.ts` — but that module is a *pure string
+helper*, not an I/O boundary, so "callers of it" is not the set of
+readers. The real read sites are independent:
 
-**First implementation chunk.** The webapp route boundary plus a route
-doctest (`makeTestServer()`) asserting 409-with-key for a pointer and
-200 for real content.
+| site | what it does with bytes |
+|---|---|
+| `src/webapp/routes/api-files.ts` | `/api/files/*` takes any box path — stat, HEAD/304, range, full body |
+| `/api/image` | image serving/derivation |
+| `src/core/capture/transcribe-clips.ts` | reads resolved audio, ships it to transcription |
+| `src/publish/render-docs.ts` | reads image bytes when rendering published docs |
+| `src/webapp/routes/figure.ts` | compiles figure source out of attach scopes |
+| box agents | plain filesystem reads — **no application boundary at all** |
+
+So the design is a **shared content-open helper** that every one of
+those goes through — `openAssetContent(absPath)` returning either bytes
+or a typed `ContentNotPresent` carrying the parsed key, size, and hash.
+One predicate, one error type, six call sites (#8). A per-route fix
+would leave transcription silently shipping 101 bytes of pointer text
+to a speech API and publishing embedding it as an image.
+
+The agent row has no code fix. It gets a `docs/assets.md` sentence and
+a knowledge audit (Track H) — an agent that reads a pointer should
+recognize it, which is exactly what the `asset-content-absent` audit
+tests.
+
+**First implementation chunk.** `openAssetContent()` plus the
+`api-files.ts` boundary (all four of stat/HEAD/range/body — a pointer
+must not produce a 200 with a plausible `content-length` on any of
+them), with a route doctest asserting 409-with-key for a pointer and
+200 for real content. Remaining call sites follow in the same track.
 
 ### Track E — hook and housekeeping integration
 
@@ -430,17 +553,41 @@ runs unless we call it. And `fsck` is the entire integrity story now
 that manifests are gone — unscheduled, it is a command nobody runs.
 
 **Direction.** In `install-validation-hooks.ts`, replace the
-`cb attachments verify` line (`:252`) with `git annex pre-commit`,
-guarded so a box without git-annex fails with a clear message rather
-than a bare command-not-found. Add `cb doctor annex` (Track C).
+`cb attachments verify` line with `git annex pre-commit`. Two
+placement details that an earlier draft got wrong, both of which would
+have left the guard silently inert:
 
-`fsck` from `housekeeping.ts`. Full-repo `fsck` rehashes every object —
-9 GB on estate — so it runs **incrementally**: `git annex fsck
---incremental-schedule=30d`, which git-annex itself paces. Holds the
-per-box `file-lock.ts` so it cannot overlap a wakeup.
+- **The annex call must come before the `cb`-not-found fallback.** The
+  generated hook currently `exit 0`s when `cb` is neither at its
+  absolute path nor on `PATH` (`install-validation-hooks.ts:230-238`).
+  Appending annex work below that means the whole guard vanishes on any
+  machine where `cb` isn't resolvable — precisely the
+  under-provisioned machine most likely to lack git-annex too. So the
+  plan's claim that "a missing binary makes every commit fail" is only
+  true once the annex line runs unconditionally, ahead of that exit.
+- **The installer leaves a foreign pre-commit hook alone**
+  (`install-validation-hooks.ts:438`), so a box whose hook we don't own
+  gets no annex integration at all. Track C therefore gains a check —
+  *is annex pre-commit integration actually present in this repo's
+  hook* — rather than assuming the managed hook owns every repository.
+
+`fsck` **does not run from `housekeeping.ts`**, and the earlier draft's
+locking claim was wrong: `runHousekeeping` is called inside an
+otherwise unlocked wakeup flow (`src/cli/commands/wakeup.ts`), and
+housekeeping takes no lock, so "hold `file-lock.ts`" would have
+excluded only other holders of that same lock — i.e. nothing.
+
+Instead `fsck` is an **independently scheduled, read-only** operation
+with explicit overlap semantics: `git annex fsck
+--incremental-schedule=30d`, run from the scheduler (`cb tick`,
+`docs/scheduler.md`) rather than inline in wakeup. Read-only means
+concurrent wakeup writes are safe by construction — a file added mid-run
+is simply fscked next cycle — which is a better property than a lock
+that would serialize a 9 GB pass against the box's main work loop.
 
 **First implementation chunk.** Hook generation change plus its
-doctest; `cb init` regeneration verified on `test1`.
+doctest, asserting the annex line precedes the `cb` fallback and that a
+repo missing annex integration is reported by `cb doctor annex`.
 
 ### Track F — worktree clone flow
 
@@ -493,17 +640,32 @@ content is settled. That is the right moment to add it.
 
 **Direction.** Keep the capture area gitignored. Per finding 7, a
 gitignored file never reaches the annex, so **no `annex.largefiles`
-exclusion is needed** — the gitignore rule is the whole mechanism:
+exclusion is needed** — the gitignore rule is the whole mechanism.
+
+The rule's path needs care in two ways an earlier draft got wrong:
+
+- **No `content/` prefix.** The managed `.gitignore` is written at the
+  box root, and for a v2 box the box root *is* `content/`
+  (`src/core/box/index.ts` writes it to `resolvedRoot`). A
+  `content/tmp-capture/…` rule resolves to `content/content/…` and
+  matches nothing.
+- **`tmp-capture` is not only at the root.** Delivery targets
+  `<contextDir>/tmp-capture/` (`src/core/capture/deliver.ts:55`), and
+  the context directory varies by chat, so an anchored rule misses real
+  captures and annexes them on arrival — the exact outcome this track
+  exists to prevent.
+
+So the rule is unanchored:
 
 ```gitignore
 # Capture staging — assets here are pre-triage and deliberately
 # un-annexed. They join the annex when the agent files them.
-content/tmp-capture/**/*.attach/**
+**/tmp-capture/**/*.attach/**
 ```
 
 `cb mv` into a final destination moves the bytes out of the ignored
-path; the next `git add -A` annexes them via `include=*.attach/*`. No
-new code on the move path.
+path; the next `git add -A` annexes them via the extension allowlist.
+No new code on the move path.
 
 Two consequences that must be handled rather than assumed:
 
@@ -535,19 +697,50 @@ Two consequences that must be handled rather than assumed:
    such files right now, both from 2026-07-29 and both among the 38
    with no second copy anywhere — so this is a live condition, not a
    hypothetical.
-2. **The bulk-upload batch-local `.gitignore`
-   (`docs/asset-manifests.md:193-213`, written by
-   `src/core/bulk-upload/prepare.ts`) must be removed** during
-   migration. It ignores everything in a batch scope, which under annex
-   means those blobs would never be annexed — finding 7's trap, one
-   layer down. Bulk upload lands arbitrary extensions, which is exactly
-   what `include=*.attach/*` handles without an extension list.
+
+   **Reuse the existing sweep, don't add a second traversal.**
+   `src/core/capture/sweep.ts` already walks capture sessions and
+   already carries an age threshold; the health check reads from it
+   rather than re-walking the tree with its own notion of "unfiled"
+   (#8, one way to do each thing).
+
+   And a loss to state plainly rather than gloss: today a staged
+   capture is *not* wholly unrecorded — `capture/write-cards.ts` writes
+   a manifest with size + sha256 alongside it. Retiring manifests trades
+   that per-file record for a time-based warning, which is weaker. It is
+   accepted because the window is meant to be hours and the warning
+   makes a long window visible; it is not equivalent, and the remote
+   iteration should revisit whether staged captures deserve a copy.
+
+2. **Bulk upload needs two fixes, not one.** The batch-local
+   `.gitignore` (`docs/asset-manifests.md:193-213`, written by
+   `src/core/bulk-upload/prepare.ts`) ignores everything in a batch
+   scope, so under annex those blobs would never be annexed — finding
+   7's trap, one layer down. But removing it is **not sufficient**:
+   `prepare.ts:127-131` stages an explicit path list —
+   `paths: [cardRelPath, manifestRelPath, gitignoreRelPath]` — which
+   never included the blobs. A path-scoped `git add` cannot annex a
+   file it was never given, and `git annex pre-commit` cannot rescue
+   it. The batch would commit a card describing content that exists
+   nowhere in git, and the staging copy is cleaned up after delivery.
+
+   So: replace the batch-local `.gitignore` with a batch-local
+   **`.gitattributes`** carrying `* annex.largefiles=anything` (with
+   `.card`, `manifest.json`, and `.gitattributes` itself excluded) —
+   the sanctioned per-path mechanism, and the one place where
+   extension-blind matching *is* correct, because a bulk batch really
+   does hold arbitrary types. And change `prepare.ts` to stage the
+   blob paths.
 
 **First implementation chunk.** The gitignore rule plus the
-`unfiled captures` health check, with a filesystem doctest: an asset in
-`tmp-capture/` is not annexed and is reported once past 7 days; the
-same asset after `cb mv` to a store path is annexed on the next commit
-and drops off the check.
+`unfiled captures` health check (reading `capture/sweep.ts`), with a
+filesystem doctest: an asset in `tmp-capture/` is not annexed and is
+reported once past 7 days; the same asset after `cb mv` to a store path
+is annexed on the next commit and drops off the check. The bulk-upload
+fix is its own chunk, and extends that pipeline's existing end-to-end
+doctest to assert the blob paths are annexed — not merely that the
+commit succeeded, which is what it asserts today and is exactly why
+this was invisible.
 
 ### Track H — docs and knowledge audits
 
@@ -583,7 +776,13 @@ not.
 | Disk fills during estate's conversion | Manual | Track A is a hard gate with measured headroom | Clear — fails loudly on ENOSPC |
 | `git annex get` in a clone with unsynced location log | Yes | Track F syncs first | Clear |
 | Asset still gitignored after migration | Yes (doctest asserts it is annexed) | Track B's `unignore` | Clear |
-| Bulk-upload batch `.gitignore` survives migration, so its blobs never annex | Yes (doctest on a batch scope) | Track G — `unignore` removes batch-local files | Clear |
+| Bulk-upload batch `.gitignore` survives migration, so its blobs never annex | Yes (doctest on a batch scope) | Track G — batch-local `.gitattributes` replaces it | Clear |
+| Bulk upload commits a card whose blobs were never staged | Yes (extend the pipeline's e2e doctest to assert blobs annexed) | Track G — `prepare.ts` stages blob paths | **Was silent**: the existing doctest asserts the commit succeeded, which it does |
+| A committed card/manifest/text file inside an attach scope gets annexed | Yes (Track B's estate-shaped fixture) | Extension allowlist, not a path glob | Clear |
+| A new large binary type lands in a scope with no allowlist entry | Yes | Commit-blocking error over 1 MB (the `.frozen` class) | Clear — was an advisory before |
+| Pointer bytes shipped to transcription or embedded by publish | Yes | Track D's shared `openAssetContent()` | Clear — per-route fixes would have left these silent |
+| Annex line placed below the hook's `cb`-not-found `exit 0` | Yes (hook-generation doctest asserts ordering) | Track E places it above | **Would have been silent** |
+| Box has a foreign pre-commit hook, so annex integration never installs | Yes | Track C check 7 | Clear |
 | Capture sits in `tmp-capture/` unannexed and un-backed-up | Yes | Track G — `unfiled captures` warning in `runHealthChecks` past 7 days | Clear — **and live today**: 2 estate files since 2026-07-29 |
 | Our pre-commit hook shadows annex's | Yes (hook-generation doctest) | Track E calls `git annex pre-commit` | Clear |
 | Agent runs `git annex drop` | No | `numcopies=1` makes drop refuse by default | Clear — refuses |
@@ -603,7 +802,11 @@ rather than let "on git-annex" read as "safe".
   its annex key (content-addressed), so a rename is a pure git
   operation with no content movement — strictly simpler than the
   manifest's rename-detection heuristic
-  (`docs/asset-manifests.md:148-155`), which is deleted.
+  (`docs/asset-manifests.md:148-155` — which overstates the shipped
+  behavior anyway: `scanAttachScope` reconciles each scope
+  independently, with no cross-scope hash table, so the documented
+  across-directory move detection does not exist), all of which is
+  deleted.
 - **Two agents touching the same card** — **ADDRESSED.** Unchanged for
   cards. For assets, git-annex's `git-annex` branch uses a union merge
   driver, so concurrent location-log writes merge without conflict.
@@ -633,7 +836,10 @@ rather than let "on git-annex" read as "safe".
   and gated on the remote iteration — that history is still the only
   off-box copy of 8.88 GB.
 - **Annexing anything outside `.attach/` scopes.** `include=*.attach/*`
-  matches today's scope exactly (`docs/asset-manifests.md:188`). The
+  matches today's ignore scope (`docs/asset-manifests.md:188` — note
+  that lines 12–18 of the same doc distinguish *attachments* from the
+  *asset* subset, which is why the classifier is an extension
+  allowlist and not a path glob; see Track B). The
   advisory for large binaries committed outside a scope stays as-is.
 - **The git-annex assistant / webapp daemon.** Homebrew's formula offers
   it; we want deterministic, commanded behavior, not a watcher.
@@ -653,7 +859,7 @@ Resolved during design, recorded so the reasoning isn't relitigated:
 
 - **`cb doctor annex` repairs; it does not gate startup** (boxholder
   decision, 2026-07-30, reversing an earlier draft in this same plan
-  that did gate). Four of the six checks name a state the box can put
+  that did gate). Five of the seven checks name a state the box can put
   right by itself, so blocking on them is refusing work it could just
   do. The two it can't fix are the two where blocking helps least: a
   missing binary already fails loudly at every read and every commit,
@@ -669,7 +875,7 @@ Resolved during design, recorded so the reasoning isn't relitigated:
   a triage backlog — which is what prompted the reversal above.)
 - **Unfiled-capture warning threshold: 7 days** (boxholder decision,
   2026-07-30), matching the `tmp/` upload sweep's existing window
-  (`src/core/housekeeping.ts:18-19`). `warning` severity, so it reports
+  (`src/core/capture/sweep.ts`). `warning` severity, so it reports
   without failing `cb health`.
 - **Mixed git-annex versions are fine** (Ubuntu 10.20240129 / Homebrew
   10.20260717, boxholder decision). Both handle repo version 10; no
@@ -708,7 +914,7 @@ a bare `--box test1` resolves inside the monorepo.)
 4. **B2** — convert `personal-test` (the rehearsal — 3,016 assets,
    271 MB, and its 3,018 unclaimed files stop being a problem by
    construction). *Depends on B1.*
-5. **C2** — `cb doctor annex`: six checks, four with repairs, `--check`
+5. **C2** — `cb doctor annex`: seven checks, five with repairs, `--check`
    for read-only; wired into `cb serve` startup, `cb init`, and
    `runHealthChecks`. *Depends on C1, B2.*
 6. **D** — absence handling: webapp route, renderers, agent reads.
@@ -721,9 +927,16 @@ a bare `--box test1` resolves inside the monorepo.)
    *Depends on C2; must land before B3 so converting estate doesn't
    annex its two pending captures.*
 10. **B3** — convert prod boxes, smallest first: `box-family` (8
-    assets), `personal` (6), then `estate` (1,184 / 9 GB). *Depends on
-    A, C2, D, E, G.*
-11. **H** — docs rewrite, knowledge audits written and run.
+    assets), then `personal` (6). *Depends on A, C2, D, E, G.*
+11. **B4 — estate, and it is separately gated.** 1,184 assets / 9 GB.
+    **Blocked until estate has a full backup** (boxholder decision,
+    2026-07-30), which the 2026-07-30 backup is not: that one covers
+    the 171 MB git history can't restore, deliberately, because a full
+    20 GB copy fit nowhere (14 GB free locally, 5.6 GB on the server).
+    So estate converts only after either the remote iteration lands, or
+    somewhere with ~20 GB is found for a full mirror. Every other track
+    completes without it; this is the one step that waits.
+12. **H** — docs rewrite, knowledge audits written and run.
 
 **Done-when**, as checkable assertions: (a) every doctest named below
 passes; (b) `cb doctor annex` is clean on all four asset-holding boxes;
