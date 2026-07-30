@@ -306,40 +306,81 @@ misconfigurations produce a working tree that *looks* fine, and one of
 them (a pointer file served as an image) is silent data-shaped garbage
 — a #4 violation if undetected.
 
-**Direction.** Seven assertions, each with a distinct message:
+**Direction.** Six checks. Most of them describe a state the box can
+simply *put right*, so the command's default is **repair, not report** —
+`cb doctor annex` fixes what it can, logs each repair, and reports only
+what it cannot fix. `--check` is the read-only mode for scripts.
 
-1. `git-annex` on PATH, and its version (Ubuntu ships 10.20240129;
-   Homebrew 10.20260717 — flag a version older than the repo format).
-2. The repository is initialized (`git annex info` succeeds).
-3. `annex.thin` is `false` — per-clone, so this is the one that will
-   actually fire (Track B's table).
-4. `annex.largefiles` is set and matches `include=*.attach/*`.
-5. **No pointer file is masquerading as content**: any file under a
-   `.attach/` scope whose bytes begin `/annex/objects/` is either
-   absent content or a broken checkout. Report the count, and for each
-   the expected size and hash parsed out of the pointer (finding 4).
-6. The `git-annex` branch has no unflushed journal (finding 8).
+| # | check | self-heal | cost |
+|---|---|---|---|
+| 1 | `git-annex` on PATH | **no** — needs a software install | — |
+| 2 | repo initialized | `git annex init "<slug>"` | cheap |
+| 3 | `annex.thin` is false | `git config` **+ `git annex fix`** | O(repo) once |
+| 4 | `annex.largefiles` set | `git annex config --set` | cheap |
+| 5 | no pointer masquerading as content | **no** — see below | — |
+| 6 | `git-annex` branch journal flushed | `git annex merge` | cheap |
 
-**Scope discipline: these are configuration assertions only.** Every
-one asks "is git-annex set up correctly in this repository" and every
-one has a fixed, one-time remedy. Nothing about box *content* belongs
-here — a check that varies with how much work is pending is an
-operational condition, not a misconfiguration, and it goes through
-`runHealthChecks` instead (Track G). This matters because of the
-startup gate below: anything in this list can take a box offline, so
-the list must contain only things that *should*.
+Check 3's repair is the one to get right: **`git config annex.thin
+false` alone is cosmetic.** Measured — after flipping the config, an
+existing file still showed link count 2 (hardlinked to its object, so
+in-place edits still silently corrupt it); `git annex fix` brought it
+to 1. The repair is both commands or it isn't a repair. `git annex fix`
+is cheap when there is nothing to fix, so running it every startup is
+fine; only the first, genuinely-drifted run pays.
 
-Assertion 5 is the load-bearing one and is shared with Track D — one
-predicate, `isAnnexPointer(bytes)`, used by both the health check and
-the read paths (#8).
+The two that can't self-heal:
 
-Runs from `cb init`, as part of the deployed-server health checks
-(`docs/health-checks.md`), and **as a gate on `cb serve` startup**: a
-box that fails any assertion refuses to serve, printing the failing
-assertion and its remedy. Annexing is one-time setup that belongs at
-the beginning, and a box quietly serving pointer files as images is a
-worse outcome than a box that won't start. `cb hub` reports the refusal
-per-box rather than treating it as a crash loop.
+- **1 (no binary)** — nothing the box can do. But it also isn't silent:
+  Track D returns 409 on any asset read, and Track E's hook makes every
+  commit fail. Both failure paths are loud at the point of use.
+- **5 (pointer, no content)** — in this iteration there is nowhere to
+  fetch from: `numcopies=1` and the box *is* the authoritative copy. A
+  pointer with no content here means the bytes are gone. That is an
+  alarm, not a repair. (Next iteration, with a remote, this one becomes
+  self-healing too — `git annex get`.)
+
+**These are configuration checks only.** Every one asks "is git-annex
+set up correctly in this repository." Nothing about box *content*
+belongs here — a condition that varies with how much work is pending is
+operational, and goes through `runHealthChecks` instead (Track G).
+
+Detail on the individual checks: **1** also flags a binary older than
+the repo format (Ubuntu ships 10.20240129, Homebrew 10.20260717).
+**3** is the one that will actually fire in practice, because
+`annex.thin` doesn't propagate to clones (Track B's table). **5**
+reports a count plus, for each file, the expected size and hash parsed
+out of the pointer (finding 4).
+
+Check 5 is shared with Track D — one predicate, `isAnnexPointer(bytes)`,
+used by both the doctor and the read paths (#8).
+
+**Where it runs, and why it does not block startup.** `cb serve` runs
+the repair pass on startup and then serves regardless. It does **not**
+gate.
+
+An earlier draft gated startup on the full list. That was wrong once
+the checks were classified: four of the six are things the box can put
+right by itself, so refusing to serve over them is refusing to do work
+it could have just done. And the two it can't fix are the two where
+blocking helps least — a missing binary already fails loudly at every
+read (Track D's 409) and every commit (Track E's hook), and a
+pointer-with-no-content is data already lost, where taking the box
+offline adds an outage to a loss.
+
+So:
+
+- **`cb serve` startup** — run repairs, log each one (`console.warn`,
+  per `code-style.md`'s "recovered but unexpected" tier), serve.
+- **`cb init`** — same repair pass; this is where a fresh or freshly
+  cloned box gets configured.
+- **`runHealthChecks`** — checks 1 and 5 register at `error` severity,
+  so they surface on the dashboard and fail `cb health` (exit 1) for
+  the deploy runbooks (`docs/health-checks.md`) without touching
+  serving.
+
+This is a strictly better answer to the plan's original critical gap
+(`annex.thin` drift on a clone): a drifted clone now *repairs itself*
+at startup instead of being detected and reported to someone.
 
 **First implementation chunk.** `src/lib/annex-pointer.ts` with
 `isAnnexPointer()` / `parseAnnexPointer()` and a pure-function doctest
@@ -477,7 +518,7 @@ Two consequences that must be handled rather than assumed:
    the `"error" | "warning"` severity split, feeds both `cb health` and
    the dashboard's warnings, and exits non-zero only on `error`. Not in
    `cb doctor annex` (Track C), and emphatically not in the `cb serve`
-   startup gate: a triage backlog must never take a box offline.
+   configuration doctor, which is about setup rather than pending work.
 
    ```typescript
    {
@@ -524,12 +565,13 @@ not.
 
 ## Failure modes
 
-> **Critical gap: `annex.thin` drift on a clone.** It does not
-> propagate (Track B's table). A clone that silently gets thin mode
-> loses `fsck`'s corruption detection (finding 6) with no symptom.
-> Handled by Track C assertion 3 — but only if the check actually runs,
-> which is why it is wired into `cb init` and the server health checks
-> rather than left as a command.
+> **Critical gap: none remaining.** The plan's original one —
+> `annex.thin` drift on a clone, which doesn't propagate (Track B's
+> table) and silently costs `fsck`'s corruption detection (finding 6) —
+> is now *repaired* rather than detected: Track C's startup pass runs
+> `git config annex.thin false` **and** `git annex fix` on every `cb
+> serve` and `cb init`. Verified that both commands are required; the
+> config alone leaves files hardlinked.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
@@ -609,18 +651,22 @@ rather than let "on git-annex" read as "safe".
    the number is unknown and the box is shared with live wakeups.
 Resolved during design, recorded so the reasoning isn't relitigated:
 
-- **`cb doctor annex` blocks `cb serve` startup** (boxholder decision,
-  2026-07-30). A box that isn't correctly annexed should not begin
-  serving — the setup is one-time and belongs at the beginning, and a
-  box quietly serving pointer files is worse than a box that refuses to
-  start with a message naming the fix.
+- **`cb doctor annex` repairs; it does not gate startup** (boxholder
+  decision, 2026-07-30, reversing an earlier draft in this same plan
+  that did gate). Four of the six checks name a state the box can put
+  right by itself, so blocking on them is refusing work it could just
+  do. The two it can't fix are the two where blocking helps least: a
+  missing binary already fails loudly at every read and every commit,
+  and a pointer-with-no-content is data already lost. Repair on
+  startup, log it, serve.
 - **`cb doctor annex` is configuration-only** (boxholder decision,
-  2026-07-30). Content-dependent conditions go to `runHealthChecks`,
-  not into the doctor and therefore not into the startup gate. The
-  unfiled-capture check was drafted as a seventh doctor assertion and
-  moved for this reason — sitting in a gated list, a triage backlog
-  would have refused to start the box, which is the exact failure the
-  separation prevents.
+  2026-07-30). Content-dependent conditions go to `runHealthChecks`.
+  The unfiled-capture check was drafted as a seventh doctor assertion
+  and moved for this reason: a condition that varies with how far
+  behind triage is has no configuration remedy, so the doctor could
+  neither repair it nor sensibly report it. (While the doctor still
+  gated startup, it would additionally have taken the box offline over
+  a triage backlog — which is what prompted the reversal above.)
 - **Unfiled-capture warning threshold: 7 days** (boxholder decision,
   2026-07-30), matching the `tmp/` upload sweep's existing window
   (`src/core/housekeeping.ts:18-19`). `warning` severity, so it reports
@@ -662,8 +708,9 @@ a bare `--box test1` resolves inside the monorepo.)
 4. **B2** — convert `personal-test` (the rehearsal — 3,016 assets,
    271 MB, and its 3,018 unclaimed files stop being a problem by
    construction). *Depends on B1.*
-5. **C2** — `cb doctor annex`, all six configuration assertions, plus
-   the `cb serve` startup gate. *Depends on C1, B2.*
+5. **C2** — `cb doctor annex`: six checks, four with repairs, `--check`
+   for read-only; wired into `cb serve` startup, `cb init`, and
+   `runHealthChecks`. *Depends on C1, B2.*
 6. **D** — absence handling: webapp route, renderers, agent reads.
    *Depends on C1.*
 7. **E** — hook generation + `fsck` in housekeeping. *Depends on B1.*
@@ -683,9 +730,10 @@ passes; (b) `cb doctor annex` is clean on all four asset-holding boxes;
 (c) `git annex fsck` on estate reports zero bad objects across all
 1,184 assets; (d) a fresh worktree clone renders images after
 `worktree-create.sh` runs, with no `cp` loop; (e) `grep -r asset-manifest
-src/` returns nothing; (f) `cb serve` refuses to start on a box with
-`annex.thin` unset, naming the fix; (g) a freshly-captured asset is
-*not* annexed until `cb mv` files it.
+src/` returns nothing; (f) a box left with `annex.thin` true serves
+normally after `cb serve` startup, with the setting repaired, existing
+files back to link count 1, and the repair logged; (g) a
+freshly-captured asset is *not* annexed until `cb mv` files it.
 
 ## Rollout shape
 
@@ -706,9 +754,11 @@ tool. Named up front:
   an asset in `tmp-capture/` is unannexed and raises the `unfiled
   captures` warning past 7 days; the same asset after `cb mv` is
   annexed on the next commit and clears the warning (Track G).
-- `test/cli/serve-annex-gate.doctest.md` — `cb serve` refuses to start
-  on a box failing any `cb doctor annex` assertion, and the message
-  names the assertion and its remedy.
+- `test/core/doctor-annex.doctest.md` — filesystem tier: a box with
+  `annex.thin` true is repaired (config *and* link count) and the
+  repair logged; an uninitialized repo is initialized; a missing binary
+  and a content-less pointer are reported, not "repaired"; `--check`
+  changes nothing.
 
 Deliberately untested: git-annex's own behavior. Findings 1–9 are
 recorded here as the evidence; re-asserting them in doctests would
