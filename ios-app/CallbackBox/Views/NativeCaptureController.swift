@@ -174,6 +174,10 @@ final class NativeCaptureController: ObservableObject {
         }
     }
 
+    /// Guards against a second `finish()` running while one is already waiting
+    /// — two concurrent waits would each call finalize.
+    private var isFinishing = false
+
     /// Set by ``skipPendingUploads`` to break ``finish``'s wait. A capture on a
     /// weak uplink can legitimately take many minutes, so the wait has no
     /// deadline of its own — the user's explicit skip is the only thing that
@@ -181,7 +185,9 @@ final class NativeCaptureController: ObservableObject {
     private var skipPendingRequested = false
 
     func finish() async {
-        guard let sessionID else { return }
+        guard let sessionID, isFinishing == false else { return }
+        isFinishing = true
+        defer { isFinishing = false }
         if audioRecorder.isRecording {
             await audioRecorder.stop()
         }
@@ -500,9 +506,16 @@ final class NativeCaptureController: ObservableObject {
         case .closed(_, let reason):
             elapsedTask?.cancel()
             switch surfaceState.phase {
-            case .recovery, .failed:
+            // `.sealing` must survive. `finish()` stops the recorder and THEN
+            // enters `.sealing`, but this event is delivered on its own
+            // `@MainActor` task, so it routinely lands afterwards. Resetting to
+            // `.active` there put the Done button back mid-seal (inviting a
+            // re-entrant finish), reopened acquisition, and hid the "waiting for
+            // N uploads / Skip Them" banner — removing the user's only escape
+            // from the wait.
+            case .recovery, .failed, .sealing:
                 break
-            case .starting, .choosingResume, .active, .recording, .sealing:
+            case .starting, .choosingResume, .active, .recording:
                 surfaceState.phase = .active
             }
             if reason != .user {
@@ -510,7 +523,11 @@ final class NativeCaptureController: ObservableObject {
             }
         case .failed(_, let message):
             elapsedTask?.cancel()
-            surfaceState.phase = .active
+            // Same reasoning: surface the error, but don't yank the phase out
+            // from under an in-flight seal.
+            if surfaceState.phase != .sealing {
+                surfaceState.phase = .active
+            }
             showError(message, retryable: false)
             surfaceState.canOpenSettings = message == CaptureAcquisitionError.microphonePermissionDenied.localizedDescription
         }
