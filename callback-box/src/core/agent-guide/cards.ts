@@ -61,7 +61,7 @@ next), but a few belong to every card:
 - **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
   points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
   anchor), the path works the same way. A leading \`/\` resolves from the **box
-  root**; a bare path resolves relative to the current card; avoid \`../../\`. The
+  root**; a bare path resolves relative to the current card — an easy thing to get wrong, so **prefer the leading \`/\` box-root form** and never \`../../\`. The
   full \`ref\`/\`href\` semantics (tracking, \`cb mv\` rewriting, external \`href\`)
   live in ${xref(SECTION.PROVENANCE)}.
 - **No Git-tracked metadata.** Don't put \`created\` / \`modified\` (or the like)

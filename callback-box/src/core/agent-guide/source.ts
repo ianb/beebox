@@ -32,7 +32,7 @@ Dana lives in Portland.
 \`ref\` is the box's pointer to another card, used throughout the guide:
 frontmatter (\`{ref: "..."}\`, \`key-people[].ref\`), body links, and tags
 like this one. A leading \`/\` resolves from the **box root** (the usual
-form); a bare path resolves relative to the current card; avoid \`../../\`.
+form); a bare path resolves relative to the current card — an easy thing to get wrong, so **prefer the leading \`/\` box-root form** and never \`../../\`.
 Refs are tracked automatically — \`cb validate\` warns when a \`ref\` no
 longer resolves, and \`cb mv\` rewrites them when the target moves. Inside
 \`{% source %}\`, exactly one of \`ref\` / \`href\` is **required** — it names

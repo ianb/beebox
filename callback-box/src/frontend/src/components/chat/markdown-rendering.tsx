@@ -146,7 +146,11 @@ function makeChatMarkdownComponents(
         />
       );
     }
-    const resolved = resolveImageSrc(src, { boxSlug, basePath: contextDir });
+    // Chat-embedded images are box-root-relative: chat has no meaningful
+    // "current directory," so a bare `photo.png` must resolve from the box root,
+    // not a bound-dir chat's subdirectory. (A leading `/…` is box-root either
+    // way; this only changes where a *bare* path lands.)
+    const resolved = resolveImageSrc(src, { boxSlug, basePath: undefined });
     return <ChatInlineImage src={resolved} alt={alt || ""} />;
   }
   // No `Link` override: the shared `makeLink` (with basePath=contextDir and
