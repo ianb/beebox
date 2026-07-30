@@ -48,7 +48,7 @@ export function CaptureControls(props: CaptureControlsProps) {
       ) : totalFailed > 0 ? (
         <div className="text-danger-light text-sm py-2 px-4 text-center">
           {summarizeFailures(props)} failed to upload.{" "}
-          <button onClick={props.onRetryFailed} className="text-warning-light underline">Retry</button>
+          <button onClick={props.onRetryFailed} disabled={props.finalizing} className="text-warning-light underline disabled:opacity-40">Retry</button>
           {" "}or press Done to finalize without them.
         </div>
       ) : null}

@@ -99,6 +99,11 @@ final class NativeCaptureController: ObservableObject {
     func submitResumable(_ capture: ResumableCapture) async {
         sessionID = capture.id
         surfaceState.phase = .sealing
+        // Stop this capture's background uploads before sealing. The runtime
+        // reschedules leftover tasks at launch, so a resumable capture can have
+        // transfers in flight right now — they would spend the uplink on bytes
+        // the sealed session rejects with a 409.
+        await uploadRuntime.cancel(boxID: box.id, sessionID: capture.id)
         switch await CaptureAPI(box: box).finalize(sessionID: capture.id) {
         case .success:
             try? await store.deleteCapture(boxID: box.id, sessionID: capture.id)
@@ -182,6 +187,12 @@ final class NativeCaptureController: ObservableObject {
     /// weak uplink can legitimately take many minutes, so the wait has no
     /// deadline of its own — the user's explicit skip is the only thing that
     /// cuts it short.
+    ///
+    /// Sticky across a failed finalize. Cancelling an upload returns its item to
+    /// `.local`, which `retryFailedUploads` does not pick up (it selects
+    /// `.failed`), so clearing the flag on every `finish()` would leave a second
+    /// Done waiting forever on items the user already chose to abandon. It is
+    /// cleared when new media arrives instead — that media has not been skipped.
     private var skipPendingRequested = false
 
     func finish() async {
@@ -191,7 +202,6 @@ final class NativeCaptureController: ObservableObject {
         if audioRecorder.isRecording {
             await audioRecorder.stop()
         }
-        skipPendingRequested = false
         surfaceState.phase = .sealing
         await refreshSurface(preservingPhase: true)
 
@@ -478,6 +488,8 @@ final class NativeCaptureController: ObservableObject {
         case .starting, .choosingResume, .recovery, .failed:
             return
         }
+        // New media is not covered by an earlier skip.
+        skipPendingRequested = false
         let candidate = CaptureUploadCandidate(boxID: box.id, sessionID: sessionID, itemID: itemID)
         do {
             try await uploadRuntime.schedule(candidate)

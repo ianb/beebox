@@ -17,18 +17,6 @@
 import { useState, useRef, useCallback } from "react";
 import { clearResumeSessionId } from "./capture-api";
 
-/** The failure tallies this flow compares across the wait. */
-export interface FailureCounts {
-  photosFailed: number;
-  audioFailed: number;
-  filesFailed: number;
-}
-
-/** Failed uploads across all three kinds. */
-export function countFailures(counts: FailureCounts): number {
-  return counts.photosFailed + counts.audioFailed + counts.filesFailed;
-}
-
 export interface CaptureFinish {
   finalizing: boolean;
   handleDone: () => Promise<void>;
@@ -41,8 +29,12 @@ export function useCaptureFinish(opts: {
   recording: boolean;
   /** Stops the recorder and awaits its tail chunk; null when not recording. */
   stopRecorder: () => Promise<void>;
-  /** Live failure counts, read across the await (the captured ones go stale). */
-  readFailures: () => FailureCounts;
+  /** Monotonic failure counter, read synchronously across the await. */
+  readFailureSeq: () => number;
+  /** Refuse new media for the rest of the seal. */
+  closeForSealing: () => void;
+  /** Re-open when a Done bounces back instead of sealing. */
+  reopenAfterSealing: () => void;
   awaitPending: () => Promise<void>;
   abortPending: () => void;
   clearPendingAndFailed: () => void;
@@ -55,7 +47,8 @@ export function useCaptureFinish(opts: {
   const [finalizing, setFinalizing] = useState(false);
   const skipRequested = useRef(false);
 
-  const { sessionId, recording, stopRecorder, readFailures } = opts;
+  const { sessionId, recording, stopRecorder, readFailureSeq } = opts;
+  const { closeForSealing, reopenAfterSealing } = opts;
   const { awaitPending, abortPending, clearPendingAndFailed, stopCamera } = opts;
   const { finalizeCaptureSession, cancelCaptureSession, setError, onExit } = opts;
 
@@ -78,10 +71,15 @@ export function useCaptureFinish(opts: {
     skipRequested.current = false;
     setFinalizing(true);
     try {
-      const failedBefore = countFailures(readFailures());
+      const failuresBefore = readFailureSeq();
+      // Stop the recorder BEFORE closing the barrier: its final `dataavailable`
+      // is legitimate media for this capture, and closing first would drop the
+      // tail chunk that `stopAsync` exists to preserve.
       if (recording) await stopRecorder();
+      closeForSealing();
       await awaitPending();
-      if (!skipWasRequested() && countFailures(readFailures()) > failedBefore) {
+      if (!skipWasRequested() && readFailureSeq() > failuresBefore) {
+        reopenAfterSealing();
         setFinalizing(false);
         setError("Some uploads failed while finishing. Retry them, or press Done again to finalize without them.");
         return;
@@ -92,13 +90,14 @@ export function useCaptureFinish(opts: {
       clearPendingAndFailed();
       onExit();
     } catch (err) {
+      reopenAfterSealing();
       setError(`Finalize failed: ${err instanceof Error ? err.message : "unknown"}`);
       setFinalizing(false);
     }
   }, [
-    sessionId, finalizing, recording, stopRecorder, readFailures, awaitPending,
-    skipWasRequested, finalizeCaptureSession, stopCamera, clearPendingAndFailed,
-    setError, onExit,
+    sessionId, finalizing, recording, stopRecorder, readFailureSeq, awaitPending,
+    closeForSealing, reopenAfterSealing, skipWasRequested, finalizeCaptureSession,
+    stopCamera, clearPendingAndFailed, setError, onExit,
   ]);
 
   const handleCancel = useCallback(async () => {

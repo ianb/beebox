@@ -39,6 +39,13 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
     private let eventBroker: CaptureBackgroundEvents
     private let responseLock = NSLock()
     private var responseData: [Int: Data] = [:]
+    /// Sessions whose uploads were cancelled. `cancel` can only reach tasks that
+    /// exist right now — a retry sleeping in its backoff holds no task, wakes
+    /// afterwards, and would re-`schedule()` into a session that is being
+    /// sealed. Session ids are UUIDs and never reused, so this only grows with
+    /// cancellations and needs no eviction.
+    private let cancelledLock = NSLock()
+    private var cancelledSessions: Set<CaptureSessionID> = []
     private var urlSession: URLSession!
     private var scopedBoxID: UUID?
 
@@ -105,6 +112,7 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
     }
 
     func schedule(_ candidate: CaptureUploadCandidate) async throws {
+        guard isCancelled(candidate.sessionID) == false else { return }
         guard let box = boxProvider(candidate.boxID) else {
             throw CaptureFailure.invalidManifest("The paired box for this upload is unavailable.")
         }
@@ -126,7 +134,12 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
         }
     }
 
+    private func isCancelled(_ sessionID: CaptureSessionID) -> Bool {
+        cancelledLock.withLock { cancelledSessions.contains(sessionID) }
+    }
+
     func cancel(boxID: UUID, sessionID: CaptureSessionID) async {
+        cancelledLock.withLock { _ = cancelledSessions.insert(sessionID) }
         let tasks = await urlSession.allTasks
         for task in tasks {
             guard

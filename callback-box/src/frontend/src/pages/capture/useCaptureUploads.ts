@@ -77,6 +77,23 @@ interface CaptureUploads {
   uploadFile: (params: UploadFileParams) => void;
   handleChunk: (params: ChunkParams) => void;
   retryFailedUploads: (sessionId: string) => void;
+  /**
+   * Monotonic count of upload failures, bumped SYNCHRONOUSLY inside the failure
+   * handler. Done compares it across its wait; reading the rendered counts
+   * instead would race — a failure's `setState` has not necessarily committed
+   * (nor the effect that mirrors it into a ref) by the time `awaitPending`
+   * resumes, so the seal could look clean. Monotonic rather than a total, so a
+   * failure appearing while another is retried successfully can't net to zero.
+   */
+  readFailureSeq: () => number;
+  /**
+   * Refuse new media. Done closes this before draining, so no producer — a
+   * late-resolving photo blob, a file picker that fires after the button was
+   * disabled, a recorder tail — can enqueue into a session being sealed.
+   */
+  closeForSealing: () => void;
+  /** Re-open after a Done that bounced back instead of sealing. */
+  reopenAfterSealing: () => void;
   awaitPending: () => Promise<void>;
   /** Abort every queued and in-flight transfer (Done's "skip", and cancel). */
   abortPending: () => void;
@@ -108,9 +125,21 @@ export function useCaptureUploads(): CaptureUploads {
   const failedPhotos = useRef(new Map<number, { blob: Blob; startedAt: string; source: string }>());
   const failedAudio = useRef(new Map<string, FailedAudioData>());
   const failedFiles = useRef(new Map<number, { file: File }>());
+  const failureSeq = useRef(0);
+  const sealed = useRef(false);
+
+  const readFailureSeq = useCallback(() => failureSeq.current, []);
+  const closeForSealing = useCallback(() => { sealed.current = true; }, []);
+  const reopenAfterSealing = useCallback(() => { sealed.current = false; }, []);
+  const isSealed = useCallback(() => sealed.current, []);
+  const noteFailure = useCallback((opts: { filename: string; error: unknown }) => {
+    failureSeq.current += 1;
+    logUploadFailure(opts);
+  }, []);
 
   const uploadPhoto = useCallback(
     ({ sessionId: sid, index, blob, startedAt, source }: UploadPhotoParams) => {
+      if (isSealed()) return;
       const ext = blob.type.includes("png") ? "png" : "jpg";
       const filename = `photo-${String(index + 1).padStart(3, "0")}.${ext}`;
       setPhotoStates(markAt(index, "uploading"));
@@ -124,17 +153,18 @@ export function useCaptureUploads(): CaptureUploads {
           setPhotoStates(markAt(index, "uploaded"));
         },
         onFailure: (e: unknown) => {
-          logUploadFailure({ filename, error: e });
+          noteFailure({ filename, error: e });
           failedPhotos.current.set(index, { blob, startedAt, source });
           setPhotoStates(markAt(index, "failed"));
         },
       });
     },
-    [uploadCaptureFile, enqueue]
+    [uploadCaptureFile, enqueue, isSealed, noteFailure]
   );
 
   const handleChunk = useCallback(
     ({ sessionId, segmentId, segmentIndex, segmentStartedAt, blob, index, startedAt }: ChunkParams) => {
+      if (isSealed()) return;
       const key = `${segmentIndex}-${index}`;
       const filename = `audio-${segmentIndex}-${String(index + 1).padStart(3, "0")}.webm`;
       setAudioChunks(markChunk(key, "uploading"));
@@ -152,17 +182,18 @@ export function useCaptureUploads(): CaptureUploads {
           setAudioChunks(markChunk(key, "uploaded"));
         },
         onFailure: (e: unknown) => {
-          logUploadFailure({ filename, error: e });
+          noteFailure({ filename, error: e });
           failedAudio.current.set(key, { segmentId, segmentIndex, segmentStartedAt, blob, index, startedAt });
           setAudioChunks(markChunk(key, "failed"));
         },
       });
     },
-    [uploadCaptureFile, enqueue]
+    [uploadCaptureFile, enqueue, isSealed, noteFailure]
   );
 
   const uploadFile = useCallback(
     ({ sessionId: sid, index, file }: UploadFileParams) => {
+      if (isSealed()) return;
       const safeName = sanitizeFilename(file.name, { fallback: "upload" });
       const filename = `file-${String(index + 1).padStart(3, "0")}-${safeName}`;
       const startedAt = new Date().toISOString();
@@ -180,16 +211,17 @@ export function useCaptureUploads(): CaptureUploads {
           setFileStates(markAt(index, "uploaded"));
         },
         onFailure: (e: unknown) => {
-          logUploadFailure({ filename, error: e });
+          noteFailure({ filename, error: e });
           failedFiles.current.set(index, { file });
           setFileStates(markAt(index, "failed"));
         },
       });
     },
-    [uploadCaptureFile, enqueue]
+    [uploadCaptureFile, enqueue, isSealed, noteFailure]
   );
 
   const retryFailedUploads = useCallback((sessionId: string) => {
+    if (isSealed()) return;
     // A retry after an abort needs a live abort scope — the spent one would
     // reject every new transfer the moment it started.
     rearm();
@@ -198,7 +230,7 @@ export function useCaptureUploads(): CaptureUploads {
       failed: { photos: failedPhotos, audio: failedAudio, files: failedFiles },
       uploadPhoto, handleChunk, uploadFile,
     });
-  }, [rearm, uploadPhoto, handleChunk, uploadFile]);
+  }, [rearm, isSealed, uploadPhoto, handleChunk, uploadFile]);
 
   const { clearPending } = runner;
   const clearPendingAndFailed = useCallback(() => {
@@ -221,6 +253,7 @@ export function useCaptureUploads(): CaptureUploads {
     activeUpload: runner.activeUpload,
     setPhotoStates, setFileStates,
     uploadPhoto, uploadFile, handleChunk, retryFailedUploads,
+    readFailureSeq, closeForSealing, reopenAfterSealing,
     awaitPending: runner.awaitPending,
     abortPending: runner.abortPending,
     clearPendingAndFailed, resetState,

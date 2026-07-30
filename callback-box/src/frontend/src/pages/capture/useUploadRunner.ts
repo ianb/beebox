@@ -70,13 +70,24 @@ export function useUploadRunner(): UploadRunner {
     const { signal } = abortRef.current;
     const task = queueRef.current
       .run(async () => {
-        setActiveUpload({ filename, percent: null });
+        // Only the bulk lane drives the progress readout. The two lanes run
+        // concurrently and share one `activeUpload` slot, so letting audio write
+        // to it too would make a photo's percentage jump to a 40 KB chunk's and
+        // back — and the status bar attaches that number to the photo/file
+        // counts. Audio has no percentage of its own to show.
+        const showsProgress = !priority;
+        if (showsProgress) setActiveUpload({ filename, percent: null });
         try {
-          await send({ signal, onProgress: reportProgress({ filename, setActiveUpload }) });
+          await send({
+            signal,
+            onProgress: showsProgress
+              ? reportProgress({ filename, setActiveUpload })
+              : () => { /* audio lane: no progress readout (see above) */ },
+          });
         } finally {
           // Clear only if this upload is still the displayed one — the next
           // queued task may already have claimed the slot.
-          setActiveUpload((prev) => (prev && prev.filename === filename ? null : prev));
+          if (showsProgress) setActiveUpload((prev) => (prev && prev.filename === filename ? null : prev));
         }
       }, { priority })
       .then(onSuccess, onFailure);

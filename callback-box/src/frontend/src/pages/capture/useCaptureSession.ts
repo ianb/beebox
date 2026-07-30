@@ -79,13 +79,6 @@ export function useCaptureSession(opts: {
   // don't reuse an on-disk segment index.
   const segmentCountRef = useRef<number>(resume ? resume.segmentCount : 0);
 
-  // `handleDone` awaits uploads, so by the time it resumes its captured
-  // `uploads` counts are stale. This ref carries the live ones across the await.
-  const uploadsRef = useRef(uploads);
-  useEffect(() => {
-    uploadsRef.current = uploads;
-  }, [uploads]);
-
   // Stops the recorder and awaits the final `dataavailable`, so the tail chunk
   // is enqueued before anything waits on the upload queue.
   const stopRecorder = useCallback(async () => {
@@ -96,10 +89,11 @@ export function useCaptureSession(opts: {
     setRecording(false);
   }, []);
 
-  const readFailures = useCallback(() => uploadsRef.current.counts, []);
-
   const { finalizing, handleDone, handleCancel, skipPendingUploads } = useCaptureFinish({
-    sessionId, recording, stopRecorder, readFailures,
+    sessionId, recording, stopRecorder,
+    readFailureSeq: uploads.readFailureSeq,
+    closeForSealing: uploads.closeForSealing,
+    reopenAfterSealing: uploads.reopenAfterSealing,
     awaitPending, abortPending, clearPendingAndFailed,
     stopCamera: camera.stopCamera,
     finalizeCaptureSession, cancelCaptureSession,
