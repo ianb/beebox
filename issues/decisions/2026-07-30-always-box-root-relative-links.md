@@ -65,7 +65,27 @@ unambiguous > portable (and moves are rare + fixable by validation).
    existing box data) but stop teaching it; optionally a lint/validation nudge
    that flags a relative agent-authored ref.
 
-## Open questions
+## DECIDED (2026-07-30, worktree path-handling-model)
+
+Boxholder call after the full path-surface mapping session: **everything is
+box-root-based, always; `attach/` is the one exception.** No `.md`-dossier
+exemption (we accept that leading-`/` links only work in our renderer), no
+landmark exemption (dir-relative landmark refs lose their special status;
+existing ones keep resolving). Resolution stays liberal — document-relative
+forms keep resolving forever for existing data; the rule governs what is
+*authored and taught*, plus validation nudges. Nav must accept the leading-`/`
+form it currently rejects. Chat re-bases ALL message markdown (links + card
+embeds, completing the image half-fix) to the box root; old directory-bound
+transcripts' bare links retarget on re-render — accepted, since most bare
+links were intended as box-root anyway.
+
+The full surface map, per-surface spec, consequence analysis, and ranked
+bug list (incl. two convention-independent bugs: `create-after-success[].path`
+has no box-containment on its write path, and feedback `path#fragment` refs
+false-flag as broken) came out of that session's analysis doc + Codex review;
+implementation is not yet scheduled.
+
+## Open questions (superseded by the decision above; kept for history)
 
 - Full deprecation of document-relative, or "always recommend `/` but still
   resolve relative" (safer for existing boxes)?
