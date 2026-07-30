@@ -316,6 +316,16 @@ usual reason to split (undecided vocabulary or shape) does not apply.
 
 ## Failure modes
 
+**Revised after a cross-model (Codex) review, 2026-07-30.** The first version of
+this table missed a whole class of row: it reasoned about each step *failing*,
+but not about a step *appearing to succeed*. `finalize` returns on the seal and
+runs prepare→deliver in the background, so both clients treated "accepted" as
+"delivered" and destroyed their recovery state on it. Rows for that and the other
+findings are marked **[review]**. The generalizable lesson: when a pipeline has an
+async tail, "what does the client believe at each point, and what does it throw
+away on that belief?" is its own failure-mode axis, and it needs walking
+deliberately rather than falling out of per-step reasoning.
+
 No critical gaps: every row below has either a test or explicit handling, and
 none fail silently. The two that would have been critical — a dropped photo and a
 lost note — are handled by the server-side item registry and by putting the note
@@ -325,7 +335,15 @@ inside the CAS seal respectively.
 |---|---|---|---|
 | A photo's upload fails after retries | Track 3 XCTest (retry/requeue) | Reported in `failedItems` at finalize; server also lists it as missing via the registry | Clear: named in the `<upload>` message's `failed` count and the card's `failed` list |
 | Every photo fails (offline mid-batch) | Track 3 XCTest | Batch still finalizes; user sees a failure message in chat | Clear — the current bug's whole problem is that nothing appears |
-| App force-quit mid-batch | Track 3 XCTest (resume reconcile) | Local batch record + `GET /api/bulk/sessions/:id` re-uploads only missing items | Clear: resume on next launch; unfinalized staging is swept by the existing abandonment sweep |
+| **[review]** Finalize succeeds, prepare/deliver then fails | route + coordinator tests | Clients poll `GET /sessions/:id` to a terminal state; composer text + staged files released only on delivery | Clear: failure surfaced with everything kept, batch retryable |
+| **[review]** User types during a long batch | XCTest (composer lock) | Batch participates in `isSending`; the clear is conditional on the text being unchanged | Clear: composer locked, later text never clobbered |
+| **[review]** A photo fails to import (iCloud) before any upload | XCTest | Reported to finalize as a `failedItem` | Clear: named in the card + `<upload>` message |
+| **[review]** Two fast pastes race the inline bound | threshold doctest | `pendingImages` counted alongside finished images | Clear: bound holds under the race |
+| **[review]** Threshold crossed with photos already inline | fold-in path on both surfaces | Existing composer photos join the same batch | Clear: one act, one destination, the text describes all of it |
+| **[review]** Cancel races the worker after the seal | route doctest | 409 past the seal, checked+deleted under the staging lock; clients disable cancel while finalizing | Clear: refused, never silently raced |
+| **[review]** Two registry items share a name, one fails | prepare doctest | Failures keyed by id when known, name only as fallback | Clear: `registered` reconciles with received+failed+missing |
+| **[review]** Batch registers items, finalizes before any bytes commit | worker check | `expectedItems` counts toward non-emptiness | Clear: all-missing card delivered, not silently deleted |
+| App force-quit mid-batch | XCTest covers `resume()` itself | **Partial** — `resume()` works but nothing calls it after a cold start, and uploads use `URLSession.shared`, so the batch is NOT durable across a relaunch | Clear-ish: an open batch is stranded server-side until the abandonment sweep; **known gap, recorded in the parity matrix** |
 | Note lost by a crash between finalize and prepare | Track 1 route doctest | Note rides IN the CAS seal with `failedItems` (`staging-store.ts:360`) | Clear: a resume rebuilds the same batch with the same note |
 | Note contains quotes/newlines/markup | Track 1 doctest (exact) | Rendered as wrapper **body**, never an attribute | Clear: cannot break wrapper parsing by construction |
 | Note exceeds the cap | Track 1 route doctest | 400 at the boundary (`z.string().max(10_000)`) | Clear: 400 with the validation error |
