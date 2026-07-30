@@ -222,8 +222,14 @@ async function buildBatchSummary(opts: {
   const failed = failedItems.map((f) => ({ name: f.name, reason: f.reason }));
   const failedKeys = new Set<string>();
   for (const f of failedItems) {
+    // Key by id when the uploader knows it, by name ONLY as the fallback for one
+    // that doesn't. Adding both would let a single failed item mask every OTHER
+    // registry item sharing its name: two picks both called `image.png`, one
+    // reported failed and one that never arrived, and the second silently drops
+    // out of `missing` — so registered no longer reconciles with
+    // received+failed+missing, which is the whole point of the registry.
     if (f.id !== undefined) failedKeys.add(`id:${f.id}`);
-    failedKeys.add(`name:${f.name}`);
+    else failedKeys.add(`name:${f.name}`);
   }
 
   const missing = (session.expectedItems ?? [])

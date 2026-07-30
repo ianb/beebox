@@ -24,6 +24,7 @@ import { InlineAction } from "../ui/InlineAction";
 import { Text } from "../ui/Text";
 import { formatBytes } from "../../lib/format-bytes";
 import { useBulkUpload, type BulkItemState, type BulkItemView } from "./use-bulk-upload";
+import { waitForBulkDelivery } from "../../lib/bulk-upload-api";
 
 const STATE_LABEL: Record<BulkItemState, string> = {
   queued: "Queued",
@@ -98,9 +99,24 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
     setFinalizing(true);
     try {
       const trimmed = note.trim();
-      await bulk.finalize({ note: trimmed !== "" ? trimmed : undefined });
-      // Only after the seal lands — a failed finalize keeps the batch staged AND
-      // keeps the user's text, so a retry still carries its introduction.
+      const sessionId = await bulk.finalize({ note: trimmed !== "" ? trimmed : undefined });
+      // Finalize only SEALS. Wait for the box to actually deliver before
+      // releasing the user's text — otherwise a batch that fails during
+      // prepare/deliver leaves them with no <upload> message AND no composer
+      // text, which is the original bug wearing a different hat.
+      const delivery = await waitForBulkDelivery({ sessionId, timeoutMs: 30_000, pollMs: 750 });
+      if (delivery.outcome === "failed") {
+        setActionError(`${delivery.reason ?? "Delivery failed."} Your message was kept — press Done to retry.`);
+        setFinalizing(false);
+        return;
+      }
+      if (delivery.outcome === "unknown") {
+        // Still working. Don't claim success and don't destroy anything, but
+        // don't trap the user in the overlay either.
+        setActionError("The box is still processing this batch. Your message was kept; the upload message will appear in chat when it lands.");
+        setFinalizing(false);
+        return;
+      }
       onDelivered();
       onExit();
     } catch (e) {
@@ -136,11 +152,13 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
   // Escape closes via the cancel path (with its uploaded-files confirm step).
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") void handleCancel();
+      // Not while finalizing: the batch is sealed and the server refuses a
+      // cancel then, so this would only surface a confusing error.
+      if (e.key === "Escape" && !finalizing) void handleCancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleCancel]);
+  }, [handleCancel, finalizing]);
 
   const dragHasFiles = (e: React.DragEvent): boolean => Array.from(e.dataTransfer.types).includes("Files");
 
@@ -165,7 +183,7 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
     >
       <header className="flex items-center justify-between px-5 py-3 border-b border-warm-300 bg-warm-100">
         <Text as="h2" size="lg" weight="semibold">Upload files</Text>
-        <CloseButton label="Close upload" onClick={() => void handleCancel()} />
+        {finalizing ? null : <CloseButton label="Close upload" onClick={() => void handleCancel()} />}
       </header>
 
       <input
@@ -209,7 +227,7 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
           </Text>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <Button intent="ghost" onClick={() => void handleCancel()}>
+          <Button intent="ghost" onClick={() => void handleCancel()} disabled={finalizing}>
             {confirmingCancel ? "Confirm discard?" : "Cancel batch"}
           </Button>
           <Button

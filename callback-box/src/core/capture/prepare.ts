@@ -37,9 +37,9 @@ import {
   setStagingTargetSessionId,
   stagingSessionDir,
   stagingSessionIsEmpty,
-  cleanupStagingSession,
   type StagingSessionState,
 } from "./staging-store.js";
+import { cleanupStagingSession } from "./staging-teardown.js";
 import { writeCaptureDocument, sessionBasenameFor, collectTimestamps } from "./write-cards.js";
 import { transcribeCaptureClips } from "./transcribe-clips.js";
 import { assembleCaptureTimeline } from "./timeline.js";

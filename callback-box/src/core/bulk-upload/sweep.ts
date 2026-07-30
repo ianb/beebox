@@ -32,7 +32,8 @@ import { createCardSchemaMap } from "../../schemas/registry.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
-import { listStagingSessions, cleanupStagingSession, isBulkSession } from "../capture/staging-store.js";
+import { listStagingSessions, isBulkSession } from "../capture/staging-store.js";
+import { cleanupStagingSession } from "../capture/staging-teardown.js";
 import { bulkBatchCardRelPath } from "./prepare.js";
 
 /** No-activity window after which an open bulk batch is surfaced as abandoned. */

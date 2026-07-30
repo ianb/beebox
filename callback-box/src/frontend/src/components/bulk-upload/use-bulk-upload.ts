@@ -62,8 +62,12 @@ export interface BulkUploadController {
   /**
    * Seal + fire prepare→deliver, naming any failed items and carrying the
    * batch's introduction. Throws on finalize error.
+   *
+   * Returns the batch's session id so the caller can WAIT for actual delivery
+   * (`waitForBulkDelivery`) before releasing anything it would need to retry —
+   * a successful finalize means "sealed", never "delivered".
    */
-  finalize: (opts: { note: string | undefined }) => Promise<void>;
+  finalize: (opts: { note: string | undefined }) => Promise<string>;
 }
 
 const CONCURRENCY = 3;
@@ -185,33 +189,29 @@ export function useBulkUpload(opts: {
     [pump],
   );
 
-  const addFiles = useCallback(
-    (files: File[]): void => {
-      if (files.length === 0) return;
-      const fresh = files.map((file) => ({ id: crypto.randomUUID(), file }));
-      for (const { id, file } of fresh) {
-        filesRef.current.set(id, file);
-      }
-      setItems((prev) => [
-        ...prev,
-        ...fresh.map(({ id, file }) => ({ id, name: file.name, size: file.size, state: "queued" as const })),
-      ]);
-      const descriptors: BulkItemDescriptor[] = fresh.map(({ id, file }) => ({
-        id,
-        name: file.name,
-        size: file.size,
-        mimetype: file.type || undefined,
-      }));
+  /**
+   * Declare items to the server, then queue their uploads. Shared by the initial
+   * add and by a retry whose ORIGINAL failure was the registration call — both
+   * need the same register-then-enqueue-or-mark-failed sequence, and an item
+   * that never registered can't be uploaded at all.
+   */
+  const registerAndEnqueue = useCallback(
+    (entries: Array<{ id: string; file: File }>, { logLabel }: { logLabel: string }): void => {
       void (async () => {
         try {
           const sessionId = await ensureSession();
-          await registerBulkItems({ sessionId, items: descriptors });
-          for (const { id } of fresh) { registeredRef.current.add(id); enqueue(id); }
+          await registerBulkItems({
+            sessionId,
+            items: entries.map(({ id, file }): BulkItemDescriptor => ({
+              id, name: file.name, size: file.size, mimetype: file.type || undefined,
+            })),
+          });
+          for (const { id } of entries) { registeredRef.current.add(id); enqueue(id); }
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
-          console.error("[bulk] Registering items failed:", message);
+          console.error(`[bulk] ${logLabel}: ${message}`);
           setError(message);
-          const failedIds = new Set<string>(fresh.map((f) => f.id));
+          const failedIds = new Set(entries.map((entry) => entry.id));
           setItems((prev) =>
             prev.map((it) =>
               failedIds.has(it.id) ? { ...it, state: "failed", reason: "Could not register with server" } : it,
@@ -221,6 +221,20 @@ export function useBulkUpload(opts: {
       })();
     },
     [ensureSession, enqueue],
+  );
+
+  const addFiles = useCallback(
+    (files: File[]): void => {
+      if (files.length === 0) return;
+      const fresh = files.map((file) => ({ id: crypto.randomUUID(), file }));
+      for (const { id, file } of fresh) filesRef.current.set(id, file);
+      setItems((prev) => [
+        ...prev,
+        ...fresh.map(({ id, file }) => ({ id, name: file.name, size: file.size, state: "queued" as const })),
+      ]);
+      registerAndEnqueue(fresh, { logLabel: "Registering items failed" });
+    },
+    [registerAndEnqueue],
   );
 
   const retry = useCallback(
@@ -234,23 +248,9 @@ export function useBulkUpload(opts: {
         enqueue(id);
         return;
       }
-      void (async () => {
-        try {
-          const sessionId = await ensureSession();
-          await registerBulkItems({
-            sessionId,
-            items: [{ id, name: file.name, size: file.size, mimetype: file.type || undefined }],
-          });
-          registeredRef.current.add(id); enqueue(id);
-        } catch (e) {
-          console.error("[bulk] Re-register on retry failed:", e instanceof Error ? e.message : String(e));
-          setItems((prev) =>
-            prev.map((it) => (it.id === id ? { ...it, state: "failed", reason: "Could not register with server" } : it)),
-          );
-        }
-      })();
+      registerAndEnqueue([{ id, file }], { logLabel: "Re-register on retry failed" });
     },
-    [ensureSession, enqueue],
+    [enqueue, registerAndEnqueue],
   );
 
   const cancel = useCallback(async (): Promise<void> => {
@@ -266,12 +266,13 @@ export function useBulkUpload(opts: {
   // Abort any in-flight uploads when the overlay unmounts.
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const finalize = useCallback(async ({ note }: { note: string | undefined }): Promise<void> => {
+  const finalize = useCallback(async ({ note }: { note: string | undefined }): Promise<string> => {
     const sessionId = await ensureSession();
     const failedItems = items
       .filter((it) => it.state === "failed")
       .map((it) => ({ id: it.id, name: it.name, reason: it.reason ?? "upload failed" }));
     await finalizeBulkSession({ sessionId, failedItems, note });
+    return sessionId;
   }, [ensureSession, items]);
 
   const clearError = useCallback((): void => setError(null), []);

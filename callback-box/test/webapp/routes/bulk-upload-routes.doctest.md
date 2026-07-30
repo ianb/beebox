@@ -448,3 +448,37 @@ JSON.stringify({ status: tooBig.statusCode, state: stillOpen.state })
 ```ts cleanup
 await ctx.cleanup();
 ```
+
+## A sealed batch cannot be cancelled out from under its worker
+
+Cancel is the uploader's affordance for a batch it still owns. Once finalize
+seals one, the background worker owns it — deleting the staging directory then
+makes the worker read `null` and quietly return, so no `<upload>` message ever
+arrives while the client, which already saw finalize succeed, reports success.
+That is the "client says done, server shows nothing" failure this feature exists
+to remove, so a post-seal cancel is refused rather than raced.
+
+```ts
+const ctx = await makeTestServer();
+const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
+const sessionId = created.body.sessionId;
+await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
+await ctx.request({ method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`, payload: {} });
+
+const late = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${sessionId}` });
+late.statusCode
+=> 409
+```
+
+An open batch still cancels normally:
+
+```ts continue
+const open = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "b", name: "b.jpg" }] });
+const cancelled = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${open.body.sessionId}` });
+JSON.stringify({ status: cancelled.statusCode, success: cancelled.body.success })
+=> {"status":200,"success":true}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```

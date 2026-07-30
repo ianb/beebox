@@ -390,3 +390,37 @@ JSON.stringify({ note: plain.note ?? null })
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A failed item never masks a same-named item that simply never arrived
+
+Failures are keyed by registry id when the uploader knows it, and by name only
+as the fallback for one that doesn't. Keying by both would let a single failure
+swallow every other registry entry sharing that name, so `registered` would stop
+reconciling with `received + failed + missing` — which is the one thing the
+predeclared registry exists to guarantee.
+
+Two picks are both called `image.png`. Item `a` is reported failed; item `b`
+never arrives. `b` must still show up as missing.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const id = await stageBulk(box.root, {
+  expectedItems: [
+    { id: "a", name: "image.png", size: 4, mimetype: "image/png" },
+    { id: "b", name: "image.png", size: 4, mimetype: "image/png" },
+  ],
+  files: [],
+});
+const prepared = await prepareBulkBatch({
+  boxRoot: box.root,
+  id,
+  contextDir: "",
+  failedItems: [{ id: "a", name: "image.png", reason: "network error" }],
+});
+JSON.stringify(prepared.counts)
+=> {"registered":2,"received":0,"missing":1,"failed":1}
+```
+
+```ts cleanup
+await box.cleanup();
+```

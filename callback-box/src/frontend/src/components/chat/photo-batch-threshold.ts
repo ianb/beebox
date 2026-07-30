@@ -33,8 +33,12 @@ export const INLINE_PHOTO_LIMIT = 4;
  *
  * Evaluated against the composer's *current* inline count as well as the new
  * selection, so the inline total can never exceed {@link INLINE_PHOTO_LIMIT}
- * however many separate selections a user makes. Photos already inline stay
- * inline — they go out with the next ordinary send.
+ * however many separate selections a user makes.
+ *
+ * `existingInline` must count photos still *encoding*, not just finished ones.
+ * Image processing is async: two four-photo pastes in quick succession would
+ * both see zero finished images, both take the inline path, and land eight
+ * inline photos — the bound broken by exactly the race it exists to prevent.
  */
 export function shouldBatchPhotos(opts: { existingInline: number; incoming: number }): boolean {
   return opts.existingInline + opts.incoming > INLINE_PHOTO_LIMIT;

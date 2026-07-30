@@ -117,9 +117,11 @@ export function useChatAttachments(opts: {
   ensureComposerVisibleRef: React.MutableRefObject<() => void>;
   /**
    * Hand a too-large photo selection to the bulk-upload path instead of inlining
-   * it (see `photo-batch-threshold.ts`). Called with the whole new selection.
+   * it (see `photo-batch-threshold.ts`). `foldInComposerImages` asks the caller
+   * to sweep the composer's existing inline photos into the same batch, so one
+   * selection act doesn't end up split across two destinations.
    */
-  onBatchPhotos: (files: File[]) => void;
+  onBatchPhotos: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
 }) {
   const { emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos } = opts;
   const { editor } = emissionStore;
@@ -131,8 +133,21 @@ export function useChatAttachments(opts: {
     // than base64-ing a camera roll into one /chat/send that can't be sent.
     // Applies to the picker, paste and drop alike: one rule, no per-entry-point
     // special cases.
-    if (shouldBatchPhotos({ existingInline: emissionStore.get().images.length, incoming: files.length })) {
-      onBatchPhotos(files);
+    //
+    // `pendingImages` counts too: encoding is async, so two fast pastes would
+    // otherwise both see zero finished images and both inline.
+    const draft = emissionStore.get();
+    if (shouldBatchPhotos({
+      existingInline: draft.images.length + draft.pendingImages,
+      incoming: files.length,
+    })) {
+      // Hand over the photos ALREADY in the composer as well. Batching only the
+      // new ones would split one intended message in two: the batch would carry
+      // the whole composer text as its introduction while the older photos sat
+      // behind in the composer with nothing describing them, and the agent would
+      // be told about photos it hadn't been given. One selection act, one
+      // destination.
+      onBatchPhotos({ files, foldInComposerImages: draft.images.length > 0 });
       return 0;
     }
     // Show placeholder tiles immediately; each clears as its image finishes

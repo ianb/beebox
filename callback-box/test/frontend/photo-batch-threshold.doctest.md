@@ -42,6 +42,22 @@ JSON.stringify({
 => {"threePlusOne":false,"threePlusTwo":true,"fullPlusOne":true}
 ```
 
+## Photos still encoding count too
+
+`existingInline` must include the store's `pendingImages`, not just finished
+ones. Image processing is async, so two four-photo pastes in quick succession
+would otherwise both observe zero finished images, both inline, and land eight
+inline photos — breaking the bound via exactly the race it exists to prevent.
+
+```ts
+JSON.stringify({
+  fourStillEncodingPlusOne: shouldBatchPhotos({ existingInline: 4, incoming: 1 }),
+  twoDonePlusTwoEncodingPlusOne: shouldBatchPhotos({ existingInline: 2 + 2, incoming: 1 }),
+  threeEncodingPlusOne: shouldBatchPhotos({ existingInline: 3, incoming: 1 }),
+})
+=> {"fourStillEncodingPlusOne":true,"twoDonePlusTwoEncodingPlusOne":true,"threeEncodingPlusOne":false}
+```
+
 ## An empty selection never batches
 
 Paste and drop both route through the same predicate, and both can fire with

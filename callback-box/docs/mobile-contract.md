@@ -510,11 +510,25 @@ See §1.3 (full request/response/errors).
     (retry shortly).
   - `GET /api/bulk/sessions/:id` — resume/status: `{ sessionId, state, targetSessionId, registered:
     BulkItem[], received: [{ itemId, name, size }] }`.
-  - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch.
+  - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch. Accepted only while the batch is
+    `open` (still uploading) or `failed:*` (dead, retryable); **409** once finalize has sealed it,
+    because the background worker owns it from then on and deleting the staging directory under that
+    worker makes it read `null` and silently return — no `<upload>` message, while the client that
+    already saw finalize succeed reports success. The state check and the delete run together under
+    the staging lock, so a cancel cannot race the seal. Uploaders must disable their cancel/close
+    affordances once finalize is in flight.
   - `POST /api/bulk/sessions/:id/finalize` — seal + fire the background prepare→deliver worker. Req
     `{ failedItems?: [{ id?, name, reason }], note?: string }`. Res `{ sessionId, staged: true }`.
     **503** if the box has no chat runtime. Returns immediately; the batch lands an `upload-batch`
     card under the chat's `tmp-upload/` and an `<upload>` message is injected.
+    **A 200 here means SEALED, not DELIVERED** — prepare→deliver runs in the background afterwards
+    and can still fail (`failed:prepare` / `failed:deliver`). An uploader MUST NOT treat this
+    response as delivery: poll `GET /sessions/:id` until the state is terminal, and only then release
+    anything a retry would need (the composer text, locally staged files). Terminal reads:
+    `delivered`, `delivering` (queued to a busy agent — reconciliation guarantees it lands), or
+    **404** (staging is torn down only after delivery) all mean delivered; `failed:*` means it did
+    not land and the batch is still retryable via another finalize. Treating the seal as delivery
+    reproduces the original "client says done, server shows nothing" bug.
     `note` is the batch's **introduction** — the uploader sends the composer text the user submitted
     the files with, verbatim. It rides in the same atomic seal as `failedItems`, lands in the card's
     `note` frontmatter, and renders as the first paragraph of the `<upload>` message body (above the

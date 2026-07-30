@@ -214,6 +214,88 @@ final class BulkUploadTests: XCTestCase {
         XCTAssertEqual(transport.uploadCount, 1, "only the missing item should be re-sent")
     }
 
+    // MARK: - Delivery confirmation
+
+    /// A seal is not a delivery. If the box later fails to prepare/deliver, the
+    /// coordinator must report failure so the caller keeps the photos and the
+    /// composer text — reporting success there is the original bug in a new
+    /// place.
+    func testFailedDeliveryAfterSealIsReportedAsFailure() async {
+        let transport = ScriptedTransport(uploadStatuses: Array(repeating: 200, count: 9))
+        transport.postFinalizeStatus = Data(#"""
+        {"sessionId":"s1","state":"failed:deliver","registered":[],"received":[]}
+        """#.utf8)
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: makeBox(), transport: transport),
+            sleep: { _ in }
+        )
+
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: "keep me")
+
+        guard case .failed(let message) = outcome else {
+            return XCTFail("a batch the box could not deliver must not report success, got \(outcome)")
+        }
+        XCTAssertTrue(message.contains("kept"), "the message should tell the user nothing was lost: \(message)")
+    }
+
+    /// Staging is torn down only after a delivered batch, so a 404 on the poll
+    /// means delivered, not lost.
+    func testMissingSessionAfterSealCountsAsDelivered() async {
+        let transport = ScriptedTransport(uploadStatuses: Array(repeating: 200, count: 9))
+        transport.postFinalizeStatusCode = 404
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: makeBox(), transport: transport),
+            sleep: { _ in }
+        )
+
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: nil)
+        XCTAssertEqual(outcome, .delivered(uploaded: 1, failed: 0))
+    }
+
+    /// A photo that failed to IMPORT never reaches the uploader, so without
+    /// explicit reporting the batch card would simply not mention it — the user
+    /// would be told "N uploaded" with no sign the missing one ever existed.
+    func testImportFailuresAreReportedToTheBox() async {
+        let transport = ScriptedTransport(uploadStatuses: Array(repeating: 200, count: 9))
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: makeBox(), transport: transport),
+            sleep: { _ in }
+        )
+
+        let outcome = await coordinator.run(
+            items: [makeItem(id: "a")],
+            targetSessionID: "chat-1",
+            note: nil,
+            importFailures: [BulkUploadAPI.FailedItem(id: nil, name: "photo-002", reason: "iCloud fetch failed")]
+        )
+
+        XCTAssertEqual(outcome, .delivered(uploaded: 1, failed: 1))
+        let finalized = transport.finalizeBody
+        let failed = finalized?["failedItems"] as? [[String: Any]]
+        XCTAssertEqual(failed?.count, 1)
+        XCTAssertEqual(failed?.first?["name"] as? String, "photo-002")
+    }
+
+    /// A selection where every photo fails to import still tells the box, rather
+    /// than silently doing nothing.
+    func testWhollyFailedImportStillReportsToTheBox() async {
+        let transport = ScriptedTransport(uploadStatuses: [])
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: makeBox(), transport: transport),
+            sleep: { _ in }
+        )
+
+        let outcome = await coordinator.run(
+            items: [],
+            targetSessionID: "chat-1",
+            note: nil,
+            importFailures: [BulkUploadAPI.FailedItem(id: nil, name: "photo-001", reason: "unreadable")]
+        )
+
+        XCTAssertEqual(outcome, .delivered(uploaded: 0, failed: 1))
+        XCTAssertNotNil(transport.finalizeBody, "finalize must still be called")
+    }
+
     // MARK: - Helpers
 
     private func makeAPI() -> BulkUploadAPI {
@@ -281,6 +363,11 @@ private final class ConcurrencyProbeTransport: CaptureTransport, @unchecked Send
         if request.url?.lastPathComponent == "sessions" {
             return Data(#"{"sessionId":"s1","startedAt":"t","capabilities":{"acceptedUploadEncodings":["raw-body-v1"]}}"#.utf8)
         }
+        // The delivery poll: report the batch as delivered so the coordinator
+        // finishes rather than waiting out its timeout.
+        if request.httpMethod == "GET" {
+            return Data(#"{"sessionId":"s1","state":"delivered","registered":[],"received":[]}"#.utf8)
+        }
         return Data(#"{"sessionId":"s1","staged":true}"#.utf8)
     }
 }
@@ -293,6 +380,10 @@ private final class ScriptedTransport: CaptureTransport, @unchecked Sendable {
     private var capturedFinalize: [String: Any]?
 
     var statusResponse: Data?
+    /// Status body served for the delivery poll (after finalize).
+    var postFinalizeStatus: Data?
+    /// Status code served for the delivery poll (404 = staging already torn down).
+    var postFinalizeStatusCode = 200
 
     var uploadCount: Int { lock.withLock { uploads } }
     var finalizeBody: [String: Any]? { lock.withLock { capturedFinalize } }
@@ -308,8 +399,18 @@ private final class ScriptedTransport: CaptureTransport, @unchecked Sendable {
             lock.withLock { capturedFinalize = parsed }
             return (Data(#"{"sessionId":"s1","staged":true}"#.utf8), ok(request))
         }
-        if request.httpMethod == "GET", let statusResponse {
-            return (statusResponse, ok(request))
+        if request.httpMethod == "GET" {
+            let (body, code) = lock.withLock { () -> (Data, Int) in
+                // Before finalize this is a resume/status read; after it, the
+                // delivery poll.
+                if capturedFinalize == nil, let scripted = statusResponse {
+                    return (scripted, 200)
+                }
+                let delivered = Data(#"{"sessionId":"s1","state":"delivered","registered":[],"received":[]}"#.utf8)
+                return (postFinalizeStatus ?? delivered, postFinalizeStatusCode)
+            }
+            let response = HTTPURLResponse(url: request.url!, statusCode: code, httpVersion: nil, headerFields: nil)!
+            return (body, response)
         }
         if path.hasSuffix("/sessions") {
             return (

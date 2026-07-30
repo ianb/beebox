@@ -159,7 +159,7 @@ export async function withStagingLock<T>(id: string, fn: () => Promise<T>): Prom
   return done;
 }
 
-function releaseStagingLock(id: string): void {
+export function releaseStagingLock(id: string): void {
   sessionLocks.delete(id);
 }
 
@@ -407,18 +407,4 @@ export async function listStagingSessions(opts: { boxRoot: string }): Promise<St
 /** True once the session holds at least one piece of media. */
 export function stagingSessionIsEmpty(session: StagingSession): boolean {
   return session.segments.length === 0 && session.photos.length === 0 && session.files.length === 0;
-}
-
-/**
- * Tear down a session: remove its directory and drop its lock-map entry in one
- * step, so the in-process lock can't outlive the session.
- */
-export async function cleanupStagingSession(opts: { boxRoot: string; id: string }): Promise<void> {
-  const { boxRoot, id } = opts;
-  try {
-    await fs.rm(stagingSessionDir(boxRoot, id), { recursive: true, force: true });
-  } catch (e) {
-    console.error(`[capture] Failed to clean up staging session ${id}:`, e);
-  }
-  releaseStagingLock(id);
 }

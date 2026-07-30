@@ -30,11 +30,27 @@ export interface BulkUploadLaunchController {
   launch: BulkUploadLaunch | null;
   /** Open an empty overlay (the Add-menu entry). */
   openEmpty: () => void;
-  /** Open one seeded with a photo selection too large to inline. */
-  openWithPhotos: (files: File[]) => void;
+  /**
+   * Open one seeded with a photo selection too large to inline. When
+   * `foldInComposerImages` is set, the composer's existing inline photos join
+   * the same batch and are removed from the composer.
+   */
+  openWithPhotos: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
   close: () => void;
   /** Clear the composer text a delivered batch consumed as its introduction. */
   onDelivered: () => void;
+}
+
+/**
+ * Turn an already-encoded composer image back into a `File` so it can join a
+ * batch. The store holds the downscaled bytes as base64 (that is what an inline
+ * send transmits), so this decodes rather than re-reading the original pick.
+ */
+function composerImageToFile(image: { id: number; mimeType: string; dataBase64: string }): File {
+  // `atob` yields one latin-1 char per byte, so each code point IS the byte.
+  const bytes = Uint8Array.from(atob(image.dataBase64), (char) => char.codePointAt(0) ?? 0);
+  const extension = image.mimeType === "image/png" ? "png" : "jpg";
+  return new File([bytes], `pasted-image-${String(image.id)}.${extension}`, { type: image.mimeType });
 }
 
 export function useBulkUploadLaunch(opts: {
@@ -49,8 +65,24 @@ export function useBulkUploadLaunch(opts: {
     setLaunch({ seedFiles: [], note: emissionStore.get().text });
   }, [emissionStore]);
 
-  const openWithPhotos = useCallback((files: File[]): void => {
-    setLaunch({ seedFiles: files, note: emissionStore.get().text });
+  const openWithPhotos = useCallback(({ files, foldInComposerImages }: {
+    files: File[];
+    foldInComposerImages: boolean;
+  }): void => {
+    const draft = emissionStore.get();
+    // Existing inline photos come along, so one selection act has one
+    // destination and the composer text describes the whole batch rather than
+    // half of it. They're removed from the composer here (which also strips
+    // their [imageN] tokens); the object URLs are revoked as the store hands
+    // them back.
+    const folded = foldInComposerImages ? draft.images.map(composerImageToFile) : [];
+    if (foldInComposerImages) {
+      const { removedImageObjectUrls } = emissionStore.editor.reset("attachments");
+      for (const url of removedImageObjectUrls) {
+        try { URL.revokeObjectURL(url); } catch (_e) { /* already revoked — harmless */ }
+      }
+    }
+    setLaunch({ seedFiles: [...folded, ...files], note: draft.text });
   }, [emissionStore]);
 
   const close = useCallback((): void => setLaunch(null), []);

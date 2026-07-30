@@ -108,6 +108,39 @@ enum BulkPhotoStaging {
         return (prepared, failures)
     }
 
+    /// Stage bytes already held in the composer (a photo pasted or picked
+    /// earlier, downscaled and encoded) so it can join a batch.
+    ///
+    /// Used when a new selection crosses the inline threshold: the photos already
+    /// in the composer come along, rather than being left behind with nothing
+    /// describing them while the composer text goes off as the batch's
+    /// introduction. One selection act, one destination.
+    static func stageComposerImage(
+        data: Data,
+        mimeType: String,
+        index: Int,
+        uploadedAt: String
+    ) -> PreparedBulkItem? {
+        let ext = mimeType == "image/png" ? "png" : "jpg"
+        let id = UUID().uuidString
+        let destination = stagingRoot().appendingPathComponent("\(id).\(ext)")
+        do {
+            try FileManager.default.createDirectory(at: stagingRoot(), withIntermediateDirectories: true)
+            try data.write(to: destination)
+        } catch {
+            return nil
+        }
+        return PreparedBulkItem(
+            id: id,
+            fileURL: destination,
+            stagedFilename: "\(id).\(ext)",
+            originalName: "pasted-image-\(String(format: "%03d", index + 1)).\(ext)",
+            mimeType: mimeType,
+            uploadedAt: uploadedAt,
+            size: data.count
+        )
+    }
+
     /// Delete the staged copies once the box has the bytes (or the batch is
     /// abandoned). Best-effort: these live in Caches, so the system reclaims
     /// anything missed.

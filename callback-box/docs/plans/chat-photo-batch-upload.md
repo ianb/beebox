@@ -286,9 +286,17 @@ left the device.
 - **The note** — the composer text at batch start is sent as `note` on finalize
   and cleared on success.
 - **Progress + resume** — a composer status row showing uploaded/total and a
-  failed count; a durable local record of the batch so a relaunch reconciles
-  against `GET /api/bulk/sessions/:id` (which reports `registered` vs `received`)
-  and re-uploads only what is missing.
+  failed count. `resume()` reconciles against `GET /api/bulk/sessions/:id` (which
+  reports `registered` vs `received`) and re-uploads only what is missing.
+
+  **Shipped narrower than this reads, recorded honestly:** uploads go through
+  `URLSession.shared` rather than a background session, and no durable local
+  batch record is written, so `resume()` covers in-session retry only — a
+  force-quit mid-batch strands an open batch server-side with no relaunch
+  reconciliation. Making that genuinely durable needs a background
+  `URLSession` plus a persisted manifest (the shape capture's
+  `CaptureStore`/`CaptureUploadCoordinator` already has), which is its own piece
+  of work. Flagged by the Codex review; the parity matrix says the same.
 
 **Vocabulary lock-ins.** None new — Track 3 implements the existing contract.
 The mobile-contract §5.6 anchor table's `native caller` cell changes from

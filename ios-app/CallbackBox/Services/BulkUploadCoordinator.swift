@@ -44,6 +44,9 @@ actor BulkUploadCoordinator {
     static let maxConcurrent = 3
     /// Attempts per item before it is reported failed (1 initial + 2 retries).
     static let maxAttempts = 3
+    /// How long to wait for the box to confirm delivery after the seal.
+    static let deliveryTimeout: TimeInterval = 30
+    private static let deliveryPollNanos: UInt64 = 750_000_000
 
     typealias Sleep = @Sendable (UInt64) async throws -> Void
 
@@ -72,13 +75,35 @@ actor BulkUploadCoordinator {
     /// Upload a whole batch and seal it. `note` is the composer text the photos
     /// were submitted with — the batch's introduction, without which the agent
     /// asks what the files are instead of filing them.
-    func run(items: [PreparedBulkItem], targetSessionID: String, note: String?) async -> BulkUploadOutcome {
+    /// `importFailures` are photos that never made it as far as an upload (an
+    /// unreadable pick, an iCloud fetch that failed). They are reported at
+    /// finalize alongside the upload failures, because a photo the user selected
+    /// and never saw again is the failure this pipeline exists to prevent — the
+    /// batch must be honest that it is short.
+    func run(
+        items: [PreparedBulkItem],
+        targetSessionID: String,
+        note: String?,
+        importFailures: [BulkUploadAPI.FailedItem] = []
+    ) async -> BulkUploadOutcome {
+        failed = importFailures
         guard items.isEmpty == false else {
-            return .failed(message: "There were no photos to upload.")
+            // Nothing staged, but if photos failed to import the box still needs
+            // to hear about them.
+            guard importFailures.isEmpty == false else {
+                return .failed(message: "There were no photos to upload.")
+            }
+            total = importFailures.count
+            publishProgress()
+            return await createAndFinalize(items: [], targetSessionID: targetSessionID, note: note)
         }
-        total = items.count
+        total = items.count + importFailures.count
         publishProgress()
 
+        return await createAndFinalize(items: items, targetSessionID: targetSessionID, note: note)
+    }
+
+    private func createAndFinalize(items: [PreparedBulkItem], targetSessionID: String, note: String?) async -> BulkUploadOutcome {
         let created = await api.createSession(
             targetSessionID: targetSessionID,
             items: items.map { $0.registryItem }
@@ -94,10 +119,46 @@ actor BulkUploadCoordinator {
         // chat must say what happened rather than showing nothing — silence is
         // exactly the bug this replaces.
         let sealed = await api.finalize(sessionID: session.sessionId, failedItems: failed, note: note)
-        if case .success = sealed {
-            return .delivered(uploaded: uploaded.count, failed: failed.count)
+        guard case .success = sealed else {
+            return .failed(message: Self.message(for: sealed) ?? "The box would not finish the upload.")
         }
-        return .failed(message: Self.message(for: sealed) ?? "The box would not finish the upload.")
+        return await confirmDelivery(sessionID: session.sessionId)
+    }
+
+    /// Wait for the box to actually deliver, rather than trusting the seal.
+    ///
+    /// `finalize` returns as soon as the batch is sealed and runs prepare→deliver
+    /// in the background, so a success there means "accepted", never "delivered".
+    /// Treating it as delivered is how the caller ends up deleting the staged
+    /// photos and clearing the composer while the batch later fails and no
+    /// `<upload>` message ever appears — the original bug in a new place.
+    private func confirmDelivery(sessionID id: String) async -> BulkUploadOutcome {
+        let deadline = Date().addingTimeInterval(Self.deliveryTimeout)
+        while Date() < deadline {
+            switch await api.status(sessionID: id) {
+            case .success(let state):
+                // `delivering` means the message is queued to a busy agent and
+                // will land (reconciliation re-delivers if a crash loses the
+                // queue), so it counts as delivered for releasing local state.
+                if state.state == "delivered" || state.state == "delivering" {
+                    return .delivered(uploaded: uploaded.count, failed: failed.count)
+                }
+                if state.state.hasPrefix("failed:") {
+                    return .failed(message: "The box could not deliver the batch (\(state.state)). Your photos and message were kept.")
+                }
+            case .rejected(.sessionGone):
+                // Staging is torn down only after a delivered batch.
+                return .delivered(uploaded: uploaded.count, failed: failed.count)
+            case .rejected(let rejection):
+                return .failed(message: rejection.message)
+            case .retryable:
+                break // transient — keep waiting
+            }
+            try? await sleep(Self.deliveryPollNanos)
+        }
+        // Still working. Report it as unfinished rather than claiming success, so
+        // the caller keeps the photos and the text.
+        return .failed(message: "The box is still processing this batch; the upload message will appear in chat when it lands.")
     }
 
     /// Resume an interrupted batch: ask the box what it already holds and send

@@ -21,9 +21,9 @@ import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import {
   readStagingSession,
   setStagingState,
-  cleanupStagingSession,
   type StagingSessionState,
 } from "../capture/staging-store.js";
+import { cleanupStagingSession } from "../capture/staging-teardown.js";
 import {
   deliverUserMessage,
   userMessageAlreadyLanded,
@@ -88,11 +88,23 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   if (session.state === "delivered") return; // Already done (idempotent resume).
 
   const failedItems = session.failedItems ?? [];
-  // Nothing arrived, nothing failed, and the user said nothing → nothing worth
-  // delivering. A note alone IS worth delivering: the boxholder typed something
-  // and pressed send, so silently discarding it would be the same class of
-  // silent loss this pipeline exists to prevent (principle #4).
-  if (session.files.length === 0 && failedItems.length === 0 && session.note === undefined) {
+  // Nothing was ever expected, nothing arrived, nothing failed, and the user
+  // said nothing → nothing worth delivering.
+  //
+  // `expectedItems` is part of the test on purpose: a batch that REGISTERED
+  // items and then finalized before any bytes committed is not empty, it is
+  // wholly missing. Deleting it silently would discard exactly the report the
+  // predeclared registry exists to guarantee — the user would see nothing at
+  // all, which is the failure this pipeline replaces. A note alone is likewise
+  // worth delivering: the boxholder typed something and pressed send
+  // (principle #4).
+  const expectedCount = session.expectedItems?.length ?? 0;
+  if (
+    session.files.length === 0 &&
+    failedItems.length === 0 &&
+    expectedCount === 0 &&
+    session.note === undefined
+  ) {
     await cleanupStagingSession({ boxRoot, id });
     return;
   }
