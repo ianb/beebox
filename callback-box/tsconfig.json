@@ -25,7 +25,18 @@
     "outDir": "dist",
     "rootDir": "src",
     "lib": ["ES2023"],
-    "types": ["node"]
+    "types": ["node"],
+    // The doctest runner (tap + tsx) uses THIS tsconfig, so a frontend module
+    // it exercises can only be imported if every alias that module uses
+    // resolves here. `@shared/*` is the one alias that's safe to mirror: it
+    // points at src/shared, which is already in this program (rootDir src,
+    // and only src/frontend is excluded) and is by definition isomorphic.
+    // @backend/@core/@schemas stay unresolvable on purpose — a frontend module
+    // reaching for those in a doctest is a boundary violation, not a config gap
+    // (see src/frontend/tsconfig.json's note on the same aliases).
+    "paths": {
+      "@shared/*": ["./src/shared/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/frontend"]

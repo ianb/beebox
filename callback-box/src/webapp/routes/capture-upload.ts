@@ -9,6 +9,7 @@ import {
 } from "../../core/capture/staging-store.js";
 import {
   StagingPathError,
+  StagingSessionNotOpenError,
   StagingUploadReplayConflictError,
 } from "../../core/capture/staging-errors.js";
 import {
@@ -129,6 +130,11 @@ export async function handleCaptureUpload(opts: {
       return reply.status(409).send({ error: error.message });
     }
     if (error instanceof StagingUploadReplayConflictError) {
+      return reply.status(409).send({ error: error.message });
+    }
+    // The session sealed while this body was still arriving. The pre-body check
+    // above can't catch that; the staging store's in-lock barrier does.
+    if (error instanceof StagingSessionNotOpenError) {
       return reply.status(409).send({ error: error.message });
     }
     throw error;

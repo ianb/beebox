@@ -12,8 +12,19 @@ export function todosSection(): string {
 
 A todo is work to do; a question is a decision you're blocked on (see
 ${xref(SECTION.QUESTIONS)}). If you can just go do the thing, it's a todo, not
-a question. Capture it in context — inline in whatever card the intention
-came up in — rather than switching to a separate task list.
+a question. If you genuinely can't — because only the boxholder can decide —
+that's a question, full stop, even if it would be easy to instead jot it down
+as "figure this out later." Deferring a decision onto a list is still
+avoiding the question, not answering it.
+
+Capture a todo in context — inline in whatever card the intention came up
+in — rather than switching to a separate task list. **This is the default
+capture path even when an older \`todo-list\` card already exists in the
+box** (a separate human-curated list format for things like shared errands —
+still valid where the boxholder maintains it as a list on purpose, but not
+where you're processing a note and notice a one-off intention in passing).
+Reaching for the familiar existing list to file something new is usually the
+wrong reflex — wrap it in place instead.
 
 ### Capturing one
 

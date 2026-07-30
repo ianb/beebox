@@ -955,6 +955,192 @@ tests:
     correct_contains: ["todo-view"]
     tags: [todos, cards]
 
+  # --- application: does the agent reach for it unprompted? ---
+  #
+  # The five audits above are recall (quiz-style): the prompt names the
+  # mechanism and asks the agent to describe it. These four are application:
+  # a realistic task that never says "todo," "{% todo %}," "annotation," or
+  # "capture" — pass condition is the agent choosing the technique itself.
+  # Learned from this corpus's de-baiting history (see the "de-baited"
+  # notes elsewhere in this file): naming the mechanism in the prompt lets
+  # the agent pass by parroting instead of by choosing, which is worthless
+  # here.
+  #
+  # Status (2026-07-29): 4/4 pass after two fix rounds; recall 5/5 above
+  # still pass (no regression from the guidance edit). History:
+  #
+  # - First run: 2/4 passed outright (query-plate, scoped-surface — both
+  #   knows_directly, 0-13 reads). capture-in-passing and
+  #   question-not-todo both failed, and both failed the SAME way: given a
+  #   quick note to file, the agent reached for the pre-existing
+  #   `weekend-errands.todo-list.card` (the legacy human-curated list type)
+  #   instead of the new inline `{% todo %}` annotation — for
+  #   capture-in-passing the due-dated parking-permit intention landed as a
+  #   plain list item (no structured due attribute); for
+  #   question-not-todo the undecided storage-unit item got its own new
+  #   todo-list card instead of a question card. Genuine guidance gap, not
+  #   a broken audit: todos.ts never said the new tag is the default over
+  #   the old list type, and its "capture it ... rather than switching to
+  #   a separate task list" line was too soft to overcome an
+  #   already-existing, discoverable list card sitting right there in the
+  #   box. Fix: strengthened `src/core/agent-guide/todos.ts`'s opening
+  #   paragraph — explicit "this is the default capture path even when an
+  #   older todo-list card already exists," explicit "reaching for the
+  #   familiar existing list ... is usually the wrong reflex," plus an
+  #   explicit "deferring a decision onto a list is still avoiding the
+  #   question, not answering it" line for the question-vs-todo case.
+  # - Second run (after the todos.ts fix): capture-in-passing flipped to
+  #   pass (agent used the inline tag with a real due= attribute, left the
+  #   book recommendation alone). question-not-todo still failed, but
+  #   differently: the agent explicitly avoided the todo-list card this
+  #   time ("that's a curated errands list, and this is a decision, not an
+  #   errand") — the guidance fix worked — but then filed the undecided
+  #   item as an inline `{% todo %}` annotation and asked a follow-up
+  #   question in its own reply text, rather than persisting a question
+  #   card. That's actually compliant with the Questions section's own
+  #   "in chat, just ask — never create a question card for something you
+  #   can ask in your reply" carve-out, which applies because my prompt
+  #   never established whether anyone was watching the reply live. Fixed
+  #   the AUDIT, not the guidance: reworded the prompt to explicit
+  #   intake-job framing ("nobody is watching your response live;
+  #   anything unresolved needs to persist as a durable card") — the same
+  #   unattended-batch framing the recall corpus's intake-style prompts
+  #   already use elsewhere in this file, just missing here originally.
+  # - Third run (audit reworded): passes. The agent's response: "this is a
+  #   decision only the boxholder can make, so per the guide it's a
+  #   question, not a todo" — created a question card, no todo tag
+  #   anywhere. Full 4/4 rerun afterward confirms no interference between
+  #   audits, and a rerun of the 5 recall audits confirms the todos.ts
+  #   wording change didn't regress them.
+  #
+  # Takeaway for the boxholder: recall was never the hard part (5/5 on
+  # first try, unprompted). Application needed one real guidance
+  # strengthening (todo-list's gravitational pull as the pre-existing,
+  # discoverable mechanism was stronger than the new tag's soft
+  # preference) plus one audit fix (job-vs-chat framing ambiguity, not a
+  # knowledge gap). Worth watching for the same pull in real box usage:
+  # boxes with existing todo-list cards may keep attracting new
+  # intentions to the old mechanism until agents see enough examples of
+  # the new one.
+
+  - id: todo-application-capture-in-passing
+    prompt: >
+      Here's a quick note from the boxholder: "Great dinner with Priya last
+      night — she recommended that book on urban design she's been reading,
+      sounds worth checking out. Also, I still need to renew the parking
+      permit before it expires August 15." File this somewhere useful.
+    expected_level: knows_directly
+    watch_for: >
+      Files the note (memo or record) and marks the parking-permit
+      intention with a {% todo %} tag (or a frontmatter todos: entry)
+      carrying the due date as a real attribute — due="2026-08-15" landing
+      in an attribute, not left as prose inside the body. The book
+      recommendation is preserved as content but should NOT get wrapped in
+      a todo — it's not an open intention, there's nothing to act on.
+    cards_contain: ["{% todo", "2026-08-15"]
+    max_turns: 15
+    tags: [todos, application]
+    notes: >
+      Pass condition is unprompted use of the mechanism — the prompt never
+      says "todo," "annotation," or "capture." If the agent instead used
+      the frontmatter todos: form, cards_contain on "{% todo" will read as
+      a (false) fail — check the card by eye before calling it broken. The
+      negative half (book recommendation NOT becoming a todo) isn't
+      mechanically asserted; eyeball the created card for todo-spam.
+
+  - id: todo-application-question-not-todo
+    prompt: >
+      You are processing an item from the intake queue — nobody is watching
+      your response live; anything unresolved needs to persist as a durable
+      card, not just a line in your reply. The item is a voice memo: "Not
+      sure whether we should cancel the storage unit or just keep paying
+      for it through winter — need to figure that out at some point."
+      Process this item.
+    expected_level: knows_directly
+    watch_for: >
+      Raises this as a question card — it's blocked on a decision the agent
+      can't make, not because there's a task to go do. Does NOT wrap it in
+      a {% todo %} tag or a todo-list item (which would misrepresent a
+      pending decision as ready-to-execute or already-scheduled work — the
+      inverse failure of the capture-in-passing audit above). The intake-job
+      framing (nobody watching the reply live) is what makes a persisted
+      question card the right call here rather than "just ask in your
+      reply" — the Questions section's own carve-out for synchronous chat,
+      which doesn't apply to unattended job processing.
+    correct_contains_any: ["question"]
+    response_not_contains: ["{% todo"]
+    max_turns: 15
+    tags: [todos, questions, application]
+    notes: >
+      Inverse of todo-application-capture-in-passing. Pass condition is
+      choosing the question mechanism unprompted — the prompt never says
+      "question" or "todo." response_not_contains guards the sharper
+      failure (narrating a {% todo %} tag in the reply); if a question card
+      was created, eyeball it for the storage-unit framing. Reworded
+      2026-07-29 to explicit intake-job framing ("nobody is watching your
+      response live") after the first two runs: without it, the agent
+      correctly applied the Questions section's own "in chat, just ask"
+      carve-out and answered inline instead of persisting a card — not a
+      knowledge gap, an ambiguous prompt. See section status comment.
+
+  - id: todo-application-query-plate
+    prompt: "What should the boxholder be focusing on right now?"
+    expected_level: knows_directly
+    watch_for: >
+      Runs `cb todos` (ideally `--on-plate`) to check actual plate-state
+      before answering, rather than grepping the box for {% todo %} tags by
+      hand or guessing from memory of past conversation.
+    bash_contains: ["cb todos"]
+    tags: [todos, application, cli]
+    notes: >
+      Pass condition is reaching for the query tool unprompted — the
+      prompt never says "todo" or "plate." Whether the box's fixture data
+      has open todos to report is incidental; the tool-use choice is what's
+      being tested, not the answer's content.
+
+  - id: todo-application-scoped-surface
+    prompt: >
+      The boxholder wants one place to glance at everything still open for
+      the Larkspur Vale garden renovation — set that up.
+    expected_level: knows_directly
+    context_dir: store/projects/larkspur-vale-garden
+    fixture:
+      store/projects/larkspur-vale-garden/Soil_Prep.memo.card: |
+        ---
+        status: processed
+        created: 2026-07-20T09:00:00Z
+        ---
+        Ordered raised bed soil from the nursery.
+
+        {% todo due="2026-08-05" %}
+        Pick up the delivered soil bags from Rivermouth Nursery
+        {% /todo %}
+      store/projects/larkspur-vale-garden/Planting_Plan.memo.card: |
+        ---
+        status: processed
+        created: 2026-07-22T09:00:00Z
+        ---
+        Planting plan drafted with Tomas.
+
+        {% todo %}
+        Decide on the border plant layout
+        {% /todo %}
+    watch_for: >
+      Creates a todo-view card in this project directory, relying on the
+      omitted-glob default (scoped to the card's own subtree) rather than
+      hand-listing the two open todos in a memo or a manually-maintained
+      list card — a hand list goes stale the moment a new todo is added
+      elsewhere in the project; a todo-view card doesn't.
+    correct_contains: ["todo-view"]
+    max_turns: 15
+    tags: [todos, application, cards]
+    notes: >
+      Fixture seeds two open todos so there's something real to surface.
+      Pass condition is choosing the live-query card unprompted — the
+      prompt never says "todo" or "todo-view." Failure mode: a memo or
+      note titled something like "Open Items" that just restates the two
+      todos as static text.
+
   # === Recording Knowledge ===
 
   - id: briefing-is-writable

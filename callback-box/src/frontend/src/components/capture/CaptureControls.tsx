@@ -1,14 +1,16 @@
 /**
  * Bottom control row for the capture page: cancel / record-toggle / done.
- * Also surfaces a retry prompt when photo uploads have failed.
+ * Also surfaces a retry prompt when uploads have failed, and — once Done is
+ * pressed with transfers still outstanding — the option to skip them.
  */
 
 interface CaptureControlsProps {
   sessionId: string | null;
   recording: boolean;
-  uploadsInProgress: boolean;
   finalizing: boolean;
   hasContent: boolean;
+  /** Transfers accepted and not yet settled. */
+  pendingUploads: number;
   photosFailed: number;
   audioFailed: number;
   filesFailed: number;
@@ -16,6 +18,8 @@ interface CaptureControlsProps {
   onCancel: () => void;
   onToggleRecording: () => void;
   onRetryFailed: () => void;
+  /** Abandon the outstanding transfers and seal with what has landed. */
+  onSkipPending: () => void;
 }
 
 function summarizeFailures({ photosFailed, audioFailed, filesFailed }: { photosFailed: number; audioFailed: number; filesFailed: number }): string {
@@ -28,13 +32,23 @@ function summarizeFailures({ photosFailed, audioFailed, filesFailed }: { photosF
 
 export function CaptureControls(props: CaptureControlsProps) {
   const totalFailed = props.photosFailed + props.audioFailed + props.filesFailed;
-  const doneDisabled = !props.sessionId || props.uploadsInProgress || props.finalizing || !props.hasContent;
+  // Uploads in progress must NOT gate Done. The failure banner tells the user
+  // to press Done to finalize without the failures, and that promise has to
+  // hold even while other transfers are still retrying — which, with a slow
+  // link, is most of the time. Done waits for outstanding transfers (with the
+  // skip affordance below as the escape), so nothing is silently dropped.
+  const doneDisabled = !props.sessionId || props.finalizing || !props.hasContent;
   return (
     <div className="flex flex-col items-center bg-gray-900/80">
-      {totalFailed > 0 ? (
+      {props.finalizing && props.pendingUploads > 0 ? (
+        <div className="text-warning-light text-sm py-2 px-4 text-center">
+          Waiting for {props.pendingUploads} upload{props.pendingUploads > 1 ? "s" : ""}.{" "}
+          <button onClick={props.onSkipPending} className="text-warning-light underline">Skip them</button>
+        </div>
+      ) : totalFailed > 0 ? (
         <div className="text-danger-light text-sm py-2 px-4 text-center">
           {summarizeFailures(props)} failed to upload.{" "}
-          <button onClick={props.onRetryFailed} className="text-warning-light underline">Retry</button>
+          <button onClick={props.onRetryFailed} disabled={props.finalizing} className="text-warning-light underline disabled:opacity-40">Retry</button>
           {" "}or press Done to finalize without them.
         </div>
       ) : null}
@@ -52,7 +66,7 @@ export function CaptureControls(props: CaptureControlsProps) {
             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
-        <button onClick={props.onToggleRecording} disabled={!props.sessionId}
+        <button onClick={props.onToggleRecording} disabled={!props.sessionId || props.finalizing}
           aria-label={props.recording ? "Stop audio recording" : "Start audio recording"}
           aria-pressed={props.recording}
           className={`w-16 h-16 rounded-full border-4 border-white flex items-center justify-center disabled:opacity-30 ${props.recording ? "bg-danger-dark" : ""}`}>

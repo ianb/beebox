@@ -41,6 +41,23 @@ is a *provisional* assistant group (built by `buildStreamEntry`, appended in
 `MessageList` keys the newest assistant group by that same `liveTurnId`. So
 finalize is an in-place props update, not a remount.
 
+The other half of "in place" is that `streamText` must survive until the
+authoritative history lands. `streamingShown` keeps the provisional bubble up
+through `refreshing` (the post-turn `fetchHistory` roundtrip), and `refreshing`'s
+`onDone` swaps messages in and clears the stream in ONE `assign`. **Invariant:
+no other transition may clear `streamText` while a turn is finalizing.** Both
+`streaming` and `refreshing` therefore ignore `REFRESH` — the backend broadcasts
+`chat-complete` the moment a turn ends and `InteractiveChat-ws.ts` turns that
+into a `REFRESH` that lands just after `STREAM_RESULT`. When `refreshing` lacked
+that guard, the global handler blanked `streamText` mid-flight: the bubble
+unmounted, the list collapsed to the user message for a full roundtrip, and the
+scroll controller rode the shrink up to the top of the turn (the "finalize jumps
+back to my message" bug, fixed 2026-07-29). The extra fetch bought nothing —
+`waitForTranscriptEntry` (`core/chat/session/transcript-sync.ts`) holds
+`result`/`done` until the turn is durable, so the in-flight read is already
+authoritative. Locked down in
+`test/frontend/chat-machine-finalize.doctest.md`.
+
 **Invariant: don't render the streaming turn as a separate bubble/component and
 swap in the finalized one** — that remount is the "shudder" this design removed
 (`docs/implemented-plans/chat-stream-finalize-unify.md`). `liveTurnId` is held
