@@ -163,6 +163,16 @@ union: `"card"` (attach form legal), `"markdown"` (no attach scope),
 `"write-target"` (no attach form, containment mandatory). Names final at
 first commit.
 
+**Discoverability (boxholder emphasis: singular routines).** The module is
+THE home for ref/path algebra, and that must be findable without archaeology:
+`callback-box/CLAUDE.md` gets a one-line behavioral note ("All box ref/path
+parsing and resolution goes through `src/shared/ref-path.ts` — never
+hand-roll `path.resolve`/string-splitting on a ref"), `docs/module-map.md`
+gets the entry, and the module's own doc comment names the consumers so the
+next resolver-shaped temptation finds the existing one. Per
+`callback-box/CLAUDE.md`: "new infrastructure isn't done until it's
+discoverable."
+
 **First implementation chunk.** `src/shared/ref-path.ts` + doctest
 (`test/shared/ref-path.doctest.md`) covering the 3-form rule, fragment/query
 splitting, attach-scope forms, and escape rejection; migrate `ref-exists.ts`
@@ -230,7 +240,9 @@ one-way-to-do-it; the landmark render split is resilient-not-silent).
 **Direction.** `symbol.src` validation: rather than a general
 declared-path-fields mechanism, landmark's existing schema-specific lint hook
 (the same layer that validates its other structures) checks `symbol.src`
-existence via `resolveContainedRef`. A general mechanism is NOT in scope
+existence via `resolveContainedRef`; `figure.entry` gets the same targeted
+existence check in the figure schema's lint (boxholder ruling — closes the
+last known unvalidated path field). A general mechanism is NOT in scope
 (below). Existing relative landmark/nav refs keep resolving unchanged.
 Template-emitted refs are generated data, so changing the generator is not a
 migration.
@@ -268,10 +280,15 @@ one commit), after C and D so the prose describes shipped behavior.
 
 **What.** (1) `cb validate --canonical`: reports non-canonical refs (bare
 document-relative cross-card refs, non-`attach/`) as warnings with a summary
-count, off by default. (2) `cb validate --canonical --fix`: rewrites them to
-leading-`/` using the mv rewriter's resolution machinery (resolve against the
-referring card, re-express from the box root) — the resurrection of
-`issues/code-quality/2026-03-16-ref-path-normalization.md`.
+count, off by default. Formal `[desc](link)` links in plain `.md` dossiers
+are included (boxholder ruling), reported as their own summary bucket so
+card-ref and dossier-link counts stay distinguishable. (2)
+`cb validate --canonical --fix`: rewrites relative refs *that resolve* to
+leading-`/` using the mv rewriter's resolution machinery (resolve against
+the referring document, re-express from the box root); refs that don't
+resolve are reported, never rewritten. This is the resurrection of
+`issues/code-quality/2026-03-16-ref-path-normalization.md` and the migration
+lever for existing boxes.
 
 **Why.** The convention needs a mechanical backstop, but a default-on warning
 would bury real broken-ref warnings under thousands of legacy-relative hits
@@ -366,20 +383,21 @@ the guidance sweep making new transcripts unambiguous.
 
 ## Open design questions
 
-1. **Nav canonical form: leading `/` or stay bare?** The decision says
-   box-root always; nav's bare form *is* box-root-based, just slash-less.
-   Lean: accept both, teach leading-`/` in examples for uniformity with every
-   other surface, don't rewrite existing bare entries. (Inside Track D's
-   chunk this is settled as stated; flagged here because the boxholder might
-   prefer keeping nav's docs bare-only.)
-2. **`figure.entry` validation**: fold a targeted existence check into D the
-   same way as `symbol.src`, or leave render-time-only? Lean: fold in — it's
-   a five-line schema-lint addition and closes the last known unvalidated
-   path field.
-3. **Does `--canonical` also flag relative links in plain `.md` dossiers?**
-   The decision includes `.md` in the convention. Lean: yes for consistency,
-   but as a separate summary bucket so card-ref noise and dossier-link noise
-   are distinguishable when deciding what to `--fix`.
+None remaining — the three raised during drafting were ruled on by the
+boxholder (2026-07-30) and folded into the track Directions:
+
+1. **Nav canonical form**: leading `/` taught for uniformity; bare keeps
+   resolving (Track D).
+2. **`figure.entry`**: gains a targeted existence check alongside
+   `symbol.src` (Track D).
+3. **`.md` dossier links**: any formal `[desc](link)` in a `.md` is
+   validated and `--fix`-normalized like card refs, reported as its own
+   summary bucket (Track F).
+
+The boxholder additionally emphasized: **a singular set of routines** — every
+path/ref parse+resolve goes through the one shared module — including the
+developer-instruction changes that keep it that way (Track A's
+discoverability chunk).
 
 ## Knowledge audits
 
