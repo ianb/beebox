@@ -160,6 +160,28 @@ result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
 ```
 
+## A ref's `#fragment` addresses a spot inside the target, not another file
+
+`feedback.target.ref` is documented as `path#fragment`. The fragment (and a
+`?query`) is split off before the existence check — the file either exists or
+it doesn't, regardless of which spot inside it the ref points at. Handing the
+whole string to the filesystem used to report these documented refs as broken.
+
+```ts
+const box = await makeTmpBox();
+await box.write("box/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nBody.\n");
+await box.write(
+  "box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"/box/notes/Plan.doc.card#risks\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Meeting.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,0]
+```
+
 ## `cb validate`'s summary line calls out broken refs separately
 
 Broken-reference warnings accumulate silently across renames/deletes and can

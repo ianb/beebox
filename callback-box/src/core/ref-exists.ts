@@ -7,16 +7,17 @@
  * dispatcher already extracts the refs itself (`extractRefs` over frontmatter,
  * `extractBodyRefs` over the Markdoc body); this only answers "does it exist".
  *
- * Ref semantics:
- *  - box-root-absolute refs (`/box/…`) resolve against the box root
- *  - `attach/<rest>` (and bare `attach`) resolve into the referring card's
- *    `<basename>.attach/` scope
- *  - everything else resolves relative to the referring card's directory
+ * Ref semantics (the 3-form rule) live in `src/shared/ref-path.ts` — this
+ * module only turns its box-relative answer into an absolute path and asks the
+ * filesystem. A ref's `?query`/`#fragment` is split off BEFORE the existence
+ * check: `feedback.target.ref` is documented as `path#fragment`
+ * (`src/schemas/feedback.tsx`), and handing the fragment to the filesystem
+ * false-flagged those refs as broken.
  */
 
 import { access } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
+import { relative, resolve, sep } from "node:path";
+import { parseRef, resolveRefPath } from "../shared/ref-path.js";
 import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
 import { errnoCode } from "../lib/error-guards.js";
 
@@ -29,15 +30,28 @@ interface RefExistsInput {
   boxRoot: string;
 }
 
-/** Resolve a ref to the absolute filesystem path it points at. */
-export function resolveRefToPath(input: RefExistsInput): string {
-  const refPath = input.ref;
-  if (refPath.startsWith("/")) return input.boxRoot + refPath;
-  if (isAttachRef(refPath)) {
-    const attachResolved = resolveAttachRef(input.fromPath, refPath);
-    if (attachResolved !== null) return attachResolved;
-  }
-  return resolve(dirname(input.fromPath), refPath);
+/**
+ * Resolve a ref to the absolute filesystem path it points at, or `null` when it
+ * escapes the box root (the shared algebra fails closed — see
+ * `src/shared/ref-path.ts`). Any `?query`/`#fragment` is dropped: it addresses a
+ * location *within* the target, not a different file.
+ */
+export function resolveRefToPath(input: RefExistsInput): string | null {
+  const fromPath = boxRelativeFrom(input.boxRoot, input.fromPath);
+  if (fromPath === null) return null;
+  const resolved = resolveRefPath({ fromPath, ref: parseRef(input.ref).path, kind: "card" });
+  return resolved === null ? null : resolve(input.boxRoot, resolved);
+}
+
+/**
+ * The referring card's path as the shared algebra wants it: box-relative,
+ * forward slashes. A card outside the box has no in-box refs to resolve, so it
+ * fails closed like an escaping ref.
+ */
+function boxRelativeFrom(boxRoot: string, absFromPath: string): string | null {
+  const rel = relative(resolve(boxRoot), resolve(absFromPath));
+  if (rel === "" || rel === ".." || rel.startsWith(".." + sep)) return null;
+  return rel.split(sep).join("/");
 }
 
 /**
@@ -49,7 +63,11 @@ export function resolveRefToPath(input: RefExistsInput): string {
  * nonexistent one at every call site.
  */
 export function resolveContainedRef(input: RefExistsInput): BoxRelativePath | null {
-  return containWithinBox(input.boxRoot, resolveRefToPath(input));
+  const abs = resolveRefToPath(input);
+  // `containWithinBox` is the security floor AND the only minter of the
+  // `BoxRelativePath` brand — kept even though the shared algebra already
+  // refuses escapes, so the branded type still traces to one checked producer.
+  return abs === null ? null : containWithinBox(input.boxRoot, abs);
 }
 
 /**
