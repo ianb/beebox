@@ -80,6 +80,40 @@ export function assetGitignorePatterns(): string {
   return ASSET_GITIGNORE_EXTENSIONS.map((ext) => `**/*.attach/**/*.${ext}`).join("\n");
 }
 
+/**
+ * The same list as a git-annex `annex.largefiles` expression — which files
+ * `git add` routes into the annex instead of committing their bytes.
+ *
+ * **This must stay an extension allowlist, not a path glob.** A `.attach/`
+ * scope holds committed non-assets as well as assets: capture writes child
+ * `.card` files into the parent scope, `manifest.json` lives there, and email
+ * bodies land as `.txt`. On one production box, 1,844 tracked files sit inside
+ * `.attach/` scopes. `include=*.attach/*` would annex all of them, replacing
+ * committed card text with pointer files — see the classifier section of
+ * docs/plans/asset-annex.md.
+ *
+ * git-annex globs let `*` cross `/`, so the mid-pattern `.attach/` anchors the
+ * match to a scope while still reaching nested child scopes and plain
+ * subdirectories; no `**` is needed (and git-annex does not treat it
+ * specially).
+ */
+export function assetLargefilesExpression(): string {
+  return ASSET_GITIGNORE_EXTENSIONS.map((ext) => `include=*.attach/*.${ext}`).join(" or ");
+}
+
+/**
+ * Capture staging is deliberately NOT annexed: a capture is pre-triage, gets
+ * renamed, re-encoded, and EXIF-rotated before reaching its final home, so
+ * annexing on arrival would mint immutable objects for superseded and
+ * discarded versions. Keeping the staging area gitignored is the whole
+ * mechanism — a gitignored file never reaches the annex.
+ *
+ * Unanchored on purpose: delivery targets `<contextDir>/tmp-capture/`, not
+ * only the box root, so a `tmp-capture/…`-anchored rule would miss real
+ * captures and annex them on arrival.
+ */
+export const CAPTURE_STAGING_IGNORE_PATTERN = "**/tmp-capture/**/*.attach/**";
+
 const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
 # (size + sha256), not committed directly. See docs/asset-manifests.md.
