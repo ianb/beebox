@@ -467,7 +467,19 @@ Every item in the implementation order landed on `worktree-path-handling-model`:
 | D — nav acceptance, then landmark (docs, `symbol.src`/`figure.entry` validation) | `3154cde1`, `1b5a187d` |
 | E — guidance/exemplar sweep, rule stated once as `REF_PATH_RULE` | `d339b944` |
 | F — `cb validate --canonical`, then `--fix` | `2c52f610` (issue bookkeeping: `e714f8df`) |
-| G — knowledge audits authored + run, issue bookkeeping | this commit |
+| G — knowledge audits authored + run, issue bookkeeping | `dbb0320c`, `a1abcdd2` |
+| Post-review hardening (cross-model review round) | `21e270f9` |
+
+The hardening round came from a Codex review of the full branch diff: empty
+(`""`/`#only`/`?only`) refs and the box root itself are no longer addressable
+targets (broken-ref warning instead of a directory passing `access()`); the mv
+rewriter classifies externals via the shared `isExternalRef`; frontmatter
+rewriting skips YAML block scalars and preserves trailing `# comments`
+(previously such refs were silently skipped); `--canonical --fix` is
+fence-aware while `cb mv` deliberately still rewrites fenced examples (intent
+difference documented at `BodyScanOptions`). Known safe-direction gap recorded
+in `rewrite-card-refs.ts`: inline-map ref forms (`- { ref: x }`) are skipped,
+never corrupted.
 
 Track G specifics:
 
