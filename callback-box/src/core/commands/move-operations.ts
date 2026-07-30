@@ -100,36 +100,42 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
     return null;
   };
 
-  // Rewrite refs from cards *outside* the moved directory that point into it
-  // (relative or absolute), and recompute the moved cards' own *outgoing*
-  // relative refs to targets that stayed outside.
-  const allCards = await listBoxCardFiles(ctx.boxRoot);
-  for (const cardPath of allCards) {
-    const inside = cardPath === destPath || cardPath.startsWith(destPath + path.sep);
+  // Rewrite refs from documents *outside* the moved directory that point into
+  // it (relative or absolute), and recompute the moved documents' own
+  // *outgoing* relative refs to targets that stayed outside. Plain `.md`
+  // dossiers are walked alongside cards for the same reason `moveOne` walks
+  // them: a dossier linking into a directory that moved is exactly how those
+  // links went stale.
+  const referrers = [
+    ...(await listBoxCardFiles(ctx.boxRoot)),
+    ...(await listBoxMarkdownFiles(ctx.boxRoot)),
+  ];
+  for (const filePath of referrers) {
+    const inside = filePath === destPath || filePath.startsWith(destPath + path.sep);
     try {
-      const content = await fs.readFile(cardPath, "utf-8");
+      const content = await fs.readFile(filePath, "utf-8");
       const result = inside
         ? rewriteMovedCardRefs({
             boxRoot: ctx.boxRoot,
-            oldCardAbs: sourcePath + cardPath.slice(destPath.length),
-            newCardAbs: cardPath,
+            oldCardAbs: sourcePath + filePath.slice(destPath.length),
+            newCardAbs: filePath,
             text: content,
             remap,
           })
         : rewriteReferrerRefs({
             boxRoot: ctx.boxRoot,
-            cardAbsPath: cardPath,
+            cardAbsPath: filePath,
             text: content,
             remap,
           });
       if (result.count === 0 || result.text === content) continue;
-      await fs.writeFile(cardPath, result.text);
-      const relPath = path.relative(ctx.boxRoot, cardPath);
+      await fs.writeFile(filePath, result.text);
+      const relPath = path.relative(ctx.boxRoot, filePath);
       updatedCards.push({ path: relPath, refsUpdated: result.count });
       filesToStage.push(relPath);
       ctx.writeLine(`  Updated ${result.count} ref${result.count > 1 ? "s" : ""} in ${relPath}`);
     } catch (e) {
-      console.warn(`Skipping card that can't be read during ref rewrite: ${cardPath}:`, e);
+      console.warn(`File unreadable during ref rewrite, skipped: ${filePath}:`, e);
     }
   }
 

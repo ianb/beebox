@@ -468,3 +468,56 @@ const saoirse = await box.read("store/dossiers/saoirse.md");
 ```ts continue
 await box.cleanup();
 ```
+
+## Directory moves rewrite `.md` dossiers too — inside and outside the move
+
+A directory move gets the same `.md` coverage a single-card move has, and
+respects the same inside/outside split as cards: a dossier *outside* the moved
+directory has its links into the directory repointed, while a dossier that
+*travelled with* the directory has its outgoing relative links recomputed from
+the new location. (Before this, `cb mv <dir>` walked cards and views only, so a
+dossier's links silently dangled.)
+
+```ts
+const box = await makeTmpBox();
+await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
+await box.write("box/session/scan.capture-session.card", "---\nsession-id: s\n---\n");
+await box.write(
+  "store/dossiers/log.md",
+  "# Log\n\nAbs [scan](/box/session/scan.capture-session.card), rel [again](../../box/session/scan.capture-session.card).\n",
+);
+await box.write(
+  "box/session/readme.md",
+  "# Session\n\nRun by [Dana](../people/dana.person.card); the [scan](scan.capture-session.card) is here.\n",
+);
+
+const result = await mv(box, { from: "box/session", to: "store/archive/session" });
+result.success
+=> true
+```
+
+The outside dossier's links — absolute and relative alike — now point at the
+new location:
+
+```ts continue
+await box.read("store/dossiers/log.md")
+=>
+# Log
+«blankline»
+Abs [scan](/store/archive/session/scan.capture-session.card), rel [again](../archive/session/scan.capture-session.card).
+```
+
+The dossier that moved with the directory keeps its link to a sibling that
+moved alongside it, and gets a recomputed path to the card that stayed put:
+
+```ts continue
+await box.read("store/archive/session/readme.md")
+=>
+# Session
+«blankline»
+Run by [Dana](../../../box/people/dana.person.card); the [scan](scan.capture-session.card) is here.
+```
+
+```ts continue
+await box.cleanup();
+```
