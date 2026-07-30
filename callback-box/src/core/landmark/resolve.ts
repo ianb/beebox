@@ -152,17 +152,24 @@ async function resolveExpand(
   const sorted = await sortMatches(matchesRel, { order, cwd: options.landmarkDir });
   const capped = options.limit === undefined ? sorted : sorted.slice(0, options.limit);
 
-  const refTpl = expand["template-ref"] ?? "${path}";
+  const refTpl = expand["template-ref"];
   const labelTpl = expand["template-label"] ?? "";
 
   const out: ResolvedLink[] = [];
   for (const matchRel of capped) {
     let frontmatter: Record<string, unknown> | null = null;
-    if (needsLookup(refTpl) || needsLookup(labelTpl)) {
+    if ((refTpl !== undefined && needsLookup(refTpl)) || needsLookup(labelTpl)) {
       frontmatter = await loadCardFrontmatter(path.join(options.landmarkDir, matchRel));
     }
     const vars: TemplateVars = { matchRel, frontmatter };
-    const ref = applyTemplate(refTpl, vars);
+    // No `template-ref` → emit the canonical box path (leading `/`) for the
+    // match rather than the landmark-dir-relative one the glob returns:
+    // generated refs say what they mean regardless of the document they end up
+    // read against. An authored template keeps `${path}` dir-relative (that is
+    // what the schema documents), and both forms resolve identically below.
+    const ref = refTpl === undefined
+      ? boxPathForMatch(matchRel, options)
+      : applyTemplate(refTpl, vars);
     const label = applyTemplate(labelTpl, vars).trim();
     out.push(await buildLink({
       rawRef: ref,
@@ -171,6 +178,23 @@ async function resolveExpand(
     }));
   }
   return { links: out, total: sorted.length };
+}
+
+/**
+ * The box path (leading `/`) of one `expand` match, whose glob-relative path is
+ * relative to the landmark's directory. Resolved as a literal path
+ * (`kind: "markdown"`): a glob match is a filesystem path, so a directory
+ * literally named `attach/` is itself, not the landmark's attach scope. Falls
+ * back to the raw match if that somehow escapes the box — `buildLink` then
+ * reports it missing, the same as any broken ref.
+ */
+function boxPathForMatch(matchRel: string, options: ResolveOptions): string {
+  const resolved = resolveRefPath({
+    fromPath: options.landmarkPath,
+    ref: matchRel,
+    kind: "markdown",
+  });
+  return resolved === null ? matchRel : `/${resolved}`;
 }
 
 /** True if the template references any field beyond the special `${path}`. */

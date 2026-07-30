@@ -43,6 +43,7 @@ import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
+import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 import { errorMessage } from "../lib/error-guards.js";
 
@@ -192,12 +193,19 @@ async function lintFrontmatterCard(input: {
   // name concept-map node ids, which can't be verified self-contained (the map
   // is in another card) nor by the generic ref walk (a node id isn't a file
   // ref). The lesson-plan adapter also warns on deferred-but-unmarked material.
+  // Landmark and figure carry the two path fields NOT named `ref`
+  // (`navigation.symbol.src`, `entry`), which the generic walk therefore misses
+  // — see lint-path-fields.ts.
   if (type === "progress") {
     warnings.push(...(await lintProgressNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "lesson-plan") {
     warnings.push(...(await lintLessonPlanNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "concept-map") {
     warnings.push(...conceptMapShapeWarnings(parsed.fields));
+  } else if (type === "landmark") {
+    warnings.push(...(await lintLandmarkSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
+  } else if (type === "figure") {
+    warnings.push(...(await lintFigureEntry({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   }
   // Type-specific, self-contained validation (rules Zod can't express) lives on
   // the schema as its `validate` hook — see the commentary/extfile schema

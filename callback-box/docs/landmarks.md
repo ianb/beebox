@@ -38,8 +38,8 @@ navigation:
   label: Recipes
   symbol: 🍳
   links:
-    - { ref: Bread.recipe.card, label: the bread }
-    - { ref: techniques/Knife_Skills.doc.card }
+    - { ref: /store/recipes/Bread.recipe.card, label: the bread }
+    - { ref: /store/recipes/techniques/Knife_Skills.doc.card }
   expand:
     - query: "*.recipe.card"
       order: modified-desc
@@ -58,12 +58,12 @@ All of these live under `navigation`.
 
 ```yaml
 symbol: 🍳                          # emoji or short text
-symbol: { src: images/portrait.webp }   # image
+symbol: { src: /store/recipes/images/portrait.webp }   # image
 ```
 
-For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a path relative to the landmark's directory; cross-directory paths are allowed. The symbol carries most of the "iconic and unique expression" weight — pick well.
+For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a box path — write it with a leading `/`, from the box root (a path relative to the landmark's directory still resolves). It is validated: a `src` pointing at nothing is a broken-ref warning at `cb validate`. The symbol carries most of the "iconic and unique expression" weight — pick well.
 
-**`links`** (zero or more `{ ref, label? }`) — pinned references to other cards. `ref` is a literal path to the target (relative to the landmark's directory; may cross directories). It's validated like any other ref — it must point at a real file. Optional `label` is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When omitted, the renderer falls back to the target's own title.
+**`links`** (zero or more `{ ref, label? }`) — pinned references to other cards. `ref` is a box path to the target — leading `/`, from the box root (a path relative to the landmark's directory still resolves). It's validated like any other ref — it must point at a real file. Optional `label` is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When omitted, the renderer falls back to the target's own title.
 
 **`expand`** (zero or more) — templated fan-out. Runs a query, applies a template per match, generates links. See below.
 
@@ -81,7 +81,7 @@ A landmark like Recipes naturally wants to surface "all recipe cards in this dir
 
 ### Template
 
-`template-ref` / `template-label` are placeholder strings applied to each matched card. When `template-ref` is omitted, the default is `${path}` (a bare link to each match).
+`template-ref` / `template-label` are placeholder strings applied to each matched card. When `template-ref` is omitted, each match links by its **box path** (the canonical leading-`/` form, resolved as a literal path).
 
 `${...}` placeholders interpolate at expand time:
 

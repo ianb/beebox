@@ -20,6 +20,8 @@ import { ExtfileSchema } from "../../src/schemas/extfile.js";
 import { ProgressSchema } from "../../src/schemas/progress.js";
 import { LessonPlanSchema } from "../../src/schemas/lesson-plan.js";
 import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
+import { LandmarkSchema } from "../../src/schemas/landmark.js";
+import { FigureSchema } from "../../src/schemas/figure.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -63,6 +65,8 @@ const ctx: LoadCardContext = {
     ["progress", ProgressSchema],
     ["lesson-plan", LessonPlanSchema],
     ["concept-map", ConceptMapSchema],
+    ["landmark", LandmarkSchema],
+    ["figure", FigureSchema],
   ]),
 };
 ```
@@ -862,4 +866,75 @@ result.totalWarnings
 
 result.results[0]!.errors[0]!.message
 => {% source %} takes at most one of `ref` or `href`, not both
+```
+
+## Path fields not named `ref` are checked too (`symbol.src`, `entry`)
+
+The generic broken-ref walk keys on frontmatter keys literally named
+`ref`/`refs`, which left two real path fields unvalidated: a landmark's
+`navigation.symbol.src` (its icon image) and a figure's `entry` (the sketch
+source in the card's attach scope). Both are now resolved through the same
+3-form semantics and reported as `type: "reference"` warnings when they name
+nothing — a missing icon or an uncompilable figure is visible at validate
+time instead of at render time.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/images/portrait.webp", "WEBP");
+await box.write(
+  "store/recipes/Recipes.landmark.card",
+  "---\nnavigation:\n  label: Recipes\n  symbol:\n    src: /store/recipes/images/portrait.webp\n---\n",
+);
+await box.write(
+  "store/recipes/Gone.landmark.card",
+  "---\nnavigation:\n  label: Gone\n  symbol:\n    src: images/vanished.webp\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/recipes/Recipes.landmark.card"), box.path("store/recipes/Gone.landmark.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,1]
+
+result.results[1]!.warnings[0]!.type
+=> reference
+
+result.results[1]!.warnings[0]!.message
+=> Broken reference at navigation.symbol.src: images/vanished.webp does not exist
+```
+
+A text/emoji symbol has no path to check, and a figure's `entry` resolves in
+the card's own attach scope:
+
+```ts continue
+await box.write("store/figures/Orbit.attach/sketch.ts", "export default () => {};\n");
+await box.write(
+  "store/figures/Orbit.figure.card",
+  "---\nruntime: p5js\nentry: attach/sketch.ts\n---\nAn orbit.\n",
+);
+await box.write(
+  "store/figures/Dangling.figure.card",
+  "---\nruntime: p5js\nentry: attach/missing.ts\n---\nNothing behind it.\n",
+);
+await box.write(
+  "store/recipes/Emoji.landmark.card",
+  "---\nnavigation:\n  label: Recipes\n  symbol: 🍳\n---\n",
+);
+const figures = await lintCardsDispatch(
+  [
+    box.path("store/figures/Orbit.figure.card"),
+    box.path("store/figures/Dangling.figure.card"),
+    box.path("store/recipes/Emoji.landmark.card"),
+  ],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([figures.totalErrors, figures.totalWarnings])
+=> [0,1]
+
+figures.results[1]!.warnings[0]!.message
+=> Broken reference at entry: attach/missing.ts does not exist
+```
+
+```ts cleanup
+await box.cleanup();
 ```

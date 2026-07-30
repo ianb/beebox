@@ -66,6 +66,48 @@ JSON.stringify(results.map((r) => ({ category: r.category, outcome: r.outcome })
 await box.cleanup();
 ```
 
+## A box-path procedure ref resolves from the box root
+
+`procedure.ref` is a box path (leading `/`) like every other ref; the bare
+form above still resolves against the landmark's own directory.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/recipes/Recipes.landmark.card",
+  `---
+navigation:
+  label: Recipes
+destinations:
+  - for: [triage]
+    rules: Cooking instructions.
+    procedure:
+      ref: /config/procedures/archive.procedure.card
+---
+`,
+);
+await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
+
+const { ctx } = createCollectorContext(box.root);
+const calls = [];
+await runHandle({
+  ctx,
+  options: {
+    runProcedure: async ({ procedurePath }) => {
+      calls.push(procedurePath);
+      return { success: true };
+    },
+  },
+});
+
+JSON.stringify(calls)
+=> ["config/procedures/archive.procedure.card"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Empty buckets are reported but no procedure runs
 
 ```ts

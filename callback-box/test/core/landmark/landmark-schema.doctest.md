@@ -214,6 +214,41 @@ store/recipes/Carrot.recipe.card
 await box.cleanup();
 ```
 
+## Expand: generated refs are box paths
+
+The default (no `template-ref`) emits the match's **box path** — the canonical
+leading-`/` form — instead of the landmark-dir-relative path the glob returns,
+so a generated ref means the same thing wherever it is read. It is resolved as
+a literal path, so a directory literally named `attach/` is itself, not the
+landmark's own attach scope (the `attach/` virtual prefix is for *authored*
+refs). An authored `template-ref` keeps `${path}` dir-relative.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/attach/Filed.recipe.card", "---\ntitle: Filed\n---\n");
+await box.write("store/recipes/Recipes.attach/Trap.recipe.card", "---\ntitle: Trap\n---\n");
+
+const navigation = { label: "Recipes", expand: [{ query: "attach/*.recipe.card" }] };
+const { links } = await resolveLandmark(navigation, {
+  landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+JSON.stringify(links.map((l) => ({ ref: l.ref, exists: l.exists })), null, 2)
+=>
+[
+  {
+    "ref": "store/recipes/attach/Filed.recipe.card",
+    "exists": true
+  }
+]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Expand: template with ${path} and a frontmatter field
 
 Template placeholders interpolate per match. `${path}` is the matched
