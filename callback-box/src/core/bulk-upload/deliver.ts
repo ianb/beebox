@@ -29,7 +29,13 @@ export class BulkTargetGoneError extends Error {
  *
  * The `failed` attribute is omitted entirely when zero (a clean batch carries
  * no failed marker); `files` counts the received items and `bytes` is the
- * server-computed total. The body is the batch's one-line summary.
+ * server-computed total.
+ *
+ * The body is the user's introduction (when they submitted one with the batch),
+ * then a blank line, then the batch's one-line summary. A batch with no
+ * introduction renders byte-identical to the pre-note form — summary alone.
+ * The note is body text, never an attribute: it is free-form user prose that may
+ * contain the quotes and newlines the `doc` invariant below exists to reject.
  */
 export function buildUploadWrapper(opts: {
   /** Box-relative path of the upload-batch card. */
@@ -38,6 +44,8 @@ export function buildUploadWrapper(opts: {
   totalBytes: number;
   failedCount: number;
   summary: string;
+  /** The user's verbatim introduction, when the batch carried one. */
+  note?: string | undefined;
 }): string {
   // `doc` is a server-generated path (`<contextDir>/tmp-upload/<slug>/…`); a
   // double quote or newline in it would break the wrapper's attribute parsing.
@@ -54,7 +62,9 @@ export function buildUploadWrapper(opts: {
     `bytes="${humanBytes(opts.totalBytes)}"`,
   ];
   if (opts.failedCount > 0) attrs.push(`failed="${String(opts.failedCount)}"`);
-  return `<upload ${attrs.join(" ")}>\n${opts.summary.trim()}\n</upload>`;
+  const note = opts.note?.trim();
+  const body = note !== undefined && note !== "" ? `${note}\n\n${opts.summary.trim()}` : opts.summary.trim();
+  return `<upload ${attrs.join(" ")}>\n${body}\n</upload>`;
 }
 
 /**

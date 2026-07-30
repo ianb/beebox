@@ -510,9 +510,17 @@ See §1.3 (full request/response/errors).
     BulkItem[], received: [{ itemId, name, size }] }`.
   - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch.
   - `POST /api/bulk/sessions/:id/finalize` — seal + fire the background prepare→deliver worker. Req
-    `{ failedItems?: [{ id?, name, reason }] }`. Res `{ sessionId, staged: true }`. **503** if the box
-    has no chat runtime. Returns immediately; the batch lands an `upload-batch` card under the chat's
-    `tmp-upload/` and an `<upload>` message is injected.
+    `{ failedItems?: [{ id?, name, reason }], note?: string }`. Res `{ sessionId, staged: true }`.
+    **503** if the box has no chat runtime. Returns immediately; the batch lands an `upload-batch`
+    card under the chat's `tmp-upload/` and an `<upload>` message is injected.
+    `note` is the batch's **introduction** — the uploader sends the composer text the user submitted
+    the files with, verbatim. It rides in the same atomic seal as `failedItems`, lands in the card's
+    `note` frontmatter, and renders as the first paragraph of the `<upload>` message body (above the
+    generated summary, separated by a blank line). Capped at 10,000 chars (**400** over); a
+    whitespace-only note is stored as absent, and a batch with no note produces an `<upload>` message
+    byte-identical to the pre-`note` form. **An uploader that has composer text MUST send it** —
+    without it every batch is "unintroduced" and the agent asks what the files are instead of filing
+    them (`src/schemas/upload-batch.tsx` duty 1).
 - **Anchors:**
   | side | anchor |
   |---|---|

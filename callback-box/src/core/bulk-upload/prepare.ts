@@ -78,6 +78,8 @@ export interface PreparedBulkBatch {
   totalBytes: number;
   /** The batch's one-line summary — the card body and the `<upload>` wrapper body. */
   summary: string;
+  /** The boxholder's verbatim introduction, when the batch carried one. */
+  note: string | undefined;
 }
 
 /**
@@ -142,6 +144,7 @@ export async function prepareBulkBatch(opts: {
     },
     totalBytes: summary.totalBytes,
     summary: summary.summary,
+    note: summary.note,
   };
 }
 
@@ -165,6 +168,8 @@ interface BatchSummary {
   totalBytes: number;
   /** The one-line card body summary (regenerated fresh, or recovered from the card). */
   summary: string;
+  /** The boxholder's introduction (from the sealed session, or recovered from the card). */
+  note: string | undefined;
 }
 
 /**
@@ -247,17 +252,18 @@ async function buildBatchSummary(opts: {
     missing,
     failed,
     summary,
+    note: session.note,
   });
   await fs.writeFile(cardAbsPath, cardContent);
 
-  return { received, missing, failed, totalBytes, summary };
+  return { received, missing, failed, totalBytes, summary, note: session.note };
 }
 
 /** Recover the summary from an already-written card (idempotent re-run). */
 async function recoverSummaryFromCard(cardAbsPath: string): Promise<BatchSummary> {
   const content = await fs.readFile(cardAbsPath, "utf-8");
   const parsed = parseUploadBatch(content);
-  if (parsed === null) return { received: [], missing: [], failed: [], totalBytes: 0, summary: "" };
+  if (parsed === null) return { received: [], missing: [], failed: [], totalBytes: 0, summary: "", note: undefined };
   const fm = parsed.frontmatter;
   return {
     received: (fm.received ?? []).map((r) => (r.mimetype !== undefined ? { name: r.name, size: r.size, mimetype: r.mimetype } : { name: r.name, size: r.size })),
@@ -265,6 +271,7 @@ async function recoverSummaryFromCard(cardAbsPath: string): Promise<BatchSummary
     failed: (fm.failed ?? []).map((f) => ({ name: f.name, reason: f.reason })),
     totalBytes: fm["total-bytes"],
     summary: parsed.body.trim(),
+    note: fm.note,
   };
 }
 

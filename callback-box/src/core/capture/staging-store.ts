@@ -354,8 +354,10 @@ export interface SealResult {
  * (Track 5) uses it so a session that raced into `failed:*` between the sweep's
  * list and its seal is NOT auto-retried (the plan bars auto-retrying failures).
  * `partial: true` marks the session partial as part of the same atomic seal.
- * `failedItems` (bulk only) is persisted IN the same CAS write, so the seal and
- * the uploader's failed-item report are one atomic mutation (no crash window).
+ * `failedItems` and `note` (bulk only) are persisted IN the same CAS write, so
+ * the seal, the uploader's failed-item report, and the user's introduction are
+ * one atomic mutation (no crash window in which a resume could rebuild the batch
+ * without them).
  */
 export async function sealStagingSession(opts: {
   boxRoot: string;
@@ -363,8 +365,9 @@ export async function sealStagingSession(opts: {
   partial?: boolean;
   requireOpen?: boolean;
   failedItems?: StagingBulkFailedItem[] | undefined;
+  note?: string | undefined;
 }): Promise<SealResult> {
-  const { boxRoot, id, partial, requireOpen, failedItems } = opts;
+  const { boxRoot, id, partial, requireOpen, failedItems, note } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
@@ -374,6 +377,7 @@ export async function sealStagingSession(opts: {
     session.state = "sealed";
     if (partial === true) session.partial = true;
     if (failedItems !== undefined) session.failedItems = failedItems;
+    if (note !== undefined) session.note = note;
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
     return { sealed: true, alreadySealed: false };

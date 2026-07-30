@@ -84,6 +84,13 @@ const uploadBatchFields = {
   missing: z.array(MissingItem).optional(),
   /** Items the uploader reported failing, with the reason. */
   failed: z.array(FailedItem).optional(),
+  /**
+   * The boxholder's own words introducing this batch — the composer text they
+   * submitted the files with. Verbatim user input (neither server-computed nor
+   * client-guessed). Absent when they submitted the batch with an empty
+   * composer, which is the case duty 1 tells the agent to ask about.
+   */
+  note: z.string().optional(),
   /** Short generated summary; the agent may overwrite it with filing notes. */
   body: body(z.string()),
 };
@@ -119,6 +126,9 @@ Frontmatter:
   (**client-claimed** — the browser's guess, may be wrong).
 - \`missing\` — registered items that never arrived (\`name\` only; **client-claimed**).
 - \`failed\` — items the uploader reported failing, with a \`reason\`.
+- \`note\` — **the boxholder's own words**, typed in the composer when they sent
+  the batch. This is the batch's introduction: what these files are, or where
+  they should go. Often absent.
 
 **Server-computed vs client-claimed:** sizes and content hashes (in the attach
 manifest) are computed here from the actual bytes and are trustworthy. Original
@@ -134,6 +144,12 @@ nothing regenerates it.
    there's no accompanying message explaining what these files are or where they
    go, ask the boxholder before operating on them. Only file unprompted when the
    destination is genuinely unambiguous.
+
+   **A batch WITH an introduction is not that case** — when \`note\` is set (it
+   also appears at the top of the \`<upload>\` message body), the boxholder has
+   already told you what these files are. Act on what they said instead of asking
+   them to repeat it. Ask only about what their introduction genuinely leaves
+   open, the way you would about any other request.
 
 2. **Read the card and its attach manifest**, then **trust the directory listing
    over the manifest if they disagree** (someone may have hand-moved a file).
@@ -165,6 +181,7 @@ const UploadBatchObject = z.object({
   received: z.array(ReceivedItem).optional(),
   missing: z.array(MissingItem).optional(),
   failed: z.array(FailedItem).optional(),
+  note: z.string().optional(),
 });
 export type UploadBatchFrontmatter = z.infer<typeof UploadBatchObject>;
 
@@ -197,8 +214,9 @@ export interface UploadBatchReceived {
 
 /**
  * Build an upload-batch card. `received`/`missing`/`failed` are the
- * server-computed batch summary; `summary` is the short body prose. Empty lists
- * are omitted from the frontmatter.
+ * server-computed batch summary; `summary` is the short body prose; `note` is
+ * the boxholder's verbatim introduction. Empty lists and an absent note are
+ * omitted from the frontmatter.
  */
 export function createUploadBatchTemplate(options: {
   batchId: string;
@@ -212,6 +230,8 @@ export function createUploadBatchTemplate(options: {
   missing: string[];
   failed: Array<{ name: string; reason: string }>;
   summary: string;
+  /** The boxholder's verbatim introduction, when the batch carried one. */
+  note?: string | undefined;
 }): string {
   const time: Record<string, string> = { start: options.startedAt };
   if (options.endedAt) time.end = options.endedAt;
@@ -238,6 +258,7 @@ export function createUploadBatchTemplate(options: {
   }
   if (options.missing.length > 0) fields.missing = options.missing.map((name) => ({ name }));
   if (options.failed.length > 0) fields.failed = options.failed.map((f) => ({ name: f.name, reason: f.reason }));
+  if (options.note !== undefined && options.note !== "") fields.note = options.note;
 
   return `---\n${stringifyYaml(fields)}---\n${options.summary}\n`;
 }

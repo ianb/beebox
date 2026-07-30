@@ -102,10 +102,23 @@ function registryAdditionError(opts: { existing: StagingBulkItem[]; incoming: St
   return null;
 }
 
+/**
+ * Upper bound on the batch introduction. Untrusted client prose, so it is capped
+ * at the boundary — far above any real composer message, far below the server's
+ * body limit.
+ */
+const MAX_NOTE_LENGTH = 10_000;
+
 const FinalizeBodySchema = z.object({
   failedItems: z
     .array(z.object({ id: z.string().optional(), name: z.string(), reason: z.string() }))
     .optional(),
+  /**
+   * The user's introduction for the batch — the composer text they submitted the
+   * photos with. Optional: an uploader with an empty composer sends none, and a
+   * batch without one is exactly the "ask before filing" case.
+   */
+  note: z.string().max(MAX_NOTE_LENGTH).optional(),
 });
 
 const BULK_CAPABILITIES = {
@@ -356,10 +369,19 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
           return reply.status(503).send({ error: "Chat runtime unavailable" });
         }
 
-        // The uploader's failed-item report rides IN the CAS seal — one atomic
-        // write, so a resume can never see a sealed batch whose failed list
-        // wasn't recorded yet.
-        const seal = await sealStagingSession({ boxRoot, id: session.id, failedItems: parsed.data.failedItems });
+        // The uploader's failed-item report and the user's introduction ride IN
+        // the CAS seal — one atomic write, so a resume can never see a sealed
+        // batch whose failed list or note wasn't recorded yet.
+        //
+        // A whitespace-only note normalizes to absent so an empty composer
+        // produces byte-identical output to a batch that never had one.
+        const trimmedNote = parsed.data.note?.trim();
+        const seal = await sealStagingSession({
+          boxRoot,
+          id: session.id,
+          failedItems: parsed.data.failedItems,
+          note: trimmedNote !== undefined && trimmedNote !== "" ? trimmedNote : undefined,
+        });
         if (seal.sealed) {
           void prepareAndDeliverBulkBatch({
             boxRoot,

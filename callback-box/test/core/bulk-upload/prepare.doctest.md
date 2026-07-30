@@ -9,7 +9,8 @@ tier — no chat runtime, no delivery (that is a later chunk).
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/cards/index.js";
 import {
@@ -17,6 +18,7 @@ import {
   addFile,
   registerBulkItems,
   readStagingSession,
+  writeStagingSession,
   stagingSessionDir,
 } from "../../../src/core/capture/staging-store.js";
 import { selectPendingCaptures, selectResumableCaptures } from "../../../src/core/capture/pending.js";
@@ -319,6 +321,70 @@ JSON.stringify({
   resumableOnlyCapture: resumable.length === 1 && resumable[0] === capture.id,
 })
 => {"pendingOnlyCapture":true,"resumableOnlyCapture":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The batch's introduction lands in the card and survives a re-run
+
+The boxholder's composer text is recorded on the sealed session, and prepare
+carries it into the card's `note` frontmatter — that is what tells the agent the
+batch is introduced, so it files against the note instead of asking what the
+files are.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const id = await stageBulk(box.root, {
+  expectedItems: [{ id: "a", name: "IMG_0001.jpg", size: 4, mimetype: "image/jpeg" }],
+  files: [
+    { filename: "staged-0.bin", uploadedAt: "2026-07-30T19:12:00.000Z", originalName: "IMG_0001.jpg", mimeType: "image/jpeg", itemId: "a", content: "JPEG" },
+  ],
+});
+// The seal is what records the note; stage it directly here (the route-tier
+// test covers the seal itself).
+const session = await readStagingSession({ boxRoot: box.root, id });
+session.note = "Receipts from the Tokyo trip";
+await writeStagingSession({ boxRoot: box.root, session });
+
+const prepared = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+prepared.note
+=> Receipts from the Tokyo trip
+```
+
+The card records it as frontmatter, labelled as the boxholder's own words rather
+than anything server-computed or client-guessed:
+
+```ts continue
+const card = await readFile(join(box.root, prepared.cardRelPath), "utf-8");
+splitCardContent(card).frontmatterText.includes("note: Receipts from the Tokyo trip")
+=> true
+```
+
+A re-run is idempotent: the card already exists, so the summary — including the
+note — is recovered from it rather than rebuilt, and the `<upload>` message a
+resumed delivery builds is identical to the first one's.
+
+```ts continue
+const rerun = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+JSON.stringify({ note: rerun.note, sameCard: rerun.cardRelPath === prepared.cardRelPath })
+=> {"note":"Receipts from the Tokyo trip","sameCard":true}
+```
+
+A batch with no introduction reports none — the case the agent's "ask first"
+duty exists for:
+
+```ts continue
+const plainId = await stageBulk(box.root, {
+  expectedItems: [{ id: "z", name: "IMG_9999.jpg", size: 4, mimetype: "image/jpeg" }],
+  files: [
+    { filename: "staged-0.bin", uploadedAt: "2026-07-30T19:20:00.000Z", originalName: "IMG_9999.jpg", mimeType: "image/jpeg", itemId: "z", content: "JPEG" },
+  ],
+});
+const plain = await prepareBulkBatch({ boxRoot: box.root, id: plainId, contextDir: "" });
+JSON.stringify({ note: plain.note ?? null })
+=> {"note":null}
 ```
 
 ```ts cleanup

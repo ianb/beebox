@@ -132,6 +132,15 @@ export const StagingSessionSchema = z.object({
   contextDir: z.string().optional(),
   /** Uploader-reported failed items, recorded at finalize (bulk sessions only). */
   failedItems: z.array(StagingBulkFailedItemSchema).optional(),
+  /**
+   * The user's introduction for this batch — verbatim composer text at the
+   * moment they submitted it — recorded at finalize (bulk sessions only). Rides
+   * IN the seal alongside `failedItems` so a resume rebuilds the same batch with
+   * the same introduction. Absent when the composer was empty; an
+   * introduction-less batch is what makes the agent ask before filing
+   * (`src/schemas/upload-batch.tsx` duty 1).
+   */
+  note: z.string().optional(),
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
 });
 export type StagingSession = z.infer<typeof StagingSessionSchema>;

@@ -58,6 +58,71 @@ buildUploadWrapper({
 </upload>
 ```
 
+## An introduced batch carries the boxholder's words above the summary
+
+When the batch was submitted with composer text, that text is the body's first
+paragraph — it is what tells the agent the batch is introduced, so it should
+file against it rather than asking what the files are.
+
+The blank line between the two is load-bearing, so these examples compare the
+JSON-escaped string — the newlines stay visible instead of being swallowed by
+the expected-block parser.
+
+```ts
+JSON.stringify(buildUploadWrapper({
+  docPath: "chats/2026-07-30/tmp-upload/upload-20260730T1912-9f3c1e00/Batch.upload-batch.card",
+  fileCount: 70,
+  totalBytes: 41943040,
+  failedCount: 0,
+  summary: "70 files uploaded (40 MB).",
+  note: "Receipts from the Tokyo trip — file them under the 2026 travel folder.",
+}))
+=> "<upload doc=\"chats/2026-07-30/tmp-upload/upload-20260730T1912-9f3c1e00/Batch.upload-batch.card\" files=\"70\" bytes=\"40 MB\">\nReceipts from the Tokyo trip — file them under the 2026 travel folder.\n\n70 files uploaded (40 MB).\n</upload>"
+```
+
+## The note is body text, so quotes and newlines in it are safe
+
+Unlike `doc`, the note is free-form user prose and can contain anything a person
+types. It goes in the body precisely so it can never break attribute parsing.
+
+```ts
+JSON.stringify(buildUploadWrapper({
+  docPath: "tmp-upload/d/Batch.upload-batch.card",
+  fileCount: 2,
+  totalBytes: 2048,
+  failedCount: 0,
+  summary: "2 files uploaded (2 KB).",
+  note: 'These are the "before" shots.\nThe after ones come later.',
+}))
+=> "<upload doc=\"tmp-upload/d/Batch.upload-batch.card\" files=\"2\" bytes=\"2 KB\">\nThese are the \"before\" shots.\nThe after ones come later.\n\n2 files uploaded (2 KB).\n</upload>"
+```
+
+## No note, or a blank one, renders exactly as before
+
+A batch submitted from an empty composer must be byte-identical to the
+pre-note wrapper — that compatibility is what lets the note be purely additive.
+
+```ts
+const withoutNote = buildUploadWrapper({
+  docPath: "tmp-upload/e/Batch.upload-batch.card",
+  fileCount: 5, totalBytes: 500, failedCount: 0, summary: "5 files uploaded (500 B).",
+});
+withoutNote
+=> <upload doc="tmp-upload/e/Batch.upload-batch.card" files="5" bytes="500 B">
+5 files uploaded (500 B).
+</upload>
+```
+
+```ts continue
+const blankNote = buildUploadWrapper({
+  docPath: "tmp-upload/e/Batch.upload-batch.card",
+  fileCount: 5, totalBytes: 500, failedCount: 0, summary: "5 files uploaded (500 B).",
+  note: "   \n  ",
+});
+blankNote === withoutNote
+=> true
+```
+
 ## A doc path with a quote or newline is a broken invariant (throws)
 
 The `doc` path is server-generated; a quote or newline would break attribute

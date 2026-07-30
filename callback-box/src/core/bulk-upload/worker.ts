@@ -88,8 +88,11 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   if (session.state === "delivered") return; // Already done (idempotent resume).
 
   const failedItems = session.failedItems ?? [];
-  // Nothing actually arrived and nothing failed → nothing worth delivering.
-  if (session.files.length === 0 && failedItems.length === 0) {
+  // Nothing arrived, nothing failed, and the user said nothing → nothing worth
+  // delivering. A note alone IS worth delivering: the boxholder typed something
+  // and pressed send, so silently discarding it would be the same class of
+  // silent loss this pipeline exists to prevent (principle #4).
+  if (session.files.length === 0 && failedItems.length === 0 && session.note === undefined) {
     await cleanupStagingSession({ boxRoot, id });
     return;
   }
@@ -148,6 +151,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
     totalBytes: prepared.totalBytes,
     failedCount: prepared.counts.failed,
     summary: prepared.summary,
+    note: prepared.note,
   });
 
   // Mark `delivering` BEFORE send/enqueue so a crash between send and the
