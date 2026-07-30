@@ -15,10 +15,10 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```ts
 const box = await makeTmpBox();
 await box.write("Notes.memo.card", "---\nstatus: new\n---\n");
-await box.write("Notes.todo-list.card", "---\nname: x\n---\n");
+await box.write("Notes.record.card", "---\nname: x\n---\n");
 const errors = await lintAttachLayout(box.root);
 JSON.stringify(errors.map((e) => e.path).toSorted())
-=> ["Notes.memo.card","Notes.todo-list.card"]
+=> ["Notes.memo.card","Notes.record.card"]
 
 errors[0]?.rule
 => basename-collision
@@ -38,10 +38,10 @@ case-insensitively so this is caught before it ever reaches disk.
 ```ts
 const box2 = await makeTmpBox();
 await box2.write("Foo.memo.card", "---\nstatus: new\n---\n");
-await box2.write("foo.todo-list.card", "---\nname: x\n---\n");
+await box2.write("foo.record.card", "---\nname: x\n---\n");
 const errors2 = await lintAttachLayout(box2.root);
 JSON.stringify(errors2.map((e) => e.path).toSorted())
-=> ["Foo.memo.card","foo.todo-list.card"]
+=> ["Foo.memo.card","foo.record.card"]
 
 errors2.every((e) => e.rule === "basename-collision")
 => true

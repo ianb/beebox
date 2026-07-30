@@ -682,11 +682,13 @@ tests:
     notes: >
       Updated 2026-07-03: this is an inherently conversational prompt — the agent
       sometimes proposes the project-task schema outright and sometimes asks what
-      distinguishes it from the existing todo-list type first; both are correct
+      distinguishes it from an existing related card type first; both are correct
       extensibility-aware behavior. A positive string match is too brittle across
       that variance, so the audit encodes the real assertion (its watch_for)
       negatively: the agent must not claim card types are a fixed/built-in set.
-      Dropped the too-strict should_read config/schemas/CLAUDE.md.
+      Dropped the too-strict should_read config/schemas/CLAUDE.md. (Updated
+      2026-07-29: the note used to name the now-retired todo-list type as the
+      example the agent might ask about; genericized since that type is gone.)
 
   - id: add-new-capability
     prompt: "How would you add a new capability to this box?"
@@ -835,63 +837,14 @@ tests:
       The agent shouldn't need to know the outbound mechanics to process
       a chat job — just write the response and commit. But understanding
       the flow helps debug issues. This is discoverable from connector docs.
-  # === Todo Lists ===
+  # === Todo Lists (retired) ===
   #
-  # Status (2026-07-03): all 6 pass. todo-list cards are YAML (items: array), not
-  # XML — fixed 3 stale audits (structure de-baited off "XML", nested-items check
-  # → items:, create dropped stale should_read).
-
-  - id: todo-list-structure
-    prompt: "Show me the structure of a todo-list card."
-    expected_level: knows_about
-    watch_for: "Describes YAML frontmatter with an items: array (each item: name/status/items? for nesting)"
-    correct_contains: ["items:"]
-    tags: [cards, todos]
-    notes: >
-      De-baited off "XML structure" 2026-07-03 (the bait made the agent stop to
-      correct the premise and often not show the shape). todo-list cards are YAML
-      with an `items:` array (name/status/completed?/details?/items?), not XML
-      `<todo-list>`/`<item>`. The agent knows this directly.
-
-  - id: todo-list-storage
-    prompt: "Where do todo lists live in the box?"
-    expected_level: knows_directly
-    watch_for: "Names store/todos/ directly from agent guide"
-    correct_contains: ["store/todos"]
-    tags: [todos, navigation]
-
-  - id: todo-list-lifecycle
-    prompt: "What happens to a todo list when all its items are done?"
-    expected_level: knows_about
-    watch_for: "Describes archiving to store/archive/done/ or store/archive/deferred/"
-    should_read: ["docs/generated/card-todo-list.md"]
-    correct_contains: ["archive"]
-    tags: [todos, lifecycle]
-
-  - id: todo-list-create
-    prompt: "Create a todo-list card for weekend errands with items: buy groceries, mow lawn, return library books."
-    expected_level: knows_about
-    watch_for: "Creates a .todo-list.card file in store/todos/ (cb create or direct write) with the three items"
-    correct_contains: ["todo-list", "store/todos"]
-    tags: [todos, cards]
-
-  - id: todo-list-nested-items
-    prompt: "Can todo items have sub-items? How does nesting work?"
-    expected_level: knows_about
-    watch_for: "Describes each item carrying its own nested items: array (recurse via items?)"
-    should_read: ["docs/generated/card-todo-list.md"]
-    correct_contains: ["items:"]
-    tags: [todos, cards]
-
-  - id: todo-list-vs-job
-    prompt: "What's the difference between a todo list and a job card?"
-    expected_level: knows_about
-    watch_for: "Distinguishes human action items (todos) from agent work items (jobs)"
-    tags: [todos, jobs]
-    notes: >
-      This tests understanding that todos are for humans while jobs are
-      for agents. The agent should not confuse the two or suggest using
-      jobs for human tasks.
+  # The dedicated todo-list card type was retired 2026-07-29 (superseded by
+  # the universal {% todo %} annotation — see the "Todo Annotation" section
+  # below and issues/closed/features/2026-07-29-retire-todo-list-schema.md).
+  # The six recall audits that used to live here (todo-list-structure,
+  # -storage, -lifecycle, -create, -nested-items, -vs-job) tested a card type
+  # that no longer exists and were removed rather than left to fail forever.
 
   # === Todo Annotation ({% todo %}) ===
   #

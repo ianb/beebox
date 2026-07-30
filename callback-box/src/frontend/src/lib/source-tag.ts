@@ -10,7 +10,7 @@ type SourceType = "card" | "commit" | "api" | "dir" | "session" | "schedule";
  * Build `data-cb-source` props from one or more type:identifier pairs.
  *
  * Single source:
- *   cbSource("card", "store/todos/Shopping.todo-list.card")
+ *   cbSource("card", "store/todos/Shopping.doc.card")
  *
  * Multiple sources (pass tuples):
  *   cbSource(["card", "path1"], ["card", "path2"])

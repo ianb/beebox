@@ -18,13 +18,11 @@ as "figure this out later." Deferring a decision onto a list is still
 avoiding the question, not answering it.
 
 Capture a todo in context — inline in whatever card the intention came up
-in — rather than switching to a separate task list. **This is the default
-capture path even when an older \`todo-list\` card already exists in the
-box** (a separate human-curated list format for things like shared errands —
-still valid where the boxholder maintains it as a list on purpose, but not
-where you're processing a note and notice a one-off intention in passing).
-Reaching for the familiar existing list to file something new is usually the
-wrong reflex — wrap it in place instead.
+in — rather than switching to a separate task list. The suggested way to
+make a todo list at all is a simple \`.doc.card\` with embedded
+\`{% todo %}\` items; reaching for a separate hand-maintained list card when
+one already exists is usually the wrong reflex — wrap the intention in place
+instead.
 
 ### Capturing one
 

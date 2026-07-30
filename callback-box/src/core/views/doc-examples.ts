@@ -8,30 +8,22 @@ export const examplesSection = `## Examples
 ### Simple Card List
 
 \`\`\`tsx
-export const name = "Todo List";
-export const description = "Active todos";
-export const dependencies = ["store/todos/**/*.card"];
+export const name = "Recent Memos";
+export const description = "Every processed memo, newest first";
+export const dependencies = ["store/**/*.memo.card"];
 export const modes = ["page", "chat"];
 
-export default function TodoList({ cards }) {
-  const todos = cards.filter(c => c.type === "todo-list");
+export default function RecentMemos({ cards }) {
+  const memos = cards.filter(c => c.type === "memo");
   return (
     <div>
-      <h2>Todos</h2>
-      {todos.map(card => {
-        // List fields live in frontmatter (typed unknown — narrow before use).
-        const items = Array.isArray(card.frontmatter?.items) ? card.frontmatter.items : [];
-        return (
-          <div key={card.path} style={{ marginBottom: "1rem" }}>
-            <h3>{String(card.frontmatter?.title ?? card.path)}</h3>
-            {items.map((item, i) => (
-              <div key={i} style={{ padding: "0.25rem 0", color: item.status === "done" ? "#999" : "#000" }}>
-                {item.status === "done" ? "\\u2713" : "\\u25cb"} {item.text}
-              </div>
-            ))}
-          </div>
-        );
-      })}
+      <h2>Memos</h2>
+      {memos.map(card => (
+        <div key={card.path} style={{ marginBottom: "1rem" }}>
+          <h3>{String(card.frontmatter?.title ?? card.path)}</h3>
+          <p>{card.body}</p>
+        </div>
+      ))}
     </div>
   );
 }

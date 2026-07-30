@@ -17,7 +17,6 @@ import { createInitialGuideTemplate } from "./guide.js";
 import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
 import { createScheduledScriptTemplate } from "./scheduled-script.js";
-import { createTodoListTemplate } from "./todo-list.js";
 import { createTodoViewTemplate } from "./todo-view.js";
 import { TODO_STATUSES } from "../shared/todo-model.js";
 import { createBriefingTemplate } from "./briefing.js";
@@ -129,32 +128,6 @@ registerTemplate({
     if (args.source) opts.source = args.source;
     if (args["lock-group"]) opts.lockGroup = args["lock-group"];
     return createScheduledScriptTemplate(opts);
-  },
-});
-
-registerTemplate({
-  name: "todo-list",
-  description: "A todo list card — human-oriented action items",
-  cardTypes: ["todo-list"],
-  defaultForTypes: ["todo-list"],
-  argsSchema: z.object({
-    name: z.string().describe("Display name for the todo list"),
-    details: z.string().optional().describe("Description of the list's purpose"),
-    items: z
-      .array(z.object({
-        name: z.string().describe("Item name"),
-        status: z.string().optional().describe("Item status (default: pending)"),
-      }))
-      .optional()
-      .describe("Initial items"),
-  }),
-  generate: (args) => {
-    const opts: Parameters<typeof createTodoListTemplate>[0] = {
-      name: args.name,
-    };
-    if (args.details) opts.details = args.details;
-    if (args.items) opts.items = args.items;
-    return createTodoListTemplate(opts);
   },
 });
 

@@ -40,7 +40,6 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "chat-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "intake-job" }, { listUI: { icon: JobIcon } });
   registerFileType({ type: "question-followup-job" }, { listUI: { icon: JobIcon } });
-  registerFileType({ type: "todo-list" }, { listUI: { icon: CardIcon } });
   registerFileType({ type: "briefing" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "person" }, { listUI: { icon: CardIcon } });
   registerFileType({ type: "feedback" }, { listUI: { icon: DocumentIcon } });

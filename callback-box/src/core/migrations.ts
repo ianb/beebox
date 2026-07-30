@@ -108,6 +108,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // hash match; a boxholder-modified copy is parked for review. See
   // docs/implemented-plans/capture-mode.md (Track 7).
   { name: "retire-process-captures", script: "scripts/migrate/retire-process-captures.ts" },
+  // Retire the `todo-list` card type — superseded by the universal
+  // `{% todo %}` annotation (docs/implemented-plans/todo-annotation.md).
+  // Converts every *.todo-list.card into a sibling *.doc.card with items
+  // rendered as {% todo %}-wrapped markdown, and rewrites inbound refs.
+  { name: "todo-list-to-doc", script: "scripts/migrate/todo-list-to-doc-run.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

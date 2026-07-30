@@ -77,7 +77,7 @@ A landmark like Recipes naturally wants to surface "all recipe cards in this dir
 
 ### Query
 
-`query` is a glob pattern, matching `cb ls` conventions (`*.recipe.card`, `**/*.todo-list.card`, etc.). Resolved relative to the landmark's directory.
+`query` is a glob pattern, matching `cb ls` conventions (`*.recipe.card`, `**/*.doc.card`, etc.). Resolved relative to the landmark's directory.
 
 ### Template
 
@@ -157,7 +157,7 @@ The expand evaluator runs server-side at fetch time so the wire response is a fu
 
 ## Open questions
 
-- **Tile renderer rollout order.** Which card types get bespoke tile renderers first? Recipe and todo-list are obvious early candidates. Most others can live with the fallback indefinitely.
+- **Tile renderer rollout order.** Which card types get bespoke tile renderers first? Recipe is an obvious early candidate. Most others can live with the fallback indefinitely.
 - **Order options beyond the v1 three.** By-attribute (`order="attr:priority"`) and by-XPath-value (`order="xpath:/yield/@amount"`) are obvious extensions if needed.
 - **`<symbol>` extensions.** Image variant and color/mood styling are deferred until there's a real case for them. The element shape leaves room.
 - **Live fields.** `<status>` or similar live-data slots are explicitly out of scope. The schema can absorb them later as new optional children without breaking existing cards.

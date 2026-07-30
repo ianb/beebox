@@ -156,7 +156,7 @@ await seedSession(box.root, { sessionId: "chat-tools", age: 4 * HOUR, entries: [
     timestamp: "2026-06-09T08:00:05Z",
     message: { role: "assistant", content: [
       { type: "text", text: "Adding it now." },
-      { type: "tool_use", id: "t1", name: "Edit", input: { file_path: "store/todos/shopping.todo-list.card" } },
+      { type: "tool_use", id: "t1", name: "Edit", input: { file_path: "store/todos/shopping.doc.card" } },
     ] },
   },
 ] });
@@ -168,7 +168,7 @@ Add milk to the shopping list
 «blankline»
 **Agent** (2026-06-09T08:00:05Z)
 Adding it now.
-→ Edit: store/todos/shopping.todo-list.card
+→ Edit: store/todos/shopping.doc.card
 ```
 
 ## Run report skeleton

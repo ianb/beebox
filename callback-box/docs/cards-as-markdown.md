@@ -88,6 +88,9 @@ attach to cards" — dropping one in a directory gives that subtree its own
 plate. `store/plate.todo-view.card` is the box-wide instance. Full design
 record: `docs/implemented-plans/todo-annotation.md`.
 
+The suggested way to make a todo list at all is a simple `.doc.card` with
+embedded `{% todo %}` items — there is no dedicated todo-list card type.
+
 ## Attachments
 
 **`Name.attach/`** — a sibling directory holding files that belong to `Name.type.card`. No reserved top-level attachment directory; every card gets its own scope next to it:

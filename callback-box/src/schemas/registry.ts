@@ -44,7 +44,6 @@ import { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
 import { TodoReviewJobSchema } from "./todo-review-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
-import { TodoListSchema } from "./todo-list.js";
 import { TodoViewSchema } from "./todo-view.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
@@ -81,7 +80,6 @@ export const cardSchemas: CardSchema[] = [
   MemoSchema,
   PersonSchema,
   PlaceSchema,
-  TodoListSchema,
   TodoViewSchema,
   QuestionSchema,
   RecipeSchema,

@@ -3,9 +3,21 @@ title: "Retire the todo-list card schema, superseded by {% todo %}"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — follow-up named in the todo-annotation plan's NOT-in-scope list
-needs: [decision]
 design: ../../callback-box/docs/implemented-plans/todo-annotation.md
+resolution: implemented
 ---
+
+**Resolved 2026-07-29** (worktree-todo-annotation): the decision was made —
+the type dies, and the suggested way to make a todo list is a simple
+`.doc.card` with embedded `{% todo %}` items. Implemented as a script
+migration (`scripts/migrate/todo-list-to-doc.ts` /
+`todo-list-to-doc-run.ts`, registered as `todo-list-to-doc` in
+`src/core/migrations.ts`) that converts every `*.todo-list.card` into a
+sibling `*.doc.card`, plus removal of the schema, its template, the frontend
+renderer (`TodoListView`), and `todosRouter.updateItem`. Run for real on
+test1 via `cb migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
+entry). Agent guide, `docs/cards-as-markdown.md`, and `knowledge-audits.yaml`
+updated to match.
 
 The universal `{% todo %}` annotation (`src/schemas/todo-view.ts` +
 `src/shared/todo-model.ts`, `docs/implemented-plans/todo-annotation.md`)

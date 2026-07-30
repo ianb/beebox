@@ -280,6 +280,23 @@ Residual data fixes that were one-offs (won't apply to other boxes):
 - Several boxes had `Box.landmark.card` with `<label>` / `<symbol>` directly under `<landmark>` instead of inside `<navigation>`. Wrapped via perl one-liner.
 - Ledger had two `*.email-outbound.card` files still in XML (no migrator existed for that type). Hand-converted to YAML.
 
+### `todo-list-to-doc` (retirement — todo-list → doc + `{% todo %}`)
+
+Registered after `retire-process-captures`. Converts every `*.todo-list.card`
+into a sibling `*.doc.card` (same basename): `name` → `title`, `details` →
+opening body paragraph, `items[]` → a markdown list with each item wrapped in
+`{% todo %}…{% /todo %}` (status mapped pending→open/done/`status="dropped"`
+for cancelled/`status="parked"` for deferred; nested `items` → indented
+sub-lists; item `completed`/`agent-notes` preserved as trailing parenthetical
+text inside the wrapper so nothing is silently dropped), card-level
+`agent-notes` → a trailing blockquote. Rewrites any other card/markdown/view
+that referenced the old path via the same resolution-based machinery `cb mv`
+uses (`rewrite-card-refs.ts`). Superseded by the universal `{% todo %}`
+annotation (`docs/implemented-plans/todo-annotation.md`); see
+`scripts/migrate/todo-list-to-doc.ts` (pure transform) and
+`scripts/migrate/todo-list-to-doc-run.ts` (CLI driver) for the full mapping.
+Idempotent: a box with no `*.todo-list.card` files is a clean no-op.
+
 ## See also
 
 - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implemented-plans/cards-as-markdown-rfc.md` for the design rationale
