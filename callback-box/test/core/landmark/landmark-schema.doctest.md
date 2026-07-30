@@ -122,6 +122,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -162,6 +163,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -197,6 +199,7 @@ await box.write("store/recipes/Carrot.recipe.card", "---\ntitle: Carrot\n---\n")
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -229,6 +232,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -267,6 +271,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -307,6 +312,7 @@ const navigation = {
 };
 const resolved = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -356,6 +362,7 @@ await box.write("store/recipes/B.recipe.card", "---\ntitle: B\n---\n");
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card", order: "modified-desc" }] };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -388,6 +395,7 @@ const navigation = {
 };
 const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -403,6 +411,57 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
     "ref": "docs/About.doc.card",
     "label": "about",
     "exists": true
+  }
+]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Box-root refs render; escaping refs are missing
+
+A leading-`/` ref means the box root — the same form `cb validate` and `cb mv`
+understand (the render layer used to resolve it against the OS filesystem root
+and report every such link missing). A ref that climbs out of the box resolves
+to nothing and is reported `exists: false`, never clamped to some other file.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("docs/About.doc.card", "---\ntitle: About\n---\n");
+
+const navigation = {
+  label: "Recipes",
+  links: [
+    { ref: "/docs/About.doc.card", label: "about" },
+    { ref: "/store/recipes/Gone.recipe.card" },
+    { ref: "../../../../etc/hosts", label: "escape" },
+  ],
+};
+const { links } = await resolveLandmark(navigation, {
+  landmarkDir: box.path("store/recipes"),
+  landmarkPath: "store/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists })), null, 2)
+=>
+[
+  {
+    "ref": "docs/About.doc.card",
+    "label": "about",
+    "exists": true
+  },
+  {
+    "ref": "store/recipes/Gone.recipe.card",
+    "label": null,
+    "exists": false
+  },
+  {
+    "ref": "../../../../etc/hosts",
+    "label": "escape",
+    "exists": false
   }
 ]
 ```

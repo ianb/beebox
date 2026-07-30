@@ -249,6 +249,38 @@ version: "1.0.0"
 rel [a](sub/Scan.capture-session.card) abs [b](/store/sub/Scan.capture-session.card)
 ```
 
+## `?query` and `#fragment` survive the rewrite
+
+A ref may address a location *within* its target — `?view=ledger` picks a view,
+`#risks` an anchor. Resolution runs on the path part only (so the ref still
+matches the moving card), and the suffix is re-appended to the rewritten ref in
+whichever style it was written.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/charts/Ledger.doc.card", "---\ntype: doc\ntitle: Ledger\n---\nx\n");
+await box.write(
+  "store/Index.doc.card",
+  "---\ntype: doc\ntitle: Index\n---\n" +
+    "rel [view](charts/Ledger.doc.card?view=ledger) abs [anchor](/store/charts/Ledger.doc.card#risks)\n" +
+    "both [x](charts/Ledger.doc.card?view=ledger#risks)\n",
+);
+
+await mv(box, { from: "store/charts/Ledger.doc.card", to: "store/archive/Ledger.doc.card" });
+(await box.read("store/Index.doc.card")).trim()
+=>
+---
+type: doc
+title: Index
+---
+rel [view](archive/Ledger.doc.card?view=ledger) abs [anchor](/store/archive/Ledger.doc.card#risks)
+both [x](archive/Ledger.doc.card?view=ledger#risks)
+```
+
+```ts continue
+await box.cleanup();
+```
+
 ## Directory move: recursive, external refs rewritten (relative + absolute)
 
 Moving a directory carries everything under it. References from outside the

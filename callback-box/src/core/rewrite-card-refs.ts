@@ -25,11 +25,16 @@
  * Over-matching is safe: a candidate that doesn't resolve to a remapped target
  * is returned unchanged, so scanning the whole text with loose patterns can't
  * corrupt non-ref content.
+ *
+ * Ref grammar (the 3-form rule, `?query`/`#fragment` splitting, fail-closed
+ * containment) lives in `src/shared/ref-path.ts` — this module only maps its
+ * box-relative answers to/from absolute paths and re-appends the suffix when it
+ * rewrites, so a `?view=`- or `#anchor`-bearing ref both resolves and survives.
  */
 
 import * as path from "node:path";
-import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
-import { containWithinBox } from "../lib/box-containment.js";
+import { isAttachRef } from "../shared/attach-path.js";
+import { parseRef, resolveRefPath, type ParsedRef } from "../shared/ref-path.js";
 import { invariant } from "../lib/invariant.js";
 
 /**
@@ -38,18 +43,22 @@ import { invariant } from "../lib/invariant.js";
  */
 export type Remap = (resolvedAbsPath: string) => string | null;
 
-/** Split a ref's path from a trailing `#fragment` (anchor / message id). */
-function splitFragment(ref: string): { pathPart: string; fragment: string } {
-  const fragmentStart = ref.indexOf("#");
-  if (fragmentStart === -1) return { pathPart: ref, fragment: "" };
-  return { pathPart: ref.slice(0, fragmentStart), fragment: ref.slice(fragmentStart) };
+/**
+ * A parsed ref's `?query`/`#fragment` re-serialized, so a rewritten ref keeps
+ * everything that addressed a location *within* the target (`?view=ledger`,
+ * `#risks`). Empty when the ref carried neither.
+ */
+function refSuffix(parsed: ParsedRef): string {
+  const query = parsed.query === undefined ? "" : `?${parsed.query}`;
+  const fragment = parsed.fragment === undefined ? "" : `#${parsed.fragment}`;
+  return query + fragment;
 }
 
 /**
- * Resolve a ref's path part to an absolute filesystem path, using the same
- * rules as the renderer: leading `/` is box-root-absolute, `attach/` resolves
- * into the card's own attach scope, everything else is relative to the card.
- * Returns `null` for refs we don't resolve (empty, protocol URLs).
+ * Resolve a ref's path part to an absolute filesystem path via the shared ref
+ * algebra (`src/shared/ref-path.ts`). Returns `null` for refs we don't resolve
+ * (empty, protocol URLs) and for refs that escape the box — an escaping ref
+ * can't name an in-box moved card, so it's left untouched, but never silently.
  */
 function resolveRefToAbs(params: {
   boxRoot: string;
@@ -59,41 +68,45 @@ function resolveRefToAbs(params: {
   const { boxRoot, cardAbsPath, pathPart } = params;
   if (pathPart === "") return null;
   if (pathPart.includes("://")) return null;
-  let abs: string;
-  if (pathPart.startsWith("/")) {
-    abs = path.normalize(path.join(boxRoot, pathPart));
-  } else if (isAttachRef(pathPart)) {
-    const resolved = resolveAttachRef(cardAbsPath, pathPart);
-    if (resolved === null) return null;
-    abs = path.normalize(resolved);
-  } else {
-    abs = path.resolve(path.dirname(cardAbsPath), pathPart);
+  const fromPath = boxRelativeFrom(boxRoot, cardAbsPath);
+  if (fromPath === null) {
+    console.warn(`rewrite-card-refs: ${cardAbsPath} is outside ${boxRoot}; leaving its refs unchanged`);
+    return null;
   }
-  // Containment: a ref that escapes the box can't name an in-box moved card, so
-  // leave it untouched (null → no rewrite) — but never silently.
-  if (containWithinBox(boxRoot, abs) === null) {
+  const resolved = resolveRefPath({ fromPath, ref: pathPart, kind: "card" });
+  if (resolved === null) {
     console.warn(`rewrite-card-refs: ref "${pathPart}" in ${cardAbsPath} escapes the box; leaving unchanged`);
     return null;
   }
-  return abs;
+  return path.resolve(boxRoot, resolved);
+}
+
+/**
+ * The referring card's path as the shared algebra wants it: box-relative,
+ * forward slashes. `null` when the card lies outside the box.
+ */
+function boxRelativeFrom(boxRoot: string, cardAbsPath: string): string | null {
+  const rel = path.relative(path.resolve(boxRoot), path.resolve(cardAbsPath));
+  if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep)) return null;
+  return rel.split(path.sep).join("/");
 }
 
 /**
  * Re-express a moved target as a ref string from `cardAbsPath`, preserving the
- * original ref's absolute-vs-relative style and trailing fragment.
+ * original ref's absolute-vs-relative style and its `?query`/`#fragment`.
  */
 function restyleRef(params: {
   boxRoot: string;
   cardAbsPath: string;
   newAbs: string;
   wasAbsolute: boolean;
-  fragment: string;
+  suffix: string;
 }): string {
-  const { boxRoot, cardAbsPath, newAbs, wasAbsolute, fragment } = params;
+  const { boxRoot, cardAbsPath, newAbs, wasAbsolute, suffix } = params;
   const body = wasAbsolute
     ? "/" + path.relative(boxRoot, newAbs)
     : path.relative(path.dirname(cardAbsPath), newAbs);
-  return body + fragment;
+  return body + suffix;
 }
 
 /** A per-ref transform: given a raw ref token, return it unchanged or rewritten. */
@@ -111,8 +124,8 @@ function transformForReferrer(params: {
 }): RefTransform {
   const { boxRoot, cardAbsPath, remap } = params;
   return (rawRef) => {
-    const { pathPart, fragment } = splitFragment(rawRef);
-    const abs = resolveRefToAbs({ boxRoot, cardAbsPath, pathPart });
+    const parsed = parseRef(rawRef);
+    const abs = resolveRefToAbs({ boxRoot, cardAbsPath, pathPart: parsed.path });
     if (abs === null) return rawRef;
     const newAbs = remap(abs);
     if (newAbs === null) return rawRef;
@@ -120,8 +133,8 @@ function transformForReferrer(params: {
       boxRoot,
       cardAbsPath,
       newAbs,
-      wasAbsolute: pathPart.startsWith("/"),
-      fragment,
+      wasAbsolute: parsed.path.startsWith("/"),
+      suffix: refSuffix(parsed),
     });
   };
 }
@@ -142,15 +155,15 @@ function transformForMovedCard(params: {
 }): RefTransform {
   const { boxRoot, oldCardAbs, newCardAbs, remap } = params;
   return (rawRef) => {
-    const { pathPart, fragment } = splitFragment(rawRef);
-    if (pathPart === "" || pathPart.startsWith("/") || isAttachRef(pathPart)) {
+    const parsed = parseRef(rawRef);
+    if (parsed.path === "" || parsed.path.startsWith("/") || isAttachRef(parsed.path)) {
       return rawRef;
     }
-    const abs = resolveRefToAbs({ boxRoot, cardAbsPath: oldCardAbs, pathPart });
+    const abs = resolveRefToAbs({ boxRoot, cardAbsPath: oldCardAbs, pathPart: parsed.path });
     if (abs === null) return rawRef;
     const remapped = remap(abs);
     const target = remapped === null ? abs : remapped;
-    return path.relative(path.dirname(newCardAbs), target) + fragment;
+    return path.relative(path.dirname(newCardAbs), target) + refSuffix(parsed);
   };
 }
 

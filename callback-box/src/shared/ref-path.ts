@@ -29,9 +29,12 @@
  *
  * Consumers: `core/ref-exists.ts` (validate-side existence + the
  * `BoxRelativePath` producer), `frontend/src/lib/view-url.ts` (markdown
- * links/images, view targets). Anything else that needs to turn a ref into a
- * path imports this module — never a hand-rolled `path.resolve`, segment
- * split, or `#`/`?` strip.
+ * links/images, view targets), `core/rewrite-card-refs.ts` (`cb mv`'s
+ * resolution-based rewriter), `core/markdown-lint-rules.ts` (CB002 + `cb
+ * relink`, as `kind: "markdown"`), `core/landmark/resolve.ts` +
+ * `webapp/trpc/routers/landmarks.ts` (landmark link/symbol rendering).
+ * Anything else that needs to turn a ref into a path imports this module —
+ * never a hand-rolled `path.resolve`, segment split, or `#`/`?` strip.
  */
 
 import { isAttachRef, resolveAttachRef } from "./attach-path.js";

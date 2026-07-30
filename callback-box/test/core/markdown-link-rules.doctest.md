@@ -110,6 +110,48 @@ JSON.stringify(await lintLinks(box.root, doc), null, 2)
 await box.cleanup();
 ```
 
+### Suffixes, and `attach/` in a `.md`
+
+A link may carry a `?query` or `#fragment` addressing a location *within* the
+target (`?view=ledger` picks a view, `#risks` an anchor) — the existence check
+runs on the path part, so those links are not broken. And a `.md` dossier owns
+no `<basename>.attach/` scope, so `attach/…` is a plain subdirectory of the
+dossier's own directory: it resolves there and is flagged only when that file is
+missing.
+
+```ts
+const sbox = await makeTmpBox();
+await mkdir(join(sbox.root, "store/figures"), { recursive: true });
+await writeFile(join(sbox.root, "store/figures/F.figure.card"), "---\n---\n");
+
+const sdoc = join(sbox.root, "store/docs/saoirse.md");
+await mkdir(join(sbox.root, "store/docs/attach"), { recursive: true });
+await writeFile(join(sbox.root, "store/docs/attach/photo.webp"), "x");
+await writeFile(
+  sdoc,
+  [
+    "[view](/store/figures/F.figure.card?view=ledger)",
+    "[anchor](/store/figures/F.figure.card#risks)",
+    "[both](../figures/F.figure.card?view=ledger#risks)",
+    "![literal attach](attach/photo.webp)",
+    "![no card scope](attach/missing.webp)",
+    "[gone](/store/figures/Missing.figure.card?view=ledger)",
+    "",
+  ].join("\n"),
+);
+
+JSON.stringify(await lintLinks(sbox.root, sdoc), null, 2)
+=>
+[
+  "CB002: Broken link: attach/missing.webp",
+  "CB002: Broken link: /store/figures/Missing.figure.card?view=ledger"
+]
+```
+
+```ts continue
+await sbox.cleanup();
+```
+
 boxRoot is required: enabling the rule without it (e.g. `true`) is a caller error
 and throws rather than silently mis-resolving every box-root link:
 

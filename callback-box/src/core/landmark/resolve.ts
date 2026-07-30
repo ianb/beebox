@@ -15,6 +15,7 @@ import type {
   LandmarkOrderType,
 } from "../../schemas/landmark.js";
 import { isCardFile } from "../../lib/paths.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
 import { titleFromFilename } from "../file-summary.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
 
@@ -60,8 +61,13 @@ export interface ResolvedNavigation {
 export const GROUP_CHILD_CAP = 50;
 
 export interface ResolveOptions {
-  /** Absolute path to the landmark card's directory. */
+  /** Absolute path to the landmark card's directory (the `expand` glob's cwd). */
   landmarkDir: string;
+  /**
+   * Box-relative path of the landmark card itself — the document every `ref`
+   * resolves against (see `src/shared/ref-path.ts`).
+   */
+  landmarkPath: string;
   /** Absolute path to the box root. */
   boxRoot: string;
 }
@@ -227,16 +233,33 @@ interface BuildLinkInput {
   options: ResolveOptions;
 }
 
+/**
+ * Resolve one `ref` into a link the client can follow. Resolution goes through
+ * the shared ref algebra (`src/shared/ref-path.ts`), so a leading-`/` ref means
+ * the box root — the form validate and `cb mv` already understood, which this
+ * layer used to mis-resolve to an OS-absolute path. A `?query`/`#fragment`
+ * addresses a location within the target: it's kept on the emitted `ref` but
+ * dropped before the existence check. A ref that escapes the box resolves to
+ * nothing and is reported missing, the same as a broken ref at validate time.
+ */
 async function buildLink({ rawRef, label, options }: BuildLinkInput): Promise<ResolvedLink> {
-  const absolute = path.resolve(options.landmarkDir, rawRef);
-  const ref = path.relative(options.boxRoot, absolute);
+  const parsed = parseRef(rawRef);
+  const title = titleFromFilename(parsed.path);
+  const resolved = resolveRefPath({
+    fromPath: options.landmarkPath,
+    ref: parsed.path,
+    kind: "card",
+  });
+  if (resolved === null) return { ref: rawRef, label, title, exists: false };
+  const suffix =
+    (parsed.query === undefined ? "" : `?${parsed.query}`) +
+    (parsed.fragment === undefined ? "" : `#${parsed.fragment}`);
   let exists = false;
   try {
-    await fs.stat(absolute);
+    await fs.stat(path.resolve(options.boxRoot, resolved));
     exists = true;
   } catch (_e) {
     exists = false;
   }
-  const title = titleFromFilename(rawRef);
-  return { ref, label, title, exists };
+  return { ref: resolved + suffix, label, title, exists };
 }
