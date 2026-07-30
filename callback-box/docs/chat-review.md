@@ -93,6 +93,12 @@ should be as explicit and specific as they need to be — names, amounts, decisi
 the actual property, the actual question. Anything left out is lost once the
 transcript goes.
 
+Separately from any of that, a title is a human-readable label rather than a data
+dump — no email addresses, URLs, ids or long numbers. Not because those are
+sensitive, but because they read as noise in a list and crowd out the words that
+help you recognise the conversation. That's a titling-quality rule, and it lives
+in the prompt alongside the length and case guidance.
+
 The leak scan rejects exactly one thing, in any field: a **credential** shape.
 That is secret hygiene, not editorial judgement — an API key in a git-tracked card
 is a problem regardless of who reads it. Emails, addresses and names are not

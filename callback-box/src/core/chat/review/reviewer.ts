@@ -103,6 +103,7 @@ The title must also be:
 - Information-dense and specific to THIS chat — distinguishable from the person's other conversations.
 - One line, sentence case, no trailing period, roughly 4-9 words.
 - Findable. "A personal matter" protects nothing anyone cared about and destroys the title's only job.
+- A human-readable label, not a data dump. No email addresses, URLs, file paths, account or order numbers, ids, or long numbers — not because they are sensitive, but because they read as noise in a list and crowd out the words that help someone recognise the conversation. If such a detail matters, it belongs in contains or the account.
 
 Return an EMPTY title string when the existing title still describes the conversation. Titles that churn every night make the list unstable to read, so change one only when it no longer fits.
 
