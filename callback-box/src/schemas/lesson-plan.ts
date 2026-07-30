@@ -78,7 +78,7 @@ segments:
     mode: material
     status: ready                        # the card exists
     concepts: [proton-transfer, conjugate-pairs]
-    material: { ref: material/Proton_Transfer.figure.card }
+    material: { ref: /store/courses/Acids.attach/material/Proton_Transfer.figure.card }
     note: Predict-then-reveal; don't just show it
   - do: Written recap of strong-vs-weak acids to re-read later
     mode: material

@@ -6,7 +6,7 @@
  * frontmatter fields only — it identifies refs by key name (`ref` /
  * `refs`) in parsed objects. Card bodies are strings as far as cardworks
  * is concerned, so refs embedded in body Markdoc tags (e.g.
- * `{% source ref="..." %}`, `{% key-person ref="people/dana" %}`) slip
+ * `{% source ref="/people/Dana_Lee.person.card" %}`) slip
  * past the field walker.
  *
  * This complement parses the body with Markdoc and walks every tag node

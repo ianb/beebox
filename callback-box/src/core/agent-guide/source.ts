@@ -6,6 +6,16 @@
 
 import { SECTION } from "./sections.js";
 
+/**
+ * The one statement of how a ref path is written, shared verbatim by every
+ * guide section that states it (here and ABOUT_CARDS) so the two can't drift.
+ * The behavior it describes is `resolveRefPath` (`src/shared/ref-path.ts`).
+ */
+export const REF_PATH_RULE =
+  "**Always write a leading `/` — the path resolves from the box root.** " +
+  "The one exception is `attach/…`, the card's own attach scope. Never `../`. " +
+  "A bare path resolves relative to the document it's written in — legacy, still resolves, not what you write.";
+
 export function sourceSection(): string {
   return `## ${SECTION.PROVENANCE} — the \`{% source %}\` tag
 
@@ -22,7 +32,7 @@ She's been going back and forth on the kitchen — open shelves vs.
 closed, mostly because she doesn't trust herself to keep them tidy.
 {% /source %}
 
-{% source ref="/box/people/Dana_Bicking.person.card" usage="inferred from her email signature" %}
+{% source ref="/people/Dana_Lee.person.card" usage="inferred from her email signature" %}
 Dana lives in Portland.
 {% /source %}
 \`\`\`
@@ -31,8 +41,7 @@ Dana lives in Portland.
 
 \`ref\` is the box's pointer to another card, used throughout the guide:
 frontmatter (\`{ref: "..."}\`, \`key-people[].ref\`), body links, and tags
-like this one. A leading \`/\` resolves from the **box root** (the usual
-form); a bare path resolves relative to the current card — an easy thing to get wrong, so **prefer the leading \`/\` box-root form** and never \`../../\`.
+like this one. ${REF_PATH_RULE}
 Refs are tracked automatically — \`cb validate\` warns when a \`ref\` no
 longer resolves, and \`cb mv\` rewrites them when the target moves. Inside
 \`{% source %}\`, exactly one of \`ref\` / \`href\` is **required** — it names

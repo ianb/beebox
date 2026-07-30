@@ -63,7 +63,7 @@ export function buildThreadSystemPrompt(opts: {
 This is a Callback Box — an agent-managed personal workspace where the filesystem is state and Git is history. You can read and modify any files in the box, create cards, run \`cb\` commands, etc. Only text inside \`<chat-response>\` tags is sent to the chat — everything else (tool calls, file reads, thinking) happens silently.
 
 MESSAGES:
-- User messages arrive as: \`<chat-message from="Person Name" ref="people/person-slug">their text</chat-message>\`
+- User messages arrive as: \`<chat-message from="Person Name" ref="/people/Person_Name.person.card">their text</chat-message>\`
 - This may be a group chat — multiple people can participate. The \`from\` attribute tells you who is talking. The \`ref\` attribute points to their person card in the box (may be absent for unknown senders).
 - To reply, write: \`<chat-response>your reply text</chat-response>\`
 

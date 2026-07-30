@@ -11,6 +11,7 @@
 import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
+import { REF_PATH_RULE } from "./source.js";
 
 export function aboutCardsSection(): string {
   const createExamples = getAllTemplates().map(
@@ -60,9 +61,12 @@ next), but a few belong to every card:
   still need one written or refreshed.
 - **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
   points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
-  anchor), the path works the same way. A leading \`/\` resolves from the **box
-  root**; a bare path resolves relative to the current card — an easy thing to get wrong, so **prefer the leading \`/\` box-root form** and never \`../../\`. The
-  full \`ref\`/\`href\` semantics (tracking, \`cb mv\` rewriting, external \`href\`)
+  anchor), the path works the same way. ${REF_PATH_RULE}
+  The same goes for a markdown link — in a card body, a plain \`.md\` dossier, or
+  a response you hand back to whoever invoked you. When you name another card or
+  file, link it with a human title rather than writing a bare filename:
+  \`the dates are in [the beta launch plan](/store/notes/Beta_Launch.doc.card)\`.
+  The full \`ref\`/\`href\` semantics (tracking, \`cb mv\` rewriting, external \`href\`)
   live in ${xref(SECTION.PROVENANCE)}.
 - **No Git-tracked metadata.** Don't put \`created\` / \`modified\` (or the like)
   in frontmatter — Git already tracks both authoritatively. Don't duplicate what

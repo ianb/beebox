@@ -20,7 +20,7 @@ const INLINE_LINK_RE = /\[[^\]]*]\(([^)]+)\)/g;
 
 export const noLegacyViewLinks: Rule = {
   names: ["CB001", "no-legacy-view-links"],
-  description: "The retired `view:` scheme — drop the prefix and reference the plain box path, e.g. [label](store/x.card) or ![alt](store/x.card)",
+  description: "The retired `view:` scheme — drop the prefix and reference the plain box path, e.g. [label](/store/x.card) or ![alt](/store/x.card)",
   tags: ["links"],
   parser: "none",
   function: (params: Parameters<Rule["function"]>[0], onError: RuleOnError): void => {
