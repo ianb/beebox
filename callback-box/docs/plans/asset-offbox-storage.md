@@ -1,6 +1,22 @@
 # Off-Box Asset Storage — Content-Addressable Backup to R2
 
-**Status:** proposed — design complete, nothing implemented.
+**Status: SUPERSEDED by [`asset-annex.md`](asset-annex.md).** Nothing
+here was implemented.
+
+This plan proposed keeping the hand-rolled asset manifests and building
+an R2 sync on top of them, having rejected git-annex on adoption cost.
+Prototyping showed that cost estimate was wrong — a clone needs two
+extra commands, plain `git add` routes assets into the annex with no
+code changes, and `git annex init` does not clobber our pre-commit hook.
+See "Prototype findings" in `asset-annex.md`.
+
+**Still valid and still referenced:** the measured asset inventory, and
+the R2 cost and API analysis below (pricing, the Cloudflare REST API's
+1,200-req/5-min account cap, the `@aws-sdk/client-s3` CRC32/R2 501
+incompatibility, the ~0.1% cross-box dedup measurement). Those are the
+input to the remote iteration that follows `asset-annex.md`. The
+*design* below — manifest-as-inventory, `cb attachments push/pull/fsck`
+— is not.
 
 Box assets (photos, scans, audio, video — the gitignored subset of
 attachments tracked by `docs/asset-manifests.md`) currently exist on
