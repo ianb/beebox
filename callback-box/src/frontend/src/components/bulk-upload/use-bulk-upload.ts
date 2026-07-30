@@ -89,6 +89,20 @@ function describeFailure(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/**
+ * Mark every unfinished row failed, so a batch whose cancel did not land is
+ * still actionable. Aborted uploads deliberately leave their row untouched;
+ * without this they sit on "uploading" with no queue entry, no retry affordance,
+ * and Done disabled — a batch the user can neither finish nor abandon.
+ */
+function markUnfinishedFailed(items: BulkItemView[]): BulkItemView[] {
+  return items.map((it) =>
+    it.state === "uploading" || it.state === "queued"
+      ? { ...it, state: "failed" as const, reason: "Cancelled — retry to upload it again" }
+      : it,
+  );
+}
+
 /** Derive the summary counts from the item list (pure). */
 function computeCounts(items: BulkItemView[]): BulkUploadCounts {
   let uploaded = 0;
@@ -260,7 +274,17 @@ export function useBulkUpload(opts: {
     abortRef.current?.abort();
     abortRef.current = null;
     const sessionId = await sessionPromiseRef.current;
-    if (sessionId) await cancelBulkSession(sessionId);
+    try {
+      if (sessionId) await cancelBulkSession(sessionId);
+    } catch (e) {
+      // The discard failed and the overlay stays open, so the rows must be left
+      // ACTIONABLE. Aborted uploads deliberately leave their row untouched, which
+      // would otherwise strand them on "uploading" with no queue entry, no retry
+      // affordance, and Done disabled — a batch the user can neither finish nor
+      // abandon. Mark them failed so retry works.
+      setItems(markUnfinishedFailed);
+      throw e;
+    }
   }, []);
 
   // Abort any in-flight uploads when the overlay unmounts.

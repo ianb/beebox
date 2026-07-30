@@ -9,7 +9,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { stagingSessionDir, type StagingSessionState } from "./staging-schema.js";
+import { stagingSessionDir, type StagingSession, type StagingSessionState } from "./staging-schema.js";
 import { StagingSessionGoneError } from "./staging-errors.js";
 import { withStagingLock, releaseStagingLock, readStagingSession } from "./staging-store.js";
 
@@ -49,13 +49,27 @@ export interface DiscardResult {
 export async function discardStagingSessionIfCancellable(opts: {
   boxRoot: string;
   id: string;
+  /**
+   * Re-checked against the FRESH session inside the lock. Callers whose decision
+   * depends on more than the lifecycle state — the sweep weighs idleness and
+   * emptiness — must pass it here, not evaluate it on a snapshot outside.
+   *
+   * Guarding only the state is not enough: an idle empty batch the sweep decided
+   * to discard can have files registered and uploaded into it (all of which
+   * leave it `open`) before the lock is taken, and the discard would then delete
+   * a batch the user is actively filling.
+   */
+  stillDiscardable?: (session: StagingSession) => boolean;
 }): Promise<DiscardResult> {
-  const { boxRoot, id } = opts;
+  const { boxRoot, id, stillDiscardable } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
     const cancellable = session.state === "open" || session.state.startsWith("failed:");
     if (!cancellable) return { discarded: false, blockedBy: session.state };
+    if (stillDiscardable !== undefined && !stillDiscardable(session)) {
+      return { discarded: false, blockedBy: session.state };
+    }
     try {
       await fs.rm(stagingSessionDir(boxRoot, id), { recursive: true, force: true });
     } catch (e) {

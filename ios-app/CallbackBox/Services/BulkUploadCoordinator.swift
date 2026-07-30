@@ -10,19 +10,24 @@ struct BulkUploadProgress: Equatable, Sendable {
     var isFinished: Bool { pending == 0 }
 }
 
-/// A batch whose delivery the box never confirmed, held so the user can retry it
-/// from the already-staged files rather than re-picking every photo.
-struct RetainedPhotoBatch: Equatable, Sendable {
-    var items: [PreparedBulkItem]
-    var importFailures: [BulkUploadAPI.FailedItem]
-    var targetSessionID: String
-    var note: String
-}
-
+/// What happened to a batch, from the uploader's point of view.
+///
+/// The three cases exist to express one invariant: **the seal is the hand-off.**
+/// Before it, this client is the only thing that can recover the batch. After it,
+/// the box holds both the bytes and the boxholder's introduction, so the box owns
+/// recovery — and the uploader may safely let go of its local copies.
 enum BulkUploadOutcome: Equatable, Sendable {
-    /// The batch sealed; the box will land the card and inject `<upload>`.
+    /// Sealed AND confirmed in the chat.
     case delivered(uploaded: Int, failed: Int)
-    /// Nothing could be sent and the batch was abandoned (with a reason to show).
+    /// Sealed, but the box hadn't confirmed delivery before we stopped waiting.
+    ///
+    /// Still a hand-off: the batch is durably the box's problem. If delivery
+    /// ultimately fails, the sweep surfaces it to the chat agent with the note
+    /// and counts (`bulk-upload/sweep.ts`, `notifyStranded`) — which is a better
+    /// recovery path than a retry button on a phone that may never come back.
+    case accepted(uploaded: Int, failed: Int)
+    /// Never sealed — the box does not have this batch. The caller keeps the
+    /// user's text so they can try again.
     case failed(message: String)
 }
 
@@ -153,21 +158,26 @@ actor BulkUploadCoordinator {
                     return .delivered(uploaded: uploaded.count, failed: failed.count)
                 }
                 if state.state.hasPrefix("failed:") {
-                    return .failed(message: "The box could not deliver the batch (\(state.state)). Your photos and message were kept.")
+                    // Sealed, so the box owns it and will surface the failure to
+                    // the chat agent. Reporting `accepted` rather than `failed`
+                    // keeps this client from also trying to recover — two
+                    // recovery paths for one batch is how it gets delivered twice.
+                    return .accepted(uploaded: uploaded.count, failed: failed.count)
                 }
             case .rejected(.sessionGone):
                 // Staging is torn down only after a delivered batch.
                 return .delivered(uploaded: uploaded.count, failed: failed.count)
-            case .rejected(let rejection):
-                return .failed(message: rejection.message)
+            case .rejected:
+                // We can't read the state, but the seal succeeded — the box has
+                // the batch either way.
+                return .accepted(uploaded: uploaded.count, failed: failed.count)
             case .retryable:
                 break // transient — keep waiting
             }
             try? await sleep(Self.deliveryPollNanos)
         }
-        // Still working. Report it as unfinished rather than claiming success, so
-        // the caller keeps the photos and the text.
-        return .failed(message: "The box is still processing this batch; the upload message will appear in chat when it lands.")
+        // Still working. Sealed, so it is the box's to finish.
+        return .accepted(uploaded: uploaded.count, failed: failed.count)
     }
 
     /// Resume an interrupted batch: ask the box what it already holds and send

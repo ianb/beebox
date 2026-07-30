@@ -522,13 +522,19 @@ See §1.3 (full request/response/errors).
     **503** if the box has no chat runtime. Returns immediately; the batch lands an `upload-batch`
     card under the chat's `tmp-upload/` and an `<upload>` message is injected.
     **A 200 here means SEALED, not DELIVERED** — prepare→deliver runs in the background afterwards
-    and can still fail (`failed:prepare` / `failed:deliver`). An uploader MUST NOT treat this
-    response as delivery: poll `GET /sessions/:id` until the state is terminal, and only then release
-    anything a retry would need (the composer text, locally staged files). Terminal reads:
-    `delivered`, `delivering` (queued to a busy agent — reconciliation guarantees it lands), or
-    **404** (staging is torn down only after delivery) all mean delivered; `failed:*` means it did
-    not land and the batch is still retryable via another finalize. Treating the seal as delivery
-    reproduces the original "client says done, server shows nothing" bug.
+    and can still fail (`failed:prepare` / `failed:deliver`).
+    **The seal is the hand-off.** Before it, the uploader is the only thing that can recover the
+    batch, so a failed finalize means the uploader keeps the user's text and lets them retry. After
+    it, the box holds both the bytes and the `note`, and owns recovery: a batch that ends `failed:*`
+    is surfaced to its chat agent by the sweep (`core/bulk-upload/sweep.ts`, `notifyStranded`) with
+    the introduction and the received/failed/registered counts, so the agent can tell the boxholder
+    and offer to place the files. An uploader therefore **MUST NOT** mount its own retry for a sealed
+    batch — two recovery paths for one batch is how it gets delivered twice — and MAY release its
+    local copies and the composer text once finalize returns 200.
+    Polling `GET /sessions/:id` after the seal is for UX only (reporting success promptly), not
+    correctness. Terminal reads: `delivered`, `delivering` (queued to a busy agent), or **404**
+    (staging is torn down only after delivery) all mean delivered; `failed:*` means the box will hand
+    it to the agent.
     `note` is the batch's **introduction** — the uploader sends the composer text the user submitted
     the files with, verbatim. It rides in the same atomic seal as `failedItems`, lands in the card's
     `note` frontmatter, and renders as the first paragraph of the `<upload>` message body (above the

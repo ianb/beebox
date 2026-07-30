@@ -216,11 +216,13 @@ final class BulkUploadTests: XCTestCase {
 
     // MARK: - Delivery confirmation
 
-    /// A seal is not a delivery. If the box later fails to prepare/deliver, the
-    /// coordinator must report failure so the caller keeps the photos and the
-    /// composer text — reporting success there is the original bug in a new
-    /// place.
-    func testFailedDeliveryAfterSealIsReportedAsFailure() async {
+    /// A seal is a HAND-OFF, not a delivery. If the box later fails to deliver,
+    /// the coordinator reports `.accepted` — not `.failed` — because the box now
+    /// holds the bytes and the note and will surface the failure to the chat
+    /// agent itself. Reporting `.failed` here would have this client mount its
+    /// own recovery in parallel, and two recovery paths for one batch is how it
+    /// gets delivered twice.
+    func testFailedDeliveryAfterSealIsAHandOffNotAFailure() async {
         let transport = ScriptedTransport(uploadStatuses: Array(repeating: 200, count: 9))
         transport.postFinalizeStatus = Data(#"""
         {"sessionId":"s1","state":"failed:deliver","registered":[],"received":[]}
@@ -232,10 +234,24 @@ final class BulkUploadTests: XCTestCase {
 
         let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: "keep me")
 
-        guard case .failed(let message) = outcome else {
-            return XCTFail("a batch the box could not deliver must not report success, got \(outcome)")
+        XCTAssertEqual(outcome, .accepted(uploaded: 1, failed: 0))
+    }
+
+    /// A batch that never sealed is a genuine failure: the box does not have it,
+    /// so the caller must keep the user's text and let them try again.
+    func testUnsealedBatchIsReportedAsFailure() async {
+        let transport = ScriptedTransport(uploadStatuses: Array(repeating: 200, count: 9))
+        transport.finalizeStatusCode = 503
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: makeBox(), transport: transport),
+            sleep: { _ in }
+        )
+
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: nil)
+
+        guard case .failed = outcome else {
+            return XCTFail("an unsealed batch must report failure, got \(outcome)")
         }
-        XCTAssertTrue(message.contains("kept"), "the message should tell the user nothing was lost: \(message)")
     }
 
     /// Staging is torn down only after a delivered batch, so a 404 on the poll
@@ -431,6 +447,8 @@ private final class ScriptedTransport: CaptureTransport, @unchecked Sendable {
     var postFinalizeStatus: Data?
     /// Status code served for the delivery poll (404 = staging already torn down).
     var postFinalizeStatusCode = 200
+    /// Status code served for the finalize call itself (non-2xx = never sealed).
+    var finalizeStatusCode = 200
 
     var uploadCount: Int { lock.withLock { uploads } }
     var finalizeBody: [String: Any]? { lock.withLock { capturedFinalize } }
@@ -443,8 +461,11 @@ private final class ScriptedTransport: CaptureTransport, @unchecked Sendable {
         let path = request.url?.path ?? ""
         if path.hasSuffix("/finalize") {
             let parsed = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
-            lock.withLock { capturedFinalize = parsed }
-            return (Data(#"{"sessionId":"s1","staged":true}"#.utf8), ok(request))
+            let code = lock.withLock { () -> Int in capturedFinalize = parsed; return finalizeStatusCode }
+            let body = code == 200
+                ? Data(#"{"sessionId":"s1","staged":true}"#.utf8)
+                : Data(#"{"error":"Chat runtime unavailable"}"#.utf8)
+            return (body, HTTPURLResponse(url: request.url!, statusCode: code, httpVersion: nil, headerFields: nil)!)
         }
         if request.httpMethod == "GET" {
             let (body, code) = lock.withLock { () -> (Data, Int) in

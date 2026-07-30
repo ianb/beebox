@@ -14,7 +14,7 @@ import type { FastifyInstance } from "fastify";
 import type { EventBus } from "../../core/event-bus.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { resumeBulkSessions } from "../../core/bulk-upload/resume.js";
-import { sweepBulkBatches, type UnfiledBatch } from "../../core/bulk-upload/sweep.js";
+import { sweepBulkBatches, type UnfiledBatch, type StrandedBatch } from "../../core/bulk-upload/sweep.js";
 import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
 import { getChatRuntime, type ChatRuntime } from "../chat-runtime.js";
@@ -53,6 +53,53 @@ async function injectUnfiledSelfNote(opts: {
 }
 
 /**
+ * Hand a sealed-but-undeliverable batch to the chat agent.
+ *
+ * The uploader is deliberately not the recovery mechanism: once a batch is
+ * sealed the box holds both the bytes and the boxholder's introduction, so the
+ * box is what must notice — a retry button on a phone that may never return
+ * cannot be relied on, and a `console.error` reaches nobody. The note gives the
+ * agent what it needs to act: what the boxholder said, how much arrived, and
+ * where it is.
+ */
+async function injectStrandedSelfNote(opts: {
+  boxRoot: string;
+  runtime: ChatRuntime;
+  batch: StrandedBatch;
+}): Promise<void> {
+  const { boxRoot, runtime, batch } = opts;
+  const targetId = batch.targetSessionId ?? (await getMostActive(boxRoot));
+  if (!targetId) {
+    console.warn(`[bulk] Stranded batch ${batch.sessionId} has no chat to notify (no live session)`);
+    return;
+  }
+  const introduction =
+    batch.note === undefined
+      ? "They did not say what the files were for."
+      : `They said: "${batch.note}"`;
+  const body =
+    `A file upload the boxholder submitted could not be delivered (${batch.state}). ` +
+    `${String(batch.receivedCount)} of ${String(batch.registeredCount)} file(s) reached the box` +
+    `${batch.failedCount > 0 ? `, ${String(batch.failedCount)} failed to upload` : ""}; ` +
+    `the bytes are still staged under \`tmp/capture-staging/${batch.sessionId}/\`. ${introduction} ` +
+    "They have not been told this failed and may believe the upload worked. " +
+    "Tell them what happened, and — if you can work out where the files should go from what they " +
+    "said — offer to place them. Do not silently discard the batch.";
+  const wrapped = `<self-note ref="bulk-upload-stranded">\n${body}\n</self-note>`;
+
+  const session = runtime.registry.getOrCreate(targetId);
+  runtime.wireSession(session);
+  if (session.isBusy()) {
+    session.enqueue({ text: wrapped });
+    return;
+  }
+  runtime.registry.enforceLiveCap(targetId);
+  runtime.registry.touch(targetId, { subprocessUse: true });
+  const sent = await session.send({ text: wrapped });
+  if (!sent) console.error(`[bulk] Self-note send failed for stranded batch ${batch.sessionId}`);
+}
+
+/**
  * Run the bulk sweep every {@link BULK_SWEEP_INTERVAL_MS} of *awake* time (never
  * wall time — a plain interval fires instantly after a macOS sleep). Self-rearms;
  * returns a cancel handle wired to server close.
@@ -76,6 +123,11 @@ function scheduleBulkSweep(opts: { boxRoot: string; eventBus: EventBus; runtime:
       notifyUnfiled: (batch) => {
         void injectUnfiledSelfNote({ boxRoot, runtime, batch }).catch((err: unknown) => {
           console.error(`[bulk] Self-note for unfiled batch ${batch.cardRelPath} failed:`, err);
+        });
+      },
+      notifyStranded: (batch) => {
+        void injectStrandedSelfNote({ boxRoot, runtime, batch }).catch((err: unknown) => {
+          console.error(`[bulk] Self-note for stranded batch ${batch.sessionId} failed:`, err);
         });
       },
     });

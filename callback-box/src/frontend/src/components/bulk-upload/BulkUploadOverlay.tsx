@@ -139,22 +139,18 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
       // prepare/deliver leaves them with no <upload> message AND no composer
       // text, which is the original bug wearing a different hat.
       const delivery = await waitForBulkDelivery({ sessionId, timeoutMs: 30_000, pollMs: 750 });
-      if (delivery.outcome === "failed") {
-        setActionError(`${delivery.reason ?? "Delivery failed."} Your message was kept — press Done to retry.`);
-        setFinalizing(false);
-        return;
-      }
-      if (delivery.outcome === "unknown") {
-        // Still working. Don't claim success and don't destroy anything — but
-        // don't trap the user either. The batch is sealed, so cancelling is
-        // refused server-side; leaving is safe because the box will finish and
-        // the `<upload>` message arrives through the normal chat stream.
-        setActionError(null);
+      // Sealed either way. The box now holds the bytes AND the note, so it owns
+      // recovery: if delivery ultimately fails the sweep surfaces the batch to
+      // the chat agent with the introduction and counts, which reaches the
+      // boxholder far more reliably than a retry button on a tab they may close.
+      // So the composer text is released here rather than held for a retry this
+      // client shouldn't be attempting.
+      onDelivered();
+      if (delivery.outcome !== "delivered") {
         setStillWorking(true);
         setFinalizing(false);
         return;
       }
-      onDelivered();
       onExit();
     } catch (e) {
       // Finalize failed — surface inline, keep the overlay open (the batch stays

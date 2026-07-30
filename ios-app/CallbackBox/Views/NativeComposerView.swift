@@ -27,10 +27,6 @@ struct NativeComposerView: View {
     @State private var statusText: String?
     /// Non-nil while a large photo selection is uploading as a bulk batch.
     @State private var batchProgress: BulkUploadProgress?
-    /// A batch whose delivery the box never confirmed, held so it can be retried.
-    /// Without this the staged files stay on disk unreachable — "kept for retry"
-    /// with nothing able to retry them.
-    @State private var retainedBatch: RetainedPhotoBatch?
     @State private var isPreparingSend = false
     @State private var editorHeight: CGFloat = 58
     @State private var focused = false
@@ -90,10 +86,6 @@ struct NativeComposerView: View {
             }
         }
         .onAppear {
-            // Staged batch files don't survive a relaunch (there is no persisted
-            // batch record), so anything still on disk now is unreachable and
-            // would accumulate in Caches forever.
-            BulkPhotoStaging.discardOrphans()
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             applyEarcon(.responseActiveChanged(responseActive))
             if initiallyFocused {
@@ -196,20 +188,11 @@ struct NativeComposerView: View {
     private var composerSurface: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let visibleStatusText {
-                HStack(spacing: 10) {
-                    Text(visibleStatusText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if retainedBatch != nil && batchProgress == nil {
-                        Button("Retry") { Task { await retryPhotoBatch() } }
-                            .font(.caption)
-                        Button("Discard") { discardRetainedBatch() }
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 8)
+                Text(visibleStatusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 8)
             }
             if hasScrollableComposerContext {
                 ScrollView(.vertical, showsIndicators: true) {
@@ -797,7 +780,6 @@ struct NativeComposerView: View {
             return
         }
 
-        let note = draftStore.draft.text
         batchProgress = BulkUploadProgress(total: items.count, uploaded: 0, failed: 0)
         statusText = "Preparing \(items.count) photos…"
 
@@ -807,6 +789,12 @@ struct NativeComposerView: View {
         // composer text as its introduction while the older photos sat in the
         // composer with nothing describing them.
         let foldedIn = await stageComposerImages(uploadedAt: uploadedAt)
+        // Read the introduction AFTER folding: staging removes each folded image
+        // and strips its `[imageN]` token, so capturing the text first would ship
+        // a note referring to attachments the message no longer has — and would
+        // then fail the unchanged-check below, leaving the consumed text sitting
+        // in the composer.
+        let note = draftStore.draft.text
 
         var staged = await BulkPhotoStaging.stage(
             items: items,
@@ -848,65 +836,27 @@ struct NativeComposerView: View {
         batchProgress = nil
 
         switch outcome {
-        case .delivered(let uploaded, let failed):
-            // The box confirmed delivery, so the staged copies are safe to drop
-            // and the text this batch carried away is safe to clear.
+        case .delivered(let uploaded, let failed), .accepted(let uploaded, let failed):
+            // Sealed either way, so the box holds the bytes AND the note: the
+            // staged copies are redundant and the text has been carried away.
+            // If delivery ultimately fails, the box surfaces it to the chat agent
+            // rather than this client retrying — see `notifyStranded`.
             BulkPhotoStaging.discard(staged.prepared)
             clearComposerTextIfUnchanged(from: note)
-            statusText = failed == 0
-                ? "\(uploaded) photos uploaded."
-                : "\(uploaded) photos uploaded, \(failed) failed."
-        case .failed(let message):
-            // Nothing was confirmed. Keep BOTH the staged files and the text, and
-            // hold them somewhere reachable so "Retry" is a real affordance
-            // rather than a promise.
-            retainedBatch = RetainedPhotoBatch(
-                items: staged.prepared,
-                importFailures: staged.failures,
-                targetSessionID: targetSessionID,
-                note: note
-            )
-            statusText = "\(message) Tap Retry to try again."
-        }
-    }
-
-    /// Re-run a batch the box never confirmed, from its retained staged files.
-    private func retryPhotoBatch() async {
-        guard let retained = retainedBatch else { return }
-        batchProgress = BulkUploadProgress(total: retained.items.count, uploaded: 0, failed: 0)
-        let coordinator = BulkUploadCoordinator(
-            api: BulkUploadAPI(box: box),
-            onProgress: { progress in
-                Task { @MainActor in batchProgress = progress }
+            if case .accepted = outcome {
+                statusText = "\(uploaded) photos sent — the box is still processing them."
+            } else {
+                statusText = failed == 0
+                    ? "\(uploaded) photos uploaded."
+                    : "\(uploaded) photos uploaded, \(failed) failed."
             }
-        )
-        let outcome = await coordinator.run(
-            items: retained.items,
-            targetSessionID: retained.targetSessionID,
-            note: retained.note,
-            importFailures: retained.importFailures
-        )
-        batchProgress = nil
-        switch outcome {
-        case .delivered(let uploaded, let failed):
-            BulkPhotoStaging.discard(retained.items)
-            retainedBatch = nil
-            clearComposerTextIfUnchanged(from: retained.note)
-            statusText = failed == 0
-                ? "\(uploaded) photos uploaded."
-                : "\(uploaded) photos uploaded, \(failed) failed."
         case .failed(let message):
-            statusText = "\(message) Tap Retry to try again."
+            // Never sealed, so the box does NOT have this batch. Drop the staged
+            // copies (nothing can use them) but keep the text, so the user can
+            // simply try again.
+            BulkPhotoStaging.discard(staged.prepared)
+            statusText = "\(message) Your message was kept — try again."
         }
-    }
-
-    /// Abandon a retained batch: drop its staged copies rather than leaving them
-    /// in Caches forever.
-    private func discardRetainedBatch() {
-        guard let retained = retainedBatch else { return }
-        BulkPhotoStaging.discard(retained.items)
-        retainedBatch = nil
-        statusText = "Photo upload discarded."
     }
 
     /// Move the composer's existing inline photos into the batch being started,

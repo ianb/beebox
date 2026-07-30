@@ -141,6 +141,12 @@ export const StagingSessionSchema = z.object({
    * (`src/schemas/upload-batch.tsx` duty 1).
    */
   note: z.string().optional(),
+  /**
+   * Set once the sweep has surfaced this batch to the chat agent as
+   * sealed-but-undelivered, so the hand-off fires exactly once rather than every
+   * sweep cycle (bulk sessions only).
+   */
+  strandedNotifiedAt: z.string().optional(),
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
 });
 export type StagingSession = z.infer<typeof StagingSessionSchema>;

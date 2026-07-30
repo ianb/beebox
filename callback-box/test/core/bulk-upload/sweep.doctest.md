@@ -296,3 +296,80 @@ JSON.stringify({
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A sealed-but-undeliverable batch is handed to the chat agent
+
+Once a batch is sealed the box holds the bytes AND the boxholder's introduction,
+so the box owns recovery — the uploader may be a phone that never comes back, and
+a `console.error` reaches nobody. The sweep surfaces a `failed:*` batch to its
+chat agent with enough context to act: what the boxholder said, how much arrived,
+and where the bytes are.
+
+```ts
+const box = await makeTmpBox();
+const stranded = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
+  expectedItems: [{ id: "a", name: "IMG_0001.jpg" }],
+});
+const session = await readStagingSession({ boxRoot: box.root, id: stranded.id });
+session.note = "Receipts from the Tokyo trip";
+await writeStagingSession({ boxRoot: box.root, session });
+await setStagingState({ boxRoot: box.root, id: stranded.id, state: "failed:deliver" });
+
+const seen = [];
+const result = await sweepBulkBatches({ boxRoot: box.root, notifyStranded: (b) => seen.push(b) });
+JSON.stringify({
+  surfaced: result.stranded.includes(stranded.id),
+  target: seen[0].targetSessionId,
+  note: seen[0].note,
+  registered: seen[0].registeredCount,
+})
+=> {"surfaced":true,"target":"chat-1","note":"Receipts from the Tokyo trip","registered":1}
+```
+
+The staging is NOT deleted — the agent may still need the bytes:
+
+```ts continue
+(await readStagingSession({ boxRoot: box.root, id: stranded.id })) !== null
+=> true
+```
+
+It fires exactly once, not every sweep cycle:
+
+```ts continue
+const again = [];
+const second = await sweepBulkBatches({ boxRoot: box.root, notifyStranded: (b) => again.push(b) });
+JSON.stringify({ surfacedAgain: second.stranded.length, notified: again.length })
+=> {"surfacedAgain":0,"notified":0}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The sweep re-checks its whole decision under the lock
+
+The discard decision is made on a snapshot, then re-made against the fresh
+session inside the staging lock. Guarding only the lifecycle state is not enough:
+registering and uploading files all leave a batch `open`, so a user who comes back
+between the snapshot and the lock would have their newly-filled batch deleted.
+
+```ts
+const box = await makeTmpBox();
+const revived = await makeBulk(box.root, { state: "open", aged: true });
+// Simulate the user returning: the batch is no longer idle when the lock is taken.
+const fresh = await readStagingSession({ boxRoot: box.root, id: revived.id });
+fresh.lastActivityAt = new Date().toISOString();
+await writeStagingSession({ boxRoot: box.root, session: fresh });
+
+const result = await sweepBulkBatches({ boxRoot: box.root });
+JSON.stringify({
+  discarded: result.discarded.includes(revived.id),
+  stillOnDisk: (await readStagingSession({ boxRoot: box.root, id: revived.id })) !== null,
+})
+=> {"discarded":false,"stillOnDisk":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
