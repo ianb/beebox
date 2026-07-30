@@ -42,6 +42,7 @@ import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from 
 import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
+import { boxRelativeDoc, canonicalIssueMessage, checkCanonicalRef } from "./canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
@@ -54,6 +55,13 @@ export interface LintDispatchOptions {
    */
   boxRoot: string;
   ctx: LoadCardContext;
+  /**
+   * Also flag refs written in the non-canonical (document-relative) form, as
+   * `type: "canonical"` warnings. Off unless `cb validate --canonical` asks for
+   * it: a box carries legacy relative refs by the hundred, and reporting them
+   * by default would bury the broken-ref signal (`canonical-refs.ts`).
+   */
+  canonical?: boolean;
 }
 
 /**
@@ -160,7 +168,11 @@ async function lintFrontmatterCard(input: {
   // hand-edit or a delete stayed silent until someone clicked it).
   const bodyLinks = typeof bodyField === "string" ? extractBodyLinks(bodyField) : [];
   const warnings: LintIssue[] = [];
-  for (const { path: refPath, ref } of [...frontmatterRefs, ...bodyRefs, ...bodyLinks]) {
+  const allRefs = [...frontmatterRefs, ...bodyRefs, ...bodyLinks];
+  if (options.canonical === true) {
+    warnings.push(...canonicalWarnings({ path, refs: allRefs, boxRoot: options.boxRoot }));
+  }
+  for (const { path: refPath, ref } of allRefs) {
     try {
       const exists = await resolveRefExists({ ref, fromPath: path, boxRoot: options.boxRoot });
       if (!exists) {
@@ -213,6 +225,30 @@ async function lintFrontmatterCard(input: {
   // the loader (box-aware), which the self-contained hook deliberately lacks.
   const errors = parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : [];
   return { path, errors, warnings };
+}
+
+/**
+ * Non-canonical (document-relative) refs in one card, as `type: "canonical"`
+ * warnings — a type distinct from `"reference"` so they never inflate the
+ * broken-ref count. Each message names the box-root form the ref should be
+ * written as, so the report doubles as a preview of `--canonical --fix`.
+ */
+function canonicalWarnings(input: {
+  path: string;
+  refs: Array<{ path: string; ref: string }>;
+  boxRoot: string;
+}): LintIssue[] {
+  const fromPath = boxRelativeDoc(input.boxRoot, input.path);
+  if (fromPath === null) return [];
+  const out: LintIssue[] = [];
+  for (const { path: locator, ref } of input.refs) {
+    const message = canonicalIssueMessage(
+      { locator, ref },
+      checkCanonicalRef({ ref, fromPath, kind: "card" })
+    );
+    if (message !== null) out.push({ type: "canonical", severity: "warning", message });
+  }
+  return out;
 }
 
 /**

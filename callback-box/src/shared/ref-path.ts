@@ -107,6 +107,23 @@ export function parseRef(raw: string): ParsedRef {
 }
 
 /**
+ * The inverse of {@link parseRef}'s suffix half: a parsed ref's `?query` and
+ * `#fragment` re-serialized, so anything that addressed a location *within* the
+ * target (`?view=ledger`, `#risks`) survives a rewrite. Empty when the ref
+ * carried neither.
+ *
+ * Lives here rather than in each rewriter because it is the exact counterpart
+ * of the split — the two must never drift. Consumers: `cb mv`'s
+ * `core/rewrite-card-refs.ts`, the `--canonical` normalizer
+ * (`core/canonical-refs.ts`).
+ */
+export function formatRefSuffix(parsed: ParsedRef): string {
+  const query = parsed.query === undefined ? "" : `?${parsed.query}`;
+  const fragment = parsed.fragment === undefined ? "" : `#${parsed.fragment}`;
+  return query + fragment;
+}
+
+/**
  * Whether a raw ref names something *outside* the box, so there is no path to
  * resolve: any URL scheme (`http:`, `mailto:`, `data:`, the retired `view:`),
  * a protocol-relative `//host/…`, a bare `#anchor` within the current

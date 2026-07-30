@@ -225,6 +225,33 @@ destinations:
 ---
 ```
 
+## Block-list `- ref:` items rewritten
+
+The most common nested ref shape is `ref` as the FIRST key of a block-list item
+(`messages:`/`items:`/`participants:` lists). It follows the move like any other
+`ref:`, whether it was written relative or box-root-absolute.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nbody\n");
+await box.write(
+  "store/notes/Index.memo.card",
+  "---\ntype: memo\nitems:\n  - ref: Plan.doc.card\n    note: rel\n  - ref: /store/notes/Plan.doc.card\n---\nbody\n",
+);
+
+await mv(box, { from: "store/notes/Plan.doc.card", to: "store/archive/Plan.doc.card" });
+await box.read("store/notes/Index.memo.card")
+=>
+---
+type: memo
+items:
+  - ref: ../archive/Plan.doc.card
+    note: rel
+  - ref: /store/archive/Plan.doc.card
+---
+body
+```
+
 ## Single card move: `ref=` strings in referrers rewritten (relative + absolute)
 
 Moving a card rewrites references to it in other cards via substring rewrite —

@@ -34,7 +34,7 @@
 
 import * as path from "node:path";
 import { isAttachRef } from "../shared/attach-path.js";
-import { parseRef, resolveRefPath, type ParsedRef } from "../shared/ref-path.js";
+import { formatRefSuffix, parseRef, resolveRefPath } from "../shared/ref-path.js";
 import { inlineLinkPattern } from "./body-refs.js";
 import { invariant } from "../lib/invariant.js";
 
@@ -43,17 +43,6 @@ import { invariant } from "../lib/invariant.js";
  * the absolute destination, or `null` if the target isn't moving.
  */
 export type Remap = (resolvedAbsPath: string) => string | null;
-
-/**
- * A parsed ref's `?query`/`#fragment` re-serialized, so a rewritten ref keeps
- * everything that addressed a location *within* the target (`?view=ledger`,
- * `#risks`). Empty when the ref carried neither.
- */
-function refSuffix(parsed: ParsedRef): string {
-  const query = parsed.query === undefined ? "" : `?${parsed.query}`;
-  const fragment = parsed.fragment === undefined ? "" : `#${parsed.fragment}`;
-  return query + fragment;
-}
 
 /**
  * Resolve a ref's path part to an absolute filesystem path via the shared ref
@@ -135,7 +124,7 @@ function transformForReferrer(params: {
       cardAbsPath,
       newAbs,
       wasAbsolute: parsed.path.startsWith("/"),
-      suffix: refSuffix(parsed),
+      suffix: formatRefSuffix(parsed),
     });
   };
 }
@@ -164,7 +153,7 @@ function transformForMovedCard(params: {
     if (abs === null) return rawRef;
     const remapped = remap(abs);
     const target = remapped === null ? abs : remapped;
-    return path.relative(path.dirname(newCardAbs), target) + refSuffix(parsed);
+    return path.relative(path.dirname(newCardAbs), target) + formatRefSuffix(parsed);
   };
 }
 
@@ -209,7 +198,11 @@ function rewriteFrontmatter(text: string, wrap: RefTransform): string {
     const line = lines[i];
     if (line === undefined) continue;
 
-    const scalar = /^(\s*ref:\s+)(\S.*?)\s*$/.exec(line);
+    // `ref:` as a plain key OR as the first key of a block-list item
+    // (`  - ref: <path>` — the dominant shape for `messages:`/`items:` lists).
+    // Missing the list-item form left `cb mv` silently not rewriting the most
+    // common nested ref there is.
+    const scalar = /^(\s*(?:-\s+)?ref:\s+)(\S.*?)\s*$/.exec(line);
     if (scalar !== null) {
       const [, prefix, value] = scalar;
       invariant(
@@ -348,8 +341,13 @@ export function rewriteViewRefs(params: {
     cardAbsPath: params.viewAbsPath,
     remap: params.remap,
   });
+  return applyViewTransform(params.text, transform);
+}
+
+/** Apply a ref transform to every literal `cardRef="…"` in a view's source. */
+function applyViewTransform(source: string, transform: RefTransform): { text: string; count: number } {
   let count = 0;
-  const text = params.text.replace(/(\bcardRef=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
+  const text = source.replace(/(\bcardRef=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
     const [attr, quote, value] = g;
     invariant(
       attr !== undefined && quote !== undefined && value !== undefined,
@@ -360,6 +358,58 @@ export function rewriteViewRefs(params: {
     return attr + quote + out + quote;
   });
   return { text, count };
+}
+
+/**
+ * A rewrite driven by a precomputed `raw ref token → replacement` map instead of
+ * a move remap. The map form exists because deciding a replacement can be
+ * *async* (the `--canonical --fix` normalizer only rewrites refs whose target
+ * exists on disk) while {@link RefTransform} is deliberately sync: the caller
+ * collects the tokens first, resolves them at its leisure, then replays the
+ * decision through the same text-surgical scan.
+ *
+ * A token maps identically wherever it appears in one document — resolution
+ * depends only on the ref and the document holding it — so keying on the raw
+ * token is sound.
+ */
+export type RefReplacements = ReadonlyMap<string, string>;
+
+const collectInto = (out: Set<string>): RefTransform => (raw) => {
+  out.add(raw);
+  return raw;
+};
+
+const replaceFrom = (replacements: RefReplacements): RefTransform => (raw) => {
+  const next = replacements.get(raw);
+  return next === undefined ? raw : next;
+};
+
+/** Every raw ref token a card's text carries, across all three ref-bearing forms. */
+export function collectCardRefTokens(text: string): string[] {
+  const out = new Set<string>();
+  applyTransform(text, collectInto(out));
+  return [...out];
+}
+
+/** Replay a token→replacement decision over a card's text. */
+export function rewriteCardRefTokens(
+  params: { text: string; replacements: RefReplacements }
+): { text: string; count: number } {
+  return applyTransform(params.text, replaceFrom(params.replacements));
+}
+
+/** Every raw `cardRef="…"` token a view's source carries. */
+export function collectViewRefTokens(source: string): string[] {
+  const out = new Set<string>();
+  applyViewTransform(source, collectInto(out));
+  return [...out];
+}
+
+/** Replay a token→replacement decision over a view's source. */
+export function rewriteViewRefTokens(
+  params: { text: string; replacements: RefReplacements }
+): { text: string; count: number } {
+  return applyViewTransform(params.text, replaceFrom(params.replacements));
 }
 
 /**
