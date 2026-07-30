@@ -269,10 +269,15 @@ await box2.cleanup();
 await box.cleanup();
 ```
 
-## Leak-scanned fields are dropped, not committed
+## A credential in generated text is dropped, not committed
 
-A generated title carrying an email address is rejected; the rest of the review
-still lands, and the rejection is reported rather than swallowed.
+The leak scan rejects exactly one thing: a credential shape. That is secret
+hygiene rather than editorial judgement — an API key in a git-tracked card is a
+problem regardless of which field it landed in or who reads it.
+
+Names, addresses, figures and dates are **not** rejected. A title that would
+embarrass someone is a real risk, but no regex detects it, so that judgement lives
+in the prompt where it can actually be exercised rather than half here.
 
 ```ts
 const box = await makeTmpBox();
@@ -284,7 +289,7 @@ const huskPath = await seed(box, {
 const summary = await runChatReview(box.root, {
   reviewer: fakeReviewer([{
     ...OUTPUT,
-    title: "Emailing dana.lin@example.com again",
+    title: "Rotating sk-abcdefghijklmnopqrstuvwxyz012345",
   }]),
   maxSessions: 10, now: NOW, ownerEmail: null,
 });
@@ -292,26 +297,35 @@ summary.rejected.join(",")
 => sess9999:title
 
 const card = await readFile(box.path(huskPath), "utf8");
-[card.includes("dana.lin@example.com"), card.includes("contains: Working through")].join(",")
+[card.includes("sk-abcdefghijklmnop"), card.includes("contains: Working through")].join(",")
 => false,true
 ```
 
-A rejected field means the span was **not** fully folded in, so the marker is
-withheld and the journal does not advance — the material is retried rather than
-lost. (It counts as an attempt, so a model that keeps leaking is eventually
-given up on rather than retried nightly forever.)
+An ordinary title full of specifics sails through — no name-stripping, no
+address-stripping.
 
 ```ts continue
-card.includes("review-span:")
-=> false
+const box2 = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
+const husk2 = await seed(box2, {
+  sessionId: "sessplain", husk: "", entries: [bulk("v1"), bulk("v2")],
+});
+const plain = await runChatReview(box2.root, {
+  reviewer: fakeReviewer([{
+    ...OUTPUT,
+    title: "Indigo's custodial account paperwork",
+    contains: "Sorting out a clerical error, dana.lin@example.com copied in.",
+  }]),
+  maxSessions: 10, now: NOW, ownerEmail: null,
+});
+plain.rejected.length
+=> 0
 
-const state = await loadReviewState(box.root);
-JSON.stringify({
-  reviewed: summary.reviewed,
-  journalled: state.sessions["sess9999"].applied["metadata"] === undefined,
-  attempts: state.sessions["sess9999"].attempts,
-})
-=> {"reviewed":0,"journalled":true,"attempts":1}
+const card2 = await readFile(box2.path(husk2), "utf8");
+[card2.includes("Indigo's custodial account paperwork"), card2.includes("dana.lin@example.com")].join(",")
+=> true,true
+
+await box2.cleanup();
 ```
 
 ```ts cleanup
