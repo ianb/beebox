@@ -478,10 +478,12 @@ See §1.3 (full request/response/errors).
 
 ### 5.6 Bulk file-upload batch (`/api/bulk/...`)
 
-- **Direction:** native → box (also driven by the web overlay). **Deferred for iOS** behind the
-  uploader boundary (`docs/implemented-plans/bulk-file-upload.md` §4) — no native client ships yet, but the
-  server contract is uploader-agnostic and carries bearer auth like every other native call, so a
-  future native uploader implements exactly these rows. Auth: cookie OR `Authorization: Bearer
+- **Direction:** native → box (also driven by the web overlay). The server contract is
+  uploader-agnostic and carries bearer auth like every other native call; there are now two
+  implementations of these rows — the web overlay and the iOS uploader
+  (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+  `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+  client. Auth: cookie OR `Authorization: Bearer
   <token>`, owner-scoped per session (same `authorizeCaptureSessionOwner` ownership as capture).
 - **Endpoints:**
   - `POST /api/bulk/sessions` — create a batch. Req `{ targetSessionId: string /* required */,
@@ -525,7 +527,7 @@ See §1.3 (full request/response/errors).
   | side | anchor |
   |---|---|
   | box handler | `src/webapp/routes/bulk-upload.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
-  | native caller | — (deferred; a future native uploader) |
+  | native caller | `Services/BulkUploadAPI.swift` — request shaping; `Services/BulkUploadCoordinator.swift` — bounded queue (3 in flight), per-item retry, resume via `GET /sessions/:id` |
 - **Drift:** LOUD (400/409/413/404 all surface; incomplete uploads leave the item in the registry's
   missing list, which finalize reports).
 
