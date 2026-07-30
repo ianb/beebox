@@ -43,7 +43,7 @@ relative refs by the hundred, and warning about them in every validate run would
 bury the broken-ref signal that actually needs acting on. It is a whole-box check
 — it does not combine with `--staged`, explicit paths, `--hook`, `--links`, or
 `--urls`, which error rather than half-work. Design rationale:
-`docs/plans/box-root-paths.md` (Track F).
+`docs/implemented-plans/box-root-paths.md` (Track F).
 
 Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
 Per-schema migrators: `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts`

@@ -12,7 +12,7 @@ therefore fails closed:
   returns `null` (the path starts with `..`), so the ref resolves to nothing and
   `cb validate` reports **every** `cardRef="…"` in a v2 box's views as a broken
   reference, including correct box-root-absolute ones.
-- The `--canonical` walk added in `callback-box/docs/plans/box-root-paths.md`
+- The `--canonical` walk added in `callback-box/docs/implemented-plans/box-root-paths.md`
   Track F deliberately *skips* those views for the same reason, so the view
   surface contributes nothing to the canonical report on a v2 box.
 

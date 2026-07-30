@@ -1,5 +1,9 @@
 # Box-root paths everywhere
 
+**Status:** implemented 2026-07 — box-root-relative refs are now the taught/generated/validated
+canonical form across the resolver, chat, nav, and landmarks, with `attach/` as the
+sole exception; see the Status section below for the track → commit map.
+
 Make box-root-based paths (leading `/`) the canonical form for every
 cross-card/file reference in a box — authored, taught, generated, and
 validated — with `attach/` (a card's own attachment scope) as the single

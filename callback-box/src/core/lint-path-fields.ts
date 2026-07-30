@@ -8,7 +8,7 @@
  * source in the card's attach scope). Both silently degraded when the target
  * moved or was renamed — a missing icon, a figure that fails to compile.
  *
- * These are targeted checks by deliberate design (see docs/plans/box-root-paths.md,
+ * These are targeted checks by deliberate design (see docs/implemented-plans/box-root-paths.md,
  * "NOT in scope"): a general schema-declared path-field registry is real
  * machinery for a two-entry long tail, and would also owe `cb mv` rewrite
  * coverage. A third field is the trigger to revisit.

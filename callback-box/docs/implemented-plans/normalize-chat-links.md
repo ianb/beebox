@@ -4,7 +4,7 @@
 > resolution is gone: chat message links, embeds, and images now all resolve
 > from the box root, and the React context that carried the chat cwd into the
 > renderer (`chat/chat-context-dir.ts`) was deleted with it. See
-> `docs/plans/box-root-paths.md` (Track C) and
+> `docs/implemented-plans/box-root-paths.md` (Track C) and
 > `issues/decisions/2026-07-30-always-box-root-relative-links.md`. Everything
 > else below still describes live behavior.
 

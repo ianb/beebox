@@ -4,12 +4,12 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, recurring agent link error
 resolution: implemented
-design: ../../../callback-box/docs/plans/box-root-paths.md
+design: ../../../callback-box/docs/implemented-plans/box-root-paths.md
 ---
 
 ## Implemented (2026-07-30)
 
-Shipped in full by `callback-box/docs/plans/box-root-paths.md` (branch
+Shipped in full by `callback-box/docs/implemented-plans/box-root-paths.md` (branch
 `worktree-path-handling-model`, Tracks A–G): one `src/shared/ref-path.ts`
 algebra behind every parse/resolve, chat re-based on the box root, nav and
 landmark accepting/teaching the leading-`/` form, the guidance stated once in

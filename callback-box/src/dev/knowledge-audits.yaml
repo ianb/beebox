@@ -308,7 +308,7 @@ tests:
     watch_for: >
       Box root, not the OS filesystem root; the target must be an existing
       file/dir in the box. Leading `/` is also the form you always write
-      (docs/plans/box-root-paths.md) — a bare path still resolves, but only
+      (docs/implemented-plans/box-root-paths.md) — a bare path still resolves, but only
       as a legacy form, and `../` is never written.
     correct_contains: ["box root"]
     tags: [links]

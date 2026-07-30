@@ -1,6 +1,6 @@
 /**
  * Canonical-form checking for box refs — the detection half of
- * `cb validate --canonical` (`docs/plans/box-root-paths.md`, Track F).
+ * `cb validate --canonical` (`docs/implemented-plans/box-root-paths.md`, Track F).
  *
  * A ref is **canonical** when it addresses its target from the box root
  * (`/store/notes/Plan.doc.card`), or is the one sanctioned exception: a card's

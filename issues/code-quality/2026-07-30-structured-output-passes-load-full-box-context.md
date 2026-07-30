@@ -2,7 +2,7 @@
 title: "Small structured-output agent passes load the full box CLAUDE.md + agent guide"
 area: callback-box
 filed-by: agent
-discovered-in: worktree-path-handling-model — tracing which agent types receive the ref-path guidance (Track E of docs/plans/box-root-paths.md)
+discovered-in: worktree-path-handling-model — tracing which agent types receive the ref-path guidance (Track E of docs/implemented-plans/box-root-paths.md)
 ---
 
 While verifying that the box-root link rule reaches every agent surface, the

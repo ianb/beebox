@@ -5,7 +5,7 @@ resolution: implemented
 ---
 
 **Closed 2026-07-30** — implemented as Track F of
-`callback-box/docs/plans/box-root-paths.md`: `cb validate --canonical` reports
+`callback-box/docs/implemented-plans/box-root-paths.md`: `cb validate --canonical` reports
 every document-relative ref with its box-root rewrite (two buckets: card refs
 and `.md` dossier links), and `cb validate --canonical --fix` normalizes the
 ones whose target actually exists. Off by default, per the plan's rationale —
