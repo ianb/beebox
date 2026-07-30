@@ -107,6 +107,24 @@ export function parseRef(raw: string): ParsedRef {
 }
 
 /**
+ * Whether a raw ref names something *outside* the box, so there is no path to
+ * resolve: any URL scheme (`http:`, `mailto:`, `data:`, the retired `view:`),
+ * a protocol-relative `//host/…`, a bare `#anchor` within the current
+ * document, or the empty string.
+ *
+ * External detection is deliberately NOT folded into `resolveRefPath` (a caller
+ * holding an external value branches on it for its own reasons — rendering an
+ * `<a>`, skipping a rewrite), but the *test* lives here so every caller agrees
+ * on what counts as external.
+ */
+export function isExternalRef(raw: string): boolean {
+  if (raw === "") return true;
+  if (raw.startsWith("#")) return true;
+  if (raw.startsWith("//")) return true;
+  return /^[A-Za-z][\d+.A-Za-z-]*:/.test(raw);
+}
+
+/**
  * Resolve a ref's path against the document it was written in, per the 3-form
  * rule above. Returns the canonical internal form — box-relative, forward
  * slashes, no leading slash, `..`-free — or `null` when the ref escapes the

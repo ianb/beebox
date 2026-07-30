@@ -1,5 +1,6 @@
 /**
- * Walk a card's markdown body for refs carried by Markdoc tag attributes.
+ * Walk a card's markdown body for the refs it carries: Markdoc tag attributes
+ * (`extractBodyRefs`) and inline markdown links/images (`extractBodyLinks`).
  *
  * Cardworks' `extractRefs` (which `card-lint.ts` uses) walks structured
  * frontmatter fields only — it identifies refs by key name (`ref` /
@@ -32,15 +33,63 @@
 // can use named imports; the backend can't. Pull `parse` off the default.
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
+import { isExternalRef } from "../shared/ref-path.js";
 
 // eslint-disable-next-line import-x/no-named-as-default-member
 const { parse } = Markdoc;
 
 export interface BodyRef {
-  /** Display path for the warning — `body:<line>:<tagName>.<attr>`. */
+  /** Display path for the warning — `body:<line>:<tagName>.<attr>` or `body:<line>:link`. */
   path: string;
   /** The ref value. */
   ref: string;
+}
+
+/**
+ * THE pattern for an inline markdown link/image target in card-ish text:
+ * `[text](path)` / `![alt](path)`, capturing the opening `…](` run and the
+ * target token separately so a rewriter can splice a replacement in.
+ *
+ * A factory rather than a shared `const` because it is `/g` — a module-level
+ * global regex carries `lastIndex` between callers, which is a classic
+ * skipped-match bug. One definition, two consumers: this module's
+ * `extractBodyLinks` (validate side) and `rewrite-card-refs.ts` (`cb mv`).
+ */
+export function inlineLinkPattern(): RegExp {
+  return /(!?\[[^\]]*]\(\s*)([^\s()]+)/g;
+}
+
+/**
+ * Inline markdown links and images in a card body, as refs to check.
+ *
+ * `cb mv` has always *rewritten* these; validate never checked them, so a link
+ * that broke by hand-edit or deletion stayed silent. External targets (a URL
+ * scheme, protocol-relative `//host`, a bare `#anchor`, empty) are skipped —
+ * they name nothing in the box.
+ *
+ * Like CB002's `extractInlineLinks`, this is a plain text scan: a link inside a
+ * fenced code block is extracted like any other. That over-reports a
+ * deliberately-illustrative link in a code fence as a broken ref; matching
+ * CB002's posture is preferred over two different answers to "is this a link".
+ */
+export function extractBodyLinks(body: string): BodyRef[] {
+  if (body === "") return [];
+  const out: BodyRef[] = [];
+  for (const match of body.matchAll(inlineLinkPattern())) {
+    const ref = match[2];
+    if (ref === undefined || isExternalRef(ref)) continue;
+    out.push({ path: `body:${String(lineAt(body, match.index))}:link`, ref });
+  }
+  return out;
+}
+
+/** 1-indexed line number of an offset into `body`, to match the body a human reads. */
+function lineAt(body: string, index: number): number {
+  let line = 1;
+  for (let i = 0; i < index; i++) {
+    if (body[i] === "\n") line++;
+  }
+  return line;
 }
 
 export function extractBodyRefs(body: string): BodyRef[] {

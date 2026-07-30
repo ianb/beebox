@@ -8,9 +8,10 @@
  * Results are merged into a single LintSummary so callers (e.g. cb validate)
  * can format them uniformly.
  *
- * Ref-checking walks two sides: `extractRefs` (src/cards) over parsed
- * frontmatter fields, and `extractBodyRefs` over the Markdoc body. Both
- * yield `{path, ref}` entries with the same shape; both are surfaced as
+ * Ref-checking walks three sides: `extractRefs` (src/cards) over parsed
+ * frontmatter fields, `extractBodyRefs` over the Markdoc body, and
+ * `extractBodyLinks` over the body's inline markdown links/images. All three
+ * yield `{path, ref}` entries with the same shape; all are surfaced as
  * warnings (not errors) so legitimate moves don't block commits.
  *
  * Type-specific, self-contained validation (rules Zod can't express, e.g.
@@ -38,7 +39,7 @@ import {
 } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
-import { extractBodyRefs } from "./body-refs.js";
+import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
@@ -153,8 +154,12 @@ async function lintFrontmatterCard(input: {
   const frontmatterRefs = extractRefs(parsed.fields);
   const bodyField = parsed.fields["body"];
   const bodyRefs = typeof bodyField === "string" ? extractBodyRefs(bodyField) : [];
+  // Inline markdown links/images in the body are refs too — `cb mv` rewrites
+  // them, so validate checks them (the asymmetry meant a link broken by a
+  // hand-edit or a delete stayed silent until someone clicked it).
+  const bodyLinks = typeof bodyField === "string" ? extractBodyLinks(bodyField) : [];
   const warnings: LintIssue[] = [];
-  for (const { path: refPath, ref } of [...frontmatterRefs, ...bodyRefs]) {
+  for (const { path: refPath, ref } of [...frontmatterRefs, ...bodyRefs, ...bodyLinks]) {
     try {
       const exists = await resolveRefExists({ ref, fromPath: path, boxRoot: options.boxRoot });
       if (!exists) {

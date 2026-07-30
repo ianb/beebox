@@ -35,6 +35,7 @@
 import * as path from "node:path";
 import { isAttachRef } from "../shared/attach-path.js";
 import { parseRef, resolveRefPath, type ParsedRef } from "../shared/ref-path.js";
+import { inlineLinkPattern } from "./body-refs.js";
 import { invariant } from "../lib/invariant.js";
 
 /**
@@ -286,8 +287,10 @@ function applyTransform(text: string, transform: RefTransform): { text: string; 
 
   let updated = rewriteFrontmatter(text, wrap);
 
-  // Inline markdown links and images: [text](path) / ![alt](path).
-  updated = updated.replace(/(!?\[[^\]]*]\(\s*)([^\s()]+)/g, (_m: string, ...g: string[]) => {
+  // Inline markdown links and images: [text](path) / ![alt](path). The pattern
+  // is shared with validate's `extractBodyLinks` so mv rewrites exactly the set
+  // of links validate checks.
+  updated = updated.replace(inlineLinkPattern(), (_m: string, ...g: string[]) => {
     const [prefix, refPart] = g;
     invariant(
       prefix !== undefined && refPart !== undefined,

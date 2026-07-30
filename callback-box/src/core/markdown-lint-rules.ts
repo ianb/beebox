@@ -4,7 +4,7 @@
 
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
-import { parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
@@ -194,9 +194,8 @@ export function linkRuleConfig(boxRoot: string): Record<string, unknown> {
   };
 }
 
+/** An in-box link is anything the shared ref algebra doesn't call external. */
 function isRelativePath(url: string): boolean {
-  if (url.startsWith("#")) return false;
-  if (/^[A-Za-z][\d+.A-Za-z-]*:/.test(url)) return false; // any scheme (http, view, mailto, etc.)
-  return true;
+  return !isExternalRef(url);
 }
 

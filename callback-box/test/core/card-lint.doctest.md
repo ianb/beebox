@@ -305,6 +305,65 @@ result.totalWarnings
 => 0
 ```
 
+## Inline markdown links in a card body are checked too
+
+`cb mv` has always rewritten `[text](path)` / `![alt](path)` inside card
+bodies; validate never looked at them, so a link broken by a hand-edit or a
+delete stayed silent until someone clicked it. They are now walked like any
+other ref — `type: "reference"` warnings that land in the broken-ref count.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "box/notes/Plan.doc.card",
+  "---\ntype: doc\ntitle: Plan\n---\nSee [the brief](/box/notes/missing.doc.card).\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Plan.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,1]
+
+result.results[0]!.warnings[0]!.type
+=> reference
+
+result.results[0]!.warnings[0]!.message
+=> Broken reference at body:1:link: /box/notes/missing.doc.card does not exist
+```
+
+It counts as a broken ref on the summary line, alongside frontmatter and
+Markdoc-tag refs:
+
+```ts continue
+formatLintResults(result, { colors: false }).split("\n").at(-1)
+=> 1 file checked, 1 warning in 0 files (1 broken ref)
+```
+
+Links that resolve are clean, and links that name nothing in the box —
+a URL scheme, a protocol-relative `//host`, or a bare `#anchor` — are skipped
+rather than resolved as paths:
+
+```ts
+const box = await makeTmpBox();
+await box.write("box/notes/Brief.doc.card", "---\ntype: doc\ntitle: Brief\n---\nx\n");
+await box.write("box/notes/Plan.attach/chart.png", "PNG");
+await box.write(
+  "box/notes/Plan.doc.card",
+  "---\ntype: doc\ntitle: Plan\n---\n" +
+    "Rel [brief](Brief.doc.card), abs [brief again](/box/notes/Brief.doc.card), " +
+    "attached ![chart](attach/chart.png).\n" +
+    "Off-box: [site](https://example.com/x), [cdn](//cdn.example.com/x), " +
+    "[mail](mailto:dana@example.com), [top](#summary).\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Plan.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,0]
+```
+
 ## Ref existence honors `attach/` scope
 
 The broken-ref walk resolves an `attach/`-prefixed ref into the referring
