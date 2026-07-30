@@ -57,9 +57,19 @@ function ItemRow({ item, onRetry }: { item: BulkItemView; onRetry: (id: string) 
   );
 }
 
-export function BulkUploadOverlay({ targetSessionId, onExit }: {
+export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, onDelivered }: {
   targetSessionId: string;
+  /**
+   * Files the batch starts with — a photo selection too large to inline
+   * (`chat/photo-batch-threshold.ts`). Empty when launched from the Add menu,
+   * where the user picks inside the overlay instead.
+   */
+  seedFiles: File[];
+  /** The composer text to send as the batch's introduction (empty when there was none). */
+  note: string;
   onExit: () => void;
+  /** Fired after a successful finalize, so the composer can clear the text this batch consumed. */
+  onDelivered: () => void;
 }) {
   const bulk = useBulkUpload({ targetSessionId });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -70,6 +80,15 @@ export function BulkUploadOverlay({ targetSessionId, onExit }: {
 
   const { addFiles } = bulk;
 
+  // Seed once on mount. `seedFiles` is the selection that opened this overlay;
+  // re-adding on every render would duplicate the whole batch.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current || seedFiles.length === 0) return;
+    seededRef.current = true;
+    addFiles(seedFiles);
+  }, [addFiles, seedFiles]);
+
   const pickFiles = useCallback((list: FileList | null): void => {
     if (list && list.length > 0) addFiles(Array.from(list));
   }, [addFiles]);
@@ -78,7 +97,11 @@ export function BulkUploadOverlay({ targetSessionId, onExit }: {
     setActionError(null);
     setFinalizing(true);
     try {
-      await bulk.finalize();
+      const trimmed = note.trim();
+      await bulk.finalize({ note: trimmed !== "" ? trimmed : undefined });
+      // Only after the seal lands — a failed finalize keeps the batch staged AND
+      // keeps the user's text, so a retry still carries its introduction.
+      onDelivered();
       onExit();
     } catch (e) {
       // Finalize failed — surface inline, keep the overlay open (the batch stays
@@ -88,7 +111,7 @@ export function BulkUploadOverlay({ targetSessionId, onExit }: {
       setActionError(message);
       setFinalizing(false);
     }
-  }, [bulk, onExit]);
+  }, [bulk, note, onExit, onDelivered]);
 
   const handleCancel = useCallback(async (): Promise<void> => {
     if (bulk.counts.uploaded > 0 && !confirmingCancel) {

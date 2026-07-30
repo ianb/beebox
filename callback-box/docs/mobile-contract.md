@@ -629,6 +629,24 @@ without the other is a contract break.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
+- **Inline photo limit** `4` — `components/chat/photo-batch-threshold.ts` · `INLINE_PHOTO_LIMIT` /
+  `shouldBatchPhotos` ↔ the iOS composer's mirrored constant. **The most photos that may ride
+  inline (base64) in one chat message.** A selection that would put the composer's *total* inline
+  count above the limit is uploaded as a bulk batch (§5.6) instead — photos already inline stay
+  inline, so the inline total is bounded by the limit however many separate selections a user
+  makes. The rule applies identically to the picker, paste, and drop.
+
+  This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
+  of megabytes into a single `/chat/send`, which is what
+  `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
+  server-side trace. There is **no documented size ceiling** for a WKWebView script message — the
+  failure is memory pressure, not a published limit — so "inline just under the cliff" is not
+  implementable; keeping the inline payload categorically small is the only sound posture. A
+  surface that raises or ignores the limit reintroduces the bug.
+
+  An uploader that routes a selection this way MUST send the composer text as the batch's `note`
+  (§5.6) — otherwise the batch is unintroduced and the agent asks what the files are instead of
+  filing them.
 
 ---
 

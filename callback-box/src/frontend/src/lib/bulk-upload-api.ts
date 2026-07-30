@@ -180,17 +180,22 @@ export async function cancelBulkSession(sessionId: string): Promise<void> {
  * Seal the batch and fire the server-side prepare→deliver worker. The named
  * `failedItems` are persisted so the delivered `<upload>` message reports them
  * (deliver-with-failures, never silent — plan §4).
+ *
+ * `note` is the batch's introduction — the composer text the boxholder submitted
+ * the files with. Sending it is what keeps the agent from asking what the files
+ * are when the boxholder already said (`docs/mobile-contract.md` §5.6).
  */
 export async function finalizeBulkSession(opts: {
   sessionId: string;
   failedItems: BulkFailedItem[];
+  note: string | undefined;
 }): Promise<void> {
   const res = await fetch(
     bulkUrl(`/sessions/${opts.sessionId}/finalize`),
     withMobileAuth({
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ failedItems: opts.failedItems }),
+      body: JSON.stringify({ failedItems: opts.failedItems, ...(opts.note !== undefined ? { note: opts.note } : {}) }),
     }),
   );
   if (!res.ok) {

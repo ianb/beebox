@@ -59,8 +59,11 @@ export interface BulkUploadController {
   retry: (id: string) => void;
   /** Discard the whole batch server-side. Safe when no session was ever created. */
   cancel: () => Promise<void>;
-  /** Seal + fire prepare→deliver, naming any failed items. Throws on finalize error. */
-  finalize: () => Promise<void>;
+  /**
+   * Seal + fire prepare→deliver, naming any failed items and carrying the
+   * batch's introduction. Throws on finalize error.
+   */
+  finalize: (opts: { note: string | undefined }) => Promise<void>;
 }
 
 const CONCURRENCY = 3;
@@ -263,12 +266,12 @@ export function useBulkUpload(opts: {
   // Abort any in-flight uploads when the overlay unmounts.
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const finalize = useCallback(async (): Promise<void> => {
+  const finalize = useCallback(async ({ note }: { note: string | undefined }): Promise<void> => {
     const sessionId = await ensureSession();
     const failedItems = items
       .filter((it) => it.state === "failed")
       .map((it) => ({ id: it.id, name: it.name, reason: it.reason ?? "upload failed" }));
-    await finalizeBulkSession({ sessionId, failedItems });
+    await finalizeBulkSession({ sessionId, failedItems, note });
   }, [ensureSession, items]);
 
   const clearError = useCallback((): void => setError(null), []);

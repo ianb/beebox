@@ -20,6 +20,7 @@ import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
 import { useEmissionStore } from "./input-store";
+import { shouldBatchPhotos } from "./photo-batch-threshold";
 import type { EmissionStore, ImageItem, FileItem } from "../../input/emission-store";
 
 /**
@@ -114,13 +115,26 @@ export function useChatAttachments(opts: {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   /** Opens the mobile typing row when a token insert happens with no visible composer (see useEnsureComposerVisible). */
   ensureComposerVisibleRef: React.MutableRefObject<() => void>;
+  /**
+   * Hand a too-large photo selection to the bulk-upload path instead of inlining
+   * it (see `photo-batch-threshold.ts`). Called with the whole new selection.
+   */
+  onBatchPhotos: (files: File[]) => void;
 }) {
-  const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
+  const { emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addImageFiles = useCallback(async (files: File[]): Promise<number> => {
     if (files.length === 0) return 0;
+    // Too many to ride inline — upload them and let the agent file them, rather
+    // than base64-ing a camera roll into one /chat/send that can't be sent.
+    // Applies to the picker, paste and drop alike: one rule, no per-entry-point
+    // special cases.
+    if (shouldBatchPhotos({ existingInline: emissionStore.get().images.length, incoming: files.length })) {
+      onBatchPhotos(files);
+      return 0;
+    }
     // Show placeholder tiles immediately; each clears as its image finishes
     // encoding, so the gap between cmd-V and the thumbnail isn't a dead beat.
     editor.bumpPendingImages(files.length);
@@ -158,7 +172,7 @@ export function useChatAttachments(opts: {
     // Count actually added — the screenshot path toasts when this is 0
     // (a single-file capture that failed processing).
     return newItems.length;
-  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef]);
+  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos]);
 
   const removeAttachment = useCallback((id: number) => {
     const target = emissionStore.get().images.find((a) => a.id === id);
