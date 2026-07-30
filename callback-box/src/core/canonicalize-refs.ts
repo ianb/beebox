@@ -4,11 +4,21 @@
  * two-bucket vocabulary live in `canonical-refs.ts`; this module only decides
  * *which* findings are safe to write and performs the write.
  *
- * **Only refs that resolve are rewritten.** A ref whose target doesn't exist is
- * reported, never rewritten — re-expressing a dangling relative ref from the
- * box root would invent a path nobody can verify, turning a visible broken-ref
- * warning into a confident lie. Same for a ref that escapes the box: there is
- * no box-root form to write.
+ * **Only refs that resolve are rewritten.** A ref whose target doesn't exist
+ * under EITHER reading is reported, never rewritten — re-expressing a dangling
+ * relative ref from the box root would invent a path nobody can verify, turning
+ * a visible broken-ref warning into a confident lie. Same for a ref that
+ * escapes the box: there is no box-root form to write.
+ *
+ * **The one rescue: box-root intent.** Old system code wrote bare refs meaning
+ * them from the box root (`people/Dana.person.card` in a card three
+ * directories down). Read document-relative they dangle, but the same bare path
+ * names a real file read from the root, so `--fix` writes that `/`-leading form
+ * — a repair, counted separately from an ordinary canonicalization because it
+ * changes the ref's target (from nothing to something). If BOTH readings name
+ * an existing file the ref is left alone and reported as ambiguous: the
+ * document-relative reading is what resolves at runtime today, so the ref
+ * works, and guessing at intent would silently retarget it.
  *
  * **Text-surgical, never parse-reserialize.** Cards are rewritten through `cb
  * mv`'s scan machinery (`rewrite-card-refs.ts`), which splices a replacement
@@ -27,39 +37,52 @@
  */
 
 import { promises as fs } from "node:fs";
-import * as path from "node:path";
-import { boxRelativeDoc, checkCanonicalRef } from "./canonical-refs.js";
+import {
+  boxRelativeDoc,
+  cardRefProbe,
+  dossierLinkProbe,
+  planCanonicalRef,
+} from "./canonical-refs.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "./list-cards.js";
-import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
-import { resolveRefExists } from "./ref-exists.js";
+import { extractInlineLinks } from "./markdown-lint-rules.js";
 import {
   collectCardRefTokens,
   collectViewRefTokens,
   rewriteCardRefTokens,
   rewriteViewRefTokens,
 } from "./rewrite-card-refs.js";
-import { fileExists } from "../lib/file-exists.js";
+import { assertNever } from "../lib/invariant.js";
 import { isTrashedCard } from "../lib/paths.js";
 import type { ValidationIgnore } from "./validation-ignore.js";
 
 export interface CanonicalizeReport {
-  /** Card/view refs rewritten to their box-root form. */
+  /** Card/view refs rewritten to their box-root form, same target as before. */
   refsRewritten: number;
-  /** `.md` dossier links rewritten to their box-root form. */
+  /** `.md` dossier links rewritten to their box-root form, same target as before. */
   dossierLinksRewritten: number;
+  /** Dangling card/view refs rewritten to the box-root reading that DOES resolve. */
+  refsRepaired: number;
+  /** Dangling dossier links rewritten to the box-root reading that DOES resolve. */
+  dossierLinksRepaired: number;
+  /** Refs whose two readings BOTH resolve — left alone rather than retargeted. */
+  ambiguous: number;
   /** Files whose text changed. */
   filesChanged: number;
-  /** Non-canonical refs left alone: the target doesn't exist, or the ref escapes the box. */
+  /** Non-canonical refs left alone: neither reading resolves, or the ref escapes the box. */
   skipped: number;
 }
 
 /** A per-file outcome, summed into the box-wide report. */
 interface FileOutcome {
-  rewritten: number;
+  /** Rewrites that keep the ref's current target. */
+  canonicalized: number;
+  /** Rewrites that turn a dangling ref into a working one. */
+  repaired: number;
+  ambiguous: number;
   skipped: number;
 }
 
-const NOTHING: FileOutcome = { rewritten: 0, skipped: 0 };
+const NOTHING: FileOutcome = { canonicalized: 0, repaired: 0, ambiguous: 0, skipped: 0 };
 
 /**
  * Rewrite every resolvable document-relative ref in the box to its box-root
@@ -74,6 +97,9 @@ export async function canonicalizeBox(
   const report: CanonicalizeReport = {
     refsRewritten: 0,
     dossierLinksRewritten: 0,
+    refsRepaired: 0,
+    dossierLinksRepaired: 0,
+    ambiguous: 0,
     filesChanged: 0,
     skipped: 0,
   };
@@ -105,10 +131,15 @@ function accumulate(
   { outcome, bucket }: { outcome: FileOutcome; bucket: "refs" | "dossierLinks" }
 ): void {
   report.skipped += outcome.skipped;
-  if (outcome.rewritten === 0) return;
-  report.filesChanged += 1;
-  if (bucket === "refs") report.refsRewritten += outcome.rewritten;
-  else report.dossierLinksRewritten += outcome.rewritten;
+  report.ambiguous += outcome.ambiguous;
+  if (bucket === "refs") {
+    report.refsRewritten += outcome.canonicalized;
+    report.refsRepaired += outcome.repaired;
+  } else {
+    report.dossierLinksRewritten += outcome.canonicalized;
+    report.dossierLinksRepaired += outcome.repaired;
+  }
+  if (outcome.canonicalized + outcome.repaired > 0) report.filesChanged += 1;
 }
 
 /**
@@ -138,31 +169,51 @@ async function canonicalizeTokenFile(
     form === "card"
       ? collectCardRefTokens({ text, skipFencedCode: true })
       : collectViewRefTokens(text);
-  const replacements = new Map<string, string>();
+  const exists = cardRefProbe({ absPath, boxRoot });
+  const sameTarget = new Map<string, string>();
+  const repairs = new Map<string, string>();
+  let ambiguous = 0;
   let skipped = 0;
   for (const token of tokens) {
     // Views hold card refs (`views/refs.ts` resolves them as such), so both
     // forms classify with `kind: "card"`.
-    const check = checkCanonicalRef({ ref: token, fromPath, kind: "card" });
-    if (check.status === "canonical") continue;
-    if (check.status === "escapes") {
-      skipped += 1;
-      continue;
+    const plan = await planCanonicalRef({ ref: token, fromPath, kind: "card" }, { exists });
+    switch (plan.status) {
+      case "canonical":
+        break;
+      case "rewritable":
+        sameTarget.set(token, plan.canonical);
+        break;
+      case "repairable":
+        repairs.set(token, plan.canonical);
+        break;
+      case "ambiguous":
+        ambiguous += 1;
+        break;
+      case "escapes":
+      case "dangling":
+        skipped += 1;
+        break;
+      default:
+        return assertNever(plan);
     }
-    if (!(await resolveRefExists({ ref: token, fromPath: absPath, boxRoot }))) {
-      skipped += 1;
-      continue;
-    }
-    replacements.set(token, check.canonical);
   }
-  if (replacements.size === 0) return { rewritten: 0, skipped };
+  if (sameTarget.size === 0 && repairs.size === 0) {
+    return { canonicalized: 0, repaired: 0, ambiguous, skipped };
+  }
 
-  const result =
+  // Two replay passes, one per bucket, so each rewrite is attributed to the
+  // outcome it belongs to (the scan reports a total count, not per-token). The
+  // passes can't interfere: every pass-1 replacement is `/`-leading, and every
+  // pass-2 key is a bare relative ref.
+  const replay = (input: string, replacements: Map<string, string>) =>
     form === "card"
-      ? rewriteCardRefTokens({ text, replacements, skipFencedCode: true })
-      : rewriteViewRefTokens({ text, replacements });
-  if (result.count > 0) await fs.writeFile(absPath, result.text);
-  return { rewritten: result.count, skipped };
+      ? rewriteCardRefTokens({ text: input, replacements, skipFencedCode: true })
+      : rewriteViewRefTokens({ text: input, replacements });
+  const canonicalized = replay(text, sameTarget);
+  const repaired = replay(canonicalized.text, repairs);
+  if (canonicalized.count + repaired.count > 0) await fs.writeFile(absPath, repaired.text);
+  return { canonicalized: canonicalized.count, repaired: repaired.count, ambiguous, skipped };
 }
 
 /**
@@ -183,31 +234,42 @@ async function canonicalizeDossier(absPath: string, boxRoot: string): Promise<Fi
   }
 
   const lines = text.split("\n");
-  const fileDir = path.dirname(absPath);
-  let rewritten = 0;
+  const exists = dossierLinkProbe({ absPath, boxRoot });
+  let canonicalized = 0;
+  let repaired = 0;
+  let ambiguous = 0;
   let skipped = 0;
   for (const link of extractInlineLinks(lines).toReversed()) {
-    const check = checkCanonicalRef({ ref: link.url, fromPath, kind: "markdown" });
-    if (check.status === "canonical") continue;
-    if (check.status === "escapes") {
-      skipped += 1;
-      continue;
-    }
-    const resolution = resolveInternalLink(link.url, { fileDir, boxRoot });
-    if (!resolution.inside || !(await fileExists(resolution.resolved))) {
-      skipped += 1;
-      continue;
+    const plan = await planCanonicalRef({ ref: link.url, fromPath, kind: "markdown" }, { exists });
+    let newUrl: string;
+    switch (plan.status) {
+      case "canonical":
+        continue;
+      case "ambiguous":
+        ambiguous += 1;
+        continue;
+      case "escapes":
+      case "dangling":
+        skipped += 1;
+        continue;
+      case "rewritable":
+      case "repairable":
+        newUrl = plan.canonical;
+        break;
+      default:
+        return assertNever(plan);
     }
     const line = lines[link.lineNumber - 1];
     if (line === undefined) continue;
-    const patched = spliceUrl(line, { link, newUrl: check.canonical });
+    const patched = spliceUrl(line, { link, newUrl });
     if (patched === null) continue;
     lines[link.lineNumber - 1] = patched;
-    rewritten += 1;
+    if (plan.status === "repairable") repaired += 1;
+    else canonicalized += 1;
   }
-  if (rewritten === 0) return { rewritten: 0, skipped };
+  if (canonicalized + repaired === 0) return { canonicalized: 0, repaired: 0, ambiguous, skipped };
   await fs.writeFile(absPath, lines.join("\n"));
-  return { rewritten, skipped };
+  return { canonicalized, repaired, ambiguous, skipped };
 }
 
 /**
@@ -227,16 +289,33 @@ function spliceUrl(
   return line.slice(0, link.index) + newSpan + line.slice(link.index + link.length);
 }
 
-/** One-line human summary of a `--fix` run. */
+/** `n thing` / `n things`. */
+function plural(count: number, noun: string): string {
+  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * One-line human summary of a `--fix` run. The three outcomes are named
+ * separately because they mean different things to a boxholder: a
+ * canonicalization changes only how a working ref is written, a repair turns a
+ * broken ref into a working one, and an ambiguous ref is a decision left for a
+ * human. The repair and ambiguity clauses are omitted when they're zero — most
+ * boxes have neither.
+ */
 export function formatCanonicalizeReport(report: CanonicalizeReport): string {
-  const { refsRewritten, dossierLinksRewritten, filesChanged, skipped } = report;
-  const skippedPart =
-    skipped === 0
-      ? ""
-      : `; ${String(skipped)} left unrewritten (target missing or ref escapes the box)`;
-  return (
-    `Canonicalized ${String(refsRewritten)} ref${refsRewritten === 1 ? "" : "s"} and ` +
-    `${String(dossierLinksRewritten)} dossier link${dossierLinksRewritten === 1 ? "" : "s"} ` +
-    `in ${String(filesChanged)} file${filesChanged === 1 ? "" : "s"}${skippedPart}`
-  );
+  const { refsRewritten, dossierLinksRewritten, refsRepaired, dossierLinksRepaired } = report;
+  const { ambiguous, filesChanged, skipped } = report;
+  const parts = [
+    `Canonicalized ${plural(refsRewritten, "ref")} and ` +
+      `${plural(dossierLinksRewritten, "dossier link")} in ${plural(filesChanged, "file")}`,
+  ];
+  if (refsRepaired + dossierLinksRepaired > 0) {
+    parts.push(
+      `repaired ${plural(refsRepaired, "dangling ref")} and ` +
+        `${plural(dossierLinksRepaired, "dossier link")} that resolve from the box root`
+    );
+  }
+  if (ambiguous > 0) parts.push(`${plural(ambiguous, "ref")} ambiguous (both readings exist) left alone`);
+  if (skipped > 0) parts.push(`${String(skipped)} left unrewritten (target missing or ref escapes the box)`);
+  return parts.join("; ");
 }

@@ -502,3 +502,9 @@ Track G specifics:
   `issues/bugs/2026-05-14-stale-image-refs-after-renames.md` stays open (its
   repair-job / pre-commit-blocking questions are untouched by this plan) with a
   note that the mv rewriter now covers block-list refs.
+
+Follow-up landed after this plan closed: `3595fad6` extends `--canonical --fix`
+to rescue refs written with box-root intent (document-relative reading dangles,
+box-root reading resolves), with an ambiguity guard for refs that resolve both
+ways. Exercised on five real local boxes (test1, personal-test, box-family,
+estate, estate-copy): 185 dangling refs repaired, zero bad rewrites on review.

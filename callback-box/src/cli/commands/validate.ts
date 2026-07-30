@@ -322,7 +322,7 @@ export const validateCommand = new Command("validate")
   .option("--urls", "Check EXTERNAL http(s) URLs that are new since the base version (HEAD by default). Network pass — never run in the sync hooks. Pair with --all (full box sweep), --staged, or --urls-since <ref>.")
   .option("--urls-since <ref>", "With --urls: treat URLs absent at <ref> as new (used by the non-blocking post-commit trigger, e.g. --urls-since HEAD~1).")
   .option("--canonical", "Also report refs written in the document-relative form instead of from the box root (`/store/…`), each with the canonical rewrite. OFF by default so legacy relative refs don't bury the broken-ref signal. Whole-box only — not combinable with --staged, explicit paths, --hook, --links, or --urls.")
-  .option("--fix", "With --canonical: rewrite those refs to their box-root form, in place. Only refs whose target actually exists are rewritten; a dangling or box-escaping ref is reported and left alone.")
+  .option("--fix", "With --canonical: rewrite those refs to their box-root form, in place. Only refs whose target actually exists are rewritten — plus dangling refs that were written with box-root intent and resolve from the root (repaired). A ref that resolves BOTH ways is ambiguous and left alone, as is one that resolves neither way or escapes the box.")
   .option("--json", "Output results as JSON")
   .option("--committed", "Also check that git working tree is clean")
   .action(
