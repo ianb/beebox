@@ -72,17 +72,22 @@ export function useBulkUploadLaunch(opts: {
     const draft = emissionStore.get();
     // Existing inline photos come along, so one selection act has one
     // destination and the composer text describes the whole batch rather than
-    // half of it. They're removed from the composer here (which also strips
-    // their [imageN] tokens); the object URLs are revoked as the store hands
-    // them back.
+    // half of it.
+    //
+    // Removed one at a time by id — NOT via reset("attachments"), which also
+    // clears `files` and would silently drop an unrelated attachment (a PDF the
+    // user attached alongside) that isn't joining the batch. `removeImage` also
+    // strips each `[imageN]` token from the text, so the note doesn't ship
+    // references to photos that are no longer described by it.
     const folded = foldInComposerImages ? draft.images.map(composerImageToFile) : [];
     if (foldInComposerImages) {
-      const { removedImageObjectUrls } = emissionStore.editor.reset("attachments");
-      for (const url of removedImageObjectUrls) {
-        try { URL.revokeObjectURL(url); } catch (_e) { /* already revoked — harmless */ }
+      for (const image of draft.images) {
+        emissionStore.editor.removeImage(image.id);
+        try { URL.revokeObjectURL(image.objectUrl); } catch (_e) { /* already revoked — harmless */ }
       }
     }
-    setLaunch({ seedFiles: [...folded, ...files], note: draft.text });
+    // Read the text AFTER the removals, so the note reflects the stripped tokens.
+    setLaunch({ seedFiles: [...folded, ...files], note: emissionStore.get().text });
   }, [emissionStore]);
 
   const close = useCallback((): void => setLaunch(null), []);

@@ -100,11 +100,15 @@ JSON.stringify({
 await box.cleanup();
 ```
 
-## Abandonment: an empty open batch is discarded; a non-empty one is surfaced
+## Abandonment: a batch with nothing to report is discarded; anything else is surfaced
 
-An `open` batch idle past the window is surfaced (never auto-finalized). Empty
-staging is discarded; a batch with received files is reported as abandoned. A
-recent open batch is left alone.
+An `open` batch idle past the window is surfaced (never auto-finalized). Only a
+batch with **nothing to report at all** is discarded — no received files, no
+reported failures, no registered items, no note. A batch that registered items
+and never uploaded them is NOT empty: it is wholly missing, and the registry
+exists so that case still produces a report. `makeBulk` registers one item, so
+both aged batches below are surfaced as abandoned rather than discarded. A recent
+open batch is left alone.
 
 ```ts
 const box = await makeTmpBox();
@@ -119,12 +123,19 @@ JSON.stringify({
   emptyGone: (await readStagingSession({ boxRoot: box.root, id: emptyOld.id })) === null,
   recentKept: (await readStagingSession({ boxRoot: box.root, id: recent.id })) !== null,
 })
-=> {"discarded":["«*»"],"abandoned":["«*»"],"emptyGone":true,"recentKept":true}
+=> {"discarded":[],"abandoned":["«*»","«*»"],"emptyGone":false,"recentKept":true}
 ```
 
+Both aged batches are surfaced, and both are still on disk — the sweep reports
+them for the uploader to finish, it never finalizes or deletes them:
+
 ```ts continue
-JSON.stringify({ discardedIsEmpty: result.discarded[0] === emptyOld.id, abandonedIsNonEmpty: result.abandoned[0] === nonEmptyOld.id })
-=> {"discardedIsEmpty":true,"abandonedIsNonEmpty":true}
+JSON.stringify({
+  bothAbandoned: [emptyOld.id, nonEmptyOld.id].every((id) => result.abandoned.includes(id)),
+  registeredKept: (await readStagingSession({ boxRoot: box.root, id: emptyOld.id })) !== null,
+  nonEmptyKept: (await readStagingSession({ boxRoot: box.root, id: nonEmptyOld.id })) !== null,
+})
+=> {"bothAbandoned":true,"registeredKept":true,"nonEmptyKept":true}
 ```
 
 ```ts cleanup
@@ -200,6 +211,86 @@ await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified2.push
 const marked = (await box.read("store/x/tmp-upload/upload-old/Batch.upload-batch.card")).includes("sweep-notified:");
 JSON.stringify({ secondSweep: notified2.length, marked })
 => {"secondSweep":0,"marked":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+
+## The sweep never discards a batch that has something to report
+
+A batch that registered items but committed no bytes is not empty — it is wholly
+*missing*, and the point of the predeclared registry is that such a batch still
+produces its report. The emptiness test is shared with the prepare→deliver worker
+(`bulkBatchHasNothingToReport`) precisely so the two cannot drift: they each
+carried their own copy, the worker's was corrected to count `expectedItems` and
+the sweep's was not, so the sweep went on silently deleting registered batches.
+
+`makeBulk` registers one item, so an aged open batch with no bytes is exactly
+that case:
+
+```ts
+const box = await makeTmpBox();
+const registered = await makeBulk(box.root, { state: "open", aged: true });
+const result = await sweepBulkBatches({ boxRoot: box.root });
+JSON.stringify({
+  discarded: result.discarded.includes(registered.id),
+  abandoned: result.abandoned.includes(registered.id),
+})
+=> {"discarded":false,"abandoned":true}
+```
+
+A batch with a note is kept too — the boxholder typed it and pressed send:
+
+```ts continue
+const noted = await createStagingSession({
+  boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
+});
+const session = await readStagingSession({ boxRoot: box.root, id: noted.id });
+session.note = "these are the receipts";
+session.lastActivityAt = OLD;
+await writeStagingSession({ boxRoot: box.root, session });
+
+const second = await sweepBulkBatches({ boxRoot: box.root });
+second.discarded.includes(noted.id)
+=> false
+```
+
+A genuinely empty batch — nothing registered, nothing uploaded, nothing said — is
+still discarded:
+
+```ts continue
+const empty = await createStagingSession({
+  boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
+});
+const emptySession = await readStagingSession({ boxRoot: box.root, id: empty.id });
+emptySession.lastActivityAt = OLD;
+await writeStagingSession({ boxRoot: box.root, session: emptySession });
+
+const third = await sweepBulkBatches({ boxRoot: box.root });
+third.discarded.includes(empty.id)
+=> true
+```
+
+A sealed batch is never discarded by the sweep, even if it looks empty — the
+worker owns it, and the locked discard refuses:
+
+```ts continue
+const sealed = await createStagingSession({
+  boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
+});
+const sealedSession = await readStagingSession({ boxRoot: box.root, id: sealed.id });
+sealedSession.lastActivityAt = OLD;
+await writeStagingSession({ boxRoot: box.root, session: sealedSession });
+await setStagingState({ boxRoot: box.root, id: sealed.id, state: "sealed" });
+
+const fourth = await sweepBulkBatches({ boxRoot: box.root });
+JSON.stringify({
+  discarded: fourth.discarded.includes(sealed.id),
+  stillOnDisk: (await readStagingSession({ boxRoot: box.root, id: sealed.id })) !== null,
+})
+=> {"discarded":false,"stillOnDisk":true}
 ```
 
 ```ts cleanup

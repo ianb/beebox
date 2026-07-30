@@ -296,6 +296,53 @@ final class BulkUploadTests: XCTestCase {
         XCTAssertNotNil(transport.finalizeBody, "finalize must still be called")
     }
 
+    // MARK: - Fold-in staging
+
+    /// The extension must follow the actual mimetype. Naming HEIC/WebP bytes
+    /// `.jpg` produces a client-claimed mimetype that contradicts the bytes — and
+    /// the batch card explicitly tells the agent to trust the bytes when they
+    /// disagree, so a wrong name becomes a wrong claim that outlives the upload.
+    func testStagedExtensionFollowsTheMimeType() {
+        XCTAssertEqual(BulkPhotoStaging.fileExtension(for: "image/png"), "png")
+        XCTAssertEqual(BulkPhotoStaging.fileExtension(for: "image/heic"), "heic")
+        XCTAssertEqual(BulkPhotoStaging.fileExtension(for: "image/HEIF"), "heic")
+        XCTAssertEqual(BulkPhotoStaging.fileExtension(for: "image/webp"), "webp")
+        XCTAssertEqual(BulkPhotoStaging.fileExtension(for: "image/jpeg"), "jpg")
+        XCTAssertEqual(BulkPhotoStaging.fileExtension(for: "application/octet-stream"), "jpg")
+    }
+
+    /// Orphaned staged files are swept, so an interrupted batch doesn't leave
+    /// copies in Caches forever — a retained batch has no persisted record, so
+    /// anything present after a cold start is unreachable.
+    func testDiscardOrphansClearsTheStagingRoot() throws {
+        let root = BulkPhotoStaging.stagingRoot()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let stray = root.appendingPathComponent("stray-\(UUID().uuidString).jpg")
+        try Data("bytes".utf8).write(to: stray)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: stray.path))
+
+        BulkPhotoStaging.discardOrphans()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: stray.path))
+    }
+
+    /// A staged composer image round-trips its bytes, so folding an already-
+    /// encoded photo into a batch doesn't corrupt or re-encode it.
+    func testStagedComposerImageRoundTripsItsBytes() throws {
+        let payload = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+        let item = try XCTUnwrap(BulkPhotoStaging.stageComposerImage(
+            data: payload,
+            mimeType: "image/png",
+            index: 0,
+            uploadedAt: "2026-07-30T19:12:00.000Z"
+        ))
+        defer { BulkPhotoStaging.discard([item]) }
+
+        XCTAssertEqual(item.size, payload.count)
+        XCTAssertEqual(item.originalName, "pasted-image-001.png")
+        XCTAssertEqual(try Data(contentsOf: item.fileURL), payload)
+    }
+
     // MARK: - Helpers
 
     private func makeAPI() -> BulkUploadAPI {

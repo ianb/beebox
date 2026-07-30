@@ -121,7 +121,12 @@ enum BulkPhotoStaging {
         index: Int,
         uploadedAt: String
     ) -> PreparedBulkItem? {
-        let ext = mimeType == "image/png" ? "png" : "jpg"
+        // Derive the extension from the actual type. Naming everything non-PNG
+        // `.jpg` mislabels HEIC/WebP bytes, and the box's card records a
+        // client-claimed mimetype the agent is told to distrust when it
+        // disagrees with the bytes — so a wrong extension turns into a wrong
+        // claim that survives into the batch.
+        let ext = Self.fileExtension(for: mimeType)
         let id = UUID().uuidString
         let destination = stagingRoot().appendingPathComponent("\(id).\(ext)")
         do {
@@ -139,6 +144,37 @@ enum BulkPhotoStaging {
             uploadedAt: uploadedAt,
             size: data.count
         )
+    }
+
+    /// Map an image mimetype to its conventional file extension.
+    static func fileExtension(for mimeType: String) -> String {
+        switch mimeType.lowercased() {
+        case "image/png": return "png"
+        case "image/heic", "image/heif": return "heic"
+        case "image/webp": return "webp"
+        case "image/gif": return "gif"
+        case "image/tiff": return "tiff"
+        default: return "jpg"
+        }
+    }
+
+    /// Delete every staged file left behind by a previous run.
+    ///
+    /// A retained batch does not survive a relaunch (there is no persisted
+    /// record — see the parity matrix), so anything still here after a cold
+    /// start is unreachable and would otherwise accumulate in Caches forever.
+    /// Call once at composer start, before any batch could have staged.
+    static func discardOrphans() {
+        let root = stagingRoot()
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: nil
+        ) else {
+            return
+        }
+        for url in contents {
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 
     /// Delete the staged copies once the box has the bytes (or the batch is

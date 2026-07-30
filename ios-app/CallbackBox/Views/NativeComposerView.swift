@@ -27,6 +27,10 @@ struct NativeComposerView: View {
     @State private var statusText: String?
     /// Non-nil while a large photo selection is uploading as a bulk batch.
     @State private var batchProgress: BulkUploadProgress?
+    /// A batch whose delivery the box never confirmed, held so it can be retried.
+    /// Without this the staged files stay on disk unreachable — "kept for retry"
+    /// with nothing able to retry them.
+    @State private var retainedBatch: RetainedPhotoBatch?
     @State private var isPreparingSend = false
     @State private var editorHeight: CGFloat = 58
     @State private var focused = false
@@ -86,6 +90,10 @@ struct NativeComposerView: View {
             }
         }
         .onAppear {
+            // Staged batch files don't survive a relaunch (there is no persisted
+            // batch record), so anything still on disk now is unreachable and
+            // would accumulate in Caches forever.
+            BulkPhotoStaging.discardOrphans()
             applyVoiceTurn(.speechPlaybackChanged(playing: speechPlaybackActive))
             applyEarcon(.responseActiveChanged(responseActive))
             if initiallyFocused {
@@ -188,11 +196,20 @@ struct NativeComposerView: View {
     private var composerSurface: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let visibleStatusText {
-                Text(visibleStatusText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
+                HStack(spacing: 10) {
+                    Text(visibleStatusText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if retainedBatch != nil && batchProgress == nil {
+                        Button("Retry") { Task { await retryPhotoBatch() } }
+                            .font(.caption)
+                        Button("Discard") { discardRetainedBatch() }
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 8)
             }
             if hasScrollableComposerContext {
                 ScrollView(.vertical, showsIndicators: true) {
@@ -441,6 +458,20 @@ struct NativeComposerView: View {
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
         dictation.clearKeywordIntent()
+        // Spoken commands go through the same in-flight lock as the buttons.
+        // Without this the visible controls are disabled during a batch upload
+        // while "send" still enqueues an overlapping message and "cancel"/"erase"
+        // still discard the draft — including the text the running batch took as
+        // its introduction. A voice path that can do what a disabled button
+        // cannot is worse than no lock, because nothing on screen explains it.
+        if isSending {
+            statusText = batchProgress == nil
+                ? "Still sending — try again in a moment."
+                : "Photos are still uploading — try again when they finish."
+            applyEarcon(.microphoneStopped)
+            applyVoiceTurn(.microphoneStopped)
+            return
+        }
         switch intent.action {
         case .send, .sendClose:
             sendKeywordIntent(intent)
@@ -784,8 +815,14 @@ struct NativeComposerView: View {
                 statusText = "Preparing \(count) of \(items.count) photos…"
             }
         )
-        staged.prepared.insert(contentsOf: foldedIn, at: 0)
-        guard staged.prepared.isEmpty == false else {
+        staged.prepared.insert(contentsOf: foldedIn.prepared, at: 0)
+        staged.failures.append(contentsOf: foldedIn.failures)
+        // No early return when nothing staged: if photos FAILED to import, the
+        // box still needs to hear about them, otherwise the user is told "none
+        // could be read" and no card, message or record of the attempt exists
+        // anywhere. Only a genuinely empty selection (nothing staged AND nothing
+        // failed) has nothing to report.
+        guard staged.prepared.isEmpty == false || staged.failures.isEmpty == false else {
             batchProgress = nil
             statusText = "None of those photos could be read."
             return
@@ -820,34 +857,106 @@ struct NativeComposerView: View {
                 ? "\(uploaded) photos uploaded."
                 : "\(uploaded) photos uploaded, \(failed) failed."
         case .failed(let message):
-            // Nothing was confirmed. Keep BOTH the staged files and the text, so
-            // a retry still has the photos and their introduction.
-            statusText = message
+            // Nothing was confirmed. Keep BOTH the staged files and the text, and
+            // hold them somewhere reachable so "Retry" is a real affordance
+            // rather than a promise.
+            retainedBatch = RetainedPhotoBatch(
+                items: staged.prepared,
+                importFailures: staged.failures,
+                targetSessionID: targetSessionID,
+                note: note
+            )
+            statusText = "\(message) Tap Retry to try again."
         }
     }
 
+    /// Re-run a batch the box never confirmed, from its retained staged files.
+    private func retryPhotoBatch() async {
+        guard let retained = retainedBatch else { return }
+        batchProgress = BulkUploadProgress(total: retained.items.count, uploaded: 0, failed: 0)
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: box),
+            onProgress: { progress in
+                Task { @MainActor in batchProgress = progress }
+            }
+        )
+        let outcome = await coordinator.run(
+            items: retained.items,
+            targetSessionID: retained.targetSessionID,
+            note: retained.note,
+            importFailures: retained.importFailures
+        )
+        batchProgress = nil
+        switch outcome {
+        case .delivered(let uploaded, let failed):
+            BulkPhotoStaging.discard(retained.items)
+            retainedBatch = nil
+            clearComposerTextIfUnchanged(from: retained.note)
+            statusText = failed == 0
+                ? "\(uploaded) photos uploaded."
+                : "\(uploaded) photos uploaded, \(failed) failed."
+        case .failed(let message):
+            statusText = "\(message) Tap Retry to try again."
+        }
+    }
+
+    /// Abandon a retained batch: drop its staged copies rather than leaving them
+    /// in Caches forever.
+    private func discardRetainedBatch() {
+        guard let retained = retainedBatch else { return }
+        BulkPhotoStaging.discard(retained.items)
+        retainedBatch = nil
+        statusText = "Photo upload discarded."
+    }
+
     /// Move the composer's existing inline photos into the batch being started,
-    /// clearing them from the composer. Returns what was staged.
-    private func stageComposerImages(uploadedAt: String) async -> [PreparedBulkItem] {
+    /// clearing only the ones that actually made it to disk.
+    ///
+    /// Two things are deliberate. An image whose bytes can't be read, or whose
+    /// staging write fails (disk full), is LEFT IN THE COMPOSER and reported as a
+    /// failure — removing it would delete the only remaining copy, since
+    /// `removeImage` drops the draft's payload. And an image still `.uploading`
+    /// is skipped entirely: it has no final bytes yet, so staging it would ship a
+    /// half-processed image and bypass the upright re-encode.
+    private func stageComposerImages(uploadedAt: String) async -> (prepared: [PreparedBulkItem], failures: [BulkUploadAPI.FailedItem]) {
         let existing = draftStore.draft.images
-        guard existing.isEmpty == false else { return [] }
+        guard existing.isEmpty == false else { return ([], []) }
         var staged: [PreparedBulkItem] = []
+        var failures: [BulkUploadAPI.FailedItem] = []
+        var stagedImageIDs: [Int] = []
+
         for (index, image) in existing.enumerated() {
-            guard let data = await draftStore.imageData(for: image, boxID: box.id) else { continue }
+            if case .uploading = image.state { continue }
+            let displayName = "pasted-image-\(String(format: "%03d", index + 1))"
+            guard let data = await draftStore.imageData(for: image, boxID: box.id) else {
+                failures.append(BulkUploadAPI.FailedItem(
+                    id: nil, name: displayName, reason: "The image data could not be read."
+                ))
+                continue
+            }
             guard let item = BulkPhotoStaging.stageComposerImage(
                 data: data,
                 mimeType: image.mimeType,
                 index: index,
                 uploadedAt: uploadedAt
-            ) else { continue }
+            ) else {
+                failures.append(BulkUploadAPI.FailedItem(
+                    id: nil, name: displayName, reason: "The image could not be written to disk."
+                ))
+                continue
+            }
             staged.append(item)
+            stagedImageIDs.append(image.id)
         }
-        // Remove them only after they are safely staged on disk.
-        for image in existing {
-            await draftStore.removeImage(id: image.id)
+
+        // Remove ONLY what is safely on disk; anything skipped or failed stays in
+        // the composer so the user still has it.
+        for id in stagedImageIDs {
+            await draftStore.removeImage(id: id)
         }
-        return staged
+        return (staged, failures)
     }
+
 
     /// Clear the composer only if it still holds the text the batch took as its
     /// introduction.

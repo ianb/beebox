@@ -251,7 +251,12 @@ export async function waitForBulkDelivery(opts: {
   for (;;) {
     let res: Response;
     try {
-      res = await fetch(bulkUrl(`/sessions/${opts.sessionId}`), withMobileAuth());
+      // Per-request timeout: without it a single hung request outlives the
+      // overall deadline and the caller waits forever.
+      res = await fetch(
+        bulkUrl(`/sessions/${opts.sessionId}`),
+        withMobileAuth({ signal: AbortSignal.timeout(Math.min(opts.pollMs * 4, 10_000)) }),
+      );
     } catch (e) {
       // A transient network blip mid-wait is not a delivery failure — keep
       // waiting rather than reporting a false negative the user would act on.

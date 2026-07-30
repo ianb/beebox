@@ -34,6 +34,7 @@ import { stageAndCommitPaths } from "../../lib/git.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { prepareBulkBatch, bulkBatchSlug, bulkBatchCardRelPath } from "./prepare.js";
+import { bulkBatchHasNothingToReport } from "./batch-format.js";
 import { buildUploadWrapper, resolveBulkDeliveryTarget } from "./deliver.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -88,23 +89,11 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   if (session.state === "delivered") return; // Already done (idempotent resume).
 
   const failedItems = session.failedItems ?? [];
-  // Nothing was ever expected, nothing arrived, nothing failed, and the user
-  // said nothing → nothing worth delivering.
-  //
-  // `expectedItems` is part of the test on purpose: a batch that REGISTERED
-  // items and then finalized before any bytes committed is not empty, it is
-  // wholly missing. Deleting it silently would discard exactly the report the
-  // predeclared registry exists to guarantee — the user would see nothing at
-  // all, which is the failure this pipeline replaces. A note alone is likewise
-  // worth delivering: the boxholder typed something and pressed send
-  // (principle #4).
-  const expectedCount = session.expectedItems?.length ?? 0;
-  if (
-    session.files.length === 0 &&
-    failedItems.length === 0 &&
-    expectedCount === 0 &&
-    session.note === undefined
-  ) {
+  // Nothing to report at all → nothing worth delivering. The test is shared with
+  // the abandonment sweep (`bulkBatchHasNothingToReport`) so the two can't drift:
+  // a batch that registered items but committed no bytes is wholly MISSING, not
+  // empty, and must still produce its report.
+  if (bulkBatchHasNothingToReport(session)) {
     await cleanupStagingSession({ boxRoot, id });
     return;
   }

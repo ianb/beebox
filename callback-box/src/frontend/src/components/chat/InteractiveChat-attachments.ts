@@ -147,6 +147,16 @@ export function useChatAttachments(opts: {
       // behind in the composer with nothing describing them, and the agent would
       // be told about photos it hadn't been given. One selection act, one
       // destination.
+      // Fold in the finished images — the ones we actually have bytes for.
+      //
+      // Photos still ENCODING cannot be folded (there are no bytes yet) and are
+      // deliberately NOT dropped: they finish and land inline, going out with the
+      // next ordinary send. That leaves a narrow race where one act produces a
+      // batch plus a few inline photos, which is a worse *presentation* than
+      // "one destination" — but discarding them to tidy that up would silently
+      // destroy photos the user picked, and never losing anything outranks
+      // arriving in one piece. The inline bound still holds: those photos were
+      // already counted above.
       onBatchPhotos({ files, foldInComposerImages: draft.images.length > 0 });
       return 0;
     }

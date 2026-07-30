@@ -33,7 +33,9 @@ import { withCardLock } from "../../lib/card-lock.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
 import { listStagingSessions, isBulkSession } from "../capture/staging-store.js";
-import { cleanupStagingSession } from "../capture/staging-teardown.js";
+import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";
+import { bulkBatchHasNothingToReport } from "./batch-format.js";
+import { StagingSessionGoneError } from "../capture/staging-errors.js";
 import { bulkBatchCardRelPath } from "./prepare.js";
 
 /** No-activity window after which an open bulk batch is surfaced as abandoned. */
@@ -106,10 +108,26 @@ export async function sweepBulkBatches(deps: BulkSweepDeps): Promise<BulkSweepRe
     if (session.state !== "open") continue;
 
     if (now - new Date(session.lastActivityAt).getTime() < BULK_ABANDONMENT_WINDOW_MS) continue;
-    const empty = session.files.length === 0 && (session.failedItems?.length ?? 0) === 0;
-    if (empty) {
-      await cleanupStagingSession({ boxRoot, id: session.id });
-      result.discarded.push(session.id);
+    if (bulkBatchHasNothingToReport(session)) {
+      // Through the LOCKED discard, never a bare delete. `session` here is a
+      // snapshot taken before the abandonment-window check, so the user can press
+      // Done and seal the batch in between — a bare delete would then remove the
+      // directory out from under the worker, which reads `null` and silently
+      // returns while the client that already saw finalize succeed treats the
+      // resulting 404 as "delivered" and drops its recovery state. The locked
+      // helper re-reads the state and refuses anything past the seal.
+      try {
+        const discard = await discardStagingSessionIfCancellable({ boxRoot, id: session.id });
+        if (discard.discarded) result.discarded.push(session.id);
+        else console.warn(`[bulk] Sweep skipped ${session.id}: it was sealed (${String(discard.blockedBy)}) while the sweep ran.`);
+      } catch (e) {
+        // Gone already (another sweep, a cancel) or the delete failed — neither
+        // is worth aborting the rest of the sweep for. A failed delete leaves
+        // the session on disk for the next pass.
+        if (!(e instanceof StagingSessionGoneError)) {
+          console.error(`[bulk] Sweep could not discard ${session.id}:`, e);
+        }
+      }
     } else {
       result.abandoned.push(session.id);
     }

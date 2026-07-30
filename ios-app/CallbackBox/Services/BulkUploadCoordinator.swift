@@ -10,6 +10,15 @@ struct BulkUploadProgress: Equatable, Sendable {
     var isFinished: Bool { pending == 0 }
 }
 
+/// A batch whose delivery the box never confirmed, held so the user can retry it
+/// from the already-staged files rather than re-picking every photo.
+struct RetainedPhotoBatch: Equatable, Sendable {
+    var items: [PreparedBulkItem]
+    var importFailures: [BulkUploadAPI.FailedItem]
+    var targetSessionID: String
+    var note: String
+}
+
 enum BulkUploadOutcome: Equatable, Sendable {
     /// The batch sealed; the box will land the card and inject `<upload>`.
     case delivered(uploaded: Int, failed: Int)

@@ -58,6 +58,34 @@ function ItemRow({ item, onRetry }: { item: BulkItemView; onRetry: (id: string) 
   );
 }
 
+/** The batch summary line plus its exit / finalize controls. */
+function BatchFooter({ counts, exitLabel, doneLabel, finalizing, canFinalize, onExit, onDone }: {
+  counts: { uploaded: number; failed: number; pending: number; total: number; totalBytes: number };
+  exitLabel: string;
+  doneLabel: string;
+  finalizing: boolean;
+  canFinalize: boolean;
+  onExit: () => void;
+  onDone: () => void;
+}) {
+  return (
+    <footer className="border-t border-warm-300 bg-warm-100 px-5 py-3">
+      <div className="mb-3">
+        <Text size="sm" tone="muted">
+          {counts.uploaded} uploaded / {counts.failed} failed / {counts.pending} pending
+          {counts.total > 0 ? ` — ${formatBytes(counts.totalBytes)} total` : ""}
+        </Text>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <Button intent="ghost" onClick={onExit} disabled={finalizing}>{exitLabel}</Button>
+        <Button intent="primary" onClick={onDone} disabled={!canFinalize} loading={finalizing}>
+          {doneLabel}
+        </Button>
+      </div>
+    </footer>
+  );
+}
+
 export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, onDelivered }: {
   targetSessionId: string;
   /**
@@ -78,6 +106,8 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
   const [finalizing, setFinalizing] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** Sealed, but the box hadn't confirmed delivery before we stopped waiting. */
+  const [stillWorking, setStillWorking] = useState(false);
 
   const { addFiles } = bulk;
 
@@ -91,8 +121,12 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
   }, [addFiles, seedFiles]);
 
   const pickFiles = useCallback((list: FileList | null): void => {
+    // Nothing may join the batch once finalize has sealed it: the registry is
+    // frozen server-side, so a file added now would never upload, never appear in
+    // `failedItems`, and vanish when the overlay closes.
+    if (finalizing || stillWorking) return;
     if (list && list.length > 0) addFiles(Array.from(list));
-  }, [addFiles]);
+  }, [addFiles, finalizing, stillWorking]);
 
   const handleDone = useCallback(async (): Promise<void> => {
     setActionError(null);
@@ -111,9 +145,12 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
         return;
       }
       if (delivery.outcome === "unknown") {
-        // Still working. Don't claim success and don't destroy anything, but
-        // don't trap the user in the overlay either.
-        setActionError("The box is still processing this batch. Your message was kept; the upload message will appear in chat when it lands.");
+        // Still working. Don't claim success and don't destroy anything — but
+        // don't trap the user either. The batch is sealed, so cancelling is
+        // refused server-side; leaving is safe because the box will finish and
+        // the `<upload>` message arrives through the normal chat stream.
+        setActionError(null);
+        setStillWorking(true);
         setFinalizing(false);
         return;
       }
@@ -154,17 +191,22 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
     const onKey = (e: KeyboardEvent): void => {
       // Not while finalizing: the batch is sealed and the server refuses a
       // cancel then, so this would only surface a confusing error.
-      if (e.key === "Escape" && !finalizing) void handleCancel();
+      if (e.key !== "Escape" || finalizing) return;
+      if (stillWorking) { onExit(); return; }
+      void handleCancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleCancel, finalizing]);
+  }, [handleCancel, finalizing, stillWorking, onExit]);
 
   const dragHasFiles = (e: React.DragEvent): boolean => Array.from(e.dataTransfer.types).includes("Files");
 
   const { counts } = bulk;
   const doneLabel = counts.failed > 0 ? `Deliver with ${counts.failed} failed` : "Done";
   const bannerError = actionError ?? bulk.error;
+  // A sealed batch cannot be cancelled, so its only exit is a plain close that
+  // leaves the box to finish. The composer text stays: delivery is unconfirmed.
+  const exitLabel = stillWorking ? "Close" : confirmingCancel ? "Confirm discard?" : "Cancel batch";
 
   return (
     <div
@@ -196,13 +238,22 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
 
       <div className={`flex-1 overflow-auto px-5 py-4 ${dragOver ? "outline-dashed outline-2 outline-primary -outline-offset-4" : ""}`}>
         <div className="mb-4 flex items-center gap-3">
-          <Button intent="secondary" onClick={() => inputRef.current?.click()}>Add files</Button>
+          <Button intent="secondary" onClick={() => inputRef.current?.click()} disabled={finalizing || stillWorking}>Add files</Button>
           <Text size="sm" tone="subtle">or drag and drop files here</Text>
         </div>
 
         {bannerError ? (
           <div className="mb-4 rounded-lg border border-danger-light bg-danger-50 px-3 py-2">
             <Text as="p" size="sm" tone="danger">{bannerError}</Text>
+          </div>
+        ) : null}
+
+        {stillWorking ? (
+          <div className="mb-4 rounded-lg border border-warm-300 bg-warm-100 px-3 py-2">
+            <Text as="p" size="sm">
+              The box is still processing this batch. Your message was kept — the upload message
+              will appear in chat when it lands.
+            </Text>
           </div>
         ) : null}
 
@@ -213,33 +264,21 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
         ) : (
           <div>
             {bulk.items.map((item) => (
-              <ItemRow key={item.id} item={item} onRetry={(id) => bulk.retry(id)} />
+              <ItemRow key={item.id} item={item} onRetry={(id) => { if (!finalizing && !stillWorking) bulk.retry(id); }} />
             ))}
           </div>
         )}
       </div>
 
-      <footer className="border-t border-warm-300 bg-warm-100 px-5 py-3">
-        <div className="mb-3">
-          <Text size="sm" tone="muted">
-            {counts.uploaded} uploaded / {counts.failed} failed / {counts.pending} pending
-            {counts.total > 0 ? ` — ${formatBytes(counts.totalBytes)} total` : ""}
-          </Text>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <Button intent="ghost" onClick={() => void handleCancel()} disabled={finalizing}>
-            {confirmingCancel ? "Confirm discard?" : "Cancel batch"}
-          </Button>
-          <Button
-            intent="primary"
-            onClick={() => void handleDone()}
-            disabled={counts.inFlight || bulk.items.length === 0}
-            loading={finalizing}
-          >
-            {doneLabel}
-          </Button>
-        </div>
-      </footer>
+      <BatchFooter
+        counts={counts}
+        exitLabel={exitLabel}
+        doneLabel={doneLabel}
+        finalizing={finalizing}
+        canFinalize={!counts.inFlight && bulk.items.length > 0}
+        onExit={stillWorking ? onExit : () => void handleCancel()}
+        onDone={() => void handleDone()}
+      />
     </div>
   );
 }

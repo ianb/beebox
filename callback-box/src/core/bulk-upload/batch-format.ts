@@ -7,6 +7,7 @@
  */
 
 import { humanBytes } from "../../lib/human-bytes.js";
+import type { StagingSession } from "../capture/staging-schema.js";
 
 /**
  * Sanitize a client-claimed filename to a safe on-disk name, preserving the
@@ -56,4 +57,28 @@ export function summarizeBatch(opts: {
   if (opts.missing > 0) parts.push(`${String(opts.missing)} missing`);
   if (opts.failed > 0) parts.push(`${String(opts.failed)} failed`);
   return `${parts.join("; ")}.`;
+}
+
+/**
+ * True when a bulk batch has genuinely nothing to tell the boxholder about, so
+ * discarding it silently is safe.
+ *
+ * Deliberately shared by the prepare→deliver worker AND the abandonment sweep.
+ * They previously each carried their own copy of this test, the worker's was
+ * corrected to count `expectedItems` and the sweep's was not — so a batch that
+ * registered items and never uploaded bytes was still being deleted by the
+ * sweep without the all-missing report the registry exists to guarantee. One
+ * predicate, one place to be wrong.
+ *
+ * `expectedItems` counts because a wholly-missing batch is not an empty
+ * batch — it is a batch with something to report. A `note` counts because the
+ * boxholder typed it and pressed send.
+ */
+export function bulkBatchHasNothingToReport(session: StagingSession): boolean {
+  return (
+    session.files.length === 0 &&
+    (session.failedItems?.length ?? 0) === 0 &&
+    (session.expectedItems?.length ?? 0) === 0 &&
+    session.note === undefined
+  );
 }
