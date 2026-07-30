@@ -4023,6 +4023,49 @@ tests:
     correct_contains: ["ask"]
     tags: [bulk-upload, chat, behavioral]
 
+  # The other half of the rule above, and the one that is easy to get wrong: an
+  # `<upload>` whose body carries the boxholder's own words is INTRODUCED, so the
+  # ask-first duty does not apply. Getting this backwards turns every photo batch
+  # into an interrogation — the agent asking what the files are immediately after
+  # being told. Added with the chat-photo-batch-upload work, which made composer
+  # text ride along as the batch's `note`.
+  #
+  # Status 2026-07-30: PASSES first try (1 read of the generated
+  # card-upload-batch.md, 6 turns, 49k→52k). Passed for the right reason, not by
+  # keyword luck — the agent wrote "The note *is* the introduction ... so no
+  # 'what are these?' question. Act on it; only ask about what it genuinely
+  # leaves open", and its example open question (does a 2026 travel folder exist,
+  # one card per receipt or one card with 34 attachments) is exactly the
+  # distinction duty 1 draws. Authoring note: the runner compiles
+  # `response_not_matches` case-insensitively already, so an inline `(?i)` is a
+  # JS regex SyntaxError that kills the run — caught only by running it.
+  - id: upload-message-introduced
+    prompt: >
+      A message arrives in chat: `<upload
+      doc="tmp-upload/batch-20260730T1912-9f3c.upload-batch.card" files="34"
+      bytes="112 MB">Receipts from the Tokyo trip — file them under the 2026
+      travel folder.
+
+      34 files uploaded (112 MB).</upload>`. What is this, and what do you do
+      first?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Recognises that the first paragraph is the boxholder's own introduction
+      (the batch's `note`), so this batch is NOT the unintroduced case — it
+      should act on what they said (file into the 2026 travel folder) rather
+      than asking what the files are or where they go. Reading the `doc` card
+      for the filing duties first is right; asking a genuinely open follow-up
+      (e.g. the exact destination path doesn't exist yet) is fine. What is wrong
+      is treating an introduced batch as needing an introduction.
+    correct_contains_any: ["travel", "Tokyo", "receipts"]
+    # The runner already compiles these case-insensitively — an inline `(?i)`
+    # flag is a JS regex syntax error, not a no-op.
+    response_not_matches:
+      - "what (are|do you want|should I do with) these (files|photos)"
+      - "where (should|would you like) (these|them|the files)"
+    tags: [bulk-upload, chat, behavioral]
+
   - id: upload-batch-found-outside-chat
     prompt: >
       Doing unrelated work in this box — not processing a chat turn — you

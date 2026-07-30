@@ -3540,6 +3540,14 @@ test1:
       peak: 41661
       added: 17409
       turns: 44
+  upload-message-introduced:
+    - date: 2026-07-30T20:24:50.707Z
+      boxCommit: 7a93ade503509020467f1e57edb103550fd8c981
+      repoCommit: 3d074d26bf38e3f9670723bdcd3964e6ef8c7750
+      initial: 48663
+      peak: 51655
+      added: 2992
+      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
