@@ -68,7 +68,18 @@ function CitationChip({
   const title = usage === undefined || usage === ""
     ? `Source: ${sourceRef}`
     : `${usage} — ${sourceRef}`;
-  const navigate = (): void => linkCtx.onNavigate(refToViewTarget(sourceRef, linkCtx.basePath), { label });
+  const target = refToViewTarget(sourceRef, linkCtx.basePath);
+  // A ref that escapes the box root points at no in-box document. Render the
+  // citation as an inert, visibly-broken marker rather than a chip that opens
+  // whatever a clamped-to-root path happened to hit.
+  if (target === null) {
+    return (
+      <span title={`${title} — escapes the box root`} className="not-italic text-danger text-xs ml-1">
+        [→ {label} (unresolvable)]
+      </span>
+    );
+  }
+  const navigate = (): void => linkCtx.onNavigate(target, { label });
   // Prefer jumping to the verbatim span in the sibling pane (commentary →
   // saved page); fall back to navigating to the target doc when there's no
   // jump handler or the text isn't found there.

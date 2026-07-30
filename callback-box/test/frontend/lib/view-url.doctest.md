@@ -70,6 +70,19 @@ resolveRelativePath(undefined, "notes.md")
 => notes.md
 ```
 
+The rules themselves live in `src/shared/ref-path.ts` (shared with the backend's
+ref checking), including its fail-closed containment: a path that climbs above
+the box root is `null`, never clamped back to the root. Callers degrade visibly
+— a link renders as a broken marker, an image gets an empty (broken) src.
+
+```ts
+JSON.stringify(resolveRelativePath("store/docs/a.md", "../../../etc/passwd"))
+=> null
+
+JSON.stringify(resolveContentTarget("store/docs/report.md", "../../../etc/passwd?view=source"))
+=> null
+```
+
 ## resolveContentTarget
 
 Turns a markdown link/image href into a `ViewTarget`, splitting the `?view=`/params query off **before** resolving so a leading slash stays meaningful (absolute vs document-relative). This is what the renderers hand to `onNavigate`.
@@ -177,6 +190,15 @@ The legacy `api/files/<path>` form (and the `api/image/<path>` form) is accepted
 ```ts
 resolveImageSrc("api/files/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
 => /test1/api/image/store/images/front.png
+```
+
+A src that escapes the box root names no servable file, so it resolves to an
+empty src — the browser draws its broken-image affordance and the alt text
+instead of the clamped-to-root image the old resolver would have shown:
+
+```ts
+JSON.stringify(resolveImageSrc("../../../etc/passwd", { boxSlug: "test1", basePath: "store/dossiers/annika.md" }))
+=> ""
 ```
 
 External URLs pass through untouched:

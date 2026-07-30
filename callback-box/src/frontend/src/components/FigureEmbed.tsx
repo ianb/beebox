@@ -36,8 +36,14 @@ export function makeEmbedComponents(ctx: LinkContext): MarkdownComponentOverride
   function Img({ src, alt, title }: { src?: string; alt?: string; title?: string }) {
     // An in-box, non-image path embeds the card/file inline via its own viewer.
     // Images and external URLs are ordinary markdown images.
-    if (typeof src === "string" && src !== "" && !isExternalUrl(src) && !isImagePath(src)) {
-      const target = resolveContentTarget(ctx.basePath, src);
+    // A `null` target is an embed path that escapes the box root; it falls
+    // through to `DefaultImg`, whose `resolveImageSrc` yields an empty src —
+    // a visibly broken image instead of a silently substituted card.
+    const target =
+      typeof src === "string" && src !== "" && !isExternalUrl(src) && !isImagePath(src)
+        ? resolveContentTarget(ctx.basePath, src)
+        : null;
+    if (target !== null) {
       // Frameless embed: the renderer owns its own appearance and the caption
       // (a media renderer shows it beneath, so an image card reads like a plain
       // captioned image). No `<figure>`/header wrapper here.

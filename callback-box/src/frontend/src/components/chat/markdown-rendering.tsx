@@ -130,8 +130,8 @@ function makeChatMarkdownComponents(
       return <VideoEmbed embedUrl={video.embedUrl} title={alt || ""} className="mx-auto" />;
     }
     if (!src) return <ChatInlineImage src="" alt={alt || ""} />;
-    if (!isExternalUrl(src) && !isImagePath(src)) {
-      const target = resolveContentTarget(contextDir, src);
+    const target = isExternalUrl(src) || isImagePath(src) ? null : resolveContentTarget(contextDir, src);
+    if (target !== null) {
       // Frameless embed (no chat header/border): the renderer owns its
       // appearance and the caption, so an embedded image card reads like a
       // plain captioned image. To open a card in the sidebar, use a link.
@@ -146,6 +146,11 @@ function makeChatMarkdownComponents(
         />
       );
     }
+    // Also the fall-through for an embed path that escapes the box root
+    // (`resolveContentTarget` → null): `resolveImageSrc` returns an empty src
+    // for it, so it renders as a broken image rather than silently embedding
+    // some other card.
+    //
     // Chat-embedded images are box-root-relative: chat has no meaningful
     // "current directory," so a bare `photo.png` must resolve from the box root,
     // not a bound-dir chat's subdirectory. (A leading `/…` is box-root either

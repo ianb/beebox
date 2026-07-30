@@ -70,6 +70,12 @@ function SheetView({ data }: RendererProps) {
       for (const tab of tabs) {
         try {
           const filePath = resolveRelativePath(data.path, tab.ref);
+          if (filePath === null) {
+            // A tab ref that escapes the box root: skip it, so the tab renders
+            // empty rather than loading whatever a clamped path pointed at.
+            console.warn(`Sheet tab ref escapes the box root; skipping tab: ${tab.ref}`);
+            continue;
+          }
           const resp = await fetch(`${getApiBase()}/files/${filePath}`);
           if (resp.ok) {
             const json = await resp.json();

@@ -36,6 +36,10 @@ export function AttachedComments({
   frontmatter: Record<string, unknown> | undefined;
 }) {
   const ref = commentsRefOf(frontmatter);
+  // A comments ref that escapes the box root resolves to null, which disables
+  // the query exactly like an absent ref — the section doesn't render, instead
+  // of loading a clamped-to-root sidecar. The broken ref is reported where refs
+  // are checked (`cb validate`), not on every render here.
   const filePath = ref === null ? null : resolveRelativePath(cardPath, ref);
 
   const { data: comments, isLoading, error } = useQuery({
