@@ -19,11 +19,11 @@ call.
   against the containing card's directory); undefined base → treated as
   box-root-relative. So `/path` is unambiguous; a bare `path` means "relative to
   *what?*" — which an LLM can't reliably know in chat.
-- **Guidance contradicts itself.** `agent-guide/source.ts` (leading `/` = box
-  root) and `schemas/record.tsx` ("box-absolute `ref` reads clearest") point one
-  way; `agent-guide/cards.ts` *shows relative examples*
-  (`[…](store/notes/Trip_Report.doc.card)`) the other. Mixed exemplars → the
-  model copies whichever it saw last.
+- **Guidance sent mixed signals.** The concrete link *examples* in
+  `agent-guide/cards.ts` / `schemas/figure.ts` were already box-root-absolute
+  (`/store/...`), but the ref-path *prose* in `cards.ts` and `source.ts` taught
+  "a bare path resolves relative to the current card" as an equal option — so the
+  model treated bare-relative as fine. (Nudged 2026-07-30, below.)
 - **Landmark `ref` is relative by schema design** (`schemas/landmark.ts`: "a
   literal path relative to the landmark's directory", e.g. `{ ref: Bread.recipe.card }`).
   So a relative landmark ref is the agent *following the schema* — but it's the
@@ -37,6 +37,17 @@ agent always knows the box root, no "relative to what" reasoning — removes the
 whole error class. Trade-off: document-relative paths survive a subtree move;
 box-root-absolute ones break if the target moves. For *agent-authored* links,
 unambiguous > portable (and moves are rare + fixable by validation).
+
+## Landed so far (2026-07-30)
+
+- **Chat-embedded images now resolve from the box root**, not the chat's bound
+  dir (`markdown-rendering.tsx`) — the concrete bug the boxholder hit. Chat has no
+  meaningful "current directory," so a bare `![](photo.png)` was mis-rooting under
+  a directory-scoped chat's subdir.
+- **Guidance nudged**: `cards.ts` / `source.ts` ref-path prose now prefers the
+  leading-`/` box-root form (part of lever 1). NOT yet done: chat *links* and
+  non-image `![](card)` embeds still resolve against `contextDir`; the landmark
+  schema is unchanged.
 
 ## Levers once decided (in increasing blast radius)
 
