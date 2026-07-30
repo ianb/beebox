@@ -43,8 +43,12 @@ export function externalLabel(href: string): string {
  * leading `/` is box-root-absolute, `attach/` resolves into the host card's
  * attach scope, anything else is relative to the host doc's directory.
  * Fragments after `#` are dropped; the router doesn't take them today.
+ *
+ * `null` when the ref escapes the box root — the chip has nothing to open, and
+ * callers render it as non-navigable rather than opening a clamped-to-root file.
  */
-export function refToViewTarget(ref: string, basePath: string | undefined): ViewTarget {
+export function refToViewTarget(ref: string, basePath: string | undefined): ViewTarget | null {
   const noFrag = ref.split("#")[0] ?? ref;
-  return { path: resolveRelativePath(basePath, noFrag), viewer: null, params: {} };
+  const path = resolveRelativePath(basePath, noFrag);
+  return path === null ? null : { path, viewer: null, params: {} };
 }

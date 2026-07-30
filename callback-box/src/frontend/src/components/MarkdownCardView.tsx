@@ -59,16 +59,16 @@ function isRef(value: unknown): value is { ref: string } {
  */
 function RefLink({ refPath }: { refPath: string }): ReactNode {
   const nav = useContext(FieldsNavContext);
-  if (nav === null) {
+  const noFrag = refPath.split("#")[0] ?? refPath;
+  const resolved = nav === null ? null : resolveRelativePath(nav.basePath, noFrag);
+  // No nav context, or a ref that escapes the box root: render the ref as plain
+  // text rather than a button that leads nowhere (or, worse, to a clamped-to-root
+  // file the ref never named).
+  if (nav === null || resolved === null) {
     return <span className="whitespace-pre-wrap break-words">{refPath}</span>;
   }
   const handleClick = (): void => {
-    const noFrag = refPath.split("#")[0] ?? refPath;
-    const target: ViewTarget = {
-      path: resolveRelativePath(nav.basePath, noFrag),
-      viewer: null,
-      params: {},
-    };
+    const target: ViewTarget = { path: resolved, viewer: null, params: {} };
     nav.onNavigate(target, { label: refPath });
   };
   return (

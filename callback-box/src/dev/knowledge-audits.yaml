@@ -291,6 +291,10 @@ tests:
   # Status (2026-06-27): both pass against test1 — knows_directly, 0 files read /
   # 0 searches, answered straight from the agent guide's cb-mv + box-root-link
   # convention (behavior.ts). Landed with the markdown link-validation fix.
+  # Status (2026-07-30): both still pass (0 reads / 0 searches, 43k ctx) after the
+  # box-root-paths rewrite of the ref rule (REF_PATH_RULE, Track E);
+  # internal-links-resolve-to-box-root's watch_for was widened to the new
+  # "always write the leading /" framing.
   - id: move-store-content-uses-cb-mv
     prompt: "How do you move or rename content under store/ (a card, a directory, or a markdown dossier)?"
     expected_level: knows_directly
@@ -301,9 +305,77 @@ tests:
   - id: internal-links-resolve-to-box-root
     prompt: "A markdown link in a card or dossier is [x](/store/foo/bar.jpg). What does the leading slash mean?"
     expected_level: knows_directly
-    watch_for: "Box root, not the OS filesystem root; the target must be an existing file/dir in the box"
+    watch_for: >
+      Box root, not the OS filesystem root; the target must be an existing
+      file/dir in the box. Leading `/` is also the form you always write
+      (docs/implemented-plans/box-root-paths.md) — a bare path still resolves, but only
+      as a legacy form, and `../` is never written.
     correct_contains: ["box root"]
     tags: [links]
+
+  # === Refs are always written box-root-relative (Track G, box-root-paths) ===
+  #
+  # One rule, three angles: the chat-reply link, a landmark frontmatter ref, and
+  # the single exception (`attach/`). The third exists specifically to keep the
+  # always-`/` rule from swallowing the attach scope. Rule text lives in one
+  # constant: REF_PATH_RULE (src/core/agent-guide/source.ts), reaching every
+  # agent via ABOUT_CARDS + PROVENANCE.
+  #
+  # Status (2026-07-30): all 3 pass first run against the test1 clone, no
+  # guidance changes needed. links-always-box-root and attach-is-the-exception
+  # answered with 0 reads / 0 searches (49k / 43k ctx). landmark-ref-box-root
+  # passes but read docs/generated/card-landmark.md first (5 turns) — weakest of
+  # the three; it recalls the box-path rule but verifies the links[] field shape,
+  # so re-check it if the landmark schema docs move.
+  - id: links-always-box-root
+    prompt: >
+      There's a card at store/notes/Beta_Launch.doc.card. In your reply to me,
+      write the markdown link you'd use to point me at it, and say why that
+      path form.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Writes the target with a leading `/` — [the beta launch
+      plan](/store/notes/Beta_Launch.doc.card) — and says it resolves from the
+      box root. FAILS on a bare `store/notes/…` target or any `../` climb: those
+      still resolve (legacy) but are not what gets authored. A human label
+      rather than a bare filename as the link text.
+    correct_contains: ["/store/notes/Beta_Launch.doc.card"]
+    response_not_matches:
+      - '\]\((?!/|attach/|https?:|#)'
+      - '\]\(\.\./'
+    tags: [links, chat, paths]
+
+  - id: landmark-ref-box-root
+    prompt: >
+      I'm adding an entry to a landmark card's links list that points at the
+      card store/recipes/Bread.recipe.card. Write the links[] entry.
+    expected_level: knows_directly
+    watch_for: >
+      `ref: /store/recipes/Bread.recipe.card` — a box path with a leading `/`,
+      the same rule as every other ref. FAILS on a landmark-dir-relative
+      (`recipes/Bread.recipe.card`) or `../`-climbing ref: that was the old
+      landmark-private convention, retired 2026-07-30. A `title`/label
+      alongside `ref` is expected and fine.
+    correct_contains: ["/store/recipes/Bread.recipe.card"]
+    response_not_matches:
+      - 'ref:\s*["'']?(?!/)[\w./-]*\.card'
+    tags: [links, landmark, paths]
+
+  - id: attach-is-the-exception
+    prompt: >
+      A card at store/trips/Trip.record.card has ![the cabin](attach/photo.jpg)
+      in its body. Which file on disk is that pointing at?
+    expected_level: knows_directly
+    watch_for: >
+      The card's OWN attach scope — store/trips/Trip.attach/photo.jpg — NOT a
+      box-root `/attach/photo.jpg` and not a literal `attach/` directory beside
+      the card. `attach/` is the one exception to the always-leading-`/` rule,
+      and this audit guards it from being over-generalized away by that rule.
+      Bonus: says a plain `.md` dossier owns no attach scope, so the prefix is
+      card-only.
+    correct_contains: ["Trip.attach/photo.jpg"]
+    tags: [links, cards, attachments, paths]
 
   - id: validate-card
     prompt: "How do you validate a card after editing it?"
@@ -3542,6 +3614,9 @@ tests:
   # the agent recalls link-vs-embed with plain box paths (no view:/?zoom) and
   # that views attach to a card type via rendersCardTypes, directly (0 files
   # read). Part of the normalize-chat-links work.
+  # Status (2026-07-30): chat-link-vs-embed-card re-run under box-root-paths
+  # Track G — still passes (0 reads, 43k ctx); its watch_for already matched the
+  # new always-leading-`/` rule (Track C fixed it), so no edit was needed.
   - id: chat-link-vs-embed-card
     prompt: >
       In chat, how do you reference a card so the user can open it, versus show
@@ -3550,8 +3625,9 @@ tests:
     watch_for: >
       A plain markdown link [label](/store/x.card) references the card — clicking
       opens it in the companion pane. Prefix with ! — ![label](/store/x.card) —
-      to embed it inline. Write box-root-absolute paths (leading /); a bare path
-      resolves against the chat working directory. Must NOT use a `view:` prefix
+      to embed it inline. Always write the box path with a leading / — chat
+      links and embeds resolve from the box root, never from the chat's working
+      directory (a bare path lands at the box root too). Must NOT use a `view:` prefix
       or a `?zoom` flag in the syntax — both are retired (naming them as retired
       to warn against them is fine).
     response_not_contains: ["?zoom", "zoom flag"]
@@ -4168,6 +4244,11 @@ tests:
   # confirmation with no prose mention correctly passes. NOTE: this audit
   # MUTATES the box (the agent creates a note card each run); the created card
   # is disposable.
+  # Status (2026-07-30): 1/1 pass in the box-root-paths Track G run — the ack
+  # ref AND the prose link both came out box-root form
+  # (ref="/store/notes/Beta_Launch.doc.card", "Saved to [Beta Launch](/store/…)"),
+  # which is the Track E exemplar change landing. One run only; the RATE caveat
+  # above still governs.
   - id: chat-reference-card-as-link
     prompt: "Quick, save this before I forget: beta ships in August, hold the pricing page until launch, and move standups to Tuesdays."
     expected_level: knows_directly

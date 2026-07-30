@@ -11,14 +11,14 @@
  *     label: Recipes
  *     symbol: 🍳
  *     links:
- *       - { ref: Bread.recipe.card, label: the bread }
+ *       - { ref: /store/recipes/Bread.recipe.card, label: the bread }
  *     expand:
  *       - { query: "*.recipe.card", order: modified-desc }
  *   destinations:                    # filing targets
  *     - for: [triage]
  *       rules: "Recipes — anything describing how to cook a dish."
  *       procedure:
- *         ref: archive-recipe.procedure.card
+ *         ref: /config/procedures/archive-recipe.procedure.card
  *   ---
  *
  * At least one role should be present; a landmark with neither is inert.
@@ -35,15 +35,17 @@ export type LandmarkOrderType = z.infer<typeof LandmarkOrder>;
 
 /**
  * The iconic mark for a landmark. Either an emoji / short text, or an
- * image (`{ src }`, a path relative to the landmark's directory).
+ * image (`{ src }`, a box path with a leading `/`; a path relative to the
+ * landmark's directory still resolves).
  */
 export const LandmarkSymbol = z.union([z.string(), z.object({ src: z.string() })]);
 export type LandmarkSymbolData = z.infer<typeof LandmarkSymbol>;
 
 /**
- * A pinned reference to another card. `ref` is a literal path relative to
- * the landmark's directory, validated like any other ref. `label` is an
- * optional display label (falls back to the target's filename title).
+ * A pinned reference to another card. `ref` is a box path with a leading `/`
+ * (a path relative to the landmark's directory still resolves), validated
+ * like any other ref. `label` is an optional display label (falls back to
+ * the target's filename title).
  */
 export const LandmarkLink = z.object({
   ref: z.string(),
@@ -59,7 +61,8 @@ export type LandmarkLinkData = z.infer<typeof LandmarkLink>;
  * per match: `${path}` is the matched card's path (relative to the
  * landmark dir); any other `${field}` reads that field from the matched
  * card's frontmatter (dotted paths allowed, e.g. `${exif.camera}`).
- * When omitted, `template-ref` defaults to `${path}`.
+ * When omitted, `template-ref` defaults to the match's box path (leading
+ * `/`) — see `core/landmark/resolve.ts`.
  *
  * `group` is the title of a collapsible submenu. When present, this
  * expand's matches stay grouped under that title (collapsed shows the
@@ -102,7 +105,8 @@ export type LandmarkNavigationData = z.infer<typeof LandmarkNavigation>;
  * Filing-target role: marks the landmark's directory as a destination for
  * one or more *kinds* of content. `for` lists the kinds (e.g. `triage`,
  * `commentary`). `rules`/`procedure` are only meaningful when `for`
- * includes `triage`. `procedure` is a card ref — `{ ref: <path> }` — to the
+ * includes `triage`. `procedure` is a card ref — `{ ref: <box path> }`,
+ * leading `/` (a landmark-dir-relative path still resolves) — to the
  * handler procedure run at the handle stage.
  */
 export const LandmarkDestination = z.object({
@@ -142,9 +146,9 @@ A landmark is pure YAML frontmatter (no body) with one or more roles. At least o
 \`\`\`yaml
 navigation:
   label: Recipes            # short bookmark name; treat like a tab name, not a sentence
-  symbol: 🍳                # emoji/short text, OR { src: images/portrait.webp } for an image
+  symbol: 🍳                # emoji/short text, OR { src: /store/recipes/images/portrait.webp } for an image
   links:                    # optional curated links to other cards
-    - ref: Bread.recipe.card  # literal path relative to the landmark's directory; validated
+    - ref: /store/recipes/Bread.recipe.card  # box path (leading /); validated
       label: the bread        # optional; falls back to the target's filename title
   expand:                   # optional templated fan-out
     - query: "*.recipe.card"  # glob, like cb ls
@@ -156,7 +160,9 @@ navigation:
     prose: "off"
 \`\`\`
 
-In an \`expand\`, \`template-ref\` / \`template-label\` are placeholder strings substituted per match: \`\${path}\` is the matched card's path, any other \`\${field}\` reads that field from the matched card's frontmatter. When omitted, \`template-ref\` defaults to \`\${path}\`. (\`template-ref\` is a \`\${…}\` substitution *pattern*, not a card ref — it is not stored under a \`ref\` key.)
+\`ref\` and \`symbol.src\` are **box paths — write them with a leading \`/\`, from the box root**. A path relative to the landmark's directory still resolves (older landmarks are written that way), but new ones use the box path. \`expand\` \`query\` globs are the exception: they are queries, not refs, and always run relative to the landmark's directory.
+
+In an \`expand\`, \`template-ref\` / \`template-label\` are placeholder strings substituted per match: \`\${path}\` is the matched card's path relative to the landmark's directory, any other \`\${field}\` reads that field from the matched card's frontmatter. When omitted, \`template-ref\` defaults to the match's box path. (\`template-ref\` is a \`\${…}\` substitution *pattern*, not a card ref — it is not stored under a \`ref\` key.)
 
 Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **collapsible submenu** instead of flattening them into the flat link list. Collapsed, the group shows its title and a child count; expanded, it reveals the matched links. Use this for "all the X" globs (e.g. \`group: Images\` over \`**/*.image.card\`) that would otherwise flood the flat list. An expand without \`group\` flattens inline as before. Group children dedup within the group only — they are independent of the flat list and of other groups.
 
@@ -168,8 +174,8 @@ Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **colla
 destinations:
   - for: [triage]           # kinds: triage (inbox→triage routing target) and/or commentary
     rules: "Recipes — anything describing how to cook a dish."  # read by the triage agent
-    procedure:                # handler run at the handle stage; a card ref ({ ref: <path> })
-      ref: archive-recipe.procedure.card
+    procedure:                # handler run at the handle stage; a card ref ({ ref: <box path> })
+      ref: /config/procedures/archive-recipe.procedure.card
   - for: [commentary]       # a commentary-only spot needs neither rules nor procedure
 \`\`\`
 
@@ -205,8 +211,8 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
  * Template for `cb create` — produces a starter landmark with a
  * `navigation` role containing label + symbol.
  *
- * Pass `symbol` for an emoji/text symbol, or `symbolSrc` for an image
- * path (relative to the landmark's directory).
+ * Pass `symbol` for an emoji/text symbol, or `symbolSrc` for an image box
+ * path (leading `/`; a landmark-dir-relative path also resolves).
  */
 export function createLandmarkTemplate(options: {
   label: string;

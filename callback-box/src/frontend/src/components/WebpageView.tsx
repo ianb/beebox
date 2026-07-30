@@ -35,10 +35,13 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
     typeof frozen === "object" && frozen !== null && "ref" in frozen && typeof frozen.ref === "string"
       ? frozen.ref
       : null;
-  const frozenUrl =
-    frozenPath !== null && frozenPath !== ""
-      ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozenPath)}`
-      : null;
+  // A `frozen` ref that escapes the box root resolves to null and is treated as
+  // absent — no snapshot link, rather than a link to a clamped-to-root file.
+  // The broken ref itself is reported where refs are checked (`cb validate`),
+  // not re-reported on every render here.
+  const frozenRelative =
+    frozenPath !== null && frozenPath !== "" ? resolveRelativePath(data.path, frozenPath) : null;
+  const frozenUrl = frozenRelative === null ? null : `${getApiBase()}/files/${frozenRelative}`;
   const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
 
   // A source chip jumps to its verbatim span in the page body (matched in-pane

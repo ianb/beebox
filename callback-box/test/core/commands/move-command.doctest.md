@@ -225,6 +225,33 @@ destinations:
 ---
 ```
 
+## Block-list `- ref:` items rewritten
+
+The most common nested ref shape is `ref` as the FIRST key of a block-list item
+(`messages:`/`items:`/`participants:` lists). It follows the move like any other
+`ref:`, whether it was written relative or box-root-absolute.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nbody\n");
+await box.write(
+  "store/notes/Index.memo.card",
+  "---\ntype: memo\nitems:\n  - ref: Plan.doc.card\n    note: rel\n  - ref: /store/notes/Plan.doc.card\n---\nbody\n",
+);
+
+await mv(box, { from: "store/notes/Plan.doc.card", to: "store/archive/Plan.doc.card" });
+await box.read("store/notes/Index.memo.card")
+=>
+---
+type: memo
+items:
+  - ref: ../archive/Plan.doc.card
+    note: rel
+  - ref: /store/archive/Plan.doc.card
+---
+body
+```
+
 ## Single card move: `ref=` strings in referrers rewritten (relative + absolute)
 
 Moving a card rewrites references to it in other cards via substring rewrite —
@@ -247,6 +274,38 @@ await mv(box, { from: "store/Scan.capture-session.card", to: "store/sub/Scan.cap
 version: "1.0.0"
 ---
 rel [a](sub/Scan.capture-session.card) abs [b](/store/sub/Scan.capture-session.card)
+```
+
+## `?query` and `#fragment` survive the rewrite
+
+A ref may address a location *within* its target — `?view=ledger` picks a view,
+`#risks` an anchor. Resolution runs on the path part only (so the ref still
+matches the moving card), and the suffix is re-appended to the rewritten ref in
+whichever style it was written.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/charts/Ledger.doc.card", "---\ntype: doc\ntitle: Ledger\n---\nx\n");
+await box.write(
+  "store/Index.doc.card",
+  "---\ntype: doc\ntitle: Index\n---\n" +
+    "rel [view](charts/Ledger.doc.card?view=ledger) abs [anchor](/store/charts/Ledger.doc.card#risks)\n" +
+    "both [x](charts/Ledger.doc.card?view=ledger#risks)\n",
+);
+
+await mv(box, { from: "store/charts/Ledger.doc.card", to: "store/archive/Ledger.doc.card" });
+(await box.read("store/Index.doc.card")).trim()
+=>
+---
+type: doc
+title: Index
+---
+rel [view](archive/Ledger.doc.card?view=ledger) abs [anchor](/store/archive/Ledger.doc.card#risks)
+both [x](archive/Ledger.doc.card?view=ledger#risks)
+```
+
+```ts continue
+await box.cleanup();
 ```
 
 ## Directory move: recursive, external refs rewritten (relative + absolute)
@@ -328,6 +387,86 @@ type: memo
 ref: /box/New_Name.doc.card
 ---
 link [n](New_Name.attach/note.txt)
+```
+
+## YAML block scalars are prose, trailing comments survive
+
+The frontmatter scan is line-based, so it has to know the two YAML constructs
+where a ref-shaped line isn't a ref. A **block scalar** (`notes: |`) holds
+literal prose — a `- ref: Plan.doc.card` line inside it is text that must be
+left exactly as written, not rewritten (that would be silent text corruption).
+An **end-of-line comment** (`# the plan`) is not part of the ref: it used to be
+captured as part of the token, which then never resolved, so `cb mv` silently
+skipped the ref and left it dangling. Both refs below are rewritten, comments
+intact.
+
+The **body** scan takes the opposite posture on fenced code: `cb mv` rewrites a
+fenced example too, because a doc example naming a card that moved should stay
+truthful rather than point at a dead path.
+
+```ts
+const FENCE = "`".repeat(3);
+const box = await makeTmpBox();
+await box.write("store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nbody\n");
+await box.write(
+  "store/notes/Index.memo.card",
+  "---\ntype: memo\nref: Plan.doc.card  # the plan\nitems:\n  - ref: Plan.doc.card # also\n" +
+    "notes: |\n  Write it as:\n  - ref: Plan.doc.card\n---\n" +
+    "Inline [plan](Plan.doc.card).\n" +
+    FENCE + "md\nFenced [plan](Plan.doc.card)\n" + FENCE + "\n",
+);
+
+await mv(box, { from: "store/notes/Plan.doc.card", to: "store/archive/Plan.doc.card" });
+const index = await box.read("store/notes/Index.memo.card");
+index.split("\n").filter((line) => line.includes("Plan.doc.card")).join("\n")
+=>
+ref: ../archive/Plan.doc.card  # the plan
+  - ref: ../archive/Plan.doc.card # also
+  - ref: Plan.doc.card
+Inline [plan](../archive/Plan.doc.card).
+Fenced [plan](../archive/Plan.doc.card)
+```
+
+```ts continue
+await box.cleanup();
+```
+
+## Scheme refs (`mailto:`, `view:`) are never resolved, even on a name collision
+
+Whether a ref names something outside the box is decided by one shared test
+(`isExternalRef` in `src/shared/ref-path.ts`) — the same one CB002 uses — not by
+looking for `://`. This box deliberately constructs the collision that the
+narrower test missed: files whose names are literally `mailto:dana.doc.card` and
+`view:Ledger.doc.card`, so a scheme ref would resolve to a card that is moving.
+The refs stay exactly as written.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/mailto:dana.doc.card", "---\ntype: doc\ntitle: Dana\n---\nx\n");
+await box.write("store/view:Ledger.doc.card", "---\ntype: doc\ntitle: Ledger\n---\nx\n");
+await box.write(
+  "store/Index.doc.card",
+  "---\ntype: doc\ntitle: Index\n---\nMail [d](mailto:dana.doc.card), view [l](view:Ledger.doc.card).\n",
+);
+
+const result = await mv(box, {
+  from: ["store/mailto:dana.doc.card", "store/view:Ledger.doc.card"],
+  to: "store/archive/",
+});
+result.success
+=> true
+
+await box.read("store/Index.doc.card")
+=>
+---
+type: doc
+title: Index
+---
+Mail [d](mailto:dana.doc.card), view [l](view:Ledger.doc.card).
+```
+
+```ts continue
+await box.cleanup();
 ```
 
 ## Dry run makes no changes
@@ -431,6 +570,59 @@ const saoirse = await box.read("store/dossiers/saoirse.md");
   true,
   false
 ]
+```
+
+```ts continue
+await box.cleanup();
+```
+
+## Directory moves rewrite `.md` dossiers too — inside and outside the move
+
+A directory move gets the same `.md` coverage a single-card move has, and
+respects the same inside/outside split as cards: a dossier *outside* the moved
+directory has its links into the directory repointed, while a dossier that
+*travelled with* the directory has its outgoing relative links recomputed from
+the new location. (Before this, `cb mv <dir>` walked cards and views only, so a
+dossier's links silently dangled.)
+
+```ts
+const box = await makeTmpBox();
+await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
+await box.write("box/session/scan.capture-session.card", "---\nsession-id: s\n---\n");
+await box.write(
+  "store/dossiers/log.md",
+  "# Log\n\nAbs [scan](/box/session/scan.capture-session.card), rel [again](../../box/session/scan.capture-session.card).\n",
+);
+await box.write(
+  "box/session/readme.md",
+  "# Session\n\nRun by [Dana](../people/dana.person.card); the [scan](scan.capture-session.card) is here.\n",
+);
+
+const result = await mv(box, { from: "box/session", to: "store/archive/session" });
+result.success
+=> true
+```
+
+The outside dossier's links — absolute and relative alike — now point at the
+new location:
+
+```ts continue
+await box.read("store/dossiers/log.md")
+=>
+# Log
+«blankline»
+Abs [scan](/store/archive/session/scan.capture-session.card), rel [again](../archive/session/scan.capture-session.card).
+```
+
+The dossier that moved with the directory keeps its link to a sibling that
+moved alongside it, and gets a recomputed path to the card that stayed put:
+
+```ts continue
+await box.read("store/archive/session/readme.md")
+=>
+# Session
+«blankline»
+Run by [Dana](../../../box/people/dana.person.card); the [scan](scan.capture-session.card) is here.
 ```
 
 ```ts continue

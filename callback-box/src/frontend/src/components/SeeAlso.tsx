@@ -51,10 +51,21 @@ export function makeSeeAlsoComponent(linkCtx: SeeAlsoLinkContext): (props: SeeAl
     if (sourceRef !== undefined && sourceRef !== "") {
       const label = refLabel(sourceRef);
       const title = reason === "" ? `See also: ${sourceRef}` : `${reason} — ${sourceRef}`;
+      const target = refToViewTarget(sourceRef, linkCtx.basePath);
+      // A ref that escapes the box root has nothing to open — mark it broken
+      // (same shape as the missing-target case below) instead of rendering a
+      // chip that navigates to a clamped-to-root file the ref never named.
+      if (target === null) {
+        return (
+          <span title={`${title} — escapes the box root`} className={`${MARKER_CLASS} text-danger`}>
+            [see also: {label} (unresolvable)]
+          </span>
+        );
+      }
       return (
         <button
           type="button"
-          onClick={() => linkCtx.onNavigate(refToViewTarget(sourceRef, linkCtx.basePath), { label })}
+          onClick={() => linkCtx.onNavigate(target, { label })}
           title={title}
           className={`${MARKER_CLASS} cursor-pointer hover:text-warm-600`}
         >

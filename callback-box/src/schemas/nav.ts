@@ -11,12 +11,14 @@
  *   entries:
  *     - { href: /questions }
  *     - { href: /chat, label: Recent }
- *     - { ref: store/projects/Big_Refactor.project.card, label: The Refactor }
+ *     - { ref: /store/projects/Big_Refactor.project.card, label: The Refactor }
  *   ---
  *
  * `href` entries point at builtin routes and are validated against the
  * route table (src/shared/nav-routes.ts). `ref` entries are card refs
- * (box-root-relative), tracked like any ref by `cb validate` / `cb mv`.
+ * written as box paths (leading `/`; a bare path is accepted and means the
+ * same thing, since `nav.card` sits at the box root), tracked like any ref
+ * by `cb validate` / `cb mv`.
  */
 
 import { z } from "zod";
@@ -34,9 +36,10 @@ export const NavHref = z.string().refine((h) => validHrefs.has(h), {
 });
 
 /**
- * One nav entry: either a builtin route (`href`) or a card ref (`ref`,
- * box-root-relative). `label` overrides the default (the route's builtin
- * label, or the target card's title).
+ * One nav entry: either a builtin route (`href`) or a card ref (`ref`, a box
+ * path with a leading `/`; bare is accepted for back-compat). `label`
+ * overrides the default (the route's builtin label, or the target card's
+ * title).
  */
 export const NavEntry = z.union([
   z.object({ href: NavHref, label: z.string().optional() }).strict(),
@@ -68,11 +71,11 @@ entries:
   - { href: / }                # builtin routes, validated against the route set:
   - { href: /chat, label: Recent }   # ${hrefList}
   - { href: /questions }
-  - { ref: store/projects/Big_Refactor.project.card, label: The Refactor }
+  - { ref: /store/projects/Big_Refactor.project.card, label: The Refactor }
 \`\`\`
 
 - **\`href\`** — a builtin route. \`label\` defaults to the route's standard name.
-- **\`ref\`** — any card, by box-root-relative path; it opens in Browse. \`label\` defaults to the target's title. Use this to pin a card (a project, a list, a note) into the nav.
+- **\`ref\`** — any card, by box path (leading \`/\`, from the box root); it opens in Browse. \`label\` defaults to the target's title. Use this to pin a card (a project, a list, a note) into the nav.
 
 Keep the list short — this is a navigation bar, not a directory. Order is display order.`,
 });

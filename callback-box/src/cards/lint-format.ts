@@ -18,7 +18,7 @@ export interface Location {
 
 /** A lint issue (error or warning). */
 export interface LintIssue {
-  type: "parse" | "validation" | "reference" | "id" | "schema" | "contains";
+  type: "parse" | "validation" | "reference" | "id" | "schema" | "contains" | "canonical";
   severity: "error" | "warning";
   message: string;
   location?: Location;
@@ -115,6 +115,23 @@ export function countBrokenRefs(summary: LintSummary): number {
   for (const result of summary.results) {
     for (const warning of result.warnings) {
       if (warning.type === "reference") count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * Count non-canonical-ref warnings (`type === "canonical"`) across all results.
+ * A separate count from {@link countBrokenRefs} on purpose: a relative ref
+ * still *resolves*, so mixing it into the broken-ref number would make a box
+ * with clean links look broken. Only populated when `cb validate --canonical`
+ * asked for the check.
+ */
+export function countNonCanonicalRefs(summary: LintSummary): number {
+  let count = 0;
+  for (const result of summary.results) {
+    for (const warning of result.warnings) {
+      if (warning.type === "canonical") count++;
     }
   }
   return count;

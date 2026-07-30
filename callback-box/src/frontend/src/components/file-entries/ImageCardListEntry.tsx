@@ -13,7 +13,9 @@ import { resolveRelativePath } from "../../lib/view-url";
 
 function imageSrc(cardPath: string, filenameRef: string): string {
   const resolved = resolveRelativePath(cardPath, filenameRef);
-  return `${getApiBase()}/files/${resolved}`;
+  // Escaping ref → empty src: the thumbnail shows broken rather than pulling in
+  // whatever a clamped-to-root path resolved to.
+  return resolved === null ? "" : `${getApiBase()}/files/${resolved}`;
 }
 
 export function ImageCardListEntry({ data, compact }: ListProps<ImageAttrs>) {

@@ -105,17 +105,19 @@ Two lint rules make this unambiguous (`src/lib/attach-lint.ts`):
 - **No two cards in the same directory may share a basename** — otherwise `Name.attach/` would have no single owner.
 - **A literal directory or file named `attach` is forbidden** outside an existing `<basename>.attach/` scope — it would collide with the `attach/` virtual ref prefix below. Names like `attachments/` are fine; only the bare `attach` is reserved.
 
-Inside a ref value, the prefix `attach/` means "this card's own attach scope" — `attach/photo-002.jpg` resolves to `<basename>.attach/photo-002.jpg` (`src/shared/attach-path.ts`). Elsewhere, a path with no leading `/` is relative to the card's directory; a leading `/` is box-root absolute.
+Inside a ref value, the prefix `attach/` means "this card's own attach scope" — `attach/photo-002.jpg` resolves to `<basename>.attach/photo-002.jpg` (`src/shared/attach-path.ts`).
 
 ## Refs
 
 Refs are found **by convention**, not by per-field schema declaration: any key literally named `ref` whose value is a string, or `refs` whose value is a string array, at any depth in the parsed frontmatter (`extractRefs()` in `src/cards/schema.ts`). The same convention is walked in the Markdoc body (`extractBodyRefs`, `src/core/body-refs.ts`) for tags carrying a `ref` attribute (e.g. `{% source ref="..." %}`). `cb validate` resolves every ref it finds against the box and warns (not errors, so a legitimate pending move doesn't block a commit) when a target doesn't exist.
 
+**How a ref path resolves** is one rule, implemented once in `resolveRefPath` (`src/shared/ref-path.ts`) and shared by every consumer. A ref is **written with a leading `/`** — it resolves from the box root, which is the canonical form everywhere refs are authored. The one exception is `attach/…`, the card's own attach scope (above); it is legal only from a `.card`, since a plain `.md` dossier owns no attach scope. `../` is never written: a `..` that climbs out of the box resolves to `null` (fail closed — never clamped back to the root). A bare path resolves relative to the directory of the document it was written in; that form still resolves, but it is legacy — existing boxes hold it, and nothing new should be authored that way.
+
 ```yaml
 participants:
-  - { ref: people/Alice.person.card }
+  - { ref: /people/Alice.person.card }
 sources:
-  - ref: store/archive/articles/Article.record.card
+  - ref: /store/archive/articles/Article.record.card
     usage: primary
 ```
 

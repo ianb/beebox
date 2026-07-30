@@ -20,18 +20,23 @@
  *    either `QuoteInline` or `QuoteBlock` based on `node.inline`, so the
  *    React component for each shape can be specialized.
  *  - `source` — universal provenance tag: where the wrapped content
- *    came from and (optionally) how it was derived. Required `ref`
- *    (which feeds Track 4's body ref-tracking automatically). Optional
- *    `as` — natural-language description of the derivation
+ *    came from and (optionally) how it was derived. At most one of
+ *    `ref` (in-box, feeds body ref-tracking automatically) / `href`
+ *    (external URL); neither means the containing document. Optional
+ *    `usage` — natural-language description of the derivation
  *    ("verbatim", "summary", "inferred from the address", …). Inline/
  *    block split same as `quote`.
- *  - `purpose` / `key-person` / `correction` / `property` /
- *    `project-phase` — briefing vocabulary. Each replaces a YAML
- *    frontmatter field that briefings used to carry as structured
+ *  - `purpose` / `correction` — briefing vocabulary. Each replaces a
+ *    YAML frontmatter field that briefings used to carry as structured
  *    data; now they're authored as body tags. Each rendered both by
  *    the frontend React renderer (per-tag component) and by the
  *    backend `compileBriefing` emitter that produces the markdown
- *    embedded in CLAUDE.md.
+ *    embedded in CLAUDE.md. (`key-people` and `properties` stayed
+ *    frontmatter — there are no tags for them.)
+ *  - `image` / `silence` — capture-session timeline vocabulary, emitted
+ *    by the capture preparation worker into a session card's generated
+ *    body: `image` refs a child image card in the session's attach
+ *    scope, `silence` marks a gap of 10+ seconds.
  *  - `ingredient` / `step` / `yield` / `substitution` / `subrecipe` /
  *    `recipe-section` — recipe vocabulary. Replaces the old XML
  *    `<ing>`, `<step>`, etc. shape with body Markdoc tags. The
@@ -151,8 +156,10 @@ const quote: Schema = {
 
 const source: Schema = {
   attributes: {
-    // In-box target (box-relative, `cb mv`-tracked) or external target
-    // (`href`, a full URL — untracked). At most one; the `validate` below
+    // In-box target (a ref path — leading `/` from the box root, or
+    // `attach/…` for this card's own attach scope; `cb mv`-tracked) or
+    // external target (`href`, a full URL — untracked). At most one; the
+    // `validate` below
     // enforces it. Neither is allowed: a bare `{% source %}` targets the
     // **containing document** (the card that owns this body's attach scope) —
     // the ref-free default for commentary attached to the page it annotates.

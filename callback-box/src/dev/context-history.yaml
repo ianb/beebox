@@ -362,6 +362,13 @@ test1:
       peak: 41200
       added: 0
       turns: 1
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 43120
+      peak: 43120
+      added: 0
+      turns: 2
   internal-links-resolve-to-box-root:
     - date: 2026-06-27T11:23:12.864Z
       boxCommit: 2f6fed59dd31aaa18d71211dba194ea4762e508a
@@ -377,6 +384,13 @@ test1:
       peak: 41209
       added: 0
       turns: 1
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42758
+      peak: 42758
+      added: 0
+      turns: 2
   procedure-instructions-gate:
     - date: 2026-06-27T17:31:49.109Z
       boxCommit: 9df1ee213bfc90a09a101a3ef10f26ba7b3037da
@@ -546,6 +560,13 @@ test1:
       peak: 41202
       added: 0
       turns: 1
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42751
+      peak: 42751
+      added: 0
+      turns: 2
   views-attach-to-cards:
     - date: 2026-07-01T21:08:48.821Z
       boxCommit: ee955cc0c21c357ba41365e024e3e215d2ee170a
@@ -3127,6 +3148,13 @@ test1:
       peak: 50922
       added: 3981
       turns: 11
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 48618
+      peak: 53018
+      added: 4400
+      turns: 10
   upload-message-meaning:
     - date: 2026-07-28T02:56:27.422Z
       boxCommit: 20a70b9b38318115af6245e9cc169b21abebd849
@@ -3548,6 +3576,30 @@ test1:
       peak: 51655
       added: 2992
       turns: 6
+  links-always-box-root:
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 48792
+      peak: 48792
+      added: 0
+      turns: 1
+  landmark-ref-box-root:
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42766
+      peak: 46537
+      added: 3771
+      turns: 5
+  attach-is-the-exception:
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42769
+      peak: 42769
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

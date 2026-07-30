@@ -84,7 +84,7 @@ Frontmatter:
 - \`transcription-failed\` — one or more clips still need transcription (the transcription provider was unavailable when this was prepared). The capture was still delivered rather than held hostage to the outage; a later \`cb transcribe\`/HQ pass can fill in the missing text.
 
 Body — the assembled transcript, a timeline of transcribed speech interleaved with:
-- \`{% image ref="photo-001.image.card" /%}\` — where a photo was taken (description/filename come from the referenced image card).
+- \`{% image ref="attach/photo-001.image.card" /%}\` — where a photo was taken (description/filename come from the referenced image card).
 - \`{% silence duration="15s" /%}\` — gaps of 10+ seconds.
 
 This body is generated, not hand-written — don't edit it directly; if something needs correcting, fix the source (a child card's transcript/description) and re-derive, or note the correction in your own annotation instead.

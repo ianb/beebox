@@ -20,6 +20,8 @@ import { ExtfileSchema } from "../../src/schemas/extfile.js";
 import { ProgressSchema } from "../../src/schemas/progress.js";
 import { LessonPlanSchema } from "../../src/schemas/lesson-plan.js";
 import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
+import { LandmarkSchema } from "../../src/schemas/landmark.js";
+import { FigureSchema } from "../../src/schemas/figure.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -63,6 +65,8 @@ const ctx: LoadCardContext = {
     ["progress", ProgressSchema],
     ["lesson-plan", LessonPlanSchema],
     ["concept-map", ConceptMapSchema],
+    ["landmark", LandmarkSchema],
+    ["figure", FigureSchema],
   ]),
 };
 ```
@@ -158,6 +162,28 @@ result.totalWarnings
 
 result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
+```
+
+## A ref's `#fragment` addresses a spot inside the target, not another file
+
+`feedback.target.ref` is documented as `path#fragment`. The fragment (and a
+`?query`) is split off before the existence check — the file either exists or
+it doesn't, regardless of which spot inside it the ref points at. Handing the
+whole string to the filesystem used to report these documented refs as broken.
+
+```ts
+const box = await makeTmpBox();
+await box.write("box/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nBody.\n");
+await box.write(
+  "box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"/box/notes/Plan.doc.card#risks\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Meeting.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,0]
 ```
 
 ## `cb validate`'s summary line calls out broken refs separately
@@ -281,6 +307,65 @@ const result = await lintCardsDispatch(
 );
 result.totalWarnings
 => 0
+```
+
+## Inline markdown links in a card body are checked too
+
+`cb mv` has always rewritten `[text](path)` / `![alt](path)` inside card
+bodies; validate never looked at them, so a link broken by a hand-edit or a
+delete stayed silent until someone clicked it. They are now walked like any
+other ref — `type: "reference"` warnings that land in the broken-ref count.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "box/notes/Plan.doc.card",
+  "---\ntype: doc\ntitle: Plan\n---\nSee [the brief](/box/notes/missing.doc.card).\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Plan.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,1]
+
+result.results[0]!.warnings[0]!.type
+=> reference
+
+result.results[0]!.warnings[0]!.message
+=> Broken reference at body:1:link: /box/notes/missing.doc.card does not exist
+```
+
+It counts as a broken ref on the summary line, alongside frontmatter and
+Markdoc-tag refs:
+
+```ts continue
+formatLintResults(result, { colors: false }).split("\n").at(-1)
+=> 1 file checked, 1 warning in 0 files (1 broken ref)
+```
+
+Links that resolve are clean, and links that name nothing in the box —
+a URL scheme, a protocol-relative `//host`, or a bare `#anchor` — are skipped
+rather than resolved as paths:
+
+```ts
+const box = await makeTmpBox();
+await box.write("box/notes/Brief.doc.card", "---\ntype: doc\ntitle: Brief\n---\nx\n");
+await box.write("box/notes/Plan.attach/chart.png", "PNG");
+await box.write(
+  "box/notes/Plan.doc.card",
+  "---\ntype: doc\ntitle: Plan\n---\n" +
+    "Rel [brief](Brief.doc.card), abs [brief again](/box/notes/Brief.doc.card), " +
+    "attached ![chart](attach/chart.png).\n" +
+    "Off-box: [site](https://example.com/x), [cdn](//cdn.example.com/x), " +
+    "[mail](mailto:dana@example.com), [top](#summary).\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Plan.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,0]
 ```
 
 ## Ref existence honors `attach/` scope
@@ -781,4 +866,75 @@ result.totalWarnings
 
 result.results[0]!.errors[0]!.message
 => {% source %} takes at most one of `ref` or `href`, not both
+```
+
+## Path fields not named `ref` are checked too (`symbol.src`, `entry`)
+
+The generic broken-ref walk keys on frontmatter keys literally named
+`ref`/`refs`, which left two real path fields unvalidated: a landmark's
+`navigation.symbol.src` (its icon image) and a figure's `entry` (the sketch
+source in the card's attach scope). Both are now resolved through the same
+3-form semantics and reported as `type: "reference"` warnings when they name
+nothing — a missing icon or an uncompilable figure is visible at validate
+time instead of at render time.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/images/portrait.webp", "WEBP");
+await box.write(
+  "store/recipes/Recipes.landmark.card",
+  "---\nnavigation:\n  label: Recipes\n  symbol:\n    src: /store/recipes/images/portrait.webp\n---\n",
+);
+await box.write(
+  "store/recipes/Gone.landmark.card",
+  "---\nnavigation:\n  label: Gone\n  symbol:\n    src: images/vanished.webp\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/recipes/Recipes.landmark.card"), box.path("store/recipes/Gone.landmark.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([result.totalErrors, result.totalWarnings])
+=> [0,1]
+
+result.results[1]!.warnings[0]!.type
+=> reference
+
+result.results[1]!.warnings[0]!.message
+=> Broken reference at navigation.symbol.src: images/vanished.webp does not exist
+```
+
+A text/emoji symbol has no path to check, and a figure's `entry` resolves in
+the card's own attach scope:
+
+```ts continue
+await box.write("store/figures/Orbit.attach/sketch.ts", "export default () => {};\n");
+await box.write(
+  "store/figures/Orbit.figure.card",
+  "---\nruntime: p5js\nentry: attach/sketch.ts\n---\nAn orbit.\n",
+);
+await box.write(
+  "store/figures/Dangling.figure.card",
+  "---\nruntime: p5js\nentry: attach/missing.ts\n---\nNothing behind it.\n",
+);
+await box.write(
+  "store/recipes/Emoji.landmark.card",
+  "---\nnavigation:\n  label: Recipes\n  symbol: 🍳\n---\n",
+);
+const figures = await lintCardsDispatch(
+  [
+    box.path("store/figures/Orbit.figure.card"),
+    box.path("store/figures/Dangling.figure.card"),
+    box.path("store/recipes/Emoji.landmark.card"),
+  ],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([figures.totalErrors, figures.totalWarnings])
+=> [0,1]
+
+figures.results[1]!.warnings[0]!.message
+=> Broken reference at entry: attach/missing.ts does not exist
+```
+
+```ts cleanup
+await box.cleanup();
 ```

@@ -2,9 +2,20 @@
 title: "Standardize agent-authored links on box-root-relative paths (drop document-relative)"
 area: callback-box
 filed-by: agent
-needs: [decision]
 discovered-in: main session — boxholder, recurring agent link error
+resolution: implemented
+design: ../../../callback-box/docs/implemented-plans/box-root-paths.md
 ---
+
+## Implemented (2026-07-30)
+
+Shipped in full by `callback-box/docs/implemented-plans/box-root-paths.md` (branch
+`worktree-path-handling-model`, Tracks A–G): one `src/shared/ref-path.ts`
+algebra behind every parse/resolve, chat re-based on the box root, nav and
+landmark accepting/teaching the leading-`/` form, the guidance stated once in
+`REF_PATH_RULE` with exemplars swept, `cb validate --canonical [--fix]` as the
+opt-in normalizer, and three knowledge audits (`links-always-box-root`,
+`landmark-ref-box-root`, `attach-is-the-exception`) authored and passing.
 
 The chat agent **frequently writes the wrong link path**: in chat it uses a
 relative (or bare) path where a box-root-absolute `[desc](/path)` is wanted, and
@@ -56,7 +67,7 @@ unambiguous > portable (and moves are rare + fixable by validation).
    a leading `/`." This alone should cut the chat error a lot.
 2. **Knowledge audit** that reproduces the error the way the bare-filenames one
    did — have the agent write a link *intuitively* and assert it uses a leading
-   `/` (see [agent-emits-bare-card-filenames](../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)).
+   `/` (see [agent-emits-bare-card-filenames](../../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)).
 3. **Landmark schema semantics:** change `ref` from "relative to the landmark's
    directory" to box-root-relative — a schema-doc + resolution change, and
    **existing landmark cards with relative refs need migration** (or keep
@@ -65,7 +76,27 @@ unambiguous > portable (and moves are rare + fixable by validation).
    existing box data) but stop teaching it; optionally a lint/validation nudge
    that flags a relative agent-authored ref.
 
-## Open questions
+## DECIDED (2026-07-30, worktree path-handling-model)
+
+Boxholder call after the full path-surface mapping session: **everything is
+box-root-based, always; `attach/` is the one exception.** No `.md`-dossier
+exemption (we accept that leading-`/` links only work in our renderer), no
+landmark exemption (dir-relative landmark refs lose their special status;
+existing ones keep resolving). Resolution stays liberal — document-relative
+forms keep resolving forever for existing data; the rule governs what is
+*authored and taught*, plus validation nudges. Nav must accept the leading-`/`
+form it currently rejects. Chat re-bases ALL message markdown (links + card
+embeds, completing the image half-fix) to the box root; old directory-bound
+transcripts' bare links retarget on re-render — accepted, since most bare
+links were intended as box-root anyway.
+
+The full surface map, per-surface spec, consequence analysis, and ranked
+bug list (incl. two convention-independent bugs: `create-after-success[].path`
+has no box-containment on its write path, and feedback `path#fragment` refs
+false-flag as broken) came out of that session's analysis doc + Codex review;
+implementation is not yet scheduled.
+
+## Open questions (superseded by the decision above; kept for history)
 
 - Full deprecation of document-relative, or "always recommend `/` but still
   resolve relative" (safer for existing boxes)?
@@ -76,6 +107,6 @@ unambiguous > portable (and moves are rare + fixable by validation).
 
 ## Related
 
-- [agent-emits-bare-card-filenames-in-chat](../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)
+- [agent-emits-bare-card-filenames-in-chat](../../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)
   — same surface (agent link output), different failure; the knowledge-audit
   approach there applies here.

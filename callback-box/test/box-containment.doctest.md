@@ -124,6 +124,22 @@ JSON.stringify(resolveContainedRef({ boxRoot: "/box", ref: "/../etc/passwd", fro
 => null
 ```
 
+A `?query` or `#fragment` addresses a viewer or a location *within* the target,
+not a different file, so it is split off before resolution (shared with the
+frontend via `src/shared/ref-path.ts`). Handing the fragment to the filesystem
+is what used to false-flag `feedback.target.ref`'s documented `path#fragment`
+form as a broken ref.
+
+```ts
+const fromCard = "/box/inbox/Job.email-message.card";
+
+resolveContainedRef({ boxRoot: "/box", ref: "/store/Plan.doc.card#risks", fromPath: fromCard })
+=> store/Plan.doc.card
+
+resolveContainedRef({ boxRoot: "/box", ref: "sibling.bill.card?view=ledger", fromPath: fromCard })
+=> inbox/sibling.bill.card
+```
+
 Refs are filesystem-style, never percent-encoded, so `%2e%2e` is a LITERAL
 directory name — decoding here would be a bug that manufactures traversal.
 

@@ -14,6 +14,7 @@ import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
+import { resolveRefPath } from "../shared/ref-path.js";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
 
@@ -88,14 +89,12 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
       });
       continue;
     }
-    // Nav refs are box-relative only — a box-root-absolute (`/…`) nav target is
-    // rejected outright; anything that would escape the box via `..` is caught
-    // by the containment resolver.
-    if (entry.ref.startsWith("/")) {
-      problems.push(`ref "${entry.ref}" must be box-relative (no leading /)`);
-      continue;
-    }
-    const contained = resolveBoxRelativeRef(boxRoot, entry.ref);
+    // Nav refs address the box root: `nav.card` sits at the root, so the
+    // canonical leading-`/` form and the bare form name the same file. The
+    // shared algebra normalizes both (`fromPath: undefined` — the root IS the
+    // referring document's directory) and fails closed on a `..` escape.
+    const boxPath = resolveRefPath({ fromPath: undefined, ref: entry.ref, kind: "card" });
+    const contained = boxPath === null ? null : resolveBoxRelativeRef(boxRoot, boxPath);
     if (contained === null) {
       console.warn(`resolveNav: ref "${entry.ref}" escapes the box`);
       problems.push(`ref "${entry.ref}" must be box-relative (must not escape the box via ..)`);
@@ -122,8 +121,11 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
     const title = exists ? await readCardTitle(absPath) : null;
     entries.push({
       kind: "ref",
-      target: entry.ref,
-      label: entry.label ?? title ?? titleFromFilename(entry.ref),
+      // The normalized box-relative form, not the raw ref: the shell builds
+      // `/<box>/browse/<target>` from it, so a leading-`/` ref must arrive
+      // resolved (both authored forms yield the same target).
+      target: safe,
+      label: entry.label ?? title ?? titleFromFilename(safe),
       exists,
     });
   }

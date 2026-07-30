@@ -10,6 +10,7 @@
 // Relative (not the `@shared` alias) so this lib resolves under the doctest
 // runner's Node resolution too — view-url is unit-doctested outside the bundler.
 import { boxRelativePath } from "../../../shared/box-path.js";
+import { resolveRefPath } from "../../../shared/ref-path.js";
 
 export interface ViewTarget {
   /** File path relative to box root */
@@ -85,12 +86,17 @@ export function isExternalUrl(src: string): boolean {
  * BEFORE resolution so a leading slash stays meaningful (absolute vs relative);
  * routing the whole href through `parseViewUrl` would strip it (`boxRelativePath`)
  * and mis-resolve absolute paths as document-relative.
+ *
+ * `null` when the path escapes the box root — there is no target to navigate to
+ * or embed; see `resolveRelativePath`.
  */
-export function resolveContentTarget(basePath: string | undefined, href: string): ViewTarget {
+export function resolveContentTarget(basePath: string | undefined, href: string): ViewTarget | null {
   const qIndex = href.indexOf("?");
   const pathPart = qIndex === -1 ? href : href.slice(0, qIndex);
+  const path = resolveRelativePath(basePath, pathPart);
+  if (path === null) return null;
   const { viewer, params } = parseViewQuery(qIndex === -1 ? "" : href.slice(qIndex + 1));
-  return { path: resolveRelativePath(basePath, pathPart), viewer, params };
+  return { path, viewer, params };
 }
 
 /**
@@ -115,41 +121,20 @@ export function serializeViewUrl(target: ViewTarget): string {
  * Special case: if `relative` starts with `attach/`, the prefix is resolved
  * against the base card's attach scope (`<basename>.attach/`) instead of the
  * base's directory.
+ *
+ * Thin wrapper over the shared ref algebra (`src/shared/ref-path.ts`) — the one
+ * home for these rules, backend and frontend alike. Returns `null` when the
+ * path climbs out of the box root: fail-closed, never clamped to the root as
+ * this function did until 2026-07-30 (clamping silently rendered a *different*
+ * file than the ref named). Callers must degrade visibly — a link that doesn't
+ * navigate, an image that shows broken — never substitute a guess.
  */
-export function resolveRelativePath(basePath: string | undefined, relative: string): string {
-  if (relative.startsWith("/")) return boxRelativePath(relative);
-
-  if ((relative === "attach" || relative.startsWith("attach/")) && basePath) {
-    const baseName = basePath.includes("/") ? basePath.slice(basePath.lastIndexOf("/") + 1) : basePath;
-    const baseDir =
-      basePath.includes("/") ? basePath.slice(0, basePath.lastIndexOf("/")) : "";
-    const cardBasename = cardBasenameOf(baseName);
-    const rest = relative === "attach" ? "" : relative.slice("attach/".length);
-    const attachPath = `${cardBasename}.attach${rest ? `/${rest}` : ""}`;
-    return baseDir ? `${baseDir}/${attachPath}` : attachPath;
-  }
-
-  const baseDir =
-    basePath && basePath.includes("/") ? basePath.slice(0, basePath.lastIndexOf("/")) : "";
-  const parts = [...baseDir.split("/"), ...relative.split("/")];
-  const out: string[] = [];
-  for (const part of parts) {
-    if (part === "" || part === ".") continue;
-    if (part === "..") {
-      out.pop();
-      continue;
-    }
-    out.push(part);
-  }
-  return out.join("/");
-}
-
-/** Strip `.<type>.card` from a card filename, leaving just the basename. */
-function cardBasenameOf(filename: string): string {
-  if (!filename.endsWith(".card")) return filename;
-  const withoutCard = filename.slice(0, -".card".length);
-  const lastDot = withoutCard.lastIndexOf(".");
-  return lastDot === -1 ? withoutCard : withoutCard.slice(0, lastDot);
+export function resolveRelativePath(basePath: string | undefined, relative: string): string | null {
+  // `kind: "card"` unconditionally: this resolver serves card views and plain
+  // `.md` documents alike, and the `attach/` prefix has always been honored for
+  // both here (`cardBasename` leaves a non-`.card` filename intact, so
+  // `notes.md` + `attach/x` → `notes.md.attach/x` exactly as before).
+  return resolveRefPath({ fromPath: basePath, ref: relative, kind: "card" });
 }
 
 /**
@@ -216,6 +201,11 @@ export function resolveImageSrc(
   const path = apiPrefix
     ? boxRelativePath(src.slice(apiPrefix.length))
     : resolveRelativePath(basePath, src);
+  // Fail-closed (see `resolveRelativePath`): a src that climbs out of the box
+  // names no servable file. An empty src renders as the browser's broken-image
+  // affordance plus the alt text — visibly wrong, which is the point; the old
+  // clamp-to-root quietly displayed some other image instead.
+  if (path === null) return "";
   return apiImageUrl(boxSlug ?? "", path);
 }
 
