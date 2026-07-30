@@ -7,6 +7,33 @@ import XCTest
 /// the memory-and-payload properties they protect can only be *confirmed* on a
 /// real device (see `docs/plans/chat-photo-batch-upload.md`).
 final class BulkUploadTests: XCTestCase {
+    // MARK: - The inline/batch threshold
+
+    /// Mirrors `test/frontend/photo-batch-threshold.doctest.md` case for case.
+    /// The two implementations cannot share code across the language boundary, so
+    /// the tests are what catch a drift between them (mobile-contract §8).
+    func testThresholdMatchesTheWebRule() {
+        XCTAssertEqual(BulkPhotoThreshold.inlineLimit, 4)
+
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 1))
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 4))
+        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 5))
+        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 70))
+    }
+
+    /// Photos already in the composer count toward the limit, so the inline total
+    /// stays bounded however many separate selections a user makes.
+    func testThresholdCountsPhotosAlreadyInTheComposer() {
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 3, incoming: 1))
+        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 3, incoming: 2))
+        XCTAssertTrue(BulkPhotoThreshold.shouldBatch(existingInline: 4, incoming: 1))
+    }
+
+    func testEmptySelectionNeverBatches() {
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 0, incoming: 0))
+        XCTAssertFalse(BulkPhotoThreshold.shouldBatch(existingInline: 4, incoming: 0))
+    }
+
     // MARK: - Request shaping
 
     func testCreateSessionRequestCarriesTargetAndRegistry() throws {
