@@ -42,7 +42,12 @@ import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from 
 import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
-import { boxRelativeDoc, canonicalIssueMessage, checkCanonicalRef } from "./canonical-refs.js";
+import {
+  boxRelativeDoc,
+  canonicalIssueMessage,
+  cardRefProbe,
+  planCanonicalRef,
+} from "./canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
@@ -170,7 +175,7 @@ async function lintFrontmatterCard(input: {
   const warnings: LintIssue[] = [];
   const allRefs = [...frontmatterRefs, ...bodyRefs, ...bodyLinks];
   if (options.canonical === true) {
-    warnings.push(...canonicalWarnings({ path, refs: allRefs, boxRoot: options.boxRoot }));
+    warnings.push(...(await canonicalWarnings({ path, refs: allRefs, boxRoot: options.boxRoot })));
   }
   for (const { path: refPath, ref } of allRefs) {
     try {
@@ -231,21 +236,23 @@ async function lintFrontmatterCard(input: {
  * Non-canonical (document-relative) refs in one card, as `type: "canonical"`
  * warnings — a type distinct from `"reference"` so they never inflate the
  * broken-ref count. Each message names the box-root form the ref should be
- * written as, so the report doubles as a preview of `--canonical --fix`.
+ * written as, so the report doubles as a preview of `--canonical --fix` — which
+ * is why it consults the filesystem through the same planner the fixer uses: a
+ * ref that `--fix` would REPAIR (dangling as written, resolvable from the box
+ * root) says so, and one it would refuse as ambiguous says that.
  */
-function canonicalWarnings(input: {
+async function canonicalWarnings(input: {
   path: string;
   refs: Array<{ path: string; ref: string }>;
   boxRoot: string;
-}): LintIssue[] {
+}): Promise<LintIssue[]> {
   const fromPath = boxRelativeDoc(input.boxRoot, input.path);
   if (fromPath === null) return [];
+  const exists = cardRefProbe({ absPath: input.path, boxRoot: input.boxRoot });
   const out: LintIssue[] = [];
   for (const { path: locator, ref } of input.refs) {
-    const message = canonicalIssueMessage(
-      { locator, ref },
-      checkCanonicalRef({ ref, fromPath, kind: "card" })
-    );
+    const plan = await planCanonicalRef({ ref, fromPath, kind: "card" }, { exists });
+    const message = canonicalIssueMessage({ locator, ref }, plan);
     if (message !== null) out.push({ type: "canonical", severity: "warning", message });
   }
   return out;

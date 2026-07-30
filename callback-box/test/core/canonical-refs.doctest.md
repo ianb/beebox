@@ -19,7 +19,10 @@ import {
   checkCanonicalRef,
   collectDossierCanonicalWarnings,
 } from "../../src/core/canonical-refs.js";
-import { canonicalizeBox } from "../../src/core/canonicalize-refs.js";
+import {
+  canonicalizeBox,
+  formatCanonicalizeReport,
+} from "../../src/core/canonicalize-refs.js";
 import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
 import {
   canonicalCounts,
@@ -180,7 +183,7 @@ nobody can verify.
 const box = await seedBox();
 const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
 JSON.stringify(fixed)
-=> {"refsRewritten":2,"dossierLinksRewritten":1,"filesChanged":2,"skipped":3}
+=> {"refsRewritten":2,"dossierLinksRewritten":1,"refsRepaired":0,"dossierLinksRepaired":0,"ambiguous":0,"filesChanged":2,"skipped":3}
 ```
 
 ```ts continue
@@ -267,7 +270,7 @@ await box.write(
 
 const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
 JSON.stringify(fixed)
-=> {"refsRewritten":3,"dossierLinksRewritten":0,"filesChanged":1,"skipped":0}
+=> {"refsRewritten":3,"dossierLinksRewritten":0,"refsRepaired":0,"dossierLinksRepaired":0,"ambiguous":0,"filesChanged":1,"skipped":0}
 ```
 
 ```ts continue
@@ -319,6 +322,124 @@ JSON.stringify(canonicalCounts({ cardSummary: report, viewWarnings: [], dossierW
 const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
 JSON.stringify({ refs: fixed.refsRewritten, files: fixed.filesChanged, skipped: fixed.skipped })
 => {"refs":0,"files":0,"skipped":0}
+```
+
+```ts continue
+await box.cleanup();
+```
+
+## Refs written with box-root intent are repaired, not just canonicalized
+
+Old system code wrote bare refs meaning them *from the box root* — a question
+card's `ref: box/inbox/scan-….capture-session.card`, a chat thread's
+`participants[0].ref: people/Ian_Bicking`. Read document-relative they dangle;
+read from the box root they resolve. So when a non-canonical ref's
+document-relative target does NOT exist, `--fix` tries the same bare path from
+the box root, and writes the `/`-leading form when *that* target exists.
+
+The box below carries all four cases in one card: two refs with box-root intent
+(one with a `#fragment`), one that resolves BOTH ways, and one that resolves
+neither.
+
+```ts
+const box = await makeTmpBox();
+await box.write("people/Dana.person.card", "---\ntype: person\nname: Dana\n---\nDana.\n");
+await box.write("team/Ops.doc.card", "---\ntype: doc\ntitle: Ops\n---\nOps.\n");
+await box.write("store/notes/team/Ops.doc.card", "---\ntype: doc\ntitle: Ops copy\n---\nCopy.\n");
+await box.write(
+  "store/notes/Thread.doc.card",
+  "---\ntype: doc\ntitle: Thread\nref: people/Dana.person.card\nrefs:\n" +
+    "  - people/Dana.person.card#bio\n  - team/Ops.doc.card\n  - ghosts/Nobody.doc.card\n---\nThread.\n",
+);
+await box.write("docs/guide.md", "Ask [Dana](people/Dana.person.card).\n");
+```
+
+Report mode is an honest preview of the fix: a repair says so, the ambiguous ref
+says why it will be left alone, and the ref that resolves neither way keeps the
+plain arrow (`--fix` won't write it — the summary's skipped count is what says
+so).
+
+```ts continue
+const report = await lintCardsDispatch(
+  [box.path("store/notes/Thread.doc.card")],
+  { boxRoot: box.root, ctx, canonical: true },
+);
+report.results[0]!.warnings.filter((w) => w.type === "canonical").map((w) => w.message).join("\n")
+=>
+Non-canonical ref at ref: people/Dana.person.card → /people/Dana.person.card (repairs dangling ref)
+Non-canonical ref at refs[0]: people/Dana.person.card#bio → /people/Dana.person.card#bio (repairs dangling ref)
+Non-canonical ref at refs[1]: team/Ops.doc.card resolves both ways — /store/notes/team/Ops.doc.card (document-relative, what runs today) and /team/Ops.doc.card (from the box root); ambiguous, left alone
+Non-canonical ref at refs[2]: ghosts/Nobody.doc.card → /store/notes/ghosts/Nobody.doc.card
+```
+
+Three of the four are counted broken today — the two box-root-intent refs and the
+truly missing one:
+
+```ts continue
+report.results[0]!.warnings.filter((w) => w.type === "reference").map((w) => w.message).join("\n")
+=>
+Broken reference at ref: people/Dana.person.card does not exist
+Broken reference at refs[0]: people/Dana.person.card#bio does not exist
+Broken reference at refs[2]: ghosts/Nobody.doc.card does not exist
+```
+
+`--fix` repairs the two (and the dossier's one), refuses the ambiguous ref, and
+leaves the dangling one alone. Repairs are their own bucket in the `--json`
+payload: they change what a ref points at (from nothing to something), which an
+ordinary canonicalization never does.
+
+```ts continue
+const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
+JSON.stringify(fixed)
+=> {"refsRewritten":0,"dossierLinksRewritten":0,"refsRepaired":2,"dossierLinksRepaired":1,"ambiguous":1,"filesChanged":2,"skipped":1}
+```
+
+```ts continue
+formatCanonicalizeReport(fixed)
+=> Canonicalized 0 refs and 0 dossier links in 2 files; repaired 2 dangling refs and 1 dossier link that resolve from the box root; 1 ref ambiguous (both readings exist) left alone; 1 left unrewritten (target missing or ref escapes the box)
+```
+
+The `#bio` fragment survives the repair, and the ambiguous and dangling refs are
+byte-identical to what was written:
+
+```ts continue
+await box.read("store/notes/Thread.doc.card")
+=>
+---
+type: doc
+title: Thread
+ref: /people/Dana.person.card
+refs:
+  - /people/Dana.person.card#bio
+  - team/Ops.doc.card
+  - ghosts/Nobody.doc.card
+---
+Thread.
+```
+
+```ts continue
+await box.read("docs/guide.md")
+=> Ask [Dana](/people/Dana.person.card).
+```
+
+Re-validating proves the point end to end: the repaired refs are no longer
+counted broken, only the genuinely missing one is.
+
+```ts continue
+const after = await lintCardsDispatch(
+  [box.path("store/notes/Thread.doc.card")],
+  { boxRoot: box.root, ctx, canonical: true },
+);
+after.results[0]!.warnings.filter((w) => w.type === "reference").map((w) => w.message).join("\n")
+=> Broken reference at refs[2]: ghosts/Nobody.doc.card does not exist
+```
+
+What's left non-canonical is exactly the pair `--fix` refuses: the ambiguous ref
+and the dangling one.
+
+```ts continue
+JSON.stringify(canonicalCounts({ cardSummary: after, viewWarnings: [], dossierWarnings: [] }))
+=> {"refs":2,"dossierLinks":0}
 ```
 
 ```ts continue

@@ -38,6 +38,24 @@ whose target actually exists; a dangling or box-escaping ref is reported and lef
 alone. The rewrite is text-surgical, so frontmatter key order and `?query` /
 `#fragment` suffixes survive untouched.
 
+**Box-root-intent rescue.** Old system code wrote bare refs meaning them from
+the box root — a question card's `ref: box/inbox/scan-….capture-session.card`, a
+chat thread's `participants[0].ref: people/Ian_Bicking`. Read
+document-relative, those dangle; read from the box root they resolve. So when a
+non-canonical ref's document-relative target does **not** exist, `--fix` tries
+the same bare path from the box root, and if *that* target exists writes the
+`/`-leading form — turning a broken ref into a working one. Repairs are counted
+and reported separately from ordinary canonicalizations (which only change how a
+ref is written, never what it points at), and the report mode marks them
+`→ /box/inbox/… (repairs dangling ref)`.
+
+The rescue is **strictly gated by an ambiguity guard**: if both readings name an
+existing file, the ref is left exactly as written and reported as ambiguous. The
+document-relative reading is what resolves at runtime today, so such a ref
+already works — rewriting it either way could silently retarget it, and that
+call belongs to a human. Same for a ref neither reading resolves: reported, never
+rewritten.
+
 It is **off by default and never runs in the hooks**: a box carries legacy
 relative refs by the hundred, and warning about them in every validate run would
 bury the broken-ref signal that actually needs acting on. It is a whole-box check

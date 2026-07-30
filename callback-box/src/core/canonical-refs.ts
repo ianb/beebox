@@ -29,8 +29,10 @@ import {
   resolveRefPath,
   type RefKind,
 } from "../shared/ref-path.js";
-import { extractInlineLinks } from "./markdown-lint-rules.js";
+import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
+import { resolveRefExists } from "./ref-exists.js";
 import { extractViewRefs } from "./views/refs.js";
+import { fileExists } from "../lib/file-exists.js";
 import { assertNever } from "../lib/invariant.js";
 
 /**
@@ -55,6 +57,38 @@ export interface CanonicalRefInput {
   kind: RefKind;
 }
 
+/**
+ * The verdict once the filesystem has been consulted — what `--fix` will
+ * actually do, and therefore what the report previews:
+ *  - `rewritable` — the ref resolves as written; rewriting it to `canonical`
+ *    keeps the same target
+ *  - `repairable` — the ref is DANGLING read document-relative, but the same
+ *    bare path names an existing file read from the box root. Old system code
+ *    wrote refs with box-root intent (`people/Dana.person.card` in a card that
+ *    lives three directories down); `canonical` is that box-root form, and
+ *    writing it turns a broken ref into a working one
+ *  - `ambiguous` — BOTH readings name existing files. The document-relative
+ *    reading is what resolves at runtime today, so this ref works; rewriting it
+ *    either way risks silently retargeting a working ref, so it is left alone
+ *    and reported for a human
+ *  - `dangling` — neither reading names anything; left alone, as before
+ */
+export type CanonicalPlan =
+  | { status: "canonical" }
+  | { status: "escapes" }
+  | { status: "rewritable"; canonical: string }
+  | { status: "repairable"; canonical: string }
+  | { status: "ambiguous"; canonical: string; rootForm: string }
+  | { status: "dangling"; canonical: string };
+
+/**
+ * Whether a ref names an existing file, resolved the way the surface holding it
+ * resolves refs (cards/views through `resolveRefExists`, dossiers through the
+ * markdown link resolver). The planner probes twice: once with the ref as
+ * written, once with its box-root reading.
+ */
+export type RefExistsProbe = (ref: string) => Promise<boolean>;
+
 /** Classify one ref's form. Pure — no filesystem access (existence is the fixer's gate). */
 export function checkCanonicalRef({ ref, fromPath, kind }: CanonicalRefInput): CanonicalCheck {
   if (isExternalRef(ref)) return { status: "canonical" };
@@ -70,24 +104,87 @@ export function checkCanonicalRef({ ref, fromPath, kind }: CanonicalRefInput): C
 }
 
 /**
+ * The bare ref read from the BOX ROOT instead of from its document — the
+ * box-root-intent reading old system code meant when it wrote
+ * `people/Dana.person.card` into a card three directories down. `null` when
+ * there is no such reading (an escaping or empty ref).
+ */
+function boxRootReading({ ref, kind }: { ref: string; kind: RefKind }): string | null {
+  const parsed = parseRef(ref);
+  const resolved = resolveRefPath({ fromPath: undefined, ref: parsed.path, kind });
+  return resolved === null ? null : `/${resolved}${formatRefSuffix(parsed)}`;
+}
+
+/**
+ * The full decision for one ref: its form, plus what the filesystem says about
+ * each reading. The single classifier behind BOTH `--canonical` reporting and
+ * `--canonical --fix`, so the report can't preview a rewrite the fixer wouldn't
+ * make (or hide one it would).
+ */
+export async function planCanonicalRef(
+  { ref, fromPath, kind }: CanonicalRefInput,
+  { exists }: { exists: RefExistsProbe }
+): Promise<CanonicalPlan> {
+  const check = checkCanonicalRef({ ref, fromPath, kind });
+  if (check.status !== "rewritable") return check;
+  const relExists = await exists(ref);
+  const rootForm = boxRootReading({ ref, kind });
+  // A document at the box root reads both ways identically — there is nothing
+  // to be ambiguous about, and nothing to repair.
+  if (rootForm === null || rootForm === check.canonical) {
+    return relExists ? check : { status: "dangling", canonical: check.canonical };
+  }
+  const rootExists = await exists(rootForm);
+  if (relExists) {
+    return rootExists ? { status: "ambiguous", canonical: check.canonical, rootForm } : check;
+  }
+  return rootExists
+    ? { status: "repairable", canonical: rootForm }
+    : { status: "dangling", canonical: check.canonical };
+}
+
+/** How cards and views resolve a ref: the same check the broken-ref walk runs. */
+export function cardRefProbe({ absPath, boxRoot }: { absPath: string; boxRoot: string }): RefExistsProbe {
+  return (ref) => resolveRefExists({ ref, fromPath: absPath, boxRoot });
+}
+
+/** How a `.md` dossier resolves a link: the same check CB002 runs. */
+export function dossierLinkProbe({ absPath, boxRoot }: { absPath: string; boxRoot: string }): RefExistsProbe {
+  const fileDir = path.dirname(absPath);
+  return async (ref) => {
+    const resolution = resolveInternalLink(ref, { fileDir, boxRoot });
+    return resolution.inside && (await fileExists(resolution.resolved));
+  };
+}
+
+/**
  * The reported message for a non-canonical ref. It names the rewrite so the
  * report doubles as a preview of what `--fix` would write. Returns `null` for a
  * canonical ref so callers can filter and format in one pass.
  */
 export function canonicalIssueMessage(
   input: { locator: string; ref: string },
-  check: CanonicalCheck
+  plan: CanonicalPlan
 ): string | null {
   const { locator, ref } = input;
-  switch (check.status) {
+  const head = `Non-canonical ref at ${locator}: ${ref}`;
+  switch (plan.status) {
     case "canonical":
       return null;
+    // `dangling` reads the same as `rewritable`: both name the box-root form of
+    // the ref as written. `--fix` only writes the first, which the summary line
+    // (and its skipped count) says.
     case "rewritable":
-      return `Non-canonical ref at ${locator}: ${ref} → ${check.canonical}`;
+    case "dangling":
+      return `${head} → ${plan.canonical}`;
+    case "repairable":
+      return `${head} → ${plan.canonical} (repairs dangling ref)`;
+    case "ambiguous":
+      return `${head} resolves both ways — ${plan.canonical} (document-relative, what runs today) and ${plan.rootForm} (from the box root); ambiguous, left alone`;
     case "escapes":
-      return `Non-canonical ref at ${locator}: ${ref} escapes the box — no box-root form, fix it by hand`;
+      return `${head} escapes the box — no box-root form, fix it by hand`;
     default:
-      return assertNever(check);
+      return assertNever(plan);
   }
 }
 
@@ -127,11 +224,10 @@ export async function collectViewCanonicalWarnings(
       // An unreadable view is the compile-check's concern, not this walk's.
       continue;
     }
+    const exists = cardRefProbe({ absPath: viewPath, boxRoot });
     for (const { path: locator, ref } of extractViewRefs(source)) {
-      const message = canonicalIssueMessage(
-        { locator, ref },
-        checkCanonicalRef({ ref, fromPath, kind: "card" })
-      );
+      const plan = await planCanonicalRef({ ref, fromPath, kind: "card" }, { exists });
+      const message = canonicalIssueMessage({ locator, ref }, plan);
       if (message !== null) out.push(`${fromPath}: ${message}`);
     }
   }
@@ -159,10 +255,12 @@ export async function collectDossierCanonicalWarnings(
       // An unreadable dossier is already an error in the markdownlint pass.
       continue;
     }
+    const exists = dossierLinkProbe({ absPath: mdPath, boxRoot });
     for (const link of extractInlineLinks(text.split("\n"))) {
+      const plan = await planCanonicalRef({ ref: link.url, fromPath, kind: "markdown" }, { exists });
       const message = canonicalIssueMessage(
         { locator: `line ${String(link.lineNumber)}`, ref: link.url },
-        checkCanonicalRef({ ref: link.url, fromPath, kind: "markdown" })
+        plan
       );
       if (message !== null) out.push(`${fromPath}: ${message}`);
     }
