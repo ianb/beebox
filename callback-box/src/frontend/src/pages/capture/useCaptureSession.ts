@@ -79,6 +79,33 @@ export function useCaptureSession(opts: {
   // don't reuse an on-disk segment index.
   const segmentCountRef = useRef<number>(resume ? resume.segmentCount : 0);
 
+  // `handleDone` awaits uploads, so by the time it resumes its captured
+  // `uploads` counts are stale. This ref carries the live ones across the await.
+  const uploadsRef = useRef(uploads);
+  useEffect(() => {
+    uploadsRef.current = uploads;
+  }, [uploads]);
+
+  // Stops the recorder and awaits the final `dataavailable`, so the tail chunk
+  // is enqueued before anything waits on the upload queue.
+  const stopRecorder = useCallback(async () => {
+    if (recorderRef.current) {
+      await recorderRef.current.stopAsync();
+      recorderRef.current = null;
+    }
+    setRecording(false);
+  }, []);
+
+  const readFailures = useCallback(() => uploadsRef.current.counts, []);
+
+  const { finalizing, handleDone, handleCancel, skipPendingUploads } = useCaptureFinish({
+    sessionId, recording, stopRecorder, readFailures,
+    awaitPending, abortPending, clearPendingAndFailed,
+    stopCamera: camera.stopCamera,
+    finalizeCaptureSession, cancelCaptureSession,
+    setError, onExit,
+  });
+
   // Adopt (resume) or create the staging session on mount, then enumerate
   // devices. On resume, seed the upload-count arrays so new media numbers above
   // what's already staged; on create, persist the id for a later resume prompt.
@@ -100,6 +127,9 @@ export function useCaptureSession(opts: {
   }, [recording]);
 
   const toggleRecording = useCallback(async () => {
+    // Gated here, not only on the button: the space/R shortcuts below call this
+    // directly, and a recorder started after Done would outlive the seal.
+    if (finalizing) return;
     if (recording) {
       // Await the final dataavailable so the tail chunk uploads before the
       // segment closes (a bare stop() would drop it — Track 5 loss window).
@@ -130,11 +160,11 @@ export function useCaptureSession(opts: {
         setError(`Microphone access failed: ${err instanceof Error ? err.message : "unknown"}`);
       }
     }
-  }, [recording, sessionId, handleChunk, refreshDevices]);
+  }, [recording, finalizing, sessionId, handleChunk, refreshDevices]);
 
   const photoTotal = uploads.counts.photoTotal;
   const takePhoto = useCallback(async () => {
-    if (!sessionId) return;
+    if (!sessionId || finalizing) return;
     if (!cameraOn) { await startCamera(); return; }
     triggerFlash();
     const { blob: blobPromise, source } = camera.takePhoto();
@@ -144,7 +174,7 @@ export function useCaptureSession(opts: {
     const startedAt = new Date().toISOString();
     setPhotoStates((prev) => [...prev, "uploading"]);
     uploadPhoto({ sessionId, index, blob, startedAt, source });
-  }, [sessionId, cameraOn, photoTotal, startCamera, triggerFlash, camera, uploadPhoto, setPhotoStates]);
+  }, [sessionId, finalizing, cameraOn, photoTotal, startCamera, triggerFlash, camera, uploadPhoto, setPhotoStates]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -164,33 +194,6 @@ export function useCaptureSession(opts: {
   const retryFailedUploads = useCallback(() => {
     if (sessionId) uploads.retryFailedUploads(sessionId);
   }, [sessionId, uploads]);
-
-  // `handleDone` awaits uploads, so by the time it resumes its captured
-  // `uploads` counts are stale. This ref carries the live ones across the await.
-  const uploadsRef = useRef(uploads);
-  useEffect(() => {
-    uploadsRef.current = uploads;
-  }, [uploads]);
-
-  // Stops the recorder and awaits the final `dataavailable`, so the tail chunk
-  // is enqueued before anything waits on the upload queue.
-  const stopRecorder = useCallback(async () => {
-    if (recorderRef.current) {
-      await recorderRef.current.stopAsync();
-      recorderRef.current = null;
-    }
-    setRecording(false);
-  }, []);
-
-  const readFailures = useCallback(() => uploadsRef.current.counts, []);
-
-  const { finalizing, handleDone, handleCancel, skipPendingUploads } = useCaptureFinish({
-    sessionId, recording, stopRecorder, readFailures,
-    awaitPending, abortPending, clearPendingAndFailed,
-    stopCamera: camera.stopCamera,
-    finalizeCaptureSession, cancelCaptureSession,
-    setError, onExit,
-  });
 
   return {
     state: { sessionId, recording, recordingTime, error, finalizing, showSettings },
