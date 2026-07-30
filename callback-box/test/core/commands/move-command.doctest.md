@@ -389,6 +389,86 @@ ref: /box/New_Name.doc.card
 link [n](New_Name.attach/note.txt)
 ```
 
+## YAML block scalars are prose, trailing comments survive
+
+The frontmatter scan is line-based, so it has to know the two YAML constructs
+where a ref-shaped line isn't a ref. A **block scalar** (`notes: |`) holds
+literal prose — a `- ref: Plan.doc.card` line inside it is text that must be
+left exactly as written, not rewritten (that would be silent text corruption).
+An **end-of-line comment** (`# the plan`) is not part of the ref: it used to be
+captured as part of the token, which then never resolved, so `cb mv` silently
+skipped the ref and left it dangling. Both refs below are rewritten, comments
+intact.
+
+The **body** scan takes the opposite posture on fenced code: `cb mv` rewrites a
+fenced example too, because a doc example naming a card that moved should stay
+truthful rather than point at a dead path.
+
+```ts
+const FENCE = "`".repeat(3);
+const box = await makeTmpBox();
+await box.write("store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nbody\n");
+await box.write(
+  "store/notes/Index.memo.card",
+  "---\ntype: memo\nref: Plan.doc.card  # the plan\nitems:\n  - ref: Plan.doc.card # also\n" +
+    "notes: |\n  Write it as:\n  - ref: Plan.doc.card\n---\n" +
+    "Inline [plan](Plan.doc.card).\n" +
+    FENCE + "md\nFenced [plan](Plan.doc.card)\n" + FENCE + "\n",
+);
+
+await mv(box, { from: "store/notes/Plan.doc.card", to: "store/archive/Plan.doc.card" });
+const index = await box.read("store/notes/Index.memo.card");
+index.split("\n").filter((line) => line.includes("Plan.doc.card")).join("\n")
+=>
+ref: ../archive/Plan.doc.card  # the plan
+  - ref: ../archive/Plan.doc.card # also
+  - ref: Plan.doc.card
+Inline [plan](../archive/Plan.doc.card).
+Fenced [plan](../archive/Plan.doc.card)
+```
+
+```ts continue
+await box.cleanup();
+```
+
+## Scheme refs (`mailto:`, `view:`) are never resolved, even on a name collision
+
+Whether a ref names something outside the box is decided by one shared test
+(`isExternalRef` in `src/shared/ref-path.ts`) — the same one CB002 uses — not by
+looking for `://`. This box deliberately constructs the collision that the
+narrower test missed: files whose names are literally `mailto:dana.doc.card` and
+`view:Ledger.doc.card`, so a scheme ref would resolve to a card that is moving.
+The refs stay exactly as written.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/mailto:dana.doc.card", "---\ntype: doc\ntitle: Dana\n---\nx\n");
+await box.write("store/view:Ledger.doc.card", "---\ntype: doc\ntitle: Ledger\n---\nx\n");
+await box.write(
+  "store/Index.doc.card",
+  "---\ntype: doc\ntitle: Index\n---\nMail [d](mailto:dana.doc.card), view [l](view:Ledger.doc.card).\n",
+);
+
+const result = await mv(box, {
+  from: ["store/mailto:dana.doc.card", "store/view:Ledger.doc.card"],
+  to: "store/archive/",
+});
+result.success
+=> true
+
+await box.read("store/Index.doc.card")
+=>
+---
+type: doc
+title: Index
+---
+Mail [d](mailto:dana.doc.card), view [l](view:Ledger.doc.card).
+```
+
+```ts continue
+await box.cleanup();
+```
+
 ## Dry run makes no changes
 
 ```ts

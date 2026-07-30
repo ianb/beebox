@@ -32,9 +32,11 @@ interface RefExistsInput {
 
 /**
  * Resolve a ref to the absolute filesystem path it points at, or `null` when it
- * escapes the box root (the shared algebra fails closed — see
- * `src/shared/ref-path.ts`). Any `?query`/`#fragment` is dropped: it addresses a
- * location *within* the target, not a different file.
+ * names no in-box file — it escapes the box root, or its path part is empty
+ * (a fragment-/query-only ref like `#risks` or `?view=x`, which used to resolve
+ * to the containing directory and pass the existence check). The shared algebra
+ * fails closed on both — see `src/shared/ref-path.ts`. Any `?query`/`#fragment`
+ * is dropped: it addresses a location *within* the target, not a different file.
  */
 export function resolveRefToPath(input: RefExistsInput): string | null {
   const fromPath = boxRelativeFrom(input.boxRoot, input.fromPath);
@@ -78,9 +80,12 @@ export function resolveContainedRef(input: RefExistsInput): BoxRelativePath | nu
 export async function resolveRefExists(input: RefExistsInput): Promise<boolean> {
   const contained = resolveContainedRef(input);
   if (contained === null) {
-    // A ref that escapes the box points at no in-box file — treat it as broken
-    // (the lint walk surfaces it as a broken-ref warning), never resilient.
-    console.warn(`resolveRefExists: ref "${input.ref}" in ${input.fromPath} escapes the box`);
+    // A ref that escapes the box — or names nothing at all — points at no in-box
+    // file. Treat it as broken (the lint walk surfaces it as a broken-ref
+    // warning), never resilient.
+    console.warn(
+      `resolveRefExists: ref "${input.ref}" in ${input.fromPath} names no in-box file (escapes the box, or is empty)`
+    );
     return false;
   }
   // `access` follows symlinks, so re-verify via realpath: an in-box symlink

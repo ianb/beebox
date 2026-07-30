@@ -162,6 +162,33 @@ resolveRefPath({ fromPath: "inbox/Job.card", ref: "%2e%2e/x.card", kind: "card" 
 => inbox/%2e%2e/x.card
 ```
 
+## A ref that names nothing fails closed too
+
+A ref addresses a *file*. An empty ref names no file, and neither does one that
+resolves to the box root itself — both return `null` rather than the containing
+directory, which every existence check would have accepted. This is what stops a
+fragment- or query-only ref (`#risks`, `?view=x`, whose path part parses away)
+from reading as a valid target.
+
+```ts
+JSON.stringify(resolveRefPath({ fromPath: "inbox/Job.card", ref: "", kind: "card" }))
+=> null
+
+JSON.stringify(resolveRefPath({ fromPath: "inbox/Job.card", ref: parseRef("#risks").path, kind: "card" }))
+=> null
+
+JSON.stringify(resolveRefPath({ fromPath: "inbox/Job.card", ref: "/", kind: "card" }))
+=> null
+```
+
+A ref to an ordinary directory still resolves — only the root is refused, because
+an empty box-relative path is not a target a caller can act on:
+
+```ts
+resolveRefPath({ fromPath: "inbox/Job.card", ref: "../store", kind: "card" })
+=> store
+```
+
 ## Query and fragment are the caller's to split
 
 `resolveRefPath` resolves a *path*; it does not parse `?`/`#`. Run the raw ref through `parseRef` first — this is what stops a `path#fragment` ref (e.g. `feedback.target.ref`) from being checked against the filesystem with its fragment attached:

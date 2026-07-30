@@ -237,3 +237,90 @@ JSON.stringify({ refs: again.refsRewritten, links: again.dossierLinksRewritten, 
 ```ts continue
 await box.cleanup();
 ```
+
+## What `--fix` refuses to touch: fenced examples, block-scalar prose, comments
+
+The fixer shares `cb mv`'s text-surgical scan but not all of its posture. Three
+lines below carry the text `Plan.doc.card` and are deliberately *not* rewritten:
+
+- the line inside a **fenced code block** — `--fix` passes `skipFencedCode`
+  where `cb mv` does not, because a fenced example may be teaching the legacy
+  relative form on purpose, and normalizing it would erase what it shows;
+- the line inside a **YAML block scalar** (`notes: |`), which is prose, not YAML;
+- nothing in either case is a ref, so nothing is counted.
+
+The two lines that *are* refs get rewritten with their **end-of-line comments**
+preserved in place — before, the comment was captured as part of the token, so
+the ref never resolved and `--fix` silently skipped it.
+
+```ts
+const FENCE = "`".repeat(3);
+const box = await makeTmpBox();
+await box.write("store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nThe plan.\n");
+await box.write(
+  "store/notes/Notes.doc.card",
+  "---\ntype: doc\ntitle: Notes\nref: Plan.doc.card  # the plan\nrefs:\n  - Plan.doc.card # also\n" +
+    "notes: |\n  Write it as:\n  - ref: Plan.doc.card\n---\n" +
+    "Inline [plan](Plan.doc.card).\n" +
+    FENCE + "md\nFenced [plan](Plan.doc.card)\n" + FENCE + "\n",
+);
+
+const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
+JSON.stringify(fixed)
+=> {"refsRewritten":3,"dossierLinksRewritten":0,"filesChanged":1,"skipped":0}
+```
+
+```ts continue
+const notes = await box.read("store/notes/Notes.doc.card");
+notes.split("\n").filter((line) => line.includes("Plan.doc.card")).join("\n")
+=>
+ref: /store/notes/Plan.doc.card  # the plan
+  - /store/notes/Plan.doc.card # also
+  - ref: Plan.doc.card
+Inline [plan](/store/notes/Plan.doc.card).
+Fenced [plan](Plan.doc.card)
+```
+
+```ts continue
+await box.cleanup();
+```
+
+## A ref with no path names nothing — broken, not canonical
+
+`ref: ""`, `#only`, and `?view=only` all parse to an empty path. They used to
+resolve to the card's own *directory*, and an existence check on a directory
+succeeds — so a malformed ref read as a valid one. Now the shared algebra fails
+closed on them, and each surfaces as an ordinary broken-ref warning.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/notes/Empty.doc.card",
+  '---\ntype: doc\ntitle: Empty\nref: ""\nrefs:\n  - "#only"\n  - "?view=only"\n---\nbody\n',
+);
+const report = await lintCardsDispatch(
+  [box.path("store/notes/Empty.doc.card")],
+  { boxRoot: box.root, ctx, canonical: true },
+);
+report.results[0].warnings.map((w) => `${w.type}: ${w.message}`).join("\n")
+=>
+reference: Broken reference at ref:  does not exist
+reference: Broken reference at refs[0]: #only does not exist
+reference: Broken reference at refs[1]: ?view=only does not exist
+```
+
+None of the three is canonical-rewritable — there is no target to re-express
+from the box root, and `--fix` leaves the card untouched:
+
+```ts continue
+JSON.stringify(canonicalCounts({ cardSummary: report, viewWarnings: [], dossierWarnings: [] }))
+=> {"refs":0,"dossierLinks":0}
+
+const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
+JSON.stringify({ refs: fixed.refsRewritten, files: fixed.filesChanged, skipped: fixed.skipped })
+=> {"refs":0,"files":0,"skipped":0}
+```
+
+```ts continue
+await box.cleanup();
+```

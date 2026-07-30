@@ -20,8 +20,12 @@
  * **Fail closed.** A ref that climbs out of the box with `..` resolves to
  * `null` — everywhere, in every consumer. It is never clamped back to the root
  * (the frontend did that until 2026-07-30, which silently rendered a *different*
- * file than the ref named). `null` means "broken ref": callers must degrade
- * visibly, never substitute a guess.
+ * file than the ref named). So does a ref that names *nothing*: an empty ref, or
+ * one that resolves to the box root itself (`/`, `.`, a balanced `..`). Those
+ * used to resolve to a directory, and an existence check on a directory
+ * succeeds — so `#fragment`-only and `?view=`-only refs read as valid targets.
+ * `null` means "broken ref": callers must degrade visibly, never substitute a
+ * guess.
  *
  * Pure string operations — no Node deps (the `attach-path.ts` precedent), so
  * the backend (relative `../shared/ref-path.js`) and the frontend
@@ -144,19 +148,30 @@ export function isExternalRef(raw: string): boolean {
 /**
  * Resolve a ref's path against the document it was written in, per the 3-form
  * rule above. Returns the canonical internal form — box-relative, forward
- * slashes, no leading slash, `..`-free — or `null` when the ref escapes the
- * box root.
+ * slashes, no leading slash, `..`-free — or `null` when the ref names no
+ * in-box file: it escapes the box root, it is empty, or it resolves to the box
+ * root itself (a ref addresses a *file*, and the root is not one).
  */
 export function resolveRefPath({ fromPath, ref, kind }: ResolveRefPathInput): string | null {
-  if (ref.startsWith("/")) return joinSegments("", boxRelativePath(ref));
+  // An empty ref names nothing. It arrives from a fragment- or query-only ref
+  // (`#risks`, `?view=x`) whose path part parsed away; resolving it would hand
+  // back the containing directory, which every existence check accepts.
+  if (ref === "") return null;
+
+  if (ref.startsWith("/")) return nonRoot(joinSegments("", boxRelativePath(ref)));
 
   const base = fromPath === undefined ? "" : fromPath;
   if (base !== "" && attachFormAllowed(kind) && isAttachRef(ref)) {
     const attached = resolveAttachRef(base, ref);
-    if (attached !== null) return joinSegments("", attached);
+    if (attached !== null) return nonRoot(joinSegments("", attached));
   }
 
-  return joinSegments(dirOf(base), ref);
+  return nonRoot(joinSegments(dirOf(base), ref));
+}
+
+/** The box root is not an addressable target: an empty resolution is `null`. */
+function nonRoot(resolved: string | null): string | null {
+  return resolved === "" ? null : resolved;
 }
 
 /** Whether the `attach/` virtual prefix is meaningful for a document of this kind. */

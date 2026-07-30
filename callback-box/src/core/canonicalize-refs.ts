@@ -18,10 +18,12 @@
  * change. Dossier links are patched in place on their own line.
  *
  * The scan machinery matches ref-bearing *syntax* (`ref:` lines, `ref=`/
- * `cardRef=` attributes, `[…](…)`), which is a slightly wider net than the
- * report's structured extractors — a `ref="…"` inside a code fence is a
- * candidate here. Over-matching is harmless: every replacement is gated on the
- * target existing, so a non-ref token is left alone (and counted as skipped).
+ * `cardRef=` attributes, `[…](…)`), a slightly wider net than the report's
+ * structured extractors. Over-matching is harmless: every replacement is gated
+ * on the target existing, so a non-ref token is left alone (and counted as
+ * skipped). The one deliberate narrowing is fenced code — this fixer scans
+ * cards with `skipFencedCode: true`, unlike `cb mv`, because a fenced example
+ * may be teaching the legacy relative form on purpose.
  */
 
 import { promises as fs } from "node:fs";
@@ -128,7 +130,14 @@ async function canonicalizeTokenFile(
     return NOTHING;
   }
 
-  const tokens = form === "card" ? collectCardRefTokens(text) : collectViewRefTokens(text);
+  // `skipFencedCode` is the one place the canonical fixer's scan differs from
+  // `cb mv`'s (see `BodyScanOptions`): a fenced example may deliberately show
+  // the legacy relative form, and normalizing it would erase what it teaches.
+  // Collect and replay must pass the same flag or the replay drifts.
+  const tokens =
+    form === "card"
+      ? collectCardRefTokens({ text, skipFencedCode: true })
+      : collectViewRefTokens(text);
   const replacements = new Map<string, string>();
   let skipped = 0;
   for (const token of tokens) {
@@ -150,7 +159,7 @@ async function canonicalizeTokenFile(
 
   const result =
     form === "card"
-      ? rewriteCardRefTokens({ text, replacements })
+      ? rewriteCardRefTokens({ text, replacements, skipFencedCode: true })
       : rewriteViewRefTokens({ text, replacements });
   if (result.count > 0) await fs.writeFile(absPath, result.text);
   return { rewritten: result.count, skipped };
