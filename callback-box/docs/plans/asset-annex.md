@@ -281,6 +281,10 @@ batch-local `.gitignore` workaround for arbitrary extensions
 `.zip`/`.csv`/extensionless files) becomes unnecessary — `include=*.attach/*`
 is extension-blind by construction.
 
+`cb attachments unignore` removes the asset extension list and the
+bulk-upload batch-local files, but **keeps one rule**: the capture
+staging path, which stays ignored deliberately (Track G).
+
 **Assets already in git history stay there.** estate's `.git` is 9.9 GB
 of pre-migration blobs. Annexing adds pointer commits; it does not
 remove history. Reclaiming that is `git filter-repo`, still out of
@@ -302,7 +306,7 @@ misconfigurations produce a working tree that *looks* fine, and one of
 them (a pointer file served as an image) is silent data-shaped garbage
 — a #4 violation if undetected.
 
-**Direction.** Six assertions, each with a distinct message:
+**Direction.** Seven assertions, each with a distinct message:
 
 1. `git-annex` on PATH, and its version (Ubuntu ships 10.20240129;
    Homebrew 10.20260717 — flag a version older than the repo format).
@@ -315,13 +319,21 @@ them (a pointer file served as an image) is silent data-shaped garbage
    absent content or a broken checkout. Report the count, and for each
    the expected size and hash parsed out of the pointer (finding 4).
 6. The `git-annex` branch has no unflushed journal (finding 8).
+7. No asset has been sitting in `tmp-capture/` longer than N days
+   (Track G) — the one window where content is in neither git nor the
+   annex.
 
 Assertion 5 is the load-bearing one and is shared with Track D — one
 predicate, `isAnnexPointer(bytes)`, used by both the health check and
 the read paths (#8).
 
-Runs from `cb init` and as part of the deployed-server health checks
-(`docs/health-checks.md`).
+Runs from `cb init`, as part of the deployed-server health checks
+(`docs/health-checks.md`), and **as a gate on `cb serve` startup**: a
+box that fails any assertion refuses to serve, printing the failing
+assertion and its remedy. Annexing is one-time setup that belongs at
+the beginning, and a box quietly serving pointer files as images is a
+worse outcome than a box that won't start. `cb hub` reports the refusal
+per-box rather than treating it as a crash loop.
 
 **First implementation chunk.** `src/lib/annex-pointer.ts` with
 `isAnnexPointer()` / `parseAnnexPointer()` and a pure-function doctest
@@ -408,7 +420,67 @@ secrets are gitignored for a different reason and are not annexed.
 **First implementation chunk.** Hook edit, exercised by creating a real
 worktree and confirming images render.
 
-### Track G — docs and knowledge audits
+### Track G — capture staging stays out of the annex
+
+**What.** Assets arriving from mobile/web capture are *not* annexed
+where they land. They become annexed when the agent moves them to a
+final destination.
+
+**Why this needs to change.** Capture lands at
+`content/tmp-capture/capture-<ts>-<id>.attach/...` — the cards there are
+committed (on estate: 6 tracked files across 2 sessions) while the
+asset bytes are gitignored. If `annex.largefiles` simply matched
+`*.attach/*`, every capture would be annexed the instant it arrived,
+which is wrong in two ways:
+
+- **It stores superseded content permanently.** Captures are triaged,
+  renamed, re-encoded, and EXIF-rotated (`docs/image-orientation.md`)
+  before reaching their final home. Annexing at arrival mints an
+  immutable object for each intermediate version; the annex accumulates
+  content nothing references.
+- **It annexes things that get discarded.** A capture the agent decides
+  against still leaves an object behind.
+
+The agent filing something into its final destination is the moment the
+content is settled. That is the right moment to add it.
+
+**Direction.** Keep the capture area gitignored. Per finding 7, a
+gitignored file never reaches the annex, so **no `annex.largefiles`
+exclusion is needed** — the gitignore rule is the whole mechanism:
+
+```gitignore
+# Capture staging — assets here are pre-triage and deliberately
+# un-annexed. They join the annex when the agent files them.
+content/tmp-capture/**/*.attach/**
+```
+
+`cb mv` into a final destination moves the bytes out of the ignored
+path; the next `git add -A` annexes them via `include=*.attach/*`. No
+new code on the move path.
+
+Two consequences that must be handled rather than assumed:
+
+1. **A staged asset is in neither git nor the annex.** That is true
+   today too, but under this plan it becomes the *only* unprotected
+   window, so it needs to be visible instead of implicit. Track C gains
+   a seventh assertion: **no asset has been sitting in `tmp-capture/`
+   longer than N days.** estate has 2 such files right now, both from
+   2026-07-29 and both among the 38 with no second copy anywhere — so
+   this is a live condition, not a hypothetical.
+2. **The bulk-upload batch-local `.gitignore`
+   (`docs/asset-manifests.md:193-213`, written by
+   `src/core/bulk-upload/prepare.ts`) must be removed** during
+   migration. It ignores everything in a batch scope, which under annex
+   means those blobs would never be annexed — finding 7's trap, one
+   layer down. Bulk upload lands arbitrary extensions, which is exactly
+   what `include=*.attach/*` handles without an extension list.
+
+**First implementation chunk.** The gitignore rule plus assertion 7,
+with a filesystem doctest: an asset in `tmp-capture/` is not annexed
+and is reported by dwell-time; the same asset after `cb mv` to a store
+path is annexed on the next commit.
+
+### Track H — docs and knowledge audits
 
 `docs/asset-manifests.md` is rewritten as `docs/assets.md` describing
 the annex model; the manifest doc moves to `docs/implemented-plans/`
@@ -441,6 +513,8 @@ not.
 | Disk fills during estate's conversion | Manual | Track A is a hard gate with measured headroom | Clear — fails loudly on ENOSPC |
 | `git annex get` in a clone with unsynced location log | Yes | Track F syncs first | Clear |
 | Asset still gitignored after migration | Yes (doctest asserts it is annexed) | Track B's `unignore` | Clear |
+| Bulk-upload batch `.gitignore` survives migration, so its blobs never annex | Yes (doctest on a batch scope) | Track G — `unignore` removes batch-local files | Clear |
+| Capture sits in `tmp-capture/` unannexed and un-backed-up | Yes | Track C assertion 7 reports dwell time | Clear — **and live today**: 2 estate files since 2026-07-29 |
 | Our pre-commit hook shadows annex's | Yes (hook-generation doctest) | Track E calls `git annex pre-commit` | Clear |
 | Agent runs `git annex drop` | No | `numcopies=1` makes drop refuse by default | Clear — refuses |
 | Box committed with `--no-verify` | Yes (pre-existing) | Next non-skipped commit catches up; `largefiles` applies at `git add`, not at hook time, so assets are annexed regardless | Clear |
@@ -505,20 +579,24 @@ rather than let "on git-annex" read as "safe".
    `--incremental-schedule=30d`, letting git-annex pace it. Wants a
    real measurement of what a full 9 GB pass costs before committing —
    the number is unknown and the box is shared with live wakeups.
-2. **Should `cb doctor annex` block `cb serve` startup, or only warn?**
-   Lean: warn on start, fail in the server health check. Blocking
-   startup on a mis-set `annex.thin` would take a box offline for a
-   degradation, not an outage.
-3. **Ubuntu's git-annex is 10.20240129, Homebrew's is 10.20260717.**
-   Both handle repo version 10, so mixed clones should be fine, but
-   this is asserted from version numbers, not tested. Worth a
-   cross-version clone test during Track B before estate converts.
-4. **Do iOS/Android capture writes land through a path that runs
-   `git add`?** If a mobile write bypasses it, the asset sits unannexed
-   until the next commit — probably fine, but `docs/mobile-contract.md`
-   needs checking during Track D rather than assumed.
+2. **The tmp-capture dwell-time threshold.** Track C assertion 7 says
+   "no asset has been in `tmp-capture/` longer than N days."
+   Lean: N=7, matching the `tmp/` upload sweep's existing 7-day window
+   (`src/core/housekeeping.ts:18-19`). Wants one look at real triage
+   latency across boxes before fixing the number.
 
-None of these sit inside a first implementation chunk.
+Resolved during design, recorded so the reasoning isn't relitigated:
+
+- **`cb doctor annex` blocks `cb serve` startup** (boxholder decision,
+  2026-07-30). A box that isn't correctly annexed should not begin
+  serving — the setup is one-time and belongs at the beginning, and a
+  box quietly serving pointer files is worse than a box that refuses to
+  start with a message naming the fix.
+- **Mixed git-annex versions are fine** (Ubuntu 10.20240129 / Homebrew
+  10.20260717, boxholder decision). Both handle repo version 10; no
+  cross-version test gate.
+
+None of the above sits inside a first implementation chunk.
 
 ## Knowledge audits
 
@@ -551,23 +629,29 @@ a bare `--box test1` resolves inside the monorepo.)
 4. **B2** — convert `personal-test` (the rehearsal — 3,016 assets,
    271 MB, and its 3,018 unclaimed files stop being a problem by
    construction). *Depends on B1.*
-5. **C2** — `cb doctor annex`, all six assertions. *Depends on C1, B2.*
+5. **C2** — `cb doctor annex`, assertions 1–6, plus the `cb serve`
+   startup gate. *Depends on C1, B2.* (Assertion 7 lands with G.)
 6. **D** — absence handling: webapp route, renderers, agent reads.
    *Depends on C1.*
 7. **E** — hook generation + `fsck` in housekeeping. *Depends on B1.*
 8. **F** — worktree clone hook. *Depends on B2, and on D so a
    partially-fetched worktree degrades legibly.*
-9. **B3** — convert prod boxes, smallest first: `box-family` (8
-   assets), `personal` (6), then `estate` (1,184 / 9 GB). *Depends on
-   A, C2, D, E.*
-10. **G** — docs rewrite, knowledge audits written and run.
+9. **G** — capture-staging gitignore rule + assertion 7 + doctest.
+   *Depends on C2; must land before B3 so converting estate doesn't
+   annex its two pending captures.*
+10. **B3** — convert prod boxes, smallest first: `box-family` (8
+    assets), `personal` (6), then `estate` (1,184 / 9 GB). *Depends on
+    A, C2, D, E, G.*
+11. **H** — docs rewrite, knowledge audits written and run.
 
 **Done-when**, as checkable assertions: (a) every doctest named below
 passes; (b) `cb doctor annex` is clean on all four asset-holding boxes;
 (c) `git annex fsck` on estate reports zero bad objects across all
 1,184 assets; (d) a fresh worktree clone renders images after
 `worktree-create.sh` runs, with no `cp` loop; (e) `grep -r asset-manifest
-src/` returns nothing.
+src/` returns nothing; (f) `cb serve` refuses to start on a box with
+`annex.thin` unset, naming the fix; (g) a freshly-captured asset is
+*not* annexed until `cb mv` files it.
 
 ## Rollout shape
 
@@ -584,6 +668,12 @@ tool. Named up front:
 - `test/core/install-validation-hooks.doctest.md` — extend the existing
   coverage to assert the generated hook calls `git annex pre-commit`
   and no longer calls `cb attachments verify`.
+- `test/core/capture/staging-not-annexed.doctest.md` — filesystem tier:
+  an asset in `tmp-capture/` is unannexed and reported by dwell-time;
+  the same asset after `cb mv` is annexed on the next commit (Track G).
+- `test/cli/serve-annex-gate.doctest.md` — `cb serve` refuses to start
+  on a box failing any `cb doctor annex` assertion, and the message
+  names the assertion and its remedy.
 
 Deliberately untested: git-annex's own behavior. Findings 1–9 are
 recorded here as the evidence; re-asserting them in doctests would
@@ -604,13 +694,18 @@ migration path and that is a deliberate choice, not an oversight.
 
 ## Prerequisites and interim mitigation
 
-Track A (reclaim 11 GB) gates the plan. Two things should happen
-regardless, because this iteration explicitly does not improve
-durability:
+Track A (reclaim 11 GB) gates the plan.
 
-1. **Get estate's 38 single-copy files (149 MB) off the box now.** They
-   are the only assets with no second copy anywhere — everything else
-   is still in pre-migration git history on GitHub. A manual copy is
-   fine; it does not need this plan.
+1. **estate backup — DONE (2026-07-30).** `~/src/box-backups/estate-2026-07-30/`
+   holds every gitignored estate file not already recoverable from git
+   history: **162 files, 171 MB**, all sha256 verified against the
+   server after transfer. That is the 38 post-migration attach assets
+   (149 MB) plus ~19 MB of SQLite/generated/secret state. A full 20 GB
+   mirror was not taken and is not needed — 1,146 of estate's 1,184
+   assets (8.88 GB) are blobs in git history with `HEAD ==
+   origin/main`. It also wouldn't fit: 14 GB free locally, 5.6 GB on
+   the server. See that directory's `README.md` for the restore
+   command.
 2. **Do not run `git filter-repo` on any box** until the remote
-   iteration lands. That history is currently protecting 8.88 GB.
+   iteration lands. That history is protecting 8.88 GB, and it is half
+   of what makes the backup above sufficient rather than partial.
