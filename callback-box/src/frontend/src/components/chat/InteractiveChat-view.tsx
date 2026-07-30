@@ -10,7 +10,6 @@ import { useCallback, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
-import { ChatContextDirProvider } from "./chat-context-dir";
 import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
@@ -148,13 +147,12 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     processBusy, debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    effectiveContextDir, captureBubbles, onCaptureRetry,
+    captureBubbles, onCaptureRetry,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
   const { handleLoadOlder } = actions;
   return (
-    <ChatContextDirProvider value={effectiveContextDir ?? undefined}>
     <MessageList
       messages={messages}
       groups={groups}
@@ -181,7 +179,6 @@ function MessageListRegion(props: ChatBodyProps) {
       captureBubbles={captureBubbles}
       onCaptureRetry={onCaptureRetry}
     />
-    </ChatContextDirProvider>
   );
 }
 

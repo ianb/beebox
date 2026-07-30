@@ -1,5 +1,13 @@
 # Normalize chat/card links
 
+> **Superseded in part (2026-07-30).** This plan's `contextDir`-relative chat
+> resolution is gone: chat message links, embeds, and images now all resolve
+> from the box root, and the React context that carried the chat cwd into the
+> renderer (`chat/chat-context-dir.ts`) was deleted with it. See
+> `docs/plans/box-root-paths.md` (Track C) and
+> `issues/decisions/2026-07-30-always-box-root-relative-links.md`. Everything
+> else below still describes live behavior.
+
 > **Implementation status (landed on this branch).** Tracks 1–6 + 8 are
 > implemented, `pnpm test` green (2635), typecheck + lint + knip clean:
 > parser/renderers (plain paths, `legacy-view` marker, generalized embeds),

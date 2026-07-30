@@ -102,8 +102,8 @@ JSON.stringify(resolveContentTarget("store/docs/report.md", "/store/x.bill.card?
 ```
 
 `basePath` is treated like a containing *file* (its last segment is stripped). A
-directory base (e.g. a chat's cwd) must carry a trailing slash so the strip is a
-no-op and the relative path resolves *inside* it, not its parent:
+directory base must carry a trailing slash so the strip is a no-op and the
+relative path resolves *inside* it, not its parent:
 
 ```ts
 JSON.stringify([
@@ -111,6 +111,34 @@ JSON.stringify([
   resolveContentTarget("store/foo/", "bar.card").path,
 ])
 => ["store/foo/bar.card","store/foo/bar.card"]
+```
+
+### Chat messages pass no base
+
+Chat message markdown (`chat/markdown-rendering.tsx`) renders with
+`basePath: undefined` for links, embeds, and images alike — a chat has no
+"current document," and a directory-bound chat's context directory is the
+agent's *working directory* for its file tools, not a link base. So in a chat
+bound to `notes`, a bare `sibling.card` link and a bare `Foo.doc.card` embed
+both name the box-root file, identically to the leading-`/` form (this is the
+resolution seam; the wiring itself is React rendering, which has no doctest
+tier):
+
+```ts
+JSON.stringify([
+  resolveContentTarget(undefined, "sibling.card").path,
+  resolveContentTarget(undefined, "/sibling.card").path,
+  resolveContentTarget(undefined, "Foo.doc.card").path,
+])
+=> ["sibling.card","sibling.card","Foo.doc.card"]
+```
+
+An image in that same chat message resolves the same way — `basePath: undefined`
+sends a bare `photo.png` to the box root, not to `notes/photo.png`:
+
+```ts
+resolveImageSrc("photo.png", { boxSlug: "test1", basePath: undefined })
+=> /test1/api/image/photo.png
 ```
 
 ## classifyMarkdownHref

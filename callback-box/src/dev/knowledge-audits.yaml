@@ -3550,8 +3550,9 @@ tests:
     watch_for: >
       A plain markdown link [label](/store/x.card) references the card — clicking
       opens it in the companion pane. Prefix with ! — ![label](/store/x.card) —
-      to embed it inline. Write box-root-absolute paths (leading /); a bare path
-      resolves against the chat working directory. Must NOT use a `view:` prefix
+      to embed it inline. Always write the box path with a leading / — chat
+      links and embeds resolve from the box root, never from the chat's working
+      directory (a bare path lands at the box root too). Must NOT use a `view:` prefix
       or a `?zoom` flag in the syntax — both are retired (naming them as retired
       to warn against them is fine).
     response_not_contains: ["?zoom", "zoom flag"]
