@@ -453,3 +453,36 @@ one unit via /finish when all complete (no partial merge to main).
   discretion.
 - **Docs**: `docs/cards-as-markdown.md` ref section rewritten to the new
   rule (Track E); this plan moves to `docs/implemented-plans/` at /finish.
+
+## Status (2026-07-30) — complete
+
+Every item in the implementation order landed on `worktree-path-handling-model`:
+
+| Track | Commits |
+|-------|---------|
+| A — `shared/ref-path.ts` + `ref-exists`/`view-url` migration | `52bcd398`, `087cc66a` |
+| A2 — mv rewriter, CB002/`relink`, landmark `buildLink`/`readSymbol` | `509e3852` |
+| B — the three bug fixes (`create-after-success` containment, `moveDir` dossiers, body-link validation) | `d1fb9b3d`, `3ce2ec12`, `e2fb7f7e` |
+| C — chat re-base + prompt/comment text | `ea4bd901` |
+| D — nav acceptance, then landmark (docs, `symbol.src`/`figure.entry` validation) | `3154cde1`, `1b5a187d` |
+| E — guidance/exemplar sweep, rule stated once as `REF_PATH_RULE` | `d339b944` |
+| F — `cb validate --canonical`, then `--fix` | `2c52f610` (issue bookkeeping: `e714f8df`) |
+| G — knowledge audits authored + run, issue bookkeeping | this commit |
+
+Track G specifics:
+
+- Three audits added to `src/dev/knowledge-audits.yaml` —
+  `links-always-box-root`, `landmark-ref-box-root`, `attach-is-the-exception`
+  (all `knows_directly`, tagged `links`/`paths`). All three pass on the first
+  run against a test1 clone with no guidance change needed; the four existing
+  `links`-tagged audits were re-run and still pass. Status recorded in the YAML.
+- `--canonical --fix` round-tripped on a real box (test1 clone): 20 refs in 6
+  files rewritten to box-root form — including `- ref:` block-list items and a
+  `../`-climbing landmark ref — with the remaining ~2.7k non-canonical refs
+  left alone because their targets don't exist. Confirms the normalizer touches
+  only what resolves.
+- The decision issue (`issues/closed/decisions/2026-07-30-always-box-root-relative-links.md`)
+  is closed `resolution: implemented` pointing here;
+  `issues/bugs/2026-05-14-stale-image-refs-after-renames.md` stays open (its
+  repair-job / pre-commit-blocking questions are untouched by this plan) with a
+  note that the mv rewriter now covers block-list refs.

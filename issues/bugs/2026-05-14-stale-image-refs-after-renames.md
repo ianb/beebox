@@ -24,4 +24,11 @@ Confirmed the mechanics referenced above:
 - **No periodic repair job exists.** Nothing in the wakeup cycle or scheduler scans for broken refs and attempts basename-based repair; the idea in the third bullet above is still unimplemented.
 - **The first bullet's ask is now implemented** — `cb validate`'s aggregate summary line calls out a broken-ref count separately so it can't hide inside the generic warning count. Implemented in `callback-box/src/cards/lint-format.ts` (`countBrokenRefs`, `formatLintResults` ~109-160): when there's at least one `type: "reference"` warning, the summary line gains a `(N broken ref(s))` clause, e.g. `15 files checked, 2 warnings in 0 files (1 broken ref)`; zero broken refs adds nothing. `--json` mode gets a matching top-level `brokenRefs` count (`callback-box/src/cli/commands/validate.ts` ~323-334). Exit-code semantics are untouched — broken refs still don't fail validation; that policy call remains open. Covered by two new doctest cases in `callback-box/test/core/card-lint.doctest.md`.
 
+**Update (2026-07-30, box-root-paths Track F):** `cb mv`'s rewriter now also
+covers `- ref:` items inside frontmatter block lists (a regex that previously
+only matched inline/mapping form silently skipped them), and `cb validate
+--canonical [--fix]` reports and normalizes non-canonical refs box-wide. Neither
+closes this issue — a rename that bypasses `cb mv` still creates the broken refs,
+and `--fix` normalizes form, it doesn't repair a dangling target.
+
 Still open: whether/how to prevent bypassed renames from creating broken refs in the first place (pre-commit block? a `git mv` wrapper hook?), and whether to build the basename-based periodic repair job. Both need a design decision — this issue stays open.
