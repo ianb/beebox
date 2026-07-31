@@ -52,11 +52,23 @@ export BROWSE_WORKTREE="$worktree"
 # that the key isn't set.
 browse_env_file="${REPO_DIR}/callback-box/.env"
 if [[ -z "${CB_BROWSE_API_KEY:-}" && -r "$browse_env_file" ]]; then
-  # Read only our own key, and only a bare `KEY=value` line: this is a
-  # deliberate non-parse, not a dotenv implementation. `source`-ing the file
-  # would execute whatever is in it and dump every other variable into this
-  # shell; the router does the real parsing (bin/router-core.ts readEnvFile).
-  CB_BROWSE_API_KEY="$(sed -n 's/^CB_BROWSE_API_KEY=//p' "$browse_env_file" | head -1 | tr -d '"'"'"'[:space:]')"
+  # Parse with Node's `util.parseEnv` — the SAME parser the router uses
+  # (bin/router-core.ts readEnvFile). A hand-rolled sed/tr version was wrong:
+  # it disagreed with the router on quoting and whitespace, so a key written
+  # in a form the two parse differently would authenticate the router's
+  # children and be rejected at the router — a silent, confusing failure. The
+  # credential must be byte-identical everywhere it is compared.
+  #
+  # Reading one named key, not sourcing the file: `source` would execute its
+  # contents and dump every other variable into this shell.
+  CB_BROWSE_API_KEY="$(node -e '
+    const { parseEnv } = require("node:util");
+    const fs = require("node:fs");
+    try {
+      const v = parseEnv(fs.readFileSync(process.argv[1], "utf8")).CB_BROWSE_API_KEY;
+      if (typeof v === "string") process.stdout.write(v);
+    } catch { /* unreadable or unparseable: no key, browse proceeds unauthenticated */ }
+  ' "$browse_env_file")"
   [[ -n "$CB_BROWSE_API_KEY" ]] && export CB_BROWSE_API_KEY
 fi
 export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"

@@ -1,14 +1,19 @@
 # The local-dev browse key (`CB_BROWSE_API_KEY`)
 
-`verifyBrowseKey` (`src/core/browse-key.ts`) is the shared check behind three
-gates — the box's own wall, the hub's proxy/upgrade gate, and the dev router's
-box-credential resolver. It grants FULL box-scoped access, so the property that
-makes it safe is that it is opt-in: with the env var unset it must be a constant
-`false` everywhere, on every input. That is the case these tests exist to keep
-from regressing.
+`verifyBrowseKey` (`src/core/browse-key.ts`) is the shared check behind four
+call sites — the box's own wall and tRPC context, the hub's proxy/upgrade gate,
+the hub's `/api/boxes`, and the dev router's credential resolvers. It grants
+full machine-wide access, so the property that makes it safe is that it is
+opt-in: with the env var unset it must be a constant `false` everywhere, on
+every input. That is what these tests exist to keep from regressing.
 
-It is header-shaped rather than Fastify-shaped precisely so all three gates —
-two of which see a raw `http.IncomingMessage` — share one implementation.
+Scope note: this file tests **the predicate only**, not the gates that call it.
+Each gate's own wiring — that it consults this at all, and in the right place —
+is not covered here; the end-to-end check that it is lives in
+`docs/plans/agent-token-browser-auth.md`.
+
+It is header-shaped rather than Fastify-shaped precisely so every call site —
+several of which see a raw `http.IncomingMessage` — shares one implementation.
 
 ```ts setup
 import { verifyBrowseKey, BROWSE_KEY_COOKIE } from "../../src/core/browse-key.js";
@@ -86,6 +91,30 @@ process.env.CB_BROWSE_API_KEY = KEY;
 
 JSON.stringify(verifyBrowseKey({ authorization: [`Bearer ${KEY}`, "Bearer other"] }))
 => false
+```
+
+## A non-ASCII key refuses rather than throwing
+
+`crypto.timingSafeEqual` throws on a length mismatch, and equal JS string length
+is not equal byte length. Comparing `.length` instead of `byteLength` let a
+same-character-length ASCII value reach it and throw out of an auth check —
+turning a refusal into a 500.
+
+```ts
+process.env.CB_BROWSE_API_KEY = "kéy-with-non-ascii";
+
+// Same character count as the key, different byte count.
+JSON.stringify(verifyBrowseKey({ authorization: "Bearer key-with-non-asciiX".slice(0, 25) }))
+=> false
+```
+
+The non-ASCII key still works when supplied correctly.
+
+```ts
+process.env.CB_BROWSE_API_KEY = "kéy-with-non-ascii";
+
+JSON.stringify(verifyBrowseKey({ authorization: "Bearer kéy-with-non-ascii" }))
+=> true
 ```
 
 ## Every value under the cookie name is checked, not just the first

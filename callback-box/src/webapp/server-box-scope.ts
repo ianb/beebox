@@ -209,13 +209,19 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       const identity = resolveRequestIdentity(req, { openAccess: instance.openAccess });
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
       const mobileOk = (await resolveMobileRequestAuth(box.boxRoot, req.headers)) !== null;
+      // The browse key must be recognized HERE too, not only in the preHandler:
+      // a request it let through would otherwise reach a protected procedure
+      // with `authed: false`, so the credential would open every public read
+      // and nothing else — and the WS path has no preHandler at all, so this is
+      // the only place it can be checked there.
+      const browseOk = verifyBrowseKey(req.headers);
       // Fail closed on a corrupt/unreadable credential store (Track D): never
       // build an authed context off an auth store we couldn't verify against.
       // For HTTP the box preHandler already answered 503 before this ran; this
       // is the fail-closed twin for the WS upgrade, which shares this context.
       // Agent- and mobile-authenticated requests don't consult that store, so
       // they stay valid through a store outage (matching the preHandler order).
-      if (identity.source === "unavailable" && !bearerOk && !mobileOk) {
+      if (identity.source === "unavailable" && !bearerOk && !mobileOk && !browseOk) {
         throw new AuthStoreUnavailableAtContextError();
       }
       // One openness signal: the resolver returns `source: "open"` both in
@@ -230,7 +236,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         eventBus,
         services: options.services ?? {},
         user,
-        authed: identityIsOpen || user !== null || bearerOk || mobileOk,
+        // `browseOk` grants `authed`, never `user`/`isOwner`: the key is a
+        // machine credential, not a person, so it must not impersonate the
+        // owner. Same treatment as the agent bearer and mobile auth beside it.
+        authed: identityIsOpen || user !== null || bearerOk || mobileOk || browseOk,
         isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
       };
     },

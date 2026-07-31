@@ -11,13 +11,20 @@
  * So this is a deliberate, operator-set key in the mould of
  * `CB_DIAG_API_KEY` (`webapp/auth.ts`) — with one difference: the diag key is
  * whitelisted down to two read-only procedures, while this one is full
- * box-scoped access, because a browser has to load the whole app.
+ * access, because a browser has to load the whole app.
+ *
+ * **Scope: the whole machine, not one box.** There is no box parameter here on
+ * purpose — one dev router fronts every worktree and every box, so its gate has
+ * exactly one key to compare against. A holder of this key reaches every box
+ * the router serves, the hub's box list, and the worktree's Vite dev assets
+ * (`@fs` included). Do not read it as a per-box credential the way the agent
+ * token or a mobile device token is.
  *
  * The property that makes that acceptable is that it is **opt-in and absent by
  * default**: with `CB_BROWSE_API_KEY` unset, every function here returns false
  * and nothing changes anywhere. It is meant for a local dev machine. Setting
- * it on a publicly-reachable deployment grants whoever holds it complete
- * access to that box, so don't, unless that is exactly what you want.
+ * it on a publicly-reachable deployment hands whoever holds it the whole
+ * fleet, so don't, unless that is exactly what you want.
  *
  * Accepted from a bearer header OR a cookie. The cookie is what a browser
  * needs: it rides every request to the origin including the WebSocket
@@ -50,12 +57,18 @@ function single(value: string | string[] | undefined): string | undefined {
 /**
  * Constant-time compare against the configured key.
  *
- * Length is checked first because `timingSafeEqual` throws on a length
- * mismatch — that check leaks only the length, not the contents.
+ * Lengths are compared as BYTES, not as JS string length: `timingSafeEqual`
+ * throws on a length mismatch, and for a non-ASCII key equal character length
+ * does not mean equal byte length — comparing `.length` would let a same-
+ * character-length ASCII value reach `timingSafeEqual` and throw out of an
+ * auth check. Encoding first and comparing `byteLength` cannot. The length
+ * check leaks only the length, not the contents.
  */
 function matchesKey(supplied: string, key: string): boolean {
-  if (supplied.length !== key.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(key));
+  const a = Buffer.from(supplied, "utf8");
+  const b = Buffer.from(key, "utf8");
+  if (a.byteLength !== b.byteLength) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 /**

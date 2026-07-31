@@ -86,10 +86,20 @@ attach an `Authorization` header to a WebSocket handshake.
 **Recommend the cookie**, with the key accepted from either place (a header is
 still the right form for a plain `curl` probe).
 
-Cookie caveat, handled explicitly: a bare long-lived auth cookie is
-CSRF-attachable, so it is set `SameSite=Strict`, `HttpOnly`, and scoped by path
-to the box. It is dev-only and absent by default, which bounds the blast radius,
-but "dev-only" is not a reason to set it sloppily.
+Cookie caveat — and the plan was WRONG about this until 2026-07-31. It claimed
+the cookie is set `SameSite=Strict`, `HttpOnly`, path-scoped. It is not, and it
+cannot be: nothing ever sends `Set-Cookie`. `bin/browse` sends a `Cookie`
+*request header* through agent-browser's origin-scoped `--headers`, so the value
+never enters the browser's cookie jar and carries no attributes at all.
+
+What that actually means: the credential rides every request agent-browser makes
+to this origin, whoever caused it. A hostile page loaded in the same
+agent-browser profile could trigger state-changing requests to localhost with
+the key attached. Accepted, not solved, and the reasons are: this browser is a
+throwaway per-worktree profile that an agent points at the local dev app, the
+key is absent unless an operator sets it, and the target is a dev machine. If
+this credential ever grows beyond that — a shared browser, a reachable host —
+it needs real CSRF handling first.
 
 `bin/browse` installs the cookie once per Chrome profile: the login page is
 served to everyone, so it navigates there, sets the cookie, then proceeds. No
