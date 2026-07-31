@@ -74,6 +74,19 @@ again.data?.["changed"]
 => false
 ```
 
+An asset rule sitting OUTSIDE the managed block is a hard failure, not a silent
+pass. Marker-presence is the wrong test: a hand-edited `.gitignore` that still
+ignores `.jpg` would leave those assets reaching neither git nor the annex, and
+nothing else reports it.
+
+```ts continue
+await box.write(".gitignore", "**/*.attach/**/*.jpg\nnode_modules/\n");
+const c4 = ctxFor(box.root);
+const stray = await runUnignore(c4);
+`${stray.success} ${c4.lines.join(" ").includes("outside the managed block")}`
+=> false true
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

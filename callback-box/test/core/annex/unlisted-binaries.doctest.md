@@ -77,8 +77,37 @@ report.includes("Either add the extension to ASSET_EXTENSIONS") && report.includ
 => true
 ```
 
+Assets in a plain **subdirectory** of a scope are found too. An email's
+`attachments/` folder is the common shape, and a direct-children-only scan
+would let exactly those through:
+
+```ts continue
+await put(box.root, "mail.attach/attachments/archive.parquet", BIG);
+(await findUnlistedBinaries(box.root)).map((f) => f.relPath).sort().join(", ")
+=> mail.attach/attachments/archive.parquet, notes.attach/export.parquet
+```
+
 ```ts cleanup
 await box.cleanup();
+```
+
+An unreadable scope is an **error**, not an empty result. This guard blocks
+commits, so a scan that silently skips what it cannot read would let the
+already-staged blob through while reporting success:
+
+```ts
+const box2 = await makeTmpBox();
+await put(box2.root, "locked.attach/big.parquet", BIG);
+await fs.chmod(box2.path("locked.attach"), 0o000);
+const outcome = await findUnlistedBinaries(box2.root).then(
+  () => "reported clean",
+  (e: unknown) => (e instanceof Error ? e.name : "non-error"),
+);
+await fs.chmod(box2.path("locked.attach"), 0o755);
+outcome
+=> UnlistedScanIncompleteError
+
+await box2.cleanup();
 ```
 
 A box with no attach scopes at all scans clean rather than erroring:

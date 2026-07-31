@@ -72,19 +72,43 @@ all ordinary content as far as a reader is concerned:
 isAnnexPointer(bytes("/annex/objects/nonsense"))
 => false
 
-isAnnexPointer(bytes("/annex/objects/SHA256E-s12--" + "a".repeat(63) + ".jpg"))
-=> false
-
-isAnnexPointer(bytes("/annex/objects/SHA256E-s12--" + "z".repeat(64)))
-=> false
-
-isAnnexPointer(bytes("/annex/objects/WORM-s12-m456--file.jpg"))
+isAnnexPointer(bytes("/annex/objects/"))
 => false
 ```
 
-That last one is deliberate: a `WORM` key carries no content hash, so there is
-nothing trustworthy to report about it — better to treat it as unrecognized
-than to invent a half-populated result.
+A wrong-length or non-hex digest is still a *pointer* — the file is a stand-in
+for content either way — it just cannot report a `sha256`:
+
+```ts
+const odd = parseAnnexPointer(bytes("/annex/objects/SHA256E-s12--" + "z".repeat(64)));
+`${odd !== null} ${odd?.sha256 === null}`
+=> true true
+```
+
+## Detection is backend-independent
+
+An earlier version matched only `SHA256`/`SHA256E`, on the reasoning that other
+backends carry no content hash so there is nothing trustworthy to report. That
+was the wrong question. The job is *"are these the bytes, or a stand-in for
+them?"* — and a `SHA512E`, `WORM`, or `URL` pointer is just as much a stand-in.
+Missing one means serving it as an image, embedding it in a published page, or
+uploading it to a transcription API.
+
+```ts
+["SHA512E-s5000--" + "b".repeat(128) + ".jpg", "WORM-s12-m456--file.jpg", "URL--http://example.com/x.jpg", "SHA1E-s12--" + "c".repeat(40) + ".jpg"]
+  .map((k) => isAnnexPointer(bytes("/annex/objects/" + k)))
+  .join(" ")
+=> true true true true
+```
+
+Hash metadata is optional enrichment, so a non-SHA256 backend reports its
+backend name and whatever size the key carries, rather than inventing a digest:
+
+```ts
+const worm = parseAnnexPointer(bytes("/annex/objects/WORM-s12-m456--file.jpg"));
+`${worm?.backend} size=${worm?.size} sha=${worm?.sha256}`
+=> WORM size=12 sha=null
+```
 
 A file too large to be a pointer is rejected without being decoded, so
 `isAnnexPointer` stays cheap on real content:

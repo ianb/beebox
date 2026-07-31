@@ -24,6 +24,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import type { GitAnnexService } from "../../services/git-annex.js";
 import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
@@ -69,6 +70,20 @@ export interface AnnexDoctorOptions {
  */
 export const ANNEX_PRECOMMIT_LINE = "git annex pre-commit";
 
+/**
+ * Does the hook actually RUN annex, as opposed to merely mentioning it?
+ *
+ * A substring test passes on `# TODO: add git annex pre-commit` and on the real
+ * command commented out — both of which mean annex never runs at commit time,
+ * which is exactly what this check exists to catch. So: the line must be
+ * uncommented.
+ */
+function invokesAnnexPreCommit(hook: string): boolean {
+  return hook
+    .split("\n")
+    .some((line) => !line.trimStart().startsWith("#") && line.includes(ANNEX_PRECOMMIT_LINE));
+}
+
 async function readHook(repoRoot: string): Promise<string | null> {
   try {
     return await fs.readFile(path.join(repoRoot, ".git", "hooks", "pre-commit"), "utf-8");
@@ -90,31 +105,49 @@ async function readHook(repoRoot: string): Promise<string | null> {
 async function findContentlessPointers(boxRoot: string): Promise<string[]> {
   const out: string[] = [];
   for (const scope of await findAttachScopes(boxRoot)) {
-    let names: string[];
-    try {
-      names = await fs.readdir(scope.absPath);
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        console.warn(`Could not read attach scope ${scope.relPath} while checking for pointers:`, e);
-      }
-      continue;
-    }
-    for (const name of names) {
-      const abs = path.join(scope.absPath, name);
-      try {
-        const stat = await fs.stat(abs);
-        if (!stat.isFile() || stat.size > 1024) continue;
-        if (isAnnexPointer(new Uint8Array(await fs.readFile(abs)))) {
-          out.push(`${scope.relPath}/${name}`);
-        }
-      } catch (e) {
-        if (errnoCode(e) !== "ENOENT") {
-          console.warn(`Could not inspect ${scope.relPath}/${name}:`, e);
-        }
-      }
-    }
+    await walkForPointers({ absDir: scope.absPath, relPrefix: scope.relPath, out });
   }
   return out;
+}
+
+/**
+ * Walk a scope INCLUDING plain subdirectories — an email's `attachments/`
+ * folder holds real assets, and a direct-children-only scan would report "no
+ * missing content" while exactly those files were absent. Nested `.attach/`
+ * dirs are their own scopes via `findAttachScopes`.
+ */
+async function walkForPointers(args: {
+  absDir: string;
+  relPrefix: string;
+  out: string[];
+}): Promise<void> {
+  const { absDir, relPrefix, out } = args;
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(absDir, { withFileTypes: true });
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`Could not read ${relPrefix} while checking for pointers:`, e);
+    }
+    return;
+  }
+  for (const entry of entries) {
+    const rel = `${relPrefix}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (entry.name.endsWith(".attach")) continue;
+      await walkForPointers({ absDir: path.join(absDir, entry.name), relPrefix: rel, out });
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const abs = path.join(absDir, entry.name);
+    try {
+      const stat = await fs.stat(abs);
+      if (stat.size > 1024) continue;
+      if (isAnnexPointer(new Uint8Array(await fs.readFile(abs)))) out.push(rel);
+    } catch (e) {
+      if (errnoCode(e) !== "ENOENT") console.warn(`Could not inspect ${rel}:`, e);
+    }
+  }
 }
 
 /**
@@ -253,7 +286,7 @@ export async function runAnnexDoctor(
   //    foreign hook untouched — so integration cannot be inferred from either
   //    having run.
   const hook = await readHook(repoRoot);
-  if (hook !== null && hook.includes(ANNEX_PRECOMMIT_LINE)) {
+  if (hook !== null && invokesAnnexPreCommit(hook)) {
     checks.push({ id: "hook", status: "ok", message: "pre-commit hook invokes git annex pre-commit" });
   } else {
     checks.push({

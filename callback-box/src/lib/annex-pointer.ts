@@ -22,10 +22,12 @@
 export interface AnnexPointer {
   /** Full annex key, e.g. `SHA256E-s300000--2ee2c7….jpg`. */
   key: string;
-  /** Expected content size in bytes, from the key's `-s<n>` field. */
-  size: number;
-  /** Expected SHA-256 hex digest, from the key's `--<hash>` field. */
-  sha256: string;
+  /** Backend name, e.g. `SHA256E`, `SHA512E`, `WORM`, `URL`. */
+  backend: string;
+  /** Expected size from the key's `-s<n>` field; null for backends that omit it. */
+  size: number | null;
+  /** Expected SHA-256 digest; null unless the key uses a SHA256 backend. */
+  sha256: string | null;
 }
 
 /**
@@ -38,12 +40,24 @@ const MAX_POINTER_BYTES = 1024;
 const POINTER_PREFIX = "/annex/objects/";
 
 /**
- * Backend-qualified key with size and hash — the SHA256E/SHA256 family, which
- * is what `annex.largefiles` produces for us. Other backends (WORM, URL) do
- * not carry a content hash and are deliberately not matched: we would have
- * nothing trustworthy to report about them.
+ * A git-annex key: `BACKEND[-s<size>][-other fields]--<name>`.
+ *
+ * **Backend-independent on purpose.** An earlier version matched only the
+ * SHA256/SHA256E family, reasoning that other backends carry no content hash so
+ * there is "nothing trustworthy to report". That was the wrong question. The
+ * job here is *"are these the bytes, or a stand-in for them?"* — a SHA512E,
+ * SHA1E, WORM, or URL pointer is just as much a stand-in, and treating one as
+ * real content is exactly the failure this module exists to prevent: it would
+ * be served as an image, embedded in a published page, or uploaded to a
+ * transcription API. Hash metadata is optional enrichment; detection is not.
  */
-const KEY_RE = /^(SHA256E?-s(\d+)--([\da-f]{64})(?:\.[^\s/]*)?)$/;
+const KEY_RE = /^([A-Z][\dA-Z]*(?:-[^\s-]\S*?)*?)--(\S+)$/;
+
+/** Size field (`-s<n>`) — present on most backends, absent on some. */
+const SIZE_FIELD_RE = /-s(\d+)(?:-|$)/;
+
+/** SHA-256 digests are the only ones we can report as `sha256`. */
+const SHA256_BACKEND_RE = /^SHA256E?$/;
 
 /**
  * Cheap first pass: could these bytes be a pointer at all? Checks the prefix
@@ -84,13 +98,22 @@ export function parseAnnexPointer(bytes: Uint8Array): AnnexPointer | null {
   const match = KEY_RE.exec(key);
   if (match === null) return null;
 
-  const [, fullKey, sizeText, sha256] = match;
-  if (fullKey === undefined || sizeText === undefined || sha256 === undefined) return null;
+  const [, fields, name] = match;
+  if (fields === undefined || name === undefined) return null;
 
-  const size = Number(sizeText);
-  if (!Number.isSafeInteger(size)) return null;
+  const backend = fields.split("-", 1)[0] ?? fields;
+  const sizeMatch = SIZE_FIELD_RE.exec(fields);
+  const sizeText = sizeMatch?.[1];
+  const parsedSize = sizeText === undefined ? null : Number(sizeText);
+  const size = parsedSize !== null && Number.isSafeInteger(parsedSize) ? parsedSize : null;
 
-  return { key: fullKey, size, sha256 };
+  // Only a SHA256 key's name is a SHA-256 digest. For any other backend the
+  // name is something else entirely (a WORM timestamp, a URL), and reporting it
+  // as `sha256` would be a lie a caller might act on.
+  const digest = SHA256_BACKEND_RE.test(backend) ? (name.split(".", 1)[0] ?? "") : "";
+  const sha256 = /^[\da-f]{64}$/.test(digest) ? digest : null;
+
+  return { key, backend, size, sha256 };
 }
 
 /**
@@ -99,8 +122,7 @@ export function parseAnnexPointer(bytes: Uint8Array): AnnexPointer | null {
  * what to do next.
  */
 export function describeAbsentContent(pointer: AnnexPointer, relPath: string): string {
-  return (
-    `${relPath}: content not present locally (${pointer.size} bytes, sha256 ` +
-    `${pointer.sha256.slice(0, 12)}…). Fetch it with \`git annex get ${relPath}\`.`
-  );
+  const size = pointer.size === null ? "unknown size" : `${String(pointer.size)} bytes`;
+  const hash = pointer.sha256 === null ? pointer.backend : `sha256 ${pointer.sha256.slice(0, 12)}…`;
+  return `${relPath}: content not present locally (${size}, ${hash}). Fetch it with \`git annex get ${relPath}\`.`;
 }

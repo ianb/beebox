@@ -20,6 +20,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { isAssetExtension } from "../../lib/asset-extensions.js";
 import { findAttachScopes } from "../asset-manifest-scan.js";
@@ -34,6 +35,22 @@ import { errnoCode } from "../../lib/error-guards.js";
  * an order of magnitude while still catching the 41 MB case that motivated it.
  */
 export const UNLISTED_BINARY_LIMIT_BYTES = 1024 * 1024;
+
+/**
+ * The scan could not see everything it needed to.
+ *
+ * A blocking guard that silently skips what it cannot read is not a guard: the
+ * staged blob commits anyway and the check reports success. So an incomplete
+ * scan is an error the caller must surface, never an empty result.
+ */
+export class UnlistedScanIncompleteError extends Error {
+  readonly relPath: string;
+  constructor(relPath: string, cause: unknown) {
+    super(`could not scan ${relPath} for unlisted binaries`, { cause });
+    this.name = "UnlistedScanIncompleteError";
+    this.relPath = relPath;
+  }
+}
 
 /** A file that would be committed to git as raw bytes without anyone deciding so. */
 export interface UnlistedBinary {
@@ -61,46 +78,65 @@ export async function findUnlistedBinaries(boxRoot: string): Promise<UnlistedBin
   const scopes = await findAttachScopes(boxRoot);
 
   for (const scope of scopes) {
-    let entries: string[];
-    try {
-      entries = await fs.readdir(scope.absPath);
-    } catch (e) {
-      // A scope that vanished between listing and reading contributes nothing.
-      // Anything other than that is worth surfacing rather than swallowing.
-      if (errnoCode(e) !== "ENOENT") {
-        console.warn(`Could not read attach scope ${scope.relPath} while scanning for unlisted binaries:`, e);
-      }
-      continue;
-    }
-
-    for (const name of entries) {
-      if (isControlFile(name)) continue;
-      if (isAssetExtension(name)) continue;
-
-      const abs = path.join(scope.absPath, name);
-      let stat;
-      try {
-        stat = await fs.stat(abs);
-      } catch (e) {
-        if (errnoCode(e) !== "ENOENT") {
-          console.warn(`Could not stat ${scope.relPath}/${name}:`, e);
-        }
-        continue;
-      }
-      // Nested scopes are walked as their own scope by findAttachScopes.
-      if (!stat.isFile()) continue;
-      if (stat.size <= UNLISTED_BINARY_LIMIT_BYTES) continue;
-
-      const dot = name.lastIndexOf(".");
-      found.push({
-        relPath: `${scope.relPath}/${name}`,
-        size: stat.size,
-        extension: dot === -1 ? "" : name.slice(dot + 1).toLowerCase(),
-      });
-    }
+    await walkScope({ absDir: scope.absPath, relPrefix: scope.relPath, found });
   }
 
   return found;
+}
+
+/**
+ * Walk one attach scope, INCLUDING plain subdirectories.
+ *
+ * Recursing matters: real boxes keep assets in ordinary subdirectories inside a
+ * scope — an email's `attachments/` folder is the common one — so a
+ * direct-children-only scan would let exactly those files through. Nested
+ * `.attach/` directories are skipped because `findAttachScopes` already returns
+ * them as scopes in their own right.
+ */
+async function walkScope(args: {
+  absDir: string;
+  relPrefix: string;
+  found: UnlistedBinary[];
+}): Promise<void> {
+  const { absDir, relPrefix, found } = args;
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(absDir, { withFileTypes: true });
+  } catch (e) {
+    // ENOENT is a scope that vanished mid-scan — genuinely nothing to report.
+    // Anything else means we cannot see part of the tree, and this guard blocks
+    // commits, so returning a clean result would be a lie with consequences.
+    if (errnoCode(e) === "ENOENT") return;
+    throw new UnlistedScanIncompleteError(relPrefix, e);
+  }
+
+  for (const entry of entries) {
+    const rel = `${relPrefix}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (entry.name.endsWith(".attach")) continue; // its own scope
+      await walkScope({ absDir: path.join(absDir, entry.name), relPrefix: rel, found });
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    if (isControlFile(entry.name)) continue;
+    if (isAssetExtension(entry.name)) continue;
+
+    let stat;
+    try {
+      stat = await fs.stat(path.join(absDir, entry.name));
+    } catch (e) {
+      if (errnoCode(e) === "ENOENT") continue;
+      throw new UnlistedScanIncompleteError(rel, e);
+    }
+    if (stat.size <= UNLISTED_BINARY_LIMIT_BYTES) continue;
+
+    const dot = entry.name.lastIndexOf(".");
+    found.push({
+      relPath: rel,
+      size: stat.size,
+      extension: dot === -1 ? "" : entry.name.slice(dot + 1).toLowerCase(),
+    });
+  }
 }
 
 /**

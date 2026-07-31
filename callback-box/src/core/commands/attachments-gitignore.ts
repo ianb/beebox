@@ -124,6 +124,21 @@ const UNIGNORE_BLOCK = `${UNIGNORE_BLOCK_MARKER}
 ${CAPTURE_STAGING_IGNORE_PATTERN}
 `;
 
+/** An asset ignore pattern, wherever it came from. */
+function isStrayAssetRule(line: string): boolean {
+  return line.trim().startsWith("**/*.attach/**/*.");
+}
+
+/** Is `index` inside the managed asset block that starts at `start`? */
+function inManagedBlock(lines: string[], opts: { index: number; start: number }): boolean {
+  const { index, start } = opts;
+  if (start === -1 || index <= start) return false;
+  for (let i = start + 1; i <= index; i += 1) {
+    if (!isManagedBlockLine(lines[i] ?? "")) return false;
+  }
+  return true;
+}
+
 /**
  * Is this line part of the unignore block's body? Same narrowness as
  * {@link isManagedBlockLine} — a comment or the capture-staging pattern.
@@ -160,6 +175,23 @@ async function runUnignore(ctx: CommandContext): Promise<CommandResult> {
     (l) => l.trim() === GITIGNORE_BLOCK_MARKER || l.trim() === LEGACY_GITIGNORE_BLOCK_MARKER,
   );
   const unignoreBlockAt = lines.findIndex((l) => l.trim() === UNIGNORE_BLOCK_MARKER);
+
+  // Asset rules that are NOT inside a managed block — hand-added, or left by a
+  // marker that got edited away. Marker-presence alone is the wrong test here:
+  // reporting success while an `**/*.attach/**/*.jpg` line survives would leave
+  // a box where those assets reach neither git nor the annex, silently.
+  const strayAssetRules = lines.filter(
+    (l, i) => isStrayAssetRule(l) && !inManagedBlock(lines, { index: i, start: assetBlockAt }),
+  );
+  if (strayAssetRules.length > 0) {
+    ctx.writeLine(
+      ".gitignore still ignores assets outside the managed block:\n" +
+        strayAssetRules.map((l) => `  ${l.trim()}`).join("\n") +
+        "\nRemove these by hand — while they are present those assets reach neither " +
+        "git nor the annex, and nothing else reports it.",
+    );
+    return { success: false, error: `${String(strayAssetRules.length)} unmanaged asset ignore rule(s)` };
+  }
 
   if (assetBlockAt === -1 && unignoreBlockAt !== -1) {
     // Already converted. Refresh in place if the block text has since changed,

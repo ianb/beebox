@@ -186,6 +186,26 @@ result.healthy
 await box.cleanup();
 ```
 
+Absent content in a plain subdirectory of a scope is found too — a
+direct-children-only scan would report "no missing content" while an email's
+`attachments/` folder was empty of bytes:
+
+```ts
+const box = await makeTmpBox();
+await installHook(box);
+await box.write(
+  "mail.attach/attachments/inline.png",
+  "/annex/objects/SHA256E-s900--" + "b".repeat(64) + ".png\n",
+);
+const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+result.checks.find((c) => c.id === "content-present")?.message.includes("mail.attach/attachments/inline.png")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Hook integration
 
 `git annex init` declines to install its own pre-commit hook when one already
@@ -205,6 +225,21 @@ result.checks.find((c) => c.id === "hook")?.status
 
 result.checks.find((c) => c.id === "hook")?.message.includes("hand-written")
 => true
+```
+
+A hook that only *mentions* annex in a comment does not count. A substring test
+would pass on `# TODO: add git annex pre-commit`, or on the real command
+commented out — both of which mean annex never runs at commit time, which is
+the whole thing this check exists to catch:
+
+```ts continue
+await fs.writeFile(
+  path.join(box.packageRoot, ".git", "hooks", "pre-commit"),
+  "#!/bin/bash\n# TODO: add git annex pre-commit\n",
+);
+const commented = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+commented.checks.find((c) => c.id === "hook")?.status
+=> failed
 ```
 
 The formatted output marks each outcome distinctly, so a repair is not mistaken
