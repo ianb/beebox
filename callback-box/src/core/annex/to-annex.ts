@@ -183,6 +183,11 @@ async function removeLfsFilters(boxRoot: string): Promise<boolean> {
   return true;
 }
 
+/** Is this box-relative path inside a capture-staging area? */
+function isCaptureStaging(relPath: string): boolean {
+  return relPath.split("/").includes("tmp-capture");
+}
+
 /**
  * Every asset must actually BE its bytes.
  *
@@ -303,7 +308,23 @@ export async function convertBoxToAnnex(
     throw new PreflightManifestError(scan.errors.map((e) => `  ${e.message}`));
   }
 
-  const claimed = await collectClaimedAssets({ boxRoot, repoRoot });
+  const allClaimed = await collectClaimedAssets({ boxRoot, repoRoot });
+
+  // Capture staging is deliberately NOT converted. A pre-triage capture stays
+  // gitignored until an agent files it — see CAPTURE_STAGING_IGNORE_PATTERN —
+  // so its assets are neither annexed here nor expected to become visible to
+  // git. `cb attachments migrate` claims them like any other asset, which made
+  // the still-ignored preflight below fire on every box holding an unfiled
+  // capture. Filtering them out here is the difference between "this box has
+  // pending work" and "this migration is unsafe".
+  const claimed = allClaimed.filter((a) => !isCaptureStaging(a.relPath));
+  const staged = allClaimed.length - claimed.length;
+  if (staged > 0) {
+    console.warn(
+      `${String(staged)} asset(s) in capture staging are left un-annexed (they join the ` +
+        "annex when filed with `cb mv`).",
+    );
+  }
   const bytes = claimed.reduce((sum, a) => sum + a.size, 0);
 
   await assertAssetsAreNotPointers(claimed);

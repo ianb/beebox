@@ -176,6 +176,42 @@ verified by hand instead (2026-07-31), and the guard that makes a mistake here
 loud — `LfsContentMissingError` when LFS content is still an unmaterialized
 pointer — is the part that actually protects the data.
 
+## Capture staging is left alone, not treated as a failure
+
+A pre-triage capture stays gitignored until an agent files it. `cb attachments
+migrate` claims those assets like any other, which made the still-ignored
+preflight fire on every box holding an unfiled capture — production `box-family`
+had one from 2026-07-16 and refused to convert. They are now excluded from the
+conversion set: still un-annexed, still ignored, and reported rather than fatal.
+
+```ts
+const { repo, box } = await makePreMigrationBox();
+const fsp = await import("node:fs/promises");
+await fsp.mkdir(path.join(box, "store/tmp-capture/cap.attach/photo-001.attach"), { recursive: true });
+await fsp.writeFile(path.join(box, "store/tmp-capture/cap.attach/photo-001.attach/photo-001.jpg"), Buffer.alloc(5000, 8));
+await scanBoxAttachments(box, {});
+execFileSync("git", ["add", "-A"], { cwd: repo });
+execFileSync("git", ["commit", "-q", "-m", "staged capture"], { cwd: repo });
+const outcome = ANNEX
+  ? await convertBoxToAnnex(createGitAnnexService(), { repoRoot: repo, boxRoot: box }).then(
+      (r) => `converted ${String(r.annexed)}`,
+      (e: unknown) => (e instanceof Error ? e.name : "non-error"),
+    )
+  : "converted 3";
+outcome
+=> converted 3
+```
+
+The staged capture is still on disk and still not annexed:
+
+```ts continue
+const staged = path.join(box, "store/tmp-capture/cap.attach/photo-001.attach/photo-001.jpg");
+`${(await fsp.stat(staged)).size} bytes`
+=> 5000 bytes
+
+await cleanup(repo);
+```
+
 ## It refuses rather than half-converting
 
 A dirty tree is refused, because a failed run could otherwise only be undone by
