@@ -52,105 +52,21 @@ import { scanBoxAttachments } from "../asset-manifest-scan.js";
 import { unignoreGitignore } from "../commands/attachments-gitignore.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
+import {
+  AssetIsLfsPointerError,
+  AssetsStillIgnoredError,
+  DirtyTreeError,
+  InsufficientSpaceError,
+  LfsContentMissingError,
+  NotAnnexedError,
+  PreflightManifestError,
+  PostConversionMismatchError,
+} from "./to-annex-errors.js";
+
+export * from "./to-annex-errors.js";
 
 const execFileAsync = promisify(execFile);
 const statfsAsync = promisify(statfs);
-
-/** The working tree had uncommitted changes, so a failed run could not be cleanly undone. */
-export class DirtyTreeError extends Error {
-  constructor(status: string) {
-    super(`working tree is not clean; commit or stash first:\n${status}`);
-    this.name = "DirtyTreeError";
-  }
-}
-
-/** Manifests disagreed with the bytes on disk BEFORE conversion. */
-export class PreflightManifestError extends Error {
-  readonly problems: string[];
-  constructor(problems: string[]) {
-    super(
-      `${String(problems.length)} asset(s) fail manifest verification. Converting now would ` +
-        `bless whatever is on disk as canonical:\n${problems.join("\n")}`,
-    );
-    this.name = "PreflightManifestError";
-    this.problems = problems;
-  }
-}
-
-/** Not enough disk for the annex objects the conversion will create. */
-export class InsufficientSpaceError extends Error {
-  constructor(needBytes: number, freeBytes: number) {
-    super(
-      `conversion needs about ${mb(needBytes)} MB of additional space (annex.thin=false keeps ` +
-        `a working-tree copy AND an object copy) but only ${mb(freeBytes)} MB is free.`,
-    );
-    this.name = "InsufficientSpaceError";
-  }
-}
-
-/**
- * Assets are still gitignored, so `git add` would never see them.
- *
- * This is the root cause of the worst failure this migration can have: the
- * conversion "succeeds", the manifests are deleted, and the bytes end up
- * tracked by nothing at all. Caught before anything is written.
- */
-export class AssetsStillIgnoredError extends Error {
-  readonly paths: string[];
-  constructor(paths: string[]) {
-    super(
-      `${String(paths.length)} asset(s) are still gitignored, so git-annex would never see ` +
-        "them. Run `cb attachments unignore` first (and clear any hand-written asset " +
-        `rules it reports):\n${paths.slice(0, 5).map((p) => `  ${p}`).join("\n")}`,
-    );
-    this.name = "AssetsStillIgnoredError";
-    this.paths = paths;
-  }
-}
-
-/** After staging, some assets did not actually end up annexed. */
-export class NotAnnexedError extends Error {
-  readonly paths: string[];
-  constructor(paths: string[]) {
-    super(
-      `${String(paths.length)} asset(s) were not annexed by \`git add\`. Manifests have NOT ` +
-        `been removed:\n${paths.slice(0, 5).map((p) => `  ${p}`).join("\n")}`,
-    );
-    this.name = "NotAnnexedError";
-    this.paths = paths;
-  }
-}
-
-/** An annexed object's hash does not match what the manifest claimed. */
-export class PostConversionMismatchError extends Error {
-  readonly mismatches: string[];
-  constructor(mismatches: string[]) {
-    super(
-      `${String(mismatches.length)} asset(s) annexed under a key that disagrees with their ` +
-        `manifest hash. Manifests have NOT been removed:\n${mismatches.join("\n")}`,
-    );
-    this.name = "PostConversionMismatchError";
-    this.mismatches = mismatches;
-  }
-}
-
-function mb(bytes: number): string {
-  return String(Math.round(bytes / (1024 * 1024)));
-}
-
-/** Git LFS content was missing locally, so converting would lose it. */
-export class LfsContentMissingError extends Error {
-  readonly paths: string[];
-  constructor(paths: string[]) {
-    super(
-      `${String(paths.length)} Git LFS file(s) are still pointers locally. Converting now would ` +
-        "commit the pointer text as the file. Run `git lfs pull` first:\n" +
-        paths.slice(0, 5).map((p) => `  ${p}`).join("\n"),
-    );
-    this.name = "LfsContentMissingError";
-    this.paths = paths;
-  }
-}
 
 export interface ToAnnexResult {
   /** Assets that moved into the annex. */
@@ -268,6 +184,31 @@ async function removeLfsFilters(boxRoot: string): Promise<boolean> {
 }
 
 /**
+ * Every asset must actually BE its bytes.
+ *
+ * A gitignored file holding LFS pointer text passes manifest verification —
+ * its recorded hash is the hash of the pointer — and would be annexed as
+ * canonical content. `git lfs ls-files` does not list it, because git never
+ * applied a filter to an ignored path, so the LFS materialize check misses it
+ * entirely.
+ */
+async function assertAssetsAreNotPointers(claimed: ClaimedAsset[]): Promise<void> {
+  const pointers: string[] = [];
+  for (const asset of claimed) {
+    if (asset.size > 1024) continue; // too big to be a pointer
+    try {
+      const head = await fs.readFile(asset.absPath);
+      if (head.subarray(0, 40).toString("utf8").startsWith("version https://git-lfs")) {
+        pointers.push(asset.relPath);
+      }
+    } catch (e) {
+      if (errnoCode(e) !== "ENOENT") throw e;
+    }
+  }
+  if (pointers.length > 0) throw new AssetIsLfsPointerError(pointers);
+}
+
+/**
  * Materialize-check every LFS file, then strip the LFS filters.
  *
  * Returns the files LFS was tracking, which annex now owns.
@@ -364,6 +305,8 @@ export async function convertBoxToAnnex(
 
   const claimed = await collectClaimedAssets({ boxRoot, repoRoot });
   const bytes = claimed.reduce((sum, a) => sum + a.size, 0);
+
+  await assertAssetsAreNotPointers(claimed);
 
   // 3. Disk preflight. annex.thin=false means a working-tree copy AND an
   //    object copy, so the conversion needs roughly the asset total again.
