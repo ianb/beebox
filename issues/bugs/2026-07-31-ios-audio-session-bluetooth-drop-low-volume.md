@@ -8,6 +8,13 @@ design: ../../callback-box/docs/plans/ios-audio-session-routing.md
 labels: [mobile]
 ---
 
+> **⏳ Awaiting manual testing** — fix landed on `worktree-ios-audio-session-fix`
+> (`f0b36d5a`, `0dad587f`); on a phone with Bluetooth headphones, play audio →
+> dictate → stop, and confirm output stays on Bluetooth at full volume
+> throughout. Full checklist in the
+> [plan](../../callback-box/docs/plans/ios-audio-session-routing.md). Only Ian
+> clears this.
+
 On iOS the audio is odd: it **won't stay on a Bluetooth output** and the **volume
 is very low**. The boxholder suspected the microphone, and that's right — it's the
 mic's `AVAudioSession` configuration. Activating the record session for
