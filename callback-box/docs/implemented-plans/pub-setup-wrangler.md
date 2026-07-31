@@ -231,6 +231,32 @@ Closed only with the boxholder present (writes real auth policy / needs browser)
    `cb pub go` path before relying on it).
 5. End-to-end: OTP login on a published `/a/` page → JWT email matches the
    allowlist.
+6. The connector-token mint (`--mint-connector-token`, addendum below):
+   permission-group display names ("Workers R2 Storage Bucket Item
+   Read"/"Write"), the bucket resource-key format
+   (`com.cloudflare.edge.r2.bucket.<account>_default_<bucket>`), and the
+   one-time `result.value` in the create response.
 
 Everything lands fake-tested; no test touches real Cloudflare or spawns real
 wrangler.
+
+## Addendum (2026-07-31): the connector token is minted, not hand-assembled
+
+Boxholder follow-up: the "mint an R2 token in the dashboard" residue was the
+one remaining weird manual step, and Cloudflare's account-owned token API
+(`POST /accounts/<id>/tokens`, permission groups resolved live via
+`/tokens/permission_groups`) removes it. `cb pub setup --mint-connector-token`
+now mints the ingestion-bucket-scoped token itself and writes
+`config/connectors/publish.secret.json` (mode 600), printing the JSON once for
+the copy-to-server step. Idempotent: an existing secret file skips the mint.
+
+Cost, decided explicitly: the setup-only bootstrap token gains **Account API
+Tokens: Edit** (it can mint arbitrary tokens while it exists). Same
+containment as the Access half — one prompt serves both `--access` and
+`--mint-connector-token`, never argv, never stored, revocation printed as the
+completion step. Wrangler's OAuth scopes cannot call the token endpoints (an
+open wrangler feature request), so the bootstrap token is the only path.
+Account-owned (not user-owned) so the credential survives the creating user
+leaving the account. New seams: `services/cloudflare-tokens.ts` (client +
+fake), `publish/connector-secret.ts` (secret file read/write + mint-ensure —
+consolidated from the connector).

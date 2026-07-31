@@ -18,7 +18,8 @@ import { assertNever } from "../../lib/invariant.js";
 import { resolveCloudflareAuth } from "../../publish/cloudflare-auth.js";
 import { type SetupAuthBundle, setupPublishing } from "../../publish/setup.js";
 import { statusPublishing, type StatusReport } from "../../publish/status.js";
-import { createCloudflareAccessClient, type CloudflareAccessClient } from "../../services/cloudflare-access.js";
+import { createCloudflareAccessClient } from "../../services/cloudflare-access.js";
+import { createCloudflareTokensClient } from "../../services/cloudflare-tokens.js";
 import { createCloudflareProvisioningClient } from "../../services/cloudflare-provisioning.js";
 import { createWranglerService } from "../../services/wrangler.js";
 import { promptHidden } from "../lib/prompt-hidden.js";
@@ -36,8 +37,18 @@ async function requireAuthBundle(accountId: string | undefined): Promise<SetupAu
   return { client, wrangler, accountId: auth.accountId, deployEnv: auth.deployEnv };
 }
 
-/** The setup-only Access token: env (`CB_ACCESS_SETUP_TOKEN`) or hidden prompt — never argv. */
-async function resolveAccessClient(accountId: string): Promise<CloudflareAccessClient> {
+/**
+ * The setup-only bootstrap token: env (`CB_ACCESS_SETUP_TOKEN`) or hidden
+ * prompt — never argv. ONE prompt serves both `--access` and
+ * `--mint-connector-token`; the label names exactly the permissions the
+ * requested halves need, so the user mints one bootstrap token, uses it once,
+ * and revokes it.
+ */
+async function resolveBootstrapToken(opts: { access: boolean; mint: boolean }): Promise<string> {
+  const needed = [
+    ...(opts.access ? ["Access: Apps and Policies — Edit", "Access: Organizations, Identity Providers, and Groups — Edit"] : []),
+    ...(opts.mint ? ["Account API Tokens — Edit"] : []),
+  ];
   // TODO(env-migration): CB_ACCESS_SETUP_TOKEN is a one-off, never-stored
   // setup-only credential (see file header) — outside lib/env.ts's startup
   // schema for now; read stays direct.
@@ -46,18 +57,18 @@ async function resolveAccessClient(accountId: string): Promise<CloudflareAccessC
     fromEnv !== undefined && fromEnv.length > 0
       ? fromEnv
       : await promptHidden({
-          label: "Setup-only Cloudflare API token (Access: Apps and Policies + Organizations, Identity Providers, and Groups — Edit): ",
-          noTtyMessage: "stdin is not an interactive terminal; pass the setup-only Access token via CB_ACCESS_SETUP_TOKEN instead.",
+          label: `Setup-only Cloudflare API token (${needed.join(" + ")}): `,
+          noTtyMessage: "stdin is not an interactive terminal; pass the setup-only bootstrap token via CB_ACCESS_SETUP_TOKEN instead.",
         });
   if (apiToken.length === 0) {
-    console.error("Error: an Access-edit API token is required for --access (mint one at dash.cloudflare.com → My Profile → API Tokens; revoke it after setup).");
+    console.error(`Error: a bootstrap API token with [${needed.join("; ")}] is required (mint one at dash.cloudflare.com → My Profile → API Tokens; revoke it after setup).`);
     process.exit(1);
   }
-  return createCloudflareAccessClient({ accountId, apiToken });
+  return apiToken;
 }
 
 /** Print a successful setup: what was provisioned and what (if anything) remains. */
-function printSetupSuccess(result: Extract<Awaited<ReturnType<typeof setupPublishing>>, { ok: true }>, opts: { accessRan: boolean }): void {
+function printSetupSuccess(result: Extract<Awaited<ReturnType<typeof setupPublishing>>, { ok: true }>, opts: { bootstrapRan: boolean }): void {
   console.log("Publishing is provisioned.");
   console.log(`  worker:    ${result.workerName}  (version ${result.version.slice(0, 16)}…)`);
   console.log(`  content:   ${result.bucketName}  (${result.bucketCreated ? "created" : "already existed"})`);
@@ -68,44 +79,56 @@ function printSetupSuccess(result: Extract<Awaited<ReturnType<typeof setupPublis
     const a = result.accessProvisioned;
     console.log(`  Access:    app ${a.appCreated ? "created" : "found"} (aud baked in); OTP login ${a.otpIdpCreated ? "created" : "present"}; policy ${a.policyCreated ? "attached" : "present"}; team ${a.teamDomain}`);
   }
-  if (opts.accessRan) {
-    console.log("\nCOMPLETION STEP: revoke the setup-only Access token now (dash.cloudflare.com → My Profile → API Tokens) — nothing stores it and nothing else needs it.");
+  if (result.connectorSecret !== null) {
+    const c = result.connectorSecret;
+    if (c.minted) {
+      console.log(`  connector: minted ingestion-scoped token '${c.tokenName ?? ""}' and wrote ${c.relativePath} (mode 600)`);
+    } else {
+      console.log(`  connector: ${c.relativePath} already exists — nothing minted (reruns never duplicate tokens)`);
+    }
+  }
+  if (opts.bootstrapRan) {
+    console.log("\nCOMPLETION STEP: revoke the setup-only bootstrap token now (dash.cloudflare.com → My Profile → API Tokens) — nothing stores it and nothing else needs it.");
   }
   if (!result.accessConfigured) {
     console.log("\nAccount tiers (`accounts` / `any-account`) are OPTIONAL and currently off (they fail closed; public/secret tiers work now).");
-    console.log("To turn them on: re-run `cb pub setup --access` with a setup-only Access-edit API token.");
+    console.log("To turn them on: re-run `cb pub setup --access` with a setup-only bootstrap token.");
   }
-  console.log("\nOPTIONAL — pulling submissions and view logs into the box:");
-  console.log("  Visitor submissions land in the ingestion bucket; the box pulls them on each");
-  console.log("  `cb wakeup`. That runs headless, so it needs its own stored credential:");
-  console.log("  1. dash.cloudflare.com → R2 → Manage R2 API Tokens → Create API token,");
-  console.log(`     permission Object Read & Write, scoped to ONLY the '${result.ingestBucketName}' bucket`);
-  console.log("     (bucket-scoped so a compromised box can never rewrite published content).");
-  console.log("  2. On the machine that runs `cb wakeup` for this box, write the gitignored file");
-  console.log("     config/connectors/publish.secret.json:");
-  console.log(`       {"accountId":"${result.accountId}","bucket":"${result.ingestBucketName}","apiToken":"<the token from step 1>"}`);
-  console.log("  Skip this entirely if you don't use submission-enabled tiers.");
+  if (result.connectorSecret?.minted === true && result.connectorSecret.json !== null) {
+    console.log("\nIf this box also wakes on a server, place the same secret file there (it is gitignored and does not sync):");
+    console.log(`  <box>/${result.connectorSecret.relativePath}:`);
+    for (const line of result.connectorSecret.json.split("\n")) console.log(`    ${line}`);
+  } else if (result.connectorSecret === null) {
+    console.log("\nOPTIONAL — pulling submissions and view logs into the box: the connector needs its own");
+    console.log("ingestion-bucket-scoped credential. Re-run `cb pub setup --mint-connector-token` to mint");
+    console.log("and store it from the CLI. Skip entirely if you don't use submission-enabled tiers.");
+  }
   console.log("\nNext: `cb pub draft <source> --tier <tier>` then `cb pub go <pub-id>` (interactive).");
 }
 
 export const pubSetupCommand = new Command("setup")
   .description("One-time Cloudflare provisioning via the wrangler login: R2 buckets + Worker deploy + optional Access (idempotent, re-runnable)")
-  .option("--access", "Provision Cloudflare Access for the account tiers via the API (prompts for a setup-only Access-edit token)")
+  .option("--access", "Provision Cloudflare Access for the account tiers via the API (prompts for a setup-only bootstrap token)")
+  .option("--mint-connector-token", "Mint + store the ingestion-bucket-scoped connector credential via the API (same bootstrap-token prompt)")
   .option("--account-id <id>", "Cloudflare account to act on (required when the wrangler login can see several)")
   .option("--access-team-domain <origin>", "Manual override: Access team origin (https://<team>.cloudflareaccess.com)")
   .option("--access-aud <aud>", "Manual override: Access application aud tag")
-  .action(async (...actionArgs: [options: { access?: boolean; accountId?: string; accessTeamDomain?: string; accessAud?: string }, ...unknown[]]) => {
+  .action(async (...actionArgs: [options: { access?: boolean; mintConnectorToken?: boolean; accountId?: string; accessTeamDomain?: string; accessAud?: string }, ...unknown[]]) => {
     const [options] = actionArgs;
     try {
       const boxRoot = await requireBoxRoot();
       const auth = await requireAuthBundle(options.accountId);
-      const access = options.access === true ? await resolveAccessClient(auth.accountId) : undefined;
+      const wantAccess = options.access === true;
+      const wantMint = options.mintConnectorToken === true;
+      const bootstrapToken = wantAccess || wantMint ? await resolveBootstrapToken({ access: wantAccess, mint: wantMint }) : null;
+      const access = wantAccess && bootstrapToken !== null ? createCloudflareAccessClient({ accountId: auth.accountId, apiToken: bootstrapToken }) : undefined;
+      const tokens = wantMint && bootstrapToken !== null ? createCloudflareTokensClient({ accountId: auth.accountId, apiToken: bootstrapToken }) : undefined;
       const result = await setupPublishing(
         { accessTeamDomain: options.accessTeamDomain, accessAud: options.accessAud },
-        { boxRoot, auth, access },
+        { boxRoot, auth, access, tokens },
       );
       if (result.ok) {
-        printSetupSuccess(result, { accessRan: access !== undefined });
+        printSetupSuccess(result, { bootstrapRan: bootstrapToken !== null });
         return;
       }
       switch (result.reason) {
@@ -119,6 +142,7 @@ export const pubSetupCommand = new Command("setup")
         case "unsafe-config":
         case "no-subdomain":
         case "access-provisioning":
+        case "connector-token":
         case "preview-urls-enabled":
           console.error(`Error: ${result.message}`);
           break;
