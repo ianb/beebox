@@ -13,6 +13,50 @@ import { glob } from "glob";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
+/**
+ * Display label for each of a known set of landmark directories ("" = the box
+ * root), keyed by directory. A directory with no landmark card — or an
+ * unreadable one — is absent from the map; callers decide the fallback.
+ *
+ * Reads only the named directories, unlike `loadLandmarkSummaries`, which globs
+ * the whole box. Use this when you already know which dirs you care about (the
+ * history dropdown resolves a handful of session bindings on every open, and a
+ * full-tree traversal per open is a real cost on a large box).
+ */
+export async function landmarkLabelsForDirs(
+  boxRoot: string,
+  dirs: Iterable<string>,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  await Promise.all(
+    [...new Set(dirs)].map(async (dir) => {
+      const absDir = path.join(boxRoot, dir);
+      let names: string[];
+      try {
+        names = await fs.readdir(absDir);
+      } catch (e) {
+        if (errnoCode(e) !== "ENOENT") {
+          console.warn(`landmark label: could not read ${absDir}:`, e);
+        }
+        return;
+      }
+      const cardName = names.find((n) => n.endsWith(".landmark.card"));
+      if (cardName === undefined) return;
+      let fields;
+      try {
+        fields = parseLandmarkFields(await fs.readFile(path.join(absDir, cardName), "utf-8"));
+      } catch (e) {
+        console.warn(`landmark label: could not read ${path.join(absDir, cardName)}:`, e);
+        return;
+      }
+      if (fields === null) return;
+      const label = fields.navigation?.label ?? "";
+      out.set(dir, label !== "" ? label : path.basename(cardName, ".landmark.card"));
+    }),
+  );
+  return out;
+}
+
 export interface LandmarkSummary {
   dir: string;
   label: string;

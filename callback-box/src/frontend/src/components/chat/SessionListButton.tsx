@@ -96,7 +96,17 @@ function SessionListMenu({
     return <div className="px-3 py-2 text-sm text-warm-500">No sessions yet</div>;
   }
 
-  const layout = layoutSessionList({ sessions, contextDir });
+  // Prefer the current session's own row over the `contextDir` prop: a resumed
+  // root-bound chat resolves to `null` there (the history file doesn't persist
+  // an empty binding, and `directoryFor` can't tell "root" from "unknown"), and
+  // the prop is only populated for a brand-new chat anyway. The row's
+  // `contextDir` comes from the husk and is already normalized, so it matches
+  // the other rows exactly.
+  const activeRow = sessions.find((s) => s.sessionId === currentSessionId);
+  const layout = layoutSessionList({
+    sessions,
+    contextDir: activeRow?.contextDir ?? contextDir,
+  });
   const rowProps = { boxSlug, currentSessionId };
 
   if (layout.kind === "flat") {
@@ -153,6 +163,7 @@ function SessionRows({
         return (
           <Link
             key={s.sessionId}
+            role="menuitem"
             to={href(`/${boxSlug}/chat`)}
             search={toSearch({ session: s.sessionId })}
             onClick={close}

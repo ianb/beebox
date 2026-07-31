@@ -23,7 +23,7 @@ import {
   tailForMinUserMessages,
 } from "../../../cli/lib/session.js";
 import { loadAllSessions } from "../../../core/chat/session/list.js";
-import { loadLandmarkSummaries } from "../../../core/landmark/summaries.js";
+import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
 
 export const chatSessionProcedures = {
   // Load + slice a session's conversation history.
@@ -73,12 +73,16 @@ export const chatSessionProcedures = {
   // landmark's chats first: `contextDir` ("" for root/legacy-unbound) plus the
   // landmark's display label, resolved here so the client stays dumb.
   sessions: publicProcedure.query(async ({ ctx }) => {
-    const [rows, landmarks, mostActive] = await Promise.all([
+    const [rows, mostActive] = await Promise.all([
       loadAllSessions(ctx.boxRoot),
-      loadLandmarkSummaries(ctx.boxRoot),
       getMostActive(ctx.boxRoot),
     ]);
-    const labelByDir = new Map(landmarks.map((lm) => [lm.dir, lm.label]));
+    // Only the dirs these sessions actually bind to — a handful — rather than
+    // globbing the whole box for landmark cards on every dropdown open.
+    const labelByDir = await landmarkLabelsForDirs(
+      ctx.boxRoot,
+      rows.map((row) => row.contextDir ?? ""),
+    );
 
     const sessions = rows.map((row) => {
       const contextDir = row.contextDir ?? "";

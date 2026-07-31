@@ -17,6 +17,7 @@ import * as fs from "node:fs/promises";
 import { listChatHusks } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel } from "../session-label.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 
 export interface ChatSessionRow {
   sessionId: string;
@@ -37,8 +38,14 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
     let mtime: Date;
     try {
       mtime = (await fs.stat(logPath)).mtime;
-    } catch (_e) {
-      // log missing — session was cleaned up; nothing to resume, skip it
+    } catch (e) {
+      if (errnoCode(e) !== "ENOENT") {
+        // Not "the transcript was cleaned up" — the file may well be there and
+        // unreadable (EACCES, EIO). Dropping the chat from every list is the
+        // same outcome either way, so say so loudly rather than silently.
+        console.warn(`[chat] husk ${husk.path}: transcript unreadable, omitting session:`, e);
+      }
+      // Nothing to resume — skip it. The husk card stays browsable.
       continue;
     }
 
