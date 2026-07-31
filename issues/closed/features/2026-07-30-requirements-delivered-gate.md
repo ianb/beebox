@@ -3,7 +3,22 @@ title: "finish should check the plan's stated scope was actually delivered"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+resolution: implemented
 ---
+
+**Closed (implemented) 2026-07-31.** Added as **step 5b** in
+`.claude/agents/finish.md`: a scope-delivery check that extracts each requirement
+from the plan (and any cited issue) and classifies it MET / PARTIAL / UNMET /
+UNCLEAR against `git diff main...HEAD` `file:line` evidence — never marking MET on
+a commit message or branch name, never fabricating a citation (no evidence →
+UNCLEAR). The open questions resolved pragmatically, matching this issue's own
+recommendations: a **step inside finish.md** (not a separate agent); **report,
+don't block** (PARTIAL/UNMET surfaces in the report and sets the plan's
+implemented-vs-partial status via step 6, but does not refuse the merge, since a
+plan often outruns its branch on purpose); requirements **extracted from prose**.
+The checkbox-based hardening (coupled to
+[plans-as-execution-state](../../decisions/2026-07-30-plans-as-execution-state.md))
+is deferred as a future iteration.
 
 `.claude/agents/finish.md` reconciles planning docs with reality (step 6) and
 closes `issues/` items the work resolved (step 7b). Neither step asks the
@@ -18,7 +33,7 @@ of the work having happened, not on a scope check.
 
 ## The shape worth copying
 
-From [research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/workflow-and-orchestration.md),
+From [research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/workflow-and-orchestration.md),
 whose `requirements-verifier` is a deliberately narrow agent:
 
 - One job — was it delivered? **Never** code quality, never suggested fixes.
@@ -38,7 +53,7 @@ the obvious failure mode for a self-assessment step.
   finding has to resolve to a BLOCKED result naming what's missing — which fits
   its existing contract but adds a new class of block.
 - **What counts as the requirement source.** Our plans have no checkboxes (see
-  [plans-as-execution-state](../decisions/2026-07-30-plans-as-execution-state.md)),
+  [plans-as-execution-state](../../decisions/2026-07-30-plans-as-execution-state.md)),
   so there's no crisp list to check against — the verifier would have to extract
   requirements from prose, which is exactly where fabrication risk lives. That
   decision item and this one are coupled: if plans grow checkboxes, this gets a
