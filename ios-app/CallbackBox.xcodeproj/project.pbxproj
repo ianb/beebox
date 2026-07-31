@@ -36,6 +36,7 @@
 		5A1000072C3C000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000182C3C000100000001 /* Assets.xcassets */; };
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
+		5A100AA02C3C000100000001 /* AudioSessionRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100AB02C3C000100000001 /* AudioSessionRouting.swift */; };
 		5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001B2C3C000100000001 /* SpeechDictation.swift */; };
 		5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
@@ -55,6 +56,7 @@
 		5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003A2C3C000100000001 /* CaptureAcquisition.swift */; };
 		5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003B2C3C000100000001 /* NativeCaptureView.swift */; };
 		5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003C2C3C000100000001 /* NativeCaptureController.swift */; };
+		5A100AC02C3C000100000001 /* AudioSessionRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */; };
 		5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */; };
 		5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001132C3C000100000001 /* CaptureModelsTests.swift */; };
 		5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */; };
@@ -107,6 +109,7 @@
 		5A1000182C3C000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
 		5A10001A2C3C000100000001 /* NativeComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerView.swift; sourceTree = "<group>"; };
+		5A100AB02C3C000100000001 /* AudioSessionRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionRouting.swift; sourceTree = "<group>"; };
 		5A10001B2C3C000100000001 /* SpeechDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictation.swift; sourceTree = "<group>"; };
 		5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPhotoThreshold.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
@@ -127,6 +130,7 @@
 		5A10003B2C3C000100000001 /* NativeCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureView.swift; sourceTree = "<group>"; };
 		5A10003C2C3C000100000001 /* NativeCaptureController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureController.swift; sourceTree = "<group>"; };
 		5A1001102C3C000100000001 /* CallbackBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CallbackBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionRoutingTests.swift; sourceTree = "<group>"; };
 		5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywordsTests.swift; sourceTree = "<group>"; };
 		5A1001132C3C000100000001 /* CaptureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModelsTests.swift; sourceTree = "<group>"; };
 		5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureFinishTests.swift; sourceTree = "<group>"; };
@@ -236,6 +240,7 @@
 			children = (
 				C83000022C3C000100000001 /* BoxLockManager.swift */,
 				5A1000192C3C000100000001 /* ChatAPI.swift */,
+				5A100AB02C3C000100000001 /* AudioSessionRouting.swift */,
 				5A10001B2C3C000100000001 /* SpeechDictation.swift */,
 				5A1000282C3C000100000001 /* SpeechAnalyzerSession.swift */,
 				5A10001F2C3C000100000001 /* SpeechKeywords.swift */,
@@ -269,6 +274,7 @@
 			isa = PBXGroup;
 			children = (
 				C83000042C3C000100000001 /* BoxLockTests.swift */,
+				5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */,
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
 				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
 				5A100F022D7A000100000001 /* NativeCaptureFinishTests.swift */,
@@ -407,6 +413,7 @@
 				5A1000082C3C000100000001 /* ChatAPI.swift in Sources */,
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
 				B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */,
+				5A100AA02C3C000100000001 /* AudioSessionRouting.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
 				5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */,
 				5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */,
@@ -433,6 +440,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A100AC02C3C000100000001 /* AudioSessionRoutingTests.swift in Sources */,
 				5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */,
 				5A1001022C3C000100000001 /* CaptureModelsTests.swift in Sources */,
 				5A100F012D7A000100000001 /* NativeCaptureFinishTests.swift in Sources */,
