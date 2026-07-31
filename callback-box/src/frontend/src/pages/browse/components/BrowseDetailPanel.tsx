@@ -23,6 +23,8 @@ interface BrowseDetailPanelProps {
   params?: Record<string, string>;
   /** Renderer override from the URL's `?view=`. */
   rendererName?: string | null;
+  /** Renderer-toggle choice, written back to the URL by the page. */
+  onSelectRenderer: (name: string) => void;
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
@@ -44,6 +46,7 @@ export function BrowseDetailPanel({
   onBack,
   onDelete,
   onNavigate,
+  onSelectRenderer,
   params,
   rendererName,
   selectedCard,
@@ -105,7 +108,14 @@ export function BrowseDetailPanel({
             ) : null}
           </div>
         </div>
-        <FileView path={selectedFilePath} mode="companion" onNavigate={onNavigate} params={params} rendererName={rendererName} />
+        <FileView
+          path={selectedFilePath}
+          mode="companion"
+          onNavigate={onNavigate}
+          onSelectRenderer={onSelectRenderer}
+          params={params}
+          rendererName={rendererName}
+        />
       </div>
     </div>
   );

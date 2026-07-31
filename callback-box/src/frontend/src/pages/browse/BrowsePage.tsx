@@ -155,6 +155,18 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     [currentPath, onNavigate],
   );
 
+  const handleSelectRenderer = useCallback(
+    (name: string) => {
+      // The renderer toggle is a view switch, so it belongs in the URL like
+      // every other one — otherwise the choice sits in FileView's local state
+      // where it outranks `?view=`, survives a same-path navigation, and can't
+      // be shared or restored by back/forward. Replace: looking at the same
+      // card a different way is not a new place.
+      onNavigate(currentPath, { search: { ...urlParams, view: name }, replace: true });
+    },
+    [currentPath, onNavigate, urlParams],
+  );
+
   const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -273,9 +285,14 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             boxSlug={boxSlug}
             deleteError={deleteError}
             deletingPath={deletingPath}
-            onBack={() => onNavigate(dirPath)}
+            onBack={() => {
+              // Replace, not push: this button closes the file, so a browser
+              // back right after it must not reopen the file it just closed.
+              onNavigate(dirPath, { replace: true });
+            }}
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
+            onSelectRenderer={handleSelectRenderer}
             params={urlParams}
             rendererName={viewer}
             selectedCard={selectedCard}
