@@ -849,6 +849,49 @@ rather than let "on git-annex" read as "safe".
   If this proves wrong, `git annex uninit` restores plain files, and
   that is the escape hatch rather than a maintained path.
 
+## BLOCKER discovered during implementation: Git LFS
+
+**Every box already uses Git LFS as well**, and the plan never accounted for
+it. Measured 2026-07-31:
+
+| box | `filter=lfs` rules | LFS-tracked files | attach manifests |
+|---|---|---|---|
+| estate | 10 | 154 | 250 |
+| personal | 10 | 11 | 12 |
+| box-family | 10 | 8 | 81 |
+| test1 (dev) | 10 | 9 | **0** |
+
+So there are three asset mechanisms in play, not two:
+
+1. **Git LFS** — `content/.gitattributes` filters `*.jpg *.jpeg *.png *.heic
+   *.m4a *.webm *.wav *.mp3 *.ogg *.frozen`, **unscoped** (any path, not just
+   `.attach/`). On estate this holds 154 files, all under
+   `box/inbox/capture-*/` — pre-`.attach` legacy captures.
+2. **Asset manifests** — `.attach/` assets, gitignored.
+3. **git-annex** — what this plan adds.
+
+Two consequences, and the first is a hard blocker for Track B3:
+
+- **The LFS extension list is exactly `ASSET_EXTENSIONS`, but unscoped.** The
+  moment `unignore` makes a `.attach/` `.jpg` visible to git, that path matches
+  *both* `filter=lfs` (from `.gitattributes`) and `annex.largefiles`. Which one
+  git actually applies is **unresolved** — an attempt to test it was
+  inconclusive because LFS did not engage for either the test or the control
+  file, so nothing was established either way. This must be settled before any
+  box converts. If LFS wins, the migration silently produces LFS pointers
+  instead of annex pointers; `to-annex`'s `NotAnnexedError` check would catch
+  it and refuse, which is the right failure but not a plan.
+- **The 154 LFS files are a separate population with no decision attached.**
+  They are outside `.attach/` scopes entirely, so neither the manifest model
+  nor this plan covers them. Leaving them in LFS is defensible; the plan should
+  say so explicitly rather than by omission.
+
+Also worth noting: **test1 has zero manifests** despite 16 asset-ignore
+patterns — the same unclaimed hole found on `personal-test`. A box in that
+state has nothing for `to-annex` to verify against, so the migration's
+before/after hash comparison is vacuous there. `cb attachments migrate` must
+run first, or the box converts with no independent record checked.
+
 ## Open design questions
 
 1. **`git annex fsck` cadence on estate.** Lean:

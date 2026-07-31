@@ -228,20 +228,24 @@ ${PRE_COMMIT_MARKER}
 set -e
 ${cd}
 
-# git-annex FIRST, deliberately above the cb fallback below.
+# git-annex FIRST, above the cb fallback: \`git annex init\` declines to install
+# its own hook when ours exists, so this line is the only thing running annex at
+# commit time, and below the \`cb\`-not-found \`exit 0\` it would vanish on exactly
+# the under-provisioned machine most likely to lack git-annex too.
 #
-# \`git annex init\` declines to install its own pre-commit hook when one already
-# exists (ours does), so this line is the only thing that runs annex at commit
-# time. Placed below the \`cb\`-not-found \`exit 0\`, it would silently vanish on
-# any machine where cb is not resolvable — exactly the under-provisioned machine
-# most likely to also be missing git-annex, and the failure would be assets
-# quietly entering git history as raw bytes.
-if command -v git-annex >/dev/null 2>&1; then
-  git annex pre-commit
-else
-  echo "pre-commit: git-annex is not installed; assets would be committed as raw bytes." >&2
-  echo "  Install it (apt install git-annex / brew install git-annex) or run: cb doctor annex" >&2
-  exit 1
+# Gated on whether THIS repo is annexed, not on whether the binary exists: a box
+# still on the manifest model must keep committing normally, or every unmigrated
+# box breaks at its next commit. Once annexed, a missing binary is fatal —
+# committing without the clean filter puts asset bytes straight into history.
+if [ -d "$(git rev-parse --git-dir)/annex" ]; then
+  if command -v git-annex >/dev/null 2>&1; then
+    git annex pre-commit
+  else
+    echo "pre-commit: this repo uses git-annex but git-annex is not installed;" >&2
+    echo "  assets would be committed as raw bytes. Install it" >&2
+    echo "  (apt install git-annex / brew install git-annex) or run: cb doctor annex" >&2
+    exit 1
+  fi
 fi
 
 CB=${JSON.stringify(cbBin)}

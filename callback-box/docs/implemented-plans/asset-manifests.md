@@ -1,6 +1,19 @@
 # Asset Manifests
 
-**Status: Implemented.** The manifest format, the auto-claim/verify scan,
+**Status: SUPERSEDED by git-annex — see [`../assets.md`](../assets.md).**
+
+This describes the system built in May 2026 and still on disk in every box that
+has not run `cb attachments to-annex`. It is kept because it accurately records
+what those boxes are doing, and because the migration reads the manifests it
+describes. Once every box is converted this becomes history only.
+
+The replacement's reasoning is in
+[`../plans/asset-annex.md`](../plans/asset-annex.md); the short version is that
+this design was a partial re-implementation of git-annex, and the parts it
+skipped — location tracking, a copy-count invariant, and periodic verification —
+are the parts that matter.
+
+**Originally: Implemented.** The manifest format, the auto-claim/verify scan,
 the pre-commit hook, and the `cb attachments` CLI have all shipped. The
 manifest tracks only each scope's *current* state — there is no asset
 version history (the only history is git's, which is exactly what these
@@ -285,7 +298,7 @@ space, run `git filter-repo` later — separate, riskier operation.
 - **Attach-scope-only enforcement.** Right now the hook and gitignore
   scope are both `**/*.attach/**`. If agents start putting big binaries
   outside attach scopes routinely (despite the advisory), revisit.
-  Noted in [issues/code-quality/2026-05-27-review-asset-manifest-scope.md](../../issues/code-quality/2026-05-27-review-asset-manifest-scope.md).
+  Noted in [issues/code-quality/2026-05-27-review-asset-manifest-scope.md](../../../issues/code-quality/2026-05-27-review-asset-manifest-scope.md).
 - **Manifest format.** JSON per-dir was chosen over per-asset sidecar
   and over a session-level recursive manifest. Worth revisiting if
   per-dir produces noisy diffs in practice.

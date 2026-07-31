@@ -22,7 +22,7 @@
  * The gitignore subcommands (init-gitignore, untrack-assets) live in the
  * sibling attachments-gitignore.ts.
  *
- * See docs/asset-manifests.md.
+ * See docs/implemented-plans/asset-manifests.md.
  */
 
 import * as fs from "node:fs/promises";

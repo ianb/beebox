@@ -5,7 +5,7 @@
  *   - `cb attachments migrate` (claim every binary into a manifest)
  *   - `cb attachments verify` (read-only check)
  *
- * See docs/asset-manifests.md for the algorithm.
+ * See docs/implemented-plans/asset-manifests.md for the algorithm.
  */
 
 import * as fs from "node:fs/promises";

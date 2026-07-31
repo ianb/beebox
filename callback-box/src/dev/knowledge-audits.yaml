@@ -4171,3 +4171,39 @@ tests:
     watch_for: "Names the SDK context-window meaning, and does NOT confuse it with chat review"
     correct_contains: ["context"]
     tags: [vocabulary, chat-review]
+
+  # === Assets (git-annex) ===
+  #
+  # Status (2026-07-31): 1 pass, 1 BLOCKED. Run against the worktree test1 box.
+  #
+  # asset-content-absent passes cleanly and is the important one — the agent
+  # names the pointer, both causes, `git annex get`, AND volunteers that
+  # on-annex is not backed up while numcopies is 1.
+  #
+  # asset-add-workflow is BLOCKED, and usefully so. It failed twice:
+  #   1. As first written it asked "how do I add a photo" and required
+  #      "git add", but a box agent legitimately answers `mkdir`/`cp` — the
+  #      pre-commit hook commits, not the agent. Criterion was wrong; rewritten
+  #      to ask directly about the misconception worth catching.
+  #   2. The rewrite still fails, because test1 is NOT annexed — it uses Git
+  #      LFS. The agent correctly answered for the box it is in, naming the LFS
+  #      filters. That is a right answer to the question asked.
+  # This audit cannot pass until a box is actually migrated. Finding it this
+  # way is what surfaced the Git-LFS blocker now recorded in
+  # docs/plans/asset-annex.md — every box has BOTH LFS and asset manifests.
+  #
+  # Run: pnpm knowledge-audit run --box <abs-path> --filter assets
+
+  - id: asset-content-absent
+    prompt: "I opened a photo in a box and the file is about 100 bytes of text starting with /annex/objects/. What happened, and is my photo gone?"
+    expected_level: knows_directly
+    watch_for: "Recognizes an annex pointer (content not fetched locally) and answers `git annex get` — NOT that the file is corrupt or lost"
+    correct_contains: ["git annex get"]
+    tags: [assets]
+
+  - id: asset-add-workflow
+    prompt: "I dropped a photo into a card's attach scope. Do I need to run `git annex add` on it, or does something else handle that?"
+    expected_level: knows_directly
+    watch_for: "Says no — annex.largefiles routes it on ordinary `git add`, so the normal commit path handles it. Reaching for `git annex add` means it learned a special case that does not exist here (and it locks files, breaking in-place edits)."
+    correct_contains: ["largefiles"]
+    tags: [assets]

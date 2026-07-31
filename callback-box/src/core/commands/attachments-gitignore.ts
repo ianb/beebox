@@ -11,7 +11,7 @@
  * public command surface still lives in attachments.ts; these helpers are
  * imported back there.
  *
- * See docs/asset-manifests.md.
+ * See docs/implemented-plans/asset-manifests.md.
  */
 
 import * as fs from "node:fs/promises";
@@ -51,7 +51,7 @@ export { ASSET_EXTENSIONS, assetGitignorePatterns } from "../../lib/asset-extens
 
 const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
-# (size + sha256), not committed directly. See docs/asset-manifests.md.
+# (size + sha256), not committed directly. See docs/implemented-plans/asset-manifests.md.
 ${assetGitignorePatterns()}
 `;
 
