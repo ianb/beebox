@@ -3,11 +3,15 @@
 How photos, scans, audio, and video stay tracked by git without their bytes
 living in git's object database.
 
-**Status: implemented, not yet rolled out.** The code below exists and is
-tested; no box has been converted. The previous system — per-directory
-`manifest.json` files alongside gitignored bytes — is described in
+**Status: implemented; one box converted.** The dev worktree's `test1` clone
+was migrated on 2026-07-31 (137 assets / 106 MB annexed, 99 manifests removed,
+9 Git LFS files taken over) and verified: `git annex fsck` clean, all seven
+`cb doctor annex` checks green, ordinary commits working, new images annexed
+automatically, and a fresh clone able to `git annex get` content. No production
+box has been converted. The previous system — per-directory `manifest.json`
+files alongside gitignored bytes — is described in
 [`implemented-plans/asset-manifests.md`](implemented-plans/asset-manifests.md),
-and remains what every box on disk is still using until it is migrated.
+and remains what every unmigrated box is still using.
 
 ## The model
 

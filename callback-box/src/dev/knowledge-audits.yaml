@@ -4174,23 +4174,20 @@ tests:
 
   # === Assets (git-annex) ===
   #
-  # Status (2026-07-31): 1 pass, 1 BLOCKED. Run against the worktree test1 box.
+  # Status (2026-07-31): 2/2 pass, verified on a box that is ACTUALLY annexed
+  # (the preserve-ignored-files worktree clone of test1, migrated with
+  # `cb attachments to-annex`: 137 assets / 106 MB, 99 manifests removed, 9 Git
+  # LFS files converted).
   #
-  # asset-content-absent passes cleanly and is the important one — the agent
-  # names the pointer, both causes, `git annex get`, AND volunteers that
-  # on-annex is not backed up while numcopies is 1.
-  #
-  # asset-add-workflow is BLOCKED, and usefully so. It failed twice:
-  #   1. As first written it asked "how do I add a photo" and required
-  #      "git add", but a box agent legitimately answers `mkdir`/`cp` — the
-  #      pre-commit hook commits, not the agent. Criterion was wrong; rewritten
-  #      to ask directly about the misconception worth catching.
-  #   2. The rewrite still fails, because test1 is NOT annexed — it uses Git
-  #      LFS. The agent correctly answered for the box it is in, naming the LFS
-  #      filters. That is a right answer to the question asked.
-  # This audit cannot pass until a box is actually migrated. Finding it this
-  # way is what surfaced the Git-LFS blocker now recorded in
-  # docs/plans/asset-annex.md — every box has BOTH LFS and asset manifests.
+  # Both failed before that migration, and each failure was informative:
+  #   1. asset-add-workflow as first written asked "how do I add a photo" and
+  #      required "git add" — but a box agent rightly answers `mkdir`/`cp`,
+  #      since the pre-commit hook commits, not the agent. Wrong criterion.
+  #   2. The rewrite still failed because the box was on Git LFS, and the agent
+  #      correctly described LFS. That is what surfaced the LFS overlap now
+  #      resolved in docs/plans/asset-annex.md.
+  # Neither audit can pass against an unmigrated box, which is the point: they
+  # test what an agent knows about the system the box is actually running.
   #
   # Run: pnpm knowledge-audit run --box <abs-path> --filter assets
 
