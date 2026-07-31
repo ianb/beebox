@@ -17,6 +17,8 @@ import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
+import { createGitAnnexService } from "../../../services/git-annex.js";
+import { runAnnexDoctor } from "../../../core/annex/doctor.js";
 import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
@@ -131,6 +133,39 @@ export interface RunHealthChecksOptions {
 }
 
 /**
+ * The git-annex conditions `cb doctor annex` cannot repair.
+ *
+ * Only those two: the other five are fixed automatically on `cb serve` /
+ * `cb init`, so surfacing them here would report problems that no longer
+ * exist by the time anyone reads the output. Both are `error` severity so the
+ * deploy runbooks gate on them — the right lever, since refusing to *serve*
+ * would take a box offline for a degradation (missing binary, which already
+ * fails loudly at every read and commit) or for a loss already sustained
+ * (missing content).
+ */
+async function annexHealthChecks(args: { repoRoot: string; boxRoot: string }): Promise<HealthCheck[]> {
+  const result = await runAnnexDoctor(createGitAnnexService(), {
+    repoRoot: args.repoRoot,
+    boxRoot: args.boxRoot,
+    options: { check: true },
+  });
+  const out: HealthCheck[] = [];
+  for (const id of ["binary", "content-present"]) {
+    const check = result.checks.find((c) => c.id === id);
+    // Absent when the run short-circuited on a missing binary, which the
+    // "binary" check itself already reports.
+    if (check === undefined) continue;
+    out.push({
+      name: `annex-${id}`,
+      ok: check.status !== "failed",
+      message: check.message,
+      severity: "error",
+    });
+  }
+  return out;
+}
+
+/**
  * Run all health checks for a box.
  */
 export async function runHealthChecks(
@@ -194,6 +229,8 @@ export async function runHealthChecks(
       : "store/archive/ is not writable — inbox processing will fail",
     severity: "error",
   });
+
+  checks.push(...(await annexHealthChecks({ repoRoot: gitRoot, boxRoot })));
 
   // --- Interface card checks ---
 
