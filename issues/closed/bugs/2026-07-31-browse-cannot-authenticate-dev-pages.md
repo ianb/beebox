@@ -12,7 +12,7 @@ credential valid at the public prod front door — but by adding an opt-in
 `CB_BROWSE_API_KEY` (`callback-box/src/core/browse-key.ts`), absent by default
 and delivered to the browser as a cookie so it also covers the WebSocket
 upgrade. Design and what building it changed:
-`callback-box/docs/plans/agent-token-browser-auth.md`.
+`callback-box/docs/implemented-plans/agent-token-browser-auth.md`.
 
 Defect 3 below (the mobile-bootstrap hard-401) is NOT fixed — it is sidestepped,
 because `bin/browse` now sends no `Authorization` header. The trigger is still

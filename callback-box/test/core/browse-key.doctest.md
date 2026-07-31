@@ -10,7 +10,7 @@ every input. That is what these tests exist to keep from regressing.
 Scope note: this file tests **the predicate only**, not the gates that call it.
 Each gate's own wiring — that it consults this at all, and in the right place —
 is not covered here; the end-to-end check that it is lives in
-`docs/plans/agent-token-browser-auth.md`.
+`docs/implemented-plans/agent-token-browser-auth.md`.
 
 It is header-shaped rather than Fastify-shaped precisely so every call site —
 several of which see a raw `http.IncomingMessage` — shares one implementation.

@@ -46,7 +46,7 @@ Candidates, none confirmed:
   the event's `path` and the browse `dirPath`.
 
 Reproduce with the isolated-router setup in
-`callback-box/docs/plans/agent-token-browser-auth.md` — that is now the only way
+`callback-box/docs/implemented-plans/agent-token-browser-auth.md` — that is now the only way
 an agent can drive the dev app in a browser at all.
 
 ## Related
