@@ -6,7 +6,7 @@ plays quietly. This plan gives the app one owner for the audio session, one
 recording configuration, and an explicit idle configuration.
 
 Source issue:
-[iOS: audio drops off Bluetooth and plays very quietly](../../../issues/bugs/2026-07-31-ios-audio-session-bluetooth-drop-low-volume.md).
+[iOS: audio drops off Bluetooth and plays very quietly](../../../issues/closed/bugs/2026-07-31-ios-audio-session-bluetooth-drop-low-volume.md).
 
 Authority for every AVFoundation claim below is the iOS 26.5 SDK header
 shipped with the installed Xcode 26.6:

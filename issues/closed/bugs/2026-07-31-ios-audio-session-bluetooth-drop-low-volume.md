@@ -3,17 +3,16 @@ title: "iOS: audio drops off Bluetooth and plays very quietly — the mic's AVAu
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, using audio on the iOS app
-needs: [manual-testing]
 design: ../../callback-box/docs/plans/ios-audio-session-routing.md
 labels: [mobile]
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — fix landed on `worktree-ios-audio-session-fix`
-> (`f0b36d5a`, `0dad587f`); on a phone with Bluetooth headphones, play audio →
-> dictate → stop, and confirm output stays on Bluetooth at full volume
-> throughout. Full checklist in the
-> [plan](../../callback-box/docs/plans/ios-audio-session-routing.md). Only Ian
-> clears this.
+> **✅ Closed 2026-07-31** — fixed in `f0b36d5a` + `0dad587f` (merged as
+> `aeac5229`), designed in
+> [the plan](../../../callback-box/docs/implemented-plans/ios-audio-session-routing.md).
+> The boxholder confirmed on a real phone with a Bluetooth accessory that
+> audio now stays on Bluetooth at full volume through dictation.
 
 On iOS the audio is odd: it **won't stay on a Bluetooth output** and the **volume
 is very low**. The boxholder suspected the microphone, and that's right — it's the
@@ -75,5 +74,5 @@ confirm the mic works AND audio doesn't jump to the phone speaker or go quiet;
 stop → confirm output returns to Bluetooth at full volume. Can't be caught in a
 headless test — needs a device and a BT accessory.
 
-Belongs in the [iOS input-plane parity](../features/2026-07-19-ios-input-plane-parity.md)
+Belongs in the [iOS input-plane parity](../../features/2026-07-19-ios-input-plane-parity.md)
 work, which owns the native audio/composer surface.
