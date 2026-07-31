@@ -12,6 +12,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { readAssetContent } from "../../lib/asset-content.js";
+import { describeAbsentContent } from "../../lib/annex-pointer.js";
 import type { PreAction, PreActionContext } from "./types.js";
 import { transcribeAudio, type TranscriptionError } from "../transcription/index.js";
 import { getBoxTimeISO } from "../../lib/time.js";
@@ -69,8 +71,23 @@ export const transcribePreAction: PreAction = {
       return { modified: false, error: "No audio attachment found" };
     }
 
+    // Absent annexed audio is ~100 bytes of pointer text, not audio. Without
+    // this it goes to the transcription provider and comes back as an opaque
+    // provider error recorded on the card, with nothing pointing at the real
+    // cause. Marked non-permanent: fetching the content makes it retryable.
+    const audio = await readAssetContent(audioFile);
+    if (!audio.ok) {
+      const message = describeAbsentContent(audio.error.pointer, path.basename(audioFile));
+      applyFrontmatterError(ctx.frontmatter.fields, {
+        permanent: false,
+        "attempted-at": getBoxTimeISO(ctx.boxRoot),
+        message,
+      });
+      return { modified: true, error: message };
+    }
+
     try {
-      const audioBuffer = await fs.readFile(audioFile);
+      const audioBuffer = Buffer.from(audio.value);
       const filename = path.basename(audioFile);
       const existingContent = getFrontmatterContent(ctx.frontmatter.fields);
       const result = await transcribeAudio({

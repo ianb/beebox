@@ -1,7 +1,7 @@
 /**
  * Asset manifests — track binary assets (the gitignored subset of
  * attachments) via a per-`.attach/` `manifest.json` file while the asset
- * bytes themselves stay gitignored. See docs/asset-manifests.md for the
+ * bytes themselves stay gitignored. See docs/implemented-plans/asset-manifests.md for the
  * full design.
  *
  * Terminology: an *attachment* is anything inside a `.attach/` scope (a

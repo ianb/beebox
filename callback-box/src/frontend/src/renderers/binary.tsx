@@ -23,11 +23,17 @@ function BinaryRenderer({ data }: RendererProps) {
     queryKey: ["file-meta", data.path],
     queryFn: async () => {
       const resp = await fetch(url, { method: "HEAD" });
+      // 409 is the annexed-but-absent case: the file is tracked, its bytes
+      // live elsewhere. Distinguished from a real failure so the UI can say
+      // "not fetched" rather than "broken" — a very different thing to a
+      // reader deciding whether their data is gone.
+      if (resp.status === 409) return { absent: true as const };
       if (!resp.ok) {
         const message = `HEAD ${data.path}: ${resp.status}`;
         throw new RequestError(message);
       }
       return {
+        absent: false as const,
         size: Number(resp.headers.get("content-length") ?? "0"),
         contentType: resp.headers.get("content-type") ?? "application/octet-stream",
       };
@@ -40,15 +46,22 @@ function BinaryRenderer({ data }: RendererProps) {
       <Text as="div" tone="subtle" size="sm" mono breakAll>{data.path}</Text>
       {isLoading ? (
         <Text as="div" tone="subtle" size="sm">Loading file info…</Text>
+      ) : meta?.absent === true ? (
+        <Text as="div" tone="subtle" size="sm">
+          Content is not stored on this machine. Fetch it with{" "}
+          <Text mono>git annex get {data.path}</Text>.
+        </Text>
       ) : meta ? (
         <Stack gap="xs">
           <Text as="div" size="sm"><Text tone="subtle">Size:</Text> {formatBytes(meta.size)}</Text>
           <Text as="div" size="sm"><Text tone="subtle">Type:</Text> {meta.contentType}</Text>
         </Stack>
       ) : null}
-      <ExternalLink href={url} variant="button" download={basename} className="self-start mt-2">
-        Download
-      </ExternalLink>
+      {meta?.absent === true ? null : (
+        <ExternalLink href={url} variant="button" download={basename} className="self-start mt-2">
+          Download
+        </ExternalLink>
+      )}
     </Stack>
   );
 }
