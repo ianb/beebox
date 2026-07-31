@@ -105,15 +105,46 @@ readOnly.checks.find((c) => c.id === "thin")?.message.includes("git config annex
 await box.cleanup();
 ```
 
-## Uninitialized, stale largefiles, dirty journal
+## An un-migrated box is left completely alone
 
-All three self-heal:
+A box still on the manifest model is in a correct state, not a broken one — and
+the doctor must not "fix" it. `git annex init` writes `* filter=annex` into
+`.git/info/attributes`, the highest-precedence attributes file, which instantly
+stops Git LFS from smudging anything in that repository. Every unmigrated box
+uses LFS, so auto-initializing would half-break each one: annexing nothing while
+making its LFS content unreachable until `git annex uninit`.
+
+```ts
+const box = await makeTmpBox();
+const annex = createFakeGitAnnex({ initialized: false });
+const result = await runAnnexDoctor(annex, {
+  repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
+});
+statuses(result)
+=> binary=ok initialized=ok
+
+annex.calls.length
+=> 0
+
+result.healthy
+=> true
+
+result.checks[1]?.message.includes("cb attachments to-annex")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Stale largefiles and a dirty journal self-heal
+
+On a box that IS annexed:
 
 ```ts
 const box = await makeTmpBox();
 await installHook(box);
 const annex = createFakeGitAnnex({
-  initialized: false,
   gitConfig: { "annex.thin": "false" },
   annexConfig: { "annex.largefiles": "include=*.attach/*" },
   unflushedJournal: true,
@@ -122,7 +153,7 @@ const result = await runAnnexDoctor(annex, {
   repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
-=> binary=ok initialized=repaired thin=ok largefiles=repaired content-present=ok journal=repaired hook=ok
+=> binary=ok initialized=ok thin=ok largefiles=repaired content-present=ok journal=repaired hook=ok
 ```
 
 A *stale* largefiles is repaired, not just an absent one. That matters: the

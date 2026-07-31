@@ -182,19 +182,30 @@ export async function runAnnexDoctor(
   }
   checks.push({ id: "binary", status: "ok", message: `git-annex ${version}` });
 
-  // 2. Repository initialized.
-  if (await annex.isInitialized(repoRoot)) {
-    checks.push({ id: "initialized", status: "ok", message: "repository is annex-initialized" });
-  } else if (readOnly) {
+  // 2. Is this box on git-annex at all?
+  //
+  // A box that has not run `cb attachments to-annex` is still on the manifest
+  // model, and that is a perfectly correct state — not a defect to repair. The
+  // doctor must NOT initialize it: `git annex init` writes `* filter=annex`
+  // into `.git/info/attributes`, the highest-precedence attributes file, which
+  // immediately stops Git LFS from smudging anything in that repository. Every
+  // unmigrated box uses LFS, so an auto-init here would half-break each one —
+  // annexing nothing while making its LFS content unreachable.
+  //
+  // Migration is `cb attachments to-annex`'s job, which does these steps in an
+  // order that keeps LFS working until it is deliberately retired. So: report
+  // and stop.
+  if (!(await annex.isInitialized(repoRoot))) {
     checks.push({
       id: "initialized",
-      status: "failed",
-      message: "repository is not annex-initialized. Run `git annex init`.",
+      status: "ok",
+      message:
+        "not on git-annex yet (still the manifest model) — nothing to check. " +
+        "Migrate with `cb attachments to-annex`.",
     });
-  } else {
-    await annex.init(repoRoot, options?.description ?? path.basename(repoRoot));
-    checks.push({ id: "initialized", status: "repaired", message: "ran `git annex init`" });
+    return { checks, healthy: true };
   }
+  checks.push({ id: "initialized", status: "ok", message: "repository is annex-initialized" });
 
   // 3. annex.thin must be false. This is THE check that fires in practice:
   //    annex.thin is plain git config, so it does not propagate to clones and
