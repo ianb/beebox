@@ -11,7 +11,7 @@ landmarks and hid the chats grouped under them, while `/<box>/landmarks` (a
 separate frontmatter reader) kept working.
 
 ```ts setup
-import { loadLandmarkSummaries } from "../../src/webapp/trpc/routers/chat.js";
+import { loadLandmarkSummaries } from "../../src/core/landmark/summaries.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

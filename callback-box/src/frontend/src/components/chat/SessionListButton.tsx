@@ -3,6 +3,11 @@
  * sessions. Each row shows the first user message as a label and the
  * session-id suffix for disambiguation. Clicking a row navigates to
  * `/chat?session=<id>` so ChatPage can route into it.
+ *
+ * The list is landmark-aware but never landmark-*filtered*: the chats bound to
+ * the landmark you're chatting in come first under its name, and everything
+ * else follows under "Other chats", tagged with where it lives. Every chat in
+ * the box stays one scroll away — prominence, not scoping.
  */
 
 import { useState, useEffect } from "react";
@@ -11,6 +16,7 @@ import { href, toSearch } from "../../lib/routing";
 import { getChatSessions, type ChatSessionInfo } from "../../api";
 import { cbSource } from "../../lib/source-tag";
 import { Dropdown, useDropdownClose } from "../ui/Dropdown";
+import { layoutSessionList } from "./session-list-grouping";
 
 /**
  * Format a date string as relative time (e.g., "2h ago", "3d ago").
@@ -26,7 +32,7 @@ function relativeTime(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export function SessionListButton() {
+export function SessionListButton({ contextDir }: { contextDir: string | null }) {
   const { boxSlug } = useParams({ strict: false });
   // eslint-disable-next-line no-restricted-syntax -- `strict: false` collapses the search type across every route; this component only ever renders under routes that carry an optional `session` string param, matching the ChatPage/HistoryPage convention.
   const search = useSearch({ strict: false }) as { session?: string };
@@ -49,7 +55,11 @@ export function SessionListButton() {
         </button>
       )}
     >
-      <SessionListMenu boxSlug={boxSlug ?? ""} currentSessionId={currentSessionId} />
+      <SessionListMenu
+        boxSlug={boxSlug ?? ""}
+        currentSessionId={currentSessionId}
+        contextDir={contextDir}
+      />
     </Dropdown>
   );
 }
@@ -59,8 +69,15 @@ export function SessionListButton() {
  * opens (which is when we lazy-fetch the session list) and can close the
  * Dropdown when a row is selected.
  */
-function SessionListMenu({ boxSlug, currentSessionId }: { boxSlug: string; currentSessionId: string | null }) {
-  const close = useDropdownClose();
+function SessionListMenu({
+  boxSlug,
+  currentSessionId,
+  contextDir,
+}: {
+  boxSlug: string;
+  currentSessionId: string | null;
+  contextDir: string | null;
+}) {
   const [sessions, setSessions] = useState<ChatSessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -78,6 +95,56 @@ function SessionListMenu({ boxSlug, currentSessionId }: { boxSlug: string; curre
   if (sessions.length === 0) {
     return <div className="px-3 py-2 text-sm text-warm-500">No sessions yet</div>;
   }
+
+  const layout = layoutSessionList({ sessions, contextDir });
+  const rowProps = { boxSlug, currentSessionId };
+
+  if (layout.kind === "flat") {
+    return <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} {...rowProps} />;
+  }
+  return (
+    <>
+      <SessionGroup label={layout.hereLabel}>
+        <SessionRows sessions={layout.here} showLandmark={false} {...rowProps} />
+      </SessionGroup>
+      <SessionGroup label="Other chats">
+        <SessionRows sessions={layout.elsewhere} showLandmark {...rowProps} />
+      </SessionGroup>
+    </>
+  );
+}
+
+/**
+ * A labelled run of rows. The heading is `aria-hidden` because the group's
+ * `aria-label` already announces it — otherwise a screen reader reads the
+ * name twice on entering the group.
+ */
+function SessionGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div role="group" aria-label={label}>
+      <div
+        aria-hidden="true"
+        className="px-3 py-1 bg-warm-50 border-y border-warm-100 text-xs font-medium uppercase tracking-wide text-warm-500 truncate"
+      >
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SessionRows({
+  sessions,
+  boxSlug,
+  currentSessionId,
+  showLandmark,
+}: {
+  sessions: ChatSessionInfo[];
+  boxSlug: string;
+  currentSessionId: string | null;
+  showLandmark: boolean;
+}) {
+  const close = useDropdownClose();
   return (
     <>
       {sessions.map((s) => {
@@ -103,6 +170,9 @@ function SessionListMenu({ boxSlug, currentSessionId }: { boxSlug: string; curre
                 <span className="text-xs text-success-dark">active</span>
               ) : null}
               <span className="text-xs text-warm-500">{relativeTime(s.lastUsedAt)}</span>
+              {showLandmark ? (
+                <span className="text-xs text-warm-500 truncate">in {s.landmarkLabel}</span>
+              ) : null}
             </div>
           </Link>
         );
