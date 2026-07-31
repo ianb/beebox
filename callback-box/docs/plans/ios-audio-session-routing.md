@@ -198,6 +198,22 @@ are the ones already visible in `ios-app/CallbackBox/Services/`.
   [Audio crashes when connected to AirPods](https://developer.apple.com/forums/thread/705706).
   This plan makes that route change reachable for the first time, so it is
   Track 3.
+- **`.notifyOthersOnDeactivation` is deactivation-only.**
+  `AVAudioSessionTypes.h:658-660`: *"Notify an interrupted app that the
+  interruption has ended and it may resume playback. **Only valid on session
+  deactivation**."* Both original call sites passed it to `setActive(true)`
+  (`SpeechDictation.swift:292`, `CaptureAcquisition.swift:633`). Found by
+  cross-model review; the new code passes it only when deactivating.
+- **Cross-model review (Codex, 2026-07-31) — one claim rejected.** Codex read
+  this plan against the source and reported that the `IsBusy` row in Failure
+  modes is wrong, because a failed deactivation leaves the session active. The
+  header says otherwise — `AVAudioSession.h:253-258`: *"if the session has
+  running I/Os at the time that deactivation is requested, **the session will
+  be deactivated**, but the method will return NO"*, and *"Starting in iOS
+  26.0, deactivating while IO is running will no longer return
+  AVAudioSessionErrorCodeIsBusy."* The row stands as written. Its other
+  findings — the leaked input tap, the activation option, and unowned
+  deactivation — were accepted and are in the tracks above.
 - **Searched and found nothing useful:** a search for prior art on "restore
   `.playback` after recording" as a named pattern returned only scattered
   Stack Overflow answers with no agreed shape. There is no established idiom
@@ -294,7 +310,10 @@ Each option, with its reason:
 
 **Vocabulary lock-ins.** `AudioSessionRole` with cases `.idle` and
 `.recording`; `AudioSessionConfiguration`; the controller protocol name
-`AudioSessionControlling` with `activate(role:) throws` and `deactivate()`.
+`AudioSessionControlling` with `activateRecording() throws`, `deactivate()`,
+and `prepareIdle()`. The role stays on the pure function, not on the protocol:
+`activate(role: .idle)` would be representable and wrong, since idle is
+installed without activating (cross-model review, 2026-07-31).
 `CaptureAudioSessionControlling` is deleted in favour of it — one protocol,
 not two.
 
@@ -366,7 +385,14 @@ matches the hardware. The documented outcome is a hard exception (see Prior
 art). `SpeechDictation` observes `AVAudioSession.interruptionNotification` at
 `:123` but nothing else.
 
-**Direction.** On the notification, while `state == .recording`, call
+**Direction.** Teardown must also remove the input tap unconditionally. Today
+`endRecording` removes it only inside `if audioEngine.isRunning`
+(`SpeechDictation.swift:181-184`), but a configuration change stops the engine
+on its own — so the tap survives, and the next `installTap` on that bus is a
+fatal exception. Track installation in a flag and remove it on every teardown.
+This was found by cross-model review, not by the tests.
+
+On the notification, while `state == .recording`, call
 `endRecording(cancelTranscription: false)` — keeping the transcript captured
 so far — and set `errorMessage` to a short line naming the cause ("Audio
 device changed. Dictation stopped."). Restarting into the new route is the
@@ -395,7 +421,7 @@ No critical gaps. Every row below has either a test or a visible failure.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| `setCategory` rejects the recording option set on some device (e.g. a future SDK tightens `.duckOthers` validity) | Yes — `AudioSessionRoutingTests` asserts the exact option set for both roles, so a change is caught in review, not on a phone | Yes — `activate(role:)` is `throws`; `SpeechDictation.start` already routes a thrown error to `VoiceCompositionReducer.reduce(&state, .fail(message:))` at `:367-368`, and capture's `start()` catch at `CaptureAcquisition.swift:757-768` surfaces `notice` | Clear — the user sees the message; dictation does not start |
+| `setCategory` rejects the recording option set on some device (e.g. a future SDK tightens `.duckOthers` validity) | Yes — `AudioSessionRoutingTests` asserts the exact option set for both roles, so a change is caught in review, not on a phone | Yes — `activateRecording()` is `throws`; `SpeechDictation.start` already routes a thrown error to `VoiceCompositionReducer.reduce(&state, .fail(message:))` at `:367-368`, and capture's `start()` catch at `CaptureAcquisition.swift:757-768` surfaces `notice` | Clear — the user sees the message; dictation does not start |
 | `.bluetoothHighQualityRecording` is rejected at runtime on an iOS 26 device whose route does not support it | Partial — the pure function is tested for both branches; the runtime rejection is not reproducible in a simulator | Documented by Apple as fallback, not error (`AVAudioSessionTypes.h:588-591`); if it does throw, the `throws` path above catches it | Clear — same error path |
 | `setActive(false)` returns `IsBusy` because an earcon `AVAudioPlayer` is still playing when dictation stops (`AVAudioSession.h:256-258`; `NativeEarcons.swift:138` keeps players alive) | No — timing-dependent, not reproducible headlessly | Partial — the session deactivates anyway per the header; the idle category is applied in step 3 regardless of step 2's result | Clear once logged — this plan replaces `try?` with a logged failure, so the case becomes visible instead of invisible |
 | Idle category applied but a stale recording route is still current | No | The route follows the category change; iOS re-evaluates on the next activation | Silent by design — this is the normal path, and the manual device check is what confirms it |
@@ -536,9 +562,12 @@ Done-when, as assertions:
   the low-volume bug, which was a mode choice.
 - It asserts `.idle` is `.playback` / `.default` / `[.mixWithOthers]`.
 - A capture test asserts that a fake `AudioSessionControlling` receives
-  `activate(role: .recording)` on start and `deactivate()` on every stop path,
-  including the size-limit, interruption, and background stops that
-  `CaptureAcquisitionTests` already exercises.
+  `activateRecording()` on start and `deactivate()` on the user, interruption,
+  background, and size-limit stop paths.
+- A capture test asserts that a start which fails before activation (denied
+  microphone permission) never calls `deactivate()` — the session is
+  process-global, so releasing one this recorder never acquired would tear
+  down whatever else holds it.
 - The full iOS suite passes: `xcodebuild -quiet -project
   ios-app/CallbackBox.xcodeproj -scheme CallbackBox -configuration Debug
   -destination 'platform=iOS Simulator,id=<UDID>' test`.
@@ -572,8 +601,12 @@ headphones or a speaker paired:
 4. Repeat 1-3 with a native audio capture instead of dictation.
 5. With no accessory connected, start dictation and confirm earcons come from
    the speaker, not the earpiece — this is what `.defaultToSpeaker` protects.
-6. With the ring/silent switch on, confirm speech output and voice memos
+6. Start dictation, then connect a Bluetooth device mid-dictation; repeat with
+   a disconnect. Confirm dictation stops with a message instead of crashing,
+   and that starting dictation again immediately afterwards works — that
+   second start is what a leaked input tap would kill.
+7. With the ring/silent switch on, confirm speech output and voice memos
    still play — that is the intended behaviour of the `.playback` idle
    category, not a defect.
-7. While music or a podcast is playing from another app, play a voice memo.
+8. While music or a podcast is playing from another app, play a voice memo.
    Confirm both are audible: the idle category mixes rather than ducking.

@@ -666,6 +666,7 @@ final class CaptureAudioRecorder: ObservableObject {
     private var currentURL: URL?
     private var sizeTimer: Timer?
     private var observers: [NSObjectProtocol] = []
+    private var holdsAudioSession = false
 
     init(
         sink: any CaptureAcquisitionSink,
@@ -704,12 +705,25 @@ final class CaptureAudioRecorder: ObservableObject {
         observers.forEach(NotificationCenter.default.removeObserver)
         sizeTimer?.invalidate()
         recorder?.stop()
-        audioSession.deactivate()
+        if holdsAudioSession {
+            audioSession.deactivate()
+        }
     }
 
     var isRecording: Bool {
         if case .recording = lifecycle.state { return true }
         return false
+    }
+
+    /// Release the session only if this recorder acquired it. `AVAudioSession`
+    /// is process-global; deactivating one we never activated would tear down
+    /// whatever else is using it.
+    private func releaseAudioSession() {
+        guard holdsAudioSession else {
+            return
+        }
+        holdsAudioSession = false
+        audioSession.deactivate()
     }
 
     func start() async {
@@ -724,7 +738,8 @@ final class CaptureAudioRecorder: ObservableObject {
             let url = try await sink.beginRecording(item: item)
             persisted = true
             onEvent?(.recordingPersisted(item))
-            try audioSession.activate(role: .recording)
+            try audioSession.activateRecording()
+            holdsAudioSession = true
             let recorder = try factory.makeRecorder(url: url, settings: Self.settings)
             guard recorder.record() else {
                 throw CaptureAcquisitionError.recordingDidNotStart
@@ -742,7 +757,7 @@ final class CaptureAudioRecorder: ObservableObject {
             recorder = nil
             currentItem = nil
             currentURL = nil
-            audioSession.deactivate()
+            releaseAudioSession()
             let message = error.localizedDescription
             lifecycle.fail(message)
             notice = message
@@ -765,7 +780,7 @@ final class CaptureAudioRecorder: ObservableObject {
         sizeTimer = nil
         recorder?.stop()
         recorder = nil
-        audioSession.deactivate()
+        releaseAudioSession()
         do {
             try await sink.closeRecording(itemID: itemID)
             _ = lifecycle.didClose(itemID: itemID)

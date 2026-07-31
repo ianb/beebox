@@ -113,6 +113,8 @@ final class SpeechDictation: ObservableObject {
     private var recordingFile: AVAudioFile?
     private var keywordSeedText = ""
     private var interruptionObserver: NSObjectProtocol?
+    private var tapInstalled = false
+    private var holdsAudioSession = false
     private var configurationChangeObserver: NSObjectProtocol?
 
     init(
@@ -199,7 +201,13 @@ final class SpeechDictation: ObservableObject {
     private func endRecording(cancelTranscription: Bool) {
         if audioEngine.isRunning {
             audioEngine.stop()
+        }
+        // Not conditional on `isRunning`: an engine configuration change stops
+        // the engine on its own, and a tap left installed makes the next
+        // `installTap` on this bus a fatal exception.
+        if tapInstalled {
             audioEngine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
         }
         if currentRecordingURL != nil {
             recordedAudioURL = currentRecordingURL
@@ -225,10 +233,15 @@ final class SpeechDictation: ObservableObject {
                 .recordingStopped(hasText: transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
             )
         }
-        // Deactivating alone would leave the recording category installed, so
-        // later playback would stay quiet and off Bluetooth. `deactivate()`
-        // also restores the idle configuration.
-        audioSession.deactivate()
+        // Only tear down a session this instance actually activated —
+        // `AVAudioSession` is process-global, and `start` calls this before it
+        // acquires anything. Deactivating alone would leave the recording
+        // category installed, so later playback would stay quiet and off
+        // Bluetooth; `deactivate()` also restores the idle configuration.
+        if holdsAudioSession {
+            holdsAudioSession = false
+            audioSession.deactivate()
+        }
     }
 
     func resetDictationState() {
@@ -305,7 +318,8 @@ final class SpeechDictation: ObservableObject {
         transcript = currentText
 
         do {
-            try audioSession.activate(role: .recording)
+            try audioSession.activateRecording()
+            holdsAudioSession = true
 
             let inputNode = audioEngine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
@@ -360,6 +374,7 @@ final class SpeechDictation: ObservableObject {
             let audioFile = try AVAudioFile(forWriting: recordingURL, settings: format.settings)
             currentRecordingURL = recordingURL
             recordingFile = audioFile
+            tapInstalled = true
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
                 modernSession?.append(buffer)
                 legacyRequest?.append(buffer)

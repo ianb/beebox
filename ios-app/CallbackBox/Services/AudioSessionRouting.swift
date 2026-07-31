@@ -86,8 +86,8 @@ enum AudioSessionRouting {
 }
 
 protocol AudioSessionControlling {
-    /// Install the configuration for `role` and activate the session.
-    func activate(role: AudioSessionRole) throws
+    /// Install the recording configuration and activate the session.
+    func activateRecording() throws
     /// Deactivate, then leave the idle configuration installed for playback.
     func deactivate()
     /// Install the idle configuration without activating. Used at launch.
@@ -97,10 +97,13 @@ protocol AudioSessionControlling {
 struct SystemAudioSession: AudioSessionControlling {
     private static let log = Logger(subsystem: "app.callbackbox.ios", category: "audio")
 
-    func activate(role: AudioSessionRole) throws {
+    func activateRecording() throws {
         let session = AVAudioSession.sharedInstance()
-        try apply(role: role, to: session)
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
+        try apply(role: .recording, to: session)
+        // No `.notifyOthersOnDeactivation` here: it is "only valid on session
+        // deactivation" (AVAudioSessionTypes.h:658-660). Both original call
+        // sites passed it on activation.
+        try session.setActive(true)
     }
 
     func deactivate() {

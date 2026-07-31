@@ -159,40 +159,63 @@ final class CaptureAudioSessionTests: XCTestCase {
         )
 
         await recorder.start()
-        XCTAssertEqual(session.activatedRoles, [.recording])
+        XCTAssertEqual(session.activations, 1)
         XCTAssertEqual(session.deactivations, 0)
 
         await recorder.stop()
         // `deactivate()` is what restores the idle playback configuration, so a
         // missing call here is the Bluetooth/low-volume defect returning.
         XCTAssertEqual(session.deactivations, 1)
-        XCTAssertEqual(session.activatedRoles, [.recording])
+        XCTAssertEqual(session.activations, 1)
     }
 
-    func testInterruptionStopAlsoRestoresIdle() async throws {
+    func testEveryStopReasonRestoresIdle() async throws {
+        for reason in [
+            CaptureAudioStopReason.interruption,
+            .background,
+            .sizeLimit,
+        ] {
+            let session = RecordingAudioSession()
+            let recorder = CaptureAudioRecorder(
+                sink: StubAcquisitionSink(),
+                factory: StubRecorderFactory(),
+                audioSession: session,
+                authorizer: AlwaysGrantedAuthorizer()
+            )
+
+            await recorder.start()
+            await recorder.stop(reason: reason)
+
+            XCTAssertEqual(session.deactivations, 1, "\(reason)")
+        }
+    }
+
+    func testAFailedStartNeverReleasesASessionItDidNotAcquire() async throws {
         let session = RecordingAudioSession()
         let recorder = CaptureAudioRecorder(
             sink: StubAcquisitionSink(),
             factory: StubRecorderFactory(),
             audioSession: session,
-            authorizer: AlwaysGrantedAuthorizer()
+            authorizer: DeniedAuthorizer()
         )
 
         await recorder.start()
-        await recorder.stop(reason: .interruption)
 
-        XCTAssertEqual(session.deactivations, 1)
+        // AVAudioSession is process-global. A recorder that never activated it
+        // must not deactivate whatever else is using it.
+        XCTAssertEqual(session.activations, 0)
+        XCTAssertEqual(session.deactivations, 0)
     }
 }
 
 @MainActor
 private final class RecordingAudioSession: AudioSessionControlling {
-    private(set) var activatedRoles: [AudioSessionRole] = []
+    private(set) var activations = 0
     private(set) var deactivations = 0
     private(set) var idlePreparations = 0
 
-    nonisolated func activate(role: AudioSessionRole) throws {
-        MainActor.assumeIsolated { activatedRoles.append(role) }
+    nonisolated func activateRecording() throws {
+        MainActor.assumeIsolated { activations += 1 }
     }
 
     nonisolated func deactivate() {
@@ -237,4 +260,8 @@ private final class StubRecording: CaptureAudioRecording {
 
 private struct AlwaysGrantedAuthorizer: CaptureMicrophoneAuthorizing {
     func requestPermission() async -> Bool { true }
+}
+
+private struct DeniedAuthorizer: CaptureMicrophoneAuthorizing {
+    func requestPermission() async -> Bool { false }
 }
