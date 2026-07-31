@@ -4,6 +4,7 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, using audio on the iOS app
 needs: [manual-testing]
+design: ../../callback-box/docs/plans/ios-audio-session-routing.md
 labels: [mobile]
 ---
 
