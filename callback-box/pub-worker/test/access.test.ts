@@ -7,8 +7,10 @@
  *
  * The suite drives {@link handle} directly (rather than `SELF.fetch`) so it can
  * supply the injected `WorkerDeps` and an Access-configured `Env`; the same R2
- * binding (`env.PUB_STORE`) backs both, so seeding via `env.PUB_STORE.put` is
- * visible to the served request.
+ * bindings (`env.PUB_STORE` for manifests/bundles, `env.PUB_INGEST` for the
+ * written access-log — the content/ingestion split, Codex cross-review amendment
+ * 1) back both, so seeding/reading through `env` is visible to the served
+ * request.
  */
 import { env } from "cloudflare:test";
 import { assert, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -246,7 +248,7 @@ describe("any-account tier — any verified email, view logged", () => {
     expect(await res.text()).toBe(ANY_HTML);
     assertSecurityHeaders(res);
 
-    const logObject = await env.PUB_STORE.get(`access-log/${ANY_ID}/${LOG_ID}.json`);
+    const logObject = await env.PUB_INGEST.get(`access-log/${ANY_ID}/${LOG_ID}.json`);
     assert(logObject !== null, "expected an access-log object to be written for the any-account view");
     const entry: unknown = JSON.parse(await logObject.text());
     const parsed = z.object({ ts: z.string(), pubId: z.string(), email: z.string() }).parse(entry);

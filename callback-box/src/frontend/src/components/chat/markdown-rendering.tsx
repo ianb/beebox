@@ -15,7 +15,6 @@ import { externalImageProxyUrl, isExternalUrl, resolveContentTarget, resolveImag
 import { useBustedImageSrc } from "../../lib/file-version";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
-import { useChatContextDir } from "./chat-context-dir";
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
@@ -119,7 +118,7 @@ function ChatParagraph({ children }: { children?: React.ReactNode }) {
 
 function makeChatMarkdownComponents(
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
-  { boxSlug, contextDir }: { boxSlug: string | undefined; contextDir: string | undefined },
+  { boxSlug }: { boxSlug: string | undefined },
 ): MarkdownComponentOverrides {
   // `![…](…)` is the embed syntax. An image src embeds an image (chat sizing +
   // lightbox); any other in-box path embeds that card/file inline (frameless)
@@ -130,8 +129,9 @@ function makeChatMarkdownComponents(
       return <VideoEmbed embedUrl={video.embedUrl} title={alt || ""} className="mx-auto" />;
     }
     if (!src) return <ChatInlineImage src="" alt={alt || ""} />;
-    if (!isExternalUrl(src) && !isImagePath(src)) {
-      const target = resolveContentTarget(contextDir, src);
+    // Box-root base (`undefined`), like every other path in a chat message.
+    const target = isExternalUrl(src) || isImagePath(src) ? null : resolveContentTarget(undefined, src);
+    if (target !== null) {
       // Frameless embed (no chat header/border): the renderer owns its
       // appearance and the caption, so an embedded image card reads like a
       // plain captioned image. To open a card in the sidebar, use a link.
@@ -146,14 +146,14 @@ function makeChatMarkdownComponents(
         />
       );
     }
-    // Chat-embedded images are box-root-relative: chat has no meaningful
-    // "current directory," so a bare `photo.png` must resolve from the box root,
-    // not a bound-dir chat's subdirectory. (A leading `/…` is box-root either
-    // way; this only changes where a *bare* path lands.)
+    // Also the fall-through for an embed path that escapes the box root
+    // (`resolveContentTarget` → null): `resolveImageSrc` returns an empty src
+    // for it, so it renders as a broken image rather than silently embedding
+    // some other card.
     const resolved = resolveImageSrc(src, { boxSlug, basePath: undefined });
     return <ChatInlineImage src={resolved} alt={alt || ""} />;
   }
-  // No `Link` override: the shared `makeLink` (with basePath=contextDir and
+  // No `Link` override: the shared `makeLink` (with a box-root base and
   // onNavigate wired to the companion pane) already renders a plain-path link
   // that opens in the sidebar on click, an external link, and the retired-`view:`
   // legacy marker.
@@ -178,9 +178,12 @@ function castMarkdownComponent<P extends object>(
 }
 
 /**
- * Render markdown content with prose styling. Relative link/embed paths resolve
- * against the chat's working directory (from `useChatContextDir`); box-root-
- * absolute `/…` paths ignore it. It flows in as the shared renderer's `basePath`.
+ * Render markdown content with prose styling. Every path in a chat message —
+ * link, embed, or image — resolves from the box root: a chat has no meaningful
+ * "current directory," and a directory-bound chat's cwd is the agent's working
+ * directory for its file tools, not a link base. So `basePath` is always
+ * undefined here. A leading `/` is recommended when writing paths and resolves
+ * identically.
  */
 export function MarkdownContent({
   text,
@@ -193,12 +196,6 @@ export function MarkdownContent({
     () => stripStructuredOutputTags(stripSpeechTags(text)),
     [text],
   );
-  const contextDir = useChatContextDir();
-  // `contextDir` is a *directory*, but `resolveRelativePath` treats its base as a
-  // containing file and strips the last segment. A trailing slash makes that
-  // strip a no-op, so a bare `foo.card` resolves to `<contextDir>/foo.card`, not
-  // its parent. Empty/box-root → undefined (resolve against the box root).
-  const basePath = contextDir && contextDir !== "" ? `${contextDir.replace(/\/+$/, "")}/` : undefined;
   const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useCallback(
     (target: ViewTarget) => {
@@ -209,15 +206,15 @@ export function MarkdownContent({
     [onZoomView],
   );
   const components = useMemo(
-    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, contextDir: basePath }),
-    [handleNavigate, boxSlug, basePath],
+    () => makeChatMarkdownComponents(handleNavigate, { boxSlug }),
+    [handleNavigate, boxSlug],
   );
 
   if (!cleaned) return null;
 
   return (
     <div className="prose prose-sm max-w-none overflow-hidden">
-      <Markdown components={components} onNavigate={handleNavigate} basePath={basePath}>{cleaned}</Markdown>
+      <Markdown components={components} onNavigate={handleNavigate} basePath={undefined}>{cleaned}</Markdown>
     </div>
   );
 }

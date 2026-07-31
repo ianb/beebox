@@ -291,6 +291,10 @@ tests:
   # Status (2026-06-27): both pass against test1 — knows_directly, 0 files read /
   # 0 searches, answered straight from the agent guide's cb-mv + box-root-link
   # convention (behavior.ts). Landed with the markdown link-validation fix.
+  # Status (2026-07-30): both still pass (0 reads / 0 searches, 43k ctx) after the
+  # box-root-paths rewrite of the ref rule (REF_PATH_RULE, Track E);
+  # internal-links-resolve-to-box-root's watch_for was widened to the new
+  # "always write the leading /" framing.
   - id: move-store-content-uses-cb-mv
     prompt: "How do you move or rename content under store/ (a card, a directory, or a markdown dossier)?"
     expected_level: knows_directly
@@ -301,9 +305,77 @@ tests:
   - id: internal-links-resolve-to-box-root
     prompt: "A markdown link in a card or dossier is [x](/store/foo/bar.jpg). What does the leading slash mean?"
     expected_level: knows_directly
-    watch_for: "Box root, not the OS filesystem root; the target must be an existing file/dir in the box"
+    watch_for: >
+      Box root, not the OS filesystem root; the target must be an existing
+      file/dir in the box. Leading `/` is also the form you always write
+      (docs/implemented-plans/box-root-paths.md) — a bare path still resolves, but only
+      as a legacy form, and `../` is never written.
     correct_contains: ["box root"]
     tags: [links]
+
+  # === Refs are always written box-root-relative (Track G, box-root-paths) ===
+  #
+  # One rule, three angles: the chat-reply link, a landmark frontmatter ref, and
+  # the single exception (`attach/`). The third exists specifically to keep the
+  # always-`/` rule from swallowing the attach scope. Rule text lives in one
+  # constant: REF_PATH_RULE (src/core/agent-guide/source.ts), reaching every
+  # agent via ABOUT_CARDS + PROVENANCE.
+  #
+  # Status (2026-07-30): all 3 pass first run against the test1 clone, no
+  # guidance changes needed. links-always-box-root and attach-is-the-exception
+  # answered with 0 reads / 0 searches (49k / 43k ctx). landmark-ref-box-root
+  # passes but read docs/generated/card-landmark.md first (5 turns) — weakest of
+  # the three; it recalls the box-path rule but verifies the links[] field shape,
+  # so re-check it if the landmark schema docs move.
+  - id: links-always-box-root
+    prompt: >
+      There's a card at store/notes/Beta_Launch.doc.card. In your reply to me,
+      write the markdown link you'd use to point me at it, and say why that
+      path form.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Writes the target with a leading `/` — [the beta launch
+      plan](/store/notes/Beta_Launch.doc.card) — and says it resolves from the
+      box root. FAILS on a bare `store/notes/…` target or any `../` climb: those
+      still resolve (legacy) but are not what gets authored. A human label
+      rather than a bare filename as the link text.
+    correct_contains: ["/store/notes/Beta_Launch.doc.card"]
+    response_not_matches:
+      - '\]\((?!/|attach/|https?:|#)'
+      - '\]\(\.\./'
+    tags: [links, chat, paths]
+
+  - id: landmark-ref-box-root
+    prompt: >
+      I'm adding an entry to a landmark card's links list that points at the
+      card store/recipes/Bread.recipe.card. Write the links[] entry.
+    expected_level: knows_directly
+    watch_for: >
+      `ref: /store/recipes/Bread.recipe.card` — a box path with a leading `/`,
+      the same rule as every other ref. FAILS on a landmark-dir-relative
+      (`recipes/Bread.recipe.card`) or `../`-climbing ref: that was the old
+      landmark-private convention, retired 2026-07-30. A `title`/label
+      alongside `ref` is expected and fine.
+    correct_contains: ["/store/recipes/Bread.recipe.card"]
+    response_not_matches:
+      - 'ref:\s*["'']?(?!/)[\w./-]*\.card'
+    tags: [links, landmark, paths]
+
+  - id: attach-is-the-exception
+    prompt: >
+      A card at store/trips/Trip.record.card has ![the cabin](attach/photo.jpg)
+      in its body. Which file on disk is that pointing at?
+    expected_level: knows_directly
+    watch_for: >
+      The card's OWN attach scope — store/trips/Trip.attach/photo.jpg — NOT a
+      box-root `/attach/photo.jpg` and not a literal `attach/` directory beside
+      the card. `attach/` is the one exception to the always-leading-`/` rule,
+      and this audit guards it from being over-generalized away by that rule.
+      Bonus: says a plain `.md` dossier owns no attach scope, so the prefix is
+      card-only.
+    correct_contains: ["Trip.attach/photo.jpg"]
+    tags: [links, cards, attachments, paths]
 
   - id: validate-card
     prompt: "How do you validate a card after editing it?"
@@ -3542,6 +3614,9 @@ tests:
   # the agent recalls link-vs-embed with plain box paths (no view:/?zoom) and
   # that views attach to a card type via rendersCardTypes, directly (0 files
   # read). Part of the normalize-chat-links work.
+  # Status (2026-07-30): chat-link-vs-embed-card re-run under box-root-paths
+  # Track G — still passes (0 reads, 43k ctx); its watch_for already matched the
+  # new always-leading-`/` rule (Track C fixed it), so no edit was needed.
   - id: chat-link-vs-embed-card
     prompt: >
       In chat, how do you reference a card so the user can open it, versus show
@@ -3550,8 +3625,9 @@ tests:
     watch_for: >
       A plain markdown link [label](/store/x.card) references the card — clicking
       opens it in the companion pane. Prefix with ! — ![label](/store/x.card) —
-      to embed it inline. Write box-root-absolute paths (leading /); a bare path
-      resolves against the chat working directory. Must NOT use a `view:` prefix
+      to embed it inline. Always write the box path with a leading / — chat
+      links and embeds resolve from the box root, never from the chat's working
+      directory (a bare path lands at the box root too). Must NOT use a `view:` prefix
       or a `?zoom` flag in the syntax — both are retired (naming them as retired
       to warn against them is fine).
     response_not_contains: ["?zoom", "zoom flag"]
@@ -4023,6 +4099,49 @@ tests:
     correct_contains: ["ask"]
     tags: [bulk-upload, chat, behavioral]
 
+  # The other half of the rule above, and the one that is easy to get wrong: an
+  # `<upload>` whose body carries the boxholder's own words is INTRODUCED, so the
+  # ask-first duty does not apply. Getting this backwards turns every photo batch
+  # into an interrogation — the agent asking what the files are immediately after
+  # being told. Added with the chat-photo-batch-upload work, which made composer
+  # text ride along as the batch's `note`.
+  #
+  # Status 2026-07-30: PASSES first try (1 read of the generated
+  # card-upload-batch.md, 6 turns, 49k→52k). Passed for the right reason, not by
+  # keyword luck — the agent wrote "The note *is* the introduction ... so no
+  # 'what are these?' question. Act on it; only ask about what it genuinely
+  # leaves open", and its example open question (does a 2026 travel folder exist,
+  # one card per receipt or one card with 34 attachments) is exactly the
+  # distinction duty 1 draws. Authoring note: the runner compiles
+  # `response_not_matches` case-insensitively already, so an inline `(?i)` is a
+  # JS regex SyntaxError that kills the run — caught only by running it.
+  - id: upload-message-introduced
+    prompt: >
+      A message arrives in chat: `<upload
+      doc="tmp-upload/batch-20260730T1912-9f3c.upload-batch.card" files="34"
+      bytes="112 MB">Receipts from the Tokyo trip — file them under the 2026
+      travel folder.
+
+      34 files uploaded (112 MB).</upload>`. What is this, and what do you do
+      first?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Recognises that the first paragraph is the boxholder's own introduction
+      (the batch's `note`), so this batch is NOT the unintroduced case — it
+      should act on what they said (file into the 2026 travel folder) rather
+      than asking what the files are or where they go. Reading the `doc` card
+      for the filing duties first is right; asking a genuinely open follow-up
+      (e.g. the exact destination path doesn't exist yet) is fine. What is wrong
+      is treating an introduced batch as needing an introduction.
+    correct_contains_any: ["travel", "Tokyo", "receipts"]
+    # The runner already compiles these case-insensitively — an inline `(?i)`
+    # flag is a JS regex syntax error, not a no-op.
+    response_not_matches:
+      - "what (are|do you want|should I do with) these (files|photos)"
+      - "where (should|would you like) (these|them|the files)"
+    tags: [bulk-upload, chat, behavioral]
+
   - id: upload-batch-found-outside-chat
     prompt: >
       Doing unrelated work in this box — not processing a chat turn — you
@@ -4125,6 +4244,11 @@ tests:
   # confirmation with no prose mention correctly passes. NOTE: this audit
   # MUTATES the box (the agent creates a note card each run); the created card
   # is disposable.
+  # Status (2026-07-30): 1/1 pass in the box-root-paths Track G run — the ack
+  # ref AND the prose link both came out box-root form
+  # (ref="/store/notes/Beta_Launch.doc.card", "Saved to [Beta Launch](/store/…)"),
+  # which is the Track E exemplar change landing. One run only; the RATE caveat
+  # above still governs.
   - id: chat-reference-card-as-link
     prompt: "Quick, save this before I forget: beta ships in August, hold the pricing page until launch, and move standups to Tuesdays."
     expected_level: knows_directly
@@ -4171,3 +4295,36 @@ tests:
     watch_for: "Names the SDK context-window meaning, and does NOT confuse it with chat review"
     correct_contains: ["context"]
     tags: [vocabulary, chat-review]
+
+  # === Assets (git-annex) ===
+  #
+  # Status (2026-07-31): 2/2 pass, verified on a box that is ACTUALLY annexed
+  # (the preserve-ignored-files worktree clone of test1, migrated with
+  # `cb attachments to-annex`: 137 assets / 106 MB, 99 manifests removed, 9 Git
+  # LFS files converted).
+  #
+  # Both failed before that migration, and each failure was informative:
+  #   1. asset-add-workflow as first written asked "how do I add a photo" and
+  #      required "git add" — but a box agent rightly answers `mkdir`/`cp`,
+  #      since the pre-commit hook commits, not the agent. Wrong criterion.
+  #   2. The rewrite still failed because the box was on Git LFS, and the agent
+  #      correctly described LFS. That is what surfaced the LFS overlap now
+  #      resolved in docs/plans/asset-annex.md.
+  # Neither audit can pass against an unmigrated box, which is the point: they
+  # test what an agent knows about the system the box is actually running.
+  #
+  # Run: pnpm knowledge-audit run --box <abs-path> --filter assets
+
+  - id: asset-content-absent
+    prompt: "I opened a photo in a box and the file is about 100 bytes of text starting with /annex/objects/. What happened, and is my photo gone?"
+    expected_level: knows_directly
+    watch_for: "Recognizes an annex pointer (content not fetched locally) and answers `git annex get` — NOT that the file is corrupt or lost"
+    correct_contains: ["git annex get"]
+    tags: [assets]
+
+  - id: asset-add-workflow
+    prompt: "I dropped a photo into a card's attach scope. Do I need to run `git annex add` on it, or does something else handle that?"
+    expected_level: knows_directly
+    watch_for: "Says no — annex.largefiles routes it on ordinary `git add`, so the normal commit path handles it. Reaching for `git annex add` means it learned a special case that does not exist here (and it locks files, breaking in-place edits)."
+    correct_contains: ["largefiles"]
+    tags: [assets]

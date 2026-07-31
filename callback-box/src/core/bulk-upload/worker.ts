@@ -21,9 +21,9 @@ import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import {
   readStagingSession,
   setStagingState,
-  cleanupStagingSession,
   type StagingSessionState,
 } from "../capture/staging-store.js";
+import { cleanupStagingSession } from "../capture/staging-teardown.js";
 import {
   deliverUserMessage,
   userMessageAlreadyLanded,
@@ -34,6 +34,7 @@ import { stageAndCommitPaths } from "../../lib/git.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { prepareBulkBatch, bulkBatchSlug, bulkBatchCardRelPath } from "./prepare.js";
+import { bulkBatchHasNothingToReport } from "./batch-format.js";
 import { buildUploadWrapper, resolveBulkDeliveryTarget } from "./deliver.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -88,8 +89,11 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
   if (session.state === "delivered") return; // Already done (idempotent resume).
 
   const failedItems = session.failedItems ?? [];
-  // Nothing actually arrived and nothing failed → nothing worth delivering.
-  if (session.files.length === 0 && failedItems.length === 0) {
+  // Nothing to report at all → nothing worth delivering. The test is shared with
+  // the abandonment sweep (`bulkBatchHasNothingToReport`) so the two can't drift:
+  // a batch that registered items but committed no bytes is wholly MISSING, not
+  // empty, and must still produce its report.
+  if (bulkBatchHasNothingToReport(session)) {
     await cleanupStagingSession({ boxRoot, id });
     return;
   }
@@ -148,6 +152,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
     totalBytes: prepared.totalBytes,
     failedCount: prepared.counts.failed,
     summary: prepared.summary,
+    note: prepared.note,
   });
 
   // Mark `delivering` BEFORE send/enqueue so a crash between send and the

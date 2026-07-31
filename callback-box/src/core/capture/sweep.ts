@@ -37,10 +37,10 @@ import { parseCaptureSession } from "../../schemas/capture-session.js";
 import {
   listStagingSessions,
   sealStagingSession,
-  cleanupStagingSession,
   stagingSessionIsEmpty,
   isCaptureSession,
 } from "./staging-store.js";
+import { cleanupStagingSession } from "./staging-teardown.js";
 
 /** No-activity window after which an open capture is swept into a partial finalize. */
 export const ABANDONMENT_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
@@ -147,7 +147,7 @@ export async function sweepAbandonedCaptures(deps: SweepDeps): Promise<SweepResu
  * Reference is the card's own `time.start` (deterministic under `CB_TIME`),
  * not file mtime (which git operations reset).
  */
-async function findStaleTmpCaptureCards(opts: { boxRoot: string; now: number }): Promise<string[]> {
+export async function findStaleTmpCaptureCards(opts: { boxRoot: string; now: number }): Promise<string[]> {
   const { boxRoot, now } = opts;
   const stale: string[] = [];
   const captureDirs = await findTmpCaptureDirs(boxRoot, boxRoot);

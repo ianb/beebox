@@ -25,6 +25,7 @@ import { ChatLoading, ExpiredAttachmentsNotice } from "./InteractiveChat-layout"
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments, useEnsureComposerVisible } from "./InteractiveChat-attachments";
+import { useBulkUploadLaunch, type BulkUploadLaunch } from "./use-bulk-upload-launch";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
 import { useChatWs } from "./InteractiveChat-ws";
@@ -107,19 +108,26 @@ interface InteractiveChatProps {
  * suppressed for native shells; bulk additionally requires a server-assigned
  * session id (its batch binds to a target chat).
  */
-function ChatModeOverlays({ captureMode, bulkUploadMode, usesNativeShell, sessionId, onExitCapture, onExitBulkUpload }: {
+function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId, onExitCapture, onExitBulkUpload, onBulkUploadDelivered }: {
   captureMode: boolean;
-  bulkUploadMode: boolean;
+  bulkUpload: BulkUploadLaunch | null;
   usesNativeShell: boolean;
   sessionId: string | null;
   onExitCapture: () => void;
   onExitBulkUpload: () => void;
+  onBulkUploadDelivered: () => void;
 }) {
   return (
     <>
       {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} /> : null}
-      {bulkUploadMode && !usesNativeShell && sessionId !== null ? (
-        <BulkUploadOverlay targetSessionId={sessionId} onExit={onExitBulkUpload} />
+      {bulkUpload !== null && !usesNativeShell && sessionId !== null ? (
+        <BulkUploadOverlay
+          targetSessionId={sessionId}
+          seedFiles={bulkUpload.seedFiles}
+          note={bulkUpload.note}
+          onExit={onExitBulkUpload}
+          onDelivered={onBulkUploadDelivered}
+        />
       ) : null}
     </>
   );
@@ -161,7 +169,6 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // it lives in root state; the overlay's recording-timer ticks stay in its own
   // subtree. Seeded from the `?capture=1` deep link, consumed once.
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
-  const [bulkUploadMode, setBulkUploadMode] = useState(false);
   // Server-derived pending capture bubbles (survive reload; refined live below).
   const { bubbles: captureBubbleList, applyCaptureStatus, retry: handleCaptureRetry } = useCaptureBubbles(sessionId);
   const screenshots = useScreenshotRequests(sessionId);
@@ -186,7 +193,13 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // Assigned by useEnsureComposerVisible below (it needs voice state) — the
   // same ref pattern as clearDraftRef.
   const ensureComposerVisibleRef = useRef<() => void>(() => {});
-  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef });
+  // Set by the draft hook further down; threaded into voice so a committed
+  // segment drops the persisted draft, and into the bulk-upload launcher so a
+  // delivered batch drops the text it carried away. A ref breaks the
+  // voice→draft→voice cycle.
+  const clearDraftRef = useRef<() => void>(() => {});
+  const { launch: bulkUploadLaunch, openEmpty: handleOpenBulkUpload, openWithPhotos: handleBatchPhotos, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef });
+  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchPhotos: handleBatchPhotos });
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
@@ -201,9 +214,6 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     (emission: Emission) => { void dispatchEmission(emission); },
     [dispatchEmission]
   );
-  // Set after the draft hook below; threaded into voice so a committed segment
-  // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
-  const clearDraftRef = useRef<() => void>(() => {});
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
@@ -306,10 +316,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
-      onUploadFiles={() => setBulkUploadMode(true)} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
+      onUploadFiles={handleOpenBulkUpload} uploadFilesDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       />
-      <ChatModeOverlays captureMode={captureMode} bulkUploadMode={bulkUploadMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={() => setBulkUploadMode(false)} />
+      <ChatModeOverlays captureMode={captureMode} bulkUpload={bulkUploadLaunch} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={handleCloseBulkUpload} onBulkUploadDelivered={handleBulkUploadDelivered} />
     </InputStoreProvider>
   );
 }

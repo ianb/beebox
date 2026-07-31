@@ -34,7 +34,19 @@ export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
 
   // A real href (the card's page URL) so middle-click / open-in-new-tab work;
   // the click handler intercepts for surface-correct in-place opening.
-  const href = `/${host.boxSlug}/views/${serializeViewUrl(refToTarget(cardRef, host.basePath))}`;
+  const target = refToTarget(cardRef, host.basePath);
+  if (target === null) {
+    // The ref escapes the box root: there is no page URL and nothing to open.
+    // Render the label as inert text with the broken marker rather than an
+    // anchor that leads to a clamped-to-root card the ref never named.
+    return (
+      <span title={`Ref escapes the box root: ${cardRef}`}>
+        {label}
+        <span className="ml-1 text-xs text-danger">(unresolvable)</span>
+      </span>
+    );
+  }
+  const href = `/${host.boxSlug}/views/${serializeViewUrl(target)}`;
 
   return (
     <a

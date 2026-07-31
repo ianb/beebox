@@ -72,7 +72,7 @@ Every entry must cite the learner's actual words/work and how the rating was rea
 This is a **present-state snapshot, not a decay model** — it records where the learner is now, not forgetting over time.
 
 \`\`\`yaml
-course: { ref: ../Acids.course.card }
+course: { ref: /store/courses/Acids.course.card }
 learner: the-learner
 entries:
   - node: electron-transfer        # a concept-map node id

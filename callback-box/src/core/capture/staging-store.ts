@@ -159,7 +159,7 @@ export async function withStagingLock<T>(id: string, fn: () => Promise<T>): Prom
   return done;
 }
 
-function releaseStagingLock(id: string): void {
+export function releaseStagingLock(id: string): void {
   sessionLocks.delete(id);
 }
 
@@ -354,8 +354,10 @@ export interface SealResult {
  * (Track 5) uses it so a session that raced into `failed:*` between the sweep's
  * list and its seal is NOT auto-retried (the plan bars auto-retrying failures).
  * `partial: true` marks the session partial as part of the same atomic seal.
- * `failedItems` (bulk only) is persisted IN the same CAS write, so the seal and
- * the uploader's failed-item report are one atomic mutation (no crash window).
+ * `failedItems` and `note` (bulk only) are persisted IN the same CAS write, so
+ * the seal, the uploader's failed-item report, and the user's introduction are
+ * one atomic mutation (no crash window in which a resume could rebuild the batch
+ * without them).
  */
 export async function sealStagingSession(opts: {
   boxRoot: string;
@@ -363,8 +365,9 @@ export async function sealStagingSession(opts: {
   partial?: boolean;
   requireOpen?: boolean;
   failedItems?: StagingBulkFailedItem[] | undefined;
+  note?: string | undefined;
 }): Promise<SealResult> {
-  const { boxRoot, id, partial, requireOpen, failedItems } = opts;
+  const { boxRoot, id, partial, requireOpen, failedItems, note } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
@@ -374,6 +377,7 @@ export async function sealStagingSession(opts: {
     session.state = "sealed";
     if (partial === true) session.partial = true;
     if (failedItems !== undefined) session.failedItems = failedItems;
+    if (note !== undefined) session.note = note;
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
     return { sealed: true, alreadySealed: false };
@@ -403,18 +407,4 @@ export async function listStagingSessions(opts: { boxRoot: string }): Promise<St
 /** True once the session holds at least one piece of media. */
 export function stagingSessionIsEmpty(session: StagingSession): boolean {
   return session.segments.length === 0 && session.photos.length === 0 && session.files.length === 0;
-}
-
-/**
- * Tear down a session: remove its directory and drop its lock-map entry in one
- * step, so the in-process lock can't outlive the session.
- */
-export async function cleanupStagingSession(opts: { boxRoot: string; id: string }): Promise<void> {
-  const { boxRoot, id } = opts;
-  try {
-    await fs.rm(stagingSessionDir(boxRoot, id), { recursive: true, force: true });
-  } catch (e) {
-    console.error(`[capture] Failed to clean up staging session ${id}:`, e);
-  }
-  releaseStagingLock(id);
 }

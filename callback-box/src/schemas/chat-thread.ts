@@ -54,7 +54,7 @@ A chat thread is an accumulating conversation from a messaging connector (e.g. T
 Top-level fields:
 - \`chat-id:\` and \`connector:\` — identify the chat
 - \`description:\` — what this chat is (e.g. "Family group chat")
-- \`participants:\` — array of \`{ref: people/...}\` linking to people cards
+- \`participants:\` — array of \`{ref: /people/...}\` linking to people cards
 - \`entries:\` — chronological array of messages and seen-markers
 
 Each entry has a \`kind\` discriminator:

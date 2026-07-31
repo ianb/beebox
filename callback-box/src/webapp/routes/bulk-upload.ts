@@ -20,7 +20,6 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { z } from "zod";
 import type { EventBus } from "../../core/event-bus.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import {
@@ -28,10 +27,10 @@ import {
   readStagingSession,
   registerBulkItems,
   sealStagingSession,
-  cleanupStagingSession,
   isBulkSession,
   type StagingBulkItem,
 } from "../../core/capture/staging-store.js";
+import { discardStagingSessionIfCancellable } from "../../core/capture/staging-teardown.js";
 import { addFileStreamed } from "../../core/capture/staging-stream.js";
 import {
   StagingPathError,
@@ -40,7 +39,13 @@ import {
   StagingSessionNotOpenError,
   StagingItemNotRegisteredError,
 } from "../../core/capture/staging-errors.js";
-import { isStagingLimitError, MAX_STAGED_ITEMS } from "../../core/capture/staging-limits.js";
+import { isStagingLimitError } from "../../core/capture/staging-limits.js";
+import {
+  CreateBulkBodySchema,
+  RegisterItemsBodySchema,
+  FinalizeBodySchema,
+  registryAdditionError,
+} from "./bulk-upload-validation.js";
 import { prepareAndDeliverBulkBatch, markBulkPreparationFailed } from "../../core/bulk-upload/worker.js";
 import {
   authorizeCaptureSessionOwner,
@@ -50,63 +55,6 @@ import { getDirectoryForSession } from "../../core/chat/session/history.js";
 import { getChatRuntime } from "../chat-runtime.js";
 import { startBulkUploadLifecycle } from "./bulk-upload-lifecycle.js";
 import { beginStream, endStream } from "./bulk-upload-stream-gate.js";
-
-/** Bound client-supplied id/name/mimetype strings (X9 — untrusted lengths). */
-const MAX_ITEM_FIELD_LENGTH = 512;
-/** Items accepted per create/register request; the registry TOTAL cap is X3's 500. */
-const MAX_ITEMS_PER_REQUEST = 500;
-
-const BulkItemSchema = z.object({
-  id: z.string().min(1).max(MAX_ITEM_FIELD_LENGTH),
-  name: z.string().max(MAX_ITEM_FIELD_LENGTH),
-  size: z.number().optional(),
-  mimetype: z.string().max(MAX_ITEM_FIELD_LENGTH).optional(),
-});
-
-const CreateBulkBodySchema = z.object({
-  // No `contextDir`: it's derived server-side from `targetSessionId` (a
-  // client-supplied dir would be a path-traversal vector — see below).
-  targetSessionId: z.string().min(1),
-  items: z.array(BulkItemSchema).max(MAX_ITEMS_PER_REQUEST).optional(),
-});
-
-const RegisterItemsBodySchema = z.object({
-  items: z.array(BulkItemSchema).min(1).max(MAX_ITEMS_PER_REQUEST),
-});
-
-/** The first item id appearing twice in `items`, or `null` when all unique. */
-function firstDuplicateId(items: StagingBulkItem[]): string | null {
-  const seen = new Set<string>();
-  for (const item of items) {
-    if (seen.has(item.id)) return item.id;
-    seen.add(item.id);
-  }
-  return null;
-}
-
-/**
- * Validate an addition to a session's registry against duplicate ids and the
- * total-item cap, returning a 400 message or `null` when it's clean. A NEW id
- * colliding with one already registered is rejected (an update-in-place would
- * silently overwrite the earlier item's claims); re-sending EXISTING ids is
- * fine (idempotent re-register while the picker streams).
- */
-function registryAdditionError(opts: { existing: StagingBulkItem[]; incoming: StagingBulkItem[] }): string | null {
-  const dupe = firstDuplicateId(opts.incoming);
-  if (dupe !== null) return `Duplicate item id in registry: ${dupe}`;
-  const existingIds = new Set(opts.existing.map((it) => it.id));
-  const newIds = opts.incoming.filter((it) => !existingIds.has(it.id)).length;
-  if (opts.existing.length + newIds > MAX_STAGED_ITEMS) {
-    return `Registry would exceed the ${String(MAX_STAGED_ITEMS)}-item cap`;
-  }
-  return null;
-}
-
-const FinalizeBodySchema = z.object({
-  failedItems: z
-    .array(z.object({ id: z.string().optional(), name: z.string(), reason: z.string() }))
-    .optional(),
-});
 
 const BULK_CAPABILITIES = {
   acceptedUploadEncodings: ["raw-body-v1"],
@@ -328,12 +276,33 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
     );
 
     // DELETE /api/bulk/sessions/:id — cancel and discard the batch.
+    //
+    // Only an `open` (still uploading) or `failed:*` (dead, retryable) batch may
+    // be discarded. Once finalize seals it, the background worker owns it: a
+    // DELETE racing that worker would delete the staging directory out from
+    // under it, the worker would read `null` and quietly return, and the user
+    // would get NO `<upload>` message while their client — which already saw
+    // finalize succeed — reported success and cleared the composer. That is the
+    // exact "client says done, server shows nothing" failure this feature
+    // exists to eliminate, so a cancel after seal is refused rather than raced.
     instance.delete<{ Params: { id: string } }>(
       "/api/bulk/sessions/:id",
       async (request: IdRequest, reply) => {
         const session = await loadOwnedBulkSession({ boxRoot, request, reply, id: request.params.id });
         if (!session) return reply;
-        await cleanupStagingSession({ boxRoot, id: session.id });
+        // The state check and the delete happen together under the staging lock;
+        // checking here and deleting after would leave the race open.
+        try {
+          const result = await discardStagingSessionIfCancellable({ boxRoot, id: session.id });
+          if (!result.discarded) {
+            return reply.status(409).send({
+              error: `Batch is ${String(result.blockedBy)}; it was already finalized and is being delivered. It cannot be cancelled.`,
+            });
+          }
+        } catch (error) {
+          if (error instanceof StagingSessionGoneError) return reply.status(404).send({ error: "Session not found" });
+          throw error;
+        }
         return { success: true };
       },
     );
@@ -356,10 +325,19 @@ export async function registerBulkUploadRoutes(options: RegisterBulkUploadRoutes
           return reply.status(503).send({ error: "Chat runtime unavailable" });
         }
 
-        // The uploader's failed-item report rides IN the CAS seal — one atomic
-        // write, so a resume can never see a sealed batch whose failed list
-        // wasn't recorded yet.
-        const seal = await sealStagingSession({ boxRoot, id: session.id, failedItems: parsed.data.failedItems });
+        // The uploader's failed-item report and the user's introduction ride IN
+        // the CAS seal — one atomic write, so a resume can never see a sealed
+        // batch whose failed list or note wasn't recorded yet.
+        //
+        // A whitespace-only note normalizes to absent so an empty composer
+        // produces byte-identical output to a batch that never had one.
+        const trimmedNote = parsed.data.note?.trim();
+        const seal = await sealStagingSession({
+          boxRoot,
+          id: session.id,
+          failedItems: parsed.data.failedItems,
+          note: trimmedNote !== undefined && trimmedNote !== "" ? trimmedNote : undefined,
+        });
         if (seal.sealed) {
           void prepareAndDeliverBulkBatch({
             boxRoot,

@@ -362,6 +362,13 @@ test1:
       peak: 41200
       added: 0
       turns: 1
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 43120
+      peak: 43120
+      added: 0
+      turns: 2
   internal-links-resolve-to-box-root:
     - date: 2026-06-27T11:23:12.864Z
       boxCommit: 2f6fed59dd31aaa18d71211dba194ea4762e508a
@@ -377,6 +384,13 @@ test1:
       peak: 41209
       added: 0
       turns: 1
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42758
+      peak: 42758
+      added: 0
+      turns: 2
   procedure-instructions-gate:
     - date: 2026-06-27T17:31:49.109Z
       boxCommit: 9df1ee213bfc90a09a101a3ef10f26ba7b3037da
@@ -546,6 +560,13 @@ test1:
       peak: 41202
       added: 0
       turns: 1
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42751
+      peak: 42751
+      added: 0
+      turns: 2
   views-attach-to-cards:
     - date: 2026-07-01T21:08:48.821Z
       boxCommit: ee955cc0c21c357ba41365e024e3e215d2ee170a
@@ -3127,6 +3148,13 @@ test1:
       peak: 50922
       added: 3981
       turns: 11
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 48618
+      peak: 53018
+      added: 4400
+      turns: 10
   upload-message-meaning:
     - date: 2026-07-28T02:56:27.422Z
       boxCommit: 20a70b9b38318115af6245e9cc169b21abebd849
@@ -3540,6 +3568,75 @@ test1:
       peak: 41661
       added: 17409
       turns: 44
+  upload-message-introduced:
+    - date: 2026-07-30T20:24:50.707Z
+      boxCommit: 7a93ade503509020467f1e57edb103550fd8c981
+      repoCommit: 3d074d26bf38e3f9670723bdcd3964e6ef8c7750
+      initial: 48663
+      peak: 51655
+      added: 2992
+      turns: 6
+  links-always-box-root:
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 48792
+      peak: 48792
+      added: 0
+      turns: 1
+  landmark-ref-box-root:
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42766
+      peak: 46537
+      added: 3771
+      turns: 5
+  attach-is-the-exception:
+    - date: 2026-07-30T21:33:25.480Z
+      boxCommit: b150ef2b4d5d5e6ca5496ae79be38f142e6f820f
+      repoCommit: e714f8df0d7f383fa75c9967e4f4f4cf62bb4873
+      initial: 42769
+      peak: 42769
+      added: 0
+      turns: 2
+  asset-content-absent:
+    - date: 2026-07-31T02:45:31.842Z
+      boxCommit: fa363ace3a6e2e207b97c1657167641eb5306751
+      repoCommit: efd56c10cf2a67d1f06b8d82082c351fc2fda71f
+      initial: 42882
+      peak: 54338
+      added: 11456
+      turns: 22
+    - date: 2026-07-31T10:05:37.688Z
+      boxCommit: c5f6123f8c097917bb5380a6aa70d996ae7b3445
+      repoCommit: ccdef9f832008b9e625f6e132dd17da2de336aaf
+      initial: 42623
+      peak: 47594
+      added: 4971
+      turns: 16
+  asset-add-workflow:
+    - date: 2026-07-31T02:45:31.842Z
+      boxCommit: fa363ace3a6e2e207b97c1657167641eb5306751
+      repoCommit: efd56c10cf2a67d1f06b8d82082c351fc2fda71f
+      initial: 42795
+      peak: 44049
+      added: 1254
+      turns: 4
+    - date: 2026-07-31T02:46:26.029Z
+      boxCommit: 853a7bda3da30b18c9666f77c04fe01ca9754c5c
+      repoCommit: efd56c10cf2a67d1f06b8d82082c351fc2fda71f
+      initial: 42698
+      peak: 43482
+      added: 784
+      turns: 4
+    - date: 2026-07-31T10:05:37.688Z
+      boxCommit: c5f6123f8c097917bb5380a6aa70d996ae7b3445
+      repoCommit: ccdef9f832008b9e625f6e132dd17da2de336aaf
+      initial: 42572
+      peak: 50762
+      added: 8190
+      turns: 20
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

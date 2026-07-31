@@ -250,3 +250,14 @@ export function isMarkdownFile(filePath: string): boolean {
 export function isViewFile(filePath: string): boolean {
   return /(^|\/)views\/[^/]+\.tsx$/.test(filePath);
 }
+
+/**
+ * Cards under `store/trash/` are by definition orphaned/discarded and routinely
+ * have broken refs (their attachments and related cards have been deleted), so
+ * the *implicit* box-wide walks skip them — `cb validate`'s default scan and the
+ * `--canonical` normalizer alike. An explicit `cb validate <path>` on a trash
+ * path still validates.
+ */
+export function isTrashedCard(boxRelOrAbs: string): boolean {
+  return /(^|\/)store\/trash\//.test(boxRelOrAbs);
+}

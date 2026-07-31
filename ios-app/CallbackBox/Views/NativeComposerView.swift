@@ -25,6 +25,8 @@ struct NativeComposerView: View {
     @EnvironmentObject private var boxLockManager: BoxLockManager
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var statusText: String?
+    /// Non-nil while a large photo selection is uploading as a bulk batch.
+    @State private var batchProgress: BulkUploadProgress?
     @State private var isPreparingSend = false
     @State private var editorHeight: CGFloat = 58
     @State private var focused = false
@@ -265,12 +267,25 @@ struct NativeComposerView: View {
     }
 
     private var visibleStatusText: String? {
-        voiceStateOverrideMessage
+        // Batch progress outranks the rest while it is live: a 70-photo upload
+        // takes real time, and a silent composer during it reads as a hang —
+        // which is how the original failure looked to the boxholder.
+        batchProgressText
+            ?? voiceStateOverrideMessage
             ?? dictation.errorMessage
             ?? dictation.preparationMessage
             ?? statusText
             ?? draftStore.restoreNotice
             ?? pendingStore.notice
+    }
+
+    private var batchProgressText: String? {
+        guard let batchProgress, batchProgress.isFinished == false else {
+            return nil
+        }
+        let done = batchProgress.uploaded + batchProgress.failed
+        let base = "Uploading photos — \(done) of \(batchProgress.total)"
+        return batchProgress.failed > 0 ? "\(base) (\(batchProgress.failed) failed)" : base
     }
 
     private var voiceStateOverrideMessage: String? {
@@ -426,6 +441,20 @@ struct NativeComposerView: View {
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
         dictation.clearKeywordIntent()
+        // Spoken commands go through the same in-flight lock as the buttons.
+        // Without this the visible controls are disabled during a batch upload
+        // while "send" still enqueues an overlapping message and "cancel"/"erase"
+        // still discard the draft — including the text the running batch took as
+        // its introduction. A voice path that can do what a disabled button
+        // cannot is worse than no lock, because nothing on screen explains it.
+        if isSending {
+            statusText = batchProgress == nil
+                ? "Still sending — try again in a moment."
+                : "Photos are still uploading — try again when they finish."
+            applyEarcon(.microphoneStopped)
+            applyVoiceTurn(.microphoneStopped)
+            return
+        }
         switch intent.action {
         case .send, .sendClose:
             sendKeywordIntent(intent)
@@ -598,7 +627,11 @@ struct NativeComposerView: View {
     }
 
     private var isSending: Bool {
-        isPreparingSend || draftStore.isReady == false
+        // A batch upload counts. Without it the text field, send button and Add
+        // button stay live through a 70-photo upload, so the user can type a new
+        // message that the batch's completion then wipes — and can start a
+        // second, overlapping batch.
+        isPreparingSend || batchProgress != nil || draftStore.isReady == false
     }
 
     private func applyVoiceTurn(_ event: NativeVoiceTurnEvent) {
@@ -711,6 +744,16 @@ struct NativeComposerView: View {
         guard items.isEmpty == false else {
             return
         }
+        // Too many to ride inline: base64-ing this many photos into one
+        // /chat/send is the failure this branch exists to prevent. Upload them
+        // and let the agent file them instead. Mirrors the web composer's
+        // `shouldBatchPhotos` — see docs/mobile-contract.md §8, INLINE_PHOTO_LIMIT.
+        if BulkPhotoThreshold.shouldBatch(existingInline: draftStore.draft.images.count, incoming: items.count) {
+            selectedPhotoItems = []
+            await uploadPhotoBatch(items)
+            return
+        }
+
         for item in items {
             guard let sourceData = try? await item.loadTransferable(type: Data.self) else {
                 continue
@@ -720,6 +763,162 @@ struct NativeComposerView: View {
             await appendImage(data: sourceData, sourceMimeType: sourceMimeType)
         }
         selectedPhotoItems = []
+    }
+
+    /// Stage a large photo selection to disk, upload it as a bulk batch, and let
+    /// the box deliver an `<upload>` message the agent files. The composer text
+    /// rides along as the batch's introduction and is cleared once the box
+    /// confirms delivery — the same "consumed on send" semantics as an ordinary
+    /// message.
+    private func uploadPhotoBatch(_ items: [PhotosPickerItem]) async {
+        // The batch binds to a specific chat, and only the webview knows which one
+        // is visible (it arrives here as the composer box's session id). Without
+        // it there is nothing to deliver into, so say so rather than silently
+        // falling back to the inline path that cannot carry this many.
+        guard let targetSessionID = box.sessionID, targetSessionID.isEmpty == false else {
+            statusText = "Send a message first, then add these photos."
+            return
+        }
+
+        batchProgress = BulkUploadProgress(total: items.count, uploaded: 0, failed: 0)
+        statusText = "Preparing \(items.count) photos…"
+
+        let uploadedAt = ISO8601DateFormatter().string(from: Date())
+        // Photos already in the composer join this batch. Leaving them behind
+        // would split one intended message: the batch would carry the whole
+        // composer text as its introduction while the older photos sat in the
+        // composer with nothing describing them.
+        let foldedIn = await stageComposerImages(uploadedAt: uploadedAt)
+        // Read the introduction AFTER folding: staging removes each folded image
+        // and strips its `[imageN]` token, so capturing the text first would ship
+        // a note referring to attachments the message no longer has — and would
+        // then fail the unchanged-check below, leaving the consumed text sitting
+        // in the composer.
+        let note = draftStore.draft.text
+
+        var staged = await BulkPhotoStaging.stage(
+            items: items,
+            uploadedAt: uploadedAt,
+            onProgress: { count in
+                statusText = "Preparing \(count) of \(items.count) photos…"
+            }
+        )
+        staged.prepared.insert(contentsOf: foldedIn.prepared, at: 0)
+        staged.failures.append(contentsOf: foldedIn.failures)
+        // No early return when nothing staged: if photos FAILED to import, the
+        // box still needs to hear about them, otherwise the user is told "none
+        // could be read" and no card, message or record of the attempt exists
+        // anywhere. Only a genuinely empty selection (nothing staged AND nothing
+        // failed) has nothing to report.
+        guard staged.prepared.isEmpty == false || staged.failures.isEmpty == false else {
+            batchProgress = nil
+            statusText = "None of those photos could be read."
+            return
+        }
+
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: box),
+            onProgress: { progress in
+                Task { @MainActor in batchProgress = progress }
+            }
+        )
+        // Photos that failed to import are reported to the box too. They were
+        // never registered, so without this the batch card would simply not
+        // mention them and the user would be told "69 uploaded" with no sign the
+        // 70th ever existed.
+        let outcome = await coordinator.run(
+            items: staged.prepared,
+            targetSessionID: targetSessionID,
+            note: note,
+            importFailures: staged.failures
+        )
+
+        batchProgress = nil
+
+        switch outcome {
+        case .delivered(let uploaded, let failed), .accepted(let uploaded, let failed):
+            // Sealed either way, so the box holds the bytes AND the note: the
+            // staged copies are redundant and the text has been carried away.
+            // If delivery ultimately fails, the box surfaces it to the chat agent
+            // rather than this client retrying — see `notifyStranded`.
+            BulkPhotoStaging.discard(staged.prepared)
+            clearComposerTextIfUnchanged(from: note)
+            if case .accepted = outcome {
+                statusText = "\(uploaded) photos sent — the box is still processing them."
+            } else {
+                statusText = failed == 0
+                    ? "\(uploaded) photos uploaded."
+                    : "\(uploaded) photos uploaded, \(failed) failed."
+            }
+        case .failed(let message):
+            // Never sealed, so the box does NOT have this batch. Drop the staged
+            // copies (nothing can use them) but keep the text, so the user can
+            // simply try again.
+            BulkPhotoStaging.discard(staged.prepared)
+            statusText = "\(message) Your message was kept — try again."
+        }
+    }
+
+    /// Move the composer's existing inline photos into the batch being started,
+    /// clearing only the ones that actually made it to disk.
+    ///
+    /// Two things are deliberate. An image whose bytes can't be read, or whose
+    /// staging write fails (disk full), is LEFT IN THE COMPOSER and reported as a
+    /// failure — removing it would delete the only remaining copy, since
+    /// `removeImage` drops the draft's payload. And an image still `.uploading`
+    /// is skipped entirely: it has no final bytes yet, so staging it would ship a
+    /// half-processed image and bypass the upright re-encode.
+    private func stageComposerImages(uploadedAt: String) async -> (prepared: [PreparedBulkItem], failures: [BulkUploadAPI.FailedItem]) {
+        let existing = draftStore.draft.images
+        guard existing.isEmpty == false else { return ([], []) }
+        var staged: [PreparedBulkItem] = []
+        var failures: [BulkUploadAPI.FailedItem] = []
+        var stagedImageIDs: [Int] = []
+
+        for (index, image) in existing.enumerated() {
+            if case .uploading = image.state { continue }
+            let displayName = "pasted-image-\(String(format: "%03d", index + 1))"
+            guard let data = await draftStore.imageData(for: image, boxID: box.id) else {
+                failures.append(BulkUploadAPI.FailedItem(
+                    id: nil, name: displayName, reason: "The image data could not be read."
+                ))
+                continue
+            }
+            guard let item = BulkPhotoStaging.stageComposerImage(
+                data: data,
+                mimeType: image.mimeType,
+                index: index,
+                uploadedAt: uploadedAt
+            ) else {
+                failures.append(BulkUploadAPI.FailedItem(
+                    id: nil, name: displayName, reason: "The image could not be written to disk."
+                ))
+                continue
+            }
+            staged.append(item)
+            stagedImageIDs.append(image.id)
+        }
+
+        // Remove ONLY what is safely on disk; anything skipped or failed stays in
+        // the composer so the user still has it.
+        for id in stagedImageIDs {
+            await draftStore.removeImage(id: id)
+        }
+        return (staged, failures)
+    }
+
+
+    /// Clear the composer only if it still holds the text the batch took as its
+    /// introduction.
+    ///
+    /// A batch can take a long time, and the composer is locked while it runs —
+    /// but a queued keystroke, a restored draft, or a dictation commit can still
+    /// land in between. Blindly clearing would delete a message the user wrote
+    /// after the batch started, which is the same silent-loss failure this whole
+    /// feature exists to remove.
+    private func clearComposerTextIfUnchanged(from snapshot: String) {
+        guard draftStore.draft.text == snapshot else { return }
+        draftStore.setText("")
     }
 
     private func dismissPresentedContentForLock() {

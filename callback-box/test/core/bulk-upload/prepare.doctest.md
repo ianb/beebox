@@ -9,7 +9,8 @@ tier — no chat runtime, no delivery (that is a later chunk).
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/cards/index.js";
 import {
@@ -17,6 +18,7 @@ import {
   addFile,
   registerBulkItems,
   readStagingSession,
+  writeStagingSession,
   stagingSessionDir,
 } from "../../../src/core/capture/staging-store.js";
 import { selectPendingCaptures, selectResumableCaptures } from "../../../src/core/capture/pending.js";
@@ -101,8 +103,17 @@ JSON.stringify({
 => {"names":["photo.png","report.pdf"],"reportSize":6,"hasHash":true}
 ```
 
-The card + manifest are committed (with the `Created-By: bulk-upload` trailer);
-the blobs are on disk but NOT tracked:
+The card, manifest, **and the blobs** are committed, with the
+`Created-By: bulk-upload` trailer.
+
+This previously staged an explicit `[card, manifest, .gitignore]` list and
+asserted `blobTracked: false` — correct under the manifest model, where the
+bytes were gitignored on purpose. Under git-annex it is a silent data-loss bug:
+`git annex pre-commit` cannot annex a path that was never passed to `git add`,
+so the batch would commit a card describing content that exists in no
+repository, and the staging copy is cleaned up after delivery. The batch-local
+`.gitattributes` routes the blobs into the annex; the assertion below is what
+proves they were actually handed to git at all.
 
 ```ts continue
 const subjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
@@ -115,7 +126,7 @@ JSON.stringify({
   blobTracked: tracked.some((f) => f.endsWith("report.pdf")),
   blobOnDisk: await pathExists(box.path(`${batch.attachRelDir}/report.pdf`)),
 })
-=> {"committed":true,"trailer":true,"cardTracked":true,"manifestTracked":true,"blobTracked":false,"blobOnDisk":true}
+=> {"committed":true,"trailer":true,"cardTracked":true,"manifestTracked":true,"blobTracked":true,"blobOnDisk":true}
 ```
 
 Staging is retained (not deleted at prepare time):
@@ -319,6 +330,104 @@ JSON.stringify({
   resumableOnlyCapture: resumable.length === 1 && resumable[0] === capture.id,
 })
 => {"pendingOnlyCapture":true,"resumableOnlyCapture":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The batch's introduction lands in the card and survives a re-run
+
+The boxholder's composer text is recorded on the sealed session, and prepare
+carries it into the card's `note` frontmatter — that is what tells the agent the
+batch is introduced, so it files against the note instead of asking what the
+files are.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const id = await stageBulk(box.root, {
+  expectedItems: [{ id: "a", name: "IMG_0001.jpg", size: 4, mimetype: "image/jpeg" }],
+  files: [
+    { filename: "staged-0.bin", uploadedAt: "2026-07-30T19:12:00.000Z", originalName: "IMG_0001.jpg", mimeType: "image/jpeg", itemId: "a", content: "JPEG" },
+  ],
+});
+// The seal is what records the note; stage it directly here (the route-tier
+// test covers the seal itself).
+const session = await readStagingSession({ boxRoot: box.root, id });
+session.note = "Receipts from the Tokyo trip";
+await writeStagingSession({ boxRoot: box.root, session });
+
+const prepared = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+prepared.note
+=> Receipts from the Tokyo trip
+```
+
+The card records it as frontmatter, labelled as the boxholder's own words rather
+than anything server-computed or client-guessed:
+
+```ts continue
+const card = await readFile(join(box.root, prepared.cardRelPath), "utf-8");
+splitCardContent(card).frontmatterText.includes("note: Receipts from the Tokyo trip")
+=> true
+```
+
+A re-run is idempotent: the card already exists, so the summary — including the
+note — is recovered from it rather than rebuilt, and the `<upload>` message a
+resumed delivery builds is identical to the first one's.
+
+```ts continue
+const rerun = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
+JSON.stringify({ note: rerun.note, sameCard: rerun.cardRelPath === prepared.cardRelPath })
+=> {"note":"Receipts from the Tokyo trip","sameCard":true}
+```
+
+A batch with no introduction reports none — the case the agent's "ask first"
+duty exists for:
+
+```ts continue
+const plainId = await stageBulk(box.root, {
+  expectedItems: [{ id: "z", name: "IMG_9999.jpg", size: 4, mimetype: "image/jpeg" }],
+  files: [
+    { filename: "staged-0.bin", uploadedAt: "2026-07-30T19:20:00.000Z", originalName: "IMG_9999.jpg", mimeType: "image/jpeg", itemId: "z", content: "JPEG" },
+  ],
+});
+const plain = await prepareBulkBatch({ boxRoot: box.root, id: plainId, contextDir: "" });
+JSON.stringify({ note: plain.note ?? null })
+=> {"note":null}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A failed item never masks a same-named item that simply never arrived
+
+Failures are keyed by registry id when the uploader knows it, and by name only
+as the fallback for one that doesn't. Keying by both would let a single failure
+swallow every other registry entry sharing that name, so `registered` would stop
+reconciling with `received + failed + missing` — which is the one thing the
+predeclared registry exists to guarantee.
+
+Two picks are both called `image.png`. Item `a` is reported failed; item `b`
+never arrives. `b` must still show up as missing.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const id = await stageBulk(box.root, {
+  expectedItems: [
+    { id: "a", name: "image.png", size: 4, mimetype: "image/png" },
+    { id: "b", name: "image.png", size: 4, mimetype: "image/png" },
+  ],
+  files: [],
+});
+const prepared = await prepareBulkBatch({
+  boxRoot: box.root,
+  id,
+  contextDir: "",
+  failedItems: [{ id: "a", name: "image.png", reason: "network error" }],
+});
+JSON.stringify(prepared.counts)
+=> {"registered":2,"received":0,"missing":1,"failed":1}
 ```
 
 ```ts cleanup

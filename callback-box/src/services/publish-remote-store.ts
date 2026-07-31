@@ -7,7 +7,7 @@
  * {@link createFakePublishStore} with no network. The real implementation
  * ({@link createR2PublishStore}) calls Cloudflare's REST API
  * (`api.cloudflare.com/client/v4/accounts/<id>/r2/buckets/<bucket>/objects/...`)
- * with a single bearer API token — no S3-style request signing.
+ * through the injected bearer provider — no S3-style request signing.
  *
  * ⚠️ UNVERIFIED: the real R2 adapter cannot be exercised without live Cloudflare
  * credentials, so it is NOT covered by any doctest. The connector *logic* is
@@ -15,16 +15,17 @@
  * Treat its request shaping / error mapping as unproven until a manual
  * end-to-end run against a real bucket (the plan's step-7 verification).
  *
- * Credentials come from machine-level env (NOT the box repo — same posture as
- * the Google OAuth creds, plan Track E):
- *   - `CLOUDFLARE_API_TOKEN`   scoped API token (Workers R2 Storage: Edit)
- *   - `CLOUDFLARE_ACCOUNT_ID`  Cloudflare account id
- *   - `CLOUDFLARE_R2_BUCKET`   the publications bucket name
- * When any is absent the connector treats publishing as unconfigured and its
- * sync is a silent no-op.
+ * Credentials (`docs/implemented-plans/pub-setup-wrangler.md` credential model): the
+ * connector reads its ingestion-bucket-scoped token from the per-box secret
+ * file `config/connectors/publish.secret.json`; the laptop CLI rides the
+ * wrangler-OAuth login. The `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`/
+ * `CLOUDFLARE_R2_BUCKET` env triple stays as an explicit override
+ * ({@link r2ConfigFromEnv}). No credential resolves ⇒ unconfigured, no-op.
  */
 
 import { z } from "zod";
+
+import { type BearerProvider, staticBearer } from "./cloudflare-bearer.js";
 
 /** R2 key prefixes the connector pulls from (plan Track A/F key layout). */
 export const SUBMISSIONS_PREFIX = "submissions/";
@@ -102,12 +103,14 @@ export interface PublishRemoteStore {
 export interface R2PublishStoreConfig {
   accountId: string;
   bucket: string;
-  apiToken: string;
+  /** The bearer seam: a stored static token (connector) or the wrangler-OAuth provider (laptop CLI). */
+  bearer: BearerProvider;
 }
 
 /**
- * Read R2 config from machine-level env. Returns `null` when any credential is
- * missing — the connector reads that as "publishing not configured" and no-ops.
+ * Read R2 config from env — the explicit escape hatch that overrides the
+ * wrangler-OAuth path (mirrors wrangler's own `CLOUDFLARE_API_TOKEN`
+ * precedence). Returns `null` when any of the three vars is missing.
  */
 export function r2ConfigFromEnv(env?: NodeJS.ProcessEnv): R2PublishStoreConfig | null {
   const source = env ?? process.env;
@@ -115,7 +118,7 @@ export function r2ConfigFromEnv(env?: NodeJS.ProcessEnv): R2PublishStoreConfig |
   const accountId = source["CLOUDFLARE_ACCOUNT_ID"];
   const bucket = source["CLOUDFLARE_R2_BUCKET"];
   if (!apiToken || !accountId || !bucket) return null;
-  return { accountId, bucket, apiToken };
+  return { accountId, bucket, bearer: staticBearer(apiToken) };
 }
 
 /** The subset of `fetch` the real adapter calls — injectable so a unit test can exercise URL/error mapping without a network. */
@@ -157,13 +160,25 @@ function encodeR2Key(key: string): string {
 /**
  * ⚠️ UNVERIFIED (no live-CF test). Real R2 adapter over Cloudflare's REST API
  * (`api.cloudflare.com/client/v4/accounts/<id>/r2/buckets/<bucket>/objects/...`),
- * authenticated with a single bearer API token (Workers R2 Storage: Edit) — no
+ * authenticated per request through the injected bearer provider — no
  * S3-style request signing.
  */
 export function createR2PublishStore(config: R2PublishStoreConfig, deps?: { fetch?: FetchLike | undefined }): PublishRemoteStore {
   const doFetch = deps?.fetch ?? fetch;
   const base = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/r2/buckets/${config.bucket}`;
-  const authHeaders: Record<string, string> = { authorization: `Bearer ${config.apiToken}` };
+
+  /**
+   * Fetch with the current bearer; a 401 may just be an expired OAuth access
+   * token (a long `cb pub go` outlives one), so refresh through the provider
+   * and retry ONCE — every store op is idempotent. A second 401 propagates.
+   */
+  async function authedFetch(url: string, init: { method: string; headers?: Record<string, string>; body?: Uint8Array | string }): Promise<Response> {
+    const attempt = async (bearer: string): Promise<Response> =>
+      doFetch(url, { method: init.method, headers: { ...init.headers, authorization: `Bearer ${bearer}` }, ...(init.body === undefined ? {} : { body: init.body }) });
+    const res = await attempt(await config.bearer.get());
+    if (res.status !== 401) return res;
+    return attempt(await config.bearer.refresh());
+  }
 
   async function listPrefix(prefix: string): Promise<string[]> {
     const keys: string[] = [];
@@ -173,7 +188,7 @@ export function createR2PublishStore(config: R2PublishStoreConfig, deps?: { fetc
       url.searchParams.set("prefix", prefix);
       url.searchParams.set("per_page", "1000");
       if (cursor !== undefined) url.searchParams.set("cursor", cursor);
-      const res = await doFetch(url.toString(), { method: "GET", headers: authHeaders });
+      const res = await authedFetch(url.toString(), { method: "GET" });
       if (!res.ok) {
         throw new R2RequestError({ op: "list", key: prefix, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
       }
@@ -199,7 +214,7 @@ export function createR2PublishStore(config: R2PublishStoreConfig, deps?: { fetc
       return listPrefix(prefix);
     },
     async get(key: string): Promise<Uint8Array> {
-      const res = await doFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "GET", headers: authHeaders });
+      const res = await authedFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "GET" });
       if (res.status === 404) throw new RemoteObjectNotFoundError(key);
       if (!res.ok) {
         throw new R2RequestError({ op: "get", key, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
@@ -207,15 +222,15 @@ export function createR2PublishStore(config: R2PublishStoreConfig, deps?: { fetc
       return new Uint8Array(await res.arrayBuffer());
     },
     async put(key: string, opts: PublishPutOptions): Promise<void> {
-      const headers: Record<string, string> = { ...authHeaders };
+      const headers: Record<string, string> = {};
       if (opts.contentType !== undefined) headers["content-type"] = opts.contentType;
-      const res = await doFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "PUT", body: opts.body, headers });
+      const res = await authedFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "PUT", body: opts.body, headers });
       if (!res.ok) {
         throw new R2RequestError({ op: "put", key, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
       }
     },
     async delete(key: string): Promise<void> {
-      const res = await doFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "DELETE", headers: authHeaders });
+      const res = await authedFetch(`${base}/objects/${encodeR2Key(key)}`, { method: "DELETE" });
       // 404 (already gone) is success from our view — delete is idempotent.
       if (!res.ok && res.status !== 404) {
         throw new R2RequestError({ op: "delete", key, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });

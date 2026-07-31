@@ -4,6 +4,7 @@
 
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
+import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
@@ -19,7 +20,7 @@ const INLINE_LINK_RE = /\[[^\]]*]\(([^)]+)\)/g;
 
 export const noLegacyViewLinks: Rule = {
   names: ["CB001", "no-legacy-view-links"],
-  description: "The retired `view:` scheme — drop the prefix and reference the plain box path, e.g. [label](store/x.card) or ![alt](store/x.card)",
+  description: "The retired `view:` scheme — drop the prefix and reference the plain box path, e.g. [label](/store/x.card) or ![alt](/store/x.card)",
   tags: ["links"],
   parser: "none",
   function: (params: Parameters<Rule["function"]>[0], onError: RuleOnError): void => {
@@ -140,9 +141,15 @@ export interface LinkResolution {
 }
 
 /**
- * Resolve an inline-link url the way CB002 does: leading `/` against the box
- * root, anything else relative to the file's own directory. Shared by the rule
- * and the `cb relink` repair so they agree on what "broken" means.
+ * Resolve an inline-link url the way CB002 does, via the shared ref algebra
+ * (`src/shared/ref-path.ts`): leading `/` against the box root, anything else
+ * relative to the file's own directory, and — `kind: "markdown"` — no attach
+ * scope, since a `.md` dossier owns no `<basename>.attach/` directory, so
+ * `attach/x` is a literal subdirectory. Any `?query`/`#fragment` addresses a
+ * location *within* the target and is dropped before the existence check. A
+ * link that escapes the box root resolves to nothing and is reported as
+ * outside-the-box. Shared by the rule and the `cb relink` repair so they agree
+ * on what "broken" means.
  */
 export function resolveInternalLink(
   url: string,
@@ -150,11 +157,23 @@ export function resolveInternalLink(
 ): LinkResolution {
   if (!isRelativePath(url)) return { internal: false, inside: false, resolved: "" };
   const root = path.resolve(boxRoot);
-  const [target] = url.split("#");
-  invariant(target !== undefined, "String.split always returns at least one element");
-  const resolved = target.startsWith("/") ? path.join(root, target) : path.resolve(fileDir, target);
-  const inside = resolved === root || resolved.startsWith(root + path.sep);
-  return { internal: true, inside, resolved };
+  const fromPath = boxRelativeDir(root, fileDir);
+  if (fromPath === null) return { internal: true, inside: false, resolved: "" };
+  const resolved = resolveRefPath({ fromPath, ref: parseRef(url).path, kind: "markdown" });
+  if (resolved === null) return { internal: true, inside: false, resolved: "" };
+  return { internal: true, inside: true, resolved: path.resolve(root, resolved) };
+}
+
+/**
+ * The linted file's directory as the shared algebra wants its `fromPath`:
+ * box-relative with forward slashes and a trailing slash (so the algebra's
+ * file-name strip is a no-op). `null` when the directory lies outside the box —
+ * it has no in-box links to resolve.
+ */
+function boxRelativeDir(root: string, fileDir: string): string | null {
+  const rel = path.relative(root, path.resolve(fileDir));
+  if (rel === ".." || rel.startsWith(".." + path.sep)) return null;
+  return rel === "" ? "" : rel.split(path.sep).join("/") + "/";
 }
 
 /** CB001 + CB002 — the box's custom markdown link rules, registered together. */
@@ -175,9 +194,8 @@ export function linkRuleConfig(boxRoot: string): Record<string, unknown> {
   };
 }
 
+/** An in-box link is anything the shared ref algebra doesn't call external. */
 function isRelativePath(url: string): boolean {
-  if (url.startsWith("#")) return false;
-  if (/^[A-Za-z][\d+.A-Za-z-]*:/.test(url)) return false; // any scheme (http, view, mailto, etc.)
-  return true;
+  return !isExternalRef(url);
 }
 

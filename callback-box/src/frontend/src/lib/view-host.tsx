@@ -89,13 +89,16 @@ export function ViewHostProvider({ value, children }: { value: ViewHost; childre
  * `basePath` into a {@link ViewTarget}, resolving relative/`attach/`/absolute
  * exactly like a markdown view-link. Shared by `openCard` and any surface that
  * needs the resolved path (e.g. CardRef's inline render).
+ *
+ * `null` when the ref escapes the box root — there is no card to open.
  */
-export function refToTarget(cardRef: string, basePath: string): ViewTarget {
+export function refToTarget(cardRef: string, basePath: string): ViewTarget | null {
   const qIdx = cardRef.indexOf("?");
   const rawPath = qIdx === -1 ? cardRef : cardRef.slice(0, qIdx);
   // resolveRelativePath handles a leading `/` (box-absolute), `attach/` scope,
   // and document-relative resolution against basePath.
   const resolvedPath = resolveRelativePath(basePath, rawPath);
+  if (resolvedPath === null) return null;
   // parseViewUrl supplies viewer/params/zoom; its own path is discarded for the
   // resolved one (parseViewUrl can't see basePath).
   const parsed = parseViewUrl(cardRef);
@@ -114,6 +117,13 @@ export function makeOpenCard(
 ): ViewHost["openCard"] {
   return (cardRef, opts) => {
     const target = refToTarget(cardRef, basePath);
+    if (target === null) {
+      // A user-initiated open of a box-escaping ref: nothing to navigate to.
+      // Log rather than no-op silently (the widgets that render such a ref
+      // already mark it broken — see CardLink/CardRef).
+      console.warn(`openCard: cardRef "${cardRef}" (base "${basePath}") escapes the box root`);
+      return;
+    }
     onNavigate(
       {
         ...target,

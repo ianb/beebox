@@ -146,7 +146,14 @@ function buildViewHost(args: {
   return {
     openCard: makeOpenCard(onNavigate, basePath),
     useResolvedRef: useBrowserResolvedRef,
-    renderInline: (cardRef) => (renderInline ? renderInline(refToTarget(cardRef, basePath).path) : null),
+    renderInline: (cardRef) => {
+      const target = refToTarget(cardRef, basePath);
+      // A box-escaping ref has no file to inline; the chip that owns this
+      // expansion already shows its own `missing` badge (the resolver reports
+      // exists:false for escapes), so rendering nothing here isn't silent.
+      if (target === null || renderInline === undefined) return null;
+      return renderInline(target.path);
+    },
     basePath,
     boxSlug: boxSlug || "",
   };

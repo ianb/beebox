@@ -17,14 +17,18 @@
  * overlapping digest (acceptable — the box is the system of record and a
  * duplicate summary is harmless).
  *
- * **Activation.** R2 credentials come from machine-level env
- * (`r2ConfigFromEnv`), never the box repo. Unconfigured → `sync()` is a silent
- * no-op. The `PublishRemoteStore` is injectable so the pull logic is fully
- * doctestable against a fake with no network.
+ * **Activation.** The credential is the per-box secret file
+ * `config/connectors/publish.secret.json` (gitignored via the box scaffold,
+ * same pattern as every other connector secret): an API token scoped to ONLY
+ * the ingestion bucket — it cannot touch publication manifests/content (the
+ * bucket split, `docs/implemented-plans/pub-setup-wrangler.md` amendment 1). The
+ * `CLOUDFLARE_*` env triple stays as a fallback. Neither resolves → `sync()`
+ * is a silent no-op. The `PublishRemoteStore` is injectable so the pull logic
+ * is fully doctestable against a fake with no network.
  */
 
 import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { z } from "zod";
 
 import { registerConnector, type Connector, type SyncResult } from "./index.js";
@@ -40,7 +44,41 @@ import {
   createR2PublishStore,
   r2ConfigFromEnv,
   type PublishRemoteStore,
+  type R2PublishStoreConfig,
 } from "../services/publish-remote-store.js";
+import { staticBearer } from "../services/cloudflare-bearer.js";
+
+/** The per-box connector secret: an ingestion-bucket-scoped R2 token (never the broad management token). */
+const publishSecretSchema = z
+  .object({
+    accountId: z.string().min(1),
+    bucket: z.string().min(1),
+    apiToken: z.string().min(1),
+  })
+  .strict();
+
+/** Path of the connector's secret file (same pattern as the other connector secrets). */
+export function publishSecretPath(boxRoot: string): string {
+  return path.join(boxRoot, "config", "connectors", "publish.secret.json");
+}
+
+/**
+ * Read the connector credential from the box's secret file; `null` when the
+ * file is absent (publishing not configured). A file that exists but fails
+ * the schema throws — a malformed credential should be fixed, not silently
+ * treated as "no publishing".
+ */
+export async function readPublishSecret(boxRoot: string): Promise<R2PublishStoreConfig | null> {
+  let raw: string;
+  try {
+    raw = await readFile(publishSecretPath(boxRoot), "utf-8");
+  } catch (e) {
+    if (e instanceof Error && "code" in e && e.code === "ENOENT") return null;
+    throw e;
+  }
+  const parsed = publishSecretSchema.parse(JSON.parse(raw));
+  return { accountId: parsed.accountId, bucket: parsed.bucket, bearer: staticBearer(parsed.apiToken) };
+}
 
 /** An `any-account` access-log object: `{ ts, pubId, email }` (edge-written). */
 const accessLogEntrySchema = z
@@ -93,10 +131,10 @@ class PublishSubmissionsConnector implements Connector {
     this.deps = deps ?? {};
   }
 
-  /** Resolve the store: injected, else built from env, else null (no-op). */
-  private resolveStore(): PublishRemoteStore | null {
+  /** Resolve the store: injected, else the per-box secret file, else the env fallback, else null (no-op). */
+  private async resolveStore(): Promise<PublishRemoteStore | null> {
     if (this.deps.store) return this.deps.store;
-    const config = r2ConfigFromEnv();
+    const config = (await readPublishSecret(this.boxRoot)) ?? r2ConfigFromEnv();
     if (!config) return null;
     return createR2PublishStore(config);
   }
@@ -122,7 +160,7 @@ class PublishSubmissionsConnector implements Connector {
   }
 
   async sync(): Promise<SyncResult> {
-    const store = this.resolveStore();
+    const store = await this.resolveStore();
     if (!store) {
       // Publishing not configured on this box — nothing to pull.
       return { success: true, created: [], updated: [] };

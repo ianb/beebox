@@ -478,10 +478,12 @@ See §1.3 (full request/response/errors).
 
 ### 5.6 Bulk file-upload batch (`/api/bulk/...`)
 
-- **Direction:** native → box (also driven by the web overlay). **Deferred for iOS** behind the
-  uploader boundary (`docs/implemented-plans/bulk-file-upload.md` §4) — no native client ships yet, but the
-  server contract is uploader-agnostic and carries bearer auth like every other native call, so a
-  future native uploader implements exactly these rows. Auth: cookie OR `Authorization: Bearer
+- **Direction:** native → box (also driven by the web overlay). The server contract is
+  uploader-agnostic and carries bearer auth like every other native call; there are now two
+  implementations of these rows — the web overlay and the iOS uploader
+  (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+  `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+  client. Auth: cookie OR `Authorization: Bearer
   <token>`, owner-scoped per session (same `authorizeCaptureSessionOwner` ownership as capture).
 - **Endpoints:**
   - `POST /api/bulk/sessions` — create a batch. Req `{ targetSessionId: string /* required */,
@@ -508,16 +510,44 @@ See §1.3 (full request/response/errors).
     (retry shortly).
   - `GET /api/bulk/sessions/:id` — resume/status: `{ sessionId, state, targetSessionId, registered:
     BulkItem[], received: [{ itemId, name, size }] }`.
-  - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch.
+  - `DELETE /api/bulk/sessions/:id` — cancel and discard the batch. Accepted only while the batch is
+    `open` (still uploading) or `failed:*` (dead, retryable); **409** once finalize has sealed it,
+    because the background worker owns it from then on and deleting the staging directory under that
+    worker makes it read `null` and silently return — no `<upload>` message, while the client that
+    already saw finalize succeed reports success. The state check and the delete run together under
+    the staging lock, so a cancel cannot race the seal. Uploaders must disable their cancel/close
+    affordances once finalize is in flight.
   - `POST /api/bulk/sessions/:id/finalize` — seal + fire the background prepare→deliver worker. Req
-    `{ failedItems?: [{ id?, name, reason }] }`. Res `{ sessionId, staged: true }`. **503** if the box
-    has no chat runtime. Returns immediately; the batch lands an `upload-batch` card under the chat's
-    `tmp-upload/` and an `<upload>` message is injected.
+    `{ failedItems?: [{ id?, name, reason }], note?: string }`. Res `{ sessionId, staged: true }`.
+    **503** if the box has no chat runtime. Returns immediately; the batch lands an `upload-batch`
+    card under the chat's `tmp-upload/` and an `<upload>` message is injected.
+    **A 200 here means SEALED, not DELIVERED** — prepare→deliver runs in the background afterwards
+    and can still fail (`failed:prepare` / `failed:deliver`).
+    **The seal is the hand-off.** Before it, the uploader is the only thing that can recover the
+    batch, so a failed finalize means the uploader keeps the user's text and lets them retry. After
+    it, the box holds both the bytes and the `note`, and owns recovery: a batch that ends `failed:*`
+    is surfaced to its chat agent by the sweep (`core/bulk-upload/sweep.ts`, `notifyStranded`) with
+    the introduction and the received/failed/registered counts, so the agent can tell the boxholder
+    and offer to place the files. An uploader therefore **MUST NOT** mount its own retry for a sealed
+    batch — two recovery paths for one batch is how it gets delivered twice — and MAY release its
+    local copies and the composer text once finalize returns 200.
+    Polling `GET /sessions/:id` after the seal is for UX only (reporting success promptly), not
+    correctness. Terminal reads: `delivered`, `delivering` (queued to a busy agent), or **404**
+    (staging is torn down only after delivery) all mean delivered; `failed:*` means the box will hand
+    it to the agent.
+    `note` is the batch's **introduction** — the uploader sends the composer text the user submitted
+    the files with, verbatim. It rides in the same atomic seal as `failedItems`, lands in the card's
+    `note` frontmatter, and renders as the first paragraph of the `<upload>` message body (above the
+    generated summary, separated by a blank line). Capped at 10,000 chars (**400** over); a
+    whitespace-only note is stored as absent, and a batch with no note produces an `<upload>` message
+    byte-identical to the pre-`note` form. **An uploader that has composer text MUST send it** —
+    without it every batch is "unintroduced" and the agent asks what the files are instead of filing
+    them (`src/schemas/upload-batch.tsx` duty 1).
 - **Anchors:**
   | side | anchor |
   |---|---|
   | box handler | `src/webapp/routes/bulk-upload.ts` — `registerBulkUploadRoutes`; streaming write in `src/core/capture/staging-stream.ts` — `addFileStreamed` |
-  | native caller | — (deferred; a future native uploader) |
+  | native caller | `Services/BulkUploadAPI.swift` — request shaping; `Services/BulkUploadCoordinator.swift` — bounded queue (3 in flight), per-item retry, resume via `GET /sessions/:id` |
 - **Drift:** LOUD (400/409/413/404 all surface; incomplete uploads leave the item in the registry's
   missing list, which finalize reports).
 
@@ -621,6 +651,28 @@ without the other is a contract break.
 - **Neutral web→native transport** `callbackboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
+- **Inline photo limit** `4` — `components/chat/photo-batch-threshold.ts` · `INLINE_PHOTO_LIMIT` /
+  `shouldBatchPhotos` ↔ the iOS composer's mirrored constant. **The most photos that may ride
+  inline (base64) in one chat message.** A selection that would put the composer's *total* inline
+  count above the limit is uploaded as a bulk batch (§5.6) instead. Photos **already inline join that
+  batch** and are removed from the composer, so one selection act has one destination — batching only
+  the new photos would send the composer text off as the batch's introduction while the older photos
+  sat behind with nothing describing them. (Photos still *encoding* can't be folded, having no bytes
+  yet; they finish and land inline rather than being discarded — never losing a photo outranks
+  arriving in one piece.) The inline total is bounded by the limit however many separate selections a
+  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, and drop.
+
+  This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
+  of megabytes into a single `/chat/send`, which is what
+  `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
+  server-side trace. There is **no documented size ceiling** for a WKWebView script message — the
+  failure is memory pressure, not a published limit — so "inline just under the cliff" is not
+  implementable; keeping the inline payload categorically small is the only sound posture. A
+  surface that raises or ignores the limit reintroduces the bug.
+
+  An uploader that routes a selection this way MUST send the composer text as the batch's `note`
+  (§5.6) — otherwise the batch is unintroduced and the agent asks what the files are instead of
+  filing them.
 
 ---
 

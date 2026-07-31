@@ -375,3 +375,110 @@ late.statusCode
 ```ts cleanup
 await ctx.cleanup();
 ```
+
+## Finalize records the batch's introduction inside the seal
+
+The composer text the boxholder submitted the batch with rides IN the CAS seal,
+so a resume rebuilds the same batch with the same introduction — there is no
+window in which a sealed batch exists without its note.
+
+```ts
+const ctx = await makeTestServer();
+const created = await createBatch(ctx, { targetSessionId: "chat-note", items: [{ id: "a", name: "a.jpg" }] });
+const sessionId = created.body.sessionId;
+await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
+
+const done = await ctx.request({
+  method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+  payload: { note: "Receipts from the Tokyo trip" },
+});
+const sealed = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+JSON.stringify({ status: done.statusCode, state: sealed.state, note: sealed.note })
+=> {"status":200,"state":"sealed","note":"Receipts from the Tokyo trip"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## A whitespace-only note is recorded as no note at all
+
+An empty composer must produce a batch indistinguishable from one that never
+carried an introduction — that is what keeps the `<upload>` message byte-identical
+to its pre-note form.
+
+```ts
+const ctx = await makeTestServer();
+const created = await createBatch(ctx, { targetSessionId: "chat-blank", items: [{ id: "a", name: "a.jpg" }] });
+const sessionId = created.body.sessionId;
+await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
+
+await ctx.request({
+  method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+  payload: { note: "   \n\t " },
+});
+const sealed = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+JSON.stringify({ note: sealed.note ?? null })
+=> {"note":null}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## An oversized note is rejected at the boundary
+
+The note is untrusted client prose, so it is length-capped where it enters
+rather than trusted downstream.
+
+```ts
+const ctx = await makeTestServer();
+const created = await createBatch(ctx, { targetSessionId: "chat-big", items: [{ id: "a", name: "a.jpg" }] });
+const sessionId = created.body.sessionId;
+
+const tooBig = await ctx.request({
+  method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+  payload: { note: "x".repeat(10_001) },
+});
+const stillOpen = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+JSON.stringify({ status: tooBig.statusCode, state: stillOpen.state })
+=> {"status":400,"state":"open"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## A sealed batch cannot be cancelled out from under its worker
+
+Cancel is the uploader's affordance for a batch it still owns. Once finalize
+seals one, the background worker owns it — deleting the staging directory then
+makes the worker read `null` and quietly return, so no `<upload>` message ever
+arrives while the client, which already saw finalize succeed, reports success.
+That is the "client says done, server shows nothing" failure this feature exists
+to remove, so a post-seal cancel is refused rather than raced.
+
+```ts
+const ctx = await makeTestServer();
+const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
+const sessionId = created.body.sessionId;
+await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
+await ctx.request({ method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`, payload: {} });
+
+const late = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${sessionId}` });
+late.statusCode
+=> 409
+```
+
+An open batch still cancels normally:
+
+```ts continue
+const open = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "b", name: "b.jpg" }] });
+const cancelled = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${open.body.sessionId}` });
+JSON.stringify({ status: cancelled.statusCode, success: cancelled.body.success })
+=> {"status":200,"success":true}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```

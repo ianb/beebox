@@ -73,7 +73,7 @@ A briefing has two parts: **structured records in frontmatter** and a
 
 \`\`\`yaml
 key-people:
-  - ref: people/Dana_Lee
+  - ref: /people/Dana_Lee.person.card
     called: Dad
     role: Ledger subject
     notes: Primary account holder; defer to the sibling group on decisions.

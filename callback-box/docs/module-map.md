@@ -24,7 +24,12 @@ by vibe.
   module** (e.g. `lib/invariant.ts`, which is dependency-free) — `lib/` is the
   lower leaf layer, so `shared/ → lib/` is a downward edge, not a cycle. It may
   NOT import `core/`, `schemas/`, `webapp/`, or any `node:`-touching `lib/`
-  module. **Frontend-consumed leaf helper?** When a dependency-free `lib/` helper
+  module. **Ref/path algebra lives here, in exactly one module**:
+  `shared/ref-path.ts` (`parseRef`, `resolveRefPath`) owns the 3-form rule and
+  fail-closed containment for every in-box ref, backend and frontend alike —
+  building on `shared/attach-path.ts` (attach-scope naming) and
+  `shared/box-path.ts` (the box-relative canonical form). A new consumer imports
+  it; it never re-derives the rules with `path.resolve` or a segment split. **Frontend-consumed leaf helper?** When a dependency-free `lib/` helper
   (e.g. `is-record`, `invariant`, `error-guards`) is also needed by the browser —
   which the import-boundary rule forbids from reaching into backend `lib/` — keep
   the implementation in `lib/` (so `lib/` stays a leaf) and add a thin

@@ -19,6 +19,7 @@
 		B72000152C3C000100000001 /* ComposerDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000162C3C000100000001 /* ComposerDraftStore.swift */; };
 		B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000182C3C000100000001 /* ComposerDraftTests.swift */; };
 		B72000192C3C000100000001 /* ComposerTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001A2C3C000100000001 /* ComposerTextView.swift */; };
+		B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720009B2C3C000100000001 /* BulkUploadTests.swift */; };
 		B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001C2C3C000100000001 /* ChatAPITests.swift */; };
 		B720001D2C3C000100000001 /* PendingEmissionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B720001E2C3C000100000001 /* PendingEmissionStore.swift */; };
 		B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */; };
@@ -36,6 +37,7 @@
 		5A1000082C3C000100000001 /* ChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000192C3C000100000001 /* ChatAPI.swift */; };
 		5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2C3C000100000001 /* NativeComposerView.swift */; };
 		5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001B2C3C000100000001 /* SpeechDictation.swift */; };
+		5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
 		5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001F2C3C000100000001 /* SpeechKeywords.swift */; };
 		5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000212C3C000100000001 /* QRScannerView.swift */; };
@@ -46,6 +48,9 @@
 		5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002E2C3C000100000001 /* CaptureModels.swift */; };
 		5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002F2C3C000100000001 /* CaptureAPI.swift */; };
 		5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000332C3C000100000001 /* CaptureStore.swift */; };
+		5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000912C3C000100000001 /* BulkUploadAPI.swift */; };
+		5A1000922C3C000100000001 /* BulkUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */; };
+		5A1000942C3C000100000001 /* BulkPhotoStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000952C3C000100000001 /* BulkPhotoStaging.swift */; };
 		5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */; };
 		5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003A2C3C000100000001 /* CaptureAcquisition.swift */; };
 		5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003B2C3C000100000001 /* NativeCaptureView.swift */; };
@@ -84,6 +89,7 @@
 		B72000162C3C000100000001 /* ComposerDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftStore.swift; sourceTree = "<group>"; };
 		B72000182C3C000100000001 /* ComposerDraftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftTests.swift; sourceTree = "<group>"; };
 		B720001A2C3C000100000001 /* ComposerTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTextView.swift; sourceTree = "<group>"; };
+		B720009B2C3C000100000001 /* BulkUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadTests.swift; sourceTree = "<group>"; };
 		B720001C2C3C000100000001 /* ChatAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPITests.swift; sourceTree = "<group>"; };
 		B720001E2C3C000100000001 /* PendingEmissionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingEmissionStore.swift; sourceTree = "<group>"; };
 		B72000202C3C000100000001 /* NativeComposerFixtureScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerFixtureScreen.swift; sourceTree = "<group>"; };
@@ -102,6 +108,7 @@
 		5A1000192C3C000100000001 /* ChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAPI.swift; sourceTree = "<group>"; };
 		5A10001A2C3C000100000001 /* NativeComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerView.swift; sourceTree = "<group>"; };
 		5A10001B2C3C000100000001 /* SpeechDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictation.swift; sourceTree = "<group>"; };
+		5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPhotoThreshold.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
 		5A10001F2C3C000100000001 /* SpeechKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywords.swift; sourceTree = "<group>"; };
 		5A1000212C3C000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
@@ -112,6 +119,9 @@
 		5A10002E2C3C000100000001 /* CaptureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureModels.swift; sourceTree = "<group>"; };
 		5A10002F2C3C000100000001 /* CaptureAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPI.swift; sourceTree = "<group>"; };
 		5A1000332C3C000100000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
+		5A1000912C3C000100000001 /* BulkUploadAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadAPI.swift; sourceTree = "<group>"; };
+		5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkUploadCoordinator.swift; sourceTree = "<group>"; };
+		5A1000952C3C000100000001 /* BulkPhotoStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPhotoStaging.swift; sourceTree = "<group>"; };
 		5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinator.swift; sourceTree = "<group>"; };
 		5A10003A2C3C000100000001 /* CaptureAcquisition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisition.swift; sourceTree = "<group>"; };
 		5A10003B2C3C000100000001 /* NativeCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureView.swift; sourceTree = "<group>"; };
@@ -183,6 +193,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1000122C3C000100000001 /* PairedBox.swift */,
+				5A1000972C3C000100000001 /* BulkPhotoThreshold.swift */,
 				5A10001E2C3C000100000001 /* ChatImageAttachment.swift */,
 				B72000022C3C000100000001 /* NativeComposerContract.swift */,
 				B72000122C3C000100000001 /* ComposerDraft.swift */,
@@ -230,6 +241,9 @@
 				5A10001F2C3C000100000001 /* SpeechKeywords.swift */,
 				5A1000252C3C000100000001 /* PairingURLInbox.swift */,
 				5A10002F2C3C000100000001 /* CaptureAPI.swift */,
+				5A1000912C3C000100000001 /* BulkUploadAPI.swift */,
+				5A1000932C3C000100000001 /* BulkUploadCoordinator.swift */,
+				5A1000952C3C000100000001 /* BulkPhotoStaging.swift */,
 				5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */,
 				5A10003A2C3C000100000001 /* CaptureAcquisition.swift */,
 				D94000112C3C000100000001 /* NativeEarcons.swift */,
@@ -264,6 +278,7 @@
 				5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */,
 				5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */,
 				B72000182C3C000100000001 /* ComposerDraftTests.swift */,
+				B720009B2C3C000100000001 /* BulkUploadTests.swift */,
 				B720001C2C3C000100000001 /* ChatAPITests.swift */,
 			);
 			path = CallbackBoxTests;
@@ -393,6 +408,7 @@
 				5A1000092C3C000100000001 /* NativeComposerView.swift in Sources */,
 				B720001F2C3C000100000001 /* NativeComposerFixtureScreen.swift in Sources */,
 				5A10000A2C3C000100000001 /* SpeechDictation.swift in Sources */,
+				5A1000962C3C000100000001 /* BulkPhotoThreshold.swift in Sources */,
 				5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */,
 				5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */,
 				5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */,
@@ -403,6 +419,9 @@
 				5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */,
 				5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */,
 				5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */,
+				5A1000902C3C000100000001 /* BulkUploadAPI.swift in Sources */,
+				5A1000922C3C000100000001 /* BulkUploadCoordinator.swift in Sources */,
+				5A1000942C3C000100000001 /* BulkPhotoStaging.swift in Sources */,
 				5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */,
 				5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */,
 				5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */,
@@ -423,6 +442,7 @@
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
+				B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */,
 				B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */,
 				C83000032C3C000100000001 /* BoxLockTests.swift in Sources */,
 			);

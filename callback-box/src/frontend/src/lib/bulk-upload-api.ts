@@ -180,17 +180,22 @@ export async function cancelBulkSession(sessionId: string): Promise<void> {
  * Seal the batch and fire the server-side prepare→deliver worker. The named
  * `failedItems` are persisted so the delivered `<upload>` message reports them
  * (deliver-with-failures, never silent — plan §4).
+ *
+ * `note` is the batch's introduction — the composer text the boxholder submitted
+ * the files with. Sending it is what keeps the agent from asking what the files
+ * are when the boxholder already said (`docs/mobile-contract.md` §5.6).
  */
 export async function finalizeBulkSession(opts: {
   sessionId: string;
   failedItems: BulkFailedItem[];
+  note: string | undefined;
 }): Promise<void> {
   const res = await fetch(
     bulkUrl(`/sessions/${opts.sessionId}/finalize`),
     withMobileAuth({
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ failedItems: opts.failedItems }),
+      body: JSON.stringify({ failedItems: opts.failedItems, ...(opts.note !== undefined ? { note: opts.note } : {}) }),
     }),
   );
   if (!res.ok) {
@@ -198,4 +203,78 @@ export async function finalizeBulkSession(opts: {
     throw new RequestError(message);
   }
   FinalizeResponse.parse(await res.json());
+}
+
+/** What the box says about a batch after finalize. */
+const SessionStatusResponse = z.object({ state: z.string() });
+
+/**
+ * The end state of a batch, from the uploader's point of view.
+ *
+ * `delivered` means the `<upload>` message is in the chat (or is queued to a busy
+ * agent and will be). `failed` means it is not and won't be without a retry.
+ * `unknown` means the box is still working and the client stopped waiting —
+ * which is NOT permission to discard anything.
+ */
+export type BulkDeliveryOutcome = "delivered" | "failed" | "unknown";
+
+export interface BulkDeliveryResult {
+  outcome: BulkDeliveryOutcome;
+  /** Failure detail for the user (set only when `failed`). */
+  reason?: string;
+}
+
+/**
+ * Wait for the box to actually deliver a sealed batch.
+ *
+ * `finalize` only *seals* — it returns `staged: true` and runs prepare→deliver in
+ * the background, so a 200 there means "accepted", never "delivered". Treating it
+ * as delivery is how a client ends up clearing the composer and dropping its
+ * retained files while the batch later fails and no `<upload>` message ever
+ * appears — i.e. the original "client says done, server shows nothing" bug in a
+ * new place. So callers wait for this before destroying anything.
+ *
+ * Terminal reads:
+ * - **404** — staging was torn down, which the worker only does after delivery.
+ * - **`delivered`** — done, teardown still pending.
+ * - **`delivering`** — handed to a busy agent's queue; it will land, and
+ *   reconciliation re-delivers if a crash loses the queue. Good enough to
+ *   release local state.
+ * - **`failed:*`** — surfaced to the user; the batch stays retryable server-side.
+ */
+export async function waitForBulkDelivery(opts: {
+  sessionId: string;
+  timeoutMs: number;
+  pollMs: number;
+}): Promise<BulkDeliveryResult> {
+  const deadline = Date.now() + opts.timeoutMs;
+  for (;;) {
+    let res: Response;
+    try {
+      // Per-request timeout: without it a single hung request outlives the
+      // overall deadline and the caller waits forever.
+      res = await fetch(
+        bulkUrl(`/sessions/${opts.sessionId}`),
+        withMobileAuth({ signal: AbortSignal.timeout(Math.min(opts.pollMs * 4, 10_000)) }),
+      );
+    } catch (e) {
+      // A transient network blip mid-wait is not a delivery failure — keep
+      // waiting rather than reporting a false negative the user would act on.
+      console.warn("[bulk] Delivery poll failed; retrying:", e instanceof Error ? e.message : String(e));
+      if (Date.now() >= deadline) return { outcome: "unknown" };
+      await new Promise((r) => setTimeout(r, opts.pollMs));
+      continue;
+    }
+    if (res.status === 404) return { outcome: "delivered" };
+    if (res.ok) {
+      const parsed = SessionStatusResponse.safeParse(await res.json());
+      const state = parsed.success ? parsed.data.state : "";
+      if (state === "delivered" || state === "delivering") return { outcome: "delivered" };
+      if (state.startsWith("failed:")) {
+        return { outcome: "failed", reason: `The box could not deliver the batch (${state}).` };
+      }
+    }
+    if (Date.now() >= deadline) return { outcome: "unknown" };
+    await new Promise((r) => setTimeout(r, opts.pollMs));
+  }
 }

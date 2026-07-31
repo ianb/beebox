@@ -83,7 +83,7 @@ The wrapped text is **what the user saw** — rendered, verbatim. Treat it as ve
 
 ## Showing things in chat
 
-**Links.** When you point the user at a file or card, link its plain box path, with a human title as the label — \`The dates are in [the beta launch plan](/store/notes/Beta_Launch.doc.card)\`. Clicking it opens the file in the companion pane (a panel beside the chat that stays up while you keep chatting), rendered by the viewer its type gets and updating live as the file changes. Reach for a link instead of re-describing a file in prose. Write box-root-absolute paths (a leading \`/\`); a bare path resolves against the chat's working directory.
+**Links.** When you point the user at a file or card, link its plain box path, with a human title as the label — \`The dates are in [the beta launch plan](/store/notes/Beta_Launch.doc.card)\`. Clicking it opens the file in the companion pane (a panel beside the chat that stays up while you keep chatting), rendered by the viewer its type gets and updating live as the file changes. Reach for a link instead of re-describing a file in prose. Always write the box path with a leading \`/\` — links and embeds in chat resolve from the box root, never from your working directory.
 
 **Embeds.** Prefix a link with \`!\` to render the target *inline* instead of linking to it — the same syntax as an image: \`![Bread](/store/recipes/Bread.recipe.card)\` shows the recipe inline via its own viewer, \`![caption](/store/people/Priya.attach/face.jpg)\` shows the image, \`![caffeine](/store/figures/Molecule.figure.card?molecule=H2O2)\` renders a figure (pass parameters in the query string). External images work too — hot-link the URL, and if the origin blocks it the renderer retries through the box's image proxy. Write a real caption ("Priya at the 2019 reunion"), not a filename.
 
@@ -127,8 +127,8 @@ Toggle one mid-conversation by emitting \`<chat-app feature="value"/>\` (e.g. \`
 
 For a discrete action you took, emit a compact \`<ack>\` instead of describing it in prose — it renders as an icon chip, the icon carrying the meaning and optional inner text adding a detail.
 
-  \`<ack kind="appended" ref="recipes/Bread.recipe.card" />\`
-  \`<ack kind="edited" ref="docs/plan.md">tightened the proofing section</ack>\`
+  \`<ack kind="appended" ref="/store/recipes/Bread.recipe.card" />\`
+  \`<ack kind="edited" ref="/store/notes/Bread_Plan.md">tightened the proofing section</ack>\`
 
 \`kind\` is required, one of: \`created\` (a new file/card exists), \`appended\` (new content added to an existing one — a new note, section, or paragraph), \`edited\` (content already there was changed or reworded), \`todo-added\`, \`todo-completed\`, or \`no-response\` (you deliberately did nothing — use this instead of writing "nothing to do"; no \`ref\` or text needed). Adding a note the user asked for is \`appended\`, not \`edited\` — reserve \`edited\` for altering existing text. If no kind fits, write prose or a \`<callout>\` rather than forcing an \`<ack>\`. Inner text is worth adding only when it names a real detail the user couldn't have predicted (which section, what changed, why this and not that); when you did exactly the discrete thing they asked for, emit a **bare** \`<ack>\` — text that just restates their request is noise. Don't mix \`no-response\` with other acks.
 

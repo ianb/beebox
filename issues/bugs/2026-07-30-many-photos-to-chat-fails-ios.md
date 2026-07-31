@@ -3,8 +3,27 @@ title: "Submitting many photos to chat fails (iOS); route >N through upload+refe
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it on a prod box
+needs: [manual-testing]
+design: ../../callback-box/docs/plans/chat-photo-batch-upload.md
 labels: [mobile]
 ---
+
+**Fix implemented on worktree `chat-photo-batch-upload`** (design:
+[chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)).
+Above 4 photos, both composers now upload the selection as a bulk batch instead
+of base64-inlining it, and the composer text rides along as the batch's `note`
+so the agent files against it rather than asking what the files are.
+
+**`needs: manual-testing` — this cannot be closed on green tests.** The two
+failures it fixes (WKWebView memory pressure carrying a huge script message, and
+iOS photo import at camera-roll scale) are exactly what a simulator and a
+headless browser cannot reproduce. On a real device: select 70+ camera-roll
+photos in the iOS app, type a sentence saying what they are, submit. Expected —
+a live "Uploading photos — N of M" line in the composer, then one `<upload>`
+message in chat carrying your sentence above the summary, an `upload-batch` card
+listing 70 received and 0 missing, and an agent that files them against what you
+typed instead of asking what they are. Watch for: photos silently dropped
+(count < 70), the composer text lost, or a stall with no progress line.
 
 Boxholder selected **70+ photos** from the camera roll and submitted them to a
 box's chat **in the iOS app**; it failed. Reproduced from logs, and it validates

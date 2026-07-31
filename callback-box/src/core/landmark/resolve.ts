@@ -15,6 +15,7 @@ import type {
   LandmarkOrderType,
 } from "../../schemas/landmark.js";
 import { isCardFile } from "../../lib/paths.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
 import { titleFromFilename } from "../file-summary.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
 
@@ -60,8 +61,13 @@ export interface ResolvedNavigation {
 export const GROUP_CHILD_CAP = 50;
 
 export interface ResolveOptions {
-  /** Absolute path to the landmark card's directory. */
+  /** Absolute path to the landmark card's directory (the `expand` glob's cwd). */
   landmarkDir: string;
+  /**
+   * Box-relative path of the landmark card itself — the document every `ref`
+   * resolves against (see `src/shared/ref-path.ts`).
+   */
+  landmarkPath: string;
   /** Absolute path to the box root. */
   boxRoot: string;
 }
@@ -146,17 +152,24 @@ async function resolveExpand(
   const sorted = await sortMatches(matchesRel, { order, cwd: options.landmarkDir });
   const capped = options.limit === undefined ? sorted : sorted.slice(0, options.limit);
 
-  const refTpl = expand["template-ref"] ?? "${path}";
+  const refTpl = expand["template-ref"];
   const labelTpl = expand["template-label"] ?? "";
 
   const out: ResolvedLink[] = [];
   for (const matchRel of capped) {
     let frontmatter: Record<string, unknown> | null = null;
-    if (needsLookup(refTpl) || needsLookup(labelTpl)) {
+    if ((refTpl !== undefined && needsLookup(refTpl)) || needsLookup(labelTpl)) {
       frontmatter = await loadCardFrontmatter(path.join(options.landmarkDir, matchRel));
     }
     const vars: TemplateVars = { matchRel, frontmatter };
-    const ref = applyTemplate(refTpl, vars);
+    // No `template-ref` → emit the canonical box path (leading `/`) for the
+    // match rather than the landmark-dir-relative one the glob returns:
+    // generated refs say what they mean regardless of the document they end up
+    // read against. An authored template keeps `${path}` dir-relative (that is
+    // what the schema documents), and both forms resolve identically below.
+    const ref = refTpl === undefined
+      ? boxPathForMatch(matchRel, options)
+      : applyTemplate(refTpl, vars);
     const label = applyTemplate(labelTpl, vars).trim();
     out.push(await buildLink({
       rawRef: ref,
@@ -165,6 +178,23 @@ async function resolveExpand(
     }));
   }
   return { links: out, total: sorted.length };
+}
+
+/**
+ * The box path (leading `/`) of one `expand` match, whose glob-relative path is
+ * relative to the landmark's directory. Resolved as a literal path
+ * (`kind: "markdown"`): a glob match is a filesystem path, so a directory
+ * literally named `attach/` is itself, not the landmark's attach scope. Falls
+ * back to the raw match if that somehow escapes the box — `buildLink` then
+ * reports it missing, the same as any broken ref.
+ */
+function boxPathForMatch(matchRel: string, options: ResolveOptions): string {
+  const resolved = resolveRefPath({
+    fromPath: options.landmarkPath,
+    ref: matchRel,
+    kind: "markdown",
+  });
+  return resolved === null ? matchRel : `/${resolved}`;
 }
 
 /** True if the template references any field beyond the special `${path}`. */
@@ -227,16 +257,33 @@ interface BuildLinkInput {
   options: ResolveOptions;
 }
 
+/**
+ * Resolve one `ref` into a link the client can follow. Resolution goes through
+ * the shared ref algebra (`src/shared/ref-path.ts`), so a leading-`/` ref means
+ * the box root — the form validate and `cb mv` already understood, which this
+ * layer used to mis-resolve to an OS-absolute path. A `?query`/`#fragment`
+ * addresses a location within the target: it's kept on the emitted `ref` but
+ * dropped before the existence check. A ref that escapes the box resolves to
+ * nothing and is reported missing, the same as a broken ref at validate time.
+ */
 async function buildLink({ rawRef, label, options }: BuildLinkInput): Promise<ResolvedLink> {
-  const absolute = path.resolve(options.landmarkDir, rawRef);
-  const ref = path.relative(options.boxRoot, absolute);
+  const parsed = parseRef(rawRef);
+  const title = titleFromFilename(parsed.path);
+  const resolved = resolveRefPath({
+    fromPath: options.landmarkPath,
+    ref: parsed.path,
+    kind: "card",
+  });
+  if (resolved === null) return { ref: rawRef, label, title, exists: false };
+  const suffix =
+    (parsed.query === undefined ? "" : `?${parsed.query}`) +
+    (parsed.fragment === undefined ? "" : `#${parsed.fragment}`);
   let exists = false;
   try {
-    await fs.stat(absolute);
+    await fs.stat(path.resolve(options.boxRoot, resolved));
     exists = true;
   } catch (_e) {
     exists = false;
   }
-  const title = titleFromFilename(rawRef);
-  return { ref, label, title, exists };
+  return { ref: resolved + suffix, label, title, exists };
 }

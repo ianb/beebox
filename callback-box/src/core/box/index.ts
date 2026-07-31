@@ -176,7 +176,7 @@ tmp/
 
 # cb-assets (managed by cb attachments init-gitignore)
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
-# (size + sha256), not committed directly. See docs/asset-manifests.md.
+# (size + sha256), not committed directly. See docs/implemented-plans/asset-manifests.md.
 ${assetGitignorePatterns()}
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);

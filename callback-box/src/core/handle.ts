@@ -19,6 +19,7 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { getBoxDir } from "../lib/paths.js";
+import { resolveRefPath } from "../shared/ref-path.js";
 import {
   compileTriageInstructions,
   type TriageCategory,
@@ -137,8 +138,19 @@ async function listBucketItems({ boxRoot, category }: { boxRoot: string; categor
 
 function resolveProcedurePath(category: TriageCategory): string | null {
   if (!category.procedureRef || category.procedureRef === "inline") return null;
-  // procedureRef is relative to the landmark's directory; resolve to box-relative.
-  return path.normalize(path.join(category.dir, category.procedureRef));
+  // A destination's `procedure.ref` is a box path (leading `/`); a bare path
+  // still resolves against the landmark's own directory. Resolution goes
+  // through the shared ref algebra, which fails closed on a `..` escape.
+  const resolved = resolveRefPath({
+    fromPath: `${category.dir}/`,
+    ref: category.procedureRef,
+    kind: "card",
+  });
+  if (resolved === null) {
+    console.warn(`handle: procedure ref "${category.procedureRef}" in "${category.dir}" escapes the box`);
+    return null;
+  }
+  return resolved;
 }
 
 /**

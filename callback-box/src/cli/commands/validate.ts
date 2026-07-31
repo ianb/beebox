@@ -14,7 +14,15 @@ import {
   formatMarkdownResults,
   type MarkdownLintSummary,
 } from "./validate-markdown.js";
-import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../../lib/paths.js";
+import { requireBoxRoot, isCardFile, isMarkdownFile, isTrashedCard, isViewFile } from "../../lib/paths.js";
+import { collectDossierCanonicalWarnings, collectViewCanonicalWarnings } from "../../core/canonical-refs.js";
+import {
+  canonicalCounts,
+  formatCanonicalReport,
+  rejectUnsupportedCanonicalScope,
+  runCanonicalFix,
+  type CanonicalBuckets,
+} from "./validate-canonical.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
 import { collectViewRefWarnings } from "../../core/views/refs.js";
 import { getStatus } from "../../lib/git.js";
@@ -38,18 +46,6 @@ const execFileP = promisify(execFile);
  */
 export function useColor(): boolean {
   return process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
-}
-
-/**
- * Cards under `store/trash/` are by definition orphaned/discarded and
- * routinely have broken refs (their attachments and related cards have
- * been deleted). We skip them from default validation so trash drift
- * doesn't block normal commits. `cb validate <path>` on an explicit
- * trash path still validates — the skip only applies to the implicit
- * scans (--all, --staged, no-args).
- */
-function isTrashedCard(boxRelOrAbs: string): boolean {
-  return /(^|\/)store\/trash\//.test(boxRelOrAbs);
 }
 
 async function listStagedCards(boxRoot: string): Promise<string[]> {
@@ -86,6 +82,13 @@ interface CollectedResults {
   claudeMdWarnings: string[];
   /** Broken `cardRef="…"` refs in box-authored views (warning-only). */
   viewWarnings: string[];
+  /**
+   * Non-canonical `cardRef=` refs in views — counted in the card-ref bucket of
+   * the `--canonical` summary. Empty unless `--canonical` was given.
+   */
+  canonicalViewWarnings: string[];
+  /** Non-canonical `[text](path)` links in `.md` dossiers — the second bucket. */
+  canonicalDossierWarnings: string[];
 }
 
 interface ValidationResults extends CollectedResults {
@@ -98,6 +101,17 @@ interface ValidationResults extends CollectedResults {
    * `collect*Results` variant.
    */
   legacySchemaErrors: string[];
+  /** Whether `--canonical` asked for the canonical-form report. */
+  canonical: boolean;
+}
+
+/** The canonical findings in the shape `validate-canonical.ts` formats/counts. */
+function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
+  return {
+    cardSummary: results.cardSummary,
+    viewWarnings: results.canonicalViewWarnings,
+    dossierWarnings: results.canonicalDossierWarnings,
+  };
 }
 
 /**
@@ -156,6 +170,8 @@ interface CollectArgs {
    * mirroring how `isTrashedCard` skips only implicit scans.
    */
   ignore: ValidationIgnore;
+  /** `--canonical`: also report refs written in the document-relative form. */
+  canonical: boolean;
 }
 
 /**
@@ -181,19 +197,30 @@ async function collectStagedResults({ boxRoot, ctx, resolved, json, ignore }: Co
   const cardSummary = cards.length > 0 ? await lintCardsDispatch(cards, { boxRoot, ctx }) : null;
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings };
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings, ...NO_CANONICAL };
 }
 
 /** Validate every card, markdown file, view, and attach layout in the box. */
-async function collectAllResults({ boxRoot, ctx, ignore }: CollectArgs): Promise<CollectedResults> {
+async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArgs): Promise<CollectedResults> {
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p) && !ignore.isIgnored(p));
-  const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
+  const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx, canonical });
   const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((p) => !ignore.isIgnored(p));
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
   const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
-  const viewWarnings = await collectViewRefWarnings(await listBoxViewFiles(boxRoot), boxRoot);
-  return { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings };
+  const viewPaths = await listBoxViewFiles(boxRoot);
+  const viewWarnings = await collectViewRefWarnings(viewPaths, boxRoot);
+  const canonicalViewWarnings = canonical ? await collectViewCanonicalWarnings(viewPaths, boxRoot) : [];
+  const canonicalDossierWarnings = canonical ? await collectDossierCanonicalWarnings(mdFiles, boxRoot) : [];
+  return {
+    cardSummary,
+    mdSummary,
+    attachErrors,
+    claudeMdWarnings,
+    viewWarnings,
+    canonicalViewWarnings,
+    canonicalDossierWarnings,
+  };
 }
 
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
@@ -208,11 +235,19 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
   const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, ctx }) : null;
   const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths, { boxRoot }) : null;
   const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings };
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings, ...NO_CANONICAL };
 }
 
+/**
+ * The canonical buckets for the scopes `--canonical` doesn't support (`--staged`
+ * and explicit paths, both rejected up front). Spread so those collectors still
+ * return the full `CollectedResults` shape.
+ */
+const NO_CANONICAL = { canonicalViewWarnings: [], canonicalDossierWarnings: [] };
+
 /** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
-function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors }: ValidationResults): void {
+function printTextResults(results: ValidationResults): void {
+  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors } = results;
   const colors = useColor();
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors });
@@ -243,6 +278,9 @@ function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnin
   }
   if (legacySchemaErrors.length > 0) {
     console.log(`\n${legacySchemaErrors.join("\n")}`);
+  }
+  if (results.canonical) {
+    console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
   }
 }
 
@@ -283,14 +321,23 @@ export const validateCommand = new Command("validate")
   .option("--links", "Warn-only box-wide broken-link scan (link rules only). Always exits 0 — used by the pre-commit hook to surface dangling links in unstaged referrers without blocking the commit.")
   .option("--urls", "Check EXTERNAL http(s) URLs that are new since the base version (HEAD by default). Network pass — never run in the sync hooks. Pair with --all (full box sweep), --staged, or --urls-since <ref>.")
   .option("--urls-since <ref>", "With --urls: treat URLs absent at <ref> as new (used by the non-blocking post-commit trigger, e.g. --urls-since HEAD~1).")
+  .option("--canonical", "Also report refs written in the document-relative form instead of from the box root (`/store/…`), each with the canonical rewrite. OFF by default so legacy relative refs don't bury the broken-ref signal. Whole-box only — not combinable with --staged, explicit paths, --hook, --links, or --urls.")
+  .option("--fix", "With --canonical: rewrite those refs to their box-root form, in place. Only refs whose target actually exists are rewritten — plus dangling refs that were written with box-root intent and resolve from the root (repaired). A ref that resolves BOTH ways is ambiguous and left alone, as is one that resolves neither way or escapes the box.")
   .option("--json", "Output results as JSON")
   .option("--committed", "Also check that git working tree is clean")
   .action(
     async (
       targetPaths: string[],
-      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; urls?: boolean; urlsSince?: string; json?: boolean; committed?: boolean }
+      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; urls?: boolean; urlsSince?: string; canonical?: boolean; fix?: boolean; json?: boolean; committed?: boolean }
     ) => {
       try {
+        const canonical = options.canonical === true;
+        rejectUnsupportedCanonicalScope({ canonical, options, targetPaths });
+
+        if (canonical && options.fix === true) {
+          await runCanonicalFix({ json: options.json === true });
+        }
+
         if (options.hook) {
           const { runHookMode } = await import("./validate-hook.js");
           await runHookMode();
@@ -316,11 +363,12 @@ export const validateCommand = new Command("validate")
           path.isAbsolute(p) ? p : path.join(process.cwd(), p)
         );
 
-        const collected = await collectResults(options, { boxRoot, ctx, resolved, json, ignore });
+        const collected = await collectResults(options, { boxRoot, ctx, resolved, json, ignore, canonical });
         const legacySchemaErrors = await checkLegacySchemaPath(boxRoot);
-        const results: ValidationResults = { ...collected, legacySchemaErrors };
+        const results: ValidationResults = { ...collected, legacySchemaErrors, canonical };
 
         if (json) {
+          const counts = canonicalCounts(canonicalBuckets(results));
           const payload = {
             cards: results.cardSummary,
             // Broken-reference warnings (type: "reference") called out as their
@@ -332,6 +380,14 @@ export const validateCommand = new Command("validate")
             claudeMd: results.claudeMdWarnings,
             views: results.viewWarnings,
             legacySchemaPath: results.legacySchemaErrors,
+            // The `--canonical` buckets, top-level and separate for the same
+            // reason `brokenRefs` is: a relative-but-resolving ref is a
+            // different signal from a broken one. Zeroed when --canonical
+            // wasn't given, so consumers always find the keys.
+            nonCanonicalRefs: counts.refs,
+            nonCanonicalDossierLinks: counts.dossierLinks,
+            canonicalViews: results.canonicalViewWarnings,
+            canonicalDossierLinks: results.canonicalDossierWarnings,
           };
           console.log(JSON.stringify(payload, null, 2));
         } else {

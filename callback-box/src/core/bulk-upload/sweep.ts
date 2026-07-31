@@ -32,7 +32,10 @@ import { createCardSchemaMap } from "../../schemas/registry.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { userMessageAlreadyLanded } from "../chat/session/deliver-user-message.js";
-import { listStagingSessions, cleanupStagingSession, isBulkSession } from "../capture/staging-store.js";
+import { listStagingSessions, isBulkSession, readStagingSession, writeStagingSession, type StagingSession, type StagingSessionState } from "../capture/staging-store.js";
+import { cleanupStagingSession, discardStagingSessionIfCancellable } from "../capture/staging-teardown.js";
+import { bulkBatchHasNothingToReport } from "./batch-format.js";
+import { StagingSessionGoneError } from "../capture/staging-errors.js";
 import { bulkBatchCardRelPath } from "./prepare.js";
 
 /** No-activity window after which an open bulk batch is surfaced as abandoned. */
@@ -51,12 +54,38 @@ export interface UnfiledBatch {
   ageDays: number;
 }
 
+/**
+ * A batch the box accepted (sealed) but could not deliver, so no `<upload>`
+ * message ever reached the chat.
+ *
+ * This is the recovery hand-off. The uploader is deliberately NOT the recovery
+ * mechanism: once a batch is sealed the box holds the bytes AND the boxholder's
+ * introduction, so it — not a retry button on a phone that may never come back —
+ * is what has to notice and act. Surfacing it to the chat agent with enough
+ * context to explain or re-file matches this feature's premise: the upload
+ * surface just lands bytes durably, the agent does the thinking
+ * (`docs/implemented-plans/bulk-file-upload.md`).
+ */
+export interface StrandedBatch {
+  sessionId: string;
+  /** The chat the batch was bound to. */
+  targetSessionId: string | null;
+  state: StagingSessionState;
+  receivedCount: number;
+  failedCount: number;
+  registeredCount: number;
+  /** The boxholder's introduction, if they submitted one. */
+  note: string | undefined;
+}
+
 export interface BulkSweepDeps {
   boxRoot: string;
   /** Re-fire the worker for a reconcilable batch (server sweep only). */
   firePreparation?: ((id: string) => void) | undefined;
   /** Surface an unfiled ≥7-day batch as a self-note to its target chat. */
   notifyUnfiled?: ((batch: UnfiledBatch) => void) | undefined;
+  /** Surface a sealed-but-undeliverable batch to its chat agent for recovery. */
+  notifyStranded?: ((batch: StrandedBatch) => void) | undefined;
 }
 
 export interface BulkSweepResult {
@@ -68,15 +97,50 @@ export interface BulkSweepResult {
   abandoned: string[];
   /** `delivered` ids whose leaked staging this pass tore down. */
   cleaned: string[];
+  /** Ids surfaced to the agent as sealed-but-undelivered. */
+  stranded: string[];
   /** Box-relative delivered batch cards under `tmp-upload/` past the stale age. */
   unfiled: string[];
 }
 
+
+/**
+ * Hand a sealed-but-undeliverable batch to the chat agent, exactly once.
+ *
+ * The worker already gave up (a re-fire would fail identically), and a
+ * `console.error` reaches nobody. The box holds the bytes and the boxholder's
+ * introduction, so the box is what must notice — the uploader may be a phone
+ * that never comes back. Returns whether this pass surfaced it.
+ */
+async function surfaceStrandedBatch(opts: {
+  boxRoot: string;
+  session: StagingSession;
+  notifyStranded: ((batch: StrandedBatch) => void) | undefined;
+}): Promise<boolean> {
+  const { boxRoot, session, notifyStranded } = opts;
+  if (!notifyStranded || session.strandedNotifiedAt !== undefined) return false;
+  notifyStranded({
+    sessionId: session.id,
+    targetSessionId: session.targetSessionId,
+    state: session.state,
+    receivedCount: session.files.length,
+    failedCount: session.failedItems?.length ?? 0,
+    registeredCount: session.expectedItems?.length ?? 0,
+    note: session.note,
+  });
+  const marked = await readStagingSession({ boxRoot, id: session.id });
+  if (marked) {
+    marked.strandedNotifiedAt = getBoxTimeISO(boxRoot);
+    await writeStagingSession({ boxRoot, session: marked });
+  }
+  return true;
+}
+
 /** Sweep one box's bulk batches once. Idempotent and safe to double-fire. */
 export async function sweepBulkBatches(deps: BulkSweepDeps): Promise<BulkSweepResult> {
-  const { boxRoot, firePreparation, notifyUnfiled } = deps;
+  const { boxRoot, firePreparation, notifyUnfiled, notifyStranded } = deps;
   const now = getBoxTime(boxRoot).getTime();
-  const result: BulkSweepResult = { refired: [], discarded: [], abandoned: [], cleaned: [], unfiled: [] };
+  const result: BulkSweepResult = { refired: [], discarded: [], abandoned: [], cleaned: [], stranded: [], unfiled: [] };
 
   const sessions = (await listStagingSessions({ boxRoot })).filter(isBulkSession);
   for (const session of sessions) {
@@ -102,13 +166,47 @@ export async function sweepBulkBatches(deps: BulkSweepDeps): Promise<BulkSweepRe
       }
       continue;
     }
+    // Sealed but undeliverable — hand recovery to the agent (see below).
+    if (session.state.startsWith("failed:")) {
+      if (await surfaceStrandedBatch({ boxRoot, session, notifyStranded })) {
+        result.stranded.push(session.id);
+      }
+      continue;
+    }
     if (session.state !== "open") continue;
 
     if (now - new Date(session.lastActivityAt).getTime() < BULK_ABANDONMENT_WINDOW_MS) continue;
-    const empty = session.files.length === 0 && (session.failedItems?.length ?? 0) === 0;
-    if (empty) {
-      await cleanupStagingSession({ boxRoot, id: session.id });
-      result.discarded.push(session.id);
+    if (bulkBatchHasNothingToReport(session)) {
+      // Through the LOCKED discard, never a bare delete. `session` here is a
+      // snapshot taken before the abandonment-window check, so the user can press
+      // Done and seal the batch in between — a bare delete would then remove the
+      // directory out from under the worker, which reads `null` and silently
+      // returns while the client that already saw finalize succeed treats the
+      // resulting 404 as "delivered" and drops its recovery state. The locked
+      // helper re-reads the state and refuses anything past the seal.
+      try {
+        const discard = await discardStagingSessionIfCancellable({
+          boxRoot,
+          id: session.id,
+          // The whole decision is re-made against the fresh session under the
+          // lock. `session` above is a snapshot; between reading it and taking
+          // the lock the user can come back and register/upload files, all of
+          // which leave the batch `open` — a state-only guard would delete a
+          // batch someone is actively filling.
+          stillDiscardable: (fresh) =>
+            bulkBatchHasNothingToReport(fresh) &&
+            now - new Date(fresh.lastActivityAt).getTime() >= BULK_ABANDONMENT_WINDOW_MS,
+        });
+        if (discard.discarded) result.discarded.push(session.id);
+        else console.warn(`[bulk] Sweep skipped ${session.id}: it was sealed (${String(discard.blockedBy)}) while the sweep ran.`);
+      } catch (e) {
+        // Gone already (another sweep, a cancel) or the delete failed — neither
+        // is worth aborting the rest of the sweep for. A failed delete leaves
+        // the session on disk for the next pass.
+        if (!(e instanceof StagingSessionGoneError)) {
+          console.error(`[bulk] Sweep could not discard ${session.id}:`, e);
+        }
+      }
     } else {
       result.abandoned.push(session.id);
     }

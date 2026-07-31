@@ -29,6 +29,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { parseAnnexPointer } from "../lib/annex-pointer.js";
 
 import Markdoc from "@markdoc/markdoc";
 import type { Config } from "@markdoc/markdoc";
@@ -68,6 +69,20 @@ export class ImageEscapesBoxError extends Error {
 }
 
 /** A doc references a local image that doesn't exist under the box root. */
+/**
+ * An image resolved to a git-annex pointer rather than its bytes. Publishing it
+ * would inline ~100 bytes of pointer text as a data: URI and ship a broken
+ * image to a public page — a failure nobody would trace back to here.
+ */
+export class ImageContentNotPresentError extends Error {
+  readonly src: string;
+  constructor(src: string) {
+    super(`image content is not present locally: ${src} (fetch it with \`git annex get\`)`);
+    this.name = "ImageContentNotPresentError";
+    this.src = src;
+  }
+}
+
 export class ImageNotFoundError extends Error {
   readonly src: string;
   constructor(src: string, options?: { cause?: unknown }) {
@@ -109,6 +124,9 @@ function localizeImage(
     bytes = readFileSync(resolved);
   } catch (e) {
     throw new ImageNotFoundError(src, { cause: e });
+  }
+  if (bytes.length <= 1024 && parseAnnexPointer(new Uint8Array(bytes)) !== null) {
+    throw new ImageContentNotPresentError(src);
   }
   const ext = path.extname(relative).toLowerCase();
   const mime = extensionToMimetype(ext, { fallback: "application/octet-stream" });

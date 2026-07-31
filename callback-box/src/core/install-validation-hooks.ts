@@ -221,12 +221,33 @@ function preCommitBody(cbBin: string, boxRelFromPackageRoot: string): string {
   const cd = boxRelFromPackageRoot === "" ? "" : `cd ${JSON.stringify(boxRelFromPackageRoot)}\n`;
   return `#!/usr/bin/env bash
 ${PRE_COMMIT_MARKER}
-# Block commits that include cards failing schema validation, and verify the
-# attachment/asset manifest is intact (read-only scan, no auto-claim).
+# Block commits that include cards failing schema validation, and hand assets
+# to git-annex before they can be committed as raw bytes.
 # Regenerate via \`cb init\` if you delete this file.
 
 set -e
 ${cd}
+
+# git-annex FIRST, above the cb fallback: \`git annex init\` declines to install
+# its own hook when ours exists, so this line is the only thing running annex at
+# commit time, and below the \`cb\`-not-found \`exit 0\` it would vanish on exactly
+# the under-provisioned machine most likely to lack git-annex too.
+#
+# Gated on whether THIS repo is annexed, not on whether the binary exists: a box
+# still on the manifest model must keep committing normally, or every unmigrated
+# box breaks at its next commit. Once annexed, a missing binary is fatal —
+# committing without the clean filter puts asset bytes straight into history.
+if [ -d "$(git rev-parse --git-dir)/annex" ]; then
+  if command -v git-annex >/dev/null 2>&1; then
+    git annex pre-commit
+  else
+    echo "pre-commit: this repo uses git-annex but git-annex is not installed;" >&2
+    echo "  assets would be committed as raw bytes. Install it" >&2
+    echo "  (apt install git-annex / brew install git-annex) or run: cb doctor annex" >&2
+    exit 1
+  fi
+fi
+
 CB=${JSON.stringify(cbBin)}
 if [ ! -x "$CB" ]; then
   if command -v cb >/dev/null 2>&1; then
@@ -248,8 +269,10 @@ fi
 # 0) so it never blocks — it surfaces dangling links to fix with cb mv.
 "$CB" validate --links || true
 
-# Verify the asset manifest on every commit (read-only; fails on error).
-"$CB" attachments verify
+# Large files in attach scopes whose extension git-annex is not configured to
+# annex would be committed as raw bytes — the class of bug that put 41MB
+# .frozen pages into box history. Blocks rather than advises.
+"$CB" attachments check-unlisted
 `;
 }
 

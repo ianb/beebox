@@ -43,7 +43,10 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
   const frontmatter = useMemo(() => data.frontmatter ?? {}, [data.frontmatter]);
   const runtime = parseRuntime(frontmatter.runtime);
   const entry = typeof frontmatter.entry === "string" ? frontmatter.entry : "";
-  const entryPath = entry === "" ? "" : resolveRelativePath(data.path, entry);
+  // An `entry` that escapes the box root resolves to null; collapsing it to ""
+  // routes it into the existing "missing a valid `entry`" error state below —
+  // the figure shows an error instead of compiling some other file.
+  const entryPath = entry === "" ? "" : resolveRelativePath(data.path, entry) ?? "";
 
   // Coerce embed query params against the card's declared `params` contract.
   // Recomputed each render (pure + cheap); a param change reshapes `figure` and

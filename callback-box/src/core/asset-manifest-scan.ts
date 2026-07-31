@@ -5,11 +5,10 @@
  *   - `cb attachments migrate` (claim every binary into a manifest)
  *   - `cb attachments verify` (read-only check)
  *
- * See docs/asset-manifests.md for the algorithm.
+ * See docs/implemented-plans/asset-manifests.md for the algorithm.
  */
 
 import * as fs from "node:fs/promises";
-import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { invariant } from "../lib/invariant.js";
 import {
@@ -22,15 +21,12 @@ import {
   saveManifest,
   sha256File,
 } from "./asset-manifest.js";
-import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { errorMessage } from "../lib/error-guards.js";
+import { type AttachScope, findAttachScopes } from "../lib/attach-scopes.js";
 
-/** A directory whose name ends in `.attach`. */
-export interface AttachScope {
-  /** Absolute path. */
-  absPath: string;
-  /** Path relative to the box root, for log messages. */
-  relPath: string;
-}
+// The attach-scope walk moved to lib/attach-scopes.ts so the git-annex code
+// doesn't depend on this module. Re-exported for existing importers.
+export { type AttachScope, findAttachScopes } from "../lib/attach-scopes.js";
 
 export interface ScanResultErrorMissing {
   kind: "missing-file";
@@ -80,22 +76,6 @@ export interface ScanOptions {
 }
 
 /**
- * Directories that should never be descended into when finding attach
- * scopes. Matched against a directory's basename (`Dirent.name`), never a
- * path, so a single `"node_modules"` entry already covers a trick's nested
- * `node_modules/` regardless of where it lives (`boxRoot/tricks/` for a
- * legacy box, `packageRoot/src/tricks/` for a package box) — no
- * shape-specific entry is needed here.
- */
-const SKIP_DIRS = new Set([
-  ".git",
-  "node_modules",
-  ".callback-box",
-  ".scan-archive",
-  ".scan-api",
-]);
-
-/**
  * Walk an attach scope and return scope-relative paths of every binary file.
  * Recurses into plain subdirectories (e.g. an email's `attachments/` dir)
  * but stops at nested `.attach/` directories — those are separate scopes
@@ -118,42 +98,6 @@ async function listScopeBinaries(scopeAbs: string): Promise<string[]> {
     }
   }
   await walk(scopeAbs, "");
-  return out;
-}
-
-/**
- * Find every `.attach/` directory under boxRoot. Returns absolute and
- * relative paths so callers can log readably.
- */
-export async function findAttachScopes(boxRoot: string): Promise<AttachScope[]> {
-  const out: AttachScope[] = [];
-  async function walk(absDir: string): Promise<void> {
-    let entries: Dirent[];
-    try {
-      entries = await fs.readdir(absDir, { withFileTypes: true });
-    } catch (e) {
-      // A directory we can't read (race with a delete, permissions, or a
-      // non-dir that slipped through) just contributes no attach scopes. Log so
-      // an unexpected IO failure during the walk is visible.
-      if (errnoCode(e) !== "ENOENT") {
-        console.warn(`Could not read ${absDir} while finding attach scopes, skipping:`, e);
-      }
-      return;
-    }
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      if (SKIP_DIRS.has(e.name)) continue;
-      const child = path.join(absDir, e.name);
-      if (e.name.endsWith(".attach")) {
-        out.push({
-          absPath: child,
-          relPath: path.relative(boxRoot, child),
-        });
-      }
-      await walk(child);
-    }
-  }
-  await walk(boxRoot);
   return out;
 }
 
