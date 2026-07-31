@@ -7,7 +7,7 @@
 import { cbSource } from "../../../lib/source-tag";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import type { RouterOutput } from "../../../lib/trpc";
-import { getApiBase, withBase } from "../../../api";
+import { getApiBase } from "../../../api";
 import { attachDirFor } from "@shared/attach-path";
 
 type BrowseData = RouterOutput["status"]["browse"];
@@ -25,24 +25,25 @@ function imageDataAttrs(relativePath: string, name: string): Record<string, stri
 }
 
 interface BrowseSidebarListProps {
-  boxSlug?: string;
   data: BrowseData;
   dirPath: string;
   loading: boolean;
+  /**
+   * Opens a row — a directory, a card, or a raw file. Every row is a URL, so
+   * opening one is a real navigation (and a back-button step), not a
+   * selection the URL doesn't know about.
+   */
   onNavigate: (path: string) => void;
   selectedFilePath: string | null;
-  onSelectFile: (path: string) => void;
   onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
 }
 
 export function BrowseSidebarList({
-  boxSlug,
   data,
   dirPath,
   loading,
   onNavigate,
   selectedFilePath,
-  onSelectFile,
   onFileContextMenu,
 }: BrowseSidebarListProps) {
   if (loading) {
@@ -87,10 +88,7 @@ export function BrowseSidebarList({
             }`}
           >
             <button
-              onClick={() => {
-                onSelectFile(card.relativePath);
-                window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${card.relativePath}`));
-              }}
+              onClick={() => onNavigate(card.relativePath)}
               {...cbSource("card", card.relativePath)}
               {...(card.type === "image" ? {
                 "data-image-src": `${getApiBase()}/image/${card.relativePath}`,
@@ -130,10 +128,7 @@ export function BrowseSidebarList({
       {data.files.map((file) => (
         <button
           key={file.relativePath}
-          onClick={() => {
-            onSelectFile(file.relativePath);
-            window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${file.relativePath}`));
-          }}
+          onClick={() => onNavigate(file.relativePath)}
           onContextMenu={(event) => onFileContextMenu(event, file.relativePath)}
           {...(imageDataAttrs(file.relativePath, file.name) ?? {})}
           className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${

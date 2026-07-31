@@ -57,6 +57,7 @@ import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
 import { loginRedirect, injectBasePrefix } from "../webapp/base-prefix.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
+import { verifyBrowseKey } from "../core/browse-key.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
@@ -149,6 +150,13 @@ async function hasMobileAuth(opts: {
   headers: http.IncomingHttpHeaders;
 }): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
+  // The local-dev browser key rides alongside the device credentials: same
+  // "this request carries per-box auth, let it through to the box" question,
+  // and the box's own wall verifies it again. Absent CB_BROWSE_API_KEY this
+  // is a constant false, so nothing changes where it isn't configured — that
+  // opt-in is the whole reason this gate may accept it at all. See
+  // core/browse-key.ts.
+  if (verifyBrowseKey(opts.headers)) return true;
   return verifyMobileRequest(opts.boxRoot, opts.headers);
 }
 
@@ -174,6 +182,14 @@ async function respondHubBoxes(opts: {
 }): Promise<{ boxes: Array<{ slug: string; name: string }>; authRequired?: boolean } | FastifyReply> {
   const { boxes, request, reply } = opts;
   if (request.server.openAccess) return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  // The local-dev browse key is machine-level rather than per-box (one dev
+  // router fronts every box), so it lists them all. This gate is separate from
+  // the proxy gate on purpose, and the SPA depends on it: it resolves the box
+  // in the URL against this list, and an empty list renders "Box not found"
+  // even though every other request authenticates fine.
+  if (verifyBrowseKey(request.headers)) {
+    return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  }
   const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
   if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
   const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });

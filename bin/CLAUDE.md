@@ -107,6 +107,31 @@ runs in prod. Full design and rationale:
   a Serve misconfiguration, and setup refuses + tears down rather than exposing
   it). `cb tailscale status` reports whether an exposed router is guarded.
 
+## `callback-box/.env` is loaded into every dev process
+
+Each checkout's `callback-box/.env` (gitignored) is parsed with Node's own
+`util.parseEnv` and merged into the environment of the children the router
+spawns for that worktree — Vite, `cb hub`, and every `cb serve` below it
+(`bin/router-core.ts` `readEnvFile`). A real exported variable wins over the
+file, so `FOO=x pnpm dev` still overrides. **It is a real env file now, not just
+the `BOXES=` line the router greps out of it** — a stray `PATH=` or
+`NODE_OPTIONS=` in there reaches every dev process.
+
+The router ALSO loads the main checkout's copy into its own process env at
+startup, because the router's own auth gate reads `CB_BROWSE_API_KEY`. One
+router fronts every worktree, so that key is effectively machine-level: a
+worktree that sets a different one passes its own children and is refused at
+the router. One key everywhere is the supported shape.
+
+The WorktreeCreate hook copies the main checkout's `.env` into each new
+worktree **minus its `BOXES=` line** — that line points at `~/src/boxes/*`, the
+real boxes, and a worktree that inherited it would serve those instead of its
+own isolated clone. Existing worktrees predate the copy; do it by hand
+(`grep -v '^BOXES=' ../../callback-box/callback-box/.env > callback-box/.env`).
+
+`CB_BROWSE_API_KEY` itself is the local-dev browser credential — see
+`callback-box/src/core/browse-key.ts` for what it grants and why it is opt-in.
+
 ## Idle shutdown + self-healing tabs
 
 Only HTTP requests count as worktree activity. WebSocket upgrades never

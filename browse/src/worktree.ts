@@ -1,3 +1,12 @@
+/**
+ * Must match `BROWSE_KEY_COOKIE` in `callback-box/src/core/browse-key.ts`.
+ * Restated rather than imported: `browse/` has no dependency on callback-box
+ * and gains nothing but coupling from one, and a mismatch fails loudly and
+ * immediately — the very first authenticated navigation lands on the login
+ * page.
+ */
+const BROWSE_KEY_COOKIE = "cb_browse_key";
+
 export interface WorktreeContext {
   repoDir: string;
   worktree: string;
@@ -37,17 +46,19 @@ export function rewriteOpenUrl(url: string, ctx: WorktreeContext): string {
 }
 
 /**
- * The box agent-token (`.callback-box/agent-token`, 0600 — see
- * callback-box's `src/core/agent/token.ts`), when `bin/browse` found one
- * for this worktree's box and exported it as `BROWSE_AGENT_TOKEN`. Auth is
- * on by default in dev, and the box's per-request auth preHandler already
- * accepts this bearer as box-scoped authentication
- * (`server-box-scope.ts` `verifyAgentBearer`) for every in-box request,
- * page navigations included.
+ * The local-dev browser key, when the operator set `CB_BROWSE_API_KEY` (the
+ * checkout's `callback-box/.env` is the usual home; the router loads it for
+ * the processes it spawns, and `bin/browse` reads it for this one). Auth is on
+ * by default in dev, so without it a navigation lands on the login page.
+ *
+ * This deliberately does NOT fall back to the box's agent loopback token. That
+ * token is a 0600 file secret for box subprocesses calling their own box, and
+ * putting it in browser request headers would make it a network credential —
+ * see `callback-box/src/core/browse-key.ts` for why this key exists instead.
  */
-function agentToken(): string | undefined {
-  const token = process.env["BROWSE_AGENT_TOKEN"];
-  return token !== undefined && token !== "" ? token : undefined;
+function browseKey(): string | undefined {
+  const key = process.env["CB_BROWSE_API_KEY"];
+  return key !== undefined && key !== "" ? key : undefined;
 }
 
 /**
@@ -61,15 +72,33 @@ export function isOwnOrigin(url: string, ctx: WorktreeContext): boolean {
 }
 
 /**
- * The `Authorization` header to attach for `url`, or `null` when there's
- * no token to inject (no agent-token file yet — not every target needs
- * auth) or `url` isn't this worktree's own origin. Callers pass the result
- * straight to agent-browser's origin-scoped `open <url> --headers <json>`.
+ * Headers to attach for `url`, or `null` when there's no key configured (not
+ * every target needs auth) or `url` isn't this worktree's own origin. Callers
+ * pass the result straight to agent-browser's origin-scoped
+ * `open <url> --headers <json>`.
+ *
+ * A cookie, and deliberately NOT an `Authorization` header, for two reasons:
+ *
+ * 1. A browser never attaches `Authorization` to a WebSocket handshake, so the
+ *    header alone would authenticate the document and XHR but leave the tRPC
+ *    socket refused — the app renders without live updates. A cookie rides
+ *    every request to the origin, the upgrade included.
+ * 2. The dev router treats ANY authorized GET into a box that carries an
+ *    `Authorization` header as a mobile-device pairing bootstrap
+ *    (`bin/router-mobile-bootstrap.ts`). The browse key is not a device token,
+ *    so that exchange fails and the router answers the navigation with a hard
+ *    `401 Mobile session bootstrap failed.` — measured, not theoretical.
+ *    Carrying no bearer sidesteps it. (That trigger is too broad and wants
+ *    narrowing on its own merits; it is not this code's job to work around.)
+ *
+ * Sending `Cookie` as a request header rather than seeding the profile's
+ * cookie jar keeps it scoped to exactly the origin agent-browser scopes these
+ * headers to, and leaves no credential behind in the persistent profile.
  */
 export function authHeaderFor(url: string, ctx: WorktreeContext): Record<string, string> | null {
-  const token = agentToken();
-  if (token === undefined || !isOwnOrigin(url, ctx)) return null;
-  return { Authorization: `Bearer ${token}` };
+  const key = browseKey();
+  if (key === undefined || !isOwnOrigin(url, ctx)) return null;
+  return { Cookie: `${BROWSE_KEY_COOKIE}=${key}` };
 }
 
 export class BrowseConfigError extends Error {

@@ -51,6 +51,14 @@ interface FileViewProps {
   /** Force a specific renderer by name (e.g. from a `?view=X` param). */
   rendererName?: string | null;
   /**
+   * Optional. When provided, the renderer toggle reports the chosen name here
+   * instead of keeping it in local state — the host owns the choice and is
+   * expected to feed it back as `rendererName`. Browse passes this so the
+   * active renderer lives in the URL (`?view=`) and survives back/forward and
+   * a shared link. Absent elsewhere, where the toggle stays view-local.
+   */
+  onSelectRenderer?: (name: string) => void;
+  /**
    * Required. Called when a link inside this view wants to open a different
    * file. The surrounding context decides what that means — pushing a URL,
    * replacing a sidebar pane, etc.
@@ -296,7 +304,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -308,14 +316,20 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
 
   // Track user's toggle selection scoped to the current path. When the path
   // changes, the stored path no longer matches so selection resets without
-  // needing an effect.
+  // needing an effect. Unused in the controlled case below: a host that owns
+  // the renderer never writes here, so `userSelection` stays null and can't
+  // shadow the `rendererName` it hands down.
   const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
   const selectForPath = useCallback((name: string) => {
-    setUserSelection({ path, name });
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
     // "explored" action. No-op outside the companion pane (reportActivity unset).
     reportActivity?.("explored", `viewing as ${name}`);
-  }, [path, reportActivity]);
+    if (onSelectRenderer) {
+      onSelectRenderer(name);
+      return;
+    }
+    setUserSelection({ path, name });
+  }, [onSelectRenderer, path, reportActivity]);
 
   // A box view exporting `rendersCardTypes` becomes this card type's
   // default renderer; the built-ins stay available through the toggle.

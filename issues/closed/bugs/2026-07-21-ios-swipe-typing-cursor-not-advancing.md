@@ -3,8 +3,18 @@ title: "iOS: swipe-typing (QuickPath) leaves the cursor behind instead of advanc
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder swipe-typing in the native iOS composer
-needs: [manual-testing]
+resolution: implemented
 ---
+
+**Closed (implemented + on-device confirmed) 2026-07-31.** The fix landed in
+`57a33f45` ("…keyboard cursor"): `ComposerTextView.swift:50` now guards the caret
+write behind `guard textView.text != text else { return }` — exactly the "only
+impose `selectedRange` on a programmatic text change, trust the native caret
+otherwise" rule the fix direction called for; the unconditional per-reconcile
+caret write is gone. Regression tests in `ComposerDraftTests.swift` cover both
+sides. The boxholder confirms it works on-device, which clears the former
+`needs: manual-testing` gate. Reopen if the autocorrect/dictation compound-input
+cases ever regress.
 
 ## Implemented 2026-07-21
 
@@ -76,5 +86,5 @@ word, autocorrect a word, dictate a phrase; confirm the caret ends up after the
 inserted text each time and the next input lands correctly).
 
 Squarely inside the active
-[iOS input-plane parity](../features/2026-07-19-ios-input-plane-parity.md) work —
+[iOS input-plane parity](../../features/2026-07-19-ios-input-plane-parity.md) work —
 fix it there, since that effort owns the native composer.

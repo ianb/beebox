@@ -15,10 +15,12 @@ version stamp is the real hash of the committed Worker source.
 
 ```ts setup
 import { setupPublishing } from "../../src/publish/setup.js";
+import { readPublishSecret } from "../../src/publish/connector-secret.js";
 import { readPublishConfig, writePublishConfig } from "../../src/publish/publish-config.js";
 import { localPubWorkerVersion } from "../../src/publish/pub-worker-meta.js";
 import { createFakeProvisioningClient } from "../../src/services/cloudflare-provisioning.js";
 import { createFakeAccessClient } from "../../src/services/cloudflare-access.js";
+import { createFakeTokensClient } from "../../src/services/cloudflare-tokens.js";
 import { createFakeWrangler } from "../../src/services/wrangler.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -173,6 +175,67 @@ const again = await setupPublishing(
 // No new mutating ops beyond the first run's three.
 access.ops.length
 => 3
+
+await box.cleanup();
+```
+
+## `--mint-connector-token`: the connector credential is minted, not hand-assembled
+
+The fake tokens client carries the two R2 bucket-item permission groups; setup
+mints an account-owned token scoped to exactly the ingestion bucket and writes
+the secret file (mode 600) into the box:
+
+```ts
+const box = await makeTmpBox();
+const tokens = createFakeTokensClient();
+const result = await setupPublishing(
+  {},
+  { boxRoot: box.root, auth: fakeAuth(createFakeProvisioningClient({ accountSubdomain: "mybox" }), fakeWrangler()), tokens },
+);
+[result.ok, result.connectorSecret.minted].join(" ")
+=> true true
+
+JSON.stringify(tokens.minted)
+=> [{"name":"callback-box publish connector (pub-ingest)","bucketName":"pub-ingest","groups":["Workers R2 Storage Bucket Item Read","Workers R2 Storage Bucket Item Write"]}]
+
+// The secret file is in place and parses — the connector can pull with it.
+const secret = await readPublishSecret(box.root);
+[secret.accountId, secret.bucket].join(" ")
+=> test-account pub-ingest
+
+// The printed server-copy JSON carries the one-time token value.
+result.connectorSecret.json.includes("minted-secret-1")
+=> true
+```
+
+A rerun mints NOTHING — the existing secret file wins (no duplicate tokens):
+
+```ts continue
+const again = await setupPublishing(
+  {},
+  { boxRoot: box.root, auth: fakeAuth(createFakeProvisioningClient({ accountSubdomain: "mybox", buckets: ["pub-store", "pub-ingest"] }), fakeWrangler()), tokens },
+);
+[again.ok, again.connectorSecret.minted, tokens.minted.length].join(" ")
+=> true false 1
+
+await box.cleanup();
+```
+
+Renamed/missing permission groups are a typed refusal (Cloudflare may rename
+them; the message says how to investigate):
+
+```ts
+const box = await makeTmpBox();
+const bare = createFakeTokensClient({ permissionGroups: [{ id: "pg-x", name: "Something Else" }] });
+const result = await setupPublishing(
+  {},
+  { boxRoot: box.root, auth: fakeAuth(createFakeProvisioningClient({ accountSubdomain: "mybox" }), fakeWrangler()), tokens: bare },
+);
+[result.ok, result.reason].join(" ")
+=> false connector-token
+
+result.message.includes("permission groups")
+=> true
 
 await box.cleanup();
 ```
