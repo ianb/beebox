@@ -29,7 +29,7 @@ import * as path from "node:path";
 import type { GitAnnexService } from "../../services/git-annex.js";
 import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
 import { isAnnexPointer } from "../../lib/annex-pointer.js";
-import { findAttachScopes } from "../asset-manifest-scan.js";
+import { findAttachScopes } from "../../lib/attach-scopes.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
 /** What a single check concluded. */

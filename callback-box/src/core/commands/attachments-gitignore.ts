@@ -161,8 +161,23 @@ function isUnignoreBlockLine(line: string): boolean {
  * {@link CAPTURE_STAGING_IGNORE_PATTERN}). Idempotent: re-running against an
  * already-converted `.gitignore` reports no change.
  */
-async function runUnignore(ctx: CommandContext): Promise<CommandResult> {
-  const gitignorePath = path.join(ctx.boxRoot, ".gitignore");
+/** What {@link unignoreGitignore} did. */
+export interface UnignoreOutcome {
+  changed: boolean;
+  /** Asset ignore rules outside the managed block — a hard failure for callers. */
+  strayRules: string[];
+  /** One-line summary for the CLI. */
+  message: string;
+}
+
+/**
+ * The `.gitignore` half of the git-annex migration, callable without a
+ * CommandContext so the migration can sequence it correctly (see
+ * core/annex/to-annex.ts — the ordering relative to `annex.largefiles` is
+ * load-bearing).
+ */
+export async function unignoreGitignore(boxRoot: string): Promise<UnignoreOutcome> {
+  const gitignorePath = path.join(boxRoot, ".gitignore");
   let existing = "";
   try {
     existing = await fs.readFile(gitignorePath, "utf-8");
@@ -176,65 +191,68 @@ async function runUnignore(ctx: CommandContext): Promise<CommandResult> {
   );
   const unignoreBlockAt = lines.findIndex((l) => l.trim() === UNIGNORE_BLOCK_MARKER);
 
-  // Asset rules that are NOT inside a managed block — hand-added, or left by a
-  // marker that got edited away. Marker-presence alone is the wrong test here:
-  // reporting success while an `**/*.attach/**/*.jpg` line survives would leave
-  // a box where those assets reach neither git nor the annex, silently.
-  const strayAssetRules = lines.filter(
-    (l, i) => isStrayAssetRule(l) && !inManagedBlock(lines, { index: i, start: assetBlockAt }),
-  );
-  if (strayAssetRules.length > 0) {
-    ctx.writeLine(
-      ".gitignore still ignores assets outside the managed block:\n" +
-        strayAssetRules.map((l) => `  ${l.trim()}`).join("\n") +
+  // Asset rules NOT inside a managed block — hand-added, or left by a marker
+  // that got edited away. Marker-presence alone is the wrong test: reporting
+  // success while an `**/*.attach/**/*.jpg` line survives leaves a box where
+  // those assets reach neither git nor the annex, silently.
+  const strayRules = lines
+    .filter((l, i) => isStrayAssetRule(l) && !inManagedBlock(lines, { index: i, start: assetBlockAt }))
+    .map((l) => l.trim());
+  if (strayRules.length > 0) {
+    return {
+      changed: false,
+      strayRules,
+      message:
+        ".gitignore still ignores assets outside the managed block:\n" +
+        strayRules.map((l) => `  ${l}`).join("\n") +
         "\nRemove these by hand — while they are present those assets reach neither " +
         "git nor the annex, and nothing else reports it.",
-    );
-    return { success: false, error: `${String(strayAssetRules.length)} unmanaged asset ignore rule(s)` };
+    };
   }
 
   if (assetBlockAt === -1 && unignoreBlockAt !== -1) {
-    // Already converted. Refresh in place if the block text has since changed,
-    // for the same reason init-gitignore replaces a stale block: marker
-    // presence alone would freeze every early-converted box on the old text.
     let end = unignoreBlockAt + 1;
     while (end < lines.length && isUnignoreBlockLine(lines[end] ?? "")) end += 1;
     const currentBlock = lines.slice(unignoreBlockAt, end).join("\n") + "\n";
     if (currentBlock === UNIGNORE_BLOCK) {
-      ctx.writeLine("Already converted for git-annex — no change.");
-      return { success: true, data: { changed: false } };
+      return { changed: false, strayRules: [], message: "Already converted for git-annex — no change." };
     }
-    const refreshed = [
-      ...lines.slice(0, unignoreBlockAt),
-      UNIGNORE_BLOCK.trimEnd(),
-      ...lines.slice(end),
-    ].join("\n");
-    await fs.writeFile(gitignorePath, refreshed);
-    ctx.writeLine("Refreshed the git-annex block in .gitignore.");
-    return { success: true, data: { changed: true } };
+    await fs.writeFile(
+      gitignorePath,
+      [...lines.slice(0, unignoreBlockAt), UNIGNORE_BLOCK.trimEnd(), ...lines.slice(end)].join("\n"),
+    );
+    return { changed: true, strayRules: [], message: "Refreshed the git-annex block in .gitignore." };
   }
 
   if (assetBlockAt === -1) {
     const sep = existing === "" || existing.endsWith("\n") ? "\n" : "\n\n";
     await fs.writeFile(gitignorePath, existing + sep + UNIGNORE_BLOCK);
-    ctx.writeLine("No asset block found; added the capture-staging rule.");
-    return { success: true, data: { changed: true } };
+    return { changed: true, strayRules: [], message: "No asset block found; added the capture-staging rule." };
   }
 
-  let end = assetBlockAt + 1;
-  while (end < lines.length && isManagedBlockLine(lines[end] ?? "")) end += 1;
-
-  const updated = [
-    ...lines.slice(0, assetBlockAt),
-    UNIGNORE_BLOCK.trimEnd(),
-    ...lines.slice(end),
-  ].join("\n");
-  await fs.writeFile(gitignorePath, updated);
-  ctx.writeLine(
-    "Removed the asset ignore block from .gitignore; assets are now visible to " +
-      "`git add` and will be annexed. Capture staging stays ignored.",
+  let blockEnd = assetBlockAt + 1;
+  while (blockEnd < lines.length && isManagedBlockLine(lines[blockEnd] ?? "")) blockEnd += 1;
+  await fs.writeFile(
+    gitignorePath,
+    [...lines.slice(0, assetBlockAt), UNIGNORE_BLOCK.trimEnd(), ...lines.slice(blockEnd)].join("\n"),
   );
-  return { success: true, data: { changed: true } };
+  return {
+    changed: true,
+    strayRules: [],
+    message:
+      "Removed the asset ignore block from .gitignore; assets are now visible to " +
+      "`git add` and will be annexed. Capture staging stays ignored.",
+  };
+}
+
+/** CLI wrapper: prints the outcome and fails on stray rules. */
+async function runUnignore(ctx: CommandContext): Promise<CommandResult> {
+  const outcome = await unignoreGitignore(ctx.boxRoot);
+  ctx.writeLine(outcome.message);
+  if (outcome.strayRules.length > 0) {
+    return { success: false, error: `${String(outcome.strayRules.length)} unmanaged asset ignore rule(s)` };
+  }
+  return { success: true, data: { changed: outcome.changed } };
 }
 
 /** Tracked-but-now-ignored files, partitioned by whether they're assets. */

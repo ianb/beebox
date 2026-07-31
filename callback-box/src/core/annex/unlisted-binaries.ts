@@ -23,7 +23,7 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { isAssetExtension } from "../../lib/asset-extensions.js";
-import { findAttachScopes } from "../asset-manifest-scan.js";
+import { findAttachScopes } from "../../lib/attach-scopes.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
 /**

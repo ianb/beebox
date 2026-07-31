@@ -13,6 +13,8 @@
  *                (git-annex migration; see docs/plans/asset-annex.md)
  *   - largefiles-expr : print the annex.largefiles expression
  *   - check-unlisted  : block on large attach-scope files git-annex won't annex
+ *   - to-annex        : one-way migration onto git-annex (verifies before and
+ *                       after; see core/annex/to-annex.ts)
  *
  * Destructive ops (overwrite, rm, mv) re-implement the chmod 444 →
  * +w → atomic-rename → 444 dance so the manifest stays in sync.
@@ -46,6 +48,9 @@ import {
 } from "./attachments-gitignore.js";
 import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
 import { describeUnlistedBinaries, findUnlistedBinaries } from "../annex/unlisted-binaries.js";
+import { convertBoxToAnnex } from "../annex/to-annex.js";
+import { createGitAnnexService } from "../../services/git-annex.js";
+import { getBoxShape } from "../../lib/box-shape.js";
 
 const AttachmentsArgsSchema = z.object({
   // Always supplied by the dispatch (CLI positional / API caller); an absent
@@ -80,6 +85,8 @@ async function executeAttachments(
       return runInitGitignore(ctx);
     case "unignore":
       return runUnignore(ctx);
+    case "to-annex":
+      return runToAnnex(ctx, { dryRun: apply === false });
     case "check-unlisted":
       return runCheckUnlisted(ctx);
     case "largefiles-expr":
@@ -91,6 +98,30 @@ async function executeAttachments(
     default:
       return { success: false, error: `Unknown subcommand: ${subcommand}` };
   }
+}
+
+/**
+ * One-way migration onto git-annex.
+ *
+ * Errors propagate rather than becoming a failed CommandResult: every one of
+ * them means the box is in a state where continuing would destroy the evidence
+ * needed to detect a problem, and the stack trace is worth having.
+ */
+async function runToAnnex(ctx: CommandContext, opts: { dryRun: boolean }): Promise<CommandResult> {
+  const shape = await getBoxShape(ctx.boxRoot);
+  const result = await convertBoxToAnnex(createGitAnnexService(), {
+    repoRoot: shape.packageRoot,
+    boxRoot: ctx.boxRoot,
+    options: { dryRun: opts.dryRun },
+  });
+  const mb = Math.round(result.bytes / (1024 * 1024));
+  ctx.writeLine(
+    result.dryRun
+      ? `Would annex ${String(result.annexed)} asset(s) (${String(mb)} MB). Nothing changed.`
+      : `Annexed ${String(result.annexed)} asset(s) (${String(mb)} MB); ` +
+        `removed ${String(result.manifestsRemoved)} manifest(s).`,
+  );
+  return { success: true, data: { ...result } };
 }
 
 /**
