@@ -111,6 +111,11 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
 State the tension: what was noticed, why the resolution isn't obvious, enough
 context (including `file:line` pointers) to pick it up cold months later.
 
+**Write in Simplified Technical English** (ASD-STE100, in spirit): short
+sentences, active voice, one idea per sentence, consistent terminology, no
+ambiguity. An issue is read cold — write for fast, unambiguous parsing over
+style.
+
 **Research** always goes in the body. If research is the next step, file the item
 with a stub section:
 
