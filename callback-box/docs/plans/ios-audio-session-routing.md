@@ -400,7 +400,7 @@ No critical gaps. Every row below has either a test or a visible failure.
 | Bluetooth device connects mid-dictation | No — needs hardware | Track 3, same path | Clear |
 | Recording starts while a phone call holds the microphone | No | Existing: `setActive(true)` fails with `InsufficientPriority` (`AVAudioSession.h:249-251`) into the same throw path | Clear |
 | App is backgrounded during capture | Yes — `CaptureAcquisitionTests` covers the background stop through the existing observer at `CaptureAcquisition.swift:711-717` | Existing; unchanged by this plan | Clear |
-| `.playback` idle category plays an earcon while the phone's silent switch is on | No | None — this is the deliberate behaviour change | Clear to the user in the moment, and stated in Open design questions |
+| `.playback` idle category plays an earcon while the phone's silent switch is on | No | None — this is the deliberate behaviour change | Clear — deliberate; speech output is not a ringer, decided 2026-07-31 |
 
 ## Agent-flow / user-flow edge cases
 
@@ -456,28 +456,33 @@ modes table above.
 
 ## Open design questions
 
-- **Does the idle category ignoring the ring/silent switch bother the
-  boxholder?** `.playback` plays regardless of the switch. The alternative,
-  `.ambient`, respects it but would silence voice-memo playback on a muted
-  phone — pressing play and hearing nothing is worse than an earcon on a muted
-  phone. Lean: keep `.playback`. Resolvable only by using it on a phone;
-  the manual device check should include it.
-- **Should voice-memo playback mix with other audio, or interrupt it?** The
-  idle category uses `.mixWithOthers` because ducking has no un-duck point
-  (see Track 1). The consequence is that a voice memo plays over the user's
-  music instead of pausing it. If that is wrong, the fix is a third role —
-  `.foregroundPlayback`, non-mixing — applied for the duration of a deliberate
-  playback and released after, which needs a playback-lifecycle hook the app
-  does not currently have. Lean: ship `.mixWithOthers`, revisit if the
-  boxholder notices.
-- **Should capture recording accept the HFP microphone at all?** Capture
-  produces 44.1 kHz AAC (`CaptureAcquisition.swift:664-670`); an HFP route
-  cannot feed it more than roughly 16 kHz, so a Bluetooth-microphone capture
-  is a worse artifact than a built-in-microphone capture on pre-iOS-26
-  hardware. Track 1 gives both paths one configuration for consistency. The
-  alternative is a third role that allows A2DP output but not HFP input for
-  capture. Lean: one configuration, because a user wearing AirPods expects the
-  AirPods microphone in both places, and iOS 26 hardware removes the penalty.
+None remain. The three questions this plan opened were resolved by the
+boxholder on 2026-07-31; the decisions and their reasons are recorded here
+because the reasoning is not visible in the code.
+
+- **Resolved — the idle category is `.playback`, which ignores the
+  ring/silent switch.** The switch silences ringers and alerts. This app's
+  output is speech and voice memos, which the user asked for; it is not a
+  ringer. `.ambient` would respect the switch but would also silence a
+  deliberate playback on a muted phone, which is the wrong failure.
+- **Resolved — the idle category mixes rather than ducks.** *Ducking* means
+  temporarily lowering another app's audio (music, a podcast) while ours
+  plays, then restoring it. iOS restores the other app's volume only when our
+  session deactivates (`AVAudioSessionTypes.h:456-458`), and nothing
+  deactivates the idle session: `AVAudioPlayer` and `WKWebView` activate it
+  implicitly and never release it. Ducking there would leave other apps quiet
+  indefinitely. `.mixWithOthers` has no such obligation. Ducking is still
+  correct for the `.recording` role, where both paths do deactivate on stop.
+  The consequence to watch on the device: a voice memo plays over the user's
+  music instead of pausing it.
+- **Resolved — capture uses the same recording configuration as dictation,
+  Bluetooth microphone included.** The boxholder's instruction is to support
+  connected devices as well as possible and to weigh capture audio fidelity
+  less. So capture accepts the HFP microphone even though it produces 44.1 kHz
+  AAC (`CaptureAcquisition.swift:664-670`) that an HFP route cannot fill on
+  pre-iOS-26 hardware, and picks up `.bluetoothHighQualityRecording` on
+  iOS 26 hardware that supports it. One configuration, per engineering
+  principle 8.
 
 ## Knowledge audits
 
@@ -564,5 +569,8 @@ headphones or a speaker paired:
 4. Repeat 1-3 with a native audio capture instead of dictation.
 5. With no accessory connected, start dictation and confirm earcons come from
    the speaker, not the earpiece — this is what `.defaultToSpeaker` protects.
-6. Note whether an earcon playing while the ring/silent switch is on is
-   acceptable (Open design questions).
+6. With the ring/silent switch on, confirm speech output and voice memos
+   still play — that is the intended behaviour of the `.playback` idle
+   category, not a defect.
+7. While music or a podcast is playing from another app, play a voice memo.
+   Confirm both are audible: the idle category mixes rather than ducking.
