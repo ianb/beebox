@@ -3,15 +3,20 @@
 How photos, scans, audio, and video stay tracked by git without their bytes
 living in git's object database.
 
-**Status: implemented; one box converted.** The dev worktree's `test1` clone
-was migrated on 2026-07-31 (137 assets / 106 MB annexed, 99 manifests removed,
-9 Git LFS files taken over) and verified: `git annex fsck` clean, all seven
-`cb doctor annex` checks green, ordinary commits working, new images annexed
-automatically, and a fresh clone able to `git annex get` content. No production
-box has been converted. The previous system — per-directory `manifest.json`
-files alongside gitignored bytes — is described in
-[`implemented-plans/asset-manifests.md`](implemented-plans/asset-manifests.md),
-and remains what every unmigrated box is still using.
+**Status: implemented; all local boxes converted, production not yet.**
+
+Twelve boxes under `~/src/boxes/` were migrated on 2026-07-31 — roughly 6,350
+assets / 9.3 GB annexed, 3,655 manifests removed, 738 Git LFS files taken over.
+Every one verifies clean: no manifests, no LFS, `annex.thin=false`,
+`git annex fsck` clean, working tree clean. `estate` was additionally checked
+byte-for-byte against its pre-conversion backup — 1,218 of 1,219 gitignored
+files identical, the one difference being runtime state the box rewrites
+itself, and zero changed or absent assets.
+
+**No production box has been converted.** The previous system — per-directory
+`manifest.json` files alongside gitignored bytes — is described in
+[`implemented-plans/asset-manifests.md`](implemented-plans/asset-manifests.md)
+and is still what the prod boxes are running.
 
 ## The model
 
