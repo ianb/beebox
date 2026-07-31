@@ -75,8 +75,16 @@ function printSetupSuccess(result: Extract<Awaited<ReturnType<typeof setupPublis
     console.log("\nAccount tiers (`accounts` / `any-account`) are OPTIONAL and currently off (they fail closed; public/secret tiers work now).");
     console.log("To turn them on: re-run `cb pub setup --access` with a setup-only Access-edit API token.");
   }
-  console.log("\nTo pull submissions on the server, mint an R2 token scoped to ONLY the ingestion bucket and place it on the box:");
-  console.log(`  config/connectors/publish.secret.json  →  {"accountId":"${result.accountId}","bucket":"${result.ingestBucketName}","apiToken":"<ingestion-bucket-scoped token>"}`);
+  console.log("\nOPTIONAL — pulling submissions and view logs into the box:");
+  console.log("  Visitor submissions land in the ingestion bucket; the box pulls them on each");
+  console.log("  `cb wakeup`. That runs headless, so it needs its own stored credential:");
+  console.log("  1. dash.cloudflare.com → R2 → Manage R2 API Tokens → Create API token,");
+  console.log(`     permission Object Read & Write, scoped to ONLY the '${result.ingestBucketName}' bucket`);
+  console.log("     (bucket-scoped so a compromised box can never rewrite published content).");
+  console.log("  2. On the machine that runs `cb wakeup` for this box, write the gitignored file");
+  console.log("     config/connectors/publish.secret.json:");
+  console.log(`       {"accountId":"${result.accountId}","bucket":"${result.ingestBucketName}","apiToken":"<the token from step 1>"}`);
+  console.log("  Skip this entirely if you don't use submission-enabled tiers.");
   console.log("\nNext: `cb pub draft <source> --tier <tier>` then `cb pub go <pub-id>` (interactive).");
 }
 
