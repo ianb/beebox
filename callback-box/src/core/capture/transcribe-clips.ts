@@ -15,6 +15,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { readAssetContent } from "../../lib/asset-content.js";
 import { renderFrontmatterBlock } from "../../cards/index.js";
 import { cardFields, parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
@@ -92,7 +93,19 @@ export async function transcribeCaptureClips(opts: {
     }
 
     try {
-      const audioBuffer = await fs.readFile(audioPath);
+      const audio = await readAssetContent(audioPath);
+      if (!audio.ok) {
+        // 101 bytes of pointer text is not audio. Without this the clip goes
+        // to the transcription service and comes back as garbage or an opaque
+        // API error, with nothing pointing at the real cause.
+        errors.push(
+          `${cardFile}: audio content is not present locally ` +
+            `(${audio.error.pointer.size} bytes, sha256 ${audio.error.pointer.sha256.slice(0, 12)}…). ` +
+            "Fetch it with `git annex get`.",
+        );
+        continue;
+      }
+      const audioBuffer = Buffer.from(audio.value);
       const result = await transcribeAudio({
         audioBuffer,
         filename: path.basename(audioPath),
