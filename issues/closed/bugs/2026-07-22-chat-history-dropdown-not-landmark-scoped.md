@@ -3,7 +3,26 @@ title: "Chat history dropdown lists all chats, not just the current landmark's"
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder in a landmark-scoped chat
+resolution: implemented
 ---
+
+Closed 2026-07-31 (worktree-chat-history-landmark-prominence). The UX
+question below was settled as **prominence, not scoping**: the dropdown
+still lists every chat in the box, but the current landmark's chats lead
+under that landmark's name and the rest follow under "Other chats",
+tagged with where they live. Root is a landmark like any other. When
+grouping would say nothing — no chats in this landmark, or every chat in
+it — the list stays flat, as before.
+
+The two enumerations were unified in the same change: `chat.sessions`
+read the history JSON while `chat.byLandmark` read husk cards, so a
+deleted husk vanished from the picker but lingered in the dropdown. Both
+now use `core/chat/session/list.ts`. That made a missing husk hide a chat
+from *every* list, so the one-shot marker-gated husk backfill became a
+per-boot `reconcileChatHusks` (see `docs/plans/chat-husks.md` § Phase 2b).
+
+Verified by doctest, not in a browser: `test/frontend/session-list-grouping.doctest.md`
+and `test/webapp/chat-sessions-label.doctest.md`.
 
 The chat history dropdown (the clock-icon `SessionListButton`) shows every web
 chat session in the box, ignoring the current landmark/directory scope. When
