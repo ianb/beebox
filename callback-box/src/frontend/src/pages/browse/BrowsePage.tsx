@@ -42,11 +42,23 @@ function basenameTitle(filename: string): string {
   return stem.replace(/_/g, " ");
 }
 
+export interface BrowseNavigateOptions {
+  /** Query params for the target URL. Omitted/empty clears the current ones. */
+  search?: Record<string, string>;
+  /** Replace the current history entry instead of pushing a new one. */
+  replace?: boolean;
+}
+
 interface BrowsePageProps {
-  /** Current directory path from URL splat (e.g., "store/recipes" or "store/recipes/Foo.recipe.card") */
+  /** Current path from URL splat (e.g., "store/recipes" or "store/recipes/Foo.recipe.card") */
   currentPath?: string;
-  /** Called when navigating to a directory */
-  onNavigate: (path: string) => void;
+  /**
+   * Called for every navigating action — opening a directory, selecting a
+   * file, following a link, going back to the parent. The URL is the single
+   * source of truth for what browse shows, so nothing changes the view
+   * without going through here.
+   */
+  onNavigate: (path: string, options?: BrowseNavigateOptions) => void;
 }
 
 /** Detect whether a path refers to a file (has an extension on the last segment). */
@@ -101,18 +113,20 @@ function useBrowseListLiveRefresh(dirPath: string): void {
 }
 
 /**
- * Query params on the browse URL, for the detail panel's renderer —
- * runtime overrides on view-card params (the `view` key stays reserved
- * for renderer selection, mirroring view: URL semantics).
+ * Query params on the browse URL, split the same way a view: URL is: the
+ * reserved `view` key selects the renderer, everything else is a runtime
+ * override forwarded to it.
  */
-function useBrowseUrlParams(): Record<string, string> {
+function useBrowseUrlView(): { viewer: string | null; params: Record<string, string> } {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   return useMemo(() => {
-    const out: Record<string, string> = {};
+    const params: Record<string, string> = {};
+    let viewer: string | null = null;
     for (const [key, value] of new URLSearchParams(searchStr)) {
-      if (key !== "view") out[key] = value;
+      if (key === "view") viewer = value;
+      else params[key] = value;
     }
-    return out;
+    return { viewer, params };
   }, [searchStr]);
 }
 
@@ -120,38 +134,36 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const urlParams = useBrowseUrlParams();
-
-  const handleLinkNavigate = useCallback(
-    (target: ViewTarget) => {
-      // A link stays in the browse layout — navigating to a new file path swaps
-      // the detail panel and updates the URL via onNavigate.
-      onNavigate(target.path);
-    },
-    [onNavigate],
-  );
+  const { viewer, params: urlParams } = useBrowseUrlView();
 
   const pathIsFile = isFilePath(currentPath);
   const dirPath = pathIsFile ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
-  const initialFile = pathIsFile ? currentPath : null;
+  // What's open in the detail panel IS what the URL points at — no local
+  // selection state to diverge from the route, so every file click is a
+  // history entry the back button can walk.
+  const selectedFilePath = pathIsFile ? currentPath : null;
+
+  const handleLinkNavigate = useCallback(
+    (target: ViewTarget) => {
+      // A link stays in the browse layout — navigating swaps the detail panel
+      // and updates the URL, carrying the link's `?view=`/params along.
+      const search = { ...target.params, ...(target.viewer ? { view: target.viewer } : {}) };
+      // Re-rendering the file already open (a pure ?view=/param change) isn't a
+      // new place: replace, so back leaves the file instead of undoing a toggle.
+      onNavigate(target.path, { search, replace: target.path === currentPath });
+    },
+    [currentPath, onNavigate],
+  );
 
   const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(initialFile);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
-  // Reset selection / clear transient errors when navigation changes
-  // the file. Both are "external signal → local state" syncs; the
-  // values can't be derived in render because they're decoupled from
-  // initialFile (selection can change without nav, and contextMenu /
-  // deleteError live independently of selection until the prop moves).
-
-  useEffect(() => {
-    setSelectedFilePath(initialFile);
-  }, [initialFile]);
-
+  // Clear transient errors when navigation changes the file. An "external
+  // signal → local state" sync: contextMenu / deleteError live independently
+  // of the route until it moves, so they can't be derived in render.
   useEffect(() => {
     setDeleteError(null);
     setContextMenu(null);
@@ -219,8 +231,9 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       }
       await utils.status.browse.invalidate({ path: dirPath });
       if (selectedFilePath === path) {
-        setSelectedFilePath(null);
-        onNavigate(dirPath);
+        // The file is gone — leaving its URL in history would let back walk
+        // onto a 404, so replace the entry rather than push.
+        onNavigate(dirPath, { replace: true });
       }
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : "Delete failed");
@@ -241,13 +254,11 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={onNavigate} />
           {data ? (
             <BrowseSidebarList
-              boxSlug={boxSlug}
               data={data}
               dirPath={dirPath}
               loading={loading}
               onNavigate={onNavigate}
               selectedFilePath={selectedFilePath}
-              onSelectFile={setSelectedFilePath}
               onFileContextMenu={handleFileContextMenu}
             />
           ) : loading ? (
@@ -262,10 +273,11 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             boxSlug={boxSlug}
             deleteError={deleteError}
             deletingPath={deletingPath}
-            onBack={() => setSelectedFilePath(null)}
+            onBack={() => onNavigate(dirPath)}
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
             params={urlParams}
+            rendererName={viewer}
             selectedCard={selectedCard}
             selectedFilePath={selectedFilePath}
             selectedRawFile={selectedRawFile}

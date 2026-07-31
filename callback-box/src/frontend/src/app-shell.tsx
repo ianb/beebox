@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { Outlet, useParams, useNavigate, useLocation } from "@tanstack/react-router";
-import { BrowsePage } from "./pages/browse/BrowsePage";
+import { BrowsePage, type BrowseNavigateOptions } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ViewOverlayProvider } from "./components/ViewOverlay";
@@ -22,7 +22,7 @@ import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
-import { href } from "./lib/routing";
+import { href, toSearch } from "./lib/routing";
 
 interface KnownBox { slug: string; name: string; }
 
@@ -159,10 +159,16 @@ export function BrowsePageWrapper() {
   return (
     <BrowsePage
       currentPath={browsePath}
-      onNavigate={(path) => {
+      onNavigate={(path: string, options?: BrowseNavigateOptions) => {
         // navigate()'s promise only rejects on a superseded/redirected
         // navigation (not a user-facing failure) -- fire-and-forget.
-        void navigate({ to: href(path ? `/${boxSlug}/browse/${path}` : `/${boxSlug}/browse`) });
+        // Search is set wholesale, not merged: one file's `?view=`/params
+        // don't belong on the next one.
+        void navigate({
+          to: href(path ? `/${boxSlug}/browse/${path}` : `/${boxSlug}/browse`),
+          search: toSearch(options?.search ?? {}),
+          replace: options?.replace ?? false,
+        });
       }}
     />
   );

@@ -55,11 +55,21 @@ if [[ "$worktree" == "main" ]]; then
 else
   browse_box_root="${HOME}/src/box-worktrees/${worktree}/${browse_box}"
 fi
-browse_agent_token_file="${browse_box_root}/.callback-box/agent-token"
-if [[ -r "$browse_agent_token_file" ]]; then
-  BROWSE_AGENT_TOKEN="$(tr -d '[:space:]' < "$browse_agent_token_file")"
-  export BROWSE_AGENT_TOKEN
-fi
+# The token lives under the box's OPERATIONAL root, which in the v2 package
+# shape is `<pkg>/content` (bin/box-entry.ts resolves the same contentDir, and
+# that's the root server-box-scope.ts hands verifyAgentBearer). Looking only at
+# the package root — as this did until 2026-07-31 — silently found nothing on
+# every v2 box, so every browse ran unauthenticated straight into the login
+# wall. The package-root path stays as the legacy (shapeVersion 1) fallback.
+for browse_agent_token_file in \
+  "${browse_box_root}/content/.callback-box/agent-token" \
+  "${browse_box_root}/.callback-box/agent-token"; do
+  if [[ -r "$browse_agent_token_file" ]]; then
+    BROWSE_AGENT_TOKEN="$(tr -d '[:space:]' < "$browse_agent_token_file")"
+    export BROWSE_AGENT_TOKEN
+    break
+  fi
+done
 export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
 export AGENT_BROWSER_PROFILE="${browse_base}/profile"
 export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
