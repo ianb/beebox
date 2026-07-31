@@ -38,6 +38,9 @@ async function requireAuthBundle(accountId: string | undefined): Promise<SetupAu
 
 /** The setup-only Access token: env (`CB_ACCESS_SETUP_TOKEN`) or hidden prompt — never argv. */
 async function resolveAccessClient(accountId: string): Promise<CloudflareAccessClient> {
+  // TODO(env-migration): CB_ACCESS_SETUP_TOKEN is a one-off, never-stored
+  // setup-only credential (see file header) — outside lib/env.ts's startup
+  // schema for now; read stays direct.
   const fromEnv = process.env["CB_ACCESS_SETUP_TOKEN"];
   const apiToken =
     fromEnv !== undefined && fromEnv.length > 0
