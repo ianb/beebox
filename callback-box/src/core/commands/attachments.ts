@@ -12,6 +12,7 @@
  *   - unignore : drop the asset ignore block so git-annex can see assets
  *                (git-annex migration; see docs/plans/asset-annex.md)
  *   - largefiles-expr : print the annex.largefiles expression
+ *   - check-unlisted  : block on large attach-scope files git-annex won't annex
  *
  * Destructive ops (overwrite, rm, mv) re-implement the chmod 444 →
  * +w → atomic-rename → 444 dance so the manifest stays in sync.
@@ -44,6 +45,7 @@ import {
   runUntrackAssets,
 } from "./attachments-gitignore.js";
 import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
+import { describeUnlistedBinaries, findUnlistedBinaries } from "../annex/unlisted-binaries.js";
 
 const AttachmentsArgsSchema = z.object({
   // Always supplied by the dispatch (CLI positional / API caller); an absent
@@ -78,6 +80,8 @@ async function executeAttachments(
       return runInitGitignore(ctx);
     case "unignore":
       return runUnignore(ctx);
+    case "check-unlisted":
+      return runCheckUnlisted(ctx);
     case "largefiles-expr":
       // Printed so the migration can feed it straight to
       // `git annex config --set annex.largefiles "$(...)"`, keeping one
@@ -87,6 +91,25 @@ async function executeAttachments(
     default:
       return { success: false, error: `Unknown subcommand: ${subcommand}` };
   }
+}
+
+/**
+ * Block a commit that would put large unannexed bytes into git history.
+ *
+ * The allowlist's failure mode is omission, and it has failed that way before:
+ * `page.frozen` snapshots reached box history because nothing noticed a new
+ * binary type matching no pattern. Advisory output would have been ignored the
+ * same way, so this exits non-zero.
+ */
+async function runCheckUnlisted(ctx: CommandContext): Promise<CommandResult> {
+  const found = await findUnlistedBinaries(ctx.boxRoot);
+  if (found.length === 0) return { success: true, data: { unlisted: 0 } };
+  ctx.writeLine(describeUnlistedBinaries(found));
+  return {
+    success: false,
+    error: `${found.length} large file(s) in attach scopes would be committed as raw bytes`,
+    data: { unlisted: found.length },
+  };
 }
 
 /**

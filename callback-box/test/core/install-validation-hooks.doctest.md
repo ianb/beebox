@@ -66,6 +66,38 @@ const stat = await fs.stat(hookPath);
 => true
 ```
 
+### git-annex runs before the `cb` fallback
+
+`git annex init` declines to install its own pre-commit hook when one already
+exists — ours does — so this line is the only thing that runs annex at commit
+time. Its *position* is the load-bearing part: the hook `exit 0`s when `cb` is
+not resolvable, so an annex call placed below that would silently vanish on
+exactly the under-provisioned machine most likely to be missing git-annex too,
+and assets would quietly enter git history as raw bytes.
+
+```ts continue
+const annexAt = hookBody.indexOf("git annex pre-commit");
+const cbFallbackExitAt = hookBody.indexOf("skipping card validation");
+annexAt !== -1 && cbFallbackExitAt !== -1 && annexAt < cbFallbackExitAt
+=> true
+```
+
+A machine without git-annex fails the commit loudly rather than committing
+asset bytes:
+
+```ts continue
+hookBody.includes("git-annex is not installed; assets would be committed as raw bytes")
+=> true
+```
+
+The manifest-era `cb attachments verify` call is gone — git-annex is the
+integrity mechanism now — replaced by the unlisted-binary guard:
+
+```ts continue
+`verify=${hookBody.includes("attachments verify")} unlisted=${hookBody.includes("attachments check-unlisted")}`
+=> verify=false unlisted=true
+```
+
 ## Idempotent — second run changes nothing
 
 ```ts

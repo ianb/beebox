@@ -221,12 +221,29 @@ function preCommitBody(cbBin: string, boxRelFromPackageRoot: string): string {
   const cd = boxRelFromPackageRoot === "" ? "" : `cd ${JSON.stringify(boxRelFromPackageRoot)}\n`;
   return `#!/usr/bin/env bash
 ${PRE_COMMIT_MARKER}
-# Block commits that include cards failing schema validation, and verify the
-# attachment/asset manifest is intact (read-only scan, no auto-claim).
+# Block commits that include cards failing schema validation, and hand assets
+# to git-annex before they can be committed as raw bytes.
 # Regenerate via \`cb init\` if you delete this file.
 
 set -e
 ${cd}
+
+# git-annex FIRST, deliberately above the cb fallback below.
+#
+# \`git annex init\` declines to install its own pre-commit hook when one already
+# exists (ours does), so this line is the only thing that runs annex at commit
+# time. Placed below the \`cb\`-not-found \`exit 0\`, it would silently vanish on
+# any machine where cb is not resolvable — exactly the under-provisioned machine
+# most likely to also be missing git-annex, and the failure would be assets
+# quietly entering git history as raw bytes.
+if command -v git-annex >/dev/null 2>&1; then
+  git annex pre-commit
+else
+  echo "pre-commit: git-annex is not installed; assets would be committed as raw bytes." >&2
+  echo "  Install it (apt install git-annex / brew install git-annex) or run: cb doctor annex" >&2
+  exit 1
+fi
+
 CB=${JSON.stringify(cbBin)}
 if [ ! -x "$CB" ]; then
   if command -v cb >/dev/null 2>&1; then
@@ -248,8 +265,10 @@ fi
 # 0) so it never blocks — it surfaces dangling links to fix with cb mv.
 "$CB" validate --links || true
 
-# Verify the asset manifest on every commit (read-only; fails on error).
-"$CB" attachments verify
+# Large files in attach scopes whose extension git-annex is not configured to
+# annex would be committed as raw bytes — the class of bug that put 41MB
+# .frozen pages into box history. Blocks rather than advises.
+"$CB" attachments check-unlisted
 `;
 }
 

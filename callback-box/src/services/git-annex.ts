@@ -56,6 +56,26 @@ export interface GitAnnexService {
   merge(repoRoot: string): Promise<void>;
   /** Is there unflushed journal state that a clone would not see? */
   hasUnflushedJournal(repoRoot: string): Promise<boolean>;
+  /**
+   * Verify annexed content against its keys, paced incrementally.
+   *
+   * Read-only, which is the property that makes it safe to schedule
+   * independently of wakeup: a file added mid-run is simply fscked next cycle.
+   * A lock would have been the wrong tool — it would serialize a multi-GB pass
+   * against the box's main work loop to prevent a race that cannot corrupt
+   * anything.
+   */
+  fsck(repoRoot: string, opts: { incrementalScheduleDays: number }): Promise<AnnexFsckReport>;
+}
+
+/** Outcome of an incremental fsck pass. */
+export interface AnnexFsckReport {
+  /** True when git-annex reported no bad content. */
+  clean: boolean;
+  /** Paths git-annex quarantined to .git/annex/bad/, if any. */
+  badPaths: string[];
+  /** Raw output, for the operator when something went wrong. */
+  output: string;
 }
 
 async function runAnnex(repoRoot: string, args: string[]): Promise<string> {
@@ -144,6 +164,44 @@ export function createGitAnnexService(): GitAnnexService {
       await runAnnex(repoRoot, ["merge"]);
     },
 
+    async fsck(repoRoot: string, opts: { incrementalScheduleDays: number }): Promise<AnnexFsckReport> {
+      // Exit code is the authority here, NOT message parsing.
+      //
+      // Verified against a repo with a deliberately corrupted object: the
+      // failure detail goes to *stderr*, not stdout, and the wording changes
+      // once the object is quarantined ("Bad file content" on the pass that
+      // finds it, "No known copies exist" afterwards). A first implementation
+      // grepped stdout for "Bad file content" and reported clean while
+      // git-annex was actively quarantining corruption — a scheduled integrity
+      // check that always passes is worse than none, because it manufactures
+      // confidence.
+      //
+      // So: non-zero exit means something is wrong, full stop. The message
+      // parsing below is best-effort enrichment for the operator, and its
+      // failure can only cost detail, never the verdict.
+      const args = ["fsck", `--incremental-schedule=${String(opts.incrementalScheduleDays)}d`];
+      let output: string;
+      let clean: boolean;
+      try {
+        const { stdout, stderr } = await execFileAsync("git", ["annex", ...args], {
+          cwd: repoRoot,
+          maxBuffer: 16 * 1024 * 1024,
+        });
+        output = `${stdout}${stderr}`;
+        clean = true;
+      } catch (e) {
+        const stdout = isRecord(e) && typeof e["stdout"] === "string" ? e["stdout"] : "";
+        const stderr = isRecord(e) && typeof e["stderr"] === "string" ? e["stderr"] : "";
+        output = `${stdout}${stderr}` || String(e);
+        clean = false;
+      }
+      const badPaths = output
+        .split("\n")
+        .filter((l) => l.includes("Bad file content") || l.includes("No known copies exist"))
+        .map((l) => l.trim());
+      return { clean, badPaths, output };
+    },
+
     async hasUnflushedJournal(repoRoot: string): Promise<boolean> {
       // git-annex buffers location-log writes in .git/annex/journal/ until a
       // merge/commit folds them into the git-annex branch. A clone fetching
@@ -168,6 +226,8 @@ export interface FakeGitAnnexOptions {
   annexConfig?: Record<string, string>;
   gitConfig?: Record<string, string>;
   unflushedJournal?: boolean;
+  /** Paths a scheduled fsck should report as corrupt. */
+  fsckBadPaths?: string[];
 }
 
 export interface FakeGitAnnexService extends GitAnnexService {
@@ -182,6 +242,7 @@ export function createFakeGitAnnex(options?: FakeGitAnnexOptions): FakeGitAnnexS
   const annexConfig: Record<string, string> = { ...options?.annexConfig };
   const gitConfig: Record<string, string> = { ...options?.gitConfig };
   let unflushedJournal = options?.unflushedJournal ?? false;
+  const fsckBadPaths = options?.fsckBadPaths ?? [];
   const calls: string[] = [];
 
   return {
@@ -219,6 +280,10 @@ export function createFakeGitAnnex(options?: FakeGitAnnexOptions): FakeGitAnnexS
     },
     async hasUnflushedJournal() {
       return unflushedJournal;
+    },
+    async fsck(_repoRoot: string, opts: { incrementalScheduleDays: number }) {
+      calls.push(`fsck:${String(opts.incrementalScheduleDays)}d`);
+      return { clean: fsckBadPaths.length === 0, badPaths: fsckBadPaths, output: "" };
     },
     describe(): string {
       return [
