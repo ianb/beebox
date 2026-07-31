@@ -147,7 +147,7 @@ export async function sweepAbandonedCaptures(deps: SweepDeps): Promise<SweepResu
  * Reference is the card's own `time.start` (deterministic under `CB_TIME`),
  * not file mtime (which git operations reset).
  */
-async function findStaleTmpCaptureCards(opts: { boxRoot: string; now: number }): Promise<string[]> {
+export async function findStaleTmpCaptureCards(opts: { boxRoot: string; now: number }): Promise<string[]> {
   const { boxRoot, now } = opts;
   const stale: string[] = [];
   const captureDirs = await findTmpCaptureDirs(boxRoot, boxRoot);
