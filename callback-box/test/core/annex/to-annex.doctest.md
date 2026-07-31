@@ -149,6 +149,33 @@ ANNEX ? execFileSync("git", ["config", "annex.thin"], { cwd: repo }).toString().
 await cleanup(repo);
 ```
 
+## Git LFS is retired, not left running alongside
+
+Every box also runs Git LFS, with the same extension list and no path scoping.
+git-annex takes precedence where both filters match, so leaving LFS configured
+would not corrupt anything — it would just keep a second, unverifying mechanism
+owning whatever annex does not. The migration removes the `filter=lfs` rules and
+re-normalizes so previously-LFS content becomes annexed.
+
+`--renormalize` is the load-bearing part: plain `git add` trusts the stat cache
+and never re-examines a file whose mtime and size are unchanged, so every
+LFS-tracked file would keep its LFS pointer in the index despite the filter
+being gone — the migration would report `lfsConverted` having converted nothing.
+It only considers *tracked* files, which is why the newly-un-ignored assets
+still need an ordinary `git add -A` first.
+
+Verified against a repo with LFS genuinely engaged (a control file confirmed the
+filter was active): a legacy capture committed as an LFS pointer, plus a
+manifest-tracked attach asset, both end up annexed with zero LFS files
+remaining, and an unrelated `.gitattributes` line survives.
+
+This path is **not** asserted here: exercising it needs `git lfs install` plus a
+working LFS filter in the fixture, and a doctest that sets that up on a machine
+without git-lfs would either skip silently or fail for the wrong reason. It was
+verified by hand instead (2026-07-31), and the guard that makes a mistake here
+loud — `LfsContentMissingError` when LFS content is still an unmaterialized
+pointer — is the part that actually protects the data.
+
 ## It refuses rather than half-converting
 
 A dirty tree is refused, because a failed run could otherwise only be undone by

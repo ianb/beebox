@@ -26,14 +26,20 @@ assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length
 => true
 ```
 
-The expression is an extension allowlist scoped to attach directories:
+The expression is an extension allowlist, **unscoped** — it matches a binary
+anywhere, not only inside `.attach/`. That is deliberate: git-annex replaces Git
+LFS, which was itself unscoped, and anchoring to `.attach/` would strand LFS's
+content (legacy captures under `box/inbox/`) with no mechanism at all.
 
 ```ts
-assetLargefilesExpression().startsWith("include=*.attach/*.jpg or include=*.attach/*.jpeg")
+assetLargefilesExpression().startsWith("include=*.jpg or include=*.jpeg")
 => true
 
-assetLargefilesExpression().includes("include=*.attach/*.frozen")
+assetLargefilesExpression().includes("include=*.frozen")
 => true
+
+assetLargefilesExpression().includes(".attach/")
+=> false
 ```
 
 **It must not become a bare path glob.** A `.attach/` scope holds committed
@@ -42,11 +48,11 @@ parent scope, `manifest.json` lives there, and email bodies land as `.txt`. On
 one production box 1,844 tracked files sit inside `.attach/` scopes, so
 `include=*.attach/*` would replace committed card text with annex pointers:
 
-```ts
-assetLargefilesExpression().includes("include=*.attach/*.card")
-=> false
+Unscoped is safe precisely because it is an *extension* allowlist: cards,
+manifests, and email bodies never match, wherever they live.
 
-assetLargefilesExpression().includes("include=*.attach/*.json")
+```ts
+["card", "json", "md", "txt"].some((e) => assetLargefilesExpression().includes(`include=*.${e}`))
 => false
 
 assetLargefilesExpression() === "include=*.attach/*"

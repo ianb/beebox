@@ -46,9 +46,16 @@ in-place editing.
 
 ## What counts as an asset
 
-An extension allowlist, scoped to `.attach/` directories:
-`src/lib/asset-extensions.ts` holds the list and renders it into the
-`annex.largefiles` expression.
+An extension allowlist: `src/lib/asset-extensions.ts` holds the list and
+renders it into the `annex.largefiles` expression.
+
+**git-annex replaces Git LFS.** Boxes previously ran LFS over this same
+extension list, and the migration removes the `filter=lfs` rules. The allowlist
+is therefore unscoped — it matches a binary anywhere, not only inside
+`.attach/` — because LFS was unscoped and its content (legacy captures under
+`box/inbox/`, 154 files on one box) would otherwise be left behind with no
+mechanism at all. Where both filters were configured, annex took precedence;
+that was verified rather than assumed.
 
 It is an allowlist rather than "everything in `.attach/`" because attach scopes
 hold committed non-assets too — capture writes child `.card` files into the

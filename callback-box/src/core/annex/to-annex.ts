@@ -138,6 +138,20 @@ function mb(bytes: number): string {
   return String(Math.round(bytes / (1024 * 1024)));
 }
 
+/** Git LFS content was missing locally, so converting would lose it. */
+export class LfsContentMissingError extends Error {
+  readonly paths: string[];
+  constructor(paths: string[]) {
+    super(
+      `${String(paths.length)} Git LFS file(s) are still pointers locally. Converting now would ` +
+        "commit the pointer text as the file. Run `git lfs pull` first:\n" +
+        paths.slice(0, 5).map((p) => `  ${p}`).join("\n"),
+    );
+    this.name = "LfsContentMissingError";
+    this.paths = paths;
+  }
+}
+
 export interface ToAnnexResult {
   /** Assets that moved into the annex. */
   annexed: number;
@@ -145,6 +159,8 @@ export interface ToAnnexResult {
   bytes: number;
   /** Manifest files removed once verification passed. */
   manifestsRemoved: number;
+  /** Files taken over from Git LFS. */
+  lfsConverted: number;
   /** What would happen, when `dryRun` was set. */
   dryRun: boolean;
 }
@@ -206,6 +222,73 @@ async function ourManifests(boxRoot: string): Promise<string[]> {
     }
   }
   return out;
+}
+
+/**
+ * Files Git LFS currently tracks, box-relative.
+ *
+ * git-annex takes precedence when both filters match a path (verified against a
+ * repo with LFS genuinely engaged), so leaving the LFS filters in place would
+ * not corrupt anything — it would just keep a second, unverifying mechanism
+ * alive for every extension annex does not cover. The migration retires it.
+ */
+async function lfsTrackedFiles(repoRoot: string): Promise<string[]> {
+  try {
+    const { stdout } = await execFileAsync("git", ["lfs", "ls-files", "--name-only"], {
+      cwd: repoRoot,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return stdout.split("\n").filter((l) => l.trim() !== "");
+  } catch (_e) {
+    /* ignore: no git-lfs installed, or no LFS in this repo — nothing to convert */
+    return [];
+  }
+}
+
+/**
+ * Strip `filter=lfs` lines from `.gitattributes`, leaving everything else.
+ *
+ * Returns whether anything changed. Other attributes (the `!text !filter` rules
+ * for test fixtures, say) are load-bearing and must survive.
+ */
+async function removeLfsFilters(boxRoot: string): Promise<boolean> {
+  const p = path.join(boxRoot, ".gitattributes");
+  let text: string;
+  try {
+    text = await fs.readFile(p, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return false;
+    throw e;
+  }
+  const kept = text.split("\n").filter((l) => !l.includes("filter=lfs"));
+  const next = kept.join("\n");
+  if (next === text) return false;
+  await fs.writeFile(p, next);
+  return true;
+}
+
+/**
+ * Materialize-check every LFS file, then strip the LFS filters.
+ *
+ * Returns the files LFS was tracking, which annex now owns.
+ */
+async function retireLfs(args: { repoRoot: string; boxRoot: string }): Promise<string[]> {
+  const { repoRoot, boxRoot } = args;
+  const lfsFiles = await lfsTrackedFiles(repoRoot);
+  const unmaterialized: string[] = [];
+  for (const rel of lfsFiles) {
+    try {
+      const buf = await fs.readFile(path.join(repoRoot, rel));
+      if (buf.subarray(0, 40).toString("utf8").startsWith("version https://git-lfs")) {
+        unmaterialized.push(rel);
+      }
+    } catch (e) {
+      if (errnoCode(e) !== "ENOENT") throw e;
+    }
+  }
+  if (unmaterialized.length > 0) throw new LfsContentMissingError(unmaterialized);
+  await removeLfsFilters(boxRoot);
+  return lfsFiles;
 }
 
 /**
@@ -292,7 +375,13 @@ export async function convertBoxToAnnex(
   // below mutates. Returning after the configure/unignore steps would leave a
   // "dry" run that had already rewritten .gitignore and the annex config.
   if (dryRun) {
-    return { annexed: claimed.length, bytes, manifestsRemoved: 0, dryRun: true };
+    return {
+      annexed: claimed.length,
+      bytes,
+      manifestsRemoved: 0,
+      lfsConverted: (await lfsTrackedFiles(repoRoot)).length,
+      dryRun: true,
+    };
   }
 
   // 4a. Configure BEFORE un-ignoring. Once the assets become visible to git,
@@ -305,6 +394,16 @@ export async function convertBoxToAnnex(
     key: "annex.largefiles",
     value: assetLargefilesExpression(),
   });
+
+  // 4a-bis. Retire Git LFS for the extensions annex now owns.
+  //
+  // Every box runs LFS as well, with this same extension list and no path
+  // scoping. annex wins where both match, so this is not a correctness fix —
+  // it stops a second, unverifying mechanism from quietly owning whatever annex
+  // does not. The content must be materialized first: an LFS file that is still
+  // a pointer locally would otherwise have its pointer text committed as the
+  // file's content.
+  const lfsFiles = await retireLfs({ repoRoot, boxRoot });
 
   // 4b. Now drop the ignore block, so `git add` can see the assets at all.
   const unignored = await unignoreGitignore(boxRoot);
@@ -324,7 +423,21 @@ export async function convertBoxToAnnex(
   // which an untouched ignored file passes trivially. The migration then
 
 
-  await execFileAsync("git", ["add", "-A"], { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 });
+  // TWO passes, and both are load-bearing.
+  //
+  // `git add -A` picks up the assets the un-ignore just made visible — files
+  // git has never tracked.
+  //
+  // `git add --renormalize` then re-runs the current filters over already-
+  // tracked content. Without it, every file Git LFS tracked keeps its LFS
+  // pointer in the index despite the filter being gone: plain `add` trusts the
+  // stat cache and never re-examines a file whose mtime and size are unchanged,
+  // so the migration would report `lfsConverted` having converted nothing.
+  // `--renormalize` only considers *tracked* files, which is why it cannot
+  // replace the first pass.
+  const addOpts = { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 };
+  await execFileAsync("git", ["add", "-A"], addOpts);
+  await execFileAsync("git", ["add", "--renormalize", "."], addOpts);
 
   // 6a. Every asset must now actually be annexed. Defense in depth behind the
   //     gitignore preflight: any other reason `git add` skipped a path (a
@@ -364,5 +477,11 @@ export async function convertBoxToAnnex(
     { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 },
   );
 
-  return { annexed: claimed.length, bytes, manifestsRemoved: manifests.length, dryRun: false };
+  return {
+    annexed: claimed.length,
+    bytes,
+    manifestsRemoved: manifests.length,
+    lfsConverted: lfsFiles.length,
+    dryRun: false,
+  };
 }

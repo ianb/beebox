@@ -849,7 +849,7 @@ rather than let "on git-annex" read as "safe".
   If this proves wrong, `git annex uninit` restores plain files, and
   that is the escape hatch rather than a maintained path.
 
-## BLOCKER discovered during implementation: Git LFS
+## Git LFS — discovered during implementation, now RESOLVED
 
 **Every box already uses Git LFS as well**, and the plan never accounted for
 it. Measured 2026-07-31:
@@ -870,21 +870,41 @@ So there are three asset mechanisms in play, not two:
 2. **Asset manifests** — `.attach/` assets, gitignored.
 3. **git-annex** — what this plan adds.
 
-Two consequences, and the first is a hard blocker for Track B3:
+**Resolution (boxholder, 2026-07-31): git-annex replaces LFS.** Not coexistence
+— one mechanism.
 
-- **The LFS extension list is exactly `ASSET_EXTENSIONS`, but unscoped.** The
-  moment `unignore` makes a `.attach/` `.jpg` visible to git, that path matches
-  *both* `filter=lfs` (from `.gitattributes`) and `annex.largefiles`. Which one
-  git actually applies is **unresolved** — an attempt to test it was
-  inconclusive because LFS did not engage for either the test or the control
-  file, so nothing was established either way. This must be settled before any
-  box converts. If LFS wins, the migration silently produces LFS pointers
-  instead of annex pointers; `to-annex`'s `NotAnnexedError` check would catch
-  it and refuse, which is the right failure but not a plan.
-- **The 154 LFS files are a separate population with no decision attached.**
-  They are outside `.attach/` scopes entirely, so neither the manifest model
-  nor this plan covers them. Leaving them in LFS is defensible; the plan should
-  say so explicitly rather than by omission.
+**Precedence, settled by experiment.** With LFS genuinely engaged (proved by a
+control file that became an LFS pointer), a path matching *both* `filter=lfs`
+and `annex.largefiles` goes to **annex**. So the migration was never at risk of
+silently producing LFS pointers. An earlier attempt to test this was
+inconclusive because LFS had not actually engaged; that result was discarded
+rather than reported.
+
+**`annex.largefiles` is now unscoped**, matching LFS's existing scope rather
+than the `.attach/`-anchored form inherited from the manifest model. That is
+what lets annex take over the 154 legacy-capture files under `box/inbox/`,
+which no `.attach/`-scoped rule would ever have reached. Behavior for those
+paths is unchanged — they were already kept out of git's object database, just
+by a tool that does not verify content.
+
+**`to-annex` retires LFS**, in three parts, each of which failed at least once
+in testing:
+
+1. Refuse if any LFS file is still an unmaterialized pointer locally
+   (`LfsContentMissingError`) — converting then would commit pointer text as
+   the file's content.
+2. Strip `filter=lfs` lines from `.gitattributes`, preserving everything else
+   (the `!text !filter` fixture rules are load-bearing).
+3. `git add -A` **then** `git add --renormalize .`. The second is not a
+   flourish: plain `add` trusts the stat cache and never re-examines a file
+   whose mtime and size are unchanged, so every LFS-tracked file kept its LFS
+   pointer in the index despite the filter being gone — the migration reported
+   `lfsConverted` having converted nothing. `--renormalize` only considers
+   *tracked* files, so it cannot replace the first pass either.
+
+Verified end to end on a box shaped like production (an LFS-committed legacy
+capture plus a manifest-tracked attach asset): both annexed, zero LFS files
+remaining, unrelated `.gitattributes` line preserved, tree clean.
 
 Also worth noting: **test1 has zero manifests** despite 16 asset-ignore
 patterns — the same unclaimed hole found on `personal-test`. A box in that

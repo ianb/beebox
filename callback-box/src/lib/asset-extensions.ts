@@ -49,20 +49,27 @@ export function assetGitignorePatterns(): string {
  * {@link ASSET_EXTENSIONS} as a git-annex `annex.largefiles` expression — which
  * files `git add` routes into the annex instead of committing their bytes.
  *
- * **This must stay an extension allowlist, not a path glob.** A `.attach/`
- * scope holds committed non-assets alongside assets: capture writes child
- * `.card` files into the parent scope, `manifest.json` lives there, and email
- * bodies land as `.txt`. On one production box, 1,844 tracked files sit inside
- * `.attach/` scopes. `include=*.attach/*` would annex all of them, replacing
- * committed card text with pointer files — see the classifier section of
+ * **An extension allowlist, never a path glob.** A `.attach/` scope holds
+ * committed non-assets alongside assets: capture writes child `.card` files
+ * into the parent scope, `manifest.json` lives there, and email bodies land as
+ * `.txt`. On one production box, 1,844 tracked files sit inside `.attach/`
+ * scopes. `include=*.attach/*` would annex all of them, replacing committed
+ * card text with pointer files — see the classifier section of
  * docs/plans/asset-annex.md.
  *
- * git-annex globs let `*` cross `/`, so the mid-pattern `.attach/` anchors the
- * match to a scope while still reaching nested child scopes and plain
- * subdirectories; no `**` is needed (git-annex does not treat it specially).
+ * **Unscoped, because git-annex replaces Git LFS here.** An earlier version
+ * anchored every pattern to `.attach/`, inherited from the manifest model,
+ * which only ever covered attach scopes. But boxes also run Git LFS with this
+ * same extension list and *no* path scoping — on one production box that is 154
+ * files, all of them legacy captures under `box/inbox/` rather than in any
+ * attach scope. Scoping annex to `.attach/` would leave those to LFS forever
+ * and keep two mechanisms alive; matching LFS's scope exactly is what lets the
+ * LFS filters be removed. Behavior for those paths is unchanged — they were
+ * already kept out of git's object database, just by a different tool that does
+ * not verify content.
  */
 export function assetLargefilesExpression(): string {
-  return ASSET_EXTENSIONS.map((ext) => `include=*.attach/*.${ext}`).join(" or ");
+  return ASSET_EXTENSIONS.map((ext) => `include=*.${ext}`).join(" or ");
 }
 
 /**
