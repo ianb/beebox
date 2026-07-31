@@ -121,6 +121,34 @@ Concrete problems, not just inconsistency:
 Worth resolving **together with** the token-scope question above, since both are
 "what credential does publishing hold, where does it live, and who can use it."
 
+## `wrangler login` (OAuth) — removes the manual token AND the dotfile, for setup
+
+Confirmed (2026-07): **`wrangler login` authenticates through a browser OAuth
+flow — "no API credentials needed."** Driving the provisioning half through
+wrangler commands under that login (`wrangler r2 bucket create`, `wrangler
+deploy`, `wrangler secret put`, preview-URLs via `wrangler.jsonc`) **eliminates
+both friction points at once**: the hand-minted scoped API token (the manual
+dashboard step) *and* `~/.cb-publish.env` (the dotfile). The only human action
+becomes `wrangler login` → approve in the browser.
+
+Two boundaries it does NOT cross:
+
+- **Cloudflare Access is not in wrangler's surface** (wrangler is Workers / KV /
+  D1 / R2 / secrets only). Account-tier Access still goes through the CF API, as
+  proposed above — wrangler doesn't change that half.
+- **The server-side submission-pull connector still needs a stored credential.**
+  `wrangler login` is interactive and laptop-local; `publish-submissions.ts` runs
+  headless on prod every `cb wakeup`. So wrangler-login fixes the one-time *setup*
+  auth but not the *runtime* credential — that stays the secret-management
+  question above.
+
+Net target: **`cb pub setup` provisions via `wrangler login` (no token, no
+dotfile); account-tier Access via the CF API (no dashboard); the runtime
+submission connector draws its credential from the resolved
+[per-box secret-management](../decisions/2026-03-15-per-box-secret-management.md)
+decision.** That collapses the chaotic dashboard to, at most, one browser approve
+for setup — and zero dashboard for `public`/`secret` tiers.
+
 ## Cheap immediate fix, regardless of the above
 
 Even if API provisioning is rejected, **the printed string is wrong today** and
