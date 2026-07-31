@@ -28,7 +28,7 @@ hook re-injects the active phase's rules.
 
 **For:** state that can't drift from reality, because it *is* the record of what
 happened. Survives compaction with no special machinery. Makes a
-[requirements-delivered gate](../features/2026-07-30-requirements-delivered-gate.md)
+[requirements-delivered gate](../closed/features/2026-07-30-requirements-delivered-gate.md)
 far more reliable — checking a diff against a checklist is tractable, checking it
 against prose is where fabrication risk lives.
 
