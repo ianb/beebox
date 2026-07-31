@@ -22,7 +22,10 @@ model — notably the content/ingestion R2 bucket split):
   Default login method: One-Time PIN; policy allow-everyone; the Worker's
   per-pub allowlist stays the authorization.
 - The connector credential is an ingestion-bucket-scoped R2 token in
-  `config/connectors/publish.secret.json` (per-box secret pattern).
+  `config/connectors/publish.secret.json` (per-box secret pattern) — and
+  `cb pub setup --mint-connector-token` MINTS it via the account-token API
+  (bootstrap token gains "Account API Tokens: Edit"), so there is no manual
+  R2-dashboard token assembly (addendum in the design doc, 2026-07-31).
 - Non-secret Access values persist in `config/publish.json` so reruns
   redeploy rather than erase them; `cb pub status` diffs deployed vars
   against that file.
@@ -32,8 +35,10 @@ model — notably the content/ingestion R2 bucket split):
 against the real Zero Trust org; verify the plan's named live gaps (create
 response `aud` placement, `/access/organizations` pre-onboarding behavior,
 whether the OTP IdP is auto-provisioned, `wrangler whoami --json` shape, R2
-object REST calls accepting the OAuth bearer); then an OTP login on a
-published `/a/` page confirming the JWT email matches the allowlist.
+object REST calls accepting the OAuth bearer, and the token-mint half —
+permission-group names, bucket resource-key format, one-time `value` in the
+create response); then an OTP login on a published `/a/` page confirming the
+JWT email matches the allowlist.
 
 `cb pub setup` provisions the R2 bucket and deploys the Worker fine (verified live
 2026-07-19, first real run). But the account-tier half — Cloudflare Access — is
