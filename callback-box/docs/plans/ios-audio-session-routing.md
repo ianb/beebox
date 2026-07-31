@@ -346,7 +346,10 @@ which no code chose.
 **First implementation chunk.** Route `SystemCaptureAudioSession` through the
 controller and add the idle restore, with the capture tests updated. Capture
 is done first because it already has the injectable seam, so the change is
-observable in a test before it is made in the harder path.
+observable in a test before it is made in the harder path. Note that
+`CaptureAudioRecorder`'s lifecycle had no test at all before this plan — only
+the pure `shouldSoftStop` helper (`CaptureAcquisitionTests.swift:83`) — so the
+fakes for its four injection points are written here, not reused.
 
 ### Track 3 — do not let a mid-recording route change fail silently
 
@@ -399,7 +402,7 @@ No critical gaps. Every row below has either a test or a visible failure.
 | Bluetooth device disconnects mid-dictation (user walks out of range) | No — needs hardware | Track 3: the engine configuration change stops the recording and reports it | Clear — message shown, partial transcript kept |
 | Bluetooth device connects mid-dictation | No — needs hardware | Track 3, same path | Clear |
 | Recording starts while a phone call holds the microphone | No | Existing: `setActive(true)` fails with `InsufficientPriority` (`AVAudioSession.h:249-251`) into the same throw path | Clear |
-| App is backgrounded during capture | Yes — `CaptureAcquisitionTests` covers the background stop through the existing observer at `CaptureAcquisition.swift:711-717` | Existing; unchanged by this plan | Clear |
+| App is backgrounded during capture | No — the observer at `CaptureAcquisition.swift:696-702` has no test; `CaptureAudioSessionTests` covers the equivalent `stop(reason: .interruption)` path, not the notification itself | Existing; unchanged by this plan | Clear |
 | `.playback` idle category plays an earcon while the phone's silent switch is on | No | None — this is the deliberate behaviour change | Clear — deliberate; speech output is not a ringer, decided 2026-07-31 |
 
 ## Agent-flow / user-flow edge cases

@@ -96,6 +96,7 @@ final class SpeechDictation: ObservableObject {
     @Published var errorMessage: String?
 
     private let audioEngine = AVAudioEngine()
+    private let audioSession: any AudioSessionControlling
     private let permissionRequester: (@MainActor () async -> Bool)?
     private let startupDidFinish: @MainActor () -> Void
     private let legacyRecognizer = SFSpeechRecognizer(locale: Locale.current)
@@ -112,11 +113,14 @@ final class SpeechDictation: ObservableObject {
     private var recordingFile: AVAudioFile?
     private var keywordSeedText = ""
     private var interruptionObserver: NSObjectProtocol?
+    private var configurationChangeObserver: NSObjectProtocol?
 
     init(
         permissionRequester: (@MainActor () async -> Bool)? = nil,
-        startupDidFinish: @escaping @MainActor () -> Void = {}
+        startupDidFinish: @escaping @MainActor () -> Void = {},
+        audioSession: any AudioSessionControlling = SystemAudioSession()
     ) {
+        self.audioSession = audioSession
         self.permissionRequester = permissionRequester
         self.startupDidFinish = startupDidFinish
         interruptionObserver = NotificationCenter.default.addObserver(
@@ -128,11 +132,26 @@ final class SpeechDictation: ObservableObject {
                 self?.handleAudioInterruption(notification)
             }
         }
+        // A Bluetooth device connecting or disconnecting mid-dictation changes
+        // the engine's input format, which the tap installed in `start` no
+        // longer matches. Stop and say so rather than run on a broken tap.
+        configurationChangeObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: audioEngine,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleEngineConfigurationChange()
+            }
+        }
     }
 
     deinit {
         if let interruptionObserver {
             NotificationCenter.default.removeObserver(interruptionObserver)
+        }
+        if let configurationChangeObserver {
+            NotificationCenter.default.removeObserver(configurationChangeObserver)
         }
     }
 
@@ -206,7 +225,10 @@ final class SpeechDictation: ObservableObject {
                 .recordingStopped(hasText: transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
             )
         }
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // Deactivating alone would leave the recording category installed, so
+        // later playback would stay quiet and off Bluetooth. `deactivate()`
+        // also restores the idle configuration.
+        audioSession.deactivate()
     }
 
     func resetDictationState() {
@@ -283,13 +305,7 @@ final class SpeechDictation: ObservableObject {
         transcript = currentText
 
         do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(
-                .playAndRecord,
-                mode: .measurement,
-                options: [.defaultToSpeaker, .duckOthers]
-            )
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            try audioSession.activate(role: .recording)
 
             let inputNode = audioEngine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
@@ -450,6 +466,16 @@ final class SpeechDictation: ObservableObject {
         errorMessage = message
         VoiceCompositionReducer.reduce(&state, .fail(message: message))
         interruptionCount += 1
+    }
+
+    private func handleEngineConfigurationChange() {
+        guard state == .recording else {
+            return
+        }
+        let message = "The audio device changed. Your live transcript is ready to edit or send."
+        endRecording(cancelTranscription: true)
+        errorMessage = message
+        VoiceCompositionReducer.reduce(&state, .fail(message: message))
     }
 
     private func requestSpeechPermission() async -> Bool {

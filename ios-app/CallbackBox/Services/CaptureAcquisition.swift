@@ -621,23 +621,6 @@ struct AVAudioRecorderFactory: CaptureAudioRecorderFactory {
     }
 }
 
-protocol CaptureAudioSessionControlling {
-    func activate() throws
-    func deactivate()
-}
-
-struct SystemCaptureAudioSession: CaptureAudioSessionControlling {
-    func activate() throws {
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .default, options: [.duckOthers])
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
-    }
-
-    func deactivate() {
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-    }
-}
-
 protocol CaptureMicrophoneAuthorizing {
     func requestPermission() async -> Bool
 }
@@ -676,7 +659,7 @@ final class CaptureAudioRecorder: ObservableObject {
 
     private let sink: any CaptureAcquisitionSink
     private let factory: any CaptureAudioRecorderFactory
-    private let audioSession: any CaptureAudioSessionControlling
+    private let audioSession: any AudioSessionControlling
     private let authorizer: any CaptureMicrophoneAuthorizing
     private var recorder: (any CaptureAudioRecording)?
     private var currentItem: CaptureItem?
@@ -687,7 +670,7 @@ final class CaptureAudioRecorder: ObservableObject {
     init(
         sink: any CaptureAcquisitionSink,
         factory: any CaptureAudioRecorderFactory = AVAudioRecorderFactory(),
-        audioSession: any CaptureAudioSessionControlling = SystemCaptureAudioSession(),
+        audioSession: any AudioSessionControlling = SystemAudioSession(),
         authorizer: any CaptureMicrophoneAuthorizing = SystemCaptureMicrophoneAuthorizer(),
         notificationCenter: NotificationCenter = .default
     ) {
@@ -741,7 +724,7 @@ final class CaptureAudioRecorder: ObservableObject {
             let url = try await sink.beginRecording(item: item)
             persisted = true
             onEvent?(.recordingPersisted(item))
-            try audioSession.activate()
+            try audioSession.activate(role: .recording)
             let recorder = try factory.makeRecorder(url: url, settings: Self.settings)
             guard recorder.record() else {
                 throw CaptureAcquisitionError.recordingDidNotStart

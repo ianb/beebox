@@ -146,3 +146,95 @@ private actor FakeAcquisitionSink: CaptureAcquisitionSink {
 
     func failRecording(itemID: UUID, message: String) {}
 }
+
+@MainActor
+final class CaptureAudioSessionTests: XCTestCase {
+    func testStartActivatesTheRecordingRoleAndStopRestoresIdle() async throws {
+        let session = RecordingAudioSession()
+        let recorder = CaptureAudioRecorder(
+            sink: StubAcquisitionSink(),
+            factory: StubRecorderFactory(),
+            audioSession: session,
+            authorizer: AlwaysGrantedAuthorizer()
+        )
+
+        await recorder.start()
+        XCTAssertEqual(session.activatedRoles, [.recording])
+        XCTAssertEqual(session.deactivations, 0)
+
+        await recorder.stop()
+        // `deactivate()` is what restores the idle playback configuration, so a
+        // missing call here is the Bluetooth/low-volume defect returning.
+        XCTAssertEqual(session.deactivations, 1)
+        XCTAssertEqual(session.activatedRoles, [.recording])
+    }
+
+    func testInterruptionStopAlsoRestoresIdle() async throws {
+        let session = RecordingAudioSession()
+        let recorder = CaptureAudioRecorder(
+            sink: StubAcquisitionSink(),
+            factory: StubRecorderFactory(),
+            audioSession: session,
+            authorizer: AlwaysGrantedAuthorizer()
+        )
+
+        await recorder.start()
+        await recorder.stop(reason: .interruption)
+
+        XCTAssertEqual(session.deactivations, 1)
+    }
+}
+
+@MainActor
+private final class RecordingAudioSession: AudioSessionControlling {
+    private(set) var activatedRoles: [AudioSessionRole] = []
+    private(set) var deactivations = 0
+    private(set) var idlePreparations = 0
+
+    nonisolated func activate(role: AudioSessionRole) throws {
+        MainActor.assumeIsolated { activatedRoles.append(role) }
+    }
+
+    nonisolated func deactivate() {
+        MainActor.assumeIsolated { deactivations += 1 }
+    }
+
+    nonisolated func prepareIdle() {
+        MainActor.assumeIsolated { idlePreparations += 1 }
+    }
+}
+
+private struct StubAcquisitionSink: CaptureAcquisitionSink {
+    func importFile(at url: URL, item: CaptureItem) async throws {}
+
+    func beginRecording(item: CaptureItem) async throws -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent(item.filename)
+    }
+
+    func closeRecording(itemID: UUID) async throws {}
+
+    func failRecording(itemID: UUID, message: String) async {}
+}
+
+private struct StubRecorderFactory: CaptureAudioRecorderFactory {
+    func makeRecorder(url: URL, settings: [String: Any]) throws -> any CaptureAudioRecording {
+        StubRecording()
+    }
+}
+
+private final class StubRecording: CaptureAudioRecording {
+    private(set) var isRecording = false
+
+    func record() -> Bool {
+        isRecording = true
+        return true
+    }
+
+    func stop() {
+        isRecording = false
+    }
+}
+
+private struct AlwaysGrantedAuthorizer: CaptureMicrophoneAuthorizing {
+    func requestPermission() async -> Bool { true }
+}
