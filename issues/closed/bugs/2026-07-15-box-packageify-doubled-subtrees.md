@@ -3,7 +3,17 @@ title: "box-packageify migration created doubled subtrees in some boxes"
 filed-by: agent
 discovered-in: main session — investigating a test box's stuck refresh-maps health flag
 area: callback-box
+resolution: implemented
 ---
+
+**Closed (fixed) 2026-07-31.** Prod verified clean (scan below), and both affected
+local boxes de-doubled by hand with **no data loss**: each nested `store/`
+doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
+their de-doubled twins (redundant), and regenerable `MAP.md` (dropped freely per
+the caveat) — **no unique files and no non-regenerable divergence**, and all of it
+was untracked in git, so removal needed no box commit. Both boxes re-scan clean;
+`refresh-maps` un-wedges on the next run as the doubled dirs no longer flag dirty
+and `MAP.md` regenerates.
 
 ## Scan results (2026-07-31) — prod CLEAN; two local boxes still corrupt
 
@@ -50,7 +60,7 @@ personal boxes scanned clean. Detection scan (structure only, no content):
 ```
 
 **Why it matters — it silently wedges `refresh-maps` forever** (see the sibling
-[refresh-maps non-convergence bug](../closed/bugs/2026-07-15-refresh-maps-wedges-on-unresolvable-dir.md)):
+[refresh-maps non-convergence bug](2026-07-15-refresh-maps-wedges-on-unresolvable-dir.md)):
 the doubled dirs don't exist at the map-state `asOf` ref, so the precheck flags
 them dirty on every run and validation never passes. Any box the migration
 corrupted has a permanently-failing refresh-maps.
