@@ -28,7 +28,7 @@
  */
 
 import path from "node:path";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { z } from "zod";
 
 import { registerConnector, type Connector, type SyncResult } from "./index.js";
@@ -44,41 +44,8 @@ import {
   createR2PublishStore,
   r2ConfigFromEnv,
   type PublishRemoteStore,
-  type R2PublishStoreConfig,
 } from "../services/publish-remote-store.js";
-import { staticBearer } from "../services/cloudflare-bearer.js";
-
-/** The per-box connector secret: an ingestion-bucket-scoped R2 token (never the broad management token). */
-const publishSecretSchema = z
-  .object({
-    accountId: z.string().min(1),
-    bucket: z.string().min(1),
-    apiToken: z.string().min(1),
-  })
-  .strict();
-
-/** Path of the connector's secret file (same pattern as the other connector secrets). */
-export function publishSecretPath(boxRoot: string): string {
-  return path.join(boxRoot, "config", "connectors", "publish.secret.json");
-}
-
-/**
- * Read the connector credential from the box's secret file; `null` when the
- * file is absent (publishing not configured). A file that exists but fails
- * the schema throws — a malformed credential should be fixed, not silently
- * treated as "no publishing".
- */
-export async function readPublishSecret(boxRoot: string): Promise<R2PublishStoreConfig | null> {
-  let raw: string;
-  try {
-    raw = await readFile(publishSecretPath(boxRoot), "utf-8");
-  } catch (e) {
-    if (e instanceof Error && "code" in e && e.code === "ENOENT") return null;
-    throw e;
-  }
-  const parsed = publishSecretSchema.parse(JSON.parse(raw));
-  return { accountId: parsed.accountId, bucket: parsed.bucket, bearer: staticBearer(parsed.apiToken) };
-}
+import { readPublishSecret } from "../publish/connector-secret.js";
 
 /** An `any-account` access-log object: `{ ts, pubId, email }` (edge-written). */
 const accessLogEntrySchema = z

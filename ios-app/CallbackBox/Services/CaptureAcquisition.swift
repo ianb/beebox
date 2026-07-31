@@ -621,23 +621,6 @@ struct AVAudioRecorderFactory: CaptureAudioRecorderFactory {
     }
 }
 
-protocol CaptureAudioSessionControlling {
-    func activate() throws
-    func deactivate()
-}
-
-struct SystemCaptureAudioSession: CaptureAudioSessionControlling {
-    func activate() throws {
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .default, options: [.duckOthers])
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
-    }
-
-    func deactivate() {
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-    }
-}
-
 protocol CaptureMicrophoneAuthorizing {
     func requestPermission() async -> Bool
 }
@@ -676,18 +659,19 @@ final class CaptureAudioRecorder: ObservableObject {
 
     private let sink: any CaptureAcquisitionSink
     private let factory: any CaptureAudioRecorderFactory
-    private let audioSession: any CaptureAudioSessionControlling
+    private let audioSession: any AudioSessionControlling
     private let authorizer: any CaptureMicrophoneAuthorizing
     private var recorder: (any CaptureAudioRecording)?
     private var currentItem: CaptureItem?
     private var currentURL: URL?
     private var sizeTimer: Timer?
     private var observers: [NSObjectProtocol] = []
+    private var holdsAudioSession = false
 
     init(
         sink: any CaptureAcquisitionSink,
         factory: any CaptureAudioRecorderFactory = AVAudioRecorderFactory(),
-        audioSession: any CaptureAudioSessionControlling = SystemCaptureAudioSession(),
+        audioSession: any AudioSessionControlling = SystemAudioSession(),
         authorizer: any CaptureMicrophoneAuthorizing = SystemCaptureMicrophoneAuthorizer(),
         notificationCenter: NotificationCenter = .default
     ) {
@@ -721,12 +705,25 @@ final class CaptureAudioRecorder: ObservableObject {
         observers.forEach(NotificationCenter.default.removeObserver)
         sizeTimer?.invalidate()
         recorder?.stop()
-        audioSession.deactivate()
+        if holdsAudioSession {
+            audioSession.deactivate()
+        }
     }
 
     var isRecording: Bool {
         if case .recording = lifecycle.state { return true }
         return false
+    }
+
+    /// Release the session only if this recorder acquired it. `AVAudioSession`
+    /// is process-global; deactivating one we never activated would tear down
+    /// whatever else is using it.
+    private func releaseAudioSession() {
+        guard holdsAudioSession else {
+            return
+        }
+        holdsAudioSession = false
+        audioSession.deactivate()
     }
 
     func start() async {
@@ -741,7 +738,8 @@ final class CaptureAudioRecorder: ObservableObject {
             let url = try await sink.beginRecording(item: item)
             persisted = true
             onEvent?(.recordingPersisted(item))
-            try audioSession.activate()
+            try audioSession.activateRecording()
+            holdsAudioSession = true
             let recorder = try factory.makeRecorder(url: url, settings: Self.settings)
             guard recorder.record() else {
                 throw CaptureAcquisitionError.recordingDidNotStart
@@ -759,7 +757,7 @@ final class CaptureAudioRecorder: ObservableObject {
             recorder = nil
             currentItem = nil
             currentURL = nil
-            audioSession.deactivate()
+            releaseAudioSession()
             let message = error.localizedDescription
             lifecycle.fail(message)
             notice = message
@@ -782,7 +780,7 @@ final class CaptureAudioRecorder: ObservableObject {
         sizeTimer = nil
         recorder?.stop()
         recorder = nil
-        audioSession.deactivate()
+        releaseAudioSession()
         do {
             try await sink.closeRecording(itemID: itemID)
             _ = lifecycle.didClose(itemID: itemID)

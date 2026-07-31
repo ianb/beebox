@@ -96,6 +96,7 @@ final class SpeechDictation: ObservableObject {
     @Published var errorMessage: String?
 
     private let audioEngine = AVAudioEngine()
+    private let audioSession: any AudioSessionControlling
     private let permissionRequester: (@MainActor () async -> Bool)?
     private let startupDidFinish: @MainActor () -> Void
     private let legacyRecognizer = SFSpeechRecognizer(locale: Locale.current)
@@ -112,11 +113,16 @@ final class SpeechDictation: ObservableObject {
     private var recordingFile: AVAudioFile?
     private var keywordSeedText = ""
     private var interruptionObserver: NSObjectProtocol?
+    private var tapInstalled = false
+    private var holdsAudioSession = false
+    private var configurationChangeObserver: NSObjectProtocol?
 
     init(
         permissionRequester: (@MainActor () async -> Bool)? = nil,
-        startupDidFinish: @escaping @MainActor () -> Void = {}
+        startupDidFinish: @escaping @MainActor () -> Void = {},
+        audioSession: any AudioSessionControlling = SystemAudioSession()
     ) {
+        self.audioSession = audioSession
         self.permissionRequester = permissionRequester
         self.startupDidFinish = startupDidFinish
         interruptionObserver = NotificationCenter.default.addObserver(
@@ -128,11 +134,26 @@ final class SpeechDictation: ObservableObject {
                 self?.handleAudioInterruption(notification)
             }
         }
+        // A Bluetooth device connecting or disconnecting mid-dictation changes
+        // the engine's input format, which the tap installed in `start` no
+        // longer matches. Stop and say so rather than run on a broken tap.
+        configurationChangeObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: audioEngine,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleEngineConfigurationChange()
+            }
+        }
     }
 
     deinit {
         if let interruptionObserver {
             NotificationCenter.default.removeObserver(interruptionObserver)
+        }
+        if let configurationChangeObserver {
+            NotificationCenter.default.removeObserver(configurationChangeObserver)
         }
     }
 
@@ -180,7 +201,13 @@ final class SpeechDictation: ObservableObject {
     private func endRecording(cancelTranscription: Bool) {
         if audioEngine.isRunning {
             audioEngine.stop()
+        }
+        // Not conditional on `isRunning`: an engine configuration change stops
+        // the engine on its own, and a tap left installed makes the next
+        // `installTap` on this bus a fatal exception.
+        if tapInstalled {
             audioEngine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
         }
         if currentRecordingURL != nil {
             recordedAudioURL = currentRecordingURL
@@ -206,7 +233,15 @@ final class SpeechDictation: ObservableObject {
                 .recordingStopped(hasText: transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
             )
         }
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // Only tear down a session this instance actually activated —
+        // `AVAudioSession` is process-global, and `start` calls this before it
+        // acquires anything. Deactivating alone would leave the recording
+        // category installed, so later playback would stay quiet and off
+        // Bluetooth; `deactivate()` also restores the idle configuration.
+        if holdsAudioSession {
+            holdsAudioSession = false
+            audioSession.deactivate()
+        }
     }
 
     func resetDictationState() {
@@ -283,13 +318,8 @@ final class SpeechDictation: ObservableObject {
         transcript = currentText
 
         do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(
-                .playAndRecord,
-                mode: .measurement,
-                options: [.defaultToSpeaker, .duckOthers]
-            )
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            try audioSession.activateRecording()
+            holdsAudioSession = true
 
             let inputNode = audioEngine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
@@ -344,6 +374,7 @@ final class SpeechDictation: ObservableObject {
             let audioFile = try AVAudioFile(forWriting: recordingURL, settings: format.settings)
             currentRecordingURL = recordingURL
             recordingFile = audioFile
+            tapInstalled = true
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
                 modernSession?.append(buffer)
                 legacyRequest?.append(buffer)
@@ -450,6 +481,16 @@ final class SpeechDictation: ObservableObject {
         errorMessage = message
         VoiceCompositionReducer.reduce(&state, .fail(message: message))
         interruptionCount += 1
+    }
+
+    private func handleEngineConfigurationChange() {
+        guard state == .recording else {
+            return
+        }
+        let message = "The audio device changed. Your live transcript is ready to edit or send."
+        endRecording(cancelTranscription: true)
+        errorMessage = message
+        VoiceCompositionReducer.reduce(&state, .fail(message: message))
     }
 
     private func requestSpeechPermission() async -> Bool {

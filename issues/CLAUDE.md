@@ -95,6 +95,14 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   — a year from now "needs testing" alone is useless. An agent should never
   remove this itself; only Ian clears it, by testing. `grep -rl "manual-testing"
   issues/` is the list of things waiting on him.
+  - **When the code has already landed** (the common case — the fix shipped and
+    only a real-device / browser check remains), make that the item's *headline*:
+    lead the body with a one-line status callout so "done except for the phone
+    check" is visible at a glance, not buried in a `## Fixed in X` section partway
+    down. A blockquote right after the frontmatter:
+    `> **⏳ Awaiting manual testing** — fix landed in \`<commit>\`; <one line of
+    what to try>. Only Ian clears this.` The reader (and Ian scanning the queue)
+    should see the true status in the first line.
 - `labels:` is a freeform cross-cutting tag — an optional YAML list of
   kebab-case strings for grouping issues by effort/epic/theme/sprint, anything
   the six categories and the `area` field don't capture (multiple allowed). It's

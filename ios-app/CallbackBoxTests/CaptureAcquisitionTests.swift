@@ -146,3 +146,122 @@ private actor FakeAcquisitionSink: CaptureAcquisitionSink {
 
     func failRecording(itemID: UUID, message: String) {}
 }
+
+@MainActor
+final class CaptureAudioSessionTests: XCTestCase {
+    func testStartActivatesTheRecordingRoleAndStopRestoresIdle() async throws {
+        let session = RecordingAudioSession()
+        let recorder = CaptureAudioRecorder(
+            sink: StubAcquisitionSink(),
+            factory: StubRecorderFactory(),
+            audioSession: session,
+            authorizer: AlwaysGrantedAuthorizer()
+        )
+
+        await recorder.start()
+        XCTAssertEqual(session.activations, 1)
+        XCTAssertEqual(session.deactivations, 0)
+
+        await recorder.stop()
+        // `deactivate()` is what restores the idle playback configuration, so a
+        // missing call here is the Bluetooth/low-volume defect returning.
+        XCTAssertEqual(session.deactivations, 1)
+        XCTAssertEqual(session.activations, 1)
+    }
+
+    func testEveryStopReasonRestoresIdle() async throws {
+        for reason in [
+            CaptureAudioStopReason.interruption,
+            .background,
+            .sizeLimit,
+        ] {
+            let session = RecordingAudioSession()
+            let recorder = CaptureAudioRecorder(
+                sink: StubAcquisitionSink(),
+                factory: StubRecorderFactory(),
+                audioSession: session,
+                authorizer: AlwaysGrantedAuthorizer()
+            )
+
+            await recorder.start()
+            await recorder.stop(reason: reason)
+
+            XCTAssertEqual(session.deactivations, 1, "\(reason)")
+        }
+    }
+
+    func testAFailedStartNeverReleasesASessionItDidNotAcquire() async throws {
+        let session = RecordingAudioSession()
+        let recorder = CaptureAudioRecorder(
+            sink: StubAcquisitionSink(),
+            factory: StubRecorderFactory(),
+            audioSession: session,
+            authorizer: DeniedAuthorizer()
+        )
+
+        await recorder.start()
+
+        // AVAudioSession is process-global. A recorder that never activated it
+        // must not deactivate whatever else is using it.
+        XCTAssertEqual(session.activations, 0)
+        XCTAssertEqual(session.deactivations, 0)
+    }
+}
+
+@MainActor
+private final class RecordingAudioSession: AudioSessionControlling {
+    private(set) var activations = 0
+    private(set) var deactivations = 0
+    private(set) var idlePreparations = 0
+
+    nonisolated func activateRecording() throws {
+        MainActor.assumeIsolated { activations += 1 }
+    }
+
+    nonisolated func deactivate() {
+        MainActor.assumeIsolated { deactivations += 1 }
+    }
+
+    nonisolated func prepareIdle() {
+        MainActor.assumeIsolated { idlePreparations += 1 }
+    }
+}
+
+private struct StubAcquisitionSink: CaptureAcquisitionSink {
+    func importFile(at url: URL, item: CaptureItem) async throws {}
+
+    func beginRecording(item: CaptureItem) async throws -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent(item.filename)
+    }
+
+    func closeRecording(itemID: UUID) async throws {}
+
+    func failRecording(itemID: UUID, message: String) async {}
+}
+
+private struct StubRecorderFactory: CaptureAudioRecorderFactory {
+    func makeRecorder(url: URL, settings: [String: Any]) throws -> any CaptureAudioRecording {
+        StubRecording()
+    }
+}
+
+private final class StubRecording: CaptureAudioRecording {
+    private(set) var isRecording = false
+
+    func record() -> Bool {
+        isRecording = true
+        return true
+    }
+
+    func stop() {
+        isRecording = false
+    }
+}
+
+private struct AlwaysGrantedAuthorizer: CaptureMicrophoneAuthorizing {
+    func requestPermission() async -> Bool { true }
+}
+
+private struct DeniedAuthorizer: CaptureMicrophoneAuthorizing {
+    func requestPermission() async -> Bool { false }
+}

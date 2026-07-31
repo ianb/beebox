@@ -3,8 +3,16 @@ title: "Camera capture traps you — Cancel is disabled until you've captured so
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder opened the camera and couldn't get out
-needs: [manual-testing]
+resolution: implemented
 ---
+
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** Fix landed in
+`d67084f1` ("make the camera always leaveable"): `CaptureControls.tsx:62` now
+gates the Cancel button on `finalizing` only — the `!hasContent`/`sessionId`
+trap is gone, so an empty session exits in one tap — and the aria-label reads
+"Exit capture" when empty vs "Discard and exit capture" with content. Boxholder
+confirms the behavior, clearing the former `needs: manual-testing`. Reopen if the
+mid-recording / mid-upload exit paths ever misbehave.
 
 Opening the camera capture overlay with nothing captured yet leaves **no way
 out**. You've entered a full-screen camera mode and every exit is unavailable
@@ -34,7 +42,7 @@ Confirmed there is no alternative exit: `CaptureShell` / `StatusBar` render no
 close/back control, and no Escape handler is wired (`grep` for
 `onExit`/`Escape`/`CloseButton` across `components/capture/` finds nothing but
 the disabled Cancel). So an empty session is a genuine dead end — the same class
-as the recently-closed [mobile media view trap](../closed/bugs/2026-07-17-mobile-media-view-no-back.md).
+as the recently-closed [mobile media view trap](2026-07-17-mobile-media-view-no-back.md).
 
 ## Fixed in `d67084f1` — awaiting phone confirmation
 

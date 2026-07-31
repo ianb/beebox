@@ -24,8 +24,10 @@
 
 import type { CloudflareAccessClient } from "../services/cloudflare-access.js";
 import type { CloudflareProvisioningClient } from "../services/cloudflare-provisioning.js";
+import type { CloudflareTokensClient } from "../services/cloudflare-tokens.js";
 import type { WranglerService } from "../services/wrangler.js";
 import { type AccessProvisionOutcome, ensureAccess } from "./access-setup.js";
+import { type ConnectorSecretResult, ensureConnectorSecret } from "./connector-secret.js";
 import {
   type PublishConfig,
   readPublishConfig,
@@ -61,6 +63,8 @@ export interface SetupDeps {
   auth: SetupAuthBundle | null;
   /** The Access client, present only for `--access` runs (setup-only token). */
   access?: CloudflareAccessClient | undefined;
+  /** The token-mint client, present only for `--mint-connector-token` runs (same setup-only token). */
+  tokens?: CloudflareTokensClient | undefined;
   /** pub-worker package dir override (doctest fixtures). */
   pubWorkerDir?: string | undefined;
 }
@@ -82,6 +86,8 @@ export type SetupResult =
       accessConfigured: boolean;
       /** What the `--access` API provisioning did this run, or `null` when it didn't run. */
       accessProvisioned: AccessProvisionOutcome | null;
+      /** The `--mint-connector-token` outcome, or `null` when it didn't run. */
+      connectorSecret: Extract<ConnectorSecretResult, { ok: true }> | null;
       deployOutput: string;
     }
   | { ok: false; reason: "unconfigured"; message: string }
@@ -90,6 +96,7 @@ export type SetupResult =
   | { ok: false; reason: "unsafe-config"; message: string }
   | { ok: false; reason: "no-subdomain"; message: string }
   | { ok: false; reason: "access-provisioning"; message: string }
+  | { ok: false; reason: "connector-token"; message: string }
   | { ok: false; reason: "deploy-failed"; message: string; output: string }
   | { ok: false; reason: "preview-urls-enabled"; message: string };
 
@@ -224,6 +231,21 @@ export async function setupPublishing(options: SetupOptions, deps: SetupDeps): P
     await writePublishConfig(deps.boxRoot, accessValues);
   }
 
+  // 7. Mint + store the connector credential (`--mint-connector-token`).
+  // Idempotent: an existing secret file skips the mint entirely. Runs last so
+  // a failed deploy never leaves an orphan token.
+  let connectorSecret: Extract<ConnectorSecretResult, { ok: true }> | null = null;
+  if (deps.tokens !== undefined) {
+    const ensured = await ensureConnectorSecret(
+      { boxRoot: deps.boxRoot, accountId, bucketName: config.ingestBucketName },
+      { tokens: deps.tokens },
+    );
+    if (!ensured.ok) {
+      return { ok: false, reason: "connector-token", message: `everything else is provisioned, but the connector-token mint failed: ${ensured.message}` };
+    }
+    connectorSecret = ensured;
+  }
+
   return {
     ok: true,
     hostname,
@@ -236,6 +258,7 @@ export async function setupPublishing(options: SetupOptions, deps: SetupDeps): P
     version,
     accessConfigured: accessValues !== null,
     accessProvisioned,
+    connectorSecret,
     deployOutput: deployed.output,
   };
 }
