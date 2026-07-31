@@ -21,7 +21,11 @@ now use `core/chat/session/list.ts`. That made a missing husk hide a chat
 from *every* list, so the one-shot marker-gated husk backfill became a
 per-boot `reconcileChatHusks` (see `docs/plans/chat-husks.md` § Phase 2b).
 
-Verified by doctest, not in a browser: `test/frontend/session-list-grouping.doctest.md`
+Verified in a real browser (`bin/browse`, three chats across two landmarks
+and root): each landmark's chats lead under its own heading, the rest stay
+reachable under "Other chats" tagged with where they live, the current
+session keeps its highlight, and clicking a row from another landmark
+navigates into it. Covered by `test/frontend/session-list-grouping.doctest.md`
 and `test/webapp/chat-sessions-label.doctest.md`.
 
 The chat history dropdown (the clock-icon `SessionListButton`) shows every web
