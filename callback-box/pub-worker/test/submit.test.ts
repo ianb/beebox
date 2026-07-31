@@ -1,7 +1,9 @@
 /**
  * Track F — the `POST /__submit/<pub-id>` drop-box endpoint. Exercises the full
- * fail-closed pipeline under @cloudflare/vitest-pool-workers with a real
- * (miniflare-backed) R2 binding: content-type + size gates, the twice-enforced
+ * fail-closed pipeline under @cloudflare/vitest-pool-workers with real
+ * (miniflare-backed) R2 bindings — manifests seeded into PUB_STORE, submissions
+ * written to PUB_INGEST (the content/ingestion split, Codex cross-review
+ * amendment 1): content-type + size gates, the twice-enforced
  * no-public-submit refusal (proven even when the store lies), tier-by-tier
  * submitter identity (anonymous `secret`, Access-gated account tiers), field
  * validation, the best-effort daily cap, and the optional per-IP rate limiter.
@@ -222,7 +224,7 @@ describe("secret tier — anonymous submit", () => {
     expect(await res.text()).toContain("received");
     assertSecurityHeaders(res);
 
-    const object = await env.PUB_STORE.get(`submissions/${SECRET_ID}/${SUB_ID}.json`);
+    const object = await env.PUB_INGEST.get(`submissions/${SECRET_ID}/${SUB_ID}.json`);
     assert(object !== null, "expected a submission object to be written");
     const parsed = submissionSchema.parse(JSON.parse(await object.text()));
     expect(parsed).toEqual({
@@ -242,7 +244,7 @@ describe("twice-enforced no-public-submit (the store can lie)", () => {
     expect(res.status).toBe(403);
     assertSecurityHeaders(res);
     // Nothing was written.
-    expect(await env.PUB_STORE.get(`submissions/${PUBLIC_ID}/${SUB_ID}.json`)).toBe(null);
+    expect(await env.PUB_INGEST.get(`submissions/${PUBLIC_ID}/${SUB_ID}.json`)).toBe(null);
   });
 
   it("404s a public manifest that illegitimately claims a submit block (schema rejects the lie)", async () => {
@@ -327,8 +329,8 @@ describe("best-effort daily cap → 429", () => {
   it("429s once today's submissions reach maxPerDay", async () => {
     // Pre-seed maxPerDay (2) objects uploaded now; the cap counts today's objects
     // by their R2 upload time, so align deps.now() with the real upload clock.
-    await env.PUB_STORE.put(`submissions/${CAP_ID}/one.json`, "{}");
-    await env.PUB_STORE.put(`submissions/${CAP_ID}/two.json`, "{}");
+    await env.PUB_INGEST.put(`submissions/${CAP_ID}/one.json`, "{}");
+    await env.PUB_INGEST.put(`submissions/${CAP_ID}/two.json`, "{}");
     const res = await runSubmit(submitRequest(CAP_ID), { deps: makeDeps({ now: () => Date.now() }) });
     expect(res.status).toBe(429);
     assertSecurityHeaders(res);
@@ -360,7 +362,7 @@ describe("account tier — Access-gated submitter identity", () => {
     const res = await runSubmit(submitRequest(ACCT_ID, { assertion: await signAssertion(validClaims()) }));
     expect(res.status).toBe(200);
 
-    const object = await env.PUB_STORE.get(`submissions/${ACCT_ID}/${SUB_ID}.json`);
+    const object = await env.PUB_INGEST.get(`submissions/${ACCT_ID}/${SUB_ID}.json`);
     assert(object !== null, "expected a submission object to be written");
     const parsed = submissionSchema.parse(JSON.parse(await object.text()));
     expect(parsed.viewer).toBe(ALLOWED_EMAIL);

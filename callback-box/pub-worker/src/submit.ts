@@ -3,9 +3,12 @@
  * `docs/plans/publish-pages.md`). Accepts a constrained urlencoded form, validates
  * every field against the manifest's `submit` block, enforces size + volume
  * limits, and writes an accepted submission to `submissions/<pub-id>/<id>.json`
- * for the box connector to pull. Every failure is fail-closed and typed; every
- * response (including the thank-you page) leaves through `withSecurityHeaders` at
- * the `handle` exit in `index.ts`.
+ * in the PUB_INGEST bucket for the box connector to pull — split from the
+ * PUB_STORE content bucket (Codex cross-review amendment 1) so the connector's
+ * stored token can be scoped to ingestion only and can never rewrite a manifest.
+ * The manifest itself is still read from PUB_STORE. Every failure is fail-closed
+ * and typed; every response (including the thank-you page) leaves through
+ * `withSecurityHeaders` at the `handle` exit in `index.ts`.
  *
  * Twice-enforced no-public-submit (the Val Town lesson): even though Track A's
  * zod union makes `public` + `submit` unrepresentable, this endpoint independently
@@ -144,7 +147,7 @@ export async function handleSubmit({
     viewer,
     country: coarseCountry(request),
   });
-  await env.PUB_STORE.put(`submissions/${pubId}/${submission.id}.json`, JSON.stringify(submission));
+  await env.PUB_INGEST.put(`submissions/${pubId}/${submission.id}.json`, JSON.stringify(submission));
   return thankYou();
 }
 
@@ -193,8 +196,9 @@ function parseForm(rawBytes: Uint8Array): Record<string, string> {
 
 /**
  * Count objects under `submissions/<pubId>/` uploaded at/after `sinceMs`, stopping
- * once the count reaches `cap` (no need to enumerate further). R2 LIST is
- * eventually consistent — see the caller's best-effort note.
+ * once the count reaches `cap` (no need to enumerate further). Lists PUB_INGEST —
+ * where submissions are written, per the bucket split above — not PUB_STORE. R2
+ * LIST is eventually consistent — see the caller's best-effort note.
  */
 async function countSubmissionsSince({
   env,
@@ -214,7 +218,7 @@ async function countSubmissionsSince({
     // `exactOptionalPropertyTypes` forbids `cursor: undefined`; omit the key on the
     // first page and supply it only when R2 handed back a continuation token.
     const options = cursor === undefined ? { prefix, limit: 1000 } : { prefix, limit: 1000, cursor };
-    const listing = await env.PUB_STORE.list(options);
+    const listing = await env.PUB_INGEST.list(options);
     for (const object of listing.objects) {
       if (object.uploaded.getTime() >= sinceMs) count++;
       if (count >= cap) return count;

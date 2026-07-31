@@ -1,11 +1,39 @@
 ---
 title: "cb pub setup's Access instructions are stale and dashboard-bound — provision via the API instead"
 area: callback-box
-needs: [design]
-design: ../../callback-box/docs/plans/publish-pages.md
+needs: [manual-testing]
+design: ../../callback-box/docs/plans/pub-setup-wrangler.md
 filed-by: agent
 discovered-in: main session — boxholder ran the first live `cb pub setup` and got stuck on the manual Access step
 ---
+
+**2026-07-31 — BUILT (worktree-pub-setup-wrangler), pending live verification.**
+The three forks were resolved with the boxholder and the rework is implemented
++ fake-tested per [pub-setup-wrangler](../../callback-box/docs/plans/pub-setup-wrangler.md)
+(which also records the Codex security review that reshaped the credential
+model — notably the content/ingestion R2 bucket split):
+
+- Setup auth is `wrangler login` (OAuth); REST read-backs ride
+  `wrangler auth token` through a refresh-on-401 bearer provider. No token, no
+  `~/.cb-publish.env`. Env pair stays as an explicit escape hatch.
+- Access is provisioned via the CF API (`cb pub setup --access`) under a
+  SETUP-ONLY Access-edit token (hidden prompt / `CB_ACCESS_SETUP_TOKEN`,
+  never argv, never stored; revoke-after printed as a completion step).
+  Default login method: One-Time PIN; policy allow-everyone; the Worker's
+  per-pub allowlist stays the authorization.
+- The connector credential is an ingestion-bucket-scoped R2 token in
+  `config/connectors/publish.secret.json` (per-box secret pattern).
+- Non-secret Access values persist in `config/publish.json` so reruns
+  redeploy rather than erase them; `cb pub status` diffs deployed vars
+  against that file.
+
+**Manual testing needed (boxholder present — writes real auth policy):** run
+`wrangler login` + `cb pub setup` live; then `--access` with a scoped token
+against the real Zero Trust org; verify the plan's named live gaps (create
+response `aud` placement, `/access/organizations` pre-onboarding behavior,
+whether the OTP IdP is auto-provisioned, `wrangler whoami --json` shape, R2
+object REST calls accepting the OAuth bearer); then an OTP login on a
+published `/a/` page confirming the JWT email matches the allowlist.
 
 `cb pub setup` provisions the R2 bucket and deploys the Worker fine (verified live
 2026-07-19, first real run). But the account-tier half — Cloudflare Access — is

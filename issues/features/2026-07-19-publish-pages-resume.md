@@ -78,7 +78,12 @@ best finished in a fresh session. Full design + security review:
   (`NODE_MODULE_VERSION` mismatch otherwise breaks most of `pnpm test` with
   `ERR_DLOPEN_FAILED`, plus 30s+ hangs from things that depend on it): `cd
   node_modules/better-sqlite3 && npm run build-release`, or reinstall from clean.
-- **Credentials**: live in `~/.cb-publish.env` (mode 600, outside the repo — machine-
+- **Credentials (SUPERSEDED 2026-07-31)**: the dotfile below is retired — setup now
+  rides `wrangler login`, the connector reads
+  `config/connectors/publish.secret.json` (ingestion-bucket-scoped token), and the
+  ingestion data moved to a second R2 bucket. See
+  [pub-setup-wrangler](../../callback-box/docs/plans/pub-setup-wrangler.md). The
+  original text (for archaeology): lived in `~/.cb-publish.env` (mode 600, outside the repo — machine-
   level like the Google OAuth creds). Holds `CLOUDFLARE_API_TOKEN` +
   `CLOUDFLARE_ACCOUNT_ID`. Still needs `CLOUDFLARE_R2_BUCKET` added once a bucket name
   is chosen in setup. Source it with

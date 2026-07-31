@@ -77,14 +77,20 @@ const wranglerConfigSchema = z.object({
   preview_urls: z.boolean().optional(),
 });
 
+/** The Worker's two R2 bindings (`docs/plans/pub-setup-wrangler.md` amendment 1 — the bucket split). */
+export const CONTENT_BUCKET_BINDING = "PUB_STORE";
+export const INGEST_BUCKET_BINDING = "PUB_INGEST";
+
 /** What setup/status need to know about the committed Worker deployment shape. */
 export interface PubWorkerConfig {
   /** The Worker script name (`name` in wrangler.jsonc) — also the workers.dev hostname's first label. */
   workerName: string;
-  /** The R2 binding name the Worker code reads (`PUB_STORE`). */
+  /** The R2 binding name the Worker reads publication content from (`PUB_STORE`). */
   bucketBinding: string;
-  /** The bucket name the committed config binds — the default `cb pub setup` provisions. */
+  /** The content bucket name the committed config binds — the default `cb pub setup` provisions. */
   bucketName: string;
+  /** The ingestion bucket (`PUB_INGEST` binding): Worker-written submissions + access logs, connector-read. */
+  ingestBucketName: string;
   /** Whether the committed config already disables version-preview URLs (it must — a leak surface). */
   previewUrlsDisabled: boolean;
 }
@@ -114,12 +120,16 @@ export async function readPubWorkerConfig(dir?: string): Promise<PubWorkerConfig
     const issue = parsed.error.issues[0];
     throw new PubWorkerConfigError({ detail: `${issue?.message ?? "schema rejected"} (${issue?.path.join(".") ?? "config"})` });
   }
-  const bucket = parsed.data.r2_buckets[0];
-  if (bucket === undefined) throw new PubWorkerConfigError({ detail: "no r2_buckets entry" });
+  const byBinding = new Map(parsed.data.r2_buckets.map((b) => [b.binding, b.bucket_name]));
+  const bucketName = byBinding.get(CONTENT_BUCKET_BINDING);
+  const ingestBucketName = byBinding.get(INGEST_BUCKET_BINDING);
+  if (bucketName === undefined) throw new PubWorkerConfigError({ detail: `no r2_buckets entry with binding '${CONTENT_BUCKET_BINDING}'` });
+  if (ingestBucketName === undefined) throw new PubWorkerConfigError({ detail: `no r2_buckets entry with binding '${INGEST_BUCKET_BINDING}'` });
   return {
     workerName: parsed.data.name,
-    bucketBinding: bucket.binding,
-    bucketName: bucket.bucket_name,
+    bucketBinding: CONTENT_BUCKET_BINDING,
+    bucketName,
+    ingestBucketName,
     previewUrlsDisabled: parsed.data.preview_urls === false,
   };
 }

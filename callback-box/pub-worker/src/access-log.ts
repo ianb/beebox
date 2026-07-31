@@ -14,6 +14,11 @@
  *
  * `id` and the clock are injected (principle #10) so a test can assert a
  * deterministic object was written.
+ *
+ * Written to `PUB_INGEST`, not `PUB_STORE`: the ingestion bucket is what the
+ * box's stored connector token is scoped to (Codex cross-review amendment 1), so
+ * writing here keeps this data on the credential boundary the connector can
+ * actually read.
  */
 
 import type { Env } from "./env";
@@ -51,7 +56,7 @@ export async function logAccess({
   const entry: AccessLogEntry = { ts: new Date(now()).toISOString(), pubId, email };
   const key = `access-log/${pubId}/${newId()}.json`;
   try {
-    await env.PUB_STORE.put(key, JSON.stringify(entry));
+    await env.PUB_INGEST.put(key, JSON.stringify(entry));
   } catch (e) {
     console.warn(`pub-worker: failed to write access log ${key}: ${String(e)}`);
   }

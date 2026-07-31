@@ -35,6 +35,9 @@ import {
   r2ConfigFromEnv,
   type PublishRemoteStore,
 } from "../services/publish-remote-store.js";
+import { createWranglerService, type WranglerService } from "../services/wrangler.js";
+import { resolveCloudflareAuth } from "./cloudflare-auth.js";
+import { readPubWorkerConfig } from "./pub-worker-meta.js";
 import {
   type PubId,
   publicationManifestSchema,
@@ -80,16 +83,35 @@ export function bundleContentType(relPath: string): string {
 // Store resolution + commit seam
 // ---------------------------------------------------------------------------
 
+/** A resolved store, or a precise reason there is none (not-logged-in vs multi-account). */
+export type PublishStoreResolution = { store: PublishRemoteStore } | { store: null; message: string };
+
 /**
- * Resolve the R2 store: the injected one wins (doctests), else one built from
- * machine-level env creds, else `null` — which the CLI reads as "publishing not
- * configured" and turns into a clear "run `cb pub setup` first" error.
+ * Resolve the CONTENT-bucket R2 store the laptop-side lifecycle commands
+ * (`cb pub go`/`revoke`) write through: the injected one wins (doctests), then
+ * the env-creds escape hatch, then the wrangler-OAuth login (bucket from the
+ * committed `wrangler.jsonc`, bearer refreshed through the login — the plan's
+ * credential model). No credential ⇒ a precise refusal message.
  */
-export function resolvePublishStore(opts?: { store?: PublishRemoteStore | undefined; env?: NodeJS.ProcessEnv | undefined }): PublishRemoteStore | null {
-  if (opts?.store) return opts.store;
-  const config = r2ConfigFromEnv(opts?.env);
-  if (!config) return null;
-  return createR2PublishStore(config);
+export async function resolvePublishStore(opts?: {
+  store?: PublishRemoteStore | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
+  wrangler?: WranglerService | undefined;
+}): Promise<PublishStoreResolution> {
+  if (opts?.store) return { store: opts.store };
+  const envConfig = r2ConfigFromEnv(opts?.env);
+  if (envConfig) return { store: createR2PublishStore(envConfig) };
+  const wrangler = opts?.wrangler ?? createWranglerService();
+  const resolved = await resolveCloudflareAuth({}, { env: opts?.env, wrangler });
+  if (!resolved.ok) return { store: null, message: resolved.message };
+  const config = await readPubWorkerConfig();
+  return {
+    store: createR2PublishStore({
+      accountId: resolved.auth.accountId,
+      bucket: config.bucketName,
+      bearer: resolved.auth.bearer,
+    }),
+  };
 }
 
 /** Commit the updated local manifest. Injectable so doctests need no real repo. */

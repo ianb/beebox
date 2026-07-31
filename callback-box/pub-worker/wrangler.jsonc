@@ -8,12 +8,26 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-07-06",
   // Publication CONTENT is data in R2, never bundled into the Worker (locked
-  // decision 3 + the "old Worker versions stay reachable" leak finding).
+  // decision 3 + the "old Worker versions stay reachable" leak finding). Split
+  // into two buckets (Codex cross-review amendment 1, CRITICAL): PUB_STORE holds
+  // only publication content (`pubs/`, `slugs/`), laptop-OAuth-written by
+  // `cb pub go`; PUB_INGEST holds Worker-written ingestion data (`submissions/`,
+  // `access-log/`). The box's stored connector token is scoped to PUB_INGEST only,
+  // so it can pull submissions/access-log but can never rewrite a manifest's
+  // `allowedEmails` or replace published content — R2 tokens scope per-bucket, not
+  // per-prefix, so one bucket could not make that guarantee. Box-side config
+  // parsing (`src/publish/pub-worker-meta.ts`) finds each entry by its binding
+  // name, so order here is presentation only.
   "r2_buckets": [
     {
       "binding": "PUB_STORE",
       "bucket_name": "pub-store",
       "preview_bucket_name": "pub-store"
+    },
+    {
+      "binding": "PUB_INGEST",
+      "bucket_name": "pub-ingest",
+      "preview_bucket_name": "pub-ingest"
     }
   ],
   // Cloudflare Access config for the account (`/a/`) tiers (Track D). Empty
@@ -32,6 +46,9 @@
   // disables them. Content never ships in the Worker, so an old version leaks
   // only old code.
   "preview_urls": false,
+  // Explicit so the committed config is the full deploy shape (workers.dev is the
+  // deploy target; `preview_urls` above stays false regardless).
+  "workers_dev": true,
   "observability": {
     "enabled": true
   }

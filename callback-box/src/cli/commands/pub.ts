@@ -176,12 +176,12 @@ const revokeCommand = new Command("revoke")
     const [pubId] = actionArgs;
     try {
       const boxRoot = await requireBoxRoot();
-      const store = resolvePublishStore();
-      if (!store) {
-        console.error("Error: publishing is not configured on this box — run `cb pub setup` first.");
+      const resolution = await resolvePublishStore();
+      if (resolution.store === null) {
+        console.error(`Error: ${resolution.message}`);
         process.exit(1);
       }
-      const result = await revokePublication({ boxRoot, pubId }, { store });
+      const result = await revokePublication({ boxRoot, pubId }, { store: resolution.store });
       if (result.ok) {
         console.log(`Revoked ${result.pubId}: tombstone written edge-side (next request 410s).`);
         console.log(`  deleted ${result.deletedBundleObjects} bundle object(s)${result.deletedSlug ? " + slug pointer" : ""}; local manifest committed as revoked.`);
@@ -210,14 +210,14 @@ const goCommand = new Command("go")
     const [pubId] = actionArgs;
     try {
       const boxRoot = await requireBoxRoot();
-      const store = resolvePublishStore();
-      if (!store) {
-        console.error("Error: publishing is not configured on this box — run `cb pub setup` first.");
+      const resolution = await resolvePublishStore();
+      if (resolution.store === null) {
+        console.error(`Error: ${resolution.message}`);
         process.exit(1);
       }
       // The default confirm is the real interactive TTY prompt (it displays the
       // preview + tier/expiry/allowlist and requires the typed pub-id).
-      const result = await goPublication({ boxRoot, pubId }, { store, ownerEmail: getOwnerEmail() });
+      const result = await goPublication({ boxRoot, pubId }, { store: resolution.store, ownerEmail: getOwnerEmail() });
       if (result.ok) {
         console.log(`\nPublished ${result.pubId} LIVE (tier: ${result.manifest.tier}).`);
         console.log(`  uploaded ${result.uploadedBundleObjects} bundle object(s) + edge manifest${result.slugPointer ? " + slug pointer" : ""}; local manifest committed as live.`);
