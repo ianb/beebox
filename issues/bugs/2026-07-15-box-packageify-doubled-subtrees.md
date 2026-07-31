@@ -5,6 +5,28 @@ discovered-in: main session — investigating a test box's stuck refresh-maps he
 area: callback-box
 ---
 
+## Scan results (2026-07-31) — prod CLEAN; two local boxes still corrupt
+
+Ran the structural detector across all local + all prod boxes:
+
+- **Prod: clean.** All deployed prod boxes scanned zero real doublings — the
+  read-only prod scan the last paragraph asked for and never got. **Prod is not
+  at risk.**
+- **Local: two boxes still carry the corruption**, unrepaired since filing — the
+  same two the original scope names (a review box and a test box):
+  - the review box — a `store/prompts/store/prompts/…` doubling (5 paths, incl.
+    `*.attach` dirs)
+  - the test box — a doubled `store/<X>/store/<X>/…` content subtree (7 paths)
+- The 51 `box/box` hits were all scenario-fixture nesting (the detector note's
+  documented false positive), not corruption.
+
+**Disposition:** the migration retirement + a clean prod resolve the high-stakes
+half, but the data-repair genuinely remains on the two **local dev/review** boxes
+(their `refresh-maps` is silently wedged). Low stakes — dev boxes, not prod. Stays
+open until the two are repaired or rebuilt; the repair caveat below (diverged
+copies, human-in-loop) still applies. If those two local boxes are disposable,
+`cb init`-rebuilding them is cheaper than de-doubling.
+
 The v1→v2 `box-packageify` migration (`scripts/migrate/box-packageify.ts`,
 registered in `src/core/migrations.ts`; ran ~2026-07-04) **duplicated some
 subtrees into themselves** on at least two local boxes. On disk you get a path
