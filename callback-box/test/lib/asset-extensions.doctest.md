@@ -1,17 +1,17 @@
 # Asset classifier — `annex.largefiles`
 
-`ASSET_GITIGNORE_EXTENSIONS` is the single source of truth for what counts as
+`ASSET_EXTENSIONS` is the single source of truth for what counts as
 an asset. It renders into `.gitignore` patterns today and, under git-annex,
 into an `annex.largefiles` expression deciding what `git add` routes into the
-annex. See `src/core/commands/attachments-gitignore.ts`.
+annex. See `src/lib/asset-extensions.ts`.
 
 ```ts setup
 import {
-  ASSET_GITIGNORE_EXTENSIONS,
+  ASSET_EXTENSIONS,
   assetGitignorePatterns,
   assetLargefilesExpression,
   CAPTURE_STAGING_IGNORE_PATTERN,
-} from "../../../src/core/commands/attachments-gitignore.js";
+} from "../../src/lib/asset-extensions.js";
 ```
 
 Both renderers walk the same list, so an extension can never be ignored but
@@ -19,10 +19,10 @@ un-annexed (or the reverse) — the drift that let 41 MB `.frozen` pages into bo
 history came from exactly that kind of split:
 
 ```ts
-assetGitignorePatterns().split("\n").length === ASSET_GITIGNORE_EXTENSIONS.length
+assetGitignorePatterns().split("\n").length === ASSET_EXTENSIONS.length
 => true
 
-assetLargefilesExpression().split(" or ").length === ASSET_GITIGNORE_EXTENSIONS.length
+assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length
 => true
 ```
 

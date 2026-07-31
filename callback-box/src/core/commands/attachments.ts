@@ -9,6 +9,9 @@
  *   - overwrite: replace contents of a tracked asset from stdin
  *   - add      : explicitly claim an untracked asset (rare; the hook
  *                normally auto-claims)
+ *   - unignore : drop the asset ignore block so git-annex can see assets
+ *                (git-annex migration; see docs/plans/asset-annex.md)
+ *   - largefiles-expr : print the annex.largefiles expression
  *
  * Destructive ops (overwrite, rm, mv) re-implement the chmod 444 →
  * +w → atomic-rename → 444 dance so the manifest stays in sync.
@@ -37,8 +40,10 @@ import {
 import { scanBoxAttachments } from "../asset-manifest-scan.js";
 import {
   runInitGitignore,
+  runUnignore,
   runUntrackAssets,
 } from "./attachments-gitignore.js";
+import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
 
 const AttachmentsArgsSchema = z.object({
   // Always supplied by the dispatch (CLI positional / API caller); an absent
@@ -71,6 +76,14 @@ async function executeAttachments(
       return runUntrackAssets(ctx);
     case "init-gitignore":
       return runInitGitignore(ctx);
+    case "unignore":
+      return runUnignore(ctx);
+    case "largefiles-expr":
+      // Printed so the migration can feed it straight to
+      // `git annex config --set annex.largefiles "$(...)"`, keeping one
+      // definition of what an asset is rather than a hand-copied string.
+      ctx.writeLine(assetLargefilesExpression());
+      return { success: true, data: { expression: assetLargefilesExpression() } };
     default:
       return { success: false, error: `Unknown subcommand: ${subcommand}` };
   }
