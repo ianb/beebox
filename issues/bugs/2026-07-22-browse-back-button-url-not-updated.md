@@ -6,10 +6,9 @@ discovered-in: main session — boxholder using browse/
 needs: [manual-testing]
 ---
 
-**Implemented 2026-07-31** on `worktree-browse-back-url` (commits
-"browse: make the URL the single source of truth for what's open" and
-"browse: put the renderer toggle in the URL, …"), but NOT verified in a
-browser — see the "Verification is blocked" section at the bottom.
+**Implemented and browser-verified 2026-07-31** on `worktree-browse-back-url`.
+`needs: manual-testing` stays for the parts an agent still cannot judge — see
+"What is left for a human" at the bottom.
 
 In `browse/`, the browser back button doesn't do the right thing because the URL
 doesn't update for enough actions — you click through several files, hit back,
@@ -90,21 +89,31 @@ Changed, all routed through `onNavigate`:
   it, the toggle reports upward rather than storing a local choice that
   outranked the `rendererName` prop.
 
-## Verification is blocked
+## Verified in a real browser (2026-07-31)
 
-The browser check this issue asks for could not be run: `bin/browse` cannot
-authenticate against the local dev app at all. Three separate defects, one now
-fixed, two still open — see
-[browse-cannot-authenticate-dev-pages](2026-07-31-browse-cannot-authenticate-dev-pages.md).
+Verifying this required first fixing `bin/browse`, which could not authenticate
+against the dev app at all — see
+[browse-cannot-authenticate-dev-pages](../closed/bugs/2026-07-31-browse-cannot-authenticate-dev-pages.md).
+Driven against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
 
-**What to try by hand, and what should happen.** Open a directory in browse,
-click three files in a row, then press browser back three times: it must step
-back through them one file at a time (forward re-does the trail). Then check
-that a deep link straight to a file still opens it, that the sidebar still
-live-updates when a card in the open directory changes, that the mobile "Back"
-button returns to the list and a browser back after it does NOT reopen the
-file, and that switching the renderer toggle puts `?view=<name>` in the URL and
-that reloading the page keeps that renderer.
+- Clicking two files in `store/recipes` produced a URL per file; browser back
+  stepped file 2 → file 1 → the directory → its parent, one entry at a time,
+  and forward re-did the trail.
+- After a history step the detail panel showed the file the URL named.
+- A deep link straight to a card opened it directly.
+
+## What is left for a human
+
+- **Live refresh could not be confirmed** — a card added to the open directory
+  did not appear until reload. Filed as
+  [browse-list-live-refresh-not-firing](2026-07-31-browse-list-live-refresh-not-firing.md);
+  the wiring is byte-identical to before this change for a directory URL, so it
+  is probably not this work, but it is unproven either way.
+- **The mobile "Back" button** (returns to the list, and a browser back after it
+  must NOT reopen the file) — needs a narrow viewport and a real touch device to
+  judge.
+- **The renderer toggle** writing `?view=<name>`, and that reloading keeps that
+  renderer — needs a card type with more than one renderer.
 
 Related: the [iOS new-tab/nav work](2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
 leans on in-app history + back; browse having correct history makes that path

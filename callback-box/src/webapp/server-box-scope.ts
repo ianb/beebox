@@ -29,6 +29,7 @@ import {
   isDiagnosticBypassRequest,
 } from "./auth.js";
 import { verifyAgentBearer } from "../core/agent/token.js";
+import { verifyBrowseKey } from "../core/browse-key.js";
 import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
 import { renewMobileSessionCookie } from "./mobile-cookie.js";
 import { canAccessBox } from "./box-access.js";
@@ -88,6 +89,11 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     // with the per-box loopback token from their env — box-scoped auth, same
     // trust as the box user they run as. See core/agent-token.ts.
     if (verifyAgentBearer(box.boxRoot, request.headers["authorization"])) {
+      return;
+    }
+    // An agent driving a real browser, when the operator has opted in by
+    // setting CB_BROWSE_API_KEY. No-op when unset. See core/browse-key.ts.
+    if (verifyBrowseKey(request.headers)) {
       return;
     }
     // Mobile devices authenticate with either the durable device token in an

@@ -181,6 +181,31 @@ else
   echo "[worktree-create] reusing existing box $BOX_DEST"
 fi
 
+# 2.5. Copy the main checkout's callback-box/.env, if it has one.
+#
+# `.env` is gitignored, so a fresh worktree gets none — and the router loads
+# each checkout's OWN .env into the dev processes it spawns (bin/router-core.ts),
+# so without this copy a worktree runs with none of the local dev config the
+# main checkout has (CB_BROWSE_API_KEY, a BOXES override). Copying keeps the
+# rule uniform — every checkout reads its own file, nothing reaches across
+# into another checkout at runtime. Copy, not symlink: a worktree is free to
+# diverge (point at a different box, use a different key) without editing the
+# file every other checkout reads.
+# BOXES is dropped, NOT copied. It is the one line in that file that is
+# inherently per-checkout: the main checkout's points at ~/src/boxes/* — the
+# real boxes — and a worktree that inherited it would silently serve those
+# instead of the isolated clone made above, which is the whole point of a
+# worktree. Omitting the line makes the router fall back to
+# ~/src/box-worktrees/<name>/test1 (bin/router.ts `boxes ?? [...]`), which is
+# exactly right. Add a BOXES line to the worktree's own .env to override.
+main_env="$(git rev-parse --show-toplevel)/callback-box/.env"
+if [ -f "$main_env" ]; then
+  grep -v '^BOXES=' "$main_env" > "$worktree_path/callback-box/.env"
+  echo "[worktree-create] copied callback-box/.env from the main checkout (minus BOXES)"
+else
+  echo "[worktree-create] no callback-box/.env in the main checkout — skipping"
+fi
+
 # 3. pnpm install. ONE workspace install at the root — never per-subpackage.
 # Under pnpm workspaces with node-linker=hoisted, running `pnpm install`
 # inside a subpackage walks up to the workspace root anyway, but in

@@ -35,6 +35,38 @@ The security property that matters is not which credential type we pick — it i
 **opt-in and absent by default**. `CB_BROWSE_API_KEY` has that; promoting an
 always-present file secret does not.
 
+## Implemented 2026-07-31 — what building it changed
+
+Three things the plan got wrong, all found by running it end to end against an
+isolated router (`CALLBACK_STATE_DIR=/tmp/cbr9 ROUTER_PORT=3299`):
+
+1. **`/api/boxes` had to be included after all.** The plan said it could stay
+   session/mobile-only. It can't: the SPA resolves the box in the URL against
+   that list, so with an empty list every page renders **"Box not found"** while
+   every other request authenticates fine. Handled in `respondHubBoxes`; the
+   key is machine-level, so it lists all boxes.
+2. **The router process needs the key itself**, not just the children it spawns.
+   Its gate runs in-process, so `main()` now loads the main checkout's `.env`
+   into `process.env`. This is what makes the key machine-level rather than
+   per-worktree.
+3. **Cookie-ONLY, not cookie-plus-bearer.** Sending both still tripped
+   `mobileBootstrapTarget`, which hard-401s the navigation with
+   `Mobile session bootstrap failed.` — the defect the cookie was supposed to
+   route around. Dropping the `Authorization` header sidesteps it, as designed.
+
+Also: the WorktreeCreate hook copies the main `.env` **minus `BOXES=`**. Copying
+it whole would have pointed every worktree at `~/src/boxes/*` — the real boxes —
+instead of its isolated clone.
+
+Verified: unauthenticated and wrong-key requests 401 at the router; the key
+authenticates page, API, Vite dev assets, and the tRPC **WebSocket upgrade**
+(101 with the cookie, refused without); `bin/browse` renders browse and steps
+back/forward through file history one entry at a time.
+
+Not verified: `useBrowseListLiveRefresh` did not fire on a file added to the
+open directory (a reload showed it). Not attributable to this work or to the
+BrowsePage change — filed separately.
+
 ## The one real choice: header or cookie
 
 The credential has to reach more than the initial navigation. The page then

@@ -3,7 +3,20 @@ title: "bin/browse cannot reach an authenticated dev page — the agent-token pa
 area: router
 filed-by: agent
 discovered-in: worktree-browse-back-url — verifying the browse back-button fix in a real browser
+resolution: implemented
 ---
+
+**Closed 2026-07-31.** Fixed not by making the agent token work through the
+hub — a Codex review showed that would promote a 0600 file secret to a
+credential valid at the public prod front door — but by adding an opt-in
+`CB_BROWSE_API_KEY` (`callback-box/src/core/browse-key.ts`), absent by default
+and delivered to the browser as a cookie so it also covers the WebSocket
+upgrade. Design and what building it changed:
+`callback-box/docs/plans/agent-token-browser-auth.md`.
+
+Defect 3 below (the mobile-bootstrap hard-401) is NOT fixed — it is sidestepped,
+because `bin/browse` now sends no `Authorization` header. The trigger is still
+too broad; see the note at the end.
 
 `bin/browse open /<any authenticated page>` lands on the login page (or a bare
 `Mobile session bootstrap failed.`), so an agent cannot drive the local dev app
@@ -68,4 +81,13 @@ main-merge plus a `pnpm dev` restart, so this needs the boxholder in the loop.
 Any issue whose verification says "check it in a real browser" is currently
 un-verifiable by an agent on the local dev app. That includes the browse
 history work in
-[browse-back-button-url-not-updated](2026-07-22-browse-back-button-url-not-updated.md).
+[browse-back-button-url-not-updated](../../bugs/2026-07-22-browse-back-button-url-not-updated.md).
+
+## Still open: defect 3's trigger is too broad
+
+`mobileBootstrapTarget` fires on any GET to a non-`/api` box path carrying any
+`Authorization` header — it is not restricted to document navigations despite
+being justified by "a navigation gets the Vite HTML shell". Any future non-device
+bearer the gate accepts will hit the same hard 401. Worth narrowing to a real
+navigation (`Sec-Fetch-Mode: navigate`), and worth reconsidering whether a failed
+best-effort exchange should fail a request the gate already authorized.

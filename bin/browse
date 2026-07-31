@@ -38,38 +38,27 @@ export BROWSE_REPO_DIR="$REPO_DIR"
 export BROWSE_WORKTREE="$worktree"
 
 # Auth is on by default in dev (local-password-auth Track B), so a page
-# navigation into this worktree's box now hits the login wall unless it
-# carries the box's agent-token bearer. The token already authenticates
-# every in-box request (server-box-scope.ts verifyAgentBearer) — the only
-# gap was that a real Chromium has no way to attach it. Resolve the same
-# box path the dev router clones for this worktree (root CLAUDE.md: "main"
-# serves from ~/src/boxes, every other worktree from
-# ~/src/box-worktrees/<name>") and hand the token to cli.ts via env, which
-# scopes it to this worktree's origin only (browse/src/worktree.ts) before
-# passing it to agent-browser's own origin-scoped `open --headers`. No
-# token file yet (first agent call hasn't run) is not an error — browse
-# just proceeds unauthenticated, same as before this change.
-browse_box="${BROWSE_BOX:-test1}"
-if [[ "$worktree" == "main" ]]; then
-  browse_box_root="${HOME}/src/boxes/${browse_box}"
-else
-  browse_box_root="${HOME}/src/box-worktrees/${worktree}/${browse_box}"
+# navigation into this worktree's box hits the login wall unless it carries a
+# credential. That credential is CB_BROWSE_API_KEY — an opt-in, operator-set
+# key (callback-box/src/core/browse-key.ts), normally living in this
+# checkout's gitignored `callback-box/.env`, which the WorktreeCreate hook
+# copies from the main checkout. cli.ts scopes it to this worktree's origin
+# only (browse/src/worktree.ts) before handing it to agent-browser's own
+# origin-scoped `open --headers`.
+#
+# An already-exported value wins over the file, so `CB_BROWSE_API_KEY=… bin/browse`
+# works for a one-off. No key at all is not an error — browse proceeds
+# unauthenticated and lands on the login page, which is also the honest signal
+# that the key isn't set.
+browse_env_file="${REPO_DIR}/callback-box/.env"
+if [[ -z "${CB_BROWSE_API_KEY:-}" && -r "$browse_env_file" ]]; then
+  # Read only our own key, and only a bare `KEY=value` line: this is a
+  # deliberate non-parse, not a dotenv implementation. `source`-ing the file
+  # would execute whatever is in it and dump every other variable into this
+  # shell; the router does the real parsing (bin/router-core.ts readEnvFile).
+  CB_BROWSE_API_KEY="$(sed -n 's/^CB_BROWSE_API_KEY=//p' "$browse_env_file" | head -1 | tr -d '"'"'"'[:space:]')"
+  [[ -n "$CB_BROWSE_API_KEY" ]] && export CB_BROWSE_API_KEY
 fi
-# The token lives under the box's OPERATIONAL root, which in the v2 package
-# shape is `<pkg>/content` (bin/box-entry.ts resolves the same contentDir, and
-# that's the root server-box-scope.ts hands verifyAgentBearer). Looking only at
-# the package root — as this did until 2026-07-31 — silently found nothing on
-# every v2 box, so every browse ran unauthenticated straight into the login
-# wall. The package-root path stays as the legacy (shapeVersion 1) fallback.
-for browse_agent_token_file in \
-  "${browse_box_root}/content/.callback-box/agent-token" \
-  "${browse_box_root}/.callback-box/agent-token"; do
-  if [[ -r "$browse_agent_token_file" ]]; then
-    BROWSE_AGENT_TOKEN="$(tr -d '[:space:]' < "$browse_agent_token_file")"
-    export BROWSE_AGENT_TOKEN
-    break
-  fi
-done
 export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
 export AGENT_BROWSER_PROFILE="${browse_base}/profile"
 export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
