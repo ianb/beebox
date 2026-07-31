@@ -1,6 +1,6 @@
 # Cloudflare auth resolution — env escape hatch vs the wrangler login
 
-`resolveCloudflareAuth` (`docs/plans/pub-setup-wrangler.md` credential model):
+`resolveCloudflareAuth` (`docs/implemented-plans/pub-setup-wrangler.md` credential model):
 the `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ACCOUNT_ID` env pair wins when present
 (wrangler's own precedence); otherwise the `wrangler login` identity. A
 multi-account login is never guessed at — it must be disambiguated explicitly

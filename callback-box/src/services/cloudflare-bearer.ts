@@ -1,6 +1,6 @@
 /**
  * BearerProvider — the credential seam every Cloudflare REST adapter draws its
- * `Authorization: Bearer` value through (`docs/plans/pub-setup-wrangler.md`,
+ * `Authorization: Bearer` value through (`docs/implemented-plans/pub-setup-wrangler.md`,
  * amendment 5).
  *
  * The wrangler OAuth access token is a short-lived string: whatever

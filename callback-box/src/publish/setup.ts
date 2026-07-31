@@ -1,5 +1,5 @@
 /**
- * `cb pub setup` core (`docs/plans/pub-setup-wrangler.md`, superseding the
+ * `cb pub setup` core (`docs/implemented-plans/pub-setup-wrangler.md`, superseding the
  * Track E flow of `docs/plans/publish-pages.md`) — the one-time Cloudflare
  * provisioning, dashboard-free:
  *

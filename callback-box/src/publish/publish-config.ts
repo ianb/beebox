@@ -1,6 +1,6 @@
 /**
  * Persisted, NON-SECRET publish configuration — `config/publish.json` in the
- * box (`docs/plans/pub-setup-wrangler.md`, amendment 3).
+ * box (`docs/implemented-plans/pub-setup-wrangler.md`, amendment 3).
  *
  * The Access values (team-domain origin + application `aud`) are deploy vars,
  * not secrets: they appear in every Access JWT and in the deployed Worker's

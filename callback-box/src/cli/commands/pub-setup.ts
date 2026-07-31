@@ -1,6 +1,6 @@
 /**
  * `cb pub setup` / `cb pub status` — the Cloudflare-facing halves of the `cb
- * pub` family (`docs/plans/pub-setup-wrangler.md`), split from `pub.ts` to
+ * pub` family (`docs/implemented-plans/pub-setup-wrangler.md`), split from `pub.ts` to
  * keep each command module small. The logic lives in `src/publish/setup.ts` /
  * `src/publish/status.ts` behind injectable clients; these actions resolve the
  * wrangler-login (or env) auth, wire the real clients, and format the results.

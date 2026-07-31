@@ -21,7 +21,7 @@
  * `config/connectors/publish.secret.json` (gitignored via the box scaffold,
  * same pattern as every other connector secret): an API token scoped to ONLY
  * the ingestion bucket — it cannot touch publication manifests/content (the
- * bucket split, `docs/plans/pub-setup-wrangler.md` amendment 1). The
+ * bucket split, `docs/implemented-plans/pub-setup-wrangler.md` amendment 1). The
  * `CLOUDFLARE_*` env triple stays as a fallback. Neither resolves → `sync()`
  * is a silent no-op. The `PublishRemoteStore` is injectable so the pull logic
  * is fully doctestable against a fake with no network.

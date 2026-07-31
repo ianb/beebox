@@ -1,6 +1,6 @@
 /**
  * Cloudflare auth resolution for the publish CLI surface
- * (`docs/plans/pub-setup-wrangler.md` credential model): the env
+ * (`docs/implemented-plans/pub-setup-wrangler.md` credential model): the env
  * `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ACCOUNT_ID` pair wins when present
  * (mirroring wrangler's own precedence), else the interactive `wrangler login`
  * identity. Multi-account logins are never guessed at (amendment 6): a login

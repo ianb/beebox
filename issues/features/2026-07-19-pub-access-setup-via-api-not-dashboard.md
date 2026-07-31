@@ -2,14 +2,14 @@
 title: "cb pub setup's Access instructions are stale and dashboard-bound — provision via the API instead"
 area: callback-box
 needs: [manual-testing]
-design: ../../callback-box/docs/plans/pub-setup-wrangler.md
+design: ../../callback-box/docs/implemented-plans/pub-setup-wrangler.md
 filed-by: agent
 discovered-in: main session — boxholder ran the first live `cb pub setup` and got stuck on the manual Access step
 ---
 
 **2026-07-31 — BUILT (worktree-pub-setup-wrangler), pending live verification.**
 The three forks were resolved with the boxholder and the rework is implemented
-+ fake-tested per [pub-setup-wrangler](../../callback-box/docs/plans/pub-setup-wrangler.md)
++ fake-tested per [pub-setup-wrangler](../../callback-box/docs/implemented-plans/pub-setup-wrangler.md)
 (which also records the Codex security review that reshaped the credential
 model — notably the content/ingestion R2 bucket split):
 

@@ -1,6 +1,6 @@
 # `cb pub status` — deployed state + committed-vs-deployed drift
 
-The status report (`docs/plans/pub-setup-wrangler.md`): local publication
+The status report (`docs/implemented-plans/pub-setup-wrangler.md`): local publication
 counts, the provisioned Cloudflare state (both buckets, script bindings,
 workers.dev routing), the version drift check (the deployed Worker's public
 `GET /__version` against the hash of the committed Worker source), and the

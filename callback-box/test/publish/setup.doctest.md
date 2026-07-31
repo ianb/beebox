@@ -1,6 +1,6 @@
 # `cb pub setup` — provisioning against a fake Cloudflare
 
-The one-time provisioning flow (`docs/plans/pub-setup-wrangler.md`): ensure
+The one-time provisioning flow (`docs/implemented-plans/pub-setup-wrangler.md`): ensure
 BOTH R2 buckets (content + ingestion — the bucket split), resolve the
 workers.dev hostname, optionally provision Cloudflare Access via the API,
 deploy `pub-worker` via the wrangler service with the version stamp (+ Access

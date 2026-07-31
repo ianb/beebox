@@ -17,7 +17,7 @@
  * Treat its request shaping / error mapping as unproven until the manual
  * end-to-end run (the plan's step-5/7 verification).
  *
- * CREDENTIAL MODEL (decided 2026-07-31 — `docs/plans/pub-setup-wrangler.md`):
+ * CREDENTIAL MODEL (decided 2026-07-31 — `docs/implemented-plans/pub-setup-wrangler.md`):
  * this client rides the interactive wrangler-OAuth login through a
  * {@link BearerProvider} (or the `CLOUDFLARE_API_TOKEN` env escape hatch). No
  * broad management token is stored anywhere; the headless connector holds only

@@ -77,7 +77,7 @@ const wranglerConfigSchema = z.object({
   preview_urls: z.boolean().optional(),
 });
 
-/** The Worker's two R2 bindings (`docs/plans/pub-setup-wrangler.md` amendment 1 — the bucket split). */
+/** The Worker's two R2 bindings (`docs/implemented-plans/pub-setup-wrangler.md` amendment 1 — the bucket split). */
 export const CONTENT_BUCKET_BINDING = "PUB_STORE";
 export const INGEST_BUCKET_BINDING = "PUB_INGEST";
 

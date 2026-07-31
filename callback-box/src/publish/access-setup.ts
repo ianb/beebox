@@ -1,6 +1,6 @@
 /**
  * Access provisioning for the account (`/a/`) tiers — the API replacement for
- * the retired dashboard-walkthrough prose (`docs/plans/pub-setup-wrangler.md`).
+ * the retired dashboard-walkthrough prose (`docs/implemented-plans/pub-setup-wrangler.md`).
  *
  * Runs only inside an interactive `cb pub setup --access` with a setup-only
  * Access-edit token (plan fork 2). The sequence converges on rerun instead of

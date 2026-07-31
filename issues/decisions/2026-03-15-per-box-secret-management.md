@@ -28,6 +28,6 @@ Worth deciding this alongside that item rather than separately.
 setup rides `wrangler login` (no stored credential at all), and the connector's
 runtime credential moved INTO the per-box pattern —
 `config/connectors/publish.secret.json`, holding an R2 token scoped to only the
-ingestion bucket (design: [pub-setup-wrangler](../../callback-box/docs/plans/pub-setup-wrangler.md)).
+ingestion bucket (design: [pub-setup-wrangler](../../callback-box/docs/implemented-plans/pub-setup-wrangler.md)).
 Publishing no longer adds a fourth answer; the general decision here (how new
 boxes get provisioned with secrets at all) remains open.

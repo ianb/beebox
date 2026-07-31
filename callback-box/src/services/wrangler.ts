@@ -1,6 +1,6 @@
 /**
  * WranglerService — the local `wrangler` CLI surface behind `cb pub setup` and
- * the laptop-side publish commands (`docs/plans/pub-setup-wrangler.md`).
+ * the laptop-side publish commands (`docs/implemented-plans/pub-setup-wrangler.md`).
  *
  * Publishing's interactive auth is `wrangler login` (browser OAuth); wrangler
  * owns the stored refresh token and silently re-mints access tokens, so the

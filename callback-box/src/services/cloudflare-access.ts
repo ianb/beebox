@@ -1,6 +1,6 @@
 /**
  * CloudflareAccessClient — the Zero Trust Access surface behind the account
- * tiers' provisioning (`docs/plans/pub-setup-wrangler.md`): read the org's
+ * tiers' provisioning (`docs/implemented-plans/pub-setup-wrangler.md`): read the org's
  * team domain, find-or-create the One-Time PIN identity provider, the
  * self-hosted application protecting `<host>/a`, and its allow-everyone
  * policy (the Worker's per-publication email allowlist stays the real

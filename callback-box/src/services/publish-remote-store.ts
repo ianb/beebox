@@ -15,7 +15,7 @@
  * Treat its request shaping / error mapping as unproven until a manual
  * end-to-end run against a real bucket (the plan's step-7 verification).
  *
- * Credentials (`docs/plans/pub-setup-wrangler.md` credential model): the
+ * Credentials (`docs/implemented-plans/pub-setup-wrangler.md` credential model): the
  * connector reads its ingestion-bucket-scoped token from the per-box secret
  * file `config/connectors/publish.secret.json`; the laptop CLI rides the
  * wrangler-OAuth login. The `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`/
