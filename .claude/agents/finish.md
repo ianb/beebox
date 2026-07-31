@@ -245,13 +245,61 @@ dropped — a checklist item that's noise is worse than absent (the
 noisy-output-is-a-bug rule applies to review checklists too). If you drop one,
 say so in the report so the list stays honest.
 
+### 5b. Verify the plan's stated scope was delivered
+
+*(Skipped on the docs-only fast path — nothing was built here to check.)*
+
+Lint, typecheck, tests, and Track O all inspect what *is* in the diff. None asks
+**"did we build what the plan said we'd build?"** A branch can be clean, green,
+and review-passing while it silently dropped half of a plan's scope — every
+quality check passes it, because each inspects what's there, not what was
+promised and isn't. This step is the one check for that. Its only job is
+delivery — never code quality, never suggested fixes (those are steps 4–5).
+
+Do this only when the branch has a scope to check against: a plan doc it
+introduced/modified, or an `issues/` item the briefing or commits cite. No plan
+and no cited issue (a small standalone fix) → there's nothing to verify against;
+say so in the report and move on.
+
+Extract each concrete requirement from the plan's prose (and any cited issue),
+then classify it against `git diff main...HEAD` evidence:
+
+- **MET** — a `file:line` in the diff clearly delivers it.
+- **PARTIAL** — part landed; name what's missing, and the `file:line` that exists.
+- **UNMET** — the plan states it; nothing in the diff delivers it.
+- **UNCLEAR** — you cannot verify it from the diff. Write "cannot verify from
+  diff" — do not guess.
+
+Two rules keep this from degenerating into a rubber stamp (the whole point):
+
+- **Evidence only, never claims.** Never mark something MET on the strength of a
+  commit message, the branch name, or the plan's own "we did X" prose — only on a
+  `file:line` that actually does it.
+- **Never fabricate a citation.** No evidence → UNCLEAR, not MET.
+
+The verdict drives two things:
+
+- **Step 6's plan disposition.** All requirements MET → the plan is
+  "implemented." Any PARTIAL/UNMET → it is **partially implemented**: mark it so
+  and leave it in `docs/plans/`; do NOT move it to `implemented-plans/` as if
+  complete.
+- **Step 9's scope line** — report the MET/PARTIAL/UNMET tally, naming every
+  PARTIAL and UNMET.
+
+**Not a merge block (for now).** A plan often outruns its branch on purpose, so
+PARTIAL/UNMET does NOT return BLOCKED — it surfaces in the report and sets the
+plan's status honestly. (A later iteration may harden this once plans carry
+checkboxes — see `issues/`.)
+
 ### 6. Reconcile planning docs with reality
 
 If the worktree introduced/modified a planning doc (a design doc / RFC / "plan" /
 "proposal" — future-tense, aspirational verbs) for work that has now happened,
-update it before merging:
+update it before merging. **Use step 5b's verdict to decide the disposition** —
+all-MET is "implemented"; any PARTIAL/UNMET is "partially implemented" and the
+plan stays in `docs/plans/`:
 
-- **Now implemented** → it shouldn't read like a plan. Default: `git mv` it from
+- **Now implemented** (step 5b: all MET) → it shouldn't read like a plan. Default: `git mv` it from
   `docs/plans/` to `docs/implemented-plans/` (see
   `callback-box/docs/plans/README.md`), then either fold durable "how it works
   now" parts into a present-tense `docs/` reference, or delete the plan if the
@@ -371,7 +419,8 @@ git -C ~/src/callback-box log --oneline -3
 ```
 
 Return a report whose language matches the truth. Be straight about: **scope**
-(is the planned work complete, or did this land part? name what's outstanding),
+(is the planned work complete, or did this land part? name what's outstanding —
+carry step 5b's MET/PARTIAL/UNMET tally here),
 **verification** (distinguish "tests pass" from "verified in the running app"
 from "not really verified" — merging on green tests is fine, claiming more isn't).
 
@@ -390,7 +439,8 @@ End your final message with a status line the caller can act on:
 
 - `RESULT: MERGED` — followed by: merge hash, `worktree-<name>` + commit count,
   test counts (X/X) or "docs-only, verification skipped", honest scope/verification
-  notes, and any deferred cleanup (e.g. unresolved feedback item).
+  notes (the step 5b MET/PARTIAL/UNMET tally when there was a plan to check), and
+  any deferred cleanup (e.g. unresolved feedback item).
 - `RESULT: BLOCKED` — followed by: exactly what's blocking (on main / conflicted
   paths / failing test output / ambiguous uncommitted files / missing info /
   unclear feedback item), what you completed before stopping, and what the human

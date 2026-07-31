@@ -17,6 +17,7 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { probePointer } from "../../lib/asset-content.js";
 import { isRecord } from "../../lib/is-record.js";
 import { parse as parseYaml } from "yaml";
 import { extensionToMimetype } from "../../lib/mimetype.js";
@@ -114,6 +115,18 @@ export function registerApiImageRoutes({
 
       try {
         const stat = await fs.stat(imageAbs);
+
+        // Absent annexed content: bail before any header or body work, so the
+        // pointer is never served as an image. See lib/asset-content.ts.
+        const pointer = await probePointer(imageAbs, { knownSize: stat.size });
+        if (pointer !== null) {
+          return reply.status(409).send({
+            error: "Content not present locally",
+            key: pointer.key,
+            size: pointer.size,
+            sha256: pointer.sha256,
+          });
+        }
         if (!stat.isFile()) return reply.status(404).send({ error: "Not found" });
 
         const ext = path.extname(imageAbs).toLowerCase();

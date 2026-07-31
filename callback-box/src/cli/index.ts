@@ -37,6 +37,7 @@ import {
   tickCommand,
   scheduledCommand,
   healthCommand,
+  doctorCommand,
   activityCommand,
   trickCommand,
   finalizeCommand,
@@ -90,6 +91,7 @@ program.addCommand(migrateCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
+program.addCommand(doctorCommand);
 program.addCommand(createCommand);
 program.addCommand(serveCommand);
 program.addCommand(hubCommand);

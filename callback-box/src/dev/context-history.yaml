@@ -3600,6 +3600,43 @@ test1:
       peak: 42769
       added: 0
       turns: 2
+  asset-content-absent:
+    - date: 2026-07-31T02:45:31.842Z
+      boxCommit: fa363ace3a6e2e207b97c1657167641eb5306751
+      repoCommit: efd56c10cf2a67d1f06b8d82082c351fc2fda71f
+      initial: 42882
+      peak: 54338
+      added: 11456
+      turns: 22
+    - date: 2026-07-31T10:05:37.688Z
+      boxCommit: c5f6123f8c097917bb5380a6aa70d996ae7b3445
+      repoCommit: ccdef9f832008b9e625f6e132dd17da2de336aaf
+      initial: 42623
+      peak: 47594
+      added: 4971
+      turns: 16
+  asset-add-workflow:
+    - date: 2026-07-31T02:45:31.842Z
+      boxCommit: fa363ace3a6e2e207b97c1657167641eb5306751
+      repoCommit: efd56c10cf2a67d1f06b8d82082c351fc2fda71f
+      initial: 42795
+      peak: 44049
+      added: 1254
+      turns: 4
+    - date: 2026-07-31T02:46:26.029Z
+      boxCommit: 853a7bda3da30b18c9666f77c04fe01ca9754c5c
+      repoCommit: efd56c10cf2a67d1f06b8d82082c351fc2fda71f
+      initial: 42698
+      peak: 43482
+      added: 784
+      turns: 4
+    - date: 2026-07-31T10:05:37.688Z
+      boxCommit: c5f6123f8c097917bb5380a6aa70d996ae7b3445
+      repoCommit: ccdef9f832008b9e625f6e132dd17da2de336aaf
+      initial: 42572
+      peak: 50762
+      added: 8190
+      turns: 20
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

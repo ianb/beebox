@@ -15,6 +15,9 @@ import { generateRules } from "../../core/init-rules.js";
 import { generateSkills } from "../../core/box/skills.js";
 import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
+import { runAnnexDoctor } from "../../core/annex/doctor.js";
+import { getBoxShape } from "../../lib/box-shape.js";
+import { createGitAnnexService } from "../../services/git-annex.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -185,6 +188,25 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // `cb init` after switching cb sources (monorepo migration, new
   // worktree, etc.) wouldn't refresh the hooks via that path alone.
   await installValidationHooks(boxRoot);
+
+  // Bring git-annex configuration up to spec, repairing what it can.
+  //
+  // This belongs in the lifecycle, not only in an explicit `cb doctor annex`
+  // run: a box that is annex-uninitialized, has a stale `annex.largefiles`, or
+  // (most likely) picked up git-annex's default `annex.thin` on clone is a box
+  // whose commits are not protected and whose fsck cannot detect corruption —
+  // and nothing else would say so. Repairs are logged; unfixable conditions are
+  // reported but do not abort init, since the rest of the setup is still worth
+  // doing and `cb health` gates on them.
+  const annexShape = await getBoxShape(boxRoot);
+  const annexResult = await runAnnexDoctor(createGitAnnexService(), {
+    repoRoot: annexShape.packageRoot,
+    boxRoot,
+  });
+  for (const check of annexResult.checks) {
+    if (check.status === "repaired") console.log(`git-annex: ${check.message}`);
+    if (check.status === "failed") console.warn(`git-annex: ${check.message}`);
+  }
 
   // Generate agent documentation (picks up docid-debug from marker file)
   await generateDocs(boxRoot);

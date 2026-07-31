@@ -121,28 +121,39 @@ if [ ! -d "$BOX_DEST" ]; then
       fi
     fi
 
-    # Carry over gitignored attachment binaries — same shape as the connector
-    # secrets above, different reason. Assets inside `*.attach/` scopes are
-    # deliberately NOT in git: they're gitignored and tracked by a per-dir
-    # manifest.json (size + sha256) instead — see docs/asset-manifests.md. So a
-    # clone gets the cards and the manifests but none of the bytes, and every
-    # image in the worktree's UI renders as alt text, which makes image work
-    # untestable against the worktree box.
+    # Fetch asset content from the source box via git-annex.
     #
-    # `ls-files --others --ignored` asks git for exactly what it deliberately
-    # left behind, scoped to attach dirs, so this can't drift from the ignore
-    # list the way a hardcoded extension list would. Paths are repo-root
-    # relative, so this works for both the v2 (content/) and legacy layouts
-    # without knowing which is which.
-    asset_count=0
-    while IFS= read -r -d '' rel; do
-      [ -f "$BOX_SRC/$rel" ] || continue
-      mkdir -p "$(dirname "$BOX_DEST/$rel")"
-      cp "$BOX_SRC/$rel" "$BOX_DEST/$rel"
-      asset_count=$((asset_count + 1))
-    done < <(git -C "$BOX_SRC" ls-files --others --ignored --exclude-standard -z -- '*.attach/*' 2>/dev/null || true)
-    if [ "$asset_count" -gt 0 ]; then
-      echo "[worktree-create] copied $asset_count attachment binar(y|ies) from source box"
+    # A clone gets every asset's pointer but none of its bytes, so without this
+    # every image in the worktree's UI renders as alt text and image work is
+    # untestable against the worktree box. This replaces a cp loop over
+    # `ls-files --others --ignored` that predates git-annex (assets used to be
+    # gitignored with a manifest.json alongside them); `git annex get` is
+    # strictly better — it verifies content against its key and works even
+    # when the source box has content the destination should not fetch.
+    #
+    # The `annex merge` in the SOURCE is not optional. git-annex buffers
+    # location writes in .git/annex/journal until something folds them into the
+    # git-annex branch; a clone taken before that flush reports "0 copies" and
+    # `git annex get` fails with "No other repository is known to contain the
+    # file" — verified. Flushing the source, then syncing the clone, is what
+    # makes the fetch possible at all.
+    if command -v git-annex >/dev/null 2>&1 && git -C "$BOX_SRC" annex info --fast >/dev/null 2>&1; then
+      git -C "$BOX_SRC" annex merge >/dev/null 2>&1 || true
+      git -C "$BOX_DEST" annex init "worktree-$NAME" >/dev/null 2>&1 || true
+      # annex.thin does NOT propagate to clones — it's plain git config — and
+      # thin mode silently disables fsck's corruption detection. Set it here so
+      # a fresh worktree box starts correct rather than waiting for the doctor.
+      git -C "$BOX_DEST" config annex.thin false
+      git -C "$BOX_DEST" annex sync >/dev/null 2>&1 || true
+      if git -C "$BOX_DEST" annex get . >/dev/null 2>&1; then
+        echo "[worktree-create] fetched asset content via git-annex"
+      else
+        echo "[worktree-create] WARNING: git annex get failed; images will render as alt text" >&2
+      fi
+    elif command -v git-annex >/dev/null 2>&1; then
+      echo "[worktree-create] source box is not annexed; skipping asset fetch"
+    else
+      echo "[worktree-create] WARNING: git-annex not installed; worktree box has no asset content" >&2
     fi
 
     # v2 (package-layout) box: redirect its "callback-box" dependency at

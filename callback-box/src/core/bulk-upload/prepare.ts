@@ -5,8 +5,9 @@
  * the target chat's `tmp-upload/`: it **copies** (never moves — parity with
  * capture, which retains staging until delivery is confirmed) the staged files
  * into the batch's attach scope, writes that scope's asset `manifest.json` + a
- * batch-local `.gitignore`, writes the summary card, and commits card + manifest
- * + gitignore (blobs stay out of git, per `docs/asset-manifests.md`).
+ * batch-local `.gitattributes`, writes the summary card, and commits the card
+ * + the whole attach scope, so git-annex takes the blobs (see the staging
+ * comment below for why the blobs must be staged, not excluded).
  *
  * Idempotence: the batch slug is derived from the session's stable `createdAt` +
  * id, so a crash re-run targets the SAME dir. The card is written last, so its
@@ -110,24 +111,24 @@ export async function prepareBulkBatch(opts: {
   const attachRelDir = `${batchRelDir}/Batch.upload-batch.attach`;
   const cardAbsPath = path.join(boxRoot, cardRelPath);
   const attachAbsDir = path.join(boxRoot, attachRelDir);
-  const manifestRelPath = `${attachRelDir}/manifest.json`;
-  const gitignoreRelPath = `${attachRelDir}/.gitignore`;
 
   const summary = await buildBatchSummary({ boxRoot, session, cardAbsPath, attachAbsDir, failedItems });
 
-  // Bulk lands ARBITRARY extensions (.zip, .csv, extensionless, …), which the
-  // box's extension-based asset gitignore doesn't cover — so an uncovered blob
-  // would show as untracked forever and a stray `git add -A` could commit it,
-  // defeating the manifest model. A batch-local `.gitignore` ignores everything
-  // in the scope except its own manifest + itself, regardless of extension
-  // (see docs/asset-manifests.md, issue bulk-upload-arbitrary-ext-gitignore).
-  await writeAttachGitignore(attachAbsDir);
+  await writeAttachGitattributes(attachAbsDir);
 
-  // Commit the card + manifest + local .gitignore (never the blobs). Idempotent:
-  // a clean re-run commits nothing; a real git failure throws loudly and leaves
-  // staging intact.
+  // Stage the BLOB DIRECTORY, not just the control files.
+  //
+  // This used to stage exactly [card, manifest, .gitignore] and never the
+  // blobs — correct under the manifest model, where the bytes were gitignored
+  // on purpose. Under git-annex it would silently commit a card describing
+  // content that exists in no repository: `git annex pre-commit` cannot annex
+  // a path that was never passed to `git add`, and the staging copy is cleaned
+  // up after delivery, so the bytes would be gone with nothing reporting it.
+  //
+  // Staging attachRelDir lets the batch-local `.gitattributes` above route
+  // every blob into the annex and keep the control files as plain git objects.
   await stageAndCommitPaths(boxRoot, {
-    paths: [cardRelPath, manifestRelPath, gitignoreRelPath],
+    paths: [cardRelPath, attachRelDir],
     message: `Upload batch: ${batchSlug}`,
     trailers: { "Created-By": "bulk-upload" },
   });
@@ -148,17 +149,31 @@ export async function prepareBulkBatch(opts: {
   };
 }
 
-/** Contents of a batch attach scope's local `.gitignore`. */
-const ATTACH_GITIGNORE = `# Bulk-upload blobs are tracked via manifest.json (size + sha256), not committed
-# directly, regardless of extension. See docs/asset-manifests.md.
-*
-!.gitignore
-!manifest.json
+/**
+ * Batch-local `.gitattributes`, replacing the `.gitignore` this used to write.
+ *
+ * A bulk batch lands ARBITRARY extensions (.zip, .csv, extensionless, …), which
+ * the box-wide asset allowlist deliberately does not cover. Under git-annex the
+ * old `.gitignore` would have been actively harmful: a gitignored file never
+ * reaches the annex, so every batch blob would stay untracked forever and
+ * nothing would report it.
+ *
+ * `annex.largefiles=anything` is correct HERE and only here — a bulk batch
+ * genuinely does hold arbitrary types, unlike an ordinary attach scope where
+ * cards and manifests sit beside the assets. The control files are exempted so
+ * they stay ordinary git objects.
+ */
+const ATTACH_GITATTRIBUTES = `# Managed by cb bulk-upload. A batch holds arbitrary file types, so annex
+# everything in this scope except the control files. See docs/plans/asset-annex.md.
+* annex.largefiles=anything
+manifest.json annex.largefiles=nothing
+.gitattributes annex.largefiles=nothing
+*.card annex.largefiles=nothing
 `;
 
-/** Write the batch-local `.gitignore` (idempotent — always the same content). */
-async function writeAttachGitignore(attachAbsDir: string): Promise<void> {
-  await fs.writeFile(path.join(attachAbsDir, ".gitignore"), ATTACH_GITIGNORE);
+/** Write the batch-local `.gitattributes` (idempotent — always the same content). */
+async function writeAttachGitattributes(attachAbsDir: string): Promise<void> {
+  await fs.writeFile(path.join(attachAbsDir, ".gitattributes"), ATTACH_GITATTRIBUTES);
 }
 
 interface BatchSummary {
