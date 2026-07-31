@@ -384,8 +384,20 @@ export async function convertBoxToAnnex(
     };
   }
 
-  // 4a. Configure BEFORE un-ignoring. Once the assets become visible to git,
-  //     any `git add` must already route them into the annex.
+  // 4a. Retire Git LFS FIRST — before `git annex init`.
+  //
+  // Ordering learned the hard way. `git annex init` writes `* filter=annex`
+  // into `.git/info/attributes`, which is the HIGHEST-precedence attributes
+  // file — above the `.gitattributes` in the tree. So the instant annex is
+  // initialized it owns the filter for every path, and Git LFS can no longer
+  // smudge anything: `git lfs checkout` becomes a no-op and unmaterialized LFS
+  // content is unreachable until `git annex uninit`. Running the materialize
+  // check after init made it permanently unsatisfiable on exactly the boxes it
+  // was written to protect.
+  const lfsFiles = await retireLfs({ repoRoot, boxRoot });
+
+  // 4b. Configure annex. After this, any `git add` routes matching files into
+  //     the annex — which is why it must come before the assets are un-ignored.
   if (!(await annex.isInitialized(repoRoot))) {
     await annex.init(repoRoot, options?.description ?? path.basename(repoRoot));
   }
@@ -395,21 +407,11 @@ export async function convertBoxToAnnex(
     value: assetLargefilesExpression(),
   });
 
-  // 4a-bis. Retire Git LFS for the extensions annex now owns.
-  //
-  // Every box runs LFS as well, with this same extension list and no path
-  // scoping. annex wins where both match, so this is not a correctness fix —
-  // it stops a second, unverifying mechanism from quietly owning whatever annex
-  // does not. The content must be materialized first: an LFS file that is still
-  // a pointer locally would otherwise have its pointer text committed as the
-  // file's content.
-  const lfsFiles = await retireLfs({ repoRoot, boxRoot });
-
-  // 4b. Now drop the ignore block, so `git add` can see the assets at all.
+  // 4c. Now drop the ignore block, so `git add` can see the assets at all.
   const unignored = await unignoreGitignore(boxRoot);
   if (unignored.strayRules.length > 0) throw new AssetsStillIgnoredError(unignored.strayRules);
 
-  // 4c. Nothing we are about to convert may still be gitignored. `unignore`
+  // 4d. Nothing we are about to convert may still be gitignored. `unignore`
   //     removes only the block we manage, so a hand-written rule survives it —
   //     and that is precisely the case that would otherwise "succeed" while
   //     leaving the bytes tracked by nothing.
