@@ -45,6 +45,7 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "feedback" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "guide" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "file" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "document" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "telegram-message" }, { listUI: { icon: DocumentIcon } });
 
   registerFileType({ match: (p: string) => p.endsWith(".md") }, { listUI: { icon: DocumentIcon } });

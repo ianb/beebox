@@ -13,6 +13,7 @@ import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { CommandContext } from "../command-runner.js";
 import { getBoxTimeISO } from "../../lib/time.js";
+import { createFileTemplate } from "../../schemas/file.js";
 import {
   PDF_EXTENSION,
   SUPPORTED_IMAGE_EXTENSIONS,
@@ -39,6 +40,43 @@ export interface SessionLayout {
   startedAt: string;
 }
 
+/**
+ * File the PDF a photo-flow session was rendered from as a `source.file.card`
+ * in the session's attach scope, so the original survives alongside the
+ * derived page renders. Returns what the caller must stage and the session
+ * card's `files:` refs.
+ */
+export async function fileSessionSourcePdf(args: {
+  sourcePdfPath: string;
+  sessionAttachAbsDir: string;
+  sessionAttachRelDir: string;
+  startedAt: string;
+}): Promise<{ filesToStage: string[]; fileRefs: string[] }> {
+  const sourceAttachAbsDir = path.join(args.sessionAttachAbsDir, "source.attach");
+  await fs.mkdir(sourceAttachAbsDir, { recursive: true });
+  const pdfDestPath = path.join(sourceAttachAbsDir, "source.pdf");
+  await fs.copyFile(args.sourcePdfPath, pdfDestPath);
+  const stat = await fs.stat(pdfDestPath);
+  await fs.writeFile(
+    path.join(args.sessionAttachAbsDir, "source.file.card"),
+    createFileTemplate({
+      capturedAt: args.startedAt,
+      source: "scan-import",
+      filename: "source.pdf",
+      originalName: path.basename(args.sourcePdfPath),
+      mimeType: "application/pdf",
+      size: stat.size,
+    })
+  );
+  return {
+    filesToStage: [
+      `${args.sessionAttachRelDir}/source.attach/source.pdf`,
+      `${args.sessionAttachRelDir}/source.file.card`,
+    ],
+    fileRefs: ["source.file.card"],
+  };
+}
+
 export const isImageFile = (p: string): boolean =>
   SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(p).toLowerCase());
 export const isPdfFile = (p: string): boolean =>
@@ -56,6 +94,27 @@ export async function readScanContextFile(boxRoot: string): Promise<string | nul
     }
   }
   return null;
+}
+
+/**
+ * Build the combined boxholder context from the optional CLAUDE_SCANS.md file
+ * and any `--context` argument, logging which sources contributed.
+ */
+export async function resolveBoxholderContext(
+  ctx: CommandContext,
+  extraContext: string | undefined
+): Promise<string | null> {
+  const fileContext = await readScanContextFile(ctx.boxRoot);
+  const contextParts: string[] = [];
+  if (fileContext) contextParts.push(fileContext.trim());
+  if (extraContext && extraContext.trim().length > 0) contextParts.push(extraContext.trim());
+  const boxholderContext = contextParts.length > 0 ? contextParts.join("\n\n---\n\n") : null;
+  if (boxholderContext) {
+    ctx.writeLine(
+      `Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`
+    );
+  }
+  return boxholderContext;
 }
 
 export async function createSessionLayout(ctx: CommandContext): Promise<SessionLayout> {

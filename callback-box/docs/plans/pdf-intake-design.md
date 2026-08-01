@@ -1,6 +1,25 @@
 # PDF Intake
 
-**Status:** active — design, not yet implemented
+**Status:** partly implemented, and **amended by
+[`scanner-ingest.md`](scanner-ingest.md) (Track 4)** — read that first where
+the two disagree. The decisions actually taken during implementation are logged
+in [`scanner-ingest-docling-decisions.md`](scanner-ingest-docling-decisions.md).
+
+Three things here are **superseded**; they are marked SUPERSEDED inline below:
+
+1. The card type is **`document`**, not `.pdf.card` — with a `format:` field
+   carrying the source type, so a non-PDF input needs no rename migration.
+   Implemented in `src/schemas/document.ts`.
+2. **Hybrid OCR does not exist in Docling** and never did; extraction runs with
+   OCR **off** (`do_ocr=False`), because the scanner supplies the text layer.
+   A PDF with *no* text layer is not OCR'd here at all — it routes to the
+   existing Gemini photo flow instead.
+3. Assets are committed via **git-annex**, not the retired per-directory
+   `manifest.json` scheme this document describes.
+
+Everything else — the card shape, the status lifecycle, AVIF, figures as
+assets, the failure table, the reanalyze command — survives as written and is
+what got built.
 
 How PDFs (and eventually other document formats) move from upload to a structured `.pdf.card` with extracted text, tables, page renders, and figure assets — using [docling](https://github.com/DS4SD/docling) as the extraction engine.
 
@@ -23,7 +42,9 @@ Docling produces:
 - Rendered markdown (the human/agent-readable view).
 - Page images and extracted figures (saved into the attach scope).
 
-The `.pdf.card` puts the rendered markdown in the card body, references the JSON via a `docling.ref` field, and lists metadata (pages, title, author) in frontmatter. The original PDF, the JSON, the page renders, and the figure files are all assets — committed via manifest, not git.
+SUPERSEDED (card name): the card type is `document`, not `.pdf.card`.
+
+The card puts the rendered markdown in the card body, references the JSON via a `docling.ref` field, and lists metadata (pages, title, author) in frontmatter. The original PDF, the JSON, the page renders, and the figure files are all assets — committed via manifest, not git.
 
 One PDF → one card. Splitting a multi-document PDF into separate cards (a scan batch containing five distinct letters, say) is a future thing; for now the card represents the whole PDF and downstream agents handle subdivision if needed.
 
@@ -52,7 +73,7 @@ description: ""
 ... rendered markdown body, including figure refs like ![](attach/figure-001.avif) ...
 ```
 
-`.pdf.card` is a **superset** of `.file.card`: it carries all the same upload-provenance fields (captured, source, original-name, mime-type, size) plus the docling-derived bits. When the intake router sees `application/pdf`, it routes to the PDF path; everything else stays in `.file.card`.
+`document.card` is a **superset** of `.file.card`: it carries all the same upload-provenance fields (captured, source, original-name, mime-type, size) plus the docling-derived bits. When the intake router sees `application/pdf`, it routes to the PDF path; everything else stays in `.file.card`.
 
 Status lifecycle (paralleling image cards):
 - `new` — created without successful extraction (docling failed, or skipped). Holds the asset reference and any error info; agent can decide what to do.
@@ -87,8 +108,8 @@ Default feature set (intentionally lean):
 
 | Feature | State | Why |
 |---|---|---|
-| OCR (hybrid: only pages without text layer) | **on** | Half the use case is scanned docs |
-| OCR engine: EasyOCR | **on** | Best general quality; English-capable; bigger model (~100 MB) acceptable |
+| OCR (hybrid: only pages without text layer) | ~~on~~ **SUPERSEDED — off** | Docling has no hybrid mode (upstream #3464/#2036/#1229). The scanner supplies the text layer; textless PDFs go to the Gemini photo flow. See decision D1. |
+| OCR engine: EasyOCR | ~~on~~ **SUPERSEDED — none** | No OCR at intake, so no OCR weights deploy. `--force-ocr` (reanalyze only) uses Docling's default engine. |
 | Table structure (TableFormer, fast mode) | **on** | Bills, statements, receipts |
 | Layout analysis | **on** | Core to the pipeline; non-optional |
 | Figure extraction | **on** | Figures become assets in the attach scope |
@@ -99,7 +120,7 @@ Default feature set (intentionally lean):
 | Code recognition | off | Rare; raw text is fine |
 | Semantic chunking | off | Not building RAG yet |
 
-OCR runs in **hybrid mode**: trust the text layer if present, OCR only pages that lack one. Force-OCR is an opt-in escape hatch (some scanners embed junk text layers) exposed via `cb pdf reanalyze --force-ocr`.
+SUPERSEDED (hybrid OCR). Docling has **no** hybrid mode — OCR region selection is bitmap-coverage-driven and force-OCR discards the existing text layer, so "trust the text layer, OCR the rest" cannot be expressed. Extraction therefore runs with OCR **off**. Force-OCR remains the opt-in escape hatch for junk text layers, exposed via `cb document reanalyze --force-ocr`.
 
 ### Box-level overrides
 
@@ -134,11 +155,11 @@ Other knobs land here over time. Keeping the surface narrow until real boxes ask
 
 On docling failure: write a `status: new` card with the original PDF as the only asset and an `error:` field carrying the failure message. The boxholder/agent can decide whether to retry, accept the file as opaque, or mark it `invalid`.
 
-### `cb pdf reanalyze <card>`
+### `cb document reanalyze <card>`
 
 Re-runs docling on an existing PDF card. Flags:
 
-- `--force-ocr` — override hybrid mode and OCR every page.
+- `--force-ocr` — OCR every page, discarding the embedded text layer.
 - `--languages en,de` — override the box default OCR language list for this run.
 
 Updates `docling.json.gz`, page renders, figures, and the embedded `<text>`. The card's other attrs (description, etc.) are preserved.
@@ -151,11 +172,10 @@ Docling downloads model weights on first call (~few GB if all models are pulled)
 
 - Layout model (DocLayNet variant) — ~50 MB
 - TableFormer (fast variant only) — ~50 MB
-- EasyOCR English weights — ~100 MB
 
-Approximately ~200 MB total. Pre-fetched via `docling-tools models download` with a model whitelist; weights cache to the user's home dir on the server. If a box adds OCR languages later, the first reanalyze pulls those weights on demand.
+Approximately ~100 MB total (the EasyOCR line above is gone — no OCR at intake). Pre-fetched via `docling-tools models download` with a model whitelist; weights cache to the user's home dir on the server. If a box adds OCR languages later, the first reanalyze pulls those weights on demand.
 
-The deploy script also installs `uv` (so `uvx docling` resolves) and verifies AVIF encoding is available (`ffmpeg` or `libavif`-backed Python lib).
+The deploy script also installs `uv` (so `uvx docling` resolves) and verifies AVIF encoding is available — which needs no extra package, since `sharp` ships a prebuilt libvips with AVIF support.
 
 ## Failure cases
 
@@ -164,9 +184,9 @@ The deploy script also installs `uv` (so `uvx docling` resolves) and verifies AV
 | Docling crashes mid-run | Card lands as `status: new` with an `error:` field. Original PDF is preserved as asset. |
 | PDF is encrypted / requires password | Same as above. Agent can prompt the boxholder for the password and retry. |
 | Docling produces empty markdown | Card lands as `status: analyzed` with an empty body. Agent treats this as "no readable content." |
-| AVIF encoder unavailable | Fall back to PNG for figures and page renders. Logged once per run. |
+| AVIF encoder unavailable | Does not arise in practice — sharp bundles an AVIF-capable libvips, and `deploy/setup-server.sh` proves it at install time. |
 | `uvx` not installed | Intake refuses with a clear error pointing at the deploy step. |
-| Asset manifest write fails | Card creation rolled back; PDF removed from attach scope. (Standard cb-write semantics.) |
+| Asset write fails | SUPERSEDED: assets are git-annex-managed, not manifest-tracked. |
 
 ## Future review points
 
@@ -174,5 +194,5 @@ The deploy script also installs `uv` (so `uvx docling` resolves) and verifies AV
 - **Tables as structured data.** Markdown tables are inline in the card body. If we ever want to query table contents (e.g. "extract every dollar amount across all utility bills"), we'd promote tables to addressable structure — a `tables:` frontmatter field, or sibling cards in the attach scope.
 - **Image classification at intake.** Currently off. If figure type ever becomes load-bearing for routing (e.g. "diagrams go here, photos go there"), turning on docling's picture classifier is cheap.
 - **VLM captioning vs agent-driven description.** Today we extract figures and rely on a subagent describing them the same way capture images are described. If docling's own VLM ever matches that quality at lower latency / cost, the consolidation might flip the other way.
-- **Other formats.** Docling supports docx, xlsx, pptx, html, asciidoc, markdown. Most of those don't need extraction at intake (they're already structured), but a `.docx` could plausibly route through the same code path with the same `.pdf.card`-shaped output. Defer until the demand is real.
+- **Other formats.** Docling supports docx, xlsx, pptx, html, asciidoc, markdown. Most of those don't need extraction at intake (they're already structured), but a `.docx` could plausibly route through the same code path — which is exactly why the card type is `document` with a `format:` field. Defer until the demand is real.
 - **Hosted alternatives.** If local extraction becomes a bottleneck, Google Document AI / AWS Textract / Azure Document Intelligence are drop-in-ish replacements. Different output shape; would be an alternate backend behind the same intake interface.

@@ -4328,3 +4328,36 @@ tests:
     watch_for: "Says no — annex.largefiles routes it on ordinary `git add`, so the normal commit path handles it. Reaching for `git annex add` means it learned a special case that does not exist here (and it locks files, breaking in-place edits)."
     correct_contains: ["largefiles"]
     tags: [assets]
+
+  # === Scanned documents (`document.card`) ===
+  #
+  # Track 4 of docs/plans/scanner-ingest.md. One entry, per the plan's
+  # "Knowledge audits" section: the agent should be able to say what a
+  # `document.card` is, where its original bytes live, and what `status: new`
+  # + `error:` means — from the schema instructions in its always-on surface,
+  # without re-reading source.
+  #
+  # The failure this guards against is the expensive one: an agent seeing a
+  # `status: new` document card with an `error:` and concluding the document
+  # was lost (or re-uploading it), when the original PDF is sitting right there
+  # in the attach scope and `cb document reanalyze` re-runs extraction.
+  #
+  # Status: PENDING RUN — the entry lands with Track 4; it has not been run
+  # yet. Run: pnpm knowledge-audit run --box <abs-path> --filter scanner-ingest
+
+  - id: document-card-failed-extraction
+    prompt: >
+      I found a card at `box/inbox/scan-20260402T1015-ab12cd34.attach/source.document.card`
+      with `status: new` and an `error:` field saying Docling exited 1. Is the
+      scanned document lost? What are my options?
+    expected_level: knows_directly
+    watch_for: >
+      Says nothing is lost — the original file is still in the card's attach
+      scope (`attach/source.pdf`, per `filename.ref`) and can be read directly;
+      names `cb document reanalyze` as the retry (and `--force-ocr` for a junk
+      text layer), or marking the card `invalid` if the file really is unusable.
+      Should NOT say the document needs re-scanning or re-uploading, and should
+      NOT treat `status: new` as "not yet arrived".
+    correct_contains: ["reanalyze"]
+    correct_contains_any: ["attach/source.pdf", "attach scope", "original"]
+    tags: [cards, intake, scanner-ingest]

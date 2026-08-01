@@ -39,6 +39,31 @@ echo "Node.js $(node -v)"
 corepack enable pnpm
 echo "pnpm $(pnpm -v)"
 
+# ── uv + Docling (document extraction) ──────────────────────────────
+# `cb scan-import`'s document mode shells out to `uvx docling` (see
+# src/services/docling.ts). uv is installed for the callback user because
+# that is who runs the box children, and uv caches its environments and
+# Docling caches its model weights under the invoking user's home — one
+# install serves every box on the host, since they all run as this user.
+echo "Installing uv for $CB_USER..."
+su - "$CB_USER" -c 'command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh'
+su - "$CB_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
+
+# Pre-fetch exactly the model weights document mode uses, so the first scanned
+# PDF does not hang for minutes downloading them. OCR weights are deliberately
+# NOT fetched: extraction runs with do_ocr=False (the scanner supplies the text
+# layer), and textless PDFs go to the Gemini photo flow instead — see
+# docs/plans/scanner-ingest-docling-decisions.md (D1, D11). `layout` covers
+# reading order; `tableformer` covers both fast and accurate table modes.
+# Keep the version in step with DOCLING_VERSION in src/services/docling.ts.
+DOCLING_VERSION=2.117.0
+echo "Pre-fetching Docling models (layout + tableformer)..."
+su - "$CB_USER" -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; uvx --from docling==$DOCLING_VERSION docling-tools models download layout tableformer"
+
+# AVIF encoding for page renders and figures needs no system package: `sharp`
+# ships a prebuilt libvips with AVIF (libheif/aom) support, verified below so a
+# platform without a prebuild fails here rather than at the first scan.
+
 # ── Git config (root, for cloning repos) ─────────────────────────────
 git config --global user.email "callback-box@box.example.com"
 git config --global user.name "Callback Box"
@@ -86,6 +111,14 @@ pnpm build
 echo "Symlinking cb CLI..."
 ln -sf "$INSTALL_DIR/callback-box/bin/cb" /usr/local/bin/cb
 cb --help >/dev/null 2>&1 && echo "cb CLI is working" || echo "WARNING: cb CLI test failed"
+
+# ── Verify AVIF encoding ────────────────────────────────────────────
+# Document mode re-encodes every page render and figure to AVIF via sharp. A
+# libvips build without AVIF would fail on the first scanned PDF instead, so
+# prove it here.
+echo "Verifying sharp AVIF encoding..."
+cd "$INSTALL_DIR/callback-box"
+node -e 'const S=require("sharp");if(!S.format.heif.output.file){console.error("sharp has no AVIF output support");process.exit(1)}S({create:{width:8,height:8,channels:3,background:{r:0,g:0,b:0}}}).avif().toBuffer().then(()=>console.log("sharp AVIF encoding OK")).catch(e=>{console.error(e.message);process.exit(1)})'
 
 # ── Install Claude Code CLI ─────────────────────────────────────────
 # Native installer auto-updates in the background, unlike npm global

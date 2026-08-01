@@ -1,0 +1,185 @@
+/**
+ * `cb document reanalyze <card>` — re-run extraction over an existing
+ * `document.card`'s original file.
+ *
+ * Uncommon by design: it exists for the cases the intake-time default cannot
+ * cover — a junk text layer that needs `--force-ocr`, a non-English document
+ * that needs `--languages`, an extraction that failed and can now succeed, or
+ * a newer Docling. Nothing automated calls it.
+ *
+ * The card's authored content survives: `description`, `title`, `contains`,
+ * and every other field are read and written back untouched. Only the
+ * extraction-derived parts — the body, `docling`, `metadata.pages`, `status`,
+ * and `error` — are replaced, along with the page/figure assets in the attach
+ * scope (stale ones from the previous run are removed first, so a re-run that
+ * yields fewer pages leaves no orphans).
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import {
+  registerCommand,
+  parseCommandArgs,
+  type CommandContext,
+  type CommandResult,
+} from "../command-runner.js";
+import { splitCardContent } from "../../cards/index.js";
+import { isRecord } from "../../lib/is-record.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
+import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
+import { createDoclingService, type DoclingService } from "../../services/docling.js";
+import { clearExtractionAssets, extractDocument } from "./document-extract.js";
+
+const DocumentReanalyzeArgsSchema = z.object({
+  card: z.string(),
+  "force-ocr": z.boolean().optional(),
+  /** Comma-separated OCR language codes; only meaningful with `force-ocr`. */
+  languages: z.string().optional(),
+});
+
+export interface DocumentReanalyzeOptions {
+  args: Record<string, unknown>;
+  /** Injected in tests; production creates the real `uvx docling` wrapper. */
+  docling?: DoclingService | undefined;
+}
+
+/**
+ * Pull the original file's name out of the card's `filename.ref`. The ref is
+ * always `attach/<name>` (the schema's own contract), so this reads the one
+ * form rather than resolving arbitrary ref shapes.
+ */
+function originalFilename(fields: Record<string, unknown>): string | null {
+  const filename = fields["filename"];
+  if (!isRecord(filename)) return null;
+  const ref = filename["ref"];
+  if (typeof ref !== "string" || !ref.startsWith("attach/")) return null;
+  const name = ref.slice("attach/".length);
+  return name === "" || name.includes("/") ? null : name;
+}
+
+export async function runDocumentReanalyze(
+  ctx: CommandContext,
+  options: DocumentReanalyzeOptions
+): Promise<CommandResult> {
+  const parsed = parseCommandArgs(options.args, DocumentReanalyzeArgsSchema);
+  const cardRelPath = path.isAbsolute(parsed.card)
+    ? path.relative(ctx.boxRoot, parsed.card)
+    : parsed.card;
+  const cardAbsPath = path.join(ctx.boxRoot, cardRelPath);
+  if (!cardAbsPath.endsWith(".document.card")) {
+    return { success: false, error: `Not a document card: ${cardRelPath}` };
+  }
+
+  let content: string;
+  try {
+    content = await fs.readFile(cardAbsPath, "utf-8");
+  } catch (_e) {
+    // The only failure that matters here is "no such card", and the path
+    // already says everything the caller needs.
+    return { success: false, error: `Card not found: ${cardRelPath}` };
+  }
+  const split = splitCardContent(content);
+  const fields: unknown = parseYaml(split.frontmatterText);
+  if (!isRecord(fields)) {
+    return { success: false, error: `Card frontmatter is not a mapping: ${cardRelPath}` };
+  }
+  const original = originalFilename(fields);
+  if (original === null) {
+    return { success: false, error: `Card has no usable filename.ref: ${cardRelPath}` };
+  }
+
+  const cardBasename = path.basename(cardAbsPath).replace(/\.document\.card$/u, "");
+  const attachRelDir = `${path.dirname(cardRelPath)}/${cardBasename}.attach`;
+  const attachAbsDir = path.join(ctx.boxRoot, attachRelDir);
+  const sourcePath = path.join(attachAbsDir, original);
+  try {
+    await fs.access(sourcePath);
+  } catch (_e) {
+    // Without the original there is nothing to re-extract; the card's assets
+    // are the whole input to this command.
+    return { success: false, error: `Original file is missing: ${attachRelDir}/${original}` };
+  }
+
+  const languages = parsed.languages === undefined
+    ? null
+    : parsed.languages.split(",").map((l) => l.trim()).filter((l) => l !== "");
+  const forceOcr = parsed["force-ocr"] === true;
+
+  const removed = await clearExtractionAssets(attachAbsDir, { keep: original });
+  const workDir = path.join(
+    await ensureBoxTmpDir(ctx.boxRoot),
+    `document-reanalyze-${randomUUID().slice(0, 8)}`
+  );
+  await fs.mkdir(workDir, { recursive: true });
+  ctx.writeLine(`Reanalyzing ${cardRelPath}${forceOcr ? " (force-ocr)" : ""}...`);
+  let extraction;
+  try {
+    extraction = await extractDocument({
+      docling: options.docling ?? createDoclingService(),
+      sourcePath,
+      attachAbsDir,
+      workDir,
+      forceOcr,
+      languages,
+    });
+  } finally {
+    await fs.rm(workDir, { recursive: true, force: true });
+  }
+
+  const paths: string[] = [cardRelPath, ...removed.map((name) => `${attachRelDir}/${name}`)];
+  let body: string;
+  if (extraction.ok) {
+    fields["status"] = "analyzed";
+    fields["docling"] = {
+      ref: `attach/${extraction.value.doclingFilename}`,
+      version: extraction.value.doclingVersion,
+    };
+    const metadata = isRecord(fields["metadata"]) ? { ...fields["metadata"] } : {};
+    metadata["pages"] = extraction.value.pageCount;
+    fields["metadata"] = metadata;
+    delete fields["error"];
+    body = extraction.value.body;
+    for (const name of extraction.value.assetNames) paths.push(`${attachRelDir}/${name}`);
+    ctx.writeLine(`Extracted ${String(extraction.value.pageCount)} page(s)`);
+  } else {
+    // Same fallback as intake: the card goes back to unextracted-but-visible
+    // rather than keeping a stale body that no longer matches its assets.
+    fields["status"] = "new";
+    fields["error"] = extraction.error;
+    delete fields["docling"];
+    body = "";
+    console.warn(`[document] reanalyze failed for ${cardRelPath}: ${extraction.error}`);
+    ctx.writeLine(`Extraction failed (status: new) — ${extraction.error}`);
+  }
+
+  await fs.writeFile(cardAbsPath, `---\n${stringifyYaml(fields)}---\n${body}`);
+  await stageAndCommitPaths(ctx.boxRoot, {
+    paths,
+    message: `Document reanalyze: ${cardBasename}`,
+    trailers: { "Created-By": "document-reanalyze" },
+  });
+
+  return {
+    success: true,
+    data: {
+      card: cardRelPath,
+      status: fields["status"],
+      forceOcr,
+      pages: extraction.ok ? extraction.value.pageCount : 0,
+    },
+  };
+}
+
+registerCommand({
+  name: "document-reanalyze",
+  description: "Re-run document extraction over an existing document card's original file",
+  args: [
+    { name: "card", description: "Path to the .document.card (box-relative or absolute)", required: true, type: "string" },
+    { name: "force-ocr", description: "Re-OCR every page, discarding the embedded text layer", required: false, type: "boolean" },
+    { name: "languages", description: "Comma-separated OCR language codes (with --force-ocr)", required: false, type: "string" },
+  ],
+  execute: (ctx, args) => runDocumentReanalyze(ctx, { args }),
+});

@@ -4,10 +4,10 @@
  * `box/inbox/scan-<date>-<id>.capture-session.card`. Child cards and files
  * live in the session's attach scope (`scan-….attach/`).
  *
- * Internal dispatch:
+ * Internal dispatch (the PDF branch probes for a text layer — `pdf-probe.ts`):
  *   - All inputs are images (.jpg/.png/etc) → photo flow with image batch
- *   - Single PDF, no embedded text → photo flow with rendered pages
- *   - Single PDF with embedded text → document mode (no Flash, file the PDF)
+ *   - Single PDF, no embedded text → photo flow with `pdftoppm`-rendered pages
+ *   - Single PDF with embedded text → document mode (Docling extraction)
  *   - Multiple PDFs or mixed types → error (callers must split)
  *
  * Photo flow output (`<sessionAttach>` = `scan-….attach`):
@@ -27,7 +27,8 @@
  * attach scope for the item it's about.
  *
  * Document flow output:
- *   <sessionAttach>/source.file.card + source.attach/source.pdf
+ *   <sessionAttach>/source.document.card
+ *     + source.attach/{source.pdf, docling.json.gz, page-NNN.avif, figure-NNN.avif}
  *   box/inbox/<name>.capture-session.card  (no image refs)
  *
  * Internal implementation is split across siblings: `scan-import-session.ts`
@@ -38,6 +39,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   registerCommand,
@@ -57,11 +59,14 @@ import {
 } from "./scan-import-helpers.js";
 import {
   createSessionLayout,
-  readScanContextFile,
+  fileSessionSourcePdf,
+  resolveBoxholderContext,
   isImageFile,
   isPdfFile,
 } from "./scan-import-session.js";
 import { runDocumentMode } from "./scan-import-document.js";
+import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
+import { PdfRenderError, probePdf, renderPdfPages } from "./pdf-probe.js";
 import {
   emitPhotoBundle,
   emitOrphanBackQuestion,
@@ -114,10 +119,19 @@ async function executeScanImport(
         error: "scan-import takes a single PDF at a time (use cb upload for batches)",
       };
     }
-    // PDFs are always filed as documents — Flash treatment for PDFs is deferred.
     const [pdfPath] = resolved;
     invariant(pdfPath !== undefined, "resolved has exactly one entry here (non-empty inputs, length > 1 handled above)");
-    return runDocumentMode(ctx, { pdfPath });
+    // The dispatch split: a PDF that already carries text is a document (its
+    // text layer is the whole point); a PDF without one is a photo batch that
+    // happens to be wrapped in a PDF, and belongs in the photo flow where
+    // front/back pairing lives.
+    const probe = await probePdf(pdfPath);
+    if (probe.hasTextLayer) {
+      ctx.writeLine(`PDF has a text layer (${probe.textLayerSource}) → document mode`);
+      return runDocumentMode(ctx, { pdfPath });
+    }
+    ctx.writeLine("PDF has no text layer → rendering pages for photo analysis");
+    return runPhotoModeFromPdf(ctx, { pdfPath, extraContext });
   }
 
   const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
@@ -127,42 +141,58 @@ async function executeScanImport(
   return runPhotoMode(ctx, {
     apiKey,
     imagePaths: resolved,
+    sourcePdfPath: null,
     extraContext,
   });
+}
+
+/**
+ * Textless PDF → page images → the existing photo flow. The renders are
+ * scratch (photo mode copies what it needs); the PDF itself is filed in the
+ * session so the original is never only-in-the-renders.
+ */
+async function runPhotoModeFromPdf(
+  ctx: CommandContext,
+  args: { pdfPath: string; extraContext: string | undefined }
+): Promise<CommandResult> {
+  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
+  if (!apiKey) {
+    return { success: false, error: "GEMINI_KEY environment variable is required" };
+  }
+  const renderDir = path.join(
+    await ensureBoxTmpDir(ctx.boxRoot),
+    `scan-render-${randomUUID().slice(0, 8)}`
+  );
+  try {
+    const imagePaths = await renderPdfPages(args.pdfPath, { outDir: renderDir });
+    ctx.writeLine(`Rendered ${String(imagePaths.length)} page(s)`);
+    return await runPhotoMode(ctx, {
+      apiKey,
+      imagePaths,
+      sourcePdfPath: args.pdfPath,
+      extraContext: args.extraContext,
+    });
+  } catch (e) {
+    if (e instanceof PdfRenderError) return { success: false, error: e.message };
+    throw e;
+  } finally {
+    await fs.rm(renderDir, { recursive: true, force: true });
+  }
 }
 
 interface RunPhotoModeArgs {
   apiKey: string;
   imagePaths: string[];
+  /** The PDF the images were rendered from, filed as the session's source. */
+  sourcePdfPath: string | null;
   extraContext: string | undefined;
-}
-
-/**
- * Build the combined boxholder context from the optional CLAUDE_SCANS.md file
- * and any `--context` argument, logging which sources contributed.
- */
-async function resolveBoxholderContext(
-  ctx: CommandContext,
-  extraContext: string | undefined
-): Promise<string | null> {
-  const fileContext = await readScanContextFile(ctx.boxRoot);
-  const contextParts: string[] = [];
-  if (fileContext) contextParts.push(fileContext.trim());
-  if (extraContext && extraContext.trim().length > 0) contextParts.push(extraContext.trim());
-  const boxholderContext = contextParts.length > 0 ? contextParts.join("\n\n---\n\n") : null;
-  if (boxholderContext) {
-    ctx.writeLine(
-      `Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`
-    );
-  }
-  return boxholderContext;
 }
 
 async function runPhotoMode(
   ctx: CommandContext,
   args: RunPhotoModeArgs
 ): Promise<CommandResult> {
-  const { apiKey, imagePaths, extraContext } = args;
+  const { apiKey, imagePaths, sourcePdfPath, extraContext } = args;
   const layout = await createSessionLayout(ctx);
   const {
     sessionAttachRelDir,
@@ -191,7 +221,23 @@ async function runPhotoMode(
     archivePages.push(dst);
   }
   const apiPages = archivePages;
-  const sourceLabel = `${imagePaths.length} images`;
+  const sourceLabel = sourcePdfPath === null
+    ? `${imagePaths.length} images`
+    : `${path.basename(sourcePdfPath)} (${imagePaths.length} rendered pages)`;
+
+  // A textless PDF's renders are derived data; the PDF is the original, so it
+  // is filed as a `file.card` in the session rather than discarded.
+  const fileRefs: string[] = [];
+  if (sourcePdfPath !== null) {
+    const filed = await fileSessionSourcePdf({
+      sourcePdfPath,
+      sessionAttachAbsDir,
+      sessionAttachRelDir,
+      startedAt,
+    });
+    filesToStage.push(...filed.filesToStage);
+    fileRefs.push(...filed.fileRefs);
+  }
 
   const boxholderContext = await resolveBoxholderContext(ctx, extraContext);
 
@@ -269,7 +315,7 @@ async function runPhotoMode(
     endedAt: startedAt,
     imageRefs,
     audioRefs: [],
-    fileRefs: [],
+    fileRefs,
   });
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
   filesToStage.push(sessionCardRelPath);

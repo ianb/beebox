@@ -23,4 +23,152 @@ No resident service to operate/monitor; uv caches one environment; scanner
 volume makes per-invocation startup acceptable. **Revisit:** if latency or
 throughput matters, docling-serve behind the same wrapper interface.
 
-(further decisions appended during implementation)
+## D3. Pin the Docling version: `uvx --from docling==2.117.0 docling convert …`
+
+2.117.0 is the current 2.x release (2026-07-30) and the one every flag below
+was read off. Unpinned, `uvx docling` silently resolves whatever is newest, so
+two runs of the same document a month apart could differ in output *and* in
+which flags exist — extraction output is stored on a card, so that drift is
+invisible until someone compares two cards. The pin also means one cached uv
+environment per host rather than one per upstream release. **Note for the
+reviewer:** the plan text said `uvx docling <pdf>`; the real 2.x CLI has a
+`convert` subcommand (`docling convert <pdf>`), and `--force-ocr` is deprecated
+in favour of `--ocr-mode` (D7) — the plan was written against an older CLI.
+The pin is duplicated in `deploy/setup-server.sh` for the model pre-fetch;
+they must move together. **Revisit:** on any Docling upgrade — re-read
+`docling convert --help`, then `cb document reanalyze` a sample and diff.
+
+## D4. `--image-export-mode referenced` — page renders and figures as files
+
+The alternative (`embedded`, the CLI default) base64s every image into the JSON,
+which would put megabytes of pixels inside the gzipped `docling.json.gz` and
+give us nothing to write into the attach scope. `referenced` writes real PNGs.
+Notably this also gets us **page renders for free** at 144 DPI (2× the page
+box) — the CLI has no page-DPI knob, so 144 is what we take; it is above
+pdf-intake's proposed 150-DPI-ish target in the vertical direction and fine for
+both vision models and the UI. Figure extraction stays **on** (pdf-intake's
+choice, kept): figures become addressable assets an agent can look at.
+**Revisit:** if page renders turn out too large or too small, the escape is
+rendering pages separately with `pdftoppm -r <dpi>` and keeping Docling only
+for figures.
+
+## D5. Find artifacts by walking the work dir, not by trusting Docling's paths
+
+Docling writes its artifact paths relative to a notion of the output root that
+does not match where the files actually land: with `--output out` the markdown
+says `out/<stem>_artifacts/page_000001_<hash>.png` while the file is at
+`out/out/<stem>_artifacts/…`. Resolving those refs would break; the basenames
+are unique and carry the page/figure index, so the wrapper walks the work
+directory and keys on basename. The markdown rewrite matches image links by
+basename for the same reason, and leaves unrecognized links alone rather than
+dropping them. **Revisit:** if upstream fixes the relative-path skew, the walk
+still works — it is strictly more tolerant. This is defensive against *their*
+bug, not ours.
+
+## D6. Two timeouts: `--document-timeout 600` inside, a 15-minute awake kill outside
+
+Docling's own per-document budget covers conversion only, so it cannot bound
+interpreter start, uv environment build, or model loading — the parts that
+dominate a cold run. The outer kill covers the whole subprocess and is counted
+in **awake** time (`startAwakeTimeout`), because a plain 15-minute `setTimeout`
+fires the instant a sleeping laptop wakes and would kill a healthy extraction.
+Both numbers are guesses sized off a warm 7-second run on a two-line PDF and
+the plan's "~2 pages/sec order of magnitude" figure; nobody has timed a
+200-page scan on the prod box. **Revisit:** the first real timeout in the wild
+— the failure is visible (`status: new` + `error:` naming the timeout), so it
+will surface rather than hide.
+
+## D7. `--ocr --ocr-mode full_page` for `--force-ocr`, not the deprecated flag
+
+Docling 2.117 deprecates `--force-ocr` in favour of `--ocr-mode full_page`;
+both still work, one will stop. This only ever runs behind
+`cb document reanalyze --force-ocr`, so the known long-document force-OCR bug
+(#1499) stays an escape-hatch-only risk, as the plan said. `--languages` maps
+to `--ocr-lang` and is only sent alongside force-OCR, since it is meaningless
+with OCR off. **Revisit:** if `--ocr-mode`'s other values (`layout_regions`,
+`pdf_aware_layout_regions`) turn out to be the hybrid mode the plan wanted —
+`pdf_aware_layout_regions` in particular sounds like it might be — that would
+change D1 itself. Not investigated; flagged here deliberately because it is the
+single most consequential thing I did not chase down.
+
+## D8. Text-layer detection: `pdftotext` over the first 5 pages, ≥64 non-space chars
+
+Poppler is already a deploy dependency and answers in milliseconds; starting
+Docling to ask a yes/no question would cost seconds and model loading. Five
+pages because a scanner OCRs a whole job or none of it. The 64-character floor
+(not zero) exists because scanner output frequently carries a few stray glyphs
+— a producer watermark, a page-number artifact — and one of those must not
+route a photo batch into document mode. When `pdftotext` is missing the answer
+is `true` **by assumption**, and the probe says so (`textLayerSource:
+"assumed"`): that routes to document mode, which is what every PDF did before
+this split existed, and document mode preserves the original either way.
+Assuming `false` would send a real document through per-page vision analysis
+because a package was missing. **Revisit:** if a real scan lands on the wrong
+side, the threshold and the page sample are two constants in `pdf-probe.ts`.
+
+## D9. Textless PDFs render with `pdftoppm -r 150`, not Docling
+
+The photo branch never wants Docling's layout/table analysis — it wants pixels
+for Gemini. `pdftoppm` gives them at a chosen DPI in one cheap subprocess,
+where Docling would load models to produce 144-DPI renders as a side effect of
+work we would throw away. (Document mode uses Docling's page renders instead —
+D4 — because there the extraction is running anyway and the renders' geometry
+matches the JSON's bboxes.) **Revisit:** 150 DPI is inherited from
+pdf-intake-design; if Gemini reads scans better or cheaper at another
+resolution, it is one constant.
+
+## D10. AVIF at quality 60, effort 4, via sharp
+
+pdf-intake chose AVIF; this fills in the numbers. Quality 60 keeps scanned text
+legible at a fraction of Docling's PNG output; effort 4 is libvips' balance
+point — higher effort costs seconds per page for single-digit percentage gains
+on a scan. No system package is needed: sharp's prebuilt libvips has AVIF, and
+`deploy/setup-server.sh` now proves that at install time rather than at the
+first scan. **Revisit:** if page renders look mushy in the UI, or if archival
+fidelity ever matters more than size, raise quality (or keep PNG for pages and
+AVIF only for figures).
+
+## D11. Model pre-fetch: `docling-tools models download layout tableformer`
+
+Exactly the two the pipeline uses. There is no separate "TableFormer fast"
+weight — one `tableformer` download covers both fast and accurate modes, and we
+run `--table-mode fast` (pdf-intake's choice, kept: bills and statements, not
+research papers). **No OCR weights are fetched**, which is the direct
+consequence of D1 and is what shrinks the download from pdf-intake's ~200 MB to
+~100 MB. `--device cpu` is passed explicitly rather than `auto`, since the
+deploy target has no GPU and `auto` probes for one every run. **Revisit:** if
+`--force-ocr` becomes common, the first reanalyze on each box pays a
+one-time EasyOCR download; pre-fetching would then be worth it.
+
+## D12. Card layout: `source.document.card` keeps the old basename
+
+Document mode previously wrote `source.file.card` + `source.attach/source.pdf`
+in the session's attach scope. The document card takes the same basename and
+the same attach directory, so the original PDF stays at exactly the path it
+had, and only the card's type and siblings change. Nothing migrates (the card
+type is net-new; existing `.file.card` PDFs are explicitly not retrofitted —
+plan, NOT in scope), but keeping the layout means the session card's `files:`
+ref and any human muscle memory still point at the same place. **Revisit:** if
+one session ever carries several documents, the basename has to become
+per-document — which is the multi-document-PDF question the plan deferred.
+
+## D13. `metadata:` comes from `pdfinfo`, not from the DoclingDocument
+
+A `DoclingDocument` carries no PDF Info dictionary — no title, no author — so
+Docling cannot supply two of the three `metadata:` fields pdf-intake specified.
+`pdfinfo` (poppler, already required) supplies all three, and does so on the
+**failure** path too, so a card that failed extraction still says how many pages
+it has. Docling's page count is the fallback when poppler is absent. All three
+fields stay optional; a scanner rarely sets title/author. **Revisit:** if
+Docling starts exposing document metadata, drop the extra subprocess.
+
+## D14. No frontmatter list of page/figure assets
+
+The card records `metadata.pages` and the schema instructions state the naming
+convention (`attach/page-001.avif`, `attach/figure-001.avif`); there is no
+`pages:` array in frontmatter. Rationale: the list would be pure duplication of
+the directory, and a long scan would put 200 refs in the frontmatter of every
+card. The cost is that the assets are discovered by convention rather than
+declared. **Uncertain** — this is the decision here I would most expect a
+reviewer to push back on; if agents turn out to miss the page renders, an
+explicit list (or a `page-count`) is additive and needs no migration.

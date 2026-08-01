@@ -18,6 +18,7 @@ on both.
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import { textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { resetScanRateLimits, SCAN_RATE_LIMIT } from "../../../src/webapp/routes/scan-rate-limit.js";
 import { qpdfAvailable } from "../../../src/core/scan/validate.js";
 import { createScanToken } from "../../../src/core/scan/tokens.js";
@@ -35,37 +36,6 @@ function pngBytes() {
   return Sharp({ create: { width: 4, height: 4, channels: 3, background: { r: 10, g: 20, b: 30 } } })
     .png()
     .toBuffer();
-}
-
-/**
- * A structurally complete one-page PDF with a real cross-reference table. Built
- * rather than pasted so the xref offsets and stream length are correct by
- * construction — a hand-typed literal drifts the moment anyone edits it, and
- * `qpdf --check` is precisely the thing that would notice. Cross-checked
- * against poppler (`pdfinfo`) and ghostscript, both of which parse it without a
- * complaint, so a qpdf rejection here would be a real bug rather than a bad
- * fixture. The content stream uses only self-contained graphics operators — a
- * text operator would reference a font this file doesn't carry.
- */
-function minimalPdf() {
-  const content = "0 0 1 rg 20 20 100 100 re f\n";
-  const objects = [
-    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R /Resources << >> >>\nendobj\n",
-    `4 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`,
-  ];
-  let pdf = "%PDF-1.4\n";
-  const offsets = [];
-  for (const object of objects) {
-    offsets.push(pdf.length);
-    pdf += object;
-  }
-  const startxref = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  for (const offset of offsets) pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${startxref}\n%%EOF\n`;
-  return Buffer.from(pdf, "latin1");
 }
 
 async function put(ctx, opts) {
@@ -306,7 +276,7 @@ await ctx.cleanup();
 resetScanRateLimits();
 const ctx = await makeTestServer();
 const hasQpdf = await qpdfAvailable();
-const pdf = minimalPdf();
+const pdf = textlessPdf();
 
 const good = await put(ctx, { bytes: pdf, filename: "Invoice.pdf" });
 pdfOutcome({ hasQpdf, res: good, status: 200, body: "accepted" })
