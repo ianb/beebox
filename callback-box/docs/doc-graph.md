@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-01T23:07:27Z
+Generated: 2026-08-01T23:22:51Z
 Total documents: 229
 
 ## Issues
@@ -132,7 +132,7 @@ Referenced by:
 - docs/plans/ios-companion-review-2026-07-09.md:56 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
 - docs/plans/publish-pages.md:154 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
-- docs/plans/scanner-ingest.md:250 (mention) — CLAUDE.md rule that file upload doesn't fit the tRPC shape), a quarantine
+- docs/plans/scanner-ingest.md:256 (mention) — CLAUDE.md rule that file upload doesn't fit the tRPC shape), a quarantine
 - docs/plans/source-available-release.md:388 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
 - docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
@@ -338,7 +338,7 @@ Referenced by:
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
 - docs/plans/publish-pages.md:29 (mention) — - `callback-box/code-style.md` — mechanical rules for all box-side TS and the Worker package.
 - docs/plans/scan-guide-card.md:27 (mention) — - `callback-box/code-style.md`: no default parameters, max 2 positional
-- docs/plans/scanner-ingest.md:38 (mention) — - `callback-box/code-style.md` — Result-vs-throw for the wire contract's
+- docs/plans/scanner-ingest.md:42 (mention) — - `callback-box/code-style.md` — Result-vs-throw for the wire contract's
 - docs/plans/source-available-release.md:44 (mention) — - `callback-box/code-style.md` — style rules for any code touched by deploy
 - docs/unimplemented-plans/query-cards.md:34 (mention) — - `callback-box/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
@@ -605,7 +605,7 @@ Referenced by:
 - docs/glossary.md:30 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
 - docs/implemented-plans/asset-manifests.md:3 (link) — **Status: SUPERSEDED by git-annex — see [`../assets.md`](../assets.md).**
 - docs/plans/asset-annex.md:534 (mention) — The agent row has no code fix. It gets a `docs/assets.md` sentence and
-- docs/plans/scanner-ingest.md:103 (mention) — on 2026-07-31 (`docs/assets.md:6`: *"Status: implemented; all local boxes
+- docs/plans/scanner-ingest.md:109 (mention) — on 2026-07-31 (`docs/assets.md:6`: *"Status: implemented; all local boxes
 - docs/server-operations.md:238 (link) — [`assets.md`](./assets.md).
 
 References:
@@ -946,7 +946,7 @@ Referenced by:
 - docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
 - docs/plans/publish-pages.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/scan-guide-card.md:17 (mention) — - `docs/engineering-principles.md` — traced by number below:
-- docs/plans/scanner-ingest.md:23 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
+- docs/plans/scanner-ingest.md:27 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:98 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
@@ -1391,7 +1391,7 @@ Title: "Scan Upload Wire Contract" | 146 lines
 
 Referenced by:
 - docs/plans/scan-guide-card.md:180 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
-- docs/plans/scanner-ingest.md:257 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
+- docs/plans/scanner-ingest.md:263 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
 - docs/scan-upload-contract.md:9 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
 
 References:
@@ -1414,7 +1414,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:572 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
 - docs/plans/docs-reorg.gap-analysis.md:137 (mention) — contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
 - docs/plans/docs-reorg.md:179 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
-- docs/plans/scanner-ingest.md:105 (mention) — - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `cb
+- docs/plans/scanner-ingest.md:111 (mention) — - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `cb
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:31 (mention) — Refs: `callback-box/docs/scheduler.md`, `callback-box/docs/adding-a-box.md`,
 - ../issues/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:22 (mention) — `docs/scheduler.md`). Is the latency gap real for the user, and could it be closed
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:86 (mention) — (`docs/scheduler.md` / the scheduled-task health state at
@@ -1430,7 +1430,7 @@ Referenced by:
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:499 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/plans/docs-reorg.md:91 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
-- docs/plans/scanner-ingest.md:7 (mention) — (`docs/server-operations.md` runbook), merge to main.
+- docs/plans/scanner-ingest.md:11 (mention) — (`docs/server-operations.md` runbook), merge to main.
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:366 (mention) — - **`CB_DIAG_API_KEY` becomes per-box** (it lives in each box's `.env`). The bypass curl pattern in `server-operations.m
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:18 (mention) — rollback runbook: `docs/server-operations.md`. A Codex adversarial review
@@ -1596,7 +1596,7 @@ Referenced by:
 - docs/plans/README.md:82 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/cli-restructure.md:91 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now oc
 - docs/plans/docs-reorg.md:341 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
-- docs/plans/scanner-ingest.md:567 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
+- docs/plans/scanner-ingest.md:584 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
@@ -3603,7 +3603,7 @@ Referenced by:
 - docs/implemented-plans/user-story-audit-followups.md:57 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 - docs/plans/README.md:81 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
-- docs/plans/scanner-ingest.md:43 (mention) — (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
+- docs/plans/scanner-ingest.md:47 (mention) — (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
 
 References:
 - → docs/plans/scanner-ingest.md (link)
@@ -3694,11 +3694,12 @@ Referenced by:
 
 #### docs/plans/scan-guide-card.md
 
-Title: "Scan Guide Card — scanner priors via the guide system" | 364 lines
+Title: "Scan Guide Card — scanner priors via the guide system" | 378 lines
 
 Referenced by:
 - docs/plans/scan-guide-card.md:174 (mention) — docs/plans/scan-guide-card.md)` via `ctx.writeLine`.
 - docs/plans/scan-guide-card.review.md:7 (mention) — `scan-guide-card.md`.
+- docs/plans/scanner-ingest.md:5 (mention) — scanner-priors mechanism reshaped 2026-08-01 by the `scan-guide-card.md`
 
 References:
 - → docs/plans/scan-guide-card.review.md (mention)
@@ -3727,14 +3728,14 @@ Title: "Docling Decisions Log — scanner-ingest" | 228 lines
 
 Referenced by:
 - docs/plans/pdf-intake-design.md:6 (link) — in [`scanner-ingest-docling-decisions.md`](scanner-ingest-docling-decisions.md).
-- docs/plans/scanner-ingest.md:5 (mention) — remainder: Docling decisions review (`scanner-ingest-docling-decisions.md`),
+- docs/plans/scanner-ingest.md:8 (mention) — (`scanner-ingest-docling-decisions.md`), box-readiness draft install
 
 References:
 - → docs/plans/scanner-ingest.md (link)
 
 #### docs/plans/scanner-ingest.md
 
-Title: "Scanner Ingest" | 721 lines
+Title: "Scanner Ingest" | 741 lines
 
 Referenced by:
 - docs/plans/pdf-intake-design.md:4 (link) — [`scanner-ingest.md`](scanner-ingest.md) (Track 4)** — read that first where
@@ -3746,6 +3747,7 @@ Referenced by:
 - docs/server-operations.md:231 (mention) — `docs/plans/scanner-ingest.md` Track 0 needs both prod boxes (`estate`,
 
 References:
+- → docs/plans/scan-guide-card.md (mention)
 - → docs/plans/scanner-ingest-docling-decisions.md (mention)
 - → docs/server-operations.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -3763,7 +3765,7 @@ References:
 Title: "Plan Engineering Review — scanner-ingest" | 100 lines
 
 Referenced by:
-- docs/plans/scanner-ingest.md:200 (mention) — mobile device store. Cross-model review (see `scanner-ingest.review.md`,
+- docs/plans/scanner-ingest.md:206 (mention) — mobile device store. Cross-model review (see `scanner-ingest.review.md`,
 
 References:
 - → docs/plans/scanner-ingest.md (mention)
