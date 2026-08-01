@@ -20,9 +20,11 @@ The box-level checks (`runHealthChecks` — permissions, API keys, annex, nav ca
 
 - first call computes and caches;
 - calls within 60 s answer from the snapshot;
-- a call past 60 s answers from the snapshot **and** kicks a background refresh, so a newly broken or newly repaired box surfaces on the *next* request rather than after an arbitrary silence.
+- a call past 60 s answers from the snapshot **and** kicks a background refresh — that request still gets the *old* report; the refreshed one is visible to the *next* reader.
 
-**Worst case staleness is therefore ~60 s plus one request.** Anything that must not be stale asks for a live run:
+**What the staleness bound actually is:** a change shows up two requests after the TTL expires, not one, and only if something asks again. A client that stops polling never sees the new verdict — which is fine, since nothing is displaying it either, but it means "worst case 60 s" is wrong. For the dashboard (which refetches on every visit) it is 60 s plus one page view. Two things bound the damage: writes are ordered by when each computation *started*, so a slow background refresh can never overwrite a newer result; and a background refresh that *throws* is latched, so the next reader recomputes in the foreground and gets the error rather than another serving of the last-known-good report.
+
+Anything that must not be stale asks for a live run:
 
 - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the snapshot. Use this in any post-deploy or post-fix verification. Curl form in [`server-operations.md`](./server-operations.md#diagnostic-endpoints-behind-auth).
 - `cb health` and the box server's `/api/health` route call `runHealthChecks` directly and never touch the cache — they are always fresh.
