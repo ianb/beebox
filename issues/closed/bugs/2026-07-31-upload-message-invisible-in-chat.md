@@ -2,8 +2,24 @@
 title: "<upload> has no chat renderer — it shows as raw markup, not a chip"
 area: callback-box
 filed-by: agent
+resolution: implemented
 discovered-in: prod (estate box) — first real run of chat-photo-batch-upload
 labels: [mobile]
+---
+
+**Closed 2026-08-01** — confirmed by the boxholder ("the `<upload...>` stuff
+still shows up in the user message, unformatted") and fixed: `<upload>` now has a
+parser (`components/chat/upload-message.ts`) and a chip
+(`components/chat/UploadChip.tsx`), mirroring capture's, with the boxholder's
+introduction rendered as their own words above the batch metadata. Pinned by
+`test/frontend/upload-message.doctest.md` against the exact wrapper
+`buildUploadWrapper` emits.
+
+The item was originally filed with a wrong headline ("the user message doesn't
+appear"), based on an in-the-moment report the boxholder later corrected. The
+real defects from that first prod run were the missing `note` (fixed separately)
+and this rendering gap.
+
 ---
 
 First real-world run of the photo-batch path, on the `estate` prod box,

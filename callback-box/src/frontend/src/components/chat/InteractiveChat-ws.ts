@@ -177,7 +177,19 @@ export function useChatWs(opts: {
         send({ type: "REFRESH" });
       } else if (userMessage) {
         if (!forSession(userMessage.sessionId, sessionId)) return;
-        if (userMessage.user && currentUser && userMessage.user.email !== currentUser.email) {
+        if (userMessage.user === null) {
+          // SERVER-INJECTED message — a delivered `<upload>` batch or `<capture>`
+          // (`core/chat/session/deliver-user-message.ts` emits `user: null`).
+          // Nothing in this client initiated it, so without a refresh the message
+          // and the agent turn it starts are both invisible until a manual
+          // reload — which is exactly what a boxholder hit after a bulk upload
+          // (2026-08-01): photos landed, the agent replied, and the chat showed
+          // neither until they reloaded the page.
+          //
+          // REFRESH is ignored while streaming, so this can't disturb a turn this
+          // client is already following.
+          send({ type: "REFRESH" });
+        } else if (currentUser && userMessage.user.email !== currentUser.email) {
           send({
             type: "OTHER_USER_MESSAGE",
             message: userMessage.message,

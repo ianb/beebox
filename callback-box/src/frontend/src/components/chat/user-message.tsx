@@ -21,7 +21,9 @@ import {
   type TaskNotification,
 } from "./message-parsing";
 import { parseCaptureWrapper } from "./capture-message";
+import { parseUploadWrapper } from "./upload-message";
 import { CaptureChip } from "./CaptureChip";
+import { UploadChip } from "./UploadChip";
 import { UserMessageText } from "./user-message-text";
 
 /**
@@ -149,6 +151,13 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
           const capture = parseCaptureWrapper(block.text ?? "");
           if (capture) {
             return <CaptureChip key={key} model={capture} />;
+          }
+          // A delivered bulk batch is an `<upload …>` wrapper — same treatment,
+          // with the boxholder's own introduction rendered as their text rather
+          // than left inside the markup.
+          const upload = parseUploadWrapper(block.text ?? "");
+          if (upload) {
+            return <UploadChip key={key} model={upload} />;
           }
           return (
             <div key={key} className="text-sm whitespace-pre-wrap">
