@@ -48,7 +48,6 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { invariant } from "../../lib/invariant.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
@@ -61,8 +60,7 @@ import {
   createSessionLayout,
   fileSessionSourcePdf,
   resolveBoxholderContext,
-  isImageFile,
-  isPdfFile,
+  resolveScanInputs,
 } from "./scan-import-session.js";
 import { runDocumentMode } from "./scan-import-document.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
@@ -76,6 +74,10 @@ import {
 const ScanImportArgsSchema = z.object({
   inputs: z.array(z.string()).optional(),
   context: z.string().optional(),
+  /** Free-text provenance recorded on the cards this run produces. The scan
+   *  promote worker passes `scan-upload/<token-name>`; the shape is a
+   *  convention, not a validated format. */
+  source: z.string().optional(),
 });
 export type ScanImportArgs = z.infer<typeof ScanImportArgsSchema>;
 
@@ -83,55 +85,27 @@ async function executeScanImport(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { inputs, context: extraContext } = parseCommandArgs(args, ScanImportArgsSchema);
+  const { inputs, context: extraContext, source } = parseCommandArgs(args, ScanImportArgsSchema);
 
   if (!inputs || inputs.length === 0) {
     return { success: false, error: "inputs argument is required (at least one file)" };
   }
 
-  const resolved: string[] = [];
-  for (const f of inputs) {
-    const abs = path.isAbsolute(f) ? f : path.join(ctx.boxRoot, f);
-    try {
-      await fs.access(abs);
-    } catch (_e) {
-      // fs.access rejects when the input path is missing/unreadable — that
-      // is precisely the condition we report back to the caller. The error
-      // adds no detail beyond the path, so we don't surface it.
-      return { success: false, error: `Input file not found: ${abs}` };
-    }
-    resolved.push(abs);
-  }
+  const resolved = await resolveScanInputs(ctx.boxRoot, inputs);
+  if ("error" in resolved) return { success: false, error: resolved.error };
 
-  const allPdf = resolved.every((f) => isPdfFile(f));
-  const allImage = resolved.every((f) => isImageFile(f));
-  if (!allPdf && !allImage) {
-    return {
-      success: false,
-      error: "Mixed file types in one scan-import invocation. PDFs run one-per-session; images can be batched together.",
-    };
-  }
-
-  if (allPdf) {
-    if (resolved.length > 1) {
-      return {
-        success: false,
-        error: "scan-import takes a single PDF at a time (use cb upload for batches)",
-      };
-    }
-    const [pdfPath] = resolved;
-    invariant(pdfPath !== undefined, "resolved has exactly one entry here (non-empty inputs, length > 1 handled above)");
+  if (resolved.kind === "pdf") {
     // The dispatch split: a PDF that already carries text is a document (its
     // text layer is the whole point); a PDF without one is a photo batch that
     // happens to be wrapped in a PDF, and belongs in the photo flow where
     // front/back pairing lives.
-    const probe = await probePdf(pdfPath);
+    const probe = await probePdf(resolved.pdfPath);
     if (probe.hasTextLayer) {
       ctx.writeLine(`PDF has a text layer (${probe.textLayerSource}) → document mode`);
-      return runDocumentMode(ctx, { pdfPath });
+      return runDocumentMode(ctx, { pdfPath: resolved.pdfPath, source });
     }
     ctx.writeLine("PDF has no text layer → rendering pages for photo analysis");
-    return runPhotoModeFromPdf(ctx, { pdfPath, extraContext });
+    return runPhotoModeFromPdf(ctx, { pdfPath: resolved.pdfPath, extraContext, source });
   }
 
   const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
@@ -140,9 +114,10 @@ async function executeScanImport(
   }
   return runPhotoMode(ctx, {
     apiKey,
-    imagePaths: resolved,
+    imagePaths: resolved.imagePaths,
     sourcePdfPath: null,
     extraContext,
+    source,
   });
 }
 
@@ -153,7 +128,7 @@ async function executeScanImport(
  */
 async function runPhotoModeFromPdf(
   ctx: CommandContext,
-  args: { pdfPath: string; extraContext: string | undefined }
+  args: { pdfPath: string; extraContext: string | undefined; source: string | undefined }
 ): Promise<CommandResult> {
   const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
   if (!apiKey) {
@@ -171,6 +146,7 @@ async function runPhotoModeFromPdf(
       imagePaths,
       sourcePdfPath: args.pdfPath,
       extraContext: args.extraContext,
+      source: args.source,
     });
   } catch (e) {
     if (e instanceof PdfRenderError) return { success: false, error: e.message };
@@ -186,13 +162,15 @@ interface RunPhotoModeArgs {
   /** The PDF the images were rendered from, filed as the session's source. */
   sourcePdfPath: string | null;
   extraContext: string | undefined;
+  /** Provenance string for the session card (`scan-upload/<token-name>`). */
+  source: string | undefined;
 }
 
 async function runPhotoMode(
   ctx: CommandContext,
   args: RunPhotoModeArgs
 ): Promise<CommandResult> {
-  const { apiKey, imagePaths, sourcePdfPath, extraContext } = args;
+  const { apiKey, imagePaths, sourcePdfPath, extraContext, source } = args;
   const layout = await createSessionLayout(ctx);
   const {
     sessionAttachRelDir,
@@ -316,6 +294,7 @@ async function runPhotoMode(
     imageRefs,
     audioRefs: [],
     fileRefs,
+    source,
   });
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
   filesToStage.push(sessionCardRelPath);
@@ -370,6 +349,12 @@ registerCommand({
     {
       name: "context",
       description: "Extra context appended to CLAUDE_SCANS.md content for this run",
+      required: false,
+      type: "string",
+    },
+    {
+      name: "source",
+      description: "Provenance recorded on the produced cards (e.g. scan-upload/<token-name>)",
       required: false,
       type: "string",
     },

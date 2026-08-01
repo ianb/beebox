@@ -39,6 +39,7 @@ import { qpdfAvailable, validateScanFile } from "../../core/scan/validate.js";
 import { makeScanAuthPreHandler, scanAuthOf, type ScanAuth } from "../scan-auth.js";
 import { invariant } from "../../lib/invariant.js";
 import { consumeScanRateLimit } from "./scan-rate-limit.js";
+import { notifyScanUpload, startScanPromoteLifecycle } from "./scan-promote-lifecycle.js";
 import {
   CHECK_BODY_ERROR,
   CheckBodySchema,
@@ -191,6 +192,12 @@ async function handlePut(opts: {
     ...(verdict.status === "rejected" ? { reason: verdict.reason } : {}),
   };
   await recordQuarantineEntry(boxRoot, entry);
+  // Re-arm the batch-settle window after EITHER verdict: the promote pass runs
+  // once this scan session goes quiet (so a ten-page session is one import and
+  // one wakeup), and a rejection needs that pass too — it is what raises the
+  // question card. A lone rejected upload that didn't schedule anything would
+  // sit unquestioned until the next accepted file or a restart.
+  notifyScanUpload(boxRoot);
   if (verdict.status === "rejected") {
     return reply.status(422).send({ status: "rejected", reason: verdict.reason });
   }
@@ -210,6 +217,11 @@ export async function registerScanUploadRoutes(options: {
   // Probe qpdf at registration rather than on the first PDF, so a host missing
   // it says so at boot instead of mid-upload.
   void qpdfAvailable();
+
+  // Startup recovery + the batch-settle timer the PUT handler re-arms. Startup
+  // is where a crashed `promoting` entry, a leftover staging dir, and an owed
+  // `cb wakeup` are all recovered.
+  startScanPromoteLifecycle({ server, boxRoot });
 
   await server.register(async (instance) => {
     // Pass the raw body through untouched so the PUT can stream it to disk —

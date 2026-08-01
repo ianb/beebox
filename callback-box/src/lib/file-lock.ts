@@ -90,6 +90,10 @@
  *
  * - `acquireLock(path, metadata)` — non-blocking; throws `LockHeldError` if a
  *   live holder owns it. Stale/crashed holders are reclaimed by proper-lockfile.
+ * - `withFileLock({ lockPath, metadata, waitMs }, fn)` — the blocking-with-a
+ *   -budget wrapper: retry the acquire until `waitMs` of wall time is spent,
+ *   run `fn` under the lock, always release. Throws `LockHeldError` when the
+ *   budget runs out — a loud failure, never a silent unserialized run.
  * - `releaseLock(path)` — idempotent; releases only a lock THIS process holds
  *   (tracked per-path). Releasing one we don't hold is a no-op — it can never
  *   delete a foreign holder's lock.
@@ -332,6 +336,44 @@ export async function releaseLock(lockPath: string): Promise<void> {
   await unlinkIgnoringMissing(lockPath).catch((e: unknown) => {
     console.warn(`[file-lock] failed to remove sidecar ${lockPath} on release:`, e);
   });
+}
+
+/** Poll interval while waiting for a contended lock. */
+const LOCK_RETRY_MS = 100;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Run `fn` while holding `lockPath`, retrying the acquire for up to `waitMs`
+ * before giving up with the contending holder's `LockHeldError`.
+ *
+ * This is the shape most read-modify-write callers want: `acquireLock` alone is
+ * non-blocking, so every such caller was otherwise re-implementing the same
+ * retry loop. The lock is always released, including when `fn` throws.
+ */
+export async function withFileLock<T>(
+  opts: { lockPath: string; metadata: Record<string, unknown>; waitMs: number },
+  fn: () => Promise<T>,
+): Promise<T> {
+  const { lockPath, metadata, waitMs } = opts;
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    try {
+      await acquireLock(lockPath, metadata);
+    } catch (e) {
+      if (!(e instanceof LockHeldError)) throw e;
+      if (Date.now() >= deadline) throw e;
+      await delay(LOCK_RETRY_MS);
+      continue;
+    }
+    try {
+      return await fn();
+    } finally {
+      await releaseLock(lockPath);
+    }
+  }
 }
 
 /**

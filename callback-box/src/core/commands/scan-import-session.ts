@@ -14,6 +14,7 @@ import { randomUUID } from "node:crypto";
 import type { CommandContext } from "../command-runner.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { createFileTemplate } from "../../schemas/file.js";
+import { invariant } from "../../lib/invariant.js";
 import {
   PDF_EXTENSION,
   SUPPORTED_IMAGE_EXTENSIONS,
@@ -81,6 +82,51 @@ export const isImageFile = (p: string): boolean =>
   SUPPORTED_IMAGE_EXTENSIONS.includes(path.extname(p).toLowerCase());
 export const isPdfFile = (p: string): boolean =>
   path.extname(p).toLowerCase() === PDF_EXTENSION;
+
+/** What one scan-import invocation was handed, once resolved and classified. */
+export type ResolvedScanInputs =
+  | { error: string }
+  | { kind: "pdf"; pdfPath: string }
+  | { kind: "images"; imagePaths: string[] };
+
+/**
+ * Resolve input paths against the box root, check they exist, and classify the
+ * batch. Every way a caller can hand scan-import an unusable set of inputs is
+ * decided here, before any session directory is created.
+ */
+export async function resolveScanInputs(
+  boxRoot: string,
+  inputs: string[],
+): Promise<ResolvedScanInputs> {
+  const resolved: string[] = [];
+  for (const f of inputs) {
+    const abs = path.isAbsolute(f) ? f : path.join(boxRoot, f);
+    try {
+      await fs.access(abs);
+    } catch (_e) {
+      // fs.access rejects when the input path is missing/unreadable — that is
+      // precisely the condition we report back. The error adds no detail
+      // beyond the path, so we don't surface it.
+      return { error: `Input file not found: ${abs}` };
+    }
+    resolved.push(abs);
+  }
+
+  const allPdf = resolved.every((f) => isPdfFile(f));
+  const allImage = resolved.every((f) => isImageFile(f));
+  if (!allPdf && !allImage) {
+    return {
+      error: "Mixed file types in one scan-import invocation. PDFs run one-per-session; images can be batched together.",
+    };
+  }
+  if (!allPdf) return { kind: "images", imagePaths: resolved };
+  if (resolved.length > 1) {
+    return { error: "scan-import takes a single PDF at a time (use cb upload for batches)" };
+  }
+  const [pdfPath] = resolved;
+  invariant(pdfPath !== undefined, "resolved has exactly one entry (non-empty inputs, length > 1 handled above)");
+  return { kind: "pdf", pdfPath };
+}
 
 export async function readScanContextFile(boxRoot: string): Promise<string | null> {
   for (const name of ["CLAUDE_SCANS.md", "claude_scans.md"]) {

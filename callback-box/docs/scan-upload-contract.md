@@ -94,6 +94,28 @@ Re-PUT of a `rejected` hash re-runs validation (the retry path after a
 validator fix). Re-PUT of `pending`/`imported` is a no-op `duplicate`. PUT is
 idempotent throughout — retrying any response is safe.
 
+## Server-side lifecycle (why `check` answers change on their own)
+
+Accepted files sit in the box's scan quarantine until the **promote worker**
+(`src/core/scan/promote.ts`) runs — debounced two minutes after the last PUT
+(accepted or rejected), once at box-serve startup, and on a slow GC sweep for
+boxes that stop scanning — under a per-box cross-process lock. A pass
+imports pending files through `cb upload --as scan` (materialized under their
+original filenames, tagged `--source scan-upload/<token-name>`), raises one
+question card per rejection, runs a supervised full `cb wakeup` recorded by a
+durable marker until it succeeds, and garbage-collects quarantine. The GC is
+what makes the answers below stable rather than eventually-empty:
+
+| Entry | When it goes | What `check` says afterwards |
+|---|---|---|
+| imported | next pass, file + sidecar | `imported`, from the upload ledger |
+| rejected, question pending | never | `rejected` + reason |
+| rejected, question resolved | file now; sidecar becomes a tombstone | `rejected` + reason |
+| rejected, resolved 30+ days ago | everything | `unknown` — a re-upload re-validates |
+
+Client consequence: a `rejected` hash can eventually return to `unknown`. That
+is deliberate, and far enough out that re-sending deserves fresh validation.
+
 ## Limits
 
 50 MB per file; 60 requests/min per token; 500 hashes per check call.

@@ -28,11 +28,11 @@ import { gunzipSync } from "node:zlib";
 const schemas = await createCardSchemaMap();
 
 // Seed a box with a text-layer PDF sitting outside it, and run document mode.
-async function importPdf(box, docling) {
+async function importPdf(box, docling, source) {
   const pdfPath = join(box.packageRoot, "incoming.pdf");
   await writeFile(pdfPath, textPdf());
   const { ctx } = createCollectorContext(box.root);
-  return runDocumentMode(ctx, { pdfPath, docling });
+  return runDocumentMode(ctx, { pdfPath, docling, source });
 }
 
 // The session attach dir of the one session this box has.
@@ -148,6 +148,48 @@ sessionCard.includes("- attach/source.document.card")
 
 result.data.intakeJobPath.startsWith("box/jobs/")
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Provenance from the caller lands on both cards
+
+A scan that arrived through the upload route carries the credential that sent
+it. The promote worker passes `scan-upload/<token-name>` down through
+`cb upload --source`, and it ends up on the document card's `source` (replacing
+the generic `scan-import`) and on the session card — so a batch that looks wrong
+identifies the device that produced it.
+
+```ts
+const box = await makeTmpBox({ git: true });
+const result = await importPdf(box, createFakeDocling({ markdown: "billed", pageCount: 1 }), "scan-upload/laptop-scansnap");
+const { rel, content } = await readDocumentCard(box);
+const card = parseCardText(content, { source: rel, schemas });
+card.fields.filename.source
+=> scan-upload/laptop-scansnap
+
+const sessionCard = await box.read(result.data.sessionCardPath);
+sessionCard.includes("source: scan-upload/laptop-scansnap")
+=> true
+```
+
+Without it the document card keeps saying `scan-import` and the session card
+carries no `source` at all — the field means "came from somewhere identifiable",
+so an absent one is the honest answer:
+
+```ts continue
+const plain = await makeTmpBox({ git: true });
+const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed", pageCount: 1 }));
+const plainDoc = await readDocumentCard(plain);
+JSON.stringify([
+  parseCardText(plainDoc.content, { source: plainDoc.rel, schemas }).fields.filename.source,
+  (await plain.read(plainResult.data.sessionCardPath)).includes("source:"),
+])
+=> ["scan-import",false]
+
+await plain.cleanup();
 ```
 
 ```ts cleanup

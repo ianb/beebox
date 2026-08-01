@@ -49,6 +49,14 @@ const ScanQuarantineEntrySchema = z.object({
   /** Ref of the question card raised for a rejection; makes emission idempotent
    *  across repeated promote passes. Written by the promote worker. */
   questionRef: z.string().optional(),
+  /** When the rejection's question card was seen resolved. Set by the promote
+   *  worker's GC, which deletes the stored bytes at that moment and leaves the
+   *  sidecar behind as a TOMBSTONE — no file, just enough state for `/check` to
+   *  keep answering `rejected` — until the 30-day sweep drops it too. So
+   *  `resolvedAt !== undefined` means "the bytes are gone; this is a
+   *  tombstone", and `storedFilename` on such an entry is history, not a path
+   *  that exists. */
+  resolvedAt: z.string().optional(),
 });
 
 export type ScanQuarantineEntry = z.infer<typeof ScanQuarantineEntrySchema>;
@@ -153,7 +161,13 @@ export async function readAllQuarantineEntries(boxRoot: string): Promise<ScanQua
  */
 export async function updateQuarantineState(
   boxRoot: string,
-  opts: { sha256: string; state: ScanQuarantineState; reason?: string; questionRef?: string },
+  opts: {
+    sha256: string;
+    state: ScanQuarantineState;
+    reason?: string;
+    questionRef?: string;
+    resolvedAt?: string;
+  },
 ): Promise<ScanQuarantineEntry | null> {
   const target = sidecarPath(boxRoot, opts.sha256);
   return withCardLock(target, async () => {
@@ -162,7 +176,22 @@ export async function updateQuarantineState(
     const updated: ScanQuarantineEntry = { ...entry, state: opts.state };
     if (opts.reason !== undefined) updated.reason = opts.reason;
     if (opts.questionRef !== undefined) updated.questionRef = opts.questionRef;
+    if (opts.resolvedAt !== undefined) updated.resolvedAt = opts.resolvedAt;
     await writeSidecar(boxRoot, updated);
     return updated;
   });
+}
+
+/** Delete an entry's stored bytes, leaving the sidecar. Used by the GC when a
+ *  rejection's question is resolved: the verdict outlives the file. */
+export async function deleteQuarantineFile(boxRoot: string, entry: ScanQuarantineEntry): Promise<void> {
+  await fs.rm(quarantineFilePath(boxRoot, entry.storedFilename), { force: true });
+}
+
+/** Delete an entry outright — stored bytes and sidecar. After this the hash is
+ *  `unknown` to `/check` again (for an imported entry the upload ledger keeps
+ *  answering `imported`, which is why imported entries can go early). */
+export async function deleteQuarantineEntry(boxRoot: string, entry: ScanQuarantineEntry): Promise<void> {
+  await deleteQuarantineFile(boxRoot, entry);
+  await fs.rm(sidecarPath(boxRoot, entry.sha256), { force: true });
 }

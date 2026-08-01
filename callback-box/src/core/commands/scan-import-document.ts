@@ -35,6 +35,9 @@ export interface RunDocumentModeArgs {
   pdfPath: string;
   /** Injected in tests; production creates the real `uvx docling` wrapper. */
   docling?: DoclingService | undefined;
+  /** Provenance from the caller (`scan-upload/<token-name>`), when the run came
+   *  from somewhere identifiable. Absent → the generic `scan-import`. */
+  source?: string | undefined;
 }
 
 export async function runDocumentMode(
@@ -87,7 +90,7 @@ export async function runDocumentMode(
     status: extraction.ok ? "analyzed" : "new",
     format: "pdf",
     capturedAt: startedAt,
-    source: "scan-import",
+    source: args.source ?? "scan-import",
     filename: SOURCE_PDF_FILENAME,
     originalName: path.basename(args.pdfPath),
     mimeType: "application/pdf",
@@ -123,6 +126,7 @@ export async function runDocumentMode(
     imageRefs: [],
     audioRefs: [],
     fileRefs: [cardFilename],
+    source: args.source,
   });
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
 
