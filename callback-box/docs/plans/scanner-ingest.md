@@ -1,9 +1,13 @@
 # Scanner Ingest
 
 **Status:** implemented on `worktree-scanner-ingest` (all code tracks + e2e
-verified + two cross-model reviews); not yet shipped. Boxholder-gated
-remainder: Docling decisions review (`scanner-ingest-docling-decisions.md`),
-box-readiness draft install (`scratch/box-readiness/`), prod annex cutover
+verified + two cross-model reviews); not yet shipped. Track 6's
+scanner-priors mechanism reshaped 2026-08-01 by the `scan-guide-card.md`
+subplan (scan guide card + deprecated `CLAUDE_SCANS.md` fallback).
+Boxholder-gated remainder: Docling decisions review
+(`scanner-ingest-docling-decisions.md`), box-readiness draft install
+(`scratch/box-readiness/`, now guide-card form), test1 scan-guide migration
+(runbook in `scan-guide-card.md`), prod annex cutover
 (`docs/server-operations.md` runbook), merge to main.
 
 A pipeline from a ScanSnap desktop scanner to triage-ready cards in a hosted
@@ -69,10 +73,12 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   `createOrAppendIntakeJob` (`src/connectors/intake-utils.ts:36-38`: *"Create
   a new intake job or append items to an existing pending one from the same
   source."*). **Reused**; Track 4 replaces only the document-mode internals.
-- **Per-box scan priors** — `src/core/commands/scan-import-session.ts:47-49`:
-  `readScanContextFile` reads `CLAUDE_SCANS.md` from the box root into the
-  per-page analysis prompt. **Reused**; Track 6 authors the files for the two
-  boxes (test1's is the template).
+- **Per-box scan priors** — now `config/scan.guide.card`, compiled in-memory
+  into the per-page analysis prompt (`resolveScanGuideContext`,
+  `src/core/commands/scan-guide-context.ts`); `CLAUDE_SCANS.md` remains a
+  deprecated, warning-logged fallback. Reshaped by the `scan-guide-card.md`
+  subplan (2026-08-01); Track 6 authors the guide-card drafts for the two
+  boxes.
 - **Bearer-token auth that traverses the hub** — the mobile device-token
   store, `src/core/mobile/pairing.ts:9`:
   `.callback-box/mobile-devices.secret.json`, with hashed tokens, pairing
@@ -509,21 +515,32 @@ Tracks 1–3 live on prod.
 
 ### Track 6 — Box readiness
 
-- **What:** Per-box content, no engine code: `CLAUDE_SCANS.md` for the family
-  and estate boxes (test1's is the template; injected via
-  `readScanContextFile`, `scan-import-session.ts:47-49`); triage landmark
-  destination cards in the estate box matching its existing
+*(Reshaped 2026-08-01 by the `scan-guide-card.md` subplan: scanner priors
+are now a guide card, not a bespoke file.)*
+
+- **What:** Scanner priors live in `config/scan.guide.card` (the guide
+  system's evidence model: confidence/source-tagged beliefs, compiled
+  in-memory into the vision prompt by `resolveScanGuideContext`,
+  `src/core/commands/scan-guide-context.ts`); `CLAUDE_SCANS.md` is a
+  deprecated, warning-logged fallback. Per-box content: `scan.guide.card`
+  drafts for the family and estate boxes (`scratch/box-readiness/`); triage
+  landmark destination cards in the estate box matching its existing
   `store/documents/README.md` taxonomy (`property/ financial/ legal/
-  personal/`) — categories are landmark cards discovered by glob, so this is
-  content, not code.
+  personal/`) — categories are landmark cards discovered by glob, so that
+  part stays content, not code.
 - **Why:** without priors the photo flow misreads names/dates; without
   landmark destinations, triage has no scanned-document categories to route
-  to. The estate `bill` schema's `sources[]` field already provides the
-  provenance link from a filed bill back to its scanned source card; no
-  schema change needed.
-- **First implementation chunk:** the two `CLAUDE_SCANS.md` files, written
-  with the boxholder (they contain personal names by design — per-box config
-  is the sanctioned home for those).
+  to. And a *flat* priors file is actively dangerous: the
+  `scratch/model-comparison/` experiment showed the model deferring to an
+  unconfirmed machine transcription recorded in the draft file over its own
+  better reading — the guide card's confidence tagging keeps
+  hypothesis-level beliefs out of the compiled prompt entirely. The estate
+  `bill` schema's `sources[]` field already provides the provenance link
+  from a filed bill back to its scanned source card; no schema change
+  needed.
+- **Design and migration:** `docs/plans/scan-guide-card.md` (subplan) —
+  seed template, extraction-side swap, question `learning:` hook, and the
+  test1 migration runbook.
 
 ## Subplans
 
@@ -582,11 +599,13 @@ scan job) removes the need rather than deferring a design.
   **ADDRESSED** by the standard card-validation hooks (schema validation on
   commit); nothing scan-specific needed.
 - **Fabricated free-form value** — the photo flow inventing names is the
-  known risk; `CLAUDE_SCANS.md` explicitly instructs disambiguation-only, and
-  Track 6 copies that instruction into both new files. **ADDRESSED** (test1
-  precedent). The document path has no generative step at intake
-  (`description` stays empty, filled downstream — pdf-intake's decision,
-  kept).
+  known risk; the scan guide seed's default triage rule instructs
+  disambiguation-only (as `buildScanPrompt`'s guardrail also does), and both
+  Track 6 guide-card drafts carry the same rule; hypothesis-confidence
+  beliefs are stripped from the compiled prompt so unconfirmed readings
+  can't feed back in. **ADDRESSED** (`scan-guide-card.md` subplan). The
+  document path has no generative step at intake (`description` stays
+  empty, filled downstream — pdf-intake's decision, kept).
 - **Validation error UX** — rejection reasons are written for the question
   card the boxholder reads (e.g. "the magic bytes match no known file type,
   but the filename claims .pdf" — `file-type` sniffs binary formats, so a
@@ -655,7 +674,7 @@ New agent-facing concepts and their audit posture
   from CLAUDE.md/schema instructions without re-reading source.
 - **Scan provenance (`source: scan-upload/<device>`)** — one `knows_directly`
   entry: the agent processing an intake job can say where a scanned session
-  came from and what `CLAUDE_SCANS.md` is for.
+  came from and what the scan guide (`config/scan.guide.card`) is for.
 - **The wire contract itself** — skip, with rationale: purely infrastructural;
   no box agent ever constructs an upload request. The breadcrumb comments and
   contract doc serve the maintainer agent, which reads code, not recall.
@@ -682,7 +701,8 @@ New agent-facing concepts and their audit posture
 6. **Track 5** — `scan-uploader` package (chunk 1: walk/settle/hash/check;
    chunk 2: PUT + dispositions + wrapper script), plus ScanSnap profile
    setup notes in the contract doc's companion section.
-7. **Track 6** — `CLAUDE_SCANS.md` × 2 + estate landmark destinations.
+7. **Track 6** — `scan.guide.card` drafts × 2 + estate landmark
+   destinations (engine-side swap in the `scan-guide-card.md` subplan).
 8. **End-to-end verification** — a real scan session through each box:
    document PDF → `document.card` in inbox → triaged; photo batch →
    photo flow → triaged. Knowledge audits run.

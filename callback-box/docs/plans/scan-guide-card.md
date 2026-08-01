@@ -204,12 +204,26 @@ accrete as beliefs.
    preserved verbatim inside rule/note text (field content also survives
    reserialization). Only the top-of-file provenance block becomes a YAML
    `#` comment — review-time only, and the README already instructs
-   stripping it at install time. Boxholder-authored priors get
-   `source: user-stated`; `[VERIFY]`-marked entries get
-   `confidence: low` (still compiled — only `hypothesis` is stripped,
-   `guide-compile.tsx:27-29`). README install table updated (target
-   `config/scan.guide.card` in each box). Drafts are NOT installed into
-   real boxes.
+   stripping it at install time. Evidence model in the drafts: all entries
+   are agent-drafted from box records, so they carry `source: inferred`
+   capped at `confidence: medium` (the inferred ceiling); the boxholder
+   flips confirmed entries to `user-stated` at review. `[VERIFY]`-marked
+   entries get `confidence: low` (still compiled — only `hypothesis` is
+   stripped, `guide-compile.tsx:27-29`). Entries derived from UNANSWERED
+   question cards — the estate draft's unresolved back-of-photo names —
+   get `confidence: hypothesis`, so they stay in the card for the learning
+   loop but never enter the compiled vision prompt. This is the concrete
+   case for the whole migration: the `scratch/model-comparison/` experiment
+   showed a model deferring to the flat priors file's unconfirmed
+   "Kris Lobent" transcription over its own better reading — a flat priors
+   file that records unconfirmed machine output as fact actively corrupts
+   later disambiguation; the guide's confidence/source tagging is what
+   prevents it. The boxholder has since adjudicated that name as
+   "Kris Lobert", which the estate draft now records as
+   `source: user-stated` / `confidence: confirmed` (noting the prior wrong
+   machine guesses "Lobent"/"Robert") — the first belief to graduate
+   through exactly the ladder the guide exists for. README install table updated (target `config/scan.guide.card` in
+   each box). Drafts are NOT installed into real boxes.
 
 **Vocabulary lock-ins:** the guide name is `scan` (file
 `config/scan.guide.card`, compiled `docs/generated/scan-guide.md`); the
