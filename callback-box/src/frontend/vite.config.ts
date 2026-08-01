@@ -2,6 +2,7 @@ import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
+import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin";
 
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
 const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
@@ -22,6 +23,12 @@ const REACT_COMPILER = process.env.REACT_COMPILER !== "0";
 
 const VITE_BASE = process.env.VITE_BASE || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
+
+// Repeatable production bundle composition analysis, run via
+// `pnpm analyze:bundle` (src/dev/analyze-bundle.ts), which sets this env var
+// before shelling out to `vite build`. Absent/unset on every ordinary build
+// (dev server and plain `pnpm build`), so the plugin never runs by default.
+const ANALYZE_BUNDLE = process.env.CB_ANALYZE_BUNDLE === "1";
 
 // Dev CSP (Report-Only). Vite serves the dev HTML, so the dev policy is set
 // here rather than by Fastify. The report path must carry the base prefix so the
@@ -61,6 +68,7 @@ export default defineConfig({
         ? { babel: { plugins: [["babel-plugin-react-compiler", { target: "18" }]] } }
         : undefined,
     ),
+    ...(ANALYZE_BUNDLE ? [bundleAnalysisPlugin()] : []),
   ],
   resolve: {
     // Mirror ONLY the `@shared/*` path alias from tsconfig.json so Vite

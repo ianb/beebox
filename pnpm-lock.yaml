@@ -387,6 +387,9 @@ importers:
       xstate:
         specifier: ^5.28.0
         version: 5.31.1
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@ianbicking/personal-vibe-check':
         specifier: workspace:*
@@ -436,9 +439,15 @@ importers:
       postcss:
         specifier: ^8.5.0
         version: 8.5.15
+      rollup:
+        specifier: ^4.20.0
+        version: 4.60.4
       tailwindcss:
         specifier: ^3.4.0
         version: 3.4.19(tsx@4.22.3)(yaml@2.9.0)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.22.3
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
