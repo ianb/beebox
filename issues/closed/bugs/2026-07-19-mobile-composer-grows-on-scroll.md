@@ -3,8 +3,17 @@ title: "Mobile: the chat input area grows while scrolling after opening recent f
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it on mobile
-needs: [manual-testing]
+resolution: implemented
 ---
+
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** Fix landed in
+`5b07cf0a`: `useVisualViewportHeight` now pins `--app-height` only while the
+keyboard is actually up (`innerHeight - vv.height > 150px`) and otherwise defers
+to CSS `100dvh`, and the two header menus lost their full-screen `fixed inset-0`
+backdrops. Boxholder confirms on a real phone the composer holds its size while
+scrolling the recent-files / landmark panels. (Other composer quirks may remain,
+but this growth-on-scroll one is gone.) Reopen only if the composer resumes
+growing on scroll.
 
 On mobile, open the **recent files** panel or the **landmark cards** menu in
 chat, then scroll — the composer/input area grows as you scroll, in the worst
