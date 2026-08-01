@@ -1,7 +1,14 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { cn } from "../../lib/cn";
+
+// The "first focusable menu item" the open/close focus management below
+// looks for. Deliberately broader than `[role="menuitem"]`: several existing
+// menus nest plain focusable controls (e.g. `RecentFilesButton`'s per-row
+// preview/panel buttons, `LandmarkLinksButton`'s group-expand toggles) that
+// aren't `MenuItem`s themselves but are still real, reachable menu content.
+const FOCUSABLE_MENU_ITEM_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface DropdownContextValue {
   close: () => void;
@@ -22,7 +29,13 @@ export type DropdownVertical = "below" | "above";
 
 export interface DropdownTriggerProps {
   open: boolean;
-  toggle: () => void;
+  /**
+   * Wire into your trigger element's `onClick` (pass the reference directly,
+   * e.g. `onClick={toggle}`) — the click event is used to detect a
+   * keyboard-activated open (`event.detail === 0`) and to record the trigger
+   * element for focus restoration on close.
+   */
+  toggle: (event?: ReactMouseEvent<HTMLElement>) => void;
   /** Props to spread on your trigger element for correct ARIA. */
   ariaProps: { "aria-haspopup": "menu"; "aria-expanded": boolean };
 }
@@ -59,15 +72,61 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
   const menuRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; });
-  // Fire onClose on the open→closed transition.
+
+  // Minimal focus management (full arrow-key roving focus is out of scope):
+  // remember the element that opened the menu so close can restore focus to
+  // it, whether the open was via keyboard (focus the first item) or mouse
+  // (leave focus alone, no visible focus ring).
+  const triggerElRef = useRef<HTMLElement | null>(null);
+  const keyboardOpenRef = useRef(false);
+  const restoreFocusRef = useRef(false);
+
+  // Fire onClose + restore focus on the open→closed transition.
   const prevOpenRef = useRef(open);
   useEffect(() => {
     if (prevOpenRef.current && !open) {
       const cb = onCloseRef.current;
       if (cb) cb();
+      if (restoreFocusRef.current) triggerElRef.current?.focus();
+      restoreFocusRef.current = false;
     }
     prevOpenRef.current = open;
   }, [open]);
+
+  // Focus the first menu item when the menu opens via a keyboard activation
+  // of the trigger (a keyboard-activated click has `event.detail === 0`).
+  // Mouse opens leave focus untouched so no focus ring appears. Some menus
+  // (e.g. `SessionListButton`) mount a loading row before their real content,
+  // so a plain post-mount check can miss the first item entirely — a
+  // one-shot MutationObserver picks it up whenever it actually appears.
+  useEffect(() => {
+    if (!open || !keyboardOpenRef.current) return;
+    const menu = menuRef.current;
+    if (menu === null) return;
+    const focusFirst = (): boolean => {
+      const first = menu.querySelector<HTMLElement>(FOCUSABLE_MENU_ITEM_SELECTOR);
+      if (first === null) return false;
+      first.focus();
+      return true;
+    };
+    if (focusFirst()) return;
+    const observer = new MutationObserver(() => {
+      if (focusFirst()) observer.disconnect();
+    });
+    observer.observe(menu, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [open]);
+
+  // Closes the menu, first recording whether focus should be restored to the
+  // trigger: only when focus is currently inside the menu. A click-outside
+  // that leaves focus elsewhere (e.g. the user tabbed to or clicked another
+  // control before dismissing the menu) does not yank focus back.
+  const closeMenu = useCallback(() => {
+    const active = document.activeElement;
+    const menu = menuRef.current;
+    restoreFocusRef.current = menu !== null && active !== null && menu.contains(active);
+    setOpen(false);
+  }, []);
 
   // The menu is portaled to document.body so it escapes any `overflow-hidden`
   // / clipping ancestor (e.g. chat message bubbles). Because it's no longer in
@@ -125,10 +184,10 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       const target = e.target;
       const inRoot = rootRef.current !== null && rootRef.current.contains(target);
       const inMenu = menuRef.current !== null && menuRef.current.contains(target);
-      if (!inRoot && !inMenu) setOpen(false);
+      if (!inRoot && !inMenu) closeMenu();
     }
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closeMenu();
     }
     document.addEventListener("mousedown", handlePointer);
     document.addEventListener("keydown", handleKey);
@@ -136,12 +195,24 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       document.removeEventListener("mousedown", handlePointer);
       document.removeEventListener("keydown", handleKey);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
-  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: () => setOpen(false), dense }), [dense]);
+  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: closeMenu, dense }), [closeMenu, dense]);
+  const toggle = useCallback(
+    (event?: ReactMouseEvent<HTMLElement>) => {
+      setOpen((o) => {
+        if (!o) {
+          keyboardOpenRef.current = event !== undefined && event.detail === 0;
+          if (event) triggerElRef.current = event.currentTarget;
+        }
+        return !o;
+      });
+    },
+    [],
+  );
   const triggerProps: DropdownTriggerProps = {
     open,
-    toggle: () => setOpen((o) => !o),
+    toggle,
     ariaProps: { "aria-haspopup": "menu", "aria-expanded": open },
   };
 
