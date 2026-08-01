@@ -66,7 +66,7 @@ is the thing that would be lost. Relevant neighbours:
 
 - [local password auth](2026-07-16-local-password-auth-default-on.md)
   (shipped) changed what `isAuthEnabled()` means.
-- [per-box lock](../../features/2026-07-19-per-box-lock-native-auth.md) is a third axis again
+- [per-box lock](2026-07-19-per-box-lock-native-auth.md) is a third axis again
   (may this client open *this* box).
 
 Three separate questions — is the box reachable, is the client authenticated, may

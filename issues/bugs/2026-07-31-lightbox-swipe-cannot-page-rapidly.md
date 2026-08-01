@@ -3,7 +3,6 @@ title: "Lightbox: can't page rapidly — each swipe must fully land before the n
 area: callback-box
 filed-by: agent
 discovered-in: boxholder, using the new swipe nav on a real device right after it shipped
-needs: [manual-testing]
 ---
 
 Swiping through a set of images one after another doesn't work. After a

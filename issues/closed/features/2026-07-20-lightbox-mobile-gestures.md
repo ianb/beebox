@@ -3,9 +3,18 @@ title: "Lightbox mobile gestures: double-tap to zoom + pan, swipe up/down to clo
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked for it after using the lightbox on a phone
-needs: [manual-testing]
+resolution: implemented
 design: ../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md
 ---
+
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** Double-tap zoom + pan,
+pinch, and swipe-to-dismiss landed (`c326d4a5` + `299297e5`, design in
+[`lightbox-mobile-gestures.md`](../../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md)),
+mode-aware so a vertical drag dismisses at fit and pans when zoomed. Boxholder
+confirms the gestures on a real device. A separate follow-up bug on rapid paging
+stays open:
+[lightbox-swipe-cannot-page-rapidly](../../bugs/2026-07-31-lightbox-swipe-cannot-page-rapidly.md).
+Reopen only if the core gestures regress.
 
 Two mobile gestures wanted in the image lightbox
 (`src/frontend/src/components/ImageLightbox.tsx`):
