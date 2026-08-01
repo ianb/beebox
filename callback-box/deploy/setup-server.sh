@@ -327,6 +327,15 @@ server {
     location / {
         proxy_pass http://127.0.0.1:3210;
         proxy_http_version 1.1;
+        # The tRPC client uses httpBatchStreamLink: the server writes each
+        # procedure's result as a JSONL line the moment it resolves, so a fast
+        # query renders without waiting for a slow batch-mate. nginx buffers
+        # proxied responses by default, which would re-couple the batch by
+        # holding every line until the response completed. There is only this
+        # one location (everything is proxied to the hub), so the whole app
+        # opts out; responses here are dynamic API/HTML, never large static
+        # files where buffering would earn its keep.
+        proxy_buffering off;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
