@@ -23,6 +23,7 @@ import { viewsRouter } from "./routers/views.js";
 import { clerkRouter } from "./routers/clerk.js";
 import { pairingRouter } from "./routers/pairing.js";
 import { captureRouter } from "./routers/capture.js";
+import { scanTokensRouter } from "./routers/scan-tokens.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -49,6 +50,7 @@ export const appRouter = router({
   clerk: clerkRouter,
   pairing: pairingRouter,
   capture: captureRouter,
+  scanTokens: scanTokensRouter,
 });
 
 export type AppRouter = typeof appRouter;
