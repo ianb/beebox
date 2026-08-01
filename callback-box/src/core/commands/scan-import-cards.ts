@@ -29,6 +29,7 @@ import { type CardSchema } from "../../cards/index.js";
 import { getBoxDir } from "../../lib/paths.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createTextQuestionTemplate } from "../../schemas/question.js";
+import { SCAN_GUIDE_REL_PATH } from "./scan-guide-context.js";
 import type { PhotoBundle, OrphanBack, ResolvedPage } from "./scan-import-helpers.js";
 
 /** Ensure `box/questions/` exists and return its absolute path. */
@@ -132,6 +133,15 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
       directive: directiveParts.join(" "),
       askedAt: startedAt,
       context: [{ ref: `${sessionAttachRelDir}/${cardFilename}` }],
+      // Identification ambiguities are where durable scanner priors surface;
+      // one-off dispositions (orphan-back/unsure questions) deliberately
+      // carry no learning: — see docs/plans/scan-guide-card.md.
+      learning: {
+        sink: "guide",
+        ref: SCAN_GUIDE_REL_PATH,
+        proposal:
+          "If the answer settles a DURABLE identification or pattern (a recurring person, place, vendor, or handwriting convention — not a one-off fix to this photo), record it as a triage-rule belief in the scan guide, creating the guide first via `cb create guide --name scan` if it does not exist. Skip recording for one-off corrections.",
+      },
     });
     const questionFilename = `${sessionSlug(sessionAttachRelDir)}-${photoBasename}.review.question.card`;
     const questionPath = path.join(await questionsDir(boxRoot), questionFilename);
