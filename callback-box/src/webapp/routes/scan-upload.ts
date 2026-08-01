@@ -187,6 +187,12 @@ async function handlePut(opts: {
   if (existing !== null && existing.storedFilename !== storedFilename) {
     await fs.rm(quarantineFilePath(boxRoot, existing.storedFilename), { force: true });
   }
+  // Durability of the accept path: the bytes were fsynced by `hashStreamToFile`
+  // before this rename, and `recordQuarantineEntry` fsyncs the sidecar before we
+  // answer. ACCEPTED RESIDUAL: neither rename's *directory entry* is fsynced, so
+  // a power cut in that window can still lose an `accepted` file — the client's
+  // archive/Trash copy covers it, and per-upload directory fsyncs are not worth
+  // their cost here.
   await fs.rename(tempPath, quarantineFilePath(boxRoot, storedFilename));
   // Untrusted client prose that ends up on a card: capped where it enters.
   const profile = header(request, "x-scan-profile")?.slice(0, MAX_PROFILE_LENGTH);

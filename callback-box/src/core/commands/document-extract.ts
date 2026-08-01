@@ -17,7 +17,7 @@ import * as path from "node:path";
 import { gzip } from "node:zlib";
 import { promisify } from "node:util";
 import Sharp from "sharp";
-import type { DoclingImage, DoclingService } from "../../services/docling.js";
+import { checkExtractionBounds, type DoclingImage, type DoclingService } from "../../services/docling.js";
 import { err, ok, type Result } from "../../lib/result.js";
 
 const gzipAsync = promisify(gzip);
@@ -106,6 +106,12 @@ export async function extractDocument(options: ExtractDocumentOptions): Promise<
     languages: options.languages,
   });
   if (!extraction.ok) return err(extraction.error);
+  // Bound the output BEFORE anything reads it: the gzip and the AVIF re-encode
+  // below are per-artifact work on whatever Docling decided to produce (D16).
+  // Over the cap is an extraction failure, which the caller already handles by
+  // filing the original bytes with `status: new` — intake never blocks.
+  const bounded = await checkExtractionBounds(extraction.value);
+  if (!bounded.ok) return err(bounded.error);
   const { markdown, jsonPath, pageImages, figures, pageCount, version } = extraction.value;
 
   const assetNames: string[] = [];

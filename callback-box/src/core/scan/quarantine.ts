@@ -84,11 +84,25 @@ function sidecarPath(boxRoot: string, sha256: string): string {
 }
 
 /** Write a sidecar atomically (temp + rename) so a crash mid-write can never
- *  leave a half-written state machine behind. */
+ *  leave a half-written state machine behind.
+ *
+ *  The temp file is fsynced before the rename: the sidecar is the recovery
+ *  source of truth, and the PUT route answers `accepted` — which is the
+ *  client's cue to delete its own copy — the moment this returns. An entry that
+ *  survives only in the page cache would make that answer a lie after a power
+ *  cut. ACCEPTED RESIDUAL: the quarantine directory's own entry is not fsynced,
+ *  so the rename itself can still be lost in that window (the client's
+ *  archive/Trash copy is the backstop). */
 async function writeSidecar(boxRoot: string, entry: ScanQuarantineEntry): Promise<void> {
   const target = sidecarPath(boxRoot, entry.sha256);
   const tmp = `${target}.tmp-${process.pid}-${crypto.randomUUID()}`;
-  await fs.writeFile(tmp, `${JSON.stringify(entry, null, 2)}\n`);
+  const handle = await fs.open(tmp, "w");
+  try {
+    await handle.writeFile(`${JSON.stringify(entry, null, 2)}\n`);
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
   await fs.rename(tmp, target);
 }
 

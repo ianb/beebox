@@ -22,8 +22,9 @@ Every request: `Authorization: Bearer <scan-token>`.
 Scan tokens are per-box credentials minted by the boxholder (`scanTokens`
 tRPC procedures), stored hashed in `.callback-box/scan-tokens.secret.json`.
 They authorize **only** the two routes below — verified independently by the
-hub (which also requires the path to match `/<slug>/api/scan/…`) and by the
-box child. They are not mobile device tokens; they cannot mint session
+hub (which also requires the path to be exactly one of those two routes under
+`/<slug>/`, hash form included; nothing else in the `/api/scan/` subtree is
+reachable with a scan token) and by the box child. They are not mobile device tokens; they cannot mint session
 cookies, open WebSockets, or reach any other surface. A full owner identity
 (browser session) is also accepted on these routes.
 

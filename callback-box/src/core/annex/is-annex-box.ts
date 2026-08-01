@@ -8,7 +8,9 @@
  * *gate* — something consulted at route registration and at the top of every
  * scan promote pass, on a box that may not have git-annex installed at all.
  * So this module answers from the filesystem: `git annex init` creates
- * `.git/annex/`, and nothing else does.
+ * `annex/` inside the repository's git directory, and nothing else does. (That
+ * git directory is `<root>/.git` for an ordinary clone, and somewhere else
+ * entirely for a linked worktree or submodule — see {@link gitDirsOf}.)
  *
  * ## Two conditions, not one
  *
@@ -35,28 +37,81 @@ import { getBoxShape } from "../../lib/box-shape.js";
 import { isAssetIgnoreRule } from "../commands/attachments-gitignore.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
+/** Read a `gitdir:`/`commondir` pointer file, or null when it isn't there or
+ *  doesn't carry a path. Both are plain one-line text files git writes. */
+async function readPointer(filePath: string, prefix: string): Promise<string | null> {
+  let text: string;
+  try {
+    text = await fs.readFile(filePath, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT" || errnoCode(e) === "EISDIR") return null;
+    throw e;
+  }
+  const line = text.split("\n")[0]?.trim();
+  if (line === undefined || line === "") return null;
+  if (prefix === "") return line;
+  if (!line.startsWith(prefix)) return null;
+  const value = line.slice(prefix.length).trim();
+  return value === "" ? null : value;
+}
+
+/**
+ * Where a repository's git directory (or directories) live, as absolute paths.
+ *
+ * Usually one: `<repoRoot>/.git`. A **linked worktree** or a submodule has a
+ * `.git` FILE holding `gitdir: <path>` instead, and a linked worktree's own git
+ * dir is per-worktree — git-annex's `annex/` lives under the COMMON dir, named
+ * by a `commondir` file beside it. Both are checked, because a box clone made
+ * as a linked worktree is a real annex box and treating it as un-annexed would
+ * make `cb init` de-annex it.
+ *
+ * Cheap filesystem reads only — no `git rev-parse` subprocess, since this is a
+ * gate consulted at route registration and on every promote pass.
+ */
+async function gitDirsOf(repoRoot: string): Promise<string[]> {
+  const dotGit = path.join(repoRoot, ".git");
+  let stat;
+  try {
+    stat = await fs.stat(dotGit);
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT" || errnoCode(e) === "ENOTDIR") return [];
+    throw e;
+  }
+  if (stat.isDirectory()) return [dotGit];
+  if (!stat.isFile()) return [];
+
+  const pointer = await readPointer(dotGit, "gitdir:");
+  if (pointer === null) return [];
+  const gitDir = path.resolve(repoRoot, pointer);
+  const common = await readPointer(path.join(gitDir, "commondir"), "");
+  return common === null ? [gitDir] : [gitDir, path.resolve(gitDir, common)];
+}
+
 /**
  * Has `git annex init` run in this repository?
  *
- * Tests for `.git/annex/`, the directory git-annex creates on init and keeps
- * for the life of the repository (objects, journal, location log). Repo-level
- * and independent of the box's `.gitignore`, which is what makes it safe for
- * `cb init` to branch on: the file `cb init` writes can never change the
- * answer, so the decision cannot oscillate.
+ * Tests for `<gitdir>/annex/`, the directory git-annex creates on init and
+ * keeps for the life of the repository (objects, journal, location log).
+ * Repo-level and independent of the box's `.gitignore`, which is what makes it
+ * safe for `cb init` to branch on: the file `cb init` writes can never change
+ * the answer, so the decision cannot oscillate.
  *
  * @param repoRoot - The git repository root (the package root for a v2 box)
  */
 export async function isAnnexInitialized(repoRoot: string): Promise<boolean> {
-  try {
-    const stat = await fs.stat(path.join(repoRoot, ".git", "annex"));
-    return stat.isDirectory();
-  } catch (e) {
-    // ENOENT is the normal "not on annex" answer. ENOTDIR means `.git` is a
-    // file (a linked worktree or submodule), which is likewise not a box we
-    // can call annex-shaped from here.
-    if (errnoCode(e) === "ENOENT" || errnoCode(e) === "ENOTDIR") return false;
-    throw e;
+  for (const gitDir of await gitDirsOf(repoRoot)) {
+    try {
+      const stat = await fs.stat(path.join(gitDir, "annex"));
+      if (stat.isDirectory()) return true;
+    } catch (e) {
+      // ENOENT/ENOTDIR are the normal "not on annex" answers for this candidate;
+      // a linked worktree's own git dir legitimately has no `annex/` (the common
+      // dir does), so keep looking rather than concluding anything here.
+      if (errnoCode(e) === "ENOENT" || errnoCode(e) === "ENOTDIR") continue;
+      throw e;
+    }
   }
+  return false;
 }
 
 /** Does the box `.gitignore` still ignore asset binaries (the manifest scheme)? */

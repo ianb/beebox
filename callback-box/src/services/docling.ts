@@ -18,7 +18,7 @@
 import { execa } from "execa";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { err, ok, type Result } from "../lib/result.js";
+import { err, ok, okVoid, type Result } from "../lib/result.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
 
@@ -45,6 +45,29 @@ const PROCESS_TIMEOUT_MS = 15 * 60 * 1000;
 
 /** How much subprocess output travels into a failure message (which lands in a card's `error:`). */
 const ERROR_DETAIL_LIMIT = 400;
+
+/**
+ * How much subprocess output we hold at once. Docling's output is only ever
+ * read to build the failure message above, so everything past the tail is
+ * discarded as it streams rather than buffered — a chatty run (a per-page
+ * warning on a long document, a stack trace loop) must not grow the box's
+ * server process by however much it decided to print.
+ */
+const OUTPUT_TAIL_BYTES = 64 * 1024;
+
+/**
+ * Bounds on what one extraction may hand back (D16). Docling controls how many
+ * artifacts it writes and how big they are; everything past this point reads
+ * them into memory and re-encodes them, so a pathological document (or a
+ * Docling bug) would otherwise be unbounded work on the box's server process.
+ *
+ * Both numbers are sized to scanner reality, where a 200-page scan is already
+ * huge — exceeding either means something is wrong, not that a document is
+ * merely large, so the honest answer is an extraction failure (the caller falls
+ * back to `status: new` + `error:` and intake still completes).
+ */
+export const MAX_EXTRACTION_ARTIFACTS = 500;
+export const MAX_EXTRACTION_BYTES = 1024 ** 3;
 
 export interface DoclingExtractOptions {
   /** Scratch directory Docling writes into. Caller owns creation and cleanup. */
@@ -194,6 +217,47 @@ async function collectOutputs(workDir: string): Promise<Result<CollectedOutputs>
   });
 }
 
+/**
+ * Is this extraction within the D16 bounds? Checked against the artifacts on
+ * disk (not a self-report), so it holds for any {@link DoclingService} — the
+ * real one, the fake, or a future replacement.
+ *
+ * Byte accounting includes the canonical JSON: it too is read whole into memory
+ * before it is gzipped into the card.
+ */
+export async function checkExtractionBounds(extraction: DoclingExtraction): Promise<Result<void>> {
+  const images = [...extraction.pageImages, ...extraction.figures];
+  if (images.length > MAX_EXTRACTION_ARTIFACTS) {
+    return err(
+      `Docling produced ${String(images.length)} page/figure artifacts, over the limit of ${String(MAX_EXTRACTION_ARTIFACTS)}`
+    );
+  }
+  let total = 0;
+  for (const filePath of [extraction.jsonPath, ...images.map((image) => image.filePath)]) {
+    total += (await fs.stat(filePath)).size;
+    if (total > MAX_EXTRACTION_BYTES) {
+      return err(
+        `Docling produced more than ${String(MAX_EXTRACTION_BYTES)} bytes of artifacts, over the extraction limit`
+      );
+    }
+  }
+  return okVoid;
+}
+
+/**
+ * Consume a subprocess output stream, keeping only its last
+ * {@link OUTPUT_TAIL_BYTES}. The stream must be consumed either way (an
+ * unconsumed pipe stalls the subprocess); this is what makes consuming it cheap.
+ */
+async function captureTail(stream: AsyncIterable<unknown> | undefined): Promise<string> {
+  if (stream === undefined) return "";
+  let tail = "";
+  for await (const chunk of stream) {
+    tail = (tail + String(chunk)).slice(-OUTPUT_TAIL_BYTES);
+  }
+  return tail;
+}
+
 export function createDoclingService(): DoclingService {
   return {
     async extract(sourcePath, options): Promise<Result<DoclingExtraction>> {
@@ -205,18 +269,23 @@ export function createDoclingService(): DoclingService {
         onTimeout: () => controller.abort(),
       });
       try {
-        const result = await execa("uvx", doclingArgs(sourcePath, options), {
+        const subprocess = execa("uvx", doclingArgs(sourcePath, options), {
           cancelSignal: controller.signal,
           reject: false,
           // Docling prints model-loading progress on stderr even under -q.
           all: true,
+          // We read the output only to build a failure message, so stream it
+          // through `captureTail` instead of letting execa buffer all of it.
+          buffer: false,
         });
+        const outputTail = captureTail(subprocess.all);
+        const result = await subprocess;
+        const output = await outputTail;
         if (controller.signal.aborted) {
           return err(`Docling did not finish within ${PROCESS_TIMEOUT_MS / 60_000} minutes and was stopped`);
         }
         if (result.exitCode !== 0) {
-          const detail = condense(result.all);
-          return err(`Docling exited ${String(result.exitCode)}: ${detail}`);
+          return err(`Docling exited ${String(result.exitCode)}: ${condense(output)}`);
         }
         const collected = await collectOutputs(options.workDir);
         if (!collected.ok) return collected;

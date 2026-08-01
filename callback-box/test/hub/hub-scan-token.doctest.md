@@ -80,12 +80,25 @@ JSON.stringify({
 => {"status":200,"url":"/test1/api/scan/check","forwarded":true,"email":null,"secret":null}
 ```
 
-The whole `/api/scan/` subtree is covered, not just the one path.
+The PUT path is covered too — with the hash in its contract form (64 lowercase
+hex).
 
 ```ts continue
-const put = await fetch(`${hubBase}/test1/api/scan/files/abc123`, { method: "PUT", headers: scanAuth, body: "x" });
+const hash = "a".repeat(64);
+const put = await fetch(`${hubBase}/test1/api/scan/files/${hash}`, { method: "PUT", headers: scanAuth, body: "x" });
 put.status
 => 200
+```
+
+Only those two shapes. The gate is not the `/api/scan/` subtree: a third route
+under it, a subpath below a legal one, a trailing slash, and a malformed hash
+are all just other protected surfaces, 401'd without waking the box.
+
+```ts continue
+const nonScan = ["/test1/api/scan/other", "/test1/api/scan", "/test1/api/scan/", "/test1/api/scan/check/", "/test1/api/scan/check/extra", `/test1/api/scan/files/${hash}/extra`, "/test1/api/scan/files/NOTAHASH", `/test1/api/scan/files/${"A".repeat(64)}`];
+const others = await Promise.all(nonScan.map((p) => fetch(`${hubBase}${p}`, { method: "POST", headers: scanAuth })));
+others.map((res) => res.status).join(" ")
+=> 401 401 401 401 401 401 401 401
 ```
 
 ## The same token on any other path is 401'd at the hub

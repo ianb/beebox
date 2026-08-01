@@ -17,14 +17,25 @@ import type http from "node:http";
 import { resolveScanRequestAuth } from "../core/scan/tokens.js";
 
 /**
- * Is this the scan upload surface of the box that owns `slug`? The hub does no
- * prefix stripping, so a box's `/api/scan/…` routes live at `/<slug>/api/scan/…`.
+ * The two paths the contract defines, and nothing else — not the `/api/scan/`
+ * subtree, not a trailing-slash variant, not a subpath below either. A scan
+ * token's whole point is that it reaches exactly the surface it was minted for,
+ * so anything the contract does not name is somebody else's protected route.
+ * The hash is matched in its documented form (64 lowercase hex); a malformed one
+ * never needs a box woken to be told it is malformed.
  *
  * WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
  */
+const SCAN_PATHS = /^\/api\/scan\/(?:check|files\/[\da-f]{64})$/u;
+
+/**
+ * Is this the scan upload surface of the box that owns `slug`? The hub does no
+ * prefix stripping, so a box's `/api/scan/…` routes live at `/<slug>/api/scan/…`.
+ */
 function isScanPath(reqPath: string, slug: string): boolean {
-  const prefix = `/${slug}/api/scan`;
-  return reqPath === prefix || reqPath.startsWith(`${prefix}/`);
+  const prefix = `/${slug}`;
+  if (!reqPath.startsWith(`${prefix}/`)) return false;
+  return SCAN_PATHS.test(reqPath.slice(prefix.length));
 }
 
 /**

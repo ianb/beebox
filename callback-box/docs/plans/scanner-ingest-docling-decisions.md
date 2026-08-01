@@ -199,3 +199,29 @@ surfaces documents with missing/garbled text regions (the symptom of scanner
 OCR gaps), or once the mode is a few releases old — switching is a config
 change plus deploying OCR weights, and `cb document reanalyze` back-fills
 existing cards.
+
+## D16. Hard caps on extraction output: 500 artifacts, 1 GiB
+
+Docling decides how many page renders and figures it writes and how big they
+are; everything after it (gzipping the canonical JSON, re-encoding every image
+to AVIF) is per-artifact work in the box's own server process. So
+`checkExtractionBounds` runs between extraction and re-encode and fails the
+extraction past either cap: **500 page/figure artifacts**, or **1 GiB of
+combined artifact bytes** (page renders, figures, and the DoclingDocument JSON,
+which is itself read whole into memory). A failure here is the same outcome as
+any other extraction failure — `status: new` plus `error:` on the card, the
+original bytes filed verbatim — so intake still completes and a boxholder sees
+what happened on the card rather than in a log. Subprocess output is bounded
+the same way, by streaming through a 64 KiB tail rather than buffering
+everything Docling prints.
+
+Both numbers are **admitted guesses, sized to scanner reality**: a 200-page
+scan is already a huge single document, so 500 artifacts is beyond anything
+plausible from a scanner and reads as "something is wrong" rather than "this
+document is large". 1 GiB is likewise far past a 50 MB upload's plausible
+render set. They are limits on pathology, not on size.
+
+**Revisit:** if a legitimate document ever trips one — a real multi-hundred-page
+manual, or a figure-dense technical PDF — raise the number rather than removing
+the cap, and reconsider whether page renders should be produced at all for a
+document that long (D14's page-list question is adjacent).

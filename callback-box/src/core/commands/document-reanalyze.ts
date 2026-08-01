@@ -27,6 +27,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { splitCardContent } from "../../cards/index.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
 import { isRecord } from "../../lib/is-record.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
@@ -60,14 +61,29 @@ function originalFilename(fields: Record<string, unknown>): string | null {
   return name === "" || name.includes("/") ? null : name;
 }
 
+/**
+ * Turn the `card` argument into a contained box-relative path, or null.
+ *
+ * The argument is user-supplied, so it goes through `shared/ref-path.ts` like
+ * every other box path (CLAUDE.md): a `..` that climbs out of the box, or an
+ * absolute path naming something outside it, resolves to `null` and becomes a
+ * clean error here rather than a file read somewhere it shouldn't be. An
+ * absolute path is relativized first so both forms meet the same check.
+ */
+function resolveCardRelPath(boxRoot: string, card: string): string | null {
+  const relative = path.isAbsolute(card) ? path.relative(boxRoot, card) : card;
+  return resolveRefPath({ fromPath: undefined, ref: parseRef(relative).path, kind: "card" });
+}
+
 export async function runDocumentReanalyze(
   ctx: CommandContext,
   options: DocumentReanalyzeOptions
 ): Promise<CommandResult> {
   const parsed = parseCommandArgs(options.args, DocumentReanalyzeArgsSchema);
-  const cardRelPath = path.isAbsolute(parsed.card)
-    ? path.relative(ctx.boxRoot, parsed.card)
-    : parsed.card;
+  const cardRelPath = resolveCardRelPath(ctx.boxRoot, parsed.card);
+  if (cardRelPath === null) {
+    return { success: false, error: `Card path is not inside the box: ${parsed.card}` };
+  }
   const cardAbsPath = path.join(ctx.boxRoot, cardRelPath);
   if (!cardAbsPath.endsWith(".document.card")) {
     return { success: false, error: `Not a document card: ${cardRelPath}` };
@@ -92,7 +108,10 @@ export async function runDocumentReanalyze(
   }
 
   const cardBasename = path.basename(cardAbsPath).replace(/\.document\.card$/u, "");
-  const attachRelDir = `${path.dirname(cardRelPath)}/${cardBasename}.attach`;
+  // `path.posix.join` rather than an interpolated `/`: a card at the box root
+  // has dirname ".", which would otherwise produce a "./Foo.attach" prefix on
+  // every staged path.
+  const attachRelDir = path.posix.join(path.dirname(cardRelPath), `${cardBasename}.attach`);
   const attachAbsDir = path.join(ctx.boxRoot, attachRelDir);
   const sourcePath = path.join(attachAbsDir, original);
   try {

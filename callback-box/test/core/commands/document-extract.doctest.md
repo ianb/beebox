@@ -15,13 +15,15 @@ exercised by `document-extract-integration.doctest.md`.
 ```ts setup
 import { runDocumentMode } from "../../../src/core/commands/scan-import-document.js";
 import { runDocumentReanalyze } from "../../../src/core/commands/document-reanalyze.js";
-import { createFakeDocling } from "../../../src/services/docling.js";
+import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling.js";
+import { extractDocument } from "../../../src/core/commands/document-extract.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { createCardSchemaMap } from "../../../src/schemas/registry.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { textPdf } from "../../helpers/pdf-fixtures.js";
-import { writeFile, readdir, readFile } from "node:fs/promises";
+import { writeFile, readdir, readFile, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
@@ -335,6 +337,84 @@ wrongType.error
 => Not a document card: box/inbox/Nope.memo.card
 ```
 
+The `card` argument is user-supplied, so it resolves through `shared/ref-path.ts`
+like every other box path: a `..` that climbs out of the box, or an absolute
+path naming somewhere else entirely, is a clean refusal rather than a file read
+outside the box. Fail-closed — nothing is clamped back to the root.
+
+```ts continue
+const outside = ["../outside/Secret.document.card", "box/../../outside/Secret.document.card", "/etc/Secret.document.card", "/tmp/Secret.document.card"];
+const escapes = await Promise.all(outside.map((card) => runDocumentReanalyze(ctx, { args: { card } })));
+escapes.map((r) => `${String(r.success)} ${r.error}`).join("\n")
+=>
+false Card path is not inside the box: ../outside/Secret.document.card
+false Card path is not inside the box: box/../../outside/Secret.document.card
+false Card path is not inside the box: /etc/Secret.document.card
+false Card path is not inside the box: /tmp/Secret.document.card
+```
+
+A `..` that stays inside the box is fine — it just normalizes, and the refusal
+that follows is about the card, not the path:
+
+```ts continue
+const inside = await runDocumentReanalyze(ctx, { args: { card: "box/inbox/../inbox/Nope.document.card" } });
+inside.error
+=> Card not found: box/inbox/Nope.document.card
+```
+
 ```ts cleanup
 await box.cleanup();
+```
+
+## Extraction output is bounded before anything re-encodes it
+
+Docling decides how many artifacts it writes; the caps (D16) sit between
+extraction and the AVIF re-encode, so a pathological run is an extraction
+failure rather than unbounded work. Over the cap behaves like every other
+extraction failure — which is the property that matters: intake never blocks.
+
+```ts
+const scratch = await mkdtemp(join(tmpdir(), "cb-doc-bounds-"));
+const workDir = join(scratch, "work");
+const attachAbsDir = join(scratch, "attach");
+await mkdir(workDir, { recursive: true });
+await mkdir(attachAbsDir, { recursive: true });
+
+const tooMany = await extractDocument({
+  docling: createFakeDocling({ pageCount: MAX_EXTRACTION_ARTIFACTS + 1 }),
+  sourcePath: join(scratch, "source.pdf"),
+  attachAbsDir,
+  workDir,
+  forceOcr: false,
+  languages: null,
+});
+JSON.stringify([tooMany.ok, tooMany.error])
+=> [false,"Docling produced 501 page/figure artifacts, over the limit of 500"]
+```
+
+Nothing was written into the attach scope — the refusal happens before the
+re-encode, not halfway through it:
+
+```ts continue
+(await readdir(attachAbsDir)).length
+=> 0
+```
+
+Right at the cap is still a normal extraction:
+
+```ts continue
+const atCap = await extractDocument({
+  docling: createFakeDocling({ pageCount: 3, figureCount: 2 }),
+  sourcePath: join(scratch, "source.pdf"),
+  attachAbsDir,
+  workDir,
+  forceOcr: false,
+  languages: null,
+});
+JSON.stringify([atCap.ok, atCap.value.assetNames.length])
+=> [true,6]
+```
+
+```ts cleanup
+await rm(scratch, { recursive: true, force: true });
 ```
