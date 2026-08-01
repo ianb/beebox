@@ -1,0 +1,25 @@
+{
+  "name": "scan-uploader",
+  "version": "0.1.0",
+  "description": "Stand-alone laptop client that uploads ScanSnap output to a callback-box scan-upload endpoint. Zero runtime dependencies; bundled to a single self-contained script.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node --import tsx build.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "tap"
+  },
+  "devDependencies": {
+    "@ianbicking/personal-vibe-check": "workspace:*",
+    "@types/node": "^24.0.0",
+    "@tapjs/core": "^4.0.0",
+    "agent-doctest": "workspace:*",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.39.2",
+    "tap": "^21.0.0",
+    "tsx": "^4.22.3",
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT"
+}
