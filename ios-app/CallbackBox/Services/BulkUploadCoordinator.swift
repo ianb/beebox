@@ -94,10 +94,18 @@ actor BulkUploadCoordinator {
     /// finalize alongside the upload failures, because a photo the user selected
     /// and never saw again is the failure this pipeline exists to prevent — the
     /// batch must be honest that it is short.
+    /// `note` is a PROVIDER, not a value, and is called immediately before the
+    /// seal — not when the batch starts.
+    ///
+    /// A large batch takes minutes, and the natural way to caption one is to pick
+    /// the photos and *then* type. Reading the composer at start time meant only
+    /// text written BEFORE opening the picker could ever become the batch's
+    /// introduction, which made a feature whose whole premise is "the batch
+    /// arrives introduced" nearly impossible to introduce.
     func run(
         items: [PreparedBulkItem],
         targetSessionID: String,
-        note: String?,
+        note: @Sendable () async -> String?,
         importFailures: [BulkUploadAPI.FailedItem] = []
     ) async -> BulkUploadOutcome {
         failed = importFailures
@@ -117,7 +125,11 @@ actor BulkUploadCoordinator {
         return await createAndFinalize(items: items, targetSessionID: targetSessionID, note: note)
     }
 
-    private func createAndFinalize(items: [PreparedBulkItem], targetSessionID: String, note: String?) async -> BulkUploadOutcome {
+    private func createAndFinalize(
+        items: [PreparedBulkItem],
+        targetSessionID: String,
+        note: @Sendable () async -> String?
+    ) async -> BulkUploadOutcome {
         let created = await api.createSession(
             targetSessionID: targetSessionID,
             items: items.map { $0.registryItem }
@@ -132,7 +144,10 @@ actor BulkUploadCoordinator {
         // Deliver even when everything failed: the boxholder pressed send, so the
         // chat must say what happened rather than showing nothing — silence is
         // exactly the bug this replaces.
-        let sealed = await api.finalize(sessionID: session.sessionId, failedItems: failed, note: note)
+        // Read the introduction NOW, after the bytes are up — this is the last
+        // moment before the seal freezes the batch.
+        let introduction = await note()
+        let sealed = await api.finalize(sessionID: session.sessionId, failedItems: failed, note: introduction)
         guard case .success = sealed else {
             return .failed(message: Self.message(for: sealed) ?? "The box would not finish the upload.")
         }
@@ -182,7 +197,7 @@ actor BulkUploadCoordinator {
 
     /// Resume an interrupted batch: ask the box what it already holds and send
     /// only the rest. Bytes that landed before the app died are not re-sent.
-    func resume(items: [PreparedBulkItem], sessionID id: String, targetSessionID: String, note: String?) async -> BulkUploadOutcome {
+    func resume(items: [PreparedBulkItem], sessionID id: String, targetSessionID: String, note: @Sendable () async -> String?) async -> BulkUploadOutcome {
         let status = await api.status(sessionID: id)
         guard case .success(let state) = status else {
             // The batch is gone (cancelled, swept) — start over rather than
@@ -197,7 +212,7 @@ actor BulkUploadCoordinator {
 
         await uploadAll(items: items.filter { alreadyHave.contains($0.id) == false }, sessionID: id)
 
-        let sealed = await api.finalize(sessionID: id, failedItems: failed, note: note)
+        let sealed = await api.finalize(sessionID: id, failedItems: failed, note: await note())
         if case .success = sealed {
             return .delivered(uploaded: uploaded.count, failed: failed.count)
         }

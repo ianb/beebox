@@ -341,7 +341,7 @@ struct NativeComposerView: View {
         .layoutPriority(1)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .allowsHitTesting(isSending == false)
+        .allowsHitTesting(isTextEntryLocked == false)
     }
 
     @ViewBuilder
@@ -626,12 +626,20 @@ struct NativeComposerView: View {
         }
     }
 
+    /// Gates the SEND path (button, voice "send", overlapping submits).
+    ///
+    /// A running batch counts, so a spoken or tapped send can't race it — but it
+    /// deliberately does NOT gate the text field. Typing while photos upload is
+    /// the normal way to caption a batch: the introduction is read at finalize,
+    /// so whatever is typed during the upload becomes the batch's note.
     private var isSending: Bool {
-        // A batch upload counts. Without it the text field, send button and Add
-        // button stay live through a 70-photo upload, so the user can type a new
-        // message that the batch's completion then wipes — and can start a
-        // second, overlapping batch.
         isPreparingSend || batchProgress != nil || draftStore.isReady == false
+    }
+
+    /// Gates only the TEXT SURFACE. A batch in flight must not lock it — the user
+    /// is expected to be writing the caption while it uploads.
+    private var isTextEntryLocked: Bool {
+        isPreparingSend || draftStore.isReady == false
     }
 
     private func applyVoiceTurn(_ event: NativeVoiceTurnEvent) {
@@ -784,17 +792,13 @@ struct NativeComposerView: View {
         statusText = "Preparing \(items.count) photos…"
 
         let uploadedAt = ISO8601DateFormatter().string(from: Date())
+        // NOTE deliberately not read here. It is read at finalize (below), so the
+        // caption the user types WHILE the photos upload is the one that ships.
         // Photos already in the composer join this batch. Leaving them behind
         // would split one intended message: the batch would carry the whole
         // composer text as its introduction while the older photos sat in the
         // composer with nothing describing them.
         let foldedIn = await stageComposerImages(uploadedAt: uploadedAt)
-        // Read the introduction AFTER folding: staging removes each folded image
-        // and strips its `[imageN]` token, so capturing the text first would ship
-        // a note referring to attachments the message no longer has — and would
-        // then fail the unchanged-check below, leaving the consumed text sitting
-        // in the composer.
-        let note = draftStore.draft.text
 
         var staged = await BulkPhotoStaging.stage(
             items: items,
@@ -826,10 +830,17 @@ struct NativeComposerView: View {
         // never registered, so without this the batch card would simply not
         // mention them and the user would be told "69 uploaded" with no sign the
         // 70th ever existed.
+        // The introduction is whatever is in the composer when the batch seals —
+        // read on the main actor at that moment, not captured up front.
+        var consumedNote = ""
         let outcome = await coordinator.run(
             items: staged.prepared,
             targetSessionID: targetSessionID,
-            note: note,
+            note: { @MainActor in
+                let text = draftStore.draft.text
+                consumedNote = text
+                return text.isEmpty ? nil : text
+            },
             importFailures: staged.failures
         )
 
@@ -842,7 +853,7 @@ struct NativeComposerView: View {
             // If delivery ultimately fails, the box surfaces it to the chat agent
             // rather than this client retrying — see `notifyStranded`.
             BulkPhotoStaging.discard(staged.prepared)
-            clearComposerTextIfUnchanged(from: note)
+            clearComposerTextIfUnchanged(from: consumedNote)
             if case .accepted = outcome {
                 statusText = "\(uploaded) photos sent — the box is still processing them."
             } else {
