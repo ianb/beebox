@@ -1,16 +1,23 @@
 ---
 title: "Pick a discussion channel for the soft launch"
-needs: [decision]
+resolution: implemented
 area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
 ---
 
+**Closed (decided) 2026-07-31 — Zulip.** Boxholder chose Zulip: live chat with
+real threading (topics), the strongest anti-Discord on organization, free hosted
+OSS tier and self-hostable (on-thesis). The forum is live at
+[callback-box.zulipchat.com](https://callback-box.zulipchat.com/). GitHub
+Discussions remains available as a secondary async record if wanted, but Zulip is
+the primary channel.
+
 Boxholder (2026-07-21): "Before release I need to decide on some discussion
 channel. Like Discord but I dislike Discord." A pre-release decision — where
 the friendly network asks questions and talks, beyond formal
-[bug reports](../features/2026-07-20-inline-bug-submission.md) (which go to
+[bug reports](../../features/2026-07-20-inline-bug-submission.md) (which go to
 GitHub issues).
 
 The choice follows from *what* about Discord grates:
