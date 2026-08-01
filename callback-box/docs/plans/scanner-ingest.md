@@ -582,9 +582,11 @@ scan job) removes the need rather than deferring a design.
   (`description` stays empty, filled downstream — pdf-intake's decision,
   kept).
 - **Validation error UX** — rejection reasons are written for the question
-  card the boxholder reads ("magic bytes say text/html but extension is
-  .pdf"), not just HTTP bodies. **ADDRESSED** in Track 2's sidecar → question
-  card path.
+  card the boxholder reads (e.g. "the magic bytes match no known file type,
+  but the filename claims .pdf" — `file-type` sniffs binary formats, so a
+  non-binary smuggle reads as unknown-type rather than named), not just HTTP
+  bodies. **ADDRESSED** in Track 2's sidecar → question card path; verified
+  in the e2e walk.
 - **Partial migration / transition state** — between Track 0 running on box A
   but not box B, box B's scan routes refuse at registration (see critical-gap
   note). During the window where prod lacks the new code entirely, the

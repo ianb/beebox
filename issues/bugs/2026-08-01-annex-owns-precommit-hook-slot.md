@@ -1,0 +1,16 @@
+---
+title: git-annex owns the pre-commit hook slot, so card-validation hooks never install on annexed boxes
+---
+
+Found during the scanner-ingest end-to-end walk (2026-08-01). On an
+annex-converted box, `.git/hooks/pre-commit` belongs to git-annex; cb's
+install-validation-hooks step correctly detects "exists and isn't ours —
+leaving it alone" and skips. Net effect: every annex-converted box (all 12
+local boxes since 2026-07-31, prod after its cutover) silently loses
+commit-time card validation.
+
+Not scanner-specific — any card commit on an annexed box goes unvalidated at
+commit time. Possible directions: chain the hooks (a wrapper that runs
+git-annex's hook then cb's), or move validation to the post-commit/serve
+layer for annexed boxes. Needs a decision rather than a quick patch, since
+the hook slot is git-annex's documented mechanism.
