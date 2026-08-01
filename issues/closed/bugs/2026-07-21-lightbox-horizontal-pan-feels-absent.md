@@ -3,8 +3,31 @@ title: "Zoomed lightbox: left/right pan feels absent while up/down works"
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, panning a zoomed photo on mobile
-needs: [manual-testing]
+resolution: implemented
 ---
+
+**Closed 2026-07-31 — and the diagnosis below was aimed at the wrong gesture.**
+
+The report was never about panning a *zoomed* image. The boxholder clarified:
+swiping left/right **at fit scale** did nothing. Zoomed panning already worked
+and already suppressed swipe, which is the wanted behaviour. The dead end was
+`lightbox-gesture-reducer.ts`'s explicit `// Horizontal at fit: reserved for
+future prev/next nav — release, no action` branch. Fixed by implementing that
+slot: a `swiping` mode, a `swipeStep` release decision mirroring
+`shouldDismiss`, and a peer layer in `ImageLightbox` holding the neighbouring
+images one viewport to either side so the drag reveals a real image.
+
+The zoom-pan analysis below is still *correct*, just about a different and much
+smaller thing — it now lives in
+`issues/features/2026-07-31-lightbox-zoom-leaves-one-axis-dead.md`. Cost of the
+misdirection: a full browser-instrumentation round measuring pan bounds that
+were never the complaint. The lesson is in the phrasing — "left/right pan feels
+absent while up/down works" read as a pan bug because it named panning; the
+actual report was "swiping does nothing." Ask which gesture before measuring.
+
+---
+
+*Original diagnosis, preserved:*
 
 On a zoomed photo in the lightbox, dragging up/down pans but dragging left/right
 seems to do nothing. Reported as "we already have up/down, left/right should be

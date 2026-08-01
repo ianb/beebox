@@ -14,18 +14,37 @@ export interface LightboxGestureRefs {
   figureRef: RefObject<HTMLElement>;
   wrapperRef: RefObject<HTMLDivElement>;
   imgRef: RefObject<HTMLImageElement>;
+  peersRef: RefObject<HTMLDivElement>;
 }
 
-export function useLightboxGestures({ src, onClose }: { src: string; onClose: () => void }): LightboxGestureRefs {
+export function useLightboxGestures({
+  src,
+  onClose,
+  onNavigate,
+  canSwipe,
+}: {
+  src: string;
+  onClose: () => void;
+  /** Move the selection by `step` (`-1` previous, `+1` next), wrapping. */
+  onNavigate: (step: -1 | 1) => void;
+  /** Whether there is a neighbour to swipe to at all. */
+  canSwipe: boolean;
+}): LightboxGestureRefs {
   const rootRef = useRef<HTMLDivElement>(null);
   const figureRef = useRef<HTMLElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const peersRef = useRef<HTMLDivElement>(null);
 
-  // Keep the latest onClose reachable without re-subscribing the controller.
+  // Keep the latest callbacks and the swipe-ability flag reachable without
+  // re-subscribing the controller (which would drop an in-flight gesture).
   const onCloseRef = useRef(onClose);
+  const onNavigateRef = useRef(onNavigate);
+  const canSwipeRef = useRef(canSwipe);
   useEffect(() => {
     onCloseRef.current = onClose;
+    onNavigateRef.current = onNavigate;
+    canSwipeRef.current = canSwipe;
   });
 
   const controllerRef = useRef<LightboxGestureController | null>(null);
@@ -37,8 +56,10 @@ export function useLightboxGestures({ src, onClose }: { src: string; onClose: ()
     const img = imgRef.current;
     if (!root || !figure || !wrapper || !img) return;
     const controller = new LightboxGestureController({
-      elements: { root, figure, wrapper, img },
+      elements: { root, figure, wrapper, img, peers: peersRef.current },
       onClose: () => onCloseRef.current(),
+      onNavigate: (step) => onNavigateRef.current(step),
+      canSwipe: () => canSwipeRef.current,
     });
     controllerRef.current = controller;
     const detach = controller.attach();
@@ -54,5 +75,5 @@ export function useLightboxGestures({ src, onClose }: { src: string; onClose: ()
     controllerRef.current?.reset();
   }, [src]);
 
-  return { rootRef, figureRef, wrapperRef, imgRef };
+  return { rootRef, figureRef, wrapperRef, imgRef, peersRef };
 }
