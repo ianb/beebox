@@ -1,6 +1,10 @@
 # Scanner Ingest
 
-**Status:** active — design, not yet implemented
+**Status:** implemented on `worktree-scanner-ingest` (all code tracks + e2e
+verified + two cross-model reviews); not yet shipped. Boxholder-gated
+remainder: Docling decisions review (`scanner-ingest-docling-decisions.md`),
+box-readiness draft install (`scratch/box-readiness/`), prod annex cutover
+(`docs/server-operations.md` runbook), merge to main.
 
 A pipeline from a ScanSnap desktop scanner to triage-ready cards in a hosted
 box. ScanSnap profiles save searchable PDFs and images into per-box folders on
