@@ -3,8 +3,16 @@ title: "iOS: location is effectively always shared — the native path bypasses 
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder: location seems always shared on iOS, not clearly toggleable
-needs: [manual-testing]
+resolution: implemented
 ---
+
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** The native Add-menu
+location row now reads the web-owned per-box consent preference and renders
+"Share Location" ↔ "Sharing Location ✓": tapping while off captures a fix and only
+then reports on; tapping while on persists off without reading location, and state
+sync performs no capture. So the app-level opt-in is authoritative on iOS too —
+location is no longer effectively always-shared. Boxholder confirms from use.
+Reopen if the native path captures location while the toggle is off.
 
 ## Implemented 2026-07-22
 
@@ -93,6 +101,6 @@ state is visible. Privacy-sensitive — this is location data leaving the device
 treat the fix as fail-closed (default off, no capture without an explicit, visible
 opt-in).
 
-Squarely in the [iOS input-plane parity](../features/2026-07-19-ios-input-plane-parity.md)
+Squarely in the [iOS input-plane parity](../../features/2026-07-19-ios-input-plane-parity.md)
 surface (native composer + its menu), and touches the
-[mobile contract](../../callback-box/docs/mobile-contract.md).
+[mobile contract](../../../callback-box/docs/mobile-contract.md).
