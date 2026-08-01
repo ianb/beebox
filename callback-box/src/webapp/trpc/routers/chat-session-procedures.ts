@@ -25,41 +25,64 @@ import {
 import { loadAllSessions } from "../../../core/chat/session/list.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
 
+/**
+ * How much of a session's log to return. Shared by `chat.history` (which adds
+ * a required `session`) and `chat.bootstrap` (which resolves the session
+ * itself), so the two can never drift apart on slicing.
+ */
+export const historySliceSchema = z.object({
+  tail: z.number().optional(),
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  minRealUserMessages: z.number().optional(),
+});
+
+export type HistorySlice = z.infer<typeof historySliceSchema>;
+
+export interface SessionHistory {
+  sessionId: string;
+  entries: Awaited<ReturnType<typeof parseSessionLog>>["entries"];
+  total: number;
+}
+
+/**
+ * Load + slice one session's conversation history. A session with no readable
+ * log reads as empty rather than failing — an id that hasn't produced a JSONL
+ * yet (a brand-new chat, an SDK turn that errored before writing) is a normal
+ * state, not an error.
+ */
+export async function loadSessionHistory(
+  boxRoot: string,
+  input: HistorySlice & { session: string },
+): Promise<SessionHistory> {
+  const { session: sessionId, tail, offset, limit, minRealUserMessages } = input;
+  const logPath = await resolveSessionLogPath(boxRoot, sessionId);
+  try {
+    const result = await parseSessionLog({
+      logPath,
+      ...(offset != null ? { offset } : {}),
+      ...(limit != null ? { limit } : {}),
+    });
+    const { entries, total } = result;
+    const userTail =
+      minRealUserMessages && minRealUserMessages > 0
+        ? tailForMinUserMessages(entries, minRealUserMessages)
+        : 0;
+    const effective = tail && tail > 0 ? Math.max(tail, userTail) : userTail > 0 ? userTail : undefined;
+    if (effective !== undefined && effective < entries.length) {
+      return { sessionId, entries: entries.slice(entries.length - effective), total };
+    }
+    return { sessionId, entries, total };
+  } catch (_e) {
+    return { sessionId, entries: [], total: 0 };
+  }
+}
+
 export const chatSessionProcedures = {
   // Load + slice a session's conversation history.
   history: publicProcedure
-    .input(
-      z.object({
-        session: z.string(),
-        tail: z.number().optional(),
-        offset: z.number().optional(),
-        limit: z.number().optional(),
-        minRealUserMessages: z.number().optional(),
-      }),
-    )
-    .query(async ({ input, ctx }) => {
-      const { session: sessionId, tail, offset, limit, minRealUserMessages } = input;
-      const logPath = await resolveSessionLogPath(ctx.boxRoot, sessionId);
-      try {
-        const result = await parseSessionLog({
-          logPath,
-          ...(offset != null ? { offset } : {}),
-          ...(limit != null ? { limit } : {}),
-        });
-        const { entries, total } = result;
-        const userTail =
-          minRealUserMessages && minRealUserMessages > 0
-            ? tailForMinUserMessages(entries, minRealUserMessages)
-            : 0;
-        const effective = tail && tail > 0 ? Math.max(tail, userTail) : userTail > 0 ? userTail : undefined;
-        if (effective !== undefined && effective < entries.length) {
-          return { sessionId, entries: entries.slice(entries.length - effective), total };
-        }
-        return { sessionId, entries, total };
-      } catch (_e) {
-        return { sessionId, entries: [], total: 0 };
-      }
-    }),
+    .input(historySliceSchema.extend({ session: z.string() }))
+    .query(({ input, ctx }) => loadSessionHistory(ctx.boxRoot, input)),
 
   // List web-chat sessions, most-recent first, for the history dropdown.
   //

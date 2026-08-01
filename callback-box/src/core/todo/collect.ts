@@ -66,8 +66,12 @@ export function assertSafeGlobPattern(pattern: string): void {
   if (isUnsafeGlobPattern(pattern)) throw new UnsafeTodoGlobError(pattern);
 }
 
-export async function collectTodos(boxRoot: string, options?: CollectTodosOptions): Promise<TodoCollectionResult> {
-  const pattern = options?.glob ?? "**/*.card";
+/**
+ * Every card path a todo scan would visit, sorted, guaranteed inside the box.
+ * Shared with the nav-badge counter (`count.ts`) so both walk exactly the same
+ * card set under exactly the same containment rules.
+ */
+export async function listTodoCardPaths(boxRoot: string, pattern: string): Promise<string[]> {
   assertSafeGlobPattern(pattern);
   const boxRootResolved = path.resolve(boxRoot);
   const rawAbsPaths = await glob(pattern, {
@@ -89,17 +93,30 @@ export async function collectTodos(boxRoot: string, options?: CollectTodosOption
     }
     return contained;
   });
+  return absPaths.toSorted();
+}
+
+/** The per-card load + plate-state context both scans need. */
+export async function buildTodoScanContext(boxRoot: string): Promise<{ ctx: LoadCardContext; plateCtx: TodoPlateContext }> {
   const schemas = await createCardSchemaMap(boxRoot);
-  const ctx: LoadCardContext = { cardSchemas: schemas };
-  const plateCtx: TodoPlateContext = {
-    now: getBoxTime(boxRoot),
-    timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+  return {
+    ctx: { cardSchemas: schemas },
+    plateCtx: {
+      now: getBoxTime(boxRoot),
+      timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
   };
+}
+
+export async function collectTodos(boxRoot: string, options?: CollectTodosOptions): Promise<TodoCollectionResult> {
+  const pattern = options?.glob ?? "**/*.card";
+  const absPaths = await listTodoCardPaths(boxRoot, pattern);
+  const { ctx, plateCtx } = await buildTodoScanContext(boxRoot);
 
   const todos: CollectedTodo[] = [];
   const issues: TodoCollectionIssue[] = [];
 
-  for (const absPath of absPaths.toSorted()) {
+  for (const absPath of absPaths) {
     const relPath = path.relative(boxRoot, absPath);
     await collectOneCard({ absPath, relPath, ctx, plateCtx, todos, issues });
   }
@@ -118,7 +135,33 @@ async function collectOneCard(input: {
   todos: CollectedTodo[];
   issues: TodoCollectionIssue[];
 }): Promise<void> {
-  const { absPath, relPath, ctx, plateCtx, todos, issues } = input;
+  const { absPath, relPath, issues } = input;
+  let content: string;
+  try {
+    content = await readFile(absPath, "utf8");
+  } catch (e) {
+    issues.push({ kind: "load", path: relPath, message: errorMessage(e) });
+    return;
+  }
+  collectCardTodos({ ...input, content });
+}
+
+/**
+ * Extract one already-read card's todos (both capture forms) into `todos`,
+ * recording anything that blocked extraction in `issues`. Split out from
+ * {@link collectOneCard} so the nav-badge counter (`count.ts`) can feed it
+ * text it read in parallel rather than re-implementing todo semantics.
+ */
+export function collectCardTodos(input: {
+  absPath: string;
+  relPath: string;
+  content: string;
+  ctx: LoadCardContext;
+  plateCtx: TodoPlateContext;
+  todos: CollectedTodo[];
+  issues: TodoCollectionIssue[];
+}): void {
+  const { absPath, relPath, content, ctx, plateCtx, todos, issues } = input;
   const type = typeFromFilename(absPath);
   if (type === undefined || !ctx.cardSchemas.has(type)) {
     // A card whose type can't be schema-loaded at all (an unparseable
@@ -137,14 +180,6 @@ async function collectOneCard(input: {
           ? "card filename doesn't match the Name.<type>.card pattern"
           : `no registered schema for card type "${type}"`,
     });
-    return;
-  }
-
-  let content: string;
-  try {
-    content = await readFile(absPath, "utf8");
-  } catch (e) {
-    issues.push({ kind: "load", path: relPath, message: errorMessage(e) });
     return;
   }
 

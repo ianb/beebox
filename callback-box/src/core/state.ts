@@ -11,6 +11,7 @@ import { getBoxDir, parseCardName, requireBoxRoot } from "../lib/paths.js";
 import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git.js";
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
+import type { LoadCardContext } from "./card-io.js";
 import { getBoxMetadata } from "./box/index.js";
 import { errnoCode } from "../lib/error-guards.js";
 
@@ -48,18 +49,23 @@ interface ScanCardsParams {
   dir: string;
   boxRoot: string;
   subdir?: string;
+  /** Built once per scan and threaded through the recursion — see {@link scanCards}. */
+  ctx: LoadCardContext;
 }
 
 /**
  * Scan a directory for card files, including subdirectories.
  *
+ * The load context is built by the caller rather than here: this recurses per
+ * subdirectory, and rebuilding the context at every level re-resolved the
+ * box's schemas over and over for a scan that only ever needs one.
+ *
  * @param params - Parameters object
  * @returns Array of card info
  */
 async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
-  const { dir, boxRoot, subdir } = params;
+  const { dir, boxRoot, subdir, ctx } = params;
   const cards: CardInfo[] = [];
-  const ctx = await buildLoadContext(boxRoot);
 
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
@@ -76,7 +82,7 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
     const fullPath = path.join(dir, name);
 
     if (entry.isDirectory() && !name.startsWith(".")) {
-      const subdirCards = await scanCards({ dir: fullPath, boxRoot, subdir: name });
+      const subdirCards = await scanCards({ dir: fullPath, boxRoot, subdir: name, ctx });
       cards.push(...subdirCards);
       continue;
     }
@@ -126,10 +132,11 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
     throw new InvalidBoxError();
   }
 
+  const ctx = await buildLoadContext(root);
   const [git, inbox, questions, recentActivity] = await Promise.all([
     getStatus(root),
-    scanCards({ dir: getBoxDir(root, "inbox"), boxRoot: root }),
-    scanCards({ dir: getBoxDir(root, "questions"), boxRoot: root }),
+    scanCards({ dir: getBoxDir(root, "inbox"), boxRoot: root, ctx }),
+    scanCards({ dir: getBoxDir(root, "questions"), boxRoot: root, ctx }),
     getLog(root, 10),
   ]);
 
