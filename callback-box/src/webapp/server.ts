@@ -30,6 +30,7 @@ import {
   registerUnbuiltFrontendRoot,
 } from "./server-root.js";
 import { registerCspReportRoute } from "./routes/api-csp-report.js";
+import { HASHED_ASSET_CACHE_OPTIONS } from "./static-cache.js";
 import { invariant } from "../lib/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../lib/csp.js";
 
@@ -190,6 +191,23 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
       prefix: "/",
       wildcard: true,
     });
+    // `/assets/*` gets its own registration so the content-hashed bundles can
+    // carry the year-long immutable policy while index.html / sw.js / icons /
+    // manifest keep revalidating (static-cache.ts). find-my-way matches the
+    // more specific `/assets/*` over the catch-all `/*` above regardless of
+    // registration order. It must come SECOND: @fastify/static's
+    // `reply.sendFile` decorator is installed by the FIRST registration and
+    // carries that registration's cache options, so an immutable mount landing
+    // first would silently make every later `sendFile` immutable too.
+    const assetsRoot = path.join(frontendPath, "assets");
+    if (fs.existsSync(assetsRoot)) {
+      await server.register(fastifyStatic, {
+        root: assetsRoot,
+        prefix: "/assets/",
+        decorateReply: false,
+        ...HASHED_ASSET_CACHE_OPTIONS,
+      });
+    }
   }
 
   // Register each box under its slug prefix
