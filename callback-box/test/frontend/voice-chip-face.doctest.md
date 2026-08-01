@@ -6,7 +6,7 @@ router context the full `VoiceChip` needs. It shows mute state via the
 speaker icon, narration via a corner indicator dot, and HQ transcription via a
 transient "transcribing…" text label (the readable text
 `NarrationStatusBadge` used to show, preserved by design — see
-docs/plans/chat-header-chips.md). `voiceChipLabel`
+docs/implemented-plans/chat-header-chips.md). `voiceChipLabel`
 (`components/chat/voice-chip-label.ts`) builds the chip's accessible name from
 the same three-flag state, independent of React.
 

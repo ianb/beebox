@@ -1,6 +1,7 @@
 # Chat header re-IA: three stateful chips
 
-**Status:** active — designed with boxholder 2026-08-01, not yet implemented.
+**Status:** implemented 2026-08 — shipped as `ContextChip`, `VoiceChip`, and
+`ChatMenu`, fixing the mobile-clipped "..." menu bug.
 
 Replace the chat header's row of eight-plus icon buttons with three stateful
 chips (context, voice, overflow menu). Each chip is both a status display and a

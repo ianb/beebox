@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-01T11:51:56Z
-Total documents: 221
+Generated: 2026-08-01T18:05:17Z
+Total documents: 223
 
 ## Issues
 
@@ -283,6 +283,7 @@ Referenced by:
 - docs/implemented-plans/canvas-loop-figure.md:28 (mention) — - `code-style.md`: max 2 positional params (the figure contract's
 - docs/implemented-plans/capture-mode.md:39 (mention) — - `callback-box/code-style.md` — no `any`, named-params objects, custom
 - docs/implemented-plans/card-view-widgets.md:22 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
+- docs/implemented-plans/chat-header-chips.md:44 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
 - docs/implemented-plans/chat-review.md:56 (mention) — - **`callback-box/code-style.md`** — max 2 positional params, no default
 - docs/implemented-plans/chat-scroll-redesign.md:46 (mention) — - `callback-box/code-style.md:36-37` — no default parameters; max 2 positional
 - docs/implemented-plans/chat-stream-finalize-unify.md:48 (mention) — - `callback-box/code-style.md:37` — max 2 positional params; new/changed
@@ -366,6 +367,7 @@ Referenced by:
 - code-style.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/implemented-plans/architectural-review.md:597 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
 - docs/implemented-plans/card-view-widgets.md:24 (mention) — - `callback-box/frontend.md:34` — *"Reach for a primitive from
+- docs/implemented-plans/chat-header-chips.md:40 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read frontend.md before writing UI"* and the
 - docs/implemented-plans/figure-card-type.md:79 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
@@ -436,7 +438,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 326 lines
+Title: "Deploy" | 335 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -515,13 +517,13 @@ Title: "Adding a Box" | 131 lines
 Referenced by:
 - CLAUDE.md:159 (mention) — | Adding a box | `docs/adding-a-box.md` |
 - README.md:81 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
-- deploy/README.md:114 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
+- deploy/README.md:123 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/implemented-plans/remove-box-shape-v1.md:250 (mention) — `docs/migrations.md` (remove box-packageify section), `docs/adding-a-box.md:91`,
 - docs/plans/cli-restructure.md:129 (mention) — (see `docs/adding-a-box.md`), `cb upgrade` is the per-box engine-upgrade
 - docs/plans/docs-reorg.gap-analysis.md:135 (mention) — `docs/adding-a-box.md`.
 - docs/plans/source-available-release.md:62 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
-- docs/server-operations.md:224 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
+- docs/server-operations.md:233 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
 - ../issues/decisions/2026-03-15-per-box-secret-management.md:15 (mention) — For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:31 (mention) — Refs: `callback-box/docs/scheduler.md`, `callback-box/docs/adding-a-box.md`,
 
@@ -769,7 +771,7 @@ Referenced by:
 - CLAUDE.md:114 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
 - docs/box-layout.md:177 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
 - docs/implemented-plans/remove-cb-render.md:550 (mention) — errors (`docs/client-debug-log.md`).
-- docs/server-operations.md:218 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
+- docs/server-operations.md:227 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 - ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 
 #### docs/composer-input-machine.md
@@ -907,6 +909,7 @@ Referenced by:
 - docs/implemented-plans/bulk-file-upload.md:19 (mention) — - `docs/engineering-principles.md` — chiefly **#1 types are structure** (a
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
+- docs/implemented-plans/chat-header-chips.md:35 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-review.md:39 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/expose-dev-router.md:29 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/hub-healthz-box-aggregation.md:31 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
@@ -1036,7 +1039,7 @@ Title: "Google Cloud Console Setup" | 162 lines
 Referenced by:
 - docs/gmail-setup.md:14 (mention) — If the server doesn't show the Google Services section at all, OAuth client credentials haven't been configured server-w
 - docs/google-drive.md:7 (link) — 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
-- docs/health-checks.md:36 (link) — in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
+- docs/health-checks.md:55 (link) — in [`google-setup.md`](google-setup.md#token-expired--invalid_grant); design
 - docs/implemented-plans/google-auth-reauth-health.md:127 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
 - docs/plans/docs-reorg.md:210 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:23 (mention) — - `docs/google-setup.md` already walks an operator through consent screen +
@@ -1049,7 +1052,7 @@ References:
 
 #### docs/health-checks.md
 
-Title: "Health Checks" | 94 lines
+Title: "Health Checks" | 113 lines
 
 Referenced by:
 - CLAUDE.md:152 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
@@ -1067,9 +1070,9 @@ Referenced by:
 
 References:
 - → deploy/README.md (link)
+- → docs/server-operations.md (link)
 - → docs/google-setup.md (link)
 - → docs/implemented-plans/google-auth-reauth-health.md (link)
-- → docs/server-operations.md (link)
 
 #### docs/image-orientation.md
 
@@ -1397,11 +1400,11 @@ Referenced by:
 
 #### docs/server-operations.md
 
-Title: "Server Operations" | 225 lines
+Title: "Server Operations" | 234 lines
 
 Referenced by:
 - CLAUDE.md:158 (mention) — | Server operations | `docs/server-operations.md` |
-- docs/health-checks.md:43 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
+- docs/health-checks.md:29 (link) — - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the s
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:499 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/plans/docs-reorg.md:91 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
@@ -1465,6 +1468,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:760 (mention) — that didn't happen. `testing.md:608`'s "soft assertions" note is a
 - docs/implemented-plans/architectural-review.review.md:12 (mention) — **Citation:** plan Track P.1; `testing.md:608`.
 - docs/implemented-plans/card-view-widgets.md:636 (mention) — - **Test posture** (per `docs/testing.md` — tests first, as a design tool):
+- docs/implemented-plans/chat-header-chips.md:47 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
 - docs/implemented-plans/chat-scroll-redesign.md:55 (mention) — - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
 - docs/implemented-plans/chat-stream-finalize-unify.md:53 (mention) — - `callback-box/docs/testing.md:5-9` + `:474-521` — layout/streaming behavior is
 - docs/implemented-plans/courseware-lesson-plan.md:326 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
@@ -2129,6 +2133,20 @@ Title: "Plan: stop composer keystrokes from re-rendering chat history" | 154 lin
 References:
 - → docs/chat-scroll-testing.md (mention)
 
+#### docs/implemented-plans/chat-header-chips.md
+
+Title: "Chat header re-IA: three stateful chips" | 342 lines
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-01-chat-menu-clipped-mobile.md:5 (mention) — discovered-in: worktree-chat-menu-mobile-overflow — implementing docs/plans/chat-header-chips.md
+
+References:
+- → docs/engineering-principles.md (mention)
+- → frontend.md (mention)
+- → code-style.md (mention)
+- → docs/testing.md (mention)
+- → docs/plans/ios-input-plane-parity.md (mention)
+
 #### docs/implemented-plans/chat-review.md
 
 Title: "Chat review: size-gated overnight compaction and generated titles" | 851 lines
@@ -2320,7 +2338,7 @@ Title: "Dead Google auth as a first-class health + notify condition" | 138 lines
 
 Referenced by:
 - docs/google-setup.md:147 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
-- docs/health-checks.md:37 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
+- docs/health-checks.md:56 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](implemented-plans/google-auth-reauth-health.md).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:6 (mention) — design: ../../callback-box/docs/implemented-plans/google-auth-reauth-health.md
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:12 (link) — [google-auth-reauth-health](../../callback-box/docs/implemented-plans/google-auth-reauth-health.md).
 
@@ -3498,6 +3516,7 @@ References:
 Title: "iOS input-plane parity" | 578 lines
 
 Referenced by:
+- docs/implemented-plans/chat-header-chips.md:276 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:3 (mention) — design: ../../callback-box/docs/plans/ios-input-plane-parity.md
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:9 (link) — [`ios-input-plane-parity.md`](../../callback-box/docs/plans/ios-input-plane-parity.md).
 
@@ -3635,6 +3654,13 @@ References:
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/implemented-plans/attach-directories-superseded.md (mention)
 - → docs/unimplemented-plans/capture-pipeline-redesign.md (mention)
+
+#### docs/plans/route-splitting.md
+
+Title: "Route-level code splitting — plan and cost/benefit" | 187 lines
+
+Referenced by:
+- ../issues/closed/decisions/2026-08-01-route-splitting-wontfix.md:11 (mention) — `../../../callback-box/docs/plans/route-splitting.md`. Summary of the call:
 
 #### docs/plans/source-available-release.md
 
