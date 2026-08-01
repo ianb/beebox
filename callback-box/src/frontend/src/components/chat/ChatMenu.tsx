@@ -121,13 +121,17 @@ export function ChatMenu({
   return (
     <Dropdown
       align="right"
-      width="w-56"
+      // The Recent-chats panel renders two-line rows (message label, id,
+      // timestamp, landmark) that the pre-chip session dropdown gave 28rem;
+      // the other panels keep the compact menu width. The viewport clamp in
+      // Dropdown still bounds it on narrow screens.
+      width={panel === "sessions" ? "w-[28rem]" : "w-56"}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
           onClick={toggle}
-          className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title="Chat menu"
           aria-label="Chat menu"
           {...ariaProps}

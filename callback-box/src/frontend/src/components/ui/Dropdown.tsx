@@ -62,6 +62,60 @@ export interface DropdownProps {
   onClose?: () => void;
 }
 
+// The open-state half of the minimal focus management (full arrow-key roving
+// focus is out of scope). Two concerns, both scoped to an open menu:
+//
+// 1. Focus the first menu item when the menu opens via a keyboard activation
+//    of the trigger (a keyboard-activated click has `event.detail === 0`).
+//    Mouse opens leave focus untouched so no focus ring appears. Some menus
+//    (e.g. `SessionListPanel`) mount a loading row before their real content,
+//    so a plain post-mount check can miss the first item entirely — a
+//    one-shot MutationObserver picks it up whenever it actually appears.
+// 2. A `keepOpen` submenu row (the panel-swap idiom) unmounts the focused
+//    element when the panel changes, dropping focus to <body> — after which
+//    Escape can't restore the trigger (focus is no longer inside the menu)
+//    and a keyboard user loses their place entirely. Watch for DOM changes
+//    that strand focus on <body> and re-anchor it on the first focusable item
+//    of the new panel. Menu items carry no :focus ring styling, so a
+//    mouse-driven swap doesn't acquire a visible ring from this.
+function useOpenMenuFocus({ open, menuRef, keyboardOpenRef }: {
+  open: boolean;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  keyboardOpenRef: React.RefObject<boolean>;
+}) {
+  useEffect(() => {
+    if (!open || !keyboardOpenRef.current) return;
+    const menu = menuRef.current;
+    if (menu === null) return;
+    const focusFirst = (): boolean => {
+      const first = menu.querySelector<HTMLElement>(FOCUSABLE_MENU_ITEM_SELECTOR);
+      if (first === null) return false;
+      first.focus();
+      return true;
+    };
+    if (focusFirst()) return;
+    const observer = new MutationObserver(() => {
+      if (focusFirst()) observer.disconnect();
+    });
+    observer.observe(menu, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [open, menuRef, keyboardOpenRef]);
+
+  useEffect(() => {
+    if (!open) return;
+    const menu = menuRef.current;
+    if (menu === null) return;
+    const observer = new MutationObserver(() => {
+      const active = document.activeElement;
+      if (active !== null && active !== document.body) return;
+      const first = menu.querySelector<HTMLElement>(FOCUSABLE_MENU_ITEM_SELECTOR);
+      first?.focus();
+    });
+    observer.observe(menu, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [open, menuRef]);
+}
+
 export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose }: DropdownProps) {
   const align = alignArg ?? "right";
   const vertical = verticalArg ?? "below";
@@ -93,29 +147,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
     prevOpenRef.current = open;
   }, [open]);
 
-  // Focus the first menu item when the menu opens via a keyboard activation
-  // of the trigger (a keyboard-activated click has `event.detail === 0`).
-  // Mouse opens leave focus untouched so no focus ring appears. Some menus
-  // (e.g. `SessionListPanel`) mount a loading row before their real content,
-  // so a plain post-mount check can miss the first item entirely — a
-  // one-shot MutationObserver picks it up whenever it actually appears.
-  useEffect(() => {
-    if (!open || !keyboardOpenRef.current) return;
-    const menu = menuRef.current;
-    if (menu === null) return;
-    const focusFirst = (): boolean => {
-      const first = menu.querySelector<HTMLElement>(FOCUSABLE_MENU_ITEM_SELECTOR);
-      if (first === null) return false;
-      first.focus();
-      return true;
-    };
-    if (focusFirst()) return;
-    const observer = new MutationObserver(() => {
-      if (focusFirst()) observer.disconnect();
-    });
-    observer.observe(menu, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [open]);
+  useOpenMenuFocus({ open, menuRef, keyboardOpenRef });
 
   // Closes the menu, first recording whether focus should be restored to the
   // trigger: only when focus is currently inside the menu. A click-outside
@@ -175,7 +207,11 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [open, align, vertical]);
+    // `width` participates because a panel swap may change the menu's width
+    // class (e.g. ChatMenu's Recent-chats panel widens to 28rem) — the
+    // clamped `left` must be recomputed from the new measured width or a
+    // right-aligned menu grows past the viewport edge.
+  }, [open, align, vertical, width]);
 
   useEffect(() => {
     if (!open) return;
