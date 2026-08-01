@@ -187,10 +187,16 @@ export function ContextChip({
       className="min-w-0"
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
+        // w-full is load-bearing: measured in-browser, this trigger button
+        // (a native <button>, not a plain div) does not stretch to fill its
+        // non-flex Dropdown wrapper on its own even with display:flex —
+        // without w-full a long label overflows the flex-shrunk wrapper
+        // instead of truncating inside it. Verified with a long label at
+        // 320px: wrapper and button both settle at the wrapper's width.
         <button
           type="button"
           onClick={toggle}
-          className="min-h-[40px] min-w-0 px-2 flex items-center rounded hover:bg-white/20 text-white/80 hover:text-white text-xs truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="min-h-[40px] w-full min-w-0 px-2 flex items-center rounded hover:bg-white/20 text-white/80 hover:text-white text-xs truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={title}
           aria-label={`Context: ${label}`}
           {...ariaProps}
