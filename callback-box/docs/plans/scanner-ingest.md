@@ -53,10 +53,14 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   const;` — the kind dispatcher was built as a plug point. **Reused** as the
   server-side entry after validation, and its ledger doubles as the remote
   side of the uploader's dedup negotiation (Track 2).
-- **scan-import** — `src/core/commands/scan-import.ts` dispatches: all-images
-  → photo flow (Gemini analysis, front/back pairing, question cards); single
-  PDF with text layer → document mode; textless PDF → rendered pages → photo
-  flow. Output is a `capture-session` card + attach scope in `box/inbox/`,
+- **scan-import** — `src/core/commands/scan-import.ts` dispatches two ways:
+  all-images → photo flow (Gemini analysis, front/back pairing, question
+  cards); any single PDF → document mode
+  (`scan-import.ts:117-118`: *"PDFs are always filed as documents — Flash
+  treatment for PDFs is deferred"* — there is **no** text-layer check or
+  textless-PDF-to-photo-flow path today; that split is Track 4 work, not
+  existing behavior). Output is a `capture-session` card + attach scope in
+  `box/inbox/`,
   committed with `Created-By: scan-import`, then
   `createOrAppendIntakeJob` (`src/connectors/intake-utils.ts:36-38`: *"Create
   a new intake job or append items to an existing pending one from the same
@@ -70,8 +74,12 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   `.callback-box/mobile-devices.secret.json`, with hashed tokens, pairing
   tickets (10-min TTL, `pairing.ts:12`), revocation, and dual verification by
   hub and box child (`pairing.ts:14-16` comment; hub side
-  `src/hub/hub-server.ts:161`). **Reused**: Track 1 adds a `scope` field
-  rather than a parallel token system (principle #8).
+  `src/hub/hub-server.ts:161`). **Pattern reused, store not**: Track 1
+  extracts the store mechanics into a shared helper and keeps scan tokens
+  in a separate file, because every mobile-auth gate reduces identity to a
+  boolean and any device bearer can mint a session cookie
+  (`src/webapp/routes/pairing.ts:55-60`) — a scope field on this store
+  cannot be contained (established by cross-model review, finding 1).
 - **Streaming raw-body upload pattern** — `src/webapp/routes/bulk-upload.ts:80-85`:
   *"Shadow the parent box scope's buffering octet-stream parser with a
   non-draining one, so item uploads can stream `request.raw` straight to disk
@@ -174,34 +182,63 @@ Tracks 1–3 live on prod.
   `annex/doctor.ts`, then the runbook for the real cutover written into
   `docs/server-operations.md`.
 
-### Track 1 — Scoped upload tokens
+### Track 1 — Scan upload tokens (dedicated credential)
 
-- **What:** Add a `scope` field to the mobile device-token store and a
-  `scan-upload` scope that authorizes only the Track 2 routes.
+- **What:** A dedicated, revocable scan-upload credential per box,
+  accepted only by the Track 2 routes, enforced independently at the hub
+  and the box child.
 - **Why this needs to change:** the boxholder wants an uploader credential
   with a deliberately small blast radius — "it can blindly upload to a known
   location … due to the limited amount it can do we wouldn't be creating a
   huge hole." Today a device token is full box access; nothing narrower
   exists.
-- **Direction:** Extend the device record schema in
-  `src/core/mobile/pairing.ts` with `scope: "full" | "scan-upload"`
-  (default `"full"` for existing records — additive, no migration).
-  `resolveMobileRequestAuth` (`src/core/mobile/request-auth.ts:54`) returns
-  the scope; the Track 2 routes require `scan-upload` or `full`; every other
-  authenticated surface requires `full`. Enforcement lives in one place — the
-  auth resolver's result type — so a new route cannot forget to check
-  (principle #2: make the compiler ask). Pairing UX: the existing
-  `pairing.create` tRPC procedure gains an optional `scope` input; the
-  boxholder mints a scan token from the browser exactly like pairing a phone.
-  Revocation and hashed storage come free from the existing store.
-  Provenance: the upload route records the device name into the quarantine
-  entry, and scan-import carries it onto the session card as
-  `source: scan-upload/<device-name>`.
-- **Vocabulary lock-ins:** scope names `full` and `scan-upload`; the
-  provenance string `scan-upload/<device-name>`.
-- **First implementation chunk:** schema + resolver change with doctests
-  proving (a) an unscoped legacy record reads as `full`, (b) a `scan-upload`
-  token is rejected by a `full`-gated route, (c) revocation works unchanged.
+- **Direction:** A **dedicated scan-token store**, not a scope field on the
+  mobile device store. Cross-model review (see `scanner-ingest.review.md`,
+  finding 1) verified that mobile identity is reduced to a boolean at every
+  gate — the box auth preHandler accepts any non-null mobile identity and
+  renews a session cookie (`src/webapp/server-box-scope.ts:99-105`), tRPC
+  gates on the same boolean, the hub reduces bearer verification to yes/no
+  before proxying every path, and `/api/pairing/session`
+  (`src/webapp/routes/pairing.ts:55-60`) mints a scope-less signed cookie
+  from any valid device bearer. Retrofitting a scope through all of that is
+  more code and more risk than a separate credential that the general auth
+  path never sees.
+  - Store: `.callback-box/scan-tokens.secret.json`, reusing the pairing
+    store's mechanics (hashed tokens, `file-lock.ts` locking, `lastUsedAt`,
+    revocation) via a shared helper extracted from
+    `src/core/mobile/pairing.ts` — shared code, separate file, so
+    `resolveMobileRequestAuth` structurally cannot resolve a scan token and
+    no mobile gate ever sees one.
+  - Child enforcement: the Track 2 routes register with their own
+    preHandler that verifies the scan bearer against the scan store (they
+    also accept a full owner identity, so the boxholder can exercise them
+    from a browser session). Every other surface is untouched and rejects
+    scan bearers by construction (unknown to mobile auth). Scan tokens can
+    never mint a session cookie: `/api/pairing/session` reads only the
+    mobile store.
+  - Hub enforcement (independent, per the review): the hub proxies a
+    scan-bearer request only when the path matches
+    `/<slug>/api/scan/…` and the bearer verifies against that box's scan
+    store; scan bearers on any other path are 401'd at the hub. Both
+    processes enforce; neither trusts the other (principle #3:
+    validate at boundaries — both boundaries).
+  - Minting UX: a `scanTokens.create` tRPC procedure (owner-authed, named
+    token, shows the secret once), plus `list`/`revoke`. Same
+    pairing-ticket indirection is unnecessary — the boxholder copies the
+    token into the uploader config by hand once.
+  - Provenance: the upload route records the token name into the quarantine
+    entry sidecar; promote passes it through so the session card carries
+    `source: scan-upload/<token-name>` (see Track 2's provenance plumbing).
+- **Vocabulary lock-ins:** store file
+  `.callback-box/scan-tokens.secret.json`; provenance string
+  `scan-upload/<token-name>`; tRPC router name `scanTokens`.
+- **First implementation chunk:** the store helper (extracted +
+  parameterized from `pairing.ts`) + `scanTokens` tRPC procedures + the
+  route preHandler, with doctests proving (a) a scan token passes the scan
+  routes, (b) a scan token is rejected by the general auth preHandler, tRPC,
+  and `/api/pairing/session`, (c) a mobile device token is NOT accepted by
+  the scan preHandler's scan-store path (only a full owner identity is),
+  (d) revocation works, (e) the hub 401s a scan bearer on a non-scan path.
 
 ### Track 2 — Upload route, wire contract, quarantine, validation
 
@@ -216,27 +253,59 @@ Tracks 1–3 live on prod.
   `docs/scan-upload-contract.md`, the single coordination point named in
   breadcrumbs on both sides):
   - `POST /api/scan/check` — body `{ "hashes": ["<sha256>", …] }`, response
-    `{ "unknown": ["<sha256>", …] }`. Answered from the Track 2 ledger wrapper
-    around `.callback-box/uploads.json` plus the current quarantine contents
-    (so an uploaded-but-not-yet-promoted file is not re-requested).
+    a **per-hash state map**, not a membership bit:
+    `{ "states": { "<sha256>": { "state": "unknown" | "pending" | "imported"
+    | "rejected", "reason"?: "…" } } }`. `pending` = validated, in
+    quarantine, awaiting promote; `imported` = in the upload ledger
+    (`.callback-box/uploads.json`); `rejected` includes the rejection
+    reason. The client's disposition logic keys on these distinctly (see
+    Track 5): collapsing rejected and imported into "known" would let the
+    client trash the only copy of a rejected file, and a crash between PUT
+    and disposition would otherwise strand files as forever-"known"
+    without a confirmation (review finding 2).
   - `PUT /api/scan/files/<sha256>` — body is the raw bytes
     (`application/octet-stream`, streamed to disk via the bulk-upload
-    passthrough-parser pattern, `bulk-upload.ts:80-90`); metadata in headers:
-    `X-Upload-Filename` (required, same header as bulk-upload),
-    `X-Scan-Profile` (optional, free-text scanner profile name). The hash in
-    the path is the idempotency key: the server hashes the received bytes and
-    responds 422 on mismatch (truncation/corruption defense), 200 with
-    `{ "status": "accepted" }` on success, 200 `{ "status": "duplicate" }` if
-    already known, 422 `{ "status": "rejected", "reason": "…" }` on
-    validation failure.
-  - Auth: `Authorization: Bearer <token>` with scope `scan-upload` or `full`
-    (Track 1).
-  - Limits: existing 50 MB body cap; plus a per-token rate limit (60
-    requests/min — an order of magnitude above real scanner cadence) that 429s
-    and logs at `warn`.
+    passthrough-parser pattern, `bulk-upload.ts:80-90`, metered — see
+    Limits); metadata in headers: `X-Upload-Filename` (required, same
+    header as bulk-upload), `X-Scan-Profile` (optional, free-text scanner
+    profile name). The hash in the path is the idempotency key: the server
+    hashes the received bytes and responds 422 on mismatch
+    (truncation/corruption defense), 200
+    `{ "status": "accepted" }` on success, 200 `{ "status": "duplicate" }`
+    for an already-`pending`/`imported` hash, 422
+    `{ "status": "rejected", "reason": "…" }` on validation failure.
+    Re-PUT of a previously **rejected** hash re-runs validation rather than
+    replaying the cached verdict — that is the deliberate retry path after
+    a validator fix, and it is idempotent (review finding 2).
+  - Auth: `Authorization: Bearer <scan-token>` (Track 1), or a full owner
+    identity.
+  - Limits: Fastify's `bodyLimit` does **not** meter a passthrough parser
+    (the raw stream bypasses the string/buffer collection path), so the
+    route meters the stream itself the way bulk-upload actually does —
+    reuse `addFileStreamed`'s byte-metering
+    (`src/core/capture/staging-stream.ts:76`), plus an early
+    `Content-Length` check; overflow deletes the partial temp file and
+    413s (review finding 8). Per-token rate limit (60 requests/min — an
+    order of magnitude above real scanner cadence) that 429s with
+    `Retry-After` and logs at `warn`.
 - **Direction — quarantine and validation:** files land in
-  `tmp/scan-quarantine/<sha256>.<ext>` with a sidecar
-  `<sha256>.json` (original filename, device name, profile, received-at).
+  `tmp/scan-quarantine/<sha256>.<ext>` with a sidecar `<sha256>.json`
+  carrying the entry's **durable state machine** — `state: "pending" |
+  "promoting" | "imported" | "rejected"`, original filename, token name,
+  profile, received-at, and (for rejected) `reason` plus `question-ref`
+  once a question card exists. The sidecar is the recovery source of truth:
+  the promote worker's startup pass re-scans quarantine and resumes
+  `promoting` entries (re-running `cb upload` is safe — the ledger dedups),
+  mirroring the bulk-upload worker's persisted-state + startup-resume shape
+  rather than approximating it (review finding 4). Quarantine has its own
+  GC (the generic `tmp/` sweep skips directories entirely —
+  `src/core/housekeeping.ts:55` `if (!stat.isFile()) continue;` — so
+  nothing else will clean it): `imported` entries are deleted on the next
+  promote pass; `rejected` entries are deleted 30 days after their
+  question card is resolved, and their hash stays answerable as `rejected`
+  via a compact rejection ledger kept in the sidecar dir until then.
+  `question-ref` makes question emission idempotent across repeated
+  promote runs (review finding 7).
   Validation runs inline in the PUT, before the 200: (1) magic-byte sniff via
   `file-type`, must be in the allowlist (`application/pdf` + the image types
   from `SUPPORTED_IMAGE_EXTENSIONS`, `upload-helpers.ts:15`) and must agree
@@ -250,15 +319,37 @@ Tracks 1–3 live on prod.
   parser exploits and type smuggling, not commodity malware, and nothing in
   this pipeline executes uploaded bytes; the boxholder concurred.
 - **Direction — promote worker:** an async, debounced worker (per box,
-  in-process alongside the route, same shape as the bulk-upload worker)
-  sweeps validated quarantine entries, moves them into `tmp/scan-staging/`,
-  and runs the `upload` command with kind `scan` (`upload.ts:45`), which
-  dedups against the ledger and invokes scan-import. Batch settle: the worker
-  runs when no new PUT has arrived for 2 minutes, so a 10-document session
-  becomes one scan-import batch and one wakeup, not ten.
+  in-process alongside the route) drives `pending` quarantine entries
+  through the sidecar state machine under a per-box cross-process
+  promotion lock (`src/lib/file-lock.ts` — the route process and any CLI
+  invocation must serialize). For each batch: mark `promoting`,
+  **materialize each file into `tmp/scan-staging/` under its original
+  sanitized filename from the sidecar** — not its hash name — because
+  scan-import's image grouping keys on scanner `<prefix>_NNN` names
+  (`upload-helpers.ts:37`) and the document path records
+  `path.basename(input)` as the original name; hash-named inputs would
+  wreck grouping and provenance (review finding 6). Then run the `upload`
+  command with kind `scan` (`upload.ts:45`) → ledger dedup → scan-import,
+  mark `imported`, clean staging. Two existing helpers get locking as part
+  of this chunk: the upload ledger's read-modify-write
+  (`upload-helpers.ts:167` — unlocked, fixed `.tmp` name) and
+  `createOrAppendIntakeJob`'s find/read/append/write
+  (`intake-utils.ts:40,112`) — both wrapped with `file-lock.ts` /
+  `withCardLock` so a concurrent wakeup's connector sync cannot lose
+  updates (review finding 4). Batch settle: the worker runs when no new
+  PUT has arrived for 2 minutes, so a 10-document session becomes one
+  scan-import batch and one wakeup, not ten.
+- **Direction — provenance plumbing:** `upload`/`scan-import` gain an
+  optional `--source <string>` argument, and the `capture-session` schema
+  gains an optional `source` field (additive; existing cards valid),
+  carrying `scan-upload/<token-name>` from sidecar to card. Today neither
+  command accepts provenance and the schema has no such field (review
+  finding 6) — this is a small, explicit extension, not free reuse.
 - **Vocabulary lock-ins:** route prefix `/api/scan/`; header `X-Scan-Profile`;
-  quarantine dir `tmp/scan-quarantine/`; response statuses
-  `accepted | duplicate | rejected`.
+  quarantine dir `tmp/scan-quarantine/`; sidecar states
+  `pending | promoting | imported | rejected`; check states
+  `unknown | pending | imported | rejected`; PUT statuses
+  `accepted | duplicate | rejected`; card field `source`.
 - **First implementation chunk:** the two routes + validation stack + sidecar
   writing, with route doctests (via `makeTestServer()`) exercising the
   contract exactly as the client will: check → PUT → duplicate PUT → hash
@@ -274,12 +365,23 @@ Tracks 1–3 live on prod.
   Prod default schedules are connector-specific (`src/core/box/defaults.ts`
   — check-email, check-calendar, etc.; no plain periodic wakeup), so without
   a trigger a scan session sits until an unrelated wakeup happens.
-- **Direction:** the promote worker spawns `cb wakeup` (detached, logged)
-  after scan-import finishes. Direct invocation, not a scheduled-script card:
-  the one-shot-card pattern was retired (`src/core/migrations.ts:106-110`)
-  and reintroducing it would fork the vocabulary (principle #8). The wakeup's
-  existing lock discipline handles overlap with a concurrently scheduled
-  wakeup.
+- **Direction:** after a batch reaches `imported`, the worker records a
+  durable `wakeup-pending` marker (a small file beside the sidecars) and
+  runs a **supervised, full (unscoped)** `cb wakeup` — awaited with output
+  captured, not fire-and-forget — clearing the marker on success and
+  retrying on the next worker pass otherwise. Two facts force this shape
+  (review finding 5): wakeup is *not* globally locked (only the reactor
+  phase takes `.cb-reactor.lock`, `src/core/reactor/engine.ts:110`;
+  `src/cli/commands/doctor.ts:51` documents wakeup as otherwise unlocked),
+  so "the lock handles overlap" was wrong — the promotion lock plus
+  supervised await is our serialization; and connector-scoped wakeups
+  filter jobs by `source` (`src/cli/commands/wakeup.ts:117`), so a
+  `source: scan` job would *never* drain on the default connector-scoped
+  schedules — a lost spawn is not "latency," it is indefinite, hence the
+  durable marker + retry (principle #4: never silent). Direct invocation,
+  not a scheduled-script card: the one-shot-card pattern was retired
+  (`src/core/migrations.ts:106-110`) and reintroducing it would fork the
+  vocabulary (principle #8).
 - **First implementation chunk:** part of the promote-worker chunk in
   Track 2; listed as its own track because it is a distinct design decision.
 
@@ -311,12 +413,18 @@ Tracks 1–3 live on prod.
      text layers (accepting the known long-document force-OCR bug as an
      escape-hatch-only risk). No OCR model weights deploy — the model
      pre-fetch shrinks to layout + TableFormer (~100 MB).
-  3. **Dispatch boundary:** scan-import's existing three-way dispatch stands.
-     Images and textless PDFs → Gemini photo flow (front/back pairing — the
-     boxholder's photo case — already handled there). Text-layer PDFs →
-     this document mode. The batch question is settled at the scanner:
-     ScanSnap profiles are configured one-PDF-per-scan-job, so multi-document
-     splitting stays out of scope (as pdf-intake also deferred).
+  3. **Dispatch boundary — this track adds the text-layer split.** Today
+     every PDF goes to document mode unconditionally
+     (`scan-import.ts:117-118`; the textless-PDF-to-photo-flow route does
+     not exist — corrected after review finding 6). Track 4 adds the
+     check: PDF **with** an embedded text layer → this Docling document
+     mode; PDF **without** one (a photo batch saved as PDF) → render pages
+     (Docling's page renders or `pdftoppm`) → the existing Gemini photo
+     flow, which handles front/back pairing — the boxholder's photo case.
+     All-image input keeps going straight to the photo flow. The batch
+     question is settled at the scanner: ScanSnap profiles are configured
+     one-PDF-per-scan-job, so multi-document splitting stays out of scope
+     (as pdf-intake also deferred).
 - **Direction — mechanics:** shell out to `uvx docling` (JSON + markdown +
   page/figure images), gzip the JSON, `sharp`-encode images to AVIF, write
   `document.card` + assets into the session attach scope, stage via the
@@ -351,17 +459,29 @@ Tracks 1–3 live on prod.
   gate** (skip files whose size or mtime changed within the last 10 seconds —
   ScanSnap writes multi-page PDFs incrementally, and a truncated upload would
   pass the hash-integrity check because truncated bytes hash consistently),
-  hash the rest, `POST /api/scan/check`, PUT each unknown file, then apply
-  the per-folder disposition **only after a confirmed `accepted`/`duplicate`
-  response**:
+  then for each surviving file: **snapshot its identity** (device, inode,
+  size, high-resolution mtime), hash it, `POST /api/scan/check`, PUT each
+  `unknown` (and optionally retry `rejected` — see below), and apply the
+  per-folder disposition **only after both a confirmed
+  `accepted`/`duplicate`/`imported` response AND a restat showing the
+  identity snapshot unchanged**. The restat closes the gap the settle gate
+  alone leaves open: the scanner can replace or append to the file after
+  the uploader reads EOF but before disposition, and moving/trashing the
+  now-different file would silently lose the only copy — the server
+  accepted an earlier byte sequence and there is no next sweep (review
+  finding 3). On any identity change: leave the file untouched; the next
+  run re-hashes it.
   - `keep` (default) — leave in place; the remote ledger makes re-sweeps
     no-ops.
   - `archive` — move to `<folder>/imported/`.
   - `trash` — move to macOS Trash (`trash` CLI when present, `osascript`
     Finder fallback); never `unlink`.
-  A `rejected` response leaves the file in place and prints it; the exit code
-  is non-zero if any file was rejected (principle #5: failure in the
-  signature).
+  Check-state handling: `pending`/`imported` count as confirmed (covers a
+  prior run that crashed between PUT and disposition — review finding 2);
+  `rejected` files are never dispositioned — they stay in place, print
+  with their server-side reason, and make the exit code non-zero
+  (principle #5: failure in the signature); a `--retry-rejected` flag
+  re-PUTs them (the server re-validates).
 - **Direction — invocation:** ScanSnap's post-scan application hook calls a
   one-line shell wrapper around `node scan-uploader.mjs`; the same command is
   the manual/periodic sweep. Idempotency comes from the check endpoint, so
@@ -417,19 +537,21 @@ scan job) removes the need rather than deferring a design.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| ScanSnap writes a file mid-sweep; uploader hashes a truncated PDF | planned (uploader doctest with a growing fixture file) | settle gate (Track 5); server-side `qpdf --check` rejects most truncations; a settled-but-truncated file self-heals — the completed file has a different hash and uploads next sweep | clear — rejected entry surfaces as question card |
+| ScanSnap writes a file mid-sweep; uploader hashes a truncated PDF | planned (uploader doctest with a growing fixture file) | settle gate + identity snapshot + restat-before-disposition (Track 5); server-side `qpdf --check` rejects most truncations; a settled-but-truncated file self-heals only because disposition is blocked on the restat — the completed file has a different hash and uploads next sweep | clear — rejected entry surfaces as question card |
+| Scanner replaces the file between uploader EOF and disposition | planned (uploader doctest: mutate fixture mid-run) | restat vs identity snapshot; on mismatch leave file, retry next run (Track 5) | clear |
 | Uploaded bytes don't match the path hash (network corruption, client bug) | planned (route doctest) | server re-hashes, 422 on mismatch; client leaves file in place and retries next sweep | clear |
 | Smuggled type (e.g. HTML renamed `.pdf`) | planned (route doctest) | magic-byte sniff + extension agreement check, 422 `rejected` | clear |
 | Structurally broken but correctly-typed PDF | planned (route doctest) | `qpdf --check` fails → `rejected`, stays in quarantine, question card on next promote | clear |
 | Docling crashes / hangs on a valid PDF | planned (faked-docling doctest for the error path) | `status: new` card with `error:` field, original PDF preserved; timeout kills the subprocess | clear — card is visibly unextracted |
 | Docling emits empty markdown | planned | `status: analyzed`, empty body — "no readable content" (pdf-intake's decision, kept) | clear enough — body absence is visible |
-| Promote worker dies mid-batch (server restart) | planned (worker doctest: restart resumes) | quarantine sidecars are the durable state; promote re-scans quarantine on box start, same as bulk-upload's stranded-batch sweep | clear |
-| `cb wakeup` spawn fails after promote | planned | logged `error`; intake job still exists and drains on any later wakeup — degradation is latency, not loss | clear (logged), degradation acceptable |
+| Promote worker dies mid-batch (server restart) | planned (worker doctest: restart resumes) | sidecar state machine is the durable state; startup pass resumes `promoting` entries and recovers both quarantine and staging (re-running `cb upload` is ledger-deduped) | clear |
+| `cb wakeup` run fails after promote | planned (worker doctest) | durable `wakeup-pending` marker + supervised retry on next worker pass (Track 3). NOTE: connector-scoped scheduled wakeups do NOT drain `source: scan` jobs (`wakeup.ts:117`), so without the marker this failure would be indefinite, not latency | clear (logged + retried) |
 | Token leaks | n/a (operational) | scope limits blast radius to feeding quarantine; rate limit caps volume; revocation one-line; provenance on every card identifies the device | clear after the fact via provenance |
 | Hash-membership oracle via `/check` | n/a (accepted risk) | none — a `scan-upload` token holder can test whether a specific file was ever uploaded | documented here; accepted: smallest possible read surface, confined to scan hashes |
 | Uploader's Trash disposition on a non-Mac | planned (unit test of platform guard) | `trash` disposition refuses with a clear error on non-darwin platforms rather than falling back to `unlink` | clear |
 | Rate limit trips during a legitimate huge session | planned (route doctest) | 429 with `Retry-After`; uploader backs off and resumes; nothing lost (files stay local) | clear |
-| Quarantine fills with rejected files | not planned | swept by the existing 7-day `tmp/` sweep (`box-tmp.ts:6`) **after** their question cards exist; sidecar prevents re-accepting the same rejected hash meanwhile | clear |
+| Quarantine fills with rejected files | planned (worker doctest) | scan-specific GC in the promote worker (Track 2): `imported` entries deleted next pass, `rejected` deleted 30 days after question resolution. The generic `tmp/` sweep does NOT cover this — it skips directories (`housekeeping.ts:55`) | clear |
+| Repeated promote runs re-emit questions for the same rejected file | planned (worker doctest) | `question-ref` recorded in the sidecar makes emission idempotent (Track 2) | clear |
 
 ## Agent-flow / user-flow edge cases
 
@@ -442,10 +564,13 @@ scan job) removes the need rather than deferring a design.
   cannot go stale independently. **ADDRESSED** by construction (attach-scope
   refs, `ref-path.ts` semantics).
 - **Two agents touching the same card** — promote worker commits a session
-  card while a wakeup-triggered reactor is running. **ADDRESSED**: scan-import
-  commits before the wakeup spawn (Track 3 ordering), and wakeup's existing
-  lock discipline serializes cycles; the intake job append uses
-  `createOrAppendIntakeJob`'s existing find-or-create.
+  card while a wakeup-triggered reactor is running. **ADDRESSED**:
+  scan-import commits before the supervised wakeup (Track 3 ordering); the
+  reactor phase holds `.cb-reactor.lock` (`src/core/reactor/engine.ts:110`);
+  and Track 2 adds locking around the two genuinely racy helpers — the
+  upload ledger's read-modify-write and `createOrAppendIntakeJob`'s
+  find/read/append/write — which are unlocked today (review finding 4;
+  wakeup as a whole is *not* locked, so the plan does not rely on it).
 - **Hand-edit drift** — boxholder hand-edits a `document.card`'s frontmatter.
   **ADDRESSED** by the standard card-validation hooks (schema validation on
   commit); nothing scan-specific needed.
@@ -484,9 +609,11 @@ scan job) removes the need rather than deferring a design.
   churn.
 - **ScanSnap Cloud / scanner-direct upload** — the boxholder scans to local
   folders; no cloud integration.
-- **A general-purpose scoped-permission system** — exactly one new scope
-  (`scan-upload`); a full capability matrix is speculative until a second
-  consumer exists.
+- **A general-purpose scoped-permission system** — exactly one new
+  credential kind (the scan token, its own store, its own routes); a full
+  capability matrix retrofitted into mobile auth is speculative until a
+  second restricted consumer exists — and cross-model review showed the
+  retrofit is where the danger lives.
 - **Non-Mac uploader polish** — the uploader is platform-neutral except the
   `trash` disposition, which is Mac-only and guarded; Windows/Linux Trash
   support waits for a real need.
@@ -495,11 +622,10 @@ scan job) removes the need rather than deferring a design.
 
 ## Open design questions
 
-- **Pairing UX for scoped tokens**: reuse the existing pairing dialog with a
-  scope dropdown, or a separate "mint scan token" admin action? Lean:
-  dropdown on the existing dialog — one surface, and the flow is identical.
-  Cosmetic; does not block Track 1's chunk (the tRPC input is the same either
-  way).
+- **Where the mint-token UI lives**: the `scanTokens` tRPC procedures are
+  settled (Track 1); whether the browser surface is a small admin-page
+  section or CLI-only for now is cosmetic and does not block Track 1's
+  chunk. Lean: admin-page section, since revocation wants a visible list.
 - **`X-Scan-Profile` → box routing hint**: for now the box is fixed by the
   URL path (per-box routes); the profile header is provenance only. If a
   future single-folder-multi-box setup appears, the header could carry
@@ -562,7 +688,8 @@ prod plus 0; 7 anytime; 8 needs everything.
   as route doctests before the uploader exists — they are the executable
   specification the client is written against. Named doctests:
   `test/webapp/routes/scan-upload.doctest.md` (contract: check/PUT/duplicate/
-  mismatch/smuggle/broken-PDF/rate-limit/scope-rejection),
+  mismatch/smuggle/broken-PDF/oversize-stream/rate-limit/token-isolation
+  including hub-path rejection),
   `test/core/scan-promote.doctest.md` (worker: batch settle, restart
   resume, wakeup spawn failure), `test/core/commands/document-extract.doctest.md`
   (faked Docling: success shape, failure fallback, empty markdown), one gated
