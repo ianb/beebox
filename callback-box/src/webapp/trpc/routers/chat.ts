@@ -5,23 +5,17 @@
  * since they don't fit tRPC's shape.
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { glob } from "glob";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";
 import { chatControlProcedures } from "./chat-control-procedures.js";
-import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
-import { errnoCode } from "../../../lib/error-guards.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
 } from "../../../core/chat/session/history.js";
-import { listChatHusks } from "../../../core/chat/husk.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
-import { huskTranscriptPath } from "../../../core/chat/husk-transcript.js";
-import { resolveSessionLabel } from "../../../core/chat/session-label.js";
+import { loadAllSessions, type ChatSessionRow } from "../../../core/chat/session/list.js";
+import { loadLandmarkSummaries } from "../../../core/landmark/summaries.js";
 
 const FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -43,133 +37,6 @@ export interface PickerLandmark {
   sessions: PickerSession[];
   /** Sessions older than the fresh window, same landmark. */
   olderSessions: PickerSession[];
-}
-
-/**
- * Pull the navigation `symbol`'s text and image src (if any). A string symbol
- * is text; a `{ src }` symbol is an image whose path is resolved from "relative
- * to the landmark directory" to "box-relative" so the frontend can request it.
- */
-function readSymbol(
-  navigation: LandmarkNavigationData | undefined,
-  { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
-): { text: string; src: string | null } {
-  const symbol = navigation === undefined ? undefined : navigation.symbol;
-  if (symbol === undefined) return { text: "", src: null };
-  if (typeof symbol === "string") return { text: symbol.trim(), src: null };
-  const absolute = path.resolve(landmarkDir, symbol.src);
-  return { text: "", src: path.relative(boxRoot, absolute) };
-}
-
-export interface LandmarkSummary {
-  dir: string;
-  label: string;
-  symbol: string;
-  symbolSrc: string | null;
-}
-
-/**
- * Like `landmarks.list` but without resolving links/expand — just the
- * tile-level metadata the picker needs. Reads each card's YAML frontmatter
- * `navigation` (label + symbol); cards whose frontmatter doesn't parse as a
- * landmark are skipped.
- *
- * Exported for the chat-picker regression doctest: this read once used the XML
- * `parseCard`, which silently threw on every (now-frontmatter) landmark card
- * and left the picker landmark-less.
- */
-export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]> {
-  const matches = await glob("**/*.landmark.card", {
-    cwd: boxRoot,
-    nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"],
-  });
-
-  const out: LandmarkSummary[] = [];
-  for (const relPath of matches) {
-    const absPath = path.join(boxRoot, relPath);
-    let fields;
-    try {
-      const content = await fs.readFile(absPath, "utf-8");
-      fields = parseLandmarkFields(content);
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        console.warn(`Skipping unreadable landmark card ${absPath}:`, e);
-      }
-      continue;
-    }
-    if (fields === null) continue;
-
-    const navigation = fields.navigation;
-    const dir = path.dirname(relPath);
-    const symbol = readSymbol(navigation, { landmarkDir: path.dirname(absPath), boxRoot });
-    out.push({
-      dir: dir === "." ? "" : dir,
-      label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
-      symbol: symbol.text,
-      symbolSrc: symbol.src,
-    });
-  }
-  out.sort((a, b) => {
-    // Root first, then alphabetical.
-    if (a.dir === "") return -1;
-    if (b.dir === "") return 1;
-    return a.dir.localeCompare(b.dir);
-  });
-  return out;
-}
-
-interface SessionRow {
-  sessionId: string;
-  /** "" for root-bound, undefined for legacy unbound (treated as root). */
-  contextDir: string | undefined;
-  mtime: Date;
-  label: string;
-  /** Box-relative path of the session's husk card. */
-  huskPath: string;
-}
-
-/**
- * Web chats, enumerated from husk cards (docs/plans/chat-husks.md) — the
- * cards are the source of truth for which sessions exist and what they're
- * called (deleting a husk is editorial removal from the picker; a husk
- * `title` beats the transcript snippet). Activity stays runtime-derived:
- * freshness is the transcript's mtime, and a husk whose transcript is
- * gone is skipped here (nothing to resume) while staying browsable as a
- * card.
- */
-async function loadAllSessions(
-  boxRoot: string,
-): Promise<SessionRow[]> {
-  const husks = await listChatHusks(boxRoot);
-  const rows: SessionRow[] = [];
-  for (const husk of husks) {
-    const logPath = huskTranscriptPath(boxRoot, husk);
-    let mtime: Date;
-    try {
-      const stat = await fs.stat(logPath);
-      mtime = stat.mtime;
-    } catch (_e) {
-      // log missing — session was cleaned up; nothing to resume, skip it
-      continue;
-    }
-
-    const label = await resolveSessionLabel({
-      sessionId: husk.session,
-      logPath,
-      title: husk.title,
-    });
-
-    rows.push({
-      sessionId: husk.session,
-      contextDir: husk.contextDir,
-      mtime,
-      label,
-      huskPath: husk.path,
-    });
-  }
-  rows.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-  return rows;
 }
 
 export const chatRouter = router({
@@ -241,7 +108,7 @@ export const chatRouter = router({
     // Group sessions by binding. `contextDir === undefined` (legacy
     // unbound) and `contextDir === ""` (explicit root) both belong to
     // the root bucket.
-    const byDir = new Map<string, SessionRow[]>();
+    const byDir = new Map<string, ChatSessionRow[]>();
     for (const session of allSessions) {
       const bucket = session.contextDir ?? "";
       const list = byDir.get(bucket);
@@ -249,7 +116,7 @@ export const chatRouter = router({
       else byDir.set(bucket, [session]);
     }
 
-    const toPicker = (s: SessionRow): PickerSession => ({
+    const toPicker = (s: ChatSessionRow): PickerSession => ({
       sessionId: s.sessionId,
       label: s.label,
       lastActivity: s.mtime.toISOString(),

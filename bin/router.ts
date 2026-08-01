@@ -74,6 +74,7 @@ import {
   errnoCode,
   httpStatusOf,
   listenLoopback,
+  readEnvFile,
   type RouterCore,
   type RouterEffects,
   type ResolvedWorktree,
@@ -1269,6 +1270,37 @@ async function main(): Promise<void> {
   // (hub/supervisor.ts buildChildEnv). So the router's env copy is unused by
   // any descendant — deleting it changes nothing downstream.
   delete process.env.CB_HUB_SECRET;
+
+  // The router's OWN gate reads CB_BROWSE_API_KEY (via core/browse-key.ts), so
+  // the router process needs it too — the per-checkout copy in `childEnv` only
+  // reaches the children it spawns. Load it from the main checkout's `.env`,
+  // the file this router already treats as its config (MAIN_BOX_DEFAULTS above).
+  //
+  // This makes the browse key effectively MACHINE-level, not per-worktree: one
+  // router process fronts every worktree, so its gate has exactly one key to
+  // compare against. Worktree copies of `.env` still matter — the hub and box
+  // children verify independently and are spawned per worktree — but a worktree
+  // that sets a DIFFERENT key would pass its own children and be refused at the
+  // router. One key everywhere is the supported shape.
+  //
+  // Only fills in what isn't already exported, so `CB_BROWSE_API_KEY=… pnpm dev`
+  // still wins.
+  //
+  // The ROUTER takes only the one key it needs, not the whole file — unlike the
+  // children, which get the file wholesale because that is what a dotenv is
+  // for. The router is different: it is the authenticating front door, and its
+  // own resolver is env-driven in ways a dev config file must not reach. A
+  // `CB_HUB_SECRET=` line would flip `isHubMode()` and swing the resolver off
+  // the gen-aware cookie path that the `delete` above exists to guarantee —
+  // silently undoing that hardening from a gitignored file nobody reviews.
+  // An allowlist makes that structurally impossible rather than relying on
+  // nobody ever putting the wrong line in a `.env`.
+  const ROUTER_ENV_FROM_FILE = ["CB_BROWSE_API_KEY"];
+  const fileEnv = await readEnvFile(path.join(MAIN_ROOT, "callback-box", ".env"), log);
+  for (const key of ROUTER_ENV_FROM_FILE) {
+    const value = fileEnv[key];
+    if (process.env[key] === undefined && value !== undefined) process.env[key] = value;
+  }
 
   const effects = createRealEffects();
   const core = createRouterCore(effects, {

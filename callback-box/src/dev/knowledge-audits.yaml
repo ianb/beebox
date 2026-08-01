@@ -4295,3 +4295,36 @@ tests:
     watch_for: "Names the SDK context-window meaning, and does NOT confuse it with chat review"
     correct_contains: ["context"]
     tags: [vocabulary, chat-review]
+
+  # === Assets (git-annex) ===
+  #
+  # Status (2026-07-31): 2/2 pass, verified on a box that is ACTUALLY annexed
+  # (the preserve-ignored-files worktree clone of test1, migrated with
+  # `cb attachments to-annex`: 137 assets / 106 MB, 99 manifests removed, 9 Git
+  # LFS files converted).
+  #
+  # Both failed before that migration, and each failure was informative:
+  #   1. asset-add-workflow as first written asked "how do I add a photo" and
+  #      required "git add" — but a box agent rightly answers `mkdir`/`cp`,
+  #      since the pre-commit hook commits, not the agent. Wrong criterion.
+  #   2. The rewrite still failed because the box was on Git LFS, and the agent
+  #      correctly described LFS. That is what surfaced the LFS overlap now
+  #      resolved in docs/plans/asset-annex.md.
+  # Neither audit can pass against an unmigrated box, which is the point: they
+  # test what an agent knows about the system the box is actually running.
+  #
+  # Run: pnpm knowledge-audit run --box <abs-path> --filter assets
+
+  - id: asset-content-absent
+    prompt: "I opened a photo in a box and the file is about 100 bytes of text starting with /annex/objects/. What happened, and is my photo gone?"
+    expected_level: knows_directly
+    watch_for: "Recognizes an annex pointer (content not fetched locally) and answers `git annex get` — NOT that the file is corrupt or lost"
+    correct_contains: ["git annex get"]
+    tags: [assets]
+
+  - id: asset-add-workflow
+    prompt: "I dropped a photo into a card's attach scope. Do I need to run `git annex add` on it, or does something else handle that?"
+    expected_level: knows_directly
+    watch_for: "Says no — annex.largefiles routes it on ordinary `git add`, so the normal commit path handles it. Reaching for `git annex add` means it learned a special case that does not exist here (and it locks files, breaking in-place edits)."
+    correct_contains: ["largefiles"]
+    tags: [assets]

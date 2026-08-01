@@ -40,6 +40,7 @@ import {
   UserExistsError,
 } from "../../webapp/local-users-errors.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { promptHidden } from "../lib/prompt-hidden.js";
 
 /** The known, clean-message errors `local-users.ts` throws — never a bare stack trace for these. */
 const KNOWN_AUTH_ERROR_CLASSES = [
@@ -56,20 +57,6 @@ function isKnownAuthError(e: unknown): e is Error {
   return KNOWN_AUTH_ERROR_CLASSES.some((cls) => e instanceof cls);
 }
 
-export class NoTtyError extends Error {
-  constructor() {
-    super("stdin is not an interactive terminal; pass --password-file instead of prompting.");
-    this.name = "NoTtyError";
-  }
-}
-
-export class PromptCancelledError extends Error {
-  constructor() {
-    super("Password entry cancelled.");
-    this.name = "PromptCancelledError";
-  }
-}
-
 export class PasswordMismatchError extends Error {
   constructor() {
     super("Passwords did not match.");
@@ -79,55 +66,9 @@ export class PasswordMismatchError extends Error {
 
 // --- password / text input ---------------------------------------------------
 
-/**
- * No-echo password prompt: raw-mode keystroke capture rather than readline's
- * undocumented output-muting private API. Handles Enter, Ctrl-C, and
- * backspace; every other keystroke is appended verbatim.
- */
-function promptHidden(label: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const stdin = process.stdin;
-    if (!stdin.isTTY) {
-      reject(new NoTtyError());
-      return;
-    }
-    process.stdout.write(label);
-    stdin.setRawMode(true);
-    stdin.resume();
-    stdin.setEncoding("utf8");
-    let input = "";
-
-    const cleanup = (): void => {
-      stdin.setRawMode(false);
-      stdin.pause();
-      stdin.removeListener("data", onData);
-    };
-    const CTRL_C_CHARCODE = 3;
-    const BACKSPACE_CHARCODE = 127;
-    const onData = (chunk: string): void => {
-      for (const char of chunk) {
-        const code = char.codePointAt(0);
-        if (char === "\n" || char === "\r") {
-          cleanup();
-          process.stdout.write("\n");
-          resolve(input);
-          return;
-        }
-        if (code === CTRL_C_CHARCODE) {
-          cleanup();
-          process.stdout.write("\n");
-          reject(new PromptCancelledError());
-          return;
-        }
-        if (code === BACKSPACE_CHARCODE || char === "\b") {
-          input = input.slice(0, -1);
-          continue;
-        }
-        input += char;
-      }
-    };
-    stdin.on("data", onData);
-  });
+/** The shared no-echo prompt with this command's password framing. */
+function promptPassword(label: string): Promise<string> {
+  return promptHidden({ label, noTtyMessage: "stdin is not an interactive terminal; pass --password-file instead of prompting." });
 }
 
 async function promptText(label: string): Promise<string> {
@@ -148,9 +89,9 @@ async function readPasswordFile(filePath: string): Promise<string> {
 
 async function resolvePassword(opts: { passwordFile: string | undefined; confirm: boolean }): Promise<string> {
   if (opts.passwordFile) return readPasswordFile(opts.passwordFile);
-  const password = await promptHidden("Password: ");
+  const password = await promptPassword("Password: ");
   if (opts.confirm) {
-    const confirmation = await promptHidden("Confirm password: ");
+    const confirmation = await promptPassword("Confirm password: ");
     // eslint-disable-next-line security/detect-possible-timing-attacks -- not a secret-vs-guess compare: both values are the same local operator's own two keystrokes-in-flight, never a stored credential, so there's no attacker-observable channel to time.
     if (password !== confirmation) throw new PasswordMismatchError();
   }

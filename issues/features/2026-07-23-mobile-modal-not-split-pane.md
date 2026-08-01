@@ -80,7 +80,7 @@ used — one thing in focus at a time — where desktop rewards side-by-side.
 
 - The composer must not eat the screen in this mode (the fixed grow-on-scroll
   bug, the native iOS composer).
-- Interacts with the [chat history dropdown scoping](../bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md)
+- Interacts with the [chat history dropdown scoping](../closed/bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md)
   and the whole mobile-nav surface.
 
 Central to a credible mobile/soft-launch experience — the phone is where most

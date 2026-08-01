@@ -26,7 +26,7 @@ import { type ChatSession, type TaskEvent } from "../../core/chat/session/index.
 import { ChatSessionRegistry } from "../../core/chat/session/registry.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { runBackfillIfNeeded } from "../../core/chat/session/backfill.js";
-import { backfillChatHusks } from "../../core/chat/husk.js";
+import { reconcileChatHusks } from "../../core/chat/husk.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import {
@@ -68,17 +68,19 @@ export async function registerChatRoutes(
   // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
   await registerChatUploadRoutes({ server, boxRoot });
 
-  // One-shot backfill of pre-existing chat sessions into the history file.
-  // Idempotent — returns early on subsequent boots.
-  void runBackfillIfNeeded(boxRoot).catch((e: unknown) => {
-    console.error("[chat] backfill failed:", e instanceof Error ? e.message : e);
-  });
-
-  // One-shot husk-card backfill for pre-husk sessions (marker-gated; ghosts
-  // whose transcript is gone are skipped). See docs/plans/chat-husks.md.
-  void backfillChatHusks(boxRoot).catch((e: unknown) => {
-    console.error("[chat] husk backfill failed:", e instanceof Error ? e.message : e);
-  });
+  // One-shot backfill of pre-existing chat sessions into the history file,
+  // then the husk reconcile that gives each of them a card. Husks are what the
+  // picker and the history dropdown enumerate, so the reconcile must run AFTER
+  // the history backfill — run concurrently it can read a history the backfill
+  // hasn't finished writing and leave those sessions card-less. Both stay off
+  // the boot critical path; the reconcile is idempotent and repeats each boot,
+  // so a session that misses this pass is picked up by the next one.
+  // See docs/plans/chat-husks.md.
+  void runBackfillIfNeeded(boxRoot)
+    .then(() => reconcileChatHusks(boxRoot))
+    .catch((e: unknown) => {
+      console.error("[chat] session backfill failed:", e instanceof Error ? e.message : e);
+    });
 
   // Per-box registry of ChatSession instances, keyed by sessionId.
   // Turn on partial-message streaming so the per-turn SSE feed delivers

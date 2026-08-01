@@ -1,81 +1,70 @@
 /**
- * `cb pub setup` core (Track E of `docs/plans/publish-pages.md`) — the one-time
- * Cloudflare provisioning: ensure the R2 bucket exists (idempotent), deploy
- * `pub-worker/` via wrangler with the version stamp + Access vars, ENFORCE that
- * workers.dev serving is on and version-preview URLs are OFF (old Worker
- * versions are a leak surface — plan Prior-art), and resolve the resulting
- * `workers.dev` hostname.
+ * `cb pub setup` core (`docs/implemented-plans/pub-setup-wrangler.md`, superseding the
+ * Track E flow of `docs/plans/publish-pages.md`) — the one-time Cloudflare
+ * provisioning, dashboard-free:
  *
- * Everything Cloudflare-touching goes through the injected
- * {@link CloudflareProvisioningClient} and {@link DeployWorkerFn}, so the whole
- * flow is doctestable with no network and NO live wrangler run. Re-running
- * setup is idempotent: the bucket create tolerates "already exists", the deploy
- * overwrites the script, and the subdomain settings converge.
+ *   1. Ensure BOTH R2 buckets exist (content + ingestion — the bucket split,
+ *      amendment 1), idempotently.
+ *   2. Resolve the account's workers.dev hostname.
+ *   3. Optionally provision Cloudflare Access via the API (`--access`, a
+ *      setup-only token) — or reuse the persisted/manual Access values.
+ *   4. Deploy `pub-worker/` via wrangler with the version stamp + Access vars.
+ *   5. ENFORCE workers.dev serving on and version-preview URLs OFF, verified
+ *      by read-back (old Worker versions are a leak surface).
+ *   6. Persist the non-secret Access values (`config/publish.json`) so a later
+ *      plain rerun redeploys them instead of erasing them (amendment 3).
  *
- * The Cloudflare Access application + Google IdP for the account tiers is a
- * one-time MANUAL step (Zero Trust dashboard) — setup prints instructions
- * (see `accessSetupInstructions`) instead of automating it, then a re-run with
- * `--access-team-domain`/`--access-aud` bakes the vars into the deploy.
+ * Auth: the interactive `wrangler login` (OAuth) drives everything except the
+ * Access half — wrangler's scopes cannot cover `/access/`, so that takes the
+ * separate setup-only token. The `CLOUDFLARE_API_TOKEN`+`CLOUDFLARE_ACCOUNT_ID`
+ * env pair remains an explicit non-interactive escape hatch. Everything
+ * Cloudflare-touching goes through injected clients + the wrangler service, so
+ * the whole flow is doctestable with no network and no wrangler spawn.
  */
 
-import { runCollectedChild } from "../lib/run-child.js";
+import type { CloudflareAccessClient } from "../services/cloudflare-access.js";
 import type { CloudflareProvisioningClient } from "../services/cloudflare-provisioning.js";
+import type { CloudflareTokensClient } from "../services/cloudflare-tokens.js";
+import type { WranglerService } from "../services/wrangler.js";
+import { type AccessProvisionOutcome, ensureAccess } from "./access-setup.js";
+import { type ConnectorSecretResult, ensureConnectorSecret } from "./connector-secret.js";
+import {
+  type PublishConfig,
+  readPublishConfig,
+  TEAM_DOMAIN_PATTERN,
+  writePublishConfig,
+} from "./publish-config.js";
 import {
   localPubWorkerVersion,
-  PUB_WORKER_DIR,
   readPubWorkerConfig,
 } from "./pub-worker-meta.js";
 
-/**
- * Runs `wrangler <args>` in the pub-worker package dir with the account creds
- * in the environment. Injectable: doctests use a recording fake; only a live
- * `cb pub setup` invokes the real {@link defaultDeployWorker}.
- */
-export type DeployWorkerFn = (args: {
-  cwd: string;
-  wranglerArgs: string[];
-  credsEnv: Record<string, string>;
-}) => Promise<{ code: number; output: string }>;
-
-/** The real deploy: `pnpm exec wrangler <args>` (wrangler is a pub-worker devDependency). */
-export const defaultDeployWorker: DeployWorkerFn = async ({ cwd, wranglerArgs, credsEnv }) => {
-  return runCollectedChild({
-    command: "pnpm",
-    args: ["exec", "wrangler", ...wranglerArgs],
-    cwd,
-    env: { ...process.env, ...credsEnv },
-  });
-};
-
-/** The machine-level Cloudflare credentials setup needs (bucket name is chosen here, not required up front). */
-export interface SetupCreds {
-  apiToken: string;
+/** Everything a resolved Cloudflare login gives setup. `null` ⇒ unconfigured refusal. */
+export interface SetupAuthBundle {
+  client: CloudflareProvisioningClient;
+  wrangler: WranglerService;
   accountId: string;
-}
-
-/** Read the two required creds from machine-level env (`~/.cb-publish.env`); `null` when either is absent. */
-export function setupCredsFromEnv(env?: NodeJS.ProcessEnv): SetupCreds | null {
-  const source = env ?? process.env;
-  const apiToken = source["CLOUDFLARE_API_TOKEN"];
-  const accountId = source["CLOUDFLARE_ACCOUNT_ID"];
-  if (!apiToken || !accountId) return null;
-  return { apiToken, accountId };
+  /** Extra env for wrangler spawns: the env-token pair in escape-hatch mode, empty under OAuth. */
+  deployEnv: Record<string, string>;
 }
 
 export interface SetupOptions {
-  /** Cloudflare Access team origin (`https://<team>.cloudflareaccess.com`) — omit until the manual Access step is done. */
+  /** Manual override pair (both or neither): bake known Access values without the API. */
   accessTeamDomain?: string | undefined;
-  /** Cloudflare Access application `aud` tag — omit until the manual Access step is done. */
   accessAud?: string | undefined;
 }
 
 export interface SetupDeps {
-  /** Machine-level env (defaults to `process.env`) — creds + the optional `CLOUDFLARE_R2_BUCKET` override. */
+  /** The box whose `config/publish.json` persists the non-secret Access values. */
+  boxRoot: string;
+  /** Machine-level env (defaults to `process.env`) — the optional `CLOUDFLARE_R2_BUCKET` override check. */
   env?: NodeJS.ProcessEnv | undefined;
-  /** The provisioning client, or `null` when creds are absent (→ `unconfigured`). Built from creds by the CLI; a fake in doctests. */
-  client: CloudflareProvisioningClient | null;
-  /** The wrangler deploy runner; defaults to the real spawn. */
-  deploy?: DeployWorkerFn | undefined;
+  /** The resolved login, or `null` when neither wrangler login nor env creds exist. */
+  auth: SetupAuthBundle | null;
+  /** The Access client, present only for `--access` runs (setup-only token). */
+  access?: CloudflareAccessClient | undefined;
+  /** The token-mint client, present only for `--mint-connector-token` runs (same setup-only token). */
+  tokens?: CloudflareTokensClient | undefined;
   /** pub-worker package dir override (doctest fixtures). */
   pubWorkerDir?: string | undefined;
 }
@@ -85,77 +74,63 @@ export type SetupResult =
       ok: true;
       hostname: string;
       workerName: string;
+      accountId: string;
       bucketName: string;
+      ingestBucketName: string;
       /** True when this run created the bucket (false: it already existed). */
       bucketCreated: boolean;
+      ingestBucketCreated: boolean;
       /** The version stamp baked into the deploy (hash of the committed Worker source). */
       version: string;
       /** True when the Access vars were baked in (account tiers live); false ⇒ account tiers fail closed. */
       accessConfigured: boolean;
-      /** Set when `CLOUDFLARE_R2_BUCKET` is not yet in the env — the line to add to `~/.cb-publish.env`. */
-      bucketEnvHint: string | null;
+      /** What the `--access` API provisioning did this run, or `null` when it didn't run. */
+      accessProvisioned: AccessProvisionOutcome | null;
+      /** The `--mint-connector-token` outcome, or `null` when it didn't run. */
+      connectorSecret: Extract<ConnectorSecretResult, { ok: true }> | null;
       deployOutput: string;
     }
   | { ok: false; reason: "unconfigured"; message: string }
   | { ok: false; reason: "invalid-access-flags"; message: string }
   | { ok: false; reason: "bucket-mismatch"; message: string }
   | { ok: false; reason: "unsafe-config"; message: string }
+  | { ok: false; reason: "no-subdomain"; message: string }
+  | { ok: false; reason: "access-provisioning"; message: string }
+  | { ok: false; reason: "connector-token"; message: string }
   | { ok: false; reason: "deploy-failed"; message: string; output: string }
-  | { ok: false; reason: "preview-urls-enabled"; message: string }
-  | { ok: false; reason: "no-subdomain"; message: string };
+  | { ok: false; reason: "preview-urls-enabled"; message: string };
 
-/** The dashboard steps that cannot be scripted (token minting has no API; Access IdP setup is one-time). */
-export const CREDENTIALS_INSTRUCTIONS = [
-  "Cloudflare credentials are missing. One-time manual steps:",
-  "  1. Create a Cloudflare account (free tier is fine) and note the Account ID.",
-  "  2. Dashboard → My Profile → API Tokens → Create Token, with permissions:",
-  "     Workers Scripts: Edit  +  Workers R2 Storage: Edit  (account-scoped).",
-  "  3. Store both OUTSIDE the box repo, machine-level (mode 600):",
-  "       ~/.cb-publish.env:",
-  "         CLOUDFLARE_API_TOKEN=<token>",
-  "         CLOUDFLARE_ACCOUNT_ID=<account id>",
-  "  4. Source it (set -a; . ~/.cb-publish.env; set +a) and re-run `cb pub setup`.",
+/** Printed when no Cloudflare login is available (browser OAuth is the only manual step). */
+export const LOGIN_INSTRUCTIONS = [
+  "No Cloudflare login found. One-time step (opens a browser to approve):",
+  "  pnpm --dir <callback-box>/pub-worker exec wrangler login",
+  "then re-run `cb pub setup`. Wrangler stores the login (OAuth refresh token)",
+  "itself — no API token, no dotfile.",
+  "Non-interactive escape hatch: set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID.",
 ].join("\n");
-
-/** The one-time manual Cloudflare Access setup for the account (`/a/`) tiers. */
-export function accessSetupInstructions(hostname: string): string {
-  return [
-    "Account tiers (`accounts` / `any-account`) need a one-time Cloudflare Access setup (manual):",
-    "  1. Zero Trust dashboard → Settings → Authentication → add Google as a login method.",
-    "  2. Access → Applications → Add application (Self-hosted):",
-    `       application domain: ${hostname}  (path: a/*)`,
-    "       policy: Allow — Login Methods: Google (any authenticated Google account;",
-    "       the Worker enforces each publication's own allowlist per request).",
-    "  3. Copy the team domain (https://<team>.cloudflareaccess.com) and the",
-    "     application's Audience (aud) tag from the application overview.",
-    "  4. Re-run: cb pub setup --access-team-domain https://<team>.cloudflareaccess.com --access-aud <aud>",
-    "Until then, account-tier publications fail closed (404); public/secret tiers work now.",
-  ].join("\n");
-}
 
 /**
  * Provision publishing against the injected Cloudflare surface. See the module
- * header for the step order; every failure is a typed, fix-naming refusal
- * (principle #5) and every step is safe to re-run.
+ * header for the step order; every failure is a typed, fix-naming refusal and
+ * every step is safe to re-run.
  */
 export async function setupPublishing(options: SetupOptions, deps: SetupDeps): Promise<SetupResult> {
   const env = deps.env ?? process.env;
-  const creds = setupCredsFromEnv(env);
-  if (creds === null || deps.client === null) {
-    return { ok: false, reason: "unconfigured", message: CREDENTIALS_INSTRUCTIONS };
+  if (deps.auth === null) {
+    return { ok: false, reason: "unconfigured", message: LOGIN_INSTRUCTIONS };
   }
-  const client = deps.client;
+  const { client, wrangler, accountId, deployEnv } = deps.auth;
 
-  // Access flags come as a pair or not at all (a lone half is a config mistake).
+  // Manual Access flags come as a pair or not at all (a lone half is a config mistake).
   const { accessTeamDomain, accessAud } = options;
   if ((accessTeamDomain === undefined) !== (accessAud === undefined)) {
     return {
       ok: false,
       reason: "invalid-access-flags",
-      message: "--access-team-domain and --access-aud must be given together (both come from the Access application overview)",
+      message: "--access-team-domain and --access-aud must be given together (both come from the Access application)",
     };
   }
-  if (accessTeamDomain !== undefined && !/^https:\/\/[\da-z-]+\.cloudflareaccess\.com$/.test(accessTeamDomain)) {
+  if (accessTeamDomain !== undefined && !TEAM_DOMAIN_PATTERN.test(accessTeamDomain)) {
     return {
       ok: false,
       reason: "invalid-access-flags",
@@ -175,35 +150,61 @@ export async function setupPublishing(options: SetupOptions, deps: SetupDeps): P
     };
   }
 
-  // The bucket the Worker binds is fixed in wrangler.jsonc; an env override that
-  // disagrees would deploy a Worker reading a different bucket than the CLI writes.
+  // A CLOUDFLARE_R2_BUCKET env override that disagrees with the committed
+  // content binding would deploy a Worker reading a different bucket than the
+  // CLI writes.
   const envBucket = env["CLOUDFLARE_R2_BUCKET"];
   if (envBucket !== undefined && envBucket !== config.bucketName) {
     return {
       ok: false,
       reason: "bucket-mismatch",
-      message: `CLOUDFLARE_R2_BUCKET is '${envBucket}' but pub-worker/wrangler.jsonc binds '${config.bucketName}' — align them (edit ~/.cb-publish.env or wrangler.jsonc) and re-run`,
+      message: `CLOUDFLARE_R2_BUCKET is '${envBucket}' but pub-worker/wrangler.jsonc binds '${config.bucketName}' — align them and re-run`,
     };
   }
-  const bucketName = config.bucketName;
 
-  // 1. Ensure the bucket (idempotent — "already exists" is success).
-  const bucketCreated = (await client.bucketExists(bucketName))
-    ? false
-    : (await client.createBucket(bucketName)).created;
+  // 1. Ensure both buckets (idempotent — "already exists" is success).
+  const ensureBucket = async (name: string): Promise<boolean> =>
+    (await client.bucketExists(name)) ? false : (await client.createBucket(name)).created;
+  const bucketCreated = await ensureBucket(config.bucketName);
+  const ingestBucketCreated = await ensureBucket(config.ingestBucketName);
 
-  // 2. Deploy the Worker with the version stamp (+ Access vars when configured).
+  // 2. Resolve the workers.dev hostname up front — Access provisioning needs it.
+  const subdomain = await client.getAccountSubdomain();
+  if (subdomain === null) {
+    return {
+      ok: false,
+      reason: "no-subdomain",
+      message: "this Cloudflare account has no workers.dev subdomain registered — register one in the dashboard (Workers & Pages → your subdomain) and re-run `cb pub setup`",
+    };
+  }
+  const hostname = `${config.workerName}.${subdomain}.workers.dev`;
+
+  // 3. Resolve the Access values: manual flags > API provisioning (`--access`)
+  // > the persisted config from an earlier run (amendment 3 — a plain rerun
+  // must never erase working Access vars).
+  let accessValues: PublishConfig | null = null;
+  let accessProvisioned: AccessProvisionOutcome | null = null;
+  if (accessTeamDomain !== undefined && accessAud !== undefined) {
+    accessValues = { accessTeamDomain, accessAud };
+  } else if (deps.access !== undefined) {
+    const provisioned = await ensureAccess({ hostname }, { access: deps.access });
+    if (!provisioned.ok) {
+      return { ok: false, reason: "access-provisioning", message: provisioned.message };
+    }
+    accessValues = { accessTeamDomain: provisioned.teamDomain, accessAud: provisioned.aud };
+    const { teamDomain, aud, appCreated, otpIdpCreated, policyCreated } = provisioned;
+    accessProvisioned = { teamDomain, aud, appCreated, otpIdpCreated, policyCreated };
+  } else {
+    accessValues = await readPublishConfig(deps.boxRoot);
+  }
+
+  // 4. Deploy the Worker with the version stamp (+ Access vars when configured).
   const version = await localPubWorkerVersion(deps.pubWorkerDir);
   const wranglerArgs = ["deploy", "--var", `PUB_WORKER_VERSION:${version}`];
-  if (accessTeamDomain !== undefined && accessAud !== undefined) {
-    wranglerArgs.push("--var", `ACCESS_TEAM_DOMAIN:${accessTeamDomain}`, "--var", `ACCESS_AUD:${accessAud}`);
+  if (accessValues !== null) {
+    wranglerArgs.push("--var", `ACCESS_TEAM_DOMAIN:${accessValues.accessTeamDomain}`, "--var", `ACCESS_AUD:${accessValues.accessAud}`);
   }
-  const deploy = deps.deploy ?? defaultDeployWorker;
-  const deployed = await deploy({
-    cwd: deps.pubWorkerDir ?? PUB_WORKER_DIR,
-    wranglerArgs,
-    credsEnv: { CLOUDFLARE_API_TOKEN: creds.apiToken, CLOUDFLARE_ACCOUNT_ID: creds.accountId },
-  });
+  const deployed = await wrangler.run(wranglerArgs, { accountId, extraEnv: deployEnv });
   if (deployed.code !== 0) {
     return {
       ok: false,
@@ -213,7 +214,7 @@ export async function setupPublishing(options: SetupOptions, deps: SetupDeps): P
     };
   }
 
-  // 3. ENFORCE workers.dev on + version-preview URLs OFF, then verify by reading
+  // 5. ENFORCE workers.dev on + version-preview URLs OFF, then verify by reading
   // back (fail-closed: trust the observed state, not the write).
   await client.setScriptSubdomain(config.workerName, { enabled: true, previewsEnabled: false });
   const observed = await client.getScriptSubdomain(config.workerName);
@@ -225,25 +226,39 @@ export async function setupPublishing(options: SetupOptions, deps: SetupDeps): P
     };
   }
 
-  // 4. Resolve the workers.dev hostname.
-  const subdomain = await client.getAccountSubdomain();
-  if (subdomain === null) {
-    return {
-      ok: false,
-      reason: "no-subdomain",
-      message: "this Cloudflare account has no workers.dev subdomain registered — register one in the dashboard (Workers & Pages → your subdomain) and re-run `cb pub setup`",
-    };
+  // 6. Persist newly-learned Access values so later plain reruns redeploy them.
+  if (accessValues !== null) {
+    await writePublishConfig(deps.boxRoot, accessValues);
+  }
+
+  // 7. Mint + store the connector credential (`--mint-connector-token`).
+  // Idempotent: an existing secret file skips the mint entirely. Runs last so
+  // a failed deploy never leaves an orphan token.
+  let connectorSecret: Extract<ConnectorSecretResult, { ok: true }> | null = null;
+  if (deps.tokens !== undefined) {
+    const ensured = await ensureConnectorSecret(
+      { boxRoot: deps.boxRoot, accountId, bucketName: config.ingestBucketName },
+      { tokens: deps.tokens },
+    );
+    if (!ensured.ok) {
+      return { ok: false, reason: "connector-token", message: `everything else is provisioned, but the connector-token mint failed: ${ensured.message}` };
+    }
+    connectorSecret = ensured;
   }
 
   return {
     ok: true,
-    hostname: `${config.workerName}.${subdomain}.workers.dev`,
+    hostname,
     workerName: config.workerName,
-    bucketName,
+    accountId,
+    bucketName: config.bucketName,
+    ingestBucketName: config.ingestBucketName,
     bucketCreated,
+    ingestBucketCreated,
     version,
-    accessConfigured: accessTeamDomain !== undefined,
-    bucketEnvHint: envBucket === undefined ? `CLOUDFLARE_R2_BUCKET=${bucketName}` : null,
+    accessConfigured: accessValues !== null,
+    accessProvisioned,
+    connectorSecret,
     deployOutput: deployed.output,
   };
 }

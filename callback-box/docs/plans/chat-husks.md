@@ -34,10 +34,16 @@ bookkeeping (`lastActivity` is the transcript mtime, merged at read time)
   (`chat-session-registry.makeOnAssigned`, beside `appendHistory`) —
   every web chat gets a header card. Failure is logged, never blocks the
   chat.
-- **Backfill**: one-shot for existing history entries (skipping ghosts
-  whose JSONL is gone), gated by a `.callback-box/` marker, fired
-  fire-and-forget at the same spot as the existing session backfill
-  (`webapp/routes/chat.ts`). Dates from transcript mtime.
+- **Reconcile**: `reconcileChatHusks` gives every history entry a husk
+  (skipping ghosts whose JSONL is gone), fired fire-and-forget *after*
+  the existing session backfill (`webapp/routes/chat.ts`) — it reads the
+  history that backfill writes, so the two can't run concurrently.
+  Dates from transcript mtime. It runs on **every boot**, not once
+  behind a marker: husks are the enumeration for both the picker and
+  the history dropdown, so a session that missed its eager husk (the
+  assignment-time write is best-effort) would otherwise be invisible
+  forever. Repeating is cheap — one directory listing plus one history
+  read, with per-session work only for husks that are actually missing.
 - **Title**: best-effort first-user-message snippet at creation/backfill
   (often unavailable at assignment time for new sessions — fine; later
   enrichment by the agent/retro is the intended path, it's an editable
@@ -58,6 +64,16 @@ transcript, no history lookup). Freshness stays runtime-derived from
 transcript mtime, and husks whose transcript is gone are skipped (nothing
 to resume) while remaining browsable as cards. Each picker row links to
 its husk ("card").
+
+**Phase 2b (2026-07-31): so does the history dropdown.** `chat.sessions`
+read the history JSON, so a deleted husk vanished from the picker but
+lingered in the dropdown. Both now share one enumeration —
+`core/chat/session/list.ts` `loadAllSessions` — and the dropdown groups
+its rows by the landmark each session binds to (the current landmark
+first, everything else under "Other chats"). Making husks the only
+enumeration is what promoted the boot backfill to a per-boot reconcile:
+a missing husk now hides a chat from every list, so it has to be
+repairable.
 
 ## Deferred
 

@@ -18,6 +18,11 @@ serves both modes:
   a sibling `<plan>.review.md` using the failure-modes + citation
   pattern.
 
+**Write in Simplified Technical English** (ASD-STE100, in spirit): short
+sentences, active voice, one idea per sentence, consistent terminology, no
+ambiguity. A plan is read cold, months later, by whoever picks up the work —
+write for fast, unambiguous parsing over style.
+
 ## What a plan is
 
 A plan is a complete unit of work — designed end-to-end before

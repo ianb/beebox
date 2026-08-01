@@ -9,7 +9,7 @@
  * are fully unit-testable against {@link createFakeProvisioningClient} with no
  * network. The real implementation ({@link createCloudflareProvisioningClient})
  * calls Cloudflare's REST API (`api.cloudflare.com/client/v4/accounts/<id>/...`)
- * with a single bearer API token.
+ * through the injected {@link BearerProvider}.
  *
  * ⚠️ UNVERIFIED: the real adapter cannot be exercised without live Cloudflare
  * credentials, so it is NOT covered by any doctest. The setup/status *logic* is
@@ -17,18 +17,17 @@
  * Treat its request shaping / error mapping as unproven until the manual
  * end-to-end run (the plan's step-5/7 verification).
  *
- * SECURITY TRADEOFF (open decision — see the resume issue
- * `issues/features/2026-07-19-publish-pages-resume.md`): v1 deliberately uses
- * ONE management token (Workers Scripts: Edit + Workers R2 Storage: Edit) for
- * everything — this provisioning client, the wrangler deploy, AND the
- * every-wakeup submissions connector. A box compromise therefore yields a token
- * that can REDEPLOY the public Worker, not just read/write R2 objects. The
- * hardening is a second, R2-only token for the connector (broad token reserved
- * for `cb pub setup`); deferred for v1 simplicity and NOT silently decided —
- * decide before this feature leaves the boxholder's own account.
+ * CREDENTIAL MODEL (decided 2026-07-31 — `docs/implemented-plans/pub-setup-wrangler.md`):
+ * this client rides the interactive wrangler-OAuth login through a
+ * {@link BearerProvider} (or the `CLOUDFLARE_API_TOKEN` env escape hatch). No
+ * broad management token is stored anywhere; the headless connector holds only
+ * an ingestion-bucket-scoped R2 token, so a box compromise can neither
+ * redeploy the Worker nor rewrite publication manifests/content.
  */
 
 import { z } from "zod";
+
+import type { BearerProvider } from "./cloudflare-bearer.js";
 
 /** One entry of a Cloudflare API JSON error body's `errors` array. */
 export interface CloudflareApiErrorDetail {
@@ -92,7 +91,8 @@ export interface CloudflareProvisioningClient {
 
 export interface ProvisioningConfig {
   accountId: string;
-  apiToken: string;
+  /** The bearer seam: a static API token, or the wrangler-OAuth-backed provider. */
+  bearer: BearerProvider;
 }
 
 /** The subset of `fetch` the real adapter calls — injectable so a unit test can exercise URL/error mapping without a network. */
@@ -132,18 +132,30 @@ async function tryReadCfErrors(res: Response): Promise<CloudflareApiErrorDetail[
 
 /**
  * ⚠️ UNVERIFIED (no live-CF test). Real provisioning adapter over Cloudflare's
- * REST API, authenticated with the single bearer management token (see the
- * module-header security tradeoff).
+ * REST API, authenticated per request through the injected bearer provider
+ * (see the module-header credential model).
  */
 export function createCloudflareProvisioningClient(config: ProvisioningConfig, deps?: { fetch?: FetchLike | undefined }): CloudflareProvisioningClient {
   const doFetch = deps?.fetch ?? fetch;
   const base = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}`;
-  const authHeaders: Record<string, string> = { authorization: `Bearer ${config.apiToken}` };
+
+  /**
+   * Fetch with the current bearer; on a 401 the OAuth access token may simply
+   * have expired mid-flow, so refresh through the provider and retry ONCE
+   * (every op here is idempotent). A second 401 propagates to the caller.
+   */
+  async function authedFetch(url: string, init: { method: string; headers?: Record<string, string>; body?: string }): Promise<Response> {
+    const attempt = async (bearer: string): Promise<Response> =>
+      doFetch(url, { method: init.method, headers: { ...init.headers, authorization: `Bearer ${bearer}` }, ...(init.body === undefined ? {} : { body: init.body }) });
+    const res = await attempt(await config.bearer.get());
+    if (res.status !== 401) return res;
+    return attempt(await config.bearer.refresh());
+  }
 
   /** GET returning the parsed `result`, or `null` on 404. Throws on any other failure. */
   async function getResult<T>(op: string, args: { url: string; resultSchema: z.ZodType<T> }): Promise<T | null> {
     const { url, resultSchema } = args;
-    const res = await doFetch(url, { method: "GET", headers: authHeaders });
+    const res = await authedFetch(url, { method: "GET" });
     if (res.status === 404) return null;
     if (!res.ok) {
       throw new ProvisioningRequestError({ op, status: res.status, statusText: res.statusText, cfErrors: await tryReadCfErrors(res) });
@@ -165,9 +177,9 @@ export function createCloudflareProvisioningClient(config: ProvisioningConfig, d
       return result !== null;
     },
     async createBucket(name: string): Promise<{ created: boolean }> {
-      const res = await doFetch(`${base}/r2/buckets`, {
+      const res = await authedFetch(`${base}/r2/buckets`, {
         method: "POST",
-        headers: { ...authHeaders, "content-type": "application/json" },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ name }),
       });
       if (res.ok) return { created: true };
@@ -191,9 +203,9 @@ export function createCloudflareProvisioningClient(config: ProvisioningConfig, d
       return { enabled: result.enabled, previewsEnabled: result.previews_enabled ?? false };
     },
     async setScriptSubdomain(scriptName: string, settings: ScriptSubdomainSettings): Promise<void> {
-      const res = await doFetch(`${base}/workers/scripts/${encodeURIComponent(scriptName)}/subdomain`, {
+      const res = await authedFetch(`${base}/workers/scripts/${encodeURIComponent(scriptName)}/subdomain`, {
         method: "POST",
-        headers: { ...authHeaders, "content-type": "application/json" },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ enabled: settings.enabled, previews_enabled: settings.previewsEnabled }),
       });
       if (!res.ok) {

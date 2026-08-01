@@ -66,6 +66,43 @@ const stat = await fs.stat(hookPath);
 => true
 ```
 
+### git-annex runs before the `cb` fallback
+
+`git annex init` declines to install its own pre-commit hook when one already
+exists — ours does — so this line is the only thing that runs annex at commit
+time. Its *position* is the load-bearing part: the hook `exit 0`s when `cb` is
+not resolvable, so an annex call placed below that would silently vanish on
+exactly the under-provisioned machine most likely to be missing git-annex too,
+and assets would quietly enter git history as raw bytes.
+
+```ts continue
+const annexAt = hookBody.indexOf("git annex pre-commit");
+const cbFallbackExitAt = hookBody.indexOf("skipping card validation");
+annexAt !== -1 && cbFallbackExitAt !== -1 && annexAt < cbFallbackExitAt
+=> true
+```
+
+The annex block is gated on whether **this repo** is annexed, not on whether
+git-annex is installed. A box still on the manifest model must keep committing
+normally — requiring annex unconditionally would break every unmigrated box at
+its next commit, which is a rollout foot-gun rather than a safety property.
+Once a repo is annexed, a missing binary is fatal:
+
+```ts continue
+const gatedOnRepo = hookBody.includes('if [ -d "$(git rev-parse --git-dir)/annex" ]');
+const fatalWhenAnnexed = hookBody.includes("this repo uses git-annex but git-annex is not installed");
+`${gatedOnRepo} ${fatalWhenAnnexed}`
+=> true true
+```
+
+The manifest-era `cb attachments verify` call is gone — git-annex is the
+integrity mechanism now — replaced by the unlisted-binary guard:
+
+```ts continue
+`verify=${hookBody.includes("attachments verify")} unlisted=${hookBody.includes("attachments check-unlisted")}`
+=> verify=false unlisted=true
+```
+
 ## Idempotent — second run changes nothing
 
 ```ts

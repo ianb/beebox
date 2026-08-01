@@ -103,8 +103,17 @@ JSON.stringify({
 => {"names":["photo.png","report.pdf"],"reportSize":6,"hasHash":true}
 ```
 
-The card + manifest are committed (with the `Created-By: bulk-upload` trailer);
-the blobs are on disk but NOT tracked:
+The card, manifest, **and the blobs** are committed, with the
+`Created-By: bulk-upload` trailer.
+
+This previously staged an explicit `[card, manifest, .gitignore]` list and
+asserted `blobTracked: false` — correct under the manifest model, where the
+bytes were gitignored on purpose. Under git-annex it is a silent data-loss bug:
+`git annex pre-commit` cannot annex a path that was never passed to `git add`,
+so the batch would commit a card describing content that exists in no
+repository, and the staging copy is cleaned up after delivery. The batch-local
+`.gitattributes` routes the blobs into the annex; the assertion below is what
+proves they were actually handed to git at all.
 
 ```ts continue
 const subjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
@@ -117,7 +126,7 @@ JSON.stringify({
   blobTracked: tracked.some((f) => f.endsWith("report.pdf")),
   blobOnDisk: await pathExists(box.path(`${batch.attachRelDir}/report.pdf`)),
 })
-=> {"committed":true,"trailer":true,"cardTracked":true,"manifestTracked":true,"blobTracked":false,"blobOnDisk":true}
+=> {"committed":true,"trailer":true,"cardTracked":true,"manifestTracked":true,"blobTracked":true,"blobOnDisk":true}
 ```
 
 Staging is retained (not deleted at prepare time):

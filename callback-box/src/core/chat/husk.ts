@@ -19,7 +19,6 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
 
 export const CHAT_HUSK_DIR = "store/chat/web";
-const BACKFILL_MARKER = ".callback-box/chat-husks-backfilled";
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
 
@@ -167,26 +166,36 @@ export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
 }
 
 /**
- * One-shot husk backfill for pre-husk sessions in the history file.
- * Ghost entries (no transcript on disk) are skipped — nothing to point
- * at. Gated by a marker file; safe to call on every server boot.
+ * Give every resumable session in the history file a husk. Ghost entries
+ * (no transcript on disk) are skipped — nothing to point at.
+ *
+ * This **reconciles on every boot** rather than running once behind a marker
+ * file. Husks are the enumeration for both the picker and the history dropdown
+ * (`core/chat/session/list.ts`), so a session with history but no husk is
+ * invisible in the UI — and there are two ways to land there that a one-shot
+ * migration could never repair: the eager `ensureChatHusk` at session-id
+ * assignment is best-effort (`session/registry.ts` logs and continues), and the
+ * history backfill that discovers pre-husk sessions runs concurrently with this
+ * one, so it could still be writing entries when this pass reads them.
+ *
+ * Cheap to repeat: one directory listing plus one history read, and per-session
+ * work only for the sessions actually missing a husk.
  */
-export async function backfillChatHusks(boxRoot: string): Promise<void> {
-  const marker = path.join(boxRoot, BACKFILL_MARKER);
-  try {
-    await fs.access(marker);
-    return;
-  } catch (_e) {
-    // Marker absent — this is the run.
-  }
-  const entries = await loadHistoryEntries(boxRoot);
+export async function reconcileChatHusks(boxRoot: string): Promise<void> {
+  const [entries, husks] = await Promise.all([
+    loadHistoryEntries(boxRoot),
+    listChatHusks(boxRoot),
+  ]);
+  const husked = new Set(husks.map((h) => h.session));
+
   for (const entry of entries) {
+    if (husked.has(entry.id)) continue;
     let mtime: Date;
     try {
       const logPath = await resolveSessionLogPath(boxRoot, entry.id);
       mtime = (await fs.stat(logPath)).mtime;
     } catch (_e) {
-      // Ghost entry — transcript gone; no husk.
+      // Ghost entry — transcript gone; nothing to resume, so no husk.
       continue;
     }
     await ensureChatHusk(boxRoot, {
@@ -195,6 +204,4 @@ export async function backfillChatHusks(boxRoot: string): Promise<void> {
       date: mtime,
     });
   }
-  await fs.mkdir(path.dirname(marker), { recursive: true });
-  await fs.writeFile(marker, `${new Date().toISOString()}\n`);
 }

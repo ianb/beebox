@@ -60,7 +60,7 @@ export function ChatHeader(props: {
           label: summary.title,
         })}
       />
-      <SessionListButton />
+      <SessionListButton contextDir={effectiveContextDir} />
       <NewSessionButton onClick={onNewSession} />
       {debugMenu}
     </header>
