@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-01T18:05:17Z
-Total documents: 223
+Generated: 2026-08-01T23:07:27Z
+Total documents: 229
 
 ## Issues
 
@@ -132,6 +132,7 @@ Referenced by:
 - docs/plans/ios-companion-review-2026-07-09.md:56 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
 - docs/plans/publish-pages.md:154 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
+- docs/plans/scanner-ingest.md:250 (mention) — CLAUDE.md rule that file upload doesn't fit the tRPC shape), a quarantine
 - docs/plans/source-available-release.md:388 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
 - docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
@@ -336,6 +337,8 @@ Referenced by:
 - docs/plans/ios-native-capture-mode.md:24 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
 - docs/plans/publish-pages.md:29 (mention) — - `callback-box/code-style.md` — mechanical rules for all box-side TS and the Worker package.
+- docs/plans/scan-guide-card.md:27 (mention) — - `callback-box/code-style.md`: no default parameters, max 2 positional
+- docs/plans/scanner-ingest.md:38 (mention) — - `callback-box/code-style.md` — Result-vs-throw for the wire contract's
 - docs/plans/source-available-release.md:44 (mention) — - `callback-box/code-style.md` — style rules for any code touched by deploy
 - docs/unimplemented-plans/query-cards.md:34 (mention) — - `callback-box/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
@@ -523,7 +526,7 @@ Referenced by:
 - docs/plans/cli-restructure.md:129 (mention) — (see `docs/adding-a-box.md`), `cb upgrade` is the per-box engine-upgrade
 - docs/plans/docs-reorg.gap-analysis.md:135 (mention) — `docs/adding-a-box.md`.
 - docs/plans/source-available-release.md:62 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
-- docs/server-operations.md:233 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
+- docs/server-operations.md:434 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
 - ../issues/decisions/2026-03-15-per-box-secret-management.md:15 (mention) — For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:31 (mention) — Refs: `callback-box/docs/scheduler.md`, `callback-box/docs/adding-a-box.md`,
 
@@ -595,13 +598,15 @@ References:
 
 #### docs/assets.md
 
-Title: "Assets" | 190 lines
+Title: "Assets" | 200 lines
 
 Referenced by:
 - CLAUDE.md:146 (mention) — | Assets (git-annex) | `docs/assets.md` |
 - docs/glossary.md:30 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
 - docs/implemented-plans/asset-manifests.md:3 (link) — **Status: SUPERSEDED by git-annex — see [`../assets.md`](../assets.md).**
 - docs/plans/asset-annex.md:534 (mention) — The agent row has no code fix. It gets a `docs/assets.md` sentence and
+- docs/plans/scanner-ingest.md:103 (mention) — on 2026-07-31 (`docs/assets.md:6`: *"Status: implemented; all local boxes
+- docs/server-operations.md:238 (link) — [`assets.md`](./assets.md).
 
 References:
 - → docs/implemented-plans/asset-manifests.md (link)
@@ -940,6 +945,8 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:41 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
 - docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
 - docs/plans/publish-pages.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
+- docs/plans/scan-guide-card.md:17 (mention) — - `docs/engineering-principles.md` — traced by number below:
+- docs/plans/scanner-ingest.md:23 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:98 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
@@ -982,7 +989,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:21 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/plans/docs-reorg.gap-analysis.md:143 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/plans/docs-reorg.md:91 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
-- docs/plans/pdf-intake-design.md:19 (link) — **Intake-time extraction.** When a PDF arrives (`cb import`, capture endpoint, email connector), the intake path runs do
+- docs/plans/pdf-intake-design.md:38 (link) — **Intake-time extraction.** When a PDF arrives (`cb import`, capture endpoint, email connector), the intake path runs do
 - ../.claude/skills/cb-codehealth/SKILL.md:154 (mention) — Read `docs/glossary.md` for the domain's real names; don't re-litigate decisions
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:6 (mention) — `docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific mean
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:89 (mention) — checking against the glossary (`callback-box/docs/glossary.md`) — the codebase
@@ -1216,6 +1223,7 @@ Referenced by:
 - docs/plans/asset-offbox-storage.md:563 (mention) — nothing in `docs/migrations.md`. The only state change is Track A2
 - docs/plans/docs-reorg.gap-analysis.md:161 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
+- docs/plans/scan-guide-card.md:84 (mention) — script + procedure kinds; `docs/migrations.md`). NOT used — see
 - ../.claude/skills/cb-migration/SKILL.md:12 (mention) — lives in **`callback-box/docs/migrations.md`** — read it before writing one.
 - ../issues/closed/bugs/2026-07-11-pre-v2-session-resume-broken.md:39 (mention) — migration script territory (`docs/migrations.md`).
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:18 (mention) — test1 via `cb migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
@@ -1377,6 +1385,19 @@ References:
 - → docs/doc-graph.md (mention)
 - → CLAUDE.md (mention)
 
+#### docs/scan-upload-contract.md
+
+Title: "Scan Upload Wire Contract" | 146 lines
+
+Referenced by:
+- docs/plans/scan-guide-card.md:180 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
+- docs/plans/scanner-ingest.md:257 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
+- docs/scan-upload-contract.md:9 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
+
+References:
+- → docs/scan-upload-contract.md (mention)
+- → docs/plans/scanner-ingest.md (link)
+
 #### docs/scheduler.md
 
 Title: "Scheduler" | 93 lines
@@ -1393,6 +1414,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:572 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
 - docs/plans/docs-reorg.gap-analysis.md:137 (mention) — contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
 - docs/plans/docs-reorg.md:179 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
+- docs/plans/scanner-ingest.md:105 (mention) — - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `cb
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:31 (mention) — Refs: `callback-box/docs/scheduler.md`, `callback-box/docs/adding-a-box.md`,
 - ../issues/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:22 (mention) — `docs/scheduler.md`). Is the latency gap real for the user, and could it be closed
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:86 (mention) — (`docs/scheduler.md` / the scheduled-task health state at
@@ -1400,7 +1422,7 @@ Referenced by:
 
 #### docs/server-operations.md
 
-Title: "Server Operations" | 234 lines
+Title: "Server Operations" | 435 lines
 
 Referenced by:
 - CLAUDE.md:158 (mention) — | Server operations | `docs/server-operations.md` |
@@ -1408,6 +1430,7 @@ Referenced by:
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:499 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/plans/docs-reorg.md:91 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
+- docs/plans/scanner-ingest.md:7 (mention) — (`docs/server-operations.md` runbook), merge to main.
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:366 (mention) — - **`CB_DIAG_API_KEY` becomes per-box** (it lives in each box's `.env`). The bypass curl pattern in `server-operations.m
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:18 (mention) — rollback runbook: `docs/server-operations.md`. A Codex adversarial review
@@ -1417,6 +1440,8 @@ References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/health-checks.md (link)
 - → docs/client-debug-log.md (link)
+- → docs/plans/scanner-ingest.md (mention)
+- → docs/assets.md (link)
 - → docs/adding-a-box.md (link)
 
 #### docs/stack-decisions.md
@@ -1571,6 +1596,7 @@ Referenced by:
 - docs/plans/README.md:82 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/cli-restructure.md:91 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now oc
 - docs/plans/docs-reorg.md:341 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
+- docs/plans/scanner-ingest.md:567 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
@@ -1904,7 +1930,7 @@ Referenced by:
 - docs/plans/asset-annex.md:15 (mention) — `docs/asset-manifests.md` describes a system we built in May: assets
 - docs/plans/asset-offbox-storage.md:22 (mention) — attachments tracked by `docs/asset-manifests.md`) currently exist on
 - docs/plans/docs-reorg.gap-analysis.md:160 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
-- docs/plans/pdf-intake-design.md:80 (link) — All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and t
+- docs/plans/pdf-intake-design.md:101 (link) — All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and t
 - docs/reports/user-stories-audit-2026-06-26.md:713 (mention) — 1. **Pre-commit hook integration missing**: The design doc (docs/asset-manifests.md) says "A pre-commit hook keeps the m
 - ../issues/closed/bugs/2026-07-20-worktree-box-clone-missing-attachments.md:26 (mention) — `callback-box/docs/asset-manifests.md` and the `cb-assets` block in the box
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:11 (mention) — extension. Documented in `docs/asset-manifests.md` ("Arbitrary-extension attach
@@ -3160,7 +3186,7 @@ References:
 Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 583 lines
 
 Referenced by:
-- docs/assets.md:186 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
+- docs/assets.md:196 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
 - docs/plans/asset-annex.md:4 (mention) — `asset-offbox-storage.md` (see "How this plan changed").
 
 References:
@@ -3570,15 +3596,18 @@ References:
 
 #### docs/plans/pdf-intake-design.md
 
-Title: "PDF Intake" | 179 lines
+Title: "PDF Intake" | 199 lines
 
 Referenced by:
 - CLAUDE.md:169 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
 - docs/implemented-plans/user-story-audit-followups.md:57 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 - docs/plans/README.md:81 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
+- docs/plans/scanner-ingest.md:43 (mention) — (`src/core/commands/upload-helpers.ts`), and `docs/plans/pdf-intake-design.md`
 
 References:
+- → docs/plans/scanner-ingest.md (link)
+- → docs/plans/scanner-ingest-docling-decisions.md (link)
 - → docs/glossary.md (link)
 - → docs/implemented-plans/asset-manifests.md (link)
 
@@ -3632,6 +3661,7 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:4 (mention) — see `docs/plans/README.md` for the plan-doc lifecycle.
 - docs/plans/asset-annex.md:1068 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/github-pages-site.md:269 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
+- docs/plans/scan-guide-card.md:88 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:70 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - ../.claude/agents/finish.md:304 (mention) — `callback-box/docs/plans/README.md`), then either fold durable "how it works
 - ../.claude/skills/cb-plan/SKILL.md:81 (mention) — live there, separate from reference docs (see `docs/plans/README.md`).
@@ -3661,6 +3691,82 @@ Title: "Route-level code splitting — plan and cost/benefit" | 187 lines
 
 Referenced by:
 - ../issues/closed/decisions/2026-08-01-route-splitting-wontfix.md:11 (mention) — `../../../callback-box/docs/plans/route-splitting.md`. Summary of the call:
+
+#### docs/plans/scan-guide-card.md
+
+Title: "Scan Guide Card — scanner priors via the guide system" | 364 lines
+
+Referenced by:
+- docs/plans/scan-guide-card.md:174 (mention) — docs/plans/scan-guide-card.md)` via `ctx.writeLine`.
+- docs/plans/scan-guide-card.review.md:7 (mention) — `scan-guide-card.md`.
+
+References:
+- → docs/plans/scan-guide-card.review.md (mention)
+- → docs/plans/scanner-ingest.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/migrations.md (mention)
+- → docs/plans/README.md (mention)
+- → docs/plans/scan-guide-card.md (mention)
+- → docs/scan-upload-contract.md (mention)
+
+#### docs/plans/scan-guide-card.review.md
+
+Title: "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" | 105 lines
+
+Referenced by:
+- docs/plans/scan-guide-card.md:3 (mention) — **Status:** active — reviewed (codex cross-model, see `scan-guide-card.review.md`); implementation in flight on `worktre
+
+References:
+- → docs/plans/scan-guide-card.md (mention)
+- → docs/plans/scanner-ingest.md (mention)
+
+#### docs/plans/scanner-ingest-docling-decisions.md
+
+Title: "Docling Decisions Log — scanner-ingest" | 228 lines
+
+Referenced by:
+- docs/plans/pdf-intake-design.md:6 (link) — in [`scanner-ingest-docling-decisions.md`](scanner-ingest-docling-decisions.md).
+- docs/plans/scanner-ingest.md:5 (mention) — remainder: Docling decisions review (`scanner-ingest-docling-decisions.md`),
+
+References:
+- → docs/plans/scanner-ingest.md (link)
+
+#### docs/plans/scanner-ingest.md
+
+Title: "Scanner Ingest" | 721 lines
+
+Referenced by:
+- docs/plans/pdf-intake-design.md:4 (link) — [`scanner-ingest.md`](scanner-ingest.md) (Track 4)** — read that first where
+- docs/plans/scan-guide-card.md:13 (mention) — This is a subplan of `docs/plans/scanner-ingest.md` (Track 6 reshaped).
+- docs/plans/scan-guide-card.review.md:13 (mention) — (`scanner-ingest.md:510`); the minimal version keeps `readScanContextFile`
+- docs/plans/scanner-ingest-docling-decisions.md:7 (link) — decision changes. Parent plan: [`scanner-ingest.md`](scanner-ingest.md).
+- docs/plans/scanner-ingest.review.md:3 (mention) — Cross-model review of `scanner-ingest.md`, run 2026-08-01 with OpenAI Codex
+- docs/scan-upload-contract.md:16 (link) — history: [`plans/scanner-ingest.md`](plans/scanner-ingest.md).
+- docs/server-operations.md:231 (mention) — `docs/plans/scanner-ingest.md` Track 0 needs both prod boxes (`estate`,
+
+References:
+- → docs/plans/scanner-ingest-docling-decisions.md (mention)
+- → docs/server-operations.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/plans/pdf-intake-design.md (mention)
+- → docs/assets.md (mention)
+- → docs/scheduler.md (mention)
+- → docs/plans/scanner-ingest.review.md (mention)
+- → CLAUDE.md (mention)
+- → docs/scan-upload-contract.md (mention)
+- → docs/triage.md (mention)
+
+#### docs/plans/scanner-ingest.review.md
+
+Title: "Plan Engineering Review — scanner-ingest" | 100 lines
+
+Referenced by:
+- docs/plans/scanner-ingest.md:200 (mention) — mobile device store. Cross-model review (see `scanner-ingest.review.md`,
+
+References:
+- → docs/plans/scanner-ingest.md (mention)
 
 #### docs/plans/source-available-release.md
 
