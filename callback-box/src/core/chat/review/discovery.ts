@@ -16,9 +16,13 @@
  */
 
 import * as fs from "node:fs/promises";
-import { getSessionMetadata, parseSessionLog, type SessionEntry } from "../../../cli/lib/session.js";
+import {
+  MAX_SESSION_ENTRIES,
+  getSessionMetadata,
+  parseSessionLog,
+  type SessionEntry,
+} from "../../../cli/lib/session.js";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { invariant } from "../../../lib/invariant.js";
 import { listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
@@ -38,12 +42,13 @@ export const REVIEW_CHAR_THRESHOLD = 6_000;
 export const REVIEW_MIN_USER_TURNS = 2;
 
 /**
- * Upper bound passed to `parseSessionLog`, which otherwise pages at 10,000
- * entries and silently drops the rest (`cli/lib/session.ts:322`). Paired with
- * an invariant below so a future change to that default cannot reintroduce a
- * silent truncation here.
+ * Chat review reads a transcript from the top: `resolveSpan` hashes every
+ * entry before the journal boundary, so the read has to be a first-page read,
+ * not a tail. It is nonetheless bounded — retaining a whole transcript is what
+ * OOM'd `cb serve` (see `cli/lib/session-retention.ts`) — and a session past
+ * the cap is reported loudly rather than silently truncated.
  */
-const PARSE_LIMIT = Number.MAX_SAFE_INTEGER;
+const PARSE_LIMIT = MAX_SESSION_ENTRIES;
 
 export interface QualifiedSession {
   sessionId: string;
@@ -98,11 +103,20 @@ function emptyResult(): DiscoveryResult {
  */
 async function parseFull(logPath: string): Promise<SessionEntry[] | null> {
   try {
-    const { entries, total } = await parseSessionLog({ logPath, limit: PARSE_LIMIT });
-    invariant(
-      entries.length === total,
-      `chat-review: parseSessionLog paged ${String(entries.length)} of ${String(total)} entries for ${logPath}`,
-    );
+    const { entries, total } = await parseSessionLog({
+      logPath,
+      slice: { mode: "page", offset: 0, limit: PARSE_LIMIT },
+    });
+    if (entries.length < total) {
+      // Degraded, but visibly: the span this session resolves is computed over
+      // the first PARSE_LIMIT entries, so review stops advancing once a
+      // transcript grows past the cap. Reviewing a transcript that long needs
+      // a streaming span resolver — see
+      // issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md.
+      console.warn(
+        `chat-review: transcript ${logPath} has ${String(total)} entries; reviewing only the first ${String(entries.length)} (bounded read).`,
+      );
+    }
     return entries;
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;

@@ -9,7 +9,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, getChatStatus, setChatModel, getChatFeatures, setChatFeature, type SessionEntry } from "../../api";
 import { trpcClient } from "../../lib/trpc";
-import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
+import { chatTailSlice } from "../../machines/chatMachine.js";
 import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "./ChatMessages";
@@ -331,7 +331,7 @@ export function usePendingMessagePoll(opts: {
     if (pendingCount === 0) return;
     if (!sessionId) return;
     const poll = () => {
-      getChatHistory({ sessionId, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES })
+      getChatHistory({ sessionId, slice: chatTailSlice() })
         .then((data) => {
           send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         })

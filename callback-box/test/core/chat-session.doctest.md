@@ -5,6 +5,7 @@ reset, and history loading. These tests don't spawn a real Claude process.
 
 ```ts setup
 import { ChatSession, buildContentBlocks } from "../../src/core/chat/session/index.js";
+import { chatHistorySlice } from "../../src/core/chat/session/load-history.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -121,7 +122,7 @@ With no session ID, getHistory returns empty:
 ```ts
 const box = await makeTmpBox();
 const session = new ChatSession(box.root);
-const history = await session.getHistory();
+const history = await session.getHistory(chatHistorySlice());
 print(`sessionId: ${history.sessionId}`);
 print(`entries: ${history.entries.length}`);
 =>
@@ -146,7 +147,7 @@ await fs.writeFile(
   JSON.stringify({ sessionId: "orphan-session" })
 );
 const session = new ChatSession(box.root);
-const history = await session.getHistory();
+const history = await session.getHistory(chatHistorySlice());
 print(`sessionId: ${history.sessionId}`);
 print(`entries: ${history.entries.length}`);
 =>

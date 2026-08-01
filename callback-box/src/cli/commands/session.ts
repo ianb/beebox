@@ -20,6 +20,7 @@ import { requireBoxRoot } from "../../lib/paths.js";
 import {
   findSessionLog,
   listSessions,
+  MAX_SESSION_ENTRIES,
   parseSessionLog,
 } from "../lib/session.js";
 import { generateSessionReport } from "../../dev/lib/session-report.js";
@@ -172,7 +173,15 @@ export const sessionCommand = new Command("session")
       // Parse and render
       console.log(`Session: ${sessionId}\n`);
 
-      const { entries } = await parseSessionLog({ logPath });
+      const { entries, total } = await parseSessionLog({
+        logPath,
+        slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+      });
+      if (entries.length < total) {
+        console.warn(
+          `Note: this session has ${String(total)} entries; showing the first ${String(entries.length)}.`,
+        );
+      }
 
       if (entries.length === 0) {
         console.log("(empty session)");

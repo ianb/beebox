@@ -28,8 +28,7 @@ import type { ChatMessage } from "@core/chat/session/messages.js";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import {
   ChatInitialLoadError,
-  HISTORY_TAIL,
-  MIN_REAL_USER_MESSAGES,
+  chatTailSlice,
   logFsm,
   type ChatEvent,
   type InitialSessionInput,
@@ -59,7 +58,7 @@ export const fetchInitialActor = fromPromise<
     };
   }
   const [history, status] = await Promise.all([
-    getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
+    getChatHistory({ sessionId: input.sessionInput, slice: chatTailSlice() }),
     getChatStatus({ sessionId: input.sessionInput }),
   ]);
   return {
@@ -79,7 +78,7 @@ export const fetchHistoryActor = fromPromise<
     return { sessionId: null, entries: [], total: 0, running: false, busy: false };
   }
   const [history, status] = await Promise.all([
-    getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),
+    getChatHistory({ sessionId: input.sessionInput, slice: chatTailSlice() }),
     getChatStatus({ sessionId: input.sessionInput }),
   ]);
   return {

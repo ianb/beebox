@@ -11,6 +11,7 @@
  */
 
 import {
+  MAX_SESSION_ENTRIES,
   isRealUserMessage,
   listSessions,
   parseSessionLog,
@@ -63,10 +64,17 @@ interface TranscriptCounts {
 /**
  * Count user messages in a transcript, or null when the file is gone
  * (user cleared `~/.claude` between listing and reading).
+ *
+ * Counts within the first {@link MAX_SESSION_ENTRIES} entries — this only
+ * feeds "does this session have enough human turns to be worth observing"
+ * thresholds, which any transcript that long has cleared many times over.
  */
 async function countUserMessages(logPath: string): Promise<TranscriptCounts | null> {
   try {
-    const { entries } = await parseSessionLog({ logPath });
+    const { entries } = await parseSessionLog({
+      logPath,
+      slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+    });
     const userEntries = entries.filter((entry) => entry.type === "user");
     return {
       userEntries: userEntries.length,

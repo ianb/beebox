@@ -12,10 +12,7 @@ import { makeLog } from "./log.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "../features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
-import {
-  loadSessionHistory,
-  type SessionHistoryResult,
-} from "./load-history.js";
+import { loadSessionHistory, type SessionHistoryResult, type SessionLogSlice } from "./load-history.js";
 import { generateDocs } from "../../docs-gen/index.js";
 import {
   createChatBackend,
@@ -395,10 +392,11 @@ export class ChatSession extends EventEmitter {
   }
 
   /**
-   * Load conversation history from the session log.
+   * Load a bounded window of conversation history from the session log.
+   * The slice is explicit — there is no whole-transcript read to fall into.
    */
-  async getHistory(params?: { tail?: number; minRealUserMessages?: number }): Promise<SessionHistoryResult> {
-    return loadSessionHistory(this.boxRoot, { sessionId: this.sessionId, params });
+  async getHistory(slice: SessionLogSlice): Promise<SessionHistoryResult> {
+    return loadSessionHistory(this.boxRoot, { sessionId: this.sessionId, slice });
   }
 
   getSessionId(): string | null {

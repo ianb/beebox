@@ -18,7 +18,7 @@ import { publicProcedure } from "../trpc.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
 import {
   historySliceSchema,
-  loadSessionHistory,
+  loadHistoryForSession,
   type SessionHistory,
 } from "./chat-session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
@@ -37,9 +37,9 @@ export const chatBootstrapProcedure = {
     // resolution `chat.defaultSession` does. An empty string is not a session
     // id: accepting one would report `sessionId: ""` alongside a status that
     // (correctly) says there's no session.
-    .input(historySliceSchema.extend({ session: z.string().min(1).optional() }))
+    .input(z.object({ session: z.string().min(1).optional(), slice: historySliceSchema }))
     .query(async ({ input, ctx }): Promise<ChatBootstrap> => {
-      const { session, ...slice } = input;
+      const { session, slice } = input;
       const resolved = session ?? (await getMostActive(ctx.boxRoot));
       // The persisted pointer is a file another process wrote; an empty id in
       // it means "none", not a session named "".
@@ -47,7 +47,7 @@ export const chatBootstrapProcedure = {
       if (sessionId === null) {
         return { sessionId: null, history: null, status: readSessionStatus(ctx.boxRoot, null) };
       }
-      const history = await loadSessionHistory(ctx.boxRoot, { ...slice, session: sessionId });
+      const history = await loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice });
       return { sessionId, history, status: readSessionStatus(ctx.boxRoot, sessionId) };
     }),
 };

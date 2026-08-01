@@ -4,10 +4,10 @@
  *
  * The journal records the *identity* of the last entry read (`endUuid`) plus a
  * hash of every uuid before it (`prefixHash`), not a numeric index. Index alone
- * cannot work: `parseSessionLog` builds the whole filtered array and slices it
- * positionally (`cli/lib/session.ts:329-339`), so a transcript rewrite that
- * replaces or reorders earlier entries while keeping the total at or above the
- * stored index silently shifts the boundary — re-reading material already
+ * cannot work: `parseSessionLog` numbers entries positionally within its scan
+ * (`cli/lib/session-retention.ts`), so a transcript rewrite that replaces or
+ * reorders earlier entries while keeping the total at or above the stored
+ * index silently shifts the boundary — re-reading material already
  * folded in, or skipping material never seen. Transcripts are SDK-owned and do
  * get rewritten (auto-compaction, `--resume` forks), so this is a real case,
  * not a theoretical one.

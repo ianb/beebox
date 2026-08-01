@@ -11,6 +11,7 @@
 import * as fs from "node:fs";
 import {
   listSessions,
+  MAX_SESSION_ENTRIES,
   parseSessionLog,
 } from "../lib/session.js";
 import { listSessionRoots } from "../../core/chat/session/history.js";
@@ -219,7 +220,18 @@ async function renderWindowedSession(options: {
     return;
   }
 
-  const { entries } = await parseSessionLog({ logPath: meta.path });
+  // `--since` is a recency filter, so read the recent end of the transcript:
+  // a first-page read would drop exactly the entries this mode wants once a
+  // session grows past the retention ceiling.
+  const { entries, total } = await parseSessionLog({
+    logPath: meta.path,
+    slice: { mode: "tail", tail: MAX_SESSION_ENTRIES },
+  });
+  if (entries.length < total) {
+    console.warn(
+      `Note: session ${meta.sessionId} has ${String(total)} entries; scanning the most recent ${String(entries.length)}.`,
+    );
+  }
   const inWindowEntries = entries.filter((e) => {
     const ts = new Date(e.timestamp);
     return !isNaN(ts.getTime()) && ts.getTime() >= since.cutoff;

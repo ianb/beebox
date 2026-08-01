@@ -17,7 +17,7 @@ import { ChatLoading } from "../components/chat/InteractiveChat-layout";
 import { useEmissionStoreInstance } from "../components/chat/input-store";
 import { isNativeShell } from "../components/chat/native-post";
 import { trpc, type RouterOutput } from "../lib/trpc";
-import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES, type ChatInitialLoad } from "../machines/chat-types";
+import { chatTailSlice, type ChatInitialLoad } from "../machines/chat-types";
 import { href, toSearch } from "../lib/routing";
 
 interface ChatSearch {
@@ -130,8 +130,7 @@ export function ChatPage() {
   const isFreshChat = sessionParam === "new";
   const bootstrap = trpc.chat.bootstrap.useQuery(
     {
-      tail: HISTORY_TAIL,
-      minRealUserMessages: MIN_REAL_USER_MESSAGES,
+      slice: chatTailSlice(),
       ...(sessionParam !== undefined ? { session: sessionParam } : {}),
     },
     {
@@ -184,7 +183,7 @@ export function ChatPage() {
     // to `session=<id>`, which is a different cache key — without the seed,
     // react-query would fetch the very same bootstrap a second time.
     utils.chat.bootstrap.setData(
-      { tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES, session: resolvedId },
+      { slice: chatTailSlice(), session: resolvedId },
       data,
     );
     // navigate()'s promise only rejects on a superseded/redirected

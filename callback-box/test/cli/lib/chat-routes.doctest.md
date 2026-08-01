@@ -16,6 +16,9 @@ import {
   getSessionDir,
 } from "../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+// "Everything, bounded": the first page at the hard retention ceiling. Every
+// parseSessionLog call names a slice — there is no unbounded shape.
+const ALL = { mode: "page", offset: 0, limit: 5000 };
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -48,7 +51,7 @@ result === expected
 ```ts
 const box = await makeTmpBox();
 await box.write("log.jsonl", "");
-const result = await parseSessionLog({ logPath: box.path("log.jsonl") });
+const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
 print(`entries: ${result.entries.length}`);
 print(`total: ${result.total}`);
 print(`hasMore: ${result.hasMore}`);
@@ -81,7 +84,7 @@ const lines = [
   }),
 ].join("\n");
 await box.write("log.jsonl", lines);
-const result = await parseSessionLog({ logPath: box.path("log.jsonl") });
+const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
 print(`total: ${result.total}`);
 print(`e0 type: ${result.entries[0].type}`);
 print(`e0 text: ${result.entries[0].content[0].text}`);
@@ -120,7 +123,7 @@ const lines = [
   }),
 ].join("\n");
 await box.write("log.jsonl", lines);
-const result = await parseSessionLog({ logPath: box.path("log.jsonl") });
+const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
 result.total
 => 1
 
@@ -149,7 +152,7 @@ const lines = [
   }),
 ].join("\n");
 await box.write("log.jsonl", lines);
-const result = await parseSessionLog({ logPath: box.path("log.jsonl") });
+const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
 result.total
 => 1
 ```
@@ -172,7 +175,7 @@ for (let i = 0; i < 5; i++) {
   }));
 }
 await box.write("log.jsonl", lines.join("\n"));
-const result = await parseSessionLog({ logPath: box.path("log.jsonl"), offset: 2, limit: 2 });
+const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: { mode: "page", offset: 2, limit: 2 } });
 print(`entries: ${result.entries.length}`);
 print(`total: ${result.total}`);
 print(`hasMore: ${result.hasMore}`);
@@ -330,7 +333,7 @@ const lines = [
   ] } },
 ];
 await writeFile(logPath, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
-const result = await parseSessionLog({ logPath });
+const result = await parseSessionLog({ logPath, slice: ALL });
 print(`entries: ${result.entries.length}`);
 print(`uuid: ${result.entries[0].uuid}`);
 print(`blocks: ${result.entries[0].content.map((b) => b.type).join(",")}`);

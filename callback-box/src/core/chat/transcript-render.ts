@@ -18,7 +18,7 @@
  */
 
 import { stripSpeechWrappers, type SessionEntry } from "../../cli/lib/session.js";
-import { parseSessionLog } from "../../cli/lib/session.js";
+import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../cli/lib/session.js";
 
 /**
  * Hard cap on transcript text handed to a model, so one marathon session can't
@@ -75,12 +75,15 @@ export function renderEntries(entries: SessionEntry[]): string {
  * Render a whole session transcript for a model, capped at
  * {@link MAX_RENDERED_CHARS}.
  *
- * Note this inherits `parseSessionLog`'s default 10,000-entry page, so a
- * transcript longer than that renders only its first 10,000 entries. Preserved
- * as-is rather than fixed here to keep this function byte-identical for its
- * existing caller; see issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md.
+ * Reads an explicit first page of at most {@link MAX_SESSION_ENTRIES} entries:
+ * a transcript longer than that renders only its first page, as it did under
+ * the old 10,000-entry default. See
+ * issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md.
  */
 export async function renderSessionCompact(logPath: string): Promise<string> {
-  const { entries } = await parseSessionLog({ logPath });
+  const { entries } = await parseSessionLog({
+    logPath,
+    slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+  });
   return elideMiddle(renderEntries(entries), MAX_RENDERED_CHARS);
 }
