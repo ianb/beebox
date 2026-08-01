@@ -62,9 +62,12 @@ independent of that removal.
 `bin/router.ts:1121` `server.on("upgrade", …)` destroys the socket on a denied
 auth decision (`:1137-1140`) and separately refuses upgrades to a
 not-running worktree (`:1170`). Either path drops the socket with no
-client-visible reason. The relevant client code is
-`src/frontend/src/components/chat/InteractiveChat-ws.ts` and the `wsLink` half
-of the `splitLink` in `src/frontend/src/lib/trpc.ts`.
+client-visible reason. On the client, the failing subscription is
+`events.turnStream` in `src/frontend/src/machines/chat-actors.ts:282`; the
+transport (the `wsLink` half of the `splitLink`) is configured in
+`src/frontend/src/lib/trpc/index.ts`. Note that
+`src/frontend/src/components/chat/InteractiveChat-ws.ts` is a *different*
+subscription — the global event bus — so it is not the place to start.
 
 Two things worth separating: whether the upgrade is being denied at the router
 (auth, or the deliberate never-wake-a-worktree rule), and whether the client

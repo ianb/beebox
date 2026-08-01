@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-01T11:05:49Z
-Total documents: 220
+Generated: 2026-08-01T11:44:17Z
+Total documents: 221
 
 ## Issues
 
@@ -36,6 +36,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (544 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/remove-cb-render.review.md** — "Plan Engineering Review — remove-cb-render" (53 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (21 lines)
 
@@ -3600,7 +3601,7 @@ References:
 
 #### docs/plans/remove-cb-render.md
 
-Title: "Remove `cb render` and the SSR machinery" | 559 lines
+Title: "Remove `cb render` and the SSR machinery" | 599 lines
 
 Referenced by:
 - docs/plans/publish-pages.md:39 (mention) — - **SSR rendering — REMOVED 2026-08-01; this plan can no longer build on it.** `cb render` and `src/frontend/src/ssr/` a
@@ -3621,6 +3622,7 @@ References:
 - → docs/reports/user-stories-audit-2026-06-26.md (mention)
 - → docs/testing.md (mention)
 - → docs/client-debug-log.md (mention)
+- → ../issues/bugs/2026-08-01-chat-turn-stream-never-arrives-ws.md (link)
 
 #### docs/plans/remove-cb-render.review.md **[ORPHAN]**
 
@@ -3907,6 +3909,14 @@ References:
 - → docs/architecture/CLAUDE.md (mention)
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 13 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

@@ -32,7 +32,7 @@ transcription, or speech playback.
   make code pass. Fix the code, or raise it with the boxholder first."* This plan
   removes a lint rule (the `useMachine` ban). That was raised with the boxholder
   and approved before this plan was written — see Track 3.
-- **Precedent:** `cb view render` (`src/cli/commands/view.ts`) is the surviving
+- **Precedent:** `cb view test` (`src/cli/commands/view.ts:352`) is the surviving
   "run React outside the webapp" path. It keeps `react-dom/server` and `cheerio`
   alive, so this removal drops no dependency.
 
@@ -330,8 +330,8 @@ claim `cb render` is Done and describe SSR state injection as shipped
 architecture, so they get rewritten to record that it was built and removed and
 that `bin/browse` is the way to look at a page; `src/frontend/tsconfig.json:36-37`
 and `eslint.config.mjs:59,67,74,82,112` (comments referring to `cb render` as a
-tsx-with-frontend-tsconfig context — `cb view render` and doctests still are, so
-the comments are re-attributed, not deleted); `vite.config.ts:20`;
+tsx-with-frontend-tsconfig context — doctests still are, so the comments are
+re-attributed, not deleted); `vite.config.ts:20`;
 `src/cli/commands/view.ts:103` (*"mirrors `cb render`"*).
 
 **Live plans and issues that cite `cb render` as an available capability** — these
@@ -453,8 +453,8 @@ rather than skipped:
   Historical records; see Track 4(c).
 - **A custom lint rule banning module-scope browser globals.** Considered and
   declined in the crash-fix issue itself; removing SSR does not revive the case.
-- **Touching `cb view render`** (`src/cli/commands/view.ts`). Different command,
-  different purpose (agent-authored views), still works.
+- **Touching `cb view test`** (`src/cli/commands/view.ts:352`). Different
+  command, different purpose (agent-authored views), still works.
 
 ## Open design questions
 
@@ -560,8 +560,15 @@ The browser pass confirmed four of the five rewired machines directly:
   (`enter-idle → send-from-idle → enter-streaming → stream-start` in the console)
   and renders full session history on load.
 - `composerMachine` — the narration toggle flips state and re-renders.
-- `speechPlaybackMachine` — mounts and renders its "Speech options" control on a
-  reply carrying speech segments.
+- `speechPlaybackMachine` — **transitions**, not merely mounts. A reply carrying
+  speech segments renders the "Speech options" menu; triggering "Replay" produces
+  a `[wakelock] acquired` → `released` pair in the console. That wake lock tracks
+  `speechPlayback.isPlaying` (`InteractiveChat-voice.ts:325`), i.e.
+  `snapshot.matches("playing")`, and no transcription was active, so the machine
+  demonstrably entered and left `playing`. What was **not** verified is playback
+  advancing through segments with real audio — headless Chromium cannot decode
+  the TTS source (`NotSupportedError: no supported source was found`), so the
+  turn ends immediately. Segment advancement remains unverified.
 - `claudeAuthMachine` — resolves out of `loading` into a real status on `/admin`,
   and re-queries cleanly on Refresh.
 - Markdown renders correctly, covering Track 4(b2).
