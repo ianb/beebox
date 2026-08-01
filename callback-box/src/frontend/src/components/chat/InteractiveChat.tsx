@@ -12,7 +12,7 @@
 
 import { useState, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
-import { useSSRMachine } from "../../hooks/useSSRMachine";
+import { useMachine } from "@xstate/react";
 import { chatMachine } from "../../machines/chatMachine.js";
 import { groupMessages } from "./ChatMessages";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -137,7 +137,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const isEmbedded = embedded === true;
   const usesNativeComposer = nativeComposer === true;
   const usesNativeShell = isEmbedded || usesNativeComposer;
-  const [snapshot, send] = useSSRMachine(chatMachine, {
+  const [snapshot, send] = useMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;

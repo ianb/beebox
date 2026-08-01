@@ -3,13 +3,13 @@
  * login/logout/refresh actions via the claudeAuthMachine.
  */
 
-import { useSSRMachine } from "../../hooks/useSSRMachine";
+import { useMachine } from "@xstate/react";
 import { claudeAuthMachine } from "../../machines/claudeAuthMachine.js";
 import { ExternalLink } from "../ui/ExternalLink";
 import { Button } from "../ui/Button";
 
 export function ClaudeCodeSection() {
-  const [snapshot, send] = useSSRMachine(claudeAuthMachine);
+  const [snapshot, send] = useMachine(claudeAuthMachine);
   const { status, error, authUrl } = snapshot.context;
   const isLoading = snapshot.matches("loading");
   const isStarting = snapshot.matches("starting");

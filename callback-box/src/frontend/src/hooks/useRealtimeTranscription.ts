@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useSSRMachine } from "./useSSRMachine";
+import { useMachine } from "@xstate/react";
 import {
   realtimeTranscriptionMachine,
   type TranscriptionState,
@@ -222,7 +222,7 @@ function dispatchKeyword(
 export function useRealtimeTranscription(
   options?: UseRealtimeTranscriptionOptions
 ): UseRealtimeTranscriptionResult {
-  const [snapshot, send] = useSSRMachine(realtimeTranscriptionMachine);
+  const [snapshot, send] = useMachine(realtimeTranscriptionMachine);
   const optionsRef = useRef(options);
   useEffect(() => {
     optionsRef.current = options;

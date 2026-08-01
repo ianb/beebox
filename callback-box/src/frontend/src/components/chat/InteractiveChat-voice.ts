@@ -15,7 +15,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
-import { useSSRMachine } from "../../hooks/useSSRMachine";
+import { useMachine } from "@xstate/react";
 import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
 import { detectKeyword, appendSendKeywordTag } from "../../lib/audio/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
@@ -216,7 +216,7 @@ export function useChatVoice(opts: {
   // Live device handles, in a ref the command subscriber reads at emit time
   // (never during render). Effects below keep its fields current.
   const devicesRef = useRef<VoiceDevices>({ transcription: null, speechPlayback: null });
-  const [composerSnapshot, composerSend, composerActor] = useSSRMachine(composerMachine, {
+  const [composerSnapshot, composerSend, composerActor] = useMachine(composerMachine, {
     input: { narration: narrationEnabled, muted },
   });
 

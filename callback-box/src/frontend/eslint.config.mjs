@@ -16,12 +16,6 @@ import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 // can't resolve; with this repo's broken frontend ts-resolver an alias import
 // would pass by accident, not design. The raw spellings are banned; the alias
 // spellings are legal, which is honest about intent.
-const XSTATE_USE_MACHINE = {
-  name: "@xstate/react",
-  importNames: ["useMachine"],
-  message:
-    "Import `useSSRMachine` from src/hooks/useSSRMachine.ts instead of `useMachine` from @xstate/react — the wrapper hydrates the machine snapshot from SSRStateContext so SSR is safe; a bare useMachine only works client-side.",
-};
 // Backend source directories that DO NOT exist as frontend subdirs, so any raw
 // relative path with the segment (at any climb-out depth) is an escape. The
 // alias `@core/…` etc. is a distinct segment (`@core` ≠ `core`) and stays legal.
@@ -108,36 +102,15 @@ const OUTSIDE_VITE_SHARED_RAW = [
 
 export default [
   ...vibeCheck({ react: true }),
-  // Base import-boundary + useMachine ban: every frontend source file except
-  // src/ssr/** (quasi-backend `cb render` entry — exempt) and the wrapper
-  // itself. no-restricted-imports does NOT merge across flat configs (last
-  // match wins), so useMachine + the boundary patterns are declared together.
+  // Base import-boundary ban: every frontend source file. no-restricted-imports
+  // does NOT merge across flat configs (last match wins), so any later block
+  // that sets this rule must restate every pattern it still wants — see the
+  // outside-Vite block below, which drops SHARED_ALIAS_PATTERN deliberately.
   // Uses @typescript-eslint/no-restricted-imports (for `allowTypeImports` on the
   // alias-value ban); the base rule is turned off here so the two don't
   // double-report on these files.
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/ssr/**", "src/hooks/useSSRMachine.ts"],
-    rules: {
-      "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": [
-        "error",
-        { paths: [XSTATE_USE_MACHINE], patterns: [...BOUNDARY_PATTERNS, SHARED_ALIAS_PATTERN] },
-      ],
-    },
-  },
-  // src/ssr/** — quasi-backend: keep the useMachine ban, drop the boundary ban.
-  {
-    files: ["src/ssr/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": ["error", { paths: [XSTATE_USE_MACHINE] }],
-    },
-  },
-  // The useSSRMachine wrapper: boundary ban applies, useMachine allowed (it IS
-  // the sanctioned wrapper around useMachine).
-  {
-    files: ["src/hooks/useSSRMachine.ts"],
     rules: {
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": [
@@ -152,10 +125,7 @@ export default [
     files: OUTSIDE_VITE_SHARED_RAW,
     rules: {
       "no-restricted-imports": "off",
-      "@typescript-eslint/no-restricted-imports": [
-        "error",
-        { paths: [XSTATE_USE_MACHINE], patterns: [...BOUNDARY_PATTERNS] },
-      ],
+      "@typescript-eslint/no-restricted-imports": ["error", { patterns: [...BOUNDARY_PATTERNS] }],
     },
   },
   {
