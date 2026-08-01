@@ -135,7 +135,15 @@ async function collectOneCard(input: {
   todos: CollectedTodo[];
   issues: TodoCollectionIssue[];
 }): Promise<void> {
-  const { absPath, relPath, issues } = input;
+  const { absPath, relPath, ctx, issues } = input;
+  // Classify before reading, so a card that is *both* unknown-type and
+  // unreadable reports the unknown type — the more actionable of the two, and
+  // the issue this reported before the read was hoisted out.
+  const classified = classifyCardType({ absPath, relPath, ctx });
+  if (!classified.ok) {
+    issues.push(classified.issue);
+    return;
+  }
   let content: string;
   try {
     content = await readFile(absPath, "utf8");
@@ -144,6 +152,37 @@ async function collectOneCard(input: {
     return;
   }
   collectCardTodos({ ...input, content });
+}
+
+/**
+ * The card's type, or the issue for a card whose type can't be schema-loaded
+ * at all (an unparseable filename, or a `type` with no registered schema — a
+ * deleted box-local schema, a typo'd filename). Such a card is reported as
+ * visible-invalid rather than silently skipped: "any globbed card that cannot
+ * be schema-loaded is reported" is what the plan's visible-invalid guarantee
+ * means (`docs/implemented-plans/todo-annotation.md`, Failure modes table) —
+ * a schema that goes missing shouldn't be able to hide a card's todos forever
+ * with zero signal.
+ */
+function classifyCardType(input: {
+  absPath: string;
+  relPath: string;
+  ctx: LoadCardContext;
+}): { ok: true; type: string } | { ok: false; issue: TodoCollectionIssue } {
+  const { absPath, relPath, ctx } = input;
+  const type = typeFromFilename(absPath);
+  if (type !== undefined && ctx.cardSchemas.has(type)) return { ok: true, type };
+  return {
+    ok: false,
+    issue: {
+      kind: "unknown-type",
+      path: relPath,
+      message:
+        type === undefined
+          ? "card filename doesn't match the Name.<type>.card pattern"
+          : `no registered schema for card type "${type}"`,
+    },
+  };
 }
 
 /**
@@ -162,26 +201,12 @@ export function collectCardTodos(input: {
   issues: TodoCollectionIssue[];
 }): void {
   const { absPath, relPath, content, ctx, plateCtx, todos, issues } = input;
-  const type = typeFromFilename(absPath);
-  if (type === undefined || !ctx.cardSchemas.has(type)) {
-    // A card whose type can't be schema-loaded at all (an unparseable
-    // filename, or a `type` with no registered schema — a deleted
-    // box-local schema, a typo'd filename) is reported as visible-invalid
-    // rather than silently skipped: "any globbed card that cannot be
-    // schema-loaded is reported" is what the plan's visible-invalid
-    // guarantee means (`docs/implemented-plans/todo-annotation.md`, Failure modes
-    // table) — a schema that goes missing shouldn't be able to hide a
-    // card's todos forever with zero signal.
-    issues.push({
-      kind: "unknown-type",
-      path: relPath,
-      message:
-        type === undefined
-          ? "card filename doesn't match the Name.<type>.card pattern"
-          : `no registered schema for card type "${type}"`,
-    });
+  const classified = classifyCardType({ absPath, relPath, ctx });
+  if (!classified.ok) {
+    issues.push(classified.issue);
     return;
   }
+  const type = classified.type;
 
   let parsed: ReturnType<typeof parseCardText>;
   try {

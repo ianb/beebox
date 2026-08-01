@@ -12,7 +12,6 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
-import { countOnPlateTodos } from "../../../core/todo/count.js";
 import { getNavCounts } from "../../../core/nav-counts.js";
 import type { CardInfo } from "../../../core/state.js";
 
@@ -67,7 +66,13 @@ export const statusRouter = router({
   }),
 
   status: publicProcedure.query(async ({ ctx }) => {
-    const state = await getSystemState(ctx.boxRoot);
+    // The two badge counts come from `getNavCounts`, not from `state`, so the
+    // dashboard and the nav can never report different numbers for the same
+    // thing (they differ on invalid cards — see `core/nav-counts.ts`).
+    const [state, navCounts] = await Promise.all([
+      getSystemState(ctx.boxRoot),
+      getNavCounts(ctx.boxRoot),
+    ]);
     return {
       boxRoot: state.boxRoot,
       boxVersion: state.boxVersion,
@@ -76,8 +81,8 @@ export const statusRouter = router({
       counts: {
         inbox: state.inbox.length,
         questions: state.questions.length,
-        pendingQuestions: state.questions.filter((q) => q.status === "pending").length,
-        onPlateTodos: await countOnPlateTodos(state.boxRoot),
+        pendingQuestions: navCounts.pendingQuestions,
+        onPlateTodos: navCounts.onPlateTodos,
       },
     };
   }),

@@ -24,6 +24,7 @@ import {
 } from "../../../cli/lib/session.js";
 import { loadAllSessions } from "../../../core/chat/session/list.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 
 /**
  * How much of a session's log to return. Shared by `chat.history` (which adds
@@ -73,7 +74,14 @@ export async function loadSessionHistory(
       return { sessionId, entries: entries.slice(entries.length - effective), total };
     }
     return { sessionId, entries, total };
-  } catch (_e) {
+  } catch (e) {
+    // A session with no log yet is the common, expected case (a brand-new
+    // chat, or a turn that errored before the SDK wrote anything). Anything
+    // else — a permissions problem, a corrupt read — degrades the same way so
+    // the chat page still renders, but must not do so silently.
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`chat.history: could not read the log for session ${sessionId}, showing it as empty:`, e);
+    }
     return { sessionId, entries: [], total: 0 };
   }
 }

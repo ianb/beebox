@@ -69,6 +69,23 @@ counts.pendingQuestions
 => 2
 ```
 
+A question card that says `status: pending` counts even if the rest of its
+frontmatter is invalid — a broken card the boxholder has to fix is exactly the
+one that shouldn't quietly disappear from the badge. `status.status` reports
+the same number (it shares this count rather than deriving its own), so the
+nav and the dashboard can't disagree.
+
+```ts continue
+await box.write("box/questions/Broken.question.card", "---\nstatus: pending\ninput: not-a-mapping\n---\n");
+// `status.status` reads box metadata, so give the marker its full contents.
+await box.write(".cb-box", JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: "2026-01-01T00:00:00Z" }));
+
+const navCount = (await caller(box).navStatus()).counts.pendingQuestions;
+const dashboardCount = (await caller(box).status()).counts.pendingQuestions;
+`${navCount} == ${dashboardCount}`
+=> 3 == 3
+```
+
 ## Todos on the plate are counted; done and future ones are not
 
 `onPlateTodos` is `escalated` (past due) plus `on-plate` (started, or undated) —
@@ -93,7 +110,7 @@ Body.
 
 const withTodos = (await caller(box).navStatus()).counts;
 JSON.stringify(withTodos)
-=> {"pendingQuestions":2,"onPlateTodos":1}
+=> {"pendingQuestions":3,"onPlateTodos":1}
 ```
 
 ## The count agrees with the full collector

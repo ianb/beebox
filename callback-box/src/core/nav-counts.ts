@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxDir } from "../lib/paths.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { mapInBatches } from "../lib/map-batched.js";
 import { loadCardFrontmatter } from "./frontmatter-field.js";
 import { countOnPlateTodos } from "./todo/count.js";
 
@@ -24,7 +25,19 @@ export interface NavCounts {
   onPlateTodos: number;
 }
 
-async function countPendingQuestions(boxRoot: string): Promise<number> {
+/** Question cards read at once — see {@link mapInBatches}. */
+const READ_CONCURRENCY = 64;
+
+/**
+ * Counts a question as pending on its raw `status` field, without a full
+ * schema-validating load. That means a question card whose frontmatter is
+ * otherwise invalid still counts if it says `status: pending` — which is the
+ * behavior we want (a broken card the boxholder must fix is exactly the one
+ * that shouldn't silently vanish from the badge, the same rule
+ * `status.questions` follows for its `invalid` rows). `status.status` shares
+ * this count rather than deriving its own, so the two can't disagree.
+ */
+export async function countPendingQuestions(boxRoot: string): Promise<number> {
   const dir = getBoxDir(boxRoot, "questions");
   let names: string[];
   try {
@@ -36,13 +49,12 @@ async function countPendingQuestions(boxRoot: string): Promise<number> {
     return 0;
   }
 
-  const frontmatters = await Promise.all(
-    names
-      .filter((name) => name.endsWith(".card"))
-      .map((name) => loadCardFrontmatter(path.join(dir, name))),
+  const frontmatters = await mapInBatches(
+    names.filter((name) => name.endsWith(".card")),
+    { size: READ_CONCURRENCY, map: (name) => loadCardFrontmatter(path.join(dir, name)) },
   );
-  // A question whose frontmatter won't parse is not countable as pending; it
-  // surfaces as an invalid card through `status.questions` / `cb validate`.
+  // A question whose frontmatter won't parse at all can't claim to be pending;
+  // it surfaces as an invalid card through `status.questions` / `cb validate`.
   return frontmatters.filter((fm) => fm !== null && fm["status"] === "pending").length;
 }
 

@@ -154,11 +154,25 @@ JSON.stringify(missing)
 => {"sessionId":"no-such-session","history":{"sessionId":"no-such-session","entries":[],"total":0},"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null}}
 ```
 
-Input still validates: a non-string session is rejected before any work.
+Input still validates: a non-string session is rejected before any work, and so
+is an empty one — `""` is not a session id, and accepting it would report
+`sessionId: ""` next to a status that correctly says there is no session.
 
 ```ts continue
 await caller(server).chat.bootstrap({ session: 42 }).then(() => "no error", (e) => e.code)
 => BAD_REQUEST
+
+await caller(server).chat.bootstrap({ session: "" }).then(() => "no error", (e) => e.code)
+=> BAD_REQUEST
+```
+
+An empty id in the persisted default-session pointer means "none" too, rather
+than a session named `""`:
+
+```ts continue
+await setDefaultSession(server, "");
+JSON.stringify(await caller(server).chat.bootstrap({}))
+=> {"sessionId":null,"history":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
 ```
 
 ```ts cleanup
