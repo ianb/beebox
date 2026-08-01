@@ -547,6 +547,39 @@ Done-when, as checkable assertions:
 - **Cross-model review.** Codex review of the plan before implementation and of
   the diff before the work is called done, per the monorepo `CLAUDE.md` rule.
 
+### What the verification actually found (2026-08-01)
+
+All automated checks passed: typecheck, lint, `doc-check`, and the full test
+suite at 5524/5524. The `eslint --print-config` probe came back exactly as
+specified — `paths` gone, every boundary pattern intact in both match classes,
+and the outside-Vite override still correctly missing `SHARED_ALIAS_PATTERN`.
+
+The browser pass confirmed four of the five rewired machines directly:
+
+- `chatMachine` — the FSM transitions correctly on send
+  (`enter-idle → send-from-idle → enter-streaming → stream-start` in the console)
+  and renders full session history on load.
+- `composerMachine` — the narration toggle flips state and re-renders.
+- `speechPlaybackMachine` — mounts and renders its "Speech options" control on a
+  reply carrying speech segments.
+- `claudeAuthMachine` — resolves out of `loading` into a real status on `/admin`,
+  and re-queries cleanly on Refresh.
+- Markdown renders correctly, covering Track 4(b2).
+
+**One step could not be completed:** watching a turn stream to completion live.
+The chat UI never leaves the streaming state because the tRPC WebSocket
+subscription never delivers — the server finishes the turn in ~2s and the client
+waits forever. This is **not** caused by this plan: a WebSocket connect to the
+tRPC endpoint fails identically for `main`, which still had the SSR machinery at
+the time. Filed as
+[chat-turn-stream-never-arrives-ws](../../../issues/bugs/2026-08-01-chat-turn-stream-never-arrives-ws.md).
+
+`realtimeTranscriptionMachine` was exercised only as far as the voice-input
+control rendering in its narration-mode state; driving a real microphone capture
+is not something an agent can do. Both gaps are recorded here rather than
+papered over — if chat or transcription misbehaves later, this paragraph and the
+Failure-modes note about the missing regression net are the first places to look.
+
 **Migration.** None. No on-disk data shape changes; no box holds `cb render`
 state.
 
