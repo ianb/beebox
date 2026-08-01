@@ -8,7 +8,7 @@
  * dispatcher.
  */
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
@@ -138,6 +138,12 @@ export function useChatWs(opts: {
   const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
+  // The subscription's FIRST start is this mount establishing it, not a
+  // reconnect — and the history it would refresh was loaded moments ago by the
+  // mount's own bootstrap. Consumed on that first fire so every later start
+  // (socket drop → resubscribe) still refreshes. A session switch remounts this
+  // hook, so its first start is likewise a fresh mount, not a reconnect.
+  const subscriptionStarted = useRef(false);
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
   // chat-history, chat-complete, chat-user-message, chat-session-assigned.
@@ -145,7 +151,11 @@ export function useChatWs(opts: {
   useBusSubscription({
     onConnect: useCallback(() => {
       console.debug("[chatfsm] ws-connect");
-      // Re-sync on every (re)connect: a full history REFRESH backs up the
+      if (!subscriptionStarted.current) {
+        subscriptionStarted.current = true;
+        return;
+      }
+      // Re-sync on every RE-connect: a full history REFRESH backs up the
       // subscription's automatic lastEventId replay for gaps that exceed the
       // event-bus retention window. REFRESH is ignored in streaming, so it's
       // safe to dispatch unconditionally.

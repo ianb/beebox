@@ -231,10 +231,12 @@ export function useChatMute() {
  */
 export function useChatSchedules(opts: {
   messages: SessionEntry[];
+  /** False while the chat machine is still loading — `messages` isn't the transcript yet. */
+  loaded: boolean;
   isStreaming: boolean;
   send: ChatSendFn;
 }) {
-  const { messages } = opts;
+  const { messages, loaded } = opts;
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
 
   const fetchSchedules = useCallback(() => {
@@ -247,10 +249,22 @@ export function useChatSchedules(opts: {
       });
   }, []);
 
-  // Poll schedules on mount + after each turn completes
+  // Fetch on mount, and whenever the conversation GREW. Keyed on the count,
+  // not the array: `messages` gets a fresh identity on every history fetch
+  // (initial load, refresh, server push), which refired this on every one of
+  // them — a duplicate request moments after mount. Schedules are set by
+  // `<schedule>` tags the agent writes, which can only reach the transcript as
+  // a new entry, so a same-length replacement can't change them. The other
+  // paths that can (a schedule firing, a pushed history) call `fetchSchedules`
+  // directly from the WS handler.
+  // Skipped while the machine loads: `messages` is the empty pre-load array
+  // then, and fetching on it only to fetch again a tick later when the
+  // transcript lands is the second half of the same duplicate.
+  const messageCount = messages.length;
   useEffect(() => {
+    if (!loaded) return;
     fetchSchedules();
-  }, [messages, fetchSchedules]);
+  }, [loaded, messageCount, fetchSchedules]);
 
   // NOTE: a former "poll /chat/history after a schedule fires" fallback lived
   // here but was inert — it fetched history with no session id, which the

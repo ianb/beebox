@@ -99,11 +99,54 @@ export interface ChatContext {
    * first turn of the session.
    */
   liveTurnId: string | null;
+  /**
+   * The caller-supplied initial load, consumed by the `loading` state's
+   * `fetchInitial` and cleared when it leaves. Transient (and not
+   * serializable-forever like the rest of context) — it exists here only
+   * because an invoke's `input` can read nothing but context.
+   */
+  initial?: ChatInitialLoad | undefined;
+}
+
+/**
+ * A session's initial history + status, already fetched by the mounting page
+ * (`ChatPage` gets it from `chat.bootstrap`, which resolves the session and
+ * loads both in one round trip). Handed to the machine as input so its
+ * `loading` state consumes this instead of asking the server again — the
+ * duplicate that used to make opening a chat cost two serial stages.
+ *
+ * `failed` carries a load that already failed: the machine reproduces it
+ * through the same `fetchInitial` onError path a live fetch failure takes, so
+ * there is one error surface regardless of who did the fetching.
+ */
+export type ChatInitialLoad =
+  | {
+      status: "loaded";
+      entries: SessionEntry[];
+      total: number;
+      sessionId: string | null;
+      running: boolean;
+      busy: boolean;
+    }
+  | { status: "failed"; error: string };
+
+/** A preloaded initial load reported as failed — see `ChatInitialLoad`. */
+export class ChatInitialLoadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ChatInitialLoadError";
+  }
 }
 
 export interface ChatMachineInput {
   /** `"new"` for a fresh conversation, or an existing session id. */
   sessionInput: string;
+  /**
+   * History + status for `sessionInput`, already fetched. Optional: a caller
+   * without it (or a `"new"` chat, which has nothing to load) leaves the
+   * machine to fetch for itself.
+   */
+  initial?: ChatInitialLoad | undefined;
   /**
    * Landmark directory binding for fresh chats. Only honored when
    * `sessionInput === "new"`; ignored for resumed sessions (those read
@@ -115,6 +158,11 @@ export interface ChatMachineInput {
 export interface SessionInput {
   /** Either a known session id or the "new" sentinel. Null/undefined means brand-new shell with no history. */
   sessionInput: string;
+}
+
+export interface InitialSessionInput extends SessionInput {
+  /** Preloaded history + status for `sessionInput`, when the caller had it. */
+  initial?: ChatInitialLoad | undefined;
 }
 
 /**
