@@ -10,24 +10,20 @@
  * raw — they now live in `chat-control-procedures.ts` via `chat-runtime`.
  */
 
-import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { publicProcedure } from "../trpc.js";
 import {
   getFeaturesForSession,
   getMostActive,
-  loadHistory,
   resolveSessionLogPath,
 } from "../../../core/chat/session/history.js";
 import { resolveFeatures } from "../../../core/chat/features.js";
 import {
-  getSessionMetadata,
   parseSessionLog,
   tailForMinUserMessages,
 } from "../../../cli/lib/session.js";
-import { errnoCode } from "../../../lib/error-guards.js";
-import { listChatHusks } from "../../../core/chat/husk.js";
-import { resolveSessionLabel } from "../../../core/chat/session-label.js";
+import { loadAllSessions } from "../../../core/chat/session/list.js";
+import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
 
 export const chatSessionProcedures = {
   // Load + slice a session's conversation history.
@@ -65,43 +61,44 @@ export const chatSessionProcedures = {
       }
     }),
 
-  // List web-chat sessions, most-recent first. Labels resolve through the
-  // shared order (husk title > first-message snippet > id prefix), so a title
-  // written by hand or by the nightly chat review shows up here — this query
-  // used to skip husks entirely and was the reason generated titles were
-  // invisible in the history dropdown.
+  // List web-chat sessions, most-recent first, for the history dropdown.
+  //
+  // Enumerated from husk cards through the same `loadAllSessions` the landmark
+  // picker uses — the cards are the source of truth for which chats exist, so
+  // deleting a husk removes the chat from both lists rather than only the
+  // picker. Labels resolve through the shared order (husk title >
+  // first-message snippet > id prefix).
+  //
+  // Each row carries its landmark binding so the dropdown can put the current
+  // landmark's chats first: `contextDir` ("" for root/legacy-unbound) plus the
+  // landmark's display label, resolved here so the client stays dumb.
   sessions: publicProcedure.query(async ({ ctx }) => {
-    const ids = await loadHistory(ctx.boxRoot);
-    const mostActive = await getMostActive(ctx.boxRoot);
-    const titlesBySession = new Map(
-      (await listChatHusks(ctx.boxRoot)).map((husk) => [husk.session, husk.title]),
+    const [rows, mostActive] = await Promise.all([
+      loadAllSessions(ctx.boxRoot),
+      getMostActive(ctx.boxRoot),
+    ]);
+    // Only the dirs these sessions actually bind to — a handful — rather than
+    // globbing the whole box for landmark cards on every dropdown open.
+    const labelByDir = await landmarkLabelsForDirs(
+      ctx.boxRoot,
+      rows.map((row) => row.contextDir ?? ""),
     );
 
-    const sessions = await Promise.all(
-      ids.map(async (sessionId) => {
-        const logPath = await resolveSessionLogPath(ctx.boxRoot, sessionId);
-        let lastUsedAt = new Date(0).toISOString();
-        try {
-          const stat = await fs.stat(logPath);
-          lastUsedAt = stat.mtime.toISOString();
-          const meta = await getSessionMetadata({ sessionId, logPath });
-          if (meta.endTime) lastUsedAt = meta.endTime.toISOString();
-        } catch (e) {
-          if (errnoCode(e) !== "ENOENT") {
-            console.warn(`[chat] session ${sessionId} log unreadable:`, e);
-          }
-          // JSONL missing or unreadable — resolveSessionLabel falls back too.
-        }
-        const label = await resolveSessionLabel({
-          sessionId,
-          logPath,
-          title: titlesBySession.get(sessionId),
-        });
-        return { sessionId, source: "chat", label, lastUsedAt, isActive: sessionId === mostActive };
-      }),
-    );
-
-    sessions.sort((a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime());
+    const sessions = rows.map((row) => {
+      const contextDir = row.contextDir ?? "";
+      // A session can outlive its landmark card (or predate one). Fall back to
+      // the directory itself so the row still says where the chat lives.
+      const landmarkLabel = labelByDir.get(contextDir) ?? (contextDir === "" ? "Root" : contextDir);
+      return {
+        sessionId: row.sessionId,
+        source: "chat",
+        label: row.label,
+        lastUsedAt: row.mtime.toISOString(),
+        isActive: row.sessionId === mostActive,
+        contextDir,
+        landmarkLabel,
+      };
+    });
     return { sessions };
   }),
 

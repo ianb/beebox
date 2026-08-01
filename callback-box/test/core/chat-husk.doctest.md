@@ -3,14 +3,14 @@
 `ensureChatHusk` creates the session's card under `store/chat/web/`
 (docs/plans/chat-husks.md): identity + editorial only, with the
 `_<shortid>.chat.card` filename suffix as the idempotency key.
-`backfillChatHusks` husk-ifies pre-existing history entries once,
-skipping ghosts whose transcript is gone.
+`reconcileChatHusks` gives every history entry a husk, skipping ghosts
+whose transcript is gone.
 
 ```ts setup
 import { mkdir, writeFile, readFile as readFsFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { ensureChatHusk, findChatHusk, backfillChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
+import { ensureChatHusk, findChatHusk, reconcileChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
 import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 ```
 
@@ -55,12 +55,10 @@ await findChatHusk(box.root, "00000000-unknown")
 => null
 ```
 
-## backfill husks history entries once, skipping ghosts
+## reconcile husks every history entry, skipping ghosts
 
 Transcript discovery honors `CB_CLAUDE_PROJECTS_DIR`; a history entry
-whose JSONL is gone (a "ghost") gets no husk. The marker file gates
-re-runs: a session added after the backfill isn't picked up by calling
-it again (assignment-time ensure covers new sessions).
+whose JSONL is gone (a "ghost") gets no husk.
 
 ```ts
 const box = await makeTmpBox();
@@ -75,7 +73,7 @@ const logPath = getSessionLogPath(box.root, live);
 await mkdir(dirname(logPath), { recursive: true });
 await writeFile(logPath, "{}\n");
 
-await backfillChatHusks(box.root);
+await reconcileChatHusks(box.root);
 const huskPath = await findChatHusk(box.root, live);
 huskPath !== null
 => true
@@ -85,15 +83,36 @@ await findChatHusk(box.root, ghost)
 
 (await readFsFile(box.path(huskPath ?? ""), "utf-8")).includes(`session: ${live}`)
 => true
+```
 
-// Marker-gated: a second run is a no-op even with a new entry present.
+It re-runs on every boot rather than once behind a marker, so a session
+that never got its husk — the assignment-time write is best-effort, and the
+history backfill may still have been writing entries during an earlier pass —
+is repaired by the next one instead of staying invisible forever.
+
+```ts continue
+const late = "cccc1111-2222-3333-4444-555566667777";
+const lateLog = getSessionLogPath(box.root, late);
+await mkdir(dirname(lateLog), { recursive: true });
+await writeFile(lateLog, "{}\n");
 await box.write(".callback-box/chat-session-history.json", JSON.stringify({
-  sessions: [{ id: live }, { id: "cccc1111-2222-3333-4444-555566667777" }],
+  sessions: [{ id: live }, { id: late }],
   migrated: true,
 }));
-await backfillChatHusks(box.root);
-await findChatHusk(box.root, "cccc1111-2222-3333-4444-555566667777")
-=> null
+
+await reconcileChatHusks(box.root);
+(await findChatHusk(box.root, late)) !== null
+=> true
+```
+
+An already-husked session is left exactly as it was — no duplicate card.
+
+```ts continue
+const before = await listChatHusks(box.root);
+await reconcileChatHusks(box.root);
+const again = await listChatHusks(box.root);
+`${before.length} then ${again.length}`
+=> 2 then 2
 ```
 
 ```ts cleanup

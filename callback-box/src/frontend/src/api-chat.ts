@@ -152,6 +152,10 @@ export interface ChatSessionInfo {
   label: string;
   lastUsedAt: string;
   isActive: boolean;
+  /** Landmark the session is bound to; "" for root/legacy-unbound. */
+  contextDir: string;
+  /** That landmark's display label ("Root" for the box root). */
+  landmarkLabel: string;
 }
 
 export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[] }> {
