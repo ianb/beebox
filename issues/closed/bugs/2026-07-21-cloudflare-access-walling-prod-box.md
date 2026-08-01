@@ -2,8 +2,19 @@
 title: "Cloudflare Access is walling off the production box (mis-scoped from pub-setup)"
 area: callback-box
 filed-by: agent
+resolution: fixed
 discovered-in: main session — boxholder saw a broken admin page + console errors on the deployed box
 ---
+
+**Closed (fixed) 2026-07-31.** Boxholder deleted the mis-scoped Access application
+(and a stray `box.<domain>` localhost-proxy tunnel it was tied to). Verified live:
+`curl` against the prod box now returns the box's **own** `302 → /auth/login`
+(correct fail-closed box auth) with **no** `cloudflareaccess.com` redirect, no
+`www-authenticate: Cloudflare-Access`, and no `CF_AppSession` — so tRPC / manifest
+/ WebSocket sub-requests are no longer intercepted. (Cloudflare still *proxies* the
+host — `cf-ray` present — which is fine and separate; the boxholder's broader
+"Tailscale-only" goal, i.e. grey-clouding the DNS record, is a distinct follow-up,
+not part of this bug.)
 
 The deployed box (`box.example.com` — the real family server) is behind a
 **Cloudflare Access application it should not be behind**. Every request without
@@ -40,7 +51,7 @@ requests. All one cause: Access in front of the box.
 
 The Access app was created during the 2026-07-19 `cb pub setup` work, which was
 meant to protect **`pub-worker.<...>.workers.dev`** (path `a/*`) — see
-[pub Access setup via API](../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
+[pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
 The reorganized Cloudflare dashboard made that flow error-prone (documented
 there), and the application domain ended up scoped to the box hostname instead of
 the worker.
@@ -55,7 +66,7 @@ to the pub worker (`pub-worker.<...>.workers.dev`, path `a/*`).
 
 Putting Cloudflare Access *deliberately* in front of the box is a real option —
 it's defense-in-depth, and it overlaps the
-[Tailscale expose-and-protect](../closed/features/2026-07-20-tailscale-expose-and-protect.md)
+[Tailscale expose-and-protect](../features/2026-07-20-tailscale-expose-and-protect.md)
 goal. But the box is **not built to run behind Access today**: the tRPC/XHR,
 `manifest.webmanifest`, and the tRPC WebSocket all need to authenticate through
 the Access session, and right now they don't (they get 302'd). So Access-in-front
