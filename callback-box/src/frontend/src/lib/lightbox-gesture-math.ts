@@ -48,6 +48,14 @@ export const DISMISS_FADE_RATIO = 0.4;
 export const SWIPE_VELOCITY_PX_PER_MS = 0.4;
 /** Fraction of viewport width a swipe must cross to navigate on release. */
 export const SWIPE_DISPLACEMENT_RATIO = 0.25;
+/**
+ * Gap (px) between adjacent images in the swipe strip. The peers are parked
+ * `viewportWidth + SWIPE_GUTTER_PX` away and a committed swipe springs exactly
+ * that far, so the incoming image lands dead centre — the two MUST agree, or
+ * the new image settles off-centre and jumps when the index swap resets the
+ * transform.
+ */
+export const SWIPE_GUTTER_PX = 32;
 /** Target scale a double-tap zooms to (and back from). */
 export const ZOOM_SCALE = 2.5;
 /** Hard ceiling on scale (pinch and double-tap). */

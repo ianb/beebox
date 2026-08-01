@@ -52,3 +52,13 @@ exactly `rubberBand(180, 1280)` — pure resistance, zero real travel.
    tell without touching the zoom model.
 
 (2) is worth doing on its own even if (1) is never designed.
+
+## Also noted, not fixed
+
+A committed swipe's spring target is captured once at release
+(`lightbox-gesture-controller.ts`, `commitSwipe`). `measure()` retargets only
+the transform settle spring, not the swipe spring, so a rotation or width
+change during the ~300ms commit flight leaves the figure partly on-screen and
+the incoming peer off-centre. Found by a Codex review; left alone deliberately
+— it needs a rotation inside a third of a second, and the next gesture or index
+change resets it.

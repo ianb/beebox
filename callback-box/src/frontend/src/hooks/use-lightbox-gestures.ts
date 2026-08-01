@@ -6,7 +6,7 @@
  * component attaches to its root, figure, zoom wrapper, and img.
  */
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { LightboxGestureController } from "../lib/lightbox-gesture-controller.js";
 
 export interface LightboxGestureRefs {
@@ -18,12 +18,18 @@ export interface LightboxGestureRefs {
 }
 
 export function useLightboxGestures({
-  src,
+  imageKey,
   onClose,
   onNavigate,
   canSwipe,
 }: {
-  src: string;
+  /**
+   * Identity of the image on screen — reset runs whenever this changes. It is
+   * the index AND the src, not the src alone: two entries can legitimately
+   * share a URL, and keying on the URL would skip the reset between them,
+   * stranding a committed swipe off-screen (or carrying zoom across).
+   */
+  imageKey: string;
   onClose: () => void;
   /** Move the selection by `step` (`-1` previous, `+1` next), wrapping. */
   onNavigate: (step: -1 | 1) => void;
@@ -56,7 +62,7 @@ export function useLightboxGestures({
     const img = imgRef.current;
     if (!root || !figure || !wrapper || !img) return;
     const controller = new LightboxGestureController({
-      elements: { root, figure, wrapper, img, peers: peersRef.current },
+      elements: { root, figure, wrapper, img, peers: () => peersRef.current },
       onClose: () => onCloseRef.current(),
       onNavigate: (step) => onNavigateRef.current(step),
       canSwipe: () => canSwipeRef.current,
@@ -69,11 +75,15 @@ export function useLightboxGestures({
     };
   }, []);
 
-  // Reset all gesture state before a swapped-in image renders (the component
-  // is reused across navigation).
-  useEffect(() => {
+  // Reset all gesture state for a swapped-in image (the component is reused
+  // across navigation). This MUST be a layout effect: a committed swipe leaves
+  // the figure parked off-screen and the peers holding the OLD neighbours, and
+  // React has already re-rendered both with the new index by the time effects
+  // run. A passive useEffect would let the browser paint that intermediate
+  // frame first — the new next-image sitting where the current one belongs.
+  useLayoutEffect(() => {
     controllerRef.current?.reset();
-  }, [src]);
+  }, [imageKey]);
 
   return { rootRef, figureRef, wrapperRef, imgRef, peersRef };
 }

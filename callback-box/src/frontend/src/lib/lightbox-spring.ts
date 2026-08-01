@@ -50,7 +50,16 @@ function stepChannel(
 
 /**
  * Start a spring. Returns a handle whose `cancel()` stops it without a final
- * frame (the caller keeps whatever value the last frame wrote).
+ * frame (the caller keeps whatever value the last frame wrote) — or **`null`
+ * when the spring already finished before returning**, which is exactly what
+ * the reduced-motion path does: it jumps to the targets and runs `onDone`
+ * synchronously.
+ *
+ * The null is not a nicety. Callers park the handle in a "spring in flight"
+ * slot that `onDone` clears; if this returned a live-looking handle after
+ * already completing, the caller's assignment would land AFTER that clear and
+ * strand the slot non-null forever, so every "is a spring running?" check
+ * would answer yes for the rest of the lightbox's life.
  */
 export function animateSpring(options: {
   channels: readonly SpringChannel[];
@@ -59,14 +68,14 @@ export function animateSpring(options: {
   timing: SpringTiming;
   onFrame: (values: number[]) => void;
   onDone: () => void;
-}): SpringHandle {
+}): SpringHandle | null {
   const { channels, omega, reducedMotion, timing, onFrame, onDone } = options;
   const targets = channels.map((c) => c.to);
 
   if (reducedMotion) {
     onFrame(targets);
     onDone();
-    return { cancel: () => {} };
+    return null;
   }
 
   const live = channels.map((c) => ({ value: c.from, velocity: c.velocity, to: c.to }));

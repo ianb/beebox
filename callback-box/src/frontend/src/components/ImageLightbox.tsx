@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { CloseButton } from "./ui/CloseButton";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { useLightboxGestures } from "../hooks/use-lightbox-gestures.js";
+import { SWIPE_GUTTER_PX } from "../lib/lightbox-gesture-math.js";
 
 export interface LightboxImage {
   src: string;
@@ -43,7 +44,7 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   // horizontal swipe for prev/next. Must run before the `!current` early
   // return so hook order stays stable.
   const { rootRef, figureRef, wrapperRef, imgRef, peersRef } = useLightboxGestures({
-    src: current?.src ?? "",
+    imageKey: `${safeIndex}:${current?.src ?? ""}`,
     onClose,
     canSwipe: hasMany,
     onNavigate: (by) => onIndexChange(step(by)),
@@ -181,25 +182,38 @@ function captionOf(image: LightboxImage): string | null {
 }
 
 /**
- * One neighbouring image, parked a full viewport (plus a gutter) to the left
- * or right of centre. It mirrors the figure's own image sizing — including the
- * caption-dependent height cap — so that when a committed swipe lands, the
- * peer sits exactly where the figure's image will be and the index change
- * swaps identical pixels instead of flashing.
+ * One neighbouring image, parked a viewport plus {@link SWIPE_GUTTER_PX} to
+ * the left or right of centre — the exact distance a committed swipe travels,
+ * so the peer lands dead centre and the index change swaps identical pixels
+ * instead of jumping.
+ *
+ * It mirrors the real figure's whole layout, not just the image: same height
+ * cap, and the caption rendered below in the same column. The figure centres
+ * image-plus-caption as a unit, which pushes a captioned image ABOVE the
+ * viewport's middle — a peer that centred only its image would sit lower and
+ * jog vertically the moment the swap happened.
  */
 function SwipePeer({ image, side }: { image: LightboxImage | undefined; side: "prev" | "next" }) {
   if (!image) return null;
-  const offset = side === "prev" ? "calc(-100% - 2rem)" : "calc(100% + 2rem)";
+  const captionText = captionOf(image);
+  const sign = side === "prev" ? "-" : "";
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
-      style={{ transform: `translateX(${offset})` }}
+      style={{ transform: `translateX(calc(${sign}100% ${side === "prev" ? "-" : "+"} ${SWIPE_GUTTER_PX}px))` }}
     >
-      <img
-        src={image.src}
-        alt=""
-        className={`max-w-[95vw] rounded shadow-lg ${captionOf(image) ? "max-h-[80vh]" : "max-h-[92vh]"}`}
-      />
+      <div className="max-w-[95vw] max-h-[95vh] flex flex-col items-center">
+        <img
+          src={image.src}
+          alt=""
+          className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"}`}
+        />
+        {captionText ? (
+          <div className="mt-3 max-w-[80ch] text-sm text-white/90 text-center px-4 leading-relaxed">
+            {captionText}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

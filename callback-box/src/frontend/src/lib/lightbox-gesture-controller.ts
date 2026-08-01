@@ -12,7 +12,7 @@
  * anchor is directly usable as a transform anchor.
  */
 
-import { isAtFit, type Point } from "./lightbox-gesture-math.js";
+import { isAtFit, SWIPE_GUTTER_PX, type Point } from "./lightbox-gesture-math.js";
 import {
   initialGestureState,
   reduceGesture,
@@ -39,6 +39,9 @@ export class LightboxGestureController {
   private dismissPointerStartY = 0;
   private swipeBaseX = 0;
   private swipePointerStartX = 0;
+  /** A committed swipe is parked off-screen awaiting the index change that
+   *  {@link reset} will follow. See {@link settleStrayOffsets}. */
+  private navigating = false;
   private resizeObserver: ResizeObserver | null = null;
 
   constructor({
@@ -96,6 +99,7 @@ export class LightboxGestureController {
     this.gesture = initialGestureState;
     this.panBase = null;
     this.pinchBase = null;
+    this.navigating = false;
     this.render.reset();
   }
 
@@ -114,11 +118,19 @@ export class LightboxGestureController {
    * snap-back whose gesture then went elsewhere (pinch from pending, a swipe
    * promoted out) would otherwise leave the figure stuck part-way off —
    * faded for a dismiss, or slid off-screen for a swipe.
+   *
+   * A COMMITTED swipe is the deliberate exception: it ends parked a full
+   * viewport off-screen on purpose, waiting for the index change to swap the
+   * image under it. Without the `navigating` guard this fires the instant the
+   * commit spring reports done, springing the OLD image back to centre — a
+   * visible bounce-back of the image you just swiped away. `reset()` clears
+   * the flag when the new image arrives.
    */
   private settleStrayOffsets(actions: GestureAction[]): void {
     const { mode } = this.gesture;
     if (mode !== "idle" && mode !== "panning" && mode !== "pinching") return;
     if (actions.some((a) => a.type === "close")) return;
+    if (this.navigating) return;
     const springdone = () => this.dispatch({ type: "springdone" });
     if (this.render.getDismissY() !== 0 && !this.render.isDismissSettling()) {
       this.render.springDismiss({ velocity: 0, onDone: springdone });
@@ -193,10 +205,13 @@ export class LightboxGestureController {
         // Fly the figure out the way the finger went (step +1 = next = the
         // image leaves to the LEFT) and only then change image: at that point
         // the incoming peer already sits dead centre, so the React swap that
-        // follows exchanges identical pixels rather than flashing.
+        // follows exchanges identical pixels rather than flashing. The travel
+        // is one viewport PLUS the strip gutter — the distance the peers are
+        // actually parked at; one viewport alone lands them a gutter off.
         const { step } = action;
+        this.navigating = true;
         this.render.springSwipe({
-          to: -step * this.render.getViewportWidth(),
+          to: -step * (this.render.getViewportWidth() + SWIPE_GUTTER_PX),
           velocity: this.releaseVelocity().x,
           onDone: () => {
             this.onNavigate(step);
@@ -277,6 +292,12 @@ export class LightboxGestureController {
       // mode is idle, and left alive it would fight the new gesture's writes
       // every frame. Cancelling freezes the current values for adoption.
       this.render.cancelSprings();
+      // Grabbing the strip mid-commit cancels that navigation: the spring that
+      // would have called onNavigate is now dead, so no index change (and thus
+      // no reset) is coming to clear the flag. Leaving it set would suppress
+      // the stray-offset invariant forever — release without moving and the
+      // figure stays parked off-screen with nothing to bring it back.
+      this.navigating = false;
       this.render.captureCenter();
     }
     const point = this.render.toCentered(e.clientX, e.clientY);

@@ -32,9 +32,14 @@ export interface LightboxElements {
   figure: HTMLElement;
   wrapper: HTMLElement;
   img: HTMLImageElement;
-  /** The prev/next peer layer, translated alongside the figure during a swipe.
-   *  Null when the lightbox holds a single image (nothing to swipe to). */
-  peers: HTMLElement | null;
+  /**
+   * The prev/next peer layer, translated alongside the figure during a swipe.
+   * Resolved on every write rather than captured once: the layer is mounted
+   * only while the lightbox holds more than one image, so a list that GROWS
+   * from one entry to several would otherwise leave this permanently null and
+   * the neighbours frozen while the figure slid.
+   */
+  peers: () => HTMLElement | null;
 }
 
 function prefersReducedMotion(): boolean {
@@ -137,7 +142,8 @@ export class LightboxRenderTarget {
     this.els.figure.style.transform = `translate3d(${this.swipeX}px, ${this.dismissY}px, 0)`;
     this.els.figure.style.opacity = String(1 - progress);
     this.els.root.style.backgroundColor = `rgba(0, 0, 0, ${BASE_BACKDROP_OPACITY * (1 - progress)})`;
-    if (this.els.peers) this.els.peers.style.transform = `translate3d(${this.swipeX}px, 0, 0)`;
+    const peers = this.els.peers();
+    if (peers) peers.style.transform = `translate3d(${this.swipeX}px, 0, 0)`;
   }
 
   restoreBackdrop(): void {
@@ -238,7 +244,7 @@ export class LightboxRenderTarget {
     this.clearTransition();
     const from = this.transform;
     const target = settleTarget(from, this.frame);
-    this.transformSpring = animateSpring({
+    const handle = animateSpring({
       channels: [
         { from: from.x, to: target.x, velocity: velocity.x },
         { from: from.y, to: target.y, velocity: velocity.y },
@@ -259,12 +265,13 @@ export class LightboxRenderTarget {
         onDone();
       },
     });
+    this.transformSpring = handle;
   }
 
   /** Spring the dismiss offset back to zero, carrying release velocity (px/s). */
   springDismiss({ velocity, onDone }: { velocity: number; onDone: () => void }): void {
     this.dismissSpring?.cancel();
-    this.dismissSpring = animateSpring({
+    const handle = animateSpring({
       channels: [{ from: this.dismissY, to: 0, velocity }],
       omega: SPRING_OMEGA,
       reducedMotion: prefersReducedMotion(),
@@ -279,6 +286,7 @@ export class LightboxRenderTarget {
         onDone();
       },
     });
+    this.dismissSpring = handle;
   }
 
   /**
@@ -289,7 +297,7 @@ export class LightboxRenderTarget {
    */
   springSwipe({ to, velocity, onDone }: { to: number; velocity: number; onDone: () => void }): void {
     this.swipeSpring?.cancel();
-    this.swipeSpring = animateSpring({
+    const handle = animateSpring({
       channels: [{ from: this.swipeX, to, velocity }],
       omega: SPRING_OMEGA,
       reducedMotion: prefersReducedMotion(),
@@ -305,5 +313,6 @@ export class LightboxRenderTarget {
         onDone();
       },
     });
+    this.swipeSpring = handle;
   }
 }

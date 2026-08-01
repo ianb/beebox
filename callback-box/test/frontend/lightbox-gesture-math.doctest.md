@@ -24,6 +24,7 @@ import {
   scaleAboutPoint,
   shouldDismiss,
   snapToFit,
+  SWIPE_GUTTER_PX,
   swipeStep,
   toContainerCentered,
 } from "../../src/frontend/src/lib/lightbox-gesture-math.js";
@@ -276,6 +277,17 @@ a phone as on a desktop:
   swipeStep({ velocityX: 0, displacementX: -110, viewportWidth: 1280 }),
 ].join(",")
 => 1,0
+```
+
+The strip gutter is shared, not two independent numbers. `ImageLightbox` parks
+each peer at `calc(100% ± SWIPE_GUTTER_PX)` and the controller springs a
+committed swipe exactly `viewportWidth + SWIPE_GUTTER_PX`. If those ever
+diverge the incoming image settles off-centre and visibly jumps when the index
+swap resets the transform, so the constant is exported and asserted here:
+
+```ts
+[SWIPE_GUTTER_PX, 390 + SWIPE_GUTTER_PX].join(" ")
+=> 32 422
 ```
 
 ## Fit epsilon snapping
