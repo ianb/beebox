@@ -31,7 +31,10 @@ export function useBoxes(): BoxesState {
     if (error) console.error("Failed to load the box list:", error);
   }, [error]);
   if (query.data) {
-    return { boxes: query.data.boxes, authRequired: query.data.authRequired ?? false, loaded: true, error: false };
+    // `error` reports the LAST attempt, even alongside data: react-query keeps
+    // showing the previous list when a refetch fails, and a caller that treats
+    // that as a validated list would rule a box "not found" off stale data.
+    return { boxes: query.data.boxes, authRequired: query.data.authRequired ?? false, loaded: true, error: query.isError };
   }
   return { boxes: [], authRequired: false, loaded: query.isError, error: query.isError };
 }

@@ -44,6 +44,14 @@ function stampFileVersion(data: { path: string; timestamp: string }): void {
   bumpFileVersion(data.path, data.timestamp.replace(/\D/g, ""));
 }
 
+/**
+ * How soon after mount a first subscription start still counts as "this mount
+ * established it" (so its REFRESH is redundant with the mount's own bootstrap).
+ * Later than this and the socket was down at mount: the start is a reconnect,
+ * and the preloaded history is old enough to be worth re-reading.
+ */
+const PROMPT_SUBSCRIPTION_MS = 5000;
+
 /** True when an event tagged with `dataSessionId` belongs to this view's session. */
 function forSession(dataSessionId: string | null, sessionId: string | null): boolean {
   return !(dataSessionId && sessionId && dataSessionId !== sessionId);
@@ -138,12 +146,22 @@ export function useChatWs(opts: {
   const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
-  // The subscription's FIRST start is this mount establishing it, not a
-  // reconnect — and the history it would refresh was loaded moments ago by the
-  // mount's own bootstrap. Consumed on that first fire so every later start
-  // (socket drop → resubscribe) still refreshes. A session switch remounts this
-  // hook, so its first start is likewise a fresh mount, not a reconnect.
+  // The subscription's FIRST start is normally this mount establishing it, not
+  // a reconnect — and the history it would refresh was loaded moments ago by
+  // the mount's own bootstrap. Suppressed once, so every later start (socket
+  // drop → resubscribe) still refreshes. A session switch remounts this hook,
+  // so its first start is likewise a fresh mount.
+  //
+  // Bounded by elapsed time because "first start" is NOT always a fresh
+  // establishment: if the socket is down when this mounts, the first start is
+  // the reconnect, arriving whenever wsLink's backoff succeeds — and by then
+  // the preloaded history can be arbitrarily old. Past this window we take the
+  // refresh.
   const subscriptionStarted = useRef(false);
+  const mountedAt = useRef<number | null>(null);
+  useEffect(() => {
+    mountedAt.current = Date.now();
+  }, []);
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
   // chat-history, chat-complete, chat-user-message, chat-session-assigned.
@@ -151,10 +169,10 @@ export function useChatWs(opts: {
   useBusSubscription({
     onConnect: useCallback(() => {
       console.debug("[chatfsm] ws-connect");
-      if (!subscriptionStarted.current) {
-        subscriptionStarted.current = true;
-        return;
-      }
+      const first = !subscriptionStarted.current;
+      subscriptionStarted.current = true;
+      const sinceMount = mountedAt.current === null ? 0 : Date.now() - mountedAt.current;
+      if (first && sinceMount < PROMPT_SUBSCRIPTION_MS) return;
       // Re-sync on every RE-connect: a full history REFRESH backs up the
       // subscription's automatic lastEventId replay for gaps that exceed the
       // event-bus retention window. REFRESH is ignored in streaming, so it's

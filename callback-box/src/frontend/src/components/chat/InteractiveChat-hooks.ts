@@ -249,22 +249,24 @@ export function useChatSchedules(opts: {
       });
   }, []);
 
-  // Fetch on mount, and whenever the conversation GREW. Keyed on the count,
-  // not the array: `messages` gets a fresh identity on every history fetch
-  // (initial load, refresh, server push), which refired this on every one of
-  // them — a duplicate request moments after mount. Schedules are set by
+  // Fetch on mount, and whenever a NEW entry lands. Keyed on the newest entry's
+  // uuid, not the array: `messages` gets a fresh identity on every history
+  // fetch (initial load, refresh, server push), which refired this on every one
+  // of them — a duplicate request moments after mount. Schedules are set by
   // `<schedule>` tags the agent writes, which can only reach the transcript as
-  // a new entry, so a same-length replacement can't change them. The other
-  // paths that can (a schedule firing, a pushed history) call `fetchSchedules`
-  // directly from the WS handler.
+  // a new entry, so a re-read that ends on the same entry can't change them.
+  // (The count would miss the case that matters most for a long chat: at the
+  // HISTORY_TAIL cap, a new turn pushes the oldest entry out and the length
+  // never moves.)
+  //
   // Skipped while the machine loads: `messages` is the empty pre-load array
   // then, and fetching on it only to fetch again a tick later when the
   // transcript lands is the second half of the same duplicate.
-  const messageCount = messages.length;
+  const newestUuid = messages.at(-1)?.uuid ?? null;
   useEffect(() => {
     if (!loaded) return;
     fetchSchedules();
-  }, [loaded, messageCount, fetchSchedules]);
+  }, [loaded, newestUuid, fetchSchedules]);
 
   // NOTE: a former "poll /chat/history after a schedule fires" fallback lived
   // here but was inert — it fetched history with no session id, which the

@@ -134,16 +134,35 @@ export function ChatPage() {
       minRealUserMessages: MIN_REAL_USER_MESSAGES,
       ...(sessionParam !== undefined ? { session: sessionParam } : {}),
     },
-    { enabled: !isFreshChat && !keyState.carried },
+    {
+      enabled: !isFreshChat && !keyState.carried,
+      // Mount-time data. A focus refetch would land after the machine has taken
+      // ownership of the transcript (it keeps itself current over the WS), so
+      // it would cost a full history read and change nothing.
+      refetchOnWindowFocus: false,
+    },
   );
-  const settled = isFreshChat || bootstrap.data !== undefined || bootstrap.isError;
+  // `isFetching` matters: react-query hands back CACHED data for a key it is
+  // about to refetch, and the machine reads its preload exactly once. Mounting
+  // on a stale cache entry would show an old transcript that the completed
+  // refetch could no longer correct.
+  const settled = isFreshChat || keyState.carried
+    || ((bootstrap.data !== undefined || bootstrap.isError) && !bootstrap.isFetching);
 
   // Bare `/chat`: adopt whatever the server resolved. A failed bootstrap falls
   // through to the fresh-chat shell, as the old default-session lookup did.
+  //
+  // Only the FIRST resolution adopts it (`prev === null`), or a later one that
+  // names the session already showing. Two ways that matters: a transient
+  // `?session=` blip (see below) would otherwise swap a live chat for the
+  // default one, and a bare-`/chat` bootstrap that failed into the "new" shell
+  // would otherwise, on a later success, "carry" that never-assigned machine
+  // onto a real session id.
   const resolvedDefault = ((): string | null => {
     if (sessionParam !== undefined) return null;
-    if (bootstrap.data) return bootstrap.data.sessionId ?? "new";
-    return bootstrap.isError ? "new" : null;
+    const candidate = bootstrap.data ? bootstrap.data.sessionId ?? "new" : (bootstrap.isError ? "new" : null);
+    if (candidate === null) return null;
+    return keyState.prev === null || keyState.prev === candidate ? candidate : null;
   })();
 
   // Bare `/chat` that resolved to a real session: put the id in the URL so a
@@ -156,6 +175,10 @@ export function ChatPage() {
     const data = bootstrap.data;
     const resolvedId = data ? data.sessionId : null;
     if (!data || !resolvedId) return;
+    // Never navigate a chat that's already showing onto a different session:
+    // the same guard `resolvedDefault` applies, for the same transient-blip and
+    // failed-then-succeeded cases.
+    if (keyState.prev !== null && keyState.prev !== resolvedId) return;
     // Seed the explicit-session query with the answer we already have. The
     // navigation below changes this page's query input from "default session"
     // to `session=<id>`, which is a different cache key — without the seed,
@@ -167,7 +190,7 @@ export function ChatPage() {
     // navigate()'s promise only rejects on a superseded/redirected
     // navigation (not a user-facing failure) -- fire-and-forget.
     void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ ...search, session: resolvedId }), replace: true });
-  }, [sessionParam, bootstrap.data, boxSlug, navigate, search, utils.chat.bootstrap]);
+  }, [sessionParam, bootstrap.data, boxSlug, navigate, search, utils.chat.bootstrap, keyState.prev]);
 
   const sessionInput = sessionParam ?? resolvedDefault;
 
