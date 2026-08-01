@@ -70,7 +70,6 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/lib/            Helpers, grouped: audio/ (recorder, mic, tts, speech),
                       patmatch/ (lexer/compiler), selection/, trpc/; plus loose
                       helpers (cn, source-tag, view-url, ...)
-  src/ssr/            Server-side rendering setup for `cb render`
 src/schemas/      Card type definitions (Zod + `cardSchema` from src/cards/)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
@@ -166,7 +165,6 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Content-Security-Policy | `docs/content-security-policy.md` |
 | Periodic maintenance | `docs/maintenance.md` |
 | Knowledge audits | `docs/knowledge-audits.md` |
-| SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 | Calendar integration | `docs/calendar.md` |
 | PDF intake design | `docs/plans/pdf-intake-design.md` |
 | Source editor plan | `docs/plans/source-editor.md` |

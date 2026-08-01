@@ -17,9 +17,7 @@ const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
 // (dev server + the production `vite build` client bundle); set REACT_COMPILER=0
 // to opt out for debugging a suspected compiler issue. target:"18" pairs with
 // the react-compiler-runtime dependency (React 19 ships the runtime; 18 needs
-// the shim). The SSR path (`cb render`) runs through tsx/esbuild, not Vite, so
-// it is deliberately uncompiled — renderToString is a single pass with no
-// re-renders, so memoization is irrelevant there.
+// the shim).
 const REACT_COMPILER = process.env.REACT_COMPILER !== "0";
 
 const VITE_BASE = process.env.VITE_BASE || "/";

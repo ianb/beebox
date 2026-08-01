@@ -87,11 +87,12 @@ declare global {
   }
 }
 
-// Guarded for SSR: `cb render` (src/ssr/setup.ts) keeps `window` undefined
-// during module import — a bare `window.__cbReact` here crashed every SSR route
-// that transitively imports this file. Mirrors the guard on `__cbViewWidgets`
-// (view-widgets/index.tsx). In the browser window is always present; under SSR
-// the install is skipped (effects don't run, so no compiled view reads it).
+// Guarded because this runs at module-eval time: a bare `window.__cbReact` here
+// crashed on import under a non-browser evaluation (it took down the since-
+// removed `cb render`). No such consumer exists today, but the guard is one
+// cheap line and re-arming the landmine costs an incident — anything that ever
+// imports this file outside a browser (a component doctest, a static emitter)
+// hits it again. Mirrors the guard on `__cbViewWidgets` (view-widgets/index.tsx).
 if (typeof window !== "undefined" && !window.__cbReact) {
   window.__cbReact = React;
 }

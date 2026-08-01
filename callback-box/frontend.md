@@ -57,7 +57,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Image>` — src/alt/size with built-in lightbox, error placeholder, bbox overlay, rotation. Lightbox and onClick are mutually exclusive at the type level.
 - `<VideoEmbed>` — responsive 16:9 lazy-loaded video iframe (privacy-friendly nocookie domain), block-level like a figure; used for embedded video in rendered markdown.
 - `<Avatar>` — user profile image with initial fallback. `fallbackClassName` for dark nav contexts.
-- `<FriendlyDate>` — renders an ISO timestamp as a localized date/time in a semantic `<time>`. SSR (`cb render`) and the client format in different timezones, so the text is expected to differ between hydration passes — the component sets `suppressHydrationWarning` to account for it. `mode` prop: `"datetime"` (default) or `"date"`.
+- `<FriendlyDate>` — renders an ISO timestamp as a localized date/time (the browser's locale and zone) in a semantic `<time>` carrying the machine-readable ISO. `mode` prop: `"datetime"` (default) or `"date"`.
 - `<VisuallyHidden>` — renders content for screen readers/the a11y tree only (`sr-only`), hidden visually; use for page-level headings that live inside a component which can collapse or move off-screen at some viewports. `as` prop picks the rendered tag (e.g. `"h1"`).
 - `<Pre>` — preformatted block (code, xml, JSON dumps). Props: `size`, `boxed`, `scroll`, `error`, `muted`.
 - `<HighlightedCode>` — wraps highlight.js output in a `<code class="hljs">`. Use inside a `<Pre boxed>`.
