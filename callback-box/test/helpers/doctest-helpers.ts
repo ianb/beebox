@@ -11,6 +11,7 @@ import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { scaffoldPackageRoot } from "../../src/core/box/package.js";
+import { makeBoxAnnexShaped } from "./annex-box.js";
 
 export interface TmpBox {
   /** Absolute path to the operational box root (`<packageRoot>/content`).
@@ -36,7 +37,7 @@ export interface TmpBox {
   cleanup(): Promise<void>;
 }
 
-export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean }): Promise<TmpBox> {
+export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?: boolean }): Promise<TmpBox> {
   const packageRoot = await mkdtemp(join(tmpdir(), "cb-doctest-"));
 
   // Build a minimal-but-valid shapeVersion-2 box: the package half at
@@ -59,6 +60,14 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean }): Prom
       cwd: packageRoot,
       stdio: "pipe",
     });
+  }
+
+  // `annex`: the box has been through `cb attachments to-annex` — assets are
+  // visible to git and the annex holds their bytes. Anything that writes asset
+  // bytes into a box gates on this shape (see core/annex/is-annex-box.ts), so a
+  // fixture exercising that path has to declare which side it is testing.
+  if (opts?.annex) {
+    await makeBoxAnnexShaped({ packageRoot, boxRoot: root });
   }
 
   const box: TmpBox = {

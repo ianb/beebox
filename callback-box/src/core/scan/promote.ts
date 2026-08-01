@@ -40,6 +40,7 @@ import {
 import { collectQuarantine } from "./promote-gc.js";
 import { emitRejectionQuestions } from "./promote-questions.js";
 import { markWakeupPending, runPendingWakeup, spawnCbWakeup, type WakeupRunner } from "./promote-wakeup.js";
+import { isAnnexBox } from "../annex/is-annex-box.js";
 
 // A batch that promoted nothing still owes no wakeup of its own, but a marker
 // left by an earlier pass is always retried — see `runPendingWakeup`.
@@ -60,8 +61,11 @@ export interface ScanPromoteDeps {
 }
 
 export interface ScanPromoteResult {
-  /** Set when another process held the promotion lock; nothing else ran. */
-  skipped: "locked" | null;
+  /**
+   * Why the pass did nothing: `locked` (another process held the promotion
+   * lock) or `not-annex` (the box cannot import asset bytes at all).
+   */
+  skipped: "locked" | "not-annex" | null;
   /** Entries that reached `imported` this pass. */
   imported: number;
   /** Entries left in `promoting` because their upload failed. */
@@ -210,6 +214,25 @@ export async function runScanPromotePass(opts: {
   const runUpload = opts.deps?.runUpload ?? defaultUploadRunner;
   const runWakeup = opts.deps?.runWakeup ?? spawnCbWakeup;
   const lockPath = promotionLockPath(boxRoot);
+
+  // Re-probed every pass rather than once at registration: a box can be
+  // de-annexed while the server runs (an older `cb init`, a hand-edited
+  // `.gitignore`), and a pass on such a box would drive every pending entry
+  // through an upload that cannot succeed — burning the retry budget and
+  // leaving entries stuck in `promoting`. Two small file reads, against work
+  // that spawns a subprocess per group. The routes refuse in the same
+  // condition (see webapp/routes/scan-upload.ts), so on a box that was never
+  // converted there is nothing here to skip.
+  if (!(await isAnnexBox(boxRoot))) {
+    console.error(
+      `[scan] Box ${boxRoot} is not annex-converted; skipping the promote pass. ` +
+        "Quarantined files stay put until it is converted (`cb attachments to-annex`).",
+    );
+    return {
+      skipped: "not-annex", imported: 0, failed: 0, questions: 0, wakeup: "not-needed",
+      importedRemoved: 0, tombstoned: 0, tombstonesRemoved: 0,
+    };
+  }
 
   try {
     await acquireLock(lockPath, { purpose: "scan-promote" });

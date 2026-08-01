@@ -61,6 +61,14 @@ is reported as `pending` — the wire vocabulary stays at these four states.
 An empty `hashes` array is legal (`200`, empty `states`). A malformed body,
 a malformed hash (not 64 lowercase hex), or >500 hashes → `400`.
 
+A box that cannot receive scans at all answers **every** request on both routes
+— check included — with the retryable `503 { "status": "server-error", … }`
+below, so a client learns the box is unavailable on its first call rather than
+on its first upload. The one condition today is a box that has not been
+converted to git-annex: promotion stages raw asset bytes, which a
+manifest-scheme box gitignores, so an `accepted` there would be a lie the
+client acts on by deleting its only copy.
+
 ## `PUT /<box>/api/scan/files/<sha256>`
 
 Body: the raw file bytes, `Content-Type: application/octet-stream`, streamed.
@@ -88,7 +96,7 @@ Responses (JSON, `status` field is the vocabulary):
 | `422` | `{ "status": "hash-mismatch" }` | received bytes ≠ path hash; nothing recorded — retry |
 | `413` | — | over size limit (50 MB) |
 | `429` | — | rate limited; honor `Retry-After` |
-| `503` | `{ "status": "server-error", "reason": "…" }` | server temporarily unable to validate (e.g. qpdf missing); nothing recorded — report, never disposition, retry a later run |
+| `503` | `{ "status": "server-error", "reason": "…" }` | server temporarily unable to accept this file (e.g. qpdf missing, box not annex-converted); nothing recorded — report, never disposition, retry a later run |
 
 Re-PUT of a `rejected` hash re-runs validation (the retry path after a
 validator fix). Re-PUT of `pending`/`imported` is a no-op `duplicate`. PUT is

@@ -36,6 +36,7 @@ import {
   type ScanQuarantineEntry,
 } from "../../core/scan/quarantine.js";
 import { qpdfAvailable, validateScanFile } from "../../core/scan/validate.js";
+import { isAnnexBox } from "../../core/annex/is-annex-box.js";
 import { makeScanAuthPreHandler, scanAuthOf, type ScanAuth } from "../scan-auth.js";
 import { invariant } from "../../lib/invariant.js";
 import { consumeScanRateLimit } from "./scan-rate-limit.js";
@@ -50,6 +51,14 @@ import {
   parsePutPrelude,
   quarantineExtension,
 } from "./scan-upload-validation.js";
+
+/**
+ * The `reason` a box that is not annex-converted answers with. Prose, not a
+ * code: the contract's 503 `reason` is free text the client logs and shows,
+ * and every documented status stays as it is (see the 503 row in
+ * docs/scan-upload-contract.md).
+ */
+const NOT_ANNEX_REASON = "box is not annex-converted; scan upload disabled";
 
 /** Client-visible state of one hash. `promoting` is an internal step of the
  *  quarantine state machine; to a client it is still `pending` (confirmed,
@@ -218,10 +227,33 @@ export async function registerScanUploadRoutes(options: {
   // it says so at boot instead of mid-upload.
   void qpdfAvailable();
 
+  // Is this box shaped to receive scans at all?
+  //
+  // Promotion runs `cb upload --as scan`, which stages raw asset bytes. On a
+  // box still using the manifest scheme those bytes are gitignored, so the
+  // upload fails — AFTER the client was told `accepted` and archived its only
+  // local copy. Accepting into a box that cannot import is the one failure
+  // this pipeline must not have, so the routes refuse up front instead.
+  //
+  // The refusal is the contract's existing retryable 503, the same answer a
+  // missing validator gets: report, never disposition, retry a later run. The
+  // shape is read once here, so converting the box takes effect at the next
+  // `cb serve` — which is fine precisely because nothing was accepted and no
+  // client-side state has to be unwound.
+  const annexShaped = await isAnnexBox(boxRoot);
+  if (!annexShaped) {
+    console.error(
+      `[scan] Box ${boxRoot} is not annex-converted; scan upload is disabled (every request answers 503). ` +
+        "Convert it with `cb attachments to-annex`.",
+    );
+  }
+
   // Startup recovery + the batch-settle timer the PUT handler re-arms. Startup
   // is where a crashed `promoting` entry, a leftover staging dir, and an owed
-  // `cb wakeup` are all recovered.
-  startScanPromoteLifecycle({ server, boxRoot });
+  // `cb wakeup` are all recovered. Skipped on an unshaped box: the pass would
+  // decline anyway (it re-probes), and arming a debounce timer that can never
+  // do anything is worse than not arming it.
+  if (annexShaped) startScanPromoteLifecycle({ server, boxRoot });
 
   await server.register(async (instance) => {
     // Pass the raw body through untouched so the PUT can stream it to disk —
@@ -229,6 +261,15 @@ export async function registerScanUploadRoutes(options: {
     // `request.raw` readable in the handler.
     // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
     instance.addContentTypeParser("application/octet-stream", (_request, _payload, done) => done(null));
+
+    // Refuse BEFORE auth: the answer does not depend on who is asking, and a
+    // box that cannot import a scan should say so without first resolving a
+    // credential. Nothing below runs, so nothing reaches quarantine.
+    if (!annexShaped) {
+      instance.addHook("preHandler", async (_request, reply) =>
+        reply.status(503).send({ status: "server-error", reason: NOT_ANNEX_REASON }),
+      );
+    }
 
     instance.addHook("preHandler", makeScanAuthPreHandler({ boxRoot }));
     instance.addHook("preHandler", async (request, reply) => {

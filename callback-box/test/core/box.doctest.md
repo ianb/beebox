@@ -192,3 +192,60 @@ meta2.created === meta1.created
 await isValidBox(boxRoot)
 => true
 ```
+
+## Asset tracking: manifest scheme vs git-annex
+
+`initBox` rewrites `.gitignore` and `.gitattributes` on every run, so it has to
+know which asset-tracking scheme the box is on. A fresh box is on the manifest
+scheme: asset bytes inside `.attach/` scopes are gitignored and tracked by
+per-dir `manifest.json`, and Git LFS filters cover the same extensions.
+
+```ts
+const tmp = await makeTmpDir();
+const { boxRoot } = await scaffoldV2Box(tmp);
+const gitignore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
+const gitattributes = await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8");
+[
+  gitignore.includes("**/*.attach/**/*.pdf"),
+  gitignore.includes("managed by cb attachments init-gitignore"),
+  gitattributes.includes("*.pdf filter=lfs") || gitattributes.includes("*.png filter=lfs"),
+].join(" ")
+=> true true true
+```
+
+Once `cb attachments to-annex` has converted the box, both of those forms are
+wrong: assets must be *visible* to `git add` (that is how they reach the annex)
+and the LFS filters are retired. `initBox` detects the conversion from
+`.git/annex/` — the directory `git annex init` creates, which nothing this
+function writes can affect — and emits the annex forms instead. Before the fix
+this path silently de-annexed every converted box on its next `cb init`.
+
+```ts continue
+await fs.mkdir(path.join(tmp, ".git", "annex"), { recursive: true });
+await initBox(boxRoot, { skipGit: true });
+const annexIgnore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
+const annexAttrs = await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8");
+[
+  annexIgnore.includes("**/*.attach/**/*.pdf"),
+  annexIgnore.includes("managed by cb attachments unignore"),
+  annexIgnore.includes("**/tmp-capture/**/*.attach/**"),
+  annexAttrs.includes("filter=lfs"),
+].join(" ")
+=> false true true false
+```
+
+Capture staging stays ignored either way — a capture is pre-triage and gets
+rewritten before it is filed.
+
+And it is idempotent: a second `initBox` on the converted box leaves both files
+byte-identical, so `cb init` no longer dirties the working tree of an annexed
+box.
+
+```ts continue
+await initBox(boxRoot, { skipGit: true });
+[
+  (await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8")) === annexIgnore,
+  (await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8")) === annexAttrs,
+].join(" ")
+=> true true
+```

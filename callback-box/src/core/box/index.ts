@@ -12,7 +12,9 @@ import { getBoxShape } from "../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
-import { assetGitignorePatterns } from "../commands/attachments-gitignore.js";
+import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
+import { isAnnexInitialized } from "../annex/is-annex-box.js";
+import { stripLfsFilters } from "../annex/gitattributes.js";
 import {
   installSchemasGuide,
   installTricksFiles,
@@ -74,7 +76,18 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // migration manifest, config, or `.gitignore`. A missing/invalid package
   // half or a stale pre-v2 marker throws here, before any of those mutations
   // land — so a bad init can't leave a half-written box behind.
-  await getBoxShape(resolvedRoot);
+  const shape = await getBoxShape(resolvedRoot);
+
+  // Which asset-tracking scheme is this box on? Every box starts on the
+  // manifest scheme (gitignored asset bytes + Git LFS filters) and `cb
+  // attachments to-annex` moves it to git-annex (assets un-ignored, LFS
+  // retired). The two files below are regenerated on EVERY init, so writing
+  // the manifest forms unconditionally silently de-annexed any converted box
+  // on its next `cb init` — assets ignored again, LFS filters back — with
+  // nothing reporting it until the first commit or asset write failed. The
+  // probe is repo-level (`.git/annex/`), so it cannot be flipped by the files
+  // this function writes.
+  const annexed = await isAnnexInitialized(shape.packageRoot);
 
   // Create all standard directories (safe to re-run). `.claude`/`.claude/rules`
   // (BOX_DIRS) are never created under the box root: a box's `.claude/` lives at
@@ -121,8 +134,12 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
     );
   }
 
-  // Always write .gitattributes (LFS rules for binary files)
-  const gitattributes = `# Audio files (voice memos, recordings)
+  // Always write .gitattributes (LFS rules for binary files). On an
+  // annex-converted box the LFS filters are stripped back out by the same
+  // function the migration uses, leaving the section headers and any
+  // non-filter attributes — so the file this writes is byte-identical to what
+  // `cb attachments to-annex` left behind, and re-running init is a no-op.
+  const lfsGitattributes = `# Audio files (voice memos, recordings)
 *.m4a filter=lfs diff=lfs merge=lfs -text
 *.webm filter=lfs diff=lfs merge=lfs -text
 *.wav filter=lfs diff=lfs merge=lfs -text
@@ -138,13 +155,21 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 # Frozen page captures
 *.frozen filter=lfs diff=lfs merge=lfs -text
 `;
-  await fs.writeFile(path.join(resolvedRoot, ".gitattributes"), gitattributes);
+  await fs.writeFile(
+    path.join(resolvedRoot, ".gitattributes"),
+    annexed ? stripLfsFilters(lfsGitattributes) : lfsGitattributes,
+  );
 
   // Always write .gitignore (keep in sync with cb version). A box's tricks live
   // at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`) entirely, so no
   // trick-dependencies entry belongs here; that box's `src/tricks/node_modules/`
   // is already covered by the package root's own `.gitignore` (`ROOT_GITIGNORE`
   // in `./box-package.js`).
+  //
+  // The trailing asset block comes from `attachments-gitignore.ts` rather than
+  // being spelled out here — the two must be identical, and an inlined copy is
+  // what let `cb init` keep writing the manifest-scheme block onto boxes that
+  // had migrated to git-annex.
   const gitignore = `# Callback Box .gitignore
 # Lock files
 .cb-lock
@@ -174,11 +199,7 @@ tmp/
 *.swp
 *~
 
-# cb-assets (managed by cb attachments init-gitignore)
-# Assets inside .attach/ scopes are tracked via per-dir manifest.json
-# (size + sha256), not committed directly. See docs/implemented-plans/asset-manifests.md.
-${assetGitignorePatterns()}
-`;
+${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
   await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
 
   // Install tricks types.d.ts and CLAUDE.md if missing

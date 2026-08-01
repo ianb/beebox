@@ -532,12 +532,14 @@ scan job) removes the need rather than deferring a design.
 > **Critical gap (resolved in-plan):** scan-import on a manifest-scheme prod
 > box commits wrong — errors or strands unmanifested bytes. Track 0 is a hard
 > prerequisite; Track 2's routes refuse (503, logged `error`) if the box is
-> not annex-shaped (checked once at route registration via the same detection
-> `annex/doctor.ts` uses), so a sequencing mistake fails loud, not silent.
+> not annex-shaped, so a sequencing mistake fails loud, not silent. Implemented
+> as `isAnnexBox()` (`src/core/annex/is-annex-box.ts`): probed once at route
+> registration, and again at the top of every promote pass, since a box can be
+> de-annexed while the server runs.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| ScanSnap writes a file mid-sweep; uploader hashes a truncated PDF | planned (uploader doctest with a growing fixture file) | settle gate + identity snapshot + restat-before-disposition (Track 5); server-side `qpdf --check` rejects most truncations; a settled-but-truncated file self-heals only because disposition is blocked on the restat — the completed file has a different hash and uploads next sweep | clear — rejected entry surfaces as question card |
+| ScanSnap writes a file mid-sweep; uploader hashes a truncated PDF | planned (uploader doctest with a growing fixture file) | settle gate + identity snapshot + restat-before-disposition (Track 5) are the real defense: e2e testing showed `qpdf --check` *reconstructs* a truncated PDF with a well-formed prefix (exit-3 warnings, accepted) and hard-rejects only unparseable corruption — so a settled-but-truncated file self-heals only because disposition is blocked on the restat; the completed file has a different hash and uploads next sweep | clear — and the truncated upload is visible as a duplicate-ish session, not silent |
 | Scanner replaces the file between uploader EOF and disposition | planned (uploader doctest: mutate fixture mid-run) | restat vs identity snapshot; on mismatch leave file, retry next run (Track 5) | clear |
 | Uploaded bytes don't match the path hash (network corruption, client bug) | planned (route doctest) | server re-hashes, 422 on mismatch; client leaves file in place and retries next sweep | clear |
 | Smuggled type (e.g. HTML renamed `.pdf`) | planned (route doctest) | magic-byte sniff + extension agreement check, 422 `rejected` | clear |

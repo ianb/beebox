@@ -81,7 +81,7 @@ dispose of its local copy, so `unknown` has to be the honest default.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 const png = await pngBytes();
 const hash = sha256(png);
 
@@ -154,7 +154,7 @@ a file promoted and swept out of quarantine still answers as confirmed.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 const png = await pngBytes();
 const hash = sha256(png);
 await ctx.seed(".callback-box/uploads.json", JSON.stringify({
@@ -185,7 +185,7 @@ could honestly file the received bytes under — so the client simply retries.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 const png = await pngBytes();
 const wrongHash = sha256(Buffer.from("something else entirely"));
 
@@ -214,7 +214,7 @@ so it names both what the bytes are and what the name claimed.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 const png = await pngBytes();
 const hash = sha256(png);
 
@@ -270,11 +270,11 @@ JSON.stringify({ retry: [retry.statusCode, retry.body.status], state: recheck.bo
 await ctx.cleanup();
 ```
 
-## PDFs: a valid one is accepted, a truncated one is rejected — or 503 without qpdf
+## PDFs: a valid one is accepted, a corrupt one is rejected — or 503 without qpdf
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 const hasQpdf = await qpdfAvailable();
 const pdf = textlessPdf();
 
@@ -283,13 +283,16 @@ pdfOutcome({ hasQpdf, res: good, status: 200, body: "accepted" })
 => ok
 ```
 
-A PDF cut off mid-file sniffs correctly (`%PDF-` is still there) and fails only
-at the structural check — which is exactly the failure a settle-gate race or a
-half-written scan produces:
+A corrupt PDF sniffs correctly (`%PDF-` is still there) and fails only at the
+structural check. Note the fixture is unparseable garbage, not a truncation:
+qpdf *reconstructs* a truncated PDF whose prefix is well-formed and exits with
+warnings (exit 3), which the validator deliberately accepts — so the defense
+against half-written scans is the client's settle gate plus the hash-integrity
+check, while qpdf catches hard corruption (exit 2):
 
 ```ts continue
-const truncated = pdf.subarray(0, Math.floor(pdf.length / 2));
-const bad = await put(ctx, { bytes: truncated, filename: "Invoice.pdf" });
+const corrupt = Buffer.from("%PDF-1.4\n<<garbage");
+const bad = await put(ctx, { bytes: corrupt, filename: "Invoice.pdf" });
 pdfOutcome({ hasQpdf, res: bad, status: 422, body: "rejected" })
 => ok
 ```
@@ -299,9 +302,9 @@ so the uploader retries later instead of treating a server misconfiguration as a
 verdict on its file.
 
 ```ts continue
-const states = await check(ctx, [sha256(pdf), sha256(truncated)]);
+const states = await check(ctx, [sha256(pdf), sha256(corrupt)]);
 const expected = hasQpdf ? ["pending", "rejected"] : ["unknown", "unknown"];
-JSON.stringify([states.body.states[sha256(pdf)].state, states.body.states[sha256(truncated)].state]) === JSON.stringify(expected)
+JSON.stringify([states.body.states[sha256(pdf)].state, states.body.states[sha256(corrupt)].state]) === JSON.stringify(expected)
 => true
 ```
 
@@ -315,7 +318,7 @@ A `Content-Length` over the 50 MB cap is refused before a byte is transferred:
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 const png = await pngBytes();
 
 const declared = await put(ctx, {
@@ -375,7 +378,7 @@ malformed one is a 400, not a best-effort guess. Uppercase hex is malformed too
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 const png = await pngBytes();
 
 const malformedHashes = ["not-a-hash", sha256(png).toUpperCase(), sha256(png) + "00"];
@@ -433,7 +436,7 @@ scanner cadence.
 
 ```ts
 resetScanRateLimits();
-const ctx = await makeTestServer();
+const ctx = await makeTestServer({ annexBox: true });
 
 let last = null;
 for (let i = 0; i < SCAN_RATE_LIMIT + 1; i++) last = await check(ctx, []);
@@ -473,7 +476,7 @@ on a real auth-on server.
 ```ts
 resetScanRateLimits();
 delete process.env.CB_HUB_SECRET;
-const ctx = await makeTestServer({ openAccess: false });
+const ctx = await makeTestServer({ openAccess: false, annexBox: true });
 const png = await pngBytes();
 const token = await createScanToken(ctx.boxRoot, { name: "laptop-scansnap", createdBy: "owner@example.com" });
 
@@ -540,4 +543,48 @@ if (ORIGINAL_HUB_SECRET === undefined) delete process.env.CB_HUB_SECRET;
 else process.env.CB_HUB_SECRET = ORIGINAL_HUB_SECRET;
 if (ORIGINAL_OWNER_EMAIL === undefined) delete process.env.CB_OWNER_EMAIL;
 else process.env.CB_OWNER_EMAIL = ORIGINAL_OWNER_EMAIL;
+```
+
+## A box that is not annex-converted refuses everything with a 503
+
+Every section above runs on an annex-converted box (`annexBox: true`), because
+that is the only shape this pipeline can import into. Promotion runs `cb upload
+--as scan`, which stages raw asset bytes; on a box still using the manifest
+scheme those bytes are gitignored and the import fails at commit — *after* the
+client was told `accepted` and archived its only local copy.
+
+So the routes probe the box's shape at registration and, on a box they cannot
+import into, answer every request with the contract's retryable 503. The client
+reports it and tries again later; it never dispositions a file on a 503, and
+nothing is written to quarantine.
+
+```ts
+resetScanRateLimits();
+const ctx = await makeTestServer();
+const png = await pngBytes();
+
+const checked = await check(ctx, [sha256(png)]);
+JSON.stringify({ status: checked.statusCode, body: checked.body })
+=> {"status":503,"body":{"status":"server-error","reason":"box is not annex-converted; scan upload disabled"}}
+```
+
+The PUT answers identically — the refusal runs before auth and before the bytes
+are read, because the answer does not depend on who is asking:
+
+```ts continue
+const stored = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
+JSON.stringify({ status: stored.statusCode, body: stored.body })
+=> {"status":503,"body":{"status":"server-error","reason":"box is not annex-converted; scan upload disabled"}}
+```
+
+Quarantine stays empty — no sidecar, no bytes, nothing for a promote pass to
+find:
+
+```ts continue
+await ctx.read(`tmp/scan-quarantine/${sha256(png)}.json`).then(() => "recorded", (e) => e.code)
+=> ENOENT
+```
+
+```ts cleanup
+await ctx.cleanup();
 ```
