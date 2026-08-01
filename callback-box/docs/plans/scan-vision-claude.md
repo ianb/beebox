@@ -41,8 +41,10 @@ The numbers cited below are from that report.
   for both backends' wire schemas.
 - `scan-import-gemini.ts:50-68` — `ScanBatchMisalignedError` +
   `assertBatchAlignment` ("Require exactly one analysis per input page,
-  indexed 0..N-1"). **Moved** to the service module and applied at the
-  service boundary for both backends.
+  indexed 0..N-1"). **Reused** (the function gets exported) and applied
+  at the service boundary for both backends; it stays in
+  `scan-import-gemini.ts`, which remains the leaf module (moving it
+  into services would create a services↔core cycle — review finding 4).
 - `scan-import-gemini.ts:84-117` — `SCAN_PROMPT` and
   `buildScanPrompt(boxholderContext)`. **Reused verbatim** for both
   backends; the Claude backend appends a backend-specific note (index
@@ -166,7 +168,7 @@ export interface ScanVisionAnalyzeArgs {
   imagePaths: string[];
   boxholderContext: string | null;
   /** Last-resort retry of a single page (backend interprets: Gemini
-   *  disables thinking; Claude is a no-op). */
+   *  disables thinking; Claude re-runs unchanged). */
   lastResort?: boolean | undefined;
 }
 
@@ -177,41 +179,76 @@ export interface ScanVisionResult {
   costUsd: number | null;
 }
 
-export type ScanVisionRetryClass = "transient" | "split" | "fatal";
+/** Thrown by analyzeBatch. `retry` tells the runner what to do; usage/cost
+ *  of the failed attempt ride along so accounting survives failures. */
+export class ScanVisionBatchError extends Error {
+  retry: "transient" | "split" | "fatal";
+  usage: BatchUsage | null;
+  costUsd: number | null;
+  cause?: unknown;
+}
 
 export interface ScanVisionService {
   readonly backend: "claude" | "gemini" | "fake";
   /** Pages per model call the runner should plan with (>= 2). */
   readonly batchSize: number;
   analyzeBatch(args: ScanVisionAnalyzeArgs): Promise<ScanVisionResult>;
-  /** How the runner should react to an analyzeBatch error. */
-  classifyError(err: unknown): ScanVisionRetryClass;
 }
 ```
 
-- `RawScanAnalysis`, `rawScanAnalysisSchema`, `BatchUsage`,
-  `ScanBatchMisalignedError`, and `assertBatchAlignment` move into
-  `scan-vision.ts` (the service module becomes the leaf that
-  `scan-import-gemini.ts` imports from — same direction the Track D.5
-  consolidation pointed). Both implementations call
-  `assertBatchAlignment` before returning: the post-condition lives at
-  the service boundary, not per-backend.
+- Retry policy stays in the runner and keeps today's exact shape; the
+  error's `retry` field replaces the Gemini-specific sniffing (see
+  Runner generalization). `"fatal"` is new: it aborts the run instead
+  of degrading (see Failure modes).
+- No module move: `scan-import-gemini.ts` stays the leaf that owns
+  `rawScanAnalysisSchema` / `RawScanAnalysis` / `BatchUsage` /
+  `ScanBatchMisalignedError` / `assertBatchAlignment` (the last is
+  exported), and the service modules import from it. The services →
+  core import direction has precedent (`claude-chat.ts:28` imports
+  `core/sdk-binary-path.js`); the reverse move would create a
+  services↔core value cycle (review finding 4). Both implementations
+  call `assertBatchAlignment` before returning: the post-condition
+  holds at the service boundary, not per-backend.
+- File layout: `src/services/scan-vision.ts` (interface, error class,
+  Gemini wrapper, fake, backend selection helper) and
+  `src/services/scan-vision-claude.ts` (the Claude backend — kept
+  separate for the 300-line file limit).
+- `ScanVisionBatchError.retry` has four values — `"transient"` (backoff
+  and re-attempt the same batch), `"split"` (re-run as smaller
+  batches), `"batch"` (give up on this batch; its pages become flagged
+  placeholders — today's non-retryable Gemini semantics), `"fatal"`
+  (abort the whole run — the provider/config is broken, not the page).
 - **`GeminiScanVision`** (`createGeminiScanVision({ apiKey })`) wraps the
   existing `analyzeScanBatchWithGemini` unchanged; `batchSize` 8 (the
-  current default, `scan-import-helpers.ts:101`); `classifyError` ports
-  `isTransientGeminiError` (→ `"transient"`) and the
-  RECITATION/MAX_TOKENS check (→ `"split"`), else `"fatal"`.
-- **`ClaudeScanVision`** (`createClaudeScanVision()`, no credentials —
-  that is the point): per batch, one stateless `query()` call following
-  the `run-outline.ts` / `core/agent/run.ts` conventions:
-  - `model: MODEL_ID.sonnet`, `maxTurns: 8`, `allowedTools: []`,
-    `settingSources: []`, `systemPrompt: {type: "preset", preset:
-    "claude_code"}`, `permissionMode` unset,
-    `pathToClaudeCodeExecutable: resolveClaudeCodeBinary()`, env from
-    `buildScriptEnv(boxRoot?)`-equivalent with `CLAUDECODE` unset and
-    `ANTHROPIC_API_KEY` stripped (subscription auth, exactly as
-    `run.ts:189-190`). Images are attached inline as base64 blocks
-    (see spike section for why inline wins).
+  current default, `scan-import-helpers.ts:101`); wraps thrown errors
+  into `ScanVisionBatchError`: `isTransientGeminiError` →
+  `"transient"`, `GeminiEmptyResponseError` with RECITATION/MAX_TOKENS
+  → `"split"`, invalid-key/permission (401/403/`API_KEY_INVALID`) →
+  `"fatal"` (an improvement over today's per-batch failure spam — a
+  bad key fails the run once, loudly), everything else → `"batch"`
+  (parity with today).
+- **`ClaudeScanVision`** (`createClaudeScanVision({ boxRoot })`): per
+  batch, one stateless `query()` call following the `run-outline.ts` /
+  `core/agent/run.ts` conventions:
+  - **Image normalization first**: every page is re-encoded with
+    `sharp` to JPEG, long edge 2000px, quality 88 — the exact recipe
+    the measured `prepared/` images used. This is what makes TIFF
+    inputs (accepted by scan upload, `upload-helpers.ts:17`, and
+    outside Claude's documented JPEG/PNG/GIF/WebP set,
+    `claude-chat-content.ts:25`) and 8–10 MB phone originals legal and
+    affordable. Normalized bytes go straight into the message; nothing
+    touches the archive files.
+  - `model: MODEL_ID.sonnet`, `maxTurns: 8`, `tools: []` (the
+    built-in-disabling spelling — `allowedTools` only controls
+    auto-approval, review finding 5), `settingSources: []`,
+    `systemPrompt: {type: "preset", preset: "claude_code"}` (the
+    measured configuration; a minimal-prompt cost experiment is filed
+    as follow-up), `pathToClaudeCodeExecutable:
+    resolveClaudeCodeBinary()`, env from `buildScriptEnv(boxRoot)`
+    with `CLAUDECODE` unset and `ANTHROPIC_API_KEY` stripped
+    (subscription auth, exactly as `run.ts:189-190`). Images are
+    attached inline as base64 blocks (see spike section for why inline
+    wins).
   - Prompt = `buildScanPrompt(context)` + a Claude note: image position
     *i* is page index *i*; the outline-then-capture two-phase procedure
     (verbatim from `run-outline.ts:19-41`, generalized to N pages:
@@ -219,42 +256,62 @@ export interface ScanVisionService {
     not use Claude's boxes — measured systematic y-offset, n=3).
   - `outputFormat: {type: "json_schema", schema}` where the schema is
     `z.toJSONSchema(z.object({ pages: z.array(claudeScanAnalysisSchema) }))`
-    and `claudeScanAnalysisSchema = rawScanAnalysisSchema.extend({
-    slot_count: z.number(), slots: z.array(slotSchema) })` — no third
-    hand-written schema.
+    — no third hand-written schema. `claudeScanAnalysisSchema` extends
+    `rawScanAnalysisSchema` with the outline fields AND tightens the
+    Claude-facing wire contract (review finding 6): integer `index`/
+    `paired_with_index`/`slot`, `rotation` as a literal union of
+    0/90/180/270 (the only values the image card schema accepts,
+    `image.tsx:36`), `subject_bbox: z.null()` (we refuse Claude boxes
+    outright — the prompt says null, the schema enforces it),
+    `slot_count: z.int()`, `slots: z.array(slotSchema)`. The base
+    schema stays untightened so the Gemini parse path is undisturbed.
+    One generation detail (verified locally): `z.toJSONSchema` emits
+    vacuous `minimum`/`maximum` MAX_SAFE_INTEGER bounds on `z.int()` —
+    strip those keys after generation, since structured-output schema
+    dialects commonly reject numeric range constraints and the bounds
+    carry no information.
   - Response handling: `subtype !== "success"` (including
-    `error_max_turns`) → throw `ClaudeScanVisionError` carrying the
-    subtype. Parse `structured_output` with the Zod schema; check the
-    outline invariant `slot_count === slots.length` per page (throw
-    `ScanSlotInvariantError` — new, sibling of
-    `ScanBatchMisalignedError`); force `subject_bbox = null` on every
-    page regardless of what the model returned; strip `slot_count`/
-    `slots` down to `RawScanAnalysis` (slots feed nothing downstream —
-    the per-slot text is already concatenated into `text_blocks` by the
-    prompt contract; keeping them out of the card path means no schema
-    change downstream); then `assertBatchAlignment`.
+    `error_max_turns`) → `ScanVisionBatchError` with the subtype in the
+    message. Parse `structured_output` with the Zod schema; check the
+    outline invariant per page — `slot_count === slots.length` AND slot
+    numbers are exactly `1..slot_count` (numbering/uniqueness, review
+    finding 6); strip `slot_count`/`slots` down to `RawScanAnalysis`
+    (slots stay out of the card path — no downstream schema change),
+    but first fold them into review flagging: any `partial`/`illegible`
+    slot forces `flag_for_review: true` and appends a compact
+    slot-list to `flag_reason` (e.g. "slots needing review: 3 (partial),
+    7, 11 (illegible)") — the report's per-row-review product win
+    delivered through the existing question-card channel; then
+    `assertBatchAlignment`.
   - Usage mapping: SDK usage → `BatchUsage` (`prompt` = input +
     cache-read + cache-write, `output`, `thinking: 0` — the SDK does
     not report a separate thinking count) and `costUsd =
-    total_cost_usd`.
-  - `classifyError`: SDK/API rate-limit or overload errors →
-    `"transient"`; `ScanSlotInvariantError` and schema-parse failures →
-    `"split"` (a smaller batch re-attempt is exactly the measured fix
-    for outline degradation); everything else (auth, `error_max_turns`
-    persisting) → `"fatal"`.
-  - `batchSize: 3`. Rationale: per-page calls are the measured
-    completeness fix, but pairing (`paired_with_index`) requires the
-    photo and its back in the same call, so `batchSize` must be ≥ 2;
-    sliding overlap of 1 (`planScanBatches`) already guarantees every
-    adjacent pair (i, i+1) is co-visible in some batch for any size ≥ 2.
-    3 halves the per-page share of the ~15k-token harness preamble vs
-    2. The measured completeness failure was at 12 pages/call and the
-    fix confirmed at 1; 3 is untested middle ground — the report calls
-    3–4 "the obvious next measurement". The split-on-invariant retry
-    (above) is the guard: if a 3-page call degrades, the runner splits
-    it, and a singleton is the measured-good configuration. Batch size
-    stays an internal constant (not config) until evidence says
-    otherwise.
+    total_cost_usd`. Failed attempts carry the same fields on the
+    thrown `ScanVisionBatchError` so the runner's totals include
+    retried/failed calls (review finding 7).
+  - Error mapping: SDK/API rate-limit or overload → `"transient"`;
+    outline-invariant breaks, schema-parse failures, and misalignment
+    → `"split"` (a smaller batch re-attempt is exactly the measured
+    fix for outline degradation); `error_max_turns` → `"batch"`;
+    auth (`ClaudeAuthError`) and process-spawn failures (missing or
+    broken Claude binary) → `"fatal"`.
+  - `batchSize: 3`, now measured rather than argued
+    (`scratch/model-comparison/run-batch3.ts`, spike section below):
+    pairing (`paired_with_index`) requires the photo and its back in
+    the same call, so `batchSize` must be ≥ 2; sliding overlap of 1
+    (`planScanBatches`) guarantees every adjacent pair (i, i+1) is
+    co-visible in some planned batch for any size ≥ 2; 3 cuts the
+    per-page share of the ~15k-token harness preamble by a third vs 2.
+    Batch size stays an internal constant (not config) until evidence
+    says otherwise.
+  - **Split preserves pairing.** `splitAndRerun` currently splits
+    `[0,1,2]` into `[0,1]` + `[2]`, permanently separating pair (1,2)
+    (review finding 1 — a silent pairing loss the plan had presented
+    as a safety mechanism). The runner's split becomes
+    overlap-preserving: halves share their boundary page (`[0,1]` +
+    `[1,2]`), the same property `planScanBatches` already guarantees
+    between planned batches, and the duplicate analyses for the shared
+    page are merged by the existing reconciliation layer.
 - **`createFakeScanVision(opts)`** — deterministic analyses derived from
   `imagePaths` (default: alternating photo/back with mutual pairing;
   overridable per-call script), `calls` array, `failWith`/`failTimes`
@@ -295,21 +352,35 @@ In `executeScanImport` (both photo entry points), replacing the two
   batchSize?, log })` — `batchSize` defaults to `vision.batchSize`;
   `apiKey`/`thinkingBudget` leave the signature (Gemini-only knobs move
   inside `GeminiScanVision`).
-- The retry envelope keeps its exact shape (3 transient attempts with
-  exponential backoff → split-or-fail → last-resort singleton) but
-  branches on `vision.classifyError(err)` instead of
-  `isTransientGeminiError` + `instanceof GeminiEmptyResponseError`.
-  The last-resort singleton call passes `lastResort: true` (Gemini
-  interprets as `thinkingBudget: 0`, preserving today's behavior at
-  `scan-import-helpers.ts:256-279`).
-- `translateIndices`, overlap reconciliation, and placeholder pages are
-  untouched. `makeMissingAnalysis`'s flag reason becomes "Page analysis
+- The retry envelope keeps its exact shape but branches on
+  `ScanVisionBatchError.retry` instead of `isTransientGeminiError` +
+  `instanceof GeminiEmptyResponseError`. Precisely (today's policy,
+  `scan-import-helpers.ts:184-254`, now stated as the contract):
+  `"transient"` → up to 3 attempts with exponential backoff, then the
+  batch fails as `"batch"` (unchanged: transient exhaustion does NOT
+  split); `"split"` → overlap-preserving split and recurse; `"split"`
+  at singleton size → one `lastResort: true` re-attempt (Gemini
+  interprets as `thinkingBudget: 0`, preserving
+  `scan-import-helpers.ts:256-279`; Claude re-runs unchanged — a
+  fresh sample is the only lever left); `"batch"` → failed pages →
+  placeholders; `"fatal"` → rethrow, aborting the run before anything
+  is staged (analysis completes before card emission, so the abort is
+  clean).
+- `translateIndices` and overlap reconciliation are untouched except:
+  `pickAnalysis` gains the mutual-claim preference its own comment
+  already describes (`scan-import-reconcile.ts:25` vs the
+  implementation at `:70`, which prefers any non-null claim then
+  arbitrarily the second batch — review finding 9; smaller overlapping
+  batches make the disagreement path common enough to matter), with a
+  doctest. `makeMissingAnalysis`'s flag reason becomes "Page analysis
   missing — vision batch failed".
-- Per-batch cost/usage logging: the existing token line
-  (`scan-import.ts:230-234`) extends with a cost line when
-  `costUsd !== null` — this is the boxholder's cost visibility for the
-  Claude path (per-run total dollars and tokens in the command output,
-  which also lands in the capture-session commit context).
+- Cost/usage accounting: the runner accumulates `usage`/`costUsd` from
+  successes AND from thrown `ScanVisionBatchError`s, and the command
+  prints per-run totals (tokens + dollars when reported) via the
+  existing token line (`scan-import.ts:230-234`). This log output is
+  the boxholder's cost visibility for the Claude path; nothing is
+  persisted to cards (the capture-session schema has no cost fields,
+  and adding one is out of scope).
 
 ### scan-import consumption
 
@@ -334,12 +405,15 @@ In `executeScanImport` (both photo entry points), replacing the two
 - `GEMINI_KEY` stops being required anywhere: the two error strings in
   `scan-import.ts` disappear with the gates. Remaining surfaces are
   already optional-framed and stay: `.env.example:22-24` (comment
-  reworded to "optional — only for CB_SCAN_VISION=gemini"),
-  `health.ts:348-355` gemini-api-key warning (reworded: only warn when
-  `CB_SCAN_VISION=gemini` and the key is missing; the capture
-  image-description path still uses Gemini — check its key use before
-  rewording, see Open questions), `hub/child-env.ts` passthrough
-  (stays, + `CB_SCAN_VISION`), `env.ts` secret names (stay).
+  reworded — the remaining `GEMINI_KEY` consumers are audio questions
+  (`src/core/audio-question.ts`) and the opt-in scan backend; capture
+  image description runs on Claude agents, and the existing health-check
+  text claiming otherwise is stale — review finding 12),
+  `health.ts:348-355` gemini-api-key warning (reworded: warn when
+  `CB_SCAN_VISION=gemini` without a key; mention audio questions as
+  the other consumer; verify `audio-question.ts`'s key use at
+  implementation time), `hub/child-env.ts` passthrough (stays, +
+  `CB_SCAN_VISION`), `env.ts` secret names (stay).
 - `docs/plans/scanner-ingest.md` gets a model note (photo flow default
   = Claude Sonnet 5 via agent SDK; Gemini opt-in), and
   `scratch/model-comparison/REPORT.md` gets a one-line decision
@@ -360,18 +434,22 @@ In `executeScanImport` (both photo entry points), replacing the two
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Agent SDK unavailable (binary missing) or unauthed host | fake-backed doctest for the selection error; auth path exercised by existing `auth-preflight` tests | `checkClaudeAuth()` before staging → command fails with `CLAUDE_NOT_LOGGED_IN_MESSAGE`; `resolveClaudeCodeBinary()` null → same early failure path | Clear (actionable error, nothing staged) |
-| Per-batch Claude call fails mid-run (rate limit / overload) | doctest: fake with `failTimes` exercises transient retry | 3 backoff attempts (existing runner), then split, then failed-page placeholders | Clear (log lines + `flag_for_review` unsure placeholders; import completes with partial analyses, matching today's Gemini semantics) |
-| `error_max_turns` from the SDK | doctest via fake throwing a fatal-classified error | `subtype !== "success"` → typed error; classified fatal → placeholders | Clear (subtype in the log line) |
-| Model returns misaligned batch (wrong count / indices) | doctest: fake returning a misaligned batch → `ScanBatchMisalignedError` | `assertBatchAlignment` at the service boundary (both backends) → classified split → smaller batches → worst case placeholders | Clear (loud error, never misattached cards) |
-| Outline invariant broken (`slot_count !== slots.length`) | doctest: fake page with mismatched slots | `ScanSlotInvariantError` → split retry → singleton (measured-good config) → placeholders | Clear |
+| Unauthed host (no Claude login, or auth expires mid-run past the 10-min positive cache) | fake-backed doctest for the selection error; auth path exercised by existing `auth-preflight` tests | `checkClaudeAuth()` before staging → command fails with `CLAUDE_NOT_LOGGED_IN_MESSAGE`; mid-run `ClaudeAuthError` → `"fatal"` → run aborts | Clear (actionable error; nothing staged — analysis precedes emission) |
+| Claude binary missing/broken (`checkClaudeAuth` shells `claude` on PATH and does not cover `resolveClaudeCodeBinary()`) | doctest: fake throwing `"fatal"` exercises the abort path | spawn failure → `ScanVisionBatchError` `"fatal"` → run aborts with the SDK's spawn message | Clear |
+| Per-batch Claude call fails mid-run (rate limit / overload) | doctest: fake with `failTimes` exercises transient retry | 3 backoff attempts (existing runner shape), then `"batch"` → failed-page placeholders | Clear (log lines + `flag_for_review` unsure placeholders; import completes with partial analyses, matching today's Gemini semantics) |
+| `error_max_turns` from the SDK | doctest via fake throwing a `"batch"`-classified error | `subtype !== "success"` → typed error → placeholders for that batch | Clear (subtype in the log line) |
+| Model returns misaligned batch (wrong count / indices) | doctest: fake returning a misaligned batch → `ScanBatchMisalignedError` | `assertBatchAlignment` at the service boundary (both backends) → `"split"` → overlap-preserving smaller batches → worst case placeholders | Clear (loud error, never misattached cards) |
+| Outline invariant broken (`slot_count !== slots.length`, or slot numbers not exactly `1..N`) | doctest: fake page with mismatched slots | invariant check → `"split"` retry → singleton `lastResort` → placeholders | Clear |
+| Split-retry separating a photo/back pair | doctest on the overlap-preserving split (pure function) | split halves share the boundary page; reconciliation merges duplicates | Clear (was the review's top finding; now handled structurally) |
+| TIFF or oversized original reaches the model | doctest: fake records normalized inputs; sharp recipe unit-tested | `ClaudeScanVision` normalizes every page to JPEG ≤2000px q88 before send | Silent by design (normalization is unconditional, not a fallback) |
 | Rotation regressions on Claude path | none possible (quality, not correctness) | field is advisory; original pixels intact; review questions carry the human backstop | Visible in rendering; documented as accepted |
-| `subject_bbox` trusted by accident | doctest asserts Claude-path analyses always carry `subject_bbox: null` | forced `null` in `ClaudeScanVision` post-processing | Silent by design (no crop is the intended behavior; card simply lacks the field, `scan-import-cards.ts:251`) |
-| Rate-limit draw on big sessions (200 pages ≈ several M tokens on subscription) | not testable | per-run token+cost log lines; batchSize 3 amortizes the preamble ~3× vs per-page | Clear (cost printed per run; boxholder sees the draw) |
+| `subject_bbox` trusted by accident | doctest asserts Claude-path analyses always carry `subject_bbox: null` | wire schema is `z.null()` — a non-null bbox fails parse | Clear (schema-enforced, not post-processed) |
+| Rate-limit draw on big sessions (200 pages ≈ several M tokens on subscription) | not testable | per-run token+cost totals include failed attempts; batchSize 3 amortizes the preamble ~3× vs per-page | Clear (cost printed per run; boxholder sees the draw) |
 | Gemini selected but key missing | doctest of the selection function | hard error at command start | Clear |
+| Gemini key invalid (401/403) | doctest: fake `"fatal"` path | `"fatal"` → run aborts once, loudly (improvement over today's per-batch failure spam) | Clear |
 | `CB_SCAN_VISION` typo | doctest of the selection function | hard error listing valid values | Clear |
 | Claude structured output missing/unparseable despite `success` | doctest: fake-shape test of the parse boundary | Zod `safeParse` → typed error → split/fail path | Clear |
-| Box CLAUDE.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `allowedTools: []` — hermetic call, unlike the reactor | Silent by design (documented in the service header) |
+| Box CLAUDE.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` — hermetic call, unlike the reactor | Silent by design (documented in the service header) |
 
 ## Agent-flow / user-flow edge cases
 
@@ -406,13 +484,20 @@ In `executeScanImport` (both photo entry points), replacing the two
   do-nothing on this box's images; no flatbed sample exists to justify
   it. Cropping simply doesn't happen on the Claude path.
 - **Calibrating Sonnet's bbox y-offset**: n=3; not worth building on.
-- **Batch-size tuning runs (3–4 per call measurement)**: the split
-  retry bounds the risk; measure later if quality reports warrant.
+- **Further batch-size tuning**: 3 is measured (spike section);
+  sweeping other sizes waits for quality reports from real use.
 - **Per-box backend selection**: env-level only, see Direction.
-- **Capture/describe-images Gemini usage**: `describe-images-helpers`'
-  other consumers (capture image description) keep Gemini; only
-  scan-import's photo flow moves. The health-check rewording must not
-  claim Gemini is unused.
+- **Audio-question Gemini usage**: `src/core/audio-question.ts` keeps
+  Gemini and its key; only scan-import's photo flow moves. The
+  health-check rewording must not claim Gemini is unused.
+- **Replacing the `claude_code` preset system prompt with a minimal
+  one** (~15k tokens/call at stake): unmeasured behavior change to the
+  measured configuration; filed as an `issues/` exploration entry
+  rather than bundled here.
+- **Gemini-path handling of oversized/TIFF originals**: a latent
+  pre-existing risk (the photo flow sends archive copies of originals,
+  and the report says 8–10 MB originals don't fit either vendor);
+  filed as an `issues/` entry, not fixed here.
 - **Document mode / Docling**: untouched (this plan is the photo flow
   only).
 - **Session/multi-turn Claude calls**: measured 8.6× token blowup;
@@ -422,12 +507,11 @@ In `executeScanImport` (both photo entry points), replacing the two
 
 ## Open design questions
 
-- **Health-check rewording** (small): `health.ts` gemini-api-key check
-  says "capture image description will not work" — capture still uses
-  `GEMINI_KEY` independently of scan-import, so the check likely stays
-  as-is except no longer implying scan-import breakage. Settle during
-  implementation by reading the capture path's key use; not a design
-  blocker.
+- **Health-check rewording** (small): the check's "capture image
+  description will not work" text is stale (capture runs on Claude
+  agents; the remaining Gemini consumers are audio questions and the
+  opt-in scan backend). Verify `audio-question.ts`'s key use during
+  implementation and word the check accordingly; not a design blocker.
 - **`maxTurns` value** (lean: 8): 4 sufficed in every experiment;
   8 gives headroom for the occasional schema-retry turn without letting
   a wedged call run long. Settled at 8 unless implementation shows
@@ -444,26 +528,32 @@ cards, that change carries the audit.)
 
 ## Implementation order
 
-1. **Service module** — `src/services/scan-vision.ts`: types moved from
-   `scan-import-gemini.ts` (`rawScanAnalysisSchema`, `RawScanAnalysis`,
-   `BatchUsage`, `ScanBatchMisalignedError`, `assertBatchAlignment`),
-   `ScanVisionService` interface, `GeminiScanVision` wrapper,
-   `createFakeScanVision`, + `test/services/scan-vision.doctest.md`.
-   (Gemini impl continues to import from `scan-import-gemini.ts`.)
-2. **Claude backend** — `ClaudeScanVision` (Zod-generated schema,
-   outline note, post-conditions, bbox-null forcing, usage/cost
-   mapping) + parse-boundary doctest with canned SDK-shaped fixtures.
-3. **Runner + command** — generalize `runScanBatches`, thread `vision`
-   through `runPhotoMode`, backend selection + `checkClaudeAuth`
-   preflight, hub passthrough, log lines. End-to-end photo-flow doctest
-   with the fake (the first one that exercises `runPhotoMode` at all —
-   today's tests stop below the model call).
+1. **Service module** — `src/services/scan-vision.ts` importing the
+   schema/guards from `scan-import-gemini.ts` (which exports
+   `assertBatchAlignment`): `ScanVisionService` interface +
+   `ScanVisionBatchError`, `GeminiScanVision` wrapper,
+   `createFakeScanVision`, backend selection helper, +
+   `test/services/scan-vision.doctest.md`.
+2. **Claude backend** — `src/services/scan-vision-claude.ts`
+   (normalization, Zod-generated tightened schema, outline note,
+   post-conditions incl. slot invariant + legibility→flag folding,
+   usage/cost mapping) + parse-boundary doctest with canned SDK-shaped
+   fixtures.
+3. **Runner + command** — generalize `runScanBatches` (four-way retry
+   dispositions, overlap-preserving split, failure-inclusive
+   accounting), the `pickAnalysis` mutual-claim fix + doctest, thread
+   `vision` through `runPhotoMode`, backend selection +
+   `checkClaudeAuth` preflight, hub passthrough, log lines. End-to-end
+   photo-flow doctest with the fake (the first one that exercises
+   `runPhotoMode` at all — today's tests stop below the model call).
 4. **Gated integration doctest** — real-Sonnet single small batch,
-   gated on `resolveClaudeCodeBinary()` + `checkClaudeAuth()` probe,
-   modeled on `document-extract-integration.doctest.md`'s
-   skipReason/ternary pattern.
-5. **Docs** — `scanner-ingest.md` model note, REPORT.md postscript,
-   `.env.example`, health-check rewording, deploy notes.
+   gated on a `checkClaudeAuth()`/binary probe, modeled on
+   `document-extract-integration.doctest.md`'s skipReason/ternary
+   pattern.
+5. **Docs + issues** — `scanner-ingest.md` model note, REPORT.md
+   postscript, `.env.example`, health-check rewording, deploy notes,
+   and the two `issues/` entries from NOT-in-scope (minimal system
+   prompt measurement; Gemini-path oversized/TIFF originals).
 
 Chunks 1→3 are strictly ordered; 4 and 5 depend on 3.
 
