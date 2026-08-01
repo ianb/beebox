@@ -132,6 +132,10 @@ sentences, active voice, one idea per sentence, consistent terminology, no
 ambiguity. An issue is read cold — write for fast, unambiguous parsing over
 style.
 
+**For user-facing functionality, frame the goal as a Job To Be Done** (what the
+user is trying to accomplish) before the means — skip it for bugs, refactors, and
+"work robustly" tensions where JTBD is the wrong lens; don't force it.
+
 **Research** always goes in the body. If research is the next step, file the item
 with a stub section:
 

@@ -23,6 +23,10 @@ sentences, active voice, one idea per sentence, consistent terminology, no
 ambiguity. A plan is read cold, months later, by whoever picks up the work —
 write for fast, unambiguous parsing over style.
 
+**For user-facing functionality, frame the goal as a Job To Be Done** (what the
+user is trying to accomplish) before the means — skip it for bugs, refactors, and
+"work robustly" jobs where JTBD is the wrong lens; don't force it.
+
 ## What a plan is
 
 A plan is a complete unit of work — designed end-to-end before
