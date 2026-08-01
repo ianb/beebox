@@ -14,8 +14,9 @@ import { RecentFilesButton } from "./RecentFilesButton";
 import { LandmarkLinksButton } from "./LandmarkLinksButton";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
-import { SchedulePill, NarrationStatusBadge, MuteButton, ChatContextLink } from "./InteractiveChat-controls";
+import { SchedulePill, ChatContextLink } from "./InteractiveChat-controls";
 import { ChatMenu } from "./ChatMenu";
+import { VoiceChip } from "./VoiceChip";
 import { ChatInputArea } from "./InteractiveChat-composer";
 import { MobileTextareaRow } from "./InteractiveChat-mobile-row";
 import type { OnZoomView } from "./ChatMessages";
@@ -32,18 +33,30 @@ export function ChatHeader(props: {
   onToggleNarration: () => void;
   muted: boolean;
   onToggleMute: () => void;
+  selectedModel: string | null;
+  onSelectModel: (model: string | null) => void;
   messages: SessionEntry[];
   onZoomView: OnZoomView;
   chatMenu: ReactNode;
 }) {
-  const { effectiveContextDir, boxSlug, narrationEnabled, hqInFlight, onToggleNarration, muted, onToggleMute, messages, onZoomView, chatMenu } = props;
+  const {
+    effectiveContextDir, boxSlug, narrationEnabled, hqInFlight, onToggleNarration, muted, onToggleMute,
+    selectedModel, onSelectModel, messages, onZoomView, chatMenu,
+  } = props;
   return (
     <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
       <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
       <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
-      <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onToggle={onToggleNarration} />
       <div className="flex-1" />
-      <MuteButton muted={muted} onToggle={onToggleMute} />
+      <VoiceChip
+        muted={muted}
+        onToggleMute={onToggleMute}
+        narrationEnabled={narrationEnabled}
+        onToggleNarration={onToggleNarration}
+        hqInFlight={hqInFlight}
+        selectedModel={selectedModel}
+        onSelectModel={onSelectModel}
+      />
       <LandmarkLinksButton
         contextDir={effectiveContextDir}
         onPanel={(link) => onZoomView({

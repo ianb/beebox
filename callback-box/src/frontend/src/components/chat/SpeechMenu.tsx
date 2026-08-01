@@ -5,7 +5,7 @@
  * Menu, top to bottom:
  *   - A control row of icon buttons on one line:
  *       Stop          — stop the current speech sequence (disabled if nothing
- *                       is playing). Does NOT mute; see MuteButton for that.
+ *                       is playing). Does NOT mute; see VoiceChip for that.
  *       Fast-forward  — abort the current segment and play the next. Only
  *                       shown when this message has multiple segments; disabled
  *                       unless this message is playing and a next segment exists.

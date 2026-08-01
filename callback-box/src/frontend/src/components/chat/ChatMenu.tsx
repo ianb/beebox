@@ -1,26 +1,19 @@
 /**
  * The chat header's "..." menu: New session, "Recent chats" (session list
- * sub-panel), and "Advanced" (debug toggles, model/voice submenus wired to
- * the transcription tRPC config, process controls). Self-contained — props
- * in, callbacks out.
+ * sub-panel), and "Advanced" (debug toggles, process controls). Model,
+ * Voice settings, and Narration mode moved to `VoiceChip` in chunk 3 of
+ * docs/plans/chat-header-chips.md. Self-contained — props in, callbacks out.
  */
 
 import { useState, type ReactNode } from "react";
 import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
-import { trpc } from "../../lib/trpc";
-import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
 import { SessionListPanel } from "./SessionListPanel";
-import {
-  AdvancedPanel, ModelPanel, VoicePanel,
-  type TranscriptionServiceOption, type HqTranscriptionOption,
-} from "./ChatMenu-advanced-panels";
+import { AdvancedPanel } from "./ChatMenu-advanced-panels";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
 // positioning complexity. Resets to "root" when the dropdown closes.
-// "model" and "voice" nest under "advanced" (their back row returns there);
-// chunk 3 of docs/plans/chat-header-chips.md moves them out to the voice chip.
-type ChatMenuPanel = "root" | "sessions" | "advanced" | "model" | "voice";
+type ChatMenuPanel = "root" | "sessions" | "advanced";
 
 /** Root panel: New session, "Recent chats ›", divider, "Advanced ›". */
 function RootPanel({
@@ -72,10 +65,7 @@ interface ChatMenuBodyProps {
   onOpenSessions: () => void;
   onOpenAdvanced: () => void;
   onBackToRoot: () => void;
-  onBackToAdvanced: () => void;
   advancedProps: Omit<Parameters<typeof AdvancedPanel>[0], "onBack">;
-  modelProps: Omit<Parameters<typeof ModelPanel>[0], "onBack">;
-  voiceProps: Omit<Parameters<typeof VoicePanel>[0], "onBack">;
 }
 
 /**
@@ -85,7 +75,7 @@ interface ChatMenuBodyProps {
  * `ChatMenuPanel` member at compile time without one).
  */
 function ChatMenuBody(props: ChatMenuBodyProps): ReactNode {
-  const { panel, onNewSession, contextDir, onOpenSessions, onOpenAdvanced, onBackToRoot, onBackToAdvanced, advancedProps, modelProps, voiceProps } = props;
+  const { panel, onNewSession, contextDir, onOpenSessions, onOpenAdvanced, onBackToRoot, advancedProps } = props;
   switch (panel) {
     case "root":
       return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} onOpenAdvanced={onOpenAdvanced} />;
@@ -93,10 +83,6 @@ function ChatMenuBody(props: ChatMenuBodyProps): ReactNode {
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "advanced":
       return <AdvancedPanel onBack={onBackToRoot} {...advancedProps} />;
-    case "model":
-      return <ModelPanel onBack={onBackToAdvanced} {...modelProps} />;
-    case "voice":
-      return <VoicePanel onBack={onBackToAdvanced} {...voiceProps} />;
   }
 }
 
@@ -116,10 +102,6 @@ export function ChatMenu({
   onToggleDebugView,
   showDebugLog,
   onToggleDebugLog,
-  selectedModel,
-  onSelectModel,
-  narrationEnabled,
-  onToggleNarration,
 }: {
   onNewSession: () => void;
   contextDir: string | null;
@@ -133,41 +115,8 @@ export function ChatMenu({
   onToggleDebugView: () => void;
   showDebugLog: boolean;
   onToggleDebugLog: () => void;
-  selectedModel: string | null;
-  onSelectModel: (model: string | null) => void;
-  narrationEnabled: boolean;
-  onToggleNarration: () => void;
 }) {
-  const transcriptionConfigQuery = trpc.transcription.config.useQuery();
-  const setTranscriptionService = trpc.transcription.setService.useMutation();
-  const setHqTranscriptionService = trpc.transcription.setHqService.useMutation();
-  const utils = trpc.useUtils();
-  const currentService = transcriptionConfigQuery.data?.service ?? null;
-  const currentHqService = transcriptionConfigQuery.data?.hqService ?? null;
-
-  const onSelectTranscriptionService = async (service: TranscriptionServiceOption) => {
-    if (currentService === service) return;
-    try {
-      await setTranscriptionService.mutateAsync({ service });
-      void utils.transcription.config.invalidate();
-    } catch (e) {
-      console.error("[chat] Failed to set transcription service", e);
-    }
-  };
-
-  const onSelectHqTranscriptionService = async (hqService: HqTranscriptionOption) => {
-    if (currentHqService === hqService) return;
-    try {
-      await setHqTranscriptionService.mutateAsync({ hqService });
-      void utils.transcription.config.invalidate();
-    } catch (e) {
-      console.error("[chat] Failed to set HQ transcription service", e);
-    }
-  };
-
   const [panel, setPanel] = useState<ChatMenuPanel>("root");
-  const currentModelLabel =
-    MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
 
   return (
     <Dropdown
@@ -196,15 +145,9 @@ export function ChatMenu({
         onOpenSessions={() => setPanel("sessions")}
         onOpenAdvanced={() => setPanel("advanced")}
         onBackToRoot={() => setPanel("root")}
-        onBackToAdvanced={() => setPanel("advanced")}
         advancedProps={{
           debugView,
           onToggleDebugView,
-          narrationEnabled,
-          onToggleNarration,
-          currentModelLabel,
-          onOpenModel: () => setPanel("model"),
-          onOpenVoice: () => setPanel("voice"),
           showDebugLog,
           onToggleDebugLog,
           onCompactSession,
@@ -213,13 +156,6 @@ export function ChatMenu({
           onStopProcess,
           running,
           sessionId,
-        }}
-        modelProps={{ selectedModel, onSelectModel }}
-        voiceProps={{
-          currentService,
-          onSelectTranscriptionService,
-          currentHqService,
-          onSelectHqTranscriptionService,
         }}
       />
     </Dropdown>

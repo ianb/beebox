@@ -118,6 +118,8 @@ function HeaderRegion(props: ChatBodyProps) {
       onToggleNarration={handleToggleNarration}
       muted={mute.muted}
       onToggleMute={mute.handleToggleMute}
+      selectedModel={selectedModel}
+      onSelectModel={handleSelectModel}
       messages={messages}
       onZoomView={onZoomView}
       chatMenu={
@@ -134,10 +136,6 @@ function HeaderRegion(props: ChatBodyProps) {
           onToggleDebugView={() => setDebugView((v) => !v)}
           showDebugLog={showDebugLog}
           onToggleDebugLog={() => setShowDebugLog((v) => !v)}
-          selectedModel={selectedModel}
-          onSelectModel={handleSelectModel}
-          narrationEnabled={narrationEnabled}
-          onToggleNarration={handleToggleNarration}
         />
       }
     />

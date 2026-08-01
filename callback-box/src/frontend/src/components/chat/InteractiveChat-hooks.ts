@@ -146,8 +146,19 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
 
   const narrationEnabled = chatFeatures.narration === "on";
 
+  // Generation counters so an out-of-order completion (an older toggle/select
+  // resolving after a newer one) can't clobber state a later request already
+  // set — bumped on every call, and a response only applies if it's still the
+  // most recent one in flight.
+  const narrationRequestIdRef = useRef(0);
+  const modelRequestIdRef = useRef(0);
+
   const handleToggleNarration = useCallback(() => {
     const next = narrationEnabled ? "off" : "on";
+    // Rollback target if the request is rejected — the pre-toggle value,
+    // derived the same way `narrationEnabled` is (absent key reads as "off").
+    const previous = narrationEnabled ? "on" : "off";
+    const requestId = ++narrationRequestIdRef.current;
     // Optimistic — server-confirmed value lands via the SSE event handler
     // (or, pre-session, reconciles from the server once the id is assigned).
     setChatFeatures((prev) => ({ ...prev, narration: next }));
@@ -159,22 +170,30 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
       return;
     }
     setChatFeature({ sessionId, feature: "narration", value: next })
-      .then((res) => { setChatFeatures(res.features); })
+      .then((res) => {
+        if (narrationRequestIdRef.current !== requestId) return;
+        setChatFeatures(res.features);
+      })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] set-feature narration failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError("Failed to update narration mode", { cause: e });
+        if (narrationRequestIdRef.current !== requestId) return;
+        // No SSE correction follows a rejected write, so the optimistic flip
+        // must be undone here or the UI shows wrong state indefinitely — but
+        // only when no newer toggle has since taken over.
+        setChatFeatures((prev) => ({ ...prev, narration: previous }));
       });
   }, [sessionId, narrationEnabled, send]);
 
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
+    const previous = selectedModel;
     const label = MODEL_OPTIONS.find((o) => o.model === model)?.label ?? "default";
+    const markerId = `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const requestId = ++modelRequestIdRef.current;
     setModelMarkers((markers) => [
       ...markers,
-      {
-        id: `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        label: `Switched to ${label}`,
-        afterGroupCount: groupCount,
-      },
+      { id: markerId, label: `Switched to ${label}`, afterGroupCount: groupCount },
     ]);
     setSelectedModel(model);
     if (sessionId) {
@@ -182,6 +201,7 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
       setChatModel({ sessionId, model })
         .then((res) => {
           console.debug(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
+          if (modelRequestIdRef.current !== requestId) return;
           // Re-sync UI to whatever the server actually persisted, in case a
           // race / bug means the request landed differently than expected.
           setSelectedModel(res.model);
@@ -189,6 +209,13 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
         .catch((e: unknown) => {
           const msg = e instanceof Error ? e.message : String(e);
           console.warn(`[chatfsm] set-model error: ${msg}`);
+          toastError("Failed to switch model", { cause: e });
+          setModelMarkers((markers) => markers.filter((m) => m.id !== markerId));
+          if (modelRequestIdRef.current !== requestId) return;
+          // Roll back the optimistic selection — but only when no newer
+          // selection has since taken over, so a stale rejection can't
+          // clobber a selection made after it.
+          setSelectedModel(previous);
         });
     } else {
       console.debug("[chatfsm] set-model skipped — sessionId is null");
