@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-01T11:44:17Z
+Generated: 2026-08-01T11:51:56Z
 Total documents: 221
 
 ## Issues
@@ -30,12 +30,12 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (57 lines)
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (49 lines)
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (621 lines)
+- **docs/implemented-plans/remove-cb-render.review.md** — "Plan Engineering Review — remove-cb-render" (53 lines)
 - **docs/implemented-plans/remove-open-mode.md** — "Remove the unauthenticated-mode operator path" (115 lines)
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (411 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (373 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (544 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
-- **docs/plans/remove-cb-render.review.md** — "Plan Engineering Review — remove-cb-render" (53 lines)
 - **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (21 lines)
@@ -105,6 +105,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-and-xml.md:416 (mention) — pnpm-workspace entry. Update `callback-box/CLAUDE.md`, root `CLAUDE.md`,
 - docs/implemented-plans/remove-cardworks-deletion.md:127 (mention) — CLAUDE.md "refs starting with `attach/` resolve into this scope").
 - docs/implemented-plans/remove-cardworks-package.md:87 (mention) — - **`callback-box/CLAUDE.md`** — `CLAUDE.md:28` (current): *"Every built-in
+- docs/implemented-plans/remove-cb-render.md:32 (mention) — - **`CLAUDE.md`** — *"Read before writing"* (`CLAUDE.md:101`); *"Leave the repo
 - docs/implemented-plans/rest-to-trpc-consolidation.md:143 (mention) — already runs cross-origin-capable via `wsLink`/`splitLink` (`CLAUDE.md`).
 - docs/implemented-plans/schema-validate-hook.md:242 (mention) — (`CLAUDE.md` Behavioral Notes). Designed-for, not built — see Open questions
 - docs/implemented-plans/see-as-the-user.md:427 (mention) — CLAUDE.md).
@@ -131,7 +132,6 @@ Referenced by:
 - docs/plans/ios-companion-review-2026-07-09.md:56 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
 - docs/plans/publish-pages.md:154 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
-- docs/plans/remove-cb-render.md:28 (mention) — - **`CLAUDE.md`** — *"Read before writing"* (`CLAUDE.md:101`); *"Leave the repo
 - docs/plans/source-available-release.md:388 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
 - docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
@@ -154,12 +154,12 @@ Referenced by:
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:14 (mention) — not a global weakening, per the CLAUDE.md lint policy). The blast radius was 6
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:24 (mention) — failure for a loud one. Note `CLAUDE.md` claims "the repo lints itself", which
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:85 (mention) — Note: `issues/CLAUDE.md` and the root `CLAUDE.md`'s "issue queue" pointer both
+- ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:55 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:7 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:21 (mention) — Related: the noisy-output policy in the root CLAUDE.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:7 (mention) — it spawns an agent with a box cwd and box CLAUDE.md context and checks
 - ../issues/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:2 (mention) — title: "Small structured-output agent passes load the full box CLAUDE.md + agent guide"
 - ../issues/decisions/2026-05-27-bin-browse-wrapper-future.md:11 (mention) — - **Replace the rewriting with a `BASE_PATH.txt` file** that holds the current worktree's URL prefix (e.g. `http://local
-- ../issues/decisions/2026-07-07-cb-render-vs-bin-browse.md:48 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/docs-and-chores/2026-05-21-fill-out-the-glossary.md:19 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
 - ../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:6 (mention) — `bin/` is the brand for the project's first-class dev tools — `bin/browse`, `bin/worktrees`, `bin/cb`. Anything an agent
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:7 (mention) — Still-open items from the 2026-04-28 CLAUDE.md self-audit
@@ -312,6 +312,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-and-xml.md:51 (mention) — - **`callback-box/code-style.md`** — `code-style.md:25`: *"NEVER use
 - docs/implemented-plans/remove-cardworks-deletion.md:100 (mention) — - **`callback-box/code-style.md:25`** (no `any`), **`:55`** (`as` is like Rust
 - docs/implemented-plans/remove-cardworks-package.md:93 (mention) — - **`callback-box/code-style.md`** — `code-style.md:25` (no `any`),
+- docs/implemented-plans/remove-cb-render.md:35 (mention) — - **`code-style.md`** — the lint-suppression section: *"Never weaken a rule to
 - docs/implemented-plans/responsive-figures.md:43 (mention) — - `code-style.md` — no default parameters, explicit return types, teardown/
 - docs/implemented-plans/rest-to-trpc-consolidation.md:43 (mention) — - **`callback-box/code-style.md`** — Zod-validated inputs, `only export what's
 - docs/implemented-plans/schema-validate-hook.md:32 (mention) — - `callback-box/code-style.md` — *"as type assertions are like Rust's
@@ -334,7 +335,6 @@ Referenced by:
 - docs/plans/ios-native-capture-mode.md:24 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
 - docs/plans/publish-pages.md:29 (mention) — - `callback-box/code-style.md` — mechanical rules for all box-side TS and the Worker package.
-- docs/plans/remove-cb-render.md:31 (mention) — - **`code-style.md`** — the lint-suppression section: *"Never weaken a rule to
 - docs/plans/source-available-release.md:44 (mention) — - `callback-box/code-style.md` — style rules for any code touched by deploy
 - docs/unimplemented-plans/query-cards.md:34 (mention) — - `callback-box/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
@@ -371,16 +371,16 @@ Referenced by:
 - docs/implemented-plans/figure-card-type.md:79 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
 - docs/implemented-plans/local-password-auth.md:531 (mention) — precedent but non-dismissible. Per cb-frontend conventions (frontend.md
 - docs/implemented-plans/open-chat-from-card.md:57 (mention) — - `callback-box/frontend.md` — UI primitives + semantic palette, `className` only for
+- docs/implemented-plans/remove-cb-render.md:288 (mention) — plus its description in `frontend.md:60`.
 - docs/implemented-plans/responsive-figures.md:42 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:103 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
 - docs/implemented-plans/user-location.md:63 (mention) — - `callback-box/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/design-reconciliation.md:39 (mention) — capture, dashboard, views, and a real design system (frontend.md).
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
-- docs/plans/remove-cb-render.md:284 (mention) — plus its description in `frontend.md:60`.
 - frontend.md:113 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:71 (mention) — read `frontend.md` before reaching for utility classes.
-- ../issues/decisions/2026-07-07-cb-render-vs-bin-browse.md:48 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
+- ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:55 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
@@ -768,7 +768,7 @@ Title: "Client Debug Log" | 55 lines
 Referenced by:
 - CLAUDE.md:114 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
 - docs/box-layout.md:177 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
-- docs/plans/remove-cb-render.md:546 (mention) — errors (`docs/client-debug-log.md`).
+- docs/implemented-plans/remove-cb-render.md:550 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server-operations.md:218 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 - ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 
@@ -863,10 +863,10 @@ Title: "(no title)" | 1 lines
 
 Referenced by:
 - docs/README.md:32 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
+- docs/implemented-plans/remove-cb-render.md:356 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
+- docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/maintenance.md:19 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 - docs/plans/docs-reorg.md:116 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
-- docs/plans/remove-cb-render.md:352 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
-- docs/plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/source-available-release.md:432 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
 - docs/testing.md:601 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
 - src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
@@ -919,6 +919,7 @@ Referenced by:
 - docs/implemented-plans/refresh-maps-convergence.md:62 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
 - docs/implemented-plans/refresh-maps-convergence.review.md:113 (mention) — `docs/engineering-principles.md` (#1 types are structure, #3 validate at
 - docs/implemented-plans/remove-box-shape-v1.md:93 (mention) — - `callback-box/docs/engineering-principles.md` — most load-bearing: **#4
+- docs/implemented-plans/remove-cb-render.md:20 (mention) — - **`docs/engineering-principles.md`** — the plan traces mainly to these:
 - docs/implemented-plans/remove-open-mode.md:17 (mention) — - `callback-box/docs/engineering-principles.md` — fail-closed; make invalid
 - docs/implemented-plans/responsive-figures.md:33 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
@@ -936,7 +937,6 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:41 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
 - docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
 - docs/plans/publish-pages.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
-- docs/plans/remove-cb-render.md:16 (mention) — - **`docs/engineering-principles.md`** — the plan traces mainly to these:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
 - ../.claude/skills/cb-plan/SKILL.md:98 (mention) — - `callback-box/docs/engineering-principles.md` — the twelve durable
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
@@ -1426,17 +1426,17 @@ Referenced by:
 - docs/architecture/CLAUDE.md:5 (mention) — **Role:** this series is the onboarding narrative — the canonical human-facing "what is this." Engineering rationale liv
 - docs/design/README.md:3 (link) — Why the system is shaped the way it is. Peer of [`../stack-decisions.md`](../stack-decisions.md)
 - docs/implemented-plans/architectural-review.md:828 (mention) — 5. **Doc drift:** `docs/stack-decisions.md` cites deleted `sseMachine.ts`;
+- docs/implemented-plans/remove-cb-render.md:332 (mention) — `frontend.md:60`; `docs/stack-decisions.md:20,182-183,786,788,931,941` — these
 - docs/plans/README.md:98 (mention) — `design-vision.md`, `stack-decisions.md` were judged reference and stayed
 - docs/plans/design-reconciliation.md:22 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/plans/docs-reorg.gap-analysis.md:110 (mention) — 8. **`@xstate/store` documented as adopted (`docs/stack-decisions.md:143`)
 - docs/plans/docs-reorg.md:92 (mention) — `stack-decisions.md`, the Google/Telegram setup runbooks, CSP docs) verified
 - docs/plans/installation-story.md:111 (mention) — `node --watch` over the backend; `docs/stack-decisions.md` used to pair
 - docs/plans/publish-pages.md:44 (mention) — - **Designed-but-unbuilt authorization.** `docs/stack-decisions.md:581`: *`## Decision 11: Authorization — Typed Princip
-- docs/plans/remove-cb-render.md:328 (mention) — `frontend.md:60`; `docs/stack-decisions.md:20,182-183,786,788,931,941` — these
 - docs/reports/user-stories-audit-2026-06-26.md:4801 (mention) — Feature is fully implemented with all claimed capabilities. Evidence: (1) /src/cli/commands/render.ts registers the `cb 
 - docs/unimplemented-plans/design-vision-superseded.md:13 (mention) — > `../stack-decisions.md` Decision 18).
+- ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:45 (mention) — pixel screenshots for exactly this (stack-decisions.md Decision 1, §931).
 - ../issues/code-quality/2026-07-04-xstate-store-never-adopted.md:7 (mention) — `callback-box/docs/stack-decisions.md` (~line 143) records `@xstate/store`
-- ../issues/decisions/2026-07-07-cb-render-vs-bin-browse.md:38 (mention) — pixel screenshots for exactly this (stack-decisions.md Decision 1, §931).
 
 References:
 - → docs/cards-as-markdown.md (mention)
@@ -1480,6 +1480,7 @@ Referenced by:
 - docs/implemented-plans/procedure-validation-completion.md:36 (mention) — - **`docs/testing.md`** — tests come first as a design tool; cover substantial codepaths, not coverage-for-its-own-sake.
 - docs/implemented-plans/refresh-maps-convergence.md:352 (mention) — **Test posture.** Doctests named as part of the design, per `docs/testing.md`:
 - docs/implemented-plans/refresh-maps-convergence.review.md:268 (mention) — **Why it matters:** The plan's ordering rationale is the one place a reader checks before starting work. An "independent
+- docs/implemented-plans/remove-cb-render.md:504 (mention) — than a deferral. `docs/testing.md` scopes tests to substantial codepaths, not
 - docs/implemented-plans/responsive-figures.md:403 (mention) — doctest tiers exercise (`docs/testing.md` posture: don't test for coverage's
 - docs/implemented-plans/rest-to-trpc-consolidation.md:383 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
 - docs/implemented-plans/see-as-the-user.md:575 (mention) — - **Tests first as design tool** (`docs/testing.md`): B0's extraction is
@@ -1495,7 +1496,6 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:62 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:33 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
 - docs/plans/publish-pages.md:274 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
-- docs/plans/remove-cb-render.md:500 (mention) — than a deferral. `docs/testing.md` scopes tests to substantial codepaths, not
 - docs/tours.md:16 (link) — ([testing.md](testing.md)).
 - ../.claude/skills/cb-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/cb-guide-testing/SKILL.md:3 (mention) — description: Explains callback-box's testing system — the test tiers, what each is for, and how to choose. Use when deci
@@ -2776,6 +2776,43 @@ References:
 - → docs/adding-schemas.md (mention)
 - → docs/migrations.md (mention)
 
+#### docs/implemented-plans/remove-cb-render.md
+
+Title: "Remove `cb render` and the SSR machinery" | 603 lines
+
+Referenced by:
+- docs/implemented-plans/remove-cb-render.review.md:8 (mention) — revised. All seven were real. The plan at `remove-cb-render.md` has been updated
+- docs/plans/publish-pages.md:39 (mention) — - **SSR rendering — REMOVED 2026-08-01; this plan can no longer build on it.** `cb render` and `src/frontend/src/ssr/` a
+- ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:12 (link) — > [remove-cb-render](../../../callback-box/docs/implemented-plans/remove-cb-render.md)
+
+References:
+- → ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md (link)
+- → docs/engineering-principles.md (mention)
+- → CLAUDE.md (mention)
+- → code-style.md (mention)
+- → ../issues/closed/bugs/2026-07-07-cb-render-ssr-window-undefined.md (link)
+- → frontend.md (mention)
+- → docs/plans/publish-pages.md (mention)
+- → docs/stack-decisions.md (mention)
+- → docs/plans/cli-restructure.md (mention)
+- → docs/plans/docs-reorg.gap-analysis.md (mention)
+- → docs/doc-graph.md (mention)
+- → docs/reports/user-stories-audit-2026-06-26.md (mention)
+- → docs/testing.md (mention)
+- → docs/client-debug-log.md (mention)
+- → ../issues/bugs/2026-08-01-chat-turn-stream-never-arrives-ws.md (link)
+
+#### docs/implemented-plans/remove-cb-render.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — remove-cb-render" | 53 lines
+
+References:
+- → docs/implemented-plans/remove-cb-render.md (mention)
+- → docs/plans/publish-pages.md (mention)
+- → docs/plans/docs-reorg.gap-analysis.md (mention)
+- → docs/plans/cli-restructure.md (mention)
+- → docs/doc-graph.md (mention)
+
 #### docs/implemented-plans/remove-open-mode.md **[ORPHAN]**
 
 Title: "Remove the unauthenticated-mode operator path" | 115 lines
@@ -3170,9 +3207,9 @@ References:
 Title: "`cb` CLI Restructure — Plan" | 173 lines
 
 Referenced by:
+- docs/implemented-plans/remove-cb-render.md:348 (mention) — - `docs/plans/cli-restructure.md:51` — lists it in a command table.
+- docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/docs-reorg.md:77 (mention) — `cli-restructure.md` (verified unimplemented; says "delete this doc when
-- docs/plans/remove-cb-render.md:344 (mention) — - `docs/plans/cli-restructure.md:51` — lists it in a command table.
-- docs/plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 
 References:
 - → docs/implemented-plans/capture-mode.md (mention)
@@ -3217,9 +3254,9 @@ References:
 Title: "Docs-reorg companion: gap analysis — non-obvious, undocumented conventions" | 163 lines
 
 Referenced by:
+- docs/implemented-plans/remove-cb-render.md:349 (mention) — - `docs/plans/docs-reorg.gap-analysis.md:57-59` — cites the SSR `window`-guard
+- docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/docs-reorg.md:359 (mention) — - Unanswered from the gap analysis (docs-reorg.gap-analysis.md B6–B9):
-- docs/plans/remove-cb-render.md:345 (mention) — - `docs/plans/docs-reorg.gap-analysis.md:57-59` — cites the SSR `window`-guard
-- docs/plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 
 References:
 - → docs/plans/docs-reorg.md (mention)
@@ -3548,8 +3585,8 @@ Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 2
 Referenced by:
 - docs/box-layout.md:128 (mention) — | `box/publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding
 - docs/implemented-plans/pub-setup-wrangler.md:5 (mention) — issue's manual-testing checklist). Extends `publish-pages.md` Track E; driven
-- docs/plans/remove-cb-render.md:304 (mention) — emitter — `docs/plans/publish-pages.md` contemplates one) re-arms it. Comments
-- docs/plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
+- docs/implemented-plans/remove-cb-render.md:308 (mention) — emitter — `docs/plans/publish-pages.md` contemplates one) re-arms it. Comments
+- docs/implemented-plans/remove-cb-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - ../issues/features/2026-07-19-publish-pages-resume.md:5 (mention) — design: ../../callback-box/docs/plans/publish-pages.md
 - ../issues/features/2026-07-19-publish-pages-resume.md:12 (link) — [publish-pages.md](../../callback-box/docs/plans/publish-pages.md).
 - ../issues/features/2026-07-27-echo-show-display-dashboard-view.md:63 (mention) — `docs/plans/publish-pages.md`). The box **renders the dashboard and publishes a
@@ -3559,7 +3596,7 @@ References:
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/plans/ios-companion-app.md (mention)
-- → docs/plans/remove-cb-render.md (mention)
+- → docs/implemented-plans/remove-cb-render.md (mention)
 - → docs/content-security-policy.md (mention)
 - → docs/stack-decisions.md (mention)
 - → docs/architecture/outline.md (mention)
@@ -3598,42 +3635,6 @@ References:
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/implemented-plans/attach-directories-superseded.md (mention)
 - → docs/unimplemented-plans/capture-pipeline-redesign.md (mention)
-
-#### docs/plans/remove-cb-render.md
-
-Title: "Remove `cb render` and the SSR machinery" | 599 lines
-
-Referenced by:
-- docs/plans/publish-pages.md:39 (mention) — - **SSR rendering — REMOVED 2026-08-01; this plan can no longer build on it.** `cb render` and `src/frontend/src/ssr/` a
-- docs/plans/remove-cb-render.review.md:8 (mention) — revised. All seven were real. The plan at `remove-cb-render.md` has been updated
-
-References:
-- → ../issues/decisions/2026-07-07-cb-render-vs-bin-browse.md (link)
-- → docs/engineering-principles.md (mention)
-- → CLAUDE.md (mention)
-- → code-style.md (mention)
-- → ../issues/closed/bugs/2026-07-07-cb-render-ssr-window-undefined.md (link)
-- → frontend.md (mention)
-- → docs/plans/publish-pages.md (mention)
-- → docs/stack-decisions.md (mention)
-- → docs/plans/cli-restructure.md (mention)
-- → docs/plans/docs-reorg.gap-analysis.md (mention)
-- → docs/doc-graph.md (mention)
-- → docs/reports/user-stories-audit-2026-06-26.md (mention)
-- → docs/testing.md (mention)
-- → docs/client-debug-log.md (mention)
-- → ../issues/bugs/2026-08-01-chat-turn-stream-never-arrives-ws.md (link)
-
-#### docs/plans/remove-cb-render.review.md **[ORPHAN]**
-
-Title: "Plan Engineering Review — remove-cb-render" | 53 lines
-
-References:
-- → docs/plans/remove-cb-render.md (mention)
-- → docs/plans/publish-pages.md (mention)
-- → docs/plans/docs-reorg.gap-analysis.md (mention)
-- → docs/plans/cli-restructure.md (mention)
-- → docs/doc-graph.md (mention)
 
 #### docs/plans/source-available-release.md
 
@@ -3695,8 +3696,8 @@ Title: "callback-box — User Stories" | 5768 lines
 
 Referenced by:
 - docs/implemented-plans/questions-end-to-end.md:618 (mention) — `bin/browse` checks, per `docs/reports/user-stories-audit-2026-06-26.md`'s
+- docs/implemented-plans/remove-cb-render.md:363 (mention) — `docs/reports/user-stories-audit-2026-06-26.md`, and the closed issues under
 - docs/implemented-plans/user-story-audit-followups.md:5 (mention) — This plan triages the 95 `IAN:` comments left on `docs/reports/user-stories-audit-2026-06-26.md` (the
-- docs/plans/remove-cb-render.md:359 (mention) — `docs/reports/user-stories-audit-2026-06-26.md`, and the closed issues under
 - docs/plans/source-available-release.md:173 (mention) — name), `docs/reports/user-stories-audit-2026-06-26.md:671` (real email).
 - docs/reports/user-stories-audit-2026-06-26.md:2509 (mention) — **Verifier (flagged):** The story is partially accurate. Core features (markdown export, lossy detection, warning displa
 

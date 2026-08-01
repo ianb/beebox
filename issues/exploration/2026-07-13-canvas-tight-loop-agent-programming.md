@@ -48,7 +48,7 @@ Why this fits agent cognition (assessment from the agent side, same date):
   creative coding, sims, visualizations) — a new programming surface for boxes.
   It does not replace browse for the real DOM/CSS app UI. Related tension about
   which "look at output" tools earn their keep:
-  [cb-render-vs-bin-browse](../decisions/2026-07-07-cb-render-vs-bin-browse.md).
+  [cb-render-vs-bin-browse](../closed/decisions/2026-07-07-cb-render-vs-bin-browse.md).
 
 Prior art to lean on: p5.js has a headless-friendly instance mode; `skia-canvas`
 / `node-canvas` give a real Canvas2D (and skia-canvas some WebGL) in Node with

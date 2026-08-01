@@ -1,5 +1,9 @@
 # Remove `cb render` and the SSR machinery
 
+**Status:** implemented 2026-08 — `cb render` and the SSR entry graph are
+removed, and all five live call sites are rewired off `useSSRMachine` to
+`useMachine`.
+
 `cb render` renders a frontend page to HTML with React SSR. It does not work:
 `renderToString` returns an empty `<body>` because the app is React-Query and
 Suspense driven. `bin/browse` covers the real need better. This plan removes the
@@ -7,7 +11,7 @@ command, the SSR entry graph, and the SSR state-injection hook, and rewires the
 five live surfaces that consume their XState machines through that hook.
 
 The decision to remove is settled — see
-[cb-render-vs-bin-browse](../../../issues/decisions/2026-07-07-cb-render-vs-bin-browse.md).
+[cb-render-vs-bin-browse](../../../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md).
 This plan is about *how* to remove it without a silent regression in chat, voice,
 transcription, or speech playback.
 
