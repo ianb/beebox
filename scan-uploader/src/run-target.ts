@@ -203,6 +203,10 @@ async function resolveConfirmation(
       console.error(`error ${candidate.filePath}: file exceeds the server's size limit`);
       ctx.counters.errors += 1;
       return undefined;
+    case "server-error":
+      console.error(`error ${candidate.filePath}: server error, will retry next run: ${result.reason}`);
+      ctx.counters.errors += 1;
+      return undefined;
     default:
       return assertNever(result);
   }

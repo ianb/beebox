@@ -67,6 +67,7 @@ export type PutResult =
   | { readonly status: "rejected"; readonly reason: string }
   | { readonly status: "hash-mismatch" }
   | { readonly status: "too-large" }
+  | { readonly status: "server-error"; readonly reason: string }
   | { readonly status: "rate-limited"; readonly retryAfterSeconds: number };
 
 const DEFAULT_RETRY_AFTER_SECONDS = 5;
@@ -136,6 +137,8 @@ async function interpretPutResponse(url: string, response: Response): Promise<Pu
       return { status: "too-large" };
     case 429:
       return { status: "rate-limited", retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")) };
+    case 503:
+      return { status: "server-error", reason: await serverErrorReason(response) };
     default:
       throw new ProtocolError(url, `unexpected HTTP status ${String(response.status)}`);
   }
@@ -155,6 +158,19 @@ function interpretPutRejection(url: string, body: unknown): PutResult {
     return { status: "hash-mismatch" };
   }
   throw new ProtocolError(url, "unexpected 422 body on PUT");
+}
+
+async function serverErrorReason(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json();
+    if (isRecord(body) && body.status === "server-error" && typeof body.reason === "string") {
+      return body.reason;
+    }
+  } catch (_e) {
+    // Non-JSON 503 body (a proxy error page, say) — the status alone is
+    // meaningful; fall through to the generic reason.
+  }
+  return "server temporarily unable to validate this file";
 }
 
 function parseRetryAfter(header: string | null): number {

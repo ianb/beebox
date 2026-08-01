@@ -55,19 +55,24 @@ Per-hash `state`:
 | `rejected` | failed validation; `reason` says why | never disposition; report; re-PUT only with retry flag |
 
 `pending`/`imported` count as confirmed so a client that crashed between PUT
-and disposition converges on the next run.
+and disposition converges on the next run. A server-side entry mid-promotion
+is reported as `pending` — the wire vocabulary stays at these four states.
+
+An empty `hashes` array is legal (`200`, empty `states`). A malformed body,
+a malformed hash (not 64 lowercase hex), or >500 hashes → `400`.
 
 ## `PUT /<box>/api/scan/files/<sha256>`
 
 Body: the raw file bytes, `Content-Type: application/octet-stream`, streamed.
-`Content-Length` required.
+`Content-Length` required (`411` without it). Malformed path hash or
+missing/unusable `X-Upload-Filename` → `400`.
 
 Headers:
 
 | header | required | meaning |
 |---|---|---|
 | `X-Upload-Filename` | yes | original filename (basename only; server sanitizes) |
-| `X-Scan-Profile` | no | free-text scanner profile name, recorded as provenance |
+| `X-Scan-Profile` | no | free-text scanner profile name (≤200 chars), recorded as provenance |
 
 Server behavior: streams to quarantine while metering bytes (over-limit →
 `413`, partial file deleted), re-hashes, then validates (magic-byte sniff vs
@@ -83,6 +88,7 @@ Responses (JSON, `status` field is the vocabulary):
 | `422` | `{ "status": "hash-mismatch" }` | received bytes ≠ path hash; nothing recorded — retry |
 | `413` | — | over size limit (50 MB) |
 | `429` | — | rate limited; honor `Retry-After` |
+| `503` | `{ "status": "server-error", "reason": "…" }` | server temporarily unable to validate (e.g. qpdf missing); nothing recorded — report, never disposition, retry a later run |
 
 Re-PUT of a `rejected` hash re-runs validation (the retry path after a
 validator fix). Re-PUT of `pending`/`imported` is a no-op `duplicate`. PUT is

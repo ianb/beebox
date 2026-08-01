@@ -14,12 +14,10 @@
  */
 
 import * as fs from "node:fs/promises";
-import { createWriteStream } from "node:fs";
-import { createHash } from "node:crypto";
-import { pipeline } from "node:stream/promises";
 import { type Readable } from "node:stream";
 import * as path from "node:path";
 import { getBoxTimeISO } from "../../lib/time.js";
+import { hashStreamToFile, StreamByteLimitError } from "../../lib/hash-stream-to-file.js";
 import { enforceStagingLimits, MAX_STAGED_BYTES, StagingByteLimitError } from "./staging-limits.js";
 import {
   StagingSessionGoneError,
@@ -73,26 +71,16 @@ export async function addFileStreamed(params: AddFileStreamedParams): Promise<Ad
   const sessionDir = stagingSessionDir(boxRoot, id);
   const tmpPath = path.join(sessionDir, `.upload-tmp-${process.pid}-${crypto.randomUUID()}`);
 
-  const hash = createHash("sha256");
-  let size = 0;
-  // An async-generator transform meters + hashes each chunk and aborts a
-  // runaway body before it fully lands. pipeline handles backpressure + cleanup.
-  async function* meter(chunks: AsyncIterable<Buffer>): AsyncGenerator<Buffer> {
-    for await (const chunk of chunks) {
-      size += chunk.length;
-      if (size > MAX_STAGED_BYTES) throw new StagingByteLimitError();
-      hash.update(chunk);
-      yield chunk;
-    }
-  }
-
+  let size: number;
+  let sha256: string;
   try {
-    await pipeline(source, meter, createWriteStream(tmpPath));
+    ({ size, sha256 } = await hashStreamToFile({ source, destPath: tmpPath, maxBytes: MAX_STAGED_BYTES }));
   } catch (e) {
-    await fs.rm(tmpPath, { force: true });
+    // The metered writer speaks in bytes; staging's callers (and the 413
+    // mapping in the route) key on the staging-specific limit error.
+    if (e instanceof StreamByteLimitError) throw new StagingByteLimitError();
     throw e;
   }
-  const sha256 = hash.digest("hex");
 
   try {
     return await withStagingLock(id, async () => {
