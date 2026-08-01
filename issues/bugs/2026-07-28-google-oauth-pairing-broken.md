@@ -168,7 +168,7 @@ responsible for this failure.
 1. **Cloudflare Access intercepting the callback.** Google's redirect back to
    `/auth/callback` or `/auth/google-services/callback` may hit the Access wall
    instead of the app — no app log, exactly the observed signature. Ties to
-   [cloudflare-access-walling-prod-box](2026-07-21-cloudflare-access-walling-prod-box.md).
+   [cloudflare-access-walling-prod-box](../closed/bugs/2026-07-21-cloudflare-access-walling-prod-box.md).
 2. **Google Cloud console redirect-URI registration mismatch.** If the app now
    sends a redirect_uri the console's Authorized Redirect URIs list doesn't
    contain, Google rejects at its own screen (again, no app log).

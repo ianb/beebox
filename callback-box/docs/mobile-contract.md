@@ -536,7 +536,12 @@ See §1.3 (full request/response/errors).
     (staging is torn down only after delivery) all mean delivered; `failed:*` means the box will hand
     it to the agent.
     `note` is the batch's **introduction** — the uploader sends the composer text the user submitted
-    the files with, verbatim. It rides in the same atomic seal as `failedItems`, lands in the card's
+    the files with, verbatim. **Read it at finalize time, not when the batch starts.** A large batch
+    takes minutes and the natural way to caption one is to pick the files and then write about them,
+    so an uploader that snapshots the composer up front can only ever carry text typed *before* the
+    picker opened — which is how the first prod run shipped with no note at all (2026-07-31). For the
+    same reason an uploader **must not lock its text surface while a batch uploads**; gate the send
+    action, not typing. It rides in the same atomic seal as `failedItems`, lands in the card's
     `note` frontmatter, and renders as the first paragraph of the `<upload>` message body (above the
     generated summary, separated by a blank line). Capped at 10,000 chars (**400** over); a
     whitespace-only note is stored as absent, and a batch with no note produces an `<upload>` message

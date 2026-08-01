@@ -2,9 +2,19 @@
 title: "Agent writes a bare `Foo.type.card` filename in chat instead of a link"
 area: callback-box
 filed-by: agent
-needs: [manual-testing]
+resolution: implemented
 discovered-in: main session — a box produced `name_of_card.gdoc.card` in a chat response
 ---
+
+**Closed (fixed + boxholder-observed) 2026-07-31.** The copy-the-style fix landed:
+the chat prompt's Links example and the cards guide now model an in-sentence card
+reference with a **human-title label** (`chat/session/prompts.ts`, `agent-guide/cards.ts:66`)
+— no new rules, no prompt growth. And a **stochastic knowledge audit** for the
+chat-reply bare-filename bug now guards it — it measures the fail *rate* over N
+runs (the right metric for an agent-cognition problem), landed with the box-root
+ref-audit work (`d339b944` / `dbb0320c`). Boxholder reports not seeing it recur.
+Being a prompting issue it's inherently probabilistic; the audit is the
+regression guard — reopen (or check the audit's fail-rate) if it resurfaces.
 
 A box wrote a bare `name_of_card.gdoc.card` as literal text in a chat reply,
 instead of a markdown link the user could click. Boxholder reports it as a

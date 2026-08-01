@@ -128,7 +128,7 @@ final class BulkUploadTests: XCTestCase {
         )
 
         let items = (0..<70).map { makeItem(id: "p\($0)") }
-        let outcome = await coordinator.run(items: items, targetSessionID: "chat-1", note: "camera roll")
+        let outcome = await coordinator.run(items: items, targetSessionID: "chat-1", note: { "camera roll" })
 
         XCTAssertEqual(outcome, .delivered(uploaded: 70, failed: 0))
         XCTAssertEqual(transport.uploadCount, 70, "every photo must be uploaded, none dropped")
@@ -147,7 +147,7 @@ final class BulkUploadTests: XCTestCase {
             sleep: { _ in }
         )
 
-        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: nil)
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: { nil })
 
         XCTAssertEqual(outcome, .delivered(uploaded: 1, failed: 0))
         XCTAssertEqual(transport.uploadCount, 2, "the failed attempt should have been retried once")
@@ -162,7 +162,7 @@ final class BulkUploadTests: XCTestCase {
             sleep: { _ in }
         )
 
-        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: nil)
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: { nil })
 
         XCTAssertEqual(outcome, .delivered(uploaded: 0, failed: 1))
         XCTAssertEqual(transport.uploadCount, BulkUploadCoordinator.maxAttempts)
@@ -182,7 +182,7 @@ final class BulkUploadTests: XCTestCase {
         let outcome = await coordinator.run(
             items: [makeItem(id: "a"), makeItem(id: "b")],
             targetSessionID: "chat-1",
-            note: nil
+            note: { nil }
         )
 
         XCTAssertEqual(outcome, .delivered(uploaded: 0, failed: 2))
@@ -207,7 +207,7 @@ final class BulkUploadTests: XCTestCase {
             items: [makeItem(id: "a"), makeItem(id: "b")],
             sessionID: "s1",
             targetSessionID: "chat-1",
-            note: nil
+            note: { nil }
         )
 
         XCTAssertEqual(outcome, .delivered(uploaded: 2, failed: 0))
@@ -232,7 +232,7 @@ final class BulkUploadTests: XCTestCase {
             sleep: { _ in }
         )
 
-        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: "keep me")
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: { "keep me" })
 
         XCTAssertEqual(outcome, .accepted(uploaded: 1, failed: 0))
     }
@@ -247,7 +247,7 @@ final class BulkUploadTests: XCTestCase {
             sleep: { _ in }
         )
 
-        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: nil)
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: { nil })
 
         guard case .failed = outcome else {
             return XCTFail("an unsealed batch must report failure, got \(outcome)")
@@ -264,7 +264,7 @@ final class BulkUploadTests: XCTestCase {
             sleep: { _ in }
         )
 
-        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: nil)
+        let outcome = await coordinator.run(items: [makeItem(id: "a")], targetSessionID: "chat-1", note: { nil })
         XCTAssertEqual(outcome, .delivered(uploaded: 1, failed: 0))
     }
 
@@ -281,7 +281,7 @@ final class BulkUploadTests: XCTestCase {
         let outcome = await coordinator.run(
             items: [makeItem(id: "a")],
             targetSessionID: "chat-1",
-            note: nil,
+            note: { nil },
             importFailures: [BulkUploadAPI.FailedItem(id: nil, name: "photo-002", reason: "iCloud fetch failed")]
         )
 
@@ -304,12 +304,45 @@ final class BulkUploadTests: XCTestCase {
         let outcome = await coordinator.run(
             items: [],
             targetSessionID: "chat-1",
-            note: nil,
+            note: { nil },
             importFailures: [BulkUploadAPI.FailedItem(id: nil, name: "photo-001", reason: "unreadable")]
         )
 
         XCTAssertEqual(outcome, .delivered(uploaded: 0, failed: 1))
         XCTAssertNotNil(transport.finalizeBody, "finalize must still be called")
+    }
+
+    /// The introduction is read at FINALIZE, not when the batch starts.
+    ///
+    /// This is the prod bug (estate, 2026-07-31): the note was captured the
+    /// instant the picker closed, so only text typed BEFORE choosing photos could
+    /// ever become the batch's introduction. The boxholder picked seven photos,
+    /// typed a caption while they uploaded, and the batch shipped with no note at
+    /// all — a feature whose premise is "the batch arrives introduced" that was
+    /// nearly impossible to introduce.
+    func testNoteIsReadAtFinalizeNotAtStart() async {
+        let transport = ScriptedTransport(uploadStatuses: Array(repeating: 200, count: 9))
+        let coordinator = BulkUploadCoordinator(
+            api: BulkUploadAPI(box: makeBox(), transport: transport),
+            sleep: { _ in }
+        )
+
+        // Stands in for the composer: empty when the batch starts, typed into
+        // while the photos upload.
+        let composer = ComposerStub()
+        let outcome = await coordinator.run(
+            items: (0..<3).map { makeItem(id: "p\($0)") },
+            targetSessionID: "chat-1",
+            note: { await composer.text }
+        )
+        XCTAssertEqual(outcome, .delivered(uploaded: 3, failed: 0))
+
+        let finalized = transport.finalizeBody
+        XCTAssertEqual(
+            finalized?["note"] as? String,
+            "typed while uploading",
+            "the caption written during the upload must be the batch's introduction"
+        )
     }
 
     // MARK: - Fold-in staging
@@ -386,6 +419,20 @@ final class BulkUploadTests: XCTestCase {
             uploadedAt: "2026-07-30T19:12:00.000Z",
             size: 4
         )
+    }
+}
+
+/// Stands in for the composer during a batch: it starts empty, and by the time
+/// the coordinator asks for the note (at finalize) it holds what the user typed.
+private actor ComposerStub {
+    private var reads = 0
+    var text: String? {
+        get async {
+            reads += 1
+            // Any read at batch-start time would see nothing; the finalize-time
+            // read sees the caption.
+            return "typed while uploading"
+        }
     }
 }
 

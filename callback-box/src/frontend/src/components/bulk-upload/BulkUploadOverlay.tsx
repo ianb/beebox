@@ -58,6 +58,39 @@ function ItemRow({ item, onRetry }: { item: BulkItemView; onRetry: (id: string) 
   );
 }
 
+/**
+ * The batch's introduction, editable while the uploads run.
+ *
+ * Prefilled from whatever was in the composer when the overlay opened, but NOT
+ * frozen there: a large batch takes minutes, and the natural way to caption one
+ * is to pick the files and then write about them. Capturing the composer text at
+ * open time meant only text written beforehand could ever become the note —
+ * which made a feature whose premise is "the batch arrives introduced" nearly
+ * impossible to introduce (seen on prod, 2026-07-31).
+ */
+function BatchNoteField({ value, disabled, onChange }: {
+  value: string;
+  disabled: boolean;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <div className="mb-4">
+      <label className="block mb-1" htmlFor="bulk-upload-note">
+        <Text size="sm" tone="muted">What are these files? (sent with the batch)</Text>
+      </label>
+      <textarea
+        id="bulk-upload-note"
+        className="w-full rounded-lg border border-warm-300 bg-warm-50 px-3 py-2 text-sm"
+        rows={2}
+        value={value}
+        disabled={disabled}
+        placeholder="e.g. Receipts from the Tokyo trip — file them under 2026 travel"
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
 /** The batch summary line plus its exit / finalize controls. */
 function BatchFooter({ counts, exitLabel, doneLabel, finalizing, canFinalize, onExit, onDone }: {
   counts: { uploaded: number; failed: number; pending: number; total: number; totalBytes: number };
@@ -108,6 +141,9 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
   const [actionError, setActionError] = useState<string | null>(null);
   /** Sealed, but the box hadn't confirmed delivery before we stopped waiting. */
   const [stillWorking, setStillWorking] = useState(false);
+  // Seeded from the composer, then owned by this field — read at finalize, so a
+  // caption typed while the uploads run is the one that ships.
+  const [noteDraft, setNoteDraft] = useState(note);
 
   const { addFiles } = bulk;
 
@@ -132,7 +168,7 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
     setActionError(null);
     setFinalizing(true);
     try {
-      const trimmed = note.trim();
+      const trimmed = noteDraft.trim();
       const sessionId = await bulk.finalize({ note: trimmed !== "" ? trimmed : undefined });
       // Finalize only SEALS. Wait for the box to actually deliver before
       // releasing the user's text — otherwise a batch that fails during
@@ -160,7 +196,7 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
       setActionError(message);
       setFinalizing(false);
     }
-  }, [bulk, note, onExit, onDelivered]);
+  }, [bulk, noteDraft, onExit, onDelivered]);
 
   const handleCancel = useCallback(async (): Promise<void> => {
     if (bulk.counts.uploaded > 0 && !confirmingCancel) {
@@ -252,6 +288,8 @@ export function BulkUploadOverlay({ targetSessionId, seedFiles, note, onExit, on
             </Text>
           </div>
         ) : null}
+
+        <BatchNoteField value={noteDraft} disabled={finalizing || stillWorking} onChange={setNoteDraft} />
 
         {bulk.items.length === 0 ? (
           <div className="flex h-full min-h-40 items-center justify-center">
