@@ -1,9 +1,9 @@
 /**
  * Header chrome + control surfaces for InteractiveChat: the schedule
- * countdown pill, narration badge/icon, mute and new-session buttons, the
- * debug dropdown menu, the companion view panel, and the context link.
- * These are presentational/self-contained — they take props and emit
- * callbacks, holding no chat-machine state of their own.
+ * countdown pill, narration badge/icon, mute button, the companion view
+ * panel, and the context link. These are presentational/self-contained —
+ * they take props and emit callbacks, holding no chat-machine state of
+ * their own.
  */
 
 import { useState, useEffect, useRef, useCallback, memo } from "react";
@@ -176,20 +176,6 @@ export function MuteButton({ muted, onToggle }: { muted: boolean; onToggle: () =
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M18.36 5.64a9 9 0 0 1 0 12.72" />
         </svg>
       )}
-    </button>
-  );
-}
-
-export function NewSessionButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-      title="New Session"
-    >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
     </button>
   );
 }

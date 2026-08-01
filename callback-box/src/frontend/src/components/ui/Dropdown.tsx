@@ -96,7 +96,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
   // Focus the first menu item when the menu opens via a keyboard activation
   // of the trigger (a keyboard-activated click has `event.detail === 0`).
   // Mouse opens leave focus untouched so no focus ring appears. Some menus
-  // (e.g. `SessionListButton`) mount a loading row before their real content,
+  // (e.g. `SessionListPanel`) mount a loading row before their real content,
   // so a plain post-mount check can miss the first item entirely — a
   // one-shot MutationObserver picks it up whenever it actually appears.
   useEffect(() => {

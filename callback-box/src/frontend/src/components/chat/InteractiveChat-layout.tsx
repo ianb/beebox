@@ -10,13 +10,12 @@ import { type ReactNode } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
 import { type SelectionItem } from "../../lib/selection/serialize";
-import { SessionListButton } from "./SessionListButton";
 import { RecentFilesButton } from "./RecentFilesButton";
 import { LandmarkLinksButton } from "./LandmarkLinksButton";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
-import { SchedulePill, NarrationStatusBadge, MuteButton, NewSessionButton, ChatContextLink } from "./InteractiveChat-controls";
-import { ChatDebugMenu } from "./InteractiveChat-debug-menu";
+import { SchedulePill, NarrationStatusBadge, MuteButton, ChatContextLink } from "./InteractiveChat-controls";
+import { ChatMenu } from "./ChatMenu";
 import { ChatInputArea } from "./InteractiveChat-composer";
 import { MobileTextareaRow } from "./InteractiveChat-mobile-row";
 import type { OnZoomView } from "./ChatMessages";
@@ -35,10 +34,9 @@ export function ChatHeader(props: {
   onToggleMute: () => void;
   messages: SessionEntry[];
   onZoomView: OnZoomView;
-  onNewSession: () => void;
-  debugMenu: ReactNode;
+  chatMenu: ReactNode;
 }) {
-  const { effectiveContextDir, boxSlug, narrationEnabled, hqInFlight, onToggleNarration, muted, onToggleMute, messages, onZoomView, onNewSession, debugMenu } = props;
+  const { effectiveContextDir, boxSlug, narrationEnabled, hqInFlight, onToggleNarration, muted, onToggleMute, messages, onZoomView, chatMenu } = props;
   return (
     <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
       <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
@@ -60,14 +58,12 @@ export function ChatHeader(props: {
           label: summary.title,
         })}
       />
-      <SessionListButton contextDir={effectiveContextDir} />
-      <NewSessionButton onClick={onNewSession} />
-      {debugMenu}
+      {chatMenu}
     </header>
   );
 }
 
-export { ChatDebugMenu };
+export { ChatMenu };
 
 export function ChatStatusBanners(props: {
   error: string | null | undefined;

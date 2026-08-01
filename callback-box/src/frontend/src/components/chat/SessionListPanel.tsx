@@ -1,21 +1,27 @@
 /**
- * SessionListButton — clock-icon dropdown listing this box's web chat
- * sessions. Each row shows the first user message as a label and the
- * session-id suffix for disambiguation. Clicking a row navigates to
- * `/chat?session=<id>` so ChatPage can route into it.
+ * SessionListPanel — the "Recent chats" sub-panel body rendered inside
+ * `ChatMenu`'s dropdown. Lists this box's web chat sessions; each row shows
+ * the first user message as a label and the session-id suffix for
+ * disambiguation. Clicking a row navigates to `/chat?session=<id>` so
+ * ChatPage can route into it.
  *
  * The list is landmark-aware but never landmark-*filtered*: the chats bound to
  * the landmark you're chatting in come first under its name, and everything
  * else follows under "Other chats", tagged with where it lives. Every chat in
  * the box stays one scroll away — prominence, not scoping.
+ *
+ * Owns its own fetch/error/retry state: a load failure renders an explicit
+ * error row with a retry affordance, distinct from the empty "No sessions
+ * yet" state (a caught-and-cleared load used to fall through to the empty
+ * state, indistinguishable from a genuinely empty box).
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { getChatSessions, type ChatSessionInfo } from "../../api";
 import { cbSource } from "../../lib/source-tag";
-import { Dropdown, useDropdownClose } from "../ui/Dropdown";
+import { useDropdownClose } from "../ui/Dropdown";
 import { layoutSessionList } from "./session-list-grouping";
 
 /**
@@ -32,66 +38,46 @@ function relativeTime(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export function SessionListButton({ contextDir }: { contextDir: string | null }) {
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "error" }
+  | { kind: "loaded"; sessions: ChatSessionInfo[] };
+
+export function SessionListPanel({ contextDir }: { contextDir: string | null }) {
   const { boxSlug } = useParams({ strict: false });
   // eslint-disable-next-line no-restricted-syntax -- `strict: false` collapses the search type across every route; this component only ever renders under routes that carry an optional `session` string param, matching the ChatPage/HistoryPage convention.
   const search = useSearch({ strict: false }) as { session?: string };
   const currentSessionId = search.session ?? null;
+  const [state, setState] = useState<LoadState>({ kind: "loading" });
 
-  return (
-    <Dropdown
-      align="right"
-      width="w-[28rem]"
-      trigger={({ toggle, ariaProps }) => (
-        <button
-          onClick={toggle}
-          className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-          title="Session history"
-          {...ariaProps}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
-      )}
-    >
-      <SessionListMenu
-        boxSlug={boxSlug ?? ""}
-        currentSessionId={currentSessionId}
-        contextDir={contextDir}
-      />
-    </Dropdown>
-  );
-}
-
-/**
- * Menu body — rendered inside the Dropdown, so it mounts each time the menu
- * opens (which is when we lazy-fetch the session list) and can close the
- * Dropdown when a row is selected.
- */
-function SessionListMenu({
-  boxSlug,
-  currentSessionId,
-  contextDir,
-}: {
-  boxSlug: string;
-  currentSessionId: string | null;
-  contextDir: string | null;
-}) {
-  const [sessions, setSessions] = useState<ChatSessionInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
+  const load = useCallback(() => {
+    setState({ kind: "loading" });
     getChatSessions()
-      .then((result) => setSessions(result.sessions))
-      .catch((_e) => console.error("Failed to load sessions:", _e))
-      .finally(() => setLoading(false));
+      .then((result) => setState({ kind: "loaded", sessions: result.sessions }))
+      .catch((e) => {
+        console.error("Failed to load sessions:", e);
+        setState({ kind: "error" });
+      });
   }, []);
 
-  if (loading) {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (state.kind === "loading") {
     return <div className="px-3 py-2 text-sm text-warm-500">Loading...</div>;
   }
+  if (state.kind === "error") {
+    return (
+      <div className="px-3 py-2 text-sm text-danger-dark">
+        Couldn&rsquo;t load sessions.{" "}
+        <button type="button" onClick={load} className="underline hover:no-underline">
+          Retry
+        </button>
+      </div>
+    );
+  }
+  const { sessions } = state;
   if (sessions.length === 0) {
     return <div className="px-3 py-2 text-sm text-warm-500">No sessions yet</div>;
   }
@@ -107,7 +93,7 @@ function SessionListMenu({
     sessions,
     contextDir: activeRow?.contextDir ?? contextDir,
   });
-  const rowProps = { boxSlug, currentSessionId };
+  const rowProps = { boxSlug: boxSlug ?? "", currentSessionId };
 
   if (layout.kind === "flat") {
     return <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} {...rowProps} />;

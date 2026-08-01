@@ -11,7 +11,7 @@ import { CompanionViewPanel } from "./InteractiveChat-controls";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
 import {
-  ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
+  ChatView, ChatHeader, ChatMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
 import { TargetStrip } from "./TargetStrip";
 import { chatTargetStatus } from "../../input/targets/chat-target";
@@ -120,9 +120,10 @@ function HeaderRegion(props: ChatBodyProps) {
       onToggleMute={mute.handleToggleMute}
       messages={messages}
       onZoomView={onZoomView}
-      onNewSession={actions.handleNewSession}
-      debugMenu={
-        <ChatDebugMenu
+      chatMenu={
+        <ChatMenu
+          onNewSession={actions.handleNewSession}
+          contextDir={effectiveContextDir}
           onStopProcess={actions.handleStopProcess}
           onRestartProcess={actions.handleRestartProcess}
           onCompactSession={actions.handleCompactSession}
