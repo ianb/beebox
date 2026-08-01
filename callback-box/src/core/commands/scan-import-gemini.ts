@@ -42,6 +42,32 @@ export const rawScanAnalysisSchema = z.object({
 export type RawScanAnalysis = z.infer<typeof rawScanAnalysisSchema>;
 
 /**
+ * The model returned a schema-valid batch whose page coverage is wrong —
+ * missing/extra analyses or indices that aren't exactly 0..N-1. Trusting such
+ * a response misattaches every later analysis to the wrong image (observed
+ * with another vision model, 2026-08-01 comparison), so it fails hard here.
+ */
+export class ScanBatchMisalignedError extends Error {
+  constructor(params: { imageCount: number; analysisCount: number; indices: number[] }) {
+    super(
+      "Scan batch response misaligned with input pages: " +
+        `expected ${String(params.imageCount)} analyses indexed 0..${String(params.imageCount - 1)}, ` +
+        `got ${String(params.analysisCount)} with indices [${params.indices.join(", ")}]`
+    );
+    this.name = "ScanBatchMisalignedError";
+  }
+}
+
+/** Require exactly one analysis per input page, indexed 0..N-1. */
+function assertBatchAlignment(analyses: RawScanAnalysis[], imageCount: number): void {
+  const indices = analyses.map((a) => a.index).toSorted((a, b) => a - b);
+  const misaligned = analyses.length !== imageCount || indices.some((idx, position) => idx !== position);
+  if (misaligned) {
+    throw new ScanBatchMisalignedError({ imageCount, analysisCount: analyses.length, indices });
+  }
+}
+
+/**
  * Same fields as {@link RawScanAnalysis} — kept as a distinct alias (not a
  * duplicated schema) because only the *meaning* of `index`/`paired_with_index`
  * changes across `translateIndices` (batch-relative → global PDF page
@@ -219,6 +245,7 @@ export async function analyzeScanBatchWithGemini(
   }
 
   const analyses = parseGeminiJsonArray(text, { itemSchema: rawScanAnalysisSchema });
+  assertBatchAlignment(analyses, imagePaths.length);
   const usage: BatchUsage | null = usageMeta
     ? {
         prompt: usageMeta.promptTokenCount || 0,
