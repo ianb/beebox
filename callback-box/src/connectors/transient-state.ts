@@ -14,7 +14,7 @@ import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
 
 import { withCardLock } from "../lib/card-lock.js";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 
 /**
  * Build the transient state file path for a connector.
@@ -131,6 +131,9 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
   const { boxRoot, connectorName, defaultValue, update } = opts;
   const statePath = transientStatePath(boxRoot, connectorName);
   const lockPath = `${statePath}.lock`;
+  // Request-scoped: a short critical section whose callers fail fast (~5 s
+  // retry budget), so a crashed holder must clear in seconds, not minutes.
+  const lock = requestScopedLock(lockPath);
 
   // withCardLock is OUTER (see the doc comment): serialize same-process racers
   // before either one reaches the cross-process lock.
@@ -142,7 +145,7 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
 
     for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
       try {
-        await acquireLock(lockPath, { purpose: "transient-state", connectorName });
+        await acquireLock(lock, { purpose: "transient-state", connectorName });
       } catch (e) {
         if (e instanceof LockHeldError) {
           // Held by ANOTHER process (a same-process holder is impossible here —
@@ -158,7 +161,7 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
         await saveTransientState({ boxRoot, connectorName, data: updated });
         return updated;
       } finally {
-        await releaseLock(lockPath);
+        await releaseLock(lock);
       }
     }
     throw new TransientStateLockError(lockPath);

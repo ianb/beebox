@@ -18,7 +18,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
 import { errnoCode } from "../lib/error-guards.js";
 
@@ -122,9 +122,12 @@ function delay(ms: number): Promise<void> {
 async function withStoreLock<T>(fn: (store: SubscriptionStore) => Promise<T> | T): Promise<T> {
   await fs.mkdir(storeDir(), { recursive: true });
   const lockPath = `${storePath()}.lock`;
+  // Request-scoped: a short critical section whose callers fail fast (~5 s
+  // retry budget), so a crashed holder must clear in seconds, not minutes.
+  const lock = requestScopedLock(lockPath);
   for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
     try {
-      await acquireLock(lockPath, { purpose: "push-subscriptions" });
+      await acquireLock(lock, { purpose: "push-subscriptions" });
     } catch (e) {
       if (e instanceof LockHeldError) {
         await delay(LOCK_RETRY_MS);
@@ -137,7 +140,7 @@ async function withStoreLock<T>(fn: (store: SubscriptionStore) => Promise<T> | T
       const result = await fn(store);
       return result;
     } finally {
-      await releaseLock(lockPath);
+      await releaseLock(lock);
     }
   }
   throw new PushStoreLockError(lockPath);
