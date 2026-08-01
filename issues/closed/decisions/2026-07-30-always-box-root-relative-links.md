@@ -67,7 +67,7 @@ unambiguous > portable (and moves are rare + fixable by validation).
    a leading `/`." This alone should cut the chat error a lot.
 2. **Knowledge audit** that reproduces the error the way the bare-filenames one
    did — have the agent write a link *intuitively* and assert it uses a leading
-   `/` (see [agent-emits-bare-card-filenames](../../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)).
+   `/` (see [agent-emits-bare-card-filenames](../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)).
 3. **Landmark schema semantics:** change `ref` from "relative to the landmark's
    directory" to box-root-relative — a schema-doc + resolution change, and
    **existing landmark cards with relative refs need migration** (or keep
@@ -107,6 +107,6 @@ implementation is not yet scheduled.
 
 ## Related
 
-- [agent-emits-bare-card-filenames-in-chat](../../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)
+- [agent-emits-bare-card-filenames-in-chat](../bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)
   — same surface (agent link output), different failure; the knowledge-audit
   approach there applies here.
