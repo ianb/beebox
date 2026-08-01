@@ -10,13 +10,12 @@ import { type ReactNode } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
 import { type SelectionItem } from "../../lib/selection/serialize";
-import { RecentFilesButton } from "./RecentFilesButton";
-import { LandmarkLinksButton } from "./LandmarkLinksButton";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
-import { SchedulePill, ChatContextLink } from "./InteractiveChat-controls";
+import { SchedulePill } from "./InteractiveChat-controls";
 import { ChatMenu } from "./ChatMenu";
 import { VoiceChip } from "./VoiceChip";
+import { ContextChip } from "./ContextChip";
 import { ChatInputArea } from "./InteractiveChat-composer";
 import { MobileTextareaRow } from "./InteractiveChat-mobile-row";
 import type { OnZoomView } from "./ChatMessages";
@@ -45,8 +44,8 @@ export function ChatHeader(props: {
   } = props;
   return (
     <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
-      <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
-      <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
+      <h1 className="flex-shrink-0 text-sm font-semibold text-white tracking-wide">Chat</h1>
+      <ContextChip dir={effectiveContextDir} boxSlug={boxSlug} messages={messages} onZoomView={onZoomView} />
       <div className="flex-1" />
       <VoiceChip
         muted={muted}
@@ -56,20 +55,6 @@ export function ChatHeader(props: {
         hqInFlight={hqInFlight}
         selectedModel={selectedModel}
         onSelectModel={onSelectModel}
-      />
-      <LandmarkLinksButton
-        contextDir={effectiveContextDir}
-        onPanel={(link) => onZoomView({
-          target: { path: link.ref, viewer: null, params: {} },
-          label: link.label ?? link.title,
-        })}
-      />
-      <RecentFilesButton
-        entries={messages}
-        onPanel={(summary) => onZoomView({
-          target: { path: summary.path, viewer: null, params: {} },
-          label: summary.title,
-        })}
       />
       {chatMenu}
     </header>

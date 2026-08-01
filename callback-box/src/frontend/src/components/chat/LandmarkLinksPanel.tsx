@@ -1,16 +1,24 @@
 /**
- * Landmark-links dropdown button in the chat header.
+ * Landmark links + groups section of the context chip's menu — extracted
+ * from the retired `LandmarkLinksButton` trigger (chunk 4 of
+ * docs/plans/chat-header-chips.md). Owns the `trpc.landmarks.forDir` query.
  *
  * When the chat is scoped to a directory whose landmark carries
  * `navigation.links` (or `expand` fan-out), this surfaces those resolved
- * links as a curated bookmark menu. Each item opens its target in the
- * companion sidebar (via `onPanel`) rather than navigating away. Hidden
- * entirely when the scope has no landmark, or a landmark with no links.
+ * links as a curated bookmark list. Each item opens its target in the
+ * companion sidebar (via `onPanel`) rather than navigating away.
+ *
+ * Three outcomes, each distinct (principle 4, resilient-and-never-silent):
+ * a landmark with links renders them; a landmark with none (or no context at
+ * all) renders nothing — the section is simply absent, but the chip and menu
+ * around it remain; a query FAILURE renders an explicit "Couldn't load
+ * landmark links" row, rather than being indistinguishable from "no links"
+ * (the bug in the retired button).
  */
 
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
-import { Dropdown, useDropdownClose } from "../ui/Dropdown";
+import { useDropdownClose } from "../ui/Dropdown";
 
 interface ResolvedLink {
   ref: string;
@@ -25,62 +33,46 @@ interface ResolvedGroup {
   count: number;
 }
 
-interface LandmarkLinksButtonProps {
+interface LandmarkLinksPanelProps {
   /** Box-relative dir the chat is scoped to (`""` for root, null for none). */
   contextDir: string | null;
   /** Open a link's target in the companion pane. */
   onPanel: (link: ResolvedLink) => void;
 }
 
-function BookmarkIcon() {
-  return (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" />
-    </svg>
-  );
-}
-
-export function LandmarkLinksButton({ contextDir, onPanel }: LandmarkLinksButtonProps) {
-  const { data } = trpc.landmarks.forDir.useQuery(
+export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelProps) {
+  const { data, isError, error, refetch } = trpc.landmarks.forDir.useQuery(
     { dir: contextDir ?? "" },
     { enabled: contextDir !== null },
   );
+
+  if (contextDir === null) return null;
+
+  if (isError) {
+    return (
+      <div className="px-3 py-2 text-sm text-danger-dark">
+        Couldn&rsquo;t load landmark links: {error.message}.{" "}
+        <button type="button" onClick={() => void refetch()} className="underline hover:no-underline">
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   const landmark = data?.landmark ?? null;
   const links = landmark?.links ?? [];
   const groups = landmark?.groups ?? [];
   if (links.length === 0 && groups.length === 0) return null;
 
-  const menuTitle = landmark?.label ? `${landmark.label} links` : "Landmark links";
-
   return (
-    <Dropdown
-      align="right"
-      width="w-[24rem]"
-      trigger={({ toggle, ariaProps }) => (
-        <button
-          type="button"
-          onClick={toggle}
-          className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white"
-          title={menuTitle}
-          {...ariaProps}
-        >
-          <BookmarkIcon />
-        </button>
-      )}
-    >
-      <div className="px-3 py-2 border-b border-warm-200 text-xs text-warm-500 font-medium uppercase tracking-wide">
-        {menuTitle}
-      </div>
-      <div className="py-1">
-        {links.map((link) => (
-          <MenuLink key={link.ref} link={link} onPanel={onPanel} />
-        ))}
-        {groups.map((group) => (
-          <MenuGroup key={group.label} group={group} onPanel={onPanel} />
-        ))}
-      </div>
-    </Dropdown>
+    <div className="py-1">
+      {links.map((link) => (
+        <MenuLink key={link.ref} link={link} onPanel={onPanel} />
+      ))}
+      {groups.map((group) => (
+        <MenuGroup key={group.label} group={group} onPanel={onPanel} />
+      ))}
+    </div>
   );
 }
 

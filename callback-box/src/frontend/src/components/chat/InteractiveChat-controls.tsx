@@ -252,20 +252,3 @@ function CompanionViewPanelInner({
  * submit; callers pass `useCallback`-stable handlers (see InteractiveChat-view).
  */
 export const CompanionViewPanel = memo(CompanionViewPanelInner);
-
-/**
- * Small "Context: <dir>" link in the chat header for chats that were
- * started from a landmark.
- */
-export function ChatContextLink({ dir, boxSlug }: { dir: string | null; boxSlug: string }) {
-  if (!dir) return null;
-  return (
-    <a
-      href={withBase(`/${boxSlug}/browse/${dir}`)}
-      className="ml-3 text-xs text-white/80 hover:text-white truncate"
-      title={`Context: ${dir}/`}
-    >
-      {dir}/
-    </a>
-  );
-}

@@ -5,8 +5,8 @@ import { cn } from "../../lib/cn";
 
 // The "first focusable menu item" the open/close focus management below
 // looks for. Deliberately broader than `[role="menuitem"]`: several existing
-// menus nest plain focusable controls (e.g. `RecentFilesButton`'s per-row
-// preview/panel buttons, `LandmarkLinksButton`'s group-expand toggles) that
+// menus nest plain focusable controls (e.g. `RecentFilesPanel`'s per-row
+// preview/panel buttons, `LandmarkLinksPanel`'s group-expand toggles) that
 // aren't `MenuItem`s themselves but are still real, reachable menu content.
 const FOCUSABLE_MENU_ITEM_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
