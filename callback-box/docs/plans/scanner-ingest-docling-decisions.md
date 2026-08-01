@@ -11,11 +11,12 @@ appends as it goes.
 
 ## D1. `do_ocr=False` — trust the scanner's text layer
 
-Docling has no hybrid mode (open upstream request); force-OCR discards the
-existing layer and has a long-document bug. ScanSnap's OCR is the text
-source; Docling contributes layout/reading-order/tables. **Revisit:** if
-ScanSnap text quality disappoints, flip default or per-box config; reanalyze
-affected cards with `--force-ocr`.
+ScanSnap's OCR is the text source; Docling contributes
+layout/reading-order/tables. When this was decided, Docling had no hybrid
+mode; **that changed one release before our pin — see D15**, which
+re-examines and keeps this default with the new facts. Force-OCR discards
+the existing layer and has a long-document bug. **Revisit:** per D15's
+trigger; reanalyze affected cards with `--force-ocr` meanwhile.
 
 ## D2. Invocation: `uvx docling` CLI per document, not docling-serve
 
@@ -172,3 +173,29 @@ card. The cost is that the assets are discovered by convention rather than
 declared. **Uncertain** — this is the decision here I would most expect a
 reviewer to push back on; if agents turn out to miss the page renders, an
 explicit list (or a `page-count`) is additive and needs no migration.
+
+## D15. Hybrid OCR now exists upstream (`--ocr-mode pdf_aware_layout_regions`) — not adopted yet
+
+D7 flagged this as the biggest unchased thread; it has now been chased
+(web research, 2026-08-01). Docling 2.116.0 (2026-07-29, one release before
+our pin) added an `OcrMode` enum via PR #3710: `pdf_aware_layout_regions`
+starts from layout-detected boxes, drops every box already covered by a
+native text cell, OCRs only the survivors, and merges with `PDF_FIRST`
+priority so the scanner's text wins where both exist. Maintainers explicitly
+endorsed it as the answer to the skip-OCR-on-text-layer request family
+(#3464/#2036/#1229 — still open but functionally addressed; the direct
+`skip_text_layer_pages` proposal #3465 was closed in its favor). On a
+well-OCR'd ScanSnap page it reduces to nearly a no-op; its value is
+recovering regions the scanner's OCR missed (stamps, faded text, skew).
+
+**Decision: stay on `do_ocr=False` (D1) for now.** Costs of switching:
+ship ~100 MB EasyOCR weights + a live CPU OCR path on the server for a
+mechanism that rarely fires on good scans; the mode is one release old with
+its region-selection internals still actively churning (PR #3746 possibly
+obsoleted; FULL_PAGE-mode crash #3887 shows fresh edge cases). The benefit
+is empirical — it depends on how often real ScanSnap output has OCR gaps,
+which we have no data on yet. **Revisit:** after real scan volume, if triage
+surfaces documents with missing/garbled text regions (the symptom of scanner
+OCR gaps), or once the mode is a few releases old — switching is a config
+change plus deploying OCR weights, and `cb document reanalyze` back-fills
+existing cards.
