@@ -14,7 +14,8 @@
  * `send()` so a failure is recorded retryably rather than fire-and-forgotten.
  */
 
-import * as fs from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import * as readline from "node:readline";
 import type { ChatSession } from "./index.js";
 import type { ChatSessionRegistry } from "./registry.js";
 import type { EventBus } from "../../event-bus.js";
@@ -68,8 +69,22 @@ export async function userMessageAlreadyLanded(opts: {
   if (sessionId === null) return false;
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
   try {
-    const raw = await fs.readFile(logPath, "utf-8");
-    return raw.includes(docPath);
+    // Stream line by line with an early return — the target chat is the
+    // most-active session by construction, i.e. the biggest transcript on the
+    // box, and reading it whole is the allocation class that OOM'd prod
+    // (2026-08-01). `docPath` sits inside a single JSONL line, so a per-line
+    // match is equivalent to a whole-file match.
+    const fileStream = createReadStream(logPath, { encoding: "utf-8" });
+    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+    try {
+      for await (const line of rl) {
+        if (line.includes(docPath)) return true;
+      }
+    } finally {
+      rl.close();
+      fileStream.destroy();
+    }
+    return false;
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`[${logPrefix}] Could not read transcript ${logPath} for at-most-once probe:`, e);

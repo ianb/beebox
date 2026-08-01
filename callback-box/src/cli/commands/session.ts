@@ -15,6 +15,7 @@
 
 import { Command } from "commander";
 import * as fs from "node:fs";
+import { pipeline } from "node:stream/promises";
 import * as path from "node:path";
 import { requireBoxRoot } from "../../lib/paths.js";
 import {
@@ -156,10 +157,9 @@ export const sessionCommand = new Command("session")
         logPath = found.value;
       }
 
-      // --raw: dump the file
+      // --raw: dump the file (streamed — a transcript can exceed the heap)
       if (options.raw) {
-        const content = fs.readFileSync(logPath, "utf-8");
-        process.stdout.write(content);
+        await pipeline(fs.createReadStream(logPath), process.stdout, { end: false });
         return;
       }
 

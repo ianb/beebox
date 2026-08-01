@@ -9,6 +9,7 @@
  */
 
 import * as fs from "node:fs";
+import { pipeline } from "node:stream/promises";
 import {
   listSessions,
   MAX_SESSION_ENTRIES,
@@ -209,7 +210,8 @@ async function renderWindowedSession(options: {
 }): Promise<void> {
   const { meta, since, renderOptions, raw, toolReport } = options;
   if (raw) {
-    process.stdout.write(fs.readFileSync(meta.path, "utf-8"));
+    // Streamed — a transcript can exceed the heap.
+    await pipeline(fs.createReadStream(meta.path), process.stdout, { end: false });
     return;
   }
   if (toolReport) {
