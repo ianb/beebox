@@ -3,13 +3,23 @@ title: "Submitting many photos to chat fails (iOS); route >N through upload+refe
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it on a prod box
-needs: [manual-testing]
+resolution: implemented
 design: ../../callback-box/docs/plans/chat-photo-batch-upload.md
 labels: [mobile]
 ---
 
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** The
+`chat-photo-batch-upload` work landed on main (plan `80f2d0e2`, plus the
+bulk-upload robustness/silent-loss fixes in `189639a3` and `ea408a04`): above 4
+photos, both composers now upload the selection as a bounded-concurrency bulk
+batch instead of base64-inlining it, with the composer text carried as the
+batch's `note` so the agent files against it. Boxholder confirms the core failure
+is fixed on-device (70+ photos submit and land). Minor tweaks are still in
+progress on the worktree, but the reported bug is resolved. Reopen only if
+large-batch submits fail again.
+
 **Fix implemented on worktree `chat-photo-batch-upload`** (design:
-[chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)).
+[chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
 Above 4 photos, both composers now upload the selection as a bulk batch instead
 of base64-inlining it, and the composer text rides along as the batch's `note`
 so the agent files against it rather than asking what the files are.

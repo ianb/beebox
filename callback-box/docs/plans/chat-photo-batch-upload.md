@@ -10,7 +10,7 @@ inlining, on both the web composer and — as the deferred Track 3 of
 composer.
 
 The driving failure is recorded in
-[`issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md`](../../../issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md):
+[`issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md`](../../../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md):
 the boxholder selected 70+ camera-roll photos in the iOS app and the send failed
 client-side with no server-side trace at all.
 

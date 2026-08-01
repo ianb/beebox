@@ -1,21 +1,18 @@
 /**
- * Gesture orchestrator for the lightbox: owns the live pointer map and the mode
- * machine, turns raw pointer events into reducer events, and executes the
- * reducer's actions against a {@link LightboxRenderTarget} (which owns the
- * transform, dismiss offset, and rAF springs). All decision logic is pure and
+ * Gesture orchestrator for the lightbox: owns the mode machine, turns raw
+ * pointer events into reducer events, and executes the reducer's actions
+ * against a {@link LightboxRenderTarget} (which owns the transform, the
+ * dismiss/swipe offsets, and the rAF springs). All decision logic is pure and
  * lives in `lightbox-gesture-reducer.ts`, `lightbox-gesture-math.ts`, and
- * `lightbox-transform.ts`; this class is the imperative glue the hook drives.
+ * `lightbox-transform.ts`; where the fingers are lives in
+ * `lightbox-pointer-tracker.ts`. This class is the imperative glue the hook
+ * drives.
  *
  * Points are container-centered before the reducer sees them, so a `toggleZoom`
  * anchor is directly usable as a transform anchor.
  */
 
-import {
-  estimateVelocity,
-  isAtFit,
-  type Point,
-  type PointerSample,
-} from "./lightbox-gesture-math.js";
+import { isAtFit, SWIPE_GUTTER_PX, type Point } from "./lightbox-gesture-math.js";
 import {
   initialGestureState,
   reduceGesture,
@@ -23,30 +20,47 @@ import {
   type GestureEvent,
   type GestureState,
 } from "./lightbox-gesture-reducer.js";
+import { LightboxPointerTracker } from "./lightbox-pointer-tracker.js";
 import { LightboxRenderTarget, type LightboxElements } from "./lightbox-render-target.js";
 import { computePan, computePinch, type PanBase, type PinchBase } from "./lightbox-transform.js";
-
-const VELOCITY_SAMPLE_LIMIT = 8;
-/** Max |velocity| carried into a spring (px/s) — ~3 screen-heights/second. */
-const MAX_SPRING_VELOCITY_PX_PER_S = 3000;
 
 export class LightboxGestureController {
   private readonly els: LightboxElements;
   private readonly render: LightboxRenderTarget;
   private readonly onClose: () => void;
+  private readonly onNavigate: (step: -1 | 1) => void;
+  private readonly canSwipe: () => boolean;
 
   private gesture: GestureState = initialGestureState;
-  private readonly pointers = new Map<number, PointerSample[]>();
+  private readonly pointers: LightboxPointerTracker;
   private panBase: PanBase | null = null;
   private pinchBase: PinchBase | null = null;
   private dismissBaseY = 0;
   private dismissPointerStartY = 0;
+  private swipeBaseX = 0;
+  private swipePointerStartX = 0;
+  /** A committed swipe is parked off-screen awaiting the index change that
+   *  {@link reset} will follow. See {@link settleStrayOffsets}. */
+  private navigating = false;
   private resizeObserver: ResizeObserver | null = null;
 
-  constructor({ elements, onClose }: { elements: LightboxElements; onClose: () => void }) {
+  constructor({
+    elements,
+    onClose,
+    onNavigate,
+    canSwipe,
+  }: {
+    elements: LightboxElements;
+    onClose: () => void;
+    onNavigate: (step: -1 | 1) => void;
+    canSwipe: () => boolean;
+  }) {
     this.els = elements;
     this.render = new LightboxRenderTarget(elements);
+    this.pointers = new LightboxPointerTracker(elements.wrapper);
     this.onClose = onClose;
+    this.onNavigate = onNavigate;
+    this.canSwipe = canSwipe;
   }
 
   attach(): () => void {
@@ -81,105 +95,87 @@ export class LightboxGestureController {
 
   /** Reset contract: a src swap reuses the component; wipe all gesture state. */
   reset(): void {
-    for (const id of this.pointers.keys()) this.dropPointer(id);
+    this.pointers.dropAll();
     this.gesture = initialGestureState;
     this.panBase = null;
     this.pinchBase = null;
+    this.navigating = false;
     this.render.reset();
-  }
-
-  /** Remove a pointer from the map AND release its capture (idempotent). */
-  private dropPointer(id: number): void {
-    this.pointers.delete(id);
-    try {
-      this.els.wrapper.releasePointerCapture(id);
-    } catch (_e) {
-      /* ignore: releasing an already-lost pointer is harmless */
-    }
-  }
-
-  private latest(id: number): PointerSample | undefined {
-    const samples = this.pointers.get(id);
-    return samples?.[samples.length - 1];
-  }
-
-  private pinnedPointer(): number {
-    return [...this.pointers.keys()][0] ?? -1;
-  }
-
-  private pushSample(id: number, sample: PointerSample): void {
-    const samples = this.pointers.get(id);
-    if (!samples) return;
-    samples.push(sample);
-    if (samples.length > VELOCITY_SAMPLE_LIMIT) samples.shift();
   }
 
   private dispatch(event: GestureEvent): GestureAction[] {
     const outcome = reduceGesture(this.gesture, event);
     this.gesture = outcome.state;
     for (const action of outcome.actions) this.runAction(action);
-    this.settleStrayDismiss(outcome.actions);
+    this.settleStrayOffsets(outcome.actions);
     return outcome.actions;
   }
 
   /**
-   * Invariant: outside a dismiss (and outside `pending`, where a frozen offset
-   * is deliberately adoptable, and `settling`, where a spring already owns it),
-   * the figure carries no dismiss offset. An interrupted dismiss snap-back
-   * whose gesture then went elsewhere (horizontal release, pinch from pending)
-   * would otherwise leave the figure stuck part-way off and faded.
+   * Invariant: outside a dismiss or swipe (and outside `pending`, where a
+   * frozen offset is deliberately adoptable, and `settling`, where a spring
+   * already owns it), the figure carries neither offset. An interrupted
+   * snap-back whose gesture then went elsewhere (pinch from pending, a swipe
+   * promoted out) would otherwise leave the figure stuck part-way off —
+   * faded for a dismiss, or slid off-screen for a swipe.
+   *
+   * A COMMITTED swipe is the deliberate exception: it ends parked a full
+   * viewport off-screen on purpose, waiting for the index change to swap the
+   * image under it. Without the `navigating` guard this fires the instant the
+   * commit spring reports done, springing the OLD image back to centre — a
+   * visible bounce-back of the image you just swiped away. `reset()` clears
+   * the flag when the new image arrives.
    */
-  private settleStrayDismiss(actions: GestureAction[]): void {
+  private settleStrayOffsets(actions: GestureAction[]): void {
     const { mode } = this.gesture;
     if (mode !== "idle" && mode !== "panning" && mode !== "pinching") return;
     if (actions.some((a) => a.type === "close")) return;
-    if (this.render.getDismissY() === 0 || this.render.isDismissSettling()) return;
-    this.render.springDismiss({ velocity: 0, onDone: () => this.dispatch({ type: "springdone" }) });
+    if (this.navigating) return;
+    const springdone = () => this.dispatch({ type: "springdone" });
+    if (this.render.getDismissY() !== 0 && !this.render.isDismissSettling()) {
+      this.render.springDismiss({ velocity: 0, onDone: springdone });
+    }
+    if (this.render.getSwipeX() !== 0 && !this.render.isSwipeSettling()) {
+      this.render.springSwipe({ to: 0, velocity: 0, onDone: springdone });
+    }
   }
 
   private releaseVelocity(): Point {
-    const samples = this.pointers.get(this.pinnedPointer()) ?? [];
-    const perMs = estimateVelocity(samples);
-    // Clamp the carried spring velocity: jittery samples (near-zero dt) can
-    // estimate absurd speeds, and an unbounded kick sends the spring on a
-    // wild excursion before it decays.
-    const cap = MAX_SPRING_VELOCITY_PX_PER_S;
-    return {
-      x: Math.max(-cap, Math.min(cap, perMs.x * 1000)),
-      y: Math.max(-cap, Math.min(cap, perMs.y * 1000)),
-    };
+    return this.pointers.releaseVelocity();
   }
 
   private runAction(action: GestureAction): void {
     switch (action.type) {
       case "capturePointer":
-        try {
-          this.els.wrapper.setPointerCapture(action.pointerId);
-        } catch (_e) {
-          /* ignore: capture can throw for a departed pointer; uncaptured tracking still works */
-        }
+        this.pointers.capture(action.pointerId);
         return;
       case "releasePointer":
-        this.dropPointer(action.pointerId);
+        this.pointers.drop(action.pointerId);
         return;
       case "cancelSpring":
         this.render.cancelSprings();
         return;
       case "beginDismiss": {
-        const p = this.latest(this.pinnedPointer());
+        const p = this.pointers.latest(this.pointers.pinned());
         this.dismissBaseY = this.render.getDismissY();
         this.dismissPointerStartY = p ? p.point.y : 0;
         return;
       }
+      case "beginSwipe": {
+        const p = this.pointers.latest(this.pointers.pinned());
+        this.swipeBaseX = this.render.getSwipeX();
+        this.swipePointerStartX = p ? p.point.x : 0;
+        return;
+      }
       case "beginPan":
         this.render.clearTransition();
-        this.panBase = { transform: this.render.getTransform(), pointerStart: this.pinnedPoint() };
+        this.panBase = { transform: this.render.getTransform(), pointerStart: this.pointers.pinnedPoint() };
         return;
       case "beginPinch": {
         this.render.clearTransition();
         const [a, b] = action.pointerIds;
-        const pa = this.latest(a);
-        const pb = this.latest(b);
+        const pa = this.pointers.latest(a);
+        const pb = this.pointers.latest(b);
         if (pa && pb) {
           this.pinchBase = {
             distance: Math.hypot(pa.point.x - pb.point.x, pa.point.y - pb.point.y),
@@ -190,7 +186,7 @@ export class LightboxGestureController {
         return;
       }
       case "demotePinchToPan":
-        this.panBase = { transform: this.render.getTransform(), pointerStart: this.pointOf(action.pointerId) };
+        this.panBase = { transform: this.render.getTransform(), pointerStart: this.pointers.pointOf(action.pointerId) };
         return;
       case "settleDismiss":
         this.render.springDismiss({
@@ -198,6 +194,32 @@ export class LightboxGestureController {
           onDone: () => this.dispatch({ type: "springdone" }),
         });
         return;
+      case "settleSwipe":
+        this.render.springSwipe({
+          to: 0,
+          velocity: this.releaseVelocity().x,
+          onDone: () => this.dispatch({ type: "springdone" }),
+        });
+        return;
+      case "commitSwipe": {
+        // Fly the figure out the way the finger went (step +1 = next = the
+        // image leaves to the LEFT) and only then change image: at that point
+        // the incoming peer already sits dead centre, so the React swap that
+        // follows exchanges identical pixels rather than flashing. The travel
+        // is one viewport PLUS the strip gutter — the distance the peers are
+        // actually parked at; one viewport alone lands them a gutter off.
+        const { step } = action;
+        this.navigating = true;
+        this.render.springSwipe({
+          to: -step * (this.render.getViewportWidth() + SWIPE_GUTTER_PX),
+          velocity: this.releaseVelocity().x,
+          onDone: () => {
+            this.onNavigate(step);
+            this.dispatch({ type: "springdone" });
+          },
+        });
+        return;
+      }
       case "settlePan":
         this.render.springSettle({
           velocity: this.releaseVelocity(),
@@ -222,36 +244,33 @@ export class LightboxGestureController {
     }
   }
 
-  private pinnedPoint(): Point {
-    return this.pointOf(this.pinnedPointer());
-  }
-
-  private pointOf(id: number): Point {
-    return this.latest(id)?.point ?? { x: 0, y: 0 };
-  }
-
   private applyActiveFrame(): void {
     switch (this.gesture.mode) {
       case "panning":
         if (this.panBase) {
           this.render.setTransform(
-            computePan({ base: this.panBase, pointer: this.pinnedPoint(), frame: this.render.getFrame() }),
+            computePan({ base: this.panBase, pointer: this.pointers.pinnedPoint(), frame: this.render.getFrame() }),
           );
         }
         return;
       case "pinching": {
         if (!this.pinchBase || !this.gesture.pinchIds) return;
         const [a, b] = this.gesture.pinchIds;
-        const pa = this.latest(a);
-        const pb = this.latest(b);
+        const pa = this.pointers.latest(a);
+        const pb = this.pointers.latest(b);
         if (pa && pb) {
           this.render.setTransform(computePinch({ base: this.pinchBase, pointers: [pa.point, pb.point] }));
         }
         return;
       }
       case "dismissing": {
-        const p = this.latest(this.pinnedPointer());
+        const p = this.pointers.latest(this.pointers.pinned());
         if (p) this.render.setDismissY(this.dismissBaseY + (p.point.y - this.dismissPointerStartY));
+        return;
+      }
+      case "swiping": {
+        const p = this.pointers.latest(this.pointers.pinned());
+        if (p) this.render.setSwipeX(this.swipeBaseX + (p.point.x - this.swipePointerStartX));
         return;
       }
       case "idle":
@@ -273,21 +292,27 @@ export class LightboxGestureController {
       // mode is idle, and left alive it would fight the new gesture's writes
       // every frame. Cancelling freezes the current values for adoption.
       this.render.cancelSprings();
+      // Grabbing the strip mid-commit cancels that navigation: the spring that
+      // would have called onNavigate is now dead, so no index change (and thus
+      // no reset) is coming to clear the flag. Leaving it set would suppress
+      // the stray-offset invariant forever — release without moving and the
+      // figure stays parked off-screen with nothing to bring it back.
+      this.navigating = false;
       this.render.captureCenter();
     }
     const point = this.render.toCentered(e.clientX, e.clientY);
-    this.pointers.set(e.pointerId, [{ point, time: e.timeStamp }]);
+    this.pointers.start(e.pointerId, { point, time: e.timeStamp });
     this.dispatch({ type: "pointerdown", pointerId: e.pointerId, point, time: e.timeStamp });
     // Map ownership follows reducer acceptance: a pointer the reducer chose
     // not to track (e.g. a third finger during a pinch) must not linger in the
     // map, or pinnedPointer() later baselines gestures on a dead touch.
-    if (!(e.pointerId in this.gesture.pointers)) this.pointers.delete(e.pointerId);
+    if (!(e.pointerId in this.gesture.pointers)) this.pointers.drop(e.pointerId);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
     if (!this.pointers.has(e.pointerId)) return;
     const point = this.render.toCentered(e.clientX, e.clientY);
-    this.pushSample(e.pointerId, { point, time: e.timeStamp });
+    this.pointers.push(e.pointerId, { point, time: e.timeStamp });
     if (this.gesture.mode === "pending") {
       this.dispatch({
         type: "pointermove",
@@ -295,6 +320,7 @@ export class LightboxGestureController {
         point,
         time: e.timeStamp,
         atFit: isAtFit(this.render.getTransform().scale),
+        canSwipe: this.canSwipe(),
       });
     }
     this.applyActiveFrame();
@@ -308,27 +334,28 @@ export class LightboxGestureController {
     // Fold the release position in BEFORE deciding: with coalesced events the
     // last big delta can arrive only on pointerup, and it must count toward
     // velocity and the dismiss displacement.
-    this.pushSample(e.pointerId, { point, time: e.timeStamp });
+    this.pointers.push(e.pointerId, { point, time: e.timeStamp });
     this.applyActiveFrame();
-    const velocity = estimateVelocity(this.pointers.get(e.pointerId) ?? []);
     this.dispatch({
       type: "pointerup",
       pointerId: e.pointerId,
       point,
       time: e.timeStamp,
-      velocityY: velocity.y,
-      displacementY: this.render.getDismissY(),
+      velocity: this.pointers.velocityOf(e.pointerId),
+      dismissOffset: this.render.getDismissY(),
+      swipeOffset: this.render.getSwipeX(),
+      viewportWidth: this.render.getViewportWidth(),
       viewportHeight: this.render.getViewportHeight(),
     });
     // Safety net alongside the reducer's releasePointer action: no pointerup
     // path may leave its pointer in the map.
-    if (!(e.pointerId in this.gesture.pointers)) this.dropPointer(e.pointerId);
+    if (!(e.pointerId in this.gesture.pointers)) this.pointers.drop(e.pointerId);
   };
 
   private onPointerCancel = (e: PointerEvent): void => {
     if (!this.pointers.has(e.pointerId)) return;
     this.dispatch({ type: "pointercancel", pointerId: e.pointerId, time: e.timeStamp });
-    if (!(e.pointerId in this.gesture.pointers)) this.dropPointer(e.pointerId);
+    if (!(e.pointerId in this.gesture.pointers)) this.pointers.drop(e.pointerId);
   };
 
   private onClickCapture = (e: MouseEvent): void => {

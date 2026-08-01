@@ -126,8 +126,8 @@ to people; close when the soft launch happens. Builds on
    [image-orientation-exif-boundaries](../closed/bugs/2026-07-17-image-orientation-exif-boundaries.md),
    and the two landed-but-unverified mobile-web fixes awaiting a real
    phone
-   ([landmark-menu-overflows-mobile](../bugs/2026-07-19-landmark-menu-overflows-mobile.md),
-   [mobile-composer-grows-on-scroll](../bugs/2026-07-19-mobile-composer-grows-on-scroll.md)).
+   ([landmark-menu-overflows-mobile](../closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md),
+   [mobile-composer-grows-on-scroll](../closed/bugs/2026-07-19-mobile-composer-grows-on-scroll.md)).
    Conditional:
    [ios-pairing-flow-robustness](../bugs/2026-07-17-ios-pairing-flow-robustness.md)
    escalates to a gate if the iOS app ships with the release (external-URL

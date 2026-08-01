@@ -27,7 +27,7 @@ Protocols`, and is refused without it.
 ## Not the BrowsePage change
 
 The browse work in
-[browse-back-button-url-not-updated](2026-07-22-browse-back-button-url-not-updated.md)
+[browse-back-button-url-not-updated](../closed/bugs/2026-07-22-browse-back-button-url-not-updated.md)
 made the URL the source of truth for the open file. For a DIRECTORY url that
 change is a no-op for this hook: `dirPath` is `currentPath` before and after,
 and the hook itself was untouched. Worth re-checking, but the wiring is

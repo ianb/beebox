@@ -3,8 +3,14 @@ title: "Mobile: the landmark cards menu (bookmark icon) doesn't fit the viewport
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it on mobile
-needs: [manual-testing]
+resolution: implemented
 ---
+
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** Fix landed in
+`5b07cf0a`: the shared `Dropdown` primitive now clamps its portaled `fixed` menu
+into `[8px, vw-8px]` with `maxHeight`+scroll, and `LandmarkLinksButton` (plus
+`RecentFilesButton`) migrated onto it. Boxholder confirms the menu now fits the
+mobile viewport with all links reachable. Reopen if it overflows again.
 
 The landmark cards menu — opened from the **bookmark icon** in chat — doesn't
 fit on a mobile viewport. It overflows rather than adapting, so some of it is

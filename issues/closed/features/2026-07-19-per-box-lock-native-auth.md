@@ -2,10 +2,19 @@
 title: "Per-box lock: require re-auth (biometric/device) to open a sensitive box in a multi-box client"
 area: callback-box
 design: ../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
-needs: [manual-testing]
+resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder raised it while working through the queue
 ---
+
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** The iOS per-box lock
+shipped (design in
+[`ios-per-box-device-lock.md`](../../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md)):
+a device-local per-box preference gates navigation behind a fresh
+`LocalAuthentication` request (Face ID / Touch ID → passcode), re-locks on
+background and box switch, and keeps protected views mounted-but-opaque. Boxholder
+confirms physical-device acceptance. Reopen if the lock lets a box through
+unauthenticated.
 
 A multi-box client authenticates **once, to the app** — the iOS companion holds
 every paired box behind a single app-level auth. But **sensitivity isn't uniform
@@ -17,7 +26,7 @@ Proposal: mark some boxes as **locked**, so opening one requires an additional
 gate even inside an already-authenticated client.
 
 The implementation-ready iOS design is
-[`ios-per-box-device-lock.md`](../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md).
+[`ios-per-box-device-lock.md`](../../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md).
 It resolves the declaration question in favor of an honest device-local
 preference: this feature gates navigation on one phone and does not introduce a
 server policy that can become stale or imply enforcement a client cannot provide.
@@ -33,7 +42,7 @@ facilities** rather than inventing a PIN.
   access control, so the gate can protect *material* rather than just a screen
   (see the honesty question below).
 - **Android** — `BiometricPrompt` is the direct analogue; parity is tracked in
-  [android-per-box-device-lock-parity](2026-07-20-android-per-box-device-lock-parity.md).
+  [android-per-box-device-lock-parity](../../features/2026-07-20-android-per-box-device-lock-parity.md).
 - **Web/PWA** — WebAuthn/passkeys is the analogue, though a browser context makes
   the "protects material vs. protects a screen" problem sharper.
 
@@ -62,7 +71,7 @@ compromise:
   key-management story, that's the signal it has drifted past this scope.
 
 Independently: iOS stores its device token in plaintext rather than the Keychain
-([ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md)).
+([ios-token-plaintext-not-keychain](../../bugs/2026-07-17-ios-token-plaintext-not-keychain.md)).
 That's a real fix worth doing on its own merits — it is **not** a prerequisite
 for this feature under the scope above, so the two need not be sequenced
 together.
@@ -82,7 +91,7 @@ together.
   set is already an unlocked phone; a lock there is close to meaningless, so
   degrade gracefully rather than making the box unreachable.
 - **Relationship to local auth.** The
-  [local password auth](../closed/features/2026-07-16-local-password-auth-default-on.md)
+  [local password auth](2026-07-16-local-password-auth-default-on.md)
   work has shipped. This remains a **second, orthogonal axis**: that one is
   "is this client authenticated at all," this one is "may it open *this* box
   right now." The iOS-only local preference does not alter server authentication.

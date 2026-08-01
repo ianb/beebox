@@ -1,10 +1,19 @@
 ---
 title: "Regression: iOS shows both native + web composers after navigating (nativeComposer=1 lost on nav)"
 area: callback-box
-needs: [manual-testing]
+resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder on iOS, a landmark chat
 ---
+
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** Fix landed in
+`9ccf1b68`: native-shell detection now keys off the injected bridge (installed at
+document start on every navigation), with `nativeComposer=1` kept only as an
+initial-load fallback — so internal same-origin navigation can no longer make the
+web composer reappear under the native one. Boxholder confirms on-device: only the
+native composer shows after navigating into a landmark / switching sessions, and
+send is acknowledged. Reopen if the double-composer or send-confirm failure
+returns.
 
 ## Implemented 2026-07-23
 
@@ -77,6 +86,6 @@ On the device: pair a box, open chat (initial load — should be native-only),
 then navigate into a landmark / switch sessions and confirm the composer stays
 native-only. Then send from the native composer and confirm it's acknowledged.
 
-Sits on the [iOS input-plane parity](../features/2026-07-19-ios-input-plane-parity.md)
+Sits on the [iOS input-plane parity](../../features/2026-07-19-ios-input-plane-parity.md)
 surface and is downstream of the new-window routing change
-([ios new-tab](2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)).
+([ios new-tab](../../bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)).

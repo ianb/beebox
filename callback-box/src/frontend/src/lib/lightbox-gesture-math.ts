@@ -44,6 +44,18 @@ export const DISMISS_VELOCITY_PX_PER_MS = 0.5;
 export const DISMISS_DISPLACEMENT_RATIO = 0.3;
 /** Fraction of viewport height over which a dismiss drag fades fully. */
 export const DISMISS_FADE_RATIO = 0.4;
+/** Flick speed (px/ms) at or above which a swipe changes image on release. */
+export const SWIPE_VELOCITY_PX_PER_MS = 0.4;
+/** Fraction of viewport width a swipe must cross to navigate on release. */
+export const SWIPE_DISPLACEMENT_RATIO = 0.25;
+/**
+ * Gap (px) between adjacent images in the swipe strip. The peers are parked
+ * `viewportWidth + SWIPE_GUTTER_PX` away and a committed swipe springs exactly
+ * that far, so the incoming image lands dead centre — the two MUST agree, or
+ * the new image settles off-centre and jumps when the index swap resets the
+ * transform.
+ */
+export const SWIPE_GUTTER_PX = 32;
 /** Target scale a double-tap zooms to (and back from). */
 export const ZOOM_SCALE = 2.5;
 /** Hard ceiling on scale (pinch and double-tap). */
@@ -206,6 +218,35 @@ export function shouldDismiss({
     (movingAway && Math.abs(velocityY) >= DISMISS_VELOCITY_PX_PER_MS) ||
     Math.abs(displacementY) >= DISMISS_DISPLACEMENT_RATIO * viewportHeight
   );
+}
+
+/**
+ * Where a released horizontal swipe lands, as a step to add to the current
+ * image index: `-1` previous, `+1` next, `0` spring back. Mirrors
+ * {@link shouldDismiss} — a fast enough flick OR a far enough drag commits,
+ * and the flick only counts when it moves AWAY from rest, so dragging right
+ * then flicking sharply back toward centre is a cancel, not a navigation.
+ *
+ * Sign: dragging RIGHT pulls the previous image in from the left, so a
+ * positive displacement is a step of `-1`. A commit-speed flick with no
+ * displacement at all has no direction to commit to, and stays.
+ */
+export function swipeStep({
+  velocityX,
+  displacementX,
+  viewportWidth,
+}: {
+  velocityX: number;
+  displacementX: number;
+  viewportWidth: number;
+}): -1 | 0 | 1 {
+  if (displacementX === 0) return 0;
+  const movingAway = Math.sign(velocityX) === Math.sign(displacementX);
+  const commits =
+    (movingAway && Math.abs(velocityX) >= SWIPE_VELOCITY_PX_PER_MS) ||
+    Math.abs(displacementX) >= SWIPE_DISPLACEMENT_RATIO * viewportWidth;
+  if (!commits) return 0;
+  return displacementX > 0 ? -1 : 1;
 }
 
 /** Dismiss fade progress in `[0, 1]` from the current vertical displacement. */

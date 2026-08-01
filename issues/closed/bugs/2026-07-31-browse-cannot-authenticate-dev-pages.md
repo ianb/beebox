@@ -81,7 +81,7 @@ main-merge plus a `pnpm dev` restart, so this needs the boxholder in the loop.
 Any issue whose verification says "check it in a real browser" is currently
 un-verifiable by an agent on the local dev app. That includes the browse
 history work in
-[browse-back-button-url-not-updated](../../bugs/2026-07-22-browse-back-button-url-not-updated.md).
+[browse-back-button-url-not-updated](2026-07-22-browse-back-button-url-not-updated.md).
 
 ## Still open: defect 3's trigger is too broad
 

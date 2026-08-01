@@ -4,8 +4,11 @@
  * semantic events (points already container-centered; velocity/displacement
  * measured) and executes the returned {@link GestureAction}s. Every transition
  * lives here so the machine is doctestable without a DOM. Modes: `idle`,
- * `pending` (down, unclassified), `dismissing`, `panning`, `pinching`,
- * `settling`. See `test/frontend/lightbox-gesture-reducer.doctest.md`.
+ * `pending` (down, unclassified), `dismissing`, `swiping`, `panning`,
+ * `pinching`, `settling`. See `test/frontend/lightbox-gesture-reducer.doctest.md`.
+ *
+ * The shapes the transitions move between live in `lightbox-gesture-types.ts`
+ * and are re-exported here, so consumers have one import site for the machine.
  */
 
 import {
@@ -15,62 +18,20 @@ import {
   isTap,
   movedEnough,
   shouldDismiss,
+  swipeStep,
   type Point,
   type PointerSample,
 } from "./lightbox-gesture-math.js";
+import { initialGestureState, type GestureAction, type GestureEvent, type GestureResult, type GestureState, type TrackedPointer } from "./lightbox-gesture-types.js";
 
-export type GestureMode = "idle" | "pending" | "dismissing" | "panning" | "pinching" | "settling";
-
-interface TrackedPointer {
-  start: PointerSample;
-  current: PointerSample;
-}
-
-export interface GestureState {
-  mode: GestureMode;
-  pointers: Record<number, TrackedPointer>;
-  pinchIds: readonly [number, number] | null;
-  lastTap: PointerSample | null;
-  /** Absolute time (ms) until which a trailing `detail > 0` click is eaten. */
-  suppressClickUntil: number | null;
-}
-
-export type GestureEvent =
-  | { type: "pointerdown"; pointerId: number; point: Point; time: number }
-  | { type: "pointermove"; pointerId: number; point: Point; time: number; atFit: boolean }
-  | { type: "pointerup"; pointerId: number; point: Point; time: number; velocityY: number; displacementY: number; viewportHeight: number }
-  | { type: "pointercancel"; pointerId: number; time: number }
-  | { type: "springdone" }
-  | { type: "click"; detail: number; time: number }
-  | { type: "reset" };
-
-export type GestureAction =
-  | { type: "capturePointer"; pointerId: number }
-  | { type: "releasePointer"; pointerId: number }
-  | { type: "cancelSpring" }
-  | { type: "beginDismiss" }
-  | { type: "beginPan" }
-  | { type: "beginPinch"; pointerIds: readonly [number, number] }
-  | { type: "demotePinchToPan"; pointerId: number }
-  | { type: "settleDismiss" }
-  | { type: "settlePan" }
-  | { type: "settleToFit" }
-  | { type: "close" }
-  | { type: "toggleZoom"; anchor: Point }
-  | { type: "suppressClick" };
-
-export interface GestureResult {
-  state: GestureState;
-  actions: GestureAction[];
-}
-
-export const initialGestureState: GestureState = {
-  mode: "idle",
-  pointers: {},
-  pinchIds: null,
-  lastTap: null,
-  suppressClickUntil: null,
-};
+export {
+  initialGestureState,
+  type GestureAction,
+  type GestureEvent,
+  type GestureMode,
+  type GestureResult,
+  type GestureState,
+} from "./lightbox-gesture-types.js";
 
 function trackedIds(pointers: Record<number, TrackedPointer>): number[] {
   return Object.keys(pointers).map(Number);
@@ -114,9 +75,11 @@ function onPointerDown(state: GestureState, event: Extract<GestureEvent, { type:
     }
     case "pending":
     case "panning":
-    case "dismissing": {
-      // Second pointer promotes to a pinch. A dismiss in flight springs its
-      // (independent) figure offset back while the pinch takes over the wrapper.
+    case "dismissing":
+    case "swiping": {
+      // Second pointer promotes to a pinch. A dismiss or swipe in flight
+      // springs its (independent) figure offset back while the pinch takes
+      // over the wrapper.
       const existing = trackedIds(state.pointers);
       const first = existing[0];
       if (first === undefined) {
@@ -129,6 +92,7 @@ function onPointerDown(state: GestureState, event: Extract<GestureEvent, { type:
       const pinchIds: readonly [number, number] = [first, pointerId];
       const actions: GestureAction[] = [];
       if (state.mode === "dismissing") actions.push({ type: "settleDismiss" });
+      if (state.mode === "swiping") actions.push({ type: "settleSwipe" });
       actions.push({ type: "capturePointer", pointerId });
       actions.push({ type: "beginPinch", pointerIds: pinchIds });
       return result(
@@ -173,7 +137,11 @@ function onPointerMove(state: GestureState, event: Extract<GestureEvent, { type:
   if (classifyAxis(dx, dy) === "vertical") {
     return result({ ...state, mode: "dismissing", pointers, lastTap: null }, [{ type: "beginDismiss" }]);
   }
-  // Horizontal at fit: reserved for future prev/next nav — release, no action.
+  // Horizontal at fit is prev/next navigation — but only with somewhere to go.
+  if (event.canSwipe) {
+    return result({ ...state, mode: "swiping", pointers, lastTap: null }, [{ type: "beginSwipe" }]);
+  }
+  // A lone image has no neighbour to swipe to: release, no action.
   return result(
     { ...state, mode: "idle", pointers: withoutPointer(state.pointers, event.pointerId), lastTap: null },
     [{ type: "releasePointer", pointerId: event.pointerId }],
@@ -184,14 +152,17 @@ interface ReleaseInput {
   pointerId: number;
   time: number;
   snapBackOnly: boolean;
-  velocityY: number;
-  displacementY: number;
+  velocity: Point;
+  dismissOffset: number;
+  swipeOffset: number;
+  viewportWidth: number;
   viewportHeight: number;
   point: Point | null;
 }
 
 function onTrackedRelease(state: GestureState, input: ReleaseInput): GestureResult {
-  const { pointerId, time, snapBackOnly, velocityY, displacementY, viewportHeight, point } = input;
+  const { pointerId, time, snapBackOnly, velocity, dismissOffset, swipeOffset } = input;
+  const { viewportWidth, viewportHeight, point } = input;
   const pointers = withoutPointer(state.pointers, pointerId);
 
   switch (state.mode) {
@@ -215,12 +186,28 @@ function onTrackedRelease(state: GestureState, input: ReleaseInput): GestureResu
       return result({ ...base, lastTap: sample }, release);
     }
     case "dismissing": {
-      if (!snapBackOnly && shouldDismiss({ velocityY, displacementY, viewportHeight })) {
+      if (
+        !snapBackOnly &&
+        shouldDismiss({ velocityY: velocity.y, displacementY: dismissOffset, viewportHeight })
+      ) {
         return result({ ...state, mode: "idle", pointers, pinchIds: null }, [{ type: "close" }, { type: "releasePointer", pointerId }]);
       }
       return result(
         { ...state, mode: "settling", pointers, suppressClickUntil: suppressWindow(time) },
         [{ type: "settleDismiss" }, { type: "releasePointer", pointerId }],
+      );
+    }
+    case "swiping": {
+      // A cancel has no velocity to trust, so it always springs back.
+      const step = snapBackOnly
+        ? 0
+        : swipeStep({ velocityX: velocity.x, displacementX: swipeOffset, viewportWidth });
+      return result(
+        { ...state, mode: "settling", pointers, suppressClickUntil: suppressWindow(time) },
+        [
+          step === 0 ? { type: "settleSwipe" } : { type: "commitSwipe", step },
+          { type: "releasePointer", pointerId },
+        ],
       );
     }
     case "panning":
@@ -280,8 +267,10 @@ export function reduceGesture(state: GestureState, event: GestureEvent): Gesture
         pointerId: event.pointerId,
         time: event.time,
         snapBackOnly: false,
-        velocityY: event.velocityY,
-        displacementY: event.displacementY,
+        velocity: event.velocity,
+        dismissOffset: event.dismissOffset,
+        swipeOffset: event.swipeOffset,
+        viewportWidth: event.viewportWidth,
         viewportHeight: event.viewportHeight,
         point: event.point,
       });
@@ -290,8 +279,10 @@ export function reduceGesture(state: GestureState, event: GestureEvent): Gesture
         pointerId: event.pointerId,
         time: event.time,
         snapBackOnly: true,
-        velocityY: 0,
-        displacementY: 0,
+        velocity: { x: 0, y: 0 },
+        dismissOffset: 0,
+        swipeOffset: 0,
+        viewportWidth: 0,
         viewportHeight: 0,
         point: null,
       });

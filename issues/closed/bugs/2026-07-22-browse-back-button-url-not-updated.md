@@ -3,12 +3,19 @@ title: "Browse: the back button doesn't work — file selection changes state wi
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder using browse/
-needs: [manual-testing]
+resolution: implemented
 ---
 
-**Implemented and browser-verified 2026-07-31** on `worktree-browse-back-url`.
-`needs: manual-testing` stays for the parts an agent still cannot judge — see
-"What is left for a human" at the bottom.
+**Closed (implemented + boxholder-confirmed) 2026-07-31.** The URL is now the
+single source of truth for browse: file selection and the detail-panel back both
+route through `onNavigate` (push/replace chosen per action), `?view=` selects the
+renderer, and the raw `history.replaceState` that overwrote history entries is
+gone. Browser-verified on an isolated router (back steps file→file→dir one entry
+at a time; deep links open directly) and boxholder-confirmed. The remaining
+human-only checks below moved to their own follow-ups —
+[browse-list-live-refresh-not-firing](../../bugs/2026-07-31-browse-list-live-refresh-not-firing.md)
+for live refresh; the mobile-back and multi-renderer-toggle checks are minor and
+narrow. Reopen only if back/URL sync regresses.
 
 In `browse/`, the browser back button doesn't do the right thing because the URL
 doesn't update for enough actions — you click through several files, hit back,
@@ -93,7 +100,7 @@ Changed, all routed through `onNavigate`:
 
 Verifying this required first fixing `bin/browse`, which could not authenticate
 against the dev app at all — see
-[browse-cannot-authenticate-dev-pages](../closed/bugs/2026-07-31-browse-cannot-authenticate-dev-pages.md).
+[browse-cannot-authenticate-dev-pages](2026-07-31-browse-cannot-authenticate-dev-pages.md).
 Driven against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
 
 - Clicking two files in `store/recipes` produced a URL per file; browser back
@@ -106,7 +113,7 @@ Driven against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
 
 - **Live refresh could not be confirmed** — a card added to the open directory
   did not appear until reload. Filed as
-  [browse-list-live-refresh-not-firing](2026-07-31-browse-list-live-refresh-not-firing.md);
+  [browse-list-live-refresh-not-firing](../../bugs/2026-07-31-browse-list-live-refresh-not-firing.md);
   the wiring is byte-identical to before this change for a directory URL, so it
   is probably not this work, but it is unproven either way.
 - **The mobile "Back" button** (returns to the list, and a browser back after it
@@ -115,6 +122,6 @@ Driven against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
 - **The renderer toggle** writing `?view=<name>`, and that reloading keeps that
   renderer — needs a card type with more than one renderer.
 
-Related: the [iOS new-tab/nav work](2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
+Related: the [iOS new-tab/nav work](../../bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
 leans on in-app history + back; browse having correct history makes that path
 more viable there too.

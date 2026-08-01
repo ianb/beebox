@@ -93,7 +93,7 @@ preserves the live+touch properties that make the Echo Show better than a TV.
 ### Wrinkle either way: Cloudflare Access
 
 The prod box currently sits behind a Cloudflare Access wall
-([cloudflare-access-walling-prod-box](../bugs/2026-07-21-cloudflare-access-walling-prod-box.md)).
+([cloudflare-access-walling-prod-box](../closed/bugs/2026-07-21-cloudflare-access-walling-prod-box.md)).
 **B** needs the token route to pass *through* Access (or an Access bypass for that
 one path); **A** sidesteps Access by living on the pub host. Pin this down before
 building.

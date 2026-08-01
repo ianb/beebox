@@ -24,6 +24,8 @@ import {
   scaleAboutPoint,
   shouldDismiss,
   snapToFit,
+  SWIPE_GUTTER_PX,
+  swipeStep,
   toContainerCentered,
 } from "../../src/frontend/src/lib/lightbox-gesture-math.js";
 import {
@@ -226,6 +228,66 @@ Fade progress tracks displacement toward the fade ratio (40% of the viewport):
 ```ts
 [dismissProgress(0, 800), dismissProgress(160, 800), dismissProgress(400, 800)].join(",")
 => 0,0.5,1
+```
+
+## Swipe decision table
+
+Same two triggers as dismiss — a fast flick OR a quarter of the viewport —
+but the answer is a direction. Dragging RIGHT pulls the previous image in from
+the left, so a positive displacement steps `-1`:
+
+```ts
+swipeStep({ velocityX: -0.5, displacementX: -40, viewportWidth: 1280 })
+=> 1
+
+swipeStep({ velocityX: 0.5, displacementX: 40, viewportWidth: 1280 })
+=> -1
+
+swipeStep({ velocityX: 0.05, displacementX: -400, viewportWidth: 1280 })
+=> 1
+```
+
+A slow, short drag stays put, and so does a flick back toward centre — the
+same away-from-rest guard `shouldDismiss` applies, so a drag that changed its
+mind is a cancel:
+
+```ts
+swipeStep({ velocityX: 0.05, displacementX: -100, viewportWidth: 1280 })
+=> 0
+
+swipeStep({ velocityX: -0.9, displacementX: 100, viewportWidth: 1280 })
+=> 0
+```
+
+A commit-speed flick that never actually moved has no direction to commit to,
+so it stays rather than picking one arbitrarily:
+
+```ts
+swipeStep({ velocityX: 2, displacementX: 0, viewportWidth: 1280 })
+=> 0
+```
+
+A narrow viewport needs proportionally less travel — the threshold is a
+fraction of the width, not a fixed distance, so the gesture feels the same on
+a phone as on a desktop:
+
+```ts
+[
+  swipeStep({ velocityX: 0, displacementX: -110, viewportWidth: 390 }),
+  swipeStep({ velocityX: 0, displacementX: -110, viewportWidth: 1280 }),
+].join(",")
+=> 1,0
+```
+
+The strip gutter is shared, not two independent numbers. `ImageLightbox` parks
+each peer at `calc(100% ± SWIPE_GUTTER_PX)` and the controller springs a
+committed swipe exactly `viewportWidth + SWIPE_GUTTER_PX`. If those ever
+diverge the incoming image settles off-centre and visibly jumps when the index
+swap resets the transform, so the constant is exported and asserted here:
+
+```ts
+[SWIPE_GUTTER_PX, 390 + SWIPE_GUTTER_PX].join(" ")
+=> 32 422
 ```
 
 ## Fit epsilon snapping

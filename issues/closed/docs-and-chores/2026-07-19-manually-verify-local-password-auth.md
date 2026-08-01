@@ -1,10 +1,14 @@
 ---
 title: "Manually verify local password auth (login/setup/WS/browse + prod hardening)"
-needs: [manual-testing]
+resolution: implemented
 filed-by: agent
 discovered-in: worktree-local-password-auth — always-on auth shipped; flows an agent can't exercise
 area: callback-box
 ---
+
+**Closed (boxholder-verified) 2026-07-31.** Boxholder walked the login / setup /
+WebSocket-auth / browse-tooling flows and the prod-hardening step; all hold.
+Nothing to reopen unless a specific auth flow regresses.
 
 The always-on local-password-auth feature is implemented, cross-model reviewed
 (twice), and green on the full doctest suite (4374/4374). What automated tests
