@@ -4,8 +4,9 @@
  * Every scan-import run (photo or document) allocates one capture-session
  * card under `box/inbox/scan-<date>-<id>.capture-session.card` with a sibling
  * `.attach/` scope. `createSessionLayout` computes those paths and creates the
- * attach directory. The file-type predicates and the optional CLAUDE_SCANS.md
- * context reader round out the shared, side-feature-free primitives.
+ * attach directory. The file-type predicates and the boxholder-context
+ * assembly (scan guide via `scan-guide-context.ts`, plus `--context`) round
+ * out the shared, side-feature-free primitives.
  */
 
 import * as fs from "node:fs/promises";
@@ -19,6 +20,7 @@ import {
   PDF_EXTENSION,
   SUPPORTED_IMAGE_EXTENSIONS,
 } from "./upload-helpers.js";
+import { resolveScanGuideContext } from "./scan-guide-context.js";
 
 export interface SessionLayout {
   sessionId: string;
@@ -128,36 +130,32 @@ export async function resolveScanInputs(
   return { kind: "pdf", pdfPath };
 }
 
-export async function readScanContextFile(boxRoot: string): Promise<string | null> {
-  for (const name of ["CLAUDE_SCANS.md", "claude_scans.md"]) {
-    try {
-      const content = await fs.readFile(path.join(boxRoot, name), "utf-8");
-      if (content.trim().length > 0) return content;
-    } catch (_e) {
-      // Context file is optional — readFile rejects when this candidate
-      // name doesn't exist, which is the common case. Try the next name;
-      // returning null (no context) at the end is a valid outcome.
-    }
-  }
-  return null;
-}
-
 /**
- * Build the combined boxholder context from the optional CLAUDE_SCANS.md file
- * and any `--context` argument, logging which sources contributed.
+ * Build the combined boxholder context from the scan guide (or the
+ * deprecated CLAUDE_SCANS.md fallback) and any `--context` argument,
+ * logging which sources contributed and surfacing deprecation warnings.
  */
 export async function resolveBoxholderContext(
   ctx: CommandContext,
   extraContext: string | undefined
 ): Promise<string | null> {
-  const fileContext = await readScanContextFile(ctx.boxRoot);
+  const guideContext = await resolveScanGuideContext(ctx.boxRoot);
+  for (const warning of guideContext?.warnings ?? []) {
+    ctx.writeLine(warning);
+  }
   const contextParts: string[] = [];
-  if (fileContext) contextParts.push(fileContext.trim());
+  if (guideContext) contextParts.push(guideContext.text.trim());
   if (extraContext && extraContext.trim().length > 0) contextParts.push(extraContext.trim());
   const boxholderContext = contextParts.length > 0 ? contextParts.join("\n\n---\n\n") : null;
   if (boxholderContext) {
+    const sourceLabel =
+      guideContext === null
+        ? ""
+        : guideContext.source === "guide"
+          ? " from scan guide"
+          : " from CLAUDE_SCANS.md (deprecated)";
     ctx.writeLine(
-      `Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`
+      `Using boxholder context (${boxholderContext.length} chars${sourceLabel}${extraContext ? " + --context" : ""})`
     );
   }
   return boxholderContext;

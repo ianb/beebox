@@ -11,7 +11,7 @@ import { errorMessage } from "../../lib/error-guards.js";
 export const scanImportCommand = new Command("scan-import")
   .description("Import a JPEG batch as photo image cards, or a PDF as a document")
   .argument("<inputs...>", "PDF (one) or image files (many) — absolute or relative to box root")
-  .option("--context <text>", "Extra context appended to CLAUDE_SCANS.md for this run")
+  .option("--context <text>", "Extra context appended to the scan-guide context for this run")
   .option("--source <text>", "Provenance recorded on the produced cards (e.g. scan-upload/<token-name>)")
   .action(async (inputs: string[], options: { context?: string; source?: string }) => {
     try {

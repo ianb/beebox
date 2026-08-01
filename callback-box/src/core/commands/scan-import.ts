@@ -348,7 +348,7 @@ registerCommand({
     },
     {
       name: "context",
-      description: "Extra context appended to CLAUDE_SCANS.md content for this run",
+      description: "Extra context appended to the scan-guide context for this run",
       required: false,
       type: "string",
     },
