@@ -99,9 +99,10 @@ function patchConsole() {
 
 /** Call at app init to start capturing logs. Always captures errors/warns to server. */
 export function enableDebugLogCapture() {
-  // No-op under SSR (`cb render`): patchConsole adds window error listeners and
-  // its patched console forwards to the debug endpoint — both browser-only, and
-  // app-shell.tsx calls this at module top-level where SSR's window is undefined.
+  // No-op outside a browser: patchConsole adds window error listeners and its
+  // patched console forwards to the debug endpoint — both browser-only, and
+  // app-shell.tsx calls this at module top-level, so a non-browser evaluation
+  // would hit it on import.
   if (typeof window === "undefined") return;
   patchConsole();
 }

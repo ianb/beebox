@@ -36,7 +36,6 @@ export {
   getChatHistory,
   getChatSessions,
   getChatStatus,
-  getDefaultChatSession,
   interruptChat,
   postAudioForHqTranscription,
   restartChatSubprocess,

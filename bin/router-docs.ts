@@ -358,7 +358,22 @@ async function listRepoMarkdown(repoRoot: string): Promise<string[]> {
       ["ls-files", "--cached", "--others", "--exclude-standard", "*.md", "**/*.md"],
       { cwd: repoRoot },
     );
-    return Array.from(new Set(stdout.split("\n").filter(Boolean))).sort();
+    const files = stdout.split("\n").filter(Boolean);
+
+    // scratch/ is deliberately gitignored (scratch/*), so --exclude-standard
+    // above drops it — but scratch/ is exactly where agents leave deliverable
+    // orientation docs the boxholder wants to browse. Re-admit ONLY ignored
+    // markdown under scratch/, scoped so node_modules/docs/generated stay out.
+    try {
+      const { stdout: scratch } = await execa(
+        "git",
+        ["ls-files", "--others", "--ignored", "--exclude-standard", "scratch/*.md", "scratch/**/*.md"],
+        { cwd: repoRoot },
+      );
+      files.push(...scratch.split("\n").filter(Boolean));
+    } catch { /* no scratch/ or git quirk — just skip it */ }
+
+    return Array.from(new Set(files)).sort();
   } catch {
     return [];
   }

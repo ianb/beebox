@@ -69,8 +69,9 @@ export function insertTokensAtCursor(tokens: string, opts: {
  */
 export function useChatAttachmentValues(): { attachments: ImageItem[]; pendingImageCount: number; fileAttachments: FileItem[] } {
   const emissionStore = useEmissionStore();
-  // Third argument (server snapshot) is required for SSR (`cb render` goes
-  // through renderToString) — same convention as useInputValue in input-store.ts.
+  // Third argument is useSyncExternalStore's optional server-snapshot getter;
+  // passing the same getter keeps the store correct if it is ever read outside a
+  // browser — same convention as useInputValue in input-store.ts.
   const getImages = () => emissionStore.get().images;
   const getPendingImages = () => emissionStore.get().pendingImages;
   const getFiles = () => emissionStore.get().files;

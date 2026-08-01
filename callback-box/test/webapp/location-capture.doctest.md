@@ -9,7 +9,7 @@ import { appRouter } from "../../src/webapp/trpc/router.js";
 import { loadLocation } from "../../src/core/location-store.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-// Minimal tRPC context — capture only reads ctx.boxRoot (cf. ssr/render.tsx).
+// Minimal tRPC context — capture only reads ctx.boxRoot.
 function caller(boxRoot) {
   const ctx = {
     boxRoot,

@@ -49,7 +49,6 @@ import {
   lsCommand,
   searchCommand,
   containsCommand,
-  renderCommand,
   pubCommand,
   viewCommand,
   usageCommand,
@@ -124,7 +123,6 @@ program.addCommand(attachmentsCommand);
 program.addCommand(lsCommand);
 program.addCommand(searchCommand);
 program.addCommand(containsCommand);
-program.addCommand(renderCommand);
 program.addCommand(pubCommand);
 program.addCommand(viewCommand);
 program.addCommand(usageCommand);

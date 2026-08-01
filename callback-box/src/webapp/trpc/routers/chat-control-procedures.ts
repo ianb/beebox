@@ -20,30 +20,42 @@ function requireRuntime(boxRoot: string): ChatRuntime {
   return runtime;
 }
 
+export interface ChatSessionStatus {
+  sessionId: string | null;
+  running: boolean;
+  busy: boolean;
+  model: string | null;
+}
+
+/**
+ * A session's live status (running/busy/model), or the idle shape when there
+ * is no session id or the id isn't live. Model comes from the persisted file
+ * so an idle-evicted session still reports its pinned model. Shared by
+ * `chat.status` and `chat.bootstrap`.
+ */
+export function readSessionStatus(boxRoot: string, sessionId: string | null): ChatSessionStatus {
+  const { registry } = requireRuntime(boxRoot);
+  const persistedModel = loadPersistedChatModel(boxRoot);
+  if (!sessionId) {
+    return { sessionId: null, running: false, busy: false, model: persistedModel };
+  }
+  const target = registry.get(sessionId);
+  if (!target) {
+    return { sessionId, running: false, busy: false, model: persistedModel };
+  }
+  return {
+    sessionId: target.getSessionId(),
+    running: target.isRunning(),
+    busy: target.isBusy(),
+    model: target.getCurrentModel(),
+  };
+}
+
 export const chatControlProcedures = {
-  // Session status (running/busy/model). Model comes from the persisted file so
-  // an idle-evicted session still reports its pinned model.
-  status: publicProcedure.input(z.object({ session: z.string().optional() })).query(({ input, ctx }) => {
-    const { registry } = requireRuntime(ctx.boxRoot);
-    const persistedModel = loadPersistedChatModel(ctx.boxRoot);
-    const sessionId = input.session;
-    if (!sessionId) {
-      const noSession: string | null = null;
-      return { sessionId: noSession, running: false, busy: false, model: persistedModel };
-    }
-    const target = registry.get(sessionId);
-    if (!target) {
-      const knownSession: string | null = sessionId;
-      return { sessionId: knownSession, running: false, busy: false, model: persistedModel };
-    }
-    const activeSession: string | null = target.getSessionId();
-    return {
-      sessionId: activeSession,
-      running: target.isRunning(),
-      busy: target.isBusy(),
-      model: target.getCurrentModel(),
-    };
-  }),
+  // Session status (running/busy/model).
+  status: publicProcedure
+    .input(z.object({ session: z.string().optional() }))
+    .query(({ input, ctx }) => readSessionStatus(ctx.boxRoot, input.session ?? null)),
 
   // Change a session's active model. getOrCreate re-registers an evicted session
   // rather than 404'ing; the live subprocess is restarted so the next turn picks

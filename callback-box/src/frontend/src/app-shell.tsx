@@ -6,7 +6,7 @@
  * classes sit next to the logic. This file is routing glue.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Outlet, useParams, useNavigate, useLocation } from "@tanstack/react-router";
 import { BrowsePage, type BrowseNavigateOptions } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
@@ -17,14 +17,13 @@ import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
 import { BoxActionsTile } from "./components/BoxSelectionTiles";
-import { fetchBoxes } from "./lib/boxes";
+import { useBoxes } from "./hooks/useBoxes";
+import type { KnownBox } from "./lib/boxes";
 import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
 import { href, toSearch } from "./lib/routing";
-
-interface KnownBox { slug: string; name: string; }
 
 // Re-exported for the route tree
 export { BoxRedirect } from "./pages/BoxSelection";
@@ -60,28 +59,10 @@ export function AppLayout() {
 
   // Validate that the box in the URL actually exists. An unknown slug
   // (typical after copying a URL across worktrees) used to fall through
-  // to the page components and crash on a missing API response.
-  const [boxesState, setBoxesState] = useState<{
-    boxes: KnownBox[];
-    loaded: boolean;
-    error: boolean;
-  }>({
-    boxes: [],
-    loaded: false,
-    error: false,
-  });
-  useEffect(() => {
-    fetchBoxes()
-      .then((r) => setBoxesState({ boxes: r.boxes, loaded: true, error: false }))
-      .catch((err: unknown) => {
-        // A silent failure here used to leave loaded:false forever, which
-        // rendered the box as "still checking" indefinitely (effectively
-        // treating an unknown box as existing). Surface it as a distinct
-        // error state instead of a permanent loading hang.
-        console.error("Failed to load box list:", err);
-        setBoxesState({ boxes: [], loaded: true, error: true });
-      });
-  }, []);
+  // to the page components and crash on a missing API response. A failed
+  // list is its own state (not "still checking", which would render the box
+  // as existing forever) — `useBoxes` reports it, and logs it once.
+  const boxesState = useBoxes();
   const boxExists =
     !boxesState.loaded || boxesState.error || boxesState.boxes.some((b) => b.slug === boxSlug);
 

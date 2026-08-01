@@ -14,7 +14,7 @@
  *   multipart audio upload. tRPC doesn't carry `multipart/form-data` bodies.
  *
  * Already-tRPC, kept as thin wrappers (NOT REST — no fetch(), no HTTP route):
- * `getChatStatus`, `getDefaultChatSession`, `setChatModel`, `getChatFeatures`,
+ * `getChatStatus`, `setChatModel`, `getChatFeatures`,
  * `setChatFeature`, `getChatHistory`, `getChatSessions`, `interruptChat`,
  * `restartChatSubprocess` all call `trpcClient.chat.*` directly. They exist
  * because their callers (xstate actors in `machines/`) invoke them
@@ -79,10 +79,6 @@ export interface SessionEntry {
 
 export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
   return trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
-}
-
-export async function getDefaultChatSession(): Promise<{ sessionId: string | null }> {
-  return trpcClient.chat.defaultSession.query();
 }
 
 export async function setChatModel(params: { sessionId: string; model: string | null }): Promise<{ ok: boolean; model: string | null }> {

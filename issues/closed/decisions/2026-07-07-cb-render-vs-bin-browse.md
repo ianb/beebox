@@ -3,7 +3,14 @@ title: "cb render vs bin browse"
 area: callback-box
 filed-by: agent
 discovered-in: main session — after fixing cb render's SSR crash and building bin/browse prod access, the boxholder questioned whether cb render earns its keep
+resolution: implemented
 ---
+
+> **Resolved 2026-08-01: removed.** `cb render` and its SSR entry graph are
+> gone (commits `45c36049`, `45c9aa7c`, `0ee5b6e8`; five call sites rewired
+> off `useSSRMachine` to `useMachine` in `45c9aa7c`). See
+> [remove-cb-render](../../../callback-box/docs/implemented-plans/remove-cb-render.md)
+> for the removal plan.
 
 `cb render` (React SSR → HTML, `src/cli/commands/render.ts` + `src/frontend/src/ssr/`)
 and `bin/browse` (real headless Chromium, now with prod access via
@@ -15,7 +22,7 @@ remove it.
 ## The honest case against (why this is filed)
 
 - **It's currently broken past the crash.** Even after the SSR-safety fixes
-  (see [cb-render-ssr-window-undefined](../closed/bugs/2026-07-07-cb-render-ssr-window-undefined.md)),
+  (see [cb-render-ssr-window-undefined](../bugs/2026-07-07-cb-render-ssr-window-undefined.md)),
   `renderToString` yields an empty `<body>` — the app is React-Query/Suspense-
   driven and `renderToString` doesn't await Suspense. Making it emit real content
   needs streaming SSR (`renderToPipeableStream`) or a non-suspense prefetch path:

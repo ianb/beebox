@@ -17,7 +17,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | Doctest system built (runner: `tap`). DI pattern established. |
 | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced react-markdown/remark in 2026-05) for custom tags like `{% quote %}`. See `docs/cards-as-markdown.md`. |
 | 23 | [Utility library replacements](#decision-23-utility-libraries--replace-hand-rolled-code) | Adopted: execa, sanitize-filename, ky. proper-lockfile reverted 2026-04, re-adopted 2026-07-21 (now backs `src/lib/file-lock.ts`). date-fns still TODO. html-entities now orphaned (rss connector removed). |
-| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated (`src/frontend/src/machines/`), replaced ~30 useState + ~15 useRef hooks. SSR state injection via `cb render` with scenario/state exploration. |
+| 1 | [XState (frontend state)](#decision-1-frontend-state-management--xstate) | All 6 machines migrated (`src/frontend/src/machines/`), replaced ~30 useState + ~15 useRef hooks. The SSR state-injection layer was removed with `cb render` (2026-08-01); machines now use `useMachine` directly. |
 | 20 | [Overmind + node --watch](#decision-20-dev-runner--overmind--node---watch) | Superseded by Decision 24. `cb serve --dev` still works for backend-only. |
 | 4 | [TanStack Router](#decision-4-routing--tanstack-router) | Code-based route tree, typed params, `href()` helper for dynamic paths. Replaced react-router-dom (dep removed). |
 
@@ -179,8 +179,7 @@ All machines live in `src/frontend/src/machines/`. Each owns one feature's lifec
 - **Thin hook wrappers preserve public interfaces.** `useVoiceRecorder`, `useRealtimeTranscription`, `useSpeechPlayback`, `useSSE` all preserve their original return types. Components consuming them needed zero changes.
 - **Direct `useMachine` for page-level machines.** `ChatPage` and `AdminPage.ClaudeCodeSection` use `useMachine()` directly since only one component consumes each.
 - **Granularity: per-feature.** Each machine covers one hook or one component's behavior. Machines are focused and independently testable.
-- **SSR state injection via `useSSRMachine`.** Drop-in replacement for `useMachine` that checks an `SSRStateContext` for a pre-built snapshot. During SSR (`cb render`), machines start in the injected state instead of their initial state. `machine.resolveState({ value, context })` builds snapshots from plain serializable data.
-- **State registry for exploration.** `src/frontend/src/ssr/state-registry.ts` declares all machines, their states, default contexts, and named scenarios per route. `cb render --list-states` enumerates what's available; `cb render --scenario streaming` renders a page in that state. This is the "state blob in, UI out" workflow the architecture was designed for.
+- **~~SSR state injection via `useSSRMachine`~~ — removed 2026-08-01.** A `useMachine` wrapper hydrated machines from an `SSRStateContext` so `cb render` could start them in an arbitrary state, and a state registry (`src/frontend/src/ssr/state-registry.ts`) declared every machine's states and named per-route scenarios. This was the "state blob in, UI out" workflow the architecture was designed for, and it was never adopted — no test or tool ever drove it. It went with `cb render`; every call site now uses `useMachine` directly. Arbitrary-state exploration is the one capability consciously given up; `bin/browse` shows only states the running app actually reaches.
 
 ### Deferred: parent orchestrator for voice turn-taking
 
@@ -783,9 +782,9 @@ Mocking is built into the code through explicit dependency injection, not bolted
 - **JSDoc `@example` extraction** — Mode 1 (inline doctests in source files) is not built. All tests are Mode 2 (markdown files).
 - **Self-describing services with scenarios** — Services don't export test scenarios yet.
 - **Property testing via fast-check** — Not adopted.
-- **~~Snapshot as interactive agent tool~~** — **Done.** `cb render` is the CGI-style renderer: takes a route + state and produces HTML. Supports `--scenario`, `--machine` (XState state override), `--mock` (tRPC data override), `--selector` (CSS extraction), `--list-states` (enumerate available states/scenarios). State registry in `src/frontend/src/ssr/state-registry.ts`.
+- **~~Snapshot as interactive agent tool~~** — **Built, then removed (2026-08-01).** `cb render` was a CGI-style renderer taking a route + state and producing HTML, with `--scenario`/`--machine`/`--mock`/`--selector`/`--list-states`. `renderToString` cannot await Suspense, so once the app became React-Query driven it emitted an empty `<body>`; fixing it meant streaming SSR. Removed in favour of `bin/browse`, which drives the real running app.
 - **Source document tracing** (`data-source` attributes) — Not built.
-- **~~HTML simplification for agent consumption~~** — **Partially done.** `cb render` strips scripts and styles by default, outputs clean HTML. CSS selector extraction (`--selector=h3`) lets agents focus on specific elements. Full Tailwind class stripping not implemented.
+- **~~HTML simplification for agent consumption~~** — **Gone with `cb render` (2026-08-01).** It stripped scripts/styles and supported `--selector` extraction. `bin/browse` snapshots the a11y tree instead, which serves the same "what does this page say" need.
 - **Knowledge audits** — Framework exists (`src/dev/knowledge-audit.ts`) but not expanded to task completion audits.
 
 ### Implementation notes
@@ -928,7 +927,7 @@ The framework runs the prompt, lets the agent act, then checks filesystem state,
 
 ### Screenshots / Page rendering
 
-~~Lightweight screenshot capability for visual verification — a CLI tool that renders a page and outputs an image.~~ **Implemented as `cb render`** — renders any page to HTML via React SSR instead of as a screenshot image. More useful for agents than pixel screenshots because the output is semantic HTML that agents can parse, search, and reason about. Supports CSS selector extraction (`--selector`), named scenarios (`--scenario streaming`), machine state overrides (`--machine chat=idle`), and tRPC data mocking (`--mock`). See Decision 1 for architecture details.
+~~Lightweight screenshot capability for visual verification — a CLI tool that renders a page and outputs an image.~~ **Implemented as `cb render` (SSR to semantic HTML rather than pixels), then removed 2026-08-01.** The bet was that parseable HTML beats a screenshot for an agent. The HTML half held up; the SSR half did not — `renderToString` does not await Suspense, so a React-Query-driven app rendered an empty body. **`bin/browse` replaced it**, and notably it reverses the original call: it drives real headless Chromium, so it gets both the a11y tree *and* a real screenshot, against real data. The lesson worth keeping is that "render it without a browser" was the expensive constraint, not the output format.
 
 ### Not Playwright
 
@@ -938,7 +937,7 @@ Playwright is designed for browser automation test suites with selectors, waits,
 
 ### Implementation notes
 
-Partial. `src/dev/knowledge-audit.ts` and `src/dev/knowledge-audits.yaml` exist and work. Task completion audits (the extension) are not built. Page rendering is done (`cb render` — see Decision 1). Expand when agent behavioral testing becomes a priority.
+Partial. `src/dev/knowledge-audit.ts` and `src/dev/knowledge-audits.yaml` exist and work. Task completion audits (the extension) are not built. Page rendering is handled by `bin/browse` (`cb render` was removed 2026-08-01 — see Decision 1). Expand when agent behavioral testing becomes a priority.
 
 ---
 

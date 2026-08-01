@@ -1,5 +1,5 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
+import { createTRPCClient, createWSClient, httpBatchStreamLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
 import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
@@ -89,6 +89,17 @@ function getWsClient(): ReturnType<typeof createWSClient> {
  *   its batch-mates down with it.
  * - Everything else (queries/mutations) goes over the GET/POST batch, with a
  *   capped URL length so an oversized query can't poison its batch.
+ *
+ * Both HTTP branches use `httpBatchStreamLink`, not `httpBatchLink`. Same
+ * batching, but the server writes each procedure's result as a JSONL line the
+ * moment it resolves instead of holding the whole batch until the slowest
+ * member finishes. That coupling was the single biggest warm-load cost: the
+ * dashboard's six queries all waited on `health.check` (~600 ms), and every
+ * page's first batch waited on `status.status` (~275 ms). Nothing else changes
+ * — same URL, same `fetch`, same 401 handling, and the WS split above is
+ * untouched. A proxy that buffers the response degrades this to the old
+ * all-at-once behavior rather than breaking it (hence `proxy_buffering off` in
+ * deploy/setup-server.sh).
  */
 function buildTrpcLink(): TRPCLink<AppRouter> {
   return splitLink({
@@ -96,8 +107,8 @@ function buildTrpcLink(): TRPCLink<AppRouter> {
     true: wsLink({ client: getWsClient() }),
     false: splitLink({
       condition: (op) => op.path === "files.summarize",
-      true: httpBatchLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
-      false: httpBatchLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
+      true: httpBatchStreamLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
+      false: httpBatchStreamLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
     }),
   });
 }

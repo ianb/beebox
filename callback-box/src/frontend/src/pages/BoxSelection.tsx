@@ -5,9 +5,9 @@
  *     login prompt if none + auth required, or lists boxes to pick from.
  */
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { fetchBoxes } from "../lib/boxes";
+import { useBoxes } from "../hooks/useBoxes";
 import { Column } from "../components/ui/Column";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
@@ -30,23 +30,11 @@ function CenteredScreen({ children }: { children: React.ReactNode }) {
  */
 export function BoxRedirect() {
   const navigate = useNavigate();
-  const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
-  const [authRequired, setAuthRequired] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchBoxes()
-      .then((result) => {
-        setBoxes(result.boxes);
-        setAuthRequired(result.authRequired ?? false);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        // A silent failure here used to leave `loading` true forever.
-        console.error("Failed to load box list:", err);
-        setLoading(false);
-      });
-  }, []);
+  // Shared with AppLayout/AppNav via react-query, and — importantly — `loaded`
+  // flips on failure too, so a box server we can't reach shows the empty-state
+  // page rather than "Loading..." forever.
+  const { boxes, authRequired, loaded } = useBoxes();
+  const loading = !loaded;
 
   useEffect(() => {
     const [onlyBox] = boxes;

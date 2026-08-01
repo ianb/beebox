@@ -258,10 +258,12 @@ export function useChatMute() {
  */
 export function useChatSchedules(opts: {
   messages: SessionEntry[];
+  /** False while the chat machine is still loading — `messages` isn't the transcript yet. */
+  loaded: boolean;
   isStreaming: boolean;
   send: ChatSendFn;
 }) {
-  const { messages } = opts;
+  const { messages, loaded } = opts;
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
 
   const fetchSchedules = useCallback(() => {
@@ -274,10 +276,24 @@ export function useChatSchedules(opts: {
       });
   }, []);
 
-  // Poll schedules on mount + after each turn completes
+  // Fetch on mount, and whenever a NEW entry lands. Keyed on the newest entry's
+  // uuid, not the array: `messages` gets a fresh identity on every history
+  // fetch (initial load, refresh, server push), which refired this on every one
+  // of them — a duplicate request moments after mount. Schedules are set by
+  // `<schedule>` tags the agent writes, which can only reach the transcript as
+  // a new entry, so a re-read that ends on the same entry can't change them.
+  // (The count would miss the case that matters most for a long chat: at the
+  // HISTORY_TAIL cap, a new turn pushes the oldest entry out and the length
+  // never moves.)
+  //
+  // Skipped while the machine loads: `messages` is the empty pre-load array
+  // then, and fetching on it only to fetch again a tick later when the
+  // transcript lands is the second half of the same duplicate.
+  const newestUuid = messages.at(-1)?.uuid ?? null;
   useEffect(() => {
+    if (!loaded) return;
     fetchSchedules();
-  }, [messages, fetchSchedules]);
+  }, [loaded, newestUuid, fetchSchedules]);
 
   // NOTE: a former "poll /chat/history after a schedule fires" fallback lived
   // here but was inert — it fetched history with no session id, which the

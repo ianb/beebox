@@ -48,7 +48,6 @@ The agent's daily surface stays flat — frequency wins over taxonomic purity.
 | `cb google-auth` | Set up OAuth |
 | `cb prompt` | Run Claude Code with a custom prompt (dev) |
 | `cb usage` | Token usage report |
-| `cb render <path>` | SSR a page (dev) |
 | `cb format <path>` | Normalize card XML (dev) — verify still useful |
 
 ## `cb connector` group

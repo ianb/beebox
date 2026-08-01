@@ -16,7 +16,7 @@ import { useErrorCount, clearErrorCount } from "./DebugLog";
 import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
 import { Avatar } from "./ui/Avatar";
 import { href } from "../lib/routing";
-import { fetchBoxes } from "../lib/boxes";
+import { useBoxes } from "../hooks/useBoxes";
 import { withBase } from "../api";
 
 /**
@@ -73,18 +73,10 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
 export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const { boxSlug } = useParams({ strict: false });
   const location = useRouterState({ select: (s) => s.location });
-  const [boxes, setBoxes] = useState<Array<{ slug: string; name: string }>>([]);
+  const { boxes } = useBoxes();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const currentUser = useCurrentUser();
-
-  useEffect(() => {
-    fetchBoxes()
-      .then((result) => setBoxes(result.boxes))
-      .catch((err: unknown) => {
-        console.error("Failed to load box list for nav switcher:", err);
-      });
-  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -111,8 +103,12 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   // (docs/implemented-plans/questions-end-to-end.md Track C): shown on the Questions
   // nav entry, and separately as an always-visible mobile badge since the
   // mobile nav list only appears once the hamburger menu is opened.
+  // `status.navStatus`, not `status.status`: the nav renders these two counts
+  // and nothing else, and it mounts on EVERY page — the fuller dashboard
+  // payload (git status/log + a full box card walk) cost ~275 ms per page for
+  // fields nothing here reads.
   const utils = trpc.useUtils();
-  const statusQuery = trpc.status.status.useQuery();
+  const statusQuery = trpc.status.navStatus.useQuery();
   const pendingQuestions = statusQuery.data ? statusQuery.data.counts.pendingQuestions : 0;
   // Open on-plate todo count (escalated + on-plate) — the plan's one
   // app-level todo affordance (docs/implemented-plans/todo-annotation.md Track 4),
@@ -130,7 +126,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
           event.event === "card-created" ||
           event.event === "file-change"
         ) {
-          void utils.status.status.invalidate();
+          void utils.status.navStatus.invalidate();
         }
       },
       [utils],

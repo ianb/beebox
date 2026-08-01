@@ -1,9 +1,7 @@
 /**
  * Render an ISO timestamp as a friendly, local-timezone date (the browser's
  * locale + zone). Emits a semantic <time> with the machine-readable ISO in
- * `dateTime`. `suppressHydrationWarning` because the server (SSR `cb render`)
- * formats in its own zone and the client re-formats in the user's — the text
- * is expected to differ between the two passes.
+ * `dateTime`.
  *
  *   <FriendlyDate iso={card.captured} />            → "Jun 14, 2026, 10:36 AM"
  *   <FriendlyDate iso={card.captured} mode="date" /> → "Jun 14, 2026"
@@ -25,7 +23,7 @@ export function FriendlyDate({ iso, mode }: FriendlyDateProps) {
       ? { dateStyle: "medium" }
       : { dateStyle: "medium", timeStyle: "short" };
   return (
-    <time dateTime={iso} suppressHydrationWarning>
+    <time dateTime={iso}>
       {parsed.toLocaleString(undefined, options)}
     </time>
   );

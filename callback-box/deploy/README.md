@@ -90,6 +90,15 @@ over to the hub by hand (see "Systemd units" below and
 `create-server.sh` run today would need the same by-hand steps repeated
 until this script catches up.
 
+**This script does not run on deploy.** `deploy.sh` never invokes it, so any
+change to the nginx config or systemd units here reaches a live server only on
+a re-provision — or by applying the equivalent change by hand. The most recent
+such change is `proxy_buffering off;` in the app proxy location (added
+2026-08-01 for tRPC streamed batches); an existing server needs that line added
+to `/etc/nginx/sites-available/callback` followed by `nginx -t && systemctl
+reload nginx`. Without it the client still works, it just loses the
+progressive-delivery benefit.
+
 ### `add-box.sh` — Add a box to the server
 
 Clones a box repo, registers it, and restarts the serving process.

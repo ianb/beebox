@@ -12,8 +12,9 @@
 
 import { useState, useRef, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
-import { useSSRMachine } from "../../hooks/useSSRMachine";
+import { useMachine } from "@xstate/react";
 import { chatMachine } from "../../machines/chatMachine.js";
+import type { ChatInitialLoad } from "../../machines/chat-types";
 import { groupMessages } from "./ChatMessages";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
@@ -100,6 +101,13 @@ interface InteractiveChatProps {
    * a normal user toggle afterward.
    */
   openCaptureOnMount?: boolean;
+  /**
+   * History + status for `sessionInput`, already fetched by ChatPage's
+   * `chat.bootstrap` call. Consumed once by the machine's `loading` state
+   * instead of a second round trip. Omitted for a `"new"` chat (nothing to
+   * load) and when the caller has no preload.
+   */
+  initial?: ChatInitialLoad;
 }
 
 /**
@@ -133,12 +141,12 @@ function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId,
   );
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial }: InteractiveChatProps) {
   const isEmbedded = embedded === true;
   const usesNativeComposer = nativeComposer === true;
   const usesNativeShell = isEmbedded || usesNativeComposer;
-  const [snapshot, send] = useSSRMachine(chatMachine, {
-    input: { sessionInput, contextDir },
+  const [snapshot, send] = useMachine(chatMachine, {
+    input: { sessionInput, contextDir, initial },
   });
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const effectiveContextDir = useEffectiveContextDir({ sessionId, contextDir });
@@ -182,7 +190,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const { activeView } = tabs;
   useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView, boxSlug });
   const cardSend = useCompanionCard({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
-  const schedules = useChatSchedules({ messages, isStreaming, send });
+  const schedules = useChatSchedules({ messages, loaded: !isLoading, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";
 import { chatControlProcedures } from "./chat-control-procedures.js";
+import { chatBootstrapProcedure } from "./chat-bootstrap-procedure.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
@@ -42,6 +43,7 @@ export interface PickerLandmark {
 export const chatRouter = router({
   ...chatSessionProcedures,
   ...chatControlProcedures,
+  ...chatBootstrapProcedure,
   /**
    * Most-recently-created session associated with a directory, or null
    * if no chat has been started for that directory.

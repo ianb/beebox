@@ -213,6 +213,15 @@ curl -H "Authorization: Bearer $CB_DIAG_API_KEY" \
   https://box.example.com/<box>/api/trpc/debugLog.get | python3 -m json.tool
 ```
 
+`health.check` answers from a cached snapshot by default (see [`health-checks.md`](./health-checks.md#healthcheck-snapshot-vs-fresh)). A machine caller that needs the box's state *right now* — post-deploy verification, "did that fix land?" — must ask for a live run:
+
+```bash
+curl -H "Authorization: Bearer $CB_DIAG_API_KEY" \
+  'https://box.example.com/<box>/api/trpc/health.check?input=%7B%22fresh%22%3Atrue%7D' | python3 -m json.tool
+```
+
+(The `input` is the URL-encoded JSON `{"fresh":true}`. The diag-key bypass keys on the procedure name only, so the query string doesn't affect it.)
+
 On localhost/dev (no `GOOGLE_OAUTH_CLIENT_ID` set), auth is disabled entirely — curl works without the header.
 
 For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client-debug-log.md`](./client-debug-log.md) for the log file format.

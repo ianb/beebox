@@ -94,7 +94,6 @@ export const PILLARS: Pillar[] = [
     supporting: [
       { path: "docs/landmarks.md", note: "How the URL bar becomes a navigation surface for the agent." },
       { path: "docs/plans/source-editor.md", note: "Aspirational. Not built yet. Read for direction, not state-of-the-world." },
-      { path: "docs/ssr-render-testing.md", note: "Hack to preview pages from the CLI without a browser." },
       { path: "docs/client-debug-log.md", note: "When your frontend bug evaporates the moment devtools opens — catch it here." },
     ],
     code: ["src/frontend/", "src/webapp/"],

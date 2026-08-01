@@ -12,6 +12,25 @@ The hub exposes two diagnostic endpoints, both requiring the `CB_DIAG_API_KEY` b
 
 Why the canary exists at all: during the 2026-07-16 Node 22→24 upgrade every box child crash-looped on a better-sqlite3 ABI mismatch while the old `/healthz` returned a constant 200 — the deploy verified "healthy" while no box could serve a request. The passive verdict now catches a crash-looping box; the canary catches a break on boxes that were never started.
 
+## `health.check` snapshot vs fresh
+
+The box-level checks (`runHealthChecks` — permissions, API keys, annex, nav card, engine) are deep and slow: a subprocess `claude auth status`, the git-annex doctor over the attachment trees, a `tmp-capture/` walk, a dozen serial fs probes. Measured 580–650 ms on prod, and they rode in the dashboard's tRPC batch, so every dashboard load waited on them.
+
+`GET /api/trpc/health.check` therefore answers from a **stale-while-revalidate snapshot** (`src/webapp/trpc/routers/health-snapshot.ts`), per box, per `cb serve` process:
+
+- first call computes and caches;
+- calls within 60 s answer from the snapshot;
+- a call past 60 s answers from the snapshot **and** kicks a background refresh — that request still gets the *old* report; the refreshed one is visible to the *next* reader.
+
+**What the staleness bound actually is:** a change shows up two requests after the TTL expires, not one, and only if something asks again. A client that stops polling never sees the new verdict — which is fine, since nothing is displaying it either, but it means "worst case 60 s" is wrong. For the dashboard (which refetches on every visit) it is 60 s plus one page view. Two things bound the damage: writes are ordered by when each computation *started*, so a slow background refresh can never overwrite a newer result; and a background refresh that *throws* is latched, so the next reader recomputes in the foreground and gets the error rather than another serving of the last-known-good report.
+
+Anything that must not be stale asks for a live run:
+
+- `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the snapshot. Use this in any post-deploy or post-fix verification. Curl form in [`server-operations.md`](./server-operations.md#diagnostic-endpoints-behind-auth).
+- `cb health` and the box server's `/api/health` route call `runHealthChecks` directly and never touch the cache — they are always fresh.
+
+A hub restart (every deploy restarts the children) empties the cache, so a deploy never serves a pre-deploy verdict.
+
 ## google-auth (is the Google grant still alive?)
 
 `cb health`'s box-checks section and the dashboard's health warnings both carry a

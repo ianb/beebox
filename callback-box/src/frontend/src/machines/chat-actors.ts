@@ -26,15 +26,37 @@ import { settleReceipt } from "../input/targets/receipts";
 import { buildStreamEntry } from "../lib/stream-entry";
 import type { ChatMessage } from "@core/chat/session/messages.js";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
-import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES, logFsm, type ChatEvent, type SessionInput } from "./chat-types";
+import {
+  ChatInitialLoadError,
+  HISTORY_TAIL,
+  MIN_REAL_USER_MESSAGES,
+  logFsm,
+  type ChatEvent,
+  type InitialSessionInput,
+  type SessionInput,
+} from "./chat-types";
 import { runFakeStream } from "./chat-actors-fakestream";
 
 export const fetchInitialActor = fromPromise<
   { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
-  SessionInput
+  InitialSessionInput
 >(async ({ input }) => {
   if (input.sessionInput === "new") {
     return { entries: [], total: 0, sessionId: null, running: false, busy: false };
+  }
+  const preloaded = input.initial;
+  if (preloaded) {
+    // The mounting page already fetched this session (one `chat.bootstrap`
+    // round trip covering session resolution + history + status). Throwing on
+    // the failed variant routes it through the machine's existing onError.
+    if (preloaded.status === "failed") throw new ChatInitialLoadError(preloaded.error);
+    return {
+      entries: preloaded.entries,
+      total: preloaded.total,
+      sessionId: preloaded.sessionId,
+      running: preloaded.running,
+      busy: preloaded.busy,
+    };
   }
   const [history, status] = await Promise.all([
     getChatHistory({ sessionId: input.sessionInput, tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES }),

@@ -72,6 +72,9 @@ export const chatMachine = setup({
     processBusy: false,
     totalEntries: 0,
     liveTurnId: null,
+    // Consumed by `loading` below and cleared on the way out, so nothing can
+    // replay a stale preload if `loading` is ever re-entered.
+    initial: input.initial,
   }),
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
@@ -127,24 +130,22 @@ export const chatMachine = setup({
     loading: {
       invoke: {
         src: "fetchInitial",
-        input: ({ context }) => ({ sessionInput: context.sessionInput }),
+        input: ({ context }) => ({ sessionInput: context.sessionInput, initial: context.initial }),
+        // `initial` is cleared on the way out either way, so nothing can
+        // replay a stale preload if `loading` is ever re-entered.
         onDone: {
           target: "idle",
           actions: assign(({ event }) => ({
-            messages: event.output.entries,
-            sessionId: event.output.sessionId,
-            processRunning: event.output.running,
-            processBusy: event.output.busy,
-            totalEntries: event.output.total,
+            messages: event.output.entries, sessionId: event.output.sessionId,
+            processRunning: event.output.running, processBusy: event.output.busy,
+            totalEntries: event.output.total, initial: undefined,
           })),
         },
         onError: {
           target: "idle",
           actions: assign(({ event }) => ({
-            error:
-              event.error instanceof Error
-                ? event.error.message
-                : "Failed to load",
+            error: event.error instanceof Error ? event.error.message : "Failed to load",
+            initial: undefined,
           })),
         },
       },

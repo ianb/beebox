@@ -123,8 +123,10 @@ If even "open the URL once" is too much, the Echo Show's native **Photo Frame /
 ambient mode** shows an Amazon Photos album full-screen, clock/UI removed, and is
 persistent by design
 ([Echo Show as a photo frame](https://www.techhive.com/article/831563/amazon-echo-show-photo-frame.html)).
-Approach: `cb render` the dashboard to an image, push it to an Amazon Photos
-album, let ambient mode cycle it. Persistence is free and requires no browser —
+Approach: render the dashboard to an image, push it to an Amazon Photos
+album, let ambient mode cycle it. (NOTE 2026-08-01: this originally said
+`cb render`, which has since been removed. `bin/browse` screenshots the real
+running app and is the replacement — heavier, but it produces a true image.) Persistence is free and requires no browser —
 but it's a **static image, not interactive**, refreshes slowly (album re-pull,
 not real-time), and Amazon Photos has no clean upload API (automation is the
 awkward part). Good "glance a few times a day" option; not a live page.

@@ -24,7 +24,7 @@
 import { Fragment, useMemo } from "react";
 import * as React from "react";
 import { useParams } from "@tanstack/react-router";
-import Markdoc, { type Config, type RenderableTreeNode } from "@markdoc/markdoc";
+import { transform, renderers, type Config, type RenderableTreeNode } from "@markdoc/markdoc";
 import { markdocConfig, makeHeadingNode } from "@shared/markdoc-config";
 import { makeQuoteComponents } from "./Quote";
 import { makeSourceComponents } from "./Source";
@@ -51,13 +51,8 @@ import { parseMarkdown } from "../lib/markdoc-parse";
 import { isRecord } from "@shared/is-record";
 import type { ReactNode } from "react";
 
-// Value named imports (`{ transform, … }`) don't resolve from this CommonJS
-// module under Node's ESM loader (used by `cb render` SSR); Vite tolerates them
-// but the SSR path does not. Destructure off the default import — same pattern
-// and lint exception as `markdoc-config.ts` / `body-refs.ts`. Parsing itself
-// goes through `parseMarkdown` (linkify-enabled) rather than the raw `parse`.
-// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM SSR; default-member access is the runtime-correct form for this CJS module
-const { transform, renderers } = Markdoc;
+// Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
+// `parse` — see lib/markdoc-parse.ts.
 
 export interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;

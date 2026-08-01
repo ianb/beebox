@@ -12,14 +12,7 @@
  * shared by every render.
  */
 
-import Markdoc, { type Node } from "@markdoc/markdoc";
-
-// Named value imports (`{ Tokenizer, parse }`) don't resolve from this CommonJS
-// module under Node's ESM loader (the `cb render` SSR path); Vite tolerates them
-// but SSR does not. Destructure off the default import — same pattern and lint
-// exception as `Markdown.tsx` / `markdoc-config.ts`.
-// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM SSR; default-member access is the runtime-correct form for this CJS module
-const { Tokenizer, parse } = Markdoc;
+import { Tokenizer, parse, type Node } from "@markdoc/markdoc";
 
 /**
  * Structural view of the bit of markdown-it we must reach: `Tokenizer.parser`

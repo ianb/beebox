@@ -55,6 +55,7 @@ import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
+import { HASHED_ASSET_CACHE_OPTIONS } from "../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../webapp/base-prefix.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 import { verifyBrowseKey } from "../core/browse-key.js";
@@ -359,8 +360,22 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // the "/*" proxy wildcard regardless of registration order. (frontendDist is
   // computed above, where the box picker also uses it.)
   if (fs.existsSync(path.join(frontendDist, "index.html"))) {
-    // assets first — its default decorateReply provides reply.sendFile below.
-    await app.register(fastifyStatic, { root: path.join(frontendDist, "assets"), prefix: "/assets/" });
+    // Decorator-only registration (`serve: false` adds no routes): it provides
+    // `reply.sendFile` for the manifest/sw.js handlers below, with DEFAULT cache
+    // options. The decorator is installed by the first registration and carries
+    // that registration's options, so this must come before the immutable
+    // `/assets/` mount — otherwise sw.js would inherit a year-long cache and
+    // strand browsers on a dead service worker.
+    await app.register(fastifyStatic, { root: frontendDist, serve: false });
+    // Everything under assets/ is content-hashed by Vite, so it gets the
+    // year-long immutable policy (see static-cache.ts); the icons/earcons/
+    // manifest/sw.js registrations below deliberately do NOT.
+    await app.register(fastifyStatic, {
+      root: path.join(frontendDist, "assets"),
+      prefix: "/assets/",
+      decorateReply: false,
+      ...HASHED_ASSET_CACHE_OPTIONS,
+    });
     for (const dir of ["icons", "earcons"]) {
       const root = path.join(frontendDist, dir);
       if (fs.existsSync(root)) await app.register(fastifyStatic, { root, prefix: `/${dir}/`, decorateReply: false });

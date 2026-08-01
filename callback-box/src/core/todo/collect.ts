@@ -66,8 +66,12 @@ export function assertSafeGlobPattern(pattern: string): void {
   if (isUnsafeGlobPattern(pattern)) throw new UnsafeTodoGlobError(pattern);
 }
 
-export async function collectTodos(boxRoot: string, options?: CollectTodosOptions): Promise<TodoCollectionResult> {
-  const pattern = options?.glob ?? "**/*.card";
+/**
+ * Every card path a todo scan would visit, sorted, guaranteed inside the box.
+ * Shared with the nav-badge counter (`count.ts`) so both walk exactly the same
+ * card set under exactly the same containment rules.
+ */
+export async function listTodoCardPaths(boxRoot: string, pattern: string): Promise<string[]> {
   assertSafeGlobPattern(pattern);
   const boxRootResolved = path.resolve(boxRoot);
   const rawAbsPaths = await glob(pattern, {
@@ -89,17 +93,30 @@ export async function collectTodos(boxRoot: string, options?: CollectTodosOption
     }
     return contained;
   });
+  return absPaths.toSorted();
+}
+
+/** The per-card load + plate-state context both scans need. */
+export async function buildTodoScanContext(boxRoot: string): Promise<{ ctx: LoadCardContext; plateCtx: TodoPlateContext }> {
   const schemas = await createCardSchemaMap(boxRoot);
-  const ctx: LoadCardContext = { cardSchemas: schemas };
-  const plateCtx: TodoPlateContext = {
-    now: getBoxTime(boxRoot),
-    timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+  return {
+    ctx: { cardSchemas: schemas },
+    plateCtx: {
+      now: getBoxTime(boxRoot),
+      timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
   };
+}
+
+export async function collectTodos(boxRoot: string, options?: CollectTodosOptions): Promise<TodoCollectionResult> {
+  const pattern = options?.glob ?? "**/*.card";
+  const absPaths = await listTodoCardPaths(boxRoot, pattern);
+  const { ctx, plateCtx } = await buildTodoScanContext(boxRoot);
 
   const todos: CollectedTodo[] = [];
   const issues: TodoCollectionIssue[] = [];
 
-  for (const absPath of absPaths.toSorted()) {
+  for (const absPath of absPaths) {
     const relPath = path.relative(boxRoot, absPath);
     await collectOneCard({ absPath, relPath, ctx, plateCtx, todos, issues });
   }
@@ -118,28 +135,15 @@ async function collectOneCard(input: {
   todos: CollectedTodo[];
   issues: TodoCollectionIssue[];
 }): Promise<void> {
-  const { absPath, relPath, ctx, plateCtx, todos, issues } = input;
-  const type = typeFromFilename(absPath);
-  if (type === undefined || !ctx.cardSchemas.has(type)) {
-    // A card whose type can't be schema-loaded at all (an unparseable
-    // filename, or a `type` with no registered schema — a deleted
-    // box-local schema, a typo'd filename) is reported as visible-invalid
-    // rather than silently skipped: "any globbed card that cannot be
-    // schema-loaded is reported" is what the plan's visible-invalid
-    // guarantee means (`docs/implemented-plans/todo-annotation.md`, Failure modes
-    // table) — a schema that goes missing shouldn't be able to hide a
-    // card's todos forever with zero signal.
-    issues.push({
-      kind: "unknown-type",
-      path: relPath,
-      message:
-        type === undefined
-          ? "card filename doesn't match the Name.<type>.card pattern"
-          : `no registered schema for card type "${type}"`,
-    });
+  const { absPath, relPath, ctx, issues } = input;
+  // Classify before reading, so a card that is *both* unknown-type and
+  // unreadable reports the unknown type — the more actionable of the two, and
+  // the issue this reported before the read was hoisted out.
+  const classified = classifyCardType({ absPath, relPath, ctx });
+  if (!classified.ok) {
+    issues.push(classified.issue);
     return;
   }
-
   let content: string;
   try {
     content = await readFile(absPath, "utf8");
@@ -147,6 +151,62 @@ async function collectOneCard(input: {
     issues.push({ kind: "load", path: relPath, message: errorMessage(e) });
     return;
   }
+  collectCardTodos({ ...input, content });
+}
+
+/**
+ * The card's type, or the issue for a card whose type can't be schema-loaded
+ * at all (an unparseable filename, or a `type` with no registered schema — a
+ * deleted box-local schema, a typo'd filename). Such a card is reported as
+ * visible-invalid rather than silently skipped: "any globbed card that cannot
+ * be schema-loaded is reported" is what the plan's visible-invalid guarantee
+ * means (`docs/implemented-plans/todo-annotation.md`, Failure modes table) —
+ * a schema that goes missing shouldn't be able to hide a card's todos forever
+ * with zero signal.
+ */
+function classifyCardType(input: {
+  absPath: string;
+  relPath: string;
+  ctx: LoadCardContext;
+}): { ok: true; type: string } | { ok: false; issue: TodoCollectionIssue } {
+  const { absPath, relPath, ctx } = input;
+  const type = typeFromFilename(absPath);
+  if (type !== undefined && ctx.cardSchemas.has(type)) return { ok: true, type };
+  return {
+    ok: false,
+    issue: {
+      kind: "unknown-type",
+      path: relPath,
+      message:
+        type === undefined
+          ? "card filename doesn't match the Name.<type>.card pattern"
+          : `no registered schema for card type "${type}"`,
+    },
+  };
+}
+
+/**
+ * Extract one already-read card's todos (both capture forms) into `todos`,
+ * recording anything that blocked extraction in `issues`. Split out from
+ * {@link collectOneCard} so the nav-badge counter (`count.ts`) can feed it
+ * text it read in parallel rather than re-implementing todo semantics.
+ */
+export function collectCardTodos(input: {
+  absPath: string;
+  relPath: string;
+  content: string;
+  ctx: LoadCardContext;
+  plateCtx: TodoPlateContext;
+  todos: CollectedTodo[];
+  issues: TodoCollectionIssue[];
+}): void {
+  const { absPath, relPath, content, ctx, plateCtx, todos, issues } = input;
+  const classified = classifyCardType({ absPath, relPath, ctx });
+  if (!classified.ok) {
+    issues.push(classified.issue);
+    return;
+  }
+  const type = classified.type;
 
   let parsed: ReturnType<typeof parseCardText>;
   try {

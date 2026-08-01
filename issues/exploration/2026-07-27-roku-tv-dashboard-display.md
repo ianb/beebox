@@ -60,9 +60,11 @@ neither. This is probably the best-fit surface on Roku.
 
 Because Roku can't run our web UI, the sane split is:
 
-- **The box renders the dashboard to an image.** We already have SSR/render
-  capability (`cb render`, `src/ssr/`) — a dashboard view can produce a
-  PNG/JPEG rather than reimplementing it in SceneGraph.
+- **The box renders the dashboard to an image.** NOTE (2026-08-01): the SSR
+  render capability this assumed (`cb render`, `src/ssr/`) has been removed —
+  it emitted an empty body and nobody used it. Re-cost this step. The nearest
+  replacement is `bin/browse`, which drives real headless Chromium and can
+  screenshot, so image output is still reachable but by a heavier path.
 - **A thin Roku channel/screensaver fetches that image** over HTTP (Tailscale or
   a public URL, with a device-scoped token) and displays it, refreshing on a
   timer. SceneGraph shows images trivially; almost no Roku-side logic.
