@@ -5,6 +5,7 @@
  * verify a box is working after setup.
  */
 
+import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import * as path from "node:path";
@@ -23,6 +24,7 @@ import { findStaleTmpCaptureCards, TMP_CAPTURE_STALE_MS } from "../../../core/ca
 import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
+import { getHealthSnapshot } from "./health-snapshot.js";
 
 export interface HealthCheck {
   name: string;
@@ -379,14 +381,28 @@ export async function runHealthChecks(
 }
 
 export const healthRouter = router({
-  check: publicProcedure.query(async ({ ctx }) => {
-    const [checks, version] = await Promise.all([
-      runHealthChecks(ctx.boxRoot, { claudeCli: ctx.services.claudeCli }),
-      readVersionInfo(),
-    ]);
-    const hasErrors = checks.some((c) => !c.ok && c.severity === "error");
-    const hasWarnings = checks.some((c) => !c.ok && c.severity === "warning");
-    const status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy";
-    return { status, checks, version };
-  }),
+  /**
+   * Served from a stale-while-revalidate snapshot (`health-snapshot.ts`) so the
+   * dashboard's batch never waits on the deep probes. `{ fresh: true }` forces a
+   * live run — that's the contract deploy runbooks use through the diag-key
+   * bypass (see docs/health-checks.md). `cb health` and `/api/health` call
+   * `runHealthChecks` directly and are unaffected.
+   */
+  check: publicProcedure
+    .input(z.object({ fresh: z.boolean().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      return getHealthSnapshot(ctx.boxRoot, {
+        fresh: input?.fresh === true,
+        compute: async () => {
+          const [checks, version] = await Promise.all([
+            runHealthChecks(ctx.boxRoot, { claudeCli: ctx.services.claudeCli }),
+            readVersionInfo(),
+          ]);
+          const hasErrors = checks.some((c) => !c.ok && c.severity === "error");
+          const hasWarnings = checks.some((c) => !c.ok && c.severity === "warning");
+          const status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy";
+          return { status, checks, version };
+        },
+      });
+    }),
 });
