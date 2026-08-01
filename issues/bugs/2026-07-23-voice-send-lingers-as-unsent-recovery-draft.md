@@ -64,5 +64,5 @@ persistence still work.
 
 Web frontend (persistence + scheduler), not shell-specific — but the recovery
 banner has shown on iOS
-([both-composers regression](2026-07-22-ios-both-composers-nativecomposer-flag-lost-on-nav.md)
+([both-composers regression](../closed/bugs/2026-07-22-ios-both-composers-nativecomposer-flag-lost-on-nav.md)
 screenshot), so verify there too.
