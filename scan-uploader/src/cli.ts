@@ -6,6 +6,7 @@
  */
 
 import { loadConfig, type UploaderConfig, type TargetConfig } from "./config.js";
+import { runConfigureCommand } from "./configure-cli.js";
 import { errorMessage } from "./error-guards.js";
 import { runTarget, type RunSummary } from "./run-target.js";
 
@@ -15,12 +16,15 @@ function printHelp(): void {
   console.log(
     [
       "Usage: scan-uploader [config.json] [--retry-rejected]",
+      "       scan-uploader configure <server-url-with-box> --folder <path> [options]",
       "",
       "Uploads new files from configured folders to a callback-box scan-upload",
       `endpoint. Config defaults to ${DEFAULT_CONFIG_PATH} in the current directory.`,
       "",
       "  --retry-rejected  re-PUT previously rejected files (after a fix upstream)",
       "  -h, --help        show this help",
+      "",
+      "Run `scan-uploader configure --help` for the setup subcommand's options.",
     ].join("\n"),
   );
 }
@@ -49,6 +53,9 @@ async function runAllTargets(config: UploaderConfig, options: { retryRejected: b
 
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
+  if (args[0] === "configure") {
+    return runConfigureCommand(args.slice(1));
+  }
   if (args.includes("--help") || args.includes("-h")) {
     printHelp();
     return 0;

@@ -31,6 +31,10 @@ export interface FakeScanServerHandlers {
   checkState: (hash: string) => CheckStateEntry;
   /** Returns the PUT outcome for a given hash; receives the full request record. */
   putOutcome: (record: PutRequestRecord) => PutOutcome;
+  /** Optional: gates `POST /api/scan/check` on the request's `authorization`
+   * header, responding 401 when it returns `false`. Omitted means every
+   * request is authorized — the default every existing test relies on. */
+  checkAuthorization?: (authorization: string | undefined) => boolean;
 }
 
 export type PutOutcome =
@@ -135,6 +139,11 @@ function requestedHashes(body: unknown): string[] {
 }
 
 async function handleCheck(ctx: RequestContext): Promise<void> {
+  const { checkAuthorization } = ctx.handlers;
+  if (checkAuthorization !== undefined && !checkAuthorization(ctx.req.headers.authorization)) {
+    ctx.res.writeHead(401, { "content-type": "application/json" }).end(JSON.stringify({ error: "unauthorized" }));
+    return;
+  }
   const raw = await readBody(ctx.req);
   const body: unknown = JSON.parse(raw.toString("utf-8"));
   const states: Record<string, CheckStateEntry> = {};

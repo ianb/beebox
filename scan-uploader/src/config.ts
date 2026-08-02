@@ -41,6 +41,20 @@ export async function loadConfig(
   const platform = options?.platform ?? process.platform;
   const text = await readConfigText(configPath);
   const parsed = parseConfigJson(configPath, text);
+  return validateParsedConfig(configPath, { parsed, platform });
+}
+
+/**
+ * The shape-validation half of {@link loadConfig}, factored out so a writer
+ * (`config-writer.ts`) can validate an in-memory candidate document — e.g.
+ * before committing it to disk — using the exact same rules a subsequent
+ * `loadConfig` would apply, rather than a second, driftable copy of them.
+ */
+export function validateParsedConfig(
+  configPath: string,
+  params: { parsed: unknown; platform: string },
+): UploaderConfig {
+  const { parsed, platform } = params;
   if (!isRecord(parsed) || !Array.isArray(parsed.targets)) {
     throw new ConfigError(configPath, 'expected an object with a "targets" array');
   }

@@ -40,3 +40,13 @@ export class TrashError extends Error {
     this.name = "TrashError";
   }
 }
+
+/** The `configure` subcommand failed validation, resolution, config-writing,
+ * or server verification — anything short of a config-file read/parse/shape
+ * problem (that's `ConfigError`'s territory). */
+export class ConfigureError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "ConfigureError";
+  }
+}
