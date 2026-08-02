@@ -1,10 +1,24 @@
 # Scan-uploader setup UI + minimal install story
 
 **Status:** implemented 2026-08-01 on `worktree-scanner-ingest` (all three
-chunks; configure doctest 9 scenarios, package tests 94/94, frontend
+chunks; configure doctest 11 scenarios, package tests 96/96, frontend
 typecheck/lint clean, smoke-install run green — with one measured
 correction: the filtered install works but is not lighter, see Prior art).
-Not yet merged.
+Live-verified against an isolated dev router: mint (tRPC) → `configure`
+(stdin token, config + 0600 token file written, `server verified`) → a real
+PDF upload accepted end-to-end, plus the rejection path (zero-page PDF,
+server's qpdf reason surfaced verbatim). Two defects found and fixed by
+that live pass: the configure URL parser took the FIRST path segment as
+the box (dropping the dev router's `/<worktree>/` prefix; box is now the
+LAST segment, prefix preserved in serverUrl), and the dev router's
+fail-closed auth wall predated scan tokens entirely — it now allowlists
+the two exact scan paths by shape (reused hub matcher, verb-pinned),
+with hub + child still verifying the bearer. Outstanding: an interactive
+click-through of the settings section on the real logged-in router (the
+isolated router's cookie-identity path 403'd owner tRPC from the browser
+for the pre-existing companion-pairing section too, so it could not
+exercise any owner UI; the section's rendering, defaults, and error
+states were verified). Not yet merged.
 
 A settings-page surface for scan uploaders — mint a token (shown once), see
 every uploader with honest last-activity, revoke — plus a `configure`
