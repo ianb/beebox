@@ -47,8 +47,26 @@ export interface AtomicWriteOptions {
   /** Exact bytes the file should hold afterwards (including any trailing newline). */
   content: string;
   /** Mode for the temp file, inherited by the target through the rename.
-   *  Omit for the platform default; pass 0o600 for anything credential-bearing. */
+   *  Omit to preserve an existing target's mode (platform default for a new
+   *  file); pass 0o600 for anything credential-bearing. */
   mode?: number;
+}
+
+/** The mode to create the temp sibling with: the caller's explicit choice,
+ *  else the existing target's (a rename replaces the inode, so an unchanged
+ *  `fs.writeFile`-style call would otherwise silently loosen a 0600 store
+ *  back to the umask default), else undefined for the platform default. */
+async function effectiveMode(filePath: string, mode: number | undefined): Promise<number | undefined> {
+  if (mode !== undefined) return mode;
+  try {
+    const { mode: existing } = await fs.stat(filePath);
+    return existing & 0o777;
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`[atomic-write] could not stat ${filePath} to preserve its mode:`, e);
+    }
+    return undefined;
+  }
 }
 
 /**
@@ -62,7 +80,7 @@ export async function writeFileAtomic(filePath: string, opts: AtomicWriteOptions
   await fs.mkdir(dir, { recursive: true });
   const tmp = `${filePath}.tmp-${String(process.pid)}-${randomBytes(6).toString("hex")}`;
   try {
-    const handle = await fs.open(tmp, "wx", mode);
+    const handle = await fs.open(tmp, "wx", await effectiveMode(filePath, mode));
     try {
       await handle.writeFile(content, "utf-8");
       await handle.sync();
