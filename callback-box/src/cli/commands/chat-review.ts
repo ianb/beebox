@@ -86,7 +86,7 @@ const runCommand = new Command("run")
         `would review ${String(planned.length)} of ${String(result.qualified.length)} qualified session(s)`,
       );
       for (const session of planned) {
-        const kind = session.span.bootstrap === null ? "increment" : session.span.bootstrap;
+        const kind = session.bootstrap === null ? "increment" : session.bootstrap;
         console.log(
           `  ${session.sessionId}  ${String(session.spanChars)} new chars (${kind})  ${session.huskPath}`,
         );

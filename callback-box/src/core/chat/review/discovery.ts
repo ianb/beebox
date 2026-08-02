@@ -12,6 +12,10 @@
  * quiescence window, holds at least REVIEW_MIN_USER_TURNS real user turns, and
  * its unread span renders to at least REVIEW_CHAR_THRESHOLD characters.
  *
+ * Qualifying a session requires parsing its transcript, but nothing parsed is
+ * retained: a `QualifiedSession` is scalars only, and the reviewer re-reads the
+ * sessions it actually reviews (see {@link QualifiedSession}).
+ *
  * See docs/implemented-plans/chat-review.md § Track A.
  */
 
@@ -26,7 +30,7 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { METADATA_CONSUMER, sessionState, type ReviewState } from "./state.js";
-import { resolveSpan, spanSize, type ResolvedSpan } from "./span.js";
+import { resolveSpan, spanSize, type BootstrapReason, type ResolvedSpan } from "./span.js";
 
 /**
  * How long a transcript must sit unmodified before it is reviewed — don't
@@ -50,17 +54,27 @@ export const REVIEW_MIN_USER_TURNS = 2;
  */
 const PARSE_LIMIT = MAX_SESSION_ENTRIES;
 
+/**
+ * A session that passed the gates — deliberately **scalars only**.
+ *
+ * Discovery holds every qualified session simultaneously, and `runChatReview`
+ * caps the run only afterwards, so retaining each one's parsed transcript here
+ * meant N × MAX_SESSION_ENTRIES fat entries (whole `tool_use.input` bodies,
+ * base64 images) resident at once — the same allocation class that OOM'd
+ * `cb serve`. The transcript is parsed to qualify the session and then dropped;
+ * the reviewer re-reads the one session it is about to review
+ * ({@link readSessionWindow}), so at most one window is alive at a time.
+ */
 export interface QualifiedSession {
   sessionId: string;
   /** Box-relative husk card path. */
   huskPath: string;
   logPath: string;
   mtime: Date;
-  /** Full parsed transcript, reused by the reviewer so it parses once per run. */
-  entries: SessionEntry[];
-  span: ResolvedSpan;
-  /** Pre-elision rendered length of the span. */
+  /** Pre-elision rendered length of the span, measured during the scan. */
   spanChars: number;
+  /** Why the span was read from the top, or null when it continues the journal. */
+  bootstrap: BootstrapReason | null;
   /**
    * The title `ensureChatHusk` would derive from this transcript. Lets the
    * reviewer tell an untouched auto-title from one a person typed.
@@ -124,6 +138,38 @@ async function parseFull(logPath: string): Promise<SessionEntry[] | null> {
   }
 }
 
+/** One session's parsed transcript window plus the unread span within it. */
+export interface SessionWindow {
+  /** The bounded first-page read of the transcript. */
+  entries: SessionEntry[];
+  span: ResolvedSpan;
+}
+
+/**
+ * Read the bounded window for one session and locate its unread span.
+ *
+ * Both discovery (to measure the span) and the reviewer (to render it) go
+ * through this. The reviewer re-reads rather than being handed discovery's
+ * array on purpose: see {@link QualifiedSession}. Returns null when the
+ * transcript is gone.
+ *
+ * Every read reports the entry cap, including the reviewer's. A transcript that
+ * crosses PARSE_LIMIT between the two reads is truncated in the read that
+ * actually advances the journal, so silencing the second one would hide exactly
+ * the case that matters; two lines about one over-long session is the cheaper
+ * cost.
+ */
+export async function readSessionWindow(args: {
+  sessionId: string;
+  logPath: string;
+  state: ReviewState;
+}): Promise<SessionWindow | null> {
+  const entries = await parseFull(args.logPath);
+  if (entries === null) return null;
+  const applied = sessionState(args.state, args.sessionId).applied[METADATA_CONSUMER] ?? null;
+  return { entries, span: resolveSpan(entries, applied) };
+}
+
 async function qualifyHusk(
   husk: ChatHuskEntry,
   args: { boxRoot: string; options: DiscoverOptions; result: DiscoveryResult },
@@ -151,15 +197,15 @@ async function qualifyHusk(
     return null;
   }
 
-  const entries = await parseFull(logPath);
-  if (entries === null) {
+  // Scoped to this block so the window is unreachable the moment the scalars
+  // below have been taken from it — the array must not outlive qualification.
+  const window = await readSessionWindow({ sessionId: husk.session, logPath, state: options.state });
+  if (window === null) {
     result.missingTranscripts += 1;
     return null;
   }
-
-  const applied = sessionState(options.state, husk.session).applied[METADATA_CONSUMER] ?? null;
-  const span = resolveSpan(entries, applied);
-  const spanChars = spanSize(span);
+  const spanChars = spanSize(window.span);
+  const bootstrap = window.span.bootstrap;
   if (spanChars < REVIEW_CHAR_THRESHOLD) {
     result.belowThreshold += 1;
     return null;
@@ -170,9 +216,8 @@ async function qualifyHusk(
     huskPath: husk.path,
     logPath,
     mtime,
-    entries,
-    span,
     spanChars,
+    bootstrap,
     snippetTitle: meta.firstUserSnippet?.trim() || null,
   };
 }
