@@ -2,9 +2,10 @@
 
 `VoiceChipFace` (`components/chat/VoiceChip.tsx`) is the presentational half
 of the header's voice chip — renderable standalone, without the `Dropdown` or
-router context the full `VoiceChip` needs. It shows mute state via the
-speaker icon, narration via a corner indicator dot, and HQ transcription via a
-transient "transcribing…" text label (the readable text
+router context the full `VoiceChip` needs. It's a split pill: a mic icon for
+narration (input, dimmed when off) and a speaker icon for mute (output,
+slashed when muted), divided by a thin vertical rule, plus a transient
+"transcribing…" text label for HQ transcription (the readable text
 `NarrationStatusBadge` used to show, preserved by design — see
 docs/implemented-plans/chat-header-chips.md). `voiceChipLabel`
 (`components/chat/voice-chip-label.ts`) builds the chip's accessible name from
@@ -33,6 +34,24 @@ face.includes('data-voice-muted="false"')
 face.includes('data-voice-narration="false"')
 => true
 
+// Narration off dims the mic segment — the dimming wrapper directly
+// contains the mic SVG (its path starts with the mic-capsule arc), so this
+// pins the structure, not just the presence of an opacity class somewhere.
+face.includes('<span class="opacity-40"><svg')
+=> true
+
+face.includes("M12 15a3 3 0 0 0 3-3V6")
+=> true
+
+// The two segments are separated by a thin vertical rule element.
+face.includes('<span aria-hidden="true" class="w-px h-4 bg-white/20">')
+=> true
+
+// The speaker segment renders the unmuted shape (sound waves), not the
+// muted slash.
+face.includes("M15.54 8.46a5 5 0 0 1 0 7.07")
+=> true
+
 face.includes("transcribing…")
 => false
 
@@ -47,19 +66,30 @@ const face = renderFace({ muted: true, narrationEnabled: false, hqInFlight: fals
 face.includes('data-voice-muted="true"')
 => true
 
+// Muted renders the slashed speaker shape instead of the sound waves.
+face.includes("M17 9l4 6m0-6-4 6")
+=> true
+
+face.includes("M15.54 8.46a5 5 0 0 1 0 7.07")
+=> false
+
 voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false })
 => Voice — muted
 ```
 
-## Narration on shows a corner indicator dot
+## Narration on brightens the mic segment (no dimming)
 
 ```ts
 const face = renderFace({ muted: false, narrationEnabled: true, hqInFlight: false });
 face.includes('data-voice-narration="true"')
 => true
 
-// The corner dot is a small rounded span rendered only when narration is on.
-face.includes("rounded-full")
+// Narration on means the mic is at full brightness, not dimmed — the mic
+// SVG is still there, but no longer inside a dimming wrapper.
+face.includes("opacity-40")
+=> false
+
+face.includes("M12 15a3 3 0 0 0 3-3V6")
 => true
 
 voiceChipLabel({ muted: false, narrationEnabled: true, hqInFlight: false })

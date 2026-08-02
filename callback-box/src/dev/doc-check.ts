@@ -24,6 +24,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { buildGraphExtended, ROOT } from "./doc-graph-data.js";
 import { duplicateBasenames, buildBasenameLookup, repairLinks, type UnfixableLink } from "./doc-link-repair.js";
+import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link-check.js";
 
 const MONO_ROOT = path.dirname(ROOT);
 
@@ -59,8 +60,16 @@ const ORPHAN_EXEMPT_PREFIXES = [
 // doctest fixtures (their example links aren't real references, and their
 // basenames aren't link targets).
 function trackedMarkdownFiles(): string[] {
+  return trackedMarkdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md"));
+}
+
+// Same set, but keeping .doctest.md fixtures: they're public tracked markdown
+// too, so the private-issues link scan (unlike the reference/orphan checks,
+// which treat doctest example links as non-real references) must not exempt
+// them — a private-issues link in doctest prose is a real leak.
+function trackedMarkdownFilesIncludingDoctests(): string[] {
   const stdout = execFileSync("git", ["ls-files", "-z", "*.md"], { cwd: MONO_ROOT, encoding: "utf8" });
-  return stdout.split("\0").filter((p) => p.length > 0 && !p.endsWith(".doctest.md"));
+  return stdout.split("\0").filter((p) => p.length > 0);
 }
 
 function issueFiles(tracked: string[]): string[] {
@@ -105,9 +114,28 @@ function issuesUniquenessProblems(tracked: string[]): string[] {
   return [...dups].map(([base, paths]) => `duplicate issue basename: ${base} — ${paths.join(", ")} (issue basenames must be unique; rename or merge)`);
 }
 
+// HARD invariant, lexical and independent of filesystem resolution: a
+// tracked (public) file — including doctest fixtures — must never link into
+// private-issues/ — see src/dev/private-link-check.ts and
+// docs/implemented-plans/private-issues-shadow-repo.md section I. Deliberately not fed
+// through --fix: these are never a heal-by-basename case, they must stay a
+// hard error. Scans its own file list (rather than taking `tracked`) because
+// it must cover .doctest.md, unlike every other check here.
+function privateLinkProblems(): string[] {
+  const problems: string[] = [];
+  for (const rel of trackedMarkdownFilesIncludingDoctests()) {
+    if (GENERATED_NO_SCAN.has(rel)) continue; // reflects other files' text verbatim, not real links
+    const content = fs.readFileSync(path.join(MONO_ROOT, rel), "utf8");
+    for (const v of findPrivateLinkViolations(rel, content)) {
+      problems.push(`private-issues link: ${v.path}:${v.line} -> ${v.target} — ${PRIVATE_LINK_REASON}`);
+    }
+  }
+  return problems;
+}
+
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
-  const problems = [...referenceProblems(), ...issuesUniquenessProblems(tracked)];
+  const problems = [...referenceProblems(), ...issuesUniquenessProblems(tracked), ...privateLinkProblems()];
 
   if (problems.length > 0) {
     console.error("doc-check failed:");
@@ -154,6 +182,14 @@ function runFix(): void {
     for (const p of issuesProblems) console.error(`  ${p}`);
   }
 
+  // Never auto-fixed (not a heal-by-basename case — a private-issues link is
+  // always a hard error, not a decayed reference).
+  const privateProblems = privateLinkProblems();
+  if (privateProblems.length > 0) {
+    console.error("\nprivate-issues link violations (must fix by hand — never auto-repaired):");
+    for (const p of privateProblems) console.error(`  ${p}`);
+  }
+
   if (unfixableByFile.size > 0) {
     console.error("\nunfixable broken links (manual — true rename/delete or ambiguous):");
     for (const [rel, links] of unfixableByFile) {
@@ -171,7 +207,7 @@ function runFix(): void {
   }
 
   // Fail loud on anything needing a human; rewrites alone are a success.
-  if (issuesProblems.length > 0 || unfixableByFile.size > 0) process.exit(1);
+  if (issuesProblems.length > 0 || privateProblems.length > 0 || unfixableByFile.size > 0) process.exit(1);
 }
 
 if (process.argv.includes("--fix")) runFix();

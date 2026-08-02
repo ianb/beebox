@@ -18,7 +18,8 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
+import { Dropdown } from "../ui/Dropdown";
+import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { withBase } from "../../api";
 import { trpc } from "../../lib/trpc";
 import { contextChipLabel } from "./context-chip-label";
@@ -31,6 +32,16 @@ import type { OnZoomView } from "./ChatMessages";
 // set of rows it renders rather than spawning a flyout. Resets to "root"
 // when the dropdown closes.
 type ContextChipPanel = "root" | "recent-files";
+
+/** Folder glyph preceding the chip's label — never shrinks so the label's
+ * own `truncate` is what gives way on narrow viewports. */
+function FolderIcon() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+    </svg>
+  );
+}
 
 interface ResolvedLink {
   ref: string;
@@ -185,6 +196,7 @@ export function ContextChip({
       align="left"
       width="w-[24rem]"
       className="min-w-0"
+      panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
         // w-full is load-bearing: measured in-browser, this trigger button
@@ -196,11 +208,12 @@ export function ContextChip({
         <button
           type="button"
           onClick={toggle}
-          className="min-h-[40px] w-full min-w-0 px-2 flex items-center rounded hover:bg-white/20 text-white/80 hover:text-white text-xs truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="min-h-[40px] w-full min-w-0 px-3 flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={title}
           aria-label={`Context: ${label}`}
           {...ariaProps}
         >
+          <FolderIcon />
           <span className="min-w-0 truncate">{label}</span>
         </button>
       )}

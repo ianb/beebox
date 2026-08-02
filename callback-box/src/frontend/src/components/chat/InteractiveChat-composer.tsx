@@ -7,7 +7,8 @@
  */
 
 import TextareaAutosize from "react-textarea-autosize";
-import { Dropdown, MenuItem } from "../ui/Dropdown";
+import { Dropdown } from "../ui/Dropdown";
+import { MenuItem } from "../ui/dropdown-menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";

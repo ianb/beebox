@@ -1,28 +1,37 @@
 /**
  * The chat header's "..." menu: New session, "Recent chats" (session list
- * sub-panel), and "Advanced" (debug toggles, process controls). Model,
- * Voice settings, and Narration mode moved to `VoiceChip` in chunk 3 of
- * docs/plans/chat-header-chips.md. Self-contained — props in, callbacks out.
+ * sub-panel), "Model" (moved here from `VoiceChip` in the chip polish round,
+ * docs/plans/chat-header-chips.md follow-up — model choice isn't a voice I/O
+ * concern), and "Advanced" (debug toggles, process controls). Voice settings
+ * and Narration mode stay on `VoiceChip` (chunk 3 of
+ * docs/plans/chat-header-chips.md). Self-contained — props in, callbacks out.
  */
 
 import { useState, type ReactNode } from "react";
-import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
+import { Dropdown } from "../ui/Dropdown";
+import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { SessionListPanel } from "./SessionListPanel";
 import { AdvancedPanel } from "./ChatMenu-advanced-panels";
+import { ModelPanel } from "./ChatMenu-model-panel";
+import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
 // positioning complexity. Resets to "root" when the dropdown closes.
-type ChatMenuPanel = "root" | "sessions" | "advanced";
+type ChatMenuPanel = "root" | "sessions" | "model" | "advanced";
 
-/** Root panel: New session, "Recent chats ›", divider, "Advanced ›". */
+/** Root panel: New session, "Recent chats ›", "Model", divider, "Advanced ›". */
 function RootPanel({
   onNewSession,
   onOpenSessions,
+  currentModelLabel,
+  onOpenModel,
   onOpenAdvanced,
 }: {
   onNewSession: () => void;
   onOpenSessions: () => void;
+  currentModelLabel: string;
+  onOpenModel: () => void;
   onOpenAdvanced: () => void;
 }) {
   return (
@@ -32,6 +41,12 @@ function RootPanel({
         <span className="flex justify-between gap-2 w-full">
           <span>Recent chats</span>
           <span className="text-warm-500">›</span>
+        </span>
+      </MenuItem>
+      <MenuItem onClick={onOpenModel} keepOpen>
+        <span className="flex justify-between gap-2 w-full">
+          <span>Model</span>
+          <span className="text-warm-500 truncate">{currentModelLabel} ›</span>
         </span>
       </MenuItem>
       <MenuDivider />
@@ -63,6 +78,10 @@ interface ChatMenuBodyProps {
   onNewSession: () => void;
   contextDir: string | null;
   onOpenSessions: () => void;
+  currentModelLabel: string;
+  onOpenModel: () => void;
+  selectedModel: string | null;
+  onSelectModel: (model: string | null) => void;
   onOpenAdvanced: () => void;
   onBackToRoot: () => void;
   advancedProps: Omit<Parameters<typeof AdvancedPanel>[0], "onBack">;
@@ -75,12 +94,25 @@ interface ChatMenuBodyProps {
  * `ChatMenuPanel` member at compile time without one).
  */
 function ChatMenuBody(props: ChatMenuBodyProps): ReactNode {
-  const { panel, onNewSession, contextDir, onOpenSessions, onOpenAdvanced, onBackToRoot, advancedProps } = props;
+  const {
+    panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, onOpenModel, selectedModel, onSelectModel,
+    onOpenAdvanced, onBackToRoot, advancedProps,
+  } = props;
   switch (panel) {
     case "root":
-      return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} onOpenAdvanced={onOpenAdvanced} />;
+      return (
+        <RootPanel
+          onNewSession={onNewSession}
+          onOpenSessions={onOpenSessions}
+          currentModelLabel={currentModelLabel}
+          onOpenModel={onOpenModel}
+          onOpenAdvanced={onOpenAdvanced}
+        />
+      );
     case "sessions":
       return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
+    case "model":
+      return <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
     case "advanced":
       return <AdvancedPanel onBack={onBackToRoot} {...advancedProps} />;
   }
@@ -92,6 +124,8 @@ function ChatMenuBody(props: ChatMenuBodyProps): ReactNode {
 export function ChatMenu({
   onNewSession,
   contextDir,
+  selectedModel,
+  onSelectModel,
   onStopProcess,
   onRestartProcess,
   onCompactSession,
@@ -105,6 +139,8 @@ export function ChatMenu({
 }: {
   onNewSession: () => void;
   contextDir: string | null;
+  selectedModel: string | null;
+  onSelectModel: (model: string | null) => void;
   onStopProcess: () => void;
   onRestartProcess: () => void;
   onCompactSession: () => void;
@@ -117,6 +153,7 @@ export function ChatMenu({
   onToggleDebugLog: () => void;
 }) {
   const [panel, setPanel] = useState<ChatMenuPanel>("root");
+  const currentModelLabel = MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
 
   return (
     <Dropdown
@@ -126,12 +163,13 @@ export function ChatMenu({
       // the other panels keep the compact menu width. The viewport clamp in
       // Dropdown still bounds it on narrow screens.
       width={panel === "sessions" ? "w-[28rem]" : "w-56"}
+      panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
           onClick={toggle}
-          className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title="Chat menu"
           aria-label="Chat menu"
           {...ariaProps}
@@ -147,6 +185,10 @@ export function ChatMenu({
         onNewSession={onNewSession}
         contextDir={contextDir}
         onOpenSessions={() => setPanel("sessions")}
+        currentModelLabel={currentModelLabel}
+        onOpenModel={() => setPanel("model")}
+        selectedModel={selectedModel}
+        onSelectModel={onSelectModel}
         onOpenAdvanced={() => setPanel("advanced")}
         onBackToRoot={() => setPanel("root")}
         advancedProps={{

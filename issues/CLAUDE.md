@@ -160,6 +160,45 @@ Whoever researches the item fills the section in and retitles it
 everything awaiting research, and researching an item is a first-class way to
 advance it without implementing anything.
 
+## Private issues (`private-issues/` — a SEPARATE repo)
+
+This repo is source-available, so everything in `issues/` is world-readable.
+Issues that can't be public live in a **separate, per-developer private repo**,
+mounted (always as a gitignored symlink) at `<checkout>/private-issues/` with
+the same category layout and file conventions as `issues/`.
+
+**What goes where.** Private: anything about a person's own boxes or their
+content, personal/operational tasks, server/infrastructure specifics, names or
+identifiers of non-public people/domains, credentials-adjacent details — and
+any issue whose *examples* need such details to be useful. Public: everything
+about the code itself, reproducible with public context. **When unsure, ask
+the developer before filing publicly** — "does this contain non-public
+information?" is a human call. If a sanitized public version loses the
+substance, split it: a sanitized public item plus a private item holding the
+specifics (the private one links to the public one, never the reverse).
+
+**It is a different git repo.** Stage and commit private issues from INSIDE
+`private-issues/`. An agent that edits a private issue and runs `git add -A`
+at the monorepo root sees nothing staged — that is the leak guard working
+(the mount is gitignored), not a bug.
+
+**Links are one-way.** Private issues may link to public files
+(`../callback-box/...` style paths resolve through the mount). Public files
+must NEVER link into `private-issues/` — the link would dangle for anyone
+without the private repo; `doc-check` hard-errors it. Name the private item
+in prose (not a link) if a public file must gesture at it.
+
+**Mechanics** (opt-in; nothing happens without it): `bin/private-issues init
+<checkout>` creates the repo as a peer of the main checkout and symlinks it
+into main; worktree creation auto-mounts a private worktree (branch
+`worktree-<name>`, stored outside the public worktree so no cleanup can
+destroy it); `/finish` lands the private branch on private `main` alongside
+the public merge; unmerged private work survives any worktree removal as an
+orphan that `bin/worktrees sweep` reports until resolved. Details:
+`bin/CLAUDE.md` and `bin/private-issues help`. Private issues appear in the
+dev issues browser (`/dev/issues/`) marked `private` — that page is
+owner-session-gated.
+
 ## Filing (agents)
 
 Filing is at your discretion — no thresholds or quotas. When you notice something

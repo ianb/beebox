@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-02T02:25:20Z
-Total documents: 232
+Generated: 2026-08-02T03:48:43Z
+Total documents: 233
 
 ## Issues
 
@@ -98,6 +98,7 @@ Referenced by:
 - docs/implemented-plans/named-places.md:85 (mention) — (the CLAUDE.md parse-mutate-reserialize contract, faithful form). **Not**
 - docs/implemented-plans/normalize-chat-links.md:88 (mention) — - **Monorepo `CLAUDE.md:` "NEVER disable or weaken a lint rule… Ask first."**
 - docs/implemented-plans/open-chat-from-card.md:265 (mention) — pane; CLAUDE.md's "don't add features beyond what the task requires."
+- docs/implemented-plans/private-issues-shadow-repo.md:402 (mention) — - Root `CLAUDE.md`: one line in the monorepo-layout section.
 - docs/implemented-plans/procedure-validation-completion.md:33 (mention) — - *"Treat noisy command output as a bug"* (monorepo `CLAUDE.md`) — model calls and retries must stay quiet on the happy 
 - docs/implemented-plans/questions-end-to-end.md:113 (mention) — the box `CLAUDE.md` via `src/core/docs-gen/claude-md.ts:20`). Reused as-is
 - docs/implemented-plans/refresh-clerk.md:17 (mention) — - Monorepo `CLAUDE.md` — **"NEVER disable or weaken a lint rule to make code
@@ -286,7 +287,7 @@ Referenced by:
 - docs/implemented-plans/canvas-loop-figure.md:28 (mention) — - `code-style.md`: max 2 positional params (the figure contract's
 - docs/implemented-plans/capture-mode.md:39 (mention) — - `callback-box/code-style.md` — no `any`, named-params objects, custom
 - docs/implemented-plans/card-view-widgets.md:22 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
-- docs/implemented-plans/chat-header-chips.md:44 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
+- docs/implemented-plans/chat-header-chips.md:56 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
 - docs/implemented-plans/chat-review.md:56 (mention) — - **`callback-box/code-style.md`** — max 2 positional params, no default
 - docs/implemented-plans/chat-scroll-redesign.md:46 (mention) — - `callback-box/code-style.md:36-37` — no default parameters; max 2 positional
 - docs/implemented-plans/chat-stream-finalize-unify.md:48 (mention) — - `callback-box/code-style.md:37` — max 2 positional params; new/changed
@@ -348,7 +349,7 @@ Referenced by:
 - ../.claude/agents/finish.md:81 (mention) — root `CLAUDE.md`/`code-style.md` — also drops you to the full flow.
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:115 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
-- ../CLAUDE.md:41 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../CLAUDE.md:43 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:91 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:17 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:37 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
@@ -373,7 +374,7 @@ Referenced by:
 - code-style.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/implemented-plans/architectural-review.md:597 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
 - docs/implemented-plans/card-view-widgets.md:24 (mention) — - `callback-box/frontend.md:34` — *"Reach for a primitive from
-- docs/implemented-plans/chat-header-chips.md:40 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
+- docs/implemented-plans/chat-header-chips.md:52 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read frontend.md before writing UI"* and the
 - docs/implemented-plans/figure-card-type.md:79 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
@@ -406,6 +407,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/implemented-plans/cards-as-markdown-rfc.md:75 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:13 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
+- docs/implemented-plans/private-issues-shadow-repo.md:158 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - ../issues/docs-and-chores/2026-07-21-community-forum-zulip.md:11 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../research/CLAUDE.md:11 (mention) — `pai/`, …) with a `README.md` index: a table of the corpus's documents plus
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:4 (link) — architecture framing in the first-pass [README](README.md)). This is a code-reading
@@ -918,7 +920,7 @@ Referenced by:
 - docs/implemented-plans/bulk-file-upload.md:19 (mention) — - `docs/engineering-principles.md` — chiefly **#1 types are structure** (a
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
-- docs/implemented-plans/chat-header-chips.md:35 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
+- docs/implemented-plans/chat-header-chips.md:47 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-review.md:39 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/expose-dev-router.md:29 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/hub-healthz-box-aggregation.md:31 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
@@ -1379,8 +1381,8 @@ Referenced by:
 - docs/cards-as-markdown.md:20 (mention) — **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` fr
 - docs/plans/README.md:68 (mention) — applies the naming conventions (`docs/README.md`). The 2026-07-04
 - docs/plans/docs-reorg.md:344 (mention) — role change). Conventions recorded in `docs/README.md`.
-- src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, or duplicate `issues/
-- ../.claude/agents/finish.md:315 (mention) — - **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
+- src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
+- ../.claude/agents/finish.md:348 (mention) — - **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
 - ../CLAUDE.md:25 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:37 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
 
@@ -1499,7 +1501,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:760 (mention) — that didn't happen. `testing.md:608`'s "soft assertions" note is a
 - docs/implemented-plans/architectural-review.review.md:12 (mention) — **Citation:** plan Track P.1; `testing.md:608`.
 - docs/implemented-plans/card-view-widgets.md:636 (mention) — - **Test posture** (per `docs/testing.md` — tests first, as a design tool):
-- docs/implemented-plans/chat-header-chips.md:47 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
+- docs/implemented-plans/chat-header-chips.md:59 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
 - docs/implemented-plans/chat-scroll-redesign.md:55 (mention) — - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
 - docs/implemented-plans/chat-stream-finalize-unify.md:53 (mention) — - `callback-box/docs/testing.md:5-9` + `:474-521` — layout/streaming behavior is
 - docs/implemented-plans/courseware-lesson-plan.md:326 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
@@ -1606,6 +1608,7 @@ Referenced by:
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
+- ../issues/decisions/2026-08-01-scan-handler-move-into-place.md:7 (mention) — `docs/triage.md`, the handle stage needs a `procedure:` (inline or
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:78 (mention) — role with a handler procedure (`docs/triage.md`). Could the admin landmark host
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:78 (mention) — (`docs/triage.md`) or a Drive-specific destination — the Drive connector may
 - ../research/pai/README.md:60 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
@@ -2167,7 +2170,7 @@ References:
 
 #### docs/implemented-plans/chat-header-chips.md
 
-Title: "Chat header re-IA: three stateful chips" | 342 lines
+Title: "Chat header re-IA: three stateful chips" | 354 lines
 
 Referenced by:
 - ../issues/closed/bugs/2026-08-01-chat-menu-clipped-mobile.md:5 (mention) — discovered-in: worktree-chat-menu-mobile-overflow — implementing docs/plans/chat-header-chips.md
@@ -2659,6 +2662,17 @@ References:
 - → code-style.md (mention)
 - → frontend.md (mention)
 - → docs/landmarks.md (mention)
+- → CLAUDE.md (mention)
+
+#### docs/implemented-plans/private-issues-shadow-repo.md
+
+Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 445 lines
+
+Referenced by:
+- ../bin/CLAUDE.md:198 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+
+References:
+- → README.md (mention)
 - → CLAUDE.md (mention)
 
 #### docs/implemented-plans/procedure-validation-completion.md **[ORPHAN]**
@@ -3557,7 +3571,7 @@ References:
 Title: "iOS input-plane parity" | 578 lines
 
 Referenced by:
-- docs/implemented-plans/chat-header-chips.md:276 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
+- docs/implemented-plans/chat-header-chips.md:288 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:3 (mention) — design: ../../callback-box/docs/plans/ios-input-plane-parity.md
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:9 (link) — [`ios-input-plane-parity.md`](../../callback-box/docs/plans/ios-input-plane-parity.md).
 
@@ -3678,7 +3692,7 @@ Referenced by:
 - docs/plans/github-pages-site.md:269 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:88 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:70 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
-- ../.claude/agents/finish.md:304 (mention) — `callback-box/docs/plans/README.md`), then either fold durable "how it works
+- ../.claude/agents/finish.md:337 (mention) — `callback-box/docs/plans/README.md`), then either fold durable "how it works
 - ../.claude/skills/cb-plan/SKILL.md:91 (mention) — live there, separate from reference docs (see `docs/plans/README.md`).
 
 References:
@@ -3715,7 +3729,7 @@ Referenced by:
 - docs/plans/scan-guide-card.md:174 (mention) — docs/plans/scan-guide-card.md)` via `ctx.writeLine`.
 - docs/plans/scan-guide-card.review.md:7 (mention) — `scan-guide-card.md`.
 - docs/plans/scanner-ingest.md:5 (mention) — scanner-priors mechanism reshaped 2026-08-01 by the `scan-guide-card.md`
-- ../issues/docs-and-chores/2026-08-01-test1-real-people-data.md:14 (mention) — (`callback-box/docs/plans/scan-guide-card.md`, test1 amendment).
+- ../issues/docs-and-chores/2026-08-01-test1-real-people-data.md:9 (mention) — fictional demo cast — see `docs/plans/scan-guide-card.md`, test1 amendment)
 
 References:
 - → docs/plans/scan-guide-card.review.md (mention)

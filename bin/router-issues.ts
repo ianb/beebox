@@ -29,15 +29,26 @@ export interface IssueFrontmatter {
 
 export type ResearchState = "none" | "awaiting" | "researched";
 
+// "public" is the tracked, source-available issues/ tree; "private" is the
+// shadow repo mounted at private-issues/ (see
+// callback-box/docs/implemented-plans/private-issues-shadow-repo.md section H). This is a
+// RECORD field, not a path prefix — relPath stays issue-relative for both
+// sources ("bugs/2026-08-01-foo.md"), so category/closed parsing in
+// parseIssueFile never has to know which source it came from. Only URLs carry
+// a `private/` prefix (addVisibilityPrefix/stripVisibilityPrefix below).
+export type Visibility = "public" | "private";
+
 export interface IssueRecord {
-  // Path relative to issues/, e.g. "bugs/2026-01-01-slug.md" or
-  // "closed/bugs/2026-01-01-slug.md".
+  // Path relative to issues/ (public) or private-issues/ (private) — e.g.
+  // "bugs/2026-01-01-slug.md" or "closed/bugs/2026-01-01-slug.md" — for
+  // BOTH sources.
   relPath: string;
   category: string;
   closed: boolean;
   slug: string;
   frontmatter: IssueFrontmatter;
   research: ResearchState;
+  visibility: Visibility;
 }
 
 // --- hand-rolled frontmatter parser ------------------------------------------
@@ -129,11 +140,14 @@ function detectResearchState(body: string): ResearchState {
 }
 
 // Parse one issue file's contents into a record. `relPath` is e.g.
-// "bugs/2026-01-01-slug.md" or "closed/bugs/2026-01-01-slug.md". Falls back
-// to a filename-derived title when frontmatter has none (an older/stray
-// file might use an H1 instead — see the caller for a real example) rather
-// than dropping the issue from the browser entirely.
-export function parseIssueFile(relPath: string, src: string): IssueRecord {
+// "bugs/2026-01-01-slug.md" or "closed/bugs/2026-01-01-slug.md" — issue-
+// relative regardless of `visibility` (omitted = "public"), so this parsing
+// is identical for a private-repo file; the caller supplies which source it
+// came from. Falls back to a filename-derived title when frontmatter has
+// none (an older/stray file might use an H1 instead — see the caller for a
+// real example) rather than dropping the issue from the browser entirely.
+export function parseIssueFile(relPath: string, src: string, visibility?: Visibility): IssueRecord {
+  const v = visibility ?? "public";
   const segments = relPath.split("/");
   const closed = segments[0] === "closed";
   const category = closed ? (segments[1] ?? "") : (segments[0] ?? "");
@@ -165,6 +179,7 @@ export function parseIssueFile(relPath: string, src: string): IssueRecord {
       ...(design !== undefined ? { design } : {}),
     },
     research: detectResearchState(body),
+    visibility: v,
   };
 }
 
@@ -179,27 +194,34 @@ async function listMdFiles(dir: string): Promise<string[]> {
   }
 }
 
-// Enumerate every issue under `issuesRoot` (the tracked issues/ dir of the
-// canonical checkout — always main's, per the caller). Only files that live
-// in a recognized category subdir (or closed/<category>) count; a stray file
-// sitting directly under issues/ (outside the documented category-dir
-// convention) is invisible to the browser, matching the documented data
-// model rather than guessing at ad hoc layouts.
-export async function listIssues(issuesRoot: string): Promise<IssueRecord[]> {
+// Enumerate every issue under `issuesRoot` — the tracked issues/ dir of the
+// canonical checkout for "public" (always main's, per the caller), or the
+// private-issues/ symlink target for "private" (categories sit at ITS root,
+// no issues/ prefix inside that repo — same category-dir shape either way,
+// so this one function serves both). Only files that live in a recognized
+// category subdir (or closed/<category>) count; a stray file sitting
+// directly under the root (e.g. the private repo's README.md, outside the
+// documented category-dir convention) is invisible to the browser, matching
+// the documented data model rather than guessing at ad hoc layouts. An
+// absent root (visibility "private" when the developer hasn't opted in)
+// naturally yields zero records with no error — listMdFiles already treats
+// a missing directory as empty.
+export async function listIssues(issuesRoot: string, visibility?: Visibility): Promise<IssueRecord[]> {
+  const v = visibility ?? "public";
   const records: IssueRecord[] = [];
   for (const category of CATEGORIES) {
     const dir = path.join(issuesRoot, category);
     for (const file of await listMdFiles(dir)) {
       const relPath = `${category}/${file}`;
       try {
-        records.push(parseIssueFile(relPath, await fs.readFile(path.join(dir, file), "utf8")));
+        records.push(parseIssueFile(relPath, await fs.readFile(path.join(dir, file), "utf8"), v));
       } catch { /* unreadable — skip */ }
     }
     const closedDir = path.join(issuesRoot, "closed", category);
     for (const file of await listMdFiles(closedDir)) {
       const relPath = `closed/${category}/${file}`;
       try {
-        records.push(parseIssueFile(relPath, await fs.readFile(path.join(closedDir, file), "utf8")));
+        records.push(parseIssueFile(relPath, await fs.readFile(path.join(closedDir, file), "utf8"), v));
       } catch { /* unreadable — skip */ }
     }
   }
@@ -265,9 +287,28 @@ function stripIssuesPrefix(p: string): string {
   return p.startsWith("issues/") ? p.slice("issues/".length) : p;
 }
 
+// Pathspecs scoping a git command to exactly the recognized category dirs
+// (and their closed/ mirrors), non-recursively into each — e.g.
+// "bugs/*.md", "closed/bugs/*.md". Used for the PRIVATE overlay, whose
+// categories sit at the private repo's root with no "issues/" prefix to
+// scope by: without this, a root file like the private README.md would
+// match a bare "*.md" pathspec and show up as a phantom issue.
+function categoryPathspecs(): string[] {
+  // :(glob) makes `*` stop at `/` (default pathspec `*` crosses directory
+  // separators, which would admit nested files listIssues never enumerates —
+  // phantom worktree-only records).
+  return CATEGORIES.flatMap((cat) => [`:(glob)${cat}/*.md`, `:(glob)closed/${cat}/*.md`]);
+}
+
 export interface OverlayResult {
-  // issue relPath (relative to issues/, e.g. "bugs/foo.md") -> entries
+  // issue relPath (relative to issues/, e.g. "bugs/foo.md") -> entries, for
+  // PUBLIC issues.
   byPath: Map<string, OverlayEntry[]>;
+  // Same shape, for PRIVATE issues (relPath relative to private-issues/).
+  // Kept as a separate map — never merged into byPath — so a public and a
+  // private issue that happen to share a relPath can never cross-attribute
+  // overlay badges.
+  byPathPrivate: Map<string, OverlayEntry[]>;
   // worktree name -> its checkout root, for detail-page diffing
   worktreeRoots: Map<string, string>;
 }
@@ -281,19 +322,32 @@ async function hasGitMarker(dir: string): Promise<boolean> {
   }
 }
 
+function mergeInto(target: Map<string, OverlayEntry[]>, source: Map<string, OverlayEntry[]>): void {
+  for (const [relPath, list] of source) {
+    const existing = target.get(relPath);
+    if (existing) existing.push(...list);
+    else target.set(relPath, list);
+  }
+}
+
 // Enumerate active worktrees (any dir directly under worktreesRoot with a
-// .git file/dir) and collect their issues/ overlay concurrently. A worktree
-// whose git commands fail (mid-teardown, not actually a repo, etc.) is
-// logged and skipped rather than failing the whole page.
+// .git file/dir) and collect their issues/ AND private-issues/ overlays
+// concurrently. A worktree whose PUBLIC git commands fail (mid-teardown, not
+// actually a repo, etc.) is logged and skipped rather than failing the whole
+// page. The PRIVATE side is a soft dependency — most developers never opt
+// in, so an absent mount or a failing private git command is skipped
+// silently (see worktreePrivateOverlayWithPaths), never logged as if it were
+// a real error.
 export async function collectOverlay(worktreesRoot: string): Promise<OverlayResult> {
   const byPath = new Map<string, OverlayEntry[]>();
+  const byPathPrivate = new Map<string, OverlayEntry[]>();
   const worktreeRoots = new Map<string, string>();
   let names: string[];
   try {
     const dirents = await fs.readdir(worktreesRoot, { withFileTypes: true });
     names = dirents.filter((d) => d.isDirectory()).map((d) => d.name);
   } catch {
-    return { byPath, worktreeRoots };
+    return { byPath, byPathPrivate, worktreeRoots };
   }
 
   await Promise.all(names.map(async (name) => {
@@ -301,18 +355,16 @@ export async function collectOverlay(worktreesRoot: string): Promise<OverlayResu
     if (!(await hasGitMarker(root))) return;
     worktreeRoots.set(name, root);
     try {
-      const entries = await worktreeIssueOverlayWithPaths(name, root);
-      for (const [relPath, list] of entries) {
-        const existing = byPath.get(relPath);
-        if (existing) existing.push(...list);
-        else byPath.set(relPath, list);
-      }
+      mergeInto(byPath, await worktreeIssueOverlayWithPaths(name, root));
     } catch (err) {
       console.error(`[issues] skipping worktree overlay for ${name}: ${(err as Error).message}`);
     }
+    try {
+      mergeInto(byPathPrivate, await worktreePrivateOverlayWithPaths(name, root));
+    } catch { /* no private mount, or its git commands failed — soft dependency, stays silent */ }
   }));
 
-  return { byPath, worktreeRoots };
+  return { byPath, byPathPrivate, worktreeRoots };
 }
 
 // Like worktreeIssueOverlay but keyed by relPath (the shape collectOverlay
@@ -324,6 +376,31 @@ async function worktreeIssueOverlayWithPaths(worktree: string, worktreeRoot: str
     run(["diff", "--name-status", "-z", "main...HEAD", "--", "issues/"]),
     run(["diff", "--name-status", "-z", "HEAD", "--", "issues/"]),
     run(["ls-files", "--others", "--exclude-standard", "-z", "--", "issues/*.md", "issues/**/*.md"]),
+  ]);
+  return mergeOverlaySources(worktree, committed.stdout, uncommitted.stdout, untracked.stdout);
+}
+
+// Like worktreeIssueOverlayWithPaths, but for the PRIVATE mount at
+// <worktreeRoot>/private-issues — a symlink to a private git worktree that
+// may not exist (developer hasn't opted in). Its categories sit at the
+// private repo's ROOT, not under an issues/ prefix, so pathspecs are scoped
+// to the recognized category dirs directly (categoryPathspecs()) rather than
+// the "issues/" prefix the public overlay uses — without that scoping, a
+// root file like the private repo's README.md would match and show up as a
+// phantom issue. Paths git returns are already root-relative with no
+// "issues/" prefix, so mergeOverlaySources's stripIssuesPrefix is a no-op
+// for them (it only strips when the prefix is actually present) — no
+// separate merge step needed. An absent mount returns an empty map rather
+// than attempting (and failing) a git command against it.
+async function worktreePrivateOverlayWithPaths(worktree: string, worktreeRoot: string): Promise<Map<string, OverlayEntry[]>> {
+  const privateRoot = path.join(worktreeRoot, "private-issues");
+  if (!(await hasGitMarker(privateRoot))) return new Map();
+  const pathspecs = categoryPathspecs();
+  const run = (args: string[]) => execa("git", args, { cwd: privateRoot });
+  const [committed, uncommitted, untracked] = await Promise.all([
+    run(["diff", "--name-status", "-z", "main...HEAD", "--", ...pathspecs]),
+    run(["diff", "--name-status", "-z", "HEAD", "--", ...pathspecs]),
+    run(["ls-files", "--others", "--exclude-standard", "-z", "--", ...pathspecs]),
   ]);
   return mergeOverlaySources(worktree, committed.stdout, uncommitted.stdout, untracked.stdout);
 }
@@ -430,10 +507,46 @@ export function appendClosedIssuePills(html: string, closedHrefs: ReadonlySet<st
   );
 }
 
+// --- URL visibility prefix ------------------------------------------------------
+// The record model never encodes privacy in relPath (see IssueRecord) — only
+// URLs do, via a "private/" segment right after "/issues". These two
+// functions are the one place that adds/strips it, operating on the URL-rel
+// string (no leading slash, no "/issues" prefix) so callers can round-trip
+// through them instead of hand-building the prefix.
+
+export function addVisibilityPrefix(relPath: string, visibility: Visibility): string {
+  return visibility === "private" ? `private/${relPath}` : relPath;
+}
+
+export function stripVisibilityPrefix(urlRel: string): { visibility: Visibility; relPath: string } {
+  if (urlRel === "private" || urlRel.startsWith("private/")) {
+    return { visibility: "private", relPath: urlRel.slice("private/".length) };
+  }
+  return { visibility: "public", relPath: urlRel };
+}
+
+// The issues-space base for a given visibility — what dirPath-relative links
+// inside an issue's markdown resolve against (rewriteIssueLinks' issuesBase).
+function issuesBaseFor(base: string, visibility: Visibility): string {
+  return visibility === "private" ? `${base}/issues/private` : `${base}/issues`;
+}
+
+function issueDetailHref(base: string, issue: Pick<IssueRecord, "relPath" | "visibility">): string {
+  return `${base}/issues/${addVisibilityPrefix(issue.relPath, issue.visibility)}`;
+}
+
+// The right overlay map for an issue's visibility — never cross the two, so
+// a public and private issue sharing a relPath can't attribute badges to
+// each other.
+function overlayEntriesFor(overlay: OverlayResult, issue: Pick<IssueRecord, "relPath" | "visibility">): OverlayEntry[] | undefined {
+  return (issue.visibility === "private" ? overlay.byPathPrivate : overlay.byPath).get(issue.relPath);
+}
+
 // --- UI: shared bits ----------------------------------------------------------
 
-function facetChips(fr: IssueFrontmatter, research: ResearchState): string {
+function facetChips(fr: IssueFrontmatter, research: ResearchState, visibility: Visibility): string {
   const chips: string[] = [];
+  if (visibility === "private") chips.push(`<span class="chip chip-private">private</span>`);
   for (const need of fr.needs) chips.push(`<span class="chip chip-needs">needs:${escapeHtml(need)}</span>`);
   for (const label of fr.labels) chips.push(`<span class="chip chip-label">${escapeHtml(label)}</span>`);
   if (fr.area) chips.push(`<span class="chip chip-area">${escapeHtml(fr.area)}</span>`);
@@ -467,6 +580,7 @@ const ISSUES_CSS = `
   .filters .clear { margin-left: 0.3em; color: #999; text-decoration: none; }
   .chip { display: inline-block; padding: 0.15em 0.55em; margin: 0.15em 0.3em 0.15em 0; border-radius: 10px; background: #eef1f5; color: #555; font-size: 0.85em; text-decoration: none; }
   .chip-closed-link { margin: 0 0 0 0.4em; font-size: 0.78em; }
+  .chip-private { background: #eee; color: #666; border: 1px dashed #bbb; }
   .chip-research { background: #fdeee0; color: #a2380a; }
   .chip-research-done { background: #e6f4ea; color: #1e6b34; }
   .chip-label { background: #ece4fb; color: #5a34a8; }
@@ -507,6 +621,7 @@ export interface Filters {
   needs?: string;
   labels?: string;
   research?: string;
+  visibility?: Visibility;
   worktreeTouched: boolean;
   status: "open" | "closed" | "all";
 }
@@ -518,12 +633,14 @@ export function parseFilters(query: URLSearchParams): Filters {
   const needs = query.get("needs");
   const labels = query.get("labels");
   const research = query.get("research");
+  const visibility = query.get("visibility");
   return {
     ...(category !== null ? { category } : {}),
     ...(area !== null ? { area } : {}),
     ...(needs !== null ? { needs } : {}),
     ...(labels !== null ? { labels } : {}),
     ...(research !== null ? { research } : {}),
+    ...(visibility === "public" || visibility === "private" ? { visibility } : {}),
     worktreeTouched: query.get("worktree") === "touched",
     status: status === "closed" || status === "all" ? status : "open",
   };
@@ -535,6 +652,7 @@ export function matches(issue: IssueRecord, f: Filters, touched: boolean): boole
   if (f.needs && !issue.frontmatter.needs.includes(f.needs)) return false;
   if (f.labels && !issue.frontmatter.labels.includes(f.labels)) return false;
   if (f.research === "awaiting" && issue.research !== "awaiting") return false;
+  if (f.visibility && issue.visibility !== f.visibility) return false;
   if (f.worktreeTouched && !touched) return false;
   return true;
 }
@@ -562,7 +680,7 @@ function filterChipsHtml(base: string, f: Filters, facets: IssueFacets): string 
     const p = new URLSearchParams();
     const merged = {
       category: f.category, area: f.area, needs: f.needs, labels: f.labels,
-      research: f.research, worktree: f.worktreeTouched ? "touched" : undefined,
+      research: f.research, visibility: f.visibility, worktree: f.worktreeTouched ? "touched" : undefined,
       status: f.status === "open" ? undefined : f.status,
       ...overrides,
     };
@@ -581,11 +699,15 @@ function filterChipsHtml(base: string, f: Filters, facets: IssueFacets): string 
   ).join("");
   const researchChip = `<a class="chip${f.research === "awaiting" ? " active" : ""}" href="${qs({ research: f.research === "awaiting" ? undefined : "awaiting" })}">awaiting research</a>`;
   const worktreeChip = `<a class="chip${f.worktreeTouched ? " active" : ""}" href="${qs({ worktree: f.worktreeTouched ? undefined : "touched" })}">touched by any worktree</a>`;
-  const anyActive = f.category || f.area || f.needs || f.labels || f.research || f.worktreeTouched || f.status !== "open";
+  const visibilityGroup = (["public", "private"] as const).map((v) =>
+    `<a class="chip${f.visibility === v ? " active" : ""}" href="${qs({ visibility: f.visibility === v ? undefined : v })}">${v}</a>`,
+  ).join("");
+  const anyActive = f.category || f.area || f.needs || f.labels || f.research || f.visibility || f.worktreeTouched || f.status !== "open";
   const clear = anyActive ? `<a class="clear" href="${base}/issues/">clear all ×</a>` : "";
   const labelsRow = facets.labels.length ? `<div>${group("labels", "labels", facets.labels, f.labels)}</div>` : "";
   return `<div class="filters">
     <div>status: ${statusGroup} ${researchChip} ${worktreeChip}${clear}</div>
+    <div>visibility: ${visibilityGroup}</div>
     <div>${group("category", "category", facets.categories, f.category)}</div>
     <div>${group("area", "area", facets.areas, f.area)}</div>
     <div>${group("needs", "needs", facets.needs, f.needs)}</div>
@@ -594,12 +716,12 @@ function filterChipsHtml(base: string, f: Filters, facets: IssueFacets): string 
 }
 
 function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] | undefined): string {
-  const href = `${base}/issues/${issue.relPath}`;
+  const href = issueDetailHref(base, issue);
   // The slug starts with the filing date, so "date · slug" would print the
   // date twice — split it into "date · rest-of-slug" instead.
   const date = issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
   const shortSlug = date ? issue.slug.slice(date.length).replace(/^-/, "") : issue.slug;
-  const pills = `${facetChips(issue.frontmatter, issue.research)}${worktreeBadges(overlay)}`;
+  const pills = `${facetChips(issue.frontmatter, issue.research, issue.visibility)}${worktreeBadges(overlay)}`;
   return `<li>
     <div class="issue-main">
       <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
@@ -609,31 +731,64 @@ function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] 
   </li>`;
 }
 
-async function readWorktreeOnlyIssue(worktreeRoot: string, relPath: string): Promise<IssueRecord | null> {
+// worktreeRoot is the WORKTREE checkout root; the visibility-appropriate
+// subdirectory (issues/ or private-issues/) is joined here so callers never
+// hand-build that path.
+async function readWorktreeOnlyIssue(worktreeRoot: string, relPath: string, visibility: Visibility): Promise<IssueRecord | null> {
+  const dir = visibility === "private" ? path.join(worktreeRoot, "private-issues") : path.join(worktreeRoot, "issues");
   try {
-    const src = await fs.readFile(path.join(worktreeRoot, "issues", relPath), "utf8");
-    return parseIssueFile(relPath, src);
+    const src = await fs.readFile(path.join(dir, relPath), "utf8");
+    return parseIssueFile(relPath, src, visibility);
   } catch {
     return null;
   }
 }
 
-async function renderIssueIndex(base: string, mainIssuesRoot: string, worktreesRoot: string, query: URLSearchParams): Promise<string> {
-  const [issues, overlay] = await Promise.all([listIssues(mainIssuesRoot), collectOverlay(worktreesRoot)]);
-  const mainPaths = new Set(issues.map((i) => i.relPath));
-
-  // Worktree-only issues: paths the overlay knows about (added somewhere)
-  // that don't exist on main. Read their frontmatter from whichever
-  // worktree has them (first one found).
-  const worktreeOnly: Array<{ issue: IssueRecord; entries: OverlayEntry[] }> = [];
-  for (const [relPath, entries] of overlay.byPath) {
+// Worktree-only issues (paths the overlay knows about — added somewhere —
+// that don't exist on the given main root) for one visibility. Read their
+// frontmatter from whichever worktree has them (first one found).
+async function findWorktreeOnlyIssues(
+  mainPaths: ReadonlySet<string>,
+  overlayByPath: Map<string, OverlayEntry[]>,
+  worktreeRoots: Map<string, string>,
+  visibility: Visibility,
+): Promise<Array<{ issue: IssueRecord; entries: OverlayEntry[] }>> {
+  const out: Array<{ issue: IssueRecord; entries: OverlayEntry[] }> = [];
+  for (const [relPath, entries] of overlayByPath) {
     if (mainPaths.has(relPath)) continue;
     const addedFrom = entries.find((e) => e.status === "added" || e.status === "renamed");
-    const root = addedFrom ? overlay.worktreeRoots.get(addedFrom.worktree) : undefined;
+    const root = addedFrom ? worktreeRoots.get(addedFrom.worktree) : undefined;
     if (!root) continue;
-    const issue = await readWorktreeOnlyIssue(root, relPath);
-    if (issue) worktreeOnly.push({ issue, entries });
+    const issue = await readWorktreeOnlyIssue(root, relPath, visibility);
+    if (issue) out.push({ issue, entries });
   }
+  return out;
+}
+
+async function renderIssueIndex(
+  base: string,
+  roots: { mainIssuesRoot: string; mainPrivateRoot: string },
+  worktreesRoot: string,
+  query: URLSearchParams,
+): Promise<string> {
+  const [publicIssues, privateIssues, overlay] = await Promise.all([
+    listIssues(roots.mainIssuesRoot, "public"),
+    listIssues(roots.mainPrivateRoot, "private"),
+    collectOverlay(worktreesRoot),
+  ]);
+  // Private records render interleaved with public ones in the same
+  // category sections, distinguished only by the "private" chip — the
+  // simplest coherent presentation per the plan, rather than a parallel set
+  // of sections.
+  const issues = [...publicIssues, ...privateIssues];
+  const mainPublicPaths = new Set(publicIssues.map((i) => i.relPath));
+  const mainPrivatePaths = new Set(privateIssues.map((i) => i.relPath));
+
+  const [worktreeOnlyPublic, worktreeOnlyPrivate] = await Promise.all([
+    findWorktreeOnlyIssues(mainPublicPaths, overlay.byPath, overlay.worktreeRoots, "public"),
+    findWorktreeOnlyIssues(mainPrivatePaths, overlay.byPathPrivate, overlay.worktreeRoots, "private"),
+  ]);
+  const worktreeOnly = [...worktreeOnlyPublic, ...worktreeOnlyPrivate];
 
   const f = parseFilters(query);
   // Worktree-only issues honor the same filters as main's (they are all
@@ -644,7 +799,7 @@ async function renderIssueIndex(base: string, mainIssuesRoot: string, worktreesR
   const facets = deriveFacets(issues);
 
   const statusFiltered = issues.filter((i) => f.status === "all" || (f.status === "closed" ? i.closed : !i.closed));
-  const visible = statusFiltered.filter((i) => matches(i, f, overlay.byPath.has(i.relPath)));
+  const visible = statusFiltered.filter((i) => matches(i, f, overlayEntriesFor(overlay, i) !== undefined));
 
   const byCategory = new Map<string, { open: IssueRecord[]; closed: IssueRecord[] }>();
   for (const cat of CATEGORIES) byCategory.set(cat, { open: [], closed: [] });
@@ -654,16 +809,17 @@ async function renderIssueIndex(base: string, mainIssuesRoot: string, worktreesR
     (issue.closed ? bucket.closed : bucket.open).push(issue);
   }
 
+  const row = (i: IssueRecord): string => issueRowHtml(base, i, overlayEntriesFor(overlay, i));
   const categoryHtml = CATEGORIES.map((cat) => {
     const bucket = byCategory.get(cat)!;
     if (bucket.open.length === 0 && bucket.closed.length === 0) return "";
     const openList = bucket.open.length
-      ? `<ul class="issues">${bucket.open.map((i) => issueRowHtml(base, i, overlay.byPath.get(i.relPath))).join("")}</ul>`
+      ? `<ul class="issues">${bucket.open.map(row).join("")}</ul>`
       : `<p class="empty">no open items</p>`;
     const closedList = bucket.closed.length && f.status !== "closed"
-      ? `<details class="closed-group"><summary>${bucket.closed.length} closed</summary><ul class="issues">${bucket.closed.map((i) => issueRowHtml(base, i, overlay.byPath.get(i.relPath))).join("")}</ul></details>`
+      ? `<details class="closed-group"><summary>${bucket.closed.length} closed</summary><ul class="issues">${bucket.closed.map(row).join("")}</ul></details>`
       : (f.status === "closed" && bucket.closed.length
-        ? `<ul class="issues">${bucket.closed.map((i) => issueRowHtml(base, i, overlay.byPath.get(i.relPath))).join("")}</ul>`
+        ? `<ul class="issues">${bucket.closed.map(row).join("")}</ul>`
         : "");
     const count = f.status === "closed" ? bucket.closed.length : bucket.open.length;
     return `<h2 class="cat">${escapeHtml(cat)} <span class="count">${count}</span></h2>${f.status === "closed" ? closedList : openList}${f.status === "all" ? closedList : ""}`;
@@ -705,31 +861,44 @@ function escapeDiffLine(line: string): string {
   return escaped;
 }
 
-async function worktreeDiffHtml(worktree: string, worktreeRoot: string, relPath: string): Promise<string> {
-  const gitPath = `issues/${relPath}`;
+// `gitCwd`/`gitPath` are already visibility-resolved by the caller: for a
+// public issue, cwd is the worktree root and the path carries the "issues/"
+// prefix; for a private one, cwd is `<worktreeRoot>/private-issues` and the
+// path is repo-root-relative with NO prefix (the private repo's categories
+// sit at its own root).
+async function worktreeDiffHtml(worktree: string, gitCwd: string, gitPath: string): Promise<string> {
   const sections: string[] = [];
   try {
-    const { stdout } = await execa("git", ["diff", "main...HEAD", "--", gitPath], { cwd: worktreeRoot });
+    const { stdout } = await execa("git", ["diff", "main...HEAD", "--", gitPath], { cwd: gitCwd });
     if (stdout.trim()) sections.push(`<h3>${escapeHtml(worktree)} — committed since main</h3><pre>${stdout.split("\n").map(escapeDiffLine).join("\n")}</pre>`);
   } catch { /* skip */ }
   try {
-    const { stdout } = await execa("git", ["diff", "HEAD", "--", gitPath], { cwd: worktreeRoot });
+    const { stdout } = await execa("git", ["diff", "HEAD", "--", gitPath], { cwd: gitCwd });
     if (stdout.trim()) sections.push(`<h3>${escapeHtml(worktree)} — uncommitted</h3><pre>${stdout.split("\n").map(escapeDiffLine).join("\n")}</pre>`);
   } catch { /* skip */ }
   return sections.join("");
 }
 
-async function renderIssueDetail(base: string, mainIssuesRoot: string, worktreesRoot: string, relPath: string, res: http.ServerResponse): Promise<void> {
-  const resolved = path.resolve(mainIssuesRoot, relPath);
-  if (!resolved.startsWith(mainIssuesRoot + path.sep) || !resolved.endsWith(".md")) {
+async function renderIssueDetail(
+  base: string,
+  roots: { mainIssuesRoot: string; mainPrivateRoot: string },
+  worktreesRoot: string,
+  urlRel: string,
+  res: http.ServerResponse,
+): Promise<void> {
+  const { visibility, relPath } = stripVisibilityPrefix(urlRel);
+  const contentRoot = visibility === "private" ? roots.mainPrivateRoot : roots.mainIssuesRoot;
+  const resolved = path.resolve(contentRoot, relPath);
+  if (!resolved.startsWith(contentRoot + path.sep) || !resolved.endsWith(".md")) {
     res.writeHead(403, { "content-type": "text/plain" });
     res.end("forbidden\n");
     return;
   }
 
   const overlay = await collectOverlay(worktreesRoot);
+  const overlayByPath = visibility === "private" ? overlay.byPathPrivate : overlay.byPath;
   const dirPath = path.posix.dirname(relPath.split(path.sep).join("/"));
-  const issuesBase = `${base}/issues`;
+  const issuesBase = issuesBaseFor(base, visibility);
 
   let src: string;
   let worktreeOnlyLabel = "";
@@ -737,7 +906,7 @@ async function renderIssueDetail(base: string, mainIssuesRoot: string, worktrees
     src = await fs.readFile(resolved, "utf8");
   } catch {
     // Not on main — maybe a worktree-only issue.
-    const entries = overlay.byPath.get(relPath);
+    const entries = overlayByPath.get(relPath);
     const addedFrom = entries?.find((e) => e.status === "added" || e.status === "renamed");
     const root = addedFrom ? overlay.worktreeRoots.get(addedFrom.worktree) : undefined;
     if (!root) {
@@ -745,8 +914,9 @@ async function renderIssueDetail(base: string, mainIssuesRoot: string, worktrees
       res.end(`not found: ${relPath}\n`);
       return;
     }
+    const dir = visibility === "private" ? path.join(root, "private-issues") : path.join(root, "issues");
     try {
-      src = await fs.readFile(path.join(root, "issues", relPath), "utf8");
+      src = await fs.readFile(path.join(dir, relPath), "utf8");
       worktreeOnlyLabel = `<p style="color:#a2380a;font:13px ui-monospace,monospace">worktree-only — exists on <strong>${escapeHtml(addedFrom!.worktree)}</strong>, not on main</p>`;
     } catch {
       res.writeHead(404, { "content-type": "text/plain" });
@@ -755,12 +925,12 @@ async function renderIssueDetail(base: string, mainIssuesRoot: string, worktrees
     }
   }
 
-  const issue = parseIssueFile(relPath, src);
+  const issue = parseIssueFile(relPath, src, visibility);
   const { md: rewritten, closedHrefs } = rewriteIssueLinks(src, dirPath, issuesBase);
   const { body } = parseFrontmatter(rewritten);
   const bodyHtml = appendClosedIssuePills(renderMarkdownToHtml(body), closedHrefs);
 
-  const entries = overlay.byPath.get(relPath) ?? [];
+  const entries = overlayByPath.get(relPath) ?? [];
   const byWorktree = new Map<string, OverlayEntry>();
   for (const e of entries) {
     const existing = byWorktree.get(e.worktree);
@@ -770,7 +940,10 @@ async function renderIssueDetail(base: string, mainIssuesRoot: string, worktrees
     ? []
     : await Promise.all([...byWorktree.keys()].map(async (wt) => {
         const root = overlay.worktreeRoots.get(wt);
-        return root ? worktreeDiffHtml(wt, root, relPath) : "";
+        if (!root) return "";
+        const gitCwd = visibility === "private" ? path.join(root, "private-issues") : root;
+        const gitPath = visibility === "private" ? relPath : `issues/${relPath}`;
+        return worktreeDiffHtml(wt, gitCwd, gitPath);
       }));
   const diffHtml = diffSections.filter(Boolean).length
     ? `<div class="wt-diff">${diffSections.join("")}</div>`
@@ -782,17 +955,22 @@ ${factsTableHtml(issue.frontmatter, issue.research, issue.closed)}
 ${bodyHtml}
 ${diffHtml}`;
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(renderDevShell(issue.frontmatter.title, devBreadcrumbs(base, `issues/${relPath}`), html, ISSUES_CSS));
+  res.end(renderDevShell(issue.frontmatter.title, devBreadcrumbs(base, `issues/${addVisibilityPrefix(relPath, visibility)}`), html, ISSUES_CSS));
 }
 
 // --- dispatch -------------------------------------------------------------------
 
 /**
  * Dispatch everything under /<name>/dev/issues/. `rel` is the URL after
- * "/issues" (e.g. "" | "/" | "/bugs/foo.md"); `query` is the parsed query
- * string. `mainRoot` is always the canonical checkout's root — the issue set
- * is main's regardless of which /<name>/dev/ prefix this request came
- * through — while `worktreesRoot` supplies the cross-worktree overlay.
+ * "/issues" (e.g. "" | "/" | "/bugs/foo.md" | "/private/bugs/foo.md");
+ * `query` is the parsed query string. `mainRoot` is always the canonical
+ * checkout's root — the issue set is main's regardless of which
+ * /<name>/dev/ prefix this request came through — while `worktreesRoot`
+ * supplies the cross-worktree overlay. A leading "private/" URL segment
+ * (stripped by stripVisibilityPrefix in renderIssueDetail) selects the
+ * private source, mounted at `<mainRoot>/private-issues/` — a symlink that
+ * may simply not exist for a developer who hasn't opted in, in which case
+ * it contributes zero records rather than an error.
  */
 export async function serveIssues(params: {
   base: string;
@@ -803,16 +981,16 @@ export async function serveIssues(params: {
   res: http.ServerResponse;
 }): Promise<void> {
   const { base, mainRoot, worktreesRoot, rel, query, res } = params;
-  const mainIssuesRoot = path.join(mainRoot, "issues");
+  const roots = { mainIssuesRoot: path.join(mainRoot, "issues"), mainPrivateRoot: path.join(mainRoot, "private-issues") };
 
   if (rel === "" || rel === "/") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(await renderIssueIndex(base, mainIssuesRoot, worktreesRoot, query));
+    res.end(await renderIssueIndex(base, roots, worktreesRoot, query));
     return;
   }
 
   // `rel` arrives already percent-decoded by serveDev — don't decode again
   // (a second pass would throw URIError on any literal "%" in a filename).
-  const relPath = rel.replace(/^\//, "");
-  await renderIssueDetail(base, mainIssuesRoot, worktreesRoot, relPath, res);
+  const urlRel = rel.replace(/^\//, "");
+  await renderIssueDetail(base, roots, worktreesRoot, urlRel, res);
 }

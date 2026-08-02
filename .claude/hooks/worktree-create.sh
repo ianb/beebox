@@ -70,11 +70,24 @@ BOX_DEST="$HOME/src/box-worktrees/$NAME/test1"
 echo "[worktree-create] name=$NAME base=$base_ref path=$worktree_path"
 wlog "event: name=$NAME base=$base_ref path=$worktree_path"
 
+# The private-issues shadow-repo mount (bin/private-issues). Runs on BOTH the
+# fresh-create and resume paths (a resume must self-heal a missing mount).
+# Soft dependency: without an initialized private repo it logs one line and
+# does nothing. Never blocks worktree creation (|| true) — a broken private
+# mount means the session runs without private issues, not no session.
+mount_private_issues() {
+  local pi="$1/bin/private-issues"
+  [ -x "$pi" ] || pi="$(git rev-parse --show-toplevel)/bin/private-issues"
+  [ -x "$pi" ] || return 0
+  "$pi" mount "$1" >/dev/null || true
+}
+
 # 1. Create (or re-attach to) the worktree.
 mkdir -p "$(dirname "$worktree_path")"
 if git worktree list --porcelain | grep -qxF "worktree $worktree_path"; then
   echo "[worktree-create] worktree already registered at $worktree_path — resume, skipping setup"
   wlog "resume: existing worktree reused name=$NAME"
+  mount_private_issues "$worktree_path"
   printf '%s\n' "$worktree_path" >&3
   exit 0
 elif git show-ref --verify --quiet "refs/heads/$new_branch"; then
@@ -83,6 +96,8 @@ elif git show-ref --verify --quiet "refs/heads/$new_branch"; then
 else
   git worktree add -b "$new_branch" "$worktree_path" "$base_ref"
 fi
+
+mount_private_issues "$worktree_path"
 
 # 2. Clone the test box if it doesn't already exist (idempotent).
 #
