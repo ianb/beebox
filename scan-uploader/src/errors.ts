@@ -50,3 +50,12 @@ export class ConfigureError extends Error {
     this.name = "ConfigureError";
   }
 }
+
+/** The `schedule` subcommand failed validation, resolution, or a launchd
+ * (`launchctl`) invocation. */
+export class ScheduleError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "ScheduleError";
+  }
+}

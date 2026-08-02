@@ -9,6 +9,7 @@ import { loadConfig, type UploaderConfig, type TargetConfig } from "./config.js"
 import { runConfigureCommand } from "./configure-cli.js";
 import { errorMessage } from "./error-guards.js";
 import { runTarget, type RunSummary } from "./run-target.js";
+import { runScheduleCommand } from "./schedule-cli.js";
 
 const DEFAULT_CONFIG_PATH = "./scan-uploader.json";
 
@@ -17,6 +18,7 @@ function printHelp(): void {
     [
       "Usage: scan-uploader [config.json] [--retry-rejected]",
       "       scan-uploader configure <server-url-with-box> --folder <path> [options]",
+      "       scan-uploader schedule <install|uninstall|status> [options]",
       "",
       "Uploads new files from configured folders to a callback-box scan-upload",
       `endpoint. Config defaults to ${DEFAULT_CONFIG_PATH} in the current directory.`,
@@ -24,7 +26,8 @@ function printHelp(): void {
       "  --retry-rejected  re-PUT previously rejected files (after a fix upstream)",
       "  -h, --help        show this help",
       "",
-      "Run `scan-uploader configure --help` for the setup subcommand's options.",
+      "Run `scan-uploader configure --help` or `scan-uploader schedule --help`",
+      "for those subcommands' options.",
     ].join("\n"),
   );
 }
@@ -55,6 +58,9 @@ async function main(): Promise<number> {
   const args = process.argv.slice(2);
   if (args[0] === "configure") {
     return runConfigureCommand(args.slice(1));
+  }
+  if (args[0] === "schedule") {
+    return runScheduleCommand(args.slice(1));
   }
   if (args.includes("--help") || args.includes("-h")) {
     printHelp();

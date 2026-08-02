@@ -156,7 +156,12 @@ function printResult(result: ConfigureResult): void {
   console.log(`  - Destination folder: ${result.folder}`);
   console.log(
     "  - Post-scan hook: point the post-scan action at a wrapper running " +
-      `"node /path/to/scan-uploader.mjs ${result.configPath}" (doubles as a periodic sweep)`,
+      `"node /path/to/scan-uploader.mjs ${result.configPath}"`,
+  );
+  console.log(
+    "  - Periodic sweep (safety net for scans that land while the hook " +
+      'didn\'t run): on macOS, "scan-uploader schedule install" — see ' +
+      "`scan-uploader schedule --help`",
   );
 }
 

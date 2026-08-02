@@ -81,6 +81,36 @@ and mints the token; the steps in full:
 `smoke-install.sh` is the executable check that step 1 works from a clean
 clone and that the built bundle runs self-contained.
 
+### Scheduling the sweep
+
+The ScanSnap post-scan hook is the primary trigger — it uploads right after
+each scan. The periodic sweep below is a safety net for scans that land
+while the hook didn't run (the machine was asleep, the hook misfired, a
+file was dropped in by hand): the `check` endpoint's dedup makes the hook
+and the sweep running back-to-back harmless.
+
+On macOS, `schedule` manages a `launchd` LaunchAgent that runs the sweep on
+an interval:
+
+```bash
+node dist/scan-uploader.mjs schedule install                # every 15 minutes (default)
+node dist/scan-uploader.mjs schedule install --interval 30   # every 30 minutes
+node dist/scan-uploader.mjs schedule status
+node dist/scan-uploader.mjs schedule uninstall
+```
+
+`install` refuses if `scan-uploader.json` is missing or fails the strict
+reader — an installed schedule pointing at a broken config would just fail
+silently into a log file. It writes
+`~/Library/LaunchAgents/org.callback-box.scan-uploader.plist` and loads it
+(`RunAtLoad` is also set, so a sweep runs immediately and again after any
+reboot/login, catching scans that landed while the machine was off).
+Output goes to `~/Library/Logs/scan-uploader.log`. `uninstall` is
+idempotent — running it again when nothing is installed reports that and
+exits cleanly. `schedule` is macOS-only (same posture as the `trash`
+disposition) — it refuses outright on other platforms rather than silently
+no-op.
+
 ## Config
 
 JSON file, path given as the first CLI argument (default
@@ -121,12 +151,15 @@ message naming exactly what's wrong.
 ```bash
 node dist/scan-uploader.mjs [config.json] [--retry-rejected]
 node dist/scan-uploader.mjs configure <server-url-with-box> --folder <path> [options]
+node dist/scan-uploader.mjs schedule <install|uninstall|status> [options]
 node dist/scan-uploader.mjs --help
 ```
 
 `configure` (see Setup above) takes the token on stdin — piped, or prompted
 without echo on a TTY — and supports `--disposition`, `--name`, and
-`--config`; `configure --help` has the details.
+`--config`; `configure --help` has the details. `schedule` manages the
+periodic-sweep LaunchAgent (see "Scheduling the sweep" above); `schedule
+--help` has the details.
 
 Exit code is non-zero if any file was rejected or hit a transport-level
 error (hash mismatch, over the size limit, or exhausted rate-limit
@@ -146,8 +179,9 @@ Configure one ScanSnap profile per box:
 - **Destination folder**: the `folder` configured for that box above.
 - **Post-scan hook**: point the ScanSnap application's post-scan action at
   a one-line shell wrapper that runs `node /path/to/scan-uploader.mjs
-  /path/to/scan-uploader.json`. The same command doubles as a manual or
-  periodic sweep (e.g. a cron job) — the check endpoint's dedup makes a
+  /path/to/scan-uploader.json`. The same command can also be run manually,
+  or scheduled as a periodic safety-net sweep via `schedule install` (see
+  "Scheduling the sweep" above) — the check endpoint's dedup makes a
   hook-plus-sweep double-run harmless.
 
 ## Development

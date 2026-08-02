@@ -1,8 +1,9 @@
 /**
  * Crash-safe file replace: write to a temp sibling in the same directory,
  * then rename over the target — a kill mid-write leaves either the old or
- * the new complete file, never a truncated one. Shared by the config writer
- * and the token-file writer (`config-writer.ts`, `token-file.ts`).
+ * the new complete file, never a truncated one. Shared by the config
+ * writer, the token-file writer, and the launchd plist writer
+ * (`config-writer.ts`, `token-file.ts`, `schedule.ts`).
  */
 
 import { randomBytes } from "node:crypto";
