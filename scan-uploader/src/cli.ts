@@ -5,13 +5,14 @@
  * check endpoint's dedup makes double-runs harmless.
  */
 
+import { homedir } from "node:os";
+
 import { loadConfig, type UploaderConfig, type TargetConfig } from "./config.js";
+import { MISSING_CONFIG_MESSAGE, pathExists, resolveConfigPath } from "./config-path.js";
 import { runConfigureCommand } from "./configure-cli.js";
 import { errorMessage } from "./error-guards.js";
 import { runTarget, type RunSummary } from "./run-target.js";
 import { runScheduleCommand } from "./schedule-cli.js";
-
-const DEFAULT_CONFIG_PATH = "./scan-uploader.json";
 
 function printHelp(): void {
   console.log(
@@ -21,7 +22,8 @@ function printHelp(): void {
       "       scan-uploader schedule <install|uninstall|status> [options]",
       "",
       "Uploads new files from configured folders to a callback-box scan-upload",
-      `endpoint. Config defaults to ${DEFAULT_CONFIG_PATH} in the current directory.`,
+      "endpoint. Config defaults to ./scan-uploader.json if present, else",
+      "~/.config/scan-uploader.json.",
       "",
       "  --retry-rejected  re-PUT previously rejected files (after a fix upstream)",
       "  -h, --help        show this help",
@@ -67,7 +69,16 @@ async function main(): Promise<number> {
     return 0;
   }
   const retryRejected = args.includes("--retry-rejected");
-  const configPath = args.find((arg) => !arg.startsWith("-")) ?? DEFAULT_CONFIG_PATH;
+  const explicitConfigPath = args.find((arg) => !arg.startsWith("-"));
+  const configPath =
+    explicitConfigPath ?? (await resolveConfigPath({ cwd: process.cwd(), homeDir: homedir() }));
+
+  if (explicitConfigPath === undefined && !(await pathExists(configPath))) {
+    for (const line of MISSING_CONFIG_MESSAGE) {
+      console.error(line);
+    }
+    return 1;
+  }
 
   let config: UploaderConfig;
   try {

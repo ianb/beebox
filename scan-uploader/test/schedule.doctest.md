@@ -26,6 +26,7 @@ import {
   type LaunchctlRunner,
 } from "../src/schedule.js";
 import { parseIntervalMinutes } from "../src/schedule-cli.js";
+import { homeConfigPath, resolveConfigPath } from "../src/config-path.js";
 import { makeTmpDir, removeTmpDir } from "./tmp-dir.js";
 
 const dir = await makeTmpDir("schedule");
@@ -431,6 +432,41 @@ JSON.stringify(runnerUninstall2.calls)
 ```continue
 LABEL
 => org.callback-box.scan-uploader
+```
+
+## `install` with no explicit `--config` embeds the resolved default's ABSOLUTE path
+
+Mirrors `schedule-cli.ts`'s actual wiring: resolve first via the same
+`resolveConfigPath` `configure` uses, then pass the result to
+`installSchedule` as an explicit `configPath` — `installSchedule` itself
+does no resolution of its own, so this proves the two modules compose
+correctly rather than re-testing resolution logic already covered in
+`config-path.doctest.md`.
+
+```
+const homeDirF = join(dir, "homeF");
+const cwdDirF = join(dir, "cwdF");
+await mkdir(cwdDirF, { recursive: true });
+const resolvedConfigPathF = await resolveConfigPath({ cwd: cwdDirF, homeDir: homeDirF });
+resolvedConfigPathF === homeConfigPath(homeDirF)
+=> true
+```
+
+```continue
+await writeValidConfig(resolvedConfigPathF);
+const runnerF = new FakeLaunchctlRunner();
+const installResultF = await installSchedule({
+  homeDir: homeDirF,
+  uid: 501,
+  runner: runnerF,
+  configPath: resolvedConfigPathF,
+  nodePath: "/usr/local/bin/node",
+  bundlePath: "/path/to/scan-uploader.mjs",
+  intervalMinutes: 15,
+});
+const writtenPlistF = await readFile(installResultF.plistPath, "utf-8");
+writtenPlistF.includes(`<string>${resolvedConfigPathF}</string>`)
+=> true
 ```
 
 ```cleanup

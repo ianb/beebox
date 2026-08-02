@@ -13,11 +13,11 @@ import { homedir } from "node:os";
 import { createInterface } from "node:readline";
 
 import type { Disposition } from "./config.js";
+import { resolveConfigPath } from "./config-path.js";
 import { configure, type ConfigureResult } from "./configure.js";
 import { errorMessage } from "./error-guards.js";
 import { ConfigureError } from "./errors.js";
 
-const DEFAULT_CONFIG_PATH = "./scan-uploader.json";
 const DEFAULT_NAME = "uploader";
 const DISPOSITIONS: readonly Disposition[] = ["keep", "archive", "trash"];
 
@@ -33,7 +33,8 @@ export function printConfigureHelp(): void {
       "  --folder <path>        folder to watch for scans (prompted if omitted on a TTY)",
       "  --disposition <value>  keep (default), archive, or trash",
       "  --name <token-name>    label shown in the confirmation message (default: uploader)",
-      "  --config <path>        config file to write (default: ./scan-uploader.json)",
+      "  --config <path>        config file to write (default: ./scan-uploader.json if",
+      "                          present, else ~/.config/scan-uploader.json)",
       "  -h, --help             show this help",
       "",
       "The token is read from stdin: pipe it, or leave stdin a TTY to be",
@@ -136,19 +137,23 @@ async function runConfigure(args: readonly string[]): Promise<ConfigureResult> {
       ? await promptDisposition()
       : parseDisposition(flags.disposition);
   const token = isTTY ? await promptToken() : await readPipedToken();
+  const homeDir = homedir();
+  const configPath =
+    flags.configPath ?? (await resolveConfigPath({ cwd: process.cwd(), homeDir }));
   return configure({
     serverUrlWithBox: flags.serverUrlWithBox,
     folder,
     disposition,
     name: flags.name ?? DEFAULT_NAME,
     token,
-    configPath: flags.configPath ?? DEFAULT_CONFIG_PATH,
-    homeDir: homedir(),
+    configPath,
+    homeDir,
   });
 }
 
 function printResult(result: ConfigureResult): void {
   console.log(`configured: ${result.name} -> ${result.box} (server verified)`);
+  console.log(`  config: ${result.configPath}`);
   console.log("");
   console.log("Next steps — set up one ScanSnap profile for this box:");
   console.log("  - Format: searchable PDF (ScanSnap's own OCR text layer)");

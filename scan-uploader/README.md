@@ -73,9 +73,11 @@ and mints the token; the steps in full:
      --name <token-name> --folder <scan-folder>
    ```
 
-   This writes/updates the target in `./scan-uploader.json`, stores the
-   token at `~/.scan-tokens/<box>.token` (0600), and verifies against the
-   server. Repeat per box with its own folder and token.
+   With no `--config`, this writes/updates `./scan-uploader.json` if one
+   already exists there, else `~/.config/scan-uploader.json` (created if
+   this is the first target on this machine — see "Config" below). It also
+   stores the token at `~/.scan-tokens/<box>.token` (0600) and verifies
+   against the server. Repeat per box with its own folder and token.
 
 4. **ScanSnap profile** — see "ScanSnap profile setup" below; point its
    post-scan action at the plain run command.
@@ -101,7 +103,8 @@ bin/scan-uploader schedule status
 bin/scan-uploader schedule uninstall
 ```
 
-`install` refuses if `scan-uploader.json` is missing or fails the strict
+`install` resolves its config the same way as everything else (see
+"Config" below) and refuses if that file is missing or fails the strict
 reader — an installed schedule pointing at a broken config would just fail
 silently into a log file. It writes
 `~/Library/LaunchAgents/org.callback-box.scan-uploader.plist` and loads it
@@ -115,10 +118,21 @@ no-op.
 
 ## Config
 
-JSON file, path given as the first CLI argument (default
-`./scan-uploader.json`, resolved relative to the current directory).
-`configure` writes this file for you (preserving any unknown keys); the
-shape, for hand-maintenance:
+JSON file, path given as the first CLI argument. With no explicit path (the
+bare run, and the `--config` default for `configure`/`schedule install`),
+it resolves the same way everywhere:
+
+1. `./scan-uploader.json` (relative to the current directory), if it
+   exists — a hand-maintained or previously-configured repo-local config
+   keeps working from that directory.
+2. Otherwise `~/.config/scan-uploader.json` — a single, cwd-independent
+   default, so `bin/scan-uploader` (with no arguments) works the same from
+   anywhere once `configure` has run at least once. No XDG environment
+   variable is consulted; it's always plain `~/.config`.
+
+`configure` writes to whichever of those already exists; if neither does,
+it creates `~/.config/scan-uploader.json`. Either way it preserves any
+unknown keys already in the file. Shape, for hand-maintenance:
 
 ```json
 {
