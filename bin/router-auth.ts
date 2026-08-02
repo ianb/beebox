@@ -18,6 +18,7 @@
 // `/favicon.*`) lives at the bare root, not under a worktree.
 
 import { assertNever } from "../callback-box/src/lib/invariant.js";
+import { isScanUploadSubpath } from "../callback-box/src/hub/scan-gate.js";
 import { isPairingRedeemUrl } from "../callback-box/src/webapp/routes/pairing.js";
 
 /** Node's incoming header bag. Repeated headers arrive as arrays. */
@@ -43,7 +44,10 @@ export interface BoxTarget {
  *
  * - `unauth-allowlist`: bootstrap surface reachable with no credential — the
  *   `/auth/*` API + login/setup HTML, the login SPA static assets, public
- *   favicons, and the pre-auth iOS pairing-redeem POST.
+ *   favicons, the pre-auth iOS pairing-redeem POST, and the scan-upload
+ *   surface (`POST /<w>/<box>/api/scan/check`, `PUT
+ *   /<w>/<box>/api/scan/files/<sha256>`) whose scan-token bearer the hub's
+ *   scan gate and the box child each verify independently.
  * - `control`: MUTATING router control (`/__router/{stop,retry}` and the
  *   dashboard cold-start) — owner session AND a CSRF-safe origin.
  * - `control-read`: read-only router infra (`/__router/status`, the `/` worktree
@@ -243,6 +247,21 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
 
   // Bare worktree root (`/<w>` / `/<w>/`) — the box picker; box class, no slug.
   if (seg2 === null) return { kind: "box", targetWorktree: name, targetBox: null };
+
+  // `/<w>/<box>/api/scan/{check,files/<sha256>}` — the scan-upload surface,
+  // matched by the REUSED hub shape matcher with the method pinned to the
+  // contract's verb per path. Like the pairing redeem above, the router
+  // forwards on shape alone: the scan bearer is the credential, verified
+  // independently by the hub's scan gate AND the box child's scan-auth
+  // preHandler. A scan path with the wrong verb falls through to the normal
+  // box wall.
+  const boxRest = rest.slice(`/${seg2}`.length);
+  if (isScanUploadSubpath(boxRest)) {
+    const wantsCheck = boxRest === "/api/scan/check";
+    if ((wantsCheck && method === "POST") || (!wantsCheck && method === "PUT")) {
+      return { kind: "unauth-allowlist" };
+    }
+  }
 
   // `/<w>/<box>/...` — a box-scoped request; the slug is the target box.
   return { kind: "box", targetWorktree: name, targetBox: seg2 };

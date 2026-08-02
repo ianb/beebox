@@ -131,6 +131,43 @@ test("classifier: exhaustive route-shape mapping", () => {
     targetWorktree: "main",
     targetBox: "test1",
   });
+
+  // scan-upload surface — forwarded on exact shape + contract verb; the hub's
+  // scan gate and the box child verify the bearer. Everything off-shape or
+  // off-verb falls to the normal box wall.
+  const sha = "a".repeat(64);
+  assert.deepEqual(c("POST", "/main/test1/api/scan/check"), { kind: "unauth-allowlist" });
+  assert.deepEqual(c("PUT", `/main/test1/api/scan/files/${sha}`), { kind: "unauth-allowlist" });
+  assert.deepEqual(c("GET", "/main/test1/api/scan/check"), {
+    kind: "box",
+    targetWorktree: "main",
+    targetBox: "test1",
+  });
+  assert.deepEqual(c("PUT", "/main/test1/api/scan/check"), {
+    kind: "box",
+    targetWorktree: "main",
+    targetBox: "test1",
+  });
+  assert.deepEqual(c("POST", `/main/test1/api/scan/files/${sha}`), {
+    kind: "box",
+    targetWorktree: "main",
+    targetBox: "test1",
+  });
+  assert.deepEqual(c("PUT", "/main/test1/api/scan/files/not-a-hash"), {
+    kind: "box",
+    targetWorktree: "main",
+    targetBox: "test1",
+  });
+  assert.deepEqual(c("POST", "/main/test1/api/scan/check/extra"), {
+    kind: "box",
+    targetWorktree: "main",
+    targetBox: "test1",
+  });
+  assert.deepEqual(c("POST", `/main/test1/api/scan/files/${sha.toUpperCase()}`), {
+    kind: "box",
+    targetWorktree: "main",
+    targetBox: "test1",
+  });
 });
 
 test("classifier: query string does not change classification", () => {
