@@ -298,11 +298,14 @@ export interface ScanVisionService {
     outright — the prompt says null, the schema enforces it),
     `slot_count: z.int()`, `slots: z.array(slotSchema)`. The base
     schema stays untightened so the Gemini parse path is undisturbed.
-    One generation detail (verified locally): `z.toJSONSchema` emits
+    Two generation details (both verified): `z.toJSONSchema` emits
     vacuous `minimum`/`maximum` MAX_SAFE_INTEGER bounds on `z.int()` —
     strip those keys after generation, since structured-output schema
     dialects commonly reject numeric range constraints and the bounds
-    carry no information.
+    carry no information — and its `$schema: …/2020-12/schema` marker
+    must also be dropped: the CLI validates `--json-schema` with a
+    draft-07 ajv and rejects the whole schema on that marker (caught by
+    the gated integration doctest's real SDK call).
   - Response handling: `subtype !== "success"` (including
     `error_max_turns`) → `ScanVisionBatchError` with the subtype in the
     message. Parse `structured_output` with the Zod schema; check the

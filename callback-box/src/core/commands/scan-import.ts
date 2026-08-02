@@ -32,9 +32,12 @@
  *   box/inbox/<name>.capture-session.card  (no image refs)
  *
  * Internal implementation is split across siblings: `scan-import-session.ts`
- * (layout + input classification), `scan-import-document.ts` (the PDF/document
- * flow), `scan-import-cards.ts` (photo/back/orphan/unsure card emission), and
- * `scan-import-helpers.ts` (Gemini batching + reconciliation).
+ * (layout + input classification + vision-backend selection),
+ * `scan-import-document.ts` (the PDF/document flow), `scan-import-cards.ts`
+ * (photo/back/orphan/unsure card emission), and `scan-import-helpers.ts`
+ * (vision batching + reconciliation). The analysis backend itself is the
+ * ScanVision service (`src/services/scan-vision.ts` — Claude default,
+ * Gemini opt-in).
  */
 
 import * as fs from "node:fs/promises";
