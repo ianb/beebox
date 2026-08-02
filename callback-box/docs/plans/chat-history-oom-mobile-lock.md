@@ -155,7 +155,12 @@ exposure: `webapp/local-users.ts`, `connectors/transient-state.ts`,
 
 3. **Declare the profile at the six request-scoped call sites** (pairing,
    local-users, transient-state, google-token-store, push-subscriptions,
-   question-transition). Callers' 5 s fail-fast retry budgets stay — a crash
+   question-transition — *question-transition was reverted to the default
+   profile post-review (2026-08-01): its critical section wraps the caller's
+   arbitrary `plan()` work plus a git commit, i.e. seconds of subprocess work,
+   not the millisecond RMW the 15 s request window assumes; a stall or sleep
+   mid-commit would make the lock stealable mid-transition. Five request-scoped
+   sites remain*). Callers' 5 s fail-fast retry budgets stay — a crash
    now blocks a store for ≤ ~15 s (accepted), and requests in that window
    still fail loud rather than hang.
 

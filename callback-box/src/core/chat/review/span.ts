@@ -23,6 +23,19 @@ import type { AppliedSpan } from "./state.js";
 /** Why a span is being read from the top rather than continuing a journal. */
 export type BootstrapReason = "no-journal" | "boundary-missing" | "prefix-rewritten";
 
+/**
+ * Why a span could not be resolved at all, so the session must be skipped for
+ * this run rather than reviewed.
+ *
+ * `"boundary-beyond-window"`: the read was truncated (the transcript holds more
+ * entries than the bounded read returned) AND the journal's boundary entry is
+ * not in what we read — so the boundary almost certainly sits past the end of
+ * the window, in the part of the file we never looked at. Bootstrapping there
+ * would re-summarize ancient entries and then record a span whose `endIndex`
+ * moves the journal BACKWARDS, permanently losing the real boundary.
+ */
+export type DeferralReason = "boundary-beyond-window";
+
 export interface ResolvedSpan {
   /** Entries not yet folded into the account. Empty when nothing is new. */
   entries: SessionEntry[];
@@ -34,6 +47,12 @@ export interface ResolvedSpan {
    * those mean the transcript was rewritten under us.
    */
   bootstrap: BootstrapReason | null;
+  /**
+   * Non-null when the span is unresolvable and the session must be left
+   * untouched this run (no husk write, no journal advance). Mutually exclusive
+   * with `bootstrap`; `entries` is empty and `endIndex` is -1.
+   */
+  deferred: DeferralReason | null;
 }
 
 /**
@@ -64,41 +83,77 @@ export function computeSpanId(args: {
   return contentHash([args.sessionId, args.endUuid, args.prefixHash].join("\n"));
 }
 
+export interface ResolveSpanArgs {
+  /** The bounded read of the transcript — a first-page read, from the top. */
+  entries: SessionEntry[];
+  /** The last span applied to this session; null when there is none. */
+  applied: AppliedSpan | null;
+  /**
+   * True when the transcript holds MORE entries than `entries` contains — i.e.
+   * the read hit its cap. Load-bearing: it is the difference between "the
+   * boundary is gone" and "we simply haven't looked far enough yet".
+   */
+  truncated: boolean;
+}
+
 /**
- * Locate the unread span, given the full parsed transcript and the last span
- * applied to this session (null when there is none).
+ * Locate the unread span, given a bounded read of the transcript and the last
+ * span applied to this session.
  *
- * Bootstrap (whole transcript) happens when there is no journal entry, when the
+ * Bootstrap (whole window) happens when there is no journal entry, when the
  * recorded boundary entry is gone, or when the history before it no longer
  * hashes the same. The last two mean a rewrite: the caller keeps the existing
  * account, which is now the only surviving record of what was rewritten.
+ *
+ * A missing boundary in a TRUNCATED read is not a rewrite, though — it is the
+ * ordinary consequence of a session growing past the read cap since the last
+ * review, and bootstrapping on it is actively destructive (see
+ * {@link DeferralReason}). That case defers instead.
  */
-export function resolveSpan(
-  entries: SessionEntry[],
-  applied: AppliedSpan | null,
-): ResolvedSpan {
+export function resolveSpan(args: ResolveSpanArgs): ResolvedSpan {
+  const { entries, applied, truncated } = args;
+  const bootstrapAll = (bootstrap: BootstrapReason): ResolvedSpan => ({
+    entries,
+    endIndex: entries.length - 1,
+    bootstrap,
+    deferred: null,
+  });
+  // Only reachable with a prior applied span, so it can never swallow the
+  // legitimate first-ever review of an over-long session.
+  const defer = (): ResolvedSpan => ({
+    entries: [],
+    endIndex: -1,
+    bootstrap: null,
+    deferred: "boundary-beyond-window",
+  });
+
   if (applied === null) {
-    return { entries, endIndex: entries.length - 1, bootstrap: "no-journal" };
+    return bootstrapAll("no-journal");
   }
 
   // `parseSessionLog` defaults a missing uuid to "" (cli/lib/session-entry.ts),
   // so an empty boundary is not an identity at all — several entries could
   // match it. Treat it as unusable rather than resolving to the wrong one.
+  // (No uuid to search for, so truncation tells us nothing here.)
   if (applied.endUuid === "") {
-    return { entries, endIndex: entries.length - 1, bootstrap: "boundary-missing" };
+    return bootstrapAll("boundary-missing");
   }
   const boundary = entries.findIndex((entry) => entry.uuid === applied.endUuid);
   if (boundary === -1) {
-    return { entries, endIndex: entries.length - 1, bootstrap: "boundary-missing" };
+    return truncated ? defer() : bootstrapAll("boundary-missing");
   }
   if (prefixHash(entries, boundary) !== applied.prefixHash) {
-    return { entries, endIndex: entries.length - 1, bootstrap: "prefix-rewritten" };
+    // The boundary IS in the window; only the history before it changed. That's
+    // a genuine rewrite, and re-reading the window is the right response
+    // whether or not the read was truncated.
+    return bootstrapAll("prefix-rewritten");
   }
 
   return {
     entries: entries.slice(boundary + 1),
     endIndex: entries.length - 1,
     bootstrap: null,
+    deferred: null,
   };
 }
 

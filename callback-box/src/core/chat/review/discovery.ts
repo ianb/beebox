@@ -93,6 +93,8 @@ export interface DiscoveryResult {
   tooFewTurns: number;
   /** Husks whose transcript is gone — nothing to read, husk left alone. */
   missingTranscripts: number;
+  /** Skipped: the journal boundary lies past the bounded read window. */
+  boundaryBeyondWindow: number;
 }
 
 export interface DiscoverOptions {
@@ -108,20 +110,30 @@ function emptyResult(): DiscoveryResult {
     belowThreshold: 0,
     tooFewTurns: 0,
     missingTranscripts: 0,
+    boundaryBeyondWindow: 0,
   };
 }
 
+/** A bounded first-page read, plus whether the transcript ran past it. */
+interface ParsedWindow {
+  entries: SessionEntry[];
+  /** True when the transcript holds more entries than `entries` — read capped. */
+  truncated: boolean;
+}
+
 /**
- * Parse a transcript in full. Returns null when the file is gone (the SDK
- * cleaned it up, or `~/.claude` was cleared between listing and reading).
+ * Parse a transcript's bounded first page. Returns null when the file is gone
+ * (the SDK cleaned it up, or `~/.claude` was cleared between listing and
+ * reading).
  */
-async function parseFull(logPath: string): Promise<SessionEntry[] | null> {
+async function parseFull(logPath: string): Promise<ParsedWindow | null> {
   try {
     const { entries, total } = await parseSessionLog({
       logPath,
       slice: { mode: "page", offset: 0, limit: PARSE_LIMIT },
     });
-    if (entries.length < total) {
+    const truncated = entries.length < total;
+    if (truncated) {
       // Degraded, but visibly: the span this session resolves is computed over
       // the first PARSE_LIMIT entries, so review stops advancing once a
       // transcript grows past the cap. Reviewing a transcript that long needs
@@ -131,7 +143,7 @@ async function parseFull(logPath: string): Promise<SessionEntry[] | null> {
         `chat-review: transcript ${logPath} has ${String(total)} entries; reviewing only the first ${String(entries.length)} (bounded read).`,
       );
     }
-    return entries;
+    return { entries, truncated };
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;
     throw e;
@@ -164,10 +176,27 @@ export async function readSessionWindow(args: {
   logPath: string;
   state: ReviewState;
 }): Promise<SessionWindow | null> {
-  const entries = await parseFull(args.logPath);
-  if (entries === null) return null;
+  const parsed = await parseFull(args.logPath);
+  if (parsed === null) return null;
+  const { entries, truncated } = parsed;
   const applied = sessionState(args.state, args.sessionId).applied[METADATA_CONSUMER] ?? null;
-  return { entries, span: resolveSpan(entries, applied) };
+  return { entries, span: resolveSpan({ entries, applied, truncated }) };
+}
+
+/**
+ * The shared reaction to an unresolvable span: say which session, and why it is
+ * being left alone. Both readers of a window (discovery's measurement and the
+ * reviewer's re-read) can hit it — the second only when a transcript crosses
+ * the cap between the two reads — so the message lives here once.
+ */
+export function warnDeferredBoundary(sessionId: string): void {
+  console.warn(
+    `chat-review: session ${sessionId} has a journal boundary that is not in the first `
+      + `${String(PARSE_LIMIT)} entries of its transcript, and the transcript is longer than that — `
+      + "the boundary is past the read window. Skipping it rather than re-reading from the top, "
+      + "which would re-summarize old material and move the journal backwards. "
+      + "See issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md.",
+  );
 }
 
 async function qualifyHusk(
@@ -202,6 +231,13 @@ async function qualifyHusk(
   const window = await readSessionWindow({ sessionId: husk.session, logPath, state: options.state });
   if (window === null) {
     result.missingTranscripts += 1;
+    return null;
+  }
+  if (window.span.deferred !== null) {
+    // Unresolvable span: not "nothing new", so it must NOT fall through to the
+    // threshold bucket, which would report it as quietly uninteresting.
+    warnDeferredBoundary(husk.session);
+    result.boundaryBeyondWindow += 1;
     return null;
   }
   const spanChars = spanSize(window.span);

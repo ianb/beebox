@@ -13,8 +13,8 @@ import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { runChatReview } from "../../../../src/core/chat/review/run.js";
-import { loadReviewState } from "../../../../src/core/chat/review/state.js";
-import { getSessionMetadata } from "../../../../src/cli/lib/session.js";
+import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
+import { MAX_SESSION_ENTRIES, getSessionMetadata } from "../../../../src/cli/lib/session.js";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
@@ -568,6 +568,82 @@ await runChatReview(box.root, {
 });
 (await readFile(box.path(huskPath), "utf8")).includes("My own notes about this chat.")
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A journal boundary past the read window defers the session — it never regresses
+
+The transcript read is capped at `MAX_SESSION_ENTRIES`, so a session that grew
+past the cap since its last review has its recorded boundary *outside* the
+window. That looks identical to "the boundary was deleted", but it is not: the
+entry is still there, further down the file.
+
+Treating it as a rewrite would be actively destructive — the run would
+re-summarize thousands of already-folded entries AND write a journal entry whose
+boundary sits *behind* the real one, permanently losing the reviewed position.
+So the session is left completely alone instead.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+// One entry more than the read window, so the read is truncated.
+const overCap = Array.from({ length: MAX_SESSION_ENTRIES + 1 },
+  (_, i) => userEntry(`cap-${String(i)}`, `line ${String(i)}`));
+const huskPath = await seed(box, {
+  sessionId: "sesscap", husk: "title: Untouched\n", entries: overCap,
+});
+const beforeCard = await readFile(box.path(huskPath), "utf8");
+
+// The journal points at the LAST entry — beyond the first-page read.
+const lastUuid = `cap-${String(MAX_SESSION_ENTRIES)}`;
+await saveReviewState(box.root, {
+  lastRunAt: null,
+  sessions: {
+    sesscap: {
+      applied: {
+        metadata: {
+          spanId: "prior-span",
+          endUuid: lastUuid,
+          endIndex: MAX_SESSION_ENTRIES,
+          prefixHash: "prior-prefix",
+          at: "2026-07-27T12:00:00Z",
+        },
+      },
+      titleOwner: "unmanaged",
+      titleHash: null,
+      attempts: 0,
+    },
+  },
+});
+
+const reviewer = fakeReviewer([OUTPUT]);
+const summary = await runChatReview(box.root, {
+  reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({
+  reviewed: summary.reviewed,
+  bootstrapped: summary.bootstrapped,
+  boundaryBeyondWindow: summary.boundaryBeyondWindow,
+  modelCalls: reviewer.calls.length,
+})
+=> {"reviewed":0,"bootstrapped":0,"boundaryBeyondWindow":1,"modelCalls":0}
+```
+
+The husk and the journal are exactly as they were — in particular the recorded
+boundary still names the real last entry, not a truncated stand-in.
+
+```ts continue
+const state = await loadReviewState(box.root);
+JSON.stringify({
+  card: (await readFile(box.path(huskPath), "utf8")) === beforeCard,
+  endUuid: state.sessions["sesscap"].applied["metadata"].endUuid,
+  endIndex: state.sessions["sesscap"].applied["metadata"].endIndex,
+})
+=> {"card":true,"endUuid":"cap-5000","endIndex":5000}
 ```
 
 ```ts cleanup

@@ -27,6 +27,7 @@ import {
   discoverSessions,
   QUIESCENCE_MS,
   readSessionWindow,
+  warnDeferredBoundary,
   type QualifiedSession,
 } from "./discovery.js";
 import { appliedSpanFor, computeSpanId, prefixHash } from "./span.js";
@@ -75,6 +76,11 @@ export interface RunSummary {
   belowThreshold: number;
   /** Qualified sessions beyond --max-sessions; they wait for the next run. */
   overflow: number;
+  /**
+   * Sessions left untouched because their journal boundary sits past the
+   * bounded read window — reviewing them would regress the journal.
+   */
+  boundaryBeyondWindow: number;
 }
 
 function emptySummary(): RunSummary {
@@ -91,6 +97,7 @@ function emptySummary(): RunSummary {
     deferredActive: 0,
     belowThreshold: 0,
     overflow: 0,
+    boundaryBeyondWindow: 0,
   };
 }
 
@@ -145,6 +152,17 @@ async function reviewOne(
     return;
   }
   const { entries, span } = transcript;
+
+  // Unresolvable: the journal boundary is past the read window (the transcript
+  // grew past the cap between the last review and now). Bootstrapping here
+  // would re-summarize ancient entries AND record a span whose endIndex moves
+  // the journal backwards, losing the real boundary for good. Leave the husk
+  // and the journal exactly as they are.
+  if (span.deferred !== null) {
+    warnDeferredBoundary(session.sessionId);
+    summary.boundaryBeyondWindow += 1;
+    return;
+  }
 
   if (span.bootstrap !== null) {
     summary.bootstrapped += 1;
@@ -280,6 +298,9 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
     summary.missingTranscripts = discovery.missingTranscripts;
     summary.deferredActive = discovery.deferredActive.length;
     summary.belowThreshold = discovery.belowThreshold;
+    // Seeded like missingTranscripts: reviewOne can add to it when a transcript
+    // crosses the read cap between discovery's read and the reviewer's.
+    summary.boundaryBeyondWindow = discovery.boundaryBeyondWindow;
 
     // One unreadable transcript or unwritable husk must not cost the night's
     // other sessions, nor the journal advances already earned.

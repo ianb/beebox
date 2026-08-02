@@ -20,7 +20,8 @@ import {
   readSessionWindow,
   QUIESCENCE_MS,
 } from "../../../../src/core/chat/review/discovery.js";
-import { loadReviewState } from "../../../../src/core/chat/review/state.js";
+import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
+import { MAX_SESSION_ENTRIES } from "../../../../src/cli/lib/session.js";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
@@ -178,6 +179,73 @@ await seed(box, { sessionId: "sessmid", entries: [bulk("m1"), bulk("m2")], agoHo
 
 (await discover(box)).qualified.map((s) => s.sessionId).join(",")
 => sessold,sessmid,sessbig
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A boundary past the read window disqualifies the session, loudly
+
+Discovery reads the first `MAX_SESSION_ENTRIES` of a transcript. When a session
+has grown past that since its last review, its recorded boundary is *below* the
+window — indistinguishable from a deleted boundary by identity alone, but the
+truncation flag tells them apart.
+
+Such a session is not qualified: it gets its own counter rather than falling into
+`belowThreshold`, which would report a destructive situation as a quiet one.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+const overCap = Array.from({ length: MAX_SESSION_ENTRIES + 1 },
+  (_, i) => userEntry(`cap-${String(i)}`, `line ${String(i)}`));
+await seed(box, { sessionId: "sesscap", entries: overCap, agoHours: 5 });
+await saveReviewState(box.root, {
+  lastRunAt: null,
+  sessions: {
+    sesscap: {
+      applied: {
+        metadata: {
+          spanId: "prior-span",
+          endUuid: `cap-${String(MAX_SESSION_ENTRIES)}`,
+          endIndex: MAX_SESSION_ENTRIES,
+          prefixHash: "prior-prefix",
+          at: "2026-07-27T12:00:00Z",
+        },
+      },
+      titleOwner: "unmanaged",
+      titleHash: null,
+      attempts: 0,
+    },
+  },
+});
+
+const result = await discover(box);
+JSON.stringify({
+  qualified: result.qualified.map((s) => s.sessionId),
+  belowThreshold: result.belowThreshold,
+  boundaryBeyondWindow: result.boundaryBeyondWindow,
+})
+=> {"qualified":[],"belowThreshold":0,"boundaryBeyondWindow":1}
+```
+
+The window itself reports the deferral rather than a bootstrap, with an empty
+span — there is nothing safe to review.
+
+```ts continue
+const window = await readSessionWindow({
+  sessionId: "sesscap",
+  logPath: getSessionLogPath(box.root, "sesscap"),
+  state: await loadReviewState(box.root),
+});
+JSON.stringify({
+  deferred: window.span.deferred,
+  bootstrap: window.span.bootstrap,
+  spanEntries: window.span.entries.length,
+})
+=> {"deferred":"boundary-beyond-window","bootstrap":null,"spanEntries":0}
 ```
 
 ```ts cleanup

@@ -61,8 +61,7 @@
  *     the profile's window. 5 min sits comfortably under that 10-min killer,
  *     so a wedged run's lock always clears before the run itself is
  *     force-killed. Request-scoped stores (mobile devices, local users,
- *     connector token/state stores, push subscriptions, question transitions)
- *     can't wait that long: a `cb serve` OOM once wedged mobile auth for
+ *     connector token/state stores, push subscriptions) can't wait that long: a `cb serve` OOM once wedged mobile auth for
  *     minutes because every caller retries only ~5 s and then fails loud
  *     (prod incident 2026-08-01). Those declare the `request` profile, so a
  *     crashed holder blocks their store for ≤ ~15 s. Their retry budgets stay
@@ -74,6 +73,11 @@
  *     becomes stealable. These critical sections are milliseconds — a read,
  *     an object mutation, and a temp-file write + fsync + rename — nowhere
  *     near 15 s, and a steal still fires `onCompromised`, which logs LOUDLY.
+ *     That bound is the entry condition for the profile, not a hope: a lock
+ *     whose critical section runs a subprocess or arbitrary caller work stays
+ *     on `default`. `core/commands/question-transition.ts` is the worked
+ *     example — its section wraps a caller `plan()` plus a git commit, so it
+ *     was reverted to the default profile after review (2026-08-01).
  *     PID-liveness fast reclaim (steal immediately once the holder's pid is
  *     gone) would remove the wait entirely and was explicitly declined
  *     (boxholder decision, 2026-08-01): it adds a second liveness authority

@@ -47,10 +47,16 @@ export interface SessionHistoryResult {
 /**
  * Load a bounded window of conversation history for `sessionId`.
  *
- * A session with no readable log reads as empty rather than failing — an id
- * that hasn't produced a JSONL yet (a brand-new chat, an SDK turn that errored
- * before writing) is a normal state. Any other read failure degrades the same
- * way so the chat page still renders, but never silently.
+ * **Only ENOENT reads as empty.** A session id that hasn't produced a JSONL yet
+ * (a brand-new chat, an SDK turn that errored before writing) is a normal
+ * state, and an empty transcript is the truthful answer for it. Every other
+ * read failure THROWS, because "empty" is not a safe degradation here — it is
+ * indistinguishable from a real answer, and the callers act on it:
+ * `chat-schedule-fire` broadcasts this result to every open tab, so a transient
+ * EIO used to visibly wipe a live conversation off the screen. Failing loud
+ * instead leaves each caller with the right behaviour: the tRPC procedures
+ * (`chat.history`, `chat.bootstrap`) surface an error and the tab keeps the
+ * state it has, and the broadcast's `.catch` skips the emit entirely.
  */
 export async function loadSessionHistory(
   boxRoot: string,
@@ -66,12 +72,9 @@ export async function loadSessionHistory(
     const { entries, total } = await parseSessionLog({ logPath, slice });
     return { sessionId, entries, total };
   } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(
-        `chat history: could not read the log for session ${sessionId}, showing it as empty:`,
-        e,
-      );
+    if (errnoCode(e) === "ENOENT") {
+      return { sessionId, entries: [], total: 0 };
     }
-    return { sessionId, entries: [], total: 0 };
+    throw e;
   }
 }

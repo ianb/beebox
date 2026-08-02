@@ -23,7 +23,7 @@ import * as fs from "node:fs/promises";
 import { stageAndCommitPaths, unstageFiles } from "../../lib/git.js";
 import { toRelativePath, isCardFile } from "../../lib/paths.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../../lib/file-lock.js";
+import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { errorMessage, errnoCode } from "../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
@@ -277,16 +277,20 @@ export async function withQuestionTransition(
 ): Promise<TransitionResult> {
   const { ctx, fullPath, questionRef, allowedStatuses, disallowedMessage, plan } = params;
   const lockPath = questionLockPath(ctx.boxRoot, fullPath);
-  // Request-scoped: a short critical section whose callers fail fast (~5 s
-  // retry budget), so a crashed holder must clear in seconds, not minutes.
-  // (The longest of these: the plan's writes plus a git commit — still well
-  // under the 15 s request stale window.)
-  const lock = requestScopedLock(lockPath);
+  // DEFAULT profile, deliberately — not `requestScopedLock`. Unlike the sibling
+  // request-scoped stores (a read, a mutation, a temp-file write), this critical
+  // section runs the caller's arbitrary `plan()` work AND a git commit, which is
+  // seconds of subprocess work, not milliseconds. Under the 15 s request stale
+  // window an event-loop stall or a laptop sleep mid-commit would let another
+  // process steal the lock partway through a transition — two writers on one
+  // question card. The 5 min default window is sized for exactly this kind of
+  // hold. (Reverted from the request profile after the post-implementation
+  // review, 2026-08-01.)
   await fs.mkdir(path.dirname(lockPath), { recursive: true });
 
   for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
     try {
-      await acquireLock(lock, { purpose: "question-transition", card: questionRef });
+      await acquireLock(lockPath, { purpose: "question-transition", card: questionRef });
     } catch (e) {
       if (e instanceof LockHeldError) {
         await delay(LOCK_RETRY_MS);
@@ -313,7 +317,7 @@ export async function withQuestionTransition(
         return { ok: true, fields: loaded.fields, committedPaths: applied.committedPaths };
       });
     } finally {
-      await releaseLock(lock);
+      await releaseLock(lockPath);
     }
   }
   throw new QuestionLockError(lockPath);
