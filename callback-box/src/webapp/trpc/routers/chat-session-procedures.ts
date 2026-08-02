@@ -15,82 +15,65 @@ import { publicProcedure } from "../trpc.js";
 import {
   getFeaturesForSession,
   getMostActive,
-  resolveSessionLogPath,
 } from "../../../core/chat/session/history.js";
 import { resolveFeatures } from "../../../core/chat/features.js";
-import {
-  parseSessionLog,
-  tailForMinUserMessages,
-} from "../../../cli/lib/session.js";
+import { MAX_SESSION_ENTRIES, type SessionEntry } from "../../../cli/lib/session.js";
+import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
 import { loadAllSessions } from "../../../core/chat/session/list.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
-import { errnoCode } from "../../../lib/error-guards.js";
 
 /**
  * How much of a session's log to return. Shared by `chat.history` (which adds
  * a required `session`) and `chat.bootstrap` (which resolves the session
  * itself), so the two can never drift apart on slicing.
+ *
+ * A discriminated union, not a bag of optionals: `tail` and `offset`/`limit`
+ * are different requests with different semantics, and every field is an
+ * integer with a hard maximum, so no input can ask the parser to retain an
+ * unbounded slice of a transcript. Both arms are `.strict()`, so a mixed
+ * request (`mode: "tail"` carrying `offset`/`limit`) is rejected rather than
+ * silently stripped down to whichever shape it named.
  */
-export const historySliceSchema = z.object({
-  tail: z.number().optional(),
-  offset: z.number().optional(),
-  limit: z.number().optional(),
-  minRealUserMessages: z.number().optional(),
-});
-
-export type HistorySlice = z.infer<typeof historySliceSchema>;
+export const historySliceSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("tail"),
+    tail: z.number().int().min(1).max(MAX_SESSION_ENTRIES),
+    minRealUserMessages: z.number().int().min(0).max(100).optional(),
+  }).strict(),
+  z.object({
+    mode: z.literal("page"),
+    offset: z.number().int().min(0),
+    limit: z.number().int().min(1).max(MAX_SESSION_ENTRIES),
+  }).strict(),
+]);
 
 export interface SessionHistory {
   sessionId: string;
-  entries: Awaited<ReturnType<typeof parseSessionLog>>["entries"];
+  entries: SessionEntry[];
   total: number;
 }
 
 /**
- * Load + slice one session's conversation history. A session with no readable
- * log reads as empty rather than failing — an id that hasn't produced a JSONL
- * yet (a brand-new chat, an SDK turn that errored before writing) is a normal
- * state, not an error.
+ * Load one session's bounded history window, with the session id narrowed back
+ * to a string — the shared loader answers for a nullable id, but these
+ * procedures only ever call it with a concrete one.
  */
-export async function loadSessionHistory(
+export async function loadHistoryForSession(
   boxRoot: string,
-  input: HistorySlice & { session: string },
+  input: { session: string; slice: z.infer<typeof historySliceSchema> },
 ): Promise<SessionHistory> {
-  const { session: sessionId, tail, offset, limit, minRealUserMessages } = input;
-  const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-  try {
-    const result = await parseSessionLog({
-      logPath,
-      ...(offset != null ? { offset } : {}),
-      ...(limit != null ? { limit } : {}),
-    });
-    const { entries, total } = result;
-    const userTail =
-      minRealUserMessages && minRealUserMessages > 0
-        ? tailForMinUserMessages(entries, minRealUserMessages)
-        : 0;
-    const effective = tail && tail > 0 ? Math.max(tail, userTail) : userTail > 0 ? userTail : undefined;
-    if (effective !== undefined && effective < entries.length) {
-      return { sessionId, entries: entries.slice(entries.length - effective), total };
-    }
-    return { sessionId, entries, total };
-  } catch (e) {
-    // A session with no log yet is the common, expected case (a brand-new
-    // chat, or a turn that errored before the SDK wrote anything). Anything
-    // else — a permissions problem, a corrupt read — degrades the same way so
-    // the chat page still renders, but must not do so silently.
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`chat.history: could not read the log for session ${sessionId}, showing it as empty:`, e);
-    }
-    return { sessionId, entries: [], total: 0 };
-  }
+  const { entries, total } = await loadSessionHistory(boxRoot, {
+    sessionId: input.session,
+    slice: input.slice,
+  });
+  return { sessionId: input.session, entries, total };
 }
 
 export const chatSessionProcedures = {
   // Load + slice a session's conversation history.
   history: publicProcedure
-    .input(historySliceSchema.extend({ session: z.string() }))
-    .query(({ input, ctx }) => loadSessionHistory(ctx.boxRoot, input)),
+    .input(z.object({ session: z.string(), slice: historySliceSchema }))
+    .query(({ input, ctx }) => loadHistoryForSession(ctx.boxRoot, input)),
 
   // List web-chat sessions, most-recent first, for the history dropdown.
   //

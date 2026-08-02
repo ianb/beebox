@@ -18,7 +18,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { writeFileAtomic } from "../lib/atomic-write.js";
+import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
 import { errnoCode } from "../lib/error-guards.js";
 
@@ -102,9 +103,15 @@ async function loadStore(): Promise<SubscriptionStore> {
   return result.data;
 }
 
+/**
+ * Replace the store crash-safely (temp file + fsync + atomic rename). `loadStore`
+ * already refuses to read a corrupt file rather than overwrite it, which turns a
+ * torn write into a wedged store — so the write half must never be able to
+ * produce one. A plain `writeFile` truncates before it streams; a kill in that
+ * window would leave a half-file where every subscription used to be.
+ */
 async function saveStore(store: SubscriptionStore): Promise<void> {
-  await fs.mkdir(storeDir(), { recursive: true });
-  await fs.writeFile(storePath(), `${JSON.stringify(store, null, 2)}\n`);
+  await writeFileAtomic(storePath(), { content: `${JSON.stringify(store, null, 2)}\n` });
 }
 
 const LOCK_RETRIES = 50;
@@ -122,9 +129,12 @@ function delay(ms: number): Promise<void> {
 async function withStoreLock<T>(fn: (store: SubscriptionStore) => Promise<T> | T): Promise<T> {
   await fs.mkdir(storeDir(), { recursive: true });
   const lockPath = `${storePath()}.lock`;
+  // Request-scoped: a short critical section whose callers fail fast (~5 s
+  // retry budget), so a crashed holder must clear in seconds, not minutes.
+  const lock = requestScopedLock(lockPath);
   for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
     try {
-      await acquireLock(lockPath, { purpose: "push-subscriptions" });
+      await acquireLock(lock, { purpose: "push-subscriptions" });
     } catch (e) {
       if (e instanceof LockHeldError) {
         await delay(LOCK_RETRY_MS);
@@ -137,7 +147,7 @@ async function withStoreLock<T>(fn: (store: SubscriptionStore) => Promise<T> | T
       const result = await fn(store);
       return result;
     } finally {
-      await releaseLock(lockPath);
+      await releaseLock(lock);
     }
   }
   throw new PushStoreLockError(lockPath);

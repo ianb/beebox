@@ -68,7 +68,10 @@ async function getSessionContext(boxRoot: string): Promise<string | null> {
 
   let entries: SessionEntry[];
   try {
-    const result = await parseSessionLog({ logPath: session.logPath });
+    const result = await parseSessionLog({
+      logPath: session.logPath,
+      slice: { mode: "tail", tail: MAX_CONTEXT_ENTRIES },
+    });
     entries = result.entries;
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {

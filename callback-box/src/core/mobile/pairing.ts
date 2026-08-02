@@ -67,6 +67,10 @@ const deviceStore = new TokenStore<MobileDevice>({
   relativePath: MOBILE_DEVICES_RELATIVE_PATH,
   collectionKey: "devices",
   purpose: "mobile-devices",
+  // Request-scoped: a short critical section whose callers fail fast (~5 s
+  // retry budget), so a crashed holder must clear in seconds, not minutes
+  // (prod incident, box-family, 2026-08-01 — see file-lock.ts's module doc).
+  lockProfile: "request",
   parseRecord: (value) => {
     const parsed = MobileDeviceSchema.safeParse(value);
     return parsed.success ? parsed.data : null;

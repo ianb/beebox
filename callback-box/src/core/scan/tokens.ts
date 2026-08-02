@@ -82,6 +82,9 @@ const scanTokenStore = new TokenStore<ScanToken>({
   relativePath: SCAN_TOKENS_RELATIVE_PATH,
   collectionKey: "tokens",
   purpose: "scan-tokens",
+  // Same rationale as the mobile device store (core/mobile/pairing.ts): every
+  // mutation runs inside an HTTP request's ~5 s retry budget.
+  lockProfile: "request",
   parseRecord: (value) => {
     const parsed = ScanTokenSchema.safeParse(value);
     return parsed.success ? parsed.data : null;

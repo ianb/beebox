@@ -5,6 +5,8 @@ reset, and history loading. These tests don't spawn a real Claude process.
 
 ```ts setup
 import { ChatSession, buildContentBlocks } from "../../src/core/chat/session/index.js";
+import { chatHistorySlice } from "../../src/core/chat/session/load-history.js";
+import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -121,7 +123,7 @@ With no session ID, getHistory returns empty:
 ```ts
 const box = await makeTmpBox();
 const session = new ChatSession(box.root);
-const history = await session.getHistory();
+const history = await session.getHistory(chatHistorySlice());
 print(`sessionId: ${history.sessionId}`);
 print(`entries: ${history.entries.length}`);
 =>
@@ -146,7 +148,7 @@ await fs.writeFile(
   JSON.stringify({ sessionId: "orphan-session" })
 );
 const session = new ChatSession(box.root);
-const history = await session.getHistory();
+const history = await session.getHistory(chatHistorySlice());
 print(`sessionId: ${history.sessionId}`);
 print(`entries: ${history.entries.length}`);
 =>
@@ -155,6 +157,47 @@ entries: 0
 ```
 
 ```ts cleanup
+await box.cleanup();
+```
+
+## getHistory — an unreadable log throws, it does not read as empty
+
+A read error is NOT an empty transcript. Only `ENOENT` means "no log yet"; any
+other failure propagates, because callers act on the result — `chat-schedule-fire`
+broadcasts it to every open tab, so degrading to `{ entries: [] }` would visibly
+clear a live conversation on a transient I/O error.
+
+Here the log path is a *directory*, so the read fails `EISDIR`:
+
+```ts
+const box = await makeTmpBox();
+const previousProjects = process.env["CB_CLAUDE_PROJECTS_DIR"];
+process.env["CB_CLAUDE_PROJECTS_DIR"] = path.join(box.root, "claude-projects");
+const dir = path.join(box.root, ".callback-box");
+await fs.mkdir(dir, { recursive: true });
+await fs.writeFile(
+  path.join(dir, "chat-session-id.json"),
+  JSON.stringify({ sessionId: "unreadable-session" })
+);
+await fs.mkdir(getSessionLogPath(box.root, "unreadable-session"), { recursive: true });
+const session = new ChatSession(box.root);
+
+let thrown = null;
+try {
+  await session.getHistory(chatHistorySlice());
+} catch (e) {
+  thrown = e;
+}
+print(`threw: ${thrown !== null}`);
+print(`code: ${thrown?.code}`);
+=>
+threw: true
+code: EISDIR
+```
+
+```ts cleanup
+if (previousProjects === undefined) delete process.env["CB_CLAUDE_PROJECTS_DIR"];
+else process.env["CB_CLAUDE_PROJECTS_DIR"] = previousProjects;
 await box.cleanup();
 ```
 

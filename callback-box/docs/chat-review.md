@@ -38,6 +38,13 @@ That last number is deliberately untuned — its job is to keep a nightly model
 call off trivial growth. Across a 775-transcript sample, any threshold between
 4k and 8k selects essentially the same ~5% of sessions.
 
+Discovery keeps nothing it parsed: a qualified session is scalars (id, paths,
+span size, bootstrap reason), and the transcript window is re-read inside the
+per-session review step, after the `--max-sessions` cap. Holding every qualified
+session's parsed transcript at once is the allocation pattern that OOM'd
+`cb serve`. The quiet-for-30-minutes check is therefore re-run at review time
+too, against the file as it stands then.
+
 ## Incremental by necessity
 
 The pass sends the model only the **new span**, plus the account it wrote last

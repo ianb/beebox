@@ -32,7 +32,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { acquireLock, releaseLock, requestScopedLock, LockHeldError, type LockProfile } from "../lib/file-lock.js";
 import { isRecord } from "../lib/is-record.js";
 
 const LOCK_RETRIES = 50;
@@ -59,6 +59,13 @@ export interface TokenStoreOptions<TRecord extends TokenRecord> {
   collectionKey: string;
   /** Lock purpose + log prefix, e.g. `mobile-devices`. */
   purpose: string;
+  /**
+   * Which stale profile the store's lock uses (see `file-lock.ts`). Every
+   * `TokenStore` mutation runs inside an HTTP request's ~5 s retry budget, so
+   * this should be `"request"` unless a store is genuinely written outside
+   * that path.
+   */
+  lockProfile: LockProfile;
   /** Parse one on-disk record; return null to drop an entry that fails validation. */
   parseRecord: (value: unknown) => TRecord | null;
   /**
@@ -146,10 +153,11 @@ export class TokenStore<TRecord extends TokenRecord> {
    */
   async withLock<T>(boxRoot: string, fn: (mutation: TokenStoreMutation<TRecord>) => T): Promise<T> {
     const lockPath = `${this.storePath(boxRoot)}.lock`;
+    const lock = this.options.lockProfile === "request" ? requestScopedLock(lockPath) : lockPath;
     fs.mkdirSync(path.dirname(lockPath), { recursive: true });
     for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
       try {
-        await acquireLock(lockPath, { purpose: this.options.purpose });
+        await acquireLock(lock, { purpose: this.options.purpose });
       } catch (e) {
         if (e instanceof LockHeldError) {
           await delay(LOCK_RETRY_MS);
@@ -161,7 +169,7 @@ export class TokenStore<TRecord extends TokenRecord> {
         const records = this.read(boxRoot);
         return fn({ records, save: () => this.write(boxRoot, records) });
       } finally {
-        await releaseLock(lockPath);
+        await releaseLock(lock);
       }
     }
     throw this.options.lockError({ lockPath });

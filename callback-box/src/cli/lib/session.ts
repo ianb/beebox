@@ -10,8 +10,12 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { isRecord } from "../../lib/is-record.js";
 
-import { type SessionEntry, buildEntry } from "./session-entry.js";
-import { stripChatAppTags } from "../../core/chat/features.js";
+import { buildEntry } from "./session-entry.js";
+import {
+  SessionScan,
+  type SessionLogResult,
+  type SessionLogSlice,
+} from "./session-retention.js";
 import {
   listSessionRoots,
   loadHistoryEntries,
@@ -25,9 +29,14 @@ import {
   isPlumbingMessage,
   parseSelfNote,
 } from "./session-text.js";
-import { invariant } from "../../lib/invariant.js";
 
 // Re-exported so existing callers of `cli/lib/session` keep their imports.
+export {
+  MAX_SESSION_ENTRIES,
+  type SessionLogResult,
+  type SessionLogSlice,
+} from "./session-retention.js";
+export { isRealUserMessage } from "./session-real-user.js";
 export {
   type SessionContentBlock,
   summarizeToolInput,
@@ -263,84 +272,40 @@ export async function getSessionMetadata(args: {
 }
 
 /**
- * A "real" user message is one the human actually typed or spoke, as opposed
- * to system-injected user entries (tool results, schedule-fired notifications,
- * pending-schedules status, etc.). Real user messages carry a <typed> or
- * <speech> tag since the UI wraps human input in those — possibly preceded
- * by the <chat-app .../> snapshot tag the server prepends to every turn.
- */
-export function isRealUserMessage(entry: SessionEntry): boolean {
-  if (entry.type !== "user") return false;
-  for (const block of entry.content) {
-    if (block.type !== "text") continue;
-    const text = stripChatAppTags((block.text || "").trimStart()).trimStart();
-    if (text.startsWith("<typed") || text.startsWith("<speech")) return true;
-  }
-  return false;
-}
-
-/**
- * Compute the minimum tail size that includes at least `minRealUserMessages`
- * real user messages. Returns the number of entries from the end of the list
- * needed to cover that many — or `entries.length` if fewer real user messages
- * exist than requested.
- */
-export function tailForMinUserMessages(
-  entries: SessionEntry[],
-  minRealUserMessages: number,
-): number {
-  if (minRealUserMessages <= 0) return 0;
-  let count = 0;
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const entry = entries[i];
-    invariant(entry !== undefined, `entries[${i}] must exist for 0 <= i < entries.length`);
-    if (isRealUserMessage(entry)) {
-      count += 1;
-      if (count >= minRealUserMessages) return entries.length - i;
-    }
-  }
-  return entries.length;
-}
-
-/**
- * Parameters for parseSessionLog
+ * Parameters for parseSessionLog. The `slice` is mandatory: a caller must say
+ * how much of the transcript it wants retained, because there is no unbounded
+ * shape to fall back to (see `session-retention.ts`).
  */
 export interface ParseSessionLogParams {
   logPath: string;
-  offset?: number;
-  limit?: number;
+  slice: SessionLogSlice;
 }
 
 /**
- * Parse a session log JSONL file with filtering and pagination.
+ * Parse a session log JSONL file, retaining only what `slice` asks for.
+ *
+ * The scan is forward and single-pass: every displayable entry is counted
+ * (`total` is exact, so paging affordances stay correct) but only the
+ * requested window is kept alive.
  */
 export async function parseSessionLog(
   params: ParseSessionLogParams
-): Promise<{ entries: SessionEntry[]; total: number; hasMore: boolean }> {
-  const { logPath } = params;
-  const offset = params.offset ?? 0;
-  const limit = params.limit ?? 10000;
+): Promise<SessionLogResult> {
+  const { logPath, slice } = params;
   const fileStream = fs.createReadStream(logPath, { encoding: "utf-8" });
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Infinity,
   });
 
-  const filtered: SessionEntry[] = [];
+  const scan = new SessionScan(slice);
 
   for await (const line of rl) {
     const raw = parseJsonlLine(line, "parseSessionLog");
     if (!raw) continue;
-    const entry = buildEntry(raw, filtered);
-    if (entry) filtered.push(entry);
+    const entry = buildEntry(raw, scan.recent());
+    if (entry) scan.record(entry);
   }
 
-  const total = filtered.length;
-  const page = filtered.slice(offset, offset + limit);
-
-  return {
-    entries: page,
-    total,
-    hasMore: offset + limit < total,
-  };
+  return scan.result();
 }

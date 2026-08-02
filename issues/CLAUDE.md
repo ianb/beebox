@@ -138,6 +138,16 @@ sentences, active voice, one idea per sentence, consistent terminology, no
 ambiguity. An issue is read cold — write for fast, unambiguous parsing over
 style.
 
+**For user-facing functionality, frame the goal as a Job To Be Done** before the
+means. Use a job story: *"When [situation], I want to [motivation], so I can
+[outcome]."* The point is not the syntax — it is to **situate the job in the real,
+concrete situations the user is in**: their intention in that moment, where their
+attention is, what capacity they have, and how the job fits into the interaction.
+This often needs several situations, not one. Prefer concrete but mundane examples;
+avoid stale clichés like booking a flight or a restaurant reservation. Skip it for
+bugs, refactors, and "work robustly" tensions where JTBD is the wrong lens; don't
+force it.
+
 **Research** always goes in the body. If research is the next step, file the item
 with a stub section:
 

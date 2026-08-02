@@ -15,11 +15,13 @@
 
 import { Command } from "commander";
 import * as fs from "node:fs";
+import { pipeline } from "node:stream/promises";
 import * as path from "node:path";
 import { requireBoxRoot } from "../../lib/paths.js";
 import {
   findSessionLog,
   listSessions,
+  MAX_SESSION_ENTRIES,
   parseSessionLog,
 } from "../lib/session.js";
 import { generateSessionReport } from "../../dev/lib/session-report.js";
@@ -29,6 +31,7 @@ import {
   resolveSince,
   runListMode,
   runSinceMode,
+  transcriptPrintable,
   type SinceWindow,
 } from "./session-modes.js";
 import { invariant } from "../../lib/invariant.js";
@@ -53,6 +56,10 @@ export const sessionCommand = new Command("session")
   .option("--tool-report", "Generate critique-friendly report (includes Bash output)")
   .option("--raw", "Dump raw JSONL")
   .option(
+    "--allow-huge",
+    "Print even when the transcript exceeds the huge-output threshold"
+  )
+  .option(
     "--since <when>",
     "Include activity since <when> — a duration (30m, 12h, 1d, 2w) or an ISO timestamp (2026-04-17 or 2026-04-17T08:00:00Z)"
   )
@@ -69,6 +76,7 @@ export const sessionCommand = new Command("session")
         full?: boolean;
         toolReport?: boolean;
         raw?: boolean;
+        allowHuge?: boolean;
         since?: string;
         dialogueOnly?: boolean;
       }
@@ -107,6 +115,7 @@ export const sessionCommand = new Command("session")
           renderOptions,
           raw: !!options.raw,
           toolReport: !!options.toolReport,
+          allowHuge: !!options.allowHuge,
         });
         return;
       }
@@ -155,10 +164,21 @@ export const sessionCommand = new Command("session")
         logPath = found.value;
       }
 
-      // --raw: dump the file
+      // Every output mode scales with the transcript; refuse a huge one
+      // unless the caller asserted they want it.
+      if (
+        !transcriptPrintable({
+          logPath,
+          sessionId,
+          allowHuge: !!options.allowHuge,
+        })
+      ) {
+        process.exit(1);
+      }
+
+      // --raw: dump the file (streamed — a transcript can exceed the heap)
       if (options.raw) {
-        const content = fs.readFileSync(logPath, "utf-8");
-        process.stdout.write(content);
+        await pipeline(fs.createReadStream(logPath), process.stdout, { end: false });
         return;
       }
 
@@ -172,7 +192,15 @@ export const sessionCommand = new Command("session")
       // Parse and render
       console.log(`Session: ${sessionId}\n`);
 
-      const { entries } = await parseSessionLog({ logPath });
+      const { entries, total } = await parseSessionLog({
+        logPath,
+        slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+      });
+      if (entries.length < total) {
+        console.warn(
+          `Note: this session has ${String(total)} entries; showing the first ${String(entries.length)}.`,
+        );
+      }
 
       if (entries.length === 0) {
         console.log("(empty session)");

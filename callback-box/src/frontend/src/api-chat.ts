@@ -132,13 +132,20 @@ export async function postAudioForHqTranscription(blob: Blob, params: { sessionI
   }
 }
 
-export async function getChatHistory(params: { sessionId: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
+/**
+ * How much of a transcript to ask for. Mirrors the server's discriminated
+ * input (`chat-session-procedures.ts`): a tail window for the live chat, a
+ * page window for "load older". There is no unbounded shape — the server
+ * retains only what the slice names.
+ */
+export type HistorySlice =
+  | { mode: "tail"; tail: number; minRealUserMessages?: number }
+  | { mode: "page"; offset: number; limit: number };
+
+export async function getChatHistory(params: { sessionId: string; slice: HistorySlice }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
   return trpcClient.chat.history.query({
     session: params.sessionId,
-    tail: params.tail,
-    offset: params.offset,
-    limit: params.limit,
-    minRealUserMessages: params.minRealUserMessages,
+    slice: params.slice,
   });
 }
 

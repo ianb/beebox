@@ -13,9 +13,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { writeFileAtomic } from "../lib/atomic-write.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { withCardLock } from "../lib/card-lock.js";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import { sleep } from "../lib/sleep.js";
 import { getBoxTimeISO } from "../lib/time.js";
 
@@ -37,6 +38,30 @@ class GoogleTokenLockError extends Error {
     super(`Google token lock could not be acquired: ${lockPath}`);
     this.name = "GoogleTokenLockError";
     this.lockPath = lockPath;
+  }
+}
+
+/**
+ * Thrown when the token file exists but can't be read or parsed inside a
+ * read-modify-write. It FAILS THE WRITE rather than starting from `{}`: a
+ * truncated file (a crash mid-write, before this store wrote atomically) would
+ * otherwise be silently replaced by whatever single field the current update
+ * carries, wiping the refresh token shared by gmail/calendar/drive across every
+ * box on the server. There is no safe automatic recovery — a corrupt token
+ * store is a human problem, and re-authorizing is the fix. Distinct from a
+ * genuinely-absent file (ENOENT → start fresh), which is the legitimate
+ * first-run case.
+ */
+export class GoogleTokenStoreCorruptError extends Error {
+  readonly storePath: string;
+  constructor(filePath: string, options: { cause: unknown }) {
+    super(
+      `Google token store at ${filePath} exists but could not be read or parsed. ` +
+        "Refusing to overwrite it — inspect or remove the file by hand, then re-authorize.",
+      options,
+    );
+    this.name = "GoogleTokenStoreCorruptError";
+    this.storePath = filePath;
   }
 }
 
@@ -117,6 +142,31 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
 }
 
 /**
+ * The read half of a token read-modify-write, FAIL-CLOSED.
+ *
+ * ENOENT is the only tolerated failure (no tokens yet — merge into `{}`).
+ * Anything else — an I/O error, a permissions problem, or JSON that doesn't
+ * parse — throws {@link GoogleTokenStoreCorruptError} and leaves the file
+ * untouched. This deliberately does NOT mirror `loadGoogleTokens`, which may
+ * degrade to "no tokens" because it only ever reads; a *writer* that degrades
+ * the same way destroys the credential it failed to read.
+ */
+async function readTokensForUpdate(targetPath: string): Promise<GoogleTokens> {
+  let content: string;
+  try {
+    content = await fs.readFile(targetPath, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return {};
+    throw new GoogleTokenStoreCorruptError(targetPath, { cause: e });
+  }
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    throw new GoogleTokenStoreCorruptError(targetPath, { cause: e });
+  }
+}
+
+/**
  * Serialized read-modify-write on the token file, with BOTH locks.
  *
  * `withCardLock` (in-process) is the OUTER lock and the cross-process file lock
@@ -132,11 +182,14 @@ async function updateGoogleTokens(
   update: (existing: GoogleTokens) => GoogleTokens,
 ): Promise<void> {
   const lockPath = `${targetPath}.lock`;
+  // Request-scoped: a short critical section whose callers fail fast (~5 s
+  // retry budget), so a crashed holder must clear in seconds, not minutes.
+  const lock = requestScopedLock(lockPath);
   await withCardLock(targetPath, async () => {
     await fs.mkdir(path.dirname(lockPath), { recursive: true });
     for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
       try {
-        await acquireLock(lockPath, { purpose: "google-tokens" });
+        await acquireLock(lock, { purpose: "google-tokens" });
       } catch (e) {
         if (e instanceof LockHeldError) {
           // Held by ANOTHER process — withCardLock already serialized ours.
@@ -146,21 +199,14 @@ async function updateGoogleTokens(
         throw e;
       }
       try {
-        let existing: GoogleTokens = {};
-        try {
-          const content = await fs.readFile(targetPath, "utf-8");
-          existing = JSON.parse(content);
-        } catch (e) {
-          // No existing tokens file (or unreadable) — start fresh and merge into {}.
-          // Log at debug so a real read/parse error is still visible.
-          if (errnoCode(e) !== "ENOENT") {
-            console.debug("Could not read existing Google tokens file, starting fresh:", e);
-          }
-        }
-        await fs.writeFile(targetPath, JSON.stringify(update(existing), null, 2));
+        const existing = await readTokensForUpdate(targetPath);
+        await writeFileAtomic(targetPath, {
+          content: JSON.stringify(update(existing), null, 2),
+          mode: 0o600,
+        });
         return;
       } finally {
-        await releaseLock(lockPath);
+        await releaseLock(lock);
       }
     }
     throw new GoogleTokenLockError(lockPath);

@@ -14,6 +14,7 @@ import { createAgent } from "../../core/agent/index.js";
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat/session/index.js";
 import {
+  MAX_SESSION_ENTRIES,
   parseSessionLog,
   type SessionContentBlock,
 } from "../../cli/lib/session.js";
@@ -189,7 +190,10 @@ async function extractBehavior(
   sessionId: string,
 ): Promise<AgentBehavior> {
   const logPath = getSessionLogPath(logDir, sessionId);
-  const { entries } = await parseSessionLog({ logPath });
+  const { entries } = await parseSessionLog({
+    logPath,
+    slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+  });
 
   const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
   const responseChunks: string[] = [];
@@ -214,7 +218,10 @@ async function extractBehavior(
     for (const file of subagentFiles) {
       if (!file.endsWith(".jsonl")) continue;
       const subagentLog = path.join(subagentDir, file);
-      const { entries: subEntries } = await parseSessionLog({ logPath: subagentLog });
+      const { entries: subEntries } = await parseSessionLog({
+        logPath: subagentLog,
+        slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+      });
       for (const entry of subEntries) {
         if (entry.type === "assistant") {
           for (const block of entry.content) {

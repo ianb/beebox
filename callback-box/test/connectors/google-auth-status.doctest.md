@@ -12,7 +12,7 @@ every box on the server. See `docs/plans/google-auth-reauth-health.md`.
 ```ts setup
 import * as os from "node:os";
 import * as path from "node:path";
-import { mkdtemp, rm, readFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
   isInvalidGrantError,
   classifyRefreshFailure,
@@ -24,6 +24,15 @@ const tmp = await mkdtemp(path.join(os.tmpdir(), "google-auth-status-"));
 process.env.CB_GOOGLE_TOKENS_FILE = path.join(tmp, "google-tokens.json");
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id";
 process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
+
+/** Run `fn`, returning whatever it throws instead of propagating. */
+async function tryCall(fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    return e;
+  }
+}
 
 /** A GaxiosError-shaped rejection, the way google-auth-library v10 throws it. */
 function gaxiosError(message, data) {
@@ -135,6 +144,41 @@ token file rather than living in any one box:
 const onDisk = JSON.parse(await readFile(process.env.CB_GOOGLE_TOKENS_FILE, "utf-8"));
 JSON.stringify(Object.keys(onDisk).sort())
 => ["accessToken","authCheckedAt","needsReauthSince","reauthReason","refreshToken","tokenExpiry"]
+```
+
+## A corrupt token file fails the write closed, it is not rewritten
+
+The store is a read-modify-write, and a partial file — a crash mid-write, before
+this store wrote atomically — used to fall through to `{}`. The next token
+update then rewrote the file from that empty base, wiping the one refresh token
+shared by gmail, calendar, and drive across every box on the server. There is no
+safe automatic recovery, so the write refuses and the bytes stay for a human.
+
+```ts continue
+await writeFile(process.env.CB_GOOGLE_TOKENS_FILE, '{"refreshToken": "trun');
+const failure = await tryCall(() => saveGoogleTokens({ accessToken: "fresh" }));
+print(`error: ${failure.name}`);
+print(`onDisk: ${await readFile(process.env.CB_GOOGLE_TOKENS_FILE, "utf-8")}`);
+=>
+error: GoogleTokenStoreCorruptError
+onDisk: {"refreshToken": "trun
+```
+
+A genuinely absent file is the legitimate first run, and still starts fresh.
+
+```ts continue
+await rm(process.env.CB_GOOGLE_TOKENS_FILE, { force: true });
+await saveGoogleTokens({ refreshToken: "first-ever" });
+JSON.parse(await readFile(process.env.CB_GOOGLE_TOKENS_FILE, "utf-8")).refreshToken
+=> first-ever
+```
+
+Writes land by temp file + fsync + atomic rename, so that truncated state can no
+longer be produced in the first place — and no temp sibling is left behind.
+
+```ts continue
+(await readdir(tmp)).sort().join(",")
+=> google-tokens.json
 ```
 
 ```ts cleanup

@@ -23,6 +23,7 @@ import type { ChatSession } from "../../core/chat/session/index.js";
 import type { ChatMessageResult } from "../../core/chat/session/messages.js";
 import type { ChatSessionRegistry } from "../../core/chat/session/registry.js";
 import { getMostActive } from "../../core/chat/session/history.js";
+import { chatHistorySlice } from "../../core/chat/session/load-history.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { ChatSchedule } from "../../core/chat/schedules.js";
 
@@ -72,7 +73,7 @@ function sendFiredTurn(deps: {
     const onDone = (msg: ChatMessageResult): void => {
       // Broadcast the refreshed transcript so the originating tab refreshes,
       // exactly as the old onFire did — harmless even on an errored turn.
-      session.getHistory()
+      session.getHistory(chatHistorySlice())
         .then((history) => {
           eventBus.emit("chat-history", {
             sessionId: history.sessionId,

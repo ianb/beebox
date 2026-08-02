@@ -24,7 +24,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../lib/error-guards.js";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import { currentScryptParams, deriveKey, dummyVerify, hashPassword } from "./local-users-scrypt.js";
 import {
   AuthFileCorruptError,
@@ -175,10 +175,13 @@ function delay(ms: number): Promise<void> {
  */
 async function withAuthFileLock<T>(fn: (file: AuthFile | null) => Promise<T> | T): Promise<T> {
   const lockPath = `${authFilePath()}.lock`;
+  // Request-scoped: a short critical section whose callers fail fast (~5 s
+  // retry budget), so a crashed holder must clear in seconds, not minutes.
+  const lock = requestScopedLock(lockPath);
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
   for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
     try {
-      await acquireLock(lockPath, { purpose: "local-users" });
+      await acquireLock(lock, { purpose: "local-users" });
     } catch (e) {
       if (e instanceof LockHeldError) {
         await delay(LOCK_RETRY_MS);
@@ -189,7 +192,7 @@ async function withAuthFileLock<T>(fn: (file: AuthFile | null) => Promise<T> | T
     try {
       return await fn(loadAuthFile());
     } finally {
-      await releaseLock(lockPath);
+      await releaseLock(lock);
     }
   }
   throw new AuthFileLockError(lockPath);
