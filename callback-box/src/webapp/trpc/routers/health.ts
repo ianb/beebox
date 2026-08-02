@@ -205,6 +205,29 @@ async function annexHealthChecks(args: { repoRoot: string; boxRoot: string }): P
 }
 
 /**
+ * Gemini key check — the key is optional: it powers audio questions
+ * (ask-about-audio) and scan-import's opt-in Gemini backend
+ * (`CB_SCAN_VISION=gemini`); scan-import defaults to the Claude backend,
+ * which needs no extra key.
+ */
+function geminiKeyCheck(): HealthCheck {
+  const geminiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
+  const geminiSelected = process.env["CB_SCAN_VISION"] === "gemini";
+  const message =
+    geminiKey !== null
+      ? "Gemini API key configured"
+      : geminiSelected
+        ? "CB_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Set GEMINI_KEY in .env"
+        : "Gemini API key not found (optional) — audio questions will not work; scan-import uses the Claude backend by default";
+  return {
+    name: "gemini-api-key",
+    ok: geminiKey !== null || !geminiSelected,
+    message,
+    severity: "warning",
+  };
+}
+
+/**
  * Run all health checks for a box.
  */
 export async function runHealthChecks(
@@ -344,16 +367,7 @@ export async function runHealthChecks(
     severity: "warning",
   });
 
-  // Gemini key (needed for image description in capture processing)
-  const geminiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
-  checks.push({
-    name: "gemini-api-key",
-    ok: geminiKey !== null,
-    message: geminiKey !== null
-      ? "Gemini API key configured"
-      : "Gemini API key not found — capture image description will not work. Set GEMINI_KEY in .env",
-    severity: "warning",
-  });
+  checks.push(geminiKeyCheck());
 
   // Claude Code auth (needed for agent operations — chat, reactor, procedures).
   // Probe via `claude auth status` through the ClaudeCli service rather than

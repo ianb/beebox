@@ -87,6 +87,10 @@ function stripIntBounds(node: unknown): void {
 /** The JSON Schema handed to the SDK's `outputFormat` — generated, not hand-written. */
 export function claudeScanWireSchema(): Record<string, unknown> {
   const schema = z.toJSONSchema(claudeResponseSchema);
+  // The CLI validates --json-schema with a draft-07 ajv; the 2020-12 `$schema`
+  // marker z.toJSONSchema emits makes it reject the whole schema ("no schema
+  // with key or ref"). The structure is draft-07-compatible, so drop the marker.
+  delete schema["$schema"];
   stripIntBounds(schema);
   return schema;
 }

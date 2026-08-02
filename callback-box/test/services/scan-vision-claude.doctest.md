@@ -63,6 +63,9 @@ pages.items.required.includes("slot_count") && pages.items.required.includes("sl
 
 JSON.stringify(schema).includes("9007199254740991")
 => false
+
+"$schema" in schema
+=> false
 ```
 
 The prompt suffix carries the two-phase outline procedure and the bbox refusal.

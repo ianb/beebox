@@ -62,8 +62,19 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   server-side entry after validation, and its ledger doubles as the remote
   side of the uploader's dedup negotiation (Track 2).
 - **scan-import** — `src/core/commands/scan-import.ts` dispatches two ways:
-  all-images → photo flow (Gemini analysis, front/back pairing, question
+  all-images → photo flow (vision analysis, front/back pairing, question
   cards); any single PDF → document mode
+
+  > **Model note (2026-08-01):** the photo flow's analysis backend is now the
+  > `ScanVision` service (`src/services/scan-vision.ts`). The default is
+  > **Claude Sonnet via the Claude Agent SDK** — zero extra credential
+  > (subscription auth, same as the reactor); Gemini Flash remains as an
+  > opt-in backend (`CB_SCAN_VISION=gemini` + `GEMINI_KEY`). Accepted trades
+  > on the Claude path: higher per-page cost/latency, no `subject_bbox`
+  > (schema-forced null), best-effort rotation. Decision + measured evidence:
+  > `docs/plans/scan-vision-claude.md`. Mentions of "Gemini analysis" for the
+  > photo flow elsewhere in this plan predate the switch. Document mode
+  > (Docling) is unaffected.
   (`scan-import.ts:117-118`: *"PDFs are always filed as documents — Flash
   treatment for PDFs is deferred"* — there is **no** text-layer check or
   textless-PDF-to-photo-flow path today; that split is Track 4 work, not

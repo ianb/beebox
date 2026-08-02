@@ -148,11 +148,44 @@ attachment wins; the Claude backend inlines image bytes.**
   and to make the affordance real, Bash — which abandons the hermetic
   zero-tool call).
 
-Decision: images are attached inline as base64 blocks, `allowedTools:
-[]`. The crop-and-re-Read idea is not dead — it is the natural shape
-for a *future escalation path* on pages a human flags as misread (one
-page, generous turn budget, human-invoked) — but it is rejected as the
-bulk mechanism. Recorded in `REPORT.md`'s postscript.
+Decision: images are attached inline as base64 blocks, `tools: []`. The
+crop-and-re-Read idea is not dead — it is the natural shape for a
+*future escalation path* on pages a human flags as misread (one page,
+generous turn budget, human-invoked) — but it is rejected as the bulk
+mechanism. Recorded in `REPORT.md`'s postscript.
+
+## The second measurement: outline mode at batchSize 3
+
+The review's top finding was that batchSize 3 was argued, not measured
+(the report tested 12/call — bails — and 1/call — complete). Measured
+2026-08-01: `scratch/model-comparison/run-batch3.ts`, all 12 prepared
+pages through `planScanBatches(12, 3)` (6 calls, sliding overlap 1),
+outline prompt, tightened wire schema. Results in
+`results/sonnet-5-batch3.json`:
+
+- **Completeness holds at 3/call.** `s06-guestbook-entries` (the page
+  the 12-batch reduced to 3 rows + a bail): **15/15 slots** = header +
+  all 14 rows. `s09-guestbook`: **12/12 slots** = title + headers + all
+  10 rows, correct hard names (`Denise Marlowe`, `Bill Kaslow`),
+  per-row legibility verdicts, no invented names, no page-level bail
+  anywhere in the run. `s07-journal` enumerated 2 slots (date header +
+  body paragraph — coarser units than the per-page run's 13 lines) but
+  the body slot carries the full verbatim journal text, so this is unit
+  granularity, not elision. `s02-scan-back`: 8 slots incl. the correct
+  `Kris Lobert` (per-page run found 10; the missing tokens are the
+  known `MOS` merge). The slot invariant held on all 17 page-analyses.
+- **Pairing works at 3/call.** The one real photo/back pair (pages
+  0↔1) came back mutually paired inside its batch; nothing else was
+  over-paired. Overlap-seam duplicates were consistent across batches.
+- **Rotation stays best-effort**, as the plan already assumed: `s06`
+  270 (correct), `s09` 0 (wrong) — 1/2, consistent with every prior
+  arm's inconsistency.
+- **Cost/latency:** $3.74 and 795 s for 12 pages (≈$0.31/page, 66
+  s/page) — roughly cost-neutral with the per-page outline arm
+  (~$0.24/page; the overlap re-analyzes seam pages, offsetting the
+  amortized preamble) and ~5× the 12-batch one-shot's $0.06/page.
+  Batch 3 is therefore justified by pairing co-visibility plus
+  completeness, not by cost; the boxholder accepted the cost trade.
 
 ## Tracks / scope
 
