@@ -149,7 +149,12 @@ pi_branch_checkout_path() {
 # and sets PI_TARGET / PI_BRANCH / PI_NAME. Must be CALLED DIRECTLY (never in
 # a $() subshell) so the variables reach the caller.
 pi_mount_state() {
-  local wt="$1" link
+  local wt link
+  # Canonicalize first: a caller may pass "." (finish's `status .`), and
+  # basename(".") is "." — that would derive a bogus PI_NAME/PI_TARGET and
+  # misreport a perfectly valid mount as "invalid". Resolving to an absolute
+  # path here means every downstream basename/comparison sees the real name.
+  wt=$(canon "$1")
   PI_NAME=$(basename "$wt")
   PI_BRANCH="worktree-$PI_NAME"
   PI_TARGET="$PI_WT_ROOT/$PI_NAME"
