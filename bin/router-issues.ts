@@ -294,7 +294,10 @@ function stripIssuesPrefix(p: string): string {
 // scope by: without this, a root file like the private README.md would
 // match a bare "*.md" pathspec and show up as a phantom issue.
 function categoryPathspecs(): string[] {
-  return CATEGORIES.flatMap((cat) => [`${cat}/*.md`, `closed/${cat}/*.md`]);
+  // :(glob) makes `*` stop at `/` (default pathspec `*` crosses directory
+  // separators, which would admit nested files listIssues never enumerates —
+  // phantom worktree-only records).
+  return CATEGORIES.flatMap((cat) => [`:(glob)${cat}/*.md`, `:(glob)closed/${cat}/*.md`]);
 }
 
 export interface OverlayResult {

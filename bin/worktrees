@@ -234,14 +234,18 @@ case "$cmd" in
       orphan_pids=$((orphan_pids + 1))
     done
 
-    # Private-issues durable orphan report + registration prune. Reported
-    # UNCONDITIONALLY on every sweep (hook logs are best-effort, so this is
-    # the mechanism that guarantees an orphaned private worktree/branch is
-    # eventually seen). Read-only apart from `prune`, which only drops
-    # registrations whose directories are already gone.
+    # Private-issues orphan pass, UNCONDITIONALLY every sweep (hook logs are
+    # best-effort, so this is the mechanism that guarantees an orphaned
+    # private worktree/branch is eventually seen). The real run prunes stale
+    # registrations and collects merged+clean orphans (sweep-orphans);
+    # dry-run only lists (report-orphans). Unmerged orphans are re-announced
+    # every run until resolved.
     if [ -x "$REPO_DIR/bin/private-issues" ]; then
-      "$REPO_DIR/bin/private-issues" report-orphans "$REPO_DIR" 2>/dev/null | sed 's/^/private-issues /' || true
-      [ "$dry_run" = false ] && "$REPO_DIR/bin/private-issues" prune "$REPO_DIR" >/dev/null 2>&1 || true
+      if [ "$dry_run" = true ]; then
+        "$REPO_DIR/bin/private-issues" report-orphans "$REPO_DIR" 2>/dev/null | sed 's/^/private-issues /' || true
+      else
+        "$REPO_DIR/bin/private-issues" sweep-orphans "$REPO_DIR" 2>/dev/null | sed 's/^/private-issues /' || true
+      fi
     fi
 
     suffix=""

@@ -1,6 +1,11 @@
 # Private issues: a shadow repo mounted at `<checkout>/private-issues/`
 
-**Status:** plan, 2026-08-01 — not yet implemented.
+**Status:** implemented 2026-08-01 (same worktree, after two plan-review
+rounds). Everything below is built and exercised end-to-end on the real
+machine (orphan preservation, relink, merged removal, gitignore-symlink
+guard, doc-check rule, browser tests) EXCEPT: the finish push leg is
+untested until a private remote exists, and the dev browser serves private
+issues only after this lands on main and the router restarts.
 
 ## Problem
 
@@ -52,14 +57,15 @@ from where the monorepo actually lives, never from `$HOME`:
 - **Private repo** — `PRIV=$(dirname "$MAIN")/callback-private-issues`.
 - **Private worktrees** — `$(dirname "$MAIN")/private-issues-worktrees/<name>/`.
 
-One tiny shared shell helper (sourced by the hooks and `bin/worktrees`)
-computes these three, so the derivation exists in exactly one place. Two
-hardening rules (round-2 finding 6): the helper takes an **explicit
+One place owns the derivation — built as the `bin/private-issues` CLI
+(subcommands init/mount/status/remove-if-safe/report-orphans/prune), which
+the hooks and `bin/worktrees` shell out to rather than sourcing a lib. Two
+hardening rules (round-2 finding 6): every command takes an **explicit
 checkout-path argument** — each caller passes the anchor it already has
 (`$worktree_path`, `$REPO_DIR`, the sweep's `$d`) — never bare cwd, which is
 wrong for `bin/worktrees` run from elsewhere and for WorktreeRemove after
 deletion. And the private repo must pass an **identity check** before any
-script touches it: `bin/private-issues-init` writes `git config
+script touches it: `bin/private-issues init` writes `git config
 callback.privateIssues true` plus a `.callback-private-issues` marker file
 into the repo it creates, and every consumer verifies the marker before
 mutating — so a same-named unrelated directory is refused (and init refuses
@@ -81,9 +87,9 @@ absent. Nothing about the mechanism is specific to the boxholder:
 - The path is derived from the checkout location (see "Location derivation"),
   so it works identically for anyone, wherever they keep their checkout, and
   the tracked hooks never embed a personal path.
-- Bootstrap is documented for everyone (issues/CLAUDE.md + a short
-  `bin/private-issues-init` script that does the `git init` + category dirs +
-  README + main-checkout symlink, so opt-in is one command). Each developer
+- Bootstrap is documented for everyone (issues/CLAUDE.md +
+  `bin/private-issues init <checkout>`, which does the `git init` + category
+  dirs + README + main-checkout symlink, so opt-in is one command). Each developer
   wires their own remote (or none — a local-only private repo is fine).
 - Absence is the default and is silent-by-design: one quiet log line in
   worktree-create, no warnings anywhere else.
@@ -143,9 +149,9 @@ therefore **remove-if-safe, orphan-if-not**:
 
 ## Changes, surface by surface
 
-### A. Bootstrap — `bin/private-issues-init` (any developer; local only)
+### A. Bootstrap — `bin/private-issues init` (any developer; local only)
 
-A short tracked script so opt-in is one command, run here once for the
+A tracked CLI subcommand so opt-in is one command, run here once for the
 boxholder's instance:
 
 - `git init -b main "$PRIV"` (the derived peer path); category dirs with
@@ -382,7 +388,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
 ### J. Docs
 
 - `issues/CLAUDE.md`: new "Private issues" section — separate repo,
-  per-developer opt-in (`bin/private-issues-init`), mount topology,
+  per-developer opt-in (`bin/private-issues init`), mount topology,
   commit-from-inside rule ("an agent that edits a private issue and runs
   `git add -A` in callback-box sees nothing staged — that is the leak guard
   working"), one-way links, orphan recovery (re-create by name, or merge the

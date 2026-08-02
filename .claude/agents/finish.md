@@ -115,13 +115,17 @@ bin/private-issues status .
 
 - `state=no-repo` → the developer hasn't opted in. Skip every "private leg"
   step below; report nothing about private issues.
-- `state=valid` (or `relink`) → the private leg is ACTIVE: this finish also
-  lands the private branch on private `main` (steps 2/3/8 gain a private
-  half), and every report includes a `PRIVATE:` line.
-- anything else (`invalid`, command fails) → **return BLOCKED** naming the
-  state. A present-but-broken mount is never "opted out" — committing or
-  merging through an unvalidated mount is how private work gets lost or
-  lands in the wrong repo.
+- `state=valid` → the private leg is ACTIVE: this finish also lands the
+  private branch on private `main` (steps 2/3/8 gain a private half), and
+  every report includes a `PRIVATE:` line.
+- `state=relink` → the mount symlink is missing but the private worktree
+  survives; heal it (`bin/private-issues mount .`), re-run `status`, and
+  require `valid` before proceeding — never run `git -C private-issues`
+  against a missing symlink.
+- anything else (`invalid`, `repo-invalid`, command fails) → **return
+  BLOCKED** naming the state. A present-but-broken mount is never "opted
+  out" — committing or merging through an unvalidated mount is how private
+  work gets lost or lands in the wrong repo.
 
 All private-repo commits/merges run FROM INSIDE `private-issues/` (it is a
 different repo — `git add` in the worktree root cannot see it, by design).
@@ -462,10 +466,20 @@ changes`):
 
 ```bash
 PRIV=$(bin/private-issues status . | sed -n 's/.*repo=\([^ ]*\).*/\1/p')
-git -C "$PRIV" merge --ff-only "$BRANCH"
-R=$(git -C "$PRIV" remote | head -1)      # the actual remote name, never assume origin
-[ -n "$R" ] && git -C "$PRIV" push "$R" main
+bin/private-issues with-lock . git -C "$PRIV" merge --ff-only "$BRANCH"
+REMOTES=$(git -C "$PRIV" remote)
 ```
+
+The `with-lock` wrapper serializes the merge against any concurrent
+cleanup/sweep mutating the same private repo — never run the private merge
+bare. Then push ONLY when exactly one remote exists:
+
+- one remote → `git -C "$PRIV" push "$REMOTES" main`
+- zero remotes → `PRIVATE: merged <hash>, not pushed (no remote)`
+- multiple remotes → do NOT guess (a private repo can have backup or even
+  accidental public remotes; pushing confidential issues to the wrong one is
+  unrecoverable) → `PRIVATE: merged <hash>, not pushed (multiple remotes —
+  push manually)`
 
 A failed private merge or push NEVER blocks, reverts, or downgrades the
 public result — the private branch is preserved (cleanup orphan-preserves
@@ -507,6 +521,7 @@ End your final message with a status line the caller can act on:
   - `PRIVATE: MERGE FAILED — branch worktree-<name> preserved; run: git -C <priv> merge worktree-<name>`
   - `PRIVATE: merged <hash>, PUSH FAILED — run: git -C <priv> push <remote> main`
   - `PRIVATE: merged <hash>, not pushed (no remote)`
+  - `PRIVATE: merged <hash>, not pushed (multiple remotes — push manually)`
   The overall line stays `RESULT: MERGED` when the public merge landed —
   public main is the authority; a failed private leg is reported, never
   silently folded into success and never a reason to revert.
