@@ -5,10 +5,13 @@ verified + two cross-model reviews); not yet shipped. Track 6's
 scanner-priors mechanism reshaped 2026-08-01 by the `scan-guide-card.md`
 subplan (scan guide card + deprecated `CLAUDE_SCANS.md` fallback).
 Boxholder-gated remainder: Docling decisions review
-(`scanner-ingest-docling-decisions.md`), box-readiness draft install
-(`scratch/box-readiness/`, now guide-card form), test1 scan-guide migration
+(`scanner-ingest-docling-decisions.md`), test1 scan-guide migration
 (runbook in `scan-guide-card.md`), prod annex cutover
-(`docs/server-operations.md` runbook), merge to main.
+(`docs/server-operations.md` runbook), merge to main. **Done 2026-08-01:**
+box-readiness install — scan guides + destination landmarks committed on the
+prod estate and box-family boxes after boxholder adjudication, including a
+boxholder-directed merge of estate's `store/finances/` and `store/legal/`
+into `store/documents/{financial,legal}/` (record: `scratch/box-readiness/`).
 
 A pipeline from a ScanSnap desktop scanner to triage-ready cards in a hosted
 box. ScanSnap profiles save searchable PDFs and images into per-box folders on
