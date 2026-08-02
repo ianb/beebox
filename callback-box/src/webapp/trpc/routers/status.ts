@@ -13,6 +13,7 @@ import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
 import { getNavCounts } from "../../../core/nav-counts.js";
+import { naturalCompare } from "../../../lib/natural-sort.js";
 import type { CardInfo } from "../../../core/state.js";
 
 /** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
@@ -233,9 +234,9 @@ export const statusRouter = router({
         files.push({ relativePath, name: entry.name });
       }
 
-      dirs.sort((a, b) => a.name.localeCompare(b.name));
-      cards.sort((a, b) => a.name.localeCompare(b.name));
-      files.sort((a, b) => a.name.localeCompare(b.name));
+      dirs.sort((a, b) => naturalCompare(a.name, b.name));
+      cards.sort((a, b) => naturalCompare(a.name, b.name));
+      files.sort((a, b) => naturalCompare(a.name, b.name));
       return { path: relPath, dirs, cards, files };
     }),
 });

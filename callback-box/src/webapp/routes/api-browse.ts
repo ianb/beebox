@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../lib/paths.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { naturalCompare } from "../../lib/natural-sort.js";
 
 interface BrowseCard {
   relativePath: string;
@@ -110,8 +111,8 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
         });
       }
 
-      dirs.sort();
-      cards.sort((a, b) => a.name.localeCompare(b.name));
+      dirs.sort(naturalCompare);
+      cards.sort((a, b) => naturalCompare(a.name, b.name));
 
       return { path: reqPath, dirs, cards };
     }

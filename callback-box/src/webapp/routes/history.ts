@@ -6,8 +6,10 @@
 
 import type { FastifyInstance } from "fastify";
 import { execFileSync } from "node:child_process";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { simpleGit } from "simple-git";
+import { describeAbsentContent, parseAnnexPointer } from "../../lib/annex-pointer.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
 
@@ -20,6 +22,10 @@ export async function registerHistoryRoutes(
 ): Promise<void> {
   /**
    * GET /api/history/blob/:hash/* - Serve a file from a specific commit.
+   *
+   * The hash may carry a trailing `^` (parent commit) — how the frontend
+   * fetches a REMOVED file's content, which no longer exists at the commit
+   * that deleted it.
    */
   server.get<{
     Params: { hash: string; "*": string };
@@ -27,7 +33,7 @@ export async function registerHistoryRoutes(
     const { hash } = request.params;
     const filePath = request.params["*"];
 
-    if (!/^[\da-f]{6,40}$/i.test(hash) || !filePath) {
+    if (!/^[\da-f]{6,40}\^?$/i.test(hash) || !filePath) {
       return reply.status(400).send({ error: "Invalid hash or path" });
     }
 
@@ -42,6 +48,26 @@ export async function registerHistoryRoutes(
           "git", ["lfs", "smudge"],
           { cwd: boxRoot, input: buffer, maxBuffer: 50 * 1024 * 1024 }
         );
+      }
+
+      // If this is a git-annex pointer, resolve the key to the object's bytes.
+      // Historical blobs hold the pointer text (annex smudge applies to the
+      // working tree only), so the key is looked up in the local annex store.
+      const annexPointer = parseAnnexPointer(new Uint8Array(buffer));
+      if (annexPointer !== null) {
+        let objectPath: string;
+        try {
+          objectPath = execFileSync(
+            "git", ["annex", "contentlocation", annexPointer.key],
+            { cwd: boxRoot, encoding: "utf-8" }
+          ).trim();
+        } catch (_e) {
+          /* ignore: non-zero exit means the content is not present locally */
+          return reply
+            .status(409)
+            .send({ error: describeAbsentContent(annexPointer, filePath) });
+        }
+        buffer = fs.readFileSync(path.join(boxRoot, objectPath));
       }
 
       const ext = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();

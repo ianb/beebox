@@ -97,6 +97,9 @@ const OUTSIDE_VITE_SHARED_RAW = [
   // Loaded outside Vite by its own doctest (root tsconfig, no @shared
   // resolution): imports @shared/todo-model by raw relative path.
   "src/components/todo-view-card-logic.ts",
+  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // resolution): imports @shared/invariant by raw relative path.
+  "src/components/history/CommitDetail-diff.ts",
 ];
 
 export default [
