@@ -1,334 +1,300 @@
-# Scan-uploader pairing UI + minimal install story
+# Scan-uploader setup UI + minimal install story
 
-A settings-page surface that pairs a laptop scan-uploader with a box the way
-the mobile companion pairs: the UI mints a short-lived pairing code, the
-uploader CLI redeems it for a scan token and writes its own config. Plus an
-installation story that covers only "clone the repo, install the one
-subdirectory" — so the uploader can be set up on a machine that never runs a
-full callback-box dev environment.
+A settings-page surface for scan uploaders — mint a token (shown once), see
+every uploader with honest last-activity, revoke — plus a `configure`
+subcommand that takes the pasted token and writes the uploader's own config,
+and an installation story that covers only "clone the repo, install the one
+subdirectory."
+
+**Revised 2026-08-01 after a Codex cross-model review**
+(`scan-uploader-pairing.review.md`): the original unauthenticated
+pairing-code protocol (new redeem route, hub exemption, dedicated limiter)
+is dropped by boxholder decision — the existing owner-only mint plus a
+paste-once `configure` command covers the job with zero new server surface.
+The pairing protocol moved to NOT in scope with its revisit trigger.
 
 **Job stories.**
 - *When I've just unboxed a document scanner at my desk and want its output
-  flowing into a box, I want the box's settings page to hand me a short
-  command I paste into a terminal, so I can finish setup without hand-editing
-  JSON, hand-placing token files, or reading a wire-contract doc.*
+  flowing into a box, I want the box's settings page to hand me a token and
+  a short command I paste into a terminal, so I can finish setup without
+  hand-editing JSON or hand-placing token files.*
 - *When a second household machine (or a rebuilt laptop) needs to upload
-  scans, I want pairing it to be the same two minutes as the first machine,
-  so adding capacity doesn't mean re-deriving the setup from old notes.*
+  scans, I want setting it up to be the same two minutes as the first
+  machine, so adding capacity doesn't mean re-deriving the setup from old
+  notes.*
 - *When I look at the settings page months later, I want to see which
-  uploaders exist and when each last uploaded, so I can revoke a machine I
-  no longer own.*
+  uploaders exist and when each was last active, so I can revoke a machine
+  I no longer own.*
 
 ## Stated preferences this plan trades against
 
 - `docs/engineering-principles.md`: **#3 validate-at-boundaries** (the
-  redeem route is unauthenticated by design — it must validate everything);
-  **#4 resilient-and-never-silent** (a failed pair attempt prints why);
-  **#5 failure paths visible in signatures** (CLI pair flow returns typed
-  results, exits non-zero); **#6 right-sized defensiveness** (defense at the
-  redeem boundary; interior reuses verified stores); **#8 one way to do each
-  thing** (reuse `TokenStore`, the mobile pairing-ticket pattern, the
-  existing `scanTokens` procedures, the settings-section component shape).
-- `callback-box/CLAUDE.md`: raw-Fastify-vs-tRPC rule (the redeem route is an
-  unauthenticated machine-to-machine POST — raw route, like
-  `/api/pairing/redeem`); "don't add features beyond what the task
-  requires"; "Keep source and docs generic — never hardcode personal names."
-- `callback-box/code-style.md`: Result-vs-throw at the wire boundary; no
-  default parameters; custom error classes.
-- Precedents: mobile pairing (`src/core/mobile/pairing.ts`,
-  `src/webapp/routes/pairing.ts`, `CompanionPairingSection.tsx`) — the
-  densest preference here; the scan-upload wire contract
+  `configure` command validates the pasted token's use before declaring
+  success; the config writer validates what it writes); **#4
+  resilient-and-never-silent** (every setup failure names the flag, file,
+  or field); **#5 failure paths visible in signatures**; **#6 right-sized
+  defensiveness** (no new server attack surface at all — the strongest form
+  of the principle); **#8 one way to do each thing** (reuse the existing
+  `scanTokens` tRPC procedures and the settings-section component shape;
+  do NOT build a second credential-exchange protocol).
+- `callback-box/CLAUDE.md`: "don't add features beyond what the task
+  requires" (the dropped pairing protocol is this rule applied); "Keep
+  source and docs generic — never hardcode personal names."
+- `callback-box/code-style.md`: Result-vs-throw at boundaries; no default
+  parameters; custom error classes (`ConfigError` precedent,
+  `scan-uploader/src/errors.ts`).
+- Precedents: `CompanionPairingSection.tsx` (one-time secret held in
+  component state, auto-cleared); the scan-upload wire contract
   (`docs/scan-upload-contract.md`); the installation-story plan's
   smoke-script verification pattern (`docker/smoke-dev-install.sh`).
 
 ## What already exists
 
-Reuse throughout; the only net-new mechanism is the pair-redeem exchange.
-
-- **Pairing-ticket machinery** — `src/core/mobile/pairing.ts:82-132`:
-  `createMobilePairingTicket` (32-byte token, SHA-256 hash in an in-memory
-  `Map`, 10-min TTL, plaintext returned once) and
-  `redeemMobilePairingTicket` (hash lookup, single-use, expiry check).
-  **Pattern reused, instance not** — scan pairing gets its own module
-  (`src/core/scan/pairing.ts`) with its own pending map, for the same
-  structural-separation reason `core/scan/tokens.ts:1-17` gives for the
-  token stores: mobile auth code must never be able to resolve a scan
-  credential, and vice versa.
-- **Scan token store** — `src/core/scan/tokens.ts`: `createScanToken`
-  (name-validated, duplicate-checked under the store lock, plaintext
-  returned once, `tokens.ts:109-131`), `listScanTokens` (summaries with
-  `lastUsedAt`, `tokens.ts:97-103`), `revokeScanToken`. **Reused as-is** —
-  redeem calls `createScanToken`; the UI list/revoke calls the existing
-  `scanTokens` tRPC procedures (`src/webapp/trpc/routers/scan-tokens.ts`).
-- **Unauthenticated-redeem route precedent** — `src/webapp/routes/pairing.ts:20-39`
-  (`POST /api/pairing/redeem`: zod body, 401 with a single generic message
-  on any failure) and its two auth-wall allowances (`hub-server.ts`
-  `isMobilePairingRedeem`; `server-box-scope.ts` `isPairingRedeemUrl`).
-  **Pattern reused** for `POST /api/scan/pair`.
-- **Scan route mounting + rate limit** — `src/webapp/routes/scan-upload.ts:226-298`
-  registers the scan routes in a sibling scope outside the box auth hook,
-  with `consumeScanRateLimit`. **Reused**: the pair route joins this scope
-  (it is scan infrastructure with non-standard auth), sharing the rate
-  limiter.
-- **Settings section shape** — `src/frontend/src/components/settings/CompanionPairingSection.tsx`:
-  `Card as="section"` + mutation-held one-time secret auto-cleared at
-  `expiresAt` (lines 88-95), devices list + revoke with query invalidation.
-  **Copied** as `ScanUploaderSection.tsx`; appended in `SettingsPage.tsx:27`
-  next to the companion section.
-- **Uploader CLI + config validation** — `scan-uploader/src/cli.ts`,
-  `config.ts` (strict fail-closed validation), `wire-client.ts` (bearer +
-  the two endpoints). **Extended** with a `pair` subcommand; config
-  load/save logic reused for the write path.
-- **Install verification precedent** — `callback-box/docker/smoke-dev-install.sh`
-  (installation-story plan). **Pattern reused** for a
-  `scan-uploader/smoke-install.sh` that proves the filtered install works
-  from a clean clone.
+- **Token mint/list/revoke** — `src/webapp/trpc/routers/scan-tokens.ts`:
+  `create` (owner-only, returns plaintext once — doc comment lines 12-17:
+  "`create` is the ONLY place its plaintext ever exists"), `list`
+  (summaries incl. `lastUsedAt`), `revoke`. **Reused as-is; zero server
+  changes in this plan.**
+- **`lastUsedAt` semantics** — `core/token-store.ts:209-223`: stamped by
+  `verify` on every authenticated request, i.e. it means "last request,"
+  not "last upload." **Reused with honest labeling** (see Track A; Codex
+  finding 5).
+- **One-time-secret UI pattern** — `CompanionPairingSection.tsx:88-95`
+  (mutation-held state, `setTimeout` auto-clear) and its `DeviceRow`
+  list/revoke shape. **Copied** as `ScanUploaderSection.tsx`; the copy adds
+  clipboard-write rejection handling the original lacks
+  (`CompanionPairingSection.tsx:102`; Codex finding 8).
+- **Settings page structure** — `SettingsPage.tsx:27`: sections are stacked
+  self-contained components. **Extended** with the new section.
+- **Uploader config validation (read side)** — `scan-uploader/src/config.ts:37-140`:
+  strict fail-closed *reader*; ENOENT is an error; unknown keys are
+  accepted and preserved nowhere because nothing writes. **There is no
+  writer** — the plan treats the config writer as net-new design (Codex
+  finding 6), not reuse.
+- **Wire client + empty-check** — `scan-uploader/src/wire-client.ts` (bearer,
+  runtime response validation at line 52); `docs/scan-upload-contract.md:62`
+  permits an empty `check`. **Reused** for `configure`'s verification call.
+- **Install verification precedent** — `callback-box/docker/smoke-dev-install.sh`.
+  **Pattern reused** for `scan-uploader/smoke-install.sh`.
 
 ## Prior art (external)
 
 - **OAuth 2.0 Device Authorization Grant (RFC 8628)** — the named pattern
-  for "constrained client redeems a short user-visible code for a long-lived
-  credential." Our flow is the inverted-but-equivalent household version
-  (code displayed where the user is authenticated, redeemed by the device);
-  the load-bearing properties we take from it: short TTL, single use,
-  rate-limited redemption, generic error responses.
+  for code-based device pairing. Recorded as the shape the NOT-in-scope
+  pairing protocol would take if its threat model ever becomes real.
   https://datatracker.ietf.org/doc/html/rfc8628
 - **pnpm filtered install** — `pnpm install --filter <pkg>...` from the
-  workspace root installs only the filtered packages and their workspace
-  dependencies; pnpm documents that filtering still requires the workspace
-  lockfile and runs from the root.
-  https://pnpm.io/filtering — the smoke script (Track 4) is the executable
-  verification that this actually skips `callback-box`'s heavy deps
-  (notably `better-sqlite3`'s native build); if it doesn't, Track 4 falls
-  back to documenting root install with `--ignore-scripts` or a committed
-  single-file build. Treat as unverified until the smoke script passes.
-- **QR-code pairing for CLI tools** — no additional search performed beyond
-  the mobile precedent already in-repo; the uploader runs on the same
-  machine as the browser, so QR adds nothing over copy-paste (see NOT in
+  workspace root installs the filtered package plus its workspace deps
+  (https://pnpm.io/filtering). Unverified claim until
+  `smoke-install.sh` passes: that this skips `callback-box`'s heavy native
+  builds (`better-sqlite3`). The workspace devDeps
+  (`@ianbicking/personal-vibe-check`, `agent-doctest` —
+  `scan-uploader/package.json`) are expected to come along; they are small
+  and build-free. Fallback if the filter disappoints: root install with
+  `--ignore-scripts`, documented, or revisiting distribution (NOT in
   scope).
+- **Reading a secret from stdin without echo** — Node has no built-in
+  no-echo prompt; the standard approach is `readline` with the output
+  stream muted, or accepting piped stdin. No dependency will be added;
+  piped-or-muted-readline is small enough to hand-roll (matches the
+  package's zero-runtime-deps stance, `scan-uploader/README.md:5`).
 
 ## Tracks / scope
 
-Ordered by implementation dependency. Track 4 is independent of 2-3 but
-lands last so the UI instructions it feeds are final.
-
-### Track 1 — Pair-redeem exchange (server)
-
-- **What:** `src/core/scan/pairing.ts` (ticket mint + redeem, mirroring
-  `core/mobile/pairing.ts`), a `scanTokens.createPairingTicket` owner-only
-  tRPC mutation, and `POST /<slug>/api/scan/pair` (raw route in the scan
-  sibling scope) that redeems `{ pairingToken, name }` →
-  `{ boxSlug, name, token }` by calling `createScanToken`.
-- **Why:** today the plaintext scan token itself must be copied out of a
-  tRPC response and hand-placed in a file. The pairing shape moves the
-  long-lived secret out of human hands entirely — only a 10-minute
-  single-use code travels through the clipboard (principle #6: defense
-  where the exposure is).
-- **Direction / shape:**
-  - Ticket: `createScanPairingTicket(boxRoot, { ttlMs? })` →
-    `{ token, expiresAt }`; in-memory pending map, hash-keyed, single-use,
-    `DEFAULT_TTL = 10 min` — same constants discipline as
-    `pairing.ts:6-8`.
-  - Redeem body (zod): `{ pairingToken: string.min(1), name: string
-    .regex(SCAN_TOKEN_NAME_PATTERN) }`. The uploader defaults `name` to a
-    sanitized hostname; `DuplicateScanTokenNameError` maps to `409` with
-    the name in the message so the CLI can retry with a suffix.
-  - All other failures: `401 { error: "Pairing code is invalid or
-    expired." }` — one generic message, like `routes/pairing.ts:29-31`.
-  - Hub + box-scope allowances: `isScanPairUrl` (exact path, POST only)
-    added beside the existing scan-route allowance in `hub-server.ts` and
-    the scan sibling scope in `server-box-scope.ts`; the route shares
-    `consumeScanRateLimit`.
-  - Wire contract: new section in `docs/scan-upload-contract.md`; both
-    sides carry `// WIRE CONTRACT (scan-upload)` comments per the existing
-    convention (`scan-uploader/README.md:40-41`).
-- **First chunk:** `core/scan/pairing.ts` + its doctest
-  (`test/core/scan-pairing.doctest.md`: mint/redeem happy path, expiry,
-  reuse, wrong-box, duplicate-name propagation).
-
-### Track 2 — Uploader `pair` subcommand (client)
-
-- **What:** `node dist/scan-uploader.mjs pair <server-url-with-box> --code
-  <pairing-code> [--folder <path>] [--disposition keep|archive|trash]
-  [--name <token-name>] [--config <path>]`.
-- **Why:** the CLI writing its own config is what makes the settings page's
-  one-line command sufficient — no JSON hand-editing (the first job story).
-- **Direction:**
-  - Redeems the code at `POST <server>/api/scan/pair`.
-  - Writes the token to `~/.scan-tokens/<box>.token` (0600, directory
-    created) and appends/updates the target in the config file (default
-    `./scan-uploader.json`, created if absent) using the existing strict
-    config shapes. An existing target for the same box+folder is updated in
-    place; a conflicting one (same box, different folder) is appended with
-    both left visible.
-  - Missing `--folder`: the target is written with a `"folder": "FILL-ME-IN"`
-    placeholder ONLY if interactive prompt is declined — default behavior is
-    an interactive prompt (stdin TTY) for folder + disposition. Non-TTY with
-    missing flags fails closed with the exact flags to pass.
-  - Verifies immediately: `POST /api/scan/check` with `[]` hashes using the
-    new token; prints `paired: <name> -> <box> (server verified)` and the
-    ScanSnap profile checklist (from README) as next steps.
-  - Duplicate-name `409`: retries once with `-2` suffix, then errors.
-- **First chunk:** the pair flow against `test/fake-scan-server.ts`
-  extended with the pair endpoint (`test/pair.doctest.md`: happy path,
-  expired code, duplicate name retry, non-TTY fail-closed, config
-  update-vs-append).
-
-### Track 3 — Settings UI section
+### Track A — Settings UI section
 
 - **What:** `src/frontend/src/components/settings/ScanUploaderSection.tsx`,
   appended to `SettingsPage.tsx` after the companion section.
-- **Why:** the third job story — visibility and revocation — plus the
-  entry point that mints codes.
+- **Why:** minting today requires calling tRPC by hand; there is no
+  visibility or revocation surface at all.
 - **Direction:**
-  - "Pair a scan uploader" button → `scanTokens.createPairingTicket`
-    mutation → renders the full paste-ready command with the code and the
-    box URL prefilled, expiry countdown, auto-clear at `expiresAt`
-    (state-only secret, exactly `CompanionPairingSection.tsx:88-95`).
-  - Above it, collapsed-by-default "first-time setup" block: the three-line
-    install story from Track 4 (clone, filtered install, build), so the
-    settings page is self-sufficient for a new machine.
-  - Uploaders list via `scanTokens.list` (`name`, `createdAt`,
-    `lastUsedAt`, revoked badge) with revoke buttons →
-    `scanTokens.revoke`, invalidating the list — same shape as
-    `DeviceRow`.
-- **First chunk:** the section with list + revoke (procedures exist
-  today); the pairing button lands with Track 1's tRPC mutation.
+  - "New uploader token" flow: a name field (client-validated against
+    `SCAN_TOKEN_NAME_PATTERN`, defaulted to e.g. `uploader-<date>`) →
+    `scanTokens.create` → the token rendered once in a copy block, held
+    only in component state and auto-cleared (companion pattern), with the
+    paste-ready command beneath it:
+    `node dist/scan-uploader.mjs configure https://<host>/<box> --name <name>`
+    (the token itself is NOT embedded in the command — it goes via stdin;
+    the copy button copies only the token).
+  - Clipboard writes handle rejection: on `navigator.clipboard.writeText`
+    failure, show "copy failed — select the text manually" instead of
+    silently appearing to succeed.
+  - Uploaders list via `scanTokens.list`: name, created, revoked badge,
+    and `lastUsedAt` labeled **"last request"** — not "last upload" —
+    because `TokenStore.verify` stamps it on any authenticated call
+    (`token-store.ts:209-223`). A true "last upload" column is deferred
+    (NOT in scope) until the server tracks successful PUTs per token.
+  - Revoke buttons → `scanTokens.revoke` + list invalidation.
+  - Collapsed "first-time setup on a new machine" block containing the
+    Track C install story verbatim, so the settings page is
+    self-sufficient.
+- **First chunk:** the whole section — all three procedures exist today.
+  Done-when: section renders, mints, lists with honest labels, revokes;
+  frontend lint/typecheck clean; exercised via `bin/browse` against the
+  dev box.
 
-### Track 4 — Minimal install story
+### Track B — Uploader `configure` subcommand
+
+- **What:** `node dist/scan-uploader.mjs configure <server-url-with-box>
+  --folder <path> [--disposition keep|archive|trash] [--name <token-name>]
+  [--config <path>]`; the token arrives on stdin (piped, or prompted
+  without echo on a TTY).
+- **Why:** the CLI writing its own config is what makes the settings page's
+  command sufficient — no JSON hand-editing (first job story).
+- **Direction:**
+  - Parses `<server-url-with-box>` locally into `serverUrl` + `box` slug;
+    the slug is validated against a conservative local pattern before it
+    becomes a filename — the token file path
+    `~/.scan-tokens/<box>.token` derives only from this locally-validated
+    value, never from any server response (Codex finding 4's class,
+    eliminated at the root since no server response carries a path
+    component at all in this design).
+  - **Config writer is net-new, designed here** (Codex finding 6):
+    read the existing file as raw JSON (or start from `{ "targets": [] }`
+    on ENOENT — the one place ENOENT is legal); refuse to touch a file
+    that fails a raw-shape parse ("configure refuses to modify a config it
+    cannot parse"); modify the raw `targets` array in place so unknown
+    keys anywhere in the document survive; write atomically (temp file +
+    rename, the `token-store.ts:225-261` discipline, minus fsync
+    ceremony); then run the existing strict reader over the result as a
+    post-write assertion. Update-in-place when a target with the same
+    `box` + `serverUrl` exists; append otherwise.
+  - Token file written 0600, parent dir created 0700; written only after
+    the config write succeeds, so a half-configured state is always
+    "config points at a token file that doesn't exist yet" — which the
+    next run reports by name.
+  - Missing `--folder` on a TTY: interactive prompt. Non-TTY with missing
+    flags: fail closed naming the exact flags. No placeholder values are
+    ever written (the reader can't reject `"FILL-ME-IN"`, so it must never
+    exist — Codex finding 6's validation-gap corollary).
+  - Verification: one `POST /api/scan/check` with `[]` using the new
+    token (legal per `scan-upload-contract.md:62`); prints
+    `configured: <name> -> <box> (server verified)` plus the ScanSnap
+    checklist as next steps. Failure prints the server's status and leaves
+    the written files in place with both paths named.
+- **First chunk:** the configure flow + `test/configure.doctest.md`
+  against `test/fake-scan-server.ts`: happy path, unknown-key
+  preservation, unparseable-config refusal, update-vs-append, 0600
+  assertion, non-TTY fail-closed, bad-token verification failure.
+
+### Track C — Minimal install story
 
 - **What:** document and verify: `git clone <repo>` →
-  `pnpm install --filter scan-uploader...` (from root) → `pnpm --filter
-  scan-uploader build` → `node scan-uploader/dist/scan-uploader.mjs pair …`.
-  A `scan-uploader/smoke-install.sh` proves it from a clean clone (fresh
-  temp dir, no reuse of the dev store); README gains a "Setup" section
-  ordered install → pair → ScanSnap profile; `docs/plans/installation-story.md`
-  gets a pointer sentence (it currently covers only full-box installs).
-- **Why:** the uploader targets machines that will never run a box;
-  today's README assumes a working monorepo dev environment
-  (`scan-uploader/README.md:105-113`).
-- **Direction:** no npm publish, no committed `dist/` (gitignored today,
-  stays that way); the filtered install is the story. If the smoke script
-  shows the filter still triggers heavy native builds, fall back per Prior
-  art. Node version: reuse the root's pinned-Node enforcement from the
-  installation-story plan rather than a second mechanism.
-- **First chunk:** `smoke-install.sh` run green locally; README rewrite in
-  the same commit.
+  `pnpm install --filter scan-uploader...` (from root) →
+  `pnpm --filter scan-uploader build` →
+  `node scan-uploader/dist/scan-uploader.mjs configure …`.
+  `scan-uploader/smoke-install.sh` proves the sequence from a clean clone
+  in a temp dir (fresh store; asserts `better-sqlite3` was NOT built);
+  README gains a "Setup" section ordered install → configure → ScanSnap
+  profile; `docs/plans/installation-story.md` gets a pointer sentence.
+- **Why:** the uploader targets machines that never run a box; today's
+  README assumes a working monorepo dev environment (README:105-113).
+- **Direction:** no npm publish, no committed `dist/`. This is
+  acknowledged as a source-checkout story, not a true end-user install
+  (Codex finding 7) — accepted by boxholder decision 2026-08-01; the
+  distribution alternatives are recorded in NOT in scope with triggers.
+- **First chunk:** `smoke-install.sh` green locally; README rewrite in the
+  same commit.
 
 ## Subplans
 
-None. The one candidate — making scan-uploader an npm-publishable package —
-is explicitly out of scope (below), not deferred design.
+None.
 
 ## Failure modes
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Pairing code redeemed twice (replay) | planned (scan-pairing doctest) | single-use map deletion, mirrors `pairing.ts:118-119` | clear (401) |
-| Code expires while user walks to terminal | planned (doctest) | TTL check at redeem; UI countdown + auto-clear | clear (401; UI shows expiry) |
-| Redeem with valid code but name already taken | planned (both sides) | 409 with name; CLI auto-suffix once | clear |
-| Hub forwards pair route to wrong surface / other scan-token paths | planned (hub gate doctest extension) | `isScanPairUrl` exact-match, POST-only, beside the existing two-route allowance | clear (401 at hub) |
-| Brute-forcing pairing codes at the unauthenticated route | existing pattern | 32-byte token space + `consumeScanRateLimit` shared with PUT | clear (429) |
-| Box process restarts between mint and redeem (in-memory map lost) | planned (doctest documents behavior) | code simply invalid; UI mints a fresh one | clear (401) — accepted, same as mobile |
-| CLI writes token file but config write fails mid-pair | planned (pair doctest) | write token file last, after config write succeeds; on any failure print both paths + state | clear |
-| Token file created world-readable | planned (pair doctest asserts mode) | explicit 0600 + parent dir create | clear |
-| `pair` run twice for the same box | planned (doctest) | update-in-place semantics; second token minted server-side — CLI prints reminder to revoke the old name | clear |
-| Filtered install silently pulls heavy native deps | smoke script | fall-back documented (Prior art) | clear (script fails loud) |
+| Pasted token is wrong/truncated | planned (configure doctest) | verification `check` fails; files left in place, status printed | clear |
+| Config exists but is unparseable JSON | planned (doctest) | configure refuses to modify; names the file | clear |
+| Config writer drops unknown keys | planned (doctest asserts preservation) | raw-JSON in-place edit, post-write strict-read assertion | clear (test-guarded) |
+| Crash between config write and token-file write | planned (doctest simulates) | ordering guarantees the gap state is "missing token file", reported by name on next run | clear |
+| Token file world-readable | planned (doctest asserts mode) | explicit 0600 + 0700 dir | clear |
+| Box slug with path tricks becomes a filename | planned (doctest) | local slug pattern validation before any filesystem use | clear |
+| Clipboard write rejected in UI | manual (browse pass) | explicit failure message replaces silent no-op | clear |
+| "last request" misread as "last upload" | n/a (labeling) | honest label + tooltip; true last-upload deferred | clear |
+| Filtered install pulls heavy native builds | smoke script asserts | documented fallback (root install `--ignore-scripts`) | clear (script fails loud) |
+| Token minted but never configured (abandoned) | n/a | visible in list as never-used; revoke | clear |
 
-**Critical gap:** none identified. The in-memory pending map's restart loss
-is accepted and documented, matching the mobile precedent.
+**Critical gap:** none identified.
 
 ## Agent-flow / user-flow edge cases
 
-This surface is boxholder-facing infrastructure; the agent-flow list adapts:
+Boxholder-facing infrastructure; the list adapts:
 
-- **Wrong URL pasted (another box's slug)** — ADDRESSED: the pairing map is
-  per-`boxRoot` (mirrors `pairing.ts:114` boxRoot check); redeem against
-  the wrong box 401s.
+- **Wrong URL pasted (another box's slug)** — ADDRESSED: verification
+  `check` runs against the entered URL with the new token; a token minted
+  on box A used against box B 401s and configure reports it.
 - **Stale ref / revoked token still in config** — ADDRESSED: uploader runs
-  get 401; the run prints the target name and exits non-zero
-  (`scan-uploader/README.md:83-87` behavior extends to auth failures).
-  Re-pair overwrites.
-- **Two pairings racing (two machines, one code)** — ADDRESSED: single-use;
-  the loser 401s and mints a new code.
-- **Hand-edit drift in scan-uploader.json** — ADDRESSED: existing strict
-  config validation fails closed naming the field (`config.ts` precedent,
-  README:72-74); `pair` refuses to modify a config it cannot parse rather
-  than clobbering it.
-- **Fabricated free-form value** — token `name` is the only free text;
-  pattern-constrained (`SCAN_TOKEN_NAME_PATTERN`) and defaulted to
-  hostname; it travels into provenance as `scan-upload/<name>`
-  (`tokens.ts:25-30`), so the CLI prints the chosen name at pair time.
-- **Validation error UX** — ADDRESSED: redeem failures are one generic
-  401 message by design (no oracle); all CLI-side failures name the flag
-  or file to fix.
-- **Partial migration / transition state** — N/A: purely additive; the
-  manual mint-via-tRPC path keeps working (the UI list shows tokens from
-  either path).
+  401, print target name, exit non-zero; re-run `configure` to replace.
+- **Two machines configured with one token** — works (shared credential)
+  but muddies revocation; the settings block says "one token per machine"
+  and the list's names make drift visible. ADDRESSED by convention, not
+  mechanism — accepted.
+- **Hand-edit drift in scan-uploader.json** — ADDRESSED: strict reader
+  fails closed naming the field; configure refuses unparseable files.
+- **Fabricated free-form value** — token `name` is pattern-constrained
+  and travels into provenance as `scan-upload/<name>` (`tokens.ts:25-30`);
+  both UI and CLI display the chosen name.
+- **Validation error UX** — ADDRESSED: every failure names the flag,
+  file, or field (Track B direction).
+- **Partial migration / transition state** — N/A: purely additive;
+  hand-minted tokens and hand-written configs keep working.
 
 ## NOT in scope
 
-- **npm-publishing scan-uploader** — the installation-story plan already
-  deferred npm publish for the whole repo; the filtered-install story is
-  sufficient for the current audience (the boxholder's own machines).
-- **QR code for the uploader** — the browser and the terminal are on the
-  same machine; copy-paste beats camera round-trip. Revisit only if a
-  headless scanning appliance appears.
-- **Windows support for `pair`'s file placement / `trash` disposition** —
-  uploader already documents `trash` as macOS-only (README:69-70); pair
-  inherits the same posture.
-- **Automatic token rotation / expiry for scan tokens** — long-lived
-  revocable tokens match the mobile-device precedent; rotation is a
-  box-wide credential-policy question, not an uploader one.
-- **Uploader auto-update** — out of scope; re-run the three install lines.
-- **A generic "pairing framework" unifying mobile + scan pairing** — two
-  parallel small modules are deliberate (structural credential separation,
-  `tokens.ts:1-17`); unify only if a third pairing surface appears.
+- **The unauthenticated pairing-code protocol** (short-lived code redeemed
+  by the CLI for the token; RFC 8628 shape) — dropped by boxholder
+  decision 2026-08-01 after Codex review: it required a new
+  unauthenticated route, a hub auth-wall exemption, a dedicated rate
+  limiter, and claim/rollback semantics for duplicate names, all to keep
+  a revocable token out of one clipboard transit. Revisit trigger: a
+  pairing target appears that isn't the same machine as the browser
+  (headless appliance), or the threat model elevates clipboard/shoulder
+  exposure.
+- **Serving the built `scan-uploader.mjs` from the box / npm publish** —
+  distribution stays "clone + filtered install" by boxholder decision
+  2026-08-01. Revisit trigger: a non-developer needs to run an uploader.
+- **True "last upload" tracking** — needs a per-token stamp written only
+  by successful PUTs, a server change; the honest "last request" label
+  covers the revocation job today.
+- **Windows support / `trash` on non-macOS** — inherits the uploader's
+  existing posture (README:69-70).
+- **Uploader auto-update** — re-run the three install lines.
+- **Interactive full-wizard UX (auto-detecting scan folders, launchd
+  install)** — print the crontab suggestion; don't write user crontabs
+  (#6 right-sized defensiveness).
 
 ## Open design questions
 
-- Should the UI command embed the code in a URL
-  (`… pair "https://…/estate#<code>"`) instead of a `--code` flag? Lean:
-  flag — explicit, greppable in shell history is acceptable because the
-  code is dead within 10 minutes and single-use.
-- Should `pair` optionally install a launchd/cron sweep entry? Lean: no —
-  print the crontab line as a suggestion; writing user crontabs is beyond
-  right-sized (#6).
+None — the two that existed (command-embedded code vs flag; launchd
+install) died with the pairing protocol or moved to NOT in scope.
 
 ## Knowledge audits
 
-Skip, with rationale: this plan adds no agent-facing vocabulary — no tags,
-card shapes, or conventions an in-box agent must recall. The wire contract
-is machine-facing (covered by doctests + the contract doc's paired
-comments); the UI is human-facing. If a box agent ever needs to explain
-scanner setup to the boxholder, the settings page itself is the durable
-reference (doc-altitude preference: obscure operational features get
-reference docs, not prompt surface).
+Skip, with rationale: no agent-facing vocabulary is introduced — no tags,
+card shapes, or conventions an in-box agent must recall. The settings page
+itself is the durable human-facing reference (doc-altitude preference).
 
 ## Implementation order
 
-1. **Chunk 1 (Track 1):** `core/scan/pairing.ts` + doctest.
-2. **Chunk 2 (Track 1):** redeem route + hub/box-scope allowances +
-   `createPairingTicket` tRPC + contract-doc section; hub-gate doctest
-   extension.
-3. **Chunk 3 (Track 2):** CLI `pair` + fake-server pair endpoint +
-   `test/pair.doctest.md`.
-4. **Chunk 4 (Track 3):** `ScanUploaderSection.tsx` (list/revoke + pairing
-   button + embedded install text).
-5. **Chunk 5 (Track 4):** `smoke-install.sh` + README Setup rewrite +
+1. **Chunk 1 (Track B):** `configure` subcommand + config writer +
+   `test/configure.doctest.md`.
+2. **Chunk 2 (Track A):** `ScanUploaderSection.tsx` (mint/list/revoke +
+   embedded instructions), exercised via `bin/browse`.
+3. **Chunk 3 (Track C):** `smoke-install.sh` + README Setup rewrite +
    installation-story pointer.
 
-Chunks 1→2→3 are strictly ordered; 4 needs 2; 5 needs 3 (its README text
-documents `pair`).
+Chunk 2 references chunk 1's command syntax; chunk 3 documents both.
+No server-side chunks exist.
 
 ## Rollout shape
 
-- **Test posture:** each chunk's doctest named above is its done-when;
-  failure-modes rows map to doctest examples. Full `pnpm typecheck` /
-  `lint` / `test` per commit. The smoke script is run (not just written)
-  before the plan completes — per the run-what-you-author rule.
+- **Test posture:** chunk 1's doctest is the plan's spine (every
+  failure-modes row above with "planned" maps to a doctest example);
+  chunk 2 is verified by a browse pass (frontend sections have no doctest
+  tier); chunk 3's smoke script is run, not just written, before the plan
+  completes.
 - **Knowledge audits:** none (rationale above).
-- **Migration:** none — additive. Existing hand-minted tokens and configs
-  keep working unchanged.
-- The plan ships as one unit on a worktree branch; merge to main is the
+- **Migration:** none — additive; existing tokens and configs unchanged.
+- Ships as one unit on a worktree branch; merge to main is the
   boxholder's call.
