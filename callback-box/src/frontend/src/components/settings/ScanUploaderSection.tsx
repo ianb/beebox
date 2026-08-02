@@ -27,7 +27,7 @@ function defaultName(): string {
 }
 
 function configureCommand(name: string): string {
-  return `node scan-uploader/dist/scan-uploader.mjs configure ${boxBaseUrl()} --name ${name} --folder <your-scan-folder>`;
+  return `bin/scan-uploader configure ${boxBaseUrl()} --name ${name} --folder <your-scan-folder>`;
 }
 
 function UploaderRow({ uploader }: { uploader: UploaderToken }) {
@@ -83,7 +83,11 @@ function InstallInstructions() {
             "pnpm install --filter scan-uploader...  # from the repo root\n" +
             "pnpm --filter scan-uploader build"}
         </code>
-        <Text size="sm" tone="muted">Then mint a token below and run the configure command it shows.</Text>
+        <Text size="sm" tone="muted">
+          Then mint a token below and run the configure command it shows (from the repo root —
+          bin/scan-uploader wraps the built bundle). No checkout on that machine? Copy
+          scan-uploader/dist/scan-uploader.mjs from a built one and run it with plain node.
+        </Text>
       </Stack>
     </details>
   );

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Runs the scan-uploader CLI from this checkout (the built single-file
+# bundle). On machines without a checkout, copy scan-uploader/dist/
+# scan-uploader.mjs and run it with plain `node` — see scan-uploader/README.md.
+set -euo pipefail
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+BUNDLE="$ROOT/scan-uploader/dist/scan-uploader.mjs"
+if [ ! -f "$BUNDLE" ]; then
+  echo "scan-uploader is not built yet — run: pnpm --filter scan-uploader build" >&2
+  exit 1
+fi
+exec node "$BUNDLE" "$@"

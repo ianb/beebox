@@ -64,10 +64,12 @@ and mints the token; the steps in full:
    open until step 3 has consumed it).
 
 3. **Configure** (run on the uploader machine; paste the token when
-   prompted — it is never passed as an argument):
+   prompted — it is never passed as an argument). On a checkout, the
+   `bin/scan-uploader` wrapper at the repo root runs the built bundle;
+   on a copy-the-file machine, substitute `node scan-uploader.mjs`:
 
    ```bash
-   node scan-uploader/dist/scan-uploader.mjs configure https://<host>/<box> \
+   bin/scan-uploader configure https://<host>/<box> \
      --name <token-name> --folder <scan-folder>
    ```
 
@@ -93,10 +95,10 @@ On macOS, `schedule` manages a `launchd` LaunchAgent that runs the sweep on
 an interval:
 
 ```bash
-node dist/scan-uploader.mjs schedule install                # every 15 minutes (default)
-node dist/scan-uploader.mjs schedule install --interval 30   # every 30 minutes
-node dist/scan-uploader.mjs schedule status
-node dist/scan-uploader.mjs schedule uninstall
+bin/scan-uploader schedule install                 # every 15 minutes (default)
+bin/scan-uploader schedule install --interval 30   # every 30 minutes
+bin/scan-uploader schedule status
+bin/scan-uploader schedule uninstall
 ```
 
 `install` refuses if `scan-uploader.json` is missing or fails the strict
@@ -149,11 +151,16 @@ message naming exactly what's wrong.
 ## Usage
 
 ```bash
-node dist/scan-uploader.mjs [config.json] [--retry-rejected]
-node dist/scan-uploader.mjs configure <server-url-with-box> --folder <path> [options]
-node dist/scan-uploader.mjs schedule <install|uninstall|status> [options]
-node dist/scan-uploader.mjs --help
+bin/scan-uploader [config.json] [--retry-rejected]      # from the repo root
+bin/scan-uploader configure <server-url-with-box> --folder <path> [options]
+bin/scan-uploader schedule <install|uninstall|status> [options]
+bin/scan-uploader --help
 ```
+
+`bin/scan-uploader` (repo root) wraps the built `dist/scan-uploader.mjs`;
+on a machine holding only the copied bundle, run
+`node scan-uploader.mjs <same args>`. The package also declares the bundle
+as its `bin`, so it is npx-able if it's ever published.
 
 `configure` (see Setup above) takes the token on stdin — piped, or prompted
 without echo on a TTY — and supports `--disposition`, `--name`, and
