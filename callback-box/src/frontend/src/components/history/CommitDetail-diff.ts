@@ -3,7 +3,9 @@
  * into structured DiffFile records, plus new-file content extraction.
  */
 
-import { invariant } from "@shared/invariant";
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
+import { invariant } from "../../../../shared/invariant.js";
 
 export interface DiffFile {
   path: string;
@@ -41,12 +43,22 @@ function finalizeRename(params: FinalizeRenameParams): void {
 }
 
 /**
- * Detect Git LFS pointer content in diff hunks.
- * LFS pointers are small text files starting with "version https://git-lfs.github.com/spec/v1".
+ * Detect Git LFS or git-annex pointer content in diff hunks. Both store a
+ * small text stand-in for the real bytes: LFS files start with
+ * "version https://git-lfs.github.com/spec/v1", annexed files with
+ * "/annex/objects/" (full grammar in src/lib/annex-pointer.ts — the prefix
+ * alone is decisive here). Removed files carry their pointer on "-" lines,
+ * so both added and removed lines are inspected.
  */
-function isLfsPointer(hunks: string[]): boolean {
-  const added = hunks.filter((l) => l.startsWith("+")).map((l) => l.slice(1));
-  return added.some((l) => l.startsWith("version https://git-lfs.github.com/spec/v1"));
+function isPointerDiff(hunks: string[]): boolean {
+  return hunks
+    .filter((l) => l.startsWith("+") || l.startsWith("-"))
+    .map((l) => l.slice(1))
+    .some(
+      (l) =>
+        l.startsWith("version https://git-lfs.github.com/spec/v1") ||
+        l.startsWith("/annex/objects/")
+    );
 }
 
 export function parseDiff(diff: string): DiffFile[] {
@@ -94,9 +106,9 @@ export function parseDiff(diff: string): DiffFile[] {
     finalizeRename({ file: current, from: renameFrom, to: renameTo });
   }
 
-  // Detect LFS pointer content and treat as binary
+  // Detect LFS / git-annex pointer content and treat as binary
   for (const file of files) {
-    if (!file.binary && isLfsPointer(file.hunks)) {
+    if (!file.binary && isPointerDiff(file.hunks)) {
       file.binary = true;
       file.hunks = [];
     }
