@@ -21,7 +21,12 @@ export interface ParsedServerTarget {
 
 export function parseServerUrlWithBox(input: string): ParsedServerTarget {
   const url = parseUrl(input);
-  const box = url.pathname.split("/").find((segment) => segment.length > 0);
+  const segments = url.pathname.split("/").filter((segment) => segment.length > 0);
+  // The box is the LAST path segment; anything before it is a mount prefix
+  // that stays part of the server URL (e.g. the dev router's
+  // http://localhost:3210/<worktree>/<box>). Dropping the prefix would
+  // silently target the wrong server path.
+  const box = segments.at(-1);
   if (box === undefined) {
     const message = `URL must include a box slug in its path, e.g. https://cb.example.org/family (got "${input}")`;
     throw new ConfigureError(message);
@@ -30,7 +35,9 @@ export function parseServerUrlWithBox(input: string): ParsedServerTarget {
     const message = `box slug "${box}" is invalid — must match ${BOX_SLUG_PATTERN.source}`;
     throw new ConfigureError(message);
   }
-  return { serverUrl: `${url.protocol}//${url.host}`, box };
+  const prefix = segments.slice(0, -1).join("/");
+  const serverUrl = `${url.protocol}//${url.host}${prefix.length > 0 ? `/${prefix}` : ""}`;
+  return { serverUrl, box };
 }
 
 function parseUrl(input: string): URL {

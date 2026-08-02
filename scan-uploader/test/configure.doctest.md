@@ -310,6 +310,22 @@ badSlug.message
 => box slug "..%2f..%2fetc%2fpasswd" is invalid — must match ^[\da-z][\da-z-]{0,63}$
 ```
 
+The box is the LAST path segment; a mount prefix before it (the dev
+router's `/<worktree>/<box>` shape) stays part of the server URL rather
+than being silently dropped:
+
+```continue
+const nested = parseServerUrlWithBox("http://localhost:3210/my-worktree/test1");
+[nested.serverUrl, nested.box].join(" ")
+=> http://localhost:3210/my-worktree test1
+```
+
+```continue
+const bare = parseServerUrlWithBox("https://cb.example.org/family");
+[bare.serverUrl, bare.box].join(" ")
+=> https://cb.example.org family
+```
+
 And `configure()` itself refuses before writing anything — the bad slug is
 rejected during URL parsing, ahead of any config or token write:
 
