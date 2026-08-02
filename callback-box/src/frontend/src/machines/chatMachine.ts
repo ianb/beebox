@@ -12,8 +12,7 @@ import { setup, assign } from "xstate";
 import { invariant } from "@shared/invariant";
 import { buildOptimisticContent, reconcilePending } from "./chat-shared";
 import {
-  HISTORY_TAIL,
-  MIN_REAL_USER_MESSAGES,
+  chatTailSlice,
   logFsm,
   type ChatContext,
   type ChatEvent,
@@ -37,7 +36,7 @@ import {
   sendInterrupt,
 } from "./chat-actions";
 
-export { HISTORY_TAIL, MIN_REAL_USER_MESSAGES };
+export { chatTailSlice };
 
 // -- Machine --
 

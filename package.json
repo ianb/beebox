@@ -16,6 +16,7 @@
     "mobile-contract-check": "node --import tsx bin/mobile-contract-check.ts",
     "security:opengrep": "bash security/opengrep/run.sh",
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts",
+    "check-docling-update": "node --import tsx bin/check-docling-update.ts",
     "snapshot:clerk-contract": "node --import tsx bin/snapshot-clerk-contract.ts",
     "typecheck": "tsc --noEmit",
     "lint": "pnpm -r lint",

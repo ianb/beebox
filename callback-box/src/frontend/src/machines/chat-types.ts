@@ -9,6 +9,7 @@ import type {
   SessionContentBlock,
   ChatImageAttachment,
 } from "../api";
+import type { HistorySlice } from "../api-chat";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 
 // -- Events --
@@ -38,10 +39,19 @@ export type ChatEvent =
 
 // -- Context --
 
-/** How many recent entries to load initially and on refresh. */
+/**
+ * How many recent entries to load initially and on refresh. Mirrors the
+ * server's `CHAT_HISTORY_TAIL` (`core/chat/session/load-history.ts`), which is
+ * what the schedule-fire broadcast uses, so both surfaces show the same window.
+ */
 export const HISTORY_TAIL = 200;
 /** Floor on how many real (typed/spoken) user messages the initial load must cover. */
 export const MIN_REAL_USER_MESSAGES = 2;
+
+/** The live chat's history request: the last {@link HISTORY_TAIL} entries. */
+export function chatTailSlice(): HistorySlice {
+  return { mode: "tail", tail: HISTORY_TAIL, minRealUserMessages: MIN_REAL_USER_MESSAGES };
+}
 
 export interface ChatContext {
   messages: SessionEntry[];

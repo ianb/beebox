@@ -31,6 +31,9 @@ function caller(server) {
   return appRouter.createCaller(ctx);
 }
 
+// The chat page's request shape: a bounded tail window.
+const TAIL = { mode: "tail", tail: 200, minRealUserMessages: 2 };
+
 const TRANSCRIPT = [
   JSON.stringify({
     type: "user",
@@ -73,7 +76,7 @@ const projects = await mkdtemp(join(tmpdir(), "cb-bootstrap-projects-"));
 process.env["CB_CLAUDE_PROJECTS_DIR"] = projects;
 const server = await makeTestServer();
 
-const empty = await caller(server).chat.bootstrap({});
+const empty = await caller(server).chat.bootstrap({ slice: TAIL });
 JSON.stringify(empty)
 => {"sessionId":null,"history":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
 ```
@@ -83,7 +86,7 @@ JSON.stringify(empty)
 ```ts continue
 await seedTranscript(server, "sess-explicit");
 
-const got = await caller(server).chat.bootstrap({ session: "sess-explicit" });
+const got = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: TAIL });
 print(`sessionId: ${got.sessionId}`);
 print(`total: ${got.history.total}`);
 print(`entries: ${got.history.entries.map((e) => `${e.type}:${e.content[0].text}`).join(", ")}`);
@@ -98,7 +101,7 @@ status: running=false busy=false id=sess-explicit
 The history slice options are the ones `chat.history` takes:
 
 ```ts continue
-const tailed = await caller(server).chat.bootstrap({ session: "sess-explicit", tail: 1 });
+const tailed = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: { mode: "tail", tail: 1 } });
 print(`kept: ${tailed.history.entries.length} of ${tailed.history.total}`);
 print(`text: ${tailed.history.entries[0].content[0].text}`);
 =>
@@ -114,7 +117,7 @@ client no longer has to ask, navigate, and ask again.
 ```ts continue
 await setDefaultSession(server, "sess-explicit");
 
-const resolved = await caller(server).chat.bootstrap({});
+const resolved = await caller(server).chat.bootstrap({ slice: TAIL });
 print(`sessionId: ${resolved.sessionId}`);
 print(`total: ${resolved.history.total}`);
 =>
@@ -128,10 +131,10 @@ total: 2
 const c = caller(server);
 const [viaDefault, viaHistory, viaStatus] = await Promise.all([
   c.chat.defaultSession(),
-  c.chat.history({ session: "sess-explicit" }),
+  c.chat.history({ session: "sess-explicit", slice: TAIL }),
   c.chat.status({ session: "sess-explicit" }),
 ]);
-const atomic = await c.chat.bootstrap({});
+const atomic = await c.chat.bootstrap({ slice: TAIL });
 
 JSON.stringify(atomic) === JSON.stringify({
   sessionId: viaDefault.sessionId,
@@ -149,7 +152,7 @@ this way; `bootstrap` matches it rather than inventing an error the chat page
 would have to handle.
 
 ```ts continue
-const missing = await caller(server).chat.bootstrap({ session: "no-such-session" });
+const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
 JSON.stringify(missing)
 => {"sessionId":"no-such-session","history":{"sessionId":"no-such-session","entries":[],"total":0},"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null}}
 ```
@@ -159,11 +162,29 @@ is an empty one — `""` is not a session id, and accepting it would report
 `sessionId: ""` next to a status that correctly says there is no session.
 
 ```ts continue
-await caller(server).chat.bootstrap({ session: 42 }).then(() => "no error", (e) => e.code)
+await caller(server).chat.bootstrap({ session: 42, slice: TAIL }).then(() => "no error", (e) => e.code)
 => BAD_REQUEST
 
-await caller(server).chat.bootstrap({ session: "" }).then(() => "no error", (e) => e.code)
+await caller(server).chat.bootstrap({ session: "", slice: TAIL }).then(() => "no error", (e) => e.code)
 => BAD_REQUEST
+```
+
+The slice is a discriminated union with hard bounds, and each arm is strict —
+a tail request carrying page fields is a different request, not a tail request
+with extras, and a slice past the retention ceiling is refused at the door
+rather than served as a bigger read:
+
+```ts continue
+const c2 = caller(server);
+print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 1, offset: 0, limit: 40 } }).then(() => "no error", (e) => e.code));
+print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 50_000 } }).then(() => "no error", (e) => e.code));
+print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "page", offset: -1, limit: 10 } }).then(() => "no error", (e) => e.code));
+print(await c2.chat.history({ session: "sess-explicit", slice: { mode: "tail", tail: 1.5 } }).then(() => "no error", (e) => e.code));
+=>
+BAD_REQUEST
+BAD_REQUEST
+BAD_REQUEST
+BAD_REQUEST
 ```
 
 An empty id in the persisted default-session pointer means "none" too, rather
@@ -171,7 +192,7 @@ than a session named `""`:
 
 ```ts continue
 await setDefaultSession(server, "");
-JSON.stringify(await caller(server).chat.bootstrap({}))
+JSON.stringify(await caller(server).chat.bootstrap({ slice: TAIL }))
 => {"sessionId":null,"history":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
 ```
 

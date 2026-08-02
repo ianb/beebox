@@ -11,8 +11,8 @@ is outside your current work, or when the resolution is genuinely unsettled.
 
 ## Layout: category subdirectories
 
-Open items live in one of six **category subdirectories** (the category *is* the
-directory — like `closed/` is the status, there is no `type:` field):
+Open items live in one of seven **category subdirectories** (the category *is*
+the directory — like `closed/` is the status, there is no `type:` field):
 
 - **`bugs/`** — actual defects: wrong behavior, data loss, crashes, flakes.
 - **`features/`** — new user/agent-facing capability.
@@ -23,6 +23,12 @@ directory — like `closed/` is the status, there is no `type:` field):
   (unify-or-not, keep-or-drop, evaluate-and-decide).
 - **`exploration/`** — not ready to implement: half-thought-out ideas,
   external-tool evaluations ("check out X"), research, agent-cognition tensions.
+- **`watch/`** — not actionable now, and not by us. Each item names an
+  **upstream/external trigger** and what to re-check when it fires (an upstream
+  bug we work around, a missing capability in a dependency). Visit a watch item
+  when its trigger lands — a dependency upgrade, a release note — not on a
+  schedule and not by picking it off the queue. If you *can* act on it today it
+  belongs in another category.
 
 Each item is one file, `<category>/YYYY-MM-DD-<slug>.md` (date = when filed; slug
 is the ID — pick a descriptive name). Before filing, grep the whole tree for
@@ -131,6 +137,16 @@ context (including `file:line` pointers) to pick it up cold months later.
 sentences, active voice, one idea per sentence, consistent terminology, no
 ambiguity. An issue is read cold — write for fast, unambiguous parsing over
 style.
+
+**For user-facing functionality, frame the goal as a Job To Be Done** before the
+means. Use a job story: *"When [situation], I want to [motivation], so I can
+[outcome]."* The point is not the syntax — it is to **situate the job in the real,
+concrete situations the user is in**: their intention in that moment, where their
+attention is, what capacity they have, and how the job fits into the interaction.
+This often needs several situations, not one. Prefer concrete but mundane examples;
+avoid stale clichés like booking a flight or a restaurant reservation. Skip it for
+bugs, refactors, and "work robustly" tensions where JTBD is the wrong lens; don't
+force it.
 
 **Research** always goes in the body. If research is the next step, file the item
 with a stub section:

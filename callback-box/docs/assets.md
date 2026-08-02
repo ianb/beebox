@@ -146,6 +146,16 @@ repairing takes both `git config annex.thin false` **and** `git annex fix`
 `cb init` runs the doctor's repair pass, so an ordinary init brings a box up to
 spec rather than leaving it to a command someone must remember.
 
+`cb init` also rewrites the box's `.gitignore` and `.gitattributes` on every
+run, and it **detects the annex conversion** (from `.git/annex/`) so it writes
+the annex forms — assets un-ignored, no Git LFS filters — instead of the
+manifest-scheme ones. Until 2026-08 it did not: a single `cb init` silently
+de-annexed a converted box, re-ignoring every asset while `.git/annex/` sat
+there looking healthy, and nothing reported it until a later commit or asset
+write failed. Anything that writes asset bytes now gates on that shape via
+`isAnnexBox()` (`src/core/annex/is-annex-box.ts`) — the scan-upload routes
+refuse with a 503 rather than accept a file they cannot import.
+
 ## Migrating a box
 
 ```bash

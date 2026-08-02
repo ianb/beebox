@@ -9,11 +9,21 @@
  * use the connector's canonical name (e.g. "gmail", "telegram"), not a
  * decorated form like "gmail-connector", or `cb wakeup --connector X`
  * won't pick up the job it just created.
+ *
+ * The whole find/read/append/write span is serialized per source, because it is
+ * a read-modify-write of one job card that two *processes* genuinely race: the
+ * scan promote worker inside `cb serve` appends a `scan` job while a wakeup's
+ * connector sync appends its own — and an unlocked append re-reads, re-renders
+ * and rewrites the card wholesale, so the loser's items vanish. Cross-process
+ * → `file-lock.ts`; `withCardLock` on top for the in-process racers a PID-blind
+ * file lock cannot see (both layers, same reasoning as question-transition.ts).
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
+import { withFileLock } from "../lib/file-lock.js";
+import { withCardLock } from "../lib/card-lock.js";
 import { parseFrontmatterObject, renderFrontmatterBlock } from "../cards/index.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
@@ -40,6 +50,30 @@ export interface IntakeJobOptions {
 export async function createOrAppendIntakeJob(
   opts: IntakeJobOptions
 ): Promise<string> {
+  const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
+  // Per-source: two sources never contend (each finds its own pending job), and
+  // narrowing the lock keeps a slow connector from blocking an unrelated one.
+  const lockPath = path.join(opts.boxRoot, ".callback-box", "intake-job-locks", `${safeSource}.lock`);
+  await fs.mkdir(path.dirname(lockPath), { recursive: true });
+  // The file lock is keyed on a path, not a card, so it doubles as the
+  // in-process key: `withCardLock(lockPath, …)` serializes same-process racers
+  // (which the PID-blind file lock cannot see) on exactly the same granularity.
+  return withCardLock(lockPath, () =>
+    withFileLock(
+      { lockPath, metadata: { purpose: "intake-job", source: opts.source } , waitMs: INTAKE_LOCK_WAIT_MS },
+      () => createOrAppendIntakeJobLocked(opts, safeSource),
+    ),
+  );
+}
+
+/** How long an intake-job writer waits for a contending one before failing. */
+const INTAKE_LOCK_WAIT_MS = 10_000;
+
+/** The find/read/append/write span itself; runs with both locks held. */
+async function createOrAppendIntakeJobLocked(
+  opts: IntakeJobOptions,
+  safeSource: string,
+): Promise<string> {
   const jobsDir = path.join(opts.boxRoot, "box/jobs");
   await fs.mkdir(jobsDir, { recursive: true });
 
@@ -55,7 +89,6 @@ export async function createOrAppendIntakeJob(
   }
 
   // Create a new job card
-  const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
   const jobFilename = timestampedJobFilename(opts.boxRoot, {
     stem: safeSource,
     extension: "intake.job.card",

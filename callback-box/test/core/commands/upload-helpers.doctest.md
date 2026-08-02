@@ -10,6 +10,7 @@ import {
   addEntry,
   loadLedger,
   saveLedger,
+  updateLedger,
   sha256File,
   groupScanFiles,
   LEDGER_REL_PATH,
@@ -210,4 +211,39 @@ groups5.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
 const err = await caught(async () => groupScanFiles(["/in/notes.txt"]));
 err !== null && err.message.startsWith("Unsupported file type(s):")
 => true
+```
+
+## Concurrent ledger writers don't lose each other's entries
+
+The ledger is a read-modify-write, and two writers genuinely race: the scan
+promote worker runs inside `cb serve` while the boxholder may run `cb upload` by
+hand. `updateLedger` re-reads inside a cross-process lock, so the loser of the
+race appends to the winner's ledger rather than overwriting it — the unlocked
+load-mutate-save it replaced would keep exactly one of these ten entries.
+
+```ts
+const boxL = await makeTmpBox();
+await Promise.all(
+  Array.from({ length: 10 }, (_, i) =>
+    updateLedger(boxL.root, (ledger) => addEntry(ledger, entry(`hash-${String(i)}`)))
+  )
+);
+const after = await loadLedger(boxL.root);
+JSON.stringify({ count: after.entries.length, sample: findEntry(after, "hash-7").hash })
+=> {"count":10,"sample":"hash-7"}
+```
+
+The mutation runs against the ledger as it is on disk *now*, never a caller's
+stale copy — so a dedup check inside the mutation sees the other writers' work:
+
+```ts continue
+await updateLedger(boxL.root, (ledger) => {
+  if (findEntry(ledger, "hash-3") === undefined) addEntry(ledger, entry("hash-3"));
+});
+(await loadLedger(boxL.root)).entries.length
+=> 10
+```
+
+```ts cleanup
+await boxL.cleanup();
 ```

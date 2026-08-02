@@ -6,6 +6,8 @@ input validation.
 
 ```ts setup
 import { parseSelfNote, parseSelfNotes, entrySelfNotes, parseSessionLog, getSessionMetadata } from "../../../src/cli/lib/session.js";
+// "Everything, bounded": the first page at the hard retention ceiling.
+const ALL = { mode: "page", offset: 0, limit: 5000 };
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 ```
@@ -214,7 +216,7 @@ const lines = [
   }),
 ].join("\n");
 await box.write("log.jsonl", lines);
-const result = await parseSessionLog({ logPath: box.path("log.jsonl") });
+const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
 print(`entries: ${result.entries.length}`);
 print(`e0 text: ${result.entries[0].content[0].text}`);
 print(`e1 has self-note: ${result.entries[1].content[0].text.includes("self-note")}`);

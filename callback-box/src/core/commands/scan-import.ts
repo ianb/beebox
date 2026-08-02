@@ -4,10 +4,10 @@
  * `box/inbox/scan-<date>-<id>.capture-session.card`. Child cards and files
  * live in the session's attach scope (`scan-….attach/`).
  *
- * Internal dispatch:
+ * Internal dispatch (the PDF branch probes for a text layer — `pdf-probe.ts`):
  *   - All inputs are images (.jpg/.png/etc) → photo flow with image batch
- *   - Single PDF, no embedded text → photo flow with rendered pages
- *   - Single PDF with embedded text → document mode (no Flash, file the PDF)
+ *   - Single PDF, no embedded text → photo flow with `pdftoppm`-rendered pages
+ *   - Single PDF with embedded text → document mode (Docling extraction)
  *   - Multiple PDFs or mixed types → error (callers must split)
  *
  * Photo flow output (`<sessionAttach>` = `scan-….attach`):
@@ -27,17 +27,22 @@
  * attach scope for the item it's about.
  *
  * Document flow output:
- *   <sessionAttach>/source.file.card + source.attach/source.pdf
+ *   <sessionAttach>/source.document.card
+ *     + source.attach/{source.pdf, docling.json.gz, page-NNN.avif, figure-NNN.avif}
  *   box/inbox/<name>.capture-session.card  (no image refs)
  *
  * Internal implementation is split across siblings: `scan-import-session.ts`
- * (layout + input classification), `scan-import-document.ts` (the PDF/document
- * flow), `scan-import-cards.ts` (photo/back/orphan/unsure card emission), and
- * `scan-import-helpers.ts` (Gemini batching + reconciliation).
+ * (layout + input classification + vision-backend selection),
+ * `scan-import-document.ts` (the PDF/document flow), `scan-import-cards.ts`
+ * (photo/back/orphan/unsure card emission), and `scan-import-helpers.ts`
+ * (vision batching + reconciliation). The analysis backend itself is the
+ * ScanVision service (`src/services/scan-vision.ts` — Claude default,
+ * Gemini opt-in).
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   registerCommand,
@@ -46,22 +51,22 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { invariant } from "../../lib/invariant.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
-import {
-  runScanBatches,
-  resolveScanPages,
-  bundleResolvedPages,
-} from "./scan-import-helpers.js";
+import { resolveScanPages, bundleResolvedPages } from "./scan-import-helpers.js";
+import { type ScanVisionService } from "../../services/scan-vision.js";
 import {
   createSessionLayout,
-  readScanContextFile,
-  isImageFile,
-  isPdfFile,
+  fileSessionSourcePdf,
+  resolveBoxholderContext,
+  resolveScanInputs,
+  resolveScanVision,
+  analyzeScanPages,
 } from "./scan-import-session.js";
 import { runDocumentMode } from "./scan-import-document.js";
+import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
+import { PdfRenderError, probePdf, renderPdfPages } from "./pdf-probe.js";
 import {
   emitPhotoBundle,
   emitOrphanBackQuestion,
@@ -71,6 +76,10 @@ import {
 const ScanImportArgsSchema = z.object({
   inputs: z.array(z.string()).optional(),
   context: z.string().optional(),
+  /** Free-text provenance recorded on the cards this run produces. The scan
+   *  promote worker passes `scan-upload/<token-name>`; the shape is a
+   *  convention, not a validated format. */
+  source: z.string().optional(),
 });
 export type ScanImportArgs = z.infer<typeof ScanImportArgsSchema>;
 
@@ -78,91 +87,89 @@ async function executeScanImport(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { inputs, context: extraContext } = parseCommandArgs(args, ScanImportArgsSchema);
+  const { inputs, context: extraContext, source } = parseCommandArgs(args, ScanImportArgsSchema);
 
   if (!inputs || inputs.length === 0) {
     return { success: false, error: "inputs argument is required (at least one file)" };
   }
 
-  const resolved: string[] = [];
-  for (const f of inputs) {
-    const abs = path.isAbsolute(f) ? f : path.join(ctx.boxRoot, f);
-    try {
-      await fs.access(abs);
-    } catch (_e) {
-      // fs.access rejects when the input path is missing/unreadable — that
-      // is precisely the condition we report back to the caller. The error
-      // adds no detail beyond the path, so we don't surface it.
-      return { success: false, error: `Input file not found: ${abs}` };
+  const resolved = await resolveScanInputs(ctx.boxRoot, inputs);
+  if ("error" in resolved) return { success: false, error: resolved.error };
+
+  if (resolved.kind === "pdf") {
+    // The dispatch split: a PDF that already carries text is a document (its
+    // text layer is the whole point); a PDF without one is a photo batch that
+    // happens to be wrapped in a PDF, and belongs in the photo flow where
+    // front/back pairing lives.
+    const probe = await probePdf(resolved.pdfPath);
+    if (probe.hasTextLayer) {
+      ctx.writeLine(`PDF has a text layer (${probe.textLayerSource}) → document mode`);
+      return runDocumentMode(ctx, { pdfPath: resolved.pdfPath, source });
     }
-    resolved.push(abs);
+    ctx.writeLine("PDF has no text layer → rendering pages for photo analysis");
+    return runPhotoModeFromPdf(ctx, { pdfPath: resolved.pdfPath, extraContext, source });
   }
 
-  const allPdf = resolved.every((f) => isPdfFile(f));
-  const allImage = resolved.every((f) => isImageFile(f));
-  if (!allPdf && !allImage) {
-    return {
-      success: false,
-      error: "Mixed file types in one scan-import invocation. PDFs run one-per-session; images can be batched together.",
-    };
-  }
-
-  if (allPdf) {
-    if (resolved.length > 1) {
-      return {
-        success: false,
-        error: "scan-import takes a single PDF at a time (use cb upload for batches)",
-      };
-    }
-    // PDFs are always filed as documents — Flash treatment for PDFs is deferred.
-    const [pdfPath] = resolved;
-    invariant(pdfPath !== undefined, "resolved has exactly one entry here (non-empty inputs, length > 1 handled above)");
-    return runDocumentMode(ctx, { pdfPath });
-  }
-
-  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
-  if (!apiKey) {
-    return { success: false, error: "GEMINI_KEY environment variable is required" };
-  }
+  const visionOrError = await resolveScanVision(ctx.boxRoot);
+  if ("error" in visionOrError) return { success: false, error: visionOrError.error };
   return runPhotoMode(ctx, {
-    apiKey,
-    imagePaths: resolved,
+    vision: visionOrError.vision,
+    imagePaths: resolved.imagePaths,
+    sourcePdfPath: null,
     extraContext,
+    source,
   });
 }
 
-interface RunPhotoModeArgs {
-  apiKey: string;
-  imagePaths: string[];
-  extraContext: string | undefined;
-}
 
 /**
- * Build the combined boxholder context from the optional CLAUDE_SCANS.md file
- * and any `--context` argument, logging which sources contributed.
+ * Textless PDF → page images → the existing photo flow. The renders are
+ * scratch (photo mode copies what it needs); the PDF itself is filed in the
+ * session so the original is never only-in-the-renders.
  */
-async function resolveBoxholderContext(
+async function runPhotoModeFromPdf(
   ctx: CommandContext,
-  extraContext: string | undefined
-): Promise<string | null> {
-  const fileContext = await readScanContextFile(ctx.boxRoot);
-  const contextParts: string[] = [];
-  if (fileContext) contextParts.push(fileContext.trim());
-  if (extraContext && extraContext.trim().length > 0) contextParts.push(extraContext.trim());
-  const boxholderContext = contextParts.length > 0 ? contextParts.join("\n\n---\n\n") : null;
-  if (boxholderContext) {
-    ctx.writeLine(
-      `Using boxholder context (${boxholderContext.length} chars${fileContext ? " from CLAUDE_SCANS.md" : ""}${extraContext ? " + --context" : ""})`
-    );
+  args: { pdfPath: string; extraContext: string | undefined; source: string | undefined }
+): Promise<CommandResult> {
+  const visionOrError = await resolveScanVision(ctx.boxRoot);
+  if ("error" in visionOrError) return { success: false, error: visionOrError.error };
+  const renderDir = path.join(
+    await ensureBoxTmpDir(ctx.boxRoot),
+    `scan-render-${randomUUID().slice(0, 8)}`
+  );
+  try {
+    const imagePaths = await renderPdfPages(args.pdfPath, { outDir: renderDir });
+    ctx.writeLine(`Rendered ${String(imagePaths.length)} page(s)`);
+    return await runPhotoMode(ctx, {
+      vision: visionOrError.vision,
+      imagePaths,
+      sourcePdfPath: args.pdfPath,
+      extraContext: args.extraContext,
+      source: args.source,
+    });
+  } catch (e) {
+    if (e instanceof PdfRenderError) return { success: false, error: e.message };
+    throw e;
+  } finally {
+    await fs.rm(renderDir, { recursive: true, force: true });
   }
-  return boxholderContext;
+}
+
+interface RunPhotoModeArgs {
+  vision: ScanVisionService;
+  imagePaths: string[];
+  /** The PDF the images were rendered from, filed as the session's source. */
+  sourcePdfPath: string | null;
+  extraContext: string | undefined;
+  /** Provenance string for the session card (`scan-upload/<token-name>`). */
+  source: string | undefined;
 }
 
 async function runPhotoMode(
   ctx: CommandContext,
   args: RunPhotoModeArgs
 ): Promise<CommandResult> {
-  const { apiKey, imagePaths, extraContext } = args;
+  const { vision, imagePaths, sourcePdfPath, extraContext, source } = args;
   const layout = await createSessionLayout(ctx);
   const {
     sessionAttachRelDir,
@@ -191,23 +198,29 @@ async function runPhotoMode(
     archivePages.push(dst);
   }
   const apiPages = archivePages;
-  const sourceLabel = `${imagePaths.length} images`;
+  const sourceLabel = sourcePdfPath === null
+    ? `${imagePaths.length} images`
+    : `${path.basename(sourcePdfPath)} (${imagePaths.length} rendered pages)`;
+
+  // A textless PDF's renders are derived data; the PDF is the original, so it
+  // is filed as a `file.card` in the session rather than discarded.
+  const fileRefs: string[] = [];
+  if (sourcePdfPath !== null) {
+    const filed = await fileSessionSourcePdf({
+      sourcePdfPath,
+      sessionAttachAbsDir,
+      sessionAttachRelDir,
+      startedAt,
+    });
+    filesToStage.push(...filed.filesToStage);
+    fileRefs.push(...filed.fileRefs);
+  }
 
   const boxholderContext = await resolveBoxholderContext(ctx, extraContext);
 
-  ctx.writeLine(`Analyzing ${apiPages.length} pages with Gemini Flash...`);
-  const batchResult = await runScanBatches({
-    apiKey,
-    imagePaths: apiPages,
-    boxholderContext,
-    log: (line) => ctx.writeLine(line),
-  });
-  if (batchResult.failed > 0) ctx.writeLine(`${batchResult.failed} page(s) failed analysis`);
-  if (batchResult.usage) {
-    ctx.writeLine(
-      `Tokens: input=${batchResult.usage.prompt}, output=${batchResult.usage.output}, thinking=${batchResult.usage.thinking}`
-    );
-  }
+  const analysisOutcome = await analyzeScanPages(ctx, { vision, apiPages, boxholderContext, sessionAttachAbsDir });
+  if ("error" in analysisOutcome) return { success: false, error: analysisOutcome.error };
+  const { batchResult } = analysisOutcome;
 
   const resolvedPages = resolveScanPages(batchResult.pageAnalyses, apiPages.length);
   const { bundles, orphanBacks, unsurePages, blankPages } = bundleResolvedPages(resolvedPages);
@@ -269,7 +282,8 @@ async function runPhotoMode(
     endedAt: startedAt,
     imageRefs,
     audioRefs: [],
-    fileRefs: [],
+    fileRefs,
+    source,
   });
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
   filesToStage.push(sessionCardRelPath);
@@ -323,7 +337,13 @@ registerCommand({
     },
     {
       name: "context",
-      description: "Extra context appended to CLAUDE_SCANS.md content for this run",
+      description: "Extra context appended to the scan-guide context for this run",
+      required: false,
+      type: "string",
+    },
+    {
+      name: "source",
+      description: "Provenance recorded on the produced cards (e.g. scan-upload/<token-name>)",
       required: false,
       type: "string",
     },
@@ -331,4 +351,4 @@ registerCommand({
   execute: executeScanImport,
 });
 
-export { executeScanImport };
+export { executeScanImport, runPhotoMode };

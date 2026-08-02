@@ -18,10 +18,18 @@
  * See docs/implemented-plans/chat-review.md § Track C.
  */
 
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { acquireLock, releaseLock, LockHeldError } from "../../../lib/file-lock.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 import { elideMiddle, MAX_RENDERED_CHARS, renderEntries } from "../transcript-render.js";
-import { discoverSessions, QUIESCENCE_MS, type QualifiedSession } from "./discovery.js";
+import {
+  discoverSessions,
+  QUIESCENCE_MS,
+  readSessionWindow,
+  warnDeferredBoundary,
+  type QualifiedSession,
+} from "./discovery.js";
 import { appliedSpanFor, computeSpanId, prefixHash } from "./span.js";
 import { applyReviewToHusk, readHuskFields } from "./husk-write.js";
 import type { ChatReviewer } from "./reviewer.js";
@@ -68,6 +76,11 @@ export interface RunSummary {
   belowThreshold: number;
   /** Qualified sessions beyond --max-sessions; they wait for the next run. */
   overflow: number;
+  /**
+   * Sessions left untouched because their journal boundary sits past the
+   * bounded read window — reviewing them would regress the journal.
+   */
+  boundaryBeyondWindow: number;
 }
 
 function emptySummary(): RunSummary {
@@ -84,6 +97,7 @@ function emptySummary(): RunSummary {
     deferredActive: 0,
     belowThreshold: 0,
     overflow: 0,
+    boundaryBeyondWindow: 0,
   };
 }
 
@@ -102,7 +116,53 @@ async function reviewOne(
   args: { boxRoot: string; options: RunOptions; state: ReviewState; summary: RunSummary },
 ): Promise<void> {
   const { boxRoot, options, state, summary } = args;
-  const { span } = session;
+
+  // A run spans many model calls, so a session that was quiet at discovery can
+  // be live again by the time its turn comes. Discovery's quiescence check no
+  // longer covers the material actually reviewed — the transcript is re-read
+  // here — so re-check it against the file as it stands now, and defer rather
+  // than summarize a conversation back in progress.
+  let mtime: Date;
+  try {
+    mtime = (await fs.stat(session.logPath)).mtime;
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") throw e;
+    summary.missingTranscripts += 1;
+    return;
+  }
+  if (options.now.getTime() - mtime.getTime() < QUIESCENCE_MS) {
+    summary.deferredActive += 1;
+    return;
+  }
+
+  // Re-read the transcript here rather than carrying discovery's array on the
+  // QualifiedSession: this is the only point where a window has to be resident,
+  // and it is one session's worth (see discovery.ts). The span is recomputed
+  // from the same journal, so it matches what discovery measured unless the
+  // transcript changed underneath — in which case the fresh read is the right
+  // one anyway.
+  const transcript = await readSessionWindow({
+    sessionId: session.sessionId,
+    logPath: session.logPath,
+    state,
+  });
+  if (transcript === null) {
+    // Vanished between discovery and now. Nothing to fold in; the husk stands.
+    summary.missingTranscripts += 1;
+    return;
+  }
+  const { entries, span } = transcript;
+
+  // Unresolvable: the journal boundary is past the read window (the transcript
+  // grew past the cap between the last review and now). Bootstrapping here
+  // would re-summarize ancient entries AND record a span whose endIndex moves
+  // the journal backwards, losing the real boundary for good. Leave the husk
+  // and the journal exactly as they are.
+  if (span.deferred !== null) {
+    warnDeferredBoundary(session.sessionId);
+    summary.boundaryBeyondWindow += 1;
+    return;
+  }
 
   if (span.bootstrap !== null) {
     summary.bootstrapped += 1;
@@ -115,12 +175,12 @@ async function reviewOne(
     }
   }
 
-  const endEntry = session.entries[span.endIndex];
+  const endEntry = entries[span.endIndex];
   if (endEntry === undefined) return; // empty transcript — nothing to fold in
   const spanId = computeSpanId({
     sessionId: session.sessionId,
     endUuid: endEntry.uuid,
-    prefixHash: prefixHash(session.entries, span.endIndex),
+    prefixHash: prefixHash(entries, span.endIndex),
   });
 
   const husk = await readHuskFields(boxRoot, session.huskPath);
@@ -138,7 +198,7 @@ async function reviewOne(
     summary.alreadyApplied += 1;
     const applied = appliedSpanFor({
       sessionId: session.sessionId,
-      entries: session.entries,
+      entries,
       endIndex: span.endIndex,
       now: options.now,
     });
@@ -198,7 +258,7 @@ async function reviewOne(
   const applied = written.spanApplied
     ? appliedSpanFor({
         sessionId: session.sessionId,
-        entries: session.entries,
+        entries,
         endIndex: span.endIndex,
         now: options.now,
       })
@@ -233,6 +293,14 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
     const planned = discovery.qualified.slice(0, options.maxSessions);
     const summary = emptySummary();
     summary.overflow = discovery.qualified.length - planned.length;
+    // Seeded before the loop, not assigned after it: reviewOne can add to
+    // missingTranscripts when a transcript disappears between the two reads.
+    summary.missingTranscripts = discovery.missingTranscripts;
+    summary.deferredActive = discovery.deferredActive.length;
+    summary.belowThreshold = discovery.belowThreshold;
+    // Seeded like missingTranscripts: reviewOne can add to it when a transcript
+    // crosses the read cap between discovery's read and the reviewer's.
+    summary.boundaryBeyondWindow = discovery.boundaryBeyondWindow;
 
     // One unreadable transcript or unwritable husk must not cost the night's
     // other sessions, nor the journal advances already earned.
@@ -248,9 +316,6 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
 
     state.lastRunAt = options.now.toISOString();
     await saveReviewState(boxRoot, state);
-    summary.missingTranscripts = discovery.missingTranscripts;
-    summary.deferredActive = discovery.deferredActive.length;
-    summary.belowThreshold = discovery.belowThreshold;
     return summary;
   } finally {
     await releaseLock(lockPath);

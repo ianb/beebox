@@ -43,7 +43,7 @@ long session enters the system — one pass over everything, rather than replayi
 its history span by span.
 
 ```ts
-const fresh = resolveSpan([a, b, c], null);
+const fresh = resolveSpan({ entries: [a, b, c], applied: null, truncated: false });
 fresh.bootstrap
 => no-journal
 
@@ -63,7 +63,7 @@ const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, 
 applied.endUuid
 => u-b
 
-const next = resolveSpan([a, b, c, d], applied);
+const next = resolveSpan({ entries: [a, b, c, d], applied, truncated: false });
 next.bootstrap
 => null
 
@@ -75,7 +75,7 @@ A transcript that hasn't grown yields an empty span, which the size gate then
 rejects — nothing is re-read and no model is called.
 
 ```ts continue
-const unchanged = resolveSpan([a, b], applied);
+const unchanged = resolveSpan({ entries: [a, b], applied, truncated: false });
 JSON.stringify({ bootstrap: unchanged.bootstrap, entries: unchanged.entries.length })
 => {"bootstrap":null,"entries":0}
 ```
@@ -86,7 +86,7 @@ JSON.stringify({ bootstrap: unchanged.bootstrap, entries: unchanged.entries.leng
 const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
 
 // The SDK replaced the transcript; `u-b` no longer exists.
-const rewritten = resolveSpan([entry("u-x", "summary"), entry("u-y", "later")], applied);
+const rewritten = resolveSpan({ entries: [entry("u-x", "summary"), entry("u-y", "later")], applied, truncated: false });
 rewritten.bootstrap
 => boundary-missing
 ```
@@ -105,7 +105,7 @@ const mutated = [entry("u-z", "replaced"), b, c];
 mutated[1].uuid === applied.endUuid
 => true
 
-resolveSpan(mutated, applied).bootstrap
+resolveSpan({ entries: mutated, applied, truncated: false }).bootstrap
 => prefix-rewritten
 ```
 
@@ -113,7 +113,7 @@ The whole transcript comes back as the span, so nothing is lost — the caller
 keeps the existing account, which is now the only record of what was rewritten.
 
 ```ts continue
-resolveSpan(mutated, applied).entries.map((e) => e.uuid).join(",")
+resolveSpan({ entries: mutated, applied, truncated: false }).entries.map((e) => e.uuid).join(",")
 => u-z,u-b,u-c
 ```
 
@@ -131,7 +131,7 @@ const edited = [entry("u-a", "first, REVISED"), b, c];
 edited.map((e) => e.uuid).join(",")
 => u-a,u-b,u-c
 
-resolveSpan(edited, applied).bootstrap
+resolveSpan({ entries: edited, applied, truncated: false }).bootstrap
 => prefix-rewritten
 ```
 
@@ -146,10 +146,58 @@ somehow exists forces a bootstrap.
 appliedSpanFor({ sessionId: "s1", entries: [entry("", "anonymous")], endIndex: 0, now: NOW })
 => null
 
-resolveSpan([a, b], {
-  spanId: "x", endUuid: "", endIndex: 0, prefixHash: "y", at: "2026-07-28T04:00:00Z",
+resolveSpan({
+  entries: [a, b],
+  applied: {
+    spanId: "x", endUuid: "", endIndex: 0, prefixHash: "y", at: "2026-07-28T04:00:00Z",
+  },
+  truncated: false,
 }).bootstrap
 => boundary-missing
+```
+
+## A missing boundary in a TRUNCATED read defers instead of bootstrapping
+
+The read is capped (`MAX_SESSION_ENTRIES`), so a session that grew past the cap
+since its last review has its journal boundary *past the window* — not deleted.
+Bootstrapping there would re-summarize ancient entries and then record a span
+whose `endIndex` moves the journal backwards, destroying the real boundary. The
+span is refused instead, and the caller leaves the husk and journal alone.
+
+```ts
+const applied = appliedSpanFor({ sessionId: "s1", entries: [a, b], endIndex: 1, now: NOW });
+
+// `u-b` is not in this window, and the transcript is longer than the window.
+const beyond = resolveSpan({ entries: [c, d], applied, truncated: true });
+JSON.stringify({
+  deferred: beyond.deferred,
+  bootstrap: beyond.bootstrap,
+  entries: beyond.entries.length,
+  endIndex: beyond.endIndex,
+})
+=> {"deferred":"boundary-beyond-window","bootstrap":null,"entries":0,"endIndex":-1}
+```
+
+Truncation alone doesn't defer: with no journal at all there is no boundary to
+lose, so the first-ever review of an over-long session still bootstraps.
+
+```ts continue
+const first = resolveSpan({ entries: [c, d], applied: null, truncated: true });
+JSON.stringify({ deferred: first.deferred, bootstrap: first.bootstrap })
+=> {"deferred":null,"bootstrap":"no-journal"}
+```
+
+And a boundary that IS in the window with a changed prefix is a real rewrite,
+truncated read or not — that still bootstraps over the window.
+
+```ts continue
+const rewrittenPrefix = resolveSpan({
+  entries: [entry("u-z", "replaced"), b, c],
+  applied,
+  truncated: true,
+});
+JSON.stringify({ deferred: rewrittenPrefix.deferred, bootstrap: rewrittenPrefix.bootstrap })
+=> {"deferred":null,"bootstrap":"prefix-rewritten"}
 ```
 
 ## Span ids are stable, and distinguish what they should
@@ -191,7 +239,7 @@ qualify again. `spanSize` renders uncapped.
 
 ```ts
 const long = Array.from({ length: 500 }, (_, i) => entry(`u-${i}`, "x".repeat(200)));
-const size = spanSize(resolveSpan(long, null));
+const size = spanSize(resolveSpan({ entries: long, applied: null, truncated: false }));
 size > 40_000
 => true
 ```

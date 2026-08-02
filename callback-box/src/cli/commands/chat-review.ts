@@ -49,6 +49,11 @@ function describeSkips(result: DiscoveryResult): string[] {
   if (result.missingTranscripts > 0) {
     lines.push(`  husks whose transcript is gone: ${String(result.missingTranscripts)}`);
   }
+  if (result.boundaryBeyondWindow > 0) {
+    lines.push(
+      `  journal boundary past the read window: ${String(result.boundaryBeyondWindow)}`,
+    );
+  }
   return lines;
 }
 
@@ -86,7 +91,7 @@ const runCommand = new Command("run")
         `would review ${String(planned.length)} of ${String(result.qualified.length)} qualified session(s)`,
       );
       for (const session of planned) {
-        const kind = session.span.bootstrap === null ? "increment" : session.span.bootstrap;
+        const kind = session.bootstrap === null ? "increment" : session.bootstrap;
         console.log(
           `  ${session.sessionId}  ${String(session.spanChars)} new chars (${kind})  ${session.huskPath}`,
         );
@@ -129,6 +134,9 @@ const runCommand = new Command("run")
     }
     if (summary.reviewerFailures > 0) parts.push(`${String(summary.reviewerFailures)} failure(s)`);
     if (summary.overflow > 0) parts.push(`${String(summary.overflow)} deferred to the next run`);
+    if (summary.boundaryBeyondWindow > 0) {
+      parts.push(`${String(summary.boundaryBeyondWindow)} with a boundary past the read window`);
+    }
     console.log(parts.join(", "));
     for (const rejection of summary.rejected) {
       console.log(`  leak scan dropped ${rejection}`);

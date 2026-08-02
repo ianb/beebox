@@ -226,6 +226,227 @@ On localhost/dev (no `GOOGLE_OAUTH_CLIENT_ID` set), auth is disabled entirely �
 
 For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client-debug-log.md`](./client-debug-log.md) for the log file format.
 
+## Prod git-annex migration (manifest → annex cutover)
+
+`docs/plans/scanner-ingest.md` Track 0 needs both prod boxes (`estate`,
+`box-family`) moved from the manifest asset scheme onto git-annex before
+scan-import ships — it stages raw asset bytes and assumes annex
+unconditionally (no manifest-writing code path exists). Track 2's upload
+routes 503 (logged `error`) at registration if a box isn't annex-shaped yet,
+so a sequencing mistake fails loud rather than silently corrupting a
+manifest-scheme box. Background and the full local-conversion precedent:
+[`assets.md`](./assets.md).
+
+**Status as of 2026-08-01: only rehearsed against already-converted copies,
+NOT against a manifest-scheme prod box.** The two boxes at `~/src/boxes/`
+that looked like plausible rehearsal targets (`estate`, `box-family`) turned
+out to already be the *local* post-conversion boxes from `assets.md`'s
+2026-07-31 migration — `git log` on both shows `Claim assets into manifests
+(pre-annex)` immediately followed by `Move assets onto git-annex`, dated
+2026-07-31; `git config --get-regexp '^annex\.'` shows `annex.thin false` /
+`annex.version 10`; there are zero `manifest.json` files anywhere in either
+tree; and annex objects on disk hold real bytes (checked several
+multi-megabyte `.jpg` objects under `.git/annex/objects/`, not ~100-byte
+pointers). This directly contradicts a same-day claim that these were fresh
+backups of the *unconverted* prod boxes — if they were, they'd show
+`manifest.json` files and no annex commit. **Whatever `estate`/`box-family`
+under `~/src/boxes/` are, they are not unconverted prod copies**; treat that
+claim as false until a fresh rsync from the server proves otherwise. Prod
+itself may or may not already be on annex — nothing available locally
+answers that; the pre-checks below settle it before the real cutover starts.
+
+**Update (2026-08-01, checked on the server): prod IS already converted.**
+Both prod boxes carry the "Claim assets into manifests (pre-annex)" → "Move
+assets onto git-annex" commit pair dated 2026-07-31, `annex.version 10` /
+`annex.thin false`, and real annex objects on disk (estate: 1,359 objects;
+box-family: 12). So the cutover reduces to the verification pass — **run 2026-08-01, both
+boxes pass**: `cb doctor annex --check` 7/7 on both (including `hook` — the
+pre-commit hook IS installed on prod, unlike the rsync'd rehearsal copies);
+`cb doctor annex-fsck` "no bad content" on both (estate ~60s, box-family
+~2s); `to-annex --dry-run` no-op on box-family, and on estate correctly
+refused by the dirty-tree guard (an in-flight photo-upload batch was staged
+— the guard working as designed, with conversion already proven by the
+migration commits and annex objects). Track 0 is DONE. One post-conversion
+anomaly found and filed
+(`issues/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md`): the
+photo-batch-upload flow committed raw JPEG blobs + old-scheme manifests on
+estate AFTER the conversion — likely the missing annex pre-commit hook plus
+a manifest-writing upload path. Note the box also has unrelated small
+metadata sidecars named `manifest.json` (`{"filename","captured","source"}`)
+— do not mistake them for asset manifests when running the pre-checks.
+
+### What was and wasn't rehearsed
+
+Rehearsed against `rsync -a` copies of both local boxes under a scratch
+directory (never against `~/src/boxes/` in place — those are read-only):
+
+- `cb doctor annex --check` on both — all checks pass (`binary`,
+  `initialized`, `thin`, `largefiles`, `content-present`, `journal`); the
+  `hook` check fails on both copies because a plain rsync doesn't run
+  `cb init` to install the pre-commit hook, not a real defect.
+- `cb doctor annex-fsck` on both — `annex fsck: no bad content`. `box-family`
+  (~50 MB) finished in under a second; `estate` (~9.8 GB of annexed content)
+  took **43.5s**.
+- `cb attachments to-annex --dry-run` against the `box-family` copy —
+  `Would annex 0 asset(s) (0 MB). Nothing changed.` confirming the migration
+  is a safe no-op against an already-converted box (no `manifest.json` to
+  claim), not a destructive re-run — useful defense-in-depth if prod turns
+  out to already be converted by the time of cutover.
+- `rsync -a` copy timing for planning the real cutover: `estate` (~29 GB
+  total, ~9.8 GB of that being `content/`) took **3m12s** locally; a
+  server-side full-box backup should be sized against that, adjusted for
+  network/disk speed.
+
+**NOT rehearsed, because no manifest-scheme box was available locally:** the
+actual `manifest.json` → git-annex conversion path in
+`src/core/annex/to-annex.ts` (`cb attachments to-annex` with a real manifest
+scope to migrate) — the preflight manifest-vs-disk hash check, the LFS
+takeover, the `git add -A` + `--renormalize` two-pass staging, the
+post-conversion manifest-vs-annex-key comparison, and the final commit. All
+of the failure modes `to-annex-errors.ts` guards against (dirty tree, stray
+`.gitignore` rules, gitignored LFS-pointer content masquerading as an asset,
+insufficient disk) are exercised by that code's own test suite, not by this
+rehearsal.
+
+**Before the real cutover, whoever runs it must:**
+
+1. Confirm from the server itself, not from a local copy, whether `estate`
+   and `box-family` are still manifest-scheme (`find <box>/content -name
+   manifest.json`, `git -C <box>/content config --get-regexp '^annex\.'` —
+   an empty result plus present manifests means still-unconverted; if annex
+   config and zero manifests turn up instead, someone already migrated prod
+   and this runbook's dry-run step will confirm it as a no-op).
+2. `rsync` a **fresh** copy of the actual prod box from the server to a
+   scratch machine (not this worktree — no server access from here) and
+   rehearse the real `cb attachments to-annex` (not `--dry-run`) against
+   that copy first, verifying with the checklist below, before touching the
+   live box.
+
+### Cutover procedure (per box)
+
+Run once per box (`estate`, then `box-family`, or the reverse — independent).
+
+**1. Pre-checks**
+
+```bash
+# Disk: conversion roughly doubles resident asset bytes (annex.thin=false
+# keeps the working-tree copy AND the annex object as separate copies) —
+# to-annex.ts's own preflight refuses below 1.1x headroom, but confirm before
+# starting so a mid-migration abort isn't the first sign of the problem.
+ssh callback@$(cat deploy/server-ip) "df -h /home/callback/boxes/<box>"
+
+# Backup freshness: confirm today's automated backup exists and is recent
+# before wedging the box, since it is the entire rollback story (see Rollback
+# below) — check whatever backup mechanism is currently configured for the
+# server; there is no maintained reverse migration.
+ssh callback@$(cat deploy/server-ip) "ls -la <backup-location>"
+
+# Working tree must be clean — to-annex.ts refuses otherwise (DirtyTreeError)
+ssh callback@$(cat deploy/server-ip) "cd /home/callback/boxes/<box>/content && git status --porcelain"
+```
+
+**2. Stop the box's serve child**
+
+There is no per-box stop command today — `Supervisor.stopBox` is private and
+only fires from the lazy-mode idle timer (`src/hub/supervisor.ts`). The
+supported lever is a full `cb-hub` stop, which SIGTERMs the hub process,
+whose `SIGTERM` handler (`src/cli/commands/hub.ts`) calls
+`supervisor.stopAll()` and cleanly tears down every box child before
+exiting — this briefly wedges **every** box on the server, not just the one
+being migrated, so coordinate timing with the boxholder as the plan calls
+for:
+
+```bash
+ssh root@$(cat deploy/server-ip) "systemctl stop cb-hub"
+```
+
+(A future improvement — a targeted `cb hub stop <slug>` or admin endpoint —
+would narrow this blast radius; it doesn't exist yet.)
+
+**3. Run the migration**
+
+As the `callback` user, against the box's operational (`content/`) root:
+
+```bash
+ssh root@$(cat deploy/server-ip) "su - callback -c '
+  cd /home/callback/boxes/<box>/content &&
+  cb attachments to-annex --dry-run
+'"
+# Review the reported asset count/bytes against expectations, then:
+ssh root@$(cat deploy/server-ip) "su - callback -c '
+  cd /home/callback/boxes/<box>/content &&
+  cb attachments to-annex
+'"
+```
+
+This is the same command exercised (as a no-op) in the local rehearsal
+above; on a real manifest-scheme box it performs, in order: preflight
+manifest-vs-disk verification, LFS takeover, annex init/config, un-ignoring
+the asset gitignore block, two-pass `git add`, post-conversion
+manifest-vs-annex-key verification, manifest removal, and a single commit
+(`Move assets onto git-annex`, `--no-verify`). Any failure at any step
+leaves the manifests in place and nothing committed — see
+`src/core/annex/to-annex-errors.ts` for the specific refusal messages
+(dirty tree, stray gitignore rules, LFS-pointer content, insufficient
+space, post-conversion hash mismatch).
+
+**4. Verify**
+
+```bash
+ssh root@$(cat deploy/server-ip) "su - callback -c '
+  cd /home/callback/boxes/<box>/content &&
+  cb doctor annex --check &&
+  cb doctor annex-fsck &&
+  find . -name manifest.json &&
+  git status --porcelain
+'"
+```
+
+Checklist — all must hold before calling the box converted:
+
+- [ ] `cb doctor annex --check` reports all checks passing (`hook` will now
+      also pass, since `to-annex.ts` doesn't touch hooks but the box's
+      existing pre-commit hook already invokes `git annex pre-commit` per
+      `cb init` — confirm this on the specific box; if it fails, `cb init`
+      regenerates it)
+- [ ] `cb doctor annex-fsck` reports `annex fsck: no bad content`
+- [ ] `find . -name manifest.json` returns nothing
+- [ ] `git status --porcelain` is empty (the migration's own commit landed
+      cleanly)
+- [ ] Spot-check a handful of cards whose `sources[]`/asset refs point into
+      `.attach/` scopes still resolve (open a few in the browse UI once the
+      box is back up, or `git annex whereis <path>` on a sample of paths)
+
+**5. Restart**
+
+```bash
+ssh root@$(cat deploy/server-ip) "systemctl start cb-hub"
+```
+
+Confirm both `/healthz` and the migrated box's `health.check` (see
+[Diagnostic endpoints behind auth](#diagnostic-endpoints-behind-auth) above)
+come back healthy before considering the box done.
+
+### Rollback
+
+No maintained reverse migration exists (`assets.md`). If verification fails
+after step 3:
+
+```bash
+ssh root@$(cat deploy/server-ip) "su - callback -c '
+  cd /home/callback/boxes/<box>/content &&
+  git annex uninit &&
+  git reset --hard HEAD^
+'"
+```
+
+then restore the pre-migration backup taken in step 1 if `git annex uninit`
+plus reverting the migration commit doesn't fully recover (e.g. if the
+migration partially committed intermediate state some other way). The local
+backup is the rollback story end to end — there is no annex remote to fetch
+lost content from (`assets.md`'s "Not yet" section: `numcopies` is 1,
+nothing to drop to or restore from except the backup).
+
 ## Related
 
 - [`deploy/README.md`](../deploy/README.md) — provisioning scripts, DNS, initial setup.

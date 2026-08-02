@@ -80,6 +80,13 @@ fi
 echo "=== $(date) sdk-update check ==="
 cd "$REPO_ROOT"
 
+# Piggyback the Docling currency watch on this job's cadence and log: it is
+# check-only, always exits 0, and prints nothing unless a settled newer release
+# exists. It must run BEFORE the SDK check's early exit, or an up-to-date SDK
+# would silence it. It never triggers the agent below — a Docling bump is
+# manual work (docs/plans/scanner-ingest-docling-decisions.md, D3).
+node --import tsx bin/check-docling-update.ts || echo "docling check failed (ignored)"
+
 if pnpm update-agent-sdk --check; then
   exit 0 # up to date — spend nothing
 fi

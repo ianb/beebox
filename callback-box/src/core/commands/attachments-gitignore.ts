@@ -49,7 +49,16 @@ const LEGACY_GITIGNORE_BLOCK_MARKER = "# cb-attach-binaries (managed by cb attac
 // the git-annex classifier. Re-exported here for existing importers.
 export { ASSET_EXTENSIONS, assetGitignorePatterns } from "../../lib/asset-extensions.js";
 
-const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
+/**
+ * The managed asset block, verbatim — the manifest scheme's half of the box
+ * `.gitignore`.
+ *
+ * Exported because `cb init` regenerates the whole file and must emit exactly
+ * this block, not a copy of it: the copy it used to inline is what let the two
+ * drift apart. Pairs with {@link UNIGNORE_BLOCK}, which replaces it on an
+ * annex-converted box.
+ */
+export const GITIGNORE_BLOCK = `${GITIGNORE_BLOCK_MARKER}
 # Assets inside .attach/ scopes are tracked via per-dir manifest.json
 # (size + sha256), not committed directly. See docs/implemented-plans/asset-manifests.md.
 ${assetGitignorePatterns()}
@@ -114,7 +123,12 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
 
 const UNIGNORE_BLOCK_MARKER = "# cb-assets (managed by cb attachments unignore)";
 
-const UNIGNORE_BLOCK = `${UNIGNORE_BLOCK_MARKER}
+/**
+ * The git-annex block: assets are tracked, only capture staging stays ignored.
+ * The annex-converted counterpart of {@link GITIGNORE_BLOCK}, and likewise
+ * exported so `cb init` writes the identical text rather than a near-copy.
+ */
+export const UNIGNORE_BLOCK = `${UNIGNORE_BLOCK_MARKER}
 # Assets inside .attach/ scopes are tracked by git-annex (annex.largefiles),
 # so they are NOT ignored — git records a pointer, the annex holds the bytes.
 # The one exception is capture staging: a capture is pre-triage and gets
@@ -124,8 +138,17 @@ const UNIGNORE_BLOCK = `${UNIGNORE_BLOCK_MARKER}
 ${CAPTURE_STAGING_IGNORE_PATTERN}
 `;
 
-/** An asset ignore pattern, wherever it came from. */
-function isStrayAssetRule(line: string): boolean {
+/**
+ * An asset ignore pattern, wherever it came from — inside the managed block,
+ * hand-written, or left over from a reverted migration.
+ *
+ * Exported for the annex-shape probe (`core/annex/is-annex-box.ts`): "does this
+ * `.gitignore` still hide assets from git" is the same question this asks, and
+ * two spellings of one pattern is how the answer drifts.
+ *
+ * @param line - A single `.gitignore` line
+ */
+export function isAssetIgnoreRule(line: string): boolean {
   return line.trim().startsWith("**/*.attach/**/*.");
 }
 
@@ -196,7 +219,7 @@ export async function unignoreGitignore(boxRoot: string): Promise<UnignoreOutcom
   // success while an `**/*.attach/**/*.jpg` line survives leaves a box where
   // those assets reach neither git nor the annex, silently.
   const strayRules = lines
-    .filter((l, i) => isStrayAssetRule(l) && !inManagedBlock(lines, { index: i, start: assetBlockAt }))
+    .filter((l, i) => isAssetIgnoreRule(l) && !inManagedBlock(lines, { index: i, start: assetBlockAt }))
     .map((l) => l.trim());
   if (strayRules.length > 0) {
     return {

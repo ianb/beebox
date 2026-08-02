@@ -3637,6 +3637,22 @@ test1:
       peak: 50762
       added: 8190
       turns: 20
+  document-card-failed-extraction:
+    - date: 2026-08-01T21:29:17.823Z
+      boxCommit: aaad2e328569a98ed431bee1b9acf8d5462612bf
+      repoCommit: 0b113c67b61cbb74c0f2362476ae82afdbf474d2
+      initial: 43161
+      peak: 49091
+      added: 5930
+      turns: 16
+  scan-session-provenance:
+    - date: 2026-08-01T21:29:17.823Z
+      boxCommit: aaad2e328569a98ed431bee1b9acf8d5462612bf
+      repoCommit: 0b113c67b61cbb74c0f2362476ae82afdbf474d2
+      initial: 43145
+      peak: 45725
+      added: 2580
+      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

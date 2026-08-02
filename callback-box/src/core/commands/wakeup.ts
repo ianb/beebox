@@ -26,26 +26,46 @@ function resolveCbPath(): string {
   }
 }
 
+/**
+ * Run a FULL (unscoped) `cb wakeup` for a box as a supervised child: awaited,
+ * with its combined output captured. Shared with the scan promote worker, which
+ * needs the same supervised spawn — a connector-scoped wakeup would never drain
+ * a `source: scan` job (`cli/commands/wakeup.ts` filters jobs by source), and a
+ * fire-and-forget spawn would make a lost run indefinite rather than late.
+ */
+export async function runCbWakeup(opts: {
+  boxRoot: string;
+  triggeredBy: string;
+  onChunk?: ((text: string) => void) | undefined;
+}): Promise<{ ok: boolean; detail: string; output: string }> {
+  const cbPath = resolveCbPath();
+  const env = await buildScriptEnv(opts.boxRoot, { CB_TRIGGERED_BY: opts.triggeredBy });
+  try {
+    const { code, output } = await runCollectedChild({
+      command: cbPath,
+      args: ["wakeup"],
+      cwd: opts.boxRoot,
+      env,
+      ...(opts.onChunk === undefined ? {} : { onChunk: opts.onChunk }),
+    });
+    if (code === 0) return { ok: true, detail: "", output };
+    return { ok: false, detail: `cb wakeup exited with code ${code}`, output };
+  } catch (err) {
+    return { ok: false, detail: errorMessage(err), output: "" };
+  }
+}
+
 async function executeWakeup(
   ctx: CommandContext,
   _args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const cbPath = resolveCbPath();
-  const env = await buildScriptEnv(ctx.boxRoot, { CB_TRIGGERED_BY: "webapp" });
-
-  try {
-    const { code } = await runCollectedChild({
-      command: cbPath,
-      args: ["wakeup"],
-      cwd: ctx.boxRoot,
-      env,
-      onChunk: (text) => ctx.write(text),
-    });
-    if (code === 0) return { success: true };
-    return { success: false, error: `cb wakeup exited with code ${code}` };
-  } catch (err) {
-    return { success: false, error: errorMessage(err) };
-  }
+  const result = await runCbWakeup({
+    boxRoot: ctx.boxRoot,
+    triggeredBy: "webapp",
+    onChunk: (text) => ctx.write(text),
+  });
+  if (result.ok) return { success: true };
+  return { success: false, error: result.detail };
 }
 
 registerCommand({

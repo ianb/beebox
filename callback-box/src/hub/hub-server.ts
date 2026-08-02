@@ -58,6 +58,7 @@ import { canAccessBox } from "../webapp/box-access.js";
 import { HASHED_ASSET_CACHE_OPTIONS } from "../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../webapp/base-prefix.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
+import { hasScanAuth } from "./scan-gate.js";
 import { verifyBrowseKey } from "../core/browse-key.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
@@ -491,16 +492,22 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const slug = slugForPath(reqPath);
     const mobileAuthed = slug !== null
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
+    // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
+    // ./scan-gate.ts); on any other path this is false and the request falls
+    // through to the wall below, which 401s it.
+    const scanAuthed = slug !== null
+      && await hasScanAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers, reqPath, slug });
+    const perBoxAuthed = mobileAuthed || scanAuthed;
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret, openAccess });
-    if (!isMobilePairingRedeem && !mobileAuthed && !decision.authorized) {
+    if (!isMobilePairingRedeem && !perBoxAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
       return loginRedirect(request, reply);
     }
-    if (!isMobilePairingRedeem && !mobileAuthed) {
+    if (!isMobilePairingRedeem && !perBoxAuthed) {
       Object.assign(request.raw.headers, decision.headersToSet);
       // Tell the child which path prefix fronts it, so its own login-SPA asset
       // rewrite (Track A chunk 2) can rebuild absolute asset paths. The hub

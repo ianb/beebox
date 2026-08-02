@@ -8,13 +8,13 @@ The reviewer is behind an interface, so this exercises the whole pipeline with a
 scripted fake and no model.
 
 ```ts setup
-import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/doctest-helpers.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { runChatReview } from "../../../../src/core/chat/review/run.js";
-import { loadReviewState } from "../../../../src/core/chat/review/state.js";
-import { getSessionMetadata } from "../../../../src/cli/lib/session.js";
+import { loadReviewState, saveReviewState } from "../../../../src/core/chat/review/state.js";
+import { MAX_SESSION_ENTRIES, getSessionMetadata } from "../../../../src/cli/lib/session.js";
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 const HOUR = 60 * 60 * 1000;
@@ -410,6 +410,145 @@ state.sessions["sessfail"].attempts
 await box.cleanup();
 ```
 
+## The per-run cap picks the oldest sessions
+
+Discovery no longer carries parsed transcripts — each reviewed session's window
+is re-read inside the per-session step, after the `--max-sessions` slice, so the
+cap now decides how many transcripts are ever *resident* at once. What it
+selects is unchanged: oldest first, the rest deferred to the next run.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+for (const [sessionId, agoHours] of [["sessnew", 5], ["sessold", 40], ["sessmid", 20]]) {
+  await seed(box, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
+  const when = new Date(NOW.getTime() - agoHours * HOUR);
+  await utimes(getSessionLogPath(box.root, sessionId), when, when);
+}
+
+const reviewer = fakeReviewer([OUTPUT]);
+const summary = await runChatReview(box.root, {
+  reviewer, maxSessions: 2, now: NOW, ownerEmail: null,
+});
+JSON.stringify({
+  reviewed: summary.reviewed,
+  overflow: summary.overflow,
+  asked: reviewer.calls.map((c) => c.sessionId),
+})
+=> {"reviewed":2,"overflow":1,"asked":["sessold","sessmid"]}
+```
+
+The deferred session is untouched — no husk fields, no journal entry — and the
+next run picks it up.
+
+```ts continue
+(await readFile(box.path("store/chat/web/2026-07-28_sessnew.chat.card"), "utf8")).includes("title:")
+=> false
+
+const rest = fakeReviewer([OUTPUT]);
+const second = await runChatReview(box.root, {
+  reviewer: rest, maxSessions: 2, now: NOW, ownerEmail: null,
+});
+JSON.stringify({ reviewed: second.reviewed, asked: rest.calls.map((c) => c.sessionId) })
+=> {"reviewed":1,"asked":["sessnew"]}
+```
+
+## A transcript that vanishes between discovery and review is counted, not fatal
+
+Discovery stats and parses the transcript; the reviewer re-reads it a moment
+later. In between, the SDK may have cleaned it up. Here the first session's
+review deletes the second's transcript, so the second re-read finds nothing.
+
+```ts continue
+const box2 = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
+for (const [sessionId, agoHours] of [["sessfirst", 40], ["sessvanish", 20]]) {
+  await seed(box2, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
+  const when = new Date(NOW.getTime() - agoHours * HOUR);
+  await utimes(getSessionLogPath(box2.root, sessionId), when, when);
+}
+
+const saboteur = {
+  calls: [],
+  async review(args) {
+    this.calls.push(args);
+    await rm(getSessionLogPath(box2.root, "sessvanish"), { force: true });
+    return OUTPUT;
+  },
+};
+const vanished = await runChatReview(box2.root, {
+  reviewer: saboteur, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({
+  reviewed: vanished.reviewed,
+  missing: vanished.missingTranscripts,
+  asked: saboteur.calls.map((c) => c.sessionId),
+})
+=> {"reviewed":1,"missing":1,"asked":["sessfirst"]}
+
+await box2.cleanup();
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A session that comes back to life mid-run is deferred, not summarized
+
+A run spans one model call per session, so a session that was quiet when
+discovery looked can be live again by the time its turn comes. Discovery's
+quiescence check covered a snapshot the reviewer no longer uses, so quiescence is
+re-checked against the file as it stands at review time.
+
+Here reviewing the first session appends to the second's transcript — the same
+thing a person typing into that chat would do.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+for (const [sessionId, agoHours] of [["sessfirst", 40], ["sesslive", 20]]) {
+  await seed(box, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
+  const when = new Date(NOW.getTime() - agoHours * HOUR);
+  await utimes(getSessionLogPath(box.root, sessionId), when, when);
+}
+
+const liveLog = getSessionLogPath(box.root, "sesslive");
+const interrupting = {
+  calls: [],
+  async review(args) {
+    this.calls.push(args);
+    await appendFile(liveLog, JSON.stringify(bulk("typed-just-now")) + "\n");
+    return OUTPUT;
+  },
+};
+const summary = await runChatReview(box.root, {
+  reviewer: interrupting, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({
+  reviewed: summary.reviewed,
+  deferredActive: summary.deferredActive,
+  asked: interrupting.calls.map((c) => c.sessionId),
+})
+=> {"reviewed":1,"deferredActive":1,"asked":["sessfirst"]}
+```
+
+The deferred session keeps its husk and its journal, so the next quiet night
+reviews the whole conversation including the new material.
+
+```ts continue
+const state = await loadReviewState(box.root);
+JSON.stringify({
+  husk: (await readFile(box.path("store/chat/web/2026-07-28_sesslive.chat.card"), "utf8")).includes("title:"),
+  journal: "sesslive" in state.sessions,
+})
+=> {"husk":false,"journal":false}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## The husk body is never touched
 
 The account lives in a field, so prose the boxholder wrote in the body survives
@@ -429,6 +568,82 @@ await runChatReview(box.root, {
 });
 (await readFile(box.path(huskPath), "utf8")).includes("My own notes about this chat.")
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A journal boundary past the read window defers the session — it never regresses
+
+The transcript read is capped at `MAX_SESSION_ENTRIES`, so a session that grew
+past the cap since its last review has its recorded boundary *outside* the
+window. That looks identical to "the boundary was deleted", but it is not: the
+entry is still there, further down the file.
+
+Treating it as a rewrite would be actively destructive — the run would
+re-summarize thousands of already-folded entries AND write a journal entry whose
+boundary sits *behind* the real one, permanently losing the reviewed position.
+So the session is left completely alone instead.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+// One entry more than the read window, so the read is truncated.
+const overCap = Array.from({ length: MAX_SESSION_ENTRIES + 1 },
+  (_, i) => userEntry(`cap-${String(i)}`, `line ${String(i)}`));
+const huskPath = await seed(box, {
+  sessionId: "sesscap", husk: "title: Untouched\n", entries: overCap,
+});
+const beforeCard = await readFile(box.path(huskPath), "utf8");
+
+// The journal points at the LAST entry — beyond the first-page read.
+const lastUuid = `cap-${String(MAX_SESSION_ENTRIES)}`;
+await saveReviewState(box.root, {
+  lastRunAt: null,
+  sessions: {
+    sesscap: {
+      applied: {
+        metadata: {
+          spanId: "prior-span",
+          endUuid: lastUuid,
+          endIndex: MAX_SESSION_ENTRIES,
+          prefixHash: "prior-prefix",
+          at: "2026-07-27T12:00:00Z",
+        },
+      },
+      titleOwner: "unmanaged",
+      titleHash: null,
+      attempts: 0,
+    },
+  },
+});
+
+const reviewer = fakeReviewer([OUTPUT]);
+const summary = await runChatReview(box.root, {
+  reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
+});
+JSON.stringify({
+  reviewed: summary.reviewed,
+  bootstrapped: summary.bootstrapped,
+  boundaryBeyondWindow: summary.boundaryBeyondWindow,
+  modelCalls: reviewer.calls.length,
+})
+=> {"reviewed":0,"bootstrapped":0,"boundaryBeyondWindow":1,"modelCalls":0}
+```
+
+The husk and the journal are exactly as they were — in particular the recorded
+boundary still names the real last entry, not a truncated stand-in.
+
+```ts continue
+const state = await loadReviewState(box.root);
+JSON.stringify({
+  card: (await readFile(box.path(huskPath), "utf8")) === beforeCard,
+  endUuid: state.sessions["sesscap"].applied["metadata"].endUuid,
+  endIndex: state.sessions["sesscap"].applied["metadata"].endIndex,
+})
+=> {"card":true,"endUuid":"cap-5000","endIndex":5000}
 ```
 
 ```ts cleanup

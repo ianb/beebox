@@ -36,6 +36,7 @@ export { finalizeCommand } from "./finalize.js";
 export { sessionCommand } from "./session.js";
 export { schedulerCommand } from "./scheduler.js";
 export { scanImportCommand } from "./scan-import.js";
+export { documentCommand } from "./document.js";
 export { uploadCommand } from "./upload.js";
 export { attachmentsCommand } from "./attachments.js";
 export { lsCommand } from "./ls.js";

@@ -75,7 +75,9 @@ src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
 src/lib/          THE single home for generic cross-cutting helpers (no core/
-                  deps) — check here before writing your own. content-hash,
+                  deps) — check here before writing your own. atomic-write
+                  (writeFileAtomic — the crash-safe whole-file replace every
+                  small state/credential store uses), content-hash,
                   mimetype, filename, file-exists, public-url, awake-timeout,
                   sleep, git*/paths/box-shape/box-layout* (promoted from
                   cli/lib), time (getBoxTime), format (chalk), box-config.

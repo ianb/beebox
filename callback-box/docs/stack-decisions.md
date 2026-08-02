@@ -1102,6 +1102,8 @@ The two 2026-04 objections are handled, not ignored:
 - **Orphaned lock dirs on SIGKILL** are reclaimed by `proper-lockfile`'s own mtime-freshness steal on the next acquire (its whole point), and additionally by `scanLocks`'s race-free reclaim path. No manual cleanup needed.
 - **macOS sleep** is a genuine residual tradeoff, mitigated by a generous 5-minute `stale` threshold (a normal brief sleep no longer false-triggers staleness) and made **observable, never silent**: if a live-but-sleeping holder's lock is stolen past the stale window, the victim's `onCompromised` handler logs LOUDLY (`console.error`). This is the inherent sleep-vs-crash-recovery tension of any mtime lock; PID-liveness sidestepped it but shipped a worse (silent double-acquire) failure instead.
 
+**2026-08-01 — two stale profiles.** A single 5-minute `stale` was too slow for request-scoped stores: an OOM-killed `cb serve` wedged mobile auth for minutes (callers retry ~5 s, then fail loud). `stale` is now per lock class — `default` 5 min, `request` 15 s via `requestScopedLock(path)` — threaded through every staleness surface so acquisition and diagnostics agree. PID-liveness fast reclaim was declined again (boxholder, 2026-08-01).
+
 `file-lock.ts` keeps the public API (`acquireLock`/`releaseLock`/`inspectLock`/`forceAcquireLock`/`scanLocks`, `LockHeldError`) and writes a diagnostic sidecar file at the lock path (holder `{pid, hostname, acquiredAt, metadata}`) that never participates in the acquire decision. Exclusion is entirely `proper-lockfile`'s atomic guard-dir `mkdir`. See the file's header for the full invariant.
 
 ### Why ky over ofetch

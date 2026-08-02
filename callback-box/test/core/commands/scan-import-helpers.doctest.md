@@ -119,6 +119,23 @@ resolved3[7].pairedWith
 
 The analyzer that named a partner wins over the one that didn't.
 
+## Pair reconciliation: mutual claims beat unreciprocated ones
+
+When both overlapping batches named a partner for the same page, the claim
+the partner actually reciprocates wins — even when it came from the first
+batch (the old rule arbitrarily took the second):
+
+```ts
+const pages4 = new Map<number, ScanPageAnalysis[]>();
+// Batch A saw 4↔5 mutually; batch B misread page 5 as paired forward with 6.
+pages4.set(4, [photo(4, 5)]);
+pages4.set(5, [back(5, 4, "Lake"), back(5, 6, "Lake")]);
+pages4.set(6, [photo(6, null)]);
+const resolved4 = resolveScanPages(pages4, 8);
+`${resolved4[4].pairedWith}<->${resolved4[5].pairedWith} conflict=${resolved4[5].conflict}`
+=> 5<->4 conflict=true
+```
+
 ## Bundling: photo + back
 
 Photos with mutual back partners become bundles:

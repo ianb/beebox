@@ -4328,3 +4328,80 @@ tests:
     watch_for: "Says no — annex.largefiles routes it on ordinary `git add`, so the normal commit path handles it. Reaching for `git annex add` means it learned a special case that does not exist here (and it locks files, breaking in-place edits)."
     correct_contains: ["largefiles"]
     tags: [assets]
+
+  # === Scanned documents (`document.card`) ===
+  #
+  # Track 4 of docs/plans/scanner-ingest.md. One entry, per the plan's
+  # "Knowledge audits" section: the agent should be able to say what a
+  # `document.card` is, where its original bytes live, and what `status: new`
+  # + `error:` means — from the schema instructions in its always-on surface,
+  # without re-reading source.
+  #
+  # The failure this guards against is the expensive one: an agent seeing a
+  # `status: new` document card with an `error:` and concluding the document
+  # was lost (or re-uploading it), when the original PDF is sitting right there
+  # in the attach scope and `cb document reanalyze` re-runs extraction.
+  #
+  # Status (2026-08-01): 1/1 pass. The agent named `cb document reanalyze`
+  # (plus `--force-ocr`), pointed at `attach/source.pdf` as still-present, and
+  # offered `status: invalid` as the give-up — the whole watch_for. But it is
+  # only nominally `knows_directly`: the prompt cites a card path that does not
+  # exist in the box, so the agent spent 5 bash calls and 16 turns proving that
+  # before answering the general question (it found the e2e box's real
+  # `source.document.card` on the way). Worth a `fixture:` staging the card at
+  # the cited path next time this entry is touched, so the read count measures
+  # knowledge rather than a wild-goose chase.
+  # Run: pnpm knowledge-audit run --box <abs-path> --filter scanner-ingest
+
+  - id: document-card-failed-extraction
+    prompt: >
+      I found a card at `box/inbox/scan-20260402T1015-ab12cd34.attach/source.document.card`
+      with `status: new` and an `error:` field saying Docling exited 1. Is the
+      scanned document lost? What are my options?
+    expected_level: knows_directly
+    watch_for: >
+      Says nothing is lost — the original file is still in the card's attach
+      scope (`attach/source.pdf`, per `filename.ref`) and can be read directly;
+      names `cb document reanalyze` as the retry (and `--force-ocr` for a junk
+      text layer), or marking the card `invalid` if the file really is unusable.
+      Should NOT say the document needs re-scanning or re-uploading, and should
+      NOT treat `status: new` as "not yet arrived".
+    correct_contains: ["reanalyze"]
+    correct_contains_any: ["attach/source.pdf", "attach scope", "original"]
+    tags: [cards, intake, scanner-ingest]
+
+  # === Scan provenance (`source: scan-upload/<token-name>`) ===
+  #
+  # The plan's second audit entry (docs/plans/scanner-ingest.md, "Knowledge
+  # audits"): an agent triaging a scan intake job should be able to say where
+  # the session came from, straight from the capture-session schema
+  # instructions, without going source-diving. The failure it guards against is
+  # an agent treating an unfamiliar `source:` value as noise (or as a ref it
+  # should resolve) instead of as the named upload credential — which is the
+  # only handle the boxholder has for "which scanner/profile produced this
+  # batch" when a whole batch comes out wrong.
+  #
+  # What CLAUDE_SCANS.md is for is already audited separately by
+  # `landmark-parent-claude-md-loads` above, so this entry does not re-ask it.
+  #
+  # Status (2026-08-01): 1/1 pass, 0 file reads, 0 searches, 6 turns, 43k
+  # initial context. The agent read the `source` paragraph out of the generated
+  # capture-session card doc and gave the right reading — desktop uploader, not
+  # chat; token name identifies the device/profile; useful when a batch looks
+  # wrong — and volunteered the CLAUDE_SCANS.md tie-in unprompted. The
+  # capture-session schema instructions carry this knowledge; nothing to fix.
+
+  - id: scan-session-provenance
+    prompt: >
+      I'm triaging an intake job and one of its items is a capture-session card
+      whose frontmatter says `source: scan-upload/study-scansnap`. What does
+      that tell me about where this session came from?
+    expected_level: knows_directly
+    watch_for: >
+      Says the session came in from outside chat — the desktop scan uploader
+      PUT these files to the box under a named scan-upload credential, and
+      `study-scansnap` is that credential's name, identifying the device or
+      scanner profile that produced the batch. Should NOT read it as a file
+      path/ref to resolve, a card type, or a user identity.
+    correct_contains_any: ["scan upload", "scan-upload", "uploader", "scanner"]
+    tags: [cards, intake, scanner-ingest]

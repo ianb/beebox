@@ -277,6 +277,15 @@ export async function withQuestionTransition(
 ): Promise<TransitionResult> {
   const { ctx, fullPath, questionRef, allowedStatuses, disallowedMessage, plan } = params;
   const lockPath = questionLockPath(ctx.boxRoot, fullPath);
+  // DEFAULT profile, deliberately — not `requestScopedLock`. Unlike the sibling
+  // request-scoped stores (a read, a mutation, a temp-file write), this critical
+  // section runs the caller's arbitrary `plan()` work AND a git commit, which is
+  // seconds of subprocess work, not milliseconds. Under the 15 s request stale
+  // window an event-loop stall or a laptop sleep mid-commit would let another
+  // process steal the lock partway through a transition — two writers on one
+  // question card. The 5 min default window is sized for exactly this kind of
+  // hold. (Reverted from the request profile after the post-implementation
+  // review, 2026-08-01.)
   await fs.mkdir(path.dirname(lockPath), { recursive: true });
 
   for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {

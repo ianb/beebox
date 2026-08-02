@@ -44,20 +44,45 @@
  *
  * ## Staleness, crash recovery, and the macOS-sleep tradeoff
  *
- * `stale` is set to {@link STALE_MS} (5 minutes). While the holding process
- * is alive proper-lockfile refreshes the guard's mtime every `stale/2`
- * (2.5 min), so a live lock stays fresh for an unbounded hold as long as the
- * event loop runs — hold duration does NOT need to fit under `stale`. The
- * threshold governs two things:
+ * `stale` comes from the lock's **profile** ({@link LOCK_STALE_MS}), which
+ * rides with the lock path: a bare path is the `default` profile (5 min);
+ * `requestScopedLock(path)` is the `request` profile (15 s). The profile is a
+ * property of the lock *class*, so every staleness surface — acquire, `check`
+ * (`inspectLock`), `scanLocks`'s reclaim, and the `onCompromised` message —
+ * reads the same number; acquisition and diagnostics can never disagree about
+ * when a lock is stale. While the holding process is alive proper-lockfile
+ * refreshes the guard's mtime every `stale/2`, so a live lock stays fresh for
+ * an unbounded hold as long as the event loop runs — hold duration does NOT
+ * need to fit under `stale`. The threshold governs two things:
  *
  *   - **Crash recovery.** A SIGKILL'd holder (e.g. `cb tick`'s 10-minute
  *     per-script timeout firing) leaves a guard dir that no exit handler
- *     cleaned up; the next acquirer reclaims it once its mtime is >5 min old.
- *     5 min sits comfortably under that 10-min killer, so a wedged run's lock
- *     always clears before the run itself is force-killed. Callers with short
- *     acquire budgets (pairing/local-users/transient-state retry ~5 s) will
- *     fail *loud* rather than block for the full 5 min against a crashed
- *     holder — a thrown lock error, never a silent double-acquire.
+ *     cleaned up; the next acquirer reclaims it once its mtime is older than
+ *     the profile's window. 5 min sits comfortably under that 10-min killer,
+ *     so a wedged run's lock always clears before the run itself is
+ *     force-killed. Request-scoped stores (mobile devices, local users,
+ *     connector token/state stores, push subscriptions) can't wait that long: a `cb serve` OOM once wedged mobile auth for
+ *     minutes because every caller retries only ~5 s and then fails loud
+ *     (prod incident 2026-08-01). Those declare the `request` profile, so a
+ *     crashed holder blocks their store for ≤ ~15 s. Their retry budgets stay
+ *     short deliberately — inside that window callers still fail *loud*
+ *     (a thrown lock error) rather than hang or silently double-acquire.
+ *
+ *     The tradeoff: a *live* request-scoped holder paused past 15 s
+ *     mid-critical-section (a long GC/event-loop stall, a laptop sleep)
+ *     becomes stealable. These critical sections are milliseconds — a read,
+ *     an object mutation, and a temp-file write + fsync + rename — nowhere
+ *     near 15 s, and a steal still fires `onCompromised`, which logs LOUDLY.
+ *     That bound is the entry condition for the profile, not a hope: a lock
+ *     whose critical section runs a subprocess or arbitrary caller work stays
+ *     on `default`. `core/commands/question-transition.ts` is the worked
+ *     example — its section wraps a caller `plan()` plus a git commit, so it
+ *     was reverted to the default profile after review (2026-08-01).
+ *     PID-liveness fast reclaim (steal immediately once the holder's pid is
+ *     gone) would remove the wait entirely and was explicitly declined
+ *     (boxholder decision, 2026-08-01): it adds a second liveness authority
+ *     next to the mtime CAS. If it's ever revisited it must layer on the
+ *     mkdir CAS, never become an independent unlink path.
  *
  *   - **Sleep tolerance.** proper-lockfile's refresh runs on a `setTimeout`,
  *     which on macOS is paused during system sleep (see the awake-timeout
@@ -71,7 +96,9 @@
  *     never silent. These locks are held for seconds-to-minutes and released
  *     long before a machine idles into sleep, so surviving across a real sleep
  *     is not an expected steady state. This sleep-vs-crash-recovery tension is
- *     inherent to any mtime-freshness lock; 5 minutes is the chosen balance.
+ *     inherent to any mtime-freshness lock; the two profiles are the chosen
+ *     balance — sleep tolerance for long holds, fast recovery for request
+ *     paths that would rather be stolen from than stay wedged.
  *
  * ## Scope
  *
@@ -88,15 +115,23 @@
  *
  * ## API
  *
- * - `acquireLock(path, metadata)` — non-blocking; throws `LockHeldError` if a
+ * Every lock-taking call takes a `LockTarget`: a bare path (default profile)
+ * or `requestScopedLock(path)` (request profile).
+ *
+ * - `acquireLock(target, metadata)` — non-blocking; throws `LockHeldError` if a
  *   live holder owns it. Stale/crashed holders are reclaimed by proper-lockfile.
- * - `releaseLock(path)` — idempotent; releases only a lock THIS process holds
+ * - `withFileLock({ lockPath, metadata, waitMs }, fn)` — the blocking-with-a
+ *   -budget wrapper: retry the acquire until `waitMs` of wall time is spent,
+ *   run `fn` under the lock, always release. Throws `LockHeldError` when the
+ *   budget runs out — a loud failure, never a silent unserialized run.
+ * - `releaseLock(target)` — idempotent; releases only a lock THIS process holds
  *   (tracked per-path). Releasing one we don't hold is a no-op — it can never
  *   delete a foreign holder's lock.
- * - `inspectLock(path)` — read the current holder via proper-lockfile's
+ * - `inspectLock(target)` — read the current holder via proper-lockfile's
  *   `.check()`, or null if not held / stale.
- * - `forceAcquireLock(path, metadata)` — deliberately evict whoever owns it.
- * - `scanLocks(dir, suffix)` — map of name → live holder; reclaims dead ones.
+ * - `forceAcquireLock(target, metadata)` — deliberately evict whoever owns it.
+ * - `scanLocks(dir, { suffix, profile })` — map of name → live holder; reclaims
+ *   dead ones (at the given profile's staleness).
  */
 
 import { randomBytes } from "node:crypto";
@@ -121,11 +156,57 @@ export interface LockHolder {
 }
 
 /**
- * Stale threshold for proper-lockfile, in milliseconds. See the module
- * comment's "Staleness, crash recovery, and the macOS-sleep tradeoff"
- * section for why 5 minutes.
+ * Which stale profile a lock class uses. `"default"` suits long-held locks
+ * (scheduled scripts, the reactor); `"request"` is for the short
+ * read-modify-write critical sections behind an HTTP request. See the module
+ * comment's staleness section.
  */
-const STALE_MS = 5 * 60 * 1000;
+export type LockProfile = "default" | "request";
+
+/**
+ * Stale threshold per profile, in milliseconds — the age at which a guard
+ * dir's mtime makes its holder reclaimable. Exported so tests can assert the
+ * recovery SLO without sleeping through it.
+ */
+export const LOCK_STALE_MS: Record<LockProfile, number> = {
+  default: 5 * 60 * 1000,
+  request: 15 * 1000,
+};
+
+/** A lock path together with its lock class's stale profile. */
+export interface LockRef {
+  lockPath: string;
+  profile: LockProfile;
+}
+
+/**
+ * A lock to operate on: a bare path (the default profile) or a profiled ref
+ * from {@link requestScopedLock}. The profile rides with the path because
+ * staleness is a property of the lock *class*, not of one call — every
+ * surface (acquire, release, inspect, scan-reclaim, the compromised log) must
+ * agree about when that lock is stale.
+ */
+export type LockTarget = string | LockRef;
+
+/**
+ * Declare a request-scoped lock: one whose critical section is a few
+ * milliseconds inside an HTTP request, so a crashed holder must clear in
+ * seconds rather than minutes. Wrap the path once where it's computed, then
+ * pass the ref to `acquireLock`/`releaseLock`/`inspectLock`.
+ */
+export function requestScopedLock(lockPath: string): LockRef {
+  return { lockPath, profile: "request" };
+}
+
+function lockRef(target: LockTarget): LockRef {
+  return typeof target === "string" ? { lockPath: target, profile: "default" } : target;
+}
+
+/** The stale window of a lock's class — the single source every staleness
+ *  surface (acquire, check, reclaim, the compromised log) reads. */
+function staleMs(ref: LockRef): number {
+  return LOCK_STALE_MS[ref.profile];
+}
 
 /**
  * Release functions for locks THIS process currently holds, keyed by lock
@@ -159,19 +240,19 @@ function guardPath(lockPath: string): string {
   return `${lockPath}.guard`;
 }
 
-function lockOptions(lockPath: string): lockfile.LockOptions {
+function lockOptions(ref: LockRef): lockfile.LockOptions {
   return {
     // Our lock path is not a real resource file (and may not exist), so skip
     // proper-lockfile's realpath resolution, which would ENOENT on it.
     realpath: false,
-    stale: STALE_MS,
-    lockfilePath: guardPath(lockPath),
-    onCompromised: makeOnCompromised(lockPath),
+    stale: staleMs(ref),
+    lockfilePath: guardPath(ref.lockPath),
+    onCompromised: makeOnCompromised(ref),
   };
 }
 
-function checkOptions(lockPath: string): lockfile.CheckOptions {
-  return { realpath: false, stale: STALE_MS, lockfilePath: guardPath(lockPath) };
+function checkOptions(ref: LockRef): lockfile.CheckOptions {
+  return { realpath: false, stale: staleMs(ref), lockfilePath: guardPath(ref.lockPath) };
 }
 
 /**
@@ -182,12 +263,13 @@ function checkOptions(lockPath: string): lockfile.CheckOptions {
  * unhandled rejection; ours logs loudly instead. This is a real degradation:
  * any critical section still running under this lock is no longer excluded.
  */
-function makeOnCompromised(lockPath: string): (err: Error) => void {
+function makeOnCompromised(ref: LockRef): (err: Error) => void {
   return (err) => {
-    heldReleases.delete(lockPath);
+    heldReleases.delete(ref.lockPath);
     console.error(
-      `[file-lock] COMPROMISED: lost cross-process lock ${lockPath} we believed we held. ` +
-        `proper-lockfile could not refresh its guard within the ${STALE_MS}ms stale window ` +
+      `[file-lock] COMPROMISED: lost cross-process lock ${ref.lockPath} we believed we held. ` +
+        `proper-lockfile could not refresh its guard within the ${ref.profile} profile's ` +
+        `${staleMs(ref)}ms stale window ` +
         "(likely a long event-loop stall, a system sleep, or another process stealing the " +
         "stale lock). Any critical section still running under this lock is NO LONGER " +
         "mutually excluded — investigate for a possible lost update.",
@@ -273,9 +355,11 @@ async function unlinkIgnoringMissing(target: string): Promise<void> {
  * -swap. Non-blocking (proper-lockfile `retries: 0` default).
  */
 export async function acquireLock(
-  lockPath: string,
+  target: LockTarget,
   metadata: Record<string, unknown>,
 ): Promise<LockHolder> {
+  const ref = lockRef(target);
+  const lockPath = ref.lockPath;
   // proper-lockfile mkdir's the guard dir; its parent (== the lock path's
   // parent) must exist. Callers generally mkdir their state dir already; do it
   // defensively so acquisition is robust on a cold first run.
@@ -283,7 +367,7 @@ export async function acquireLock(
 
   let release: () => Promise<void>;
   try {
-    release = await lockfile.lock(lockPath, lockOptions(lockPath));
+    release = await lockfile.lock(lockPath, lockOptions(ref));
   } catch (e) {
     if (isLockedError(e)) {
       throw new LockHeldError((await readHolder(lockPath)) ?? unknownHolder());
@@ -314,7 +398,8 @@ export async function acquireLock(
  * the guard dir — releasing a lock we no longer hold never deletes someone
  * else's.
  */
-export async function releaseLock(lockPath: string): Promise<void> {
+export async function releaseLock(target: LockTarget): Promise<void> {
+  const lockPath = lockRef(target).lockPath;
   const release = heldReleases.get(lockPath);
   heldReleases.delete(lockPath);
   if (release === undefined) return;
@@ -334,13 +419,53 @@ export async function releaseLock(lockPath: string): Promise<void> {
   });
 }
 
+/** Poll interval while waiting for a contended lock. */
+const LOCK_RETRY_MS = 100;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Run `fn` while holding `lockPath`, retrying the acquire for up to `waitMs`
+ * before giving up with the contending holder's `LockHeldError`.
+ *
+ * This is the shape most read-modify-write callers want: `acquireLock` alone is
+ * non-blocking, so every such caller was otherwise re-implementing the same
+ * retry loop. The lock is always released, including when `fn` throws.
+ */
+export async function withFileLock<T>(
+  opts: { lockPath: string; metadata: Record<string, unknown>; waitMs: number },
+  fn: () => Promise<T>,
+): Promise<T> {
+  const { lockPath, metadata, waitMs } = opts;
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    try {
+      await acquireLock(lockPath, metadata);
+    } catch (e) {
+      if (!(e instanceof LockHeldError)) throw e;
+      if (Date.now() >= deadline) throw e;
+      await delay(LOCK_RETRY_MS);
+      continue;
+    }
+    try {
+      return await fn();
+    } finally {
+      await releaseLock(lockPath);
+    }
+  }
+}
+
 /**
  * Read the current holder of a lock, or null if not held (or stale). Uses
  * proper-lockfile's `.check()` — no side effects, never blocks a concurrent
  * acquirer, never steals or deletes.
  */
-export async function inspectLock(lockPath: string): Promise<LockHolder | null> {
-  const held = await lockfile.check(lockPath, checkOptions(lockPath));
+export async function inspectLock(target: LockTarget): Promise<LockHolder | null> {
+  const ref = lockRef(target);
+  const lockPath = ref.lockPath;
+  const held = await lockfile.check(lockPath, checkOptions(ref));
   if (!held) return null;
   return (await readHolder(lockPath)) ?? unknownHolder();
 }
@@ -353,10 +478,11 @@ export async function inspectLock(lockPath: string): Promise<LockHolder | null> 
  * holding the lock via proper-lockfile, so it can never remove a live
  * holder's guard dir.
  */
-async function reclaimIfDead(lockPath: string): Promise<boolean> {
+async function reclaimIfDead(ref: LockRef): Promise<boolean> {
+  const lockPath = ref.lockPath;
   let release: () => Promise<void>;
   try {
-    release = await lockfile.lock(lockPath, lockOptions(lockPath));
+    release = await lockfile.lock(lockPath, lockOptions(ref));
   } catch (e) {
     if (isLockedError(e)) return false; // live holder
     throw e;
@@ -380,15 +506,16 @@ async function reclaimIfDead(lockPath: string): Promise<boolean> {
  * today — used for administrative override.
  */
 export async function forceAcquireLock(
-  lockPath: string,
+  target: LockTarget,
   metadata: Record<string, unknown>,
 ): Promise<LockHolder> {
+  const lockPath = lockRef(target).lockPath;
   for (let attempt = 0; attempt < 2; attempt++) {
     // Evict the current holder's guard dir + sidecar outright, then acquire.
     await fs.rm(guardPath(lockPath), { recursive: true, force: true });
     await unlinkIgnoringMissing(lockPath);
     try {
-      return await acquireLock(lockPath, metadata);
+      return await acquireLock(target, metadata);
     } catch (e) {
       if (isLockedError(e) || e instanceof LockHeldError) continue; // raced another acquirer; retry
       throw e;
@@ -403,7 +530,10 @@ export async function forceAcquireLock(
  * reclaimed (sidecar + guard dir removed) as a side effect, via the race-free
  * `reclaimIfDead` path.
  */
-export async function scanLocks(dir: string, suffix: string): Promise<Map<string, LockHolder>> {
+export async function scanLocks(
+  dir: string,
+  { suffix, profile }: { suffix: string; profile: LockProfile },
+): Promise<Map<string, LockHolder>> {
   const result = new Map<string, LockHolder>();
   let entries: string[];
   try {
@@ -417,7 +547,7 @@ export async function scanLocks(dir: string, suffix: string): Promise<Map<string
     const fullPath = path.join(dir, entry);
     // A single proper-lockfile acquire attempt decides live-vs-dead atomically:
     // reclaimed (dead) → skip; ELOCKED (live) → report the holder.
-    if (await reclaimIfDead(fullPath)) continue;
+    if (await reclaimIfDead({ lockPath: fullPath, profile })) continue;
     const name = entry.slice(0, -suffix.length);
     result.set(name, (await readHolder(fullPath)) ?? unknownHolder());
   }

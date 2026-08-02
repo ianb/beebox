@@ -9,10 +9,6 @@
  * `buildContentBlocks`) so existing importers are unaffected.
  */
 
-import {
-  tailForMinUserMessages,
-  type SessionEntry,
-} from "../../../cli/lib/session.js";
 import { assertNever } from "../../../lib/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../../../services/claude-chat.js";
@@ -107,26 +103,6 @@ export interface ChatSendInput {
    * snapshot child elements.
    */
   cardState?: CardStateDetails;
-}
-
-/**
- * Compute the tail size honoring both an explicit tail and a minimum number
- * of real user messages to include. Returns null to mean "no trimming".
- */
-export function effectiveTailSize(
-  entries: SessionEntry[],
-  params?: { tail?: number; minRealUserMessages?: number },
-): number | null {
-  const tail = params ? params.tail : undefined;
-  const minUsers = params ? params.minRealUserMessages : undefined;
-  const userTail = minUsers && minUsers > 0
-    ? tailForMinUserMessages(entries, minUsers)
-    : 0;
-  if (tail !== undefined && tail > 0) {
-    return Math.max(tail, userTail);
-  }
-  if (userTail > 0) return userTail;
-  return null;
 }
 
 /**

@@ -19,6 +19,7 @@ import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
+import { registerScanUploadRoutes } from "./routes/scan-upload.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
@@ -285,6 +286,17 @@ export async function registerBox(server: FastifyInstance, deps: BoxScopeDeps): 
 
   await server.register(async (instance) => {
     await registerBoxRoutes(instance, deps);
+  }, { prefix: `/${box.slug}` });
+
+  // The scan upload routes mount under the SAME `/<slug>` prefix but in their
+  // own sibling scope, deliberately outside `addBoxAuthHook`: that hook runs
+  // before every route in the box scope and knows nothing of scan tokens, so a
+  // scan bearer would be 401'd there before reaching a handler. This scope
+  // installs `makeScanAuthPreHandler` instead — the ONLY gate that reads the
+  // scan-token store — which is what confines that credential to these two
+  // routes. Do not fold this back into registerBoxRoutes.
+  await server.register(async (instance) => {
+    await registerScanUploadRoutes({ server: instance, boxRoot: box.boxRoot });
   }, { prefix: `/${box.slug}` });
 
   // Register webhooks at /webhook/<slug>/ — outside auth so external

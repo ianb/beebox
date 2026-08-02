@@ -34,3 +34,29 @@ Not fixed inline while designing chat review because changing the default would
 alter retro's behaviour on long transcripts without a test covering it, and the
 render split that surfaced this was deliberately kept byte-identical for its
 existing caller.
+
+## Update 2026-08-01 — the default is gone, the truncation isn't
+
+Track A of `docs/plans/chat-history-oom-mobile-lock.md` took option 1: the
+`limit` default is gone, `parseSessionLog` now requires an explicit bounded
+slice (`{ mode: "tail", ... }` or `{ mode: "page", ... }`), and the compiler
+found every call site. So the *trap* — a caller silently inheriting a page
+size it never asked for — no longer exists.
+
+What remains is the honest half of this issue — first-page reads that stop at
+`MAX_SESSION_ENTRIES` (5 000) rather than 10 000, and say nothing when a
+transcript is longer:
+
+- `core/chat/transcript-render.ts` `renderSessionCompact` (silent).
+- `core/retro/discovery.ts` `countUserMessages` — only feeds "enough human
+  turns to observe?" thresholds, so the cap is harmless there, but it is still
+  a first-page read (silent).
+- `dev/lib/test-runner.ts` `extractBehavior` — knowledge-audit behavior
+  extraction over the main log and each sub-agent log (silent); an audit of a
+  5 000+-entry run would miss later tool use.
+- `cli/commands/session.ts` (plain `cb session <id>`) now *prints* a note when
+  it truncates, and `cb session --since` was switched to a tail read (it wants
+  the recent end, not the first page) — those two are no longer silent.
+
+Chat review's variant of the same problem is filed separately as
+`issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md`.

@@ -13,7 +13,7 @@ import { escapeHtml, renderDevShell, devBreadcrumbs, renderMarkdownToHtml } from
 
 // --- data model (issues/CLAUDE.md) ------------------------------------------
 
-const CATEGORIES = ["bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration"] as const;
+const CATEGORIES = ["bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 export interface IssueFrontmatter {

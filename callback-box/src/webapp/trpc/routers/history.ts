@@ -9,7 +9,7 @@ import {
   getLogPaginated,
   getTrailerFacets,
 } from "../../../lib/git.js";
-import { parseSessionLog } from "../../../cli/lib/session.js";
+import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../cli/lib/session.js";
 import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
 
 /** Escape values so they can be interpolated into a git --grep ERE pattern. */
@@ -105,7 +105,7 @@ export const historyRouter = router({
       z.object({
         sessionId: z.string().regex(/^[\da-f-]{36}$/i),
         cursor: z.number().int().nonnegative().default(0),
-        limit: z.number().int().positive().default(100),
+        limit: z.number().int().positive().max(MAX_SESSION_ENTRIES).default(100),
       })
     )
     .query(async ({ input, ctx }) => {
@@ -124,8 +124,7 @@ export const historyRouter = router({
 
       const result = await parseSessionLog({
         logPath,
-        offset: input.cursor,
-        limit: input.limit,
+        slice: { mode: "page", offset: input.cursor, limit: input.limit },
       });
 
       const nextCursor = result.hasMore

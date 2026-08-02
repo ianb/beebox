@@ -50,6 +50,7 @@ import { findAttachScopes } from "../../lib/attach-scopes.js";
 import { loadManifest, MANIFEST_FILENAME, sha256File } from "../asset-manifest.js";
 import { scanBoxAttachments } from "../asset-manifest-scan.js";
 import { unignoreGitignore } from "../commands/attachments-gitignore.js";
+import { stripLfsFilters } from "./gitattributes.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
 import {
@@ -176,8 +177,7 @@ async function removeLfsFilters(boxRoot: string): Promise<boolean> {
     if (errnoCode(e) === "ENOENT") return false;
     throw e;
   }
-  const kept = text.split("\n").filter((l) => !l.includes("filter=lfs"));
-  const next = kept.join("\n");
+  const next = stripLfsFilters(text);
   if (next === text) return false;
   await fs.writeFile(p, next);
   return true;

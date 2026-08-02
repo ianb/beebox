@@ -20,7 +20,7 @@ import {
 import { getBoxTimeISO } from "../../lib/time.js";
 import {
   loadLedger,
-  saveLedger,
+  updateLedger,
   sha256File,
   findEntry,
   addEntry,
@@ -37,6 +37,10 @@ const UploadArgsSchema = z.object({
   kind: z.string().optional(),
   force: z.boolean().optional(),
   context: z.string().optional(),
+  /** Free-text provenance passed through to the destination handler, which
+   *  records it on the cards it writes. The scan promote worker sends
+   *  `scan-upload/<token-name>`; the shape is a convention, not validated. */
+  source: z.string().optional(),
   /** Process at most this many files (after sort, before grouping). For smoke tests. */
   limit: z.number().optional(),
 });
@@ -116,6 +120,9 @@ function applyFileLimit(
 
 interface GroupOutcome {
   status: "imported" | "skipped" | "failed";
+  /** The ledger the caller should carry into the next group — the freshly
+   *  saved one after an import, otherwise the one it passed in. */
+  ledger: UploadLedger;
 }
 
 /**
@@ -131,9 +138,10 @@ async function processGroup(
     kind: string;
     force: boolean | undefined;
     extraContext: string | undefined;
+    source: string | undefined;
   }
 ): Promise<GroupOutcome> {
-  const { group, ledger, kind, force, extraContext } = options;
+  const { group, ledger, kind, force, extraContext, source } = options;
   ctx.writeLine(`\n→ [${group.kind}] ${group.label}`);
 
   const hashes: { file: string; hash: string }[] = [];
@@ -148,35 +156,40 @@ async function processGroup(
     ctx.writeLine(
       `  skipped (all ${group.files.length} file${group.files.length === 1 ? "" : "s"} already uploaded${where}); use --force to re-import`
     );
-    return { status: "skipped" };
+    return { status: "skipped", ledger };
   }
 
   const scanArgs: Record<string, unknown> = { inputs: group.files };
   if (extraContext && extraContext.trim().length > 0) scanArgs["context"] = extraContext;
+  if (source !== undefined && source.trim().length > 0) scanArgs["source"] = source;
   const result = await runCommand({ name: "scan-import", args: scanArgs, ctx });
 
   if (!result.success) {
     ctx.writeLine(`  failed: ${result.error}`);
-    return { status: "failed" };
+    return { status: "failed", ledger };
   }
 
   const { data } = result;
   const sessionRelDir = isRecord(data) && typeof data.sessionRelDir === "string" ? data.sessionRelDir : undefined;
-  for (const { file, hash } of hashes) {
-    if (findEntry(ledger, hash) !== undefined) continue;
-    const entry: UploadLedgerEntry = {
-      hash,
-      originalName: path.basename(file),
-      originalPath: file,
-      uploadedAt: getBoxTimeISO(ctx.boxRoot),
-      kind,
-    };
-    if (sessionRelDir) entry.sessionRelDir = sessionRelDir;
-    addEntry(ledger, entry);
-  }
-  // Save after each group so a crash mid-batch still preserves the dedup record.
-  await saveLedger(ctx.boxRoot, ledger);
-  return { status: "imported" };
+  // Save after each group so a crash mid-batch still preserves the dedup
+  // record — and under the ledger lock, re-reading inside it, so a concurrent
+  // writer (a hand-run `cb upload` beside the promote worker) can't lose
+  // entries to a stale in-memory copy.
+  const saved = await updateLedger(ctx.boxRoot, (fresh) => {
+    for (const { file, hash } of hashes) {
+      if (findEntry(fresh, hash) !== undefined) continue;
+      const entry: UploadLedgerEntry = {
+        hash,
+        originalName: path.basename(file),
+        originalPath: file,
+        uploadedAt: getBoxTimeISO(ctx.boxRoot),
+        kind,
+      };
+      if (sessionRelDir) entry.sessionRelDir = sessionRelDir;
+      addEntry(fresh, entry);
+    }
+  });
+  return { status: "imported", ledger: saved };
 }
 
 async function executeUpload(
@@ -187,7 +200,7 @@ async function executeUpload(
   if ("error" in validated) {
     return { success: false, error: validated.error };
   }
-  const { kind, force, context: extraContext, limit } = validated.args;
+  const { kind, force, context: extraContext, source, limit } = validated.args;
 
   const resolved = await resolveAndValidateFiles(validated.args.files);
   if ("error" in resolved) {
@@ -208,13 +221,14 @@ async function executeUpload(
     ctx.writeLine(`  [${g.kind}] ${g.label} (${g.files.length} file${g.files.length === 1 ? "" : "s"})`);
   }
 
-  const ledger = await loadLedger(ctx.boxRoot);
+  let ledger = await loadLedger(ctx.boxRoot);
   let imported = 0;
   let skipped = 0;
   let failed = 0;
 
   for (const group of groups) {
-    const outcome = await processGroup(ctx, { group, ledger, kind, force, extraContext });
+    const outcome = await processGroup(ctx, { group, ledger, kind, force, extraContext, source });
+    ledger = outcome.ledger;
     if (outcome.status === "imported") imported++;
     else if (outcome.status === "skipped") skipped++;
     else failed++;
@@ -235,6 +249,7 @@ registerCommand({
     { name: "kind", description: "Destination kind (currently: scan)", required: true, type: "string" },
     { name: "force", description: "Re-import files already in the ledger", required: false, default: false, type: "boolean" },
     { name: "context", description: "Per-batch context passed to the destination handler", required: false, type: "string" },
+    { name: "source", description: "Provenance recorded on the produced cards (e.g. scan-upload/<token-name>)", required: false, type: "string" },
     { name: "limit", description: "Process at most N files (sorted; useful for smoke tests)", required: false, type: "number" },
   ],
   execute: executeUpload,
