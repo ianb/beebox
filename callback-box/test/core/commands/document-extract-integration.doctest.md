@@ -17,7 +17,8 @@ why the probe below requires the environment to already exist rather than
 building it inside a test.
 
 ```ts setup
-import { createDoclingService, DOCLING_VERSION, doclingArgs } from "../../../src/services/docling.js";
+import { createDoclingService, doclingArgs } from "../../../src/services/docling.js";
+import { DOCLING_VERSION } from "../../../src/services/docling-version.js";
 import { textPdf } from "../../helpers/pdf-fixtures.js";
 import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

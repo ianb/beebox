@@ -13,6 +13,7 @@
 import { execa } from "execa";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { err, ok, type Result } from "../../lib/result.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /** Awake-second budget for a probe. These read a few pages; anything near this is pathological. */
@@ -83,6 +84,32 @@ async function readPdfInfo(pdfPath: string): Promise<{ pages?: number; title?: s
 }
 
 /**
+ * Run `pdftotext` to stdout over a page range (`lastPage: null` = to the end).
+ *
+ * One wrapper for both readers of the text layer — the dispatch probe below,
+ * which reads a few leading pages, and {@link extractPdfText}, which reads the
+ * whole document for the stored `text-layer.txt` asset. They differ only in
+ * range and budget; keeping one invocation means the flags, the failure
+ * handling, and the "is poppler even here" answer stay identical.
+ */
+async function runPdftotext(
+  pdfPath: string,
+  options: { lastPage: number | null; timeoutMs: number }
+): Promise<Result<string>> {
+  const range = options.lastPage === null ? [] : ["-f", "1", "-l", String(options.lastPage)];
+  try {
+    const result = await execa("pdftotext", [...range, "-q", pdfPath, "-"], {
+      timeout: options.timeoutMs,
+      reject: false,
+    });
+    if (result.exitCode !== 0) return err(`pdftotext exited ${String(result.exitCode)}`);
+    return ok(result.stdout);
+  } catch (e) {
+    return err(`pdftotext could not be run (${errorMessage(e)})`);
+  }
+}
+
+/**
  * Does this PDF carry a text layer?
  *
  * When `pdftotext` is unavailable the answer is `true` by assumption, not by
@@ -93,22 +120,41 @@ async function readPdfInfo(pdfPath: string): Promise<{ pages?: number; title?: s
  * than a missing package.
  */
 async function probeTextLayer(pdfPath: string): Promise<{ hasTextLayer: boolean; textLayerSource: "probed" | "assumed" }> {
-  try {
-    const result = await execa(
-      "pdftotext",
-      ["-f", "1", "-l", String(TEXT_LAYER_PAGE_SAMPLE), "-q", pdfPath, "-"],
-      { timeout: PROBE_TIMEOUT_MS, reject: false }
-    );
-    if (result.exitCode !== 0) {
-      console.warn(`[scan] pdftotext exited ${String(result.exitCode)} on ${path.basename(pdfPath)}; assuming a text layer`);
-      return { hasTextLayer: true, textLayerSource: "assumed" };
-    }
-    const characters = result.stdout.replaceAll(/\s/gu, "").length;
-    return { hasTextLayer: characters >= TEXT_LAYER_MIN_CHARS, textLayerSource: "probed" };
-  } catch (e) {
-    console.warn(`[scan] pdftotext could not be run (${errorMessage(e)}); assuming a text layer`);
+  const sample = await runPdftotext(pdfPath, {
+    lastPage: TEXT_LAYER_PAGE_SAMPLE,
+    timeoutMs: PROBE_TIMEOUT_MS,
+  });
+  if (!sample.ok) {
+    console.warn(`[scan] ${sample.error} on ${path.basename(pdfPath)}; assuming a text layer`);
     return { hasTextLayer: true, textLayerSource: "assumed" };
   }
+  const characters = sample.value.replaceAll(/\s/gu, "").length;
+  return { hasTextLayer: characters >= TEXT_LAYER_MIN_CHARS, textLayerSource: "probed" };
+}
+
+/**
+ * Budget for reading the whole document's text. Larger than a probe's — this
+ * one walks every page — but still bounded, and still cheap next to Docling.
+ */
+const FULL_TEXT_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * The document's text layer, verbatim, as `pdftotext` reads it — no layout
+ * analysis, no rewriting. Document mode stores this beside the original as
+ * `text-layer.txt` (D8), so the exact characters the producer embedded survive
+ * next to Docling's rendered-but-lossy markdown.
+ *
+ * `null` means there is nothing to store: no poppler on the host, a
+ * non-PDF/unreadable source, or a document whose text layer is empty. All three
+ * are ordinary — the asset is additive, and its absence is not an error.
+ */
+export async function extractPdfText(pdfPath: string): Promise<string | null> {
+  const text = await runPdftotext(pdfPath, { lastPage: null, timeoutMs: FULL_TEXT_TIMEOUT_MS });
+  if (!text.ok) {
+    console.warn(`[document] ${text.error} on ${path.basename(pdfPath)}; no text-layer.txt will be written`);
+    return null;
+  }
+  return text.value.trim() === "" ? null : text.value;
 }
 
 export async function probePdf(pdfPath: string): Promise<PdfProbe> {

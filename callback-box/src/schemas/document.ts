@@ -19,6 +19,7 @@
  *   inbox/scan-XX.attach/source.document.card
  *   inbox/scan-XX.attach/source.attach/source.pdf      (the original)
  *   inbox/scan-XX.attach/source.attach/docling.json.gz (canonical extraction)
+ *   inbox/scan-XX.attach/source.attach/text-layer.txt  (raw text layer)
  *   inbox/scan-XX.attach/source.attach/page-001.avif   (rendered page)
  *   inbox/scan-XX.attach/source.attach/figure-001.avif (extracted figure)
  */
@@ -92,6 +93,10 @@ Everything is inside the card's own attach scope, so refs are \`attach/…\`:
   layout, reading order, bounding boxes, table structure. Gzipped JSON. Read it
   only when you need structure the markdown body dropped (e.g. cell-level table
   data or where on the page something sits).
+- \`attach/text-layer.txt\` — the document's **raw text layer, verbatim**, as
+  the file itself carries it (no layout analysis, no rewriting). Read it when
+  you need the exact characters rather than the rendered body. Absent when the
+  document carries no extractable text.
 - \`attach/page-001.avif\`, \`page-002.avif\`, … — one rendered image per page,
   in page order. Use these when you want to *look* at a page.
 - \`attach/figure-001.avif\`, … — figures/images pulled out of the document.

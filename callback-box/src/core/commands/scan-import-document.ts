@@ -109,7 +109,8 @@ export async function runDocumentMode(
     template.doclingFilename = extraction.value.doclingFilename;
     template.doclingVersion = extraction.value.doclingVersion;
     for (const name of extraction.value.assetNames) assetRelPaths.push(`${attachRelDir}/${name}`);
-    ctx.writeLine(`Extracted ${String(extraction.value.pageCount)} page(s), ${String(extraction.value.assetNames.length - 1)} image asset(s)`);
+    const imageAssets = extraction.value.assetNames.filter((name) => name.endsWith(".avif")).length;
+    ctx.writeLine(`Extracted ${String(extraction.value.pageCount)} page(s), ${String(imageAssets)} image asset(s)`);
   } else {
     template.error = extraction.error;
     // Non-silent by construction: the reason is on the card, not only here.

@@ -21,13 +21,19 @@ import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { createCardSchemaMap } from "../../../src/schemas/registry.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { textPdf } from "../../helpers/pdf-fixtures.js";
+import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { writeFile, readdir, readFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
+import { execa } from "execa";
 
 const schemas = await createCardSchemaMap();
+
+// The raw text layer comes from poppler, which is a deployed-server given but
+// not a developer-machine one — so assertions about it are
+// availability-appropriate, like `pdf-probe.doctest.md`.
+const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then((r) => r.exitCode === 0, () => false);
 
 // Seed a box with a text-layer PDF sitting outside it, and run document mode.
 async function importPdf(box, docling, source) {
@@ -43,10 +49,13 @@ async function sessionDir(box) {
   return entries.find((e) => e.endsWith(".attach"));
 }
 
-// Everything in the document card's attach scope, sorted.
+// Everything in the document card's attach scope, sorted. `text-layer.txt` is
+// left out because its presence depends on whether poppler exists here; it has
+// its own section below.
 async function attachContents(box) {
   const dir = await sessionDir(box);
-  return (await readdir(join(box.root, "box/inbox", dir, "source.attach"))).sort().join("\n");
+  const names = await readdir(join(box.root, "box/inbox", dir, "source.attach"));
+  return names.filter((n) => n !== "text-layer.txt").sort().join("\n");
 }
 
 async function readDocumentCard(box) {
@@ -154,6 +163,69 @@ result.data.intakeJobPath.startsWith("box/jobs/")
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## The raw text layer is kept verbatim as `text-layer.txt`
+
+Docling's markdown is the body, and it is faithful-but-lossy. The document's own
+text layer is stored beside the original as an asset (D8), so the exact
+characters the producer embedded survive too. It is reference-free — nothing in
+frontmatter points at it; the schema instructions name the convention, the same
+way they do for the page renders.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await importPdf(box, createFakeDocling({ markdown: "rendered", pageCount: 1 }));
+const dir = await sessionDir(box);
+const names = await readdir(join(box.root, "box/inbox", dir, "source.attach"));
+havePdftotext ? names.includes("text-layer.txt") : true
+=> true
+```
+
+It holds the PDF's own words, not Docling's rendering of them:
+
+```ts continue
+const raw = havePdftotext
+  ? await readFile(join(box.root, "box/inbox", dir, "source.attach/text-layer.txt"), "utf-8")
+  : "Invoice 2026-04 Northwind Traders";
+raw.includes("Northwind Traders")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A document with no text layer gets no `text-layer.txt`
+
+An empty asset would be worse than an absent one — it reads as "this document
+has no text" when the honest answer may be "nobody could look" (no poppler on
+the host). Either way the file is simply not written, so its presence always
+means real content. This holds with or without poppler installed.
+
+```ts
+const scratch = await mkdtemp(join(tmpdir(), "cb-text-layer-"));
+const workDir = join(scratch, "work");
+const attachAbsDir = join(scratch, "attach");
+await mkdir(workDir, { recursive: true });
+await mkdir(attachAbsDir, { recursive: true });
+const textlessPath = join(scratch, "textless.pdf");
+await writeFile(textlessPath, textlessPdf());
+
+const result = await extractDocument({
+  docling: createFakeDocling({ markdown: "", pageCount: 1 }),
+  sourcePath: textlessPath,
+  attachAbsDir,
+  workDir,
+  forceOcr: false,
+  languages: null,
+});
+JSON.stringify([result.ok, result.value.assetNames.includes("text-layer.txt"), (await readdir(attachAbsDir)).includes("text-layer.txt")])
+=> [true,false,false]
+```
+
+```ts cleanup
+await rm(scratch, { recursive: true, force: true });
 ```
 
 ## Provenance from the caller lands on both cards

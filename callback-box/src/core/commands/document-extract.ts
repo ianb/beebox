@@ -18,12 +18,22 @@ import { gzip } from "node:zlib";
 import { promisify } from "node:util";
 import Sharp from "sharp";
 import { checkExtractionBounds, type DoclingImage, type DoclingService } from "../../services/docling.js";
+import { extractPdfText } from "./pdf-probe.js";
 import { err, ok, type Result } from "../../lib/result.js";
 
 const gzipAsync = promisify(gzip);
 
 /** Name of the gzipped canonical extraction inside the card's attach scope. */
 const DOCLING_JSON_FILENAME = "docling.json.gz";
+
+/**
+ * Name of the raw text layer inside the card's attach scope (D8). The card's
+ * body is Docling's rendering — faithful but lossy — so the producer's own
+ * characters are kept verbatim beside it rather than only in the original's
+ * bytes. Reference-free by convention, like the page renders: the schema
+ * instructions name it, nothing in frontmatter points at it.
+ */
+const TEXT_LAYER_FILENAME = "text-layer.txt";
 
 /**
  * AVIF encode settings for page renders and figures (D10). Quality 60 keeps
@@ -120,6 +130,18 @@ export async function extractDocument(options: ExtractDocumentOptions): Promise<
   await fs.writeFile(path.join(options.attachAbsDir, DOCLING_JSON_FILENAME), await gzipAsync(json));
   assetNames.push(DOCLING_JSON_FILENAME);
 
+  // The raw text layer, read straight off the source (D8). Only document mode
+  // pays for this — the textless branch never reaches here, so a scan with no
+  // text is not charged for a full-document extraction that would yield
+  // nothing. Empty or unavailable → no file, because an empty asset is worse
+  // than an absent one: it reads as "the document has no text" rather than
+  // "nobody could look".
+  const textLayer = await extractPdfText(options.sourcePath);
+  if (textLayer !== null) {
+    await fs.writeFile(path.join(options.attachAbsDir, TEXT_LAYER_FILENAME), textLayer, "utf-8");
+    assetNames.push(TEXT_LAYER_FILENAME);
+  }
+
   const pages = await encodeImages(pageImages, { prefix: "page", attachAbsDir: options.attachAbsDir });
   const figureAssets = await encodeImages(figures, { prefix: "figure", attachAbsDir: options.attachAbsDir });
   assetNames.push(...pages.names, ...figureAssets.names);
@@ -154,7 +176,9 @@ export async function clearExtractionAssets(
   const stale = entries.filter(
     (name) =>
       name !== options.keep
-      && (name === DOCLING_JSON_FILENAME || /^(?:page|figure)-\d{3}\.avif$/u.test(name))
+      && (name === DOCLING_JSON_FILENAME
+        || name === TEXT_LAYER_FILENAME
+        || /^(?:page|figure)-\d{3}\.avif$/u.test(name))
   );
   for (const name of stale) await fs.rm(path.join(attachAbsDir, name), { force: true });
   return stale;

@@ -21,13 +21,7 @@ import * as path from "node:path";
 import { err, ok, okVoid, type Result } from "../lib/result.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
-
-/**
- * Pinned Docling release (D3). `uvx --from docling==<pin>` resolves one cached
- * environment; an unpinned `uvx docling` would silently upgrade under us and
- * change extraction output between two runs of the same document.
- */
-export const DOCLING_VERSION = "2.117.0";
+import { DOCLING_VERSION } from "./docling-version.js";
 
 /**
  * Docling's own per-document budget, passed as `--document-timeout` (D6). It
@@ -39,9 +33,10 @@ const DOCUMENT_TIMEOUT_SECONDS = 600;
 /**
  * Outer kill, counted in *awake* time (D6). Larger than the inner budget
  * because a cold host still has to build the uv environment and load model
- * weights before conversion starts.
+ * weights before conversion starts — but only by a few minutes: a run that has
+ * not finished by then is stuck, not slow (boxholder review 2026-08-02).
  */
-const PROCESS_TIMEOUT_MS = 15 * 60 * 1000;
+const PROCESS_TIMEOUT_MS = 10 * 60 * 1000;
 
 /** How much subprocess output travels into a failure message (which lands in a card's `error:`). */
 const ERROR_DETAIL_LIMIT = 400;
@@ -67,7 +62,7 @@ const OUTPUT_TAIL_BYTES = 64 * 1024;
  * back to `status: new` + `error:` and intake still completes).
  */
 export const MAX_EXTRACTION_ARTIFACTS = 500;
-export const MAX_EXTRACTION_BYTES = 1024 ** 3;
+export const MAX_EXTRACTION_BYTES = 512 * 1024 ** 2;
 
 export interface DoclingExtractOptions {
   /** Scratch directory Docling writes into. Caller owns creation and cleanup. */
@@ -262,7 +257,7 @@ export function createDoclingService(): DoclingService {
   return {
     async extract(sourcePath, options): Promise<Result<DoclingExtraction>> {
       const controller = new AbortController();
-      // A 15-minute `setTimeout` fires the instant a sleeping laptop wakes
+      // A plain multi-minute `setTimeout` fires the instant a sleeping laptop wakes
       // (CLAUDE.md, time discipline), which would kill a healthy extraction.
       const budget = startAwakeTimeout({
         timeoutMs: PROCESS_TIMEOUT_MS,

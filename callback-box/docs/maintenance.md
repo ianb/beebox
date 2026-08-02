@@ -13,6 +13,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Task | Command | Cadence | Output |
 |------|---------|---------|--------|
 | Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated (launchd, weekdays); manual anytime | Bumped `package.json` + lockfile |
+| Docling currency watch | `pnpm check-docling-update` (monorepo root) | Automated (rides the SDK-update launchd job); manual anytime | Console (silent when nothing to report) |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Prompt viewer | `pnpm prompt-viewer` | After prompt or schema-instruction changes | `dev/prompts/data.json` + size ledger (browse at `/<worktree>/dev/prompts/`) |
@@ -54,6 +55,27 @@ report, exit 1 when behind) work anytime.
 which verifies the undocumented mid-turn input semantics the chat session
 depends on still hold. Then commit; prod picks the new version up on the next
 `main` deploy.
+
+### Docling currency watch — `pnpm check-docling-update` (monorepo root)
+
+Compares the pinned Docling release — `DOCLING_VERSION` in
+`src/services/docling-version.ts`, the one place it lives, read by the extractor,
+`deploy/setup-server.sh`, and this check — against PyPI. It prints a line only
+when the newest release is **both** above the pin and more than **14 days** old;
+otherwise it says nothing and exits 0. The settling window keeps us off day-one
+releases: Docling ships often, and a regression in a document extractor lands in
+stored card content where it is expensive to notice.
+
+**When to run:** automated — the check is appended to
+`bin/update-agent-sdk-scheduled.sh`, so it rides that job's weekday cadence and
+writes into the same log (`~/Library/Logs/callback-box-sdk-update.log`). Manual
+runs work anytime.
+
+**It never updates anything, deliberately.** A Docling bump is judgment work:
+re-read `docling convert --help` for flag changes (the CLI has moved flags
+between releases), bump the constant, then `cb document reanalyze` a sample
+document and diff the output. See
+`docs/plans/scanner-ingest-docling-decisions.md` (D3).
 
 ### Knowledge audits — `npm run knowledge-audit`
 

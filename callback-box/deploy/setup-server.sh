@@ -39,27 +39,6 @@ echo "Node.js $(node -v)"
 corepack enable pnpm
 echo "pnpm $(pnpm -v)"
 
-# ── uv + Docling (document extraction) ──────────────────────────────
-# `cb scan-import`'s document mode shells out to `uvx docling` (see
-# src/services/docling.ts). uv is installed for the callback user because
-# that is who runs the box children, and uv caches its environments and
-# Docling caches its model weights under the invoking user's home — one
-# install serves every box on the host, since they all run as this user.
-echo "Installing uv for $CB_USER..."
-su - "$CB_USER" -c 'command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh'
-su - "$CB_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
-
-# Pre-fetch exactly the model weights document mode uses, so the first scanned
-# PDF does not hang for minutes downloading them. OCR weights are deliberately
-# NOT fetched: extraction runs with do_ocr=False (the scanner supplies the text
-# layer), and textless PDFs go to the Gemini photo flow instead — see
-# docs/plans/scanner-ingest-docling-decisions.md (D1, D11). `layout` covers
-# reading order; `tableformer` covers both fast and accurate table modes.
-# Keep the version in step with DOCLING_VERSION in src/services/docling.ts.
-DOCLING_VERSION=2.117.0
-echo "Pre-fetching Docling models (layout + tableformer)..."
-su - "$CB_USER" -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; uvx --from docling==$DOCLING_VERSION docling-tools models download layout tableformer"
-
 # AVIF encoding for page renders and figures needs no system package: `sharp`
 # ships a prebuilt libvips with AVIF (libheif/aom) support, verified below so a
 # platform without a prebuild fails here rather than at the first scan.
@@ -96,6 +75,34 @@ for repo in "${REPOS[@]}"; do
     git clone "$REPO_BASE/$repo.git" "$INSTALL_DIR/$repo"
   fi
 done
+
+# ── uv + Docling (document extraction) ──────────────────────────────
+# `cb scan-import`'s document mode shells out to `uvx docling` (see
+# src/services/docling.ts). uv is installed for the callback user because
+# that is who runs the box children, and uv caches its environments and
+# Docling caches its model weights under the invoking user's home — one
+# install serves every box on the host, since they all run as this user.
+# This runs after the clone because the pinned version is read out of the
+# checkout, and after the user exists because everything here runs as them.
+echo "Installing uv for $CB_USER..."
+su - "$CB_USER" -c 'command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh'
+su - "$CB_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
+
+# Pre-fetch exactly the model weights document mode uses, so the first scanned
+# PDF does not hang for minutes downloading them. OCR weights are deliberately
+# NOT fetched: extraction runs with do_ocr=False (the scanner supplies the text
+# layer), and textless PDFs go to the Gemini photo flow instead — see
+# docs/plans/scanner-ingest-docling-decisions.md (D1, D11). `layout` covers
+# reading order; `tableformer` covers both fast and accurate table modes.
+# The version comes from the one place that holds it, so this can never pin a
+# different Docling than the extractor asks `uvx` for.
+DOCLING_VERSION="$(sed -n 's/^export const DOCLING_VERSION = "\([^"]*\)";$/\1/p' "$INSTALL_DIR/callback-box/src/services/docling-version.ts")"
+if [[ -z "$DOCLING_VERSION" ]]; then
+  echo "Could not read DOCLING_VERSION from src/services/docling-version.ts" >&2
+  exit 1
+fi
+echo "Pre-fetching Docling $DOCLING_VERSION models (layout + tableformer)..."
+su - "$CB_USER" -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; uvx --from docling==$DOCLING_VERSION docling-tools models download layout tableformer"
 
 # ── Install and build ───────────────────────────────────────────────
 echo "Installing callback-box..."
