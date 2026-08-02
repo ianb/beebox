@@ -25,6 +25,8 @@ import {
   parseFilters,
   matches,
   deriveFacets,
+  addVisibilityPrefix,
+  stripVisibilityPrefix,
 } from "./router-issues.js";
 
 // --- parseFrontmatter ---------------------------------------------------------
@@ -119,6 +121,53 @@ test("parseIssueFile: no title anywhere falls back to the slug", () => {
   assert.equal(issue.research, "none");
 });
 
+// --- visibility (private-issues shadow repo) -----------------------------------
+
+test("parseIssueFile: visibility defaults to public when omitted", () => {
+  const issue = parseIssueFile("bugs/2026-01-01-fix-the-thing.md", `---\ntitle: "Fix"\n---\nbody`);
+  assert.equal(issue.visibility, "public");
+});
+
+test("parseIssueFile: private records get visibility set, and category/closed parsing is identical to public", () => {
+  const src = `---\ntitle: "Private thing"\nresolution: implemented\n---\nbody`;
+  const publicIssue = parseIssueFile("closed/features/2026-02-02-x.md", src, "public");
+  const privateIssue = parseIssueFile("closed/features/2026-02-02-x.md", src, "private");
+  assert.equal(privateIssue.visibility, "private");
+  // Same relPath, same source — every OTHER field must parse identically
+  // regardless of visibility, since relPath stays issue-relative for both
+  // sources and category/closed classification never looks at visibility.
+  assert.equal(privateIssue.category, publicIssue.category);
+  assert.equal(privateIssue.closed, publicIssue.closed);
+  assert.equal(privateIssue.slug, publicIssue.slug);
+  assert.deepEqual(privateIssue.frontmatter, publicIssue.frontmatter);
+});
+
+// --- addVisibilityPrefix / stripVisibilityPrefix (URL layer) -------------------
+
+test("addVisibilityPrefix / stripVisibilityPrefix: round-trip for public and private, including closed/ nesting", () => {
+  for (const visibility of ["public", "private"] as const) {
+    for (const relPath of ["bugs/2026-01-01-foo.md", "closed/features/2026-02-02-bar.md"]) {
+      const url = addVisibilityPrefix(relPath, visibility);
+      const back = stripVisibilityPrefix(url);
+      assert.equal(back.visibility, visibility);
+      assert.equal(back.relPath, relPath);
+    }
+  }
+});
+
+test("addVisibilityPrefix: public relPath is unprefixed; private gets a private/ segment", () => {
+  assert.equal(addVisibilityPrefix("bugs/foo.md", "public"), "bugs/foo.md");
+  assert.equal(addVisibilityPrefix("bugs/foo.md", "private"), "private/bugs/foo.md");
+});
+
+test("stripVisibilityPrefix: a category that merely starts with 'private' (not the literal segment) stays public", () => {
+  // Guards against a naive startsWith("private") — only a full "private/"
+  // path SEGMENT switches visibility, never a same-prefixed category name.
+  const out = stripVisibilityPrefix("private-stuff/2026-01-01-foo.md");
+  assert.equal(out.visibility, "public");
+  assert.equal(out.relPath, "private-stuff/2026-01-01-foo.md");
+});
+
 // --- labels facet -------------------------------------------------------------
 
 test("parseIssueFile: labels parsed from a flow list", () => {
@@ -142,6 +191,27 @@ test("matches: an issue appears under each of its labels, and not under others",
   assert.equal(under("soft-launch"), true);
   assert.equal(under("epic-onboarding"), true);
   assert.equal(under("nope"), false);
+});
+
+test("parseFilters: visibility facet reads a valid value, ignores an invalid one", () => {
+  assert.equal(parseFilters(new URLSearchParams("visibility=private")).visibility, "private");
+  assert.equal(parseFilters(new URLSearchParams("visibility=public")).visibility, "public");
+  assert.equal(parseFilters(new URLSearchParams("visibility=bogus")).visibility, undefined);
+  assert.equal(parseFilters(new URLSearchParams("")).visibility, undefined);
+});
+
+test("matches: visibility filter isolates public from private issues, unset shows both", () => {
+  const pub = parseIssueFile("bugs/2026-01-01-a.md", `---\ntitle: "A"\n---\nx`, "public");
+  const priv = parseIssueFile("bugs/2026-01-01-a.md", `---\ntitle: "A"\n---\nx`, "private");
+  const publicOnly = parseFilters(new URLSearchParams("visibility=public"));
+  const privateOnly = parseFilters(new URLSearchParams("visibility=private"));
+  const unset = parseFilters(new URLSearchParams(""));
+  assert.equal(matches(pub, publicOnly, false), true);
+  assert.equal(matches(priv, publicOnly, false), false);
+  assert.equal(matches(pub, privateOnly, false), false);
+  assert.equal(matches(priv, privateOnly, false), true);
+  assert.equal(matches(pub, unset, false), true);
+  assert.equal(matches(priv, unset, false), true);
 });
 
 test("deriveFacets: lists distinct labels sorted, across issues", () => {
@@ -348,6 +418,119 @@ test("collectOverlay: a worktree with no .git marker is skipped, not fatal", asy
   await fs.mkdir(path.join(worktreesRoot, "not-a-repo"), { recursive: true });
   const overlay = await collectOverlay(worktreesRoot);
   assert.equal(overlay.byPath.size, 0);
+  assert.equal(overlay.byPathPrivate.size, 0);
   assert.equal(overlay.worktreeRoots.size, 0);
+  await fs.rm(base, { recursive: true, force: true });
+});
+
+// --- private-issues mount: listIssues + collectOverlay -------------------------
+
+test("listIssues: an absent private root yields zero records, not an error", async () => {
+  const base = await mkTmpDir("router-issues-noprivroot-");
+  const records = await listIssues(path.join(base, "private-issues"), "private");
+  assert.deepEqual(records, []);
+  await fs.rm(base, { recursive: true, force: true });
+});
+
+test("listIssues: private root's categories sit at ITS root (no issues/ prefix), and every record is tagged private", async () => {
+  const base = await mkTmpDir("router-issues-privroot-");
+  const privateRoot = path.join(base, "private-issues");
+  await fs.mkdir(path.join(privateRoot, "bugs"), { recursive: true });
+  await fs.mkdir(path.join(privateRoot, "closed", "features"), { recursive: true });
+  await fs.writeFile(path.join(privateRoot, "bugs", "2026-01-01-alpha.md"), `---\ntitle: "Alpha"\n---\nbody`);
+  await fs.writeFile(path.join(privateRoot, "closed", "features", "2026-02-02-beta.md"), `---\ntitle: "Beta"\n---\nbody`);
+  // A root-level file (the private repo's README.md analogue) outside any
+  // recognized category dir must stay invisible, same as the public side.
+  await fs.writeFile(path.join(privateRoot, "README.md"), "not an issue");
+
+  const records = await listIssues(privateRoot, "private");
+  assert.equal(records.length, 2);
+  assert.ok(records.every((r) => r.visibility === "private"));
+  assert.ok(records.some((r) => r.relPath === "bugs/2026-01-01-alpha.md" && !r.closed));
+  assert.ok(records.some((r) => r.relPath === "closed/features/2026-02-02-beta.md" && r.closed));
+  await fs.rm(base, { recursive: true, force: true });
+});
+
+async function writePrivateIssue(privateRoot: string, relPath: string, content: string): Promise<void> {
+  const full = path.join(privateRoot, relPath);
+  await fs.mkdir(path.dirname(full), { recursive: true });
+  await fs.writeFile(full, content, "utf8");
+}
+
+test(
+  "collectOverlay: private worktree overlay is scoped to category dirs, keeps a root file out, and never merges into the public map even at the same relPath",
+  { timeout: 30_000 },
+  async () => {
+    const base = await mkTmpDir("router-issues-privoverlay-");
+    const worktreesRoot = path.join(base, "worktrees");
+    await fs.mkdir(worktreesRoot, { recursive: true });
+
+    // The public side of the worktree: an ordinary repo, seeded with an
+    // issue at "bugs/2026-01-01-alpha.md" — the SAME relPath the private
+    // side below will also use, to prove the two never cross-attribute.
+    const wtRoot = path.join(worktreesRoot, "worktree-priv");
+    await fs.mkdir(wtRoot, { recursive: true });
+    await git(wtRoot, ["init", "-q", "-b", "main"]);
+    await git(wtRoot, ["config", "user.email", "test@example.com"]);
+    await git(wtRoot, ["config", "user.name", "Test"]);
+    await writeIssue(wtRoot, "bugs/2026-01-01-alpha.md", `---\ntitle: "Public alpha"\n---\nbody`);
+    await git(wtRoot, ["add", "-A"]);
+    await git(wtRoot, ["commit", "-q", "-m", "seed public"]);
+
+    // The private mount: router-issues.ts only cares that <wtRoot>/private-issues
+    // has a .git marker — in production it's a symlink to a private worktree,
+    // but a plain directory that IS its own repo stands in fine for this test.
+    // Categories sit at ITS root (no "issues/" prefix), matching the plan.
+    const privRoot = path.join(wtRoot, "private-issues");
+    await fs.mkdir(privRoot, { recursive: true });
+    await git(privRoot, ["init", "-q", "-b", "main"]);
+    await git(privRoot, ["config", "user.email", "test@example.com"]);
+    await git(privRoot, ["config", "user.name", "Test"]);
+    await writePrivateIssue(privRoot, "bugs/2026-01-01-alpha.md", `---\ntitle: "Private alpha"\n---\nbody`);
+    await writePrivateIssue(privRoot, "README.md", "not an issue — must never appear as one");
+    await git(privRoot, ["add", "-A"]);
+    await git(privRoot, ["commit", "-q", "-m", "seed private"]);
+    await git(privRoot, ["checkout", "-q", "-b", "worktree-priv"]);
+    // An untracked new private issue, to exercise the ls-files leg too.
+    await writePrivateIssue(privRoot, "bugs/2026-03-03-gamma.md", `---\ntitle: "Private new"\n---\nbody`);
+
+    const overlay = await collectOverlay(worktreesRoot);
+
+    // The root README.md never leaks in as a phantom issue.
+    assert.equal(overlay.byPathPrivate.has("README.md"), false);
+
+    // The untracked private issue is present, keyed relative to the private
+    // root (no "issues/" prefix).
+    const gamma = overlay.byPathPrivate.get("bugs/2026-03-03-gamma.md");
+    assert.ok(gamma?.some((e) => e.worktree === "worktree-priv" && e.status === "added" && e.committed === false));
+
+    // Neither map crosses into the other for the shared relPath: the public
+    // worktree made no changes to bugs/2026-01-01-alpha.md (it just seeded
+    // it on main, so main...HEAD and HEAD are both clean for it), so byPath
+    // has nothing for it — while byPathPrivate also has nothing for it
+    // (unchanged since the private "seed" commit). The key assertion is that
+    // gamma (private-only) never appears in byPath at all.
+    assert.equal(overlay.byPath.get("bugs/2026-03-03-gamma.md"), undefined);
+
+    await fs.rm(base, { recursive: true, force: true });
+  },
+);
+
+test("collectOverlay: a worktree with no private-issues mount contributes nothing to byPathPrivate", async () => {
+  const base = await mkTmpDir("router-issues-noprivmount-");
+  const worktreesRoot = path.join(base, "worktrees");
+  const wtRoot = path.join(worktreesRoot, "worktree-bare");
+  await fs.mkdir(wtRoot, { recursive: true });
+  await git(wtRoot, ["init", "-q", "-b", "main"]);
+  await git(wtRoot, ["config", "user.email", "test@example.com"]);
+  await git(wtRoot, ["config", "user.name", "Test"]);
+  await writeIssue(wtRoot, "bugs/2026-01-01-a.md", `---\ntitle: "A"\n---\nbody`);
+  await git(wtRoot, ["add", "-A"]);
+  await git(wtRoot, ["commit", "-q", "-m", "seed"]);
+
+  const overlay = await collectOverlay(worktreesRoot);
+  assert.equal(overlay.byPathPrivate.size, 0);
+  // The public side still works normally.
+  assert.ok(overlay.worktreeRoots.has("worktree-bare"));
   await fs.rm(base, { recursive: true, force: true });
 });
