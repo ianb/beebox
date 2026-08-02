@@ -50,15 +50,19 @@ and mints the token; the steps in full:
    ```bash
    git clone <repo> && cd <repo>
    pnpm install --filter "scan-uploader..."
-   pnpm --filter scan-uploader build
    ```
 
-   Note: the workspace's `node-linker=hoisted` (root `.npmrc`) means the
-   filtered install still materializes the full hoisted tree (~1.3 GB) — it
-   works verbatim from a clean clone (verified by `smoke-install.sh`) but
-   is not lighter than a full install. For additional machines, skip the
-   clone entirely: `dist/scan-uploader.mjs` is self-contained — copy that
-   one file to any machine with Node.
+   That's it — `bin/scan-uploader` runs the CLI straight from source via
+   `tsx`, so a checkout is always current; no build step. (Note: the
+   workspace's `node-linker=hoisted`, root `.npmrc`, means the filtered
+   install still materializes the full hoisted tree (~1.3 GB) — it works
+   verbatim from a clean clone, verified by `smoke-install.sh`, but isn't
+   lighter than a full install.)
+
+   For additional machines that shouldn't hold a full checkout, build once
+   (`pnpm --filter scan-uploader build`) to produce the self-contained
+   `dist/scan-uploader.mjs`, and copy just that one file to any machine
+   with Node.
 
 2. **Mint a token** in the box's settings page (shown once — keep the page
    open until step 3 has consumed it).
@@ -115,6 +119,14 @@ idempotent — running it again when nothing is installed reports that and
 exits cleanly. `schedule` is macOS-only (same posture as the `trash`
 disposition) — it refuses outright on other platforms rather than silently
 no-op.
+
+On a checkout, the scheduled sweep runs through `bin/scan-uploader` itself
+(source mode — same tsx run as everything else), so its sweeps track
+source just like a manual run does; a copied-bundle machine's schedule
+instead runs the bundle directly with `node`, as before. If a LaunchAgent
+was installed before this distinction existed (bundle-mode plist on a
+checkout), re-run `schedule install` once to pick up the source-mode
+plist — `install` always rewrites in place.
 
 ## Config
 

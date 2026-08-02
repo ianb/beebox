@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
-# Runs the scan-uploader CLI from this checkout (the built single-file
-# bundle). On machines without a checkout, copy scan-uploader/dist/
+# Runs the scan-uploader CLI from this checkout, straight from SOURCE via
+# tsx — a checkout run is always current, no rebuild needed after pulling.
+# On machines without a checkout, copy the built scan-uploader/dist/
 # scan-uploader.mjs and run it with plain `node` — see scan-uploader/README.md.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-BUNDLE="$ROOT/scan-uploader/dist/scan-uploader.mjs"
-if [ ! -f "$BUNDLE" ]; then
-  echo "scan-uploader is not built yet — run: pnpm --filter scan-uploader build" >&2
+
+# node-linker=hoisted (root .npmrc) puts tsx at the workspace root, not in
+# scan-uploader/node_modules. Prefer the root bin and fall back to the local
+# one (mirrors bin/browse).
+if [[ -x "$ROOT/node_modules/.bin/tsx" ]]; then
+  TSX="$ROOT/node_modules/.bin/tsx"
+elif [[ -x "$ROOT/scan-uploader/node_modules/.bin/tsx" ]]; then
+  TSX="$ROOT/scan-uploader/node_modules/.bin/tsx"
+else
+  echo "scan-uploader: tsx not found. Run 'pnpm install' at the monorepo root." >&2
   exit 1
 fi
-exec node "$BUNDLE" "$@"
+
+# $TSX is an absolute path resolved from $ROOT above — this does not cd, so
+# the caller's cwd (and any relative paths on the command line, e.g. a
+# config path) is preserved exactly, whether this wrapper is run from the
+# repo root or anywhere else.
+exec "$TSX" "$ROOT/scan-uploader/src/cli.ts" "$@"

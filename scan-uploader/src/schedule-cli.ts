@@ -122,8 +122,8 @@ async function runInstall(args: readonly string[]): Promise<number> {
     uid: requireUid(),
     runner: new RealLaunchctlRunner(),
     configPath,
-    nodePath: process.execPath,
-    bundlePath: resolveBundlePath(),
+    execPath: process.execPath,
+    entryPath: resolveEntryPath(),
     intervalMinutes,
   });
   printInstallResult(result);
@@ -150,7 +150,11 @@ async function runStatus(): Promise<number> {
   return 0;
 }
 
-function resolveBundlePath(): string {
+/** The absolute path of the currently-running entry point — `.ts` on a
+ * checkout run (`bin/scan-uploader` execs tsx against `src/cli.ts`), `.mjs`
+ * when running a copied `dist/scan-uploader.mjs` bundle. Determines
+ * source-vs-bundle mode (`schedule.ts`'s `detectRunMode`). */
+function resolveEntryPath(): string {
   const argv1 = process.argv[1];
   if (argv1 === undefined) {
     const message = "could not resolve the running script's path from process.argv[1]";
