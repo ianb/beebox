@@ -255,6 +255,20 @@ claim as false until a fresh rsync from the server proves otherwise. Prod
 itself may or may not already be on annex — nothing available locally
 answers that; the pre-checks below settle it before the real cutover starts.
 
+**Update (2026-08-01, checked on the server): prod IS already converted.**
+Both prod boxes carry the "Claim assets into manifests (pre-annex)" → "Move
+assets onto git-annex" commit pair dated 2026-07-31, `annex.version 10` /
+`annex.thin false`, and real annex objects on disk (estate: 1,359 objects;
+box-family: 12). So the cutover reduces to the verification pass: dry-run
+no-op, `cb doctor annex --check` (expect the `hook` check to need `cb
+init`), `annex-fsck`. One post-conversion anomaly found and filed
+(`issues/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md`): the
+photo-batch-upload flow committed raw JPEG blobs + old-scheme manifests on
+estate AFTER the conversion — likely the missing annex pre-commit hook plus
+a manifest-writing upload path. Note the box also has unrelated small
+metadata sidecars named `manifest.json` (`{"filename","captured","source"}`)
+— do not mistake them for asset manifests when running the pre-checks.
+
 ### What was and wasn't rehearsed
 
 Rehearsed against `rsync -a` copies of both local boxes under a scratch
