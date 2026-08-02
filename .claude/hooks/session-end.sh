@@ -129,6 +129,20 @@ MONO="$HOME/src/callback-box"
 
 echo "[session-end] worktree '$branch' is fully merged into main and clean — cleaning up"
 
+# Private-issues shadow worktree (bin/private-issues): remove it iff merged
+# into private main AND strictly clean; anything else is preserved as an
+# orphan OUTSIDE this worktree (the mount is only a symlink, so the public
+# cleanup below cannot touch private files) and re-reported by every sweep
+# until resolved. Must run BEFORE the trash-mv below (it classifies the
+# mount via the symlink). Never blocks public cleanup.
+PI_CLI="$worktree_path/bin/private-issues"
+[ -x "$PI_CLI" ] || PI_CLI="$MONO/bin/private-issues" # worktree predates the CLI
+if [ -x "$PI_CLI" ]; then
+  pi_result=$("$PI_CLI" remove-if-safe "$worktree_path" 2>/dev/null || echo "error")
+  echo "[session-end]   private-issues: $pi_result"
+  wlog "private-issues result=$pi_result wt=$worktree_path"
+fi
+
 # Tell the dev router to stop this worktree's processes immediately so
 # there's nothing left binding the cloned-box files when we delete them.
 if curl -fsS -X POST -m 5 "http://127.0.0.1:3210/__router/stop/$name" >/dev/null 2>&1; then

@@ -26,6 +26,10 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
    - anything unusual about **scope or verification** its final report should be
      honest about (e.g. "tests pass but I never exercised it in the app").
 
+   If the worktree has a `private-issues/` mount, the subagent lands that
+   repo's branch too (its step 1b detects this itself); relay its `PRIVATE:`
+   line to the human verbatim — especially a MERGE/PUSH FAILED one.
+
    Don't ask "close-out vs checkpoint" — it changed nothing the flow does. The
    subagent's work is identical either way, and cleanup is the SessionEnd hook's
    job: it fires on ANY worktree exit once the branch is merged + clean,

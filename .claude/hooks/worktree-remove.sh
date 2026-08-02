@@ -41,6 +41,22 @@ ROUTER_PORT="${ROUTER_PORT:-3210}"
 echo "[worktree-remove] name=$NAME"
 wlog "event: name=$NAME name_in='$name_from_input' path_in='$path_from_input'"
 
+# Private-issues shadow worktree: remove iff merged + strictly clean, else
+# preserve as an orphan (it lives outside this worktree — Claude Code's
+# removal only deletes the mount symlink — and every sweep re-reports it).
+# Claude Code's own clean-check is blind to the private repo, which is why
+# this can't refuse; with the symlink topology it doesn't need to. Runs
+# before the worktree dir disappears; harmless if it already has (the CLI
+# fails closed and we || true it — this hook is non-blocking).
+WT_PATH="${path_from_input:-$HOME/src/callback-worktrees/$NAME}"
+PI_CLI="$WT_PATH/bin/private-issues"
+[ -x "$PI_CLI" ] || PI_CLI="$HOME/src/callback-box/bin/private-issues" # worktree predates the CLI
+if [ -x "$PI_CLI" ]; then
+  pi_result=$("$PI_CLI" remove-if-safe "$WT_PATH" 2>/dev/null || echo "error")
+  echo "[worktree-remove] private-issues: $pi_result"
+  wlog "private-issues result=$pi_result name=$NAME"
+fi
+
 # Tell the dev router to stop this worktree's processes immediately (rather
 # than waiting for its idle timeout). Best-effort — if the router isn't
 # running, the call just fails and we move on.
