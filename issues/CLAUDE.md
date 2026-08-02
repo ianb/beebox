@@ -11,8 +11,8 @@ is outside your current work, or when the resolution is genuinely unsettled.
 
 ## Layout: category subdirectories
 
-Open items live in one of six **category subdirectories** (the category *is* the
-directory — like `closed/` is the status, there is no `type:` field):
+Open items live in one of seven **category subdirectories** (the category *is*
+the directory — like `closed/` is the status, there is no `type:` field):
 
 - **`bugs/`** — actual defects: wrong behavior, data loss, crashes, flakes.
 - **`features/`** — new user/agent-facing capability.
@@ -23,6 +23,12 @@ directory — like `closed/` is the status, there is no `type:` field):
   (unify-or-not, keep-or-drop, evaluate-and-decide).
 - **`exploration/`** — not ready to implement: half-thought-out ideas,
   external-tool evaluations ("check out X"), research, agent-cognition tensions.
+- **`watch/`** — not actionable now, and not by us. Each item names an
+  **upstream/external trigger** and what to re-check when it fires (an upstream
+  bug we work around, a missing capability in a dependency). Visit a watch item
+  when its trigger lands — a dependency upgrade, a release note — not on a
+  schedule and not by picking it off the queue. If you *can* act on it today it
+  belongs in another category.
 
 Each item is one file, `<category>/YYYY-MM-DD-<slug>.md` (date = when filed; slug
 is the ID — pick a descriptive name). Before filing, grep the whole tree for
