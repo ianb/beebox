@@ -18,7 +18,10 @@ import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { trpc } from "../../lib/trpc";
 import { toastError } from "../ui/toast-store";
 import { voiceChipLabel } from "./voice-chip-label";
-import { VoicePanel, type TranscriptionServiceOption, type HqTranscriptionOption } from "./VoiceChip-panels";
+import {
+  VoicePanel, transcriptionServiceLabel, hqTranscriptionServiceLabel,
+  type TranscriptionServiceOption, type HqTranscriptionOption,
+} from "./VoiceChip-panels";
 
 // Single-panel submenu pattern (see ChatMenu.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -116,12 +119,31 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
     case "root":
       return (
         <>
-          <MenuItem onClick={onToggleMute}>{muted ? "✓ " : "  "}Mute</MenuItem>
-          <MenuItem onClick={onToggleNarration}>{narrationEnabled ? "✓ " : "  "}Narration mode</MenuItem>
+          <MenuItem onClick={onToggleMute} icon={<SpeakerIcon muted={muted} />}>
+            {muted ? "✓ " : ""}Mute
+          </MenuItem>
+          <MenuItem
+            onClick={onToggleNarration}
+            icon={
+              <span className={narrationEnabled ? undefined : "opacity-40"}>
+                <MicIcon />
+              </span>
+            }
+          >
+            {narrationEnabled ? "✓ " : ""}Narration mode
+          </MenuItem>
           <MenuDivider />
           <MenuItem onClick={onOpenVoice} keepOpen>
             <span className="flex justify-between gap-2 w-full">
-              <span>Voice settings</span>
+              <span className="min-w-0">
+                Voice settings
+                <span className="block text-xs text-warm-500 truncate">
+                  Live: {transcriptionServiceLabel(currentService)}
+                </span>
+                <span className="block text-xs text-warm-500 truncate">
+                  HQ: {hqTranscriptionServiceLabel(currentHqService)}
+                </span>
+              </span>
               <span className="text-warm-500">›</span>
             </span>
           </MenuItem>
@@ -189,7 +211,9 @@ export function VoiceChip({
   return (
     <Dropdown
       align="right"
-      width="w-56"
+      // w-64 (not the menu-default w-56) buys the root panel's "Live: … ·
+      // HQ: …" summary line room before it truncates.
+      width="w-64"
       panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (

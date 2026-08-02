@@ -34,6 +34,24 @@ const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   { label: "Voxtral + diarization", service: "voxtral-diarized" },
 ];
 
+function optionLabel(options: ReadonlyArray<{ label: string; service: string }>, service: string | null): string {
+  if (service === null) return "…";
+  return options.find((o) => o.service === service)?.label ?? service;
+}
+
+/** Display label for the current live-transcription service — the option's
+ * label, or the raw service id for values outside the picker (e.g. "fake"),
+ * or "…" while the config query hasn't resolved. For the root-panel summary
+ * line under "Voice settings". */
+export function transcriptionServiceLabel(service: string | null): string {
+  return optionLabel(TRANSCRIPTION_OPTIONS, service);
+}
+
+/** HQ counterpart of `transcriptionServiceLabel`. */
+export function hqTranscriptionServiceLabel(service: string | null): string {
+  return optionLabel(HQ_TRANSCRIPTION_OPTIONS, service);
+}
+
 /** "Voice settings" sub-panel: live + HQ transcription service pickers. */
 export function VoicePanel({
   onBack,
