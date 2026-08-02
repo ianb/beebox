@@ -7,6 +7,7 @@ import { href } from "../lib/routing";
 import { CalendarSection } from "../components/settings/CalendarSection";
 import { CompanionPairingSection } from "../components/settings/CompanionPairingSection";
 import { DriveSection } from "../components/settings/DriveSection";
+import { ScanUploaderSection } from "../components/settings/ScanUploaderSection";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
@@ -25,6 +26,8 @@ export function SettingsPage() {
         <Text as="h1" size="2xl" weight="bold">Settings</Text>
 
         <CompanionPairingSection />
+
+        <ScanUploaderSection />
 
         <CalendarSection />
 
