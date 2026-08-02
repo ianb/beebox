@@ -259,9 +259,15 @@ answers that; the pre-checks below settle it before the real cutover starts.
 Both prod boxes carry the "Claim assets into manifests (pre-annex)" → "Move
 assets onto git-annex" commit pair dated 2026-07-31, `annex.version 10` /
 `annex.thin false`, and real annex objects on disk (estate: 1,359 objects;
-box-family: 12). So the cutover reduces to the verification pass: dry-run
-no-op, `cb doctor annex --check` (expect the `hook` check to need `cb
-init`), `annex-fsck`. One post-conversion anomaly found and filed
+box-family: 12). So the cutover reduces to the verification pass — **run 2026-08-01, both
+boxes pass**: `cb doctor annex --check` 7/7 on both (including `hook` — the
+pre-commit hook IS installed on prod, unlike the rsync'd rehearsal copies);
+`cb doctor annex-fsck` "no bad content" on both (estate ~60s, box-family
+~2s); `to-annex --dry-run` no-op on box-family, and on estate correctly
+refused by the dirty-tree guard (an in-flight photo-upload batch was staged
+— the guard working as designed, with conversion already proven by the
+migration commits and annex objects). Track 0 is DONE. One post-conversion
+anomaly found and filed
 (`issues/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md`): the
 photo-batch-upload flow committed raw JPEG blobs + old-scheme manifests on
 estate AFTER the conversion — likely the missing annex pre-commit hook plus
