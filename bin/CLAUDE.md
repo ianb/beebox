@@ -195,7 +195,7 @@ to keep or remove.
 
 `bin/private-issues` manages the per-developer private issue repo
 (`issues/CLAUDE.md` has the what-goes-where rules; the plan is
-`callback-box/docs/plans/private-issues-shadow-repo.md`). Design invariants,
+`callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 in the spirit of the router protocol above:
 
 - **Symlink topology is the safety property.** Every checkout's

@@ -5,7 +5,7 @@
  * machine (the symlink exists) but is dangling for everyone else, so a
  * filesystem-resolution check (like the rest of doc-check) would silently
  * pass it there. This check is lexical and runs before/independent of any
- * filesystem resolution — see docs/plans/private-issues-shadow-repo.md
+ * filesystem resolution — see docs/implemented-plans/private-issues-shadow-repo.md
  * section I.
  *
  * Pure logic (no fs) so it's unit-testable; `doc-check.ts` wires it to the

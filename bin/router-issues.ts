@@ -31,7 +31,7 @@ export type ResearchState = "none" | "awaiting" | "researched";
 
 // "public" is the tracked, source-available issues/ tree; "private" is the
 // shadow repo mounted at private-issues/ (see
-// callback-box/docs/plans/private-issues-shadow-repo.md section H). This is a
+// callback-box/docs/implemented-plans/private-issues-shadow-repo.md section H). This is a
 // RECORD field, not a path prefix — relPath stays issue-relative for both
 // sources ("bugs/2026-08-01-foo.md"), so category/closed parsing in
 // parseIssueFile never has to know which source it came from. Only URLs carry

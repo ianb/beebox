@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CLI for the private-issues shadow repo (see
-# callback-box/docs/plans/private-issues-shadow-repo.md).
+# callback-box/docs/implemented-plans/private-issues-shadow-repo.md).
 #
 # A separate, per-developer git repo holds issues that must not enter this
 # source-available repo. Its checkouts mirror callback-box's: the main
