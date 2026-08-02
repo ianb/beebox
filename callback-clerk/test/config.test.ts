@@ -4,6 +4,7 @@ import {
   emptyConfig,
   getActiveBox,
   isBoxEnabled,
+  moveBox,
   normalizeConfig,
   removeBox,
   setActiveBox,
@@ -79,4 +80,22 @@ test("normalizeConfig drops malformed boxes and repairs activeBoxUrl", async (t)
   });
   t.same(config.boxes, [boxA]);
   t.equal(config.activeBoxUrl, boxA.boxUrl);
+});
+
+test("moveBox reorders the list without touching the active box", async (t) => {
+  const config = addBox(addBox(emptyConfig(), boxA), boxB);
+  const moved = moveBox(config, { boxUrl: boxB.boxUrl, delta: -1 });
+  t.same(moved.boxes.map((b) => b.boxUrl), [boxB.boxUrl, boxA.boxUrl]);
+  t.equal(moved.activeBoxUrl, boxA.boxUrl);
+});
+
+test("moveBox past either end is a no-op, not a wrap", async (t) => {
+  const config = addBox(addBox(emptyConfig(), boxA), boxB);
+  t.same(moveBox(config, { boxUrl: boxA.boxUrl, delta: -1 }).boxes, config.boxes);
+  t.same(moveBox(config, { boxUrl: boxB.boxUrl, delta: 1 }).boxes, config.boxes);
+});
+
+test("moveBox ignores a URL that isn't enabled", async (t) => {
+  const config = addBox(emptyConfig(), boxA);
+  t.same(moveBox(config, { boxUrl: "https://evil.example.com", delta: 1 }), config);
 });

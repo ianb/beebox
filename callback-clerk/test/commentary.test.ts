@@ -2,6 +2,7 @@ import { test } from "tap";
 import {
   buildCommentaryPayload,
   commentaryOpenUrl,
+  commentBlockedReason,
   type ReadablePage,
 } from "../src/domain/commentary.js";
 
@@ -87,4 +88,12 @@ test("commentaryOpenUrl tolerates trailing/leading slashes", async (t) => {
     commentaryOpenUrl("https://cb.example.org/test1/", "/chat?session=new"),
     "https://cb.example.org/test1/chat?session=new",
   );
+});
+
+test("commentBlockedReason passes http(s) pages and explains everything else", async (t) => {
+  t.equal(commentBlockedReason("https://example.com/article"), null);
+  t.equal(commentBlockedReason("http://localhost:3210/main/test1/"), null);
+  t.match(commentBlockedReason("chrome-extension://abc/options.html"), /http and https/);
+  t.match(commentBlockedReason("chrome://extensions/"), /http and https/);
+  t.match(commentBlockedReason(undefined), /No page/);
 });
