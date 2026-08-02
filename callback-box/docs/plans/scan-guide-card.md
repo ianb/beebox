@@ -373,5 +373,16 @@ Chunks 2–4 are independent of each other; all depend on chunk 1's vocabulary.
   - test1 is the only known holder; estate/box-family never had the file —
     they install the reshaped drafts directly as `config/scan.guide.card`
     after boxholder review (all `[VERIFY]` items resolved first).
+    **(Done for estate/box-family 2026-08-01 — installed on the prod
+    boxes.)**
+  - **test1 amendment (boxholder-directed 2026-08-01): step 2 is
+    replacement, not migration.** test1 is a generic demo/test box and must
+    carry no information about real people, but its `CLAUDE_SCANS.md`
+    names real family members. Its guide card therefore gets entirely
+    fictional demo priors (pre-written:
+    `scratch/box-readiness/test1-scan.guide.card`, exercising nicknames, a
+    two-people-one-name trap, confidence tiers, and era dating) instead of
+    the old bullets; steps 1, 3, 4 unchanged. Post-merge only — the
+    deployed engine can't read guide cards before then.
 - The plan ships as one unit on this worktree branch; merge to main is the
   boxholder's call.
