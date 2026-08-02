@@ -87,6 +87,39 @@ legal.length
 => 0
 ```
 
+## Angle-bracket inline link destinations are unwrapped (CommonMark form)
+
+```ts
+isForbiddenPrivateLinkTarget("<private-issues/a.md>")
+=> true
+
+// a title after the closing bracket doesn't hide the path
+isForbiddenPrivateLinkTarget('<private-issues/a.md> "some title"')
+=> true
+
+const bracketed = findPrivateLinkViolations("issues/features/x.md", "see [t](<private-issues/a.md>) for detail");
+JSON.stringify(bracketed)
+=> [{"path":"issues/features/x.md","line":1,"target":"<private-issues/a.md>"}]
+```
+
+## Doctest fixtures are covered: prose errors, fenced code stays exempt
+
+Doctest files (`.doctest.md`) are public tracked markdown — doc-check now
+scans them too — but they legitimately contain link syntax inside fenced
+code blocks (the code under test). A private-issues link in doctest prose
+must still error; the same text inside a fenced block must not.
+
+```ts
+const doctestProse = findPrivateLinkViolations("test/example.doctest.md", "See [the private thread](../private-issues/thread.md) for background before running this doctest.");
+JSON.stringify(doctestProse)
+=> [{"path":"test/example.doctest.md","line":1,"target":"../private-issues/thread.md"}]
+
+const fence = "```ts\nconst x = \"[t](private-issues/thread.md)\";\n```";
+const doctestFenced = findPrivateLinkViolations("test/example.doctest.md", fence);
+doctestFenced.length
+=> 0
+```
+
 ## The reason string names the rule and the fix
 
 ```ts

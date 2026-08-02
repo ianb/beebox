@@ -32,10 +32,20 @@ function stripFragmentAndQuery(target: string): string {
   return target.replace(/[#?].*$/, "").trim();
 }
 
+// CommonMark allows wrapping a link destination in angle brackets
+// (`[x](<private-issues/a.md>)`), including a trailing title outside them
+// (`<...> "title"`). Unwrap before any other parsing.
+function unwrapAngleBrackets(target: string): string {
+  const trimmed = target.trim();
+  if (!trimmed.startsWith("<")) return trimmed;
+  const closeIdx = trimmed.indexOf(">");
+  return closeIdx === -1 ? trimmed : trimmed.slice(1, closeIdx);
+}
+
 // Absolute (scheme://host/path) targets check only their path portion; a
 // non-URL scheme (mailto:, tel:, ...) has no filesystem/route path to check.
 function pathnameOf(target: string): { pathname: string; isExternal: boolean } | undefined {
-  const cleaned = stripFragmentAndQuery(target);
+  const cleaned = stripFragmentAndQuery(unwrapAngleBrackets(target));
   if (!cleaned) return undefined;
   if (!hasUriScheme(cleaned)) return { pathname: cleaned, isExternal: false };
   try {
