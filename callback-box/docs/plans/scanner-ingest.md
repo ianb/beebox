@@ -4,10 +4,14 @@
 verified + two cross-model reviews); not yet shipped. Track 6's
 scanner-priors mechanism reshaped 2026-08-01 by the `scan-guide-card.md`
 subplan (scan guide card + deprecated `CLAUDE_SCANS.md` fallback).
-Boxholder-gated remainder: Docling decisions review
-(`scanner-ingest-docling-decisions.md`), test1 scan-guide migration
-(runbook in `scan-guide-card.md`), prod annex cutover
-(`docs/server-operations.md` runbook), merge to main. **Done 2026-08-01:**
+Boxholder-gated remainder: prod annex cutover
+(`docs/server-operations.md` runbook), merge to main. Post-merge steps:
+test1 scan-guide replacement (pre-written fictional card,
+`scratch/box-readiness/test1-scan.guide.card`; runbook + amendment in
+`scan-guide-card.md`), scan-token minting + uploader config on the laptop
+(Track 5 go-live). **Done 2026-08-01:** Docling decisions review
+(boxholder-reviewed; final decisions written into
+`scanner-ingest-docling-decisions.md`). Also done 2026-08-01:
 box-readiness install — scan guides + destination landmarks committed on the
 prod estate and box-family boxes after boxholder adjudication, including a
 boxholder-directed merge of estate's `store/finances/` and `store/legal/`
