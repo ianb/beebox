@@ -191,6 +191,39 @@ On session exit with no changes the worktree is auto-removed and the
 the worktree's dev server. With uncommitted changes, Claude Code prompts
 to keep or remove.
 
+## Private-issues shadow repo (`private-issues`)
+
+`bin/private-issues` manages the per-developer private issue repo
+(`issues/CLAUDE.md` has the what-goes-where rules; the plan is
+`callback-box/docs/plans/private-issues-shadow-repo.md`). Design invariants,
+in the spirit of the router protocol above:
+
+- **Symlink topology is the safety property.** Every checkout's
+  `private-issues/` is a symlink (main → the private repo's primary tree;
+  worktree → a private worktree at `<parent>/private-issues-worktrees/<name>`
+  on branch `worktree-<name>`). No public-worktree removal path can touch
+  private files — it deletes a symlink. Never "simplify" the mount into a
+  real directory inside the worktree.
+- **Locations are derived, never hardcoded** — peers of the main checkout,
+  found via `git rev-parse --git-common-dir` from an explicit checkout-path
+  argument. The private repo must carry the identity marker
+  (`.callback-private-issues` + `callback.privateIssues` git config) before
+  any command mutates it; a same-named unrelated dir is refused.
+- **Remove-if-safe, orphan-if-not.** Cleanup (session-end, worktree-remove,
+  sweep) removes a private worktree only when merged into private `main` AND
+  strictly clean (no deletion-only exemption — deleting a private issue is
+  intentional work). Everything else is preserved as an orphan; nothing ever
+  forces, escalates a git refusal, or auto-commits. `bin/worktrees sweep`
+  reports orphaned private worktrees/branches unconditionally every run —
+  that report, not hook logs, is the durable discovery mechanism.
+- **All private-repo mutations serialize through the mkdir lock** in the
+  CLI (`pi_lock`), with safety checks re-run after acquiring — session-end
+  fires auto-sweep in the background and keeps cleaning, so concurrent
+  writers are routine, and concurrent `git worktree prune` corrupts state.
+- **`.gitignore` uses `/private-issues` with NO trailing slash** — a
+  dir-only (`…/`) pattern does not match a symlink, which would make the
+  mount stageable and defeat the leak guard.
+
 ## Multiple agents sharing one worktree
 
 A plan can spawn several concurrent task agents committing straight to the

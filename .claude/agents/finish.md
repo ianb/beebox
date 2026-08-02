@@ -104,6 +104,28 @@ You should be on `worktree-<name>` inside `~/src/callback-worktrees/<name>/`. If
 you're on `main` or in the main checkout, **return BLOCKED** — this is for
 worktrees only.
 
+### 1b. Detect the private-issues leg
+
+This worktree MAY have a private-issues mount (`private-issues/` — a symlink
+into a SEPARATE private git repo; see `issues/CLAUDE.md`). Classify it once:
+
+```bash
+bin/private-issues status .
+```
+
+- `state=no-repo` → the developer hasn't opted in. Skip every "private leg"
+  step below; report nothing about private issues.
+- `state=valid` (or `relink`) → the private leg is ACTIVE: this finish also
+  lands the private branch on private `main` (steps 2/3/8 gain a private
+  half), and every report includes a `PRIVATE:` line.
+- anything else (`invalid`, command fails) → **return BLOCKED** naming the
+  state. A present-but-broken mount is never "opted out" — committing or
+  merging through an unvalidated mount is how private work gets lost or
+  lands in the wrong repo.
+
+All private-repo commits/merges run FROM INSIDE `private-issues/` (it is a
+different repo — `git add` in the worktree root cannot see it, by design).
+
 ### 2. Commit any straggling changes
 
 If `git status` shows uncommitted changes: if the caller said they're intentional
@@ -111,6 +133,9 @@ If `git status` shows uncommitted changes: if the caller said they're intentiona
 describing what ships (not "wip"/"final" — what it does). If it's ambiguous
 whether they should ship or are accidental, **return BLOCKED** naming the files —
 don't discard and don't guess.
+
+**Private leg:** same rule for `git -C private-issues status` — commit private
+stragglers from inside `private-issues/`, same ambiguity → BLOCKED standard.
 
 ### 3. Pull main into the worktree branch
 
@@ -122,6 +147,10 @@ git merge main
 Conflicts: resolve carefully (read both sides, don't blindly pick), then
 typecheck + lint, then `git add` + `git commit`. If you can't resolve a conflict
 with high confidence, **return BLOCKED** with the conflicted paths.
+
+**Private leg:** also `git -C private-issues merge main` (private main into the
+private branch). Conflicts there are markdown-only; same resolve-or-BLOCKED
+rule, no typecheck/lint (the private repo has no tooling).
 
 ### 4. Run the full test suite
 
@@ -384,6 +413,13 @@ basename. Don't rely on the pre-commit hook failing later.
 
 Skip entirely if the work wasn't tied to a filed issue.
 
+**Private issues** close the same way (`git mv` to `closed/<category>/` +
+`resolution:` frontmatter) but INSIDE `private-issues/`, and `doc-check --fix`
+does NOT apply there (no tooling in the private repo) — fix any inbound links
+among private issues by hand. Public→private links are forbidden (doc-check
+hard-errors them); private→public links are fine and need no repair on a
+public move unless the public file was renamed.
+
 ### 8. Finalization gate, then merge into main
 
 Steps 5–7b may have changed files *after* the green verification tier. Before
@@ -395,10 +431,18 @@ merging, all three must hold:
    Track O code fix means the full tier ran again after it; a doc move means
    doc-check ran).
 3. **Main checkout clean and on `main`**: `git -C ~/src/callback-box status
-   --porcelain` is empty.
+   --porcelain` is empty AND `git -C ~/src/callback-box rev-parse
+   --abbrev-ref HEAD` prints `main` (check both — a clean checkout parked on
+   another branch would mis-target the merge).
+4. **Private leg only:** `git -C private-issues status --porcelain` empty
+   (strictly — deletions count), and the private PRIMARY checkout (the
+   `repo=` path from `bin/private-issues status .`) is on `main` and clean —
+   the private merge runs there. Any failure → BLOCKED (nothing has merged).
 
-Then merge — fast-forward only. You're INSIDE the worktree, so operate on the
-main checkout with `-C`:
+Then merge — fast-forward only, **public first, then private** (the merges
+can't be atomic across two repos; this order makes the failure mode the
+self-healing one — see the PRIVATE contract below). You're INSIDE the
+worktree, so operate on the main checkout with `-C`:
 
 ```bash
 MONO=~/src/callback-box
@@ -411,6 +455,21 @@ this run (e.g. another finish landed). If `--ff-only` refuses: go back to step
 3 (merge the new main in, re-verify), then return here — never create a merge
 commit from the main checkout. The monorepo `post-merge` hook triggers the
 deploy.
+
+**Private leg**, immediately after the public merge succeeds (skip if the
+private branch has no commits beyond private main — then `PRIVATE: no
+changes`):
+
+```bash
+PRIV=$(bin/private-issues status . | sed -n 's/.*repo=\([^ ]*\).*/\1/p')
+git -C "$PRIV" merge --ff-only "$BRANCH"
+R=$(git -C "$PRIV" remote | head -1)      # the actual remote name, never assume origin
+[ -n "$R" ] && git -C "$PRIV" push "$R" main
+```
+
+A failed private merge or push NEVER blocks, reverts, or downgrades the
+public result — the private branch is preserved (cleanup orphan-preserves
+it) and mergeable later. It MUST surface in the `PRIVATE:` report line.
 
 ### 9. Report
 
@@ -441,6 +500,16 @@ End your final message with a status line the caller can act on:
   test counts (X/X) or "docs-only, verification skipped", honest scope/verification
   notes (the step 5b MET/PARTIAL/UNMET tally when there was a plan to check), and
   any deferred cleanup (e.g. unresolved feedback item).
+- When the private leg is active (step 1b), EVERY report also carries exactly
+  one `PRIVATE:` line, one of:
+  - `PRIVATE: merged <hash>`
+  - `PRIVATE: no changes`
+  - `PRIVATE: MERGE FAILED — branch worktree-<name> preserved; run: git -C <priv> merge worktree-<name>`
+  - `PRIVATE: merged <hash>, PUSH FAILED — run: git -C <priv> push <remote> main`
+  - `PRIVATE: merged <hash>, not pushed (no remote)`
+  The overall line stays `RESULT: MERGED` when the public merge landed —
+  public main is the authority; a failed private leg is reported, never
+  silently folded into success and never a reason to revert.
 - `RESULT: BLOCKED` — followed by: exactly what's blocking (on main / conflicted
   paths / failing test output / ambiguous uncommitted files / missing info /
   unclear feedback item), what you completed before stopping, and what the human

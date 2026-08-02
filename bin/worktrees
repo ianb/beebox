@@ -179,6 +179,16 @@ case "$cmd" in
       branch=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
       echo "remove $name (branch=$branch)"
       if [ "$dry_run" = false ]; then
+        # Private-issues shadow worktree: remove iff merged + strictly
+        # clean, else preserve as an orphan (reported below on every run).
+        # The mount is a symlink, so the public removal below can't touch
+        # private files either way.
+        if [ -x "$REPO_DIR/bin/private-issues" ]; then
+          pi_result=$("$REPO_DIR/bin/private-issues" remove-if-safe "$d" 2>/dev/null || echo "error")
+          # || true: under set -e a failed [ ] as a line's last command kills
+          # the whole sweep.
+          { [ "$pi_result" != "nothing" ] && echo "  private-issues: $pi_result"; } || true
+        fi
         curl -fsS -X POST -m 3 --unix-socket "$ROUTER_SOCK" "http://router/__router/stop/$name" >/dev/null 2>&1 || true
         git -C "$MONO" worktree remove --force "$d" 2>/dev/null || true
         # A half-deleted worktree can defeat `worktree remove` — fall back
@@ -223,6 +233,16 @@ case "$cmd" in
       [ "$dry_run" = false ] && rm -f "$f"
       orphan_pids=$((orphan_pids + 1))
     done
+
+    # Private-issues durable orphan report + registration prune. Reported
+    # UNCONDITIONALLY on every sweep (hook logs are best-effort, so this is
+    # the mechanism that guarantees an orphaned private worktree/branch is
+    # eventually seen). Read-only apart from `prune`, which only drops
+    # registrations whose directories are already gone.
+    if [ -x "$REPO_DIR/bin/private-issues" ]; then
+      "$REPO_DIR/bin/private-issues" report-orphans "$REPO_DIR" 2>/dev/null | sed 's/^/private-issues /' || true
+      [ "$dry_run" = false ] && "$REPO_DIR/bin/private-issues" prune "$REPO_DIR" >/dev/null 2>&1 || true
+    fi
 
     suffix=""
     [ "$dry_run" = true ] && suffix=" (dry-run; nothing removed)"
