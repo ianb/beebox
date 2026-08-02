@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "@tanstack/react-router";
 import { cn } from "../../lib/cn";
 
 // The "first focusable menu item" the open/close focus management below
@@ -10,13 +9,14 @@ import { cn } from "../../lib/cn";
 // aren't `MenuItem`s themselves but are still real, reachable menu content.
 const FOCUSABLE_MENU_ITEM_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-interface DropdownContextValue {
+export interface DropdownContextValue {
   close: () => void;
   /** Tighter padding for menu items + dividers. */
   dense: boolean;
 }
 
-const DropdownContext = createContext<DropdownContextValue | null>(null);
+/** Exported for `MenuItem`/`MenuDivider` (`dropdown-menu-item.tsx`) only. */
+export const DropdownContext = createContext<DropdownContextValue | null>(null);
 
 /** Close the enclosing Dropdown. No-op outside one. For custom menu content. */
 export function useDropdownClose(): () => void {
@@ -60,6 +60,13 @@ export interface DropdownProps {
   /** Called whenever the menu transitions from open to closed. Use to reset
    *  per-open ephemeral state (e.g. submenu page). */
   onClose?: () => void;
+  /**
+   * Sub-panel depth for the panel-swap idiom (0 = root, 1+ = nested panels).
+   * When this changes while open, the content wrapper remounts (keyed on the
+   * value) and slides in — from the right on a deeper panel, from the left
+   * on a shallower one. Omit for menus with no sub-panels (no animation).
+   */
+  panelIndex?: number;
 }
 
 // The open-state half of the minimal focus management (full arrow-key roving
@@ -116,7 +123,32 @@ function useOpenMenuFocus({ open, menuRef, keyboardOpenRef }: {
   }, [open, menuRef]);
 }
 
-export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose }: DropdownProps) {
+// Direction for the panel-swap slide: the "adjust state during render"
+// pattern (react.dev "You Might Not Need an Effect") rather than an effect,
+// so the very first render after a `panelIndex` change already picks the
+// right class — an effect would land one render late. Calling `setState`
+// here is safe because it's conditioned on an actual change, so it can't
+// loop. The result is null until a panel swap happens WITHIN the current
+// open session: opening the menu itself must not slide (and must not reuse
+// the direction left over from a previous session — the onClose reset back
+// to the root panel records a spurious "left" that would otherwise play on
+// the next open), so each closed→open transition clears it.
+function usePanelSlideDirection({ open, panelIndex }: { open: boolean; panelIndex: number }): "right" | "left" | null {
+  const [prevPanelIndex, setPrevPanelIndex] = useState(panelIndex);
+  const [direction, setDirection] = useState<"right" | "left" | null>(null);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setDirection(null);
+  }
+  if (panelIndex !== prevPanelIndex) {
+    setDirection(open ? (panelIndex > prevPanelIndex ? "right" : "left") : null);
+    setPrevPanelIndex(panelIndex);
+  }
+  return direction;
+}
+
+export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, panelIndex }: DropdownProps) {
   const align = alignArg ?? "right";
   const vertical = verticalArg ?? "below";
   const width = widthArg ?? "w-48";
@@ -203,9 +235,23 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
     update();
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
+    // A width-class swap (e.g. ChatMenu's Recent-chats panel) now eases via
+    // CSS `transition-[width]` rather than snapping, so the menu's measured
+    // width changes continuously over ~150ms — a one-shot `update()` at the
+    // start of the swap would clamp `left` against the *old* width and drift
+    // out of sync as the box animates. A ResizeObserver on the menu element
+    // re-runs the clamp on every intermediate frame so `left` tracks the
+    // animating width instead of a single stale measurement.
+    const menu = menuRef.current;
+    let resizeObserver: ResizeObserver | null = null;
+    if (menu !== null) {
+      resizeObserver = new ResizeObserver(update);
+      resizeObserver.observe(menu);
+    }
     return () => {
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
+      resizeObserver?.disconnect();
     };
     // `width` participates because a panel swap may change the menu's width
     // class (e.g. ChatMenu's Recent-chats panel widens to 28rem) — the
@@ -232,6 +278,9 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       document.removeEventListener("keydown", handleKey);
     };
   }, [open, closeMenu]);
+
+  const currentPanelIndex = panelIndex ?? 0;
+  const direction = usePanelSlideDirection({ open, panelIndex: currentPanelIndex });
 
   const ctxValue = useMemo<DropdownContextValue>(() => ({ close: closeMenu, dense }), [closeMenu, dense]);
   const toggle = useCallback(
@@ -261,11 +310,29 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
               ref={menuRef}
               role="menu"
               style={coords}
-              className={cn("bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain", dense ? "py-0.5" : "py-1", width)}
+              className={cn(
+                "bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
+                dense ? "py-0.5" : "py-1",
+                width,
+              )}
             >
-              <DropdownContext.Provider value={ctxValue}>
-                {children}
-              </DropdownContext.Provider>
+              {/* Keyed on panelIndex: the panel-swap idiom (VoiceChip/ChatMenu/
+                  ContextChip) remounts this wrapper on every panel change, which
+                  also re-triggers useOpenMenuFocus's re-anchor observer. The
+                  slide direction reflects whether the new panel is deeper
+                  (right) or shallower (left); motion-safe: leaves it an instant
+                  swap under prefers-reduced-motion. */}
+              <div
+                key={currentPanelIndex}
+                className={cn(
+                  direction === "right" && "motion-safe:animate-dropdown-panel-in-right",
+                  direction === "left" && "motion-safe:animate-dropdown-panel-in-left",
+                )}
+              >
+                <DropdownContext.Provider value={ctxValue}>
+                  {children}
+                </DropdownContext.Provider>
+              </div>
             </div>,
             document.body,
           )
@@ -274,115 +341,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
   );
 }
 
-// ---------- MenuItem ----------
-
-interface MenuItemBase {
-  children: ReactNode;
-  icon?: ReactNode;
-  disabled?: boolean;
-  /** Styles as a destructive row. */
-  danger?: boolean;
-  /** Highlights the row as the current selection. */
-  active?: boolean;
-  /**
-   * Don't close the dropdown on click. Use for items that open a nested
-   * panel inside the same menu (e.g. submenu swap pattern).
-   */
-  keepOpen?: boolean;
-}
-
-export type MenuItemProps = MenuItemBase & (
-  | { onClick: () => void | Promise<void>; to?: never; href?: never }
-  | { to: string; onClick?: never; href?: never }
-  | { href: string; onClick?: never; to?: never }
-);
-
-interface RowClassOpts {
-  active: boolean;
-  danger: boolean;
-  disabled: boolean;
-  dense: boolean;
-}
-
-function rowClass({ active, danger, disabled, dense }: RowClassOpts): string {
-  const pad = dense ? "px-3 py-1" : "px-3 py-2";
-  if (disabled) {
-    return `block w-full text-left ${pad} text-warm-400 cursor-not-allowed`;
-  }
-  if (active) {
-    return `block w-full text-left ${pad} bg-warm-100 text-warm-900 font-medium`;
-  }
-  const color = danger ? "text-danger hover:bg-danger/10" : "text-warm-700 hover:bg-warm-50";
-  return `block w-full text-left ${pad} transition-colors ${color}`;
-}
-
-function MenuItemContent({ icon, children }: { icon: ReactNode | undefined; children: ReactNode }) {
-  if (icon === undefined) return children;
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span aria-hidden="true">{icon}</span>
-      <span>{children}</span>
-    </span>
-  );
-}
-
-function noop() {}
-
-export function MenuItem(props: MenuItemProps) {
-  const ctx = useContext(DropdownContext);
-  const close = ctx !== null ? ctx.close : noop;
-  const dense = ctx !== null ? ctx.dense : false;
-  const { children, icon, disabled = false, danger = false, active = false, keepOpen = false } = props;
-  const className = rowClass({ active, danger, disabled, dense });
-  const content = <MenuItemContent icon={icon}>{children}</MenuItemContent>;
-
-  if ("to" in props && props.to !== undefined) {
-    if (disabled) {
-      return <span role="menuitem" aria-disabled="true" className={className}>{content}</span>;
-    }
-    return (
-      <Link role="menuitem" to={props.to} onClick={close} className={className}>
-        {content}
-      </Link>
-    );
-  }
-
-  if ("href" in props && props.href !== undefined) {
-    if (disabled) {
-      return <span role="menuitem" aria-disabled="true" className={className}>{content}</span>;
-    }
-    return (
-      <a role="menuitem" href={props.href} onClick={close} className={className}>
-        {content}
-      </a>
-    );
-  }
-
-  const onClick = "onClick" in props ? props.onClick : undefined;
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={disabled}
-      onClick={() => {
-        if (disabled || onClick === undefined) return;
-        if (!keepOpen) close();
-        // Safety net for this shared primitive: individual callers are
-        // expected to surface their own user-visible errors; this is the
-        // last-resort log if an onClick's promise rejects uncaught.
-        void Promise.resolve(onClick()).catch((err: unknown) => {
-          console.error("[Dropdown] MenuItem onClick handler threw:", err);
-        });
-      }}
-      className={className}
-    >
-      {content}
-    </button>
-  );
-}
-
-export function MenuDivider() {
-  const ctx = useContext(DropdownContext);
-  const dense = ctx !== null ? ctx.dense : false;
-  return <div className={cn("border-t border-warm-100", dense ? "my-0.5" : "my-1")} role="separator" />;
-}
+// `MenuItem`/`MenuDivider` live in `dropdown-menu-item.tsx` (split out to
+// keep this file under the line cap and avoid a value-import cycle — that
+// file reads `DropdownContext`, exported above). Callers import them from
+// there directly.

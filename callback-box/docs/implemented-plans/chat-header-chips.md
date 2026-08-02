@@ -3,6 +3,18 @@
 **Status:** implemented 2026-08 — shipped as `ContextChip`, `VoiceChip`, and
 `ChatMenu`, fixing the mobile-clipped "..." menu bug.
 
+**Polish round (2026-08-01):** a boxholder-requested follow-up pass deviated
+from this plan in two ways: Model selection now lives in `ChatMenu`, not
+`VoiceChip` (this doc's Voice chip section above still describes the
+original "Model: <current> ›" sub-panel location); and the `VoiceChip` face
+became a split pill (mic half toggles narration, speaker half toggles mute)
+rather than the single speaker-icon-plus-corner-dot face described above.
+Also in this round: pill styling across all three chip triggers, a folder
+icon on `ContextChip`, `Dropdown` panel-slide transitions (direction-aware,
+width-transitioning with a `ResizeObserver`-driven viewport clamp), and
+`MenuItem`/`MenuDivider` split out of `Dropdown.tsx` into
+`src/frontend/src/components/ui/dropdown-menu-item.tsx`.
+
 Replace the chat header's row of eight-plus icon buttons with three stateful
 chips (context, voice, overflow menu). Each chip is both a status display and a
 menu trigger. The row's controls are then a small fixed set whose only

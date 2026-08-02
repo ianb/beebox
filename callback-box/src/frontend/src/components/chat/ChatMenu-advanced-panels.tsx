@@ -5,7 +5,7 @@
  * (`VoiceChip-panels.tsx`) in chunk 3 of docs/plans/chat-header-chips.md.
  */
 
-import { MenuItem, MenuDivider } from "../ui/Dropdown";
+import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 
 /**
  * "Advanced" sub-panel: debug toggles and process controls + status footer.

@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-02T02:25:20Z
+Generated: 2026-08-02T03:42:25Z
 Total documents: 232
 
 ## Issues
@@ -286,7 +286,7 @@ Referenced by:
 - docs/implemented-plans/canvas-loop-figure.md:28 (mention) — - `code-style.md`: max 2 positional params (the figure contract's
 - docs/implemented-plans/capture-mode.md:39 (mention) — - `callback-box/code-style.md` — no `any`, named-params objects, custom
 - docs/implemented-plans/card-view-widgets.md:22 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
-- docs/implemented-plans/chat-header-chips.md:44 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
+- docs/implemented-plans/chat-header-chips.md:56 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
 - docs/implemented-plans/chat-review.md:56 (mention) — - **`callback-box/code-style.md`** — max 2 positional params, no default
 - docs/implemented-plans/chat-scroll-redesign.md:46 (mention) — - `callback-box/code-style.md:36-37` — no default parameters; max 2 positional
 - docs/implemented-plans/chat-stream-finalize-unify.md:48 (mention) — - `callback-box/code-style.md:37` — max 2 positional params; new/changed
@@ -373,7 +373,7 @@ Referenced by:
 - code-style.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/implemented-plans/architectural-review.md:597 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
 - docs/implemented-plans/card-view-widgets.md:24 (mention) — - `callback-box/frontend.md:34` — *"Reach for a primitive from
-- docs/implemented-plans/chat-header-chips.md:40 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
+- docs/implemented-plans/chat-header-chips.md:52 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read frontend.md before writing UI"* and the
 - docs/implemented-plans/figure-card-type.md:79 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
@@ -918,7 +918,7 @@ Referenced by:
 - docs/implemented-plans/bulk-file-upload.md:19 (mention) — - `docs/engineering-principles.md` — chiefly **#1 types are structure** (a
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
-- docs/implemented-plans/chat-header-chips.md:35 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
+- docs/implemented-plans/chat-header-chips.md:47 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-review.md:39 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/expose-dev-router.md:29 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/hub-healthz-box-aggregation.md:31 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
@@ -1499,7 +1499,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:760 (mention) — that didn't happen. `testing.md:608`'s "soft assertions" note is a
 - docs/implemented-plans/architectural-review.review.md:12 (mention) — **Citation:** plan Track P.1; `testing.md:608`.
 - docs/implemented-plans/card-view-widgets.md:636 (mention) — - **Test posture** (per `docs/testing.md` — tests first, as a design tool):
-- docs/implemented-plans/chat-header-chips.md:47 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
+- docs/implemented-plans/chat-header-chips.md:59 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
 - docs/implemented-plans/chat-scroll-redesign.md:55 (mention) — - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
 - docs/implemented-plans/chat-stream-finalize-unify.md:53 (mention) — - `callback-box/docs/testing.md:5-9` + `:474-521` — layout/streaming behavior is
 - docs/implemented-plans/courseware-lesson-plan.md:326 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
@@ -1606,6 +1606,7 @@ Referenced by:
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
+- ../issues/decisions/2026-08-01-scan-handler-move-into-place.md:7 (mention) — `docs/triage.md`, the handle stage needs a `procedure:` (inline or
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:78 (mention) — role with a handler procedure (`docs/triage.md`). Could the admin landmark host
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:78 (mention) — (`docs/triage.md`) or a Drive-specific destination — the Drive connector may
 - ../research/pai/README.md:60 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
@@ -2167,7 +2168,7 @@ References:
 
 #### docs/implemented-plans/chat-header-chips.md
 
-Title: "Chat header re-IA: three stateful chips" | 342 lines
+Title: "Chat header re-IA: three stateful chips" | 354 lines
 
 Referenced by:
 - ../issues/closed/bugs/2026-08-01-chat-menu-clipped-mobile.md:5 (mention) — discovered-in: worktree-chat-menu-mobile-overflow — implementing docs/plans/chat-header-chips.md
@@ -3557,7 +3558,7 @@ References:
 Title: "iOS input-plane parity" | 578 lines
 
 Referenced by:
-- docs/implemented-plans/chat-header-chips.md:276 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
+- docs/implemented-plans/chat-header-chips.md:288 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:3 (mention) — design: ../../callback-box/docs/plans/ios-input-plane-parity.md
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:9 (link) — [`ios-input-plane-parity.md`](../../callback-box/docs/plans/ios-input-plane-parity.md).
 
@@ -3715,7 +3716,7 @@ Referenced by:
 - docs/plans/scan-guide-card.md:174 (mention) — docs/plans/scan-guide-card.md)` via `ctx.writeLine`.
 - docs/plans/scan-guide-card.review.md:7 (mention) — `scan-guide-card.md`.
 - docs/plans/scanner-ingest.md:5 (mention) — scanner-priors mechanism reshaped 2026-08-01 by the `scan-guide-card.md`
-- ../issues/docs-and-chores/2026-08-01-test1-real-people-data.md:14 (mention) — (`callback-box/docs/plans/scan-guide-card.md`, test1 amendment).
+- ../issues/docs-and-chores/2026-08-01-test1-real-people-data.md:9 (mention) — fictional demo cast — see `docs/plans/scan-guide-card.md`, test1 amendment)
 
 References:
 - → docs/plans/scan-guide-card.review.md (mention)
