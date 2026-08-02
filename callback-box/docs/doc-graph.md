@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-02T03:48:43Z
-Total documents: 233
+Generated: 2026-08-02T05:16:14Z
+Total documents: 235
 
 ## Issues
 
@@ -320,6 +320,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:35 (mention) — - **`code-style.md`** — the lint-suppression section: *"Never weaken a rule to
 - docs/implemented-plans/responsive-figures.md:43 (mention) — - `code-style.md` — no default parameters, explicit return types, teardown/
 - docs/implemented-plans/rest-to-trpc-consolidation.md:43 (mention) — - **`callback-box/code-style.md`** — Zod-validated inputs, `only export what's
+- docs/implemented-plans/scan-uploader-pairing.md:68 (mention) — - `callback-box/code-style.md`: Result-vs-throw at boundaries; no default
 - docs/implemented-plans/schema-validate-hook.md:32 (mention) — - `callback-box/code-style.md` — *"as type assertions are like Rust's
 - docs/implemented-plans/see-as-the-user.md:35 (mention) — - `callback-box/code-style.md` — mechanical rules (no default parameters,
 - docs/implemented-plans/selection-commentary.md:88 (mention) — - `callback-box/code-style.md:36` — *"**No default parameters**: handle
@@ -460,7 +461,7 @@ Referenced by:
 - docs/implemented-plans/tailscale-expose-and-protect.md:110 (mention) — `cb hub` on the live server (hand-migrated; `deploy/README.md:85` records
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
-- docs/plans/installation-story.md:283 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
+- docs/plans/installation-story.md:289 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see [`
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:85 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:17 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
@@ -639,7 +640,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:590 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
 - docs/plans/docs-reorg.gap-analysis.md:41 (mention) — `docs/box-layout.md`.
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
-- docs/plans/installation-story.md:130 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
+- docs/plans/installation-story.md:136 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-ia-review.md:146 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/source-available-release.md:60 (mention) — and documented at `callback-box/docs/box-layout.md:194`. No credential values
 - docs/reports/user-stories-audit-2026-06-26.md:4927 (mention) — The user story is accurately implemented across both claimed files. `callback-box/src/cli/commands/init.ts` provides the
@@ -862,7 +863,7 @@ Referenced by:
 - docker/README.md:15 (mention) — | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/developer-install.md` from a fresh `de
 - docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
 - docs/implemented-plans/local-password-auth.md:539 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
-- docs/plans/installation-story.md:122 (mention) — in `docs/developer-install.md`.
+- docs/plans/installation-story.md:128 (mention) — in `docs/developer-install.md`.
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:79 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:11 (mention) — (`developer-install.md`, `docker-install.md`), and added to the agent's
 - ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
@@ -897,7 +898,7 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:539 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/implemented-plans/remove-open-mode.md:48 (mention) — - Docs mentioning the opt-out: `docs/docker-install.md`,
 - docs/implemented-plans/tailscale-expose-and-protect.md:74 (mention) — - **The documented-but-untested path.** `callback-box/docs/docker-install.md:119`
-- docs/plans/installation-story.md:421 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
+- docs/plans/installation-story.md:427 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:11 (mention) — (`developer-install.md`, `docker-install.md`), and added to the agent's
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:31 (mention) — `docs/docker-install.md`. Interacts with the deferred npm-publish rung
@@ -936,6 +937,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:20 (mention) — - **`docs/engineering-principles.md`** — the plan traces mainly to these:
 - docs/implemented-plans/remove-open-mode.md:17 (mention) — - `callback-box/docs/engineering-principles.md` — fail-closed; make invalid
 - docs/implemented-plans/responsive-figures.md:33 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
+- docs/implemented-plans/scan-uploader-pairing.md:56 (mention) — - `docs/engineering-principles.md`: **#3 validate-at-boundaries** (the
 - docs/implemented-plans/see-as-the-user.md:23 (mention) — - `callback-box/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
 - docs/implemented-plans/tailscale-expose-and-protect.md:48 (mention) — - `callback-box/docs/engineering-principles.md` — especially fail-closed /
@@ -946,7 +948,7 @@ Referenced by:
 - docs/plans/chat-photo-batch-upload.md:19 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
 - docs/plans/github-pages-site-story-extraction.subplan.md:36 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/github-pages-site.md:22 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
-- docs/plans/installation-story.md:41 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
+- docs/plans/installation-story.md:47 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
 - docs/plans/ios-input-plane-parity.md:41 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
 - docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
@@ -1398,6 +1400,7 @@ References:
 Title: "Scan Upload Wire Contract" | 146 lines
 
 Referenced by:
+- docs/implemented-plans/scan-uploader-pairing.md:73 (mention) — (`docs/scan-upload-contract.md`); the installation-story plan's
 - docs/plans/scan-guide-card.md:180 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
 - docs/plans/scanner-ingest.md:281 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
 - docs/scan-upload-contract.md:9 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
@@ -1467,7 +1470,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:22 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/plans/docs-reorg.gap-analysis.md:110 (mention) — 8. **`@xstate/store` documented as adopted (`docs/stack-decisions.md:143`)
 - docs/plans/docs-reorg.md:92 (mention) — `stack-decisions.md`, the Google/Telegram setup runbooks, CSP docs) verified
-- docs/plans/installation-story.md:111 (mention) — `node --watch` over the backend; `docs/stack-decisions.md` used to pair
+- docs/plans/installation-story.md:117 (mention) — `node --watch` over the backend; `docs/stack-decisions.md` used to pair
 - docs/plans/publish-pages.md:44 (mention) — - **Designed-but-unbuilt authorization.** `docs/stack-decisions.md:581`: *`## Decision 11: Authorization — Typed Princip
 - docs/reports/user-stories-audit-2026-06-26.md:4801 (mention) — Feature is fully implemented with all claimed capabilities. Evidence: (1) /src/cli/commands/render.ts registers the `cb 
 - docs/unimplemented-plans/design-vision-superseded.md:13 (mention) — > `../stack-decisions.md` Decision 18).
@@ -2929,6 +2932,27 @@ Referenced by:
 - ../bin/docs/router-protocol.md:215 (mention) — `callback-box/docs/implemented-plans/router-state-formalization.md`) then did the fuller
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:54 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
+#### docs/implemented-plans/scan-uploader-pairing.md
+
+Title: "Scan-uploader setup UI + minimal install story" | 360 lines
+
+Referenced by:
+- docs/plans/installation-story.md:34 (mention) — `scan-uploader/README.md` "Setup" and `docs/plans/scan-uploader-pairing.md`
+
+References:
+- → docs/implemented-plans/scan-uploader-pairing.review.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/scan-upload-contract.md (mention)
+- → docs/plans/installation-story.md (mention)
+
+#### docs/implemented-plans/scan-uploader-pairing.review.md
+
+Title: "Codex cross-model review — scan-uploader-pairing (2026-08-01)" | 87 lines
+
+Referenced by:
+- docs/implemented-plans/scan-uploader-pairing.md:35 (mention) — (`scan-uploader-pairing.review.md`): the original unauthenticated
+
 #### docs/implemented-plans/schema-validate-hook.md **[ORPHAN]**
 
 Title: "Schema `validate` hook — co-locate non-Zod card validation with its schema" | 373 lines
@@ -3471,9 +3495,10 @@ References:
 
 #### docs/plans/installation-story.md
 
-Title: "Installation story, phase 1: developer install + local Docker" | 612 lines
+Title: "Installation story, phase 1: developer install + local Docker" | 618 lines
 
 Referenced by:
+- docs/implemented-plans/scan-uploader-pairing.md:217 (mention) — profile; `docs/plans/installation-story.md` gets a pointer sentence.
 - docs/implemented-plans/tailscale-expose-and-protect.md:365 (mention) — `docs/plans/installation-story.md`'s failure-modes table, which treats the
 - docs/plans/source-available-release.md:271 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:39 (mention) — first-class alternative in `callback-box/docs/plans/installation-story.md` and
@@ -3482,6 +3507,7 @@ Referenced by:
 
 References:
 - → docs/plans/source-available-release.md (mention)
+- → docs/implemented-plans/scan-uploader-pairing.md (mention)
 - → docs/engineering-principles.md (mention)
 - → docs/stack-decisions.md (mention)
 - → docs/developer-install.md (mention)
