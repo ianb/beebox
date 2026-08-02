@@ -37,16 +37,46 @@ The boxholder is explicit that this need not be all-or-nothing:
   media/binary content may simply opt out. Start with the markdown body and expand
   only where it pays off.
 
+## Baseline = git history (boxholder's steer)
+
+The card's own git history is the diff backbone. A box is a git repo and every
+edit is a commit, so the view **maps to git history**: it sees that a commit
+updated the card and shows the change **against the previous committed version**
+(the parent commit's copy of that file). This answers the "what is the before"
+question without inventing a separate snapshot mechanism — the versions already
+exist — and gives natural per-commit granularity and history navigation. Caveats
+to design for:
+
+- **Commit granularity.** The diff is only as fine as the commits. If the agent
+  batches many edits into one commit, the "what did it do" view is coarse; if it
+  commits per logical edit, it maps cleanly. Worth checking how card edits commit
+  today.
+- **Uncommitted working-tree state.** An edit that has not been committed yet is
+  not in history — the view must also handle "working tree vs HEAD," not only
+  committed-vs-parent, or a just-made voice/chat edit would be invisible until
+  commit.
+- **Renames.** `cb mv` moves cards (and rewrites refs); follow history across
+  renames (`git log --follow`) so a moved card keeps its diff lineage.
+
 ## Design questions
 
-- **What is the "before"?** A diff needs a baseline. Diff against what — a snapshot
-  pinned at the start of the editing turn/session, or the card's existing version
-  history? The baseline must survive until the boxholder reviews it, since with
-  voice/chat the edit and the review can be **asynchronous** (say it, then look).
-- **Rendering per content type.** Markdown body → inline text diff (added / removed,
-  the strikethrough-old + inserted-new style — see the ProofEditor screenshot that
-  inspired [questions-as-inline-annotations](../exploration/2026-08-01-questions-as-inline-annotations.md)).
-  Structured fields → a field-level diff. Media → likely unsupported.
+- **Rendering — diff the RENDERED markdown, not the source (boxholder preference).**
+  The boxholder would much rather see a diff of the *rendered* card than of the raw
+  markdown text, even though rendered-diffing is the harder path. Seeing `**bold**`
+  become `*em*` in source is noise; seeing the rendered result change is the point.
+  The likely-tractable approach is **diff the source/AST, then render one document
+  with the changes marked inline** — you don't diff HTML trees (fragile), you diff
+  at the markdown/AST level and present the result rendered with insertion/deletion
+  styling (the strikethrough-old + inserted-new look — see the ProofEditor
+  screenshot that inspired
+  [questions-as-inline-annotations](../exploration/2026-08-01-questions-as-inline-annotations.md)).
+  Cards already parse through **Markdoc**, so its AST is the natural leverage point
+  — an AST-level diff is also more robust to formatting-only churn than a raw text
+  diff. Open hard part: **block-structural changes** (a heading added, list
+  reordered, a table cell edited) render differently than inline word changes and
+  need their own treatment; inline-within-a-paragraph is the easy case.
+- **Structured fields / media.** Frontmatter or schema fields → a field-level diff.
+  Media → likely unsupported (partial coverage is fine, per the scope note).
 - **Toggle/mode vs. always-on-while-editing.** Is it a view the boxholder switches
   on (a `?view=diff` on the card's `browse/` path, per the card-attached-view
   model), or does it appear automatically after an AI edit?
