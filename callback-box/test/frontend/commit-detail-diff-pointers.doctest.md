@@ -35,7 +35,7 @@ function summarize(diff: string): string {
 An **added** annexed file — its pointer arrives on a `+` line:
 
 ```ts
-summarize(diffFor("photos/cat.jpg", "new file mode 120000", `+/annex/objects/${ANNEX_KEY}`))
+summarize(diffFor("photos/cat.jpg", "new file mode 100644", `+/annex/objects/${ANNEX_KEY}`))
 => photos/cat.jpg binary=true hunks=0
 ```
 
@@ -43,7 +43,7 @@ A **removed** annexed file — the pointer shows up on a `-` line. (This was the
 reported bug's second half: removed annexed images rendered as pointer text.)
 
 ```ts continue
-summarize(diffFor("photos/cat.jpg", "deleted file mode 120000", `-/annex/objects/${ANNEX_KEY}`))
+summarize(diffFor("photos/cat.jpg", "deleted file mode 100644", `-/annex/objects/${ANNEX_KEY}`))
 => photos/cat.jpg binary=true hunks=0
 ```
 
