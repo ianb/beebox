@@ -219,6 +219,32 @@ The pairing protocol moved to NOT in scope with its revisit trigger.
 - **First chunk:** `smoke-install.sh` green locally; README rewrite in the
   same commit.
 
+### Track D — Self-scheduling (`schedule` subcommand; added 2026-08-01)
+
+- **What:** `scan-uploader schedule install [--interval <minutes>]
+  [--config <path>]` / `uninstall` / `status` — writes and loads a launchd
+  LaunchAgent (`~/Library/LaunchAgents/org.callback-box.scan-uploader.plist`)
+  running the sweep every 15 minutes by default, `RunAtLoad` for the
+  catch-up-after-boot case, stdout+stderr to
+  `~/Library/Logs/scan-uploader.log`. macOS-only, refused elsewhere (the
+  `trash`-disposition posture). Added by boxholder decision after the
+  first implementation round; supersedes the "print a crontab suggestion"
+  stance.
+- **Why:** the ScanSnap post-scan hook is the primary trigger; the sweep
+  is the safety net for missed hooks. Packaging the net as one command
+  makes second-machine setup complete without hand-editing LaunchAgents.
+- **Direction:** pure core (plist generation with XML escaping, interval
+  parse-back) + thin CLI; `launchctl bootout` (tolerated failure) then
+  `bootstrap gui/<uid>`; launchctl behind an injectable runner so tests
+  never touch the real launchd; install refuses when the config file is
+  missing or fails the strict reader — an installed schedule pointing at
+  a broken config is a silent-failure machine. `configure`'s next-steps
+  printout and the README point at it.
+- **First chunk:** the whole subcommand + `test/schedule.doctest.md`
+  (plist content incl. escaping, refusal on bad config, fake-launchctl
+  install/uninstall/status flows, uninstall idempotency, non-darwin
+  refusal).
+
 ## Subplans
 
 None.
@@ -237,6 +263,10 @@ None.
 | "last request" misread as "last upload" | n/a (labeling) | honest label + tooltip; true last-upload deferred | clear |
 | Filtered install pulls heavy native builds | smoke script asserts | documented fallback (root install `--ignore-scripts`) | clear (script fails loud) |
 | Token minted but never configured (abandoned) | n/a | visible in list as never-used; revoke | clear |
+| Schedule installed against a missing/invalid config | planned (schedule doctest) | install refuses after running the strict reader | clear |
+| Plist path contains spaces/XML metacharacters | planned (doctest asserts escaping) | XML entity escaping in the generator | clear (test-guarded) |
+| launchd job present but sweep failing repeatedly | partial | stdout+stderr land in ~/Library/Logs/scan-uploader.log; `schedule status` shows log mtime | visible in log, not pushed — accepted (rejected files also surface as never-arriving cards) |
+| `schedule install` on a non-macOS machine | planned (doctest) | refused with a clear message (trash-disposition posture) | clear |
 
 **Critical gap:** none identified.
 
@@ -283,9 +313,10 @@ Boxholder-facing infrastructure; the list adapts:
 - **Windows support / `trash` on non-macOS** — inherits the uploader's
   existing posture (README:69-70).
 - **Uploader auto-update** — re-run the three install lines.
-- **Interactive full-wizard UX (auto-detecting scan folders, launchd
-  install)** — print the crontab suggestion; don't write user crontabs
-  (#6 right-sized defensiveness).
+- **Interactive full-wizard UX (auto-detecting scan folders)** — the
+  launchd-install half of this deferral was promoted to Track D by
+  boxholder decision (2026-08-01, second round); folder auto-detection
+  stays out.
 
 ## Open design questions
 
