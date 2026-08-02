@@ -1,5 +1,8 @@
 # Bounded chat-history loading + fast stale-lock recovery
 
+**Status:** implemented 2026-08 — both tracks and the post-fix sweep shipped;
+see the commits merged into `main` for this branch.
+
 Two fixes from one prod incident (box-family, 2026-08-01 ~22:08 UTC): a `cb serve`
 process OOM'd at the ~2 GB heap cap while serving a large chat session, and the
 OOM-killed process's held mobile device-store lock then caused mobile-auth 500s
