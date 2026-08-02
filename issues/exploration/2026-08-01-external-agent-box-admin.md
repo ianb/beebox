@@ -7,6 +7,10 @@ discovered-in: main session — boxholder's idea, riffing off the Every tools
 labels: [soft-launch]
 ---
 
+> **⭐ First-release candidate** — boxholder flagged this to look into for the
+> first release (2026-08-01). Evaluate what (if anything) ships in v1; not yet a
+> committed gate.
+
 Give the boxholder a way to hand box administration to **the general-purpose agent
 they already use** — their personal ChatGPT, Claude.ai, or Claude Desktop — rather
 than doing the fiddly setup themselves or asking the box's own internal agent (which
