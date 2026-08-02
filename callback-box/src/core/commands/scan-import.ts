@@ -51,16 +51,15 @@ import { createCardSchemaMap } from "../../schemas/registry.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
-import {
-  runScanBatches,
-  resolveScanPages,
-  bundleResolvedPages,
-} from "./scan-import-helpers.js";
+import { resolveScanPages, bundleResolvedPages } from "./scan-import-helpers.js";
+import { type ScanVisionService } from "../../services/scan-vision.js";
 import {
   createSessionLayout,
   fileSessionSourcePdf,
   resolveBoxholderContext,
   resolveScanInputs,
+  resolveScanVision,
+  analyzeScanPages,
 } from "./scan-import-session.js";
 import { runDocumentMode } from "./scan-import-document.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
@@ -108,18 +107,17 @@ async function executeScanImport(
     return runPhotoModeFromPdf(ctx, { pdfPath: resolved.pdfPath, extraContext, source });
   }
 
-  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
-  if (!apiKey) {
-    return { success: false, error: "GEMINI_KEY environment variable is required" };
-  }
+  const visionOrError = await resolveScanVision(ctx.boxRoot);
+  if ("error" in visionOrError) return { success: false, error: visionOrError.error };
   return runPhotoMode(ctx, {
-    apiKey,
+    vision: visionOrError.vision,
     imagePaths: resolved.imagePaths,
     sourcePdfPath: null,
     extraContext,
     source,
   });
 }
+
 
 /**
  * Textless PDF → page images → the existing photo flow. The renders are
@@ -130,10 +128,8 @@ async function runPhotoModeFromPdf(
   ctx: CommandContext,
   args: { pdfPath: string; extraContext: string | undefined; source: string | undefined }
 ): Promise<CommandResult> {
-  const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
-  if (!apiKey) {
-    return { success: false, error: "GEMINI_KEY environment variable is required" };
-  }
+  const visionOrError = await resolveScanVision(ctx.boxRoot);
+  if ("error" in visionOrError) return { success: false, error: visionOrError.error };
   const renderDir = path.join(
     await ensureBoxTmpDir(ctx.boxRoot),
     `scan-render-${randomUUID().slice(0, 8)}`
@@ -142,7 +138,7 @@ async function runPhotoModeFromPdf(
     const imagePaths = await renderPdfPages(args.pdfPath, { outDir: renderDir });
     ctx.writeLine(`Rendered ${String(imagePaths.length)} page(s)`);
     return await runPhotoMode(ctx, {
-      apiKey,
+      vision: visionOrError.vision,
       imagePaths,
       sourcePdfPath: args.pdfPath,
       extraContext: args.extraContext,
@@ -157,7 +153,7 @@ async function runPhotoModeFromPdf(
 }
 
 interface RunPhotoModeArgs {
-  apiKey: string;
+  vision: ScanVisionService;
   imagePaths: string[];
   /** The PDF the images were rendered from, filed as the session's source. */
   sourcePdfPath: string | null;
@@ -170,7 +166,7 @@ async function runPhotoMode(
   ctx: CommandContext,
   args: RunPhotoModeArgs
 ): Promise<CommandResult> {
-  const { apiKey, imagePaths, sourcePdfPath, extraContext, source } = args;
+  const { vision, imagePaths, sourcePdfPath, extraContext, source } = args;
   const layout = await createSessionLayout(ctx);
   const {
     sessionAttachRelDir,
@@ -219,19 +215,9 @@ async function runPhotoMode(
 
   const boxholderContext = await resolveBoxholderContext(ctx, extraContext);
 
-  ctx.writeLine(`Analyzing ${apiPages.length} pages with Gemini Flash...`);
-  const batchResult = await runScanBatches({
-    apiKey,
-    imagePaths: apiPages,
-    boxholderContext,
-    log: (line) => ctx.writeLine(line),
-  });
-  if (batchResult.failed > 0) ctx.writeLine(`${batchResult.failed} page(s) failed analysis`);
-  if (batchResult.usage) {
-    ctx.writeLine(
-      `Tokens: input=${batchResult.usage.prompt}, output=${batchResult.usage.output}, thinking=${batchResult.usage.thinking}`
-    );
-  }
+  const analysisOutcome = await analyzeScanPages(ctx, { vision, apiPages, boxholderContext, sessionAttachAbsDir });
+  if ("error" in analysisOutcome) return { success: false, error: analysisOutcome.error };
+  const { batchResult } = analysisOutcome;
 
   const resolvedPages = resolveScanPages(batchResult.pageAnalyses, apiPages.length);
   const { bundles, orphanBacks, unsurePages, blankPages } = bundleResolvedPages(resolvedPages);
@@ -362,4 +348,4 @@ registerCommand({
   execute: executeScanImport,
 });
 
-export { executeScanImport };
+export { executeScanImport, runPhotoMode };

@@ -39,7 +39,7 @@ export function resolveScanPages(
   const conflicts: boolean[] = Array.from({ length: totalPages }, () => false);
 
   for (let i = 0; i < totalPages; i++) {
-    picked[i] = pickAnalysis(pageAnalyses.get(i), { index: i, conflicts });
+    picked[i] = pickAnalysis(pageAnalyses.get(i), { index: i, conflicts, pageAnalyses });
   }
 
   // Reconcile pairs: only mutual claims survive.
@@ -63,13 +63,31 @@ export function resolveScanPages(
   return resolved;
 }
 
+/** Is `claim` reciprocated by ANY analysis of the claimed partner page? */
+function claimReciprocated(
+  claim: number | null,
+  { index, pageAnalyses }: { index: number; pageAnalyses: Map<number, ScanPageAnalysis[]> }
+): boolean {
+  if (claim === null) return false;
+  const partnerAnalyses = pageAnalyses.get(claim);
+  if (!partnerAnalyses) return false;
+  return partnerAnalyses.some((partner) => partner.paired_with_index === index);
+}
+
 /**
  * Choose the winning analysis for one page, recording a conflict when two
  * overlapping batches disagree. Mutates `conflicts[i]` as a side effect.
+ * Preference order: a pair claim the partner reciprocates (in either batch)
+ * beats an unreciprocated one; any claim beats none; ties take the second
+ * batch, which saw a wider forward context.
  */
 function pickAnalysis(
   analyses: ScanPageAnalysis[] | undefined,
-  { index: i, conflicts }: { index: number; conflicts: boolean[] }
+  {
+    index: i,
+    conflicts,
+    pageAnalyses,
+  }: { index: number; conflicts: boolean[]; pageAnalyses: Map<number, ScanPageAnalysis[]> }
 ): ScanPageAnalysis {
   if (!analyses || analyses.length === 0) {
     return makeMissingAnalysis(i);
@@ -83,6 +101,14 @@ function pickAnalysis(
   invariant(a !== undefined && b !== undefined, "checked analyses.length >= 2 above");
   if (a.kind !== b.kind || a.paired_with_index !== b.paired_with_index) {
     conflicts[i] = true;
+  }
+  // Prefer the analysis whose pair claim is mutual with the partner's own
+  // claim — the comment always promised this; overlap-heavy batching (small
+  // Claude batches, overlap-preserving splits) makes it actually matter.
+  const aMutual = claimReciprocated(a.paired_with_index, { index: i, pageAnalyses });
+  const bMutual = claimReciprocated(b.paired_with_index, { index: i, pageAnalyses });
+  if (aMutual !== bMutual) {
+    return aMutual ? a : b;
   }
   // Prefer the analysis that named a partner.
   if (a.paired_with_index !== null && b.paired_with_index === null) {
@@ -109,7 +135,7 @@ function makeMissingAnalysis(index: number): ScanPageAnalysis {
     text_blocks: [],
     date_hint: null,
     flag_for_review: true,
-    flag_reason: "Page analysis missing — Gemini batch failed",
+    flag_reason: "Page analysis missing — vision batch failed",
   };
 }
 
