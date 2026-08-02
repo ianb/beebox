@@ -11,7 +11,12 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { configure } from "../src/configure.js";
-import { parseConfigureArgs, requireFolderFlag } from "../src/configure-cli.js";
+import {
+  parseConfigureArgs,
+  requireFolderFlag,
+  TOKEN_PROMPT_TEXT,
+  TOKEN_RECEIVED_ACK,
+} from "../src/configure-cli.js";
 import { parseServerUrlWithBox } from "../src/target-url.js";
 import { startFakeScanServer, type FakeScanServer } from "./fake-scan-server.js";
 import { makeTmpDir, removeTmpDir } from "./tmp-dir.js";
@@ -392,6 +397,30 @@ looksLikeAFlag.message
 => --folder requires a value
 ```
 
+## The hidden token prompt's exact wording
+
+The interactive TTY prompt itself isn't practical to doctest (it needs a
+real TTY — verified manually with `script -q /dev/null`; see the comment on
+`promptToken`), but the exact text it writes is exported as plain
+constants precisely so a typo, or a regression back to the invisible-prompt
+bug (the prompt used to be written through the same muted stream as the
+input echo, so it silently never appeared at all), stays test-guarded:
+
+```
+TOKEN_PROMPT_TEXT.startsWith("Paste the scan token (input is hidden):")
+=> true
+```
+
+```continue
+TOKEN_PROMPT_TEXT.endsWith(" ")
+=> true
+```
+
+```continue
+TOKEN_RECEIVED_ACK
+=> token received
+```
+
 ## A bad new target never corrupts an already-valid config on disk
 
 `configure()` itself doesn't pre-check `folder` (that's `configure-cli.ts`'s
@@ -499,5 +528,43 @@ await exists(tokenPath6)
 
 ```cleanup
 await server6.close();
+```
+
+## Verification failure surfaces the server's own reason, not just the HTTP status
+
+When the server's error body carries a `reason` (e.g. a 503 explaining
+itself), that text rides all the way up through `checkHashes`'s
+`ProtocolError` into `configure()`'s own `ConfigureError` — the boxholder
+sees why, not just a bare status code they'd otherwise have to go curl the
+endpoint by hand to explain.
+
+```
+const server7: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "unknown" }),
+  putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
+  checkFailure: () => ({
+    status: 503,
+    body: { status: "server-error", reason: "box is not annex-converted; scan upload disabled" },
+  }),
+});
+const configPath7 = join(dir, "verify-fail-reason", "scan-uploader.json");
+const homeDir7 = join(dir, "home7");
+const failure7 = await rejected(
+  configure({
+    serverUrlWithBox: `${server7.url}/family`,
+    folder: "/scans/family",
+    disposition: "keep",
+    name: "laptop-7",
+    token: "any-token",
+    configPath: configPath7,
+    homeDir: homeDir7,
+  }),
+);
+failure7.message.includes("server says: box is not annex-converted; scan upload disabled")
+=> true
+```
+
+```cleanup
+await server7.close();
 await removeTmpDir(dir);
 ```

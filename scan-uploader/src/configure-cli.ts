@@ -198,13 +198,31 @@ interface MutedReadline {
   _writeToOutput: (chunk: string) => void;
 }
 
+/** The exact prompt/ack text `promptToken` writes to stderr. Exported as
+ * constants (rather than inlined) so a doctest can assert on the literal
+ * wording without needing a real TTY — the interactive read itself is only
+ * verified manually (see the comment on `promptToken`). */
+export const TOKEN_PROMPT_TEXT = "Paste the scan token (input is hidden): ";
+export const TOKEN_RECEIVED_ACK = "token received";
+
 /** Reads the token without echoing it. Node's `readline` has no public API
  * for a no-echo prompt, so this overrides the internal `_writeToOutput`
- * writer — the standard documented recipe for this exact gap. Not exercised
- * by doctests: it needs a real TTY, and `readPipedToken` below covers the
- * same token-consumption logic that `configure()` actually depends on. */
+ * writer — the standard documented recipe for this exact gap. That mute
+ * applies to `readline`'s own `output` stream (`process.stdout` here), so
+ * the prompt text is written directly to STDERR first, before the
+ * `Interface` even exists: writing it through `rl.question(promptText, …)`
+ * (the "obvious" approach) sends it through the same muted stream and it
+ * never appears at all — the bug this fixes (the process looked hung; it
+ * was just a real, working, entirely invisible prompt). STDERR also keeps
+ * a piped-stdout workflow's stdout clean. A short ack after a successful
+ * read confirms the paste registered, since nothing echoed while typing/
+ * pasting. Not exercised by doctests: it needs a real TTY (manually
+ * verified via `script -q /dev/null`), and `readPipedToken` below covers
+ * the same token-consumption logic that `configure()` actually depends on;
+ * `TOKEN_PROMPT_TEXT`/`TOKEN_RECEIVED_ACK` above are what doctests can and
+ * do assert on. */
 async function promptToken(): Promise<string> {
-  process.stdout.write("Paste the scan-upload token: ");
+  process.stderr.write(TOKEN_PROMPT_TEXT);
   return new Promise((resolve, reject) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
     // eslint-disable-next-line no-restricted-syntax -- readline exposes no public API to suppress input echo; overriding `_writeToOutput` is the standard Node.js recipe for a no-echo prompt.
@@ -222,7 +240,7 @@ async function promptToken(): Promise<string> {
     rl.question("", (answer) => {
       answered = true;
       rl.close();
-      process.stdout.write("\n");
+      process.stderr.write(`\n${TOKEN_RECEIVED_ACK}\n`);
       resolve(answer.trim());
     });
   });
