@@ -58,8 +58,12 @@ export class ScanBatchMisalignedError extends Error {
   }
 }
 
-/** Require exactly one analysis per input page, indexed 0..N-1. */
-function assertBatchAlignment(analyses: RawScanAnalysis[], imageCount: number): void {
+/**
+ * Require exactly one analysis per input page, indexed 0..N-1. The
+ * post-condition every {@link RawScanAnalysis} batch must satisfy at the
+ * scan-vision service boundary, whichever backend produced it.
+ */
+export function assertBatchAlignment(analyses: RawScanAnalysis[], imageCount: number): void {
   const indices = analyses.map((a) => a.index).toSorted((a, b) => a - b);
   const misaligned = analyses.length !== imageCount || indices.some((idx, position) => idx !== position);
   if (misaligned) {
