@@ -40,10 +40,53 @@ the server side and the exact request/response shapes live in
 Every place in this codebase that encodes part of that contract carries a
 `// WIRE CONTRACT (scan-upload): …` comment — change both sides together.
 
+## Setup
+
+The box's settings page (**Settings → Scan uploaders**) walks through this
+and mints the token; the steps in full:
+
+1. **Install** (once, on any machine — a dev checkout already qualifies):
+
+   ```bash
+   git clone <repo> && cd <repo>
+   pnpm install --filter "scan-uploader..."
+   pnpm --filter scan-uploader build
+   ```
+
+   Note: the workspace's `node-linker=hoisted` (root `.npmrc`) means the
+   filtered install still materializes the full hoisted tree (~1.3 GB) — it
+   works verbatim from a clean clone (verified by `smoke-install.sh`) but
+   is not lighter than a full install. For additional machines, skip the
+   clone entirely: `dist/scan-uploader.mjs` is self-contained — copy that
+   one file to any machine with Node.
+
+2. **Mint a token** in the box's settings page (shown once — keep the page
+   open until step 3 has consumed it).
+
+3. **Configure** (run on the uploader machine; paste the token when
+   prompted — it is never passed as an argument):
+
+   ```bash
+   node scan-uploader/dist/scan-uploader.mjs configure https://<host>/<box> \
+     --name <token-name> --folder <scan-folder>
+   ```
+
+   This writes/updates the target in `./scan-uploader.json`, stores the
+   token at `~/.scan-tokens/<box>.token` (0600), and verifies against the
+   server. Repeat per box with its own folder and token.
+
+4. **ScanSnap profile** — see "ScanSnap profile setup" below; point its
+   post-scan action at the plain run command.
+
+`smoke-install.sh` is the executable check that step 1 works from a clean
+clone and that the built bundle runs self-contained.
+
 ## Config
 
 JSON file, path given as the first CLI argument (default
-`./scan-uploader.json`, resolved relative to the current directory):
+`./scan-uploader.json`, resolved relative to the current directory).
+`configure` writes this file for you (preserving any unknown keys); the
+shape, for hand-maintenance:
 
 ```json
 {
@@ -77,8 +120,13 @@ message naming exactly what's wrong.
 
 ```bash
 node dist/scan-uploader.mjs [config.json] [--retry-rejected]
+node dist/scan-uploader.mjs configure <server-url-with-box> --folder <path> [options]
 node dist/scan-uploader.mjs --help
 ```
+
+`configure` (see Setup above) takes the token on stdin — piped, or prompted
+without echo on a TTY — and supports `--disposition`, `--name`, and
+`--config`; `configure --help` has the details.
 
 Exit code is non-zero if any file was rejected or hit a transport-level
 error (hash mismatch, over the size limit, or exhausted rate-limit

@@ -28,6 +28,12 @@ v2-box container contract, box-local install, argv-forwarding entrypoint,
 git-identity/LFS-filter/UID gaps, doctor de-abstraction, engine-strict
 sequencing, several citation corrections).
 
+*(Adjacent, out of this plan's scope: the stand-alone `scan-uploader/`
+package has its own minimal install story — clean clone + filtered install +
+self-contained bundle, verified by `scan-uploader/smoke-install.sh` — see
+`scan-uploader/README.md` "Setup" and `docs/plans/scan-uploader-pairing.md`
+Track C.)*
+
 ## Stated preferences this plan trades against
 
 - `callback-box/CLAUDE.md:103` — *"Keep source and docs generic — never

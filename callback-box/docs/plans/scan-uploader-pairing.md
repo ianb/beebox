@@ -1,5 +1,11 @@
 # Scan-uploader setup UI + minimal install story
 
+**Status:** implemented 2026-08-01 on `worktree-scanner-ingest` (all three
+chunks; configure doctest 9 scenarios, package tests 94/94, frontend
+typecheck/lint clean, smoke-install run green — with one measured
+correction: the filtered install works but is not lighter, see Prior art).
+Not yet merged.
+
 A settings-page surface for scan uploaders — mint a token (shown once), see
 every uploader with honest last-activity, revoke — plus a `configure`
 subcommand that takes the pasted token and writes the uploader's own config,
@@ -85,14 +91,17 @@ The pairing protocol moved to NOT in scope with its revisit trigger.
   https://datatracker.ietf.org/doc/html/rfc8628
 - **pnpm filtered install** — `pnpm install --filter <pkg>...` from the
   workspace root installs the filtered package plus its workspace deps
-  (https://pnpm.io/filtering). Unverified claim until
-  `smoke-install.sh` passes: that this skips `callback-box`'s heavy native
-  builds (`better-sqlite3`). The workspace devDeps
-  (`@ianbicking/personal-vibe-check`, `agent-doctest` —
-  `scan-uploader/package.json`) are expected to come along; they are small
-  and build-free. Fallback if the filter disappoints: root install with
-  `--ignore-scripts`, documented, or revisiting distribution (NOT in
-  scope).
+  (https://pnpm.io/filtering). **Measured 2026-08-01 (smoke script): the
+  lightweight-install claim is FALSE in this workspace** — the root
+  `.npmrc`'s `node-linker=hoisted` (necessarily workspace-wide) makes any
+  install materialize the full hoisted tree (~1.3 GB, `better-sqlite3` and
+  `sharp` included). The filtered sequence still works verbatim from a
+  clean clone and the built bundle is self-contained, so the story stands
+  with honest framing: filtering scopes project scripts, not download
+  size; the lightweight path for additional machines is copying the
+  single built `dist/scan-uploader.mjs` (README "Setup" step 1 note;
+  `smoke-install.sh` asserts self-containment by running the bundle from a
+  bare directory).
 - **Reading a secret from stdin without echo** — Node has no built-in
   no-echo prompt; the standard approach is `readline` with the output
   stream muted, or accepting piped stdin. No dependency will be added;
