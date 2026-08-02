@@ -200,6 +200,42 @@ export async function runListMode(options: {
   await printSearchedRootsFooter(boxRoot);
 }
 
+/**
+ * A transcript bigger than this refuses to print without `--allow-huge`.
+ * Every `cb session` output mode scales with the file (`--raw` is the file,
+ * `--tool-report` exceeds it, render is entry-capped but still huge past
+ * this), and a surprise multi-hundred-MB dump helps nobody — least of all an
+ * agent reading the output. 25 MB is far past any human- or agent-readable
+ * result while letting every ordinary session through.
+ */
+export const HUGE_TRANSCRIPT_BYTES = 25 * 1024 * 1024;
+
+function formatMb(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Fail closed on a huge transcript: true when printing may proceed. When the
+ * file exceeds {@link HUGE_TRANSCRIPT_BYTES} and `--allow-huge` wasn't given,
+ * prints a loud refusal naming the size and the override and returns false.
+ */
+export function transcriptPrintable(options: {
+  logPath: string;
+  sessionId: string;
+  allowHuge: boolean;
+}): boolean {
+  const { logPath, sessionId, allowHuge } = options;
+  if (allowHuge) return true;
+  const { size } = fs.statSync(logPath);
+  if (size <= HUGE_TRANSCRIPT_BYTES) return true;
+  console.error(
+    `Refusing to print session ${sessionId}: its transcript is ${formatMb(size)} ` +
+      `(threshold ${formatMb(HUGE_TRANSCRIPT_BYTES)}). ` +
+      "Re-run with --allow-huge if you really want a result this size.",
+  );
+  return false;
+}
+
 /** Print one windowed session in the active output mode (raw/report/render). */
 async function renderWindowedSession(options: {
   meta: EnrichedSession;
@@ -207,8 +243,14 @@ async function renderWindowedSession(options: {
   renderOptions: RenderOptions;
   raw: boolean;
   toolReport: boolean;
+  allowHuge: boolean;
 }): Promise<void> {
-  const { meta, since, renderOptions, raw, toolReport } = options;
+  const { meta, since, renderOptions, raw, toolReport, allowHuge } = options;
+  // A refused session is loudly skipped (transcriptPrintable prints why);
+  // the other sessions in the window still print.
+  if (!transcriptPrintable({ logPath: meta.path, sessionId: meta.sessionId, allowHuge })) {
+    return;
+  }
   if (raw) {
     // Streamed — a transcript can exceed the heap.
     await pipeline(fs.createReadStream(meta.path), process.stdout, { end: false });
@@ -267,8 +309,9 @@ export async function runSinceMode(options: {
   renderOptions: RenderOptions;
   raw: boolean;
   toolReport: boolean;
+  allowHuge: boolean;
 }): Promise<void> {
-  const { boxRoot, since, renderOptions, raw, toolReport } = options;
+  const { boxRoot, since, renderOptions, raw, toolReport, allowHuge } = options;
   const allSessions = await listSessions(boxRoot);
   const prefiltered = allSessions.filter(
     (s) => s.mtime.getTime() >= since.cutoff
@@ -294,6 +337,7 @@ export async function runSinceMode(options: {
       renderOptions,
       raw,
       toolReport,
+      allowHuge,
     });
   }
 }

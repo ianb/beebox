@@ -31,6 +31,7 @@ import {
   resolveSince,
   runListMode,
   runSinceMode,
+  transcriptPrintable,
   type SinceWindow,
 } from "./session-modes.js";
 import { invariant } from "../../lib/invariant.js";
@@ -55,6 +56,10 @@ export const sessionCommand = new Command("session")
   .option("--tool-report", "Generate critique-friendly report (includes Bash output)")
   .option("--raw", "Dump raw JSONL")
   .option(
+    "--allow-huge",
+    "Print even when the transcript exceeds the huge-output threshold"
+  )
+  .option(
     "--since <when>",
     "Include activity since <when> — a duration (30m, 12h, 1d, 2w) or an ISO timestamp (2026-04-17 or 2026-04-17T08:00:00Z)"
   )
@@ -71,6 +76,7 @@ export const sessionCommand = new Command("session")
         full?: boolean;
         toolReport?: boolean;
         raw?: boolean;
+        allowHuge?: boolean;
         since?: string;
         dialogueOnly?: boolean;
       }
@@ -109,6 +115,7 @@ export const sessionCommand = new Command("session")
           renderOptions,
           raw: !!options.raw,
           toolReport: !!options.toolReport,
+          allowHuge: !!options.allowHuge,
         });
         return;
       }
@@ -155,6 +162,18 @@ export const sessionCommand = new Command("session")
           process.exit(1);
         }
         logPath = found.value;
+      }
+
+      // Every output mode scales with the transcript; refuse a huge one
+      // unless the caller asserted they want it.
+      if (
+        !transcriptPrintable({
+          logPath,
+          sessionId,
+          allowHuge: !!options.allowHuge,
+        })
+      ) {
+        process.exit(1);
       }
 
       // --raw: dump the file (streamed — a transcript can exceed the heap)
