@@ -3,11 +3,7 @@ import { getActiveBox, isBoxEnabled, type ClerkConfig, type EnabledBox } from ".
 import { loadConfig } from "../platform/config-storage.js";
 import { detectBoxOnActiveTab } from "../platform/detect-box.js";
 import { activateBox, disableBox, enableBox } from "../platform/enable-box.js";
-import {
-  hasSilentCapturePermission,
-  requestSilentCapturePermission,
-  revokeSilentCapturePermission,
-} from "../platform/capture-permission.js";
+import { openBox } from "../platform/open-box.js";
 import { ActionsPanel } from "./actions-panel.js";
 
 export function PopupApp() {
@@ -48,6 +44,16 @@ export function PopupApp() {
     });
   }, []);
 
+  const handleOpen = useCallback((boxUrl: string) => {
+    openBox(boxUrl)
+      .then(() => {
+        window.close(); // the popup has served its purpose once the tab is up
+      })
+      .catch((err: unknown) => {
+        console.error("[clerk] failed to open box:", err);
+      });
+  }, []);
+
   if (config === null) {
     return <div className="w-80 p-4 text-sm text-gray-500">Loading…</div>;
   }
@@ -57,16 +63,19 @@ export function PopupApp() {
 
   return (
     <div className="w-80 p-4">
-      <h1 className="mb-3 text-lg font-semibold">Callback Clerk</h1>
+      <PopupHeader />
       {showOffer ? (
         <EnableOffer box={detected} onEnable={handleEnable} />
       ) : null}
+      {/* Above the box list: the primary action must not move as boxes pile up. */}
+      {activeBox !== null ? <ActionsPanel box={activeBox} /> : null}
       {config.boxes.length > 0 ? (
         <BoxList
           boxes={config.boxes}
           activeBoxUrl={config.activeBoxUrl}
           onActivate={handleActivate}
           onDisable={handleDisable}
+          onOpen={handleOpen}
         />
       ) : null}
       {config.boxes.length === 0 && !showOffer ? (
@@ -75,66 +84,41 @@ export function PopupApp() {
           popup will offer to enable it.
         </p>
       ) : null}
-      {config.boxes.length > 0 ? <SilentCaptureToggle /> : null}
-      {activeBox !== null ? <ActionsPanel box={activeBox} /> : null}
     </div>
   );
 }
 
-/**
- * Opt-in for silent agent screenshots. Toggles the broad host permission
- * captureVisibleTab needs (see capture-permission.ts). Off is the safe default:
- * the box app falls back to its getDisplayMedia consent popup, so screenshots
- * still work, just with a one-time browser share prompt.
- */
-function SilentCaptureToggle() {
-  const [granted, setGranted] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    hasSilentCapturePermission().then(setGranted).catch((err: unknown) => {
-      console.error("[clerk] failed to read capture permission:", err);
+function PopupHeader() {
+  const openSettings = useCallback(() => {
+    chrome.runtime.openOptionsPage().catch((err: unknown) => {
+      console.error("[clerk] failed to open settings:", err);
     });
   }, []);
 
-  const toggle = useCallback(() => {
-    if (granted === null) return;
-    setBusy(true);
-    // request()/remove() must stay inside the click gesture — no awaits before.
-    const action = granted ? revokeSilentCapturePermission() : requestSilentCapturePermission();
-    action
-      .then((ok) => {
-        // request → ok means granted; remove → ok means revoked.
-        if (ok) setGranted(!granted);
-      })
-      .catch((err: unknown) => {
-        console.error("[clerk] failed to change capture permission:", err);
-      })
-      .finally(() => setBusy(false));
-  }, [granted]);
-
-  if (granted === null) return null;
-
   return (
-    <div className="mt-3 rounded border border-gray-200 p-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">Silent screenshots</span>
-        <button
-          onClick={toggle}
-          disabled={busy}
-          className={`shrink-0 rounded px-2 py-1 text-xs font-medium ${
-            granted ? "bg-teal-600 text-white hover:bg-teal-700" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          } disabled:opacity-50`}
-        >
-          {granted ? "On" : "Off"}
-        </button>
-      </div>
-      <p className="mt-1 text-xs text-gray-500">
-        {granted
-          ? "The agent can capture your box tabs without a prompt. Turn off to require the browser share prompt each time."
-          : "Let the agent screenshot your box tabs without a prompt. Grants access to all sites (the extension only captures enabled boxes). Off = a browser share prompt each time."}
-      </p>
+    <div className="mb-3 flex items-center justify-between gap-2">
+      <h1 className="text-lg font-semibold">Callback Clerk</h1>
+      <button
+        onClick={openSettings}
+        className="shrink-0 rounded px-1 text-gray-400 hover:text-gray-700"
+        title="Settings"
+        aria-label="Settings"
+      >
+        <GearIcon />
+      </button>
     </div>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        d="M8.34 1.5a1 1 0 0 0-.98.8l-.2 1.02a6.5 6.5 0 0 0-1.2.7l-.98-.34a1 1 0 0 0-1.19.45l-1.16 2a1 1 0 0 0 .21 1.25l.78.68a6.6 6.6 0 0 0 0 1.38l-.78.68a1 1 0 0 0-.21 1.25l1.16 2a1 1 0 0 0 1.19.45l.98-.34c.37.28.77.51 1.2.7l.2 1.02a1 1 0 0 0 .98.8h2.32a1 1 0 0 0 .98-.8l.2-1.02c.43-.19.83-.42 1.2-.7l.98.34a1 1 0 0 0 1.19-.45l1.16-2a1 1 0 0 0-.21-1.25l-.78-.68a6.6 6.6 0 0 0 0-1.38l.78-.68a1 1 0 0 0 .21-1.25l-1.16-2a1 1 0 0 0-1.19-.45l-.98.34a6.5 6.5 0 0 0-1.2-.7l-.2-1.02a1 1 0 0 0-.98-.8H8.34ZM10 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"
+        clipRule="evenodd"
+      />
+    </svg>
   );
 }
 
@@ -165,9 +149,10 @@ interface BoxListProps {
   activeBoxUrl: string | null;
   onActivate: (boxUrl: string) => void;
   onDisable: (boxUrl: string) => void;
+  onOpen: (boxUrl: string) => void;
 }
 
-function BoxList({ boxes, activeBoxUrl, onActivate, onDisable }: BoxListProps) {
+function BoxList({ boxes, activeBoxUrl, onActivate, onDisable, onOpen }: BoxListProps) {
   return (
     <div className="space-y-2">
       {boxes.map((box) => (
@@ -177,6 +162,7 @@ function BoxList({ boxes, activeBoxUrl, onActivate, onDisable }: BoxListProps) {
           isActive={box.boxUrl === activeBoxUrl}
           onActivate={onActivate}
           onDisable={onDisable}
+          onOpen={onOpen}
         />
       ))}
     </div>
@@ -188,29 +174,42 @@ interface BoxRowProps {
   isActive: boolean;
   onActivate: (boxUrl: string) => void;
   onDisable: (boxUrl: string) => void;
+  onOpen: (boxUrl: string) => void;
 }
 
-function BoxRow({ box, isActive, onActivate, onDisable }: BoxRowProps) {
+function BoxRow({ box, isActive, onActivate, onDisable, onOpen }: BoxRowProps) {
   const handleActivate = useCallback(() => {
     onActivate(box.boxUrl);
   }, [onActivate, box.boxUrl]);
   const handleDisable = useCallback(() => {
     onDisable(box.boxUrl);
   }, [onDisable, box.boxUrl]);
+  const handleOpen = useCallback(() => {
+    onOpen(box.boxUrl);
+  }, [onOpen, box.boxUrl]);
 
   const border = isActive ? "border-teal-500 bg-teal-50" : "border-gray-200";
   const dot = isActive ? "bg-teal-500" : "bg-gray-300";
 
   return (
-    <div className={`flex items-center gap-2 rounded border p-2 ${border}`}>
+    <div className={`flex items-center gap-1 rounded border p-2 ${border}`}>
       <button onClick={handleActivate} className="flex min-w-0 flex-1 items-center gap-2 text-left" title="Make this the active box">
         <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
         <BoxLabel box={box} />
       </button>
       <button
+        onClick={handleOpen}
+        className="shrink-0 px-1 text-lg leading-none text-gray-400 hover:text-teal-700"
+        title="Open this box's chat"
+        aria-label={`Open ${box.title}`}
+      >
+        ›
+      </button>
+      <button
         onClick={handleDisable}
         className="shrink-0 px-1 text-gray-400 hover:text-red-600"
         title="Disable this box"
+        aria-label={`Disable ${box.title}`}
       >
         ✕
       </button>
