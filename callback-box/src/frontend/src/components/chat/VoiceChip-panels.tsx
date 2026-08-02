@@ -1,13 +1,15 @@
 /**
- * `VoiceChip`'s two sub-panels (Model, Voice settings) — split out of
- * VoiceChip.tsx to keep that file under the 300-line cap. Moved here from
+ * `VoiceChip`'s "Voice settings" sub-panel — split out of VoiceChip.tsx to
+ * keep that file under the 300-line cap. Moved here from
  * `ChatMenu-advanced-panels.tsx` by chunk 3 of
  * docs/plans/chat-header-chips.md; the mutation handlers (with rollback +
  * toast on rejection) stay owned by VoiceChip.tsx, which passes them in.
+ * (The Model sub-panel that used to live here moved to `ChatMenu` — see
+ * `ChatMenu-model-panel.tsx` — in the chip polish round, since Model isn't
+ * an I/O concern.)
  */
 
-import { MenuItem, MenuDivider } from "../ui/Dropdown";
-import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
+import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 
 export type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper" | "openai-realtime";
 export type HqTranscriptionOption = "whisper" | "whisper-llm" | "whisper-llm-mini" | "voxtral" | "voxtral-diarized";
@@ -31,31 +33,6 @@ const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   { label: "Voxtral (Mistral)", service: "voxtral" },
   { label: "Voxtral + diarization", service: "voxtral-diarized" },
 ];
-
-/** "Model" sub-panel. */
-export function ModelPanel({
-  onBack,
-  selectedModel,
-  onSelectModel,
-}: {
-  onBack: () => void;
-  selectedModel: string | null;
-  onSelectModel: (model: string | null) => void;
-}) {
-  return (
-    <>
-      <MenuItem onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Model</span>
-      </MenuItem>
-      <MenuDivider />
-      {MODEL_OPTIONS.map((opt) => (
-        <MenuItem key={opt.label} onClick={() => onSelectModel(opt.model)}>
-          {selectedModel === opt.model ? "✓ " : "  "}{opt.label}
-        </MenuItem>
-      ))}
-    </>
-  );
-}
 
 /** "Voice settings" sub-panel: live + HQ transcription service pickers. */
 export function VoicePanel({

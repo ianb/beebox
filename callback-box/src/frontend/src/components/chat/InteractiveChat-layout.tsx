@@ -32,15 +32,13 @@ export function ChatHeader(props: {
   onToggleNarration: () => void;
   muted: boolean;
   onToggleMute: () => void;
-  selectedModel: string | null;
-  onSelectModel: (model: string | null) => void;
   messages: SessionEntry[];
   onZoomView: OnZoomView;
   chatMenu: ReactNode;
 }) {
   const {
     effectiveContextDir, boxSlug, narrationEnabled, hqInFlight, onToggleNarration, muted, onToggleMute,
-    selectedModel, onSelectModel, messages, onZoomView, chatMenu,
+    messages, onZoomView, chatMenu,
   } = props;
   return (
     <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
@@ -53,8 +51,6 @@ export function ChatHeader(props: {
         narrationEnabled={narrationEnabled}
         onToggleNarration={onToggleNarration}
         hqInFlight={hqInFlight}
-        selectedModel={selectedModel}
-        onSelectModel={onSelectModel}
       />
       {chatMenu}
     </header>

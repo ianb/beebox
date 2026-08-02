@@ -7,7 +7,7 @@
  */
 
 import { useParams } from "@tanstack/react-router";
-import { MenuItem } from "../ui/Dropdown";
+import { MenuItem } from "../ui/dropdown-menu-item";
 import { useLocationShare } from "../../hooks/useLocationShare";
 
 function shareLabel(opts: { busy: boolean; error: string | null; enabled: boolean }): string {

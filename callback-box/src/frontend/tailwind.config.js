@@ -103,6 +103,26 @@ export default {
         // alias) — warm-50..900 is self-documenting as a shade scale.
         warm: palette.warm,
       },
+      // ─── Dropdown sub-panel transitions ─────────────────────────
+      // The panel-swap idiom (Dropdown.tsx) keys its content wrapper on
+      // `panelIndex` and picks one of these based on whether the new panel
+      // is deeper (slides in from the right) or shallower (from the left).
+      // Gated behind `motion-safe:` at the call site so reduced-motion users
+      // get an instant swap instead.
+      keyframes: {
+        "dropdown-panel-in-right": {
+          "0%": { opacity: "0", transform: "translateX(1rem)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "dropdown-panel-in-left": {
+          "0%": { opacity: "0", transform: "translateX(-1rem)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+      },
+      animation: {
+        "dropdown-panel-in-right": "dropdown-panel-in-right 150ms ease-out forwards",
+        "dropdown-panel-in-left": "dropdown-panel-in-left 150ms ease-out forwards",
+      },
     },
   },
   plugins: [typography],

@@ -118,14 +118,14 @@ function HeaderRegion(props: ChatBodyProps) {
       onToggleNarration={handleToggleNarration}
       muted={mute.muted}
       onToggleMute={mute.handleToggleMute}
-      selectedModel={selectedModel}
-      onSelectModel={handleSelectModel}
       messages={messages}
       onZoomView={onZoomView}
       chatMenu={
         <ChatMenu
           onNewSession={actions.handleNewSession}
           contextDir={effectiveContextDir}
+          selectedModel={selectedModel}
+          onSelectModel={handleSelectModel}
           onStopProcess={actions.handleStopProcess}
           onRestartProcess={actions.handleRestartProcess}
           onCompactSession={actions.handleCompactSession}

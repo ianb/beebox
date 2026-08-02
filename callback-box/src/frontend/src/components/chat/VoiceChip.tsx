@@ -1,9 +1,11 @@
 /**
  * The chat header's voice chip: a Dropdown-triggered chip whose face shows
- * mute/narration/transcribing state, and whose menu holds every voice
- * control (Mute, Narration mode, Model, Voice settings) — moved here from
+ * mute/narration/transcribing state, and whose menu holds the I/O voice
+ * controls (Mute, Narration mode, Voice settings) — moved here from
  * `ChatMenu`/`MuteButton`/`NarrationStatusBadge` by chunk 3 of
- * docs/plans/chat-header-chips.md.
+ * docs/plans/chat-header-chips.md. Model selection moved out to `ChatMenu`
+ * in the chip polish round (docs/plans/chat-header-chips.md follow-up) —
+ * this chip is purely I/O now.
  *
  * `VoiceChipFace` is exported separately so it can be rendered in a doctest
  * (test/frontend/voice-chip-face.doctest.md) without the Dropdown/router
@@ -11,20 +13,17 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { Dropdown, MenuItem, MenuDivider } from "../ui/Dropdown";
+import { Dropdown } from "../ui/Dropdown";
+import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { trpc } from "../../lib/trpc";
 import { toastError } from "../ui/toast-store";
-import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
 import { voiceChipLabel } from "./voice-chip-label";
-import {
-  ModelPanel, VoicePanel,
-  type TranscriptionServiceOption, type HqTranscriptionOption,
-} from "./VoiceChip-panels";
+import { VoicePanel, type TranscriptionServiceOption, type HqTranscriptionOption } from "./VoiceChip-panels";
 
 // Single-panel submenu pattern (see ChatMenu.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
 // when the dropdown closes.
-type VoiceChipPanel = "root" | "model" | "voice";
+type VoiceChipPanel = "root" | "voice";
 
 /**
  * Speaker icon reflecting mute state — the same shapes `MuteButton` used
@@ -45,6 +44,15 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
   );
 }
 
+/** Mic icon representing narration (input) mode. */
+function MicIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0M12 19v3" />
+    </svg>
+  );
+}
+
 export interface VoiceChipFaceState {
   muted: boolean;
   narrationEnabled: boolean;
@@ -52,28 +60,27 @@ export interface VoiceChipFaceState {
 }
 
 /**
- * Presentational chip face: speaker icon (slashed when muted), a corner dot
- * when narration is on, and a transient "transcribing…" label while HQ
- * transcription is in flight — the readable text `NarrationStatusBadge` used
- * to show, preserved here. Renderable standalone (no Dropdown/router
- * context), so the doctest exercises it directly.
+ * Presentational chip face: a split pill with two segments — a mic icon for
+ * narration (input, dimmed when off) and a speaker icon for mute (output,
+ * slashed when muted) — divided by a thin vertical rule, plus a transient
+ * "transcribing…" label while HQ transcription is in flight (the readable
+ * text `NarrationStatusBadge` used to show, preserved here). Renderable
+ * standalone (no Dropdown/router context), so the doctest exercises it
+ * directly. The whole pill is one tap target (wired up by the caller); the
+ * two icons are not separately actionable.
  */
 export function VoiceChipFace({ muted, narrationEnabled, hqInFlight }: VoiceChipFaceState) {
   return (
     <span
-      className="relative inline-flex items-center gap-1"
+      className="inline-flex items-center gap-1.5"
       data-voice-muted={muted}
       data-voice-narration={narrationEnabled}
     >
-      <span className="relative inline-flex">
-        <SpeakerIcon muted={muted} />
-        {narrationEnabled ? (
-          <span
-            aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-white"
-          />
-        ) : null}
+      <span className={narrationEnabled ? "opacity-100" : "opacity-40"}>
+        <MicIcon />
       </span>
+      <span aria-hidden="true" className="w-px h-4 bg-white/20" />
+      <SpeakerIcon muted={muted} />
       {hqInFlight ? <span className="text-xs opacity-80">transcribing…</span> : null}
     </span>
   );
@@ -85,12 +92,8 @@ interface VoiceChipBodyProps {
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
-  currentModelLabel: string;
-  onOpenModel: () => void;
   onOpenVoice: () => void;
   onBackToRoot: () => void;
-  selectedModel: string | null;
-  onSelectModel: (model: string | null) => void;
   currentService: string | null;
   onSelectTranscriptionService: (service: TranscriptionServiceOption) => void;
   currentHqService: string | null;
@@ -105,8 +108,8 @@ interface VoiceChipBodyProps {
  */
 function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   const {
-    panel, muted, onToggleMute, narrationEnabled, onToggleNarration, currentModelLabel, onOpenModel, onOpenVoice,
-    onBackToRoot, selectedModel, onSelectModel, currentService, onSelectTranscriptionService, currentHqService,
+    panel, muted, onToggleMute, narrationEnabled, onToggleNarration, onOpenVoice,
+    onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService,
   } = props;
   switch (panel) {
@@ -116,12 +119,6 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
           <MenuItem onClick={onToggleMute}>{muted ? "✓ " : "  "}Mute</MenuItem>
           <MenuItem onClick={onToggleNarration}>{narrationEnabled ? "✓ " : "  "}Narration mode</MenuItem>
           <MenuDivider />
-          <MenuItem onClick={onOpenModel} keepOpen>
-            <span className="flex justify-between gap-2 w-full">
-              <span>Model</span>
-              <span className="text-warm-500 truncate">{currentModelLabel} ›</span>
-            </span>
-          </MenuItem>
           <MenuItem onClick={onOpenVoice} keepOpen>
             <span className="flex justify-between gap-2 w-full">
               <span>Voice settings</span>
@@ -130,8 +127,6 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
           </MenuItem>
         </>
       );
-    case "model":
-      return <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
     case "voice":
       return (
         <VoicePanel
@@ -154,16 +149,12 @@ export function VoiceChip({
   narrationEnabled,
   onToggleNarration,
   hqInFlight,
-  selectedModel,
-  onSelectModel,
 }: {
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
   hqInFlight: boolean;
-  selectedModel: string | null;
-  onSelectModel: (model: string | null) => void;
 }) {
   const utils = trpc.useUtils();
   const transcriptionConfigQuery = trpc.transcription.config.useQuery();
@@ -193,19 +184,19 @@ export function VoiceChip({
   };
 
   const [panel, setPanel] = useState<VoiceChipPanel>("root");
-  const currentModelLabel = MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
   const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight });
 
   return (
     <Dropdown
       align="right"
       width="w-56"
+      panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
           onClick={toggle}
-          className="min-h-[40px] px-2 flex items-center justify-center rounded hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className="min-h-[40px] px-3 flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           title={label}
           aria-label={label}
           {...ariaProps}
@@ -220,12 +211,8 @@ export function VoiceChip({
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}
         onToggleNarration={onToggleNarration}
-        currentModelLabel={currentModelLabel}
-        onOpenModel={() => setPanel("model")}
         onOpenVoice={() => setPanel("voice")}
         onBackToRoot={() => setPanel("root")}
-        selectedModel={selectedModel}
-        onSelectModel={onSelectModel}
         currentService={currentService}
         onSelectTranscriptionService={onSelectTranscriptionService}
         currentHqService={currentHqService}
