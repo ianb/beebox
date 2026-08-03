@@ -122,7 +122,7 @@ picture), and the app bar's two menus (the compact, always-reachable forms).
 `/<box>/landmarks` is one section per landmark, each carrying both halves of
 the landmark's activity: its **chats** and its **links**. It absorbed the
 former Chats page (`/chats` redirects here) — the two were the same
-landmark-keyed page projected twice (`docs/plans/top-nav-ia.md` Track D).
+landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 Implementation: `LandmarksList` + `LandmarkSection` + `LandmarkSessions` in
 `src/frontend/src/components/landmarks/`.
 
@@ -161,7 +161,7 @@ Two things render outside the per-landmark sections:
 
 ### App bar — switch menu and here menu
 
-The unified app bar (`docs/plans/top-nav-ia.md`) is the compact surface:
+The unified app bar (`docs/implemented-plans/top-nav-ia.md`) is the compact surface:
 
 - **Switch menu** (the place pill's left half) lists every landmark as a row
   — symbol, label, and its fresh-chat count — plus `All landmarks →` to the

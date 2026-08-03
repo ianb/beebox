@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-02T05:16:14Z
-Total documents: 235
+Generated: 2026-08-03T12:18:41Z
+Total documents: 236
 
 ## Issues
 
@@ -115,6 +115,7 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:45 (mention) — - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — degraded
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:23 (mention) — `CLAUDE.md`. We share what Track 2 forces us to share. We do not
 - docs/implemented-plans/todo-annotation.md:128 (mention) — CLAUDE.md that @-imports MAP.md"). **Reused** as the channel for
+- docs/implemented-plans/top-nav-ia.md:441 (mention) — | Voice/session chips regress companion-pane memo stability (bar re-renders on chat state) | Render-count probe (chat CL
 - docs/implemented-plans/user-location.md:255 (mention) — CLAUDE.md default; the raw-route carve-out doesn't apply. (An earlier
 - docs/implemented-plans/view-render-testing.md:258 (mention) — of the orphan-prone dev machinery in CLAUDE.md — no router, no Vite, no Fastify,
 - docs/implemented-plans/web-push-notifications.md:192 (mention) — prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
@@ -210,6 +211,7 @@ Referenced by:
 - ../research/openclaw-hermes/scout-agent-zero.md:66 (mention) — - **Different, worth noting but not necessarily adopting:** (a) the entire framework directory is agent-writable with no
 - ../research/openclaw-hermes/scout-goose.md:279 (mention) — `load_hints.rs:27-97`), similar to nested `CLAUDE.md`. This is pure static
 - ../research/openclaw-hermes/scout-nanobot.md:37 (mention) — - **Memory architecture is the single most CBX-relevant finding**: nanobot converged on the same shape CBX already uses 
+- ../research/openclaw-personality-onboarding/reception.md:120 (mention) — the config, and emits per-framework files including OpenClaw `SOUL.md` alongside `CLAUDE.md`,
 - ../research/pai/README.md:17 (mention) — | [prompts.md](./prompts.md) | The actual prompt text — system prompt, CLAUDE.md, Algorithm doctrine — quoted and annota
 - ../research/pai/information-layout.md:17 (mention) — CLAUDE.md:
 - ../research/pai/prompts.md:20 (mention) — > layer. CLAUDE.md defines operational procedures and format templates.
@@ -287,7 +289,7 @@ Referenced by:
 - docs/implemented-plans/canvas-loop-figure.md:28 (mention) — - `code-style.md`: max 2 positional params (the figure contract's
 - docs/implemented-plans/capture-mode.md:39 (mention) — - `callback-box/code-style.md` — no `any`, named-params objects, custom
 - docs/implemented-plans/card-view-widgets.md:22 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
-- docs/implemented-plans/chat-header-chips.md:56 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
+- docs/implemented-plans/chat-header-chips.md:69 (mention) — - `code-style.md:69` — "User-initiated actions never silently no-op"; governs
 - docs/implemented-plans/chat-review.md:56 (mention) — - **`callback-box/code-style.md`** — max 2 positional params, no default
 - docs/implemented-plans/chat-scroll-redesign.md:46 (mention) — - `callback-box/code-style.md:36-37` — no default parameters; max 2 positional
 - docs/implemented-plans/chat-stream-finalize-unify.md:48 (mention) — - `callback-box/code-style.md:37` — max 2 positional params; new/changed
@@ -375,7 +377,7 @@ Referenced by:
 - code-style.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/implemented-plans/architectural-review.md:597 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
 - docs/implemented-plans/card-view-widgets.md:24 (mention) — - `callback-box/frontend.md:34` — *"Reach for a primitive from
-- docs/implemented-plans/chat-header-chips.md:52 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
+- docs/implemented-plans/chat-header-chips.md:65 (mention) — - `frontend.md:28` — "Components in components/ own their appearance"; all
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read frontend.md before writing UI"* and the
 - docs/implemented-plans/figure-card-type.md:79 (mention) — - **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
@@ -384,6 +386,7 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:288 (mention) — plus its description in `frontend.md:60`.
 - docs/implemented-plans/responsive-figures.md:42 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:103 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
+- docs/implemented-plans/top-nav-ia.md:110 (mention) — palette. Read frontend.md before writing UI"; components own their
 - docs/implemented-plans/user-location.md:63 (mention) — - `callback-box/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/design-reconciliation.md:39 (mention) — capture, dashboard, views, and a real design system (frontend.md).
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
@@ -770,7 +773,10 @@ Referenced by:
 - CLAUDE.md:165 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
 - docs/implemented-plans/architectural-review-followups.md:271 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
+- docs/implemented-plans/top-nav-ia.md:409 (mention) — bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
 - ../issues/code-quality/2026-07-06-chat-session-shared-core.md:50 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:52 (mention) — (See `docs/chat-session-lifecycle.md`.)
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:71 (link) — - [Chat session lifecycle](../../callback-box/docs/chat-session-lifecycle.md) — how
 
 References:
 - → ../issues/code-quality/2026-07-06-chat-session-shared-core.md (mention)
@@ -921,7 +927,7 @@ Referenced by:
 - docs/implemented-plans/bulk-file-upload.md:19 (mention) — - `docs/engineering-principles.md` — chiefly **#1 types are structure** (a
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
-- docs/implemented-plans/chat-header-chips.md:47 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
+- docs/implemented-plans/chat-header-chips.md:60 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-review.md:39 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/expose-dev-router.md:29 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/hub-healthz-box-aggregation.md:31 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
@@ -942,6 +948,7 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
 - docs/implemented-plans/tailscale-expose-and-protect.md:48 (mention) — - `callback-box/docs/engineering-principles.md` — especially fail-closed /
 - docs/implemented-plans/todo-annotation.md:53 (mention) — - `callback-box/docs/engineering-principles.md` — especially
+- docs/implemented-plans/top-nav-ia.md:107 (mention) — - `callback-box/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/plans/android-companion-app.md:25 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
 - docs/plans/asset-annex.md:62 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent),
 - docs/plans/asset-offbox-storage.md:65 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent —
@@ -1076,6 +1083,7 @@ Referenced by:
 - docs/implemented-plans/google-auth-reauth-health.md:127 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:4 (mention) — canary route all shipped; see `docs/health-checks.md` for the current
 - docs/implemented-plans/tailscale-expose-and-protect.md:414 (mention) — on the server plus a short runbook note in `docs/health-checks.md`'s style
+- docs/implemented-plans/top-nav-ia.md:440 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/health-checks.md`); Overview reacha
 - docs/plans/asset-annex.md:476 (mention) — the deploy runbooks (`docs/health-checks.md`) without touching
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:203 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
@@ -1160,14 +1168,16 @@ References:
 
 #### docs/landmarks.md
 
-Title: "Landmarks" | 164 lines
+Title: "Landmarks" | 199 lines
 
 Referenced by:
 - CLAUDE.md:163 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
 - docs/design/representation.md:91 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
 - docs/implemented-plans/architectural-review.md:829 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/clerk-webpage-capture.md:264 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
+- docs/implemented-plans/nav-card.md:136 (mention) — links (see `docs/landmarks.md`).
 - docs/implemented-plans/open-chat-from-card.md:96 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
+- docs/implemented-plans/top-nav-ia.md:193 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
 - docs/landmark-curation.md:5 (mention) — For the design and schema of the card itself, see `docs/landmarks.md` and `docs/generated/card-landmark.md`.
 - docs/reports/user-stories-audit-2026-06-26.md:732 (mention) — The file src/core/frontmatter-field.ts exports two functions that implement the exact capability described. lookupField(
 - docs/unimplemented-plans/design-vision-superseded.md:7 (mention) — > retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
@@ -1175,9 +1185,11 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:65 (mention) — `src/schemas/landmark.ts` and `docs/landmarks.md`; an `expand` entry fans out to
 - ../issues/features/2026-06-12-card-level-prominence.md:7 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:26 (mention) — Landmarks are already the box's "notable spots" surface (`docs/landmarks.md`), and
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:69 (link) — - [Landmarks](../../callback-box/docs/landmarks.md) — the navigation surface the
 
 References:
 - → docs/triage.md (mention)
+- → docs/implemented-plans/top-nav-ia.md (mention)
 
 #### docs/maintenance.md
 
@@ -1357,7 +1369,7 @@ References:
 
 #### docs/questions.md
 
-Title: "Questions" | 335 lines
+Title: "Questions" | 338 lines
 
 Referenced by:
 - CLAUDE.md:158 (mention) — | Questions subsystem design | `docs/questions.md` |
@@ -1372,6 +1384,7 @@ References:
 - → docs/implemented-plans/questions-end-to-end.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
 - → CLAUDE.md (mention)
+- → docs/implemented-plans/top-nav-ia.md (mention)
 
 #### docs/README.md
 
@@ -1504,7 +1517,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:760 (mention) — that didn't happen. `testing.md:608`'s "soft assertions" note is a
 - docs/implemented-plans/architectural-review.review.md:12 (mention) — **Citation:** plan Track P.1; `testing.md:608`.
 - docs/implemented-plans/card-view-widgets.md:636 (mention) — - **Test posture** (per `docs/testing.md` — tests first, as a design tool):
-- docs/implemented-plans/chat-header-chips.md:59 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
+- docs/implemented-plans/chat-header-chips.md:72 (mention) — - `docs/testing.md:13-17` — "Doctests are the default"; frontend doctests cover
 - docs/implemented-plans/chat-scroll-redesign.md:55 (mention) — - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
 - docs/implemented-plans/chat-stream-finalize-unify.md:53 (mention) — - `callback-box/docs/testing.md:5-9` + `:474-521` — layout/streaming behavior is
 - docs/implemented-plans/courseware-lesson-plan.md:326 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
@@ -2173,12 +2186,14 @@ References:
 
 #### docs/implemented-plans/chat-header-chips.md
 
-Title: "Chat header re-IA: three stateful chips" | 354 lines
+Title: "Chat header re-IA: three stateful chips" | 367 lines
 
 Referenced by:
+- docs/implemented-plans/top-nav-ia.md:50 (mention) — split-face idiom (`docs/implemented-plans/chat-header-chips.md`).
 - ../issues/closed/bugs/2026-08-01-chat-menu-clipped-mobile.md:5 (mention) — discovered-in: worktree-chat-menu-mobile-overflow — implementing docs/plans/chat-header-chips.md
 
 References:
+- → docs/implemented-plans/top-nav-ia.md (mention)
 - → docs/engineering-principles.md (mention)
 - → frontend.md (mention)
 - → code-style.md (mention)
@@ -2639,13 +2654,16 @@ References:
 
 #### docs/implemented-plans/nav-card.md
 
-Title: "Nav as a card — first interface-as-cards slice" | 107 lines
+Title: "Nav as a card — first interface-as-cards slice" | 143 lines
 
 Referenced by:
+- docs/implemented-plans/top-nav-ia.md:120 (mention) — and `docs/implemented-plans/nav-card.md` (card-driven nav — this plan
 - docs/plans/interface-as-cards.md:289 (mention) — | Nav | curated `refs` card + per-entry overrides — **shipped 2026-07** (`docs/implemented-plans/nav-card.md`; nav form/
 
 References:
+- → docs/implemented-plans/top-nav-ia.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
+- → docs/landmarks.md (mention)
 
 #### docs/implemented-plans/normalize-chat-links.md **[ORPHAN]**
 
@@ -3103,6 +3121,28 @@ References:
 - → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/top-nav-ia.md
+
+Title: "Unified app bar: one nav for chat and everything else" | 531 lines
+
+Referenced by:
+- docs/implemented-plans/chat-header-chips.md:6 (mention) — **Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
+- docs/implemented-plans/nav-card.md:12 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
+- docs/landmarks.md:125 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
+- docs/questions.md:254 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
+- ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md:5 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
+- ../issues/features/2026-07-20-first-run-experience.md:10 (mention) — **Update 2026-08-02** (`callback-box/docs/implemented-plans/top-nav-ia.md`): new users
+
+References:
+- → docs/implemented-plans/chat-header-chips.md (mention)
+- → docs/engineering-principles.md (mention)
+- → frontend.md (mention)
+- → docs/implemented-plans/nav-card.md (mention)
+- → docs/landmarks.md (mention)
+- → docs/chat-session-lifecycle.md (mention)
+- → docs/health-checks.md (mention)
+- → CLAUDE.md (mention)
+
 #### docs/implemented-plans/user-location.md
 
 Title: "User Location (`cb location get`)" | 496 lines
@@ -3524,7 +3564,7 @@ Referenced by:
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
 - docs/design/interaction-model.md:17 (link) — ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
-- docs/implemented-plans/nav-card.md:11 (mention) — First implementation slice of `docs/plans/interface-as-cards.md`. Small on
+- docs/implemented-plans/nav-card.md:20 (mention) — First implementation slice of `docs/plans/interface-as-cards.md`. Small on
 - docs/plans/chat-husks.md:8 (mention) — `docs/plans/interface-as-cards.md` ("Chat / Husks").
 - docs/plans/design-reconciliation.md:22 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/plans/docs-reorg.md:43 (mention) — files are genuinely active plans** (`input-widget.md`, `interface-as-cards.md`,
@@ -3597,7 +3637,7 @@ References:
 Title: "iOS input-plane parity" | 578 lines
 
 Referenced by:
-- docs/implemented-plans/chat-header-chips.md:288 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
+- docs/implemented-plans/chat-header-chips.md:301 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:3 (mention) — design: ../../callback-box/docs/plans/ios-input-plane-parity.md
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:9 (link) — [`ios-input-plane-parity.md`](../../callback-box/docs/plans/ios-input-plane-parity.md).
 

@@ -251,7 +251,7 @@ evidence model.
 ## Surfacing
 
 - **Header badge** — retired 2026-08 with the nav link row
-  (`docs/plans/top-nav-ia.md`): the app bar no longer carries a
+  (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
   pending-question count, and Questions has no nav presence unless a box
   pins `/questions` in its `nav.card`. The intended replacement is inline
   questions in chat (not built). Until then the Dashboard's attention cards

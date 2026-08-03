@@ -2,7 +2,7 @@
 
 `navMenuEntries` (`lib/nav-menu-entries.ts`) decides which of a box's
 `nav.card` entries the app bar's switch menu renders. The card used to drive a
-whole link row; with the row retired (docs/plans/top-nav-ia.md Track C3) its
+whole link row; with the row retired (docs/implemented-plans/top-nav-ia.md Track C3) its
 entries become a section inside the menu — but the menu already has builtin
 rows for most routes, so a duplicate is dropped rather than shown twice.
 

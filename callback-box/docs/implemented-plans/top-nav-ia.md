@@ -1,5 +1,8 @@
 # Unified app bar: one nav for chat and everything else
 
+**Status:** implemented 2026-08 — all tracks (A–E) shipped, including a
+post-review follow-up commit (`ac8e12c5`).
+
 Replace the two stacked header rows (the AppNav link bar + the chat header
 chips row) with a single unified app bar, navigate by place (box ▸ landmark)
 through a split-pill chip, make chat the default landing, merge the Chats

@@ -3,7 +3,7 @@
 **Status:** implemented 2026-08 — shipped as `ContextChip`, `VoiceChip`, and
 `ChatMenu`, fixing the mobile-clipped "..." menu bug.
 
-**Superseded surface (2026-08-02, `docs/plans/top-nav-ia.md`).** The chat
+**Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
 header row this plan built no longer exists — it was absorbed into the
 unified app bar, which now carries the chips for every page. `ChatMenu`
 became the **session chip** (face: the session title; menu: New session /

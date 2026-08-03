@@ -7,7 +7,7 @@ discovered-in: worktree-open-source-readiness — first-run UX audit for the sof
 labels: [soft-launch]
 ---
 
-**Update 2026-08-02** (`callback-box/docs/plans/top-nav-ia.md`): new users
+**Update 2026-08-02** (`callback-box/docs/implemented-plans/top-nav-ia.md`): new users
 now land on **chat**, not the dashboard — the dashboard moved to
 `/<box>/dashboard` as an ops plane reached from the app bar's Box submenu.
 That reframes this issue rather than closing it: the "schedule table is the

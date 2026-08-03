@@ -9,7 +9,7 @@ route table in `src/shared/nav-routes.ts`, the schema in
 `src/frontend/src/lib/nav-menu-entries.ts`. The "Deliberately deferred"
 section at the bottom is still future.
 
-**Where the entries render changed (2026-08, `docs/plans/top-nav-ia.md`
+**Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
 Track C3).** There is no nav link row any more, so the card's entries are a
 section inside the app bar's switch menu, and entries duplicating a builtin
 menu row are skipped. The builtin *fallback* nav (`DEFAULT_NAV_HREFS`) is
@@ -114,7 +114,7 @@ chat husks) wants it too.
   frontmatter — fine).
 - Per-directory / contextual navs; mobile layout changes; seeding.
 
-## Behavior changes (2026-08, `docs/plans/top-nav-ia.md`)
+## Behavior changes (2026-08, `docs/implemented-plans/top-nav-ia.md`)
 
 The repo keeps no changelog, so the user-visible meaning changes from the
 app-bar work are recorded here, next to the mechanism they affect.

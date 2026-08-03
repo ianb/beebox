@@ -2,7 +2,7 @@
 title: "/card/$ and /views/$ are two parallel single-card routes"
 area: callback-box
 filed-by: agent
-discovered-in: worktree-top-nav-ia — unified app bar (docs/plans/top-nav-ia.md)
+discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 ---
 
 The frontend has two routes that mean "show me this one card":

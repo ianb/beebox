@@ -1,7 +1,7 @@
 # `landmarks.list`: broken landmark cards are reported, not skipped
 
 `landmarks.list` is the Landmarks page's reader — the merged activity surface
-(`docs/plans/top-nav-ia.md` Track D) renders one section per landmark from it.
+(`docs/implemented-plans/top-nav-ia.md` Track D) renders one section per landmark from it.
 A `*.landmark.card` whose frontmatter doesn't parse used to vanish from that
 page without a trace; now it comes back in `problems`, the same shape
 `chat.byLandmark` reports, so the page can dedupe the two by path and show a
