@@ -30,6 +30,11 @@ Findings worth actually pursuing get **filed into the monorepo-root
 stranded only in `research/` doesn't reach the place where work actually
 gets picked up.
 
+Research corpora do **not** need a cross-model (Codex) review (boxholder,
+2026-08-02). That rule is for built things — code, plans, wire contracts. A
+survey's dispositions get their scrutiny later, when an idea is picked up
+and planned; don't spend a review cycle on the survey itself.
+
 ## Lifecycle
 
 These are **dated snapshots**, not living docs. A review reflects the other
