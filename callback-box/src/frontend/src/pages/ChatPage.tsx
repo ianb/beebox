@@ -229,6 +229,7 @@ export function ChatPage() {
       companion={companion}
       card={card}
       emissionStore={emissionStore}
+      sessionLabel={bootstrap.data && bootstrap.data.sessionId === rendered ? bootstrap.data.label : null}
       embedded={embedded}
       nativeComposer={nativeComposer}
       openCaptureOnMount={openCaptureOnMount}

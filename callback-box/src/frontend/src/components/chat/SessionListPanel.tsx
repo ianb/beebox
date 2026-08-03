@@ -1,6 +1,14 @@
 /**
- * SessionListPanel — the "Recent chats" sub-panel body rendered inside
- * `ChatMenu`'s dropdown. Lists this box's web chat sessions; each row shows
+ * SessionListPanel — the "Recent chats" sub-panel body.
+ *
+ * **Currently unrendered.** Its host, `ChatMenu`'s "Recent chats" row, was
+ * retired with the chat header row (docs/plans/top-nav-ia.md Track C2): the
+ * app bar's switch menu owns finding sessions now. Kept — with its
+ * `session-list-grouping` layout, which is doctested — for Track D, which
+ * grows session rows on the Landmarks page. If Track D lands without reusing
+ * it, delete both.
+ *
+ * Lists this box's web chat sessions; each row shows
  * the first user message as a label and the session-id suffix for
  * disambiguation. Clicking a row navigates to `/chat?session=<id>` so
  * ChatPage can route into it.

@@ -1,18 +1,20 @@
 /**
- * The chat header's voice chip: a Dropdown-triggered chip whose face shows
+ * The voice chip: a Dropdown-triggered chip whose face shows
  * mute/narration/transcribing state, and whose menu holds the I/O voice
  * controls (Mute, Narration mode, Voice settings) — moved here from
  * `ChatMenu`/`MuteButton`/`NarrationStatusBadge` by chunk 3 of
- * docs/plans/chat-header-chips.md. Model selection moved out to `ChatMenu`
- * in the chip polish round (docs/plans/chat-header-chips.md follow-up) —
- * this chip is purely I/O now.
+ * docs/plans/chat-header-chips.md. Model selection moved out to the session
+ * chip in the chip polish round (docs/plans/chat-header-chips.md follow-up)
+ * — this chip is purely I/O now. Since Track C2 of
+ * docs/plans/top-nav-ia.md it renders in the app bar's chip slot rather than
+ * a chat header row; the chip itself is unchanged.
  *
  * `VoiceChipFace` is exported separately so it can be rendered in a doctest
  * (test/frontend/voice-chip-face.doctest.md) without the Dropdown/router
  * context the full chip needs.
  */
 
-import { useState, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { trpc } from "../../lib/trpc";
@@ -23,7 +25,7 @@ import {
   type TranscriptionServiceOption, type HqTranscriptionOption,
 } from "./VoiceChip-panels";
 
-// Single-panel submenu pattern (see ChatMenu.tsx): the dropdown swaps which
+// Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
 // when the dropdown closes.
 type VoiceChipPanel = "root" | "voice";
@@ -162,22 +164,28 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   }
 }
 
-/**
- * The chat header's voice dropdown menu.
- */
-export function VoiceChip({
-  muted,
-  onToggleMute,
-  narrationEnabled,
-  onToggleNarration,
-  hqInFlight,
-}: {
+export interface VoiceChipProps {
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
   onToggleNarration: () => void;
   hqInFlight: boolean;
-}) {
+}
+
+/**
+ * The voice dropdown menu, now portaled into the app bar's chip slot
+ * (`ChatBarChrome`, Track C2 of docs/plans/top-nav-ia.md) rather than
+ * rendered in a chat header row. `React.memo` because the publishing tree
+ * re-renders on every streaming token and the bar must not — its five props
+ * are primitives and `useCallback`s, so the memo holds.
+ */
+export const VoiceChip = memo(function VoiceChip({
+  muted,
+  onToggleMute,
+  narrationEnabled,
+  onToggleNarration,
+  hqInFlight,
+}: VoiceChipProps) {
   const utils = trpc.useUtils();
   const transcriptionConfigQuery = trpc.transcription.config.useQuery();
   // Neither mutation is applied optimistically — `currentService`/
@@ -244,4 +252,4 @@ export function VoiceChip({
       />
     </Dropdown>
   );
-}
+});

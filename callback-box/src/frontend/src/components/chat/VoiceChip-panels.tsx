@@ -1,11 +1,11 @@
 /**
  * `VoiceChip`'s "Voice settings" sub-panel — split out of VoiceChip.tsx to
  * keep that file under the 300-line cap. Moved here from
- * `ChatMenu-advanced-panels.tsx` by chunk 3 of
+ * `SessionChip-advanced-panels.tsx` by chunk 3 of
  * docs/plans/chat-header-chips.md; the mutation handlers (with rollback +
  * toast on rejection) stay owned by VoiceChip.tsx, which passes them in.
  * (The Model sub-panel that used to live here moved to `ChatMenu` — see
- * `ChatMenu-model-panel.tsx` — in the chip polish round, since Model isn't
+ * `SessionChip-model-panel.tsx` — in the chip polish round, since Model isn't
  * an I/O concern.)
  */
 

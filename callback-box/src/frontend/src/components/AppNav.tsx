@@ -20,6 +20,8 @@ import { href } from "../lib/routing";
 import { useBoxes } from "../hooks/useBoxes";
 import { withBase } from "../api";
 import { PlacePill } from "./PlacePill";
+import { AppBarChipSlot, useAppBarPublishedPlace } from "./app-bar-chrome";
+import { placeLabel } from "../lib/place-label";
 
 /**
  * Profile avatar + dropdown menu (Settings, Admin, Logout).
@@ -144,7 +146,11 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   // The unified bar's place chip (docs/plans/top-nav-ia.md Track C1). It sits
   // beside the old link row / box <select> for now — those come out in C3.
   const boxName = boxes.find((b) => b.slug === boxSlug)?.name ?? boxSlug ?? "";
-  const placePill = <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} />;
+  // A page that knows its own place publishes it (chat: the session's context
+  // dir — Track C2); every other route falls back to the route-derived map.
+  const publishedPlace = useAppBarPublishedPlace();
+  const place = publishedPlace ?? placeLabel({ pathname: location.pathname, boxSlug: boxSlug ?? "" });
+  const placePill = <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />;
 
   const boxSelector = boxes.length > 1 ? (
     <select
@@ -174,6 +180,8 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
             <span className="font-medium">{currentLabel}</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Chat's session + voice chips portal in here (Track C2). */}
+            <AppBarChipSlot />
             <QuestionsBadge base={base} count={pendingQuestions} />
             <PlateBadge base={base} count={onPlateTodos} />
             <button
@@ -233,6 +241,8 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
           </Link>
         ))}
         <div className="ml-auto flex items-center gap-2">
+          {/* Chat's session + voice chips portal in here (Track C2). */}
+          <AppBarChipSlot />
           <PlateBadge base={base} count={onPlateTodos} />
           <ErrorBadge onToggleDebugLog={onToggleDebugLog} />
           <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />

@@ -13,6 +13,7 @@ import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./compone
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ViewOverlayProvider } from "./components/ViewOverlay";
 import { AppNav } from "./components/AppNav";
+import { AppBarChromeProvider } from "./components/app-bar-chrome";
 import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
@@ -70,25 +71,31 @@ export function AppLayout() {
   useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
   return (
-    <ViewOverlayProvider>
-      <Column className="h-app">
-        {embeddedChat ? null : (
-          <AppNav
-            onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
-            onToggleSourceView={handleToggleSourceView}
-          />
-        )}
-        <main className="flex-1 min-h-0">
-          {boxExists ? (
-            <Outlet />
-          ) : (
-            <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />
+    // AppBarChromeProvider is OUTSIDE Column so the shell below it is a stable
+    // `children` element: a page publishing its place / a chip slot mounting
+    // re-renders the provider, and React then skips the whole Outlet subtree
+    // (only the bar's context consumers re-render). See app-bar-chrome.tsx.
+    <AppBarChromeProvider>
+      <ViewOverlayProvider>
+        <Column className="h-app">
+          {embeddedChat ? null : (
+            <AppNav
+              onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
+              onToggleSourceView={handleToggleSourceView}
+            />
           )}
-        </main>
-        {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
-        <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
-      </Column>
-    </ViewOverlayProvider>
+          <main className="flex-1 min-h-0">
+            {boxExists ? (
+              <Outlet />
+            ) : (
+              <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />
+            )}
+          </main>
+          {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
+          <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
+        </Column>
+      </ViewOverlayProvider>
+    </AppBarChromeProvider>
   );
 }
 

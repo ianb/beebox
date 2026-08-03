@@ -1,7 +1,8 @@
 /**
- * `ChatMenu`'s "Model" sub-panel — moved here from `VoiceChip-panels.tsx` in
- * the chip polish round (docs/plans/chat-header-chips.md follow-up): Model
- * selection isn't a voice I/O concern, so it lives in the "..." menu now.
+ * The session chip's "Model" sub-panel — moved here from `VoiceChip-panels.tsx`
+ * in the chip polish round (docs/plans/chat-header-chips.md follow-up): Model
+ * selection isn't a voice I/O concern. It rode along when `ChatMenu` became
+ * `SessionChip` (docs/plans/top-nav-ia.md Track C2).
  */
 
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";

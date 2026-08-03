@@ -11,8 +11,9 @@ import { CompanionViewPanel } from "./InteractiveChat-controls";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
 import {
-  ChatView, ChatHeader, ChatMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
+  ChatView, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
+import { ChatBarChrome } from "./ChatBarChrome";
 import { TargetStrip } from "./TargetStrip";
 import { chatTargetStatus } from "../../input/targets/chat-target";
 import { DebugLogPanel } from "../DebugLog";
@@ -47,6 +48,8 @@ interface ChatBodyProps {
   schedules: ReturnType<typeof useChatSchedules>;
   effectiveContextDir: string | null;
   boxSlug: string | undefined;
+  /** The session's display name (`chat.bootstrap`'s `label`) — the session chip's face. */
+  sessionLabel: string | null;
   messages: SessionEntry[];
   groups: MessageGroup[];
   backgroundTasks: LiveTask[];
@@ -105,39 +108,44 @@ interface ChatBodyProps {
   screenshots: ScreenshotRequestController;
 }
 
-function HeaderRegion(props: ChatBodyProps) {
-  const { tabs, model, mute, voice, actions, effectiveContextDir, boxSlug, messages, sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog } = props;
+/**
+ * The chat's app-bar publications (Track C2). Renders only portals — the
+ * chips land in the bar's chip slots, the here menu in the pill's dropdown.
+ * Every prop below is a primitive or a stable callback so the memoized
+ * children don't reconcile per streaming token.
+ */
+function BarChromeRegion(props: ChatBodyProps) {
+  const {
+    tabs, model, mute, voice, actions, effectiveContextDir, boxSlug, sessionLabel, messages,
+    sessionId, processRunning, isStreaming, debugView, setDebugView, showDebugLog, setShowDebugLog,
+  } = props;
   const { onZoomView } = tabs;
   const { selectedModel, narrationEnabled, handleToggleNarration, handleSelectModel } = model;
   return (
-    <ChatHeader
-      effectiveContextDir={effectiveContextDir}
+    <ChatBarChrome
+      contextDir={effectiveContextDir}
       boxSlug={boxSlug}
-      narrationEnabled={narrationEnabled}
-      hqInFlight={voice.hqInFlight}
-      onToggleNarration={handleToggleNarration}
-      muted={mute.muted}
-      onToggleMute={mute.handleToggleMute}
+      sessionLabel={sessionLabel}
       messages={messages}
       onZoomView={onZoomView}
-      chatMenu={
-        <ChatMenu
-          onNewSession={actions.handleNewSession}
-          contextDir={effectiveContextDir}
-          selectedModel={selectedModel}
-          onSelectModel={handleSelectModel}
-          onStopProcess={actions.handleStopProcess}
-          onRestartProcess={actions.handleRestartProcess}
-          onCompactSession={actions.handleCompactSession}
-          sessionId={sessionId}
-          running={processRunning}
-          busy={isStreaming}
-          debugView={debugView}
-          onToggleDebugView={() => setDebugView((v) => !v)}
-          showDebugLog={showDebugLog}
-          onToggleDebugLog={() => setShowDebugLog((v) => !v)}
-        />
-      }
+      muted={mute.muted}
+      onToggleMute={mute.handleToggleMute}
+      narrationEnabled={narrationEnabled}
+      onToggleNarration={handleToggleNarration}
+      hqInFlight={voice.hqInFlight}
+      onNewSession={actions.handleNewSession}
+      selectedModel={selectedModel}
+      onSelectModel={handleSelectModel}
+      onStopProcess={actions.handleStopProcess}
+      onRestartProcess={actions.handleRestartProcess}
+      onCompactSession={actions.handleCompactSession}
+      sessionId={sessionId}
+      running={processRunning}
+      busy={isStreaming}
+      debugView={debugView}
+      setDebugView={setDebugView}
+      showDebugLog={showDebugLog}
+      setShowDebugLog={setShowDebugLog}
     />
   );
 }
@@ -297,7 +305,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           />
         ) : null
       }
-      header={embedded ? null : <HeaderRegion {...props} />}
+      barChrome={embedded ? null : <BarChromeRegion {...props} />}
       messageList={<MessageListRegion {...props} />}
       statusBanners={
         <>

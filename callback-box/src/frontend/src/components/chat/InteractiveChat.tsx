@@ -108,6 +108,12 @@ interface InteractiveChatProps {
    * load) and when the caller has no preload.
    */
   initial?: ChatInitialLoad;
+  /**
+   * The session's display name, from the same `chat.bootstrap` call — the app
+   * bar's session chip face (docs/plans/top-nav-ia.md Track C2). Null for a
+   * fresh chat (and until bootstrap settles); the chip then reads "New chat".
+   */
+  sessionLabel: string | null;
 }
 
 /**
@@ -141,7 +147,7 @@ function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId,
   );
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel }: InteractiveChatProps) {
   const isEmbedded = embedded === true;
   const usesNativeComposer = nativeComposer === true;
   const usesNativeShell = isEmbedded || usesNativeComposer;
@@ -290,7 +296,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       actions={actions}
       schedules={schedules}
       effectiveContextDir={effectiveContextDir}
-      boxSlug={boxSlug}
+      boxSlug={boxSlug} sessionLabel={sessionLabel}
       messages={messages}
       groups={groups}
       backgroundTasks={backgroundTasks.tasks}

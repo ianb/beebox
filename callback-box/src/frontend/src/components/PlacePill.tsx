@@ -22,16 +22,16 @@
  */
 
 import { useState } from "react";
-import { useRouterState } from "@tanstack/react-router";
 import { Dropdown } from "./ui/Dropdown";
 import { trpc } from "../lib/trpc";
 import { apiFileUrl } from "../lib/view-url";
-import { placeLabel } from "../lib/place-label";
+import type { Place } from "../lib/place-label";
 import { useOpenLandmarkChat } from "../hooks/useOpenLandmarkChat";
 import { SwitchMenuBody, type SwitchPanel } from "./PlacePill-panels";
 import { HereMenuBody } from "./PlacePill-here";
+import { AppBarHereSlot, useAppBarHereMenuClaimed } from "./app-bar-chrome";
 
-/** Folder glyph on the here half — the shape `ContextChip` uses. */
+/** Folder glyph on the here half — the shape the chat's context chip used. */
 function FolderIcon() {
   return (
     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -78,10 +78,17 @@ function dirBasename(dir: string): string {
 export function PlacePill({
   boxSlug,
   boxName,
+  place,
   hideBoxRow,
 }: {
   boxSlug: string;
   boxName: string;
+  /**
+   * Where the user is. Resolved by AppNav: the place a page published (Track
+   * C2) when there is one, else the route-derived fallback (`placeLabel`).
+   * The pill doesn't derive it itself — only the bar knows both sources.
+   */
+  place: Place;
   /**
    * Suppress the entire "Box: … ▸" row. AppNav wires this from the chat
    * route's `nativeComposer` flag (C3) — the native shell owns box picking,
@@ -89,13 +96,12 @@ export function PlacePill({
    */
   hideBoxRow?: boolean;
 }) {
-  const location = useRouterState({ select: (s) => s.location });
-  const place = placeLabel({ pathname: location.pathname, boxSlug });
   const [switchPanel, setSwitchPanel] = useState<SwitchPanel>("root");
   // First-open latch for the switch menu's data (see the file header). Once
   // true it stays true, so re-opens render from react-query's cache.
   const [switchOpened, setSwitchOpened] = useState(false);
   const openLandmarkChat = useOpenLandmarkChat(boxSlug);
+  const hereClaimed = useAppBarHereMenuClaimed();
 
   const hereQuery = trpc.landmarks.forDir.useQuery(
     { dir: place.dir ?? "" },
@@ -118,9 +124,10 @@ export function PlacePill({
         panelIndex={switchPanel === "root" ? 0 : 1}
         onClose={() => setSwitchPanel("root")}
         trigger={({ toggle, ariaProps }) => (
-          // w-full is load-bearing on a Dropdown trigger — see ContextChip's
-          // note: the native <button> doesn't stretch to its wrapper on its
-          // own, and without it a long label overflows instead of truncating.
+          // w-full is load-bearing on a Dropdown trigger — measured in-browser
+          // on the retired ContextChip: the native <button> doesn't stretch to
+          // its wrapper on its own, and without it a long label overflows
+          // instead of truncating.
           <button
             type="button"
             onClick={(e) => { setSwitchOpened(true); toggle(e); }}
@@ -174,12 +181,26 @@ export function PlacePill({
               </button>
             )}
           >
-            <HereMenuBody
-              dir={landmark.dir}
-              boxSlug={boxSlug}
-              links={landmark.links}
-              groups={landmark.groups}
-            />
+            {/* Two providers for one menu (plan Track C1/C2). On a chat page
+                the body is the chat's own — it needs `messages` and the
+                companion-pane zoom the bar can't reach — so we render the
+                portal target INSIDE the open Dropdown and the chat fills it.
+                Keeping the container here (rather than a permanently-mounted
+                hidden one elsewhere) leaves Dropdown's open/close, focus
+                restore, and click-outside semantics completely untouched; the
+                registration lands in the same commit as the open, so the
+                chat's portal fills it before paint. Everywhere else — and
+                before the chat mounts — the reduced body below is the menu. */}
+            {hereClaimed ? (
+              <AppBarHereSlot />
+            ) : (
+              <HereMenuBody
+                dir={landmark.dir}
+                boxSlug={boxSlug}
+                links={landmark.links}
+                groups={landmark.groups}
+              />
+            )}
           </Dropdown>
         </>
       )}

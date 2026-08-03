@@ -1,35 +1,62 @@
 /**
- * The chat header's "..." menu: New session, "Recent chats" (session list
- * sub-panel), "Model" (moved here from `VoiceChip` in the chip polish round,
- * docs/plans/chat-header-chips.md follow-up — model choice isn't a voice I/O
- * concern), and "Advanced" (debug toggles, process controls). Voice settings
- * and Narration mode stay on `VoiceChip` (chunk 3 of
- * docs/plans/chat-header-chips.md). Self-contained — props in, callbacks out.
+ * The app bar's session chip — chat fiddling, named by its object
+ * (docs/plans/top-nav-ia.md Track C2). Reshaped from the chat header's `⋯`
+ * ChatMenu: same menu machinery (New session, Model ›, Advanced ›, the
+ * panel-swap idiom), but the face is the session's own name, because an
+ * unlabeled `⋯` stops working once every other menu face names its object.
+ *
+ * "Recent chats" is deliberately gone — the pill's switch menu owns finding
+ * sessions now.
+ *
+ * Face, following the bar's one-flexible-member rule: the session label
+ * (truncated) from `sm:` up, a sliders icon below it — the chip is the third
+ * thing to give way as the viewport narrows, after the box prefix and the
+ * folder half's label.
+ *
+ * `React.memo` is load-bearing, not decoration: this chip is portaled into
+ * the bar from the chat's tree, which re-renders on every streaming token
+ * (`components/chat/CLAUDE.md`). Every prop must stay referentially stable
+ * across a streamed turn or the bar ticks per token.
  */
 
-import { useState, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
-import { SessionListPanel } from "./SessionListPanel";
-import { AdvancedPanel } from "./ChatMenu-advanced-panels";
-import { ModelPanel } from "./ChatMenu-model-panel";
+import { AdvancedPanel } from "./SessionChip-advanced-panels";
+import { ModelPanel } from "./SessionChip-model-panel";
 import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
 // positioning complexity. Resets to "root" when the dropdown closes.
-type ChatMenuPanel = "root" | "sessions" | "model" | "advanced";
+type SessionChipPanel = "root" | "model" | "advanced";
 
-/** Root panel: New session, "Recent chats ›", "Model", divider, "Advanced ›". */
+/** Three sliders — "settings for this thing", the phone-width face. */
+function SlidersIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0M16 5v4M10 10v4M18 15v4" />
+    </svg>
+  );
+}
+
+/** Menu-opens-here caret, matching the place pill's. */
+function CaretIcon() {
+  return (
+    <svg className="w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+/** Root panel: New session, "Model ›", divider, "Advanced ›". */
 function RootPanel({
   onNewSession,
-  onOpenSessions,
   currentModelLabel,
   onOpenModel,
   onOpenAdvanced,
 }: {
   onNewSession: () => void;
-  onOpenSessions: () => void;
   currentModelLabel: string;
   onOpenModel: () => void;
   onOpenAdvanced: () => void;
@@ -37,12 +64,6 @@ function RootPanel({
   return (
     <>
       <MenuItem onClick={onNewSession}>New session</MenuItem>
-      <MenuItem onClick={onOpenSessions} keepOpen>
-        <span className="flex justify-between gap-2 w-full">
-          <span>Recent chats</span>
-          <span className="text-warm-500">›</span>
-        </span>
-      </MenuItem>
       <MenuItem onClick={onOpenModel} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Model</span>
@@ -60,24 +81,9 @@ function RootPanel({
   );
 }
 
-/** "Recent chats" sub-panel: back row + the lifted `SessionListPanel` body. */
-function SessionsPanel({ onBack, contextDir }: { onBack: () => void; contextDir: string | null }) {
-  return (
-    <>
-      <MenuItem onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Recent chats</span>
-      </MenuItem>
-      <MenuDivider />
-      <SessionListPanel contextDir={contextDir} />
-    </>
-  );
-}
-
-interface ChatMenuBodyProps {
-  panel: ChatMenuPanel;
+interface SessionChipBodyProps {
+  panel: SessionChipPanel;
   onNewSession: () => void;
-  contextDir: string | null;
-  onOpenSessions: () => void;
   currentModelLabel: string;
   onOpenModel: () => void;
   selectedModel: string | null;
@@ -91,11 +97,11 @@ interface ChatMenuBodyProps {
  * Exhaustive panel dispatch — a `switch` with no `default:` (the frontend
  * `.tsx` rule bans `default:` cases outright; TypeScript's
  * switch-exhaustiveness check still catches an unhandled new
- * `ChatMenuPanel` member at compile time without one).
+ * `SessionChipPanel` member at compile time without one).
  */
-function ChatMenuBody(props: ChatMenuBodyProps): ReactNode {
+function SessionChipBody(props: SessionChipBodyProps): ReactNode {
   const {
-    panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, onOpenModel, selectedModel, onSelectModel,
+    panel, onNewSession, currentModelLabel, onOpenModel, selectedModel, onSelectModel,
     onOpenAdvanced, onBackToRoot, advancedProps,
   } = props;
   switch (panel) {
@@ -103,14 +109,11 @@ function ChatMenuBody(props: ChatMenuBodyProps): ReactNode {
       return (
         <RootPanel
           onNewSession={onNewSession}
-          onOpenSessions={onOpenSessions}
           currentModelLabel={currentModelLabel}
           onOpenModel={onOpenModel}
           onOpenAdvanced={onOpenAdvanced}
         />
       );
-    case "sessions":
-      return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
       return <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
     case "advanced":
@@ -118,27 +121,10 @@ function ChatMenuBody(props: ChatMenuBodyProps): ReactNode {
   }
 }
 
-/**
- * The chat header's "..." dropdown menu.
- */
-export function ChatMenu({
-  onNewSession,
-  contextDir,
-  selectedModel,
-  onSelectModel,
-  onStopProcess,
-  onRestartProcess,
-  onCompactSession,
-  sessionId,
-  running,
-  busy,
-  debugView,
-  onToggleDebugView,
-  showDebugLog,
-  onToggleDebugLog,
-}: {
+export interface SessionChipProps {
+  /** The session's display name (`chat.bootstrap`'s `label`), or null before one exists. */
+  label: string | null;
   onNewSession: () => void;
-  contextDir: string | null;
   selectedModel: string | null;
   onSelectModel: (model: string | null) => void;
   onStopProcess: () => void;
@@ -151,40 +137,45 @@ export function ChatMenu({
   onToggleDebugView: () => void;
   showDebugLog: boolean;
   onToggleDebugLog: () => void;
-}) {
-  const [panel, setPanel] = useState<ChatMenuPanel>("root");
+}
+
+export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
+  const {
+    label, onNewSession, selectedModel, onSelectModel, onStopProcess, onRestartProcess,
+    onCompactSession, sessionId, running, busy, debugView, onToggleDebugView, showDebugLog, onToggleDebugLog,
+  } = props;
+  const [panel, setPanel] = useState<SessionChipPanel>("root");
   const currentModelLabel = MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
+  const faceLabel = label !== null && label !== "" ? label : "New chat";
 
   return (
     <Dropdown
       align="right"
-      // The Recent-chats panel renders two-line rows (message label, id,
-      // timestamp, landmark) that the pre-chip session dropdown gave 28rem;
-      // the other panels keep the compact menu width. The viewport clamp in
-      // Dropdown still bounds it on narrow screens.
-      width={panel === "sessions" ? "w-[28rem]" : "w-56"}
+      width="w-56"
       panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
         <button
           type="button"
           onClick={toggle}
-          className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-          title="Chat menu"
-          aria-label="Chat menu"
+          className="min-h-[40px] min-w-[40px] px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          title={faceLabel}
+          aria-label={`Session: ${faceLabel}`}
           {...ariaProps}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-          </svg>
+          <span className="sm:hidden">
+            <SlidersIcon />
+          </span>
+          <span className="hidden sm:inline max-w-[11rem] truncate">{faceLabel}</span>
+          <span className="hidden sm:flex">
+            <CaretIcon />
+          </span>
         </button>
       )}
     >
-      <ChatMenuBody
+      <SessionChipBody
         panel={panel}
         onNewSession={onNewSession}
-        contextDir={contextDir}
-        onOpenSessions={() => setPanel("sessions")}
         currentModelLabel={currentModelLabel}
         onOpenModel={() => setPanel("model")}
         selectedModel={selectedModel}
@@ -206,4 +197,4 @@ export function ChatMenu({
       />
     </Dropdown>
   );
-}
+});

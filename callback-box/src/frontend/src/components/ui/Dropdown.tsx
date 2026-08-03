@@ -75,7 +75,7 @@ export interface DropdownProps {
 // 1. Focus the first menu item when the menu opens via a keyboard activation
 //    of the trigger (a keyboard-activated click has `event.detail === 0`).
 //    Mouse opens leave focus untouched so no focus ring appears. Some menus
-//    (e.g. `SessionListPanel`) mount a loading row before their real content,
+//    (e.g. `RecentFilesPanel`) mount a loading row before their real content,
 //    so a plain post-mount check can miss the first item entirely — a
 //    one-shot MutationObserver picks it up whenever it actually appears.
 // 2. A `keepOpen` submenu row (the panel-swap idiom) unmounts the focused
@@ -235,7 +235,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
     update();
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
-    // A width-class swap (e.g. ChatMenu's Recent-chats panel) now eases via
+    // A width-class swap (a menu whose sub-panel needs more room) now eases via
     // CSS `transition-[width]` rather than snapping, so the menu's measured
     // width changes continuously over ~150ms — a one-shot `update()` at the
     // start of the swap would clamp `left` against the *old* width and drift
@@ -254,7 +254,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
       resizeObserver?.disconnect();
     };
     // `width` participates because a panel swap may change the menu's width
-    // class (e.g. ChatMenu's Recent-chats panel widens to 28rem) — the
+    // class (a sub-panel that widens) — the
     // clamped `left` must be recomputed from the new measured width or a
     // right-aligned menu grows past the viewport edge.
   }, [open, align, vertical, width]);
@@ -316,8 +316,8 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
                 width,
               )}
             >
-              {/* Keyed on panelIndex: the panel-swap idiom (VoiceChip/ChatMenu/
-                  ContextChip) remounts this wrapper on every panel change, which
+              {/* Keyed on panelIndex: the panel-swap idiom (VoiceChip/SessionChip/
+                  PlacePill) remounts this wrapper on every panel change, which
                   also re-triggers useOpenMenuFocus's re-anchor observer. The
                   slide direction reflects whether the new panel is deeper
                   (right) or shallower (left); motion-safe: leaves it an instant
@@ -339,6 +339,20 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
         : null}
     </div>
   );
+}
+
+/**
+ * Re-establish a Dropdown's context on the far side of a `createPortal`.
+ *
+ * A portal moves DOM, not React context: menu content rendered by one tree
+ * and portaled into a Dropdown that lives in another (the app bar's here
+ * menu, `components/app-bar-chrome.tsx`) would otherwise see no
+ * `DropdownContext`, and its `MenuItem`s would silently fail to close the
+ * menu. Wrap the portaled content in this with the slot's `close`.
+ */
+export function PortaledMenuScope({ close, children }: { close: () => void; children: ReactNode }) {
+  const value = useMemo<DropdownContextValue>(() => ({ close, dense: false }), [close]);
+  return <DropdownContext.Provider value={value}>{children}</DropdownContext.Provider>;
 }
 
 // `MenuItem`/`MenuDivider` live in `dropdown-menu-item.tsx` (split out to

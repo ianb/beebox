@@ -3,7 +3,7 @@
  * C1): "Open <dir>/" plus the landmark's curated links and groups, rendered
  * as plain navigations to the card route.
  *
- * The full form — the chat's own ContextChip body, whose rows open in the
+ * The full form — the chat's own `ContextMenuBody`, whose rows open in the
  * companion pane (`onZoomView`) and which adds "Recent files ›" — needs chat
  * state the bar doesn't have. It arrives via the chrome slot in C2; this
  * reduced menu is what non-chat pages get, and the fallback while the chat
