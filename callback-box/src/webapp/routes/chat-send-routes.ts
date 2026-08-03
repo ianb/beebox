@@ -12,6 +12,7 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { isRecord } from "../../lib/is-record.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import { type ChatMessage, type ChatSession } from "../../core/chat/session/index.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
@@ -226,6 +227,9 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
 
     // Deduplicate retries: if we've already processed this messageId, report it
     // as already-done so the client finishes the turn (it will refresh history).
+    // Claiming the id here (rather than after the send) makes it a genuine
+    // in-flight guard against a double-submit; `releaseMessageId` gives it back
+    // if the send never lands, so a retry carrying the same id isn't swallowed.
     if (messageId) {
       pruneMessageIds(processedMessageIds);
       if (processedMessageIds.has(messageId)) {
@@ -235,16 +239,29 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       processedMessageIds.set(messageId, Date.now());
       persistProcessedMessageIds(boxRoot, processedMessageIds);
     }
+    const releaseMessageId = (): void => {
+      if (!messageId) return;
+      processedMessageIds.delete(messageId);
+      persistProcessedMessageIds(boxRoot, processedMessageIds);
+    };
 
-    // Broadcast the user message to other clients via the event bus.
+    // Broadcast the user message to other clients via the event bus. Emitted
+    // only once the message is genuinely on its way (queued or sent) — this is
+    // a *persisted* event, so emitting it before the send meant a failed run
+    // start left a message in the conversation history that the agent never
+    // received, while the client treated the 500 as "unsent" and offered the
+    // text back for a retry that then recorded it twice
+    // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
     // For pending-new sessions, sessionId is still unknown; subscribers will
     // see it once `session-assigned` fires.
-    eventBus.emit("chat-user-message", {
-      sessionId: knownId,
-      message: attributed,
-      user: user ? { email: user.email, name: user.name } : null,
-      timestamp: new Date().toISOString(),
-    });
+    const recordUserMessage = (): void => {
+      eventBus.emit("chat-user-message", {
+        sessionId: knownId,
+        message: attributed,
+        user: user ? { email: user.email, name: user.name } : null,
+        timestamp: new Date().toISOString(),
+      });
+    };
 
     // Where the user is sending from, for the snapshot's `channel` attr.
     const channel = classifyChannel(request.headers["user-agent"]);
@@ -263,6 +280,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         ...(channel !== undefined ? { channel } : {}),
         ...cardFields,
       });
+      recordUserMessage();
       return reply.send({ queued: true });
     }
 
@@ -294,18 +312,35 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     const turnId = randomUUID();
     const capture = captureTurn(chatSession, { turnId, releasePin });
 
-    const sent = await chatSession.send({
-      text: fullMessage,
-      ...(images ? { images } : {}),
-      ...(channel !== undefined ? { channel } : {}),
-      ...cardFields,
-    });
+    // `send()` can also *throw*: a run that fails to start (an FD-exhausted SDK
+    // spawn is the case we've seen) rejects rather than returning false. It
+    // unwinds like `sent === false` because both mean the same thing here —
+    // `send()` only throws before it reaches the backend, so nothing was
+    // dispatched. Without this the turn buffer and the session pin leak, and
+    // the messageId stays claimed against the client's own retry.
+    let sent: boolean;
+    try {
+      sent = await chatSession.send({
+        text: fullMessage,
+        ...(images ? { images } : {}),
+        ...(channel !== undefined ? { channel } : {}),
+        ...cardFields,
+      });
+    } catch (e) {
+      capture.cancel();
+      releasePin();
+      releaseMessageId();
+      console.error("[chat] send failed to start a run:", e);
+      return reply.status(500).send({ error: errorMessage(e) });
+    }
     if (!sent) {
       capture.cancel();
       releasePin();
+      releaseMessageId();
       return reply.status(500).send({ error: "Failed to send message" });
     }
 
+    recordUserMessage();
     return reply.send({ turnId });
   });
 

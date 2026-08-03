@@ -150,15 +150,23 @@ export async function deliverUserMessage(opts: {
     await onSessionResolved(id);
   }
 
-  eventBus.emit("chat-user-message", {
-    sessionId: id,
-    message,
-    user: null,
-    timestamp: getBoxTimeISO(boxRoot),
-  });
+  // `chat-user-message` is a *persisted* event, so it is emitted only once the
+  // message is genuinely on its way. Emitting it up front put messages into the
+  // conversation history that the agent never received whenever the run failed
+  // to start (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md),
+  // and the caller's retry then recorded them a second time.
+  const recordUserMessage = (): void => {
+    eventBus.emit("chat-user-message", {
+      sessionId: id,
+      message,
+      user: null,
+      timestamp: getBoxTimeISO(boxRoot),
+    });
+  };
 
   if (session.isBusy()) {
     session.enqueue({ text: message });
+    recordUserMessage();
     return { sessionId: id, queued: true };
   }
 
@@ -170,7 +178,13 @@ export async function deliverUserMessage(opts: {
     });
   }
 
+  // A send that *throws* is deliberately NOT mapped to the retryable
+  // UserMessageDeliveryError: `sent === false` means the message was never
+  // dispatched, while a throw is ambiguous — it may have gone out before the
+  // failure — and treating the two alike would let a retry double-deliver. The
+  // callers' crash-recovery paths depend on that distinction.
   const sent = await session.send({ text: message });
   if (!sent) throw new UserMessageDeliveryError();
+  recordUserMessage();
   return { sessionId: session.getSessionId(), queued: false };
 }

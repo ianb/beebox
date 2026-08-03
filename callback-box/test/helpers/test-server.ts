@@ -23,6 +23,7 @@ import { createRequire } from "node:module";
 import type { FastifyInstance } from "fastify";
 import { scaffoldV2Box } from "../../src/core/box/package.js";
 import { createServer } from "../../src/webapp/server.js";
+import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
 import { makeBoxAnnexShaped } from "./annex-box.js";
@@ -61,6 +62,13 @@ export interface TestServerOptions {
    * side they are testing rather than inheriting it.
    */
   annexBox?: boolean | undefined;
+  /**
+   * Chat backend for every session this server creates. Pass
+   * `createFakeChatBackend()` to exercise the chat-send path (including a run
+   * start that fails) without spawning a real Claude subprocess. Omit and the
+   * server builds the real one — which no route doctest should provoke.
+   */
+  chatBackend?: ChatBackend | undefined;
 }
 
 // Filter chat-history backfill noise: every makeTestServer() boots a fresh
@@ -167,6 +175,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
     boxes: [{ slug: TEST_SLUG, boxRoot, eventBus }],
     services: opts?.services,
     openAccess: opts?.openAccess ?? true,
+    ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
   });
 
   return {

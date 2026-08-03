@@ -4,6 +4,7 @@
  * forming an import cycle with server.ts.
  */
 
+import type { ChatBackend } from "../services/claude-chat-types.js";
 import type { FastifyInstance } from "fastify";
 import type { Services } from "../services/index.js";
 import type { EventBus } from "../core/event-bus.js";
@@ -51,6 +52,14 @@ export interface ServerOptions {
  */
 export interface InternalServerOptions extends ServerOptions {
   openAccess?: boolean | undefined;
+  /**
+   * Chat backend for every session this server creates. The same test-only
+   * spirit as `openAccess`: no CLI path sets it, and production falls through
+   * to `createChatBackend()`. It exists so a route test can exercise the
+   * chat-send path — including a run start that fails — without spawning a real
+   * Claude subprocess.
+   */
+  chatBackend?: ChatBackend | undefined;
 }
 
 export interface ServerContext {

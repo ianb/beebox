@@ -72,6 +72,14 @@ export interface FakeChatBackend extends ChatBackend {
    * Returns whether a slot was installed.
    */
   settleWarm(): boolean;
+  /**
+   * When set, the next `start()` throws this instead of opening a run, then
+   * clears itself. Models an SDK subprocess spawn that fails outright — the
+   * `EBADF` at the heart of
+   * `issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md` — so a
+   * test can exercise run-start failure without an unspawnable environment.
+   */
+  failNextStart: Error | null;
   /** Stable, human-readable snapshot of warm-pool state for doctests. */
   describe(): string;
 }
@@ -89,6 +97,7 @@ export function createFakeChatBackend(): FakeChatBackend {
     prewarmCount: 0,
     closeWarmCount: 0,
     autoSettleWarm: true,
+    failNextStart: null,
     lastRun() {
       return runs[runs.length - 1] ?? null;
     },
@@ -121,6 +130,11 @@ export function createFakeChatBackend(): FakeChatBackend {
       ].join("\n");
     },
     start(opts: ChatBackendStartOptions): FakeChatBackendRun {
+      const failure = backend.failNextStart;
+      if (failure !== null) {
+        backend.failNextStart = null;
+        throw failure;
+      }
       const messageQueue = createAsyncIterableQueue<SDKMessage>();
       const sent: ChatContentBlock[][] = [];
 
