@@ -5,9 +5,24 @@ filed-by: agent
 discovered-in: main session — boxholder hit "internal server error" on a local box, twice
 ---
 
-> **⏳ Awaiting next-occurrence data** — diagnostic logging added in `66352beb`
-> (`session/start-run.ts` logs the open-FD count on spawn failure). Not fixed;
-> next occurrence tells us exhaustion vs. race. Boxholder OK'd "logging for now."
+> **🔎 Root cause found: a file-descriptor LEAK in `cb serve` (not the upstream
+> race).** The logging from `66352beb` fired on the next occurrence (2026-08-03
+> 01:06) and reported **`openFDs=11227`** — FD exhaustion, not a spawn race.
+> `lsof` on the box's `cb serve` process showed **~9,600 open regular-file read
+> descriptors, ~9,438 of them under `content/store/`** (a mix of cards + their
+> image assets: 4,749 `.webp`, 3,641 `.card`, 618 `.md`, 383 `.jpg`, 171 `.png`
+> — each distinct path, opened once, never closed). So a store-wide scan in
+> `cb serve` holds a file handle for every file it reads. It **accumulates
+> slowly over the process's multi-hour life** (independent of load — the box's
+> `generate-image` trick auto-commits were ~8h prior and NOT responsible). Not
+> urgent (local-only, self-recovers on retry); boxholder is watching it.
+>
+> **Next: find the unclosed open.** Leads: `core/asset-manifest.ts` `sha256File`
+> (`createReadStream` to hash assets — though modern Node auto-closes on
+> end/error, so verify), and whatever re-indexes / rebuilds a manifest or
+> refresh-map after a commit and streams/opens every store file. The fd is a
+> numbered read handle (`Nr`), so it's an open descriptor a scan is holding, not
+> a memory-map.
 
 A chat send occasionally 500s with `spawn EBADF` at the moment the SDK subprocess
 is spawned. It **recovers on retry** — the box cold-restarts and the next send
