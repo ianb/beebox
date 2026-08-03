@@ -45,6 +45,26 @@ in place.
   The out-of-band form keeps questions off the main body when the body should
   stay clean, without detaching them from their card.
 
+## A question about done work carries a git range (its subject)
+
+A large class of questions is **"is this okay?"** about work the agent already
+did — and that work IS a set of commits. Pair those questions with the **git
+range** (the commit set) they concern. Ideally always, for the review/approval
+kind: the question points at exactly the commits it is asking about.
+
+- **Only for work already done.** A question that instead *informs future action*
+  (a preference, a clarification, "which way should I go?") is a plain question
+  with no range — there is nothing committed to point at yet.
+- **Do not fabricate a range.** It would be over-designed for the agent to ask a
+  *speculative* question by proposing a branch of hypothetical commits. The range
+  is a handle on real history, not a way to stage imagined work.
+- **Why it pays off — the "no, you did that wrong" case.** When the answer is a
+  rejection, the explicit git range makes the follow-up mechanical: another agent
+  can come along and operate thoroughly on exactly those commits (revert, rework,
+  amend) without reconstructing what "that" was. The range turns a vague "redo it"
+  into a precise, actionable scope — the concrete form of the resolution's *act*
+  half: for a done-work question, acting means operating on its commits.
+
 ## The open question this issue exists to settle
 
 **Is this a use of `{% todo %}`, or a separate primitive?** Not yet decided.
@@ -94,5 +114,3 @@ in place.
 - ProofEditor as an agent↔human doc-collaboration surface — the external
   inspiration; a separate exploration if the boxholder wants to track the tool
   itself.
-</content>
-</invoke>
