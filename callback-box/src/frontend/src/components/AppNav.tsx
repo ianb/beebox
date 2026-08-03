@@ -19,6 +19,7 @@ import { Avatar } from "./ui/Avatar";
 import { href } from "../lib/routing";
 import { useBoxes } from "../hooks/useBoxes";
 import { withBase } from "../api";
+import { PlacePill } from "./PlacePill";
 
 /**
  * Profile avatar + dropdown menu (Settings, Admin, Logout).
@@ -140,6 +141,11 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";
 
+  // The unified bar's place chip (docs/plans/top-nav-ia.md Track C1). It sits
+  // beside the old link row / box <select> for now — those come out in C3.
+  const boxName = boxes.find((b) => b.slug === boxSlug)?.name ?? boxSlug ?? "";
+  const placePill = <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} />;
+
   const boxSelector = boxes.length > 1 ? (
     <select
       value={boxSlug}
@@ -161,7 +167,8 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
       {/* Mobile: compact bar with hamburger + dropdown */}
       <div className="sm:hidden" ref={menuRef}>
         <div className="flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {placePill}
             {boxSelector}
             <span className="text-white/60">/</span>
             <span className="font-medium">{currentLabel}</span>
@@ -209,6 +216,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
       </div>
       {/* Desktop: inline links + profile */}
       <div className="hidden sm:flex items-center gap-5 px-4 py-2 text-sm">
+        {placePill}
         {boxSelector}
         {links.map((link) => (
           <Link

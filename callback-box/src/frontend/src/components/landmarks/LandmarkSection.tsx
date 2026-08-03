@@ -8,10 +8,10 @@
  */
 
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { href, toSearch } from "../../lib/routing";
+import { Link } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 import { apiFileUrl } from "../../lib/view-url";
-import { trpc } from "../../lib/trpc";
+import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
@@ -152,34 +152,10 @@ function LandmarkGroup({ group, boxSlug }: { group: ResolvedGroup; boxSlug: stri
 }
 
 function ChatButton({ dir, boxSlug }: { dir: string; boxSlug: string }) {
-  const navigate = useNavigate();
-  const utils = trpc.useUtils();
-
-  const onClick = async () => {
-    try {
-      const { sessionId } = await utils.chat.lastSessionForDirectory.fetch({ contextDir: dir });
-      if (sessionId) {
-        // navigate()'s promise only rejects on a superseded/redirected
-        // navigation (not a user-facing failure) -- fire-and-forget.
-        void navigate({
-          to: href(`/${boxSlug}/chat`),
-          search: toSearch({ session: sessionId }),
-        });
-        return;
-      }
-      // No prior chat for this dir — start a new one. The backend reads
-      // `contextDir` off the first send and spawns the SDK with `cwd` at
-      // that directory; the association is persisted on session assignment.
-      void navigate({
-        to: href(`/${boxSlug}/chat`),
-        search: toSearch({ session: "new", contextDir: dir }),
-      });
-    } catch (e) {
-      // User-initiated action (policy rule 5): no toast affordance on this
-      // button today, so log at error level as the interim signal.
-      console.error(`[landmarks] failed to open chat for ${dir}:`, e);
-    }
-  };
+  // Shared with the app bar's PlacePill switch menu — one resume-or-start
+  // action, two surfaces (docs/plans/top-nav-ia.md Track C1).
+  const openChat = useOpenLandmarkChat(boxSlug);
+  const onClick = () => openChat(dir);
 
   return (
     <button
