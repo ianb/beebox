@@ -9,6 +9,7 @@
  */
 
 import { makeLog } from "./log.js";
+import { startBackendRun } from "./start-run.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "../features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
@@ -186,7 +187,7 @@ export class ChatSession extends EventEmitter {
     // mid-response and defer commits that would race with agent writes.
     await this.acquireRunLock();
 
-    const run = this.backend.start({
+    const run = startBackendRun(this.backend, {
       ...(await this.buildBackendStartOptions()),
       resumeSessionId: this.sessionId ?? undefined,
       model: this.currentModel ?? undefined,
