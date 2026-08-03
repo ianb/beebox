@@ -656,9 +656,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
         <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
         <span class="statuscell">${status}</span>
         ${diffCell}
-        ${dashLink}
-        ${devLink}
-        ${stopForm}
+        <div class="actions">${dashLink}${devLink}${stopForm}</div>
       </li>`;
     })
     .join("");
@@ -671,17 +669,18 @@ async function renderIndex(core: RouterCore): Promise<string> {
 <title>callback-box dev router</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
 <style>
-  body { font: 14px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2em auto; padding: 0 1em; color: #222; }
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 900px; margin: 2em auto; padding: 0 1em; color: #222; }
   h1 { font-size: 1.2em; margin-bottom: 0.2em; }
   p.sub { color: #666; margin-top: 0; }
   ul { list-style: none; padding: 0; }
-  li { display: flex; align-items: center; gap: 0.6em; padding: 0.5em 0; border-bottom: 1px solid #eee; }
-  a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; min-width: 12em; }
+  li { display: grid; grid-template-columns: max-content max-content 1fr auto; align-items: center; column-gap: 0.9em; padding: 0.5em 0; border-bottom: 1px solid #eee; }
+  a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
   a.name:hover { text-decoration: underline; }
-  .statuscell { flex: 0 0 11em; }
-  .diffstat { flex: 0 0 7em; font-size: 0.8em; font-family: ui-monospace, Menlo, monospace; }
+  .statuscell { white-space: nowrap; }
+  .diffstat { justify-self: end; white-space: nowrap; font-size: 0.8em; font-family: ui-monospace, Menlo, monospace; }
   .diffstat .ins { color: #2a8a2a; }
   .diffstat .del { color: #c0392b; }
+  .actions { display: flex; align-items: center; gap: 0.6em; justify-self: end; }
   .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
   .badge.running { background: #d8f0d8; color: #2a6b2a; }
   .badge.cold    { background: #ececec; color: #666; }
@@ -689,7 +688,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
   .badge.failed a { color: #a22; text-decoration: underline; }
   .dash { font-size: 0.8em; color: #2255aa; text-decoration: none; padding: 0.15em 0.5em; border: 1px solid #d0deef; border-radius: 4px; background: #f4f8ff; }
   .dash:hover { background: #e6f0ff; text-decoration: underline; }
-  .stopForm { margin-left: auto; }
+  .stopForm { display: inline-flex; }
   .stopForm button { font-size: 0.75em; padding: 0.15em 0.6em; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #666; cursor: pointer; }
   .stopForm button:hover { background: #fee; border-color: #faa; color: #a22; }
   .help { margin-top: 2em; padding: 1em; background: #f7f7f7; border-radius: 6px; font-size: 0.9em; }
@@ -697,10 +696,10 @@ async function renderIndex(core: RouterCore): Promise<string> {
   .help code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
   footer { margin-top: 1em; font-size: 0.85em; color: #888; }
   footer a { color: #888; }
-  @media (max-width: 480px) {
-    li { flex-wrap: wrap; row-gap: 0.2em; }
-    a.name { min-width: 0; flex: 1 1 100%; }
-    .statuscell { flex: 0 0 auto; }
+  @media (max-width: 700px) {
+    li { display: flex; flex-wrap: wrap; gap: 0.3em 0.7em; }
+    a.name { white-space: normal; }
+    .diffstat, .actions { justify-self: auto; }
   }
 </style>
 </head>
