@@ -27,7 +27,6 @@ import {
 } from "./prompts.js";
 import {
   accumulateAssistantText,
-  adaptSdkMessage,
   buildContentBlocks,
   warnErroredTurn,
   type ChatImage,
@@ -47,7 +46,7 @@ import {
   saveCurrentModel,
   DEFAULT_MODEL_FILE,
 } from "./state.js";
-import { pumpChatRun } from "./consume.js";
+import { pumpSessionRun } from "./consume.js";
 import { preflightChatBackend } from "../../agent/auth-preflight.js";
 import { acquireSessionRunLock, releaseSessionRunLock } from "./run-lock.js";
 import {
@@ -185,13 +184,28 @@ export class ChatSession extends EventEmitter {
       model: this.currentModel ?? undefined,
       acquireLock: () => this.acquireRunLock(),
       releaseLock: () => this.releaseRunLock(),
-      onFailed: () => this.transition({ phase: "idle" }),
+      onFailed: () => this.abandonStart(),
     });
     this.transition({ phase: "ready", run });
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
     // and emit as "error" events.
     void this.consumeMessages(run);
+  }
+
+  /**
+   * Return to `idle` after a run failed to start, and deal with anything that
+   * queued behind it. While the start was in flight the session read as busy,
+   * so a concurrent send enqueued and *persisted* its user message — leaving
+   * that in the queue would strand it indefinitely (the queue only drains on a
+   * turn result or a run close, neither of which will now happen) and let a
+   * later send overtake it, so history and delivery order would disagree.
+   * Draining retries once; if that start fails too, `drainQueue`'s own handler
+   * reports it on the session rather than silently dropping the text.
+   */
+  private abandonStart(): void {
+    this.transition({ phase: "idle" });
+    this.drainQueue();
   }
 
   private async acquireRunLock(): Promise<void> {
@@ -204,38 +218,20 @@ export class ChatSession extends EventEmitter {
   }
 
   private consumeMessages(run: ChatBackendRun): Promise<void> {
-    return pumpChatRun({
-      run,
-      adapt: adaptSdkMessage,
-      onMessage: async (msg) => {
-        this.durability.observe(msg);
-        // Hold `result` until the transcript is flushed: consumers refetch
-        // history the moment a turn ends, and the CLI writes the final
-        // assistant entry ~150ms *after* emitting result.
-        if (msg.type === "result") {
-          await this.durability.awaitDurability();
-          // Record the "since my last reply" marker before the queue drains.
-          if (this.sessionId) await recordTurnMarkerForSession(this.boxRoot, this.sessionId);
-        }
-        this.handleMessage(msg);
-      },
-      onError: (err) => {
-        log("error", `Run errored: ${err.message}`);
-        this.emit("error", err);
-      },
-      onClose: async () => {
-        log("close", "Run ended");
-        const wasIntentional = this.state.phase === "stopping";
-        if (this.state.phase !== "idle") this.transition({ phase: "idle" });
-        await this.releaseRunLock();
-        this.emit("close", wasIntentional ? 0 : null);
-        // Drain any messages queued while the run was busy into a fresh run,
-        // unless this was an intentional stop (queue is already cleared).
-        if (!wasIntentional && this.messageQueue.length > 0) {
-          log("close", `Draining ${this.messageQueue.length} queued message(s) into fresh run`);
-          this.drainQueue();
-        }
-      },
+    return pumpSessionRun(run, {
+      durability: this.durability,
+      boxRoot: this.boxRoot,
+      getSessionId: () => this.sessionId,
+      recordTurnMarker: (sessionId) => recordTurnMarkerForSession(this.boxRoot, sessionId),
+      handleMessage: (msg) => this.handleMessage(msg),
+      isStopping: () => this.state.phase === "stopping",
+      toIdle: () => { if (this.state.phase !== "idle") this.transition({ phase: "idle" }); },
+      releaseRunLock: () => this.releaseRunLock(),
+      emitError: (err) => { this.emit("error", err); },
+      emitClose: (code) => { this.emit("close", code); },
+      queueLength: () => this.messageQueue.length,
+      drainQueue: () => this.drainQueue(),
+      log,
     });
   }
 
@@ -343,7 +339,16 @@ export class ChatSession extends EventEmitter {
     // ready → streaming.
     this.transition({ phase: "streaming", run });
     this.turnText = "";
-    run.send(content);
+    try {
+      run.send(content);
+    } catch (e) {
+      // The dispatch itself failed. Step back to `ready` before rethrowing:
+      // left in `streaming` the session reads as busy forever, with no result
+      // coming to release it — the same wedge a failed start used to cause.
+      this.state = afterTurnResult(this.state);
+      log("send", `Dispatch failed, turn abandoned: ${errorMessage(e)}`);
+      throw e;
+    }
     return true;
   }
 

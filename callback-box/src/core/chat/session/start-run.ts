@@ -130,8 +130,18 @@ export async function openChatRun(opts: {
     });
   } catch (e) {
     log("start", `Run start failed, resetting session to idle: ${errorMessage(e)}`);
-    await opts.releaseLock();
-    opts.onFailed();
+    // The state reset must happen even if releasing the lock fails, and the
+    // original error must survive: reversing these, or letting a lock-release
+    // rejection escape, would leave the session in `starting` — recreating the
+    // exact permanent-busy wedge this unwind exists to prevent, now masked by a
+    // different error.
+    try {
+      await opts.releaseLock();
+    } catch (releaseErr) {
+      console.error("[ChatSession:start] releasing the run lock after a failed start failed:", releaseErr);
+    } finally {
+      opts.onFailed();
+    }
     throw e;
   }
 }

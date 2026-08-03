@@ -20,6 +20,18 @@ import { join } from "node:path";
 /** How many descriptors this process holds right now. */
 const openFDs = () => readdirSync("/dev/fd").length;
 
+/**
+ * Poll until `check` passes, up to `ms`. Filesystem notifications have no
+ * latency guarantee — a fixed sleep either flakes under load or wastes time —
+ * so every timing-sensitive assertion below waits for its condition.
+ */
+async function waitFor(check: () => boolean, ms: number): Promise<void> {
+  const deadline = Date.now() + ms;
+  while (Date.now() < deadline && !check()) {
+    await new Promise((r) => setTimeout(r, 20));
+  }
+}
+
 /** Seed `count` files spread over `dirs` directories under the box root. */
 async function seedTree(root: string, dirs: number, perDir: number): Promise<void> {
   for (let d = 0; d < dirs; d++) {
@@ -100,7 +112,7 @@ const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
 
 await writeFile(join(box.root, "store", "Note.memo.card"), "---\nstatus: new\n---\nhi\n");
-await new Promise((r) => setTimeout(r, 300));
+await waitFor(() => seen.includes("store/Note.memo.card"), 5000);
 
 seen.includes("store/Note.memo.card")
 => true
@@ -126,10 +138,152 @@ const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
 
 await mkdir(join(box.root, "store", "Trip.attach"), { recursive: true });
-await new Promise((r) => setTimeout(r, 300));
+await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach"), 5000);
 
 watcher.watchedDirs().includes("store/Trip.attach")
 => true
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## A replaced directory is re-watched, subtree and all
+
+`mv`, `git checkout`, and an atomic "write a new tree, swap it in" all replace a
+directory's inode under an unchanged path. Keeping the old watches would leave
+them attached to an inode that no longer exists — and, worse, make the path look
+already-watched, so the new subtree would never be watched at all.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "store", "Trip.attach", "old"), { recursive: true });
+
+const watcher = ensureBoxWatcher(box.root, bus);
+await watcher.ready;
+
+const { rm, rename } = await import("node:fs/promises");
+await rm(join(box.root, "store", "Trip.attach"), { recursive: true });
+await mkdir(join(box.root, "store", "Staging", "fresh"), { recursive: true });
+await rename(join(box.root, "store", "Staging"), join(box.root, "store", "Trip.attach"));
+await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5000);
+await watcher.settled();
+
+watcher.watchedDirs().join(" ")
+=> . store store/Trip.attach store/Trip.attach/fresh
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## Files already inside a newly-appeared directory are announced
+
+A directory that arrives complete — an agent writing a card folder, a `git
+checkout` — held its files before any watch existed, so nothing else will ever
+report them. The reconciling walk announces what it finds.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "store"), { recursive: true });
+
+const seen: string[] = [];
+bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
+
+const watcher = ensureBoxWatcher(box.root, bus);
+await watcher.ready;
+
+// Build the tree out of sight, then swap it in whole — no watch can have seen
+// the file being written.
+const { rename } = await import("node:fs/promises");
+await mkdir(join(box.root, "staging"), { recursive: true });
+await writeFile(join(box.root, "staging", "Photo.md"), "hi\n");
+await rename(join(box.root, "staging"), join(box.root, "store", "Trip.attach"));
+await waitFor(() => seen.includes("store/Trip.attach/Photo.md"), 5000);
+await watcher.settled();
+
+seen.includes("store/Trip.attach/Photo.md")
+=> true
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## A directory symlink created at runtime is not followed
+
+The initial walk refuses symlinks (a box may link outside itself, or into
+itself). The runtime path has to agree, or a link planted after startup would
+pull an arbitrary outside tree into the watch set and bypass the exclusions.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "store"), { recursive: true });
+await mkdir(join(box.root, "procedure", "runs", "noisy"), { recursive: true });
+
+const watcher = ensureBoxWatcher(box.root, bus);
+await watcher.ready;
+
+const { symlink } = await import("node:fs/promises");
+await symlink(join(box.root, "procedure", "runs"), join(box.root, "store", "link"));
+// Create a real directory after the link and wait for *it*. Asserting an
+// absence is only meaningful once we know the notifications arrived — a bare
+// sleep would pass vacuously whenever delivery was merely slow.
+await mkdir(join(box.root, "store", "real"), { recursive: true });
+await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000);
+await watcher.settled();
+
+watcher.watchedDirs().join(" ")
+=> . procedure store store/real
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## Rapid writes still produce a trailing event
+
+Repeats inside the 50 ms window collapse, but the *last* write still reaches
+consumers. Merely dropping duplicates would leave a client that refetched on the
+first event holding content a later write had already superseded.
+
+The writes are spaced ~12 ms — inside the window, but far enough apart that the
+kernel reports them separately. Back-to-back writes are coalesced by FSEvents
+itself before Node ever sees them, so a tighter burst tests the platform rather
+than this module.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "store"), { recursive: true });
+const card = join(box.root, "store", "Note.memo.card");
+await writeFile(card, "---\nstatus: new\n---\nv1\n");
+
+const watcher = ensureBoxWatcher(box.root, bus);
+await watcher.ready;
+
+let events = 0;
+bus.subscribe({ listener: (e) => { if (e.event === "file-change" && e.data.path === "store/Note.memo.card") events++; } });
+
+for (const v of ["v2", "v3", "v4", "v5"]) {
+  await writeFile(card, `---\nstatus: new\n---\n${v}\n`);
+  await new Promise((r) => setTimeout(r, 12));
+}
+await new Promise((r) => setTimeout(r, 400));
+
+`events>=2: ${events >= 2} | bounded: ${events <= 6}`
+=> events>=2: true | bounded: true
 ```
 
 ```ts cleanup

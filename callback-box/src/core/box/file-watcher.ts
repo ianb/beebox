@@ -39,12 +39,29 @@ const DOT_SEGMENT = /(^|[/\\])\../;
 const HIGH_CHURN_DIRS = ["procedure/runs", "store/trash"];
 
 /**
- * Window for collapsing repeated `(event, path)` pairs into one emission.
- * `fs.watch` is chattier than chokidar was — a single write commonly surfaces
- * as two `change` events — and every consumer treats `file-change` as a hint to
- * refetch, so a duplicate is pure waste.
+ * Throttle window for a given `(event, path)` pair. `fs.watch` is chattier than
+ * chokidar was — a single write commonly surfaces as two `change` events — and
+ * every consumer treats `file-change` as a hint to refetch, so a duplicate is
+ * pure waste. Throttled leading-and-trailing, never merely deduplicated: a
+ * second write inside the window still produces an event when the window
+ * closes, so a consumer that refetched on the first one can't be left holding
+ * stale content.
  */
 const COALESCE_MS = 50;
+
+/** A watched directory: its watcher, plus the inode it was watching. */
+interface WatchedDir {
+  watcher: fs.FSWatcher;
+  /** Identifies the directory across a replace — see `reconcile`. */
+  ino: number;
+}
+
+/** Throttle state for one `(event, path)` key. */
+interface EmitWindow {
+  timer: ReturnType<typeof setTimeout>;
+  /** Another change arrived while the window was open. */
+  pending: boolean;
+}
 
 /** What {@link ensureBoxWatcher} hands back to a caller that wants to observe. */
 export interface BoxWatcherHandle {
@@ -52,13 +69,23 @@ export interface BoxWatcherHandle {
   ready: Promise<void>;
   /** Box-relative paths of every watched directory, sorted (`.` is the root). */
   watchedDirs(): string[];
+  /** Resolves when every reconcile queued so far has finished. For tests. */
+  settled(): Promise<void>;
 }
 
-/** One box root's directory watches, plus the coalescing state for its emits. */
+/** One box root's directory watches, plus the throttling state for its emits. */
 class BoxWatcher implements BoxWatcherHandle {
-  private readonly dirs = new Map<string, fs.FSWatcher>();
-  private readonly recent = new Map<string, number>();
+  private readonly dirs = new Map<string, WatchedDir>();
+  private readonly windows = new Map<string, EmitWindow>();
   private closed = false;
+  /**
+   * Read `closed` through a call, not the field. Every check after an `await`
+   * needs to re-read it (close can land mid-walk), and control-flow narrowing
+   * would otherwise treat the field as still-false and flag the re-check dead.
+   */
+  private isClosed(): boolean { return this.closed; }
+  /** Serializes reconciles so two renames of one path can't interleave. */
+  private reconciling: Promise<void> = Promise.resolve();
   /** Set by `ensureBoxWatcher` to the initial walk; resolved for a fresh instance. */
   ready: Promise<void> = Promise.resolve();
 
@@ -79,9 +106,18 @@ class BoxWatcher implements BoxWatcherHandle {
    * directory. Missing/unreadable directories are skipped: the tree is walked
    * live, so a directory can vanish between the readdir that named it and the
    * watch that would cover it.
+   *
+   * With `emitDiscovered`, every entry the walk finds is announced. That is for
+   * a directory that appeared at runtime: it may already hold files, written
+   * before this watch existed, and nothing else will ever report them.
    */
-  async addDir(dir: string): Promise<void> {
+  async addDir(dir: string, opts?: { emitDiscovered: boolean }): Promise<void> {
     if (this.closed || this.dirs.has(dir) || this.ignored(dir)) return;
+
+    // Read the inode before watching so `reconcile` can tell a replaced
+    // directory from the same one being touched again.
+    const stat = await fsp.lstat(dir).catch(() => null);
+    if (stat === null || !stat.isDirectory() || this.isClosed() || this.dirs.has(dir)) return;
 
     let watcher: fs.FSWatcher;
     try {
@@ -98,9 +134,9 @@ class BoxWatcher implements BoxWatcherHandle {
     }
     watcher.on("error", (error) => {
       console.error(`[box-watcher] watch error on ${path.relative(this.boxRoot, dir)}:`, error);
-      this.dropDir(dir);
+      this.dropSubtree(dir);
     });
-    this.dirs.set(dir, watcher);
+    this.dirs.set(dir, { watcher, ino: stat.ino });
 
     let entries: fs.Dirent[];
     try {
@@ -113,19 +149,32 @@ class BoxWatcher implements BoxWatcherHandle {
     }
     // Symlinked directories are deliberately not followed: a box may link
     // outside itself (or into itself), and a cycle would walk forever.
+    // `Dirent.isDirectory()` is lstat-equivalent, so a symlink is simply not a
+    // directory here — `reconcile` uses `lstat` to match.
     await Promise.all(
-      entries
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => this.addDir(path.join(dir, entry.name))),
+      entries.map(async (entry) => {
+        const child = path.join(dir, entry.name);
+        if (this.ignored(child)) return;
+        if (opts?.emitDiscovered === true) this.emit("rename", child);
+        if (entry.isDirectory()) await this.addDir(child, opts);
+      }),
     );
   }
 
-  /** Stop watching one directory (it was removed, or its watch errored). */
-  private dropDir(dir: string): void {
-    const watcher = this.dirs.get(dir);
-    if (!watcher) return;
-    this.dirs.delete(dir);
-    watcher.close();
+  /**
+   * Stop watching `dir` **and everything under it**. Dropping only the named
+   * directory would strand its descendants' watches on inodes that are gone (an
+   * `mv` or `git checkout` moves a whole subtree at once), and those stale
+   * entries would then make `addDir` treat a recreated path as already-watched
+   * and skip it — blinding that subtree until a restart.
+   */
+  private dropSubtree(dir: string): void {
+    const prefix = dir + path.sep;
+    for (const [watched, entry] of this.dirs) {
+      if (watched !== dir && !watched.startsWith(prefix)) continue;
+      this.dirs.delete(watched);
+      entry.watcher.close();
+    }
   }
 
   /**
@@ -140,41 +189,79 @@ class BoxWatcher implements BoxWatcherHandle {
       filename === null ? dir : path.join(dir, typeof filename === "string" ? filename : filename.toString());
     if (this.ignored(absPath)) return;
 
-    // A `rename` is a create OR a delete. On a create of a directory, start
-    // watching it (and its subtree) so newly-made card folders go live without
-    // a restart; on a delete, drop the watch we held.
-    if (event === "rename") {
-      fsp
-        .stat(absPath)
-        .then((stat) => (stat.isDirectory() ? this.addDir(absPath) : undefined))
-        .catch(() => this.dropDir(absPath));
-    }
+    // A `rename` is a create, a delete, or a replace — including a whole
+    // subtree swapped out under one path.
+    if (event === "rename") this.reconcile(absPath);
 
     this.emit(event, absPath);
   }
 
-  /** Emit a `file-change`, collapsing repeats of the same pair. */
+  /**
+   * Bring the watches for `absPath` back in line with what is on disk.
+   * Serialized, so two renames of the same path can't interleave a drop with an
+   * add and leave the subtree half-watched.
+   */
+  private reconcile(absPath: string): void {
+    this.reconciling = this.reconciling
+      .then(async () => {
+        if (this.isClosed()) return;
+        // `lstat`, not `stat`: a symlink must not be followed here either, or a
+        // link planted at runtime would pull an arbitrary outside tree into the
+        // watch set — the initial walk refuses them, and the two must agree.
+        const stat = await fsp.lstat(absPath).catch(() => null);
+        const existing = this.dirs.get(absPath);
+        if (stat === null || !stat.isDirectory()) {
+          // Gone, or replaced by a non-directory. A no-op for an ordinary file.
+          if (existing) this.dropSubtree(absPath);
+          return;
+        }
+        // Same directory we already watch, merely touched: the watch is live
+        // and its subtree is intact, so leave it alone. Comparing inodes (not
+        // just the path) is what keeps an ordinary rename inside a watched
+        // directory from tearing down and rebuilding its whole subtree.
+        if (existing && existing.ino === stat.ino) return;
+        // A new directory, or a different inode at a path we were watching —
+        // the old watches point at something that is no longer here.
+        if (existing) this.dropSubtree(absPath);
+        await this.addDir(absPath, { emitDiscovered: true });
+      })
+      .catch((e: unknown) => {
+        console.warn(`[box-watcher] reconciling ${path.relative(this.boxRoot, absPath)} failed:`, e);
+      });
+  }
+
+  /**
+   * Emit a `file-change`, throttled per `(event, path)`. The first event in a
+   * window goes out immediately; anything more inside the window is collapsed
+   * into a single further emission when the window closes, so repeated writes
+   * stay cheap without a consumer ever being left on stale content.
+   */
   private emit(event: string, absPath: string): void {
+    if (this.closed) return;
     const rel = path.relative(this.boxRoot, absPath);
     const key = `${event}\0${rel}`;
-    const now = Date.now();
-    const last = this.recent.get(key);
-    if (last !== undefined && now - last < COALESCE_MS) return;
-    this.recent.set(key, now);
-    if (this.recent.size > 1000) this.pruneRecent(now);
+
+    const open = this.windows.get(key);
+    if (open) {
+      open.pending = true;
+      return;
+    }
 
     this.eventBus.emitTransient("file-change", {
       event,
       path: rel,
       timestamp: new Date().toISOString(),
     });
-  }
 
-  /** Drop coalescing entries that can no longer suppress anything. */
-  private pruneRecent(now: number): void {
-    for (const [key, at] of this.recent) {
-      if (now - at >= COALESCE_MS) this.recent.delete(key);
-    }
+    const timer = setTimeout(() => {
+      const window = this.windows.get(key);
+      this.windows.delete(key);
+      // Trailing edge: a change we collapsed still needs to reach consumers.
+      if (window?.pending === true) this.emit(event, absPath);
+    }, COALESCE_MS);
+    // The watcher must never be the reason a process stays alive.
+    timer.unref();
+    this.windows.set(key, { timer, pending: false });
   }
 
   /** Box-relative paths of every watched directory, sorted. For tests. */
@@ -182,10 +269,16 @@ class BoxWatcher implements BoxWatcherHandle {
     return [...this.dirs.keys()].map((dir) => path.relative(this.boxRoot, dir) || ".").toSorted();
   }
 
+  /** Resolves once every reconcile queued so far has run. For tests. */
+  async settled(): Promise<void> {
+    await this.reconciling;
+  }
+
   close(): void {
     this.closed = true;
-    for (const dir of [...this.dirs.keys()]) this.dropDir(dir);
-    this.recent.clear();
+    for (const dir of [...this.dirs.keys()]) this.dropSubtree(dir);
+    for (const window of this.windows.values()) clearTimeout(window.timer);
+    this.windows.clear();
   }
 }
 
