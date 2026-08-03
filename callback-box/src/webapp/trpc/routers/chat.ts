@@ -203,12 +203,16 @@ export const chatRouter = router({
       latestActivity: newestOrphan === undefined ? null : newestOrphan.session.mtime.toISOString(),
     };
 
-    // Sort by latest activity (most-recent landmark first). Landmarks
-    // with no fresh chats sink to the bottom — root first within that
-    // group so it's always reachable, then alphabetical by label.
+    // Sort by latest activity (most-recent landmark first), reading
+    // `latestActivity` rather than the visible rows: a landmark whose only
+    // chats are older than the fresh window has activity to sort on even
+    // though `sessions` is empty, and sinking it among the never-used
+    // landmarks would misreport it. Landmarks with no chats at all sink to
+    // the bottom — root first within that group so it's always reachable,
+    // then alphabetical by label.
     picker.sort((a, b) => {
-      const aLatest = a.sessions[0] ? Date.parse(a.sessions[0].lastActivity) : null;
-      const bLatest = b.sessions[0] ? Date.parse(b.sessions[0].lastActivity) : null;
+      const aLatest = a.latestActivity === null ? null : Date.parse(a.latestActivity);
+      const bLatest = b.latestActivity === null ? null : Date.parse(b.latestActivity);
       if (aLatest !== null && bLatest !== null) return bLatest - aLatest;
       if (aLatest !== null) return -1;
       if (bLatest !== null) return 1;

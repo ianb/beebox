@@ -14,13 +14,13 @@ import { Text } from "../ui/Text";
 import type { RouterOutput } from "../../lib/trpc";
 
 /** A session as `chat.byLandmark` reports it under a landmark. */
-export type PickerSession = RouterOutput["chat"]["byLandmark"]["landmarks"][number]["sessions"][number];
+type PickerSession = RouterOutput["chat"]["byLandmark"]["landmarks"][number]["sessions"][number];
 
 /**
  * A session in the trailing unassigned bucket — same shape plus the
  * directory it's bound to, since that bucket spans directories.
  */
-export type UnassignedSession = RouterOutput["chat"]["byLandmark"]["unassigned"]["sessions"][number];
+type UnassignedSession = RouterOutput["chat"]["byLandmark"]["unassigned"]["sessions"][number];
 
 /** Either kind of row; the unassigned one shows its binding under the label. */
 export type SessionRowItem = PickerSession | UnassignedSession;

@@ -149,6 +149,33 @@ const trips = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l
 await box.cleanup();
 ```
 
+## Ordering follows `latestActivity`, not just the visible rows
+
+A landmark whose only chats fell out of the fresh window renders no inline
+rows, but it isn't a landmark nobody has used — it sorts by when it was last
+used, ahead of landmarks with no chats at all. (Sorting on the visible rows
+sank it among the never-used ones, which is what the Landmarks page shows.)
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+
+await box.write("store/fresh/Fresh.landmark.card", "---\nnavigation:\n  label: Fresh\n---\n\n");
+await box.write("store/stale/Stale.landmark.card", "---\nnavigation:\n  label: Stale\n---\n\n");
+await box.write("store/never/Never.landmark.card", "---\nnavigation:\n  label: Never\n---\n\n");
+
+await seedSession(box, { sessionId: "freshone", contextDir: "store/fresh", firstMessage: "today", daysAgo: 1 });
+await seedSession(box, { sessionId: "staleone", contextDir: "store/stale", firstMessage: "a while back", daysAgo: 30 });
+
+const ordered = await caller(box.root).chat.byLandmark();
+ordered.landmarks.map((l) => l.label).join(" > ")
+=> Fresh > Stale > Never
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## A landmark card that doesn't parse is reported, not swallowed
 
 The good landmarks still load. The broken one rides along in `problems` so the

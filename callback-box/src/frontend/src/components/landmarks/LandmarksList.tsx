@@ -29,23 +29,33 @@ type ChatBucket = RouterOutput["chat"]["byLandmark"]["landmarks"][number];
 
 /**
  * Order `list`'s rows the way `byLandmark` orders its buckets, pairing each
- * with its chats. A landmark in `list` but not in `byLandmark` shouldn't
- * happen (both glob the same cards) — if it does it lands at the end,
+ * with its chats. Both sides key on directory, and a directory is supposed to
+ * hold one landmark card — but nothing enforces it, so the join keeps a queue
+ * per directory and consumes it: two cards in one directory both render (each
+ * against one of that directory's two buckets) instead of one silently
+ * vanishing. A landmark in `list` with no bucket left shouldn't happen (both
+ * readers glob the same cards); if it does it lands at the end,
  * alphabetically, rather than disappearing.
  */
 function joinByDir(
   landmarks: LandmarkRow[],
   buckets: ChatBucket[],
 ): { landmark: LandmarkRow; bucket: ChatBucket | null }[] {
-  const byDir = new Map(landmarks.map((lm) => [lm.dir, lm]));
+  const byDir = new Map<string, LandmarkRow[]>();
+  for (const lm of landmarks) {
+    const queue = byDir.get(lm.dir);
+    if (queue) queue.push(lm);
+    else byDir.set(lm.dir, [lm]);
+  }
   const paired: { landmark: LandmarkRow; bucket: ChatBucket | null }[] = [];
   for (const bucket of buckets) {
-    const landmark = byDir.get(bucket.dir);
+    const landmark = byDir.get(bucket.dir)?.shift();
     if (landmark === undefined) continue;
-    byDir.delete(bucket.dir);
     paired.push({ landmark, bucket });
   }
-  const leftovers = [...byDir.values()].toSorted((a, b) => a.dir.localeCompare(b.dir));
+  const leftovers = [...byDir.values()]
+    .flat()
+    .toSorted((a, b) => a.dir.localeCompare(b.dir));
   return [...paired, ...leftovers.map((landmark) => ({ landmark, bucket: null }))];
 }
 
