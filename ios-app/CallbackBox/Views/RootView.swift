@@ -91,9 +91,16 @@ struct RootView: View {
             await pendingEmissionStore.activate(boxID: boxID)
         }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task {
+                    await LogForwarder.shared.setActive(true)
+                    await LogForwarder.shared.flush()
+                }
+            }
             guard phase == .background else {
                 return
             }
+            LogFlushBackgroundTask().begin()
             if store.selectedBox?.requiresDeviceUnlock == true {
                 showingPairSheet = false
                 resignProtectedFirstResponder()
@@ -213,6 +220,41 @@ struct RootView: View {
             composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
             composerCommandAcknowledgements.append(acknowledgement)
         }
+    }
+}
+
+/// One best-effort log flush as the app backgrounds, held open by a UIKit
+/// background-task assertion.
+///
+/// The entries are already on disk, so this is opportunistic: expiration
+/// cancels the flush and ends the assertion rather than racing the watchdog.
+/// The running `Task` keeps this object alive for its own lifetime.
+@MainActor
+private final class LogFlushBackgroundTask {
+    private var identifier = UIBackgroundTaskIdentifier.invalid
+    private var work: Task<Void, Never>?
+
+    func begin() {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: "callbackbox.log-flush") {
+            MainActor.assumeIsolated {
+                self.end()
+            }
+        }
+        work = Task {
+            await LogForwarder.shared.setActive(false)
+            await LogForwarder.shared.flush()
+            self.end()
+        }
+    }
+
+    private func end() {
+        work?.cancel()
+        work = nil
+        guard identifier != .invalid else {
+            return
+        }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
     }
 }
 

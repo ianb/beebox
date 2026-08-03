@@ -361,6 +361,17 @@ extension CaptureUploadCoordinator: URLSessionDataDelegate {
     }
 
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-        eventBroker.finish(identifier: CaptureBackgroundSession.identifier)
+        let broker = eventBroker
+        Task { @MainActor in
+            // Releasing the completion handler ends this wake-up, so anything
+            // the completion path recorded must be on disk first. A flush is
+            // attempted but never waited on: holding the handler open for a
+            // network round trip is what the watchdog kills apps for.
+            await LogForwarder.shared.awaitPersistence()
+            Task {
+                await LogForwarder.shared.flush()
+            }
+            broker.finish(identifier: CaptureBackgroundSession.identifier)
+        }
     }
 }

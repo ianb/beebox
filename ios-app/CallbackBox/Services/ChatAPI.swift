@@ -205,10 +205,7 @@ struct ChatAPI: Sendable {
     }
 
     private func applyAuth(to request: inout URLRequest) {
-        guard let token = box.authToken, token.isEmpty == false else {
-            return
-        }
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        BoxRequest.apply(to: &request, box: box)
     }
 
     private func multipartAudioBody(fileURL: URL, session: String, boundary: String) throws -> Data {

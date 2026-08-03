@@ -265,12 +265,7 @@ struct CaptureAPI: Sendable {
     }
 
     private func authenticatedRequest(url: URL) -> URLRequest {
-        var request = URLRequest(url: url)
-        request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
-        if let token = box.authToken, token.isEmpty == false {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        return request
+        BoxRequest.authenticated(url: url, box: box)
     }
 
     private func perform<Value: Decodable>(
