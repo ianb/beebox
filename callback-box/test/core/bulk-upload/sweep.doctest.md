@@ -21,6 +21,7 @@ import {
 import { bulkBatchCardRelPath } from "../../../src/core/bulk-upload/prepare.js";
 import { createUploadBatchTemplate } from "../../../src/schemas/upload-batch.js";
 import { sweepBulkBatches } from "../../../src/core/bulk-upload/sweep.js";
+import { getBoxTime } from "../../../src/lib/time.js";
 
 const OLD = "2020-01-01T00:00:00.000Z";
 
@@ -189,7 +190,10 @@ async function writeBatchCard(relDir, startedAt) {
 }
 
 await writeBatchCard("store/x/tmp-upload/upload-old", OLD);
-await writeBatchCard("store/x/tmp-upload/upload-new", "2026-07-27T00:00:00.000Z");
+// Recent = 1 day ago on the sweep's own clock — a hardcoded "recent" date
+// here is a time bomb that crosses the ≥7-day threshold as real time passes.
+const RECENT = new Date(getBoxTime(box.root).getTime() - 24 * 60 * 60 * 1000).toISOString();
+await writeBatchCard("store/x/tmp-upload/upload-new", RECENT);
 
 const notified = [];
 const result = await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified.push(b) });
