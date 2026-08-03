@@ -162,6 +162,38 @@ foo("hello")
   t.ok(source.includes("test.doctest.md:"), "should reference source file");
 });
 
+test("generateTestSource: throws assertion emits an awaited async thunk", async (t) => {
+  const md = `\`\`\`
+await failAsync()
+=> throws RangeError
+\`\`\`
+`;
+
+  const source = generateTestSource(md, "/test.doctest.md");
+  t.ok(
+    source.includes("await t.checkThrows(async () => (await failAsync())"),
+    "throws thunk is async and awaited, so await-containing expressions compile",
+  );
+});
+
+test("generateTestSource: continue block with no open test throws", async (t) => {
+  const md = `\`\`\`ts setup
+const x = 1;
+\`\`\`
+
+\`\`\`ts continue
+x + 1
+=> 2
+\`\`\`
+`;
+
+  t.throws(
+    () => generateTestSource(md, "/test.doctest.md"),
+    /has no open test to continue/,
+    "orphan continue is a generation-time error, not a silent new test",
+  );
+});
+
 test("generateTestSource: no-assertion block generates runnable test", async (t) => {
   const md = `\`\`\`
 doStuff()

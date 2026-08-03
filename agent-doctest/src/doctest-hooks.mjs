@@ -298,7 +298,9 @@ function emitExamples(out, examples, indent = "  ") {
       const { setup, expr } = splitExpression(ex.expression);
       emitLines(out, setup, indent);
       const mode = ex.expected.includes(":") ? "full" : "name";
-      out.push(`${indent}t.checkThrows(() => (${expr}), { expected: ${JSON.stringify(ex.expected)}, mode: ${JSON.stringify(mode)} });`);
+      // Async arrow + await so `=> throws` works on await-containing
+      // expressions (rejections and sync throws both land in checkThrows).
+      out.push(`${indent}await t.checkThrows(async () => (${expr}), { expected: ${JSON.stringify(ex.expected)}, mode: ${JSON.stringify(mode)} });`);
     } else if (ex.expected !== null) {
       const { setup, expr } = splitExpression(ex.expression);
       emitLines(out, setup, indent);
@@ -400,6 +402,12 @@ export function generateTestSource(markdown, filePath) {
       out.push(`  // --- continue (${fileName}:${block.line}) ---`);
       emitExamples(out, examples);
     } else {
+      if (isContinue) {
+        throw new Error(
+          `${fileName}:${block.line}: 'continue' block has no open test to continue — ` +
+            `it would silently become a new test. Make the first example block a plain \`\`\`ts block.`,
+        );
+      }
       // Close previous test if open
       closeTest();
 

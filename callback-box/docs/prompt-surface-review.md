@@ -1,11 +1,8 @@
----
-name: cb-prompt-review
-description: Review or engineer callback-box's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Use when reviewing prompts for overlap/redundancy/staleness, deciding where a new instruction belongs, checking what an agent actually sees in some situation, or after any change to prompt-generating code. Triggers include "review the prompts", "prompt surface", "where should this instruction go", "what does the chat/reactor agent see", "check for prompt overlap".
----
-
 # Reviewing the prompt surface
 
-The prompts are how every agent comes to understand Callback Box — what it is, what its role is, what the rules are. They are generated code (`src/core/agent-guide/`, `chat-session-prompts.ts`, `reactor/prompts.ts`, schema `instructions`, `box-skills-content.ts`), assembled into a per-situation context stack. Review the *assembled stack*, not the source files: judge what an agent actually reads, end to end.
+The workflow for reviewing or engineering callback-box's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Read this when auditing the assembled prompt stack for overlap/redundancy/staleness/contradiction, checking what an agent actually sees in some situation, or after any change to prompt-generating code. [prompt-audits.md](prompt-audits.md) is the companion lens catalog for the hunt step. (For routing a single new instruction to the right box surface, use the `cb-context` skill.)
+
+The prompts are how every agent comes to understand Callback Box — what it is, what its role is, what the rules are. They are generated code (`src/core/agent-guide/`, `src/core/chat/session/prompts.ts`, `src/core/reactor/prompts.ts`, schema `instructions`, `src/core/box/skills-content.ts`), assembled into a per-situation context stack. Review the *assembled stack*, not the source files: judge what an agent actually reads, end to end.
 
 ## See the assembled context
 
@@ -50,13 +47,13 @@ Every agent's context is a stack; each layer has a loading class:
 ## Review pass, in order
 
 1. Render the stacks (`agent-context` per situation) and read each end-to-end *as the agent*.
-2. Hunt: overlap (same concept taught twice), contradiction, dated language, claims unverified against code, weight (cost-per-bit), missing role framing.
+2. Hunt: overlap (same concept taught twice), contradiction, dated language, claims unverified against code, weight (cost-per-bit), missing role framing. [prompt-audits.md](prompt-audits.md) is the full lens catalog for this step.
 3. Fix at the canonical home; turn the duplicate sites into cross-references (`SECTION` / `xref`).
 4. Re-render; compare layer word counts before/after.
 5. New conventions get knowledge audits; run them before calling the work done.
 6. Re-run `cb init` on live boxes so the change actually ships.
 
-Prior art: `callback-box/docs/plans/prompt-surface-ia-review.md` is the worked example of a full-surface review (what was found, what each fix traded against). `callback-box/docs/prompt-audits.md` is the full lens catalog to work through during the "hunt" step above.
+Prior art: [plans/prompt-surface-ia-review.md](plans/prompt-surface-ia-review.md) is the worked example of a full-surface review (what was found, what each fix traded against).
 
 ## Invariants: session/prompt cache
 

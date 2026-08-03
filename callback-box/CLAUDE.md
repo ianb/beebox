@@ -154,6 +154,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Deployed-server health-check runbooks | `docs/health-checks.md` |
 | Agent-set chat timers (`<schedule>` tag) | `docs/chat-schedules.md` |
 | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
+| Prompt-surface review workflow | `docs/prompt-surface-review.md` (lens catalog: `docs/prompt-audits.md`) |
 | Triage pipeline design | `docs/triage.md` |
 | Questions subsystem design | `docs/questions.md` |
 | Deployment | `deploy/README.md` |

@@ -1,6 +1,6 @@
 ---
 name: cb-codehealth
-description: Use for a deliberate codebase-health pass — when cruft has accumulated, an area feels tangled or hard to test, you're about to make a big change in a messy area, or cb-debug's circuit-breaker flagged the architecture. Surfaces deepening opportunities and dead code; not every-refactor cleanup. Triggers include "codebase health", "this feels crufty/tangled", "reduce cruft", "is this architecture okay", "de-cruft X".
+description: Use for a deliberate codebase-health pass — when cruft has accumulated, an area feels tangled or hard to test, you're about to make a big change in a messy area, or cb-debug's circuit-breaker flagged the architecture. Surfaces deepening opportunities and dead code; not every-refactor cleanup. Triggers include "codebase health", "health check/checkup on the code", "health pass", "audit the codebase", "find dead code", "tech debt pass", "this feels crufty/tangled", "reduce cruft", "is this architecture okay", "de-cruft X", "what should we clean up".
 allowed-tools: Bash, Read, Grep, Glob, Agent
 ---
 
@@ -40,7 +40,9 @@ you could delete by smearing its job across callers was shallow.
 
 ## 1. Scan for friction
 
-**Run our tooling first — these are concrete, runnable signals, not vibes:**
+**Run our tooling first — these are concrete, runnable signals, not vibes.**
+All the `pnpm lint:*` scripts live in `callback-box/package.json`, so run them
+from `callback-box/`:
 
 - `pnpm lint:knip` — **dead code** (unused files, exports, deps). The clearest
   "code is a liability" hit; removing it is free health. (knip also enforces
@@ -91,10 +93,9 @@ one-time cleanup didn't hold, so they get a cheap recurring grep instead of a
 17-agent pass. Run them from `callback-box/`; each says what healthy looks like
 and what a regression looks like.
 
-- **Dead code — `pnpm lint:knip`.** Entries are now correct (a prior commit had
-  dropped `src/cli/index.ts`, inflating "unused files" to 144); healthy is ~3
-  genuine unused files, a regression is a jump back into the dozens (usually a
-  broken entry in `knip.json`, not real dead code) or a newly-orphaned file.
+- **Dead code — `pnpm lint:knip`.** Healthy is a small handful of genuine
+  unused files; a regression is a jump into the dozens (usually a broken entry
+  in `knip.json`, not real dead code) or a newly-orphaned file.
 - **Cycles — `pnpm lint:circular`** (madge). Healthy: only `import type` cycles.
   A regression is any new value-import cycle.
 - **`as unknown as` trend — `grep -rn "as unknown as" src | wc -l`.** Healthy is

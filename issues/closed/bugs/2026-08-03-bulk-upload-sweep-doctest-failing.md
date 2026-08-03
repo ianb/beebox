@@ -3,7 +3,15 @@ title: "`bulk-upload/sweep.doctest.md` abandons a fresh staging session it shoul
 area: callback-box
 filed-by: agent
 discovered-in: worktree-cbserve-fd-leak — while running the full suite for the spawn-EBADF fix
+resolution: implemented
 ---
+
+Closed 2026-08-03 (worktree-skill-review): it was the fixture, not the sweep.
+The test hardcoded `2026-07-27T00:00:00.000Z` as the "recent" batch's
+`startedAt` — a time bomb that crossed the ≥7-day threshold on 2026-08-03
+(the day this was filed). The sweep's age cutoff (`getBoxTime`-based) is
+correct; real boxes were never at risk. The fixture now derives the recent
+date from `getBoxTime(box.root)` minus one day.
 
 `pnpm test` has one failing doctest, unrelated to the change it was found
 under. It reproduces every run (not flaky) and it also fails on the unmodified

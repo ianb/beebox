@@ -32,23 +32,36 @@ line (`docs/testing.md` opens with this).
 - **Service fakes** (`src/services/`) — every external dependency has a
   typed fake with observable state; tests never hit real services.
   `test/helpers/fake-agent.ts` enforces real SDK session semantics.
+- **Traditional TAP tests** (`test/*.test.ts`) — reserved for things
+  that would be circular as doctests, e.g. testing the doctest
+  infrastructure itself. Not the default; prefer a doctest.
 - **Knowledge audits** (`src/dev/knowledge-audits.yaml`) — verify a *box
   agent* can recall a convention from its context without re-reading.
   New agent-facing concept → at least one audit (see cb-plan's section).
-- **SSR render tests** (`cb render`, `docs/ssr-render-testing.md`) —
-  pages rendered server-side with mocked state; the cheap way to check a
-  page shape without a browser.
+- **Session critiques** (`@session-critique <session-id>`) — evaluate
+  whether the CLI tools helped or hindered the agent in a real session
+  (unhelpful output, missing commands, wrong tool, bad errors, wasted
+  effort) — not what the agent knows, but whether the tools served it.
+- **Card validator hook** (`src/core/sdk-hooks.ts`) — not a test tier
+  you write; a live `PostToolUse` hook that lints `.card` writes/edits
+  during agent sessions and feeds issues back as `additionalContext`.
+- **Frontend dev stubs** (`/fakestream`, `bin/browse`) — for frontend
+  bugs that only manifest against real layout/measurement (scroll,
+  virtualization, reflow); a dev stub makes the input deterministic
+  while you drive the running app.
 - **Browser probing** (`bin/browse`, the browse skill) — for behavior
-  only a real browser shows (scroll, focus, HMR).
+  only a real browser shows (scroll, focus, HMR) and the way to check
+  page appearance in general.
 
 ## Choosing
 
 Pure logic → pure doctest. HTTP surface → route doctest. Touches box
 files → filesystem doctest. Spans wakeup cycles or several steps →
-scenario. Page appearance → SSR render first, browser probe second.
-"Will the box agent know this?" → knowledge audit. When a change fits no
-tier cleanly, that's usually a decomposition smell — split the change,
-don't invent a new harness.
+scenario. Page appearance → browser probe (`bin/browse`). Streaming/scroll
+UI bugs → frontend dev stub + browser probe. "Will the box agent know
+this?" → knowledge audit. "Did the tools help or hinder?" → session
+critique. When a change fits no tier cleanly, that's usually a
+decomposition smell — split the change, don't invent a new harness.
 
 Run `pnpm test` before committing (pre-commit runs typecheck + lint, not
 tests). Time in tests: `getBoxTime` honors frozen scenario time; plain

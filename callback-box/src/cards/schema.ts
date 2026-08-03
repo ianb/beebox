@@ -80,6 +80,9 @@ export type FieldDecl = ZodType | BodyField;
  * - `todos` — a list of todo entries for intentions that don't belong to any
  *   particular sentence of the body (see `src/shared/todo-model.ts`, the
  *   frontmatter counterpart to the `{% todo %}` Markdoc tag).
+ *
+ * Adding/removing a field here? Update the enumerations in
+ * `.claude/skills/cb-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
  */
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),

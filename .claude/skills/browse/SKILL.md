@@ -1,7 +1,7 @@
 ---
 name: browse
 description: Use when you need to drive a real browser — navigating pages, snapshotting the a11y tree, clicking, filling forms, taking screenshots, or checking responsive behavior, on the local dev app or any other site.
-allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*)
+allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*), Bash(pnpm --filter browse verify-help:*)
 ---
 
 # browse

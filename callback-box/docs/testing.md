@@ -196,9 +196,7 @@ await box.cleanup();
 
 ### Doctest limitations
 
-- **No `import type`** in setup blocks — the loader doesn't support it. Import value exports only.
-- **No `!.`** (non-null assertion) — use `?.` instead.
-- **No TypeScript type annotations** in test blocks — only in setup blocks.
+Doctest blocks are full TypeScript (compiled via esbuild's `ts` loader) — `import type`, non-null assertions, and type annotations all work, in setup and test blocks alike. The real limitations are structural: assertions compare serialized output (see the string-comparison rules in `.claude/rules/doctest.md`), and code blocks can't express trailing newlines.
 
 ## 2. Traditional TAP Tests
 
