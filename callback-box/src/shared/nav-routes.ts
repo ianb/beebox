@@ -15,8 +15,12 @@ export interface NavRoute {
 }
 
 export const NAV_ROUTES: readonly NavRoute[] = [
-  { href: "/", label: "Dashboard" },
-  { href: "/chat", label: "Recent" },
+  // "/" redirects to /chat (the box lands on the conversation); the entry
+  // stays because nav.card href validation derives from this table —
+  // removing it would invalidate existing cards.
+  { href: "/", label: "Chat" },
+  { href: "/chat", label: "Chat" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/chats", label: "Chats" },
   { href: "/questions", label: "Questions" },
   { href: "/browse", label: "Browse" },

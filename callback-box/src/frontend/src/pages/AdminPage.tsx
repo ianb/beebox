@@ -23,7 +23,7 @@ export function AdminPage() {
   return (
     <Column overflow="auto" className="h-full">
       <Stack gap="lg" className="max-w-2xl mx-auto py-8 px-4 w-full">
-        <TextLink to={href(`/${boxSlug}/`)}>
+        <TextLink to={href(`/${boxSlug}/dashboard`)}>
           <Text size="sm">&larr; Back</Text>
         </TextLink>
 

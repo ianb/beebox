@@ -70,9 +70,22 @@ const boxLayoutRoute = createRoute({
 
 // --- Box child routes ---
 
-const dashboardRoute = createRoute({
+// The box index lands on chat — the conversation is the primary surface
+// (docs/plans/top-nav-ia.md Track A). A redirect rather than mounting
+// ChatPage here: the chat flows canonicalize onto /chat (ChatPage rewrites
+// the resolved session there), so a root-mounted chat would immediately
+// navigate away from itself.
+const boxIndexRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/",
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/$boxSlug/chat", params: { boxSlug: params.boxSlug } });
+  },
+});
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/dashboard",
   component: DashboardPage,
 });
 
@@ -219,6 +232,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
   boxLayoutRoute.addChildren([
+    boxIndexRoute,
     dashboardRoute,
     chatRoute,
     questionsRoute,

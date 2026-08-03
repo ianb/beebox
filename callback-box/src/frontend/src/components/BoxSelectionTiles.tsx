@@ -31,8 +31,9 @@ export function SignInLink({ returnTo }: { returnTo: string }) {
 }
 
 /**
- * Full tile for the root box selector: clickable box name + split row for
- * quick-jump Chat / Capture.
+ * Full tile for the root box selector: clickable box name (lands on the
+ * box's chat via the index redirect) + a quick-jump Capture row. No Chat
+ * quick link — the name itself lands on chat now.
  */
 export function BoxActionsTile({ box }: { box: Box }) {
   return (
@@ -43,17 +44,11 @@ export function BoxActionsTile({ box }: { box: Box }) {
       >
         <span className="text-lg font-medium text-primary">{box.name}</span>
       </Link>
-      <div className="grid grid-cols-2 divide-x divide-warm-200 border-t border-warm-200">
-        <Link
-          to={href(`/${box.slug}/chat`)}
-          className="py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
-        >
-          Chat
-        </Link>
+      <div className="border-t border-warm-200">
         <Link
           to={href(`/${box.slug}/chat`)}
           search={toSearch({ capture: "1" })}
-          className="py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
+          className="block py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
         >
           Capture
         </Link>
