@@ -117,11 +117,17 @@ struct ChatAPI: Sendable {
 
         let (data, response) = try await transport.data(for: request)
         guard let http = response as? HTTPURLResponse else {
+            BoxLog.error("transcribe-audio got a non-HTTP response", category: .composer)
             throw ChatAPIError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let error = try? JSONDecoder().decode(ErrorBody.self, from: data)
-            throw ChatAPIError.server(error?.error ?? "HQ transcription failed.")
+            let message = error?.error ?? "HQ transcription failed."
+            BoxLog.error(
+                "transcribe-audio failed status=\(http.statusCode) bytes=\(request.httpBody?.count ?? 0): \(message)",
+                category: .composer
+            )
+            throw ChatAPIError.server(message)
         }
         return try JSONDecoder().decode(HqTranscriptionResult.self, from: data)
     }
@@ -143,13 +149,23 @@ struct ChatAPI: Sendable {
             onProgress: onProgress
         )
         guard let http = response as? HTTPURLResponse else {
+            BoxLog.error("file upload got a non-HTTP response bytes=\(data.count)", category: .composer)
             throw ChatAPIError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
             let error = try? JSONDecoder().decode(ErrorBody.self, from: responseData)
-            throw ChatAPIError.server(error?.error ?? "File upload failed.")
+            let message = error?.error ?? "File upload failed."
+            BoxLog.error(
+                "file upload failed status=\(http.statusCode) bytes=\(data.count) mime=\(mimeType): \(message)",
+                category: .composer
+            )
+            throw ChatAPIError.server(message)
         }
         guard let uploaded = try? JSONDecoder().decode(UploadedChatFile.self, from: responseData) else {
+            BoxLog.error(
+                "file upload response could not be decoded bytes=\(responseData.count)",
+                category: .composer
+            )
             throw ChatAPIError.invalidResponse
         }
         guard
@@ -158,6 +174,7 @@ struct ChatAPI: Sendable {
             uploaded.size >= 0,
             uploaded.mimetype.isEmpty == false
         else {
+            BoxLog.error("file upload response was incomplete size=\(uploaded.size)", category: .composer)
             throw ChatAPIError.invalidResponse
         }
         return uploaded
@@ -198,6 +215,12 @@ struct ChatAPI: Sendable {
             throw ChatAPIError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
+            // Silent degradation until now (mobile-contract §5.3): everything
+            // downstream believes the user asked for a new chat.
+            BoxLog.warn(
+                "default-session lookup failed status=\(http.statusCode); falling back to a new session",
+                category: .net
+            )
             return "new"
         }
         let result = try JSONDecoder().decode(DefaultSessionResult.self, from: data)

@@ -1,0 +1,32 @@
+{
+  "variant": "submit",
+  "input": [
+    {
+      "level": "warn",
+      "category": "webview",
+      "message": "chat navigation failed stage=provisional urlError=-1009: The Internet connection appears to be offline.",
+      "at": "2026-08-03T12:00:01.250Z"
+    },
+    {
+      "level": "error",
+      "category": "upload",
+      "message": "bulk item gave up item=b7 bytes=204800 mime=image/jpeg session=bulk-1: The upload did not complete.",
+      "at": "2026-08-03T12:00:02.500Z"
+    }
+  ],
+  "expected": {
+    "source": "ios",
+    "entries": [
+      {
+        "level": "warn",
+        "message": "webview: chat navigation failed stage=provisional urlError=-1009: The Internet connection appears to be offline.",
+        "at": "2026-08-03T12:00:01.250Z"
+      },
+      {
+        "level": "error",
+        "message": "upload: bulk item gave up item=b7 bytes=204800 mime=image/jpeg session=bulk-1: The upload did not complete.",
+        "at": "2026-08-03T12:00:02.500Z"
+      }
+    ]
+  }
+}

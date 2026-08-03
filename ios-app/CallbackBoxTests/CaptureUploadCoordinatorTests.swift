@@ -82,7 +82,8 @@ final class CaptureUploadCoordinatorTests: XCTestCase {
             metadata: metadata,
             response: response,
             data: Data(#"{"error":"Capture session is gone"}"#.utf8),
-            error: nil
+            error: nil,
+            bytesSent: 0
         )
 
         XCTAssertEqual(recorder.events, [
@@ -117,7 +118,8 @@ final class CaptureUploadCoordinatorTests: XCTestCase {
             metadata: metadata,
             response: response,
             data: Data(#"{"error":"Capture session is already sealed"}"#.utf8),
-            error: nil
+            error: nil,
+            bytesSent: 0
         )
 
         XCTAssertEqual(recorder.events, [
@@ -152,7 +154,8 @@ final class CaptureUploadCoordinatorTests: XCTestCase {
             metadata: metadata,
             response: nil,
             data: Data(),
-            error: URLError(.notConnectedToInternet)
+            error: URLError(.notConnectedToInternet),
+            bytesSent: 0
         )
 
         XCTAssertEqual(recorder.events, [.retryScheduled(candidate, afterSeconds: 1)])

@@ -208,6 +208,9 @@ struct ChatWebView: UIViewRepresentable {
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
         private var inflightComposerCommandAcknowledgementIDs = Set<String>()
         private var pageLoaded: Bool
+        /// One log line per transition into navigation failure; cleared by the
+        /// next successful load.
+        private var navigationFailureLogged = false
         private let receiptTimeoutDelay: TimeInterval
         private let evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)?
         private let openExternalURL: (URL) -> Void
@@ -255,6 +258,7 @@ struct ChatWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             pageLoaded = true
+            navigationFailureLogged = false
             onSessionChange(ChatWebView.visibleSessionID(from: webView.url))
             deliver(pendingEmissions, to: webView)
             deliverLocationRequest(to: webView)
@@ -272,6 +276,44 @@ struct ChatWebView: UIViewRepresentable {
             locationRequestTimeout = nil
             inflightScreenshotRequestID = nil
             inflightComposerCommandAcknowledgementIDs.removeAll()
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            didFailProvisionalNavigation navigation: WKNavigation!,
+            withError error: Error
+        ) {
+            noteNavigationFailure("provisional", error: error)
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            noteNavigationFailure("committed", error: error)
+        }
+
+        /// The chat page reloads on its own while offline, so this logs the
+        /// TRANSITION into failure, not every retry — a reconnecting phone must
+        /// not fill the box's debug log with the same line.
+        private func noteNavigationFailure(_ stage: String, error: Error) {
+            guard navigationFailureLogged == false else {
+                return
+            }
+            navigationFailureLogged = true
+            BoxLog.warn(
+                "chat navigation failed stage=\(stage)"
+                    + " urlError=\((error as? URLError)?.code.rawValue ?? -1): \(error.localizedDescription)",
+                category: .webview
+            )
+        }
+
+        /// The web content process died — the transcript, its session state, and
+        /// every pending native emission went with it. Nothing else in the app
+        /// can see this.
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            BoxLog.error(
+                "web content process terminated pendingEmissions=\(pendingEmissions.count)"
+                    + " inflight=\(inflightEmissionIDs.count)",
+                category: .webview
+            )
         }
 
         func webView(

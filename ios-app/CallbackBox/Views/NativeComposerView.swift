@@ -865,6 +865,12 @@ struct NativeComposerView: View {
             // Never sealed, so the box does NOT have this batch. Drop the staged
             // copies (nothing can use them) but keep the text, so the user can
             // simply try again.
+            BoxLog.error(
+                "photo batch never sealed photos=\(staged.prepared.count)"
+                    + " bytes=\(staged.prepared.reduce(0) { $0 + $1.size })"
+                    + " importFailures=\(staged.failures.count): \(message)",
+                category: .upload
+            )
             BulkPhotoStaging.discard(staged.prepared)
             statusText = "\(message) Your message was kept — try again."
         }

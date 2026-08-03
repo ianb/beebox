@@ -18,9 +18,35 @@ Durability changes too: this route now writes through
 a real 2xx.
 
 ```ts setup
+import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
+
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "mobile-contract", "fixtures", "debug-log-submit");
+
+function loadSubmitFixtures() {
+  return readdirSync(FIXTURES_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .map((file) => ({ file, fixture: JSON.parse(readFileSync(join(FIXTURES_DIR, file), "utf-8")) }));
+}
+
+// POST every fixture's `expected` body exactly as the phone would send it.
+async function postSubmitFixtures(server, fixtures) {
+  const lines = [];
+  for (const { file, fixture } of fixtures) {
+    const res = await server.request({
+      method: "POST",
+      url: "/api/trpc/debugLog.submit",
+      payload: fixture.expected,
+    });
+    lines.push(`${file} ${res.statusCode} ${JSON.stringify(res.body)}`);
+  }
+  return lines.join("\n");
+}
 
 function caller(boxRoot) {
   const ctx = {
@@ -226,6 +252,47 @@ JSON.stringify(res.body)
 
 const line = (await server.read(LOG_PATH)).trim();
 /^\S+ \[error\] \[ios(@[^\]]+)?\] capture: probe$/.test(line)
+=> true
+```
+
+```ts cleanup
+await server.cleanup();
+```
+
+## The shared golden fixtures POST verbatim and land
+
+`test/mobile-contract/fixtures/debug-log-submit/` holds the same vectors
+`LogForwarderTests.testFlushPostsTheFixtureWireShape` asserts the Swift encoder
+produces. Here each fixture's `expected` body -- the exact bytes the phone puts
+on the wire -- is POSTed as-is, so a change to either side fails the other's
+suite. Every entry is stale by fixture design (a fixed 2026 timestamp), so all
+of them render with the `[ios@<at>]` incident-time tag.
+
+```ts
+const server = await makeTestServer();
+const fixtures = loadSubmitFixtures();
+
+fixtures.length > 0
+=> true
+
+await postSubmitFixtures(server, fixtures)
+=> capture-upload-failure.json 200 {"result":{"data":{"ok":true}}}
+mixed-level-batch.json 200 {"result":{"data":{"ok":true}}}
+```
+
+Every fixture entry landed as its own tagged line, in order, with the message
+the fixture pins.
+
+```ts continue
+const lines = (await server.read(LOG_PATH)).trim().split("\n");
+const expectedMessages = fixtures.flatMap(({ fixture }) => fixture.expected.entries);
+lines.length === expectedMessages.length
+=> true
+
+lines.every((line, i) => line.endsWith(` ${expectedMessages[i].message}`))
+=> true
+
+lines.every((line, i) => line.includes(`[${expectedMessages[i].level}] [ios@`))
 => true
 ```
 

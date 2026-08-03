@@ -136,24 +136,40 @@ final class LogForwarderTests: XCTestCase {
 
     // MARK: - Flush shape
 
-    func testFlushPostsTheContractShapeToTheBox() async {
-        let transport = StubLogTransport()
-        let forwarder = makeForwarder(transport: transport)
-        await forwarder.updateBoxes([box], selectedBoxID: box.id)
-        await forwarder.record(makeEntry(message: "upload failed status=500", category: .upload))
+    /// The submitted body is pinned by the shared golden fixtures under
+    /// `callback-box/test/mobile-contract/fixtures/debug-log-submit/`, which the
+    /// TS side POSTs verbatim in `test/webapp/debug-log-submit.doctest.md`.
+    /// Editing a fixture fails both suites until both catch up.
+    func testFlushPostsTheFixtureWireShape() async throws {
+        let fixtures = try MobileContractFixtures.load("debug-log-submit")
+        XCTAssertFalse(fixtures.isEmpty, "no debug-log-submit fixtures found at \(MobileContractFixtures.root.path)")
 
-        await forwarder.flush()
+        for (name, fixture) in fixtures {
+            let input = try XCTUnwrap(fixture["input"] as? [[String: Any]], "\(name): input must be a list of entries")
+            let expected = try XCTUnwrap(fixture["expected"] as? [String: Any], "\(name): expected must be an object")
 
-        XCTAssertEqual(transport.lastRequest?.url?.path, "/box/api/trpc/debugLog.submit")
-        XCTAssertEqual(transport.lastRequest?.httpMethod, "POST")
-        XCTAssertEqual(transport.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer device-token")
-        XCTAssertEqual(transport.lastRequest?.value(forHTTPHeaderField: "User-Agent"), "CallbackBox-iOS/0.1")
-        XCTAssertEqual(transport.lastBody?["source"] as? String, "ios")
-        let entry = try? XCTUnwrap(transport.batches.first?.first)
-        XCTAssertEqual(entry?["level"] as? String, "error")
-        XCTAssertEqual(entry?["message"] as? String, "upload: upload failed status=500")
-        let at = try? XCTUnwrap(entry?["at"] as? String)
-        XCTAssertTrue(at?.hasSuffix("Z") == true, "the device timestamp must carry an offset, got \(at ?? "nil")")
+            let transport = StubLogTransport()
+            let forwarder = makeForwarder(transport: transport)
+            await forwarder.updateBoxes([box], selectedBoxID: box.id)
+            for entry in input {
+                await forwarder.record(try makeEntry(from: entry, file: name))
+            }
+
+            await forwarder.flush()
+
+            XCTAssertEqual(transport.lastRequest?.url?.path, "/box/api/trpc/debugLog.submit", name)
+            XCTAssertEqual(transport.lastRequest?.httpMethod, "POST", name)
+            XCTAssertEqual(transport.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer device-token", name)
+            XCTAssertEqual(transport.lastRequest?.value(forHTTPHeaderField: "User-Agent"), "CallbackBox-iOS/0.1", name)
+            XCTAssertEqual(transport.lastRequest?.value(forHTTPHeaderField: "Content-Type"), "application/json", name)
+            let body = try XCTUnwrap(transport.lastBody, name)
+            XCTAssertEqual(
+                try MobileContractFixtures.canonicalJSON(body),
+                try MobileContractFixtures.canonicalJSON(expected),
+                "\(name): the submitted body must match the fixture"
+            )
+            try? FileManager.default.removeItem(at: storageURL)
+        }
     }
 
     /// More than one POST's worth of queue drains in batches rather than being
@@ -365,6 +381,24 @@ final class LogForwarderTests: XCTestCase {
             sessionID: nil,
             authToken: authToken,
             requiresDeviceUnlock: false
+        )
+    }
+
+    /// One fixture entry as the app would have recorded it. The fixture's
+    /// `message` is the raw call-site text; the `category:` prefix the wire
+    /// carries is the forwarder's job, so it appears only in `expected`.
+    private func makeEntry(from fixture: [String: Any], file: String) throws -> LogEntry {
+        let rawLevel = try XCTUnwrap(fixture["level"] as? String, "\(file): entry needs a level")
+        let rawCategory = try XCTUnwrap(fixture["category"] as? String, "\(file): entry needs a category")
+        let rawAt = try XCTUnwrap(fixture["at"] as? String, "\(file): entry needs an at")
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return LogEntry(
+            at: try XCTUnwrap(formatter.date(from: rawAt), "\(file): at must be an ISO-8601 instant"),
+            level: try XCTUnwrap(BoxLogLevel(rawValue: rawLevel), "\(file): unknown level \(rawLevel)"),
+            category: try XCTUnwrap(BoxLogCategory(rawValue: rawCategory), "\(file): unknown category \(rawCategory)"),
+            message: try XCTUnwrap(fixture["message"] as? String, "\(file): entry needs a message"),
+            boxID: box.id
         )
     }
 

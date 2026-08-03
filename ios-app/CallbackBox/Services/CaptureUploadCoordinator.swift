@@ -106,6 +106,14 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
             do {
                 try await schedule(candidate)
             } catch {
+                await LogForwarder.shared.record(
+                    level: .error,
+                    category: .capture,
+                    message: "upload could not be rescheduled at launch"
+                        + " session=\(candidate.sessionID.rawValue) item=\(candidate.itemID.uuidString):"
+                        + " \(error.localizedDescription)",
+                    boxID: candidate.boxID
+                )
                 eventHandler(.failed(candidate, message: error.localizedDescription))
             }
         }
@@ -161,17 +169,50 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
         await cancel(boxID: scopedBoxID, sessionID: sessionID)
     }
 
+    /// What a diagnosis needs about one upload attempt, read at the classify
+    /// boundary. `CaptureAPI.classify` flattens everything into a message, so the
+    /// HTTP status and the `URLError` code are captured here or lost.
+    private struct UploadAttempt {
+        var statusCode: Int?
+        var urlErrorCode: Int?
+        var bytesSent: Int64
+        var metadata: CaptureBackgroundTaskMetadata
+
+        var detail: String {
+            var parts = [
+                "session=\(metadata.sessionID.rawValue)",
+                "item=\(metadata.itemID.uuidString)",
+                "attempt=\(metadata.generation)",
+                "bytes=\(bytesSent)",
+            ]
+            if let statusCode {
+                parts.append("status=\(statusCode)")
+            }
+            if let urlErrorCode {
+                parts.append("urlError=\(urlErrorCode)")
+            }
+            return parts.joined(separator: " ")
+        }
+    }
+
     func handleCompletion(
         taskIdentifier: Int,
         metadata: CaptureBackgroundTaskMetadata,
         response: HTTPURLResponse?,
         data: Data,
-        error: Error?
+        error: Error?,
+        bytesSent: Int64
     ) async {
         let candidate = CaptureUploadCandidate(
             boxID: metadata.boxID,
             sessionID: metadata.sessionID,
             itemID: metadata.itemID
+        )
+        let attempt = UploadAttempt(
+            statusCode: response?.statusCode,
+            urlErrorCode: (error as? URLError)?.code.rawValue,
+            bytesSent: bytesSent,
+            metadata: metadata
         )
         let outcome: CaptureRequestOutcome<Bool>
         if let error {
@@ -184,10 +225,24 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
 
         switch outcome {
         case .success:
-            guard (try? await store.acknowledgeUpload(
-                metadata: metadata,
-                taskIdentifier: taskIdentifier
-            )) == true else {
+            do {
+                guard try await store.acknowledgeUpload(
+                    metadata: metadata,
+                    taskIdentifier: taskIdentifier
+                ) else {
+                    BoxLog.info("upload ack ignored as stale \(attempt.detail)", category: .capture)
+                    return
+                }
+            } catch {
+                // The bytes are on the box but this device still thinks they are
+                // owed — exactly the divergence that has to be diagnosable later.
+                await LogForwarder.shared.record(
+                    level: .error,
+                    category: .capture,
+                    message: "upload succeeded but the local record could not be updated"
+                        + " \(attempt.detail): \(error.localizedDescription)",
+                    boxID: metadata.boxID
+                )
                 return
             }
             eventHandler(.uploaded(candidate))
@@ -196,14 +251,16 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
                 candidate: candidate,
                 metadata: metadata,
                 taskIdentifier: taskIdentifier,
-                failure: .retryable(message: retry.message)
+                failure: .retryable(message: retry.message),
+                attempt: attempt
             )
         case .rejected(let rejection):
             await handleFailure(
                 candidate: candidate,
                 metadata: metadata,
                 taskIdentifier: taskIdentifier,
-                failure: .terminal(message: rejection.message)
+                failure: .terminal(message: rejection.message),
+                attempt: attempt
             )
             switch rejection {
             case .sessionGone:
@@ -220,17 +277,44 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
         candidate: CaptureUploadCandidate,
         metadata: CaptureBackgroundTaskMetadata,
         taskIdentifier: Int,
-        failure: CaptureUploadFailure
+        failure: CaptureUploadFailure,
+        attempt: UploadAttempt
     ) async {
-        guard let resolution = try? await store.recordUploadFailure(
-            metadata: metadata,
-            taskIdentifier: taskIdentifier,
-            failure: failure
-        ) else {
+        let message: String
+        switch failure {
+        case .retryable(let value), .terminal(let value):
+            message = value
+        }
+        let detail = "\(attempt.detail) kind=\(await itemKind(metadata: metadata))"
+
+        let resolution: CaptureUploadFailureResolution
+        do {
+            resolution = try await store.recordUploadFailure(
+                metadata: metadata,
+                taskIdentifier: taskIdentifier,
+                failure: failure
+            )
+        } catch {
+            // Log and continue exactly as before: the persistence error used to
+            // take the upload failure down with it, leaving no trace of either.
+            await LogForwarder.shared.record(
+                level: .error,
+                category: .capture,
+                message: "upload failed and the failure could not be recorded locally"
+                    + " \(detail): \(message) (\(error.localizedDescription))",
+                boxID: metadata.boxID
+            )
             return
         }
+
         switch resolution {
         case .retry(let seconds):
+            await LogForwarder.shared.record(
+                level: .warn,
+                category: .capture,
+                message: "upload failed, retrying in \(seconds)s \(detail): \(message)",
+                boxID: metadata.boxID
+            )
             eventHandler(.retryScheduled(candidate, afterSeconds: seconds))
             do {
                 try await sleep(UInt64(seconds) * 1_000_000_000)
@@ -238,18 +322,38 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
             } catch is CancellationError {
                 return
             } catch {
+                await LogForwarder.shared.record(
+                    level: .error,
+                    category: .capture,
+                    message: "upload retry could not be scheduled \(detail): \(error.localizedDescription)",
+                    boxID: metadata.boxID
+                )
                 eventHandler(.failed(candidate, message: error.localizedDescription))
             }
         case .failed:
-            let message: String
-            switch failure {
-            case .retryable(let value), .terminal(let value):
-                message = value
-            }
+            await LogForwarder.shared.record(
+                level: .error,
+                category: .capture,
+                message: "upload failed permanently \(detail): \(message)",
+                boxID: metadata.boxID
+            )
             eventHandler(.failed(candidate, message: message))
         case .ignoredStaleCompletion:
-            break
+            BoxLog.info("upload completion ignored as stale \(detail)", category: .capture)
         }
+    }
+
+    /// Read the item's kind from the manifest for the log line. Only the failure
+    /// path pays for this, and an unreadable manifest degrades the detail rather
+    /// than the handling.
+    private func itemKind(metadata: CaptureBackgroundTaskMetadata) async -> String {
+        guard
+            let manifest = try? await store.loadManifest(boxID: metadata.boxID, sessionID: metadata.sessionID),
+            let item = manifest.items.first(where: { $0.id == metadata.itemID })
+        else {
+            return "unknown"
+        }
+        return item.kind.rawValue
     }
 }
 
@@ -349,13 +453,15 @@ extension CaptureUploadCoordinator: URLSessionDataDelegate {
         let data = responseLock.withLock {
             responseData.removeValue(forKey: task.taskIdentifier) ?? Data()
         }
+        let bytesSent = task.countOfBytesSent
         Task {
             await handleCompletion(
                 taskIdentifier: task.taskIdentifier,
                 metadata: metadata,
                 response: task.response as? HTTPURLResponse,
                 data: data,
-                error: error
+                error: error,
+                bytesSent: bytesSent
             )
         }
     }

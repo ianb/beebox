@@ -331,6 +331,16 @@ enum MobileContractFixtures {
     static func jsonData(from object: [String: Any]) throws -> Data {
         try JSONSerialization.data(withJSONObject: object)
     }
+
+    /// Key-sorted JSON text, so two structurally equal payloads compare equal
+    /// however their dictionaries happened to be ordered.
+    static func canonicalJSON(_ object: [String: Any]) throws -> String {
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw FixtureError(message: "could not encode fixture JSON as UTF-8")
+        }
+        return string
+    }
 }
 
 final class CameraImageEncoderTests: XCTestCase {

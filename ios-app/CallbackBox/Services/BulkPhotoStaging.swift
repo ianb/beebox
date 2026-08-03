@@ -133,6 +133,13 @@ enum BulkPhotoStaging {
             try FileManager.default.createDirectory(at: stagingRoot(), withIntermediateDirectories: true)
             try data.write(to: destination)
         } catch {
+            // The caller only learns "nil"; without this the reason a composer
+            // image never joined its batch is gone.
+            BoxLog.error(
+                "composer image could not be staged index=\(index) bytes=\(data.count)"
+                    + " mime=\(mimeType): \(error.localizedDescription)",
+                category: .composer
+            )
             return nil
         }
         return PreparedBulkItem(

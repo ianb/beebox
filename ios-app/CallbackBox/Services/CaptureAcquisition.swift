@@ -247,6 +247,7 @@ enum CaptureGalleryImporter {
                 ))
             }
         }
+        logImportFailures(results, source: "gallery")
         return results
     }
 
@@ -309,7 +310,26 @@ enum CaptureFileImporter {
                 ))
             }
         }
+        logImportFailures(results, source: "files")
         return results
+    }
+}
+
+/// One line per import that produced nothing, plus the batch's shape. A photo
+/// the user picked and never saw again is the failure the capture pipeline
+/// exists to prevent, so it may not stay on the phone as a banner.
+private func logImportFailures(_ results: [CaptureImportResult], source: String) {
+    let failures = results.filter { $0.error != nil }
+    guard failures.isEmpty == false else {
+        return
+    }
+    for failure in failures {
+        BoxLog.error(
+            "import failed source=\(source) item=\(failure.id.uuidString)"
+                + " (\(failures.count) of \(results.count) in this batch):"
+                + " \(failure.error?.localizedDescription ?? "unknown reason")",
+            category: .capture
+        )
     }
 }
 
@@ -766,6 +786,10 @@ final class CaptureAudioRecorder: ObservableObject {
             currentURL = nil
             releaseAudioSession()
             let message = error.localizedDescription
+            BoxLog.error(
+                "recording could not start item=\(item.id.uuidString) persisted=\(persisted): \(message)",
+                category: .capture
+            )
             lifecycle.fail(message)
             notice = message
             if persisted {
@@ -801,6 +825,15 @@ final class CaptureAudioRecorder: ObservableObject {
             onEvent?(.closed(item, reason))
         } catch {
             let message = error.localizedDescription
+            var byteCount = 0
+            if let currentURL, let values = try? currentURL.resourceValues(forKeys: [.fileSizeKey]) {
+                byteCount = values.fileSize ?? 0
+            }
+            BoxLog.error(
+                "recording could not be closed item=\(itemID.uuidString) reason=\(reason)"
+                    + " bytes=\(byteCount): \(message)",
+                category: .capture
+            )
             lifecycle.fail(message)
             notice = message
             await sink.failRecording(itemID: itemID, message: message)

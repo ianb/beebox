@@ -280,6 +280,11 @@ actor BulkUploadCoordinator {
     }
 
     private func recordFailure(item: PreparedBulkItem, message: String) {
+        BoxLog.error(
+            "bulk item gave up item=\(item.id) bytes=\(item.size) mime=\(item.mimeType)"
+                + " session=\(sessionID ?? "none"): \(message)",
+            category: .upload
+        )
         failed.append(BulkUploadAPI.FailedItem(id: item.id, name: item.originalName, reason: message))
         publishProgress()
     }
@@ -315,6 +320,14 @@ extension BulkUploadAPI {
             }
             return Self.classifyUploadResponse(http, data: data)
         } catch {
+            // The `URLError` code is recorded here because the outcome carries
+            // only `localizedDescription` from this point on.
+            BoxLog.warn(
+                "bulk item upload threw item=\(item.id) bytes=\(item.size) session=\(sessionID)"
+                    + " urlError=\((error as? URLError)?.code.rawValue ?? -1):"
+                    + " \(error.localizedDescription)",
+                category: .upload
+            )
             return .retryable(CaptureRetry(message: error.localizedDescription, retryAfter: nil))
         }
     }
