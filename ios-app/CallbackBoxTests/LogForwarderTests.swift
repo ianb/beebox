@@ -63,6 +63,38 @@ final class LogForwarderTests: XCTestCase {
         XCTAssertEqual(markers.first?.level, .warn)
     }
 
+    /// The bound runs while a flush is suspended in its POST. Evicting from the
+    /// batch that POST is carrying would delete lines the box then answers
+    /// `.keep` for — gone despite "keep".
+    func testTheBoundNeverEvictsTheBatchAPostIsCarrying() async {
+        let gate = Gate()
+        let transport = StubLogTransport(statuses: [500], gate: gate)
+        let forwarder = makeForwarder(transport: transport)
+        await forwarder.updateBoxes([box], selectedBoxID: box.id)
+        for index in 0..<100 {
+            await forwarder.record(makeEntry(message: "inflight\(index)"))
+        }
+
+        let flush = Task { await forwarder.flush() }
+        await waitUntil { await gate.arrivals == 1 }
+        // Fill past the per-box bound while the POST is suspended.
+        for index in 0..<200 {
+            await forwarder.record(makeEntry(message: "later\(index)"))
+        }
+        await gate.open()
+        await flush.value
+
+        let queued = await forwarder.queuedEntries()
+        let real = queued.filter { $0.droppedCount == nil }
+        XCTAssertEqual(real.count, LogForwarder.perBoxLimit)
+        XCTAssertEqual(
+            real.filter { $0.message.hasPrefix("inflight") }.count,
+            100,
+            "HTTP 500 said keep, so every in-flight entry must still be here"
+        )
+        XCTAssertEqual(real.filter { $0.message.hasPrefix("later") }.first?.message, "later100")
+    }
+
     /// Several boxes each under the per-box bound can still exceed the global
     /// one; the global trim is what keeps the file small.
     func testGlobalBoundTrimsAcrossBoxes() async {
@@ -123,6 +155,24 @@ final class LogForwarderTests: XCTestCase {
         XCTAssertTrue(stored.isEmpty)
         let sent = try? XCTUnwrap(transport.batches.first?.first?["message"] as? String)
         XCTAssertEqual(sent?.count, LogForwarder.maxMessageLength)
+    }
+
+    /// The server's cap counts UTF-16 code units, so a message of astral-plane
+    /// characters is twice as long as its `Character` count suggests — truncating
+    /// by characters would send 6000 units and 400 the whole batch.
+    func testAstralMessageIsTruncatedByUTF16Units() async {
+        let transport = StubLogTransport()
+        let forwarder = makeForwarder(transport: transport)
+        await forwarder.updateBoxes([box], selectedBoxID: box.id)
+
+        // The leading "a" puts the cap boundary in the middle of a surrogate pair.
+        await forwarder.record(makeEntry(message: "a" + String(repeating: "😀", count: 3000)))
+        await forwarder.flush()
+
+        let sent = transport.batches.first?.first?["message"] as? String
+        XCTAssertNotNil(sent)
+        XCTAssertLessThanOrEqual(sent?.utf16.count ?? 0, LogForwarder.maxMessageLength)
+        XCTAssertFalse(sent?.contains("\u{FFFD}") == true, "a surrogate pair must not be split")
     }
 
     func testStoredMessageIsTruncatedBeforeItIsPersisted() async {
@@ -285,6 +335,27 @@ final class LogForwarderTests: XCTestCase {
         }
     }
 
+    /// Only the batch the box actually refused is dropped. A line recorded while
+    /// that POST was in flight was never offered to the box, so the refusal says
+    /// nothing about it — it waits for the next cycle.
+    func testARevokedDeviceOnlyDropsTheAttemptedBatch() async {
+        let gate = Gate()
+        let transport = StubLogTransport(statuses: [401], gate: gate)
+        let forwarder = makeForwarder(transport: transport)
+        await forwarder.updateBoxes([box], selectedBoxID: box.id)
+        await forwarder.record(makeEntry(message: "before"))
+
+        let flush = Task { await forwarder.flush() }
+        await waitUntil { await gate.arrivals == 1 }
+        await forwarder.record(makeEntry(message: "during"))
+        await gate.open()
+        await flush.value
+
+        let queued = await forwarder.queuedEntries()
+        XCTAssertEqual(queued.map(\.message), ["during"])
+        XCTAssertEqual(transport.requestCount, 1, "the cycle stops after a refusal")
+    }
+
     /// 400 is unreachable from a conforming client, so it is a bug signal, not
     /// something to keep re-sending.
     func testMalformedBatchIsDroppedRatherThanRetried() async {
@@ -326,6 +397,25 @@ final class LogForwarderTests: XCTestCase {
         await forwarder.updateBoxes([box], selectedBoxID: box.id)
         await forwarder.record(makeEntry(message: "auth header was Bearer device-token"))
 
+        await forwarder.flush()
+
+        let sent = transport.batches.first?.first?["message"] as? String
+        XCTAssertEqual(sent, "net: auth header was Bearer [redacted-token]")
+        XCTAssertFalse(sent?.contains("device-token") == true)
+    }
+
+    /// Re-pairing keeps the box's UUID and replaces its token, so a queued
+    /// message carrying the OLD token would no longer match anything the
+    /// send-time pass knows about. Redaction at record time is what covers it.
+    func testARotatedTokenCannotUnredactAnAlreadyQueuedEntry() async {
+        let transport = StubLogTransport()
+        let forwarder = makeForwarder(transport: transport)
+        await forwarder.updateBoxes([box], selectedBoxID: box.id)
+        await forwarder.record(makeEntry(message: "auth header was Bearer device-token"))
+
+        var rotated = box!
+        rotated.authToken = "rotated-token"
+        await forwarder.updateBoxes([rotated], selectedBoxID: rotated.id)
         await forwarder.flush()
 
         let sent = transport.batches.first?.first?["message"] as? String

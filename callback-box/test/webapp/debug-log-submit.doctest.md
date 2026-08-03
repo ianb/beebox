@@ -226,6 +226,17 @@ await code(c.debugLog.submit({ entries: [{ level: "error", message: "should not 
 => INTERNAL_SERVER_ERROR
 ```
 
+The in-memory ring is committed only after the append succeeds, so a failed
+batch leaves no trace there either -- otherwise `debugLog.get` would show
+entries the mutation reported as lost, and the client's retry would duplicate
+them.
+
+```ts continue
+const got = await c.debugLog.get();
+JSON.stringify(got.entries)
+=> []
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

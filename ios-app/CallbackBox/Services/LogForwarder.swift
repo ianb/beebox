@@ -55,9 +55,13 @@ struct URLSessionLogTransport: LogTransport {
 /// box's `debugLog.submit`.
 ///
 /// Persistence is the guarantee; the network flush is opportunistic. Every
-/// enqueue writes the whole (small) queue atomically before returning, so an
-/// entry recorded through the awaitable tier survives a suspension, a kill, or
-/// a crash and lands on the box at the next launch or foreground.
+/// enqueue attempts an atomic write of the whole (small) queue before
+/// returning, so an entry recorded through the awaitable tier normally
+/// survives a suspension, a kill, or a crash and lands on the box at the next
+/// launch or foreground. The write itself is best-effort: a filesystem failure
+/// cannot be forwarded (that report would need the same disk), so it is logged
+/// to unified logging and nothing else — an entry lost to a failing disk is
+/// visible there only.
 ///
 /// The forwarder never enqueues an entry about its own failures — that would be
 /// a feedback loop with a network error as its clock. Transport problems are
@@ -125,6 +129,10 @@ actor LogForwarder {
     private var boxes: [UUID: PairedBox] = [:]
     private var selectedBoxID: UUID?
     private var inFlightBoxes: Set<UUID> = []
+    /// The ids of the batch each box currently has a POST out for. The bound is
+    /// enforced while that POST is suspended, and evicting one of those entries
+    /// would erase a line the box may still answer `.keep` for.
+    private var inFlightIDs: [UUID: Set<UUID>] = [:]
     private var isActive = true
     private var debounceTask: Task<Void, Never>?
 
@@ -148,11 +156,19 @@ actor LogForwarder {
 
     // MARK: - Recording
 
-    /// Persist an entry and return. This is the awaitable durability tier: when
-    /// it returns, the entry is on disk.
+    /// Enqueue an entry and attempt to persist before returning. This is the
+    /// awaitable durability tier: when it returns the write has been attempted
+    /// synchronously, so an entry survives a suspension or a crash unless the
+    /// write itself failed — a failure that is reported to unified logging only
+    /// (see `persist()`).
+    ///
+    /// Redaction runs here as well as at send time: a queued message outlives
+    /// the token map it was recorded against (re-pairing keeps the box's UUID
+    /// and replaces its token), so a token redacted only at send time would
+    /// already have stopped matching.
     func record(_ entry: LogEntry) {
         var stored = entry
-        stored.message = String(entry.message.prefix(Self.maxMessageLength))
+        stored.message = Self.truncatedToWireCap(redacted(entry.message))
         entries.append(stored)
         enforceBounds()
         persist()
@@ -173,7 +189,8 @@ actor LogForwarder {
         record(level: level, category: category, message: message, boxID: boxID)
     }
 
-    /// Returns once everything enqueued before this call is on disk. The actor's
+    /// Returns once every enqueue made before this call has had its write
+    /// attempted (see `record`/`persist` for the best-effort caveat). The actor's
     /// serialization does the work; the method exists so the background-URLSession
     /// completion path can state the guarantee it depends on.
     func awaitPersistence() {}
@@ -226,25 +243,35 @@ actor LogForwarder {
             return
         }
         inFlightBoxes.insert(boxID)
-        defer { inFlightBoxes.remove(boxID) }
+        defer {
+            inFlightBoxes.remove(boxID)
+            inFlightIDs[boxID] = nil
+        }
 
         while true {
             let batch = Array(entries.filter { $0.boxID == boxID }.prefix(Self.maxBatchSize))
             guard batch.isEmpty == false else {
                 return
             }
-            switch await send(batch, box: box) {
+            let ids = Set(batch.map(\.id))
+            inFlightIDs[boxID] = ids
+            let outcome = await send(batch, box: box)
+            inFlightIDs[boxID] = nil
+            switch outcome {
             case .acknowledged:
-                remove(ids: Set(batch.map(\.id)))
+                remove(ids: ids)
                 persist()
             case .keep:
                 return
             case .discardBatch:
-                remove(ids: Set(batch.map(\.id)))
+                remove(ids: ids)
                 persist()
                 return
             case .dropBox:
-                remove(ids: Set(entries.filter { $0.boxID == boxID }.map(\.id)))
+                // Only the attempted batch: a line recorded while this POST was
+                // in flight was never offered to the box, so a refusal of the
+                // batch says nothing about it. Flushing stops here regardless.
+                remove(ids: ids)
                 persist()
                 return
             }
@@ -300,9 +327,26 @@ actor LogForwarder {
         let composed = "\(entry.category.rawValue): \(redacted(entry.message))"
         return WireEntry(
             level: entry.level.rawValue,
-            message: String(composed.prefix(Self.maxMessageLength)),
+            message: Self.truncatedToWireCap(composed),
             at: timestampFormatter.string(from: entry.at)
         )
+    }
+
+    /// The server's `z.string().max(4000)` counts UTF-16 code units, so the cap
+    /// is measured in those and not in `Character`s — 3000 emoji are 3000
+    /// characters and 6000 code units, and would 400 the whole batch. Trims back
+    /// off a lead surrogate rather than splitting a pair into replacement
+    /// characters.
+    private static func truncatedToWireCap(_ message: String) -> String {
+        guard message.utf16.count > maxMessageLength else {
+            return message
+        }
+        let units = Array(message.utf16)
+        var end = maxMessageLength
+        if UTF16.isLeadSurrogate(units[end - 1]) {
+            end -= 1
+        }
+        return String(decoding: units[0..<end], as: UTF16.self)
     }
 
     /// Last line of defence before a message leaves the device: no paired box's
@@ -346,7 +390,13 @@ actor LogForwarder {
 
     // MARK: - Bounds
 
+    /// In-flight entries count against the bound but are never the ones evicted:
+    /// a flush snapshots its batch and then suspends, so evicting from under it
+    /// would delete lines the box is about to tell us to keep. The next-oldest
+    /// evictable entries go instead; if everything is in flight the queue stays
+    /// briefly over the bound until the POST answers.
     private func enforceBounds() {
+        let protected = Set(inFlightIDs.values.joined())
         var dropped: [UUID: Int] = [:]
         for boxID in Set(entries.map(\.boxID)) {
             let indices = entries.indices.filter { entries[$0].boxID == boxID && entries[$0].droppedCount == nil }
@@ -354,13 +404,15 @@ actor LogForwarder {
             guard excess > 0 else {
                 continue
             }
-            drop(indices: Set(indices.prefix(excess)), counting: &dropped)
+            let evictable = indices.filter { protected.contains(entries[$0].id) == false }
+            drop(indices: Set(evictable.prefix(excess)), counting: &dropped)
         }
 
         let realIndices = entries.indices.filter { entries[$0].droppedCount == nil }
         let globalExcess = realIndices.count - Self.globalLimit
         if globalExcess > 0 {
-            drop(indices: Set(realIndices.prefix(globalExcess)), counting: &dropped)
+            let evictable = realIndices.filter { protected.contains(entries[$0].id) == false }
+            drop(indices: Set(evictable.prefix(globalExcess)), counting: &dropped)
         }
 
         for (boxID, count) in dropped.sorted(by: { $0.key.uuidString < $1.key.uuidString }) {
@@ -416,6 +468,10 @@ actor LogForwarder {
         }
     }
 
+    /// Best effort by design: the write is attempted synchronously, and a
+    /// failure is reported to unified logging and nowhere else. It is never
+    /// forwarded (an entry about it would try to persist again to report it) and
+    /// never thrown (no call site could do anything about a failing phone disk).
     private func persist() {
         do {
             try fileManager.createDirectory(

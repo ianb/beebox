@@ -46,6 +46,12 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
     /// cancellations and needs no eviction.
     private let cancelledLock = NSLock()
     private var cancelledSessions: Set<CaptureSessionID> = []
+    /// Completion handling that is still running. `urlSessionDidFinishEvents`
+    /// waits on these before it releases the OS background completion handler:
+    /// releasing it ends the wake-up, and an untracked completion could still be
+    /// mid-`handleCompletion` with the failure it is about to record nowhere.
+    private let completionLock = NSLock()
+    private var completionTasks: [UUID: Task<Void, Never>] = [:]
     private var urlSession: URLSession!
     private var scopedBoxID: UUID?
 
@@ -195,6 +201,33 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
         }
     }
 
+    /// Run completion handling as a tracked task. Delegate callbacks are
+    /// synchronous, so the async work has to be launched — but it must remain
+    /// visible to `awaitPendingCompletions()` until it is done.
+    func trackCompletion(_ body: @escaping @Sendable () async -> Void) {
+        let id = UUID()
+        completionLock.lock()
+        completionTasks[id] = Task { [weak self] in
+            await body()
+            self?.completionLock.withLock { _ = self?.completionTasks.removeValue(forKey: id) }
+        }
+        completionLock.unlock()
+    }
+
+    /// Returns once every completion running right now has finished recording.
+    /// The retry backoff is deliberately not part of this (see `scheduleRetry`).
+    func awaitPendingCompletions() async {
+        while true {
+            let pending = completionLock.withLock { Array(completionTasks.values) }
+            guard pending.isEmpty == false else {
+                return
+            }
+            for task in pending {
+                await task.value
+            }
+        }
+    }
+
     func handleCompletion(
         taskIdentifier: Int,
         metadata: CaptureBackgroundTaskMetadata,
@@ -316,20 +349,7 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
                 boxID: metadata.boxID
             )
             eventHandler(.retryScheduled(candidate, afterSeconds: seconds))
-            do {
-                try await sleep(UInt64(seconds) * 1_000_000_000)
-                try await schedule(candidate)
-            } catch is CancellationError {
-                return
-            } catch {
-                await LogForwarder.shared.record(
-                    level: .error,
-                    category: .capture,
-                    message: "upload retry could not be scheduled \(detail): \(error.localizedDescription)",
-                    boxID: metadata.boxID
-                )
-                eventHandler(.failed(candidate, message: error.localizedDescription))
-            }
+            scheduleRetry(candidate: candidate, boxID: metadata.boxID, seconds: seconds, detail: detail)
         case .failed:
             await LogForwarder.shared.record(
                 level: .error,
@@ -340,6 +360,33 @@ final class CaptureUploadCoordinator: NSObject, @unchecked Sendable {
             eventHandler(.failed(candidate, message: message))
         case .ignoredStaleCompletion:
             BoxLog.info("upload completion ignored as stale \(detail)", category: .capture)
+        }
+    }
+
+    /// Wait out the backoff and re-schedule, outside the completion barrier. The
+    /// failure is already recorded and the item is persisted back to `.local`,
+    /// so a suspension during the wait costs only the immediate retry — `start()`
+    /// reconciles it at the next launch. Holding the background completion
+    /// handler open for a multi-second sleep is what the watchdog kills apps for.
+    private func scheduleRetry(candidate: CaptureUploadCandidate, boxID: UUID, seconds: Int, detail: String) {
+        Task { [weak self] in
+            guard let self else {
+                return
+            }
+            do {
+                try await sleep(UInt64(seconds) * 1_000_000_000)
+                try await schedule(candidate)
+            } catch is CancellationError {
+                return
+            } catch {
+                await LogForwarder.shared.record(
+                    level: .error,
+                    category: .capture,
+                    message: "upload retry could not be scheduled \(detail): \(error.localizedDescription)",
+                    boxID: boxID
+                )
+                eventHandler(.failed(candidate, message: error.localizedDescription))
+            }
         }
     }
 
@@ -454,11 +501,13 @@ extension CaptureUploadCoordinator: URLSessionDataDelegate {
             responseData.removeValue(forKey: task.taskIdentifier) ?? Data()
         }
         let bytesSent = task.countOfBytesSent
-        Task {
-            await handleCompletion(
-                taskIdentifier: task.taskIdentifier,
+        let taskIdentifier = task.taskIdentifier
+        let response = task.response as? HTTPURLResponse
+        trackCompletion { [weak self] in
+            await self?.handleCompletion(
+                taskIdentifier: taskIdentifier,
                 metadata: metadata,
-                response: task.response as? HTTPURLResponse,
+                response: response,
                 data: data,
                 error: error,
                 bytesSent: bytesSent
@@ -470,9 +519,12 @@ extension CaptureUploadCoordinator: URLSessionDataDelegate {
         let broker = eventBroker
         Task { @MainActor in
             // Releasing the completion handler ends this wake-up, so anything
-            // the completion path recorded must be on disk first. A flush is
-            // attempted but never waited on: holding the handler open for a
-            // network round trip is what the watchdog kills apps for.
+            // the completion path recorded must be on disk first — which means
+            // waiting for the completions themselves, not only for what they
+            // have already handed to the forwarder. A flush is attempted but
+            // never waited on: holding the handler open for a network round trip
+            // is what the watchdog kills apps for.
+            await awaitPendingCompletions()
             await LogForwarder.shared.awaitPersistence()
             Task {
                 await LogForwarder.shared.flush()

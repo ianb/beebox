@@ -197,6 +197,30 @@ final class CaptureUploadCoordinatorTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: payloadURL.path))
     }
 
+    /// Releasing the OS background completion handler ends the wake-up, so the
+    /// barrier must wait for completion handling that is still running — not
+    /// only for what it has already handed to the forwarder.
+    func testTheBackgroundBarrierWaitsForInFlightCompletionHandling() async throws {
+        let (store, _, _) = try await makeLocalCandidate()
+        let coordinator = makeCoordinator(store: store, recorder: EventRecorder())
+        let probe = CompletionProbe()
+
+        coordinator.trackCompletion {
+            await probe.begin()
+            await probe.finish()
+        }
+        await probe.waitUntilStarted()
+
+        let barrier = Task { await coordinator.awaitPendingCompletions() }
+        let finishedBeforeRelease = await probe.isFinished
+        XCTAssertFalse(finishedBeforeRelease, "the completion has not finished yet")
+
+        await probe.release()
+        await barrier.value
+        let finished = await probe.isFinished
+        XCTAssertTrue(finished, "the barrier must not return before the completion is done")
+    }
+
     private var testConfiguration: URLSessionConfiguration {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockCaptureUploadURLProtocol.self]
@@ -247,6 +271,48 @@ final class CaptureUploadCoordinatorTests: XCTestCase {
             CaptureUploadCandidate(boxID: box.id, sessionID: sessionID, itemID: item.id),
             payloadURL
         )
+    }
+}
+
+/// A completion the test can hold open, so the barrier's wait is asserted
+/// rather than timed.
+private actor CompletionProbe {
+    private var hasStarted = false
+    private var isReleased = false
+    private(set) var isFinished = false
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func begin() {
+        hasStarted = true
+        let pending = startWaiters
+        startWaiters.removeAll()
+        pending.forEach { $0.resume() }
+    }
+
+    func finish() async {
+        if isReleased == false {
+            await withCheckedContinuation { continuation in
+                releaseWaiters.append(continuation)
+            }
+        }
+        isFinished = true
+    }
+
+    func waitUntilStarted() async {
+        guard hasStarted == false else {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            startWaiters.append(continuation)
+        }
+    }
+
+    func release() {
+        isReleased = true
+        let pending = releaseWaiters
+        releaseWaiters.removeAll()
+        pending.forEach { $0.resume() }
     }
 }
 

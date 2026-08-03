@@ -115,7 +115,21 @@ struct ChatAPI: Sendable {
         applyAuth(to: &request)
         request.httpBody = try multipartAudioBody(fileURL: fileURL, session: session, boundary: boundary)
 
-        let (data, response) = try await transport.data(for: request)
+        let requestBytes = request.httpBody?.count ?? 0
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await transport.data(for: request)
+        } catch {
+            // Until now a transport failure left no trace at all: the throw
+            // surfaced as a composer error with nothing behind it.
+            BoxLog.error(
+                "transcribe-audio transport failed bytes=\(requestBytes)"
+                    + " urlError=\(Self.urlErrorCode(error)): \(error.localizedDescription)",
+                category: .composer
+            )
+            throw error
+        }
         guard let http = response as? HTTPURLResponse else {
             BoxLog.error("transcribe-audio got a non-HTTP response", category: .composer)
             throw ChatAPIError.invalidResponse
@@ -129,7 +143,16 @@ struct ChatAPI: Sendable {
             )
             throw ChatAPIError.server(message)
         }
-        return try JSONDecoder().decode(HqTranscriptionResult.self, from: data)
+        do {
+            return try JSONDecoder().decode(HqTranscriptionResult.self, from: data)
+        } catch {
+            BoxLog.error(
+                "transcribe-audio response could not be decoded bytes=\(data.count):"
+                    + " \(error.localizedDescription)",
+                category: .composer
+            )
+            throw error
+        }
     }
 
     func uploadFile(
@@ -143,11 +166,22 @@ struct ChatAPI: Sendable {
             throw ChatAPIError.invalidResponse
         }
         request.httpBody = nil
-        let (responseData, response) = try await transport.upload(
-            for: request,
-            body: body,
-            onProgress: onProgress
-        )
+        let responseData: Data
+        let response: URLResponse
+        do {
+            (responseData, response) = try await transport.upload(
+                for: request,
+                body: body,
+                onProgress: onProgress
+            )
+        } catch {
+            BoxLog.error(
+                "file upload transport failed bytes=\(data.count) mime=\(mimeType)"
+                    + " urlError=\(Self.urlErrorCode(error)): \(error.localizedDescription)",
+                category: .composer
+            )
+            throw error
+        }
         guard let http = response as? HTTPURLResponse else {
             BoxLog.error("file upload got a non-HTTP response bytes=\(data.count)", category: .composer)
             throw ChatAPIError.invalidResponse
@@ -210,8 +244,20 @@ struct ChatAPI: Sendable {
         var request = URLRequest(url: box.apiURL.appendingPathComponent("chat/default"))
         request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
         applyAuth(to: &request)
-        let (data, response) = try await transport.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await transport.data(for: request)
+        } catch {
+            BoxLog.error(
+                "default-session lookup transport failed urlError=\(Self.urlErrorCode(error)):"
+                    + " \(error.localizedDescription)",
+                category: .net
+            )
+            throw error
+        }
         guard let http = response as? HTTPURLResponse else {
+            BoxLog.error("default-session lookup got a non-HTTP response", category: .net)
             throw ChatAPIError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
@@ -223,8 +269,27 @@ struct ChatAPI: Sendable {
             )
             return "new"
         }
-        let result = try JSONDecoder().decode(DefaultSessionResult.self, from: data)
+        let result: DefaultSessionResult
+        do {
+            result = try JSONDecoder().decode(DefaultSessionResult.self, from: data)
+        } catch {
+            BoxLog.error(
+                "default-session response could not be decoded bytes=\(data.count):"
+                    + " \(error.localizedDescription)",
+                category: .net
+            )
+            throw error
+        }
         return result.sessionId ?? "new"
+    }
+
+    /// The `URLError` code behind a thrown transport error, or `none` when the
+    /// error is not a `URLError` — metadata only, never the request body.
+    private static func urlErrorCode(_ error: Error) -> String {
+        guard let urlError = error as? URLError else {
+            return "none"
+        }
+        return String(urlError.code.rawValue)
     }
 
     private func applyAuth(to request: inout URLRequest) {

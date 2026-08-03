@@ -30,7 +30,9 @@ enum BoxLogCategory: String, Codable, CaseIterable, Sendable {
 ///   the entry to `LogForwarder` inside a `Task`, so a crash in the same
 ///   instant can lose that one entry. This is the general-purpose tier.
 /// - `await LogForwarder.shared.record(...)` is the awaitable tier: it returns
-///   only once the entry is on disk. Critical failure boundaries — capture
+///   only once the entry has been enqueued and its write attempted (the write
+///   is best-effort — a filesystem failure is visible in unified logging only).
+///   Critical failure boundaries — capture
 ///   upload completion/failure, the background-session completion path — use
 ///   that tier directly, because those are exactly the failures a suspension or
 ///   crash would otherwise erase.

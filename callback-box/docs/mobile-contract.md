@@ -569,7 +569,9 @@ See §1.3 (full request/response/errors).
   `message` is capped at 4000 chars server-side; iOS enforces the identical cap client-side before
   persisting, so a conforming client's batch can never 400 for size. Up to 100 entries per batch.
   Auth: `Authorization: Bearer <device token>` like every other native call (§2).
-- **Response 200:** `{ ok: true }`. A 2xx means the batch is **durably written** — the route's file
+- **Response 200:** the tRPC HTTP-RPC envelope `{"result":{"data":{"ok":true}}}` — the procedure
+  returns `{ ok: true }`, but the raw bytes a native client reads are wrapped (the native side only
+  checks the status code, so it never unwraps this). A 2xx means the batch is **durably written** — the route's file
   append goes through a strict variant (`appendRollingLogStrict`) that rejects on filesystem failure,
   unlike the lenient one every other rolling-log writer uses. The forwarder relies on this: it only
   clears a batch from its local queue once it sees 2xx, so a swallowed disk error would otherwise be
@@ -590,7 +592,7 @@ See §1.3 (full request/response/errors).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native caller | `Services/LogForwarder.swift` (lands in a sibling chunk) |
+  | native caller | `Services/LogForwarder.swift` — `flushBox`/`send` |
   | box handler | `src/webapp/trpc/routers/debugLog.ts` — `submit` |
   | box durability | `src/lib/rolling-log.ts` — `appendRollingLogStrict` |
 - **Drift:** fail-local. A forwarding failure must never break the feature it's logging — entries are
@@ -651,7 +653,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
-| H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{ok:true}` | `Services/LogForwarder.swift` (sibling chunk) | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
+| H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
@@ -688,7 +690,7 @@ without the other is a contract break.
   `native-composer-command.ts`.
 - **`debugLog.submit` wire keys** `{source?,entries:[{level,message,at?}]}`, `level` closed to
   `error|warn|log|info`, `source` slug `^[a-z][a-z0-9-]{0,15}$` (iOS always sends `"ios"`), `at` an
-  offset datetime — `Services/LogForwarder.swift` (sibling chunk) ↔
+  offset datetime — `Services/LogForwarder.swift` ↔
   `trpc/routers/debugLog.ts` · `submit`.
 - **Bridge globals** `callbackboxNativeReceive` / `callbackboxNativeQueue` /
   `callbackboxNativeShareLocation` / `callbackboxNativeLocationQueue` /

@@ -92,17 +92,22 @@ export const debugLogRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const logs = boxLogs(ctx.boxRoot);
       const lines: string[] = [];
+      const received: Array<{ ts: string; level: string; message: string }> = [];
       for (const entry of input.entries) {
         const receivedAt = new Date().toISOString();
         const message = normalizeControlChars(entry.message);
         const tag = renderTag({ source: input.source, at: entry.at, receivedAt });
-        logs.push({ ts: receivedAt, level: entry.level, message: `${tag}${message}` });
+        received.push({ ts: receivedAt, level: entry.level, message: `${tag}${message}` });
         lines.push(`${receivedAt} [${entry.level}] ${tag}${message}\n`);
       }
-      while (logs.length > MAX_CLIENT_LOGS) logs.shift();
+      // The ring is committed only after the durable append succeeds: a failed
+      // batch that had already landed in the ring would be visible through
+      // debugLog.get and then duplicated by the client's retry.
       await appendToLogFile(ctx.boxRoot, lines);
+      const logs = boxLogs(ctx.boxRoot);
+      logs.push(...received);
+      while (logs.length > MAX_CLIENT_LOGS) logs.shift();
       return { ok: true };
     }),
 
