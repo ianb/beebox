@@ -24,6 +24,7 @@
 import type { FastifyInstance } from "fastify";
 import { type ChatSession, type TaskEvent } from "../../core/chat/session/index.js";
 import { ChatSessionRegistry } from "../../core/chat/session/registry.js";
+import type { ChatBackend } from "../../services/claude-chat-types.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { runBackfillIfNeeded } from "../../core/chat/session/backfill.js";
 import { reconcileChatHusks } from "../../core/chat/husk.js";
@@ -55,6 +56,8 @@ interface RegisterChatRoutesOptions {
    * hold the test runner open.
    */
   prewarmChat?: boolean | undefined;
+  /** Backend for every session this box creates; production omits it. */
+  chatBackend?: ChatBackend | undefined;
 }
 
 /**
@@ -63,7 +66,7 @@ interface RegisterChatRoutesOptions {
 export async function registerChatRoutes(
   options: RegisterChatRoutesOptions
 ): Promise<void> {
-  const { server, boxRoot, eventBus, openaiAudio, prewarmChat } = options;
+  const { server, boxRoot, eventBus, openaiAudio, prewarmChat, chatBackend } = options;
 
   // File-upload endpoint for chat attachments (writes to <boxRoot>/tmp/).
   await registerChatUploadRoutes({ server, boxRoot });
@@ -87,6 +90,7 @@ export async function registerChatRoutes(
   // token-level text deltas to the frontend; the chat machine and the
   // speech queue pick them up live.
   const registry = new ChatSessionRegistry(boxRoot, {
+    ...(chatBackend !== undefined ? { backend: chatBackend } : {}),
     buildSessionOptions: () => ({ includePartialMessages: true }),
   });
   registry.startCleanup();

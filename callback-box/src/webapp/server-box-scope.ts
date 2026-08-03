@@ -38,7 +38,7 @@ import { loginRedirect } from "./base-prefix.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
-import type { BoxSpec, ServerOptions } from "./server-types.js";
+import type { BoxSpec, InternalServerOptions } from "./server-types.js";
 import { assertNever, invariant } from "../lib/invariant.js";
 import { AuthStoreUnavailableAtContextError } from "./local-users-errors.js";
 
@@ -146,7 +146,7 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
 interface BoxScopeDeps {
   box: BoxSpec;
   eventBus: EventBus;
-  options: ServerOptions;
+  options: InternalServerOptions;
   frontendPath: string;
   frontendExists: boolean;
 }
@@ -256,7 +256,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerHistoryRoutes(instance, box.boxRoot);
-  await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
+  await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat, chatBackend: options.chatBackend });
   registerPairingRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
   // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route

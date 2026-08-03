@@ -9,12 +9,12 @@
  */
 
 import { makeLog } from "./log.js";
-import { startBackendRun } from "./start-run.js";
+import { errorMessage } from "../../../lib/error-guards.js";
+import { openChatRun } from "./start-run.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "../features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
 import { loadSessionHistory, type SessionHistoryResult, type SessionLogSlice } from "./load-history.js";
-import { generateDocs } from "../../docs-gen/index.js";
 import {
   createChatBackend,
   type ChatBackend,
@@ -173,24 +173,19 @@ export class ChatSession extends EventEmitter {
 
     this.transition({ phase: "starting" });
 
-    // Ensure agent docs are up to date (fast mtime-cached no-op if unchanged).
-    // Best-effort: a regen/commit failure here (e.g. a git-permission hiccup in
-    // the template-sync commit) must not 500 the chat — log and proceed on-disk.
-    if (this.options.skipBootstrap !== true) {
-      await generateDocs(this.boxRoot).catch((e: unknown) => log("start", `generateDocs failed (continuing): ${e}`));
-    }
-
-    log("start", "Starting SDK chat run");
-
-    // Hold a chat-active lock for the duration of the SDK run so that
-    // `cb tick` (and any other housekeeping process) can detect a chat is
-    // mid-response and defer commits that would race with agent writes.
-    await this.acquireRunLock();
-
-    const run = startBackendRun(this.backend, {
-      ...(await this.buildBackendStartOptions()),
+    // `openChatRun` either returns a live run or unwinds (lock released,
+    // `onFailed` puts us back in `idle`) and throws — never leaves us stranded
+    // in `starting`, which would read as permanently busy with no way out.
+    const run = await openChatRun({
+      backend: this.backend,
+      boxRoot: this.boxRoot,
+      skipBootstrap: this.options.skipBootstrap === true,
+      buildStartOptions: () => this.buildBackendStartOptions(),
       resumeSessionId: this.sessionId ?? undefined,
       model: this.currentModel ?? undefined,
+      acquireLock: () => this.acquireRunLock(),
+      releaseLock: () => this.releaseRunLock(),
+      onFailed: () => this.transition({ phase: "idle" }),
     });
     this.transition({ phase: "ready", run });
 
@@ -200,11 +195,8 @@ export class ChatSession extends EventEmitter {
   }
 
   private async acquireRunLock(): Promise<void> {
-    this.chatLockPath = await acquireSessionRunLock({
-      boxRoot: this.boxRoot,
-      sessionId: this.sessionId,
-      currentLockPath: this.chatLockPath,
-    });
+    const { boxRoot, sessionId, chatLockPath: currentLockPath } = this;
+    this.chatLockPath = await acquireSessionRunLock({ boxRoot, sessionId, currentLockPath });
   }
 
   private async releaseRunLock(): Promise<void> {
@@ -301,7 +293,14 @@ export class ChatSession extends EventEmitter {
     if (this.messageQueue.length === 0) return;
     const queued = this.messageQueue.splice(0);
     log("drain", `Sending ${queued.length} queued message(s)`);
-    void this.send(combineQueuedInputs(queued));
+    // Nothing is awaiting this send, so a rejected run start (an FD-exhausted
+    // spawn, say) would surface as an unhandled rejection and take the server
+    // down. Report it on the session instead; the queued text is already spliced
+    // out and is not re-queued, since a failing start would just fail again.
+    void this.send(combineQueuedInputs(queued)).catch((e: unknown) => {
+      log("drain", `Draining queued message(s) failed: ${errorMessage(e)}`);
+      this.emit("error", e instanceof Error ? e : new Error(String(e)));
+    });
   }
 
   /**

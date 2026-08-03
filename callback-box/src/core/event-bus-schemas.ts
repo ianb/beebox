@@ -79,7 +79,11 @@ const sessionEntrySchema = z.object({
  * key here (and bumping `EVENT_SCHEMA_GENERATION`).
  */
 export const eventSchemas = {
-  /** A watched file changed on disk (chokidar event name in `event`). */
+  /**
+   * A watched file changed on disk. `event` is the raw `fs.watch` event name
+   * (`"rename"` for a create/delete, `"change"` for a write) — consumers key on
+   * `path` and treat any event as "refetch this"; none branches on the name.
+   */
   "file-change": z.object({
     event: z.string(),
     path: z.string(),
