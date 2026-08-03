@@ -29,7 +29,7 @@ declare module "@tapjs/core" {
     checkThrows(
       fn: () => unknown,
       options: { expected: string; mode: "name" | "full" },
-    ): Extractions;
+    ): Extractions | Promise<Extractions>;
   }
 }
 
@@ -60,47 +60,62 @@ TestBase.prototype.check = function tapCheck(actual: unknown, expected: string |
 };
 
 /**
- * Assert that fn() throws an error matching expected.
+ * Assert that fn() throws (or, for an async fn, rejects) with an error
+ * matching expected.
  * mode="name" compares just error.name; mode="full" compares "ErrorName: message".
  * On failure, includes the caught error's stack trace in diagnostics.
+ *
+ * A sync fn reports synchronously; a fn returning a Promise reports via a
+ * returned Promise the caller must await (the doctest loader always awaits).
  */
 TestBase.prototype.checkThrows = function tapCheckThrows(
   fn: () => unknown,
   { expected, mode }: { expected: string; mode: "name" | "full" },
-): Extractions {
+): Extractions | Promise<Extractions> {
   (this as { currentAssert: unknown }).currentAssert = (this as { checkThrows: unknown }).checkThrows;
 
-  let caught: unknown = null;
-  let label: string;
-  try {
-    fn();
-    label = "(no error thrown)";
-  } catch (e: unknown) {
-    caught = e;
-    if (mode === "name") {
-      label = e instanceof Error ? e.name : String(e);
+  const finish = (caught: unknown, threw: boolean): Extractions => {
+    let label: string;
+    if (!threw) {
+      label = "(no error thrown)";
+    } else if (mode === "name") {
+      label = caught instanceof Error ? caught.name : String(caught);
     } else {
-      const name = e instanceof Error ? e.name : "Error";
-      const msg = e instanceof Error ? e.message : String(e);
+      const name = caught instanceof Error ? caught.name : "Error";
+      const msg = caught instanceof Error ? caught.message : String(caught);
       label = `${name}: ${msg}`;
     }
-  }
 
-  const result = inspect(label, expected) as CheckResult;
+    const result = inspect(label, expected) as CheckResult;
 
-  if (result.pass) {
-    this.pass("");
+    if (result.pass) {
+      this.pass("");
+      return result.extractions;
+    }
+
+    const extra: Record<string, unknown> = {
+      diff: result.diff,
+      found: result.actual,
+      wanted: result.expected,
+    };
+    if (caught instanceof Error && caught.stack) {
+      extra.stack = caught.stack;
+    }
+    this.fail(result.message, extra);
     return result.extractions;
-  }
-
-  const extra: Record<string, unknown> = {
-    diff: result.diff,
-    found: result.actual,
-    wanted: result.expected,
   };
-  if (caught instanceof Error && caught.stack) {
-    extra.stack = caught.stack;
+
+  let returned: unknown;
+  try {
+    returned = fn();
+  } catch (e: unknown) {
+    return finish(e, true);
   }
-  this.fail(result.message, extra);
-  return result.extractions;
+  if (returned instanceof Promise) {
+    return returned.then(
+      () => finish(null, false),
+      (e: unknown) => finish(e, true),
+    );
+  }
+  return finish(null, false);
 };
