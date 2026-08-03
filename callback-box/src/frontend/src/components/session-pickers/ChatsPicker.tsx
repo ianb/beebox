@@ -1,8 +1,10 @@
 /**
  * The chats-picker surface: fresh chats (last 7 days) grouped by landmark,
- * with a New-chat button per landmark. Self-sufficient (fetches its own
- * data), so it serves both the /chats page and `view: chat-picker` cards
- * (docs/plans/interface-as-cards.md).
+ * with a New-chat button per landmark, and a trailing "Other chats" card for
+ * chats bound to a directory with no landmark. Self-sufficient (fetches its
+ * own data). Card-embedded only now — it serves `view: chat-picker` cards
+ * (docs/plans/interface-as-cards.md); the /chats page redirects to the
+ * merged Landmarks surface (docs/plans/top-nav-ia.md Track D).
  */
 
 import { useParams } from "@tanstack/react-router";
@@ -28,6 +30,9 @@ export function ChatsPicker() {
   }
 
   const landmarks = data ? data.landmarks : [];
+  const unassigned = data ? data.unassigned : null;
+  const hasUnassigned =
+    unassigned !== null && (unassigned.sessions.length > 0 || unassigned.olderSessions.length > 0);
 
   return (
     <Stack gap="lg">
@@ -37,13 +42,31 @@ export function ChatsPicker() {
         chat bound to that directory.
       </Text>
 
-      {landmarks.length === 0 ? (
+      {landmarks.length === 0 && !hasUnassigned ? (
         <Text as="p" tone="subtle">No landmarks yet.</Text>
       ) : (
         <Stack gap="md">
           {landmarks.map((lm) => (
             <ChatsLandmarkCard key={lm.dir || "__root__"} landmark={lm} boxSlug={slug} />
           ))}
+          {/*
+           * Chats whose directory has no landmark card — the box root before
+           * anyone made a root landmark, or a dir whose landmark was deleted.
+           * "New" here binds to the root, the one directory that always exists.
+           */}
+          {hasUnassigned ? (
+            <ChatsLandmarkCard
+              landmark={{
+                dir: "",
+                label: "Other chats",
+                symbol: "💬",
+                symbolSrc: null,
+                sessions: unassigned.sessions,
+                olderSessions: unassigned.olderSessions,
+              }}
+              boxSlug={slug}
+            />
+          ) : null}
         </Stack>
       )}
     </Stack>

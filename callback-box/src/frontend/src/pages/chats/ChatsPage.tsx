@@ -1,22 +1,17 @@
 /**
- * Chats page — page chrome around the ChatsPicker surface, which also
- * serves `view: chat-picker` cards. Sibling to the "Recent" nav entry
- * (which jumps to the most-active chat directly); use this page to pick
- * a chat by landmark or start a new one in a specific binding.
+ * `/chats` deep link.
+ *
+ * Chats are no longer a page of their own — the Landmarks page lists every
+ * landmark's chats alongside its links, plus the landmark-less ones
+ * (docs/plans/top-nav-ia.md Track D). This route survives as a redirect for
+ * bookmarks and older links. `ChatsPicker` still renders as a
+ * `view: chat-picker` card.
  */
 
-import { Column } from "../../components/ui/Column";
-import { Stack } from "../../components/ui/Stack";
-import { Text } from "../../components/ui/Text";
-import { ChatsPicker } from "../../components/session-pickers/ChatsPicker";
+import { Navigate, useParams } from "@tanstack/react-router";
+import { href } from "../../lib/routing";
 
 export function ChatsPage() {
-  return (
-    <Column overflow="auto" className="h-full">
-      <Stack gap="lg" className="max-w-6xl mx-auto py-8 px-4 w-full">
-        <Text as="h1" size="2xl" weight="bold">Chats</Text>
-        <ChatsPicker />
-      </Stack>
-    </Column>
-  );
+  const { boxSlug } = useParams({ strict: false });
+  return <Navigate to={href(`/${boxSlug ?? ""}/landmarks`)} replace />;
 }

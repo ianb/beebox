@@ -1,7 +1,10 @@
 /**
- * Page-local components for the Chats picker. Lives under `components/`
- * so appearance classes (rounded borders, hover states, etc.) are
- * allowed on raw elements — the page itself sticks to primitives.
+ * Card-local components for the chats picker (`view: chat-picker` cards).
+ * Lives under `components/` so appearance classes (rounded borders, hover
+ * states, etc.) are allowed on raw elements.
+ *
+ * Session rows themselves are shared with the Landmarks page — see
+ * `SessionRow` (docs/plans/top-nav-ia.md Track D).
  */
 
 import { useState } from "react";
@@ -11,14 +14,7 @@ import { apiFileUrl } from "../../lib/view-url";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
-
-export interface PickerSession {
-  sessionId: string;
-  label: string;
-  lastActivity: string;
-  /** Box-relative path of the session's husk card. */
-  huskPath: string;
-}
+import { SessionRow, type SessionRowItem } from "./SessionRow";
 
 export interface PickerLandmark {
   /** Box-relative path; empty string for the root tile. */
@@ -26,8 +22,8 @@ export interface PickerLandmark {
   label: string;
   symbol: string;
   symbolSrc: string | null;
-  sessions: PickerSession[];
-  olderSessions: PickerSession[];
+  sessions: SessionRowItem[];
+  olderSessions: SessionRowItem[];
 }
 
 export function ChatsLandmarkCard({
@@ -101,7 +97,7 @@ function LandmarkSymbol({
 }: {
   landmark: PickerLandmark;
   boxSlug: string;
-  compact?: boolean;
+  compact: boolean;
 }) {
   if (landmark.symbolSrc) {
     return (
@@ -116,45 +112,5 @@ function LandmarkSymbol({
     <span className={compact ? "text-xl leading-none flex-shrink-0" : "text-3xl leading-none flex-shrink-0"} aria-hidden>
       {landmark.symbol || "📍"}
     </span>
-  );
-}
-
-function formatRelativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  const ms = Date.now() - then;
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  return `${days}d ago`;
-}
-
-function SessionRow({ session, boxSlug }: { session: PickerSession; boxSlug: string }) {
-  return (
-    <div className="flex items-stretch gap-1">
-      <Link
-        to={href(`/${boxSlug}/chat`)}
-        search={toSearch({ session: session.sessionId })}
-        className="block flex-1 px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors"
-      >
-        <div className="flex items-start gap-3">
-          <Text as="div" size="sm" className="flex-1 line-clamp-2">{session.label}</Text>
-          <Text as="span" size="xs" tone="muted" className="flex-shrink-0">
-            {formatRelativeTime(session.lastActivity)}
-          </Text>
-        </div>
-      </Link>
-      {/* The session's husk card — the durable, editable face of this chat. */}
-      <Link
-        to={href(`/${boxSlug}/browse/${session.huskPath}`)}
-        title="Open this chat's card"
-        aria-label="Open this chat's card"
-        className="flex items-center px-2 rounded border border-subtle text-warm-400 hover:text-info-dark hover:border-info-400 transition-colors"
-      >
-        <Text as="span" size="xs">card</Text>
-      </Link>
-    </div>
   );
 }
