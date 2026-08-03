@@ -21,7 +21,7 @@ const MAX_ENTRIES = 100;
 const logEntries: LogEntry[] = [];
 const listeners: Set<() => void> = new Set();
 let patched = false;
-let sendBuffer: Array<{ level: string; message: string }> = [];
+let sendBuffer: Array<{ level: LogEntry["level"]; message: string }> = [];
 let sendTimer: ReturnType<typeof setTimeout> | null = null;
 let verboseForwarding = false;
 let errorCount = 0;
@@ -42,7 +42,7 @@ function isNetworkNoise(message: string): boolean {
     /\b\[sse] Diagnostic fetch\b/.test(message);
 }
 
-function queueForServer(level: string, message: string) {
+function queueForServer(level: LogEntry["level"], message: string) {
   // Always forward errors and warnings; forward log/info only in verbose mode
   if (level !== "error" && level !== "warn" && !verboseForwarding) return;
   // Don't forward SSE/network errors — they're expected during deploys

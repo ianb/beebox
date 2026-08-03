@@ -30,6 +30,26 @@ read logs off a running server.
 
 The log file is plain text, one line per entry: `2024-01-15T10:00:00.000Z [error] message`. It auto-truncates at ~100KB.
 
+## iOS native logging
+
+The native companion app forwards its own `error`/`warn` entries (via `os.Logger` +
+`Services/LogForwarder.swift`) to the same `debugLog.submit` sink, tagged `[ios]` so
+native and web entries are distinguishable in one place:
+
+```
+2026-08-03T12:00:04.000Z [error] [ios] capture: upload failed status=500 attempt=2
+```
+
+A queued entry can flush long after the incident it describes — the app persists
+entries on-device and only flushes when it has network (launch, foreground, or a
+background best-effort attempt), so an offline or killed run's entries land whenever
+the app next gets a chance to send them. Each entry carries its own device-side `at`
+timestamp for exactly this reason; once `at` drifts more than ~5s from the server's
+receipt time, the log line tags both: `[ios@2026-08-03T09:00:00.000Z]`. Read the
+bracketed time as when the incident actually happened, not the line's leading
+timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
+wire contract and `docs/plans/ios-log-forwarding.md` for the full design.
+
 ### In the browser
 
 - A red error badge appears in the nav bar when errors occur (shows count)
@@ -52,3 +72,6 @@ tRPC procedures (from the app or a tRPC client), not a raw HTTP endpoint.
 - `src/frontend/src/components/DebugLog.tsx` — console patching, server forwarding, panel UI
 - `src/frontend/src/app-shell.tsx` — init capture, error badge, global panel rendering
 - `src/webapp/trpc/routers/debugLog.ts` — `submit`/`get`/`clear` procedures, ring buffer, log file writing
+- `src/lib/rolling-log.ts` — `appendRollingLogStrict` (used by `submit`, rejects on filesystem
+  failure so a mobile client doesn't clear a queued entry it never durably sent) vs. the lenient
+  `appendRollingLog` (used elsewhere, best-effort)

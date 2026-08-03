@@ -410,7 +410,7 @@ the contract.
 
 ## 5. Direct HTTP calls from native code
 
-Only four endpoints are hit by native code. (`/chat/send` is called by the **web layer inside the
+Only five endpoints are hit by native code. (`/chat/send` is called by the **web layer inside the
 webview**, not natively — §6.)
 
 ### 5.1 `POST /api/pairing/redeem`
@@ -556,6 +556,49 @@ See §1.3 (full request/response/errors).
 - **Drift:** LOUD (400/409/413/404 all surface; incomplete uploads leave the item in the registry's
   missing list, which finalize reports).
 
+### 5.7 `POST /api/trpc/debugLog.submit` — native log forwarding
+
+- **Direction:** native → box. Non-batched tRPC mutation: no transformer is configured on the tRPC
+  stack, so per the tRPC v11 HTTP-RPC spec this is a plain `POST <baseURL>/api/trpc/debugLog.submit`
+  with the input object as the raw JSON body (not the batch-link envelope).
+- **Request:** `{ source?: string, entries: [{ level: "error"|"warn"|"log"|"info", message: string,
+  at?: string }] }`. `source` is a slug (`^[a-z][a-z0-9-]{0,15}$`, ≤16 chars); iOS sends `"ios"`.
+  `at` is an RFC 3339 datetime with an offset (`z.string().datetime({ offset: true })`) — the
+  device-side time the entry describes, since a queued entry can flush long after the incident (the
+  forwarder persists entries on-device and only flushes on launch/foreground/best-effort-background).
+  `message` is capped at 4000 chars server-side; iOS enforces the identical cap client-side before
+  persisting, so a conforming client's batch can never 400 for size. Up to 100 entries per batch.
+  Auth: `Authorization: Bearer <device token>` like every other native call (§2).
+- **Response 200:** `{ ok: true }`. A 2xx means the batch is **durably written** — the route's file
+  append goes through a strict variant (`appendRollingLogStrict`) that rejects on filesystem failure,
+  unlike the lenient one every other rolling-log writer uses. The forwarder relies on this: it only
+  clears a batch from its local queue once it sees 2xx, so a swallowed disk error would otherwise be
+  a silent, unrecoverable loss of the client's only copy.
+- **Rendering:** appended to `<boxRoot>/.callback-box/client-debug.log` as
+  `<receiptISOTime> [level] message`; a `source` adds a `[source]` tag, and once `at` drifts more than
+  ~5s from receipt time the tag becomes `[source@<at>]` — so a stale-flushed entry still shows the
+  incident's own time. Control characters (including CR/LF) in `message` are normalized to single
+  spaces before the line is written, for every source including web — a crafted or multiline message
+  can't forge extra log lines. The 200-entry in-memory ring (`debugLog.get`) bakes the same tag into
+  its `message` field; its `{ts,level,message}` shape is otherwise unchanged.
+- **Forward-compat:** the input schema is a plain (non-strict) `z.object` — unknown top-level or
+  per-entry keys are stripped rather than rejected, so an old server against a client sending fields
+  it doesn't know yet still accepts the batch (untagged, degrading to today's web-only rendering).
+- **Errors:** 400 (Zod validation — bad `level`, oversized `message`, batch over 100 entries, bad
+  `source` shape); 500 if the strict append itself fails (disk full/permissions — rare, but the point
+  of the strict variant is that it's never silent).
+- **Anchors:**
+  | side | anchor |
+  |---|---|
+  | native caller | `Services/LogForwarder.swift` (lands in a sibling chunk) |
+  | box handler | `src/webapp/trpc/routers/debugLog.ts` — `submit` |
+  | box durability | `src/lib/rolling-log.ts` — `appendRollingLogStrict` |
+- **Drift:** fail-local. A forwarding failure must never break the feature it's logging — entries are
+  retained client-side on any network failure or 5xx and simply wait for the next flush trigger; there
+  is no retry loop that could itself become a second unreliable upload. A 401/403 (revoked device)
+  drops that box's queued batch rather than retrying forever against a device that will never regain
+  access.
+
 ---
 
 ## 6. Server-side "mobile" awareness
@@ -608,6 +651,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
+| H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{ok:true}` | `Services/LogForwarder.swift` (sibling chunk) | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
@@ -642,6 +686,10 @@ without the other is a contract break.
 - **Composer command V1** `{version,id,kind,selection:{ref,text,position}}` and acknowledgement V1
   `{version,id,accepted,reason?}` — `Models/NativeComposerContract.swift` ↔
   `native-composer-command.ts`.
+- **`debugLog.submit` wire keys** `{source?,entries:[{level,message,at?}]}`, `level` closed to
+  `error|warn|log|info`, `source` slug `^[a-z][a-z0-9-]{0,15}$` (iOS always sends `"ios"`), `at` an
+  offset datetime — `Services/LogForwarder.swift` (sibling chunk) ↔
+  `trpc/routers/debugLog.ts` · `submit`.
 - **Bridge globals** `callbackboxNativeReceive` / `callbackboxNativeQueue` /
   `callbackboxNativeShareLocation` / `callbackboxNativeLocationQueue` /
   `callbackboxNativeComposerCommandAck` / `callbackboxNativeComposerCommandAckQueue` and events
@@ -792,6 +840,7 @@ callback-box/src/webapp/routes/chat-audio-routes.ts
 callback-box/src/webapp/routes/chat-uploads.ts
 callback-box/src/webapp/routes/bulk-upload.ts
 callback-box/src/core/capture/staging-stream.ts
+callback-box/src/webapp/trpc/routers/debugLog.ts
 
 # iOS native shell: webview bridge, pairing model, paired-box storage
 ios-app/CallbackBox/Views/ChatWebView.swift
@@ -800,6 +849,7 @@ ios-app/CallbackBox/Storage/ComposerDraftStore.swift
 ios-app/CallbackBox/Services/ChatAPI.swift
 ios-app/CallbackBox/Models/PairedBox.swift
 ios-app/CallbackBox/Storage/PairedBoxStore.swift
+ios-app/CallbackBox/Services/LogForwarder.swift
 
 # Shared golden fixtures — any fixture change is a contract change (directory prefix)
 callback-box/test/mobile-contract/
