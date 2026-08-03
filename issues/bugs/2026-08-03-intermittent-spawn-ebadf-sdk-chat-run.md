@@ -12,10 +12,16 @@ discovered-in: main session — boxholder hit "internal server error" on a local
 > descriptors, ~9,438 of them under `content/store/`** (a mix of cards + their
 > image assets: 4,749 `.webp`, 3,641 `.card`, 618 `.md`, 383 `.jpg`, 171 `.png`
 > — each distinct path, opened once, never closed). So a store-wide scan in
-> `cb serve` holds a file handle for every file it reads. It **accumulates
-> slowly over the process's multi-hour life** (independent of load — the box's
-> `generate-image` trick auto-commits were ~8h prior and NOT responsible). Not
-> urgent (local-only, self-recovers on retry); boxholder is watching it.
+> `cb serve` holds a file handle for every file it reads.
+>
+> **Corrections from a 3rd occurrence (2026-08-03 01:31, `openFDs=10583`):** the
+> leak is **FAST under active use, not a slow drip** — a freshly restarted
+> `cb serve` accumulated **~9,300 open handles in under 5 minutes** of chat
+> activity, then EBADF'd. So a box in use hits this within minutes; more reachable
+> than first framed. And it does **NOT cleanly "recover on retry"** — see the two
+> downstream effects below. (The image-generation trick was ~8h prior and not
+> responsible.) Local-only; boxholder is watching it, but the retry/wedge effects
+> raise it above "cosmetic".
 >
 > **Next: find the unclosed open.** Leads: `core/asset-manifest.ts` `sha256File`
 > (`createReadStream` to hash assets — though modern Node auto-closes on
@@ -24,9 +30,30 @@ discovered-in: main session — boxholder hit "internal server error" on a local
 > numbered read handle (`Nr`), so it's an open descriptor a scan is holding, not
 > a memory-map.
 
-A chat send occasionally 500s with `spawn EBADF` at the moment the SDK subprocess
-is spawned. It **recovers on retry** — the box cold-restarts and the next send
-works.
+## Two downstream effects of a failed run-start (independent bugs, worth their own fixes)
+
+When the spawn fails, the chat-send path handles it badly — and these are really
+about run-start failure handling, not the FD leak specifically (any run-start
+failure would trip them):
+
+- **Wedged session (no cleanup).** The spawn fails fast (~120 ms, not a hang), but
+  the `ChatSession` registry entry is left with an **unresolved turn** — no
+  `[ChatSession:done]` / `[ChatSession:close]` event ever follows, and nothing
+  auto-recovers it. The session sits mid-turn. That's the boxholder's "wedged
+  agent". The run-start failure path should mark the turn failed / reset the
+  session to idle so the next send starts clean.
+- **Duplicate-send risk (data integrity).** The user message is **persisted to
+  `events.db` (`chat-user-message`) BEFORE the SDK run starts** — so it's durably
+  in the conversation history — but the spawn failure returns a 500 that the client
+  treats as "unsent" and **restores the text into the composer**. Retrying then
+  logs a **second** `chat-user-message` → a duplicate in history. So the send does
+  NOT cleanly self-recover on retry; it risks duplication. Either the message
+  should be persisted only after the run successfully starts, or the client's retry
+  must be idempotent against the already-recorded message.
+
+## The primary symptom
+
+A chat send 500s with `spawn EBADF` at the moment the SDK subprocess is spawned.
 
 ```
 [ChatSession:start] Starting SDK chat run
