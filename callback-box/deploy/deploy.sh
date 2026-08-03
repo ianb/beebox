@@ -561,6 +561,30 @@ if [[ "$SKIP_RESTART" != true ]]; then
   #      most boxes rest "stopped". A fleet-wide startup break (e.g. a native-
   #      module ABI mismatch) makes this 503. Parsed with node (jq isn't on the
   #      server); the box slug + error land in the log on failure.
+  # Verify the runtime tools the box shells out to are actually installed.
+  # These are declared in setup-server.sh, but a box provisioned before a tool
+  # was added silently 503s the upload/processing path that needs it (qpdf → PDF
+  # scan uploads; poppler pdfinfo/pdftoppm → PDF intake; pandoc → doc convert;
+  # imagemagick convert → image ops; openpyxl/xlsx2csv → spreadsheet reads;
+  # git-annex/git-lfs → assets) until someone hits it in the wild. Catch a
+  # "declared but not installed on this older box" gap at deploy, not at first use.
+  echo "Verifying required external tools..."
+  ssh "root@$SERVER_IP" bash -s <<'TOOLCHECK'
+    set -uo pipefail
+    missing=""
+    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv git git-lfs git-annex; do
+      command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
+    done
+    python3 -c "import openpyxl" >/dev/null 2>&1 || missing="$missing python3-openpyxl"
+    if [ -n "$missing" ]; then
+      echo "  FAILED: required runtime tools missing on the server:$missing"
+      echo "  Fix: re-run deploy/setup-server.sh on the server (or apt-get install the"
+      echo "  missing packages), then redeploy. See setup-server.sh for the package list."
+      exit 1
+    fi
+    echo "  Required tools present."
+TOOLCHECK
+
   echo "Verifying hub health + box canary..."
   ssh "root@$SERVER_IP" bash -s <<'HEALTHCHECK'
     set -euo pipefail
