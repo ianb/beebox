@@ -1,18 +1,19 @@
-# Top-nav IA revision: two destinations, landmark-centered switching, chat as landing
+# Unified app bar: one nav for chat and everything else
 
-Revise the app shell's top navigation from eight builtin links to two (Chat,
-Landmarks), merge the Chats picker and Landmarks page into one
-landmark-centered surface, make Chat the default landing for a box, and
-demote the Dashboard to an ops plane reached from the profile menu. The
-current nav carries destinations that no user job reaches from cold
-navigation, and the default landing (Dashboard) taxes the most frequent job
-(get a thought into the box).
+Replace the two stacked header rows (the AppNav link bar + the chat header
+chips row) with a single unified app bar, navigate by place (box ▸ landmark)
+through a split-pill chip, make chat the default landing, merge the Chats
+picker into the Landmarks page, and demote the Dashboard to a box-tools
+submenu. The current eight-link nav carries destinations no user job reaches
+by cold navigation; the landing page (Dashboard) taxes the most frequent job;
+and Chats/Landmarks are two halves of one activity-switching surface.
 
-Revised 2026-08-02 after a Codex cross-model review; the review's accepted
-findings are folded in below (canonical-route inversion, no new overview
-procedure, orphan-session bucket as new behavior, older-sessions
-preservation, visible landmark parse failures, nav-card compatibility
-policy).
+Designed interactively with the boxholder 2026-08-02 (mockups:
+`scratch/nav-unified.html`, gitignored); supersedes the earlier two-link-nav
+revision of this plan. The earlier revision's Codex findings that still apply
+(canonical `/chat`, no new overview procedure, unassigned-session bucket as
+new behavior, `olderSessions` preservation, visible landmark parse failures,
+`NAV_ROUTES` compatibility) are carried forward.
 
 ## Jobs this serves
 
@@ -21,325 +22,397 @@ policy).
   move on. (Today: land on Dashboard, tap Recent, then compose.)
 - When I was chatting about trip planning yesterday and want that thread
   back — not the grocery thread from this morning — I want to switch by
-  *activity*, so I can resume where that activity left off. (Today: split
-  across two pages — Chats groups sessions by landmark, Landmarks shows the
-  landmark's content but hides its sessions.)
-- When I'm inside the "Recipes" activity, I want its pinned cards and its
-  conversations in one place, so I don't have to hold the join in my head.
-- When a nightly schedule failed or I want to check what the box did, I
-  want an ops view, so I can inspect and re-run — but this is a
-  weekly-order job, not a landing page.
+  *activity*: tap the place name, tap the landmark, land in its chat.
+- When I'm chatting inside "Recipes" and want its pinned cards (the bread,
+  Knife Skills), I want them one tap away — they are the curated heart of
+  the landmark, not buried fiddling.
+- When a schedule failed or I want to inspect the box (files, history,
+  health), I want box-scoped tools findable behind the box's own name —
+  not behind an avatar, which reads as account settings everywhere else.
+
+## The design (converged with the boxholder)
+
+One bar, all pages, no second header row:
+
+```
+[ test1 ▸ 🍳 Recipes ▾ │ 📁 recipes/ ▾ ]      [Sourdough timing ▾] [🎙 ▾] [◎ 4] [avatar]
+  └─ switch menu          └─ here menu          └─ session chip    voice   plate  meta
+```
+
+Category → control (the boxholder's taxonomy):
+
+- **Place (box | landmark)** — the split pill. Left half (box prefix +
+  landmark name) opens the **switch menu**; right half (folder + dir
+  basename) opens the **here menu**. Split pill follows the VoiceChip
+  split-face idiom (`docs/implemented-plans/chat-header-chips.md`).
+- **I/O** — the voice chip, unchanged (mic + narration pooled for target
+  size). Chat pages only.
+- **Chat fiddling** — the session chip: face is the session title
+  (truncated), menu is New session / Model / Advanced. "Recent chats"
+  drops out — the switch menu owns finding sessions. Replaces the `⋯`
+  ChatMenu face; an unlabeled `⋯` stops working once every other menu
+  face names its object. Phone face: a sliders icon, no title.
+- **Landmark fiddling** — the here menu: today's ContextChip root
+  verbatim (Open dir/, pinned links at root level, Recent files ›). The
+  bookmarks are deliberately NOT in a sub-panel.
+- **Meta** — avatar menu: Settings, Admin, Source View, Debug Log, Sign
+  out. Nothing content-shaped remains here.
+- **Attention** — the plate badge (nonzero only), with a real icon (a
+  plate-rim SVG + count) replacing the `☑` text glyph. The Questions
+  badge and nav entry are removed (boxholder decision; an inline-question
+  concept will replace the standalone surface).
+
+Menu layouts (stable rows above variable lists — boxholder rule; list
+continuations at the bottom):
+
+```
+switch menu                    Box submenu (web only)      here menu
+┌───────────────────┐          ┌──────────────────┐        ┌──────────────────┐
+│ Box: test1      ▸ │ stable   │ ‹ Box: test1     │        │ Open recipes/    │
+│ All landmarks   → │ stable   │ Overview         │        │ ── links ──      │
+│ ── Switch to ──   │          │ Browse           │        │ 🍞 the bread     │
+│ 🍳 Recipes      1 │ variable │ History          │        │ 🔪 Knife Skills  │
+│ ✈ Trips         2 │          │ ──               │        │ Images       134 │
+│ 🛒 Groceries      │          │ Other boxes    → │        │ ──               │
+│ 🏠 Box root       │          └──────────────────┘        │ Recent files   ▸ │
+└───────────────────┘                                      └──────────────────┘
+```
+
+- Tapping a landmark resumes its most recent session or starts one (the
+  existing `LandmarkSection` ChatButton logic).
+- "Other boxes →" navigates to the front page (the box selector). No box
+  list is ever rendered in-menu — rare operation, and the iOS app's
+  native chrome owns box picking, so the web menu and iOS menu stay
+  structurally identical except the Box row, which is suppressed in the
+  native shell.
+- Fresh-chat counts render per-landmark in the switch menu; the
+  bar-level fresh badge is retired with the link row.
+
+Responsive rules (explicit, not emergent): the bar keeps exactly one
+flexible member — the pill's landmark label. Sacrifice order as width
+shrinks: (1) box prefix on the pill, (2) dir label on the folder half
+(icon-only), (3) session title (chip becomes the sliders icon). The bar
+never wraps and never grows a hamburger.
+
+Non-chat pages: same bar; chat-only chips (session, voice) absent; the
+pill's left half shows the page as the place (`test1 ▸ All landmarks`,
+`test1 ▸ Browse: store/recipes/`); the here half renders when a landmark
+context exists (Browse inside a landmarked dir), else hides.
 
 ## Stated preferences this plan trades against
 
-- `callback-box/docs/engineering-principles.md` — principle tracing for
-  design choices; especially reuse-over-rebuild, validate-at-boundaries,
-  and resilient-not-silent.
+- `callback-box/docs/engineering-principles.md` — reuse-over-rebuild,
+  validate-at-boundaries, resilient-not-silent.
 - `callback-box/CLAUDE.md` — "Frontend uses UI primitives and a semantic
-  palette. Read frontend.md before writing UI"; "don't add features beyond
-  what the task requires."
-- `callback-box/frontend.md` — `restrict-component-classes` (pages use
-  outer-layout classes only; appearance lives under `components/`);
-  primitive-extraction rule (3+ repeats before a new primitive).
-- Precedents: the nav-card plan
-  (`docs/implemented-plans/nav-card.md`) — the nav is a card-driven surface
-  with a builtin fallback; this plan changes the fallback, not the
-  mechanism. The chat-header chips plan
-  (`docs/implemented-plans/chat-header-chips.md`) — the sibling precedent
-  that per-conversation controls live in chat chrome, global switching in
-  the shell.
-- Boxholder decisions from the planning conversation (2026-08-02):
-  Questions leaves the nav (an inline-question concept will replace the
-  standalone surface); landmarks are the real activity axis ("the
-  different landmarks are the real different activities that you want to
-  return to"); the landmark *name* stays; the Dashboard is "almost like an
-  admin plane" and should launch History and Browse.
+  palette. Read frontend.md before writing UI"; components own their
+  appearance under `components/`.
+- `callback-box/frontend.md` — `restrict-component-classes`; primitive
+  extraction only at 3+ uniform repeats; coral is app-nav-gradient-only.
+- `callback-box/src/frontend/src/components/chat/CLAUDE.md` — composer
+  input store isolation; companion-pane memo stability (the bar mounts
+  above both; new bar state must not re-render chat internals per
+  keystroke).
+- Precedents: `docs/implemented-plans/chat-header-chips.md` (chip/menu
+  idiom, split-pill face, one-flexible-member rule, panel-swap submenus)
+  and `docs/implemented-plans/nav-card.md` (card-driven nav — this plan
+  relocates its rendering surface, see Track C3).
+- Boxholder decisions (2026-08-02, this conversation): unified single
+  bar; place chip as switcher; stable-above-variable menu layout; list
+  continuations at menu bottom; bookmarks never in a sub-panel; no
+  in-menu box list; Questions sidelined; "Landmarks" name stays; phone
+  diet as specced.
 
 ## What already exists
 
-- **Nav resolution.** `src/shared/nav-routes.ts:17-44` — `NAV_ROUTES`
-  (href→label table) and `DEFAULT_NAV_HREFS` (the builtin fallback list:
-  `"/", "/chat", "/chats", "/questions", "/browse", "/landmarks",
-  "/history", "/capture"`). `useNavLinks`
-  (`src/frontend/src/hooks/useNavLinks.ts`) resolves a box's `nav.card`
-  via `trpc.nav.get` and falls back to this list. `nav.card` href
-  validation derives from the same table
-  (`src/schemas/nav.ts:30`: `const validHrefs = new
-  Set(NAV_ROUTES.map((r) => r.href))`) — so `NAV_ROUTES` entries can be
-  relabeled but never removed without invalidating existing cards.
-  **Reused** — the plan edits the fallback list and labels; the
-  card-driven mechanism is untouched; no `NAV_ROUTES` entry is removed.
-- **Chat canonicalization.** `/chat` is the canonical chat URL and the
-  client actively enforces it: `ChatPage` rewrites the resolved session
-  onto `/chat` (`src/frontend/src/pages/ChatPage.tsx:191`:
-  `void navigate({ to: href(\`/${boxSlug}/chat\`), … replace: true })`),
-  and new-session assignment and the capture shim also hard-code `/chat`
-  (`components/chat/InteractiveChat-ws.ts:234`,
-  `pages/capture/CapturePage.tsx:13`). **Constrains the design**: the box
-  root cannot *be* the chat route without fighting these; it must
-  redirect to `/chat` (Track 1).
-- **AppNav shell.** `src/frontend/src/components/AppNav.tsx` — link row,
-  box switcher, `QuestionsBadge`/`PlateBadge`/`ErrorBadge`, `ProfileMenu`
-  (Settings, Admin, Source View, Debug Log, Reload, Sign out). **Reused**
-  — the profile menu gains a Dashboard entry; the Questions badge is
-  removed; the fresh-chats badge re-keys (Track 2).
-- **Routing.** `src/frontend/src/router.tsx` — `dashboardRoute` is the
-  index child (`path: "/"`) of `boxLayoutRoute` (`router.tsx:73-77`), so
-  `/$boxSlug` renders `DashboardPage`. `boxCatchAllRoute`
-  (`router.tsx:207-213`) redirects unknown paths to `/$boxSlug`.
-  **Reused** — routes are re-pointed, not restructured.
-- **Chat landing on an empty box.** `chat.bootstrap`
-  (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:41-52`) returns
-  `sessionId: null` when the box has no sessions, and `ChatPage` maps
-  that to a fresh session (`ChatPage.tsx:162`: `bootstrap.data ?
-  bootstrap.data.sessionId ?? "new" : …`) — the composer renders and the
-  session is created on first send. **Reused unchanged.**
-- **The two halves of the merged surface.**
-  - `ChatsPicker` (`src/frontend/src/components/session-pickers/ChatsPicker.tsx:14-51`):
-    fresh chats grouped by landmark via `trpc.chat.byLandmark`,
-    per-landmark `ChatsLandmarkCard` with visible sessions, a
-    collapsible `olderSessions` list
-    (`ChatsLandmarkCard.tsx:74`), and New-chat.
-  - `LandmarksList` (`src/frontend/src/components/landmarks/LandmarksList.tsx:14-47`):
-    every landmark via `trpc.landmarks.list`, per-landmark
-    `LandmarkSection` with symbol/label/path, a Chat button (resolves the
-    *last* session only, `LandmarkSection.tsx:154-193`), link tiles, and
-    collapsible groups.
-  - Both are self-sufficient and also serve `view: chat-picker` /
-    `view: landmarks` cards (`ChatsPicker.tsx:1-6`,
-    `LandmarksList.tsx:1-6`, `src/frontend/src/renderers/view.tsx`).
-  - `chat.byLandmark` (`src/webapp/trpc/routers/chat.ts:100-150`) buckets
-    sessions by `contextDir` but **emits only buckets that have a
-    landmark card** — it maps over `loadLandmarkSummaries` results, which
-    contain no synthetic root entry
-    (`src/core/landmark/summaries.ts:92-131`). Sessions bound to a
-    directory with no landmark (including the root, when no root
-    landmark card exists) are currently dropped from the picker.
-    **Partially reused** — Track 3 extends `byLandmark` with an explicit
-    unassigned bucket (new behavior, not reuse) and keeps
-    `olderSessions`.
-- **Capture.** Already absorbed: `/capture` is a redirect shim to
-  `/chat?capture=1` (`src/frontend/src/pages/capture/CapturePage.tsx:1-13`).
-  **Reused** — the route stays as a deep-link target; only the nav entry
-  goes.
-- **Dashboard.** `src/frontend/src/pages/DashboardPage.tsx` — health,
-  attention (questions + inbox), schedules (the app's only schedules UI,
-  `components/dashboard/ScheduleOverview.tsx`), recent activity, system
-  info. **Reused** — page unchanged except gaining Browse/History links;
-  it moves to `/$boxSlug/dashboard` and the profile menu.
-- **Semantic "back to Dashboard" links.** Three pages link to the box
-  root *meaning* the Dashboard: `SettingsPage.tsx:22-23` ("Back to
-  Dashboard"), `AdminPage.tsx:26-27` ("Back"), and
-  `pages/card/CardViewPage.tsx:31-32` ("Back to Dashboard"). **Must
-  change in Track 1** — after the re-point, a root link means chat.
-- **Landmark data.** `src/schemas/landmark.ts:95-102`
-  (`LandmarkNavigation`: optional label/symbol/links/expand) and the
-  resolver `src/core/landmark/resolve.ts` (expands, dedup, group caps).
-  **Reused** — no schema change. The layout chaos ("options to include
-  things … but not enough rules that it ends up consistent" — boxholder)
-  is fixed at the rendering surface, not the schema. Note: a card whose
-  frontmatter fails to parse is silently skipped today
-  (`landmark.ts:196-208` returns null; `summaries.ts:113` `continue`s) —
-  Track 3 makes that visible.
-- **No landmark "full form" exists.** `docs/landmarks.md:119-134`
-  describes a tile/full-form rendering design, but the code has no
-  landmark-specific full view: the complete link list renders only on
-  the current `/landmarks` page itself, and the generic card route
-  renders `FileView` (`pages/card/CardViewPage.tsx:38`). The doc is
-  aspirational relative to the code. **Constrains the design**: the
-  merged surface caps links with an *inline* disclosure, not a
-  click-through to a full view that doesn't exist.
+- **Chat header chips (merged to main).** `ContextChip`
+  (`src/frontend/src/components/chat/ContextChip.tsx`) — face = landmark
+  label, menu = Open dir/ + `LandmarkLinksPanel` + Recent files ›, with
+  the panel-swap submenu mechanism (`ContextChipPanel`,
+  `ContextChip.tsx:34`, `panelIndex` on `Dropdown`). **Reused**: the here
+  menu is this menu, moved into the bar. `VoiceChip` (split-pill face
+  precedent) and `ChatMenu` (New session / Recent chats / Advanced;
+  model selection) — **reused**: voice unchanged; ChatMenu becomes the
+  session chip's menu minus Recent chats.
+- **AppNav** (`src/frontend/src/components/AppNav.tsx`) — gradient bar,
+  box `<select>`, link row from `useNavLinks`, QuestionsBadge
+  (`AppNav.tsx:254`) / PlateBadge (`AppNav.tsx:276-289`: `☑` + count →
+  `store/plate.todo-view.card`), ErrorBadge, ProfileMenu, mobile
+  hamburger. **Rebuilt** as the unified
+  bar: gradient, ErrorBadge, ProfileMenu (trimmed), PlateBadge (new
+  icon) survive; link row, box `<select>`, hamburger, QuestionsBadge are
+  removed.
+- **Nav-card mechanism.** `useNavLinks`
+  (`src/frontend/src/hooks/useNavLinks.ts`) resolves `nav.card` via
+  `trpc.nav.get` with `DEFAULT_NAV_HREFS` fallback
+  (`src/shared/nav-routes.ts:35-44`); `nav.card` validation derives from
+  `NAV_ROUTES` (`src/schemas/nav.ts:30`). **Relocated**: with no link
+  row, custom `nav.card` entries render as a section in the switch menu
+  (Track C3); `NAV_ROUTES` keeps every entry (validation compatibility);
+  `DEFAULT_NAV_HREFS` is retired from rendering (fallback boxes get the
+  builtin switch menu, which needs no card).
+- **Chat canonicalization.** `ChatPage` rewrites the resolved session
+  onto `/chat` (`src/frontend/src/pages/ChatPage.tsx:191`); new-session
+  assignment and the capture shim hard-code `/chat`
+  (`components/chat/InteractiveChat-ws.ts:248`,
+  `pages/capture/CapturePage.tsx:13`). **Constrains Track A**: the box
+  root must redirect to `/chat`, not be the chat route.
+- **Chat landing on an empty box.** `chat.bootstrap` returns
+  `sessionId: null` (`src/webapp/trpc/routers/chat-bootstrap-procedure.ts:46-49`);
+  `ChatPage.tsx:162` maps null → `"new"` — fresh composer, session
+  created on first send. **Reused unchanged.**
+- **Landmark data for the switch menu.** `chat.byLandmark`
+  (`src/webapp/trpc/routers/chat.ts:100-150`) — per-landmark fresh
+  sessions + `olderSessions` + `freshCount`; buckets sessions by
+  `contextDir` but emits only buckets that have a landmark card
+  (`loadLandmarkSummaries`, `src/core/landmark/summaries.ts:92-131`, no
+  synthetic root); landmark-less sessions are dropped today. AppNav
+  already fetches this query on every page (fresh badge). **Reused** for
+  the switch menu's landmark list + counts; **extended** (Track B) with
+  an unassigned bucket.
+- **Resume-or-start logic.** `LandmarkSection`'s ChatButton
+  (`src/frontend/src/components/landmarks/LandmarkSection.tsx:154-193`):
+  `chat.lastSessionForDirectory` → navigate with `session` or
+  `session=new&contextDir=`. **Reused** as the switch-menu row action.
+- **Here-menu data.** `trpc.landmarks.forDir`
+  (`ContextChip.tsx:172-175`) and `LandmarkLinksPanel`. **Reused
+  unchanged.**
+- **Semantic root links.** `SettingsPage.tsx:22`, `AdminPage.tsx:26`,
+  `pages/card/CardViewPage.tsx:31` link to the box root meaning
+  Dashboard. **Re-pointed** in Track A.
+- **Landmarks page / Chats page.** `LandmarksList` + `LandmarkSection`
+  (links, groups, depth indent) and `ChatsPicker` + `ChatsLandmarkCard`
+  (sessions, Show older) — same landmark-keyed page, projected twice.
+  **Merged** (Track D) by extending `LandmarkSection`; `ChatsPicker`
+  survives for `view: chat-picker` cards.
+- **Silent landmark parse failures.** `parseLandmarkFields` → null
+  (`src/schemas/landmark.ts:196-208`), skipped without warning
+  (`summaries.ts:113`). **Made visible** (Track B `problems`).
+- **No landmark full form exists.** `docs/landmarks.md:119-134`
+  describes one; the code renders full link lists only on the Landmarks
+  page; `CardViewPage` renders `FileView` (`CardViewPage.tsx:38`).
+  **Constrains Track D**: caps use inline disclosures, no click-through
+  to a nonexistent view. The stale doc section is corrected in Track E.
+- **Native/embed chrome.** `embed=1` already hides the entire bar
+  (`app-shell.tsx:53`); `nativeComposer=1` (`router.tsx:94`) is the
+  native mode that keeps web chrome. **Used**: the Box-row suppression
+  gates on `nativeComposer`.
 
 ## Prior art (external)
 
-- Platform navigation guidance (Material Design navigation bar; echoed by
-  [Smashing Magazine's mobile-navigation rules](https://www.smashingmagazine.com/2016/11/the-golden-rules-of-mobile-navigation-design/))
-  recommends keeping top-level destinations few — no more than five;
-  Material's bars are designed for 3–5. The current builtin nav has 8;
-  this plan lands on 2 links + 2 situational badges + a profile menu,
-  under that ceiling.
-- Job-story framing (situational JTBD) per the project's own convention
-  (`issues/CLAUDE.md:142-149`); no further external search needed — the
-  method is already adopted.
-- No external prior art applies to the landmark/chat merge itself: it is
-  an internal vocabulary decision over this project's own concepts.
+- Navigation-destination count guidance (Material navigation bars are
+  designed for 3–5 destinations; [Smashing Magazine's mobile-navigation
+  rules](https://www.smashingmagazine.com/2016/11/the-golden-rules-of-mobile-navigation-design/)
+  warn against more than five): the unified bar carries two navigation
+  menus + three utility controls, under the ceiling.
+- Split-button / split-pill controls are an established pattern
+  (toolbar split buttons; this repo's own VoiceChip). No further search
+  needed — the in-repo precedent is denser than external guidance.
+- The "current-location control opens a location switcher" convention
+  (breadcrumb menus, workspace/channel switchers) is ubiquitous;
+  adopted here as the switch menu. No external citation needed beyond
+  the convention's ubiquity.
 
 ## Tracks / scope
 
-Ordered by implementation dependency, then surface size.
+### Track A — Routes: chat landing, /dashboard, root-link audit
 
-### Track 1 — Landing and route re-point
-
-**What.** `/$boxSlug` redirects to `/$boxSlug/chat`; the Dashboard moves
-to `/$boxSlug/dashboard`. `/chat` stays the canonical chat URL.
-
-**Why.** The most frequent job (capture/chat) pays a navigation tax today;
-the landing page is optimized for a weekly-order ops job. The box-selector
-tiles already grew Chat/Capture bypass links
-(`components/BoxSelectionTiles.tsx:37-63`) — evidence the landing is
-wrong. The redirect (rather than making `/` the chat route) is forced by
-the client's own canonicalization: `ChatPage` and the session/capture
-flows rewrite to `/chat` (`ChatPage.tsx:191`,
-`InteractiveChat-ws.ts:234`), so a root chat route would immediately
-navigate away from itself and never match the nav's active state.
+**What.** `/$boxSlug/` redirects to `/$boxSlug/chat`; Dashboard moves to
+`/$boxSlug/dashboard`; root-meaning-Dashboard links re-point.
 
 **Direction.**
-- `router.tsx`: the index child of `boxLayoutRoute` becomes a
-  `beforeLoad` redirect to `/$boxSlug/chat` (same mechanism as
-  `boxCatchAllRoute`, `router.tsx:207-213`); `dashboardRoute` moves to
-  `path: "dashboard"`.
-- `nav-routes.ts`: `{ href: "/", label: "Dashboard" }` is **relabeled**
-  `{ href: "/", label: "Chat" }` (kept — `src/schemas/nav.ts:30` derives
-  `nav.card` validation from this table, so removal would invalidate
-  existing cards; a card entry for `/` now lands on chat via the
-  redirect). Add `{ href: "/dashboard", label: "Dashboard" }`.
-- `ProfileMenu` gains a Dashboard `MenuItem` (to `/dashboard`) above
-  Settings.
-- **Semantic root-link audit:** `SettingsPage.tsx:22` and
-  `CardViewPage.tsx:31` ("Back to Dashboard") re-point to `/dashboard`
-  with unchanged labels — they mean the Dashboard. `AdminPage.tsx:26`
-  ("Back") re-points to `/dashboard` for symmetry with Settings. Grep
-  for further `href(\`/${boxSlug}\`)`/`href(\`/${boxSlug}/\`)`
-  constructions during implementation; each one is a semantic decision
-  (Dashboard vs. landing), not a mechanical rewrite.
-- Box-selector tile: the box name link keeps targeting the box root
-  (now → chat); the redundant per-tile Chat quick link is removed; the
-  Capture quick link stays.
+- `router.tsx`: index child of `boxLayoutRoute` becomes a `beforeLoad`
+  redirect to `/chat` (mechanism of `boxCatchAllRoute`,
+  `router.tsx:207-213`); `dashboardRoute` → `path: "dashboard"`.
+- `nav-routes.ts`: relabel `{ href: "/", label: "Chat" }` (entry kept —
+  `src/schemas/nav.ts:30` derives validation from the table; removal
+  would invalidate existing `nav.card`s); add
+  `{ href: "/dashboard", label: "Dashboard" }`.
+- Re-point: `SettingsPage.tsx:22` + `CardViewPage.tsx:31` ("Back to
+  Dashboard") and `AdminPage.tsx:26` ("Back") → `/dashboard`. Grep for
+  other `href(\`/${boxSlug}\`)`-family constructions; each is a semantic
+  decision (Dashboard vs landing).
+- `BoxSelectionTiles.tsx`: box-name link keeps targeting the root (now →
+  chat); the redundant Chat quick link is removed; Capture stays.
 
-**Vocabulary lock-ins.** `/dashboard` as the Dashboard's route; `/chat`
-canonical; `/` = redirect to chat.
+**First chunk.** All of the above + route doctests. No open questions.
 
-**First implementation chunk.** The router + `nav-routes.ts` +
-`ProfileMenu` + root-link audit + box-tile change, with route-level
-tests. No open questions inside it.
+### Track B — Backend: unassigned bucket + visible parse problems
 
-### Track 2 — Nav fallback shrink
-
-**What.** `DEFAULT_NAV_HREFS` becomes `["/chat", "/landmarks"]`; the
-`/chat` label changes "Recent" → "Chat". Questions badge leaves AppNav.
-
-**Why.** Per the jobs analysis: Capture duplicates Chat (it is a redirect
-into it); Questions is being sidelined as a concept (boxholder decision);
-Browse and History are link-following destinations, not cold-navigation
-ones; Chats and Landmarks merge (Track 3); Dashboard demotes (Track 1).
-
-**Direction.** Edit `DEFAULT_NAV_HREFS` and the `/chat` label
-(`nav-routes.ts:19`). Remove `QuestionsBadge` from AppNav (both mobile
-and desktop positions, `AppNav.tsx:170,254-267`); keep `PlateBadge` and
-`ErrorBadge`. The fresh-chats badge (`useNavLinks.ts:72`, keyed to
-`/chats` today) attaches to `/landmarks` when present, else `/chats`
-(covers custom `nav.card`s that keep a `/chats` entry). `NAV_ROUTES`
-keeps entries for `/questions`, `/browse`, `/history`, `/chats`,
-`/capture` so existing `nav.card` files stay valid — only the *fallback*
-shrinks.
-
-**Vocabulary lock-ins.** Builtin fallback nav = Chat, Landmarks. Label
-"Recent" retires.
-
-**First implementation chunk.** The whole track is one chunk.
-
-### Track 3 — The merged Landmarks surface
-
-**What.** `/landmarks` becomes the single activity-switching surface:
-every landmark rendered in one fixed template — identity (symbol, label,
-path link), its recent chat sessions (resume + "Show older" + New chat),
-and a capped row of pinned links with an inline show-all disclosure.
-`/chats` becomes a redirect to `/landmarks`.
-
-**Why.** ChatsPicker and LandmarksList are the same page projected twice
-— both landmark-keyed, each missing the other's payload. The boxholder
-uses both, manually joining them. And the landmarks page's layout is
-chaotic because it renders whatever each card declares; the surface must
-impose consistency the schema deliberately doesn't.
+**What.** `chat.byLandmark` gains an `unassigned` bucket; `landmarks.list`
+(and the summaries path) gains `problems`.
 
 **Direction.**
-- **Data: no new procedure.** The page consumes the two existing
-  queries — `landmarks.list` (resolved links/groups) and
-  `chat.byLandmark` (sessions) — and joins them by `dir` client-side.
-  `AppNav` already fetches `chat.byLandmark` on every page
-  (`AppNav.tsx`, fresh-count badge), so the join reuses the cached
-  query instead of adding a third traversal. (A merged
-  `landmarks.overview` procedure was considered and cut on Codex
-  review: `byLandmark` is inline router logic, not a reusable
-  implementation, and the join is a per-`dir` map lookup.)
-- **`chat.byLandmark` extension (new behavior):** add an `unassigned`
-  bucket for session groups whose `contextDir` has no landmark card —
-  the root bucket when no root landmark exists, and any directory whose
-  landmark was deleted after sessions bound to it. Today these sessions
-  are silently dropped (`chat.ts:127-145` maps over landmarks only).
-  The bucket renders at the end of the page labeled "Other chats", each
-  session row showing its `contextDir` when nonempty; "New" in this
-  bucket starts a root-bound chat. `olderSessions` is **kept** for
-  every bucket — the picker's "Show older" disclosure
-  (`ChatsLandmarkCard.tsx:74`) carries over; dropping it would make the
-  merged surface strictly less capable than the page it replaces.
-- **Page:** extend `LandmarkSection` (per Codex: the smaller change —
-  its `LandmarkSymbol`/`LinkTile`/group pieces are private to it, and a
-  parallel page-local card would duplicate them, violating
-  reuse-over-rebuild) with: a sessions slot (rows + Show older + New
-  chat, replacing the single Chat button at
-  `LandmarkSection.tsx:154-193`); a link cap (first N=6 tiles, inline
-  "Show all N" disclosure for the rest — the same disclosure pattern
-  its groups already use, `LandmarkSection.tsx:122-152`); groups stay
-  collapsed count-chips. Drop the depth-indent hierarchy
-  (`LandmarkSection.tsx:69`) — flat list ordered by latest session
-  activity (landmarks with no sessions after, root first then
-  alphabetical, matching `byLandmark`'s existing sort). `LandmarksList`
-  becomes the merged surface; `view: landmarks` cards therefore gain
-  sessions too, which is acceptable — the card embeds the same
-  activity-switcher surface.
-- **Visible parse failures:** `landmarks.list` (and the summaries path)
-  gains a `problems` list — files matching `**/*.landmark.card` whose
-  frontmatter failed to parse (`parseLandmarkFields` null,
-  `landmark.ts:196-208`). The page renders a warning row per problem
-  ("⚠ recipes/Recipes.landmark.card didn't parse — not shown"). Once
-  Landmarks is the sole activity switcher, a hand-edit must not make an
-  activity silently vanish (resilient-not-silent).
-- **Compatibility:** `ChatsPicker` stays for `view: chat-picker` cards;
-  the `/chats` route becomes a `<Navigate replace>` shim to
-  `/landmarks` (same pattern as `CapturePage.tsx`).
+- `byLandmark`: session groups whose `contextDir` has no landmark card
+  (root with no root landmark; deleted-landmark dirs) emit as one
+  trailing bucket (label "Other chats"; per-session `contextDir` shown
+  when nonempty; "New" starts a root-bound chat). `olderSessions` kept
+  for every bucket. Today these sessions are silently dropped
+  (`chat.ts:127-145` maps over landmarks only).
+- `byLandmark` per-bucket fields (Codex rev-2 finding 3): the picker's
+  visible-session capping (`chat.ts:128-145`: non-root buckets show one
+  fresh session inline, the rest fold into `olderSessions`) makes bucket
+  fresh counts unrecoverable client-side, and the sort uses only the
+  visible session. Add explicit `freshCount` and `latestActivity` per
+  bucket (caps unchanged for the picker's rendering); the switch menu
+  and the merged page's ordering consume these.
+- `loadLandmarkSummaries` returns `{ summaries, problems }` — files
+  matching `**/*.landmark.card` whose frontmatter fails to parse
+  (`summaries.ts:113` silently `continue`s today) — and both
+  `landmarks.list` and `chat.byLandmark` pass `problems` through (the
+  switch menu consumes `byLandmark` only, so problems must ride it).
+  Consumers render a warning row (Tracks C/D). (Resilient-not-silent:
+  once the switch menu is the sole activity switcher, a hand-edit must
+  not make an activity vanish without trace.)
+- `chat.bootstrap` gains the session's display `label` (from the husk
+  card, the same source the pickers read) — the session chip's face
+  needs it and no chat-page query carries a title today (Codex rev-2
+  finding 7; `chat-bootstrap-procedure.ts:26-32` returns only
+  id/history/status). Refreshes with bootstrap's existing invalidation.
 
-**Vocabulary lock-ins.** "Landmarks" stays the surface name (boxholder
-decision); `unassigned` bucket + `problems` list on the wire.
+**First chunk.** All extensions + doctests (`makeTestServer()` tier):
+unassigned bucket with root sessions and orphaned `contextDir`;
+`olderSessions` preserved; per-bucket `freshCount`/`latestActivity`;
+`problems` on a malformed card through both procedures; bootstrap
+`label`. No open questions.
 
-**First implementation chunk.** The `chat.byLandmark` unassigned-bucket
-extension + `landmarks.list` `problems` field, with doctest coverage
-(route doctests, `makeTestServer()` tier), before any UI. No open
-questions inside it.
+### Track C — The unified bar
 
-### Track 4 — Dashboard as ops plane
+**C1 — place pill (works standalone before chat-chip integration).**
+New `PlacePill` in `components/` (bar-owned): split pill; left half =
+box prefix (`sm:` up) + landmark symbol/label + caret; right half =
+folder icon + dir basename (`sm:` up). Switch menu: `Box: <name> ▸`
+(submenu: Overview → `/dashboard`, Browse → `/browse`, History →
+`/history`, divider, Other boxes → `/`), `All landmarks →`
+(`/landmarks`), divider, landmark rows from `chat.byLandmark` (symbol,
+label, per-bucket fresh count; current highlighted; resume-or-start on
+tap; the unassigned bucket's sessions are reachable on the Landmarks
+page, not in this menu — the menu lists landmarks only, plus Box
+root), and a parse-problem warning row when `problems` is nonempty.
+Dropdown submenus use the existing `panelIndex` swap mechanism
+(`ContextChip.tsx:194-199`).
 
-**What.** Dashboard gains explicit launch links to History and Browse and
-becomes the acknowledged ops hub.
+**Switch-menu data is fetched lazily on first open** (query `enabled`
+by dropdown open, cached across opens), NOT mounted globally: AppNav's
+own comment rejects broad always-on queries in a bar that mounts on
+every page (`AppNav.tsx:103`, the slim `status.navStatus` rationale),
+and `byLandmark` globs every landmark and enumerates every session
+(`chat.ts:104-108`). The bar's current always-on `byLandmark` fetch
+(the fresh badge, `AppNav.tsx:94`) is removed with the badge, so this
+is a net reduction in resting cost. Open-latency is checked in the
+browse walk; cached data renders immediately on re-open.
 
-**Why.** History and Browse leave the top bar (Track 2); their remaining
-cold-navigation entry point is the ops plane, matching their diagnostic /
-fallback jobs. The Dashboard keeps its attention strip (including pending
-questions) so the sidelined Questions surface stays reachable until the
-inline-question concept lands.
+**Here menu (two providers).** On chat pages, the full ContextChip body
+(Open dir/, `LandmarkLinksPanel`, Recent files ›) requires chat-owned
+state — `messages` for Recent files and `onZoomView` for companion-pane
+zoom (`ContextChip.tsx:108-126,181-192`) — so the chat page supplies
+the menu body via the chrome slot (C2); `{dir, label}` context alone
+cannot carry it (Codex rev-2 finding 1). On non-chat pages the bar
+renders a reduced here menu itself: Open dir/ + landmark links as
+plain navigations (`/views/…`), no Recent files, no zoom. The reduced
+form is also the fallback while the chat slot hasn't mounted.
 
-**Direction.** Add a compact link row to `DashboardPage` (History →
-`/history`, Browse → `/browse`; Questions already links from
-`AttentionCards`). No other dashboard change — its redesign (per
-`issues/features/2026-07-20-first-run-experience.md`) is out of scope
-because it no longer fronts the first-run experience.
+**C2 — chrome slot: chat chips into the bar, chat header row removed.**
+The bar is global (`AppLayout`); the session/voice chips and the full
+here menu are chat-page state. Mechanism: a chrome module
+(`app-bar-chrome.tsx`) provided by `AppLayout`, designed for render
+stability (Codex rev-2 findings 6, 9 — a portal relocates DOM, it does
+NOT isolate renders; `InteractiveChat`'s root re-renders on every
+streaming token, `chat/CLAUDE.md`):
+- **Split read/write contexts**: the writer context (stable setter
+  functions, `[]`-dep) is what pages consume; the reader context is
+  consumed only by the bar. A publish during streaming must not exist
+  at all: publications happen on navigation/session-change effects with
+  primitive deps (`dir`, `label` strings), never per-render.
+- `useAppBarPlace({ dir, label })`: pages publish their place (chat:
+  session `contextDir`; Browse: current path; others: static label).
+  Each publication carries an owner token (the hook instance);
+  cleanup clears only its own publication, so a stale unmount cannot
+  erase a newer page's value. Bar fallback = route-derived label.
+- **Two portal slots** rendered by the bar: `chipSlot` (session chip +
+  voice chip) and `hereSlot` (the full ContextChip menu body). Chat
+  renders into both via `createPortal`; state ownership stays in
+  `InteractiveChat`. Every portaled component is memoized with stable
+  props (the `CompanionViewPanel` discipline, `chat/CLAUDE.md`), so the
+  root's per-token re-renders reconcile to no-ops in the bar.
+- **Render-count assertions** extend the existing probe: on a streamed
+  turn, AppNav and the portal subtrees must not tick (not just the
+  companion pane).
+The chat header row (`InteractiveChat-layout.tsx:27` — h1, ContextChip,
+VoiceChip, ChatMenu) is removed; a visually-hidden `h1` preserves the
+page heading semantics (Codex rev-2 finding 10; `CaptureChip`/
+`UploadChip` are transcript renderers and `TargetStrip` sits below the
+list — none are orphaned). The session chip (face: bootstrap `label`,
+truncated, desktop / sliders icon `sm:` down; menu: New session,
+Model ›, Advanced ›) replaces ChatMenu.
 
-**First implementation chunk.** The whole track is one chunk.
+**C3 — bar cleanup + nav.card relocation + native suppression.**
+Remove: link row, box `<select>`, mobile hamburger + current-page
+label, QuestionsBadge, and `DEFAULT_NAV_HREFS` (no remaining runtime
+consumer once fallback rendering is gone — verified by Codex rev-2
+finding 4). Keep: ErrorBadge; ProfileMenu minus Dashboard (Settings,
+Admin, Source View, Debug Log, Sign out). PlateBadge: plate-rim SVG +
+count (same target, `/browse/store/plate.todo-view.card`).
 
-### Track 5 — Docs
+`useNavLinks` retires, but two of its responsibilities transfer
+explicitly (finding 4): the `nav.get` **file-change invalidation
+subscription** (`useNavLinks.ts:58`) moves to the switch menu's
+nav-section consumer so an edited `nav.card` still reshapes the menu
+live; the `/chats`+`/questions` **badge map** (`useNavLinks.ts:72`)
+retires with the badges.
 
-Update `docs/landmarks.md` (rendering section: the merged surface, caps,
-disclosures; delete or mark the never-built tile/full-form description —
-it is stale relative to the code), the nav-card doc's fallback description
-(`docs/implemented-plans/nav-card.md` gets a pointer, not a rewrite),
-`docs/chat-session-lifecycle.md` if it references the Chats page, and a
-release-note paragraph covering the `nav.card` behavior changes (a `/`
-entry now lands on chat; a `/chats` entry redirects to `/landmarks`).
+**nav.card rendering policy** (finding 2 — `nav.get` resolves both
+`href:` and `ref:` entries, `core/nav.ts`): the switch menu's custom
+section renders (a) every `ref:` entry (box-card destinations — these
+have no builtin home), and (b) `href:` entries whose target is NOT
+already a builtin menu row. Dedup table: `/` and `/chat` → duplicate of
+the chat landing (skip); `/landmarks`, `/browse`, `/history`,
+`/dashboard` → duplicates of builtin rows (skip); `/chats` → duplicate
+of `All landmarks` post-redirect (skip); `/settings`, `/admin`,
+`/questions`, `/capture` → render (still-real destinations with no
+other menu presence; a box that pinned Questions keeps its entry until
+inline questions land). Labels from the card, fallback `NAV_ROUTES`.
+Boxes without a `nav.card` get no section.
+
+Native shell: AppLayout already omits the whole bar under `embed=1`
+(`app-shell.tsx:53`), so the Box-row suppression keys on
+**`nativeComposer=1`** — the native mode that keeps web chrome
+(`router.tsx:94`; Codex rev-2 finding 8). Release-note the nav.card
+relocation (Track E).
+
+**Vocabulary lock-ins.** "PlacePill", switch menu / here menu; session
+chip; `problems`; unassigned bucket label "Other chats".
+
+### Track D — Landmarks page merge + /chats redirect
+
+As previously planned, adjusted to the unified design: extend
+`LandmarkSection` with a sessions slot (rows + Show older + New chat,
+replacing the lone ChatButton), link cap (first 6 tiles + inline "Show
+all N" disclosure — the group-disclosure pattern at
+`LandmarkSection.tsx:122-152`), groups stay collapsed count-chips, drop
+the depth indent (`LandmarkSection.tsx:69`), order by latest session
+activity (no-session landmarks after, root first then alphabetical —
+`byLandmark`'s sort), render the unassigned bucket last and
+parse-problem warning rows. `view: landmarks` cards gain sessions too
+(acceptable — same surface). `/chats` → `<Navigate replace>` shim to
+`/landmarks` (CapturePage pattern). `ChatsPicker` stays for
+`view: chat-picker` cards.
+
+### Track E — Docs + release note
+
+`docs/landmarks.md`: rendering section rewritten (merged surface, caps,
+disclosures; delete the never-built tile/full-form description).
+`docs/implemented-plans/nav-card.md` + `chat-header-chips.md`: pointer
+notes (rendering surface relocated / header row absorbed into the app
+bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
+Release note: `nav.card` entries render in the switch menu now; `/`
+lands on chat; `/chats` redirects. Grep agent-facing text
+(`src/dev/knowledge-audits.yaml`, agent guide, schema instructions) for
+stale "Dashboard landing"/"Chats page" wording.
 
 ## Subplans
 
-None. The dashboard/first-run redesign and the inline-questions concept
-are adjacent efforts, deliberately not folded in (see NOT in scope).
+None. Inline questions, dashboard redesign, per-box icons, dir-scoped
+History are adjacent efforts (see NOT in scope).
 
 ## Failure modes
 
@@ -347,130 +420,108 @@ are adjacent efforts, deliberately not folded in (see NOT in scope).
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| A `nav.card` references `/` expecting Dashboard; after Track 1 it lands on chat | Nav resolver doctest updated (Track 1) | Entry stays valid (`/` kept in `NAV_ROUTES`); destination meaning changes | Clear (user sees chat; documented in Track 5 release note) |
-| A `nav.card` references `/chats`; after Track 3 it redirects to `/landmarks` | Route doctest for the redirect | Redirect shim | Clear; documented in Track 5 |
-| Bookmarked `/$boxSlug/` (old Dashboard) | Track 1 route doctest | Redirects to chat by design | Clear |
-| "Back to Dashboard" links still pointing at box root after re-point | Covered by the Track 1 root-link audit + grep | Re-pointed to `/dashboard` | Clear |
-| Sessions bound to a dir with no landmark (or deleted landmark) invisible on the sole switcher | Doctest (Track 3 chunk 1) | New `unassigned` bucket | Clear — was silent before this plan |
-| Malformed landmark card makes an activity vanish from the switcher | Doctest (Track 3 chunk 1) | `problems` list + page warning row | Clear — was silent before this plan |
-| A landmark's links all fail to resolve (moved/archived targets) | Existing resolver behavior; covered in merged-page doctest | Resolver returns `exists: false`; tile renders "Missing" (`LandmarkSection.tsx:215-222`) | Clear |
-| Fresh-chat badge on a custom `nav.card` with neither `/landmarks` nor `/chats` | No | Badge doesn't attach (keyed by present hrefs, `useNavLinks.ts:72`) — same as today | Silent but harmless — the count is decoration |
-| Empty box lands on chat with `sessionId: null` | Existing behavior (`chat-bootstrap-procedure.ts:46-49`, `ChatPage.tsx:162` maps null → "new") | Fresh composer; session created on first send | Clear |
-| Health warnings go unseen because Dashboard is off the bar | No | `ErrorBadge` covers client errors only; server health surfaces only on Dashboard | **Accepted risk** — health checks also run server-side with their own runbooks (`docs/health-checks.md`); the dashboard was never a reliable alert channel (boxholder "almost never" visits it) |
+| `nav.card` box: entries no longer render as a link row | Nav resolver doctest updated (C3) | Entries render in the switch menu; validation unchanged | Clear; release-noted |
+| `nav.card` referencing `/` (was Dashboard) lands on chat | Route doctest (A) | Entry valid; meaning changes | Clear; release-noted |
+| Bookmarked `/$boxSlug/` or `/chats` | Route doctests (A, D) | Redirects (chat / landmarks) | Clear |
+| Root-meaning-Dashboard links become "back to chat" | Root-link audit + grep (A) | Re-pointed to `/dashboard` | Clear |
+| Chip/here slot element not yet mounted when chat renders | Covered by conditional render (portal only when slot non-null); reduced here menu is the interim | One-frame absence, then content appears | Clear (visual only) |
+| `place` stale after leaving chat (pill shows old landmark on Browse) | Automated nav-sequence check (chat→Browse→Landmarks) in C2's done-when | Owner-token cleanup: a hook instance clears only its own publication | Clear |
+| Bar/portal subtree re-renders per streaming token (perf regression) | Render-count probe extended to AppNav + portals (C2) | Split read/write contexts; memoized portal content; primitive-dep publications | Clear if probe run — in C2's done-when |
+| Switch menu open is slow on a large box (byLandmark globs all landmarks + sessions) | Browse-walk timing check (E) | Lazy fetch on first open + cache; resting cost drops (always-on badge fetch removed) | Clear |
+| Custom `nav.card` resurrects `/questions` or duplicates builtin rows | Nav-section doctest (C3) | Dedup policy table (C3) | Clear |
+| Edited `nav.card` no longer live-updates the menu | Covered by transferred file-change subscription (C3) | Subscription moves with the consumer | Clear |
+| Sessions bound to dirs with no landmark invisible in the switch menu | Doctest (B) for the data; Landmarks page renders the bucket (D) | Menu lists landmarks only (deliberate); "All landmarks →" reaches the bucket | Clear — was silent before this plan |
+| Malformed landmark vanishes from the switcher | Doctest (B); warning rows (C1, D) | `problems` surfaced in both surfaces | Clear — was silent before |
+| Empty box lands on chat, no sessions | Existing (`bootstrap` null → `"new"`) | Fresh composer | Clear |
+| Native shell shows web Box row over native box picker | `nativeComposer` gate (C3) | Row suppressed under `nativeComposer`; `embed` already hides the whole bar (`app-shell.tsx:53`) | Clear |
+| Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/health-checks.md`); Overview reachable via Box submenu | **Accepted risk** (boxholder: dashboard was never the alert channel) |
+| Voice/session chips regress companion-pane memo stability (bar re-renders on chat state) | Render-count probe (chat CLAUDE.md procedure) run in C2 | Chips portal from `InteractiveChat` (state ownership unchanged) | Clear if probe run — explicitly in C2's done-when |
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field** — ADDRESSED: no schema change; landmark
-  authoring rules unchanged (`src/schemas/landmark.ts:138` instructions).
-- **Stale ref** — ADDRESSED: link resolution already returns
-  `exists: false` and the tile renders "Missing"
-  (`LandmarkSection.tsx:215`); a deleted *landmark* with surviving
-  sessions now surfaces via the `unassigned` bucket (Track 3).
-- **Two agents touching the same card** — ADDRESSED (not applicable):
-  this plan writes no cards; `nav.card` handling is unchanged.
-- **Hand-edit drift** — ADDRESSED: landmark parse failures become
-  visible (`problems` list + warning row, Track 3); invalid `nav.card`
-  falls back to the builtin list (`useNavLinks.ts`).
-- **Fabricated free-form value** — ADDRESSED (not applicable): no new
-  agent-written fields.
-- **Validation error UX** — ADDRESSED: `nav.card` href validation keeps
-  accepting every current href (`NAV_ROUTES` retains all entries;
-  `src/schemas/nav.ts:30` derives from it), so no existing box starts
-  failing validation. Two entries change *meaning* (`/` → chat, `/chats`
-  → redirect); that is a documented behavior change, not a validation
-  failure.
-- **Partial migration / transition state** — ADDRESSED: there is no data
-  migration; each track is internally consistent at its commit boundary.
-  Boxes with custom `nav.card`s keep their nav *entries* verbatim
-  throughout; the `/` and `/chats` destination changes above are the
-  only behavior deltas they see.
+- **Wrong tag / wrong field** — ADDRESSED: no schema changes; landmark
+  authoring instructions unchanged.
+- **Stale ref** — ADDRESSED: link tiles render "Missing"
+  (`LandmarkSection.tsx:215-222`); deleted-landmark sessions surface via
+  the unassigned bucket (B/D).
+- **Two agents touching the same card** — not applicable: no card
+  writes.
+- **Hand-edit drift** — ADDRESSED: parse failures become visible
+  (`problems`, B/C1/D); invalid `nav.card` degrades to the builtin
+  switch menu (no custom section).
+- **Fabricated free-form value** — not applicable.
+- **Validation error UX** — ADDRESSED: `NAV_ROUTES` retains all hrefs;
+  no box starts failing validation; meaning changes release-noted.
+- **Partial migration / transition state** — ADDRESSED: no data
+  migration; tracks are internally consistent at commit boundaries. The
+  bar and the chat header swap in one track (C2) — no intermediate
+  double-header state ships.
 
 ## NOT in scope
 
-- **Dashboard redesign / first-run experience**
-  (`issues/features/2026-07-20-first-run-experience.md`) — the landing
-  change removes the dashboard from the first-run path; redesigning the
-  ops plane is its own effort.
-- **Inline questions** — the boxholder's replacement concept for the
-  Questions surface; this plan only removes Questions from the nav. The
-  page, route, badge data (`status.navStatus`), and subsystem stay.
-- **Removing the questions subsystem or its `navStatus` fields** — wire
-  cleanup follows once inline questions exist.
-- **Landmark schema changes** (caps, layout rules in the card format) —
-  consistency is imposed by the merged surface; the schema stays
-  permissive for agent authoring.
-- **A landmark full-form renderer** — `docs/landmarks.md` describes one;
-  it was never built. The merged surface's inline disclosures make it
-  unnecessary for this plan; building it is a separate decision.
-- **`/card/$` vs `/views/$` consolidation** — `LandmarkSection` links into
-  `/card/` (`LandmarkSection.tsx:225`) while most of the app uses
-  `/views/`; real tension, separate cleanup (filed — see Rollout).
-- **The chat header's session menu** — the sibling chat-header work
-  (`docs/implemented-plans/chat-header-chips.md`) owns it; pointing its
-  "Recent chats" item at `/landmarks` is a one-line follow-up there, not
-  here.
-- **`PlateBadge` and the plate surface** — stays as-is; it is the one
-  situational nav element with a live daily job.
-- **Box-selector redesign** (per-box icons etc.,
-  `issues/features/2026-07-22-per-box-custom-icon.md`) — only the
-  redundant Chat quick link is touched here.
-- **Return-visit memory** (remember last box) — none exists today; adding
-  it is orthogonal to what the landing page is.
+- **Inline questions** (replacement concept) — this plan only removes
+  the Questions nav presence; page/route/subsystem stay.
+- **Dashboard/Overview redesign** — it demotes; redesign is the
+  first-run-experience effort's problem, which this plan makes
+  non-blocking (new users land in chat).
+- **Dir-scoped History** — the symmetry slot exists in the here menu for
+  later; new backend capability, not built now.
+- **Landmark full-form renderer** — inline disclosures suffice; the
+  stale doc section is corrected instead.
+- **`/card/$` vs `/views/$` consolidation** — separate cleanup; filed on
+  completion.
+- **Per-box icons / box-selector redesign** — only the redundant Chat
+  tile link is touched. (If per-box emoji faces land later, the pill's
+  box prefix can carry them — the whole pill stays one target class.)
+- **Return-visit memory** — orthogonal.
+- **Retiring `view: chat-picker`** in favor of session-bearing
+  `view: landmarks` — later decision.
+- **Removing questions subsystem wire fields** — after inline questions.
 
 ## Open design questions
 
-- **Link cap N.** Lean: 6 (fills the two-column tile grid three rows deep
-  on desktop, one screen on mobile). Settle during Track 3 UI review with
-  real box data.
-- **Unassigned-bucket label.** Lean: "Other chats". Settle at UI review.
-- **Does `view: chat-picker` eventually retire** in favor of
-  `view: landmarks` (which now includes sessions)? Lean: yes, later; not
-  in this plan.
+- **"Overview" vs "Dashboard"** as the Box-submenu label. Lean:
+  "Overview" (the page's new role); recognition argues "Dashboard".
+  Settle at browse-walk.
+- **Sliders icon** for the phone session chip: exact glyph (SVG, not
+  `⋯`, not an emoji). Settle in C2.
+- **Link cap N=6** on the merged Landmarks page. Settle at browse-walk
+  with real box data.
 
 ## Knowledge audits
 
-No new agent-facing concept lands: the landmark card format, `nav.card`
-format, and all validation are unchanged; the changes are shell rendering
-and routing. One existing audit surface is affected: any audit or
-instruction text that tells agents "the Chats page" or "the user lands on
-the Dashboard" — grep `src/dev/knowledge-audits.yaml`, the agent guide,
-and schema instructions for `Dashboard`/`Chats page` references during
-Track 5 and correct wording. Skip-with-rationale for new entries: agents
-do not navigate the web UI; the UI's IA is not agent-recalled knowledge.
+No new agent-facing concept: card formats, schemas, and validation are
+unchanged; changes are shell rendering and routing. Track E greps
+agent-facing text for stale UI wording. Skip-with-rationale for new
+entries: agents do not navigate the web UI.
 
 ## Implementation order
 
-1. **Track 1** — landing redirect, `/dashboard` move, `NAV_ROUTES`
-   relabel/add, ProfileMenu, root-link audit, box tiles + route doctests.
-2. **Track 2** — fallback shrink + badge removal/re-key. Depends on
-   Track 1's `NAV_ROUTES` edits.
-3. **Track 3 chunk 1** — `chat.byLandmark` unassigned bucket +
-   `landmarks.list` `problems` field + doctests.
-4. **Track 3 chunk 2** — merged `LandmarkSection`/`LandmarksList` UI,
-   `/chats` redirect shim.
-5. **Track 4** — dashboard launch links.
-6. **Track 5** — docs sweep, stale full-form removal, release note,
-   agent-text wording greps.
+1. **B** — backend extensions + doctests (independent of all UI).
+2. **A** — routes/landing + doctests.
+3. **C1** — place pill + menus (bar still has the old link row beside it
+   momentarily in-branch; removed in C3).
+4. **C2** — chrome slot, chat chips into bar, chat header row removed,
+   render-count probe.
+5. **C3** — link row/box-select/hamburger/QuestionsBadge removal,
+   nav.card switch-menu section, plate icon, native suppression.
+6. **D** — Landmarks merge + /chats redirect.
+7. **E** — docs, release note, wording greps, full `bin/browse` walk
+   (desktop + 390px) as the acceptance pass.
 
-Each chunk is a commit; the plan ships as one unit (worktree → main on
-the boxholder's signal).
+Each chunk commits; the plan ships as one unit on the boxholder's
+signal.
 
 ## Rollout shape
 
-- **Tests.** Route doctests for: `/$boxSlug/` → redirect to chat,
-  `/dashboard` → dashboard, `/chats` → redirect to landmarks,
-  `/capture` → unchanged shim. `chat.byLandmark` doctests: unassigned
-  bucket (root sessions with no root landmark; orphaned `contextDir`),
-  `olderSessions` preserved. `landmarks.list` doctest: `problems` on a
-  malformed card. Merged-page behavior (cap, disclosures, ordering) is
-  verified by a `bin/browse` walk of the worktree box at desktop and
-  390px widths — the done-when is the doctests passing plus that walk.
-- **Knowledge audits.** None new (see section); wording greps land with
-  Track 5.
-- **Migration.** None — no data shape changes. Boxes with custom
-  `nav.card`s keep validating; the `/` and `/chats` destination changes
-  are release-noted (Track 5). The fallback change reaches fallback
-  boxes on deploy.
-- **Issue filing on completion.** File the `/card/$`-vs-`/views/$`
-  tension and a pointer from the first-run-experience issue to the new
-  landing reality.
+- **Tests.** Doctests: byLandmark unassigned/olderSessions,
+  landmarks.list problems (B); route redirects `/`→chat,
+  `/dashboard`, `/chats`→landmarks, `/capture` unchanged (A, D); nav
+  resolver with custom card → switch-menu section (C3). Behavioral/
+  layout verification via `bin/browse` walk at desktop + 390px: pill
+  menus, truncation order, chip portal, badge, non-chat pill labels
+  (E). Render-count probe after C2 per chat CLAUDE.md.
+- **Migration.** None. `nav.card` boxes keep validating; rendering
+  relocation + `/`/`/chats` meaning changes release-noted.
+- **Issue filing on completion.** `/card/$`-vs-`/views/$` tension;
+  pointer from first-run-experience issue to the new landing.
