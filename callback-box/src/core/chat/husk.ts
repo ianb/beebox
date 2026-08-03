@@ -135,34 +135,52 @@ export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
   const out: ChatHuskEntry[] = [];
   for (const name of names) {
     if (!name.endsWith(".chat.card")) continue;
-    const relPath = `${CHAT_HUSK_DIR}/${name}`;
-    let content: string;
-    try {
-      content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
-    } catch (e) {
-      console.warn(`chat-husk: skipping unreadable ${relPath}: ${errorMessage(e)}`);
-      continue;
-    }
-    const fm = parseHuskFrontmatter(content);
-    if (fm === null) {
-      console.warn(`chat-husk: skipping ${relPath}: no frontmatter mapping`);
-      continue;
-    }
-    const session = fm["session"];
-    if (typeof session !== "string" || session === "") {
-      console.warn(`chat-husk: skipping ${relPath}: no session field`);
-      continue;
-    }
-    const contextDir = fm["context-dir"];
-    const title = fm["title"];
-    out.push({
-      path: relPath,
-      session,
-      ...(typeof contextDir === "string" ? { contextDir } : {}),
-      ...(typeof title === "string" && title !== "" ? { title } : {}),
-    });
+    const entry = await readChatHusk(boxRoot, `${CHAT_HUSK_DIR}/${name}`);
+    if (entry !== null) out.push(entry);
   }
   return out;
+}
+
+/**
+ * Read one husk card into its entry, or null (with a warning) when it isn't a
+ * usable husk. The per-file half of `listChatHusks`, split out so a single
+ * session can be resolved without reading every husk in the box.
+ */
+async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskEntry | null> {
+  let content: string;
+  try {
+    content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
+  } catch (e) {
+    console.warn(`chat-husk: skipping unreadable ${relPath}: ${errorMessage(e)}`);
+    return null;
+  }
+  const fm = parseHuskFrontmatter(content);
+  if (fm === null) {
+    console.warn(`chat-husk: skipping ${relPath}: no frontmatter mapping`);
+    return null;
+  }
+  const session = fm["session"];
+  if (typeof session !== "string" || session === "") {
+    console.warn(`chat-husk: skipping ${relPath}: no session field`);
+    return null;
+  }
+  const contextDir = fm["context-dir"];
+  const title = fm["title"];
+  return {
+    path: relPath,
+    session,
+    ...(typeof contextDir === "string" ? { contextDir } : {}),
+    ...(typeof title === "string" && title !== "" ? { title } : {}),
+  };
+}
+
+/** The husk for one session, or null when it has none. */
+export async function findChatHuskEntry(
+  boxRoot: string,
+  sessionId: string,
+): Promise<ChatHuskEntry | null> {
+  const relPath = await findChatHusk(boxRoot, sessionId);
+  return relPath === null ? null : readChatHusk(boxRoot, relPath);
 }
 
 /**

@@ -3,7 +3,9 @@
 Opening `/chat` used to take three serial round trips: `chat.defaultSession` to
 learn the session id, a client navigation, then `chat.history` + `chat.status`
 (both need a concrete id server-side, so they can't go out sooner).
-`chat.bootstrap` resolves the session and answers all three at once.
+`chat.bootstrap` resolves the session and answers all three at once. It also
+carries the session's display `label` — the chat page's session chip needs a
+name, and no other chat-page query has one.
 
 It composes the same implementations the three procedures use, so it can't
 report anything different from them.
@@ -78,7 +80,7 @@ const server = await makeTestServer();
 
 const empty = await caller(server).chat.bootstrap({ slice: TAIL });
 JSON.stringify(empty)
-=> {"sessionId":null,"history":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
+=> {"sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
 ```
 
 ## An explicit session id returns that session's history and status
@@ -90,11 +92,13 @@ const got = await caller(server).chat.bootstrap({ session: "sess-explicit", slic
 print(`sessionId: ${got.sessionId}`);
 print(`total: ${got.history.total}`);
 print(`entries: ${got.history.entries.map((e) => `${e.type}:${e.content[0].text}`).join(", ")}`);
+print(`label: ${got.label}`);
 print(`status: running=${got.status.running} busy=${got.status.busy} id=${got.status.sessionId}`);
 =>
 sessionId: sess-explicit
 total: 2
 entries: user:Hello, assistant:Hi there!
+label: Hello
 status: running=false busy=false id=sess-explicit
 ```
 
@@ -136,7 +140,10 @@ const [viaDefault, viaHistory, viaStatus] = await Promise.all([
 ]);
 const atomic = await c.chat.bootstrap({ slice: TAIL });
 
-JSON.stringify(atomic) === JSON.stringify({
+// `label` is bootstrap's own addition — the three procedures it replaces have
+// no equivalent — so it sits out the comparison.
+const { label, ...composed } = atomic;
+JSON.stringify(composed) === JSON.stringify({
   sessionId: viaDefault.sessionId,
   history: viaHistory,
   status: viaStatus,
@@ -151,10 +158,13 @@ errored before writing — is a normal state. `chat.history` already degrades
 this way; `bootstrap` matches it rather than inventing an error the chat page
 would have to handle.
 
+The label falls back to the id prefix, the same last resort the session lists
+use.
+
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
 JSON.stringify(missing)
-=> {"sessionId":"no-such-session","history":{"sessionId":"no-such-session","entries":[],"total":0},"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null}}
+=> {"sessionId":"no-such-session","history":{"sessionId":"no-such-session","entries":[],"total":0},"label":"no-such-","status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null}}
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
@@ -187,13 +197,31 @@ BAD_REQUEST
 BAD_REQUEST
 ```
 
+## The label comes from the husk, like every other session list
+
+A husk `title` — hand-set, or written by the nightly chat review — wins over the
+transcript snippet, so the chip and the pickers can't disagree about what a chat
+is called.
+
+```ts continue
+await mkdir(join(server.boxRoot, "store/chat/web"), { recursive: true });
+await writeFile(
+  join(server.boxRoot, "store/chat/web/2026-01-01_sess-exp.chat.card"),
+  "---\nsession: sess-explicit\ntitle: Chasing down a duplicate charge\n---\n\n",
+);
+
+const titled = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: TAIL });
+titled.label
+=> Chasing down a duplicate charge
+```
+
 An empty id in the persisted default-session pointer means "none" too, rather
 than a session named `""`:
 
 ```ts continue
 await setDefaultSession(server, "");
 JSON.stringify(await caller(server).chat.bootstrap({ slice: TAIL }))
-=> {"sessionId":null,"history":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
+=> {"sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
 ```
 
 ```ts cleanup

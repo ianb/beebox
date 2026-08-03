@@ -22,12 +22,20 @@ import {
   type SessionHistory,
 } from "./chat-session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
+import { labelForSession } from "../../../core/chat/session/list.js";
 
 export interface ChatBootstrap {
   /** The resolved session, or null when the box has no chat session yet. */
   sessionId: string | null;
   /** Null exactly when `sessionId` is null — there is no history to load. */
   history: SessionHistory | null;
+  /**
+   * The session's display label — husk `title`, else the first user message,
+   * else the id prefix — the same resolution the session pickers show. Null
+   * exactly when `sessionId` is null. The chat page's session chip needs a
+   * name and no other chat-page query carries one.
+   */
+  label: string | null;
   status: ChatSessionStatus;
 }
 
@@ -45,9 +53,17 @@ export const chatBootstrapProcedure = {
       // it means "none", not a session named "".
       const sessionId = resolved === "" ? null : resolved;
       if (sessionId === null) {
-        return { sessionId: null, history: null, status: readSessionStatus(ctx.boxRoot, null) };
+        return {
+          sessionId: null,
+          history: null,
+          label: null,
+          status: readSessionStatus(ctx.boxRoot, null),
+        };
       }
-      const history = await loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice });
-      return { sessionId, history, status: readSessionStatus(ctx.boxRoot, sessionId) };
+      const [history, label] = await Promise.all([
+        loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }),
+        labelForSession(ctx.boxRoot, sessionId),
+      ]);
+      return { sessionId, history, label, status: readSessionStatus(ctx.boxRoot, sessionId) };
     }),
 };

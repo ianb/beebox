@@ -64,6 +64,22 @@ export interface LandmarkSummary {
   symbolSrc: string | null;
 }
 
+/** A `*.landmark.card` that exists but doesn't parse as a landmark. */
+export interface LandmarkProblem {
+  /** Box-relative path of the offending card. */
+  path: string;
+}
+
+export interface LandmarkSummaries {
+  summaries: LandmarkSummary[];
+  /**
+   * Cards whose frontmatter failed to parse or validate. Reported rather than
+   * silently skipped: once a landmark is the only way to reach an activity, a
+   * hand-edit must not make it vanish without trace.
+   */
+  problems: LandmarkProblem[];
+}
+
 /**
  * Pull the navigation `symbol`'s text and image src (if any). A string symbol
  * is text; a `{ src }` symbol is an image whose path is resolved from "relative
@@ -84,13 +100,15 @@ function readSymbol(
  * Like `landmarks.list` but without resolving links/expand — just the
  * tile-level metadata the picker needs. Reads each card's YAML frontmatter
  * `navigation` (label + symbol); cards whose frontmatter doesn't parse as a
- * landmark are skipped.
+ * landmark are reported in `problems` rather than skipped silently. An
+ * unreadable file (an fs error) is a different failure — it warns and is left
+ * out of both lists, since there's nothing to say about a card we never read.
  *
  * Exported for the chat-picker regression doctest: this read once used the XML
  * `parseCard`, which silently threw on every (now-frontmatter) landmark card
  * and left the picker landmark-less.
  */
-export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]> {
+export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummaries> {
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
@@ -98,6 +116,7 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
   });
 
   const out: LandmarkSummary[] = [];
+  const problems: LandmarkProblem[] = [];
   for (const relPath of matches) {
     const absPath = path.join(boxRoot, relPath);
     let fields;
@@ -110,7 +129,10 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
       }
       continue;
     }
-    if (fields === null) continue;
+    if (fields === null) {
+      problems.push({ path: relPath });
+      continue;
+    }
 
     const navigation = fields.navigation;
     const dir = path.dirname(relPath);
@@ -128,5 +150,6 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
     if (b.dir === "") return 1;
     return a.dir.localeCompare(b.dir);
   });
-  return out;
+  problems.sort((a, b) => a.path.localeCompare(b.path));
+  return { summaries: out, problems };
 }

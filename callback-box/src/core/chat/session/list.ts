@@ -14,10 +14,12 @@
  */
 
 import * as fs from "node:fs/promises";
-import { listChatHusks } from "../husk.js";
+import { findChatHuskEntry, listChatHusks } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel } from "../session-label.js";
+import { getSessionLogPath } from "./transcript-paths.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { fileExists } from "../../../lib/file-exists.js";
 
 export interface ChatSessionRow {
   sessionId: string;
@@ -65,4 +67,26 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
   }
   rows.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
   return rows;
+}
+
+/**
+ * One session's display label, resolved the way `loadAllSessions` resolves a
+ * row's — husk `title`, then the transcript's first user message, then the id
+ * prefix — but for a single known id, so the chat page's bootstrap doesn't pay
+ * for enumerating every chat in the box just to name the one it's showing.
+ *
+ * A session with no husk still gets a label: a brand-new chat is named from its
+ * transcript, and an id with neither is named from its prefix (not an error —
+ * `chat.bootstrap` already treats a transcript-less id as a normal state).
+ */
+export async function labelForSession(boxRoot: string, sessionId: string): Promise<string> {
+  const husk = await findChatHuskEntry(boxRoot, sessionId);
+  const logPath = husk === null ? getSessionLogPath(boxRoot, sessionId) : huskTranscriptPath(boxRoot, husk);
+  const title = husk?.title;
+  // Skip the transcript read when there's nothing to read — `resolveSessionLabel`
+  // would warn about a missing file, and "no transcript yet" is routine here.
+  if ((title === undefined || title === "") && !(await fileExists(logPath))) {
+    return sessionId.slice(0, 8);
+  }
+  return resolveSessionLabel({ sessionId, logPath, title });
 }

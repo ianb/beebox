@@ -16,7 +16,7 @@ import {
 } from "../../../core/chat/session/history.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
 import { loadAllSessions, type ChatSessionRow } from "../../../core/chat/session/list.js";
-import { loadLandmarkSummaries } from "../../../core/landmark/summaries.js";
+import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
 
 const FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -28,16 +28,45 @@ export interface PickerSession {
   huskPath: string;
 }
 
-export interface PickerLandmark {
+/** Fields every bucket carries, landmark-backed or not. */
+interface PickerBucket {
+  /** Sessions touched within the fresh window (last 7 days). */
+  sessions: PickerSession[];
+  /** Sessions older than the fresh window, same bucket. */
+  olderSessions: PickerSession[];
+  /**
+   * How many of the bucket's sessions are inside the fresh window — the true
+   * count, NOT `sessions.length`: a non-root landmark shows one fresh session
+   * inline and folds the rest into `olderSessions`, so the count isn't
+   * recoverable from the rendered lists.
+   */
+  freshCount: number;
+  /** ISO mtime of the bucket's newest session (fresh or not); null when empty. */
+  latestActivity: string | null;
+}
+
+export interface PickerLandmark extends PickerBucket {
   /** Box-relative directory; empty string for the root tile. */
   dir: string;
   label: string;
   symbol: string;
   symbolSrc: string | null;
-  /** Sessions touched within the fresh window (last 7 days). */
-  sessions: PickerSession[];
-  /** Sessions older than the fresh window, same landmark. */
-  olderSessions: PickerSession[];
+}
+
+/** A session in the unassigned bucket, which spans directories. */
+export interface UnassignedSession extends PickerSession {
+  /** The session's binding; "" for root-bound (and legacy unbound) chats. */
+  contextDir: string;
+}
+
+/**
+ * Chats whose `contextDir` has no landmark card — the box root when there's no
+ * root landmark, and dirs whose landmark was deleted. They used to be dropped
+ * from the picker entirely, since it mapped over landmarks only.
+ */
+export interface PickerUnassigned extends PickerBucket {
+  sessions: UnassignedSession[];
+  olderSessions: UnassignedSession[];
 }
 
 export const chatRouter = router({
@@ -96,13 +125,20 @@ export const chatRouter = router({
    * For the root tile we show *every* fresh root chat — root is the
    * catch-all and a long active thread plus a quick one-off both
    * deserve a row.
+   *
+   * Sessions bound to a dir with no landmark card land in the trailing
+   * `unassigned` bucket instead of being dropped, and landmark cards that
+   * don't parse are reported in `problems` — the switch menu reads this
+   * procedure only, so both have to ride it.
    */
   byLandmark: publicProcedure.query(async ({ ctx }): Promise<{
     landmarks: PickerLandmark[];
+    unassigned: PickerUnassigned;
     freshCount: number;
+    problems: LandmarkProblem[];
   }> => {
     const cutoff = Date.now() - FRESH_WINDOW_MS;
-    const [landmarks, allSessions] = await Promise.all([
+    const [{ summaries: landmarks, problems }, allSessions] = await Promise.all([
       loadLandmarkSummaries(ctx.boxRoot),
       loadAllSessions(ctx.boxRoot),
     ]);
@@ -133,6 +169,7 @@ export const chatRouter = router({
       // ones go in the collapsible "Older" list.
       const visibleFresh = lm.dir === "" ? fresh : fresh.slice(0, 1);
       const inlineOlder = lm.dir === "" ? [] : fresh.slice(1);
+      const newest = all[0];
       return {
         dir: lm.dir,
         label: lm.label,
@@ -140,8 +177,31 @@ export const chatRouter = router({
         symbolSrc: lm.symbolSrc,
         sessions: visibleFresh.map(toPicker),
         olderSessions: [...inlineOlder, ...older].map(toPicker),
+        freshCount: fresh.length,
+        latestActivity: newest === undefined ? null : newest.mtime.toISOString(),
       };
     });
+
+    // Everything landmark-less: the root when no root landmark card exists, and
+    // dirs whose landmark was deleted. Uncapped like the root tile — there is no
+    // landmark page to send the overflow to.
+    const landmarked = new Set(landmarks.map((lm) => lm.dir));
+    const orphaned = [...byDir.entries()]
+      .filter(([dir]) => !landmarked.has(dir))
+      .flatMap(([dir, sessions]) => sessions.map((s) => ({ dir, session: s })));
+    orphaned.sort((a, b) => b.session.mtime.getTime() - a.session.mtime.getTime());
+    const toUnassigned = (entry: { dir: string; session: ChatSessionRow }): UnassignedSession => ({
+      ...toPicker(entry.session),
+      contextDir: entry.dir,
+    });
+    const orphanFresh = orphaned.filter((e) => e.session.mtime.getTime() >= cutoff);
+    const newestOrphan = orphaned[0];
+    const unassigned: PickerUnassigned = {
+      sessions: orphanFresh.map(toUnassigned),
+      olderSessions: orphaned.filter((e) => e.session.mtime.getTime() < cutoff).map(toUnassigned),
+      freshCount: orphanFresh.length,
+      latestActivity: newestOrphan === undefined ? null : newestOrphan.session.mtime.toISOString(),
+    };
 
     // Sort by latest activity (most-recent landmark first). Landmarks
     // with no fresh chats sink to the bottom — root first within that
@@ -157,7 +217,10 @@ export const chatRouter = router({
       return a.label.localeCompare(b.label);
     });
 
+    // Unchanged: the nav badge counts the landmark tiles' visible rows. (It is
+    // already an undercount by design — capped tiles hide their overflow — and
+    // the per-bucket `freshCount`s are the honest numbers.)
     const freshCount = picker.reduce((n, l) => n + l.sessions.length, 0);
-    return { landmarks: picker, freshCount };
+    return { landmarks: picker, unassigned, freshCount, problems };
   }),
 });

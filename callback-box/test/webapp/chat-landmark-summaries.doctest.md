@@ -28,9 +28,12 @@ await box.write(
   "---\nnavigation:\n  label: Recipes\n  symbol: 🍳\n---\n",
 );
 
-const summaries = await loadLandmarkSummaries(box.root);
+const { summaries, problems } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
 => [{"dir":"","label":"Home","symbol":"🏠","symbolSrc":null},{"dir":"recipes","label":"Recipes","symbol":"🍳","symbolSrc":null}]
+
+JSON.stringify(problems)
+=> []
 ```
 
 ## An image `symbol: { src }` resolves to a box-relative path
@@ -42,7 +45,7 @@ await box.write(
   "---\nnavigation:\n  label: Trips\n  symbol:\n    src: Trips.attach/pin.png\n---\n",
 );
 
-const summaries = await loadLandmarkSummaries(box.root);
+const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
 => [{"dir":"trips","label":"Trips","symbol":"","symbolSrc":"trips/Trips.attach/pin.png"}]
 ```
@@ -59,19 +62,28 @@ await box.write(
   "---\ndestinations:\n  - for:\n      - triage\n---\n",
 );
 
-const summaries = await loadLandmarkSummaries(box.root);
+const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
 => [{"dir":"archive","label":"Old_Mail","symbol":"","symbolSrc":null}]
 ```
 
-## A card whose frontmatter doesn't parse is skipped, not fatal
+## A card whose frontmatter doesn't parse is reported, not silently skipped
+
+One bad card doesn't fail the read — the good landmarks still come back — but it
+lands in `problems` so a consumer can say so. Silence was the old behavior, and
+once a landmark is the only route to an activity, a hand-edit that breaks the
+frontmatter would make that activity disappear without a trace.
 
 ```ts
 const box = await makeTmpBox();
 await box.write("Good.landmark.card", "---\nnavigation:\n  label: Good\n---\n");
 await box.write("Bad.landmark.card", "not a frontmatter card at all\n");
+await box.write("deep/Broken.landmark.card", "---\nnavigation:\n  label: [unterminated\n---\n");
 
-const summaries = await loadLandmarkSummaries(box.root);
+const { summaries, problems } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries.map((s) => s.label))
 => ["Good"]
+
+JSON.stringify(problems)
+=> [{"path":"Bad.landmark.card"},{"path":"deep/Broken.landmark.card"}]
 ```
