@@ -3,8 +3,7 @@ title: "MCP tool: agent launches the conversation into another chat (by landmark
 needs: [design]
 area: callback-box
 filed-by: agent
-discovered-in: main session — boxholder going through Memory Atlas features
-labels: [memory-atlas]
+discovered-in: main session — boxholder's idea
 ---
 
 An **MCP tool the box agent can call** to hand the live conversation off into a
