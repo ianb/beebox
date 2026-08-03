@@ -1,10 +1,20 @@
 ---
 title: "Add self-screenshot to the iOS app (the agent-visible screen capture clerk gives on desktop)"
-needs: [design]
+resolution: implemented
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants the clerk screenshot ability on iOS
 ---
+
+**Closed (already implemented) 2026-08-03 — filed on a wrong premise.** I asserted
+"iOS has no equivalent" without checking the Swift code; it does. iOS already has a
+full screenshot capability: a user-facing **"Screenshot" button**
+(`ios-app/CallbackBox/Views/ComposerActionsView.swift:60`), the native
+`NativeScreenshotRequest` / `NativeScreenshotResult` capture bridge
+(`ios-app/CallbackBox/Views/ChatWebView.swift`, wired in `RootView.swift`), and the
+agent-initiated path — the web `cb chat screenshot` (`screenshot-capture.ts` Track B)
+is fulfilled by the native bridge on iOS instead of the unavailable mobile-web
+`getDisplayMedia`. So the "agent sees your screen" capability is present. No action.
 
 Give the iOS native app the ability to **screenshot its own current view** and feed
 it into chat, mirroring the "let the agent see what I'm looking at" capability that
