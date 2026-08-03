@@ -20,9 +20,10 @@ review notes are unambiguous and greppable.
 
 **The review itself:**
 
-- Read the three assembled stacks end-to-end, the way an agent does — the
-  `cb-prompt-review` skill is the procedure for acting on findings (where an
-  instruction should live, what to trim).
+- Read the three assembled stacks end-to-end, the way an agent does —
+  [prompt-surface-review.md](../../callback-box/docs/prompt-surface-review.md)
+  is the procedure for acting on findings (where an instruction should live,
+  what to trim).
 - Triage the duplication findings on the page. Known real signal at filing
   time: `schema-gdoc` ↔ `schema-gsheet` share restated guidance; several
   smaller cross-prompt boilerplate overlaps. Findings pairing an inventory
@@ -35,4 +36,5 @@ review notes are unambiguous and greppable.
   stays visible; the page charts it once there are ≥2 points.
 
 Output of the review: comments/decisions per named fragment, then edits (via
-`cb-prompt-review` / normal prompt-editing flow) and a fresh ledger point.
+the prompt-surface-review workflow / normal prompt-editing flow) and a fresh
+ledger point.

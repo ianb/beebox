@@ -29,7 +29,8 @@ Things the schema system does that you'd otherwise miss:
   a schema's own declaration silently wins.
 - **`instructions` prose is injected into agent context** when an agent
   processes cards of that type — it's prompt surface (see
-  cb-prompt-review before writing more than a couple of lines).
+  `docs/prompt-surface-review.md` before writing more than a couple of
+  lines).
 - **Reserialization reorders frontmatter keys** to the schema's declared
   field order; a one-field mutation rewrites the whole block.
 - Templates: new types that ship to boxes need template entries
