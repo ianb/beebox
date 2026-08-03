@@ -607,8 +607,30 @@ async function discoverWorktrees(core: RouterCore): Promise<DiscoveredWorktree[]
   );
 }
 
+// Best-effort "+ins −del vs main" for the worktree list. Uses the merge-base so
+// a worktree that hasn't merged a newer main doesn't count main's own commits as
+// deletions; diffs the WORKING TREE (committed + uncommitted) against it, so the
+// number reflects the tree's current state. Null on any error or no changes.
+async function worktreeDiffStat(name: string): Promise<{ ins: number; del: number } | null> {
+  if (name === "main") return null;
+  try {
+    const cwd = worktreeRoot(name);
+    const base = (await execa("git", ["merge-base", "main", "HEAD"], { cwd })).stdout.trim();
+    if (!base) return null;
+    const { stdout } = await execa("git", ["diff", "--shortstat", base], { cwd });
+    const ins = Number(/(\d+) insertion/.exec(stdout)?.[1] ?? "0");
+    const del = Number(/(\d+) deletion/.exec(stdout)?.[1] ?? "0");
+    return ins === 0 && del === 0 ? null : { ins, del };
+  } catch (_e) {
+    return null; // best-effort: a non-git worktree or transient git error → no stat
+  }
+}
+
 async function renderIndex(core: RouterCore): Promise<string> {
   const list = await discoverWorktrees(core);
+  const diffStats = new Map(
+    await Promise.all(list.map(async (w) => [w.name, await worktreeDiffStat(w.name)] as const)),
+  );
   const rows = list
     .map((w) => {
       const ready = w.handle ? readyLifecycle(w.handle) : null;
@@ -625,10 +647,15 @@ async function renderIndex(core: RouterCore): Promise<string> {
            <button type="submit" title="Tell the router to stop ${escapeHtml(w.name)} now">stop</button>
          </form>`
         : "";
+      const diff = diffStats.get(w.name) ?? null;
+      const diffCell = diff
+        ? `<span class="diffstat" title="changes vs main (committed + uncommitted, since this tree branched)"><span class="ins">+${diff.ins}</span> <span class="del">−${diff.del}</span></span>`
+        : `<span class="diffstat"></span>`;
       return `
       <li>
         <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
         <span class="statuscell">${status}</span>
+        ${diffCell}
         ${dashLink}
         ${devLink}
         ${stopForm}
@@ -652,6 +679,9 @@ async function renderIndex(core: RouterCore): Promise<string> {
   a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; min-width: 12em; }
   a.name:hover { text-decoration: underline; }
   .statuscell { flex: 0 0 11em; }
+  .diffstat { flex: 0 0 7em; font-size: 0.8em; font-family: ui-monospace, Menlo, monospace; }
+  .diffstat .ins { color: #2a8a2a; }
+  .diffstat .del { color: #c0392b; }
   .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
   .badge.running { background: #d8f0d8; color: #2a6b2a; }
   .badge.cold    { background: #ececec; color: #666; }
