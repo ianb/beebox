@@ -13,8 +13,11 @@ is the **router**: given a durable piece of guidance, put it on the right tier,
 keep the always-on tier lean, and **verify the agent actually absorbed it.**
 
 Scope: the box's surfaces (`CLAUDE.md`, nested `CLAUDE.md`, `.claude/rules/`,
-schema `instructions`, box docs) and the shipped agent-guide. *Not* the
-callback-box dev repo's own `CLAUDE.md` — that's ours, not a box's.
+schema `instructions`, box docs). *Not* the callback-box dev repo's own
+`CLAUDE.md` — that's ours, not a box's. Auditing the full assembled prompt
+stack (agent guide, system prompts, everything an agent reads end to end) is
+the sibling skill `cb-prompt-review`; this one routes a single durable
+instruction to its right tier.
 
 ## The attention budget, not the context window
 

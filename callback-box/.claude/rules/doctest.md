@@ -21,3 +21,7 @@ paths:
 - Trailing newlines on string results are automatically trimmed (code blocks can't express trailing newlines)
 - `print("text")` accumulates lines; they drain into the next `=>` assertion combined with the expression result. Scope-local per test — concurrent tests don't interfere. Use for narrative output across multiple steps.
 - Prose between code blocks is ignored — use it to document behavior
+- **Limitations**: no `import type` in `ts setup` blocks (value imports
+  only — the loader doesn't support type-only imports); no `!.`
+  non-null assertion in example blocks (use `?.` instead); no
+  TypeScript type annotations in example blocks (setup blocks only)

@@ -310,9 +310,8 @@ How the completed plan actually goes out as one unit:
 - Knowledge-audit entries (see the Knowledge audits section above) —
   what lands with the plan vs deferred.
 - Migration approach if the plan changes existing data shape (hand-done
-  by agent, scripted, atomic vs gradual). Note: even a "gradual"
-  migration is part of the plan's completion — partial migration that
-  expects to stop midway is a subplan, not a phase.
+  by agent, scripted, atomic vs gradual). A migration that expects to
+  stop midway is a subplan, not a phase (see "Where the work happens").
 
 ## The discipline rules
 
@@ -444,8 +443,8 @@ thinking one of them, you're hollowing out the plan, not saving time:
   obvious design has obvious failure modes; surface them anyway.
 - **Shipping a chunk and stopping.** Committing chunks during
   implementation is fine; merging a partial plan to main because "the
-  first part feels done" defeats the no-partial-ship principle. The
-  plan completes before any of it ships.
+  first part feels done" is the violation (see "Where the work
+  happens").
 - **Skipping the Knowledge audits section because no tests are
   written yet.** The section asks "*should* audits land," not "*do*
   they exist." A new agent-facing concept without a single audit is a

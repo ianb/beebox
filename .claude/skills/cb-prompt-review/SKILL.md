@@ -1,11 +1,13 @@
 ---
 name: cb-prompt-review
-description: Review or engineer callback-box's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Use when reviewing prompts for overlap/redundancy/staleness, deciding where a new instruction belongs, checking what an agent actually sees in some situation, or after any change to prompt-generating code. Triggers include "review the prompts", "prompt surface", "where should this instruction go", "what does the chat/reactor agent see", "check for prompt overlap".
+description: Review or engineer callback-box's agent-facing prompt surface — the agent guide, chat/reactor system prompts, schema instructions, box skills, and rules. Use when auditing the assembled prompt stack for overlap/redundancy/staleness/contradiction, checking what an agent actually sees in some situation, or after any change to prompt-generating code. Triggers include "review the prompts", "prompt surface", "what does the chat/reactor agent see", "check for prompt overlap". (For routing a single new instruction to the right box surface, that's cb-context.)
 ---
 
 # Reviewing the prompt surface
 
-The prompts are how every agent comes to understand Callback Box — what it is, what its role is, what the rules are. They are generated code (`src/core/agent-guide/`, `chat-session-prompts.ts`, `reactor/prompts.ts`, schema `instructions`, `box-skills-content.ts`), assembled into a per-situation context stack. Review the *assembled stack*, not the source files: judge what an agent actually reads, end to end.
+The prompts are how every agent comes to understand Callback Box — what it is, what its role is, what the rules are. They are generated code (`src/core/agent-guide/`, `src/core/chat/session/prompts.ts`, `src/core/reactor/prompts.ts`, schema `instructions`, `src/core/box/skills-content.ts`), assembled into a per-situation context stack. Review the *assembled stack*, not the source files: judge what an agent actually reads, end to end.
+
+This skill audits the whole assembled surface; its sibling `cb-context` is the authoring/routing guide for placing an individual instruction on a box's own surfaces. Same attention-budget principle, opposite direction of work.
 
 ## See the assembled context
 
