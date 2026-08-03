@@ -26,7 +26,7 @@ separately from any individual playback fix.
 this shipped — native error/warn logs now forward to the box's
 `client-debug.log` via `debugLog.submit`, tagged `[ios]`, with a persisted
 offline queue, metadata-only message discipline, and device-token redaction
-(design: `callback-box/docs/plans/ios-log-forwarding.md`). Instrumented:
+(design: `callback-box/docs/implemented-plans/ios-log-forwarding.md`). Instrumented:
 capture upload/acquisition, bulk photo batch, chat API degradations, webview
 process death and navigation failures. Still open from this issue's scope: a
 user-facing on-device export/share of a diagnostic bundle, and timestamped app

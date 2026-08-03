@@ -4,7 +4,7 @@ Extends the existing web-only `debugLog.submit` sink (`ts [level] message`
 lines + a 200-entry ring buffer) to accept native-forwarded entries: an
 optional per-batch `source` slug, a closed `level` enum, a per-entry `at`
 device timestamp, and hard caps (≤100 entries, message ≤4000 chars). See
-`docs/plans/ios-log-forwarding.md` chunk 1 and `docs/mobile-contract.md` §5.7.
+`docs/implemented-plans/ios-log-forwarding.md` chunk 1 and `docs/mobile-contract.md` §5.7.
 
 Rendering stays `ts [level] message` when there's no `source` (today's web
 shape, unchanged except control-character normalization); gains a `[source]`

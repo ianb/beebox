@@ -1,5 +1,10 @@
 # iOS log forwarding to the box debug log
 
+**Status:** implemented 2026-08 — server sink, iOS forwarding core, and
+instrumentation all shipped and tested (route doctests + `LogForwarderTests`,
+193/193 iOS suite). Manual iPhone verification (below) is still pending as of
+merge — the boxholder is exercising it against prod post-merge.
+
 Give the iOS app a native logging layer (`os.Logger`) whose errors and warnings
 are forwarded to the paired box's existing client debug log
 (`.callback-box/client-debug.log`), so native failures — capture uploads first —

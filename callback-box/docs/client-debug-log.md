@@ -48,7 +48,7 @@ timestamp for exactly this reason; once `at` drifts more than ~5s from the serve
 receipt time, the log line tags both: `[ios@2026-08-03T09:00:00.000Z]`. Read the
 bracketed time as when the incident actually happened, not the line's leading
 timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
-wire contract and `docs/plans/ios-log-forwarding.md` for the full design.
+wire contract and `docs/implemented-plans/ios-log-forwarding.md` for the full design.
 
 ### In the browser
 
