@@ -115,7 +115,7 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
   }, [box.boxUrl]);
 
   return (
-    <div className="mt-3 space-y-3 border-t border-gray-200 pt-3">
+    <div className="mb-3 space-y-3 border-b border-gray-200 pb-3">
       {tab !== null ? (
         <CommentSection
           busyLabel={busy}
