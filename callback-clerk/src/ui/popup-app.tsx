@@ -2,13 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import { getActiveBox, isBoxEnabled, type ClerkConfig, type EnabledBox } from "../domain/config.js";
 import { loadConfig } from "../platform/config-storage.js";
 import { detectBoxOnActiveTab } from "../platform/detect-box.js";
-import { activateBox, disableBox, enableBox } from "../platform/enable-box.js";
+import { activateBox, disableBox, enableBox, reorderBox } from "../platform/enable-box.js";
 import { openBox } from "../platform/open-box.js";
 import { ActionsPanel } from "./actions-panel.js";
+import { BoxList } from "./box-list.js";
 
 export function PopupApp() {
   const [config, setConfig] = useState<ClerkConfig | null>(null);
   const [detected, setDetected] = useState<EnabledBox | null>(null);
+  // Edit mode gates the destructive/reordering controls, so a stray click in
+  // the normal list can't disable a box (there's no undo).
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     loadConfig().then(setConfig).catch((err: unknown) => {
@@ -44,6 +48,12 @@ export function PopupApp() {
     });
   }, []);
 
+  const handleMove = useCallback((move: { boxUrl: string; delta: -1 | 1 }) => {
+    reorderBox(move).then(setConfig).catch((err: unknown) => {
+      console.error("[clerk] failed to reorder boxes:", err);
+    });
+  }, []);
+
   const handleOpen = useCallback((boxUrl: string) => {
     openBox(boxUrl)
       .then(() => {
@@ -52,6 +62,10 @@ export function PopupApp() {
       .catch((err: unknown) => {
         console.error("[clerk] failed to open box:", err);
       });
+  }, []);
+
+  const toggleEditing = useCallback(() => {
+    setEditing((wasEditing) => !wasEditing);
   }, []);
 
   if (config === null) {
@@ -63,7 +77,11 @@ export function PopupApp() {
 
   return (
     <div className="w-80 p-4">
-      <PopupHeader />
+      <PopupHeader
+        editing={editing}
+        canEdit={config.boxes.length > 0}
+        onToggleEditing={toggleEditing}
+      />
       {showOffer ? (
         <EnableOffer box={detected} onEnable={handleEnable} />
       ) : null}
@@ -73,9 +91,13 @@ export function PopupApp() {
         <BoxList
           boxes={config.boxes}
           activeBoxUrl={config.activeBoxUrl}
-          onActivate={handleActivate}
-          onDisable={handleDisable}
-          onOpen={handleOpen}
+          editing={editing}
+          handlers={{
+            onActivate: handleActivate,
+            onDisable: handleDisable,
+            onMove: handleMove,
+            onOpen: handleOpen,
+          }}
         />
       ) : null}
       {config.boxes.length === 0 && !showOffer ? (
@@ -88,7 +110,13 @@ export function PopupApp() {
   );
 }
 
-function PopupHeader() {
+interface PopupHeaderProps {
+  editing: boolean;
+  canEdit: boolean;
+  onToggleEditing: () => void;
+}
+
+function PopupHeader({ editing, canEdit, onToggleEditing }: PopupHeaderProps) {
   const openSettings = useCallback(() => {
     chrome.runtime.openOptionsPage().catch((err: unknown) => {
       console.error("[clerk] failed to open settings:", err);
@@ -98,14 +126,27 @@ function PopupHeader() {
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
       <h1 className="text-lg font-semibold">Callback Clerk</h1>
-      <button
-        onClick={openSettings}
-        className="shrink-0 rounded px-1 text-gray-400 hover:text-gray-700"
-        title="Settings"
-        aria-label="Settings"
-      >
-        <GearIcon />
-      </button>
+      <div className="flex shrink-0 items-center gap-1">
+        {canEdit ? (
+          <button
+            onClick={onToggleEditing}
+            className={`rounded px-2 py-1 text-xs font-medium ${
+              editing ? "bg-teal-600 text-white hover:bg-teal-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            }`}
+            title={editing ? "Stop editing the box list" : "Reorder or remove boxes"}
+          >
+            {editing ? "Done" : "Edit"}
+          </button>
+        ) : null}
+        <button
+          onClick={openSettings}
+          className="rounded px-1 text-gray-400 hover:text-gray-700"
+          title="Settings"
+          aria-label="Settings"
+        >
+          <GearIcon />
+        </button>
+      </div>
     </div>
   );
 }
@@ -141,87 +182,5 @@ function EnableOffer({ box, onEnable }: EnableOfferProps) {
         Enable this box
       </button>
     </div>
-  );
-}
-
-interface BoxListProps {
-  boxes: EnabledBox[];
-  activeBoxUrl: string | null;
-  onActivate: (boxUrl: string) => void;
-  onDisable: (boxUrl: string) => void;
-  onOpen: (boxUrl: string) => void;
-}
-
-function BoxList({ boxes, activeBoxUrl, onActivate, onDisable, onOpen }: BoxListProps) {
-  return (
-    <div className="space-y-2">
-      {boxes.map((box) => (
-        <BoxRow
-          key={box.boxUrl}
-          box={box}
-          isActive={box.boxUrl === activeBoxUrl}
-          onActivate={onActivate}
-          onDisable={onDisable}
-          onOpen={onOpen}
-        />
-      ))}
-    </div>
-  );
-}
-
-interface BoxRowProps {
-  box: EnabledBox;
-  isActive: boolean;
-  onActivate: (boxUrl: string) => void;
-  onDisable: (boxUrl: string) => void;
-  onOpen: (boxUrl: string) => void;
-}
-
-function BoxRow({ box, isActive, onActivate, onDisable, onOpen }: BoxRowProps) {
-  const handleActivate = useCallback(() => {
-    onActivate(box.boxUrl);
-  }, [onActivate, box.boxUrl]);
-  const handleDisable = useCallback(() => {
-    onDisable(box.boxUrl);
-  }, [onDisable, box.boxUrl]);
-  const handleOpen = useCallback(() => {
-    onOpen(box.boxUrl);
-  }, [onOpen, box.boxUrl]);
-
-  const border = isActive ? "border-teal-500 bg-teal-50" : "border-gray-200";
-  const dot = isActive ? "bg-teal-500" : "bg-gray-300";
-
-  return (
-    <div className={`flex items-center gap-1 rounded border p-2 ${border}`}>
-      <button onClick={handleActivate} className="flex min-w-0 flex-1 items-center gap-2 text-left" title="Make this the active box">
-        <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
-        <BoxLabel box={box} />
-      </button>
-      <button
-        onClick={handleOpen}
-        className="shrink-0 px-1 text-lg leading-none text-gray-400 hover:text-teal-700"
-        title="Open this box's chat"
-        aria-label={`Open ${box.title}`}
-      >
-        ›
-      </button>
-      <button
-        onClick={handleDisable}
-        className="shrink-0 px-1 text-gray-400 hover:text-red-600"
-        title="Disable this box"
-        aria-label={`Disable ${box.title}`}
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-function BoxLabel({ box }: { box: EnabledBox }) {
-  return (
-    <span className="min-w-0">
-      <span className="block truncate text-sm font-medium">{box.title}</span>
-      <span className="block truncate text-xs text-gray-400">{box.boxUrl}</span>
-    </span>
   );
 }

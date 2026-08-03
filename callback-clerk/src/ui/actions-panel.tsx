@@ -3,6 +3,7 @@ import type { EnabledBox } from "../domain/config.js";
 import type { ActionResponse, ClerkMessage } from "../domain/messages.js";
 import type { CommentaryDestination } from "../contract/clerk-contract.generated.js";
 import { getCommentaryDestinations } from "../platform/clerk-api.js";
+import { commentBlockedReason } from "../domain/commentary.js";
 
 interface Notice {
   kind: "ok" | "error" | "auth";
@@ -44,6 +45,7 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [tab, setTab] = useState<CurrentTab | null>(null);
+  const [blocked, setBlocked] = useState<string | null>(null);
   const [destinations, setDestinations] = useState<CommentaryDestination[]>([]);
   const [selectedDir, setSelectedDir] = useState("");
 
@@ -52,13 +54,20 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
       .query({ active: true, currentWindow: true })
       .then((tabs) => {
         const current = tabs[0];
-        if (current === undefined || current.id === undefined) return;
-        const url = current.url ?? "";
-        if (!url.startsWith("http://") && !url.startsWith("https://")) return;
-        setTab({ id: current.id, url, title: current.title ?? "" });
+        const reason = commentBlockedReason(current?.url);
+        if (reason !== null) {
+          setBlocked(reason);
+          return;
+        }
+        if (current?.id === undefined) {
+          setBlocked("No page to comment on.");
+          return;
+        }
+        setTab({ id: current.id, url: current.url ?? "", title: current.title ?? "" });
       })
       .catch((err: unknown) => {
         console.error("[clerk] failed to query active tab:", err);
+        setBlocked("Couldn't read the current tab.");
       });
   }, []);
 
@@ -116,15 +125,14 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
 
   return (
     <div className="mb-3 space-y-3 border-b border-gray-200 pb-3">
-      {tab !== null ? (
-        <CommentSection
-          busyLabel={busy}
-          destinations={destinations}
-          selectedDir={selectedDir}
-          onSelectDir={handleSelectDir}
-          onComment={handleComment}
-        />
-      ) : null}
+      <CommentSection
+        busyLabel={busy}
+        blockedReason={blocked}
+        destinations={destinations}
+        selectedDir={selectedDir}
+        onSelectDir={handleSelectDir}
+        onComment={handleComment}
+      />
       {notice !== null ? <NoticeLine notice={notice} onOpenBox={handleOpenBox} /> : null}
     </div>
   );
@@ -132,46 +140,75 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
 
 interface CommentSectionProps {
   busyLabel: string | null;
+  blockedReason: string | null;
   destinations: CommentaryDestination[];
   selectedDir: string;
   onSelectDir: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onComment: () => void;
 }
 
-function CommentSection({ busyLabel, destinations, selectedDir, onSelectDir, onComment }: CommentSectionProps) {
-  const soleDestination = destinations.length === 1 ? destinations[0] ?? null : null;
+function CommentSection(props: CommentSectionProps) {
+  const { busyLabel, blockedReason, destinations, selectedDir, onSelectDir, onComment } = props;
+  const blocked = blockedReason !== null;
   return (
     <div className="space-y-2">
-      <button
-        onClick={onComment}
-        disabled={busyLabel !== null}
-        className="w-full rounded bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
-      >
-        {busyLabel === "comment" ? "Creating commentary…" : "Comment on this page"}
-      </button>
-      {destinations.length > 1 ? (
-        <label className="block text-xs text-gray-500">
-          File to
-          <select
-            value={selectedDir}
-            onChange={onSelectDir}
-            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-800"
-          >
-            <option value="">Inbox</option>
-            {destinations.map((d) => (
-              <option key={d.dir} value={d.dir}>
-                {d.symbol !== null ? `${d.symbol} ` : ""}{d.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : soleDestination !== null ? (
-        <p className="text-xs text-gray-500">
-          Filing to {soleDestination.symbol !== null ? `${soleDestination.symbol} ` : ""}
-          {soleDestination.label}
-        </p>
-      ) : null}
+      {/* The tooltip lives on the wrapper: a disabled button fires no mouse
+          events, so its own title attribute would never show. */}
+      <span className="block" title={blockedReason ?? undefined}>
+        <button
+          onClick={onComment}
+          disabled={busyLabel !== null || blocked}
+          className="w-full rounded bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+        >
+          {busyLabel === "comment" ? "Creating commentary…" : "Comment on this page"}
+        </button>
+      </span>
+      {/* Nothing to file when there's no page to file — the tooltip carries the why. */}
+      {blocked ? null : (
+        <DestinationPicker
+          destinations={destinations}
+          selectedDir={selectedDir}
+          onSelectDir={onSelectDir}
+        />
+      )}
     </div>
+  );
+}
+
+interface DestinationPickerProps {
+  destinations: CommentaryDestination[];
+  selectedDir: string;
+  onSelectDir: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+}
+
+/** A selector when the box offers several destinations; a note when it offers one. */
+function DestinationPicker({ destinations, selectedDir, onSelectDir }: DestinationPickerProps) {
+  const soleDestination = destinations.length === 1 ? destinations[0] ?? null : null;
+  if (destinations.length > 1) {
+    return (
+      <label className="block text-xs text-gray-500">
+        File to
+        <select
+          value={selectedDir}
+          onChange={onSelectDir}
+          className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-800"
+        >
+          <option value="">Inbox</option>
+          {destinations.map((d) => (
+            <option key={d.dir} value={d.dir}>
+              {d.symbol !== null ? `${d.symbol} ` : ""}{d.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+  if (soleDestination === null) return null;
+  return (
+    <p className="text-xs text-gray-500">
+      Filing to {soleDestination.symbol !== null ? `${soleDestination.symbol} ` : ""}
+      {soleDestination.label}
+    </p>
   );
 }
 

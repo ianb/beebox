@@ -40,6 +40,24 @@ export function removeBox(config: ClerkConfig, boxUrl: string): ClerkConfig {
   return { version: 1, boxes, activeBoxUrl };
 }
 
+/**
+ * Moves a box one slot up (-1) or down (+1) in the list. The list order is the
+ * user's own, edited from the popup's edit mode; a move past either end is a
+ * no-op rather than a wrap.
+ */
+export function moveBox(config: ClerkConfig, move: { boxUrl: string; delta: -1 | 1 }): ClerkConfig {
+  const { boxUrl, delta } = move;
+  const from = config.boxes.findIndex((b) => b.boxUrl === boxUrl);
+  if (from === -1) return config;
+  const to = from + delta;
+  if (to < 0 || to >= config.boxes.length) return config;
+  const boxes = [...config.boxes];
+  const [moved] = boxes.splice(from, 1);
+  if (moved === undefined) return config;
+  boxes.splice(to, 0, moved);
+  return { ...config, boxes };
+}
+
 /** No-op when boxUrl isn't an enabled box. */
 export function setActiveBox(config: ClerkConfig, boxUrl: string): ClerkConfig {
   if (!config.boxes.some((b) => b.boxUrl === boxUrl)) return config;
