@@ -118,7 +118,9 @@ final class NativeCaptureController: ObservableObject {
     func takePhoto() async {
         guard sessionID != nil else { return }
         do {
-            _ = try await camera.capturePhoto(into: acquisitionSink)
+            _ = try await camera.capturePhoto(into: acquisitionSink) { [weak self] in
+                self?.surfaceState.captureFeedbackSequence += 1
+            }
             await refreshSurface()
         } catch {
             showError(error.localizedDescription, retryable: false)

@@ -412,9 +412,16 @@ final class CaptureCamera: ObservableObject {
         position = next
     }
 
-    func capturePhoto(into sink: any CaptureAcquisitionSink) async throws -> CaptureItem {
+    func capturePhoto(
+        into sink: any CaptureAcquisitionSink,
+        onCaptured: () -> Void = {}
+    ) async throws -> CaptureItem {
         let source = position.source
         let data = try await pipeline.capturePhotoData()
+        // AVCapturePhotoOutput supplies the platform shutter sound where enabled.
+        // NativeCaptureView pairs this event with the standard impact haptic and
+        // a viewfinder flash, including on devices where shutter audio is muted.
+        onCaptured()
         return try await CaptureGalleryImporter.importData(data, source: source, into: sink)
     }
 

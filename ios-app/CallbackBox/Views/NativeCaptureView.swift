@@ -48,6 +48,8 @@ struct NativeCaptureSurfaceState: Equatable {
     var destinationLabel: String
     var phase: NativeCaptureSurfacePhase = .starting
     var counts = NativeCaptureSurfaceCounts()
+    /// Advances only when the camera produces a photo, never for gallery imports.
+    var captureFeedbackSequence = 0
     var elapsedSeconds = 0
     var banner: String?
     var cameraAvailable = true
@@ -102,12 +104,20 @@ struct NativeCaptureView<Preview: View>: View {
     @State private var showingFileImporter = false
     @State private var showingCancelConfirmation = false
     @State private var showingFinishChoices = false
+    @State private var showingCaptureFlash = false
+    @State private var captureFlashTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             preview()
                 .ignoresSafeArea()
+
+            Color.white
+                .opacity(showingCaptureFlash ? 0.82 : 0)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
 
             VStack(spacing: 0) {
                 topChrome
@@ -118,6 +128,7 @@ struct NativeCaptureView<Preview: View>: View {
         }
         .preferredColorScheme(.dark)
         .statusBarHidden()
+        .sensoryFeedback(.impact(weight: .medium), trigger: state.captureFeedbackSequence)
         .fileImporter(
             isPresented: $showingFileImporter,
             allowedContentTypes: [.data, .content],
@@ -152,6 +163,13 @@ struct NativeCaptureView<Preview: View>: View {
             onAddPhotos(items)
             selectedPhotos = []
         }
+        .onChange(of: state.captureFeedbackSequence) { oldSequence, newSequence in
+            guard newSequence > oldSequence else { return }
+            showCaptureFeedback()
+        }
+        .onDisappear {
+            captureFlashTask?.cancel()
+        }
     }
 
     private var topChrome: some View {
@@ -169,9 +187,9 @@ struct NativeCaptureView<Preview: View>: View {
                         .font(.headline)
                         .lineLimit(1)
                     Text(statusSummary)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .font(.footnote.monospacedDigit().weight(.medium))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -230,6 +248,8 @@ struct NativeCaptureView<Preview: View>: View {
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
+        .padding(.bottom, 10)
+        .background(Color.black.opacity(0.62))
     }
 
     private var bottomChrome: some View {
@@ -329,29 +349,35 @@ struct NativeCaptureView<Preview: View>: View {
     }
 
     private var statusSummary: String {
-        var parts: [String] = []
+        var captureParts: [String] = []
         if state.counts.photos > 0 {
-            parts.append(countLabel(state.counts.photos, singular: "photo", plural: "photos"))
+            captureParts.append(countLabel(state.counts.photos, singular: "photo", plural: "photos"))
         }
         if state.counts.audioSegments > 0 {
-            parts.append("\(state.counts.audioSegments) audio")
+            captureParts.append("\(state.counts.audioSegments) audio")
         }
         if state.counts.files > 0 {
-            parts.append(countLabel(state.counts.files, singular: "file", plural: "files"))
+            captureParts.append(countLabel(state.counts.files, singular: "file", plural: "files"))
         }
         if state.isRecording {
-            parts.append(Self.duration(state.elapsedSeconds))
+            captureParts.append(Self.duration(state.elapsedSeconds))
         }
+
+        var uploadParts: [String] = []
         if state.counts.uploading > 0 {
-            parts.append("\(state.counts.uploading) uploading")
+            uploadParts.append("\(state.counts.uploading) uploading")
         }
         if state.counts.uploaded > 0 {
-            parts.append("\(state.counts.uploaded) uploaded")
+            uploadParts.append("\(state.counts.uploaded) uploaded")
         }
         if state.counts.failed > 0 {
-            parts.append("\(state.counts.failed) failed")
+            uploadParts.append("\(state.counts.failed) failed")
         }
-        return parts.isEmpty ? "Ready" : parts.joined(separator: "   ")
+
+        let lines = [captureParts, uploadParts]
+            .filter { $0.isEmpty == false }
+            .map { $0.joined(separator: "  •  ") }
+        return lines.isEmpty ? "Ready" : lines.joined(separator: "\n")
     }
 
     private func countLabel(_ count: Int, singular: String, plural: String) -> String {
@@ -391,6 +417,20 @@ struct NativeCaptureView<Preview: View>: View {
             showingFinishChoices = true
         } else {
             onFinish()
+        }
+    }
+
+    private func showCaptureFeedback() {
+        captureFlashTask?.cancel()
+        withAnimation(.linear(duration: 0.04)) {
+            showingCaptureFlash = true
+        }
+        captureFlashTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            guard Task.isCancelled == false else { return }
+            withAnimation(.easeOut(duration: 0.16)) {
+                showingCaptureFlash = false
+            }
         }
     }
 
@@ -444,6 +484,7 @@ struct NativeCaptureFixtureScreen: View {
     private let fixture = ProcessInfo.processInfo.arguments
         .first { $0.hasPrefix("--capture-fixture=") }?
         .replacingOccurrences(of: "--capture-fixture=", with: "") ?? "recording"
+    @State private var captureFeedbackSequence = 0
 
     var body: some View {
         NativeCaptureView(
@@ -457,7 +498,7 @@ struct NativeCaptureFixtureScreen: View {
                 }
             },
             onCancel: {},
-            onShutter: {},
+            onShutter: { captureFeedbackSequence += 1 },
             onFlipCamera: {},
             onToggleRecording: {},
             onAddPhotos: { _ in },
@@ -473,9 +514,10 @@ struct NativeCaptureFixtureScreen: View {
     }
 
     private var state: NativeCaptureSurfaceState {
+        var result: NativeCaptureSurfaceState
         switch fixture {
         case "failure":
-            NativeCaptureSurfaceState(
+            result = NativeCaptureSurfaceState(
                 destinationLabel: "Family",
                 phase: .active,
                 counts: NativeCaptureSurfaceCounts(
@@ -489,7 +531,7 @@ struct NativeCaptureFixtureScreen: View {
                 canRetry: true
             )
         case "recovery":
-            NativeCaptureSurfaceState(
+            result = NativeCaptureSurfaceState(
                 destinationLabel: "Family",
                 phase: .recovery(
                     title: "Capture already submitted",
@@ -498,19 +540,21 @@ struct NativeCaptureFixtureScreen: View {
                 counts: NativeCaptureSurfaceCounts(photos: 4, files: 1, uploaded: 3, failed: 2)
             )
         case "sealing":
-            NativeCaptureSurfaceState(
+            result = NativeCaptureSurfaceState(
                 destinationLabel: "Family",
                 phase: .sealing,
                 counts: NativeCaptureSurfaceCounts(photos: 4, files: 1, audioSegments: 2, uploading: 2, uploaded: 5)
             )
         default:
-            NativeCaptureSurfaceState(
+            result = NativeCaptureSurfaceState(
                 destinationLabel: "Family",
                 phase: .recording,
                 counts: NativeCaptureSurfaceCounts(photos: 3, files: 1, audioSegments: 1, uploading: 2, uploaded: 3),
                 elapsedSeconds: 42
             )
         }
+        result.captureFeedbackSequence = captureFeedbackSequence
+        return result
     }
 }
 #endif
