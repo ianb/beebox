@@ -46,6 +46,12 @@ interface PickerBucket {
 }
 
 export interface PickerLandmark extends PickerBucket {
+  /**
+   * Box-relative path of the landmark card. Two cards in one directory each
+   * get their own bucket, so this — not `dir` — is a bucket's identity (and the
+   * only stable React key for a rendered row).
+   */
+  path: string;
   /** Box-relative directory; empty string for the root tile. */
   dir: string;
   label: string;
@@ -171,6 +177,7 @@ export const chatRouter = router({
       const inlineOlder = lm.dir === "" ? [] : fresh.slice(1);
       const newest = all[0];
       return {
+        path: lm.path,
         dir: lm.dir,
         label: lm.label,
         symbol: lm.symbol,

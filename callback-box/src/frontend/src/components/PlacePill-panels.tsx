@@ -22,6 +22,8 @@ export type SwitchPanel = "root" | "box";
 
 /** One landmark row's data — the subset of `chat.byLandmark` this menu reads. */
 export interface SwitchLandmark {
+  /** Box-relative path of the landmark card — the row's identity (see below). */
+  path: string;
   /** Box-relative dir; `""` for the root landmark. */
   dir: string;
   label: string;
@@ -76,9 +78,12 @@ function LandmarkRows({
 }) {
   return (
     <>
+      {/* Keyed by card path, not dir: `byLandmark` emits one bucket per
+          landmark card, and nothing stops a directory holding two — keying by
+          dir would then hand React duplicate keys. */}
       {landmarks.map((landmark) => (
         <MenuItem
-          key={landmark.dir}
+          key={landmark.path}
           onClick={() => onSelectLandmark(landmark.dir)}
           active={currentDir !== null && landmark.dir === currentDir}
         >
@@ -91,6 +96,47 @@ function LandmarkRows({
       ))}
     </>
   );
+}
+
+/**
+ * The "Switch to" section's body: the rows, or — while `chat.byLandmark` is
+ * still resolving — a loading line, or, when it failed, a retry row. A failure
+ * used to render as "Loading…" forever, which reads as a hang rather than as
+ * the recoverable error it is (code-style.md: UI errors stay visible).
+ */
+function LandmarkList({
+  landmarks,
+  failed,
+  onRetry,
+  boxSlug,
+  currentDir,
+  onSelectLandmark,
+}: {
+  landmarks: SwitchLandmark[] | null;
+  failed: boolean;
+  onRetry: () => void;
+  boxSlug: string;
+  currentDir: string | null;
+  onSelectLandmark: (dir: string) => void;
+}) {
+  if (landmarks !== null) {
+    return (
+      <LandmarkRows
+        landmarks={landmarks}
+        boxSlug={boxSlug}
+        currentDir={currentDir}
+        onSelectLandmark={onSelectLandmark}
+      />
+    );
+  }
+  if (failed) {
+    return (
+      <MenuItem onClick={onRetry} keepOpen danger>
+        Couldn&rsquo;t load landmarks — Retry
+      </MenuItem>
+    );
+  }
+  return <div className="px-3 py-2 text-warm-500">Loading…</div>;
 }
 
 /**
@@ -141,6 +187,10 @@ interface SwitchMenuProps {
   currentDir: string | null;
   /** null while the lazy `chat.byLandmark` query is still resolving. */
   landmarks: SwitchLandmark[] | null;
+  /** True when that query failed — the list is null for a reason worth saying. */
+  landmarksFailed: boolean;
+  /** Retry the failed landmark load, from the error row. */
+  onRetryLandmarks: () => void;
   /** The box's `nav.card` rows, already deduped against the builtin rows. */
   navEntries: NavMenuEntry[];
   problemCount: number;
@@ -157,7 +207,8 @@ interface SwitchMenuProps {
  */
 export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
   const {
-    panel, boxSlug, boxName, hideBoxRow, currentDir, landmarks, navEntries, problemCount,
+    panel, boxSlug, boxName, hideBoxRow, currentDir, landmarks, landmarksFailed,
+    onRetryLandmarks, navEntries, problemCount,
     onOpenBoxPanel, onBackToRoot, onSelectLandmark,
   } = props;
   switch (panel) {
@@ -176,16 +227,14 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           <NavCardRows entries={navEntries} />
           <MenuDivider />
           <SectionHeader>Switch to</SectionHeader>
-          {landmarks === null ? (
-            <div className="px-3 py-2 text-warm-500">Loading…</div>
-          ) : (
-            <LandmarkRows
-              landmarks={landmarks}
-              boxSlug={boxSlug}
-              currentDir={currentDir}
-              onSelectLandmark={onSelectLandmark}
-            />
-          )}
+          <LandmarkList
+            landmarks={landmarks}
+            failed={landmarksFailed}
+            onRetry={onRetryLandmarks}
+            boxSlug={boxSlug}
+            currentDir={currentDir}
+            onSelectLandmark={onSelectLandmark}
+          />
           <ProblemRow count={problemCount} boxSlug={boxSlug} />
         </>
       );

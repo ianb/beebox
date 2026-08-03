@@ -46,8 +46,10 @@ export function ChatsPicker() {
         <Text as="p" tone="subtle">No landmarks yet.</Text>
       ) : (
         <Stack gap="md">
+          {/* Keyed by the landmark card's path: `byLandmark` emits one bucket
+              per card, so a directory holding two would collide on `dir`. */}
           {landmarks.map((lm) => (
-            <ChatsLandmarkCard key={lm.dir || "__root__"} landmark={lm} boxSlug={slug} />
+            <ChatsLandmarkCard key={lm.path} landmark={lm} boxSlug={slug} />
           ))}
           {/*
            * Chats whose directory has no landmark card — the box root before

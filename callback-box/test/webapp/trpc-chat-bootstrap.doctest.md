@@ -215,6 +215,22 @@ titled.label
 => Chasing down a duplicate charge
 ```
 
+A husk can be renamed freely — the `session` field is what identifies it, and
+the pickers enumerate by that field. So a husk whose filename no longer carries
+the id's `_<shortid>` suffix still names its chat; the filename convention is
+only a fast path for finding it.
+
+```ts continue
+await writeFile(
+  join(server.boxRoot, "store/chat/web/Duplicate_charge_followup.chat.card"),
+  "---\nsession: sess-renamed\ntitle: Renamed husk still names its chat\n---\n\n",
+);
+
+const renamed = await caller(server).chat.bootstrap({ session: "sess-renamed", slice: TAIL });
+renamed.label
+=> Renamed husk still names its chat
+```
+
 An empty id in the persisted default-session pointer means "none" too, rather
 than a session named `""`:
 

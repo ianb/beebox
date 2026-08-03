@@ -1,9 +1,10 @@
 # Nav card resolution
 
 `nav.card` at the box root drives the top navigation (docs/implemented-plans/nav-card.md).
-`resolveNav` loads and validates it: `absent` means "show the builtin nav",
-`invalid` means "builtin nav + health warning", `ok` carries render-ready
-entries plus non-fatal `problems` (dangling refs) for the health check.
+`resolveNav` loads and validates it: `absent` means "the box has no custom nav
+section" (the app bar's switch menu is builtin and shows regardless), `invalid`
+means the same plus a health warning, `ok` carries render-ready entries plus
+non-fatal `problems` (dangling refs) for the health check.
 
 ```ts setup
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -11,7 +12,7 @@ import { resolveNav } from "../../src/core/nav.js";
 import { parseNavFields } from "../../src/schemas/nav.js";
 ```
 
-## No nav.card → absent (builtin nav, not a problem)
+## No nav.card → absent (no custom section, not a problem)
 
 ```ts
 const box = await makeTmpBox();

@@ -58,6 +58,13 @@ export async function landmarkLabelsForDirs(
 }
 
 export interface LandmarkSummary {
+  /**
+   * Box-relative path of the landmark card. The identity of the summary: a
+   * directory is *supposed* to hold one landmark card but nothing enforces it,
+   * so `dir` alone doesn't distinguish two summaries (and doesn't make a stable
+   * React key).
+   */
+  path: string;
   dir: string;
   label: string;
   symbol: string;
@@ -138,6 +145,7 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
     const dir = path.dirname(relPath);
     const symbol = readSymbol(navigation, { landmarkDir: path.dirname(absPath), boxRoot });
     out.push({
+      path: relPath,
       dir: dir === "." ? "" : dir,
       label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
       symbol: symbol.text,

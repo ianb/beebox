@@ -174,13 +174,27 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
   };
 }
 
-/** The husk for one session, or null when it has none. */
+/**
+ * The husk for one session, or null when it has none.
+ *
+ * The `session` field is authoritative — a husk can be renamed freely, and the
+ * card enumerations (`listChatHusks` and everything built on it) key on the
+ * field, not the filename. So the filename convention is only a fast path
+ * here: when it misses (or names a card whose `session` says otherwise), fall
+ * back to reading the husks and matching the field, which is what the pickers
+ * would have found.
+ */
 export async function findChatHuskEntry(
   boxRoot: string,
   sessionId: string,
 ): Promise<ChatHuskEntry | null> {
   const relPath = await findChatHusk(boxRoot, sessionId);
-  return relPath === null ? null : readChatHusk(boxRoot, relPath);
+  if (relPath !== null) {
+    const entry = await readChatHusk(boxRoot, relPath);
+    if (entry !== null && entry.session === sessionId) return entry;
+  }
+  const husks = await listChatHusks(boxRoot);
+  return husks.find((h) => h.session === sessionId) ?? null;
 }
 
 /**

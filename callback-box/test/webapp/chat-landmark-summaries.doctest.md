@@ -1,8 +1,9 @@
 # Chat picker landmark summaries
 
-`loadLandmarkSummaries` backs the chat picker (`chat.byLandmark`, the
-`/<box>/chats` page): it reads every `*.landmark.card` and returns the
-tile-level metadata (dir, label, symbol) the picker groups chats under.
+`loadLandmarkSummaries` backs the chat picker (`chat.byLandmark` — the
+Landmarks page and the `view: chat-picker` cards): it reads every
+`*.landmark.card` and returns the tile-level metadata (path, dir, label,
+symbol) the picker groups chats under.
 
 It reads the card's YAML **frontmatter** `navigation` (label + symbol). This
 regressed once: the read used the XML `parseCard`, which throws on a
@@ -30,7 +31,7 @@ await box.write(
 
 const { summaries, problems } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"dir":"","label":"Home","symbol":"🏠","symbolSrc":null},{"dir":"recipes","label":"Recipes","symbol":"🍳","symbolSrc":null}]
+=> [{"path":"Box.landmark.card","dir":"","label":"Home","symbol":"🏠","symbolSrc":null},{"path":"recipes/Recipes.landmark.card","dir":"recipes","label":"Recipes","symbol":"🍳","symbolSrc":null}]
 
 JSON.stringify(problems)
 => []
@@ -47,7 +48,7 @@ await box.write(
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"dir":"trips","label":"Trips","symbol":"","symbolSrc":"trips/Trips.attach/pin.png"}]
+=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":"","symbolSrc":"trips/Trips.attach/pin.png"}]
 ```
 
 ## Missing label falls back to the filename, missing navigation is tolerated
@@ -64,7 +65,7 @@ await box.write(
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"dir":"archive","label":"Old_Mail","symbol":"","symbolSrc":null}]
+=> [{"path":"archive/Old_Mail.landmark.card","dir":"archive","label":"Old_Mail","symbol":"","symbolSrc":null}]
 ```
 
 ## A card whose frontmatter doesn't parse is reported, not silently skipped

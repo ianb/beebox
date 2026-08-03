@@ -23,6 +23,7 @@ import { Text } from "../../components/ui/Text";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
+import { useAppBarPlace } from "../../components/app-bar-chrome";
 
 /**
  * Strip a trailing extension and convert underscores to spaces.
@@ -130,6 +131,22 @@ function useBrowseUrlView(): { viewer: string | null; params: Record<string, str
   }, [searchStr]);
 }
 
+/**
+ * Publish browse's place to the app bar (docs/plans/top-nav-ia.md Track C2).
+ *
+ * The bar's own fallback (`lib/place-label.ts`) can only guess a route's
+ * directory from the path, and any dotted last segment reads as a file there —
+ * so `Foo.attach/`, a directory browse walks into, resolved no landmark and the
+ * pill lost its "here" half. Browse has already classified the path, so it
+ * hands the bar its answer rather than letting the heuristic disagree.
+ */
+function useBrowsePlace({ dirPath, currentPath }: { dirPath: string; currentPath: string }): void {
+  useAppBarPlace({
+    dir: dirPath,
+    label: currentPath === "" ? "Browse" : `Browse: ${currentPath}`,
+  });
+}
+
 export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
@@ -225,6 +242,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   }, [selectedFilePath, selectedCard, dirPath]);
 
   useDocumentTitle(pageTitle);
+  useBrowsePlace({ dirPath, currentPath });
 
   const handleDelete = useCallback(async (path: string) => {
     if (deletingPath !== null) return;

@@ -19,7 +19,7 @@ import {
 import { resolveFeatures } from "../../../core/chat/features.js";
 import { MAX_SESSION_ENTRIES, type SessionEntry } from "../../../cli/lib/session.js";
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
-import { loadAllSessions } from "../../../core/chat/session/list.js";
+import { labelForSession, loadAllSessions } from "../../../core/chat/session/list.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
 
 /**
@@ -115,6 +115,20 @@ export const chatSessionProcedures = {
     });
     return { sessions };
   }),
+
+  // One session's display label, resolved exactly as `chat.bootstrap` and the
+  // pickers resolve it (husk title > first-message snippet > id prefix).
+  //
+  // Bootstrap already carries the label for the session it answered for; this
+  // is for the chat page's other case — a chat that started as `session=new`
+  // and was assigned an id mid-turn, which no bootstrap ever ran for. Reading
+  // only the label keeps that fetch off the transcript the running machine owns.
+  label: publicProcedure
+    .input(z.object({ session: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const label = await labelForSession(ctx.boxRoot, input.session);
+      return { label };
+    }),
 
   // Resolve the "most-active" session id (for bare /chat).
   defaultSession: publicProcedure.query(async ({ ctx }) => {

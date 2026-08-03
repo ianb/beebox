@@ -23,7 +23,7 @@
  * `status.navStatus`). The same applies to the `nav.card` section's query.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dropdown } from "./ui/Dropdown";
 import { trpc } from "../lib/trpc";
 import { apiFileUrl } from "../lib/view-url";
@@ -116,6 +116,14 @@ export function PlacePill({
 
   const switchQuery = trpc.chat.byLandmark.useQuery(undefined, { enabled: switchOpened });
   const switchData = switchQuery.data;
+  // A failed load is shown in the menu as a retry row, and logged: without
+  // both, the menu sat on "Loading…" forever with nothing anywhere saying why.
+  const switchError = switchQuery.error;
+  useEffect(() => {
+    if (switchError !== null) {
+      console.error("[app-bar] switch menu: chat.byLandmark failed:", switchError.message);
+    }
+  }, [switchError]);
   // The box's own nav.card section — same first-open laziness as the
   // landmark list, and it keeps the card's live-invalidation subscription
   // that the retired link row used to own (Track C3).
@@ -179,6 +187,8 @@ export function PlacePill({
           hideBoxRow={hideBoxRow === true}
           currentDir={place.dir}
           landmarks={switchData === undefined ? null : switchData.landmarks}
+          landmarksFailed={switchError !== null}
+          onRetryLandmarks={() => { void switchQuery.refetch(); }}
           navEntries={navEntries}
           problemCount={switchData === undefined ? 0 : switchData.problems.length}
           onOpenBoxPanel={() => setSwitchPanel("box")}

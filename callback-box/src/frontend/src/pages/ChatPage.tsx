@@ -84,6 +84,35 @@ function initialLoadFrom(params: {
   };
 }
 
+/**
+ * The session chip's name for the session actually rendered.
+ *
+ * `chat.bootstrap` carries the label for the session it answered for, but it
+ * never runs for a chat that started as `?session=new`, and it stays disabled
+ * once that machine is *carried* onto its assigned id (see `keyState.carried`)
+ * — so the chip would read as unnamed until a reload. The narrow fix is to
+ * fetch only the label for the assigned id: that's a husk read, not the
+ * transcript the running machine owns, so the page's no-refetch-during-a-turn
+ * rule is untouched.
+ */
+function useSessionLabel({
+  rendered,
+  carried,
+  bootstrapped,
+}: {
+  rendered: string | null;
+  carried: boolean;
+  bootstrapped: RouterOutput["chat"]["bootstrap"] | undefined;
+}): string | null {
+  const assigned = carried && rendered !== null && rendered !== "new" ? rendered : null;
+  const query = trpc.chat.label.useQuery(
+    { session: assigned ?? "" },
+    { enabled: assigned !== null, refetchOnWindowFocus: false },
+  );
+  if (bootstrapped !== undefined && bootstrapped.sessionId === rendered) return bootstrapped.label;
+  return query.data === undefined ? null : query.data.label;
+}
+
 export function ChatPage() {
   // eslint-disable-next-line no-restricted-syntax -- router boundary: `useSearch({ strict: false })` returns the union of every route's search params (this page mounts under a non-strict route), so it can't be statically typed to this page's ChatSearch shape without the cast.
   const search = useSearch({ strict: false }) as ChatSearch;
@@ -214,6 +243,12 @@ export function ChatPage() {
   // tear down a live chat; the skeleton is reserved for the genuine
   // pre-resolution state where nothing has rendered yet.
   const rendered = sessionInput ?? keyState.prev;
+  const sessionLabel = useSessionLabel({
+    rendered,
+    carried: keyState.carried,
+    bootstrapped: bootstrap.data,
+  });
+
   if (rendered === null || keyState.awaiting) {
     return <ChatLoading />;
   }
@@ -229,7 +264,7 @@ export function ChatPage() {
       companion={companion}
       card={card}
       emissionStore={emissionStore}
-      sessionLabel={bootstrap.data && bootstrap.data.sessionId === rendered ? bootstrap.data.label : null}
+      sessionLabel={sessionLabel}
       embedded={embedded}
       nativeComposer={nativeComposer}
       openCaptureOnMount={openCaptureOnMount}
