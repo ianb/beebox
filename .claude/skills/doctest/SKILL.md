@@ -18,16 +18,15 @@ still open.
 Create `test/<name>.doctest.md` (path mirrors the `src/` file under
 test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
 Don't restate syntax here — when in doubt, read the rule file and an
-existing doctest near the code you're touching. Two mistakes not
-obvious from the rule file: no `import type` in `ts setup` blocks
-(value imports only) and no TypeScript type annotations inside example
-blocks.
+existing doctest near the code you're touching. Blocks are full
+TypeScript (esbuild); the traps are in assertion semantics (see the
+rule file's string-comparison rules), not syntax.
 
 ## Running
 
 - One file: `pnpm exec tap test/<path>.doctest.md`
-- Whole suite: `pnpm test` (also runs pre-commit, but not automatically
-  on every edit — run it yourself before declaring a test tier done)
+- Whole suite: `pnpm test`. Note pre-commit runs typecheck + lint only,
+  NOT the suite — run `pnpm test` yourself before declaring done.
 - Force serial (rule out contention as a cause): add `-j1`
 
 **Never declare a doctest fixed without actually running it.** Reading

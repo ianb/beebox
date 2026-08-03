@@ -70,15 +70,28 @@ if [ $# -ge 1 ]; then
   esac
 fi
 
-# Self-locate the monorepo from this script's own path (bin/ lives at the repo
-# root), falling back to the historical location. A worktree checkout resolves
-# to the MAIN checkout via git-common-dir so `claude --worktree` runs there.
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-MONO=$(cd "$script_dir/.." && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null | xargs dirname || true)
-if [ -z "$MONO" ] || [ ! -d "$MONO/bin" ]; then
+# Self-locate the monorepo from this script's own REAL path (bin/ lives at the
+# repo root; the ~/.local/bin install is a symlink, so follow it first),
+# falling back to the historical location. A worktree checkout resolves to the
+# MAIN checkout via git-common-dir so `claude --worktree` runs there.
+self="${BASH_SOURCE[0]}"
+while [ -L "$self" ]; do
+  target=$(readlink "$self")
+  case "$target" in
+    /*) self="$target" ;;
+    *)  self="$(dirname "$self")/$target" ;;
+  esac
+done
+script_dir=$(cd "$(dirname "$self")" && pwd)
+common_dir=$(cd "$script_dir/.." && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+MONO=""
+if [ -n "$common_dir" ]; then
+  MONO=$(dirname "$common_dir")
+fi
+if [ -z "$MONO" ] || [ ! -x "$MONO/bin/launch-worktree-session" ] || [ ! -d "$MONO/callback-box" ]; then
   MONO="$HOME/src/callback-box"
 fi
-if [ ! -d "$MONO" ]; then
+if [ ! -x "$MONO/bin/launch-worktree-session" ] || [ ! -d "$MONO/callback-box" ]; then
   echo "launch-worktree-session: cannot locate the monorepo (tried self-locating from $script_dir, then $MONO)" >&2
   exit 1
 fi

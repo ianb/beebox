@@ -1,6 +1,6 @@
 ---
 name: knowledge-audit
-description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check what it actually knows. Use after touching CLAUDE.md, schemas, prompts, or any agent-facing guidance, to verify agents absorbed it. Triggers include "knowledge audit", "did the agent absorb this doc", "audit the guidance", "test what the agent knows", "run the knowledge audits". Full guide in callback-box/docs/knowledge-audits.md.
+description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check what it actually knows. Use after touching what a BOX agent loads — a box CLAUDE.md, the generated agent guide, schema instructions, or box prompts/rules — to verify agents absorbed it. (Dev-repo guidance like this repo's CLAUDE.md or .claude/skills/ is invisible to box agents; audits can't test it.) Triggers include "knowledge audit", "did the agent absorb this doc", "audit the guidance", "test what the agent knows", "run the knowledge audits". Full guide in callback-box/docs/knowledge-audits.md.
 ---
 
 # Knowledge audits: verifying what agents actually know
@@ -22,8 +22,10 @@ reading CLAUDE.md/schemas/prompts. Definitions in
 - Immediately after adding or editing audit entries — filtered to just those
   (`--filter <tag-or-id>`). A never-run audit is unverified in both
   directions.
-- After touching CLAUDE.md, schemas, prompts, or anything else that changes
-  what an agent should know.
+- After touching what a box agent actually loads — a box CLAUDE.md, the
+  generated agent guide, schema `instructions`, box prompts/rules. (Not
+  dev-repo guidance: this repo's CLAUDE.md and skills never reach a box
+  agent's context, so audits can't observe them.)
 - Monthly-ish, for slow drift.
 
 ## Running
