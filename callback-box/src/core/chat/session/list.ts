@@ -17,9 +17,7 @@ import * as fs from "node:fs/promises";
 import { findChatHuskEntry, listChatHusks } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel } from "../session-label.js";
-import { getSessionLogPath } from "./transcript-paths.js";
 import { errnoCode } from "../../../lib/error-guards.js";
-import { fileExists } from "../../../lib/file-exists.js";
 
 export interface ChatSessionRow {
   sessionId: string;
@@ -79,14 +77,16 @@ export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]
  * transcript, and an id with neither is named from its prefix (not an error —
  * `chat.bootstrap` already treats a transcript-less id as a normal state).
  */
-export async function labelForSession(boxRoot: string, sessionId: string): Promise<string> {
+/**
+ * The session's *editorial* title — the husk card's `title`, or null when
+ * the session has none (yet). Deliberately no first-message/id fallback:
+ * those fabrications are fine as picker-row labels where every row must be
+ * distinguishable, but the app bar's session chip shows a title only when a
+ * real one exists (the nightly chat review or a hand edit names it) and an
+ * icon face otherwise.
+ */
+export async function titleForSession(boxRoot: string, sessionId: string): Promise<string | null> {
   const husk = await findChatHuskEntry(boxRoot, sessionId);
-  const logPath = husk === null ? getSessionLogPath(boxRoot, sessionId) : huskTranscriptPath(boxRoot, husk);
   const title = husk?.title;
-  // Skip the transcript read when there's nothing to read — `resolveSessionLabel`
-  // would warn about a missing file, and "no transcript yet" is routine here.
-  if ((title === undefined || title === "") && !(await fileExists(logPath))) {
-    return sessionId.slice(0, 8);
-  }
-  return resolveSessionLabel({ sessionId, logPath, title });
+  return title === undefined || title === "" ? null : title;
 }

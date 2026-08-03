@@ -24,7 +24,9 @@ export interface ContextChipLabelInput {
  * label is an upgrade, not a dependency.
  */
 export function contextChipLabel({ landmarkLabel, dir }: ContextChipLabelInput): string {
-  if (landmarkLabel !== null) return landmarkLabel;
+  // "" is treated as absent, not as a label: a label that renders as
+  // nothing would leave the face blank (caret-only pill).
+  if (landmarkLabel !== null && landmarkLabel !== "") return landmarkLabel;
   if (dir === null) return "Files";
   if (dir === "") return "Box root";
   return dir.split("/").pop() ?? dir;

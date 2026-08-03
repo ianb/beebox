@@ -32,6 +32,16 @@ contextChipLabel({ landmarkLabel: null, dir: "store/recipes" })
 => recipes
 ```
 
+## Empty landmark label: treated as absent, not returned
+
+A label-less landmark card (e.g. a destinations-only landmark) must not
+blank the face — `""` falls through the same way `null` does.
+
+```ts
+contextChipLabel({ landmarkLabel: "", dir: "store/recipes" })
+=> recipes
+```
+
 ## No landmark label, root dir: "Box root", not "Files"
 
 The empty string is a real value meaning box root — it must not fall

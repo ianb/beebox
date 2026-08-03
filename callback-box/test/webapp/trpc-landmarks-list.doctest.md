@@ -58,6 +58,19 @@ landmarks: Recipes,Trips
 problems: 0
 ```
 
+A label-less card (e.g. a destinations-only triage landmark) falls back to
+its filename basename — the label is never empty, so the app bar's pill
+face always has something to render.
+
+```ts continue
+await box.write("store/archive/Old_Mail.landmark.card",
+  "---\ndestinations:\n  - for: [triage]\n    rules: \"Old mail.\"\n---\n\n");
+
+const withArchive = await caller(box.root).landmarks.list();
+withArchive.landmarks.map((l) => l.label).join(",")
+=> Old_Mail,Recipes,Trips
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

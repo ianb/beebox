@@ -146,7 +146,12 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   } = props;
   const [panel, setPanel] = useState<SessionChipPanel>("root");
   const currentModelLabel = MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
-  const faceLabel = label !== null && label !== "" ? label : "New chat";
+  // Editorial title or nothing: `label` is the husk's `title` (null until
+  // the nightly chat review or a hand edit names the session). With no real
+  // title the face is the sliders icon at every width — never a fabricated
+  // name (boxholder call, 2026-08-03).
+  const titled = label !== null && label !== "";
+  const accessibleName = titled ? `Session: ${label}` : "Session menu";
 
   return (
     <Dropdown
@@ -159,17 +164,21 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
           type="button"
           onClick={toggle}
           className="min-h-[40px] min-w-[40px] px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-          title={faceLabel}
-          aria-label={`Session: ${faceLabel}`}
+          title={accessibleName}
+          aria-label={accessibleName}
           {...ariaProps}
         >
-          <span className="sm:hidden">
+          <span className={titled ? "sm:hidden" : ""}>
             <SlidersIcon />
           </span>
-          <span className="hidden sm:inline max-w-[11rem] truncate">{faceLabel}</span>
-          <span className="hidden sm:flex">
-            <CaretIcon />
-          </span>
+          {titled ? (
+            <>
+              <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span>
+              <span className="hidden sm:flex">
+                <CaretIcon />
+              </span>
+            </>
+          ) : null}
         </button>
       )}
     >

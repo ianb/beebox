@@ -147,7 +147,10 @@ export function PlacePill({
     setSwitchOpened(true);
   }
 
-  const faceLabel = landmark === null ? place.label : landmark.label;
+  // `|| place.label`: an empty landmark label must not blank the face (the
+  // backend falls back to the card's filename, but this face must render
+  // something even against an older server).
+  const faceLabel = landmark === null ? place.label : landmark.label || place.label;
   const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
 
   return (

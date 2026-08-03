@@ -19,7 +19,7 @@ import {
 import { resolveFeatures } from "../../../core/chat/features.js";
 import { MAX_SESSION_ENTRIES, type SessionEntry } from "../../../cli/lib/session.js";
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
-import { labelForSession, loadAllSessions } from "../../../core/chat/session/list.js";
+import { titleForSession, loadAllSessions } from "../../../core/chat/session/list.js";
 import { landmarkLabelsForDirs } from "../../../core/landmark/summaries.js";
 
 /**
@@ -125,8 +125,8 @@ export const chatSessionProcedures = {
   // only the label keeps that fetch off the transcript the running machine owns.
   label: publicProcedure
     .input(z.object({ session: z.string().min(1) }))
-    .query(async ({ input, ctx }) => {
-      const label = await labelForSession(ctx.boxRoot, input.session);
+    .query(async ({ input, ctx }): Promise<{ label: string | null }> => {
+      const label = await titleForSession(ctx.boxRoot, input.session);
       return { label };
     }),
 

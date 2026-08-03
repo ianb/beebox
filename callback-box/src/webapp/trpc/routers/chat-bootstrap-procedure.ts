@@ -22,7 +22,7 @@ import {
   type SessionHistory,
 } from "./chat-session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
-import { labelForSession } from "../../../core/chat/session/list.js";
+import { titleForSession } from "../../../core/chat/session/list.js";
 
 export interface ChatBootstrap {
   /** The resolved session, or null when the box has no chat session yet. */
@@ -30,10 +30,11 @@ export interface ChatBootstrap {
   /** Null exactly when `sessionId` is null — there is no history to load. */
   history: SessionHistory | null;
   /**
-   * The session's display label — husk `title`, else the first user message,
-   * else the id prefix — the same resolution the session pickers show. Null
-   * exactly when `sessionId` is null. The chat page's session chip needs a
-   * name and no other chat-page query carries one.
+   * The session's *editorial* title — the husk card's `title`, or null when
+   * it has none (or `sessionId` is null). Deliberately NOT the pickers'
+   * first-message/id fallback chain: a fabricated title reads wrong on the
+   * app bar's session chip, which shows an icon face until the session has
+   * a real name (boxholder call, 2026-08-03).
    */
   label: string | null;
   status: ChatSessionStatus;
@@ -62,7 +63,7 @@ export const chatBootstrapProcedure = {
       }
       const [history, label] = await Promise.all([
         loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }),
-        labelForSession(ctx.boxRoot, sessionId),
+        titleForSession(ctx.boxRoot, sessionId),
       ]);
       return { sessionId, history, label, status: readSessionStatus(ctx.boxRoot, sessionId) };
     }),

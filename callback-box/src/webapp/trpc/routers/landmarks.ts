@@ -119,7 +119,10 @@ async function loadLandmarkPayload(
     payload: {
       path: relPath,
       dir: dir === "." ? "" : dir,
-      label: navigation?.label ?? "",
+      // Filename-basename fallback, matching `loadLandmarkSummaries`: a
+      // label-less card (e.g. a destinations-only landmark) must never ship
+      // an empty label — the app bar renders it as a blank pill face.
+      label: (navigation?.label ?? "") || path.basename(relPath, ".landmark.card"),
       symbol: symbol.text,
       symbolSrc: symbol.src,
       links,

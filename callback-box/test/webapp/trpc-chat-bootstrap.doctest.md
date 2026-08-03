@@ -4,8 +4,9 @@ Opening `/chat` used to take three serial round trips: `chat.defaultSession` to
 learn the session id, a client navigation, then `chat.history` + `chat.status`
 (both need a concrete id server-side, so they can't go out sooner).
 `chat.bootstrap` resolves the session and answers all three at once. It also
-carries the session's display `label` — the chat page's session chip needs a
-name, and no other chat-page query has one.
+carries the session's editorial `label` (the husk card's `title`, or null
+when the session has no real name yet) — the chat page's session chip needs
+it, and no other chat-page query has one.
 
 It composes the same implementations the three procedures use, so it can't
 report anything different from them.
@@ -98,9 +99,14 @@ print(`status: running=${got.status.running} busy=${got.status.busy} id=${got.st
 sessionId: sess-explicit
 total: 2
 entries: user:Hello, assistant:Hi there!
-label: Hello
+label: null
 status: running=false busy=false id=sess-explicit
 ```
+
+`label` is null here even though the transcript has messages: it is the
+session's *editorial* title (husk `title` only — see the husk section
+below), not the pickers' first-message fallback. The session chip shows an
+icon face until a real title exists.
 
 The history slice options are the ones `chat.history` takes:
 
@@ -158,13 +164,14 @@ errored before writing — is a normal state. `chat.history` already degrades
 this way; `bootstrap` matches it rather than inventing an error the chat page
 would have to handle.
 
-The label falls back to the id prefix, the same last resort the session lists
-use.
+The label is null — no husk, no editorial title. (The session *lists* fall
+back to an id prefix for their rows; bootstrap's label deliberately
+doesn't.)
 
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
 JSON.stringify(missing)
-=> {"sessionId":"no-such-session","history":{"sessionId":"no-such-session","entries":[],"total":0},"label":"no-such-","status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null}}
+=> {"sessionId":"no-such-session","history":{"sessionId":"no-such-session","entries":[],"total":0},"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null}}
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
