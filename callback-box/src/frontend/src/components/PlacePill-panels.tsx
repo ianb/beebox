@@ -15,6 +15,7 @@ import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { href } from "../lib/routing";
 import { apiFileUrl } from "../lib/view-url";
 import { withBase } from "../api";
+import type { NavMenuEntry } from "../lib/nav-menu-entries";
 
 /** Panel-swap depth for the switch menu (see `Dropdown`'s `panelIndex`). */
 export type SwitchPanel = "root" | "box";
@@ -109,6 +110,24 @@ function ProblemRow({ count, boxSlug }: { count: number; boxSlug: string }) {
   );
 }
 
+/**
+ * The box's own `nav.card` entries (Track C3) — the section that used to be
+ * the bar's link row. Entries duplicating a builtin row are already filtered
+ * out upstream (`lib/nav-menu-entries.ts`); an empty list renders nothing at
+ * all, divider included, so a box without a card sees no trace of it.
+ */
+function NavCardRows({ entries }: { entries: NavMenuEntry[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <>
+      <MenuDivider />
+      {entries.map((entry) => (
+        <MenuItem key={entry.to} to={href(entry.to)}>{entry.label}</MenuItem>
+      ))}
+    </>
+  );
+}
+
 interface SwitchMenuProps {
   panel: SwitchPanel;
   boxSlug: string;
@@ -119,6 +138,8 @@ interface SwitchMenuProps {
   currentDir: string | null;
   /** null while the lazy `chat.byLandmark` query is still resolving. */
   landmarks: SwitchLandmark[] | null;
+  /** The box's `nav.card` rows, already deduped against the builtin rows. */
+  navEntries: NavMenuEntry[];
   problemCount: number;
   onOpenBoxPanel: () => void;
   onBackToRoot: () => void;
@@ -133,7 +154,7 @@ interface SwitchMenuProps {
  */
 export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
   const {
-    panel, boxSlug, boxName, hideBoxRow, currentDir, landmarks, problemCount,
+    panel, boxSlug, boxName, hideBoxRow, currentDir, landmarks, navEntries, problemCount,
     onOpenBoxPanel, onBackToRoot, onSelectLandmark,
   } = props;
   switch (panel) {
@@ -149,6 +170,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
             </MenuItem>
           )}
           <MenuItem to={href(`/${boxSlug}/landmarks`)}>All landmarks →</MenuItem>
+          <NavCardRows entries={navEntries} />
           <MenuDivider />
           <SectionHeader>Switch to</SectionHeader>
           {landmarks === null ? (

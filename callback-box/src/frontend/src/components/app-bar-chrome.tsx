@@ -59,13 +59,11 @@ export interface AppBarMenuSlot {
 interface AppBarChromeValues {
   place: AppBarPlace | null;
   /**
-   * Every mounted chip container. AppNav renders separate compact (mobile)
-   * and inline (desktop) bars, so there are two — one of them display:none.
-   * Publishers render one portal per slot rather than guessing which is
-   * visible; the hidden copy costs nothing and C3's single responsive bar
-   * collapses this back to one.
+   * The bar's chip container, or null before the bar mounts (it never does
+   * under `?embed=1`). Exactly one: the bar is a single responsive row (C3),
+   * so there is no hidden duplicate to portal into.
    */
-  chipSlots: HTMLElement[];
+  chipSlot: HTMLElement | null;
   /**
    * The here-menu target, or null when no here menu is open. Only ever one:
    * the container mounts inside the pill's here `Dropdown`, which exists only
@@ -81,14 +79,14 @@ interface AppBarChromeWriters {
   clearPlace: (owner: object) => void;
   claimHereMenu: (owner: object) => void;
   releaseHereMenu: (owner: object) => void;
-  addChipSlot: (element: HTMLElement) => void;
-  removeChipSlot: (element: HTMLElement) => void;
+  setChipSlot: (element: HTMLElement) => void;
+  clearChipSlot: (element: HTMLElement) => void;
   setHereSlot: (slot: AppBarMenuSlot | null) => void;
 }
 
 const EMPTY_VALUES: AppBarChromeValues = {
   place: null,
-  chipSlots: [],
+  chipSlot: null,
   hereSlot: null,
   hereMenuClaimed: false,
 };
@@ -104,7 +102,7 @@ const AppBarChromeWriteContext = createContext<AppBarChromeWriters | null>(null)
 export function AppBarChromeProvider({ children }: { children: ReactNode }) {
   const [place, setPlace] = useState<{ owner: object; place: AppBarPlace } | null>(null);
   const [hereOwner, setHereOwner] = useState<object | null>(null);
-  const [chipSlots, setChipSlots] = useState<HTMLElement[]>([]);
+  const [chipSlot, setChipSlot] = useState<HTMLElement | null>(null);
   const [hereSlot, setHereSlot] = useState<AppBarMenuSlot | null>(null);
 
   const writers = useMemo<AppBarChromeWriters>(
@@ -113,8 +111,10 @@ export function AppBarChromeProvider({ children }: { children: ReactNode }) {
       clearPlace: (owner) => setPlace((cur) => (cur !== null && cur.owner === owner ? null : cur)),
       claimHereMenu: (owner) => setHereOwner(owner),
       releaseHereMenu: (owner) => setHereOwner((cur) => (cur === owner ? null : cur)),
-      addChipSlot: (element) => setChipSlots((cur) => (cur.includes(element) ? cur : [...cur, element])),
-      removeChipSlot: (element) => setChipSlots((cur) => (cur.includes(element) ? cur.filter((e) => e !== element) : cur)),
+      setChipSlot: (element) => setChipSlot(element),
+      // Owner-scoped, like the place publication: a slot that unmounts after
+      // its replacement registered must not clear the live one.
+      clearChipSlot: (element) => setChipSlot((cur) => (cur === element ? null : cur)),
       setHereSlot,
     }),
     [],
@@ -123,11 +123,11 @@ export function AppBarChromeProvider({ children }: { children: ReactNode }) {
   const values = useMemo<AppBarChromeValues>(
     () => ({
       place: place === null ? null : place.place,
-      chipSlots,
+      chipSlot,
       hereSlot,
       hereMenuClaimed: hereOwner !== null,
     }),
-    [place, chipSlots, hereSlot, hereOwner],
+    [place, chipSlot, hereSlot, hereOwner],
   );
 
   return (
@@ -181,11 +181,11 @@ export function useAppBarHereMenuClaim(claimed: boolean): void {
   }, [writers, claimed]);
 }
 
-/** The portal targets a page can render into. Null/empty until the bar mounts
+/** The portal targets a page can render into. Null until the bar mounts
  *  (it doesn't at all under `?embed=1`), so callers must guard on presence. */
-export function useAppBarSlots(): { chipSlots: HTMLElement[]; hereSlot: AppBarMenuSlot | null } {
-  const { chipSlots, hereSlot } = useContext(AppBarChromeReadContext);
-  return { chipSlots, hereSlot };
+export function useAppBarSlots(): { chipSlot: HTMLElement | null; hereSlot: AppBarMenuSlot | null } {
+  const { chipSlot, hereSlot } = useContext(AppBarChromeReadContext);
+  return { chipSlot, hereSlot };
 }
 
 /** The place a page published, or null when none has. Read by the bar. */
@@ -210,9 +210,9 @@ export function AppBarChipSlot() {
   const setRef = useCallback(
     (element: HTMLDivElement | null) => {
       if (writers === null) return;
-      if (mountedRef.current !== null) writers.removeChipSlot(mountedRef.current);
+      if (mountedRef.current !== null) writers.clearChipSlot(mountedRef.current);
       mountedRef.current = element;
-      if (element !== null) writers.addChipSlot(element);
+      if (element !== null) writers.setChipSlot(element);
     },
     [writers],
   );

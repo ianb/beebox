@@ -85,7 +85,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   useAppBarPlace({ dir: contextDir, label });
   useAppBarHereMenuClaim(true);
 
-  const { chipSlots, hereSlot } = useAppBarSlots();
+  const { chipSlot, hereSlot } = useAppBarSlots();
 
   // Stable across a streamed turn: `setDebugView`/`setShowDebugLog` are React
   // state setters, so these two callbacks never change identity.
@@ -124,7 +124,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   // there is nothing to portal into and this renders nothing.
   return (
     <>
-      {chipSlots.map((element, i) => createPortal(chips, element, `chip-slot-${i}`))}
+      {chipSlot === null ? null : createPortal(chips, chipSlot)}
       {hereSlot === null ? null : createPortal(
         <PortaledMenuScope close={hereSlot.close}>
           <ContextMenuBody

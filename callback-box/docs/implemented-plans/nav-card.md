@@ -4,9 +4,18 @@ Status: **implemented 2026-07** (all three PRs, verified in a live box).
 Where it lives now: the naming grammar in `src/shared/card-name.ts`, the
 route table in `src/shared/nav-routes.ts`, the schema in
 `src/schemas/nav.ts`, resolution in `src/core/nav.ts` (tRPC `nav.get` + a
-`nav-card` health check), and AppNav consumption via
-`src/frontend/src/hooks/useNavLinks.ts`. The "Deliberately deferred"
+`nav-card` health check), and app-bar consumption via
+`src/frontend/src/hooks/useNavMenuEntries.ts` + the rendering policy in
+`src/frontend/src/lib/nav-menu-entries.ts`. The "Deliberately deferred"
 section at the bottom is still future.
+
+**Where the entries render changed (2026-08, `docs/plans/top-nav-ia.md`
+Track C3).** There is no nav link row any more, so the card's entries are a
+section inside the app bar's switch menu, and entries duplicating a builtin
+menu row are skipped. The builtin *fallback* nav (`DEFAULT_NAV_HREFS`) is
+retired with it: the menu carries those destinations itself, so a box with no
+`nav.card` needs no substitute list. Resolution, validation and the health
+check are unchanged.
 
 First implementation slice of `docs/plans/interface-as-cards.md`. Small on
 the surface, but deliberately forces the three load-bearing pieces of the

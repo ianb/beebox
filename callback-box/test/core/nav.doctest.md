@@ -41,7 +41,7 @@ JSON.stringify(result.status === "ok" ? result.entries : null, null, 2)
   {
     "kind": "href",
     "target": "/",
-    "label": "Dashboard"
+    "label": "Chat"
   },
   {
     "kind": "href",
@@ -166,14 +166,14 @@ JSON.stringify(missing.status === "ok" ? missing.entries[0].target : null)
 const box = await makeTmpBox();
 await box.write("nav.card", `---
 entries:
-  - { href: /dashboard }
+  - { href: /not-a-route }
 ---
 `);
 const result = await resolveNav(box.root);
 result.status
 => invalid
 
-result.status === "invalid" ? result.error.includes("href must be one of: /, /chat, /chats") : null
+result.status === "invalid" ? result.error.includes("href must be one of: /, /chat, /dashboard") : null
 => true
 ```
 

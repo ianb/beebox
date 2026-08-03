@@ -1,7 +1,10 @@
 /**
  * The builtin route table for nav purposes — the single source for
- * `nav.card` href validation (schema), href label defaults (nav resolver),
- * and the builtin fallback nav (AppNav). Shared by backend and frontend.
+ * `nav.card` href validation (schema) and href label defaults (nav
+ * resolver). Shared by backend and frontend. There is no builtin fallback
+ * nav any more: the app bar's switch menu carries these destinations itself
+ * (docs/plans/top-nav-ia.md Track C3), so a box without a `nav.card` needs
+ * no substitute list.
  *
  * As interface surfaces convert to cards (docs/plans/interface-as-cards.md),
  * nav entries migrate from `href:` to `ref:`; this table only ever names
@@ -29,22 +32,6 @@ export const NAV_ROUTES: readonly NavRoute[] = [
   { href: "/capture", label: "Capture" },
   { href: "/settings", label: "Settings" },
   { href: "/admin", label: "Admin" },
-];
-
-/**
- * The builtin fallback nav — what AppNav shows when there is no (or an
- * invalid) `nav.card`. Mirrors the pre-nav-card hardcoded nav; deliberately
- * omits Settings/Admin, which are reachable but not front-line.
- */
-export const DEFAULT_NAV_HREFS: readonly string[] = [
-  "/",
-  "/chat",
-  "/chats",
-  "/questions",
-  "/browse",
-  "/landmarks",
-  "/history",
-  "/capture",
 ];
 
 const byHref = new Map(NAV_ROUTES.map((r) => [r.href, r]));

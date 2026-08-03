@@ -1,8 +1,8 @@
 /**
  * Nav card resolution — loads the box root's `nav.card` and turns it into
- * render-ready entries. Consumed by the nav tRPC router (AppNav) and by
- * the health check (an invalid nav card is a health warning, not a broken
- * nav — the shell falls back to the builtin nav either way).
+ * render-ready entries. Consumed by the nav tRPC router (the app bar's
+ * switch menu) and by the health check (an invalid nav card is a health
+ * warning, not a broken nav — the menu keeps its builtin rows either way).
  * See docs/implemented-plans/nav-card.md.
  */
 
@@ -30,9 +30,9 @@ export interface NavEntryResolved {
 }
 
 export type NavResolution =
-  /** No nav.card — the shell shows the builtin nav; not a problem. */
+  /** No nav.card — the menu shows only its builtin rows; not a problem. */
   | { status: "absent" }
-  /** nav.card exists but doesn't validate — builtin fallback + health warning. */
+  /** nav.card exists but doesn't validate — no section + health warning. */
   | { status: "invalid"; error: string }
   /**
    * Valid card. `problems` lists non-fatal issues (dangling refs) for the

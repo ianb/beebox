@@ -27,6 +27,7 @@ import { trpc } from "../lib/trpc";
 import { apiFileUrl } from "../lib/view-url";
 import type { Place } from "../lib/place-label";
 import { useOpenLandmarkChat } from "../hooks/useOpenLandmarkChat";
+import { useNavMenuEntries } from "../hooks/useNavMenuEntries";
 import { SwitchMenuBody, type SwitchPanel } from "./PlacePill-panels";
 import { HereMenuBody } from "./PlacePill-here";
 import { AppBarHereSlot, useAppBarHereMenuClaimed } from "./app-bar-chrome";
@@ -111,6 +112,10 @@ export function PlacePill({
 
   const switchQuery = trpc.chat.byLandmark.useQuery(undefined, { enabled: switchOpened });
   const switchData = switchQuery.data;
+  // The box's own nav.card section — same first-open laziness as the
+  // landmark list, and it keeps the card's live-invalidation subscription
+  // that the retired link row used to own (Track C3).
+  const navEntries = useNavMenuEntries({ base: `/${boxSlug}`, enabled: switchOpened });
 
   const faceLabel = landmark === null ? place.label : landmark.label;
   const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
@@ -152,6 +157,7 @@ export function PlacePill({
           hideBoxRow={hideBoxRow === true}
           currentDir={place.dir}
           landmarks={switchData === undefined ? null : switchData.landmarks}
+          navEntries={navEntries}
           problemCount={switchData === undefined ? 0 : switchData.problems.length}
           onOpenBoxPanel={() => setSwitchPanel("box")}
           onBackToRoot={() => setSwitchPanel("root")}
