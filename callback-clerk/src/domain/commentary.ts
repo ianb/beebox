@@ -8,6 +8,7 @@
  */
 
 import type { CommentaryPayload } from "../contract/clerk-contract.generated.js";
+import { boxPageUrl } from "./box-url.js";
 
 /** The readable rendering of a page (Defuddle markdown + metadata). */
 export interface ReadablePage {
@@ -50,12 +51,10 @@ export function buildCommentaryPayload(params: {
 /**
  * Resolve the server's relative `open` path (e.g.
  * `chat?session=new&companion=…`) against the box's root URL into an absolute
- * URL the extension can open in a new tab. `boxUrl` already carries the box's
- * path prefix (origin + base + slug), so the open path is appended as a
- * sibling segment — mirroring how clerk-api builds `${boxUrl}/api/trpc/clerk.…`.
+ * URL the extension can open in a new tab.
  */
 export function commentaryOpenUrl(boxUrl: string, openPath: string): string {
-  return `${boxUrl.replace(/\/+$/, "")}/${openPath.replace(/^\/+/, "")}`;
+  return boxPageUrl(boxUrl, openPath);
 }
 
 function linkMarkdown(title: string, url: string): string {

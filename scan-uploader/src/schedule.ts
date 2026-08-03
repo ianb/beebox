@@ -11,7 +11,7 @@
  */
 
 import { readFile, stat, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { loadConfig } from "./config.js";
 import { writeFileAtomic } from "./atomic-write.js";
@@ -57,15 +57,19 @@ export interface LaunchctlRunner {
 }
 
 export interface PlistParams {
-  readonly nodePath: string;
-  readonly bundlePath: string;
-  readonly configPath: string;
+  readonly programArguments: readonly string[];
+  /** Source-mode only: `bin/scan-uploader` execs tsx from wherever launchd
+   * happens to run it, so the repo root needs to be pinned explicitly. */
+  readonly workingDirectory?: string;
+  /** Source-mode only: launchd's default `PATH` has no `node` on it (the
+   * wrapper's `exec "$TSX" …` needs one to run at all), so the directory
+   * holding the `node` binary that resolved `tsx` is added explicitly. */
+  readonly environmentVariables?: Readonly<Record<string, string>>;
   readonly intervalSeconds: number;
   readonly logPath: string;
 }
 
 export function generatePlist(params: PlistParams): string {
-  const programArguments = [params.nodePath, params.bundlePath, params.configPath];
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
@@ -75,8 +79,10 @@ export function generatePlist(params: PlistParams): string {
     `\t<string>${xmlEscape(LABEL)}</string>`,
     "\t<key>ProgramArguments</key>",
     "\t<array>",
-    ...programArguments.map((argument) => `\t\t<string>${xmlEscape(argument)}</string>`),
+    ...params.programArguments.map((argument) => `\t\t<string>${xmlEscape(argument)}</string>`),
     "\t</array>",
+    ...workingDirectoryLines(params.workingDirectory),
+    ...environmentVariablesLines(params.environmentVariables),
     "\t<key>StartInterval</key>",
     `\t<integer>${String(params.intervalSeconds)}</integer>`,
     "\t<key>RunAtLoad</key>",
@@ -90,6 +96,20 @@ export function generatePlist(params: PlistParams): string {
     "",
   ];
   return lines.join("\n");
+}
+
+function workingDirectoryLines(workingDirectory: string | undefined): string[] {
+  if (workingDirectory === undefined) return [];
+  return ["\t<key>WorkingDirectory</key>", `\t<string>${xmlEscape(workingDirectory)}</string>`];
+}
+
+function environmentVariablesLines(environmentVariables: Readonly<Record<string, string>> | undefined): string[] {
+  if (environmentVariables === undefined) return [];
+  const entryLines = Object.entries(environmentVariables).flatMap(([key, value]) => [
+    `\t\t<key>${xmlEscape(key)}</key>`,
+    `\t\t<string>${xmlEscape(value)}</string>`,
+  ]);
+  return ["\t<key>EnvironmentVariables</key>", "\t<dict>", ...entryLines, "\t</dict>"];
 }
 
 function xmlEscape(value: string): string {
@@ -111,6 +131,70 @@ export function parseIntervalSeconds(plistXml: string): number | undefined {
   return Number(raw);
 }
 
+/** `bin/scan-uploader` (the wrapper) execs tsx directly against
+ * `scan-uploader/src/cli.ts`, so `process.argv[1]` on a checkout run always
+ * ends in `.ts`; a copied `dist/scan-uploader.mjs` run with plain `node`
+ * ends in `.mjs`. Two possible values, so a suffix check is enough — no
+ * need to inspect the filesystem just to tell them apart. */
+export type RunMode = "source" | "bundle";
+
+export function detectRunMode(entryPath: string): RunMode {
+  return entryPath.endsWith(".ts") ? "source" : "bundle";
+}
+
+export interface LaunchdInvocation {
+  readonly programArguments: readonly string[];
+  readonly workingDirectory?: string;
+  readonly environmentVariables?: Readonly<Record<string, string>>;
+}
+
+export interface ResolveLaunchdInvocationParams {
+  /** `process.argv[1]`, already resolved to an absolute path. */
+  readonly entryPath: string;
+  /** `process.execPath`. */
+  readonly execPath: string;
+  readonly configPath: string;
+}
+
+/**
+ * Builds the launchd-facing invocation for whichever mode `entryPath`
+ * indicates. Bundle mode is unchanged from before source-mode existed:
+ * `[execPath, entryPath, configPath]`, no working directory or env — the
+ * bundle is self-contained and portable. Source mode instead runs through
+ * the repo-root wrapper (which resolves and execs tsx itself), so the
+ * schedule needs to hand launchd a repo root (`WorkingDirectory`) and a
+ * `PATH` with a `node` on it (launchd's own default `PATH` has none —
+ * that's what the wrapper's `exec "$TSX" …` needs to find `node` to run at
+ * all).
+ */
+export async function resolveLaunchdInvocation(
+  params: ResolveLaunchdInvocationParams,
+): Promise<LaunchdInvocation> {
+  if (detectRunMode(params.entryPath) === "bundle") {
+    return { programArguments: [params.execPath, params.entryPath, params.configPath] };
+  }
+  return resolveSourceInvocation(params);
+}
+
+async function resolveSourceInvocation(params: ResolveLaunchdInvocationParams): Promise<LaunchdInvocation> {
+  // entryPath: <repoRoot>/scan-uploader/src/cli.ts
+  const srcDir = dirname(params.entryPath);
+  const packageDir = dirname(srcDir);
+  const repoRoot = dirname(packageDir);
+  const wrapperPath = join(repoRoot, "bin", "scan-uploader");
+  if (!(await pathExists(wrapperPath))) {
+    const message =
+      `expected the repo-root wrapper at ${wrapperPath} (derived from ${params.entryPath}), ` +
+      "but it does not exist — source-mode scheduling only works from a full monorepo checkout";
+    throw new ScheduleError(message);
+  }
+  return {
+    programArguments: [wrapperPath, params.configPath],
+    workingDirectory: repoRoot,
+    environmentVariables: { PATH: `${dirname(params.execPath)}:/usr/bin:/bin` },
+  };
+}
+
 export interface ScheduleContext {
   readonly homeDir: string;
   readonly uid: number;
@@ -119,8 +203,11 @@ export interface ScheduleContext {
 
 export interface InstallParams extends ScheduleContext {
   readonly configPath: string;
-  readonly nodePath: string;
-  readonly bundlePath: string;
+  /** `process.execPath`. */
+  readonly execPath: string;
+  /** `process.argv[1]`, already resolved to an absolute path — determines
+   * source vs. bundle mode (see {@link detectRunMode}). */
+  readonly entryPath: string;
   readonly intervalMinutes: number;
 }
 
@@ -142,13 +229,12 @@ export async function installSchedule(params: InstallParams): Promise<InstallRes
   const intervalSeconds = params.intervalMinutes * 60;
   const path = plistPath(params.homeDir);
   const log = logPath(params.homeDir);
-  const plist = generatePlist({
-    nodePath: params.nodePath,
-    bundlePath: params.bundlePath,
+  const invocation = await resolveLaunchdInvocation({
+    entryPath: params.entryPath,
+    execPath: params.execPath,
     configPath: params.configPath,
-    intervalSeconds,
-    logPath: log,
   });
+  const plist = generatePlist({ ...invocation, intervalSeconds, logPath: log });
   await writeFileAtomic(path, { contents: plist });
   await params.runner.run(["bootout", serviceTarget(params.uid)]);
   const bootstrap = await params.runner.run(["bootstrap", domainTarget(params.uid), path]);

@@ -27,7 +27,7 @@ function defaultName(): string {
 }
 
 function configureCommand(name: string): string {
-  return `node scan-uploader/dist/scan-uploader.mjs configure ${boxBaseUrl()} --name ${name} --folder <your-scan-folder>`;
+  return `bin/scan-uploader configure ${boxBaseUrl()} --name ${name} --folder <your-scan-folder>`;
 }
 
 function UploaderRow({ uploader }: { uploader: UploaderToken }) {
@@ -79,11 +79,14 @@ function InstallInstructions() {
           On the machine connected to the scanner, one time:
         </Text>
         <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800 whitespace-pre">
-          {"git clone <repo>\n" +
-            "pnpm install --filter scan-uploader...  # from the repo root\n" +
-            "pnpm --filter scan-uploader build"}
+          {"git clone <repo>\n" + "pnpm install --filter scan-uploader...  # from the repo root"}
         </code>
-        <Text size="sm" tone="muted">Then mint a token below and run the configure command it shows.</Text>
+        <Text size="sm" tone="muted">
+          Then mint a token below and run the configure command it shows (from the repo root —
+          bin/scan-uploader runs the CLI straight from source, so a checkout always stays current).
+          No checkout on that machine? Build once elsewhere (pnpm --filter scan-uploader build),
+          copy the resulting scan-uploader/dist/scan-uploader.mjs, and run it there with plain node.
+        </Text>
       </Stack>
     </details>
   );

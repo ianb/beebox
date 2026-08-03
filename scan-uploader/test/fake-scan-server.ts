@@ -35,6 +35,12 @@ export interface FakeScanServerHandlers {
    * header, responding 401 when it returns `false`. Omitted means every
    * request is authorized — the default every existing test relies on. */
   checkAuthorization?: (authorization: string | undefined) => boolean;
+  /** Optional: short-circuits `POST /api/scan/check` with an arbitrary
+   * status + JSON body instead of the normal 200 states response — for
+   * simulating a status the real server can legitimately return outside
+   * the check endpoint's documented 200 shape (e.g. a 503 the client has
+   * no specific handling for, carrying a `reason` in its body). */
+  checkFailure?: () => { readonly status: number; readonly body: unknown };
 }
 
 export type PutOutcome =
@@ -42,7 +48,12 @@ export type PutOutcome =
   | { readonly status: 422; readonly body: { status: "rejected"; reason: string } }
   | { readonly status: 422; readonly body: { status: "hash-mismatch" } }
   | { readonly status: 413 }
-  | { readonly status: 429; readonly retryAfterSeconds: number };
+  | { readonly status: 429; readonly retryAfterSeconds: number }
+  /** A status this client's `interpretPutResponse` has no specific case
+   * for (anything besides 200/422/413/429/503) — falls to its generic
+   * "unexpected HTTP status" handling. For simulating that path with a
+   * reason-carrying body. */
+  | { readonly status: 500; readonly body: unknown };
 
 export interface FakeScanServer {
   readonly url: string;
@@ -139,9 +150,14 @@ function requestedHashes(body: unknown): string[] {
 }
 
 async function handleCheck(ctx: RequestContext): Promise<void> {
-  const { checkAuthorization } = ctx.handlers;
+  const { checkAuthorization, checkFailure } = ctx.handlers;
   if (checkAuthorization !== undefined && !checkAuthorization(ctx.req.headers.authorization)) {
     ctx.res.writeHead(401, { "content-type": "application/json" }).end(JSON.stringify({ error: "unauthorized" }));
+    return;
+  }
+  if (checkFailure !== undefined) {
+    const failure = checkFailure();
+    ctx.res.writeHead(failure.status, { "content-type": "application/json" }).end(JSON.stringify(failure.body));
     return;
   }
   const raw = await readBody(ctx.req);

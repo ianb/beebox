@@ -8,6 +8,7 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 
+import { resolveConfigPath } from "./config-path.js";
 import { errorMessage } from "./error-guards.js";
 import { ScheduleError } from "./errors.js";
 import { RealLaunchctlRunner } from "./launchctl.js";
@@ -21,8 +22,6 @@ import {
   type StatusResult,
   type UninstallResult,
 } from "./schedule.js";
-
-const DEFAULT_CONFIG_PATH = "./scan-uploader.json";
 
 export function printScheduleHelp(): void {
   console.log(
@@ -113,13 +112,18 @@ async function dispatchAction(args: readonly string[]): Promise<number> {
 async function runInstall(args: readonly string[]): Promise<number> {
   const flags = parseActionFlags(args);
   const intervalMinutes = parseIntervalMinutes(flags.interval);
+  const homeDir = homedir();
+  const configPath =
+    flags.configPath !== undefined
+      ? resolve(process.cwd(), flags.configPath)
+      : await resolveConfigPath({ cwd: process.cwd(), homeDir });
   const result = await installSchedule({
-    homeDir: homedir(),
+    homeDir,
     uid: requireUid(),
     runner: new RealLaunchctlRunner(),
-    configPath: resolve(process.cwd(), flags.configPath ?? DEFAULT_CONFIG_PATH),
-    nodePath: process.execPath,
-    bundlePath: resolveBundlePath(),
+    configPath,
+    execPath: process.execPath,
+    entryPath: resolveEntryPath(),
     intervalMinutes,
   });
   printInstallResult(result);
@@ -146,7 +150,11 @@ async function runStatus(): Promise<number> {
   return 0;
 }
 
-function resolveBundlePath(): string {
+/** The absolute path of the currently-running entry point — `.ts` on a
+ * checkout run (`bin/scan-uploader` execs tsx against `src/cli.ts`), `.mjs`
+ * when running a copied `dist/scan-uploader.mjs` bundle. Determines
+ * source-vs-bundle mode (`schedule.ts`'s `detectRunMode`). */
+function resolveEntryPath(): string {
   const argv1 = process.argv[1];
   if (argv1 === undefined) {
     const message = "could not resolve the running script's path from process.argv[1]";

@@ -16,6 +16,15 @@ import { makeTmpDir, removeTmpDir } from "./tmp-dir.js";
 const dir = await makeTmpDir("wire-client");
 const filePath = join(dir, "page1.pdf");
 await writeFile(filePath, "scan bytes");
+
+async function rejectedMessage(promise: Promise<unknown>): Promise<string> {
+  try {
+    await promise;
+    return "(no error thrown)";
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
 ```
 
 `checkHashes` parses the per-hash state map, including a `rejected` entry's
@@ -108,5 +117,76 @@ JSON.stringify(limited)
 
 ```cleanup
 await server3.close();
+```
+
+An unexpected `check` status whose body carries a `reason` gets that reason
+appended to the error, instead of leaving the boxholder to curl the
+endpoint by hand to find out why (a 503 the client has no specific
+`checkHashes` handling for — unlike `putFile`'s dedicated 503 case):
+
+```
+const server4: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "unknown" }),
+  checkFailure: () => ({
+    status: 503,
+    body: { status: "server-error", reason: "box is not annex-converted; scan upload disabled" },
+  }),
+  putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
+});
+const connection4 = { serverUrl: server4.url, box: "family", token: "t" };
+const checkFailureMessage = await rejectedMessage(checkHashes(connection4, ["aaa"]));
+checkFailureMessage.endsWith(
+  "check returned HTTP 503 — server says: box is not annex-converted; scan upload disabled",
+)
+=> true
+```
+
+```cleanup
+await server4.close();
+```
+
+A `reason` longer than ~200 chars is truncated rather than dumped whole
+(guards against a server echoing something like a stack trace as the
+field):
+
+```
+const longReason = "x".repeat(250);
+const server5: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "unknown" }),
+  checkFailure: () => ({ status: 503, body: { reason: longReason } }),
+  putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
+});
+const connection5 = { serverUrl: server5.url, box: "family", token: "t" };
+const longReasonMessage = await rejectedMessage(checkHashes(connection5, ["aaa"]));
+longReasonMessage.includes("x".repeat(200) + "…")
+=> true
+```
+
+```continue
+longReasonMessage.includes("x".repeat(201))
+=> false
+```
+
+```cleanup
+await server5.close();
+```
+
+`putFile` gets the same treatment for a status it has no specific case for
+(anything besides 200/422/413/429/503) — here the reason comes from a
+`message` field, checked when `reason` is absent:
+
+```
+const server6: FakeScanServer = await startFakeScanServer({
+  checkState: () => ({ state: "unknown" }),
+  putOutcome: () => ({ status: 500, body: { message: "database is in read-only mode" } }),
+});
+const connection6 = { serverUrl: server6.url, box: "family", token: "t" };
+const putFailureMessage = await rejectedMessage(putFile(connection6, { hash: "abc123", filePath }));
+putFailureMessage.endsWith("unexpected HTTP status 500 — server says: database is in read-only mode")
+=> true
+```
+
+```cleanup
+await server6.close();
 await removeTmpDir(dir);
 ```

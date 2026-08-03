@@ -1,0 +1,57 @@
+---
+title: "cb doctor annex passes green on a half-migrated box whose .gitignore still hides all assets"
+area: callback-box
+filed-by: agent
+discovered-in: main session — a clerk page-save 500'd; several boxes found half-migrated
+---
+
+Several boxes on a deployment were found in a broken half-migrated annex state:
+**git-annex initialized (`annex.uuid` set, `annex.largefiles` configured) BUT the box
+`.gitignore` still carried the manifest-scheme asset block** (`**/*.attach/**/*.<ext>`,
+incl. `*.frozen`). In that state every asset is ignored, so `git add` never sees it,
+so nothing is ever annexed — and any code path that `git add`s an asset (the clerk
+page-save's `page.frozen`) fails hard. It surfaced as a `clerk.commentary` **500**:
+*"The following paths are ignored by one of your .gitignore files: …/page.frozen".*
+
+## The core problem: doctor is blind to it
+
+`cb doctor annex` reported **all green** in this exact state:
+
+```
+✓ initialized  ✓ thin  ✓ largefiles  ✓ content-present  ✓ journal  ✓ hook
+```
+
+None of its checks ask *"does the box `.gitignore` still ignore assets?"* — the one
+condition that makes an annex-initialized box silently annex nothing.
+`attachments-gitignore.ts` already has the exact predicate (`isAssetIgnoreRule`, and
+`core/annex/is-annex-box.ts` frames "does this `.gitignore` still hide assets from
+git" as the same question). doctor should add a check that **fails** when the box is
+annex-initialized AND an asset ignore rule is still present, pointing at
+`cb attachments unignore` as the fix. Without it, this state is invisible until an
+asset write happens to hit it.
+
+## Secondary findings (worth their own items if pursued)
+
+- **`cb attachments to-annex` no-ops on this half-state.** It guards on
+  "is-annex-box" (annex.uuid present) and reports "0 assets, nothing changed", so it
+  will NOT complete a box that was annex-init'd but never gitignore-converted. The
+  fix on such a box is `cb attachments unignore`. Consider making `to-annex` (or a
+  dedicated repair) detect and finish this state.
+- **The clerk save 500s instead of degrading.** `clerk.commentary` surfaces the raw
+  git "ignored path" error as a 500 rather than a handled failure. Hardening worth
+  doing regardless of the box state.
+- **How the boxes got here:** annex init reached these boxes but the gitignore
+  conversion did not (one box was fully converted; most were not). Likely an
+  incomplete batch annex rollout / the "template rollout parks silently" pattern.
+  Worth confirming so a re-run can't re-strand boxes.
+
+## Resolution of the immediate incident (2026-08-02)
+
+Manually ran `cb attachments unignore` on the affected boxes (annex + largefiles were
+already fine; only the gitignore was stale). The one box with stuck clerk page
+snapshots had them annexed and committed afterward (verified: `page.frozen` became a
+98-byte annex pointer with the annex holding the object). A box that was consistently
+on the manifest scheme (not annex) was not affected. One box had the same conversion
+sitting UNCOMMITTED in a template sync and was left for the boxholder to commit or
+revert.
+</content>

@@ -13,11 +13,11 @@ import { homedir } from "node:os";
 import { createInterface } from "node:readline";
 
 import type { Disposition } from "./config.js";
+import { resolveConfigPath } from "./config-path.js";
 import { configure, type ConfigureResult } from "./configure.js";
 import { errorMessage } from "./error-guards.js";
 import { ConfigureError } from "./errors.js";
 
-const DEFAULT_CONFIG_PATH = "./scan-uploader.json";
 const DEFAULT_NAME = "uploader";
 const DISPOSITIONS: readonly Disposition[] = ["keep", "archive", "trash"];
 
@@ -33,7 +33,8 @@ export function printConfigureHelp(): void {
       "  --folder <path>        folder to watch for scans (prompted if omitted on a TTY)",
       "  --disposition <value>  keep (default), archive, or trash",
       "  --name <token-name>    label shown in the confirmation message (default: uploader)",
-      "  --config <path>        config file to write (default: ./scan-uploader.json)",
+      "  --config <path>        config file to write (default: ./scan-uploader.json if",
+      "                          present, else ~/.config/scan-uploader.json)",
       "  -h, --help             show this help",
       "",
       "The token is read from stdin: pipe it, or leave stdin a TTY to be",
@@ -136,19 +137,23 @@ async function runConfigure(args: readonly string[]): Promise<ConfigureResult> {
       ? await promptDisposition()
       : parseDisposition(flags.disposition);
   const token = isTTY ? await promptToken() : await readPipedToken();
+  const homeDir = homedir();
+  const configPath =
+    flags.configPath ?? (await resolveConfigPath({ cwd: process.cwd(), homeDir }));
   return configure({
     serverUrlWithBox: flags.serverUrlWithBox,
     folder,
     disposition,
     name: flags.name ?? DEFAULT_NAME,
     token,
-    configPath: flags.configPath ?? DEFAULT_CONFIG_PATH,
-    homeDir: homedir(),
+    configPath,
+    homeDir,
   });
 }
 
 function printResult(result: ConfigureResult): void {
   console.log(`configured: ${result.name} -> ${result.box} (server verified)`);
+  console.log(`  config: ${result.configPath}`);
   console.log("");
   console.log("Next steps — set up one ScanSnap profile for this box:");
   console.log("  - Format: searchable PDF (ScanSnap's own OCR text layer)");
@@ -193,13 +198,31 @@ interface MutedReadline {
   _writeToOutput: (chunk: string) => void;
 }
 
+/** The exact prompt/ack text `promptToken` writes to stderr. Exported as
+ * constants (rather than inlined) so a doctest can assert on the literal
+ * wording without needing a real TTY — the interactive read itself is only
+ * verified manually (see the comment on `promptToken`). */
+export const TOKEN_PROMPT_TEXT = "Paste the scan token (input is hidden): ";
+export const TOKEN_RECEIVED_ACK = "token received";
+
 /** Reads the token without echoing it. Node's `readline` has no public API
  * for a no-echo prompt, so this overrides the internal `_writeToOutput`
- * writer — the standard documented recipe for this exact gap. Not exercised
- * by doctests: it needs a real TTY, and `readPipedToken` below covers the
- * same token-consumption logic that `configure()` actually depends on. */
+ * writer — the standard documented recipe for this exact gap. That mute
+ * applies to `readline`'s own `output` stream (`process.stdout` here), so
+ * the prompt text is written directly to STDERR first, before the
+ * `Interface` even exists: writing it through `rl.question(promptText, …)`
+ * (the "obvious" approach) sends it through the same muted stream and it
+ * never appears at all — the bug this fixes (the process looked hung; it
+ * was just a real, working, entirely invisible prompt). STDERR also keeps
+ * a piped-stdout workflow's stdout clean. A short ack after a successful
+ * read confirms the paste registered, since nothing echoed while typing/
+ * pasting. Not exercised by doctests: it needs a real TTY (manually
+ * verified via `script -q /dev/null`), and `readPipedToken` below covers
+ * the same token-consumption logic that `configure()` actually depends on;
+ * `TOKEN_PROMPT_TEXT`/`TOKEN_RECEIVED_ACK` above are what doctests can and
+ * do assert on. */
 async function promptToken(): Promise<string> {
-  process.stdout.write("Paste the scan-upload token: ");
+  process.stderr.write(TOKEN_PROMPT_TEXT);
   return new Promise((resolve, reject) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
     // eslint-disable-next-line no-restricted-syntax -- readline exposes no public API to suppress input echo; overriding `_writeToOutput` is the standard Node.js recipe for a no-echo prompt.
@@ -217,7 +240,7 @@ async function promptToken(): Promise<string> {
     rl.question("", (answer) => {
       answered = true;
       rl.close();
-      process.stdout.write("\n");
+      process.stderr.write(`\n${TOKEN_RECEIVED_ACK}\n`);
       resolve(answer.trim());
     });
   });

@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Smoke test for the install story (docs/plans/scan-uploader-pairing.md
-# Track C): from a CLEAN clone of the monorepo, the documented sequence
+# Smoke test for the COPY-THE-BUNDLE install path (docs/plans/
+# scan-uploader-pairing.md Track C): from a CLEAN clone of the monorepo,
 #
 #   pnpm install --filter "scan-uploader..."
 #   pnpm --filter scan-uploader build
 #
 # must produce a dist/scan-uploader.mjs that runs SELF-CONTAINED (from a bare
-# directory with no node_modules in reach).
+# directory with no node_modules in reach) — the story for a machine that
+# won't hold a checkout. A checkout itself does NOT need this build: `bin/
+# scan-uploader` (repo root) runs the CLI straight from source via tsx, so a
+# checkout stays current with no rebuild step — see the wrapper's own header
+# comment and README "Setup" step 1.
 #
 # Measured 2026-08-01: the workspace's `node-linker=hoisted` (.npmrc,
 # necessarily workspace-wide) means the filtered install still materializes
@@ -50,4 +54,4 @@ grep -q "configure" help.out || { echo "FAIL: --help does not mention configure"
 node scan-uploader.mjs configure --help > configure-help.out 2>&1 \
   || { echo "FAIL: configure --help errored"; exit 1; }
 
-echo "PASS: clean clone -> filtered install -> build -> self-contained run"
+echo "PASS: clean clone -> filtered install -> build -> self-contained bundle run"

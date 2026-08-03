@@ -12,10 +12,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import {
+  detectRunMode,
   generatePlist,
   installSchedule,
   parseIntervalSeconds,
   requireDarwin,
+  resolveLaunchdInvocation,
   scheduleStatus,
   uninstallSchedule,
   DEFAULT_INTERVAL_MINUTES,
@@ -26,6 +28,7 @@ import {
   type LaunchctlRunner,
 } from "../src/schedule.js";
 import { parseIntervalMinutes } from "../src/schedule-cli.js";
+import { homeConfigPath, resolveConfigPath } from "../src/config-path.js";
 import { makeTmpDir, removeTmpDir } from "./tmp-dir.js";
 
 const dir = await makeTmpDir("schedule");
@@ -85,13 +88,14 @@ async function writeValidConfig(configPath: string): Promise<void> {
 A path with a space and an ampersand must come out entity-escaped (`&amp;`)
 so the plist stays valid XML; `RunAtLoad` is always `true`; `StartInterval`
 is exactly `intervalSeconds` as given (the minutes→seconds multiplication
-happens in `installSchedule`, not here).
+happens in `installSchedule`, not here). No `workingDirectory`/
+`environmentVariables` given — this is bundle mode's shape, where
+`ProgramArguments` alone is enough (no `WorkingDirectory`/
+`EnvironmentVariables` keys at all):
 
 ```
 const plist = generatePlist({
-  nodePath: "/usr/local/bin/node",
-  bundlePath: "/Users/A B & C/scan-uploader.mjs",
-  configPath: "/Users/A B & C/scan-uploader.json",
+  programArguments: ["/usr/local/bin/node", "/Users/A B & C/scan-uploader.mjs", "/Users/A B & C/scan-uploader.json"],
   intervalSeconds: 900,
   logPath: "/Users/A B & C/scan-uploader.log",
 });
@@ -105,6 +109,112 @@ output — round-tripping what `generatePlist` wrote:
 ```continue
 parseIntervalSeconds(plist)
 => 900
+```
+
+Source mode's shape adds `WorkingDirectory` and an `EnvironmentVariables`
+dict — both entity-escaped the same as any other string value:
+
+```
+const sourcePlist = generatePlist({
+  programArguments: ["/repo/bin/scan-uploader", "/Users/A B & C/scan-uploader.json"],
+  workingDirectory: "/repo root & co",
+  environmentVariables: { PATH: "/usr/local/bin:/usr/bin:/bin" },
+  intervalSeconds: 900,
+  logPath: "/Users/A B & C/scan-uploader.log",
+});
+JSON.stringify(sourcePlist)
+=> "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>Label</key>\n\t<string>org.callback-box.scan-uploader</string>\n\t<key>ProgramArguments</key>\n\t<array>\n\t\t<string>/repo/bin/scan-uploader</string>\n\t\t<string>/Users/A B &amp; C/scan-uploader.json</string>\n\t</array>\n\t<key>WorkingDirectory</key>\n\t<string>/repo root &amp; co</string>\n\t<key>EnvironmentVariables</key>\n\t<dict>\n\t\t<key>PATH</key>\n\t\t<string>/usr/local/bin:/usr/bin:/bin</string>\n\t</dict>\n\t<key>StartInterval</key>\n\t<integer>900</integer>\n\t<key>RunAtLoad</key>\n\t<true/>\n\t<key>StandardOutPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n\t<key>StandardErrorPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n</dict>\n</plist>\n"
+```
+
+```continue
+parseIntervalSeconds(sourcePlist)
+=> 900
+```
+
+## `detectRunMode` — the `.ts` vs `.mjs` suffix check
+
+```
+detectRunMode("/repo/scan-uploader/src/cli.ts")
+=> source
+```
+
+```continue
+detectRunMode("/path/to/scan-uploader.mjs")
+=> bundle
+```
+
+```continue
+detectRunMode("/Users/A B & C/scan-uploader.mjs")
+=> bundle
+```
+
+## `resolveLaunchdInvocation` — bundle mode is unchanged; source mode needs the repo-root wrapper
+
+Bundle mode: `[execPath, entryPath, configPath]`, no working directory or
+env — this never touches the filesystem, so a nonexistent path is fine to
+pass here.
+
+```
+const bundleInvocation = await resolveLaunchdInvocation({
+  entryPath: "/path/to/scan-uploader.mjs",
+  execPath: "/usr/local/bin/node",
+  configPath: "/path/to/scan-uploader.json",
+});
+JSON.stringify(bundleInvocation)
+=> {"programArguments":["/usr/local/bin/node","/path/to/scan-uploader.mjs","/path/to/scan-uploader.json"]}
+```
+
+Source mode derives the repo root from `entryPath` (`<repoRoot>/scan-uploader/src/cli.ts`) and requires `<repoRoot>/bin/scan-uploader` to actually exist:
+
+```continue
+const repoRootG = join(dir, "repoG");
+const entryPathG = join(repoRootG, "scan-uploader", "src", "cli.ts");
+const missingWrapper = await rejected(
+  resolveLaunchdInvocation({ entryPath: entryPathG, execPath: "/usr/local/bin/node", configPath: "/x/scan-uploader.json" }),
+);
+missingWrapper.name
+=> ScheduleError
+```
+
+```continue
+missingWrapper.message.includes(join(repoRootG, "bin", "scan-uploader"))
+=> true
+```
+
+Once the wrapper exists, source mode resolves to
+`[wrapperPath, configPath]`, `workingDirectory` = the repo root, and a
+`PATH` env built from `dirname(execPath)`:
+
+```continue
+await mkdir(join(repoRootG, "bin"), { recursive: true });
+await writeFile(join(repoRootG, "bin", "scan-uploader"), "#!/usr/bin/env bash\n");
+const sourceInvocation = await resolveLaunchdInvocation({
+  entryPath: entryPathG,
+  execPath: "/usr/local/bin/node",
+  configPath: "/x/scan-uploader.json",
+});
+sourceInvocation.programArguments.length
+=> 2
+```
+
+```continue
+sourceInvocation.programArguments[0] === join(repoRootG, "bin", "scan-uploader")
+=> true
+```
+
+```continue
+sourceInvocation.programArguments[1]
+=> /x/scan-uploader.json
+```
+
+```continue
+sourceInvocation.workingDirectory === repoRootG
+=> true
+```
+
+```continue
+JSON.stringify(sourceInvocation.environmentVariables)
+=> {"PATH":"/usr/local/bin:/usr/bin:/bin"}
 ```
 
 ## `parseIntervalMinutes` — positive-integer validation, default 15
@@ -173,8 +283,8 @@ const missingConfigFailure = await rejected(
     uid: 501,
     runner: runnerA,
     configPath: missingConfigPath,
-    nodePath: "/usr/local/bin/node",
-    bundlePath: "/path/to/scan-uploader.mjs",
+    execPath: "/usr/local/bin/node",
+    entryPath: "/path/to/scan-uploader.mjs",
     intervalMinutes: 15,
   }),
 );
@@ -199,8 +309,8 @@ const invalidConfigFailure = await rejected(
     uid: 501,
     runner: runnerA,
     configPath: invalidConfigPath,
-    nodePath: "/usr/local/bin/node",
-    bundlePath: "/path/to/scan-uploader.mjs",
+    execPath: "/usr/local/bin/node",
+    entryPath: "/path/to/scan-uploader.mjs",
     intervalMinutes: 15,
   }),
 );
@@ -228,8 +338,8 @@ const installResult = await installSchedule({
   uid: 501,
   runner: runnerB,
   configPath: configPathB,
-  nodePath: "/usr/local/bin/node",
-  bundlePath: "/path/to/scan-uploader.mjs",
+  execPath: "/usr/local/bin/node",
+  entryPath: "/path/to/scan-uploader.mjs",
   intervalMinutes: 20,
 });
 installResult.intervalMinutes
@@ -283,6 +393,108 @@ runnerB.calls[1]?.[2] === installResult.plistPath
 => true
 ```
 
+The written plist has exactly bundle mode's shape: no `WorkingDirectory`,
+no `EnvironmentVariables`:
+
+```continue
+writtenPlist.includes("WorkingDirectory")
+=> false
+```
+
+```continue
+writtenPlist.includes("EnvironmentVariables")
+=> false
+```
+
+## `install` in SOURCE mode — the plist runs through the repo-root wrapper
+
+Same flow, but `entryPath` ends in `.ts` (as it does when launched via
+`bin/scan-uploader`, which execs tsx against `src/cli.ts`) and a
+`bin/scan-uploader` wrapper exists at the derived repo root. The written
+plist's `ProgramArguments` is `[wrapperPath, configPath]` — no `node`/tsx
+in sight, since the wrapper resolves that itself — plus `WorkingDirectory`
+and a `PATH` env so launchd's own bare-bones default `PATH` (which has no
+`node` on it) doesn't sink the wrapper's `exec "$TSX" …`.
+
+```
+const repoRootH = join(dir, "repoH");
+const entryPathH = join(repoRootH, "scan-uploader", "src", "cli.ts");
+await mkdir(join(repoRootH, "bin"), { recursive: true });
+await writeFile(join(repoRootH, "bin", "scan-uploader"), "#!/usr/bin/env bash\n");
+const homeDirH = join(dir, "homeH");
+const configPathH = join(dir, "install-source", "scan-uploader.json");
+await writeValidConfig(configPathH);
+const runnerH = new FakeLaunchctlRunner();
+const installResultH = await installSchedule({
+  homeDir: homeDirH,
+  uid: 501,
+  runner: runnerH,
+  configPath: configPathH,
+  execPath: "/usr/local/bin/node",
+  entryPath: entryPathH,
+  intervalMinutes: 15,
+});
+const writtenPlistH = await readFile(installResultH.plistPath, "utf-8");
+writtenPlistH.includes(`<string>${join(repoRootH, "bin", "scan-uploader")}</string>`)
+=> true
+```
+
+```continue
+writtenPlistH.includes(`<string>${configPathH}</string>`)
+=> true
+```
+
+`node` (or a bare `node`/tsx invocation) never appears as a
+`ProgramArguments` entry in source mode — only the wrapper and the config
+path:
+
+```continue
+writtenPlistH.includes("/usr/local/bin/node</string>")
+=> false
+```
+
+```continue
+writtenPlistH.includes(`<key>WorkingDirectory</key>\n\t<string>${repoRootH}</string>`)
+=> true
+```
+
+```continue
+writtenPlistH.includes(
+  "<key>EnvironmentVariables</key>\n\t<dict>\n\t\t<key>PATH</key>\n\t\t<string>/usr/local/bin:/usr/bin:/bin</string>",
+)
+=> true
+```
+
+Missing the wrapper entirely is refused before anything is written — no
+partial/wrong plist:
+
+```continue
+const repoRootI = join(dir, "repoI-no-wrapper");
+const entryPathI = join(repoRootI, "scan-uploader", "src", "cli.ts");
+const homeDirI = join(dir, "homeI");
+const configPathI = join(dir, "install-source-no-wrapper", "scan-uploader.json");
+await writeValidConfig(configPathI);
+const noWrapperFailure = await rejected(
+  installSchedule({
+    homeDir: homeDirI,
+    uid: 501,
+    runner: new FakeLaunchctlRunner(),
+    configPath: configPathI,
+    execPath: "/usr/local/bin/node",
+    entryPath: entryPathI,
+    intervalMinutes: 15,
+  }),
+);
+noWrapperFailure.name
+=> ScheduleError
+```
+
+```continue
+const plistExistsI = await readFile(plistPath(homeDirI), "utf-8").then(() => true, () => false);
+plistExistsI
+=> false
+```
+
 ## `install` surfaces a `bootstrap` failure — the plist is still on disk
 
 ```
@@ -296,8 +508,8 @@ const bootstrapFailure = await rejected(
     uid: 501,
     runner: runnerC,
     configPath: configPathC,
-    nodePath: "/usr/local/bin/node",
-    bundlePath: "/path/to/scan-uploader.mjs",
+    execPath: "/usr/local/bin/node",
+    entryPath: "/path/to/scan-uploader.mjs",
     intervalMinutes: 15,
   }),
 );
@@ -356,8 +568,8 @@ await installSchedule({
   uid: 501,
   runner: runnerInstallD,
   configPath: configPathD,
-  nodePath: "/usr/local/bin/node",
-  bundlePath: "/path/to/scan-uploader.mjs",
+  execPath: "/usr/local/bin/node",
+  entryPath: "/path/to/scan-uploader.mjs",
   intervalMinutes: 5,
 });
 const runnerLoadedD = new FakeLaunchctlRunner({ print: { code: 0, stdout: "state = running", stderr: "" } });
@@ -392,8 +604,8 @@ await installSchedule({
   uid: 501,
   runner: new FakeLaunchctlRunner(),
   configPath: configPathE,
-  nodePath: "/usr/local/bin/node",
-  bundlePath: "/path/to/scan-uploader.mjs",
+  execPath: "/usr/local/bin/node",
+  entryPath: "/path/to/scan-uploader.mjs",
   intervalMinutes: 15,
 });
 const runnerUninstall1 = new FakeLaunchctlRunner();
@@ -431,6 +643,41 @@ JSON.stringify(runnerUninstall2.calls)
 ```continue
 LABEL
 => org.callback-box.scan-uploader
+```
+
+## `install` with no explicit `--config` embeds the resolved default's ABSOLUTE path
+
+Mirrors `schedule-cli.ts`'s actual wiring: resolve first via the same
+`resolveConfigPath` `configure` uses, then pass the result to
+`installSchedule` as an explicit `configPath` — `installSchedule` itself
+does no resolution of its own, so this proves the two modules compose
+correctly rather than re-testing resolution logic already covered in
+`config-path.doctest.md`.
+
+```
+const homeDirF = join(dir, "homeF");
+const cwdDirF = join(dir, "cwdF");
+await mkdir(cwdDirF, { recursive: true });
+const resolvedConfigPathF = await resolveConfigPath({ cwd: cwdDirF, homeDir: homeDirF });
+resolvedConfigPathF === homeConfigPath(homeDirF)
+=> true
+```
+
+```continue
+await writeValidConfig(resolvedConfigPathF);
+const runnerF = new FakeLaunchctlRunner();
+const installResultF = await installSchedule({
+  homeDir: homeDirF,
+  uid: 501,
+  runner: runnerF,
+  configPath: resolvedConfigPathF,
+  execPath: "/usr/local/bin/node",
+  entryPath: "/path/to/scan-uploader.mjs",
+  intervalMinutes: 15,
+});
+const writtenPlistF = await readFile(installResultF.plistPath, "utf-8");
+writtenPlistF.includes(`<string>${resolvedConfigPathF}</string>`)
+=> true
 ```
 
 ```cleanup

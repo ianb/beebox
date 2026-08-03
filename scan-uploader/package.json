@@ -4,6 +4,9 @@
   "description": "Stand-alone laptop client that uploads ScanSnap output to a callback-box scan-upload endpoint. Zero runtime dependencies; bundled to a single self-contained script.",
   "type": "module",
   "private": true,
+  "bin": {
+    "scan-uploader": "dist/scan-uploader.mjs"
+  },
   "scripts": {
     "build": "node --import tsx build.ts",
     "typecheck": "tsc --noEmit",

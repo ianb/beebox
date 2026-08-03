@@ -50,30 +50,38 @@ and mints the token; the steps in full:
    ```bash
    git clone <repo> && cd <repo>
    pnpm install --filter "scan-uploader..."
-   pnpm --filter scan-uploader build
    ```
 
-   Note: the workspace's `node-linker=hoisted` (root `.npmrc`) means the
-   filtered install still materializes the full hoisted tree (~1.3 GB) — it
-   works verbatim from a clean clone (verified by `smoke-install.sh`) but
-   is not lighter than a full install. For additional machines, skip the
-   clone entirely: `dist/scan-uploader.mjs` is self-contained — copy that
-   one file to any machine with Node.
+   That's it — `bin/scan-uploader` runs the CLI straight from source via
+   `tsx`, so a checkout is always current; no build step. (Note: the
+   workspace's `node-linker=hoisted`, root `.npmrc`, means the filtered
+   install still materializes the full hoisted tree (~1.3 GB) — it works
+   verbatim from a clean clone, verified by `smoke-install.sh`, but isn't
+   lighter than a full install.)
+
+   For additional machines that shouldn't hold a full checkout, build once
+   (`pnpm --filter scan-uploader build`) to produce the self-contained
+   `dist/scan-uploader.mjs`, and copy just that one file to any machine
+   with Node.
 
 2. **Mint a token** in the box's settings page (shown once — keep the page
    open until step 3 has consumed it).
 
 3. **Configure** (run on the uploader machine; paste the token when
-   prompted — it is never passed as an argument):
+   prompted — it is never passed as an argument). On a checkout, the
+   `bin/scan-uploader` wrapper at the repo root runs the built bundle;
+   on a copy-the-file machine, substitute `node scan-uploader.mjs`:
 
    ```bash
-   node scan-uploader/dist/scan-uploader.mjs configure https://<host>/<box> \
+   bin/scan-uploader configure https://<host>/<box> \
      --name <token-name> --folder <scan-folder>
    ```
 
-   This writes/updates the target in `./scan-uploader.json`, stores the
-   token at `~/.scan-tokens/<box>.token` (0600), and verifies against the
-   server. Repeat per box with its own folder and token.
+   With no `--config`, this writes/updates `./scan-uploader.json` if one
+   already exists there, else `~/.config/scan-uploader.json` (created if
+   this is the first target on this machine — see "Config" below). It also
+   stores the token at `~/.scan-tokens/<box>.token` (0600) and verifies
+   against the server. Repeat per box with its own folder and token.
 
 4. **ScanSnap profile** — see "ScanSnap profile setup" below; point its
    post-scan action at the plain run command.
@@ -93,13 +101,14 @@ On macOS, `schedule` manages a `launchd` LaunchAgent that runs the sweep on
 an interval:
 
 ```bash
-node dist/scan-uploader.mjs schedule install                # every 15 minutes (default)
-node dist/scan-uploader.mjs schedule install --interval 30   # every 30 minutes
-node dist/scan-uploader.mjs schedule status
-node dist/scan-uploader.mjs schedule uninstall
+bin/scan-uploader schedule install                 # every 15 minutes (default)
+bin/scan-uploader schedule install --interval 30   # every 30 minutes
+bin/scan-uploader schedule status
+bin/scan-uploader schedule uninstall
 ```
 
-`install` refuses if `scan-uploader.json` is missing or fails the strict
+`install` resolves its config the same way as everything else (see
+"Config" below) and refuses if that file is missing or fails the strict
 reader — an installed schedule pointing at a broken config would just fail
 silently into a log file. It writes
 `~/Library/LaunchAgents/org.callback-box.scan-uploader.plist` and loads it
@@ -111,12 +120,31 @@ exits cleanly. `schedule` is macOS-only (same posture as the `trash`
 disposition) — it refuses outright on other platforms rather than silently
 no-op.
 
+On a checkout, the scheduled sweep runs through `bin/scan-uploader` itself
+(source mode — same tsx run as everything else), so its sweeps track
+source just like a manual run does; a copied-bundle machine's schedule
+instead runs the bundle directly with `node`, as before. If a LaunchAgent
+was installed before this distinction existed (bundle-mode plist on a
+checkout), re-run `schedule install` once to pick up the source-mode
+plist — `install` always rewrites in place.
+
 ## Config
 
-JSON file, path given as the first CLI argument (default
-`./scan-uploader.json`, resolved relative to the current directory).
-`configure` writes this file for you (preserving any unknown keys); the
-shape, for hand-maintenance:
+JSON file, path given as the first CLI argument. With no explicit path (the
+bare run, and the `--config` default for `configure`/`schedule install`),
+it resolves the same way everywhere:
+
+1. `./scan-uploader.json` (relative to the current directory), if it
+   exists — a hand-maintained or previously-configured repo-local config
+   keeps working from that directory.
+2. Otherwise `~/.config/scan-uploader.json` — a single, cwd-independent
+   default, so `bin/scan-uploader` (with no arguments) works the same from
+   anywhere once `configure` has run at least once. No XDG environment
+   variable is consulted; it's always plain `~/.config`.
+
+`configure` writes to whichever of those already exists; if neither does,
+it creates `~/.config/scan-uploader.json`. Either way it preserves any
+unknown keys already in the file. Shape, for hand-maintenance:
 
 ```json
 {
@@ -149,11 +177,16 @@ message naming exactly what's wrong.
 ## Usage
 
 ```bash
-node dist/scan-uploader.mjs [config.json] [--retry-rejected]
-node dist/scan-uploader.mjs configure <server-url-with-box> --folder <path> [options]
-node dist/scan-uploader.mjs schedule <install|uninstall|status> [options]
-node dist/scan-uploader.mjs --help
+bin/scan-uploader [config.json] [--retry-rejected]      # from the repo root
+bin/scan-uploader configure <server-url-with-box> --folder <path> [options]
+bin/scan-uploader schedule <install|uninstall|status> [options]
+bin/scan-uploader --help
 ```
+
+`bin/scan-uploader` (repo root) wraps the built `dist/scan-uploader.mjs`;
+on a machine holding only the copied bundle, run
+`node scan-uploader.mjs <same args>`. The package also declares the bundle
+as its `bin`, so it is npx-able if it's ever published.
 
 `configure` (see Setup above) takes the token on stdin — piped, or prompted
 without echo on a TTY — and supports `--disposition`, `--name`, and

@@ -47,7 +47,8 @@ export async function checkHashes(
     body: JSON.stringify({ hashes }),
   });
   if (response.status !== 200) {
-    throw new ProtocolError(url, `check returned HTTP ${String(response.status)}`);
+    const message = await describeUnexpectedResponse(response, `check returned HTTP ${String(response.status)}`);
+    throw new ProtocolError(url, message);
   }
   const body: unknown = await response.json();
   if (!isRecord(body) || !isRecord(body.states)) {
@@ -140,7 +141,10 @@ async function interpretPutResponse(url: string, response: Response): Promise<Pu
     case 503:
       return { status: "server-error", reason: await serverErrorReason(response) };
     default:
-      throw new ProtocolError(url, `unexpected HTTP status ${String(response.status)}`);
+      throw new ProtocolError(
+        url,
+        await describeUnexpectedResponse(response, `unexpected HTTP status ${String(response.status)}`),
+      );
   }
 }
 
@@ -171,6 +175,52 @@ async function serverErrorReason(response: Response): Promise<string> {
     // meaningful; fall through to the generic reason.
   }
   return "server temporarily unable to validate this file";
+}
+
+/** Field names checked (in order — first hit wins) for a human-readable
+ * explanation on a response this client has no specific handling for. Not
+ * part of the wire contract proper — a best-effort diagnostic aid, since
+ * the server's error middleware commonly attaches one of these. */
+const REASON_FIELD_NAMES = ["reason", "message", "error"] as const;
+
+/** Caps how much of a reason field gets appended, so a server that (say)
+ * echoes a stack trace as `message` doesn't turn one CLI line into a wall
+ * of text. */
+const REASON_MAX_LENGTH = 200;
+
+/**
+ * Builds the error text for an HTTP response this client doesn't
+ * specifically handle. If the body parses as JSON and carries a `reason`,
+ * `message`, or `error` string field, it's appended to `baseMessage` — this
+ * is what turns `check returned HTTP 503` into something that actually
+ * explains itself, instead of sending the boxholder to curl the endpoint by
+ * hand. A non-JSON or fieldless body leaves `baseMessage` exactly as given.
+ * Consumes the response body — callers must not have read it already.
+ */
+async function describeUnexpectedResponse(response: Response, baseMessage: string): Promise<string> {
+  const reason = await extractReason(response);
+  if (reason === undefined) return baseMessage;
+  return `${baseMessage} — server says: ${truncateReason(reason)}`;
+}
+
+async function extractReason(response: Response): Promise<string | undefined> {
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch (_e) {
+    return undefined;
+  }
+  if (!isRecord(body)) return undefined;
+  for (const field of REASON_FIELD_NAMES) {
+    const value = body[field];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+function truncateReason(reason: string): string {
+  if (reason.length <= REASON_MAX_LENGTH) return reason;
+  return `${reason.slice(0, REASON_MAX_LENGTH)}…`;
 }
 
 function parseRetryAfter(header: string | null): number {

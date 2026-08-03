@@ -22,12 +22,17 @@ tab sync, context-menu save).
   hand-written manifest.json).
 - `src/entrypoints/` — WXT entrypoints, kept thin: `background.ts`,
   `commentary-capture.content.ts` (Defuddle+DOMPurify+Turndown extraction
-  shim, plus the page-freeze capture), `popup/`, `sidepanel/`.
+  shim, plus the page-freeze capture), `popup/`, `sidepanel/`, `options/`
+  (the settings page — the popup's gear opens it via
+  `chrome.runtime.openOptionsPage()`; `open_in_tab` is set by a
+  `<meta name="manifest.open_in_tab">` in its index.html, since WXT generates
+  `options_ui` itself and overwrites a wxt.config manifest key).
 - `src/platform/` — browser-API and DOM code: `clerk-api.ts` (clerk tRPC
   HTTP client), `config-storage.ts` (chrome.storage config load/save, clears
   legacy Dropbox-relay keys), `detect-box.ts` (reads the box-identity meta
   from the active tab), `enable-box.ts` (requests the per-origin host
-  permission and persists the box), `extract-readable.ts` (Defuddle isolates
+  permission and persists the box), `open-box.ts` (navigates to a box's chat,
+  reusing a tab already on that box), `extract-readable.ts` (Defuddle isolates
   content, DOMPurify sanitizes, Turndown converts to markdown), and
   `freeze-page.ts` (single-file-core page freeze into self-contained HTML).
 - `src/domain/` — pure logic (config schema, URL building) with tap tests.
