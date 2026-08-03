@@ -121,8 +121,11 @@ function NavCardRows({ entries }: { entries: NavMenuEntry[] }) {
   return (
     <>
       <MenuDivider />
-      {entries.map((entry) => (
-        <MenuItem key={entry.to} to={href(entry.to)}>{entry.label}</MenuItem>
+      {/* Keyed by position as well as target: a card may legitimately list the
+          same target twice (two labels for one card), and a bare `to` key
+          would then collide. */}
+      {entries.map((entry, index) => (
+        <MenuItem key={`${index}:${entry.to}`} to={href(entry.to)}>{entry.label}</MenuItem>
       ))}
     </>
   );

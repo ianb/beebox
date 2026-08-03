@@ -17,8 +17,10 @@
  * per-place, cheap and scoped to one directory. The switch menu's
  * `chat.byLandmark` — which globs every landmark and enumerates every session
  * — does NOT: it's gated behind the first dropdown open (`enabled`), then
- * cached. A bar that mounts on every page must not carry that at rest (the
- * rationale AppNav already states for `status.navStatus`).
+ * cached, with every later open invalidating in the background so the cached
+ * rows paint instantly and refresh behind them. A bar that mounts on every
+ * page must not carry that at rest (the rationale AppNav already states for
+ * `status.navStatus`). The same applies to the `nav.card` section's query.
  */
 
 import { useState } from "react";
@@ -99,8 +101,10 @@ export function PlacePill({
 }) {
   const [switchPanel, setSwitchPanel] = useState<SwitchPanel>("root");
   // First-open latch for the switch menu's data (see the file header). Once
-  // true it stays true, so re-opens render from react-query's cache.
+  // true it stays true, so re-opens render from react-query's cache while
+  // `openSwitchMenu` refreshes it in the background.
   const [switchOpened, setSwitchOpened] = useState(false);
+  const utils = trpc.useUtils();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug);
   const hereClaimed = useAppBarHereMenuClaimed();
 
@@ -117,6 +121,24 @@ export function PlacePill({
   // that the retired link row used to own (Track C3).
   const navEntries = useNavMenuEntries({ base: `/${boxSlug}`, enabled: switchOpened });
 
+  /**
+   * Open the switch menu: latch the lazy queries on, and on every LATER open
+   * ask for a background refresh. Without this the menu would show whatever it
+   * fetched the first time forever — the bar's old 60-second `byLandmark` poll
+   * came out with the fresh badge, so nothing else refreshes fresh counts, new
+   * landmarks, parse problems, or an edited `nav.card` in a long-lived tab.
+   * `invalidate` (not `refetch`) keeps the cached data on screen while the
+   * refetch runs, which is the plan's "cached data renders immediately".
+   */
+  function openSwitchMenu(): void {
+    if (switchOpened) {
+      void utils.chat.byLandmark.invalidate();
+      void utils.nav.get.invalidate();
+      return;
+    }
+    setSwitchOpened(true);
+  }
+
   const faceLabel = landmark === null ? place.label : landmark.label;
   const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
 
@@ -128,14 +150,14 @@ export function PlacePill({
         className="min-w-0 flex"
         panelIndex={switchPanel === "root" ? 0 : 1}
         onClose={() => setSwitchPanel("root")}
-        trigger={({ toggle, ariaProps }) => (
+        trigger={({ open, toggle, ariaProps }) => (
           // w-full is load-bearing on a Dropdown trigger — measured in-browser
           // on the retired ContextChip: the native <button> doesn't stretch to
           // its wrapper on its own, and without it a long label overflows
           // instead of truncating.
           <button
             type="button"
-            onClick={(e) => { setSwitchOpened(true); toggle(e); }}
+            onClick={(e) => { if (!open) openSwitchMenu(); toggle(e); }}
             className="min-h-[40px] w-full min-w-0 pl-3 pr-2 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={title}
             aria-label={`Place: ${faceLabel}`}
