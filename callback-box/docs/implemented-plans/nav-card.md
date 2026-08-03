@@ -113,3 +113,30 @@ chat husks) wants it too.
 - A nav renderer for Browse (opening `nav.card` in Browse shows plain
   frontmatter — fine).
 - Per-directory / contextual navs; mobile layout changes; seeding.
+
+## Behavior changes (2026-08, `docs/plans/top-nav-ia.md`)
+
+The repo keeps no changelog, so the user-visible meaning changes from the
+app-bar work are recorded here, next to the mechanism they affect.
+
+- **`nav.card` entries render in the app bar's switch menu, not a link
+  row.** The link row is gone. Entries appear as a section in the switch
+  menu; `ref:` entries always render, `href:` entries render only when the
+  menu doesn't already reach that destination. Skipped as duplicates: `/`,
+  `/chat`, `/chats`, `/landmarks`, `/browse`, `/history`, `/dashboard`.
+  Still rendered: `/settings`, `/admin`, `/questions`, `/capture`. A box
+  with no `nav.card` gets no section — the builtin menu carries the
+  destinations itself, so `DEFAULT_NAV_HREFS` is retired. Card format,
+  validation and the `nav-card` health check are unchanged.
+- **`/<box>/` lands on chat.** The box root redirects to `/<box>/chat`
+  instead of rendering the Dashboard. A `nav.card` entry pointing at `/` is
+  still valid; it just means "chat" now.
+- **`/<box>/chats` redirects to `/<box>/landmarks`.** The Chats page merged
+  into the Landmarks page, which now shows each landmark's chats beside its
+  links (see `docs/landmarks.md`).
+- **The Dashboard lives at `/<box>/dashboard`.** It is reached from the app
+  bar's Box submenu (labelled Overview), and "back to Dashboard" links from
+  Settings, Admin and card views point there.
+- **The Questions nav entry and its header badge are gone.** The Questions
+  page and subsystem are unchanged and still reachable by URL, or by pinning
+  `/questions` in a `nav.card`.

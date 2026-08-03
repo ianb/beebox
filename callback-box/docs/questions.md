@@ -250,11 +250,14 @@ evidence model.
 
 ## Surfacing
 
-- **Header badge** — `AppNav` shows the pending-question count, visible in
-  the collapsed mobile nav; this is the primary "there is activity" signal
-  and doesn't depend on any notification channel being configured. Fed by
-  the `status.questions` tRPC query, invalidated on `question-answered`/
-  `card-created`/`question-expired` bus events.
+- **Header badge** — retired 2026-08 with the nav link row
+  (`docs/plans/top-nav-ia.md`): the app bar no longer carries a
+  pending-question count, and Questions has no nav presence unless a box
+  pins `/questions` in its `nav.card`. The intended replacement is inline
+  questions in chat (not built). Until then the Dashboard's attention cards
+  (fed by the same `status.questions` tRPC query, invalidated on
+  `question-answered`/`card-created`/`question-expired` bus events) are the
+  in-app "there is activity" signal.
 - **Questions page** (`QuestionsPage` / `QuestionsList.tsx`) — the full list:
   pending at the top, an archive of answered/dismissed/expired below
   showing the recorded answer and status (not just a status word). Expired

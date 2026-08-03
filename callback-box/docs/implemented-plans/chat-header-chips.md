@@ -3,6 +3,19 @@
 **Status:** implemented 2026-08 — shipped as `ContextChip`, `VoiceChip`, and
 `ChatMenu`, fixing the mobile-clipped "..." menu bug.
 
+**Superseded surface (2026-08-02, `docs/plans/top-nav-ia.md`).** The chat
+header row this plan built no longer exists — it was absorbed into the
+unified app bar, which now carries the chips for every page. `ChatMenu`
+became the **session chip** (face: the session title; menu: New session /
+Model / Advanced — "Recent chats" dropped, the bar's switch menu owns
+finding sessions); `ContextChip`'s body became the bar's **here menu**,
+portaled up from the chat page so it keeps its chat-owned state (Recent
+files, companion-pane zoom); `VoiceChip` moved up unchanged;
+`SessionListPanel` was deleted. Everything below is the original plan and
+its polish round, kept as history — the chip/menu idiom, the split-pill
+face, the one-flexible-member responsive rule and the panel-swap submenu
+mechanism all carried forward into the bar.
+
 **Polish round (2026-08-01):** a boxholder-requested follow-up pass deviated
 from this plan in two ways: Model selection now lives in `ChatMenu`, not
 `VoiceChip` (this doc's Voice chip section above still describes the

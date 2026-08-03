@@ -7,6 +7,13 @@ discovered-in: worktree-open-source-readiness — first-run UX audit for the sof
 labels: [soft-launch]
 ---
 
+**Update 2026-08-02** (`callback-box/docs/plans/top-nav-ia.md`): new users
+now land on **chat**, not the dashboard — the dashboard moved to
+`/<box>/dashboard` as an ops plane reached from the app bar's Box submenu.
+That reframes this issue rather than closing it: the "schedule table is the
+first thing you see" complaint below is gone, and the chat zero-state
+(which had no answer) is now the whole first-run surface.
+
 Audited 2026-07-20 by code-reading. What a brand-new user sees after
 creating their account on a fresh `cb init` box:
 

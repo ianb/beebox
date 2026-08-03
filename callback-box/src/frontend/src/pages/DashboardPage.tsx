@@ -10,6 +10,7 @@ import { ScheduleOverview } from "../components/dashboard/ScheduleOverview";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { SystemInfo } from "../components/dashboard/SystemInfo";
 import { HealthWarnings } from "../components/dashboard/HealthWarnings";
+import { OpsLinks } from "../components/dashboard/OpsLinks";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 
@@ -60,6 +61,8 @@ export function DashboardPage() {
 
       <Column overflow="auto" className="flex-1">
         <Stack gap="lg" className="max-w-4xl mx-auto py-4 px-4">
+          <OpsLinks />
+
           <HealthWarnings health={healthQuery.data ?? null} />
 
           <AttentionCards
