@@ -236,11 +236,25 @@ history should not be silently lossy.
   `transcribe-clips.ts`): fold into the continuation as a trivial
   `Promise.allSettled` with a small cap. Footnote-level: the common case is
   one clip.
-- **Provider choice**: deepgram measured 3× faster than voxtral for
-  word-timestamped transcription of the same clip (0.96s vs 2.8s).
-  box-family runs voxtral (the default). Recommend flipping box-family's
-  `config/transcription.json` to deepgram, and possibly the default —
-  separate decision (cost/quality).
+- **Provider choice — settled**: the boxholder wants voxtral or whisper
+  (deepgram measured 3× faster — 0.96s vs 2.8s for the same 33s clip — but is
+  not the preference). Consequence: ~2.7–3s per clip is the transcription
+  floor, which makes taking it off the critical path (this plan) and
+  parallelizing multi-clip captures the levers, not provider swaps.
+- **The 2026-08-04 morning capture's 4–5 minutes was mostly NOT this
+  pipeline**: the box child was GC-thrashing (mutator utilization ~0.3)
+  under the iOS webview's burst-refetch of a 15.5MB transcript, then heap-OOM
+  crashed mid-`delivering` and resumed after respawn. That is
+  `issues/bugs/2026-08-04-chat-history-parse-transient-oom.md` (filed from
+  the ios-capture-upload-diag worktree, live-measured, with fix directions) —
+  a separate track. This plan removes work from the crash-exposed span but
+  does not fix the OOM.
+- **The pre-Done upload wait (~20s on phone uplink)**: Done is gated on all
+  uploads landing. A possible follow-up: allow finalize-with-pending-uploads
+  (client declares expected media; the server seals when the last upload
+  drains), moving that wait into the async span too. Touches the iOS/web
+  capture clients and the staging seal CAS — out of scope here, noted for
+  the boxholder.
 - **Cold-start delivery cost** (~0.6–1.1s: compose snapshot + auth
   preflight): real but secondary; optimize only if it dominates post-change
   measurements.
@@ -284,7 +298,8 @@ along; the capture upload/finalize HTTP contract is untouched
    but never processes. If you want the agent-drives lever, it needs a
    cross-process lock + a full lifecycle contract (validate/commit/events),
    which is real added scope — the Codex review sized that gap.
-3. Flip box-family (and/or the default) to deepgram?
+3. ~~Flip box-family (and/or the default) to deepgram?~~ Settled: no —
+   voxtral/whisper stays (boxholder, 2026-08-04).
 4. Any attachment to the summary appearing in the chat bubble text itself?
    (Post-change it's a media tally there; the real summary lives on the card
    and in the agent's response. The optional live-chip query can close most
