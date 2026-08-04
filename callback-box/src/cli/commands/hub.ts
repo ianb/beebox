@@ -90,8 +90,9 @@ export const hubCommand = new Command("hub")
     const baseUrl = `http://${host}:${port}`;
 
     // First-run setup: the hub is the fleet login host, so with auth required
-    // and zero local users it prints the one-time setup claim link too. `cb hub`
-    // never enables open access, so auth is always required here.
+    // and no owner yet it prints the one-time setup claim link too. Silent once
+    // an owner exists, including an OAuth-only owner with no local account.
+    // `cb hub` never enables open access, so auth is always required here.
     maybeArmFirstRunSetup({ publicUrl: getPublicUrl(baseUrl), openAccess: false });
 
     const server = await createHubServer({ endpoints: supervisor, getHealth, hubSecret, boxes, baseUrl });
