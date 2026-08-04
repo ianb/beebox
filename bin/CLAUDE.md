@@ -199,13 +199,23 @@ session in a fresh worktree the same way the default claude path does. Codex
 has no `--worktree`, so the launcher's generated launch script invokes
 `.claude/hooks/worktree-create.sh` directly (JSON `{name}` on stdin, worktree
 path on stdout; idempotent — a relaunch re-attaches), then execs `codex` in
-the worktree with a `workspace-write`/never-approve sandbox (`--add-dir` for
-the main checkout (shared git metadata and `/finish` fast-forward), box clone,
-`~/.cache/callback-box`, and validated private-issues paths when present;
-network on; the worktree pre-trusted; and `project_doc_max_bytes` raised via
-launch-scoped `-c` overrides — nothing persisted to `~/.codex/config.toml`).
-`--model` maps to `codex -m` (OpenAI model names). Remote Control is claude-only
-and ignored for codex.
+the worktree with a `workspace-write`/never-approve sandbox (`--add-dir` for the
+box clone and `~/.cache/callback-box`; network on; the worktree pre-trusted; and
+`project_doc_max_bytes` raised via launch-scoped `-c` overrides — nothing
+persisted to `~/.codex/config.toml`). `--model` maps to `codex -m` (OpenAI model
+names). Remote Control is claude-only and ignored for codex.
+
+**A codex worker cannot commit or `/finish` in its linked worktree — this is an
+upstream limitation, not a config gap.** Codex's sandbox force-mounts `.git` (and
+the resolved gitdir) read-only *after* the writable roots, and a linked
+worktree's git metadata lives outside the worktree (`$MONO/.git/worktrees/<name>`),
+so no `--add-dir` grant reaches it (openai/codex#14338, #23661; verified 2026-08-04
+— a worker launched with the main checkout granted still hit EPERM on `index.lock`).
+An earlier `--add-dir "$MONO"` grant to fix this was reverted: it delivered nothing
+and only weakened isolation. So the working model is **codex implements + verifies +
+reports; the parent (Claude session or the boxholder) commits and lands.** The
+merge-to-main step is unsandboxable for codex regardless, since it writes the shared
+main checkout's `.git`. See `issues/watch/` for the upstream tracker.
 
 Codex's `workspace-write` sandbox confines **writes** (workspace + the `--add-dir`
 roots) and network, but **reads are global** — verified empirically 2026-08-04: a

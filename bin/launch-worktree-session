@@ -171,11 +171,17 @@ else
   # AGENTS.md mirrors) and prints the worktree path on stdout, logs on stderr.
   #
   # Sandbox: workspace-write + never-approve rather than the blunt
-  # --dangerously-bypass-approvals-and-sandbox. Extra writable roots: the main
-  # checkout (shared git metadata + finish's fast-forward), box clone, router
-  # state, and validated private-issues paths when present. Network on (pnpm,
-  # the localhost router, web). Config overrides, all launch-scoped (nothing
-  # persisted into ~/.codex/config.toml):
+  # --dangerously-bypass-approvals-and-sandbox. Extra writable roots: the box
+  # clone and router state (bin/browse logs, pidfiles). NOTE: a codex worker
+  # CANNOT commit or /finish in a linked worktree — its sandbox force-mounts
+  # .git read-only AFTER the writable roots, and a linked worktree's git metadata
+  # lives outside the worktree (at $MONO/.git/worktrees/<name>), so no --add-dir
+  # grant ever reaches it (openai/codex#14338, #23661). Granting the whole main
+  # checkout bought nothing and only weakened isolation, so it was reverted. A
+  # codex worker implements + verifies + reports; the parent (Claude or the
+  # boxholder) commits and lands. Network on (pnpm, the localhost router, web).
+  # Config overrides, all launch-scoped (nothing persisted into
+  # ~/.codex/config.toml):
   #   - trust_level: pre-trust the worktree dir so the first-run trust prompt
   #     doesn't eat the briefing.
   #   - project_doc_max_bytes: default 32 KiB truncates the injected root→cwd
@@ -202,7 +208,6 @@ done
 cd "\$wt_path"
 codex_args=(
   -s workspace-write -a never
-  --add-dir "$MONO"
   --add-dir "$HOME/src/box-worktrees/$wt"
   --add-dir "$HOME/.cache/callback-box"
   -c 'sandbox_workspace_write.network_access=true'
@@ -210,13 +215,6 @@ codex_args=(
   -c project_doc_max_bytes=131072
 $model_line
 )
-private_status=\$(bin/private-issues status . 2>/dev/null || true)
-if [[ "\$private_status" == state=valid* ]]; then
-  private_target=\$(printf '%s\n' "\$private_status" | sed -n 's/.*target=\([^ ]*\).*/\1/p')
-  private_repo=\$(printf '%s\n' "\$private_status" | sed -n 's/.*repo=\([^ ]*\).*/\1/p')
-  [ -z "\$private_target" ] || codex_args+=(--add-dir "\$private_target")
-  [ -z "\$private_repo" ] || codex_args+=(--add-dir "\$private_repo")
-fi
 if [ -s "$prompt_file" ]; then
   exec codex "\${codex_args[@]}" "\$(cat "$prompt_file")"
 else
