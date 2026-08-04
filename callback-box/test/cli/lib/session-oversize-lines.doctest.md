@@ -174,6 +174,99 @@ JSON.stringify({ entries: widened.entries.length, real: widened.entries.filter(i
 await box.cleanup();
 ```
 
+## Oversize plumbing is dropped, not shown
+
+The length check runs before `buildEntry`, so without care an oversize line
+would bypass every filter `buildEntry` applies and appear as a message the
+parsed version never was — an oversize `tool_result` (the commonest fat line of
+all) turning into a visible user turn that also inflates `total`. The head sniff
+recognizes the shapes the scan drops anyway: system records, SDK meta prompts,
+synthetic assistant turns, and tool_result plumbing.
+
+```ts
+const box = await makeTmpBox();
+const fat = "z".repeat(MAX_SESSION_LINE_BYTES);
+await box.write("log.jsonl", [
+  JSON.stringify({
+    type: "user",
+    uuid: "u1",
+    timestamp: "2026-01-01T00:00:00Z",
+    message: { role: "user", content: [{ type: "text", text: "<typed>hello</typed>" }] },
+  }),
+  JSON.stringify({
+    type: "user",
+    uuid: "plumbing",
+    timestamp: "2026-01-01T00:01:00Z",
+    message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: fat }] },
+  }),
+  JSON.stringify({
+    type: "system",
+    subtype: "compact_boundary",
+    uuid: "sys",
+    timestamp: "2026-01-01T00:02:00Z",
+    payload: fat,
+  }),
+  JSON.stringify({
+    type: "user",
+    uuid: "meta",
+    isMeta: true,
+    timestamp: "2026-01-01T00:03:00Z",
+    message: { role: "user", content: [{ type: "text", text: fat }] },
+  }),
+  JSON.stringify({
+    type: "assistant",
+    uuid: "synth",
+    timestamp: "2026-01-01T00:04:00Z",
+    message: { role: "assistant", model: "<synthetic>", content: [{ type: "text", text: fat }] },
+  }),
+].join("\n"));
+
+const result = await parseSessionLog({
+  logPath: box.path("log.jsonl"),
+  slice: { mode: "tail", tail: 200 },
+});
+JSON.stringify({ uuids: result.entries.map((e) => e.uuid), total: result.total })
+=> {"uuids":["u1"],"total":1}
+```
+
+A shape the sniff does not recognize still becomes a stub. An unexplained gap in
+the transcript is the worse failure, so the fallback is visible rather than
+silent:
+
+```ts continue
+await box.write("mystery.jsonl", JSON.stringify({ payload: fat }));
+const mystery = await parseSessionLog({
+  logPath: box.path("mystery.jsonl"),
+  slice: { mode: "tail", tail: 200 },
+});
+JSON.stringify(mystery.entries.map((e) => ({ type: e.type, uuid: e.uuid })))
+=> [{"type":"assistant","uuid":""}]
+```
+
+The threshold is UTF-8 bytes, not characters, so a payload of multi-byte
+characters can't slip under it. This line is 100 000 characters — well under the
+262 144 threshold as a code-unit count — but 300 KB encoded:
+
+```ts continue
+const cjk = "漢".repeat(100_000);
+await box.write("cjk.jsonl", JSON.stringify({
+  type: "assistant",
+  uuid: "cjk",
+  timestamp: "2026-01-01T00:00:00Z",
+  message: { role: "assistant", content: [{ type: "text", text: cjk }] },
+}));
+const wide = await parseSessionLog({
+  logPath: box.path("cjk.jsonl"),
+  slice: { mode: "tail", tail: 200 },
+});
+JSON.stringify(wide.entries.map((e) => e.content[0].text))
+=> ["[message too large to display: ~293 KB]"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## An oversize tool call loses its grafted result
 
 `graftToolResults` matches a `tool_result` to the `tool_use` block of a recent
