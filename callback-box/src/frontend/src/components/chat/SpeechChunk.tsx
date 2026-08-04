@@ -32,7 +32,6 @@ export function SpeechChunk({
   return (
     <div
       data-speech-state={state}
-      title={description}
       className={cn(
         "border-l-2 pl-3 pr-2 py-1 rounded-r-md transition-colors duration-500 ease-out",
         state === "waiting" && "border-warning border-dashed bg-warning/5",
