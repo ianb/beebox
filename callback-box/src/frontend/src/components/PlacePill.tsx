@@ -151,19 +151,6 @@ export function PlacePill({
   // backend falls back to the card's filename, but this face must render
   // something even against an older server).
   const faceLabel = landmark === null ? place.label : landmark.label || place.label;
-
-  // The folder half renders when a landmark resolves for the place, OR when
-  // the chat has claimed the here menu — a chat with no bound directory
-  // still carries Recent files (the old ContextChip's "Files" face), which
-  // must not disappear with the landmark (boxholder report, 2026-08-03).
-  const hereDir = landmark === null ? place.dir : landmark.dir;
-  const hereHalf: { face: string; title: string } | null =
-    landmark === null && !hereClaimed
-      ? null
-      : {
-          face: hereDir === null ? "Files" : hereDir === "" ? "/" : dirBasename(hereDir),
-          title: hereDir === null ? "Here: recent files" : `Here: ${hereDir === "" ? "/" : `${hereDir}/`}`,
-        };
   const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
 
   return (
@@ -213,7 +200,7 @@ export function PlacePill({
         />
       </Dropdown>
 
-      {hereHalf === null ? null : (
+      {landmark === null ? null : (
         <>
           <span aria-hidden="true" className="w-px my-2 bg-white/22 shrink-0" />
           <Dropdown
@@ -225,12 +212,12 @@ export function PlacePill({
                 type="button"
                 onClick={toggle}
                 className="min-h-[40px] px-2.5 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                title={hereHalf.title}
-                aria-label={`Here: ${hereHalf.face}`}
+                title={`Here: ${landmark.dir === "" ? "/" : `${landmark.dir}/`}`}
+                aria-label={`Here: ${dirBasename(landmark.dir)}`}
                 {...ariaProps}
               >
                 <FolderIcon />
-                <span className="hidden sm:inline max-w-[8rem] truncate">{hereHalf.face}</span>
+                <span className="hidden sm:inline max-w-[8rem] truncate">{dirBasename(landmark.dir)}</span>
                 <CaretIcon />
               </button>
             )}
@@ -247,14 +234,14 @@ export function PlacePill({
                 before the chat mounts — the reduced body below is the menu. */}
             {hereClaimed ? (
               <AppBarHereSlot />
-            ) : landmark !== null ? (
+            ) : (
               <HereMenuBody
                 dir={landmark.dir}
                 boxSlug={boxSlug}
                 links={landmark.links}
                 groups={landmark.groups}
               />
-            ) : /* unreachable: the half renders only when claimed or landmarked */ null}
+            )}
           </Dropdown>
         </>
       )}
