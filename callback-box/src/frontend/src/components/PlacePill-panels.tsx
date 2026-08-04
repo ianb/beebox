@@ -82,19 +82,32 @@ function LandmarkRows({
       {/* Keyed by card path, not dir: `byLandmark` emits one bucket per
           landmark card, and nothing stops a directory holding two — keying by
           dir would then hand React duplicate keys. */}
-      {landmarks.map((landmark) => (
-        <MenuItem
-          key={landmark.path}
-          onClick={() => onSelectLandmark(landmark.dir)}
-          active={currentDir !== null && landmark.dir === currentDir}
-        >
-          <span className="flex items-center gap-2 w-full">
-            <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
-            <span className="min-w-0 truncate">{landmark.label}</span>
-            <FreshCount count={landmark.freshCount} />
-          </span>
-        </MenuItem>
-      ))}
+      {landmarks.map((landmark) => {
+        const current = currentDir !== null && landmark.dir === currentDir;
+        return (
+          <MenuItem
+            key={landmark.path}
+            onClick={() => onSelectLandmark(landmark.dir)}
+            active={current}
+          >
+            <span className="flex items-center gap-2 w-full">
+              <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
+              <span className={`min-w-0 truncate${current ? " font-semibold" : ""}`}>
+                {landmark.label}
+              </span>
+              {/* "You are here" — the row tint alone was too subtle to read
+                  as the current landmark. */}
+              {current ? (
+                <span className="shrink-0 text-info-dark font-semibold" aria-hidden>
+                  ✓
+                </span>
+              ) : null}
+              {current ? <span className="sr-only">(current)</span> : null}
+              <FreshCount count={landmark.freshCount} />
+            </span>
+          </MenuItem>
+        );
+      })}
     </>
   );
 }
@@ -182,8 +195,6 @@ interface SwitchMenuProps {
   panel: SwitchPanel;
   boxSlug: string;
   boxName: string;
-  /** Suppress the whole "Box: …" row (the native shell owns box picking). */
-  hideBoxRow: boolean;
   /** The place's dir, for highlighting the landmark the user is already in. */
   currentDir: string | null;
   /** null while the lazy `chat.byLandmark` query is still resolving. */
@@ -215,7 +226,7 @@ interface SwitchMenuProps {
  */
 export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
   const {
-    panel, boxSlug, boxName, hideBoxRow, currentDir, landmarks, landmarksFailed,
+    panel, boxSlug, boxName, currentDir, landmarks, landmarksFailed,
     onRetryLandmarks, navEntries, problemCount, recentFilesClaimed,
     onOpenBoxPanel, onOpenRecentFiles, onBackToRoot, onSelectLandmark,
   } = props;
@@ -223,14 +234,12 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
     case "root":
       return (
         <>
-          {hideBoxRow ? null : (
-            <MenuItem onClick={onOpenBoxPanel} keepOpen>
-              <span className="flex justify-between gap-2 w-full">
-                <span className="min-w-0 truncate">Box: {boxName}</span>
-                <span className="text-warm-500">›</span>
-              </span>
-            </MenuItem>
-          )}
+          <MenuItem onClick={onOpenBoxPanel} keepOpen>
+            <span className="flex justify-between gap-2 w-full">
+              <span className="min-w-0 truncate">Box: {boxName}</span>
+              <span className="text-warm-500">›</span>
+            </span>
+          </MenuItem>
           <MenuItem to={href(`/${boxSlug}/landmarks`)}>All landmarks →</MenuItem>
           {recentFilesClaimed ? (
             <MenuItem onClick={onOpenRecentFiles} keepOpen>

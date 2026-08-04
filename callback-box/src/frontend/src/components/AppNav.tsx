@@ -31,7 +31,6 @@ import { Avatar } from "./ui/Avatar";
 import { href } from "../lib/routing";
 import { useBoxes } from "../hooks/useBoxes";
 import { withBase } from "../api";
-import { isNativeShell } from "./chat/native-post";
 import { PlacePill } from "./PlacePill";
 import { AppBarChipSlot, useAppBarPublishedPlace } from "./app-bar-chrome";
 import { placeLabel } from "../lib/place-label";
@@ -123,21 +122,10 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const publishedPlace = useAppBarPublishedPlace();
   const place = publishedPlace ?? placeLabel({ pathname: location.pathname, boxSlug: boxSlug ?? "" });
 
-  // The native shell owns box picking, so the pill's whole "Box: …" row is
-  // suppressed under it (the bar itself is hidden only under `?embed=1`).
-  // Read both signals `ChatPage` reads: the chat route's initial
-  // `?nativeComposer=1`, plus the injected bridge — which, unlike the param,
-  // survives an in-app navigation. Parsing `location.searchStr` rather than
-  // calling `useSearch` keeps the bar out of per-route search typing (it sits
-  // above every route, and only one route declares the param); it's the same
-  // idiom the shell's `?embed=1` check already uses (`app-shell.tsx`).
-  const nativeShell =
-    new URLSearchParams(location.searchStr).get("nativeComposer") === "1" || isNativeShell();
-
   return (
     <nav aria-label="Primary" className="bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
       <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 text-sm">
-        <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} hideBoxRow={nativeShell} />
+        <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {/* Chat's session + voice chips portal in here (Track C2). */}
           <AppBarChipSlot />
