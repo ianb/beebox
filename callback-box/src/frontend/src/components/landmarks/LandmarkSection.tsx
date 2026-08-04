@@ -42,7 +42,18 @@ interface Landmark {
   symbolSrc: string | null;
   links: ResolvedLink[];
   groups: ResolvedGroup[];
+  depth: number;
 }
+
+/*
+ * Nesting indent, reduced below `sm`. The desktop steps (8/16/24/32 = up to
+ * 8rem) are unchanged; on a 390px phone that deepest step alone ate a third
+ * of the viewport before any content. Mobile steps are a quarter of
+ * desktop's — still legible as hierarchy, without spending the screen on it.
+ * (Removed with the activity ordering, restored with the directory grouping
+ * — the indent is what makes the grouping legible.)
+ */
+const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
 
 function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   return (
@@ -81,9 +92,10 @@ export function LandmarkSection({
   sessions: { sessions: SessionRowItem[]; olderSessions: SessionRowItem[] } | null;
 }) {
   const labelText = landmark.label || landmark.path;
+  const indentClass = INDENT_CLASSES[Math.min(landmark.depth, INDENT_CLASSES.length - 1)];
 
   return (
-    <Card padding="md" border="subtle" shadow>
+    <Card padding="md" border="subtle" shadow className={indentClass}>
       <Stack gap="md">
         <div className="flex items-center gap-3">
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />

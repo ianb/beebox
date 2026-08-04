@@ -39,6 +39,8 @@ export interface LandmarkPayload {
   links: ResolvedLink[];
   /** Named expands kept as collapsible groups (submenus). */
   groups: ResolvedGroup[];
+  /** Nesting depth relative to ancestor landmarks (root = 0). */
+  depth: number;
   /**
    * Chat-feature seeds (e.g. `{ narration: "on" }`) declared via
    * `navigation.chat-app`. Applied at session-open time for chats bound
@@ -127,6 +129,8 @@ async function loadLandmarkPayload(
       symbolSrc: symbol.src,
       links,
       groups,
+      // Overwritten by the ancestor traversal in `list` after sorting.
+      depth: 0,
       features: readLandmarkFeatures(navigation),
     },
   };
@@ -153,14 +157,43 @@ export const landmarksRouter = router({
     }
     problems.sort((a, b) => a.path.localeCompare(b.path));
 
-    // Stable, predictable order: root first, then lexicographic by dir. The
-    // Landmarks page re-orders by chat activity (`chat.byLandmark`'s sort);
-    // this is what a consumer that doesn't gets.
+    // Sort by dir so each landmark follows its nearest landmark ancestor:
+    // root first, then lexicographic by dir (a parent dir always lex-precedes
+    // its child dirs because "Parent" < "Parent/Child"). This directory
+    // grouping IS the Landmarks page's order — the page is the box's map,
+    // and scattering related landmarks by chat recency destroyed the sense
+    // of place (boxholder, 2026-08-03); recency ordering lives in the app
+    // bar's switch menu instead.
     payloads.sort((a, b) => {
       if (a.dir === "" && b.dir !== "") return -1;
       if (b.dir === "" && a.dir !== "") return 1;
       return a.dir.localeCompare(b.dir);
     });
+
+    // Assign depth: each landmark's depth is 1 + the depth of its nearest
+    // ancestor landmark. The root landmark is special — it pins to the top
+    // but doesn't act as a parent, so top-level landmarks stay at depth 0.
+    const byDir = new Map<string, LandmarkPayload>();
+    for (const lm of payloads) byDir.set(lm.dir, lm);
+    for (const lm of payloads) {
+      if (lm.dir === "") {
+        lm.depth = 0;
+        continue;
+      }
+      let cursor = path.dirname(lm.dir);
+      if (cursor === ".") cursor = "";
+      let depth = 0;
+      while (cursor !== "") {
+        const ancestor = byDir.get(cursor);
+        if (ancestor) {
+          depth = ancestor.depth + 1;
+          break;
+        }
+        const next = path.dirname(cursor);
+        cursor = next === "." ? "" : next;
+      }
+      lm.depth = depth;
+    }
 
     return { landmarks: payloads, problems };
   }),
