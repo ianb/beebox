@@ -566,13 +566,14 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # was added silently 503s the upload/processing path that needs it (qpdf → PDF
   # scan uploads; poppler pdfinfo/pdftoppm → PDF intake; pandoc → doc convert;
   # imagemagick convert → image ops; openpyxl/xlsx2csv → spreadsheet reads;
-  # git-annex/git-lfs → assets) until someone hits it in the wild. Catch a
+  # ffmpeg → audio transcode/concat (capture voice); git-annex/git-lfs →
+  # assets) until someone hits it in the wild. Catch a
   # "declared but not installed on this older box" gap at deploy, not at first use.
   echo "Verifying required external tools..."
   ssh "root@$SERVER_IP" bash -s <<'TOOLCHECK'
     set -uo pipefail
     missing=""
-    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv git git-lfs git-annex; do
+    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex; do
       command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
     done
     python3 -c "import openpyxl" >/dev/null 2>&1 || missing="$missing python3-openpyxl"
