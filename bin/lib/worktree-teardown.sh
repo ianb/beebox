@@ -190,8 +190,25 @@ wt_work_state() {
   local d="$1"
   WT_BRANCH=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   WT_AHEAD=$(git -C "$d" rev-list --count main..HEAD 2>/dev/null || echo "?")
-  WT_DIRTY=$(git -C "$d" status --porcelain 2>/dev/null | grep -cvE '^( D|D ) ' || true)
-  WT_BLOCKERS=$(git -C "$d" status --porcelain 2>/dev/null | grep -vE '^( D|D ) ' | head -6 | tr '\n' ';' || true)
+
+  # `git status` failing must NOT read as "clean". Piping it straight into
+  # `grep -c` loses that distinction: a status that errors out with no output
+  # yields a count of 0, i.e. exactly the value that authorizes a delete. So
+  # capture it, keep git's exit status, and report "?" — which every caller
+  # compares against "0" and therefore treats as blocking.
+  local status_out
+  if status_out=$(git -C "$d" status --porcelain 2>/dev/null); then
+    if [ -z "$status_out" ]; then
+      WT_DIRTY=0
+      WT_BLOCKERS=""
+    else
+      WT_DIRTY=$(printf '%s\n' "$status_out" | grep -cvE '^( D|D ) ' || true)
+      WT_BLOCKERS=$(printf '%s\n' "$status_out" | grep -vE '^( D|D ) ' | head -6 | tr '\n' ';' || true)
+    fi
+  else
+    WT_DIRTY="?"
+    WT_BLOCKERS="git-status-failed"
+  fi
   [ -n "$WT_DIRTY" ] || WT_DIRTY="?"
 }
 

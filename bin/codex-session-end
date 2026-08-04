@@ -81,6 +81,14 @@ if [ -z "$WT_BRANCH" ] || [ "$WT_BRANCH" = "main" ] || [ "$WT_BRANCH" = "HEAD" ]
   exit 0
 fi
 
+if [ "$WT_AHEAD" = "?" ] || [ "$WT_DIRTY" = "?" ]; then
+  # git couldn't tell us what's in there. Don't remove it, and don't ask a human
+  # to decide off a display we know is wrong.
+  echo "codex-session-end: cannot read git state for $name (ahead=$WT_AHEAD dirty=$WT_DIRTY) — leaving it alone"
+  wt_log "decision=skip:cannot-read-git-state branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY wt=$worktree_path"
+  exit 0
+fi
+
 if [ "$WT_AHEAD" = "0" ] && [ "$WT_DIRTY" = "0" ]; then
   echo "codex-session-end: '$WT_BRANCH' is fully merged into main and clean — cleaning up"
   wt_log "decision=clean branch=$WT_BRANCH ahead=0 dirty=0 wt=$worktree_path"
@@ -134,12 +142,24 @@ fi
 case "$answer" in
   r|R|remove|Remove)
     echo "codex-session-end: removing '$name' at your request"
-    # Re-check liveness: the prompt may have sat for minutes, and a sibling
-    # session can have started in this worktree in the meantime.
+    # The prompt may have sat for up to 300s, so consent is against a snapshot
+    # that could be stale by minutes. Re-check both things it rested on before
+    # acting, and abort on any drift — the human agreed to delete what they were
+    # shown, not whatever the worktree holds now.
     wt_other_agent_live "$worktree_path"
     if [ "$WT_AGENT_STATE" != "none" ]; then
       echo "codex-session-end: an agent is now live in $name ($WT_AGENT_STATE $WT_AGENT_REASON) — NOT removing"
       wt_log "decision=abort-remove:$WT_AGENT_STATE $WT_AGENT_REASON wt=$worktree_path"
+      exit 0
+    fi
+    shown_branch="$WT_BRANCH" shown_ahead="$WT_AHEAD" shown_dirty="$WT_DIRTY"
+    wt_work_state "$worktree_path"
+    if [ "$WT_BRANCH" != "$shown_branch" ] || [ "$WT_AHEAD" != "$shown_ahead" ] || [ "$WT_DIRTY" != "$shown_dirty" ]; then
+      echo "codex-session-end: $name changed while the prompt was open"
+      echo "  shown: branch=$shown_branch ahead=$shown_ahead dirty=$shown_dirty"
+      echo "  now:   branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY"
+      echo "  NOT removing — re-run \`bin/codex-session-end $worktree_path\` to see the current state."
+      wt_log "decision=abort-remove:state-drift shown=[$shown_branch $shown_ahead $shown_dirty] now=[$WT_BRANCH $WT_AHEAD $WT_DIRTY] wt=$worktree_path"
       exit 0
     fi
     keep_branch=""
