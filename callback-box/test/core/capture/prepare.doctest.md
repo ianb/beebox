@@ -559,3 +559,63 @@ execFileSync("git", ["status", "--short"], { cwd: box.root }).toString().trim().
 ```ts cleanup
 await box.cleanup();
 ```
+
+## Fully-gitignored attach scope still commits the card and delivers
+
+Post-annex boxes gitignore the whole capture staging attach scope
+(`**/tmp-capture/**/*.attach/**` — staging media joins the annex only when an
+agent files it, see `docs/plans/asset-annex.md`). `git add` then stages nothing
+from the attach directory, and a commit pathspec naming it would fail with
+"pathspec did not match any file(s) known to git" — the 2026-08-03 box-family
+incident: every capture wedged in `preparing` and the client retried forever.
+Preparation must commit only what actually staged (the session card) and still
+deliver.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write(".gitignore", GITIGNORE + "**/tmp-capture/**/*.attach/**\n");
+await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
+await box.write("config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
+box.commitAll("configure fake transcription, annex-style ignore");
+const id = await stageSealedSession(box.root);
+
+const backend = createFakeChatBackend();
+const registry = new ChatSessionRegistry(box.root, {
+  backend,
+  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+});
+const eventBus = createEventBus(box.root);
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
+await tick();
+
+const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
+const docRel = `tmp-capture/${basename}.capture-session.card`;
+const attachRel = `tmp-capture/${basename}.attach`;
+```
+
+The capture delivered (staging cleaned up) and the card was committed —
+flipped to `delivered` — while the attach files exist on disk untracked:
+
+```ts continue
+await readStagingSession({ boxRoot: box.root, id })
+=> null
+
+(await box.read(docRel)).includes("status: delivered")
+=> true
+
+await pathExists(`${box.root}/${attachRel}/audio-001.audio.card`)
+=> true
+
+const capSubjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString();
+capSubjects.includes(`Capture: ${basename}`)
+=> true
+
+execFileSync("git", ["ls-files", "--", attachRel], { cwd: box.root }).toString().trim()
+=> 
+```
+
+```ts cleanup
+registry.shutdown();
+eventBus.close();
+await box.cleanup();
+```

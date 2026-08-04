@@ -30,7 +30,7 @@ import { lintCardsDispatch } from "../card-lint.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { stageFiles, commitPaths, pathsHaveChanges, isNothingToCommitError } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import {
   readStagingSession,
   setStagingState,
@@ -112,24 +112,16 @@ function withCommitLock<T>(fn: () => Promise<T>): Promise<T> {
 
 /**
  * Stage + commit exactly the given paths, serialized against every other
- * capture commit and scoped to those paths. Idempotent: no-op when the paths
- * are already clean, and a residual "nothing to commit" race (the box's own
- * auto-sweep beat us to it) is treated as success.
+ * capture commit. `stageAndCommitPaths` supplies the idempotency (no-op when
+ * the paths are already clean, "nothing to commit" race treated as success)
+ * and the staged-only commit scoping that keeps a fully-gitignored attach
+ * scope (post-annex boxes) from failing the commit pathspec.
  */
 async function commitPathsSerialized(
   boxRoot: string,
   opts: { paths: string[]; message: string; trailers?: Record<string, string> },
 ): Promise<void> {
-  await withCommitLock(async () => {
-    if (!(await pathsHaveChanges(boxRoot, opts.paths))) return;
-    await stageFiles(boxRoot, opts.paths);
-    try {
-      await commitPaths(boxRoot, opts);
-    } catch (err) {
-      if (isNothingToCommitError(err)) return;
-      throw err;
-    }
-  });
+  await withCommitLock(() => stageAndCommitPaths(boxRoot, opts));
 }
 
 /**
