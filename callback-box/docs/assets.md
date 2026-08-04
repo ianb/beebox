@@ -170,12 +170,17 @@ repairing takes both `git config annex.thin false` **and** `git annex fix`
 spec rather than leaving it to a command someone must remember.
 
 `cb init` also rewrites the box's `.gitignore` and `.gitattributes` on every
-run, and it **detects the annex conversion** (from `.git/annex/`) so it writes
-the annex forms — assets un-ignored, no Git LFS filters — instead of the
-manifest-scheme ones. Until 2026-08 it did not: a single `cb init` silently
-de-annexed a converted box, re-ignoring every asset while `.git/annex/` sat
-there looking healthy, and nothing reported it until a later commit or asset
-write failed. Anything that writes asset bytes now gates on that shape via
+run. It **detects the annex conversion** (from `.git/annex/`) so `.gitignore`
+gets the annex form — assets un-ignored — instead of the manifest-scheme one.
+Until 2026-08 it did not: a single `cb init` silently de-annexed a converted
+box, re-ignoring every asset while `.git/annex/` sat there looking healthy, and
+nothing reported it until a later commit or asset write failed.
+
+`.gitattributes` no longer varies by scheme: as of 2026-08-04 the template
+carries no `filter=lfs` rules at all, so every box gets the same LFS-free file.
+A pre-annex box gitignores its asset bytes, so an LFS filter could never fire on
+it either — the rules were dead config whose only live effect was the risk of
+re-LFS-ifying a converted box's new media. Anything that writes asset bytes now gates on that shape via
 `isAnnexBox()` (`src/core/annex/is-annex-box.ts`) — the scan-upload routes
 refuse with a 503 rather than accept a file they cannot import.
 

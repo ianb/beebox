@@ -8,6 +8,7 @@ import { Image } from "../ui/Image";
 import { Pre } from "../ui/Pre";
 import type { DiffFile } from "./CommitDetail-diff";
 import { extractNewFileContent } from "./CommitDetail-diff";
+import { buildHistoryBlobUrl } from "./history-blob-url";
 
 // --- Binary file rendering ---
 
@@ -24,7 +25,7 @@ function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
   // A removed file's content only exists at the parent commit; the blob route
   // accepts a trailing "^" on the hash for exactly this.
   const blobHash = file.meta.includes("deleted") ? `${hash}^` : hash;
-  const blobUrl = `${getApiBase()}/history/blob/${blobHash}/${file.path}`;
+  const blobUrl = buildHistoryBlobUrl({ apiBase: getApiBase(), hash: blobHash, filePath: file.path });
 
   if (IMAGE_EXTS.includes(ext)) {
     return (

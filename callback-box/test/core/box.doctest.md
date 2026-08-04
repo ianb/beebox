@@ -198,7 +198,13 @@ await isValidBox(boxRoot)
 `initBox` rewrites `.gitignore` and `.gitattributes` on every run, so it has to
 know which asset-tracking scheme the box is on. A fresh box is on the manifest
 scheme: asset bytes inside `.attach/` scopes are gitignored and tracked by
-per-dir `manifest.json`, and Git LFS filters cover the same extensions.
+per-dir `manifest.json`.
+
+`.gitattributes` does *not* vary with the scheme. Git LFS is retired, so no box
+gets `filter=lfs` rules — a manifest-scheme box gitignores its asset bytes, so
+an LFS filter could never fire on it anyway, and carrying the rules only risked
+re-LFS-ifying a converted box's new media if the annex probe below ever read
+false.
 
 ```ts
 const tmp = await makeTmpDir();
@@ -208,17 +214,17 @@ const gitattributes = await fs.readFile(path.join(boxRoot, ".gitattributes"), "u
 [
   gitignore.includes("**/*.attach/**/*.pdf"),
   gitignore.includes("managed by cb attachments init-gitignore"),
-  gitattributes.includes("*.pdf filter=lfs") || gitattributes.includes("*.png filter=lfs"),
+  gitattributes.includes("filter=lfs"),
 ].join(" ")
-=> true true true
+=> true true false
 ```
 
-Once `cb attachments to-annex` has converted the box, both of those forms are
-wrong: assets must be *visible* to `git add` (that is how they reach the annex)
-and the LFS filters are retired. `initBox` detects the conversion from
-`.git/annex/` — the directory `git annex init` creates, which nothing this
-function writes can affect — and emits the annex forms instead. Before the fix
-this path silently de-annexed every converted box on its next `cb init`.
+Once `cb attachments to-annex` has converted the box, the `.gitignore` form is
+wrong: assets must be *visible* to `git add` (that is how they reach the annex).
+`initBox` detects the conversion from `.git/annex/` — the directory `git annex
+init` creates, which nothing this function writes can affect — and emits the
+annex form instead. Before the fix this path silently de-annexed every converted
+box on its next `cb init`. `.gitattributes` is LFS-free either way.
 
 ```ts continue
 await fs.mkdir(path.join(tmp, ".git", "annex"), { recursive: true });

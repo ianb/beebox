@@ -185,11 +185,71 @@ second router without touching the live one (which only picks up
 `~/src/boxes/test1` to `~/src/box-worktrees/<name>/test1/` (kept outside
 the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename
 stays `test1` so URL slugs match across worktrees and links like
-`/<wt>/test1/...` swap cleanly) and runs `pnpm install` at every level.
+`/<wt>/test1/...` swap cleanly), runs `pnpm install` at every level, and
+generates the gitignored AGENTS.md mirrors (next section).
 On session exit with no changes the worktree is auto-removed and the
 `WorktreeRemove` hook deletes the cloned box and tells the router to stop
 the worktree's dev server. With uncommitted changes, Claude Code prompts
 to keep or remove.
+
+## Codex worktree sessions
+
+`bin/launch-worktree-session --agent codex` spins up an OpenAI Codex CLI
+session in a fresh worktree the same way the default claude path does. Codex
+has no `--worktree`, so the launcher's generated launch script invokes
+`.claude/hooks/worktree-create.sh` directly (JSON `{name}` on stdin, worktree
+path on stdout; idempotent — a relaunch re-attaches), then execs `codex` in
+the worktree with a `workspace-write`/never-approve sandbox (`--add-dir` for the
+box clone and `~/.cache/callback-box`; network on; the worktree pre-trusted; and
+`project_doc_max_bytes` raised via launch-scoped `-c` overrides — nothing
+persisted to `~/.codex/config.toml`). `--model` maps to `codex -m` (OpenAI model
+names). Remote Control is claude-only and ignored for codex.
+
+**A codex worker cannot commit or `/finish` in its linked worktree — this is an
+upstream limitation, not a config gap.** Codex's sandbox force-mounts `.git` (and
+the resolved gitdir) read-only *after* the writable roots, and a linked
+worktree's git metadata lives outside the worktree (`$MONO/.git/worktrees/<name>`),
+so no `--add-dir` grant reaches it (openai/codex#14338, #23661; verified 2026-08-04
+— a worker launched with the main checkout granted still hit EPERM on `index.lock`).
+An earlier `--add-dir "$MONO"` grant to fix this was reverted: it delivered nothing
+and only weakened isolation. So the working model is **codex implements + verifies +
+reports; the parent (Claude session or the boxholder) commits and lands.** The
+merge-to-main step is unsandboxable for codex regardless, since it writes the shared
+main checkout's `.git`. See `issues/watch/` for the upstream tracker.
+
+Codex's `workspace-write` sandbox confines **writes** (workspace + the `--add-dir`
+roots) and network, but **reads are global** — verified empirically 2026-08-04: a
+codex session reads files in a sibling worktree outside every writable root fine.
+So a codex worker can inspect other in-progress worktrees (`git worktree list`,
+`git -C <path> status`/`diff main`) with no extra grant; the root preamble tells it
+so. Broadening read scope needs nothing; only *writing* another worktree would.
+
+Codex reads AGENTS.md where Claude reads CLAUDE.md (root→cwd chain injected
+at startup; nested files discovered by the model as it works, per its own
+system prompt), and scans `.agents/skills/` for repo skills.
+`bin/generate-agents-md.ts` writes a gitignored AGENTS.md mirror next to every
+tracked CLAUDE.md, embeds tracked `.claude/rules/*.md` at their nearest AGENTS.md
+scope, and symlinks every tracked `.claude/skills/<name>/` into
+`.agents/skills/<name>` — preserving each skill's scripts, references, and
+assets. CLAUDE.md and rule content stays verbatim except for generated framing
+and a root-level Codex preamble
+(harness-feature mapping, worktree orientation, a `CODEX-AGENTS-LOADED`
+sentinel for verifying the docs actually loaded). The one committed
+find-replace AGENTS.md rotted and mangled commands (removed in 872450eb), so
+mirrors regenerate at every spin-up (both hook paths, fresh AND resume); the
+generator refuses to overwrite a tracked AGENTS.md or an existing non-generated
+Codex skill. The launcher's codex path fails closed if the root mirror is
+missing.
+
+Tracked `.claude/rules/*.md` files are embedded verbatim into the generated
+AGENTS.md at their nearest directory scope. Their `paths` frontmatter remains a
+conditional applicability instruction; it is not copied into Codex's rules
+directory, because Codex command-execution rules have different semantics.
+
+Teardown differs from claude sessions: no WorktreeRemove/SessionEnd hook
+fires when a codex session ends, so the worktree persists until
+`bin/worktrees sweep` collects it (sweep counts a live `codex` process whose
+cwd is in a worktree as an active session, same as claude).
 
 ## Private-issues shadow repo (`private-issues`)
 

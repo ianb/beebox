@@ -17,8 +17,11 @@ dist/
 # The tracked .commit-blocklist.example documents the format.
 .commit-blocklist
 
-# Codex mirror (AGENTS.md / .agents/ / .codex/) — kept local for now; not
-# committed to avoid maintaining a sync with the .claude/ + CLAUDE.md sources.
+# Codex mirrors: AGENTS.md files and .agents/skills symlinks are GENERATED from
+# CLAUDE.md, .claude/rules, and .claude/skills at worktree spin-up
+# (bin/generate-agents-md.ts, called by the WorktreeCreate hook) and must never
+# be committed — a committed mirror is exactly the drift-to-stale failure mode
+# the generator exists to prevent (see 872450eb).
 AGENTS.md
 .agents/
 .codex/
