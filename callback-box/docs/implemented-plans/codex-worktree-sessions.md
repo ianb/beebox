@@ -1,5 +1,7 @@
 # Codex worktree sessions
 
+**Status:** implemented 2026-08 — shipped as `bin/launch-worktree-session --agent codex`; see `bin/CLAUDE.md` for the current reference.
+
 Let `bin/launch-worktree-session` spin up an OpenAI Codex CLI session in a fresh
 worktree the same way it spins up Claude Code sessions today: new worktree,
 cloned test box, installs, a briefing as the opening prompt — but `exec codex`

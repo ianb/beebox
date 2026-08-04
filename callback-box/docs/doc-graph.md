@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-03T23:03:22Z
-Total documents: 238
+Generated: 2026-08-04T19:20:49Z
+Total documents: 239
 
 ## Issues
 
@@ -14,6 +14,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (354 lines)
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (154 lines)
+- **docs/implemented-plans/codex-worktree-sessions.md** — "Codex worktree sessions" (199 lines)
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (366 lines)
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (345 lines)
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (714 lines)
@@ -83,6 +84,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:234 (mention) — The explanation-length test (see Test results section) confirms this is modest, not dramatic: the full Cards section in 
 - docs/implemented-plans/chat-stream-finalize-unify.md:338 (mention) — `CLAUDE.md` (`src/frontend/src/components/chat/CLAUDE.md`, shipped with the scroll
 - docs/implemented-plans/clerk-webpage-capture.md:125 (mention) — - **callback-clerk `CLAUDE.md`** — *"domain code never imports React, WXT, or
+- docs/implemented-plans/codex-worktree-sessions.md:15 (mention) — - **Codex reads AGENTS.md, not CLAUDE.md.** Two layers, both verified against
 - docs/implemented-plans/courseware-phase1.md:98 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/implemented-plans/extfile-card.md:39 (mention) — (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
 - docs/implemented-plans/ios-audio-session-routing.md:45 (mention) — - `CLAUDE.md` (monorepo root) — *"Treat noisy command output as a bug."* The
@@ -154,7 +156,7 @@ Referenced by:
 - ../.claude/skills/cb-plan/SKILL.md:112 (mention) — - `callback-box/CLAUDE.md` — project conventions, validation contract,
 - ../.claude/skills/doctest/SKILL.md:19 (mention) — test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check
-- ../.claude/skills/launch-worktree-session/SKILL.md:158 (mention) — CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
+- ../.claude/skills/launch-worktree-session/SKILL.md:150 (mention) — mirrors of every CLAUDE.md so codex gets the repo docs (mechanism:
 - ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:11 (mention) — doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
@@ -173,6 +175,7 @@ Referenced by:
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:20 (mention) — CLAUDE.mds) and spot-check their concrete claims against code —
 - ../issues/docs-and-chores/2026-07-04-instruction-surface-size-budget.md:10 (mention) — Give each instruction surface (agent guide, box CLAUDE.md, guide cards,
 - ../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md:29 (mention) — them). The box's CLAUDE.md already `@`-includes the agent guide by path
+- ../issues/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:17 (mention) — the box's own CLAUDE.md / agent-guide / rules, not this repo's docs). So the box
 - ../issues/exploration/2026-03-04-claude-code-memory-concerns.md:10 (mention) — - Custom subagents don't inherit CLAUDE.md or `.claude/rules/` (only built-in subagents do)
 - ../issues/exploration/2026-05-19-subagent-strategy.md:27 (mention) — Connected concern: subagents in callback-box don't inherit CLAUDE.md or rules (per [Claude Code Memory Concerns](2026-03
 - ../issues/exploration/2026-05-28-before-you-build-this.md:11 (mention) — Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new component / helper / schema, run `cb reu
@@ -397,7 +400,7 @@ Referenced by:
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - frontend.md:113 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
-- ../issues/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:21 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
+- ../issues/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:27 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:71 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:55 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
@@ -613,7 +616,7 @@ References:
 
 #### docs/assets.md
 
-Title: "Assets" | 200 lines
+Title: "Assets" | 205 lines
 
 Referenced by:
 - CLAUDE.md:148 (mention) — | Assets (git-annex) | `docs/assets.md` |
@@ -653,6 +656,7 @@ Referenced by:
 - docs/plans/prompt-surface-ia-review.md:146 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/source-available-release.md:60 (mention) — and documented at `callback-box/docs/box-layout.md:194`. No credential values
 - docs/reports/user-stories-audit-2026-06-26.md:4927 (mention) — The user story is accurately implemented across both claimed files. `callback-box/src/cli/commands/init.ts` provides the
+- ../issues/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:15 (mention) — the dev-repo `docs/box-layout.md:82` ("scratch space (not committed)"). **Box
 - ../research/pai/information-layout.md:10 (mention) — knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 
 References:
@@ -781,8 +785,8 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
 - docs/implemented-plans/top-nav-ia.md:409 (mention) — bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
 - ../issues/code-quality/2026-07-06-chat-session-shared-core.md:50 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
-- ../issues/features/2026-08-02-mcp-launch-into-chat.md:52 (mention) — (See `docs/chat-session-lifecycle.md`.)
-- ../issues/features/2026-08-02-mcp-launch-into-chat.md:71 (link) — - [Chat session lifecycle](../../callback-box/docs/chat-session-lifecycle.md) — how
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:51 (mention) — (See `docs/chat-session-lifecycle.md`.)
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:70 (link) — - [Chat session lifecycle](../../callback-box/docs/chat-session-lifecycle.md) — how
 
 References:
 - → ../issues/code-quality/2026-07-06-chat-session-shared-core.md (mention)
@@ -1198,7 +1202,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:65 (mention) — `src/schemas/landmark.ts` and `docs/landmarks.md`; an `expand` entry fans out to
 - ../issues/features/2026-06-12-card-level-prominence.md:7 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:26 (mention) — Landmarks are already the box's "notable spots" surface (`docs/landmarks.md`), and
-- ../issues/features/2026-08-02-mcp-launch-into-chat.md:69 (link) — - [Landmarks](../../callback-box/docs/landmarks.md) — the navigation surface the
+- ../issues/features/2026-08-02-mcp-launch-into-chat.md:68 (link) — - [Landmarks](../../callback-box/docs/landmarks.md) — the navigation surface the
 
 References:
 - → docs/triage.md (mention)
@@ -1291,15 +1295,18 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:119 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - ../.claude/skills/cb-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `callback-box/docs/mobile-contract.md`**
 - ../CLAUDE.md:10 (mention) — - **ios-app/** — Native SwiftUI companion app; a thin shell around the web chat (`WKWebView`) plus native pairing, compo
+- ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:55 (mention) — `docs/mobile-contract.md` governs the receipt contract.
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:17 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md`; doc: `docs/mobile-contract.md`
 - ../issues/closed/bugs/2026-07-21-device-store-crash-safety-and-renewal-race.md:20 (mention) — `docs/mobile-contract.md` § Cookie lifetime and revocation (decision: documented
 - ../issues/closed/bugs/2026-07-21-ios-location-always-shared-no-toggle.md:106 (link) — [mobile contract](../../../callback-box/docs/mobile-contract.md).
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:78 (mention) — to the mobile contract (`docs/mobile-contract.md`) and the iOS composer
+- ../issues/closed/features/2026-08-03-ios-self-screenshot.md:65 (mention) — into the native bridge + `docs/mobile-contract.md`.
 - ../issues/code-quality/2026-07-19-mobile-contract-small-cleanups.md:27 (mention) — one so a future Android client has one thing to learn. `docs/mobile-contract.md` §8 lists
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:29 (mention) — web (`docs/mobile-contract.md` §2).
 - ../issues/docs-and-chores/2026-08-03-mobile-contract-missing-capture-bulk-rows.md:8 (mention) — `docs/mobile-contract.md` presents itself as the canonical Contract Surface
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:11 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:87 (mention) — `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
+- ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md:47 (mention) — reload path (`docs/mobile-contract.md`; cb-ios-overlap territory).
 
 References:
 - → docs/implemented-plans/mobile-parity-sync.md (mention)
@@ -2324,6 +2331,13 @@ References:
 - → CLAUDE.md (mention)
 - → docs/landmarks.md (mention)
 
+#### docs/implemented-plans/codex-worktree-sessions.md **[ORPHAN]**
+
+Title: "Codex worktree sessions" | 199 lines
+
+References:
+- → CLAUDE.md (mention)
+
 #### docs/implemented-plans/companion-pane-card-activity.md **[ORPHAN]**
 
 Title: "Companion-pane card activity awareness for chat" | 366 lines
@@ -2743,7 +2757,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 445 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:198 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:230 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3332,7 +3346,7 @@ References:
 Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 583 lines
 
 Referenced by:
-- docs/assets.md:196 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
+- docs/assets.md:201 (link) — [`plans/asset-offbox-storage.md`](plans/asset-offbox-storage.md).
 - docs/plans/asset-annex.md:4 (mention) — `asset-offbox-storage.md` (see "How this plan changed").
 
 References:
