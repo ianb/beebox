@@ -9,26 +9,39 @@ Several boxes on a deployment were found in a broken half-migrated annex state:
 **git-annex initialized (`annex.uuid` set, `annex.largefiles` configured) BUT the box
 `.gitignore` still carried the manifest-scheme asset block** (`**/*.attach/**/*.<ext>`,
 incl. `*.frozen`). In that state every asset is ignored, so `git add` never sees it,
-so nothing is ever annexed — and any code path that `git add`s an asset (the clerk
-page-save's `page.frozen`) fails hard. It surfaced as a `clerk.commentary` **500**:
-*"The following paths are ignored by one of your .gitignore files: …/page.frozen".*
+so nothing is ever annexed — and any code path that `git add`s an asset fails hard.
+
+Two real surfaces of the same root cause, both hit 2026-08-02:
+
+- A `clerk.commentary` **500** on a page-save: *"The following paths are ignored by
+  one of your .gitignore files: …/page.frozen"* (the `page.frozen` snapshot could not
+  be `git add`ed).
+- Scan-upload routes answering **503 `box is not annex-converted`** — the box passed
+  doctor 7/7 while the upload gate refused it.
 
 ## The core problem: doctor is blind to it
 
-`cb doctor annex` reported **all green** in this exact state:
+`isAnnexBox` (`src/core/annex/is-annex-box.ts`) gates on TWO conditions: annex
+initialized AND the box `.gitignore` no longer carrying the manifest-scheme asset
+block. `cb doctor annex --check` verifies **seven** things — binary, initialized,
+thin, largefiles, content-present, journal, hook — but **not the gitignore half**. So
+in this exact state doctor reports all green:
 
 ```
 ✓ initialized  ✓ thin  ✓ largefiles  ✓ content-present  ✓ journal  ✓ hook
 ```
 
-None of its checks ask *"does the box `.gitignore` still ignore assets?"* — the one
-condition that makes an annex-initialized box silently annex nothing.
-`attachments-gitignore.ts` already has the exact predicate (`isAssetIgnoreRule`, and
-`core/annex/is-annex-box.ts` frames "does this `.gitignore` still hide assets from
-git" as the same question). doctor should add a check that **fails** when the box is
-annex-initialized AND an asset ignore rule is still present, pointing at
-`cb attachments unignore` as the fix. Without it, this state is invisible until an
-asset write happens to hit it.
+while the annex gate (and the scan-upload route that depends on it) says "not
+converted." **A gate and its diagnostic disagreeing is exactly what doctor exists to
+prevent** — reconciling them cost real debugging time reading the probe source.
+
+**Fix:** doctor grows an eighth check that **fails** when the box is annex-initialized
+AND an asset ignore rule is still present. The exact predicate already exists —
+`isAssetIgnoreRule` / `gitignoreIgnoresAssets` in `attachments-gitignore.ts`, the same
+"does this `.gitignore` still hide assets from git" question `is-annex-box.ts` frames.
+The check should point at the repair (`cb attachments unignore` — remove the managed
+block, add the post-annex unignore block). Without it, this state is invisible until
+an asset write happens to hit it.
 
 ## Secondary findings (worth their own items if pursued)
 
@@ -54,4 +67,3 @@ snapshots had them annexed and committed afterward (verified: `page.frozen` beca
 on the manifest scheme (not annex) was not affected. One box had the same conversion
 sitting UNCOMMITTED in a template sync and was left for the boxholder to commit or
 revert.
-</content>
