@@ -165,12 +165,14 @@ codex exec - -s read-only -C "$ROOT" -m gpt-5.5 \
 
 ### Review / challenge modes (Claude → Codex)
 
-- **review:** `codex review` (or `codex exec review`) against the branch
-  preserves Codex's own tuned review prompt; add a focus string if given. That
-  form takes its prompt differently from `codex exec -`, so this skill's
-  scaffolding (boundary prefix, orientation glue, fencing) does not reach it —
-  if you want the scaffolding, use plain `codex exec -` with your own review
-  prompt instead.
+- **review — use `codex exec -` with your own prompt, same as every other mode.**
+  The scaffolding in shared rules 2–4 (orientation glue, fencing, verify-don't-
+  opine) is what makes these reviews land, and it applies here too.
+- `codex review` (or `codex exec review`) exists and preserves Codex's own tuned
+  review prompt, but it takes its prompt differently, so **none** of this skill's
+  scaffolding reaches it — an unfenced repo crawl is the usual result. Reach for
+  it only as a deliberate experiment, and say in your report that the review ran
+  unfenced.
 - **challenge:** `codex exec - -s read-only -C "$ROOT"` with the adversarial
   persona (shared, below).
 
@@ -212,8 +214,9 @@ every cited path must be this worktree's. That is only safe because of
 > (recorded in `~/.cache/callback-box/worktree-cleanup.log`). Loading user
 > settings only means the project's hooks are never registered.
 > (`.claude/hooks/session-end.sh` now also refuses to clean a worktree that
-> still has another live agent process cwd'd inside it, so this is
-> belt-and-braces — but keep the flag.)
+> still has another live agent belonging to it, and fails closed when it can't
+> tell — so this is belt-and-braces. Keep the flag anyway: it stops the hook
+> from running at all, which is a guard nothing can get wrong.)
 
 > ⚠️ **`--tools` is variadic, so it eats a positional prompt.** `claude -p
 > --tools "Read,Grep,Glob" "my prompt"` fails with *"Input must be provided
