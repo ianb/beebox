@@ -82,21 +82,22 @@ mount_private_issues() {
   "$pi" mount "$1" >/dev/null || true
 }
 
-# Regenerate the gitignored AGENTS.md mirrors (Codex CLI reads AGENTS.md where
-# Claude reads CLAUDE.md — see bin/generate-agents-md.ts). Runs on BOTH the
-# fresh and resume paths: a resume must refresh mirrors against whatever
-# CLAUDE.md now says, and skipping it would leave a hand-launched `codex` in a
-# resumed worktree on stale docs. tsx lives at the worktree ROOT node_modules
-# (hoisted workspace — callback-box/node_modules/.bin has no tsx). Non-blocking:
-# a Claude session doesn't need the mirrors, and the codex launcher path
+# Regenerate the gitignored AGENTS.md and .agents/skills mirrors (Codex CLI
+# reads AGENTS.md where Claude reads CLAUDE.md/rules and scans .agents/skills —
+# see bin/generate-agents-md.ts). Runs on BOTH the fresh and resume paths: a
+# resume must refresh mirrors against whatever Claude docs and skills now say,
+# and skipping it would leave a hand-launched `codex` in a resumed worktree on
+# stale guidance. tsx lives at the worktree ROOT node_modules (hoisted
+# workspace — callback-box/node_modules/.bin has no tsx). Non-blocking: a
+# Claude session doesn't need the mirrors, and the codex launcher path
 # re-verifies the root AGENTS.md exists before exec'ing codex.
 generate_agents_md() {
   local wt="$1" tsx="$1/node_modules/.bin/tsx"
   if [ -x "$tsx" ]; then
     "$tsx" "$wt/bin/generate-agents-md.ts" --worktree-name "$NAME" "$wt" \
-      || echo "[worktree-create] WARNING: generate-agents-md failed; codex sessions will lack AGENTS.md" >&2
+      || echo "[worktree-create] WARNING: generate-agents-md failed; codex sessions will lack mirrors" >&2
   else
-    echo "[worktree-create] WARNING: no tsx at $tsx; skipping AGENTS.md generation" >&2
+    echo "[worktree-create] WARNING: no tsx at $tsx; skipping Codex mirror generation" >&2
   fi
 }
 
@@ -250,8 +251,8 @@ fi
 echo "[worktree-create] running pnpm install (workspace-wide)..."
 (cd "$worktree_path" && pnpm install)
 
-# 3.5. AGENTS.md mirrors for Codex sessions (see generate_agents_md above —
-# needs the install for tsx).
+# 3.5. AGENTS.md and skill mirrors for Codex sessions (see generate_agents_md
+# above — this needs the install for tsx).
 generate_agents_md "$worktree_path"
 
 # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
