@@ -72,6 +72,13 @@ interface AppBarChromeValues {
   hereSlot: AppBarMenuSlot | null;
   /** Whether a page has claimed the here menu (chat has; other pages haven't). */
   hereMenuClaimed: boolean;
+  /**
+   * The switch menu's "Recent files" sub-panel target — same lifecycle as
+   * `hereSlot` (mounts inside the open switch `Dropdown`).
+   */
+  recentSlot: AppBarMenuSlot | null;
+  /** Whether a page will supply the Recent-files panel (chat pages do). */
+  recentFilesClaimed: boolean;
 }
 
 interface AppBarChromeWriters {
@@ -79,9 +86,12 @@ interface AppBarChromeWriters {
   clearPlace: (owner: object) => void;
   claimHereMenu: (owner: object) => void;
   releaseHereMenu: (owner: object) => void;
+  claimRecentFiles: (owner: object) => void;
+  releaseRecentFiles: (owner: object) => void;
   setChipSlot: (element: HTMLElement) => void;
   clearChipSlot: (element: HTMLElement) => void;
   setHereSlot: (slot: AppBarMenuSlot | null) => void;
+  setRecentSlot: (slot: AppBarMenuSlot | null) => void;
 }
 
 const EMPTY_VALUES: AppBarChromeValues = {
@@ -89,6 +99,8 @@ const EMPTY_VALUES: AppBarChromeValues = {
   chipSlot: null,
   hereSlot: null,
   hereMenuClaimed: false,
+  recentSlot: null,
+  recentFilesClaimed: false,
 };
 
 const AppBarChromeReadContext = createContext<AppBarChromeValues>(EMPTY_VALUES);
@@ -102,8 +114,10 @@ const AppBarChromeWriteContext = createContext<AppBarChromeWriters | null>(null)
 export function AppBarChromeProvider({ children }: { children: ReactNode }) {
   const [place, setPlace] = useState<{ owner: object; place: AppBarPlace } | null>(null);
   const [hereOwner, setHereOwner] = useState<object | null>(null);
+  const [recentOwner, setRecentOwner] = useState<object | null>(null);
   const [chipSlot, setChipSlot] = useState<HTMLElement | null>(null);
   const [hereSlot, setHereSlot] = useState<AppBarMenuSlot | null>(null);
+  const [recentSlot, setRecentSlot] = useState<AppBarMenuSlot | null>(null);
 
   const writers = useMemo<AppBarChromeWriters>(
     () => ({
@@ -111,11 +125,14 @@ export function AppBarChromeProvider({ children }: { children: ReactNode }) {
       clearPlace: (owner) => setPlace((cur) => (cur !== null && cur.owner === owner ? null : cur)),
       claimHereMenu: (owner) => setHereOwner(owner),
       releaseHereMenu: (owner) => setHereOwner((cur) => (cur === owner ? null : cur)),
+      claimRecentFiles: (owner) => setRecentOwner(owner),
+      releaseRecentFiles: (owner) => setRecentOwner((cur) => (cur === owner ? null : cur)),
       setChipSlot: (element) => setChipSlot(element),
       // Owner-scoped, like the place publication: a slot that unmounts after
       // its replacement registered must not clear the live one.
       clearChipSlot: (element) => setChipSlot((cur) => (cur === element ? null : cur)),
       setHereSlot,
+      setRecentSlot,
     }),
     [],
   );
@@ -126,8 +143,10 @@ export function AppBarChromeProvider({ children }: { children: ReactNode }) {
       chipSlot,
       hereSlot,
       hereMenuClaimed: hereOwner !== null,
+      recentSlot,
+      recentFilesClaimed: recentOwner !== null,
     }),
-    [place, chipSlot, hereSlot, hereOwner],
+    [place, chipSlot, hereSlot, hereOwner, recentSlot, recentOwner],
   );
 
   return (
@@ -181,11 +200,56 @@ export function useAppBarHereMenuClaim(claimed: boolean): void {
   }, [writers, claimed]);
 }
 
+/**
+ * Claim the switch menu's "Recent files" row: tells the pill that this page
+ * will portal the panel body in, so the row (and its sub-panel) render at
+ * all. Same owner-token discipline as the here-menu claim.
+ */
+export function useAppBarRecentFilesClaim(claimed: boolean): void {
+  const writers = useContext(AppBarChromeWriteContext);
+  const ownerRef = useRef<object>({});
+
+  useEffect(() => {
+    const owner = ownerRef.current;
+    if (writers !== null) {
+      if (claimed) writers.claimRecentFiles(owner);
+      else writers.releaseRecentFiles(owner);
+    }
+    return () => { if (writers !== null) writers.releaseRecentFiles(owner); };
+  }, [writers, claimed]);
+}
+
 /** The portal targets a page can render into. Null until the bar mounts
  *  (it doesn't at all under `?embed=1`), so callers must guard on presence. */
-export function useAppBarSlots(): { chipSlot: HTMLElement | null; hereSlot: AppBarMenuSlot | null } {
-  const { chipSlot, hereSlot } = useContext(AppBarChromeReadContext);
-  return { chipSlot, hereSlot };
+export function useAppBarSlots(): {
+  chipSlot: HTMLElement | null;
+  hereSlot: AppBarMenuSlot | null;
+  recentSlot: AppBarMenuSlot | null;
+} {
+  const { chipSlot, hereSlot, recentSlot } = useContext(AppBarChromeReadContext);
+  return { chipSlot, hereSlot, recentSlot };
+}
+
+/** Whether a page will supply the Recent-files panel. Read by the bar. */
+export function useAppBarRecentFilesClaimed(): boolean {
+  return useContext(AppBarChromeReadContext).recentFilesClaimed;
+}
+
+/**
+ * The Recent-files sub-panel's container — the switch-menu counterpart of
+ * `AppBarHereSlot`, with the same inside-the-open-Dropdown mounting rationale.
+ */
+export function AppBarRecentFilesSlot() {
+  const writers = useContext(AppBarChromeWriteContext);
+  const close = useDropdownClose();
+  const setRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (writers === null) return;
+      writers.setRecentSlot(element === null ? null : { element, close });
+    },
+    [writers, close],
+  );
+  return <div ref={setRef} />;
 }
 
 /** The place a page published, or null when none has. Read by the bar. */

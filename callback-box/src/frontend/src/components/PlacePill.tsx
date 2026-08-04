@@ -32,7 +32,7 @@ import { useOpenLandmarkChat } from "../hooks/useOpenLandmarkChat";
 import { useNavMenuEntries } from "../hooks/useNavMenuEntries";
 import { SwitchMenuBody, type SwitchPanel } from "./PlacePill-panels";
 import { HereMenuBody } from "./PlacePill-here";
-import { AppBarHereSlot, useAppBarHereMenuClaimed } from "./app-bar-chrome";
+import { AppBarHereSlot, useAppBarHereMenuClaimed, useAppBarRecentFilesClaimed } from "./app-bar-chrome";
 
 /** Folder glyph on the here half — the shape the chat's context chip used. */
 function FolderIcon() {
@@ -107,6 +107,7 @@ export function PlacePill({
   const utils = trpc.useUtils();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug);
   const hereClaimed = useAppBarHereMenuClaimed();
+  const recentFilesClaimed = useAppBarRecentFilesClaimed();
 
   const hereQuery = trpc.landmarks.forDir.useQuery(
     { dir: place.dir ?? "" },
@@ -194,7 +195,9 @@ export function PlacePill({
           onRetryLandmarks={() => { void switchQuery.refetch(); }}
           navEntries={navEntries}
           problemCount={switchData === undefined ? 0 : switchData.problems.length}
+          recentFilesClaimed={recentFilesClaimed}
           onOpenBoxPanel={() => setSwitchPanel("box")}
+          onOpenRecentFiles={() => setSwitchPanel("recent-files")}
           onBackToRoot={() => setSwitchPanel("root")}
           onSelectLandmark={(dir) => { void openLandmarkChat(dir); }}
         />

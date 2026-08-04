@@ -27,9 +27,9 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "../../lib/trpc";
 import { PortaledMenuScope } from "../ui/Dropdown";
-import { useAppBarHereMenuClaim, useAppBarPlace, useAppBarSlots } from "../app-bar-chrome";
+import { useAppBarHereMenuClaim, useAppBarPlace, useAppBarRecentFilesClaim, useAppBarSlots } from "../app-bar-chrome";
 import { contextChipLabel } from "./context-chip-label";
-import { ContextMenuBody } from "./ContextMenuBody";
+import { ContextMenuBody, RecentFilesMenuBody } from "./ContextMenuBody";
 import { SessionChip } from "./SessionChip";
 import { VoiceChip } from "./VoiceChip";
 import type { SessionEntry } from "../../api";
@@ -84,8 +84,12 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   const label = contextDir === null ? "Chat" : contextChipLabel({ landmarkLabel, dir: contextDir });
   useAppBarPlace({ dir: contextDir, label });
   useAppBarHereMenuClaim(true);
+  // The switch menu's "Recent files ›" row — the session's files, reachable
+  // from the box-title menu even when the chat has no landmark (and so no
+  // here half at all).
+  useAppBarRecentFilesClaim(true);
 
-  const { chipSlot, hereSlot } = useAppBarSlots();
+  const { chipSlot, hereSlot, recentSlot } = useAppBarSlots();
 
   // Stable across a streamed turn: `setDebugView`/`setShowDebugLog` are React
   // state setters, so these two callbacks never change identity.
@@ -135,6 +139,12 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
           />
         </PortaledMenuScope>,
         hereSlot.element,
+      )}
+      {recentSlot === null ? null : createPortal(
+        <PortaledMenuScope close={recentSlot.close}>
+          <RecentFilesMenuBody messages={messages} onZoomView={onZoomView} />
+        </PortaledMenuScope>,
+        recentSlot.element,
       )}
     </>
   );
