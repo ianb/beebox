@@ -14,7 +14,6 @@ const WATCHED_PACKAGES = [
   "p5",
   "d3",
   "highlight.js",
-  "ldrs",
   "@xyflow/react",
   "dagre",
   "@markdoc/markdoc",

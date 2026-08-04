@@ -103,7 +103,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 }
 
 function MessageListInner({
-  messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
+  messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
   captureBubbles, onCaptureRetry,
@@ -114,7 +114,6 @@ function MessageListInner({
   isStreaming: boolean;
   streamText: string;
   streamTools: SessionContentBlock[];
-  processingShown: boolean;
   debugView: boolean;
   currentUserEmail: string | undefined;
   speechPlayback: SpeechPlaybackState;
@@ -148,8 +147,8 @@ function MessageListInner({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView],
   );
 
   const { scrollerRef, contentRef, isPinned, hasUnseenContent, scrollToBottom, captureForPrepend } = useStickToBottom();

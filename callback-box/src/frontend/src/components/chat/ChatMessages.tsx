@@ -3,8 +3,6 @@
  */
 
 import { useMemo } from "react";
-import { Grid } from "ldrs/react";
-import "ldrs/react/Grid.css";
 import { Pre } from "../ui/Pre";
 import type { SessionEntry } from "../../api";
 import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../../lib/audio/speech-parsing";
@@ -81,7 +79,6 @@ export function AssistantMessage({
   onReplaySpeech,
   onZoomView,
   proseEnabled,
-  isStreaming,
 }: {
   entries: SessionEntry[];
   debugView?: boolean;
@@ -101,8 +98,6 @@ export function AssistantMessage({
   onZoomView?: OnZoomView;
   /** When false, untagged prose hides; only callouts and acks render. Default true. */
   proseEnabled?: boolean;
-  /** This group is the live, still-streaming turn — show a cursor/working state. */
-  isStreaming?: boolean;
 }) {
   const grouped = groupIntoParts(entries);
   const allText = entries.flatMap((e) =>
@@ -189,13 +184,6 @@ export function AssistantMessage({
           )
         ) : null}
         {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
-        {isStreaming ? (
-          // The "agent is working" progress animation, shown below the streamed
-          // content for the whole turn (matches the pre-unification throbber).
-          <div className="flex flex-col items-center gap-2 my-6">
-            <Grid size={40} color="#D4845A" speed={1.5} />
-          </div>
-        ) : null}
       </div>
     </div>
   );
