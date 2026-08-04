@@ -93,6 +93,48 @@ wlog "resolved worktree=$worktree_path"
 
 cd "$worktree_path" || { wlog "decision=skip:cd-failed wt=$worktree_path"; exit 0; }
 
+# Another live agent still working here? Then this is NOT the last session in
+# the worktree, and cleaning would pull the rug out from under it. `bin/worktrees
+# sweep` has always had this check; this hook did not, and that gap has teeth: a
+# nested `claude -p` (the /cross-model skill's Codex→Claude reviewer) run from
+# inside a worktree ends its own session, fires this hook, and — seeing a merged,
+# clean branch — deletes the worktree out from under the session that spawned it.
+# Verified on 2026-08-04; recorded in this log.
+#
+# Excluding "self" is the subtle part. The hook is a descendant of the ending
+# agent, so we walk up the ppid chain and exclude the NEAREST claude/codex
+# ancestor — that one is the session that's ending. In the nested case the outer
+# session is a *farther* ancestor, so it survives the exclusion, is found cwd'd
+# in the worktree, and blocks the cleanup. In a genuine session end the ending
+# process is the only agent here, so cleanup proceeds exactly as before.
+self_agent=""
+probe=$$
+while [ -n "$probe" ] && [ "$probe" != "0" ] && [ "$probe" != "1" ]; do
+  pcomm=$(ps -o comm= -p "$probe" 2>/dev/null || true)
+  case "$(basename "${pcomm:-none}")" in
+    claude|codex) self_agent="$probe"; break ;;
+  esac
+  probe=$(ps -o ppid= -p "$probe" 2>/dev/null | tr -d ' ' || true)
+done
+# NOT `pgrep -x claude`: pgrep matches the 16-char accounting name (`ps ucomm`),
+# and a native-installed Claude Code reports that as its VERSION ("2.1.221"),
+# not "claude" — so pgrep misses live sessions entirely (verified 2026-08-04:
+# 10 of 11 running sessions invisible to it). `ps comm` is the executable path,
+# which is reliable; match on its basename.
+other_pids=$(ps -axo pid=,comm= 2>/dev/null \
+  | awk -v self="${self_agent:-0}" \
+      '{ n = $2; sub(/.*\//, "", n);
+         if ((n == "claude" || n == "codex") && $1 != self) print $1 }' \
+  | tr '\n' ',' | sed 's/,$//' || true)
+if [ -n "$other_pids" ]; then
+  other_cwds=$(lsof -a -d cwd -p "$other_pids" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u)
+  if [ -n "$other_cwds" ] && printf '%s\n' "$other_cwds" | grep -qE "^$worktree_path(/|\$)"; then
+    echo "[session-end] another live claude/codex session is cwd'd in $worktree_path — leaving alone"
+    wlog "decision=skip:other-agent-live self=$self_agent others=[$other_pids] wt=$worktree_path"
+    exit 0
+  fi
+fi
+
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ -z "$branch" ] || [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then
   echo "[session-end] branch=$branch, not eligible for auto-cleanup"

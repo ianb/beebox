@@ -146,7 +146,15 @@ case "$cmd" in
     # Codex sessions count too (launch-worktree-session --agent codex): no
     # argv marker to grep (codex takes no worktree name), but the process cwd
     # check below covers them — a codex TUI's cwd is the worktree it runs in.
-    agent_pids=$( { pgrep -x claude; pgrep -x codex; } 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+    # NOT `pgrep -x claude`: pgrep matches the 16-char accounting name
+    # (`ps ucomm`), and a native-installed Claude Code reports that as its
+    # VERSION ("2.1.221"), not "claude" — so pgrep silently missed 10 of 11
+    # live sessions when this was measured (2026-08-04), leaving signal 2 doing
+    # nothing and the whole guard resting on the argv signal alone. `ps comm` is
+    # the executable path and is reliable; match on its basename.
+    agent_pids=$(ps -axo pid=,comm= 2>/dev/null \
+      | awk '{ n = $2; sub(/.*\//, "", n); if (n == "claude" || n == "codex") print $1 }' \
+      | tr '\n' ',' | sed 's/,$//')
     active_cwds=""
     if [ -n "$agent_pids" ]; then
       active_cwds=$(lsof -a -d cwd -p "$agent_pids" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u)
