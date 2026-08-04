@@ -3,7 +3,12 @@ title: "Publish go doctest waits for confirmation under parallel load"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-turn-buffer-byte-budget — full-suite verification during finish
+resolution: implemented
 ---
+
+Resolved by `8d3feaf9`. The doctest now sets `process.stdin.isTTY = false`
+explicitly, which makes its non-interactive refusal path deterministic and
+prevents the publication confirmation prompt from blocking the suite.
 
 `test/publish/go.doctest.md` timed out during a full parallel `pnpm test` run.
 The test passed 22/22 when rerun by itself.

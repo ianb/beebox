@@ -3,7 +3,12 @@ title: "Auth command doctest loses expected global state under parallel load"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-turn-buffer-byte-budget — full-suite verification during finish
+resolution: implemented
 ---
+
+Resolved by `8d3feaf9`. The doctest now sets `process.stdin.isTTY = false`
+explicitly, so its agent-safety assertions do not depend on the test runner's
+terminal.
 
 `test/cli/auth-command.doctest.md` failed during a full parallel `pnpm test` run.
 The test passed 17/17 when rerun by itself.

@@ -3,7 +3,12 @@ title: "TurnBuffer bounds frame count, not bytes — heavy turns hold arbitrary 
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
+resolution: implemented
 ---
+
+Resolved by `5147906d`. `TurnBuffer` now tracks serialized UTF-8 payload bytes
+as frames arrive and evicts the oldest frames when either the 4,000-frame cap or
+the 8 MiB byte cap is exceeded.
 
 `callback-box/src/core/chat/turn-buffer.ts` caps a turn's replay buffer at
 `MAX_FRAMES = 4000`, but each frame holds a whole `ChatMessage` — a turn heavy
