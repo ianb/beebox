@@ -5,7 +5,7 @@ filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 ---
 
-`.claude/skills/codex/` runs a cross-model review as a standalone manual pass.
+`.claude/skills/cross-model/` runs a cross-model review as a standalone manual pass.
 Its findings are never cross-referenced against anything, and it has no memory of
 what it told us last time. Two cheap improvements, both from
 [research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/workflow-and-orchestration.md).

@@ -93,6 +93,94 @@ wlog "resolved worktree=$worktree_path"
 
 cd "$worktree_path" || { wlog "decision=skip:cd-failed wt=$worktree_path"; exit 0; }
 
+# Another live agent still working here? Then this is NOT the last session in
+# the worktree, and cleaning would pull the rug out from under it. `bin/worktrees
+# sweep` has always had this check; this hook did not, and that gap has teeth: a
+# nested `claude -p` (the /cross-model skill's Codex→Claude reviewer) run from
+# inside a worktree ends its own session, fires this hook, and — seeing a merged,
+# clean branch — deletes the worktree out from under the session that spawned it.
+# Verified on 2026-08-04; recorded in this log.
+#
+# Excluding "self" is the subtle part. The hook is a descendant of the ending
+# agent, so we walk up the ppid chain and exclude the NEAREST claude/codex
+# ancestor — that one is the session that's ending. In the nested case the outer
+# session is a *farther* ancestor, so it survives the exclusion and blocks the
+# cleanup. In a genuine session end the ending process is the only agent here,
+# so cleanup proceeds exactly as before.
+#
+# FAIL CLOSED. This guard stands in front of an irreversible delete, so every
+# "can't tell" answer skips the cleanup. A worktree that lingers is collected by
+# the next `bin/worktrees sweep`; a worktree deleted under a live session is
+# gone. Two independent liveness signals, mirroring sweep:
+#   1. argv — `claude --worktree <name>`. Required because a session launched by
+#      bin/launch-worktree-session runs claude from the MAIN checkout, so its
+#      process cwd is main, not the worktree (same reason the transcript_path
+#      fallback above exists). A cwd-only guard misses exactly that case.
+#   2. process cwd — resumed claude sessions and all codex sessions carry no
+#      --worktree argv, but their cwd is inside the worktree.
+#
+# NOT `pgrep -x claude`: pgrep matches the 16-char accounting name (`ps ucomm`),
+# and a native-installed Claude Code reports that as its VERSION ("2.1.221"),
+# not "claude" — so pgrep misses live sessions entirely (verified 2026-08-04:
+# 10 of 11 running sessions invisible to it). `ps comm` is the executable path,
+# which is reliable; match on its basename.
+self_agent=""
+probe=$$
+while [ -n "$probe" ] && [ "$probe" != "0" ] && [ "$probe" != "1" ]; do
+  pcomm=$(ps -o comm= -p "$probe" 2>/dev/null || true)
+  case "$(basename "${pcomm:-none}")" in
+    claude|codex) self_agent="$probe"; break ;;
+  esac
+  probe=$(ps -o ppid= -p "$probe" 2>/dev/null | tr -d ' ' || true)
+done
+
+wt_name=$(basename "$worktree_path")
+agent_snapshot=$(ps -axo pid=,comm= 2>/dev/null || true)
+if [ -z "$agent_snapshot" ]; then
+  echo "[session-end] cannot enumerate processes — refusing to clean $worktree_path"
+  wlog "decision=skip:cannot-enumerate-processes wt=$worktree_path"
+  exit 0
+fi
+other_pids=$(printf '%s\n' "$agent_snapshot" \
+  | awk -v self="${self_agent:-0}" \
+      '{ n = $2; sub(/.*\//, "", n);
+         if ((n == "claude" || n == "codex") && $1 != self) print $1 }')
+
+if [ -n "$other_pids" ]; then
+  # Signal 1: argv. Substring match on a literal, no regex — a worktree name
+  # with a metacharacter must not silently turn the guard off.
+  for pid in $other_pids; do
+    pargs=$(ps -o command= -p "$pid" 2>/dev/null || true)
+    case "$pargs" in
+      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+        echo "[session-end] live claude session for '$wt_name' (pid $pid, argv) — leaving alone"
+        wlog "decision=skip:other-agent-live signal=argv self=$self_agent pid=$pid wt=$worktree_path"
+        exit 0 ;;
+    esac
+  done
+
+  # Signal 2: process cwd. If lsof tells us nothing about processes we know are
+  # alive, we cannot prove none of them lives here — so we skip.
+  pid_csv=$(printf '%s\n' "$other_pids" | tr '\n' ',' | sed 's/,$//')
+  other_cwds=$(lsof -a -d cwd -p "$pid_csv" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u || true)
+  if [ -z "$other_cwds" ]; then
+    echo "[session-end] cannot read cwd of live agent processes — refusing to clean $worktree_path"
+    wlog "decision=skip:cannot-read-agent-cwds self=$self_agent others=[$pid_csv] wt=$worktree_path"
+    exit 0
+  fi
+  while IFS= read -r acwd; do
+    [ -n "$acwd" ] || continue
+    case "$acwd" in
+      "$worktree_path"|"$worktree_path"/*)
+        echo "[session-end] another live claude/codex session is cwd'd in $worktree_path — leaving alone"
+        wlog "decision=skip:other-agent-live signal=cwd self=$self_agent others=[$pid_csv] wt=$worktree_path"
+        exit 0 ;;
+    esac
+  done <<EOF
+$other_cwds
+EOF
+fi
+
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ -z "$branch" ] || [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then
   echo "[session-end] branch=$branch, not eligible for auto-cleanup"

@@ -3,7 +3,24 @@ title: "Make the cross-model review skill bidirectional (rename `codex` → `cro
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder noticed while landing codex worktree parity
+resolution: implemented
 ---
+
+> **Closed 2026-08-04** — implemented in the `cross-model-review-skill` worktree.
+> `.claude/skills/codex/` → `.claude/skills/cross-model/`, branching in prose on
+> which model runs it. The new Codex→Claude half is
+> `claude -p --model opus --effort high --setting-sources user
+> --no-session-persistence --tools "Read,Grep,Glob"`, prompt piped from a file,
+> diff pre-materialized to `scratch/`. Plan mode defaults to `--model fable`
+> (approach-level judgment) while diff review stays on Opus.
+>
+> Two things the build turned up that the design didn't anticipate, both fixed:
+> a nested `claude -p` inside a worktree fires the project `SessionEnd` hook and
+> **deletes that worktree** (it did, once, during this work), and
+> `pgrep -x claude` — the liveness guard in `bin/worktrees sweep` — misses
+> essentially every live session because pgrep matches the accounting name,
+> which is the Claude Code *version string*. See `bin/CLAUDE.md` → "Codex
+> worktree sessions".
 
 The `codex` skill (`.claude/skills/codex/`) runs OpenAI's codex CLI to get an
 **independent cross-model review** — a different model family than Claude, so it
