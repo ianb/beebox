@@ -201,6 +201,9 @@ case "$cmd" in
           git -C "$MONO" worktree prune 2>/dev/null || true
         fi
         [ -n "$branch" ] && git -C "$MONO" branch -D "$branch" >/dev/null 2>&1 || true
+        # git-annex locks its object tree read-only. Unlock the cloned box
+        # before removal or macOS leaves annex remnants behind.
+        [ ! -d "$BOX_ROOT/$name" ] || chmod -R u+w "$BOX_ROOT/$name" 2>/dev/null || true
         rm -rf "$BOX_ROOT/$name" "$BROWSE_ROOT/$name"
         rm -f "$LOGS_ROOT/$name.log" "$PID_DIR/$name.json"
         removed=$((removed + 1))

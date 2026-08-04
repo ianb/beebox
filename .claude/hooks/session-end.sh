@@ -180,8 +180,9 @@ if git branch -D "$branch" >/dev/null 2>&1; then
   echo "[session-end]   deleted branch $branch"
 fi
 
-# Slow delete, detached. Clears earlier leftovers too.
-nohup rm -rf "$TRASH" >/dev/null 2>&1 &
+# Slow delete, detached. Clears earlier leftovers too. git-annex locks its
+# object tree read-only, so unlock it first or macOS leaves annex remnants.
+nohup sh -c 'chmod -R u+w "$1" 2>/dev/null || true; rm -rf "$1"' sh "$TRASH" >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 # Cache state: browse profile + socket dir, router log, pid file.
