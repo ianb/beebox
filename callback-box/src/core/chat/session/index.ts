@@ -10,7 +10,7 @@
 
 import { makeLog } from "./log.js";
 import { errorMessage } from "../../../lib/error-guards.js";
-import { openChatRun, appendTimingLine } from "./start-run.js";
+import { openChatRun } from "./start-run.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "../features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
@@ -319,19 +319,16 @@ export class ChatSession extends EventEmitter {
     // before run creation: observers of "a run exists" (drain-path tests,
     // callers polling the backend) expect run.send to follow run creation
     // with no awaits in between.
-    const tSend0 = performance.now();
     const content = await composeTurnContent(this.boxRoot, {
       rawInput,
       features: this.features,
       sessionStart: this.sessionId === null,
       healthGate: this.healthGate,
     });
-    const tCompose = performance.now();
 
     if (this.liveRun() === null) {
       await this.startRun();
     }
-    appendTimingLine(this.boxRoot, { label: "chat-send", spans: { compose: tCompose - tSend0, startRun: performance.now() - tCompose } });
 
     const run = this.liveRun();
     if (run === null) {

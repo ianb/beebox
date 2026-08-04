@@ -16,7 +16,6 @@
  * instead of surfacing as an opaque spawn error.
  */
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { generateDocs } from "../../docs-gen/index.js";
 import { makeLog } from "./log.js";
@@ -66,29 +65,6 @@ function warnIfFdsRunningOut(): void {
   );
 }
 
-/**
- * Measurement instrumentation for the capture-latency work: append one
- * timing line to `.callback-box/capture-timing.log` (the same file the
- * capture preparation worker writes) so run-start/send costs inside a
- * capture delivery are attributable. Best-effort, fire-and-forget.
- */
-export function appendTimingLine(
-  boxRoot: string,
-  { label, spans }: { label: string; spans: Record<string, number> },
-): void {
-  const parts = Object.entries(spans)
-    .map(([k, ms]) => `${k}=${ms.toFixed(0)}ms`)
-    .join(" ");
-  const line = `${new Date().toISOString()} ${label} ${parts}`;
-  console.log(`[ChatSession] timing ${line}`);
-  void fs.promises
-    .mkdir(path.join(boxRoot, ".callback-box"), { recursive: true })
-    .then(() => fs.promises.appendFile(path.join(boxRoot, ".callback-box", "capture-timing.log"), line + "\n"))
-    .catch((e: unknown) => {
-      console.warn("[ChatSession] Failed to write capture-timing.log:", e);
-    });
-}
-
 export function startBackendRun(
   backend: ChatBackend,
   options: ChatBackendStartOptions,
@@ -134,13 +110,11 @@ export async function openChatRun(opts: {
   onFailed: () => void;
 }): Promise<ChatBackendRun> {
   try {
-    const t0 = performance.now();
     // Best-effort: a regen/commit failure here (e.g. a git-permission hiccup in
     // the template-sync commit) must not 500 the chat — log and proceed on-disk.
     if (!opts.skipBootstrap) {
       await generateDocs(opts.boxRoot).catch((e: unknown) => log("start", `generateDocs failed (continuing): ${e}`));
     }
-    const tDocs = performance.now();
 
     log("start", "Starting SDK chat run");
 
@@ -148,26 +122,12 @@ export async function openChatRun(opts: {
     // `cb tick` (and any other housekeeping process) can detect a chat is
     // mid-response and defer commits that would race with agent writes.
     await opts.acquireLock();
-    const tLock = performance.now();
 
-    const startOptions = await opts.buildStartOptions();
-    const tBuild = performance.now();
-    const run = startBackendRun(opts.backend, {
-      ...startOptions,
+    return startBackendRun(opts.backend, {
+      ...(await opts.buildStartOptions()),
       resumeSessionId: opts.resumeSessionId,
       model: opts.model,
     });
-    const tSpawn = performance.now();
-    appendTimingLine(opts.boxRoot, {
-      label: "chat-run-start",
-      spans: {
-        generateDocs: tDocs - t0,
-        acquireLock: tLock - tDocs,
-        buildStartOptions: tBuild - tLock,
-        spawn: tSpawn - tBuild,
-      },
-    });
-    return run;
   } catch (e) {
     log("start", `Run start failed, resetting session to idle: ${errorMessage(e)}`);
     // The state reset must happen even if releasing the lock fails, and the
