@@ -16,8 +16,8 @@
 # --worktree, so this path invokes the WorktreeCreate hook directly (same
 # worktree + box clone + installs; the hook also generates the gitignored
 # AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
-# execs codex in the worktree with a workspace-write/no-approvals sandbox.
-# Cleanup differs:
+# execs codex in the worktree with full access/no-approvals (parity with claude
+# workers, which run unsandboxed). Cleanup differs:
 # no hook fires when a codex session ends, so the worktree persists until
 # `bin/worktrees sweep` collects it (merged + clean + no active session).
 #
@@ -170,18 +170,11 @@ else
   # directly — it's idempotent (a relaunch re-attaches and refreshes the
   # AGENTS.md mirrors) and prints the worktree path on stdout, logs on stderr.
   #
-  # Sandbox: workspace-write + never-approve rather than the blunt
-  # --dangerously-bypass-approvals-and-sandbox. Extra writable roots: the box
-  # clone and router state (bin/browse logs, pidfiles). NOTE: a codex worker
-  # CANNOT commit or /finish in a linked worktree — its sandbox force-mounts
-  # .git read-only AFTER the writable roots, and a linked worktree's git metadata
-  # lives outside the worktree (at $MONO/.git/worktrees/<name>), so no --add-dir
-  # grant ever reaches it (openai/codex#14338, #23661). Granting the whole main
-  # checkout bought nothing and only weakened isolation, so it was reverted. A
-  # codex worker implements + verifies + reports; the parent (Claude or the
-  # boxholder) commits and lands. Network on (pnpm, the localhost router, web).
-  # Config overrides, all launch-scoped (nothing persisted into
-  # ~/.codex/config.toml):
+  # Full access (danger-full-access + never-approve), matching claude workers,
+  # which run unsandboxed via --dangerously-skip-permissions. A workspace-write
+  # sandbox can't commit or /finish in a linked worktree (codex force-mounts
+  # .git read-only), so parity means the same unsandboxed footing. Launch-scoped
+  # -c overrides, nothing persisted into ~/.codex/config.toml:
   #   - trust_level: pre-trust the worktree dir so the first-run trust prompt
   #     doesn't eat the briefing.
   #   - project_doc_max_bytes: default 32 KiB truncates the injected root→cwd
@@ -207,10 +200,7 @@ for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
 done
 cd "\$wt_path"
 codex_args=(
-  -s workspace-write -a never
-  --add-dir "$HOME/src/box-worktrees/$wt"
-  --add-dir "$HOME/.cache/callback-box"
-  -c 'sandbox_workspace_write.network_access=true'
+  -s danger-full-access -a never
   -c "projects.\"\$wt_path\".trust_level=\"trusted\""
   -c project_doc_max_bytes=131072
 $model_line
