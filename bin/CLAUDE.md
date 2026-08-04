@@ -200,23 +200,34 @@ has no `--worktree`, so the launcher's generated launch script invokes
 `.claude/hooks/worktree-create.sh` directly (JSON `{name}` on stdin, worktree
 path on stdout; idempotent — a relaunch re-attaches), then execs `codex` in
 the worktree with a `workspace-write`/never-approve sandbox (`--add-dir` for
-the box clone and `~/.cache/callback-box`, network on, the worktree
-pre-trusted and `project_doc_max_bytes` raised via launch-scoped `-c`
-overrides — nothing persisted to `~/.codex/config.toml`). `--model` maps to
-`codex -m` (OpenAI model names). Remote Control is claude-only and ignored
-for codex.
+the main checkout (shared git metadata and `/finish` fast-forward), box clone,
+`~/.cache/callback-box`, and validated private-issues paths when present;
+network on; the worktree pre-trusted; and `project_doc_max_bytes` raised via
+launch-scoped `-c` overrides — nothing persisted to `~/.codex/config.toml`).
+`--model` maps to `codex -m` (OpenAI model names). Remote Control is claude-only
+and ignored for codex.
 
 Codex reads AGENTS.md where Claude reads CLAUDE.md (root→cwd chain injected
 at startup; nested files discovered by the model as it works, per its own
-system prompt). `bin/generate-agents-md.ts` writes a gitignored AGENTS.md
-mirror next to every tracked CLAUDE.md — verbatim content plus a root-level
-Codex preamble (harness-feature mapping, worktree orientation, a
-`CODEX-AGENTS-LOADED` sentinel for verifying the docs actually loaded). No
-prose transformation, by design: the one committed find-replace AGENTS.md
-rotted and mangled commands (removed in 872450eb), so mirrors regenerate at
-every spin-up (both hook paths, fresh AND resume) and the generator refuses
-to overwrite a git-tracked AGENTS.md. The launcher's codex path fails closed
-if the root mirror is missing.
+system prompt), and scans `.agents/skills/` for repo skills.
+`bin/generate-agents-md.ts` writes a gitignored AGENTS.md mirror next to every
+tracked CLAUDE.md, embeds tracked `.claude/rules/*.md` at their nearest AGENTS.md
+scope, and symlinks every tracked `.claude/skills/<name>/` into
+`.agents/skills/<name>` — preserving each skill's scripts, references, and
+assets. CLAUDE.md and rule content stays verbatim except for generated framing
+and a root-level Codex preamble
+(harness-feature mapping, worktree orientation, a `CODEX-AGENTS-LOADED`
+sentinel for verifying the docs actually loaded). The one committed
+find-replace AGENTS.md rotted and mangled commands (removed in 872450eb), so
+mirrors regenerate at every spin-up (both hook paths, fresh AND resume); the
+generator refuses to overwrite a tracked AGENTS.md or an existing non-generated
+Codex skill. The launcher's codex path fails closed if the root mirror is
+missing.
+
+Tracked `.claude/rules/*.md` files are embedded verbatim into the generated
+AGENTS.md at their nearest directory scope. Their `paths` frontmatter remains a
+conditional applicability instruction; it is not copied into Codex's rules
+directory, because Codex command-execution rules have different semantics.
 
 Teardown differs from claude sessions: no WorktreeRemove/SessionEnd hook
 fires when a codex session ends, so the worktree persists until
