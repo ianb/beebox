@@ -207,6 +207,13 @@ launch-scoped `-c` overrides — nothing persisted to `~/.codex/config.toml`).
 `--model` maps to `codex -m` (OpenAI model names). Remote Control is claude-only
 and ignored for codex.
 
+Codex's `workspace-write` sandbox confines **writes** (workspace + the `--add-dir`
+roots) and network, but **reads are global** — verified empirically 2026-08-04: a
+codex session reads files in a sibling worktree outside every writable root fine.
+So a codex worker can inspect other in-progress worktrees (`git worktree list`,
+`git -C <path> status`/`diff main`) with no extra grant; the root preamble tells it
+so. Broadening read scope needs nothing; only *writing* another worktree would.
+
 Codex reads AGENTS.md where Claude reads CLAUDE.md (root→cwd chain injected
 at startup; nested files discovered by the model as it works, per its own
 system prompt), and scans `.agents/skills/` for repo skills.

@@ -63,6 +63,12 @@ isolated test box clone is at ~/src/box-worktrees/${worktreeName}/test1, and
 the shared dev router serves this checkout at
 http://localhost:3210/${worktreeName}/... (the worktree short name, not the
 branch name).
+
+Other in-progress worktrees live at ~/src/callback-worktrees/<name>/ (their box
+clones at ~/src/box-worktrees/<name>/). You MAY read them to see what other work
+is underway — \`git worktree list\` to enumerate, \`git -C <path> status\` and
+\`git -C <path> diff main\` to inspect one. Your sandbox confines writes, not
+reads, so reading any worktree works; only write inside your own.
 `;
   return `# Codex session preamble
 
