@@ -28,6 +28,17 @@
  * `chat/review/span.ts`'s prefix hash cannot see an oversize entry being
  * rewritten in place at the same rounded size. Detecting that would mean
  * parsing the line this module exists to refuse.
+ *
+ * **Accepted limitations (deliberate, not fixed):** the sniff assumes
+ * Claude Code's own compact JSON encoding (`"key":"value"`, no inserted
+ * whitespace) — reordered keys, pretty-printed JSON, or a marker string
+ * appearing somewhere unexpected in the head can misclassify or misidentify
+ * a line, and a `tool_result`-shaped user turn that also carries real text is
+ * dropped whole rather than partially recovered. Image-only oversize user
+ * turns surface as a visible stub even though a normally-parsed image-only
+ * turn is dropped. These are accepted tradeoffs of a best-effort head sniff
+ * over a real parse (2026-08 review); fixing them means parsing the line this
+ * module exists to refuse.
  */
 
 import type { SessionEntry } from "./session-entry.js";
@@ -114,8 +125,15 @@ function envelopeType(head: string): "user" | "assistant" | "system" | null {
  * the transcript is the worse failure. For the same reason an unattributed stub
  * is the assistant's — a `user` stub would be a lie the tail-window floor could
  * act on (`isRealUserMessage` rejects stubs either way).
+ *
+ * `lineNumber` (1-based, the line's position in the transcript) backs a
+ * fallback identity when the sniff can't find a `uuid` in the head: several
+ * empty-uuid stubs in the same scan would otherwise collide as React keys
+ * (`MessageList` keys entries by uuid) and on the `appliedSpanFor()` journal
+ * boundary. The line number is stable across re-scans of the same file, so
+ * the fallback id doesn't change from one request to the next.
  */
-export function oversizeEntry(line: string): SessionEntry | null {
+export function oversizeEntry(line: string, lineNumber: number): SessionEntry | null {
   const head = detachedHead(line);
   const type = envelopeType(head);
   if (type === "system") return null;
@@ -126,8 +144,9 @@ export function oversizeEntry(line: string): SessionEntry | null {
   if (type === "user" && head.includes("\"type\":\"tool_result\"")) return null;
 
   const kb = Math.round(Buffer.byteLength(line, "utf8") / 1024);
+  const uuid = sniffString(head, UUID_RE);
   return {
-    uuid: sniffString(head, UUID_RE),
+    uuid: uuid !== "" ? uuid : `oversize-${String(lineNumber)}`,
     type: type === "user" ? "user" : "assistant",
     timestamp: sniffString(head, TIMESTAMP_RE),
     content: [{ type: "text", text: `[message too large to display: ~${String(kb)} KB]` }],

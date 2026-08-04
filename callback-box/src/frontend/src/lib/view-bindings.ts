@@ -14,7 +14,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trpcClient } from "./trpc";
 import { busEventData } from "./bus-events";
-import { createDeferredResync } from "./deferred-resync";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 
 export interface CardViewBinding {
@@ -22,43 +21,60 @@ export interface CardViewBinding {
   name: string;
 }
 
-let bindingsPromise: Promise<Map<string, CardViewBinding>> | null = null;
-
-function fetchBindings(): Promise<Map<string, CardViewBinding>> {
-  bindingsPromise ??= (async () => {
-    const map = new Map<string, CardViewBinding>();
-    try {
-      const metas = await trpcClient.views.list.query();
-      for (const meta of [...metas].toSorted((a, b) => a.slug.localeCompare(b.slug))) {
-        for (const type of meta.rendersCardTypes) {
-          if (!map.has(type)) map.set(type, { slug: meta.slug, name: meta.name });
-        }
-      }
-    } catch (e) {
-      // No views listing (older server, network hiccup): cards simply fall
-      // back to the built-in renderers. Log so a real outage is visible.
-      console.warn("view-bindings: could not load views listing", e);
-    }
-    return map;
-  })();
-  return bindingsPromise;
+/**
+ * Single-flight async cache: concurrent `load()` calls share one in-flight
+ * fetch, and `invalidate()` clears the cache synchronously — not deferred to
+ * a microtask — so a `load()` called immediately after an `invalidate()` in
+ * the same tick always sees the cleared cache and starts a fresh fetch. (An
+ * earlier revision routed `invalidate()` through the shared `deferred-resync`
+ * coalescing helper, which delayed the clear to a microtask; both call sites
+ * below call `load()` synchronously right after invalidating, so they kept
+ * reading the pre-invalidation promise and nothing ever reloaded. Repeated
+ * `invalidate()` calls are idempotent — clearing an already-null cache is a
+ * no-op — so no coalescing is needed for the clear itself.) Exported so this
+ * exact same-tick sequencing can be asserted directly, without going through
+ * `trpcClient`.
+ */
+export function createSingleFlightCache<T>(fetcher: () => Promise<T>): {
+  load: () => Promise<T>;
+  invalidate: () => void;
+} {
+  let promise: Promise<T> | null = null;
+  return {
+    load: () => {
+      promise ??= fetcher();
+      return promise;
+    },
+    invalidate: () => {
+      promise = null;
+    },
+  };
 }
 
-/**
- * Drop the memoized bindings so the next fetch re-reads `/api/views`. Coalesced
- * across the many FileViews mounted at once (chat embeds whole conversations):
- * the first call in a tick clears the cache, the rest no-op until the microtask
- * resets the guard, so a single view edit triggers one refetch — not one per
- * mounted card, each clobbering the previous in-flight fetch. Built on the
- * shared `deferred-resync` helper with `alwaysVisible: true`: this cache feeds
- * `useCardViewBinding`'s return value, which is read from render regardless of
- * tab visibility, so unlike a pure UI refresh it must NOT defer while hidden —
- * a card bound to a since-changed view would render with the wrong renderer
- * until some other trigger woke the tab.
- */
-const bindingsResync = createDeferredResync(() => { bindingsPromise = null; }, { alwaysVisible: true });
+const bindingsCache = createSingleFlightCache<Map<string, CardViewBinding>>(async () => {
+  const map = new Map<string, CardViewBinding>();
+  try {
+    const metas = await trpcClient.views.list.query();
+    for (const meta of [...metas].toSorted((a, b) => a.slug.localeCompare(b.slug))) {
+      for (const type of meta.rendersCardTypes) {
+        if (!map.has(type)) map.set(type, { slug: meta.slug, name: meta.name });
+      }
+    }
+  } catch (e) {
+    // No views listing (older server, network hiccup): cards simply fall
+    // back to the built-in renderers. Log so a real outage is visible.
+    console.warn("view-bindings: could not load views listing", e);
+  }
+  return map;
+});
+
+function fetchBindings(): Promise<Map<string, CardViewBinding>> {
+  return bindingsCache.load();
+}
+
+/** Drop the memoized bindings so the next `fetchBindings()` re-reads `/api/views`. */
 function invalidateBindings(): void {
-  bindingsResync.trigger();
+  bindingsCache.invalidate();
 }
 
 /** The custom view bound to a card type, or null (also null while loading). */

@@ -63,10 +63,18 @@ export interface DeferredResync {
    * microtask fires and resets the guard. While the tab is hidden, the
    * request is parked instead of scheduled; it fires once, the next time the
    * tab becomes visible (still subject to same-tick coalescing at that
-   * point).
+   * point). No-op after `dispose()`.
    */
   trigger: () => void;
-  /** Detach the visibility-change listener. Call on teardown (e.g. unmount). */
+  /**
+   * Detach the visibility-change listener and make the instance permanently
+   * inert: a `run()` already queued via a same-tick `trigger()` becomes a
+   * no-op when its microtask fires, and any later `trigger()` call
+   * (including one against a `trigger` reference a caller kept directly) is
+   * a no-op too. Call on teardown (e.g. unmount) — a component can unmount
+   * between `trigger()` and the microtask it queued, and without this the
+   * queued `fn` would still run and update state on the unmounted component.
+   */
   dispose: () => void;
 }
 
@@ -79,6 +87,7 @@ export function createDeferredResync(fn: () => void, opts?: CreateDeferredResync
   const visibility = opts?.visibility ?? documentVisibilityAdapter;
   let scheduled = false;
   let pendingWhileHidden = false;
+  let disposed = false;
 
   function hidden(): boolean {
     return !alwaysVisible && visibility.isHidden();
@@ -86,10 +95,12 @@ export function createDeferredResync(fn: () => void, opts?: CreateDeferredResync
 
   function run(): void {
     scheduled = false;
+    if (disposed) return; // queued before dispose(); the instance is now inert
     fn();
   }
 
   function trigger(): void {
+    if (disposed) return;
     if (hidden()) {
       pendingWhileHidden = true;
       return;
@@ -108,6 +119,8 @@ export function createDeferredResync(fn: () => void, opts?: CreateDeferredResync
   const unsubscribe = alwaysVisible ? null : visibility.onVisible(handleVisible);
 
   function dispose(): void {
+    disposed = true;
+    pendingWhileHidden = false;
     unsubscribe?.();
   }
 

@@ -157,7 +157,15 @@ export function useChatWs(opts: {
   // first — a flapping socket used to send one REFRESH per flap.
   const refreshGateRef = useRef<ReconnectRefreshGate | null>(null);
   useEffect(() => {
-    refreshGateRef.current = createReconnectRefreshGate({ minIntervalMs: PROMPT_SUBSCRIPTION_MS, baselineAt: Date.now() });
+    const gate = createReconnectRefreshGate({ minIntervalMs: PROMPT_SUBSCRIPTION_MS, baselineAt: Date.now() });
+    refreshGateRef.current = gate;
+    // Cancel any pending trailing refresh timer on unmount — a session switch
+    // remounts this hook, and a stale timer firing into a torn-down closure
+    // would REFRESH the wrong (or a since-unmounted) session.
+    return () => {
+      gate.dispose();
+      refreshGateRef.current = null;
+    };
   }, []);
 
   // A reconnect-driven REFRESH is deferred while the tab is hidden — a
@@ -177,9 +185,10 @@ export function useChatWs(opts: {
       // Re-sync on every RE-connect: a full history REFRESH backs up the
       // subscription's automatic lastEventId replay for gaps that exceed the
       // event-bus retention window. REFRESH is ignored in streaming, so it's
-      // safe to dispatch unconditionally (once the gate clears it).
-      if (!refreshGateRef.current?.shouldRefresh()) return;
-      triggerRefresh();
+      // safe to dispatch unconditionally (once the gate clears it). A
+      // reconnect inside the gate's window isn't dropped — the gate arms a
+      // trailing timer so it's still eventually serviced.
+      refreshGateRef.current?.notifyReconnect(triggerRefresh);
     }, [triggerRefresh]),
     onEvent: useCallback((event: RealtimeEvent) => {
       const scheduleFired = busEventData(event, "schedule-fired");

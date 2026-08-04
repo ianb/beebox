@@ -167,3 +167,43 @@ await Promise.resolve();
 calls
 => 0
 ```
+
+## `dispose` cancels an already-queued microtask run
+
+A `trigger()` schedules `run()` via `queueMicrotask` before the microtask
+actually executes. If the caller (e.g. a component's unmount cleanup) calls
+`dispose()` in that window — after `trigger()` queued the run but before the
+microtask fires — the queued run must become a no-op, not invoke `fn` against
+a torn-down caller:
+
+```ts
+let calls = 0;
+const visibility = makeFakeVisibility();
+const resync = createDeferredResync(() => { calls += 1; }, { visibility });
+
+resync.trigger();
+resync.dispose();
+await Promise.resolve();
+calls
+=> 0
+```
+
+## A direct `trigger()` call after `dispose()` is also a no-op
+
+Some callers (e.g. `useDeferredResync`'s returned `trigger` callback) may
+hold the `trigger` function directly rather than going through the `resync`
+object; disposal must make that reference inert too, not just future calls
+made through `resync.trigger`:
+
+```ts
+let calls = 0;
+const visibility = makeFakeVisibility();
+const resync = createDeferredResync(() => { calls += 1; }, { visibility });
+const { trigger } = resync;
+
+resync.dispose();
+trigger();
+await Promise.resolve();
+calls
+=> 0
+```

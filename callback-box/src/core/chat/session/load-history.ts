@@ -136,17 +136,33 @@ async function readHistory(args: {
  * instead leaves each caller with the right behaviour: the tRPC procedures
  * (`chat.history`, `chat.bootstrap`) surface an error and the tab keeps the
  * state it has, and the broadcast's `.catch` skips the emit entirely.
+ *
+ * **`fresh: true` bypasses coalescing entirely.** A caller reading BECAUSE it
+ * knows the transcript just changed (the post-turn-completion history
+ * broadcast in `chat-schedule-fire.ts`) must never join a scan that started
+ * before that change — coalescing exists for callers that all want "the
+ * current state", not for one that just observed the state change and needs
+ * its own read of it. A `fresh` read skips the `inFlight` lookup entirely
+ * (so it can't join a stale scan) and never registers itself in `inFlight`
+ * either (so an ordinary caller arriving alongside it isn't forced to wait on
+ * a read whose whole point was to not be shared) — it is a plain, uncoalesced
+ * read that happens to go through the same parser and ENOENT handling as
+ * every other caller.
  */
 export async function loadSessionHistory(
   boxRoot: string,
-  opts: { sessionId: string | null; slice: SessionLogSlice },
+  opts: { sessionId: string | null; slice: SessionLogSlice; fresh?: boolean },
 ): Promise<SessionHistoryResult> {
-  const { sessionId, slice } = opts;
+  const { sessionId, slice, fresh = false } = opts;
   if (!sessionId) {
     return { sessionId: null, entries: [], total: 0 };
   }
 
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
+  if (fresh) {
+    return readHistory({ sessionId, logPath, slice });
+  }
+
   // The separator is NUL, spelled as an escape and never a literal (a raw NUL
   // in the source makes git treat the whole file as binary): it is the one byte
   // a path cannot contain, so no path/slice pair can spell another pair's key.

@@ -127,6 +127,54 @@ delete process.env["CB_CLAUDE_PROJECTS_DIR"];
 await box.cleanup();
 ```
 
+## `fresh: true` never joins an in-flight scan
+
+A caller reading BECAUSE it knows the transcript just changed (the
+post-turn-completion broadcast in `chat-schedule-fire.ts`) must get its own
+read, not the answer of a scan that started before the change: it neither
+joins nor registers itself in the coalescing map.
+
+```ts
+const box = await makeTmpBox();
+process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+await seed(box.root, 6);
+
+const before = sessionHistoryReadStats().reads;
+const [ordinary, fresh] = await Promise.all([
+  loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
+  loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL, fresh: true }),
+]);
+print(`parses: ${readsSince(before)}`);
+print(`shared object: ${ordinary.entries === fresh.entries}`);
+=>
+parses: 2
+shared object: false
+```
+
+A `fresh` read also isn't visible to *other* callers to join — it never
+occupies the `inFlight` slot:
+
+```ts continue
+const beforeOrdinary = sessionHistoryReadStats().reads;
+const [freshAlone, twoOrdinary] = await Promise.all([
+  loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL, fresh: true }),
+  Promise.all([
+    loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
+    loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
+  ]),
+]);
+print(`parses: ${readsSince(beforeOrdinary)}`);
+print(`the two ordinary reads shared one parse: ${twoOrdinary[0].entries === twoOrdinary[1].entries}`);
+=>
+parses: 2
+the two ordinary reads shared one parse: true
+```
+
+```ts cleanup
+delete process.env["CB_CLAUDE_PROJECTS_DIR"];
+await box.cleanup();
+```
+
 ## A transcript that appears later is picked up
 
 A missing JSONL is a normal state (a brand-new chat), and it answers empty. That

@@ -399,9 +399,13 @@ export class ChatSession extends EventEmitter {
   /**
    * Load a bounded window of conversation history from the session log.
    * The slice is explicit — there is no whole-transcript read to fall into.
+   *
+   * `fresh: true` (see `loadSessionHistory`) is for a caller that already
+   * knows the transcript just changed — a post-turn-completion broadcast —
+   * and must not join a scan that started before that change.
    */
-  async getHistory(slice: SessionLogSlice): Promise<SessionHistoryResult> {
-    return loadSessionHistory(this.boxRoot, { sessionId: this.sessionId, slice });
+  async getHistory(slice: SessionLogSlice, opts?: { fresh?: boolean }): Promise<SessionHistoryResult> {
+    return loadSessionHistory(this.boxRoot, { sessionId: this.sessionId, slice, fresh: opts?.fresh ?? false });
   }
 
   getSessionId(): string | null {

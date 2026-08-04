@@ -231,7 +231,9 @@ JSON.stringify({ uuids: result.entries.map((e) => e.uuid), total: result.total }
 
 A shape the sniff does not recognize still becomes a stub. An unexplained gap in
 the transcript is the worse failure, so the fallback is visible rather than
-silent:
+silent. With no `uuid` in the head, the stub falls back to a synthesized
+per-line identity (`oversize-<line number>`) rather than an empty string —
+several empty-uuid stubs in one scan would otherwise collide as React keys:
 
 ```ts continue
 await box.write("mystery.jsonl", JSON.stringify({ payload: fat }));
@@ -240,7 +242,23 @@ const mystery = await parseSessionLog({
   slice: { mode: "tail", tail: 200 },
 });
 JSON.stringify(mystery.entries.map((e) => ({ type: e.type, uuid: e.uuid })))
-=> [{"type":"assistant","uuid":""}]
+=> [{"type":"assistant","uuid":"oversize-1"}]
+```
+
+Two mystery lines in the same file get distinct fallback ids, so they don't
+collide:
+
+```ts continue
+await box.write("mystery2.jsonl", [
+  JSON.stringify({ payload: fat }),
+  JSON.stringify({ payload: fat }),
+].join("\n"));
+const mystery2 = await parseSessionLog({
+  logPath: box.path("mystery2.jsonl"),
+  slice: { mode: "tail", tail: 200 },
+});
+JSON.stringify(mystery2.entries.map((e) => e.uuid))
+=> ["oversize-1","oversize-2"]
 ```
 
 The threshold is UTF-8 bytes, not characters, so a payload of multi-byte

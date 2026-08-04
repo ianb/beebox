@@ -302,14 +302,16 @@ export async function parseSessionLog(
 
   const scan = new SessionScan(slice);
 
+  let lineNumber = 0;
   for await (const line of rl) {
+    lineNumber += 1;
     // A pathologically long line is never parsed — see `session-oversize.ts`.
     // It is dropped if its head shows plumbing the scan would drop anyway;
     // otherwise the stub it becomes counts as one displayable entry (so `total`
     // and `hasMore` stay honest), is never a real user message, and carries no
     // `tool_use` block for a later `tool_result` to graft onto.
     if (isOversizeLine(line)) {
-      const stub = oversizeEntry(line);
+      const stub = oversizeEntry(line, lineNumber);
       if (stub) scan.record(stub);
       continue;
     }
