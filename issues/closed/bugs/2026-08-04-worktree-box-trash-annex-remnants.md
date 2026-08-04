@@ -1,6 +1,14 @@
 ---
 title: Worktree box trash never fully deletes — git-annex objects are write-protected
+resolution: implemented
 ---
+
+> **Fixed 2026-08-04.** Every detached box-cleanup path now makes the annex
+> object tree owner-writable (`chmod -R u+w`) before `rm -rf`, so read-only
+> `.git/annex/objects/**` files no longer strand remnants on macOS —
+> `.claude/hooks/worktree-remove.sh`, `.claude/hooks/session-end.sh`, and
+> `bin/worktrees`. The accumulated remnants (16 trees, ~625 MB) were purged from
+> `~/.cache/callback-box/trash/` at the same time.
 
 `worktree-remove.sh` (and sweep) trash a removed worktree's box clone to
 `~/.cache/callback-box/trash/` and background-`rm -rf` it. git-annex marks its
