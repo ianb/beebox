@@ -24,6 +24,8 @@ import {
 
 // Small work factor keeps scrypt fast in tests (same seam local-users.doctest.md uses).
 process.env.CB_AUTH_SCRYPT_N = String(2 ** 14);
+// Keep the agent-safety guard deterministic when the suite itself runs in a TTY.
+process.stdin.isTTY = false;
 
 const dir = await mkdtemp(join(tmpdir(), "cb-auth-cli-"));
 process.env.CB_AUTH_FILE = join(dir, "auth.json");
