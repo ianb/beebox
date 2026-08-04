@@ -15,10 +15,11 @@ import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { href } from "../lib/routing";
 import { apiFileUrl } from "../lib/view-url";
 import { withBase } from "../api";
+import { AppBarRecentFilesSlot } from "./app-bar-chrome";
 import type { NavMenuEntry } from "../lib/nav-menu-entries";
 
 /** Panel-swap depth for the switch menu (see `Dropdown`'s `panelIndex`). */
-export type SwitchPanel = "root" | "box";
+export type SwitchPanel = "root" | "box" | "recent-files";
 
 /** One landmark row's data — the subset of `chat.byLandmark` this menu reads. */
 export interface SwitchLandmark {
@@ -194,22 +195,16 @@ interface SwitchMenuProps {
   /** The box's `nav.card` rows, already deduped against the builtin rows. */
   navEntries: NavMenuEntry[];
   problemCount: number;
-  /** Open on-plate todos — the count on the stable "The Plate" row. */
-  plateCount: number;
+  /**
+   * Whether the chat page will portal the Recent-files panel in
+   * (`useAppBarRecentFilesClaim`). The row only exists on chat pages —
+   * recent files are the session's, so there is nothing to list elsewhere.
+   */
+  recentFilesClaimed: boolean;
   onOpenBoxPanel: () => void;
+  onOpenRecentFiles: () => void;
   onBackToRoot: () => void;
   onSelectLandmark: (dir: string) => void;
-}
-
-/** The plate's rim, seen from above — The Plate row's mark (moved from the
- * retired bar badge). */
-function PlateIcon() {
-  return (
-    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.25" strokeWidth="1.5" />
-      <circle cx="8" cy="8" r="3.25" strokeWidth="1.25" />
-    </svg>
-  );
 }
 
 /**
@@ -221,8 +216,8 @@ function PlateIcon() {
 export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
   const {
     panel, boxSlug, boxName, hideBoxRow, currentDir, landmarks, landmarksFailed,
-    onRetryLandmarks, navEntries, problemCount, plateCount,
-    onOpenBoxPanel, onBackToRoot, onSelectLandmark,
+    onRetryLandmarks, navEntries, problemCount, recentFilesClaimed,
+    onOpenBoxPanel, onOpenRecentFiles, onBackToRoot, onSelectLandmark,
   } = props;
   switch (panel) {
     case "root":
@@ -237,21 +232,14 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
             </MenuItem>
           )}
           <MenuItem to={href(`/${boxSlug}/landmarks`)}>All landmarks →</MenuItem>
-          {/* The Plate lives here rather than as a bar badge: every bar chip
-              opens a menu, so a bar control that navigates read as broken
-              (boxholder, 2026-08-03). A stable row — present at zero count —
-              per the stable-above-variable menu rule. */}
-          <MenuItem to={href(`/${boxSlug}/browse/store/plate.todo-view.card`)}>
-            <span className="flex items-center gap-2 w-full">
-              <PlateIcon />
-              <span>The Plate</span>
-              {plateCount > 0 ? (
-                <span className="ml-auto inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-info-50 text-info-dark text-[10px] font-semibold">
-                  {plateCount}
-                </span>
-              ) : null}
-            </span>
-          </MenuItem>
+          {recentFilesClaimed ? (
+            <MenuItem onClick={onOpenRecentFiles} keepOpen>
+              <span className="flex justify-between gap-2 w-full">
+                <span>Recent files</span>
+                <span className="text-warm-500">›</span>
+              </span>
+            </MenuItem>
+          ) : null}
           <NavCardRows entries={navEntries} />
           <MenuDivider />
           <SectionHeader>Switch to</SectionHeader>
@@ -280,6 +268,20 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           {/* The front page (box selector) is outside the box's route tree —
               a plain navigation, not a router Link. */}
           <MenuItem href={withBase("/")}>Other boxes →</MenuItem>
+        </>
+      );
+    case "recent-files":
+      return (
+        <>
+          <MenuItem onClick={onBackToRoot} keepOpen>
+            <span className="text-warm-500">‹ Recent files</span>
+          </MenuItem>
+          <MenuDivider />
+          {/* The chat portals `RecentFilesMenuBody` in here — the files are
+              the session's, so only the chat can list them (Track C2's
+              here-slot pattern). The row that opens this panel only renders
+              when the chat has claimed it, so the slot is never empty. */}
+          <AppBarRecentFilesSlot />
         </>
       );
   }

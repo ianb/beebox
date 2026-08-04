@@ -32,7 +32,7 @@ import { useOpenLandmarkChat } from "../hooks/useOpenLandmarkChat";
 import { useNavMenuEntries } from "../hooks/useNavMenuEntries";
 import { SwitchMenuBody, type SwitchPanel } from "./PlacePill-panels";
 import { HereMenuBody } from "./PlacePill-here";
-import { AppBarHereSlot, useAppBarHereMenuClaimed } from "./app-bar-chrome";
+import { AppBarHereSlot, useAppBarHereMenuClaimed, useAppBarRecentFilesClaimed } from "./app-bar-chrome";
 
 /** Folder glyph on the here half — the shape the chat's context chip used. */
 function FolderIcon() {
@@ -107,6 +107,7 @@ export function PlacePill({
   const utils = trpc.useUtils();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug);
   const hereClaimed = useAppBarHereMenuClaimed();
+  const recentFilesClaimed = useAppBarRecentFilesClaimed();
 
   const hereQuery = trpc.landmarks.forDir.useQuery(
     { dir: place.dir ?? "" },
@@ -116,12 +117,6 @@ export function PlacePill({
 
   const switchQuery = trpc.chat.byLandmark.useQuery(undefined, { enabled: switchOpened });
   const switchData = switchQuery.data;
-  // The Plate row's count — lazy like everything else the menu shows. The
-  // plate moved off the bar into this menu (boxholder call, 2026-08-03: the
-  // bar's chips all open menus; a control that navigates belongs with the
-  // other navigation rows), which also makes the bar query-free at rest.
-  const plateQuery = trpc.status.navStatus.useQuery(undefined, { enabled: switchOpened });
-  const plateCount = plateQuery.data === undefined ? 0 : plateQuery.data.counts.onPlateTodos;
   // A failed load is shown in the menu as a retry row, and logged: without
   // both, the menu sat on "Loading…" forever with nothing anywhere saying why.
   const switchError = switchQuery.error;
@@ -148,7 +143,6 @@ export function PlacePill({
     if (switchOpened) {
       void utils.chat.byLandmark.invalidate();
       void utils.nav.get.invalidate();
-      void utils.status.navStatus.invalidate();
       return;
     }
     setSwitchOpened(true);
@@ -158,19 +152,6 @@ export function PlacePill({
   // backend falls back to the card's filename, but this face must render
   // something even against an older server).
   const faceLabel = landmark === null ? place.label : landmark.label || place.label;
-
-  // The folder half renders when a landmark resolves for the place, OR when
-  // the chat has claimed the here menu — a chat with no bound directory
-  // still carries Recent files (the old ContextChip's "Files" face), which
-  // must not disappear with the landmark (boxholder report, 2026-08-03).
-  const hereDir = landmark === null ? place.dir : landmark.dir;
-  const hereHalf: { face: string; title: string } | null =
-    landmark === null && !hereClaimed
-      ? null
-      : {
-          face: hereDir === null ? "Files" : hereDir === "" ? "/" : dirBasename(hereDir),
-          title: hereDir === null ? "Here: recent files" : `Here: ${hereDir === "" ? "/" : `${hereDir}/`}`,
-        };
   const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
 
   return (
@@ -214,14 +195,15 @@ export function PlacePill({
           onRetryLandmarks={() => { void switchQuery.refetch(); }}
           navEntries={navEntries}
           problemCount={switchData === undefined ? 0 : switchData.problems.length}
-          plateCount={plateCount}
+          recentFilesClaimed={recentFilesClaimed}
           onOpenBoxPanel={() => setSwitchPanel("box")}
+          onOpenRecentFiles={() => setSwitchPanel("recent-files")}
           onBackToRoot={() => setSwitchPanel("root")}
           onSelectLandmark={(dir) => { void openLandmarkChat(dir); }}
         />
       </Dropdown>
 
-      {hereHalf === null ? null : (
+      {landmark === null ? null : (
         <>
           <span aria-hidden="true" className="w-px my-2 bg-white/22 shrink-0" />
           <Dropdown
@@ -233,12 +215,12 @@ export function PlacePill({
                 type="button"
                 onClick={toggle}
                 className="min-h-[40px] px-2.5 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                title={hereHalf.title}
-                aria-label={`Here: ${hereHalf.face}`}
+                title={`Here: ${landmark.dir === "" ? "/" : `${landmark.dir}/`}`}
+                aria-label={`Here: ${dirBasename(landmark.dir)}`}
                 {...ariaProps}
               >
                 <FolderIcon />
-                <span className="hidden sm:inline max-w-[8rem] truncate">{hereHalf.face}</span>
+                <span className="hidden sm:inline max-w-[8rem] truncate">{dirBasename(landmark.dir)}</span>
                 <CaretIcon />
               </button>
             )}
@@ -255,14 +237,14 @@ export function PlacePill({
                 before the chat mounts — the reduced body below is the menu. */}
             {hereClaimed ? (
               <AppBarHereSlot />
-            ) : landmark !== null ? (
+            ) : (
               <HereMenuBody
                 dir={landmark.dir}
                 boxSlug={boxSlug}
                 links={landmark.links}
                 groups={landmark.groups}
               />
-            ) : /* unreachable: the half renders only when claimed or landmarked */ null}
+            )}
           </Dropdown>
         </>
       )}

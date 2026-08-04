@@ -153,3 +153,26 @@ export const ContextMenuBody = memo(function ContextMenuBody(props: ContextMenuB
       return <RecentFilesSubPanel onBack={() => setPanel("root")} messages={messages} onFilePanel={onFilePanel} />;
   }
 });
+
+/**
+ * The Recent-files list alone — the body the chat portals into the switch
+ * menu's "Recent files ›" sub-panel (`AppBarRecentFilesSlot`; the back row
+ * lives on the bar side, where the panel state is). Memoized with the same
+ * stable-props discipline as `ContextMenuBody` above: `messages` changes when
+ * a turn lands, not per token, and `onZoomView` is a `[]`-dep callback.
+ */
+export const RecentFilesMenuBody = memo(function RecentFilesMenuBody({
+  messages,
+  onZoomView,
+}: {
+  messages: SessionEntry[];
+  onZoomView: OnZoomView;
+}): ReactNode {
+  const onFilePanel: RecentFilesPanelFileHandler = (summary) => {
+    onZoomView({
+      target: { path: summary.path, viewer: null, params: {} },
+      label: summary.title,
+    });
+  };
+  return <RecentFilesPanel entries={messages} onPanel={onFilePanel} />;
+});
