@@ -194,22 +194,9 @@ interface SwitchMenuProps {
   /** The box's `nav.card` rows, already deduped against the builtin rows. */
   navEntries: NavMenuEntry[];
   problemCount: number;
-  /** Open on-plate todos — the count on the stable "The Plate" row. */
-  plateCount: number;
   onOpenBoxPanel: () => void;
   onBackToRoot: () => void;
   onSelectLandmark: (dir: string) => void;
-}
-
-/** The plate's rim, seen from above — The Plate row's mark (moved from the
- * retired bar badge). */
-function PlateIcon() {
-  return (
-    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.25" strokeWidth="1.5" />
-      <circle cx="8" cy="8" r="3.25" strokeWidth="1.25" />
-    </svg>
-  );
 }
 
 /**
@@ -221,7 +208,7 @@ function PlateIcon() {
 export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
   const {
     panel, boxSlug, boxName, hideBoxRow, currentDir, landmarks, landmarksFailed,
-    onRetryLandmarks, navEntries, problemCount, plateCount,
+    onRetryLandmarks, navEntries, problemCount,
     onOpenBoxPanel, onBackToRoot, onSelectLandmark,
   } = props;
   switch (panel) {
@@ -237,21 +224,6 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
             </MenuItem>
           )}
           <MenuItem to={href(`/${boxSlug}/landmarks`)}>All landmarks →</MenuItem>
-          {/* The Plate lives here rather than as a bar badge: every bar chip
-              opens a menu, so a bar control that navigates read as broken
-              (boxholder, 2026-08-03). A stable row — present at zero count —
-              per the stable-above-variable menu rule. */}
-          <MenuItem to={href(`/${boxSlug}/browse/store/plate.todo-view.card`)}>
-            <span className="flex items-center gap-2 w-full">
-              <PlateIcon />
-              <span>The Plate</span>
-              {plateCount > 0 ? (
-                <span className="ml-auto inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-info-50 text-info-dark text-[10px] font-semibold">
-                  {plateCount}
-                </span>
-              ) : null}
-            </span>
-          </MenuItem>
           <NavCardRows entries={navEntries} />
           <MenuDivider />
           <SectionHeader>Switch to</SectionHeader>

@@ -116,12 +116,6 @@ export function PlacePill({
 
   const switchQuery = trpc.chat.byLandmark.useQuery(undefined, { enabled: switchOpened });
   const switchData = switchQuery.data;
-  // The Plate row's count — lazy like everything else the menu shows. The
-  // plate moved off the bar into this menu (boxholder call, 2026-08-03: the
-  // bar's chips all open menus; a control that navigates belongs with the
-  // other navigation rows), which also makes the bar query-free at rest.
-  const plateQuery = trpc.status.navStatus.useQuery(undefined, { enabled: switchOpened });
-  const plateCount = plateQuery.data === undefined ? 0 : plateQuery.data.counts.onPlateTodos;
   // A failed load is shown in the menu as a retry row, and logged: without
   // both, the menu sat on "Loading…" forever with nothing anywhere saying why.
   const switchError = switchQuery.error;
@@ -148,7 +142,6 @@ export function PlacePill({
     if (switchOpened) {
       void utils.chat.byLandmark.invalidate();
       void utils.nav.get.invalidate();
-      void utils.status.navStatus.invalidate();
       return;
     }
     setSwitchOpened(true);
@@ -214,7 +207,6 @@ export function PlacePill({
           onRetryLandmarks={() => { void switchQuery.refetch(); }}
           navEntries={navEntries}
           problemCount={switchData === undefined ? 0 : switchData.problems.length}
-          plateCount={plateCount}
           onOpenBoxPanel={() => setSwitchPanel("box")}
           onBackToRoot={() => setSwitchPanel("root")}
           onSelectLandmark={(dir) => { void openLandmarkChat(dir); }}

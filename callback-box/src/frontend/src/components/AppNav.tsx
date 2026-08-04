@@ -19,8 +19,11 @@
  * alongside the navigation logic. The app-shell just imports <AppNav>.
  */
 
-import { useParams, useRouterState } from "@tanstack/react-router";
+import { useCallback } from "react";
+import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../hooks/useCurrentUser";
+import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { trpc } from "../lib/trpc";
 import { useErrorCount, clearErrorCount } from "./DebugLog";
 import { Dropdown } from "./ui/Dropdown";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
@@ -87,9 +90,33 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const { boxes } = useBoxes();
   const currentUser = useCurrentUser();
 
-  // The bar makes NO queries at rest: The Plate moved into the switch menu
-  // (fetched lazily on open, like everything else the menus show), taking
-  // the bar's last always-on query and its bus subscription with it.
+  const base = `/${boxSlug}`;
+
+  // Open on-plate todo count (escalated + on-plate) — the plan's one
+  // app-level todo affordance (docs/implemented-plans/todo-annotation.md
+  // Track 4), and the only query the bar makes at rest.
+  // `status.navStatus`, not `status.status`: the bar renders this one count
+  // and nothing else, and it mounts on EVERY page — the fuller dashboard
+  // payload (git status/log + a full box card walk) cost ~275 ms per page for
+  // fields nothing here reads. Everything the menus need is fetched on their
+  // first open (`PlacePill`), never at rest.
+  const utils = trpc.useUtils();
+  const statusQuery = trpc.status.navStatus.useQuery();
+  const onPlateTodos = statusQuery.data ? statusQuery.data.counts.onPlateTodos : 0;
+
+  useBusSubscription({
+    onEvent: useCallback(
+      (event: RealtimeEvent) => {
+        // Todos live in cards and files. The question events this used to
+        // watch moved out with the questions badge.
+        if (event.event === "card-created" || event.event === "file-change") {
+          void utils.status.navStatus.invalidate();
+        }
+      },
+      [utils],
+    ),
+  });
+
   const boxName = boxes.find((b) => b.slug === boxSlug)?.name ?? boxSlug ?? "";
   // A page that knows its own place publishes it (chat: the session's context
   // dir — Track C2); every other route falls back to the route-derived map.
@@ -114,11 +141,43 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {/* Chat's session + voice chips portal in here (Track C2). */}
           <AppBarChipSlot />
+          <PlateBadge base={base} count={onPlateTodos} />
           <ErrorBadge onToggleDebugLog={onToggleDebugLog} />
           <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
         </div>
       </div>
     </nav>
+  );
+}
+
+/** The plate's rim, seen from above — the badge's mark instead of a glyph. */
+function PlateIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.25" strokeWidth="1.5" />
+      <circle cx="8" cy="8" r="3.25" strokeWidth="1.25" />
+    </svg>
+  );
+}
+
+/**
+ * Open on-plate todo count (escalated + on-plate) — links to the stock
+ * box-wide `todo-view` card ("The Plate", `store/plate.todo-view.card`),
+ * per the plan's one app-level todo affordance
+ * (`docs/implemented-plans/todo-annotation.md` Track 4). Zero renders nothing.
+ */
+function PlateBadge({ base, count }: { base: string; count: number }) {
+  if (count === 0) return null;
+  return (
+    <Link
+      to={href(`${base}/browse/store/plate.todo-view.card`)}
+      className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
+      title={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
+      aria-label={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
+    >
+      <PlateIcon />
+      {count}
+    </Link>
   );
 }
 
