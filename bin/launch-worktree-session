@@ -16,8 +16,8 @@
 # --worktree, so this path invokes the WorktreeCreate hook directly (same
 # worktree + box clone + installs; the hook also generates the gitignored
 # AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
-# execs codex in the worktree with a workspace-write/no-approvals sandbox.
-# Cleanup differs:
+# execs codex in the worktree with full access/no-approvals (parity with claude
+# workers, which run unsandboxed). Cleanup differs:
 # no hook fires when a codex session ends, so the worktree persists until
 # `bin/worktrees sweep` collects it (merged + clean + no active session).
 #
@@ -170,12 +170,11 @@ else
   # directly — it's idempotent (a relaunch re-attaches and refreshes the
   # AGENTS.md mirrors) and prints the worktree path on stdout, logs on stderr.
   #
-  # Sandbox: workspace-write + never-approve rather than the blunt
-  # --dangerously-bypass-approvals-and-sandbox. Extra writable roots: the main
-  # checkout (shared git metadata + finish's fast-forward), box clone, router
-  # state, and validated private-issues paths when present. Network on (pnpm,
-  # the localhost router, web). Config overrides, all launch-scoped (nothing
-  # persisted into ~/.codex/config.toml):
+  # Full access (danger-full-access + never-approve), matching claude workers,
+  # which run unsandboxed via --dangerously-skip-permissions. A workspace-write
+  # sandbox can't commit or /finish in a linked worktree (codex force-mounts
+  # .git read-only), so parity means the same unsandboxed footing. Launch-scoped
+  # -c overrides, nothing persisted into ~/.codex/config.toml:
   #   - trust_level: pre-trust the worktree dir so the first-run trust prompt
   #     doesn't eat the briefing.
   #   - project_doc_max_bytes: default 32 KiB truncates the injected root→cwd
@@ -201,22 +200,11 @@ for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
 done
 cd "\$wt_path"
 codex_args=(
-  -s workspace-write -a never
-  --add-dir "$MONO"
-  --add-dir "$HOME/src/box-worktrees/$wt"
-  --add-dir "$HOME/.cache/callback-box"
-  -c 'sandbox_workspace_write.network_access=true'
+  -s danger-full-access -a never
   -c "projects.\"\$wt_path\".trust_level=\"trusted\""
   -c project_doc_max_bytes=131072
 $model_line
 )
-private_status=\$(bin/private-issues status . 2>/dev/null || true)
-if [[ "\$private_status" == state=valid* ]]; then
-  private_target=\$(printf '%s\n' "\$private_status" | sed -n 's/.*target=\([^ ]*\).*/\1/p')
-  private_repo=\$(printf '%s\n' "\$private_status" | sed -n 's/.*repo=\([^ ]*\).*/\1/p')
-  [ -z "\$private_target" ] || codex_args+=(--add-dir "\$private_target")
-  [ -z "\$private_repo" ] || codex_args+=(--add-dir "\$private_repo")
-fi
 if [ -s "$prompt_file" ]; then
   exec codex "\${codex_args[@]}" "\$(cat "$prompt_file")"
 else

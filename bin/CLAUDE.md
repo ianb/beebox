@@ -199,11 +199,11 @@ session in a fresh worktree the same way the default claude path does. Codex
 has no `--worktree`, so the launcher's generated launch script invokes
 `.claude/hooks/worktree-create.sh` directly (JSON `{name}` on stdin, worktree
 path on stdout; idempotent — a relaunch re-attaches), then execs `codex` in
-the worktree with a `workspace-write`/never-approve sandbox (`--add-dir` for
-the main checkout (shared git metadata and `/finish` fast-forward), box clone,
-`~/.cache/callback-box`, and validated private-issues paths when present;
-network on; the worktree pre-trusted; and `project_doc_max_bytes` raised via
-launch-scoped `-c` overrides — nothing persisted to `~/.codex/config.toml`).
+the worktree with full access (`-s danger-full-access -a never`) — parity with
+claude workers, which run unsandboxed via `--dangerously-skip-permissions` (a
+`workspace-write` sandbox can't commit/`/finish` in a linked worktree, since codex
+force-mounts `.git` read-only). Launch-scoped `-c` overrides pre-trust the worktree
+and raise `project_doc_max_bytes`; nothing is persisted to `~/.codex/config.toml`.
 `--model` maps to `codex -m` (OpenAI model names). Remote Control is claude-only
 and ignored for codex.
 
