@@ -40,13 +40,21 @@ chat) never crashed — annex itself is not implicated.
 
 ## Fix directions (compose; roughly in value order)
 
-1. **Coalesce/single-flight history reads per (session, slice)** — concurrent
-   identical fetches share one parse. Kills the concurrency multiplier, which
-   is what actually reaches the cap.
-2. **Bound per-line parse cost** — skip/stub entries whose raw line exceeds a
-   byte threshold during the scan (render as a "large entry elided" stub the
-   frontend already has affordances for), so one fetch of a fat transcript
-   costs MBs, not tens of MBs.
+Directions 1 and 2 are **done** (2026-08-04, server-side only, no frontend
+change). Directions 3 and 4 are still open, which is why this item is.
+
+1. ~~**Coalesce/single-flight history reads per (session, slice)**~~ — done.
+   `loadSessionHistory` (`callback-box/src/core/chat/session/load-history.ts`)
+   keys in-flight reads on `(logPath, slice)` and hands concurrent callers the
+   same promise. The entry is dropped on settle, so it is a coalescing window,
+   not a cache. The shared entries array is frozen.
+2. ~~**Bound per-line parse cost**~~ — done.
+   `callback-box/src/cli/lib/session-oversize.ts` holds the threshold
+   (`MAX_SESSION_LINE_BYTES`, 256 KB) and the stub entry the scan records in
+   place of a line it refuses to parse. The stub is an ordinary `SessionEntry`
+   with one text block, so the frontend needed nothing. It counts toward
+   `total`, never counts as a real user message, and cannot receive a grafted
+   `tool_result`.
 3. **Client: backoff + dedupe on the webview's reconnect refetch loop** — the
    56-req/s storm is a bug regardless of server cost (`fetchHistoryActor`,
    reconnect paths in `src/frontend/src/machines/chat-actors.ts`).
