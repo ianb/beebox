@@ -71,7 +71,9 @@ if [ -d "$BOX_DEST" ]; then
   mkdir -p "$TRASH"
   echo "[worktree-remove] trashing box $BOX_DEST"
   mv "$BOX_DEST" "$TRASH/box-$NAME-$(date +%s)"
-  nohup rm -rf "$TRASH" >/dev/null 2>&1 &
+  # git-annex locks its object tree read-only. Make it writable in the
+  # detached cleanup before removing it, or macOS leaves annex remnants.
+  nohup sh -c 'chmod -R u+w "$1" 2>/dev/null || true; rm -rf "$1"' sh "$TRASH" >/dev/null 2>&1 &
   disown 2>/dev/null || true
 else
   echo "[worktree-remove] no box at $BOX_DEST (already gone)"

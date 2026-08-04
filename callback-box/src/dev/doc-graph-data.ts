@@ -16,7 +16,10 @@ export const ROOT = PACKAGE_ROOT;
 const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html", "docs/prompts.md"]);
 
 const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports"];
-const EXCLUDE_PATTERNS = [/\.doctest\.md$/];
+// AGENTS.md files are gitignored, generated mirrors of the sibling CLAUDE.md
+// (bin/generate-agents-md.ts, for Codex sessions) — not documents; scanning
+// them would flag every mirror as an orphan and double-count CLAUDE.md refs.
+const EXCLUDE_PATTERNS = [/\.doctest\.md$/, /^AGENTS\.md$/];
 
 export interface Reference {
   from: string;

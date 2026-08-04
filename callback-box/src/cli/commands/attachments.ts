@@ -7,6 +7,7 @@
  *   cb attachments migrate        # write manifests for every asset in .attach/
  *   cb attachments overwrite PATH # replace tracked asset contents from stdin
  *   cb attachments unignore       # drop the asset gitignore block (annex migration)
+ *   cb attachments annex-attributes # print the scoped .git/info/attributes
  *   cb attachments to-annex       # migrate this box onto git-annex
  *   cb attachments check-unlisted # block unlisted large binaries (pre-commit)
  *   cb attachments add PATH       # explicitly claim a file (rarely needed;
@@ -60,6 +61,11 @@ attachmentsCommand
   .command("largefiles-expr")
   .description("Print the annex.largefiles expression for this box's asset extensions.")
   .action(async () => dispatch("largefiles-expr"));
+
+attachmentsCommand
+  .command("annex-attributes")
+  .description("Print the scoped .git/info/attributes contents for this box's asset extensions.")
+  .action(async () => dispatch("annex-attributes"));
 
 attachmentsCommand
   .command("check-unlisted")

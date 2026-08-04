@@ -51,6 +51,7 @@ import { loadManifest, MANIFEST_FILENAME, sha256File } from "../asset-manifest.j
 import { scanBoxAttachments } from "../asset-manifest-scan.js";
 import { unignoreGitignore } from "../commands/attachments-gitignore.js";
 import { stripLfsFilters } from "./gitattributes.js";
+import { writeAnnexInfoAttributes } from "./info-attributes.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
 import {
@@ -370,6 +371,15 @@ export async function convertBoxToAnnex(
     key: "annex.largefiles",
     value: assetLargefilesExpression(),
   });
+
+  // Narrow the `* filter=annex` that `git annex init` just wrote. Unscoped, it
+  // hands every path to the annex filter-process — ~0.3s of fixed cost per git
+  // invocation, paid by every text-only commit this box will ever make. Safe
+  // here by construction: nothing is annexed yet, and the staging below can
+  // only annex what `annex.largefiles` matches, which is the same extension
+  // list. On an existing repository `cb doctor annex` does this instead, behind
+  // its annexed-coverage check.
+  await writeAnnexInfoAttributes(repoRoot);
 
   // 4c. Now drop the ignore block, so `git add` can see the assets at all.
   const unignored = await unignoreGitignore(boxRoot);

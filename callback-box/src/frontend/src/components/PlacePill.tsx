@@ -82,7 +82,6 @@ export function PlacePill({
   boxSlug,
   boxName,
   place,
-  hideBoxRow,
 }: {
   boxSlug: string;
   boxName: string;
@@ -92,12 +91,6 @@ export function PlacePill({
    * The pill doesn't derive it itself — only the bar knows both sources.
    */
   place: Place;
-  /**
-   * Suppress the entire "Box: … ▸" row. AppNav wires this from the chat
-   * route's `nativeComposer` flag (C3) — the native shell owns box picking,
-   * so the web Box row would sit on top of a native one.
-   */
-  hideBoxRow?: boolean;
 }) {
   const [switchPanel, setSwitchPanel] = useState<SwitchPanel>("root");
   // First-open latch for the switch menu's data (see the file header). Once
@@ -188,7 +181,6 @@ export function PlacePill({
           panel={switchPanel}
           boxSlug={boxSlug}
           boxName={boxName}
-          hideBoxRow={hideBoxRow === true}
           currentDir={place.dir}
           landmarks={switchData === undefined ? null : switchData.landmarks}
           landmarksFailed={switchError !== null}

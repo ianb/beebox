@@ -14,7 +14,6 @@ import { claudeProjectsRoot } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
 import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
 import { isAnnexInitialized } from "../annex/is-annex-box.js";
-import { stripLfsFilters } from "../annex/gitattributes.js";
 import {
   installSchemasGuide,
   installTricksFiles,
@@ -79,14 +78,14 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   const shape = await getBoxShape(resolvedRoot);
 
   // Which asset-tracking scheme is this box on? Every box starts on the
-  // manifest scheme (gitignored asset bytes + Git LFS filters) and `cb
-  // attachments to-annex` moves it to git-annex (assets un-ignored, LFS
-  // retired). The two files below are regenerated on EVERY init, so writing
-  // the manifest forms unconditionally silently de-annexed any converted box
-  // on its next `cb init` — assets ignored again, LFS filters back — with
-  // nothing reporting it until the first commit or asset write failed. The
-  // probe is repo-level (`.git/annex/`), so it cannot be flipped by the files
-  // this function writes.
+  // manifest scheme (gitignored asset bytes) and `cb attachments to-annex`
+  // moves it to git-annex (assets un-ignored). `.gitignore` is regenerated on
+  // EVERY init, so writing the manifest form unconditionally silently
+  // de-annexed any converted box on its next `cb init` — assets ignored again
+  // — with nothing reporting it until the first commit or asset write failed.
+  // The probe is repo-level (`.git/annex/`), so it cannot be flipped by the
+  // files this function writes. (`.gitattributes` no longer varies: LFS is
+  // retired, so neither scheme gets filter rules.)
   const annexed = await isAnnexInitialized(shape.packageRoot);
 
   // Create all standard directories (safe to re-run). `.claude`/`.claude/rules`
@@ -134,30 +133,23 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
     );
   }
 
-  // Always write .gitattributes (LFS rules for binary files). On an
-  // annex-converted box the LFS filters are stripped back out by the same
-  // function the migration uses, leaving the section headers and any
-  // non-filter attributes — so the file this writes is byte-identical to what
-  // `cb attachments to-annex` left behind, and re-running init is a no-op.
-  const lfsGitattributes = `# Audio files (voice memos, recordings)
-*.m4a filter=lfs diff=lfs merge=lfs -text
-*.webm filter=lfs diff=lfs merge=lfs -text
-*.wav filter=lfs diff=lfs merge=lfs -text
-*.mp3 filter=lfs diff=lfs merge=lfs -text
-*.ogg filter=lfs diff=lfs merge=lfs -text
-
-# Images
-*.jpg filter=lfs diff=lfs merge=lfs -text
-*.jpeg filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
-*.heic filter=lfs diff=lfs merge=lfs -text
-
-# Frozen page captures
-*.frozen filter=lfs diff=lfs merge=lfs -text
-`;
+  // Always write .gitattributes. Git LFS is retired: git-annex is the only
+  // asset backend, so no box — annexed or not — gets `filter=lfs` rules any
+  // more. Pre-annex boxes gitignore their asset bytes (GITIGNORE_BLOCK below),
+  // so an LFS filter could never fire on them either; the rules were dead
+  // config that only did harm, by re-LFS-ifying a converted box's new media if
+  // the annex probe ever read false. What stays is the section headers, so the
+  // file is byte-identical to what `cb attachments to-annex` leaves behind and
+  // re-running init is a no-op on every box. `stripLfsFilters` remains the
+  // migration's tool for stripping rules off boxes that still carry them.
   await fs.writeFile(
     path.join(resolvedRoot, ".gitattributes"),
-    annexed ? stripLfsFilters(lfsGitattributes) : lfsGitattributes,
+    `# Audio files (voice memos, recordings)
+
+# Images
+
+# Frozen page captures
+`,
   );
 
   // Always write .gitignore (keep in sync with cb version). A box's tricks live

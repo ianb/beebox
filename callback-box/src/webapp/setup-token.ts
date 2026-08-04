@@ -20,6 +20,7 @@
  */
 
 import * as crypto from "node:crypto";
+import { getOwnerEmail } from "./auth.js";
 import { listUsers } from "./local-users.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
@@ -66,13 +67,25 @@ export function clearSetupToken(): void {
 }
 
 /**
- * At listen time, when auth is required AND the store has zero users, arm a
- * setup token and print the claim link. No-op in open access (there's no wall)
- * or once a user exists. A corrupt/unreadable store degrades to "no setup link"
- * with a loud error — logins will surface the store problem per-request.
+ * At listen time, when auth is required AND the server has no owner at all, arm
+ * a setup token and print the claim link. No-op in open access (there's no
+ * wall), once a local user exists, or when an owner is already established some
+ * other way. A corrupt/unreadable store degrades to "no setup link" with a loud
+ * error — logins will surface the store problem per-request.
+ *
+ * The owner check is not the same as the zero-local-users check. A server whose
+ * owner signs in through Google OAuth (`CB_OWNER_EMAIL` set, no local password
+ * account) has zero local users *permanently*, so the user-count test alone
+ * re-armed and re-printed a setup link on every single restart — 105 times on
+ * the deployed server before this was noticed. That link was never usable
+ * (`POST /auth/setup` refuses to create an owner that doesn't match
+ * `CB_OWNER_EMAIL`), so it was pure noise that read as an unclaimed server.
  */
 export function maybeArmFirstRunSetup({ publicUrl, openAccess }: { publicUrl: string; openAccess: boolean }): void {
   if (openAccess) return;
+  // An owner already exists (env override or a local owner account) — there is
+  // nothing to claim, so no token and no link.
+  if (getOwnerEmail() !== null) return;
   let userCount: number;
   try {
     userCount = listUsers().length;

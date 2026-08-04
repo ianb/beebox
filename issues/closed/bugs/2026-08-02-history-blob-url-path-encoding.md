@@ -1,6 +1,12 @@
 ---
 title: History blob URLs don't encode file paths (or decode git's quoted paths)
+resolution: implemented
 ---
+
+> **Fixed in `4edbe94a`.** Segment-wise `encodeURIComponent` via a new
+> `buildHistoryBlobUrl` helper (Fastify decodes the wildcard once, so no
+> double-decode on the route), plus `decodeGitPath` in `parseDiff` (octal +
+> C-style escapes + UTF-8). Frontend + route round-trip doctests added.
 
 `BinaryFilePreview` builds `/api/history/blob/<hash>/<file.path>` by string
 interpolation (`CommitDetail-tabs.tsx`), and `parseDiff` copies `diff --git` /

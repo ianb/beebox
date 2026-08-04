@@ -19,7 +19,7 @@ apt-get update -qq
 # qpdf is the scan-upload PDF structure validator (src/core/scan/validate.ts).
 # Without it the scan routes refuse PDFs with a 503 rather than quarantine
 # unvalidated bytes, so it is a hard requirement, not a nice-to-have.
-apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf
+apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf ffmpeg
 
 # Ubuntu 24.04 ships ImageMagick 6 (`convert`); homebrew + IM7 use `magick`.
 # Symlink so scripts written for `magick` work on prod without branching.

@@ -122,6 +122,28 @@ as much a stand-in as a `SHA256E` one.
 | `annex.largefiles` | rendered from `ASSET_EXTENSIONS` | `git annex config` | **yes** |
 | `annex.thin` | `false` | `git config` | **no** |
 | `numcopies` | 1 | `git annex numcopies` | yes |
+| `.git/info/attributes` | rendered from `ASSET_EXTENSIONS` | repository file | **no** |
+
+`.git/info/attributes` is which paths git hands to the git-annex
+filter-process. `git annex init` writes `* filter=annex` there — the whole
+repository — so a commit of two text cards pays the filter's startup cost for
+nothing (measured: 15 `git add` + `git commit` pairs of one-line cards took
+3.7s unscoped and 1.4s scoped). Since `annex.largefiles` is purely
+extension-based, the filter is narrowed to the same extensions and text-only
+commits skip it entirely.
+
+The narrowing is only safe while every already-annexed path has an extension on
+the list: one that does not keeps its pointer in git but loses the smudge
+filter, so the next checkout writes `/annex/objects/…` text where the bytes
+were. `cb doctor annex` checks that (`annexed-coverage`) before it writes the
+scoped file, and refuses to scope while any path is uncovered. The attribute
+lines use case-insensitive character classes (`*.[hH][eE][iI][cC]`) — an
+over-wide line only starts a filter that then declines to annex, while a
+missing one strands a pointer.
+
+`git annex init` reinstates its unscoped default, including in every fresh
+clone, so this drift recurs; `cb doctor annex` (and therefore `cb init`)
+repairs it.
 
 `annex.thin=false` is load-bearing. With thin mode the working-tree file is a
 hardlink to its annex object, so an in-place edit silently corrupts the object
@@ -137,22 +159,28 @@ repairing takes both `git config annex.thin false` **and** `git annex fix`
 
 | command | what |
 |---|---|
-| `cb doctor annex` | Check and repair the box's annex configuration. Five of its seven checks self-heal. `--check` for read-only. |
+| `cb doctor annex` | Check and repair the box's annex configuration. Most checks self-heal. `--check` for read-only. |
 | `cb doctor annex-fsck` | Verify content against keys, incrementally. Read-only; run from a schedule. |
 | `cb attachments to-annex` | One-way migration from the manifest model. Verifies before and after. |
 | `cb attachments check-unlisted` | Block unlisted large binaries. Runs from the pre-commit hook. |
 | `cb attachments largefiles-expr` | Print the `annex.largefiles` expression. |
+| `cb attachments annex-attributes` | Print the scoped `.git/info/attributes` contents. |
 
 `cb init` runs the doctor's repair pass, so an ordinary init brings a box up to
 spec rather than leaving it to a command someone must remember.
 
 `cb init` also rewrites the box's `.gitignore` and `.gitattributes` on every
-run, and it **detects the annex conversion** (from `.git/annex/`) so it writes
-the annex forms — assets un-ignored, no Git LFS filters — instead of the
-manifest-scheme ones. Until 2026-08 it did not: a single `cb init` silently
-de-annexed a converted box, re-ignoring every asset while `.git/annex/` sat
-there looking healthy, and nothing reported it until a later commit or asset
-write failed. Anything that writes asset bytes now gates on that shape via
+run. It **detects the annex conversion** (from `.git/annex/`) so `.gitignore`
+gets the annex form — assets un-ignored — instead of the manifest-scheme one.
+Until 2026-08 it did not: a single `cb init` silently de-annexed a converted
+box, re-ignoring every asset while `.git/annex/` sat there looking healthy, and
+nothing reported it until a later commit or asset write failed.
+
+`.gitattributes` no longer varies by scheme: as of 2026-08-04 the template
+carries no `filter=lfs` rules at all, so every box gets the same LFS-free file.
+A pre-annex box gitignores its asset bytes, so an LFS filter could never fire on
+it either — the rules were dead config whose only live effect was the risk of
+re-LFS-ifying a converted box's new media. Anything that writes asset bytes now gates on that shape via
 `isAnnexBox()` (`src/core/annex/is-annex-box.ts`) — the scan-upload routes
 refuse with a 503 rather than accept a file they cannot import.
 

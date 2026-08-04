@@ -1,12 +1,13 @@
 /**
  * The `.gitattributes` half of the git-annex migration, as a pure function.
  *
- * Two callers need the exact same transform and must not drift: the migration
- * (`to-annex.ts`, which strips the filters off the box's existing file) and
- * `cb init` (`core/box/index.ts`, which regenerates that file from a template
- * on every run and would otherwise reinstate the Git LFS filters the migration
- * removed). A second, hand-rolled strip in the init path is precisely how a box
- * gets re-LFS-ified one `cb init` at a time.
+ * Used by the migration (`to-annex.ts`) to strip the filters off a box's
+ * existing file. `cb init` used to need the same transform, because it
+ * regenerated `.gitattributes` from an LFS-bearing template on every run and
+ * would otherwise reinstate the filters the migration removed — a box could get
+ * re-LFS-ified one `cb init` at a time. That template no longer carries LFS
+ * rules at all (`core/box/index.ts`), so this is the migration's tool only, for
+ * boxes created before that change.
  */
 
 /**

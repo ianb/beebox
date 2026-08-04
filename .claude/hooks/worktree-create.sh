@@ -82,12 +82,32 @@ mount_private_issues() {
   "$pi" mount "$1" >/dev/null || true
 }
 
+# Regenerate the gitignored AGENTS.md and .agents/skills mirrors (Codex CLI
+# reads AGENTS.md where Claude reads CLAUDE.md/rules and scans .agents/skills —
+# see bin/generate-agents-md.ts). Runs on BOTH the fresh and resume paths: a
+# resume must refresh mirrors against whatever Claude docs and skills now say,
+# and skipping it would leave a hand-launched `codex` in a resumed worktree on
+# stale guidance. tsx lives at the worktree ROOT node_modules (hoisted
+# workspace — callback-box/node_modules/.bin has no tsx). Non-blocking: a
+# Claude session doesn't need the mirrors, and the codex launcher path
+# re-verifies the root AGENTS.md exists before exec'ing codex.
+generate_agents_md() {
+  local wt="$1" tsx="$1/node_modules/.bin/tsx"
+  if [ -x "$tsx" ]; then
+    "$tsx" "$wt/bin/generate-agents-md.ts" --worktree-name "$NAME" "$wt" \
+      || echo "[worktree-create] WARNING: generate-agents-md failed; codex sessions will lack mirrors" >&2
+  else
+    echo "[worktree-create] WARNING: no tsx at $tsx; skipping Codex mirror generation" >&2
+  fi
+}
+
 # 1. Create (or re-attach to) the worktree.
 mkdir -p "$(dirname "$worktree_path")"
 if git worktree list --porcelain | grep -qxF "worktree $worktree_path"; then
   echo "[worktree-create] worktree already registered at $worktree_path — resume, skipping setup"
   wlog "resume: existing worktree reused name=$NAME"
   mount_private_issues "$worktree_path"
+  generate_agents_md "$worktree_path"
   printf '%s\n' "$worktree_path" >&3
   exit 0
 elif git show-ref --verify --quiet "refs/heads/$new_branch"; then
@@ -230,6 +250,10 @@ fi
 # deploy/deploy.sh does on the server.
 echo "[worktree-create] running pnpm install (workspace-wide)..."
 (cd "$worktree_path" && pnpm install)
+
+# 3.5. AGENTS.md and skill mirrors for Codex sessions (see generate_agents_md
+# above — this needs the install for tsx).
+generate_agents_md "$worktree_path"
 
 # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
 # own cb on PATH. Per-worktree because each worktree has its own absolute
