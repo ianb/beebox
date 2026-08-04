@@ -8,9 +8,10 @@
  * (docs/plans/top-nav-ia.md Track D).
  *
  * Two queries: `landmarks.list` for link data, `chat.byLandmark` for the
- * chat buckets, joined by directory. Order comes from `byLandmark` (latest
- * activity first, then chat-less landmarks with root ahead of alphabetical)
- * — this page doesn't re-sort, so the switch menu and this list agree.
+ * chat buckets, joined by directory. Order and nesting come from `list`
+ * (root first, then lexicographic by dir, depth-indented) — the page is
+ * the box's MAP, grouped by directory; recency ordering belongs to the app
+ * bar's switch menu, not here.
  *
  * See docs/landmarks.md.
  */
@@ -28,35 +29,30 @@ type LandmarkRow = RouterOutput["landmarks"]["list"]["landmarks"][number];
 type ChatBucket = RouterOutput["chat"]["byLandmark"]["landmarks"][number];
 
 /**
- * Order `list`'s rows the way `byLandmark` orders its buckets, pairing each
- * with its chats. Both sides key on directory, and a directory is supposed to
- * hold one landmark card — but nothing enforces it, so the join keeps a queue
- * per directory and consumes it: two cards in one directory both render (each
- * against one of that directory's two buckets) instead of one silently
- * vanishing. A landmark in `list` with no bucket left shouldn't happen (both
- * readers glob the same cards); if it does it lands at the end,
- * alphabetically, rather than disappearing.
+ * Pair each of `list`'s rows with its chat bucket, keeping `list`'s ORDER —
+ * root first, then lexicographic by dir, so each landmark follows its
+ * nearest landmark ancestor and the page reads as the box's map (the
+ * activity ordering that briefly replaced this scattered related landmarks;
+ * recency lives in the app bar's switch menu, not here). A directory is
+ * supposed to hold one landmark card — but nothing enforces it, so the join
+ * keeps a queue per directory and consumes it: two cards in one directory
+ * each take one of that directory's buckets instead of one silently
+ * vanishing.
  */
 function joinByDir(
   landmarks: LandmarkRow[],
   buckets: ChatBucket[],
 ): { landmark: LandmarkRow; bucket: ChatBucket | null }[] {
-  const byDir = new Map<string, LandmarkRow[]>();
-  for (const lm of landmarks) {
-    const queue = byDir.get(lm.dir);
-    if (queue) queue.push(lm);
-    else byDir.set(lm.dir, [lm]);
-  }
-  const paired: { landmark: LandmarkRow; bucket: ChatBucket | null }[] = [];
+  const byDir = new Map<string, ChatBucket[]>();
   for (const bucket of buckets) {
-    const landmark = byDir.get(bucket.dir)?.shift();
-    if (landmark === undefined) continue;
-    paired.push({ landmark, bucket });
+    const queue = byDir.get(bucket.dir);
+    if (queue) queue.push(bucket);
+    else byDir.set(bucket.dir, [bucket]);
   }
-  const leftovers = [...byDir.values()]
-    .flat()
-    .toSorted((a, b) => a.dir.localeCompare(b.dir));
-  return [...paired, ...leftovers.map((landmark) => ({ landmark, bucket: null }))];
+  return landmarks.map((landmark) => ({
+    landmark,
+    bucket: byDir.get(landmark.dir)?.shift() ?? null,
+  }));
 }
 
 export function LandmarksList() {
