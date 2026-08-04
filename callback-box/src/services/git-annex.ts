@@ -54,6 +54,16 @@ export interface GitAnnexService {
   fix(repoRoot: string): Promise<void>;
   /** Flush the journal into the `git-annex` branch, so clones can see location info. */
   merge(repoRoot: string): Promise<void>;
+  /**
+   * Every annexed path in the working tree, repo-relative.
+   *
+   * Includes paths whose content is absent — `--anything` rather than the
+   * default "content present here" matcher. A file the box cannot currently
+   * fetch is still a file that needs a smudge filter, so leaving it out would
+   * make the attributes coverage check pass on exactly the repositories where
+   * being wrong is least recoverable.
+   */
+  listAnnexedFiles(repoRoot: string): Promise<string[]>;
   /** Is there unflushed journal state that a clone would not see? */
   hasUnflushedJournal(repoRoot: string): Promise<boolean>;
   /**
@@ -164,6 +174,11 @@ export function createGitAnnexService(): GitAnnexService {
       await runAnnex(repoRoot, ["merge"]);
     },
 
+    async listAnnexedFiles(repoRoot: string): Promise<string[]> {
+      const out = await runAnnex(repoRoot, ["find", "--anything"]);
+      return out === "" ? [] : out.split("\n");
+    },
+
     async fsck(repoRoot: string, opts: { incrementalScheduleDays: number }): Promise<AnnexFsckReport> {
       // Exit code is the authority here, NOT message parsing.
       //
@@ -228,6 +243,8 @@ export interface FakeGitAnnexOptions {
   unflushedJournal?: boolean;
   /** Paths a scheduled fsck should report as corrupt. */
   fsckBadPaths?: string[];
+  /** Paths `listAnnexedFiles` should report as annexed. */
+  annexedFiles?: string[];
 }
 
 export interface FakeGitAnnexService extends GitAnnexService {
@@ -243,6 +260,7 @@ export function createFakeGitAnnex(options?: FakeGitAnnexOptions): FakeGitAnnexS
   const gitConfig: Record<string, string> = { ...options?.gitConfig };
   let unflushedJournal = options?.unflushedJournal ?? false;
   const fsckBadPaths = options?.fsckBadPaths ?? [];
+  const annexedFiles = options?.annexedFiles ?? [];
   const calls: string[] = [];
 
   return {
@@ -277,6 +295,9 @@ export function createFakeGitAnnex(options?: FakeGitAnnexOptions): FakeGitAnnexS
     async merge() {
       calls.push("merge");
       unflushedJournal = false;
+    },
+    async listAnnexedFiles() {
+      return annexedFiles;
     },
     async hasUnflushedJournal() {
       return unflushedJournal;

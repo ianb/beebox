@@ -101,6 +101,38 @@ const inFlightIds = new Set<string>();
  */
 let commitChain: Promise<unknown> = Promise.resolve();
 
+/**
+ * Wall-clock per-step timing for one preparation run. Marks accumulate as
+ * (step, elapsed-since-previous-mark) spans; `report` writes one summary line
+ * to `.callback-box/capture-timing.log` under the box (and stdout).
+ * Measurement instrumentation for the capture-latency work.
+ */
+class StepTimer {
+  private readonly spans: Array<[string, number]> = [];
+  private readonly t0 = performance.now();
+  private last = this.t0;
+
+  mark(step: string): void {
+    const now = performance.now();
+    this.spans.push([step, now - this.last]);
+    this.last = now;
+  }
+
+  report(opts: { boxRoot: string; id: string; outcome: string }): void {
+    const total = performance.now() - this.t0;
+    const parts = this.spans.map(([s, ms]) => `${s}=${ms.toFixed(0)}ms`).join(" ");
+    const line = `${new Date().toISOString()} id=${opts.id} outcome=${opts.outcome} total=${total.toFixed(0)}ms ${parts}`;
+    console.log(`[capture] timing ${line}`);
+    const logPath = path.join(opts.boxRoot, ".callback-box", "capture-timing.log");
+    void fs
+      .mkdir(path.dirname(logPath), { recursive: true })
+      .then(() => fs.appendFile(logPath, line + "\n"))
+      .catch((e: unknown) => {
+        console.warn("[capture] Failed to write capture-timing.log:", e);
+      });
+  }
+}
+
 function withCommitLock<T>(fn: () => Promise<T>): Promise<T> {
   const result = commitChain.then(fn, fn);
   commitChain = result.then(
@@ -145,6 +177,7 @@ export async function prepareCaptureSession(deps: PrepareCaptureDeps): Promise<v
 
 async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
   const { boxRoot, id, eventBus, registry, wireSession } = deps;
+  const timer = new StepTimer();
 
   const session = await readStagingSession({ boxRoot, id });
   if (session === null) return; // Cancelled/cleaned up between seal and here.
@@ -170,6 +203,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
 
   await setStagingState({ boxRoot, id, state: "preparing" });
   eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "preparing" });
+  timer.mark("setup");
 
   const captureRelDir =
     target.contextDir !== null && target.contextDir !== "" ? `${target.contextDir}/tmp-capture` : "tmp-capture";
@@ -199,10 +233,12 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
       partial: session.partial === true,
     });
   }
+  timer.mark("write-cards");
 
   // Step c — transcribe each clip (word timestamps + `.timing.json` sidecars).
   eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "transcribing" });
   const transcription = await transcribeCaptureClips({ boxRoot, captureAttachDir: sessionAttachAbsDir });
+  timer.mark("transcribe");
   // ANY clip left untranscribed flags the wrapper — a partial failure otherwise
   // silently under-reports (see the visible per-clip markers in the timeline).
   const transcriptionFailed = transcription.transcribed < transcription.total;
@@ -214,10 +250,12 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
 
   // Step d — assemble the deterministic timeline body (idempotent).
   await assembleCaptureTimeline({ captureCardPath: sessionCardAbsPath });
+  timer.mark("timeline");
 
   // Step e — validate the written cards before committing.
   const cardPaths = await collectCardPaths(sessionCardAbsPath, sessionAttachAbsDir);
   const summary = await lintCardsDispatch(cardPaths, { boxRoot, ctx: await buildLoadContext(boxRoot) });
+  timer.mark("validate");
   if (summary.totalErrors > 0) {
     const detail = summary.results
       .filter((r) => r.errors.length > 0)
@@ -240,6 +278,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
     message: `Capture: ${basename}`,
     trailers: { "Created-By": "capture" },
   });
+  timer.mark("commit-doc");
 
   // Step g — deliver the <capture> message (at most once).
   const wrapperSummary = summarizeCapture({
@@ -266,7 +305,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
       docPath: sessionCardRelPath,
     });
     if (landed) {
-      await finishDelivery({ boxRoot, id, eventBus, sessionCardAbsPath, sessionCardRelPath, basename, deliveredSessionId: target.sessionId });
+      await finishDelivery({ boxRoot, id, eventBus, sessionCardAbsPath, sessionCardRelPath, basename, deliveredSessionId: target.sessionId, timer });
       return;
     }
   }
@@ -297,11 +336,13 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
     throw e;
   }
 
+  timer.mark("deliver-send");
+
   // An enqueue (agent busy) counts as delivered-for-idempotency: the queue is
   // in-memory only, so a crash before drain loses the notification (accepted —
   // the card is already committed), but marking `delivered` here guarantees a
   // resume never double-enqueues.
-  await finishDelivery({ boxRoot, id, eventBus, sessionCardAbsPath, sessionCardRelPath, basename, deliveredSessionId: delivered.sessionId });
+  await finishDelivery({ boxRoot, id, eventBus, sessionCardAbsPath, sessionCardRelPath, basename, deliveredSessionId: delivered.sessionId, timer });
 }
 
 /**
@@ -317,10 +358,12 @@ async function finishDelivery(opts: {
   sessionCardRelPath: string;
   basename: string;
   deliveredSessionId: string | null;
+  timer: StepTimer;
 }): Promise<void> {
-  const { boxRoot, id, eventBus, sessionCardAbsPath, sessionCardRelPath, basename, deliveredSessionId } = opts;
+  const { boxRoot, id, eventBus, sessionCardAbsPath, sessionCardRelPath, basename, deliveredSessionId, timer } = opts;
 
   await markCaptureCardDelivered({ boxRoot, sessionCardAbsPath, sessionCardRelPath, basename });
+  timer.mark("mark-delivered");
 
   await setStagingState({ boxRoot, id, state: "delivered" });
   eventBus.emit("capture-status", {
@@ -329,6 +372,7 @@ async function finishDelivery(opts: {
     status: "delivered",
     docPath: sessionCardRelPath,
   });
+  timer.report({ boxRoot, id, outcome: "delivered" });
 
   // Only now that delivery landed do we discard the raw staging media.
   await cleanupStagingSession({ boxRoot, id });

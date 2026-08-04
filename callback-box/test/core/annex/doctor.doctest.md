@@ -11,7 +11,8 @@ round trip. `check: true` is the read-only mode.
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeGitAnnex } from "../../../src/services/git-annex.js";
 import { runAnnexDoctor, formatAnnexDoctor, ANNEX_PRECOMMIT_LINE } from "../../../src/core/annex/doctor.js";
-import { assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
+import { assetAnnexAttributes, assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
+import { writeAnnexInfoAttributes } from "../../../src/core/annex/info-attributes.js";
 
 /** A fake in the fully-correct state, which individual tests then break. */
 function healthyFake() {
@@ -35,16 +36,17 @@ function statuses(result: { checks: { id: string; status: string }[] }): string 
 }
 ```
 
-A correctly configured repository reports all seven checks clean and changes
+A correctly configured repository reports every check clean and changes
 nothing:
 
 ```ts
 const box = await makeTmpBox();
 await installHook(box);
+await writeAnnexInfoAttributes(box.packageRoot);
 const annex = healthyFake();
 const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
 statuses(result)
-=> binary=ok initialized=ok thin=ok largefiles=ok content-present=ok journal=ok hook=ok
+=> binary=ok initialized=ok thin=ok largefiles=ok annexed-coverage=ok attributes=ok content-present=ok journal=ok hook=ok
 
 result.healthy
 => true
@@ -153,7 +155,7 @@ const result = await runAnnexDoctor(annex, {
   repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
-=> binary=ok initialized=ok thin=ok largefiles=repaired content-present=ok journal=repaired hook=ok
+=> binary=ok initialized=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=repaired content-present=ok journal=repaired hook=ok
 ```
 
 A *stale* largefiles is repaired, not just an absent one. That matters: the
@@ -166,6 +168,116 @@ result.checks.find((c) => c.id === "largefiles")?.message
 
 await annex.getAnnexConfig(box.packageRoot, "annex.largefiles") === assetLargefilesExpression()
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## The annex filter is scoped to the asset extensions
+
+`git annex init` writes `* filter=annex` into `.git/info/attributes`, which
+hands every path to the annex filter-process — ~0.3s of fixed cost per git
+invocation, paid by every text-only commit. The doctor replaces it with the
+rendering from `ASSET_EXTENSIONS`, and does so on a box that has git-annex's
+default:
+
+```ts
+const box = await makeTmpBox();
+await installHook(box);
+const fs = await import("node:fs/promises");
+const path = await import("node:path");
+const attrPath = path.join(box.packageRoot, ".git", "info", "attributes");
+await fs.mkdir(path.dirname(attrPath), { recursive: true });
+await fs.writeFile(attrPath, "\n* filter=annex\n");
+const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+result.checks.find((c) => c.id === "attributes")?.message
+=> rescoped .git/info/attributes to the asset extensions
+
+await fs.readFile(attrPath, "utf-8") === assetAnnexAttributes()
+=> true
+```
+
+A second run is a no-op — the repair is idempotent, which matters because
+`cb init` runs the doctor every time:
+
+```ts continue
+const again = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+again.checks.find((c) => c.id === "attributes")?.status
+=> ok
+```
+
+Under `check: true` nothing is written and the message names both remedies:
+
+```ts continue
+await fs.writeFile(attrPath, "\n* filter=annex\n");
+const readOnly = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot, boxRoot: box.root, options: { check: true },
+});
+readOnly.checks.find((c) => c.id === "attributes")?.status
+=> failed
+
+readOnly.checks.find((c) => c.id === "attributes")?.message.includes("cb attachments annex-attributes")
+=> true
+
+await fs.readFile(attrPath, "utf-8")
+=> «blankline»
+* filter=annex
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Scoping is refused while an annexed file falls outside the list
+
+An annexed file whose extension the scoped list does not cover keeps its
+pointer in git but loses the smudge filter — the next checkout writes
+`/annex/objects/…` text where the bytes were. That is indistinguishable from
+data loss, and it is not repairable from here: the list is a source-code
+decision. So the doctor reports it loudly and leaves the unscoped file alone
+rather than performing the change that would strand the file.
+
+```ts
+const box = await makeTmpBox();
+await installHook(box);
+const annex = createFakeGitAnnex({
+  gitConfig: { "annex.thin": "false" },
+  annexConfig: { "annex.largefiles": assetLargefilesExpression() },
+  annexedFiles: ["content/trip.attach/photo.jpg", "content/scan.attach/page.psd"],
+});
+const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
+result.checks.find((c) => c.id === "annexed-coverage")?.message
+=> 1 annexed path(s) have an extension outside ASSET_EXTENSIONS: content/scan.attach/page.psd. They would read back as pointer text once the annex filter is scoped. Add the extension(s) to ASSET_EXTENSIONS (src/lib/asset-extensions.ts).
+
+result.healthy
+=> false
+```
+
+Even in repair mode the attributes file is left untouched:
+
+```ts continue
+result.checks.find((c) => c.id === "attributes")?.status
+=> failed
+
+const fs2 = await import("node:fs/promises");
+const path2 = await import("node:path");
+await fs2.readFile(path2.join(box.packageRoot, ".git", "info", "attributes"), "utf-8").catch(() => "(absent)")
+=> (absent)
+```
+
+Case is not a gap: the coverage test is case-insensitive, matching the
+character classes the attributes lines use, so an iOS `.HEIC` counts as covered.
+
+```ts continue
+const ios = createFakeGitAnnex({
+  gitConfig: { "annex.thin": "false" },
+  annexConfig: { "annex.largefiles": assetLargefilesExpression() },
+  annexedFiles: ["content/trip.attach/IMG_0001.HEIC"],
+});
+const iosResult = await runAnnexDoctor(ios, { repoRoot: box.packageRoot, boxRoot: box.root });
+iosResult.checks.find((c) => c.id === "annexed-coverage")?.status
+=> ok
 ```
 
 ```ts cleanup

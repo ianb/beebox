@@ -8,12 +8,12 @@
  * mode for scripts and health endpoints.
  *
  * **It does not gate `cb serve`.** An earlier design refused to start a box
- * that failed any check. That was wrong twice over: five of the seven checks
- * self-heal, so blocking on them refuses work the box could have just done;
- * and the two that cannot self-heal are the two where blocking helps least —
- * a missing binary already fails loudly at every read (the pointer predicate)
- * and every commit (the pre-commit hook), and a pointer with no content is
- * data already lost, where an outage only compounds it.
+ * that failed any check. That was wrong twice over: most checks self-heal, so
+ * blocking on them refuses work the box could have just done; and the ones that
+ * cannot self-heal are the ones where blocking helps least — a missing binary
+ * already fails loudly at every read (the pointer predicate) and every commit
+ * (the pre-commit hook), and a pointer with no content is data already lost,
+ * where an outage only compounds it.
  *
  * **Configuration only.** Every check asks "is git-annex set up correctly",
  * and every one has a fixed remedy. Conditions that vary with pending work —
@@ -27,8 +27,13 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import type { GitAnnexService } from "../../services/git-annex.js";
-import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
+import { assetAnnexAttributes, assetLargefilesExpression } from "../../lib/asset-extensions.js";
 import { isAnnexPointer } from "../../lib/annex-pointer.js";
+import {
+  readAnnexInfoAttributes,
+  uncoveredAnnexedPaths,
+  writeAnnexInfoAttributes,
+} from "./info-attributes.js";
 import { findAttachScopes } from "../../lib/attach-scopes.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -65,8 +70,8 @@ export interface AnnexDoctorOptions {
 /**
  * The `git annex pre-commit` invocation the generated hook must contain. Kept
  * here rather than in the hook generator so the doctor and the generator agree
- * by construction — the whole point of check 7 is catching a repository whose
- * hook we do not own, and a drifted literal would make it useless.
+ * by construction — the whole point of the hook check is catching a repository
+ * whose hook we do not own, and a drifted literal would make it useless.
  */
 export const ANNEX_PRECOMMIT_LINE = "git annex pre-commit";
 
@@ -148,6 +153,93 @@ async function walkForPointers(args: {
       if (errnoCode(e) !== "ENOENT") console.warn(`Could not inspect ${rel}:`, e);
     }
   }
+}
+
+/**
+ * The two checks that govern which paths reach the annex filter-process.
+ *
+ * They are one unit because the second depends on the first: scoping
+ * `.git/info/attributes` to `ASSET_EXTENSIONS` is only safe while every
+ * already-annexed path has an extension on that list. An annexed file outside
+ * it keeps its pointer in git but loses the smudge filter, so the next checkout
+ * writes `/annex/objects/…` text where the bytes were — indistinguishable from
+ * data loss. That gap is not repairable from here; the list is a source-code
+ * decision, so the doctor names it and leaves the unscoped file in place.
+ *
+ * The scoping itself is what makes text-only commits cheap: git-annex's default
+ * `* filter=annex` hands EVERY path to the filter-process, ~0.3s of fixed cost
+ * per git invocation even for a two-line card. `git annex init` reinstates the
+ * default — including in every fresh clone — so this is recurring drift, not a
+ * one-time fix.
+ */
+async function filterScopeChecks(
+  annex: GitAnnexService,
+  args: { repoRoot: string; readOnly: boolean }
+): Promise<AnnexCheckResult[]> {
+  const { repoRoot, readOnly } = args;
+  const annexedPaths = await annex.listAnnexedFiles(repoRoot);
+  const uncovered = uncoveredAnnexedPaths(annexedPaths);
+  const coverage: AnnexCheckResult =
+    uncovered.length === 0
+      ? {
+          id: "annexed-coverage",
+          status: "ok",
+          message: `all ${annexedPaths.length} annexed path(s) are covered by the asset extensions`,
+        }
+      : {
+          id: "annexed-coverage",
+          status: "failed",
+          message:
+            `${uncovered.length} annexed path(s) have an extension outside ASSET_EXTENSIONS: ` +
+            `${uncovered.slice(0, 5).join(", ")}${uncovered.length > 5 ? ` (+${uncovered.length - 5} more)` : ""}. ` +
+            "They would read back as pointer text once the annex filter is scoped. Add the " +
+            "extension(s) to ASSET_EXTENSIONS (src/lib/asset-extensions.ts).",
+        };
+
+  const attributes = await readAnnexInfoAttributes(repoRoot);
+  if (attributes === assetAnnexAttributes()) {
+    return [
+      coverage,
+      { id: "attributes", status: "ok", message: ".git/info/attributes is scoped to the asset extensions" },
+    ];
+  }
+  if (uncovered.length > 0) {
+    return [
+      coverage,
+      {
+        id: "attributes",
+        status: "failed",
+        message:
+          ".git/info/attributes is left unscoped: scoping it would strand the annexed path(s) " +
+          "reported by annexed-coverage. Fix that first.",
+      },
+    ];
+  }
+  if (readOnly) {
+    return [
+      coverage,
+      {
+        id: "attributes",
+        status: "failed",
+        message:
+          `.git/info/attributes is ${attributes === null ? "missing" : "unscoped or stale"}. ` +
+          "Run `cb doctor annex` without `--check`, or " +
+          "`cb attachments annex-attributes > .git/info/attributes`.",
+      },
+    ];
+  }
+  await writeAnnexInfoAttributes(repoRoot);
+  return [
+    coverage,
+    {
+      id: "attributes",
+      status: "repaired",
+      message:
+        attributes === null
+          ? "wrote .git/info/attributes scoped to the asset extensions"
+          : "rescoped .git/info/attributes to the asset extensions",
+    },
+  ];
 }
 
 /**
@@ -259,7 +351,11 @@ export async function runAnnexDoctor(
     });
   }
 
-  // 5. No pointer standing in for content. Not repairable this iteration.
+  // 5-6. Annexed-path coverage, then the scoped attributes file that coverage
+  //      makes safe.
+  checks.push(...(await filterScopeChecks(annex, { repoRoot, readOnly })));
+
+  // 7. No pointer standing in for content. Not repairable this iteration.
   const pointers = await findContentlessPointers(boxRoot);
   if (pointers.length === 0) {
     checks.push({ id: "content-present", status: "ok", message: "no missing asset content" });
@@ -275,7 +371,7 @@ export async function runAnnexDoctor(
     });
   }
 
-  // 6. Journal flushed, so a clone can see location info and `git annex get`
+  // 8. Journal flushed, so a clone can see location info and `git annex get`
   //    works. An unflushed journal is why a fresh clone reports "0 copies".
   if (await annex.hasUnflushedJournal(repoRoot)) {
     if (readOnly) {
@@ -292,7 +388,7 @@ export async function runAnnexDoctor(
     checks.push({ id: "journal", status: "ok", message: "git-annex journal is flushed" });
   }
 
-  // 7. The pre-commit hook actually invokes annex. `git annex init` declines
+  // 9. The pre-commit hook actually invokes annex. `git annex init` declines
   //    to install its own hook when one already exists, and `cb init` leaves a
   //    foreign hook untouched — so integration cannot be inferred from either
   //    having run.
