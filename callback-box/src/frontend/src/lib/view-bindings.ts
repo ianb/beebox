@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trpcClient } from "./trpc";
 import { busEventData } from "./bus-events";
+import { createDeferredResync } from "./deferred-resync";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 
 export interface CardViewBinding {
@@ -48,14 +49,16 @@ function fetchBindings(): Promise<Map<string, CardViewBinding>> {
  * across the many FileViews mounted at once (chat embeds whole conversations):
  * the first call in a tick clears the cache, the rest no-op until the microtask
  * resets the guard, so a single view edit triggers one refetch — not one per
- * mounted card, each clobbering the previous in-flight fetch.
+ * mounted card, each clobbering the previous in-flight fetch. Built on the
+ * shared `deferred-resync` helper with `alwaysVisible: true`: this cache feeds
+ * `useCardViewBinding`'s return value, which is read from render regardless of
+ * tab visibility, so unlike a pure UI refresh it must NOT defer while hidden —
+ * a card bound to a since-changed view would render with the wrong renderer
+ * until some other trigger woke the tab.
  */
-let invalidating = false;
+const bindingsResync = createDeferredResync(() => { bindingsPromise = null; }, { alwaysVisible: true });
 function invalidateBindings(): void {
-  if (invalidating) return;
-  invalidating = true;
-  bindingsPromise = null;
-  queueMicrotask(() => { invalidating = false; });
+  bindingsResync.trigger();
 }
 
 /** The custom view bound to a card type, or null (also null while loading). */

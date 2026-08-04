@@ -10,11 +10,13 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../api";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { useDeferredResync } from "../hooks/useDeferredResync";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";
 import { useViewFileHelpers, type ViewFile, type ViewFileHelpers } from "../hooks/useViewFileHelpers";
 import { trpc } from "../lib/trpc";
 import { busEventData } from "../lib/bus-events";
+import { RequestError } from "../lib/errors";
 import {
   ViewHostProvider,
   useViewHost,
@@ -168,6 +170,42 @@ interface ViewModule {
   modes?: ViewMode[];
 }
 
+interface CardsPayload {
+  cards: ViewCard[];
+  files: ViewFile[];
+}
+
+/**
+ * Module-level in-flight cards-fetch cache, keyed `${slug}:${qs}`. Every bound
+ * card visible in a chat mounts its own `AgentViewRenderer`, each with its own
+ * `useBusSubscription` — on a WS reconnect, every instance's `onConnect` fires
+ * in the same tick, and without this, each issued its own bare `fetch` (56
+ * identical `/api/views/:slug/cards` GETs in one second, observed on prod).
+ * Mirrors `bindingsPromise` in `view-bindings.ts`: shared while the fetch is
+ * in flight, cleared as soon as it settles — a coalescing window, not a
+ * result cache, so a real edit is never served stale data.
+ */
+const cardsFetchCache = new Map<string, Promise<CardsPayload>>();
+
+function fetchCardsPayload(key: string, url: string): Promise<CardsPayload> {
+  const existing = cardsFetchCache.get(key);
+  if (existing) return existing;
+  const request: Promise<CardsPayload> = (async () => {
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const message = `Failed to load cards: ${resp.status}`;
+      throw new RequestError(message);
+    }
+    const data: CardsPayload = await resp.json();
+    return data;
+  })();
+  cardsFetchCache.set(key, request);
+  void request.finally(() => {
+    if (cardsFetchCache.get(key) === request) cardsFetchCache.delete(key);
+  });
+  return request;
+}
+
 export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
@@ -215,12 +253,7 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
     try {
       const qs = new URLSearchParams(viewParams).toString();
       const url = qs ? `${apiBase}/views/${slug}/cards?${qs}` : `${apiBase}/views/${slug}/cards`;
-      const resp = await fetch(url);
-      if (!resp.ok) {
-        setError(`Failed to load cards: ${resp.status}`);
-        return;
-      }
-      const data: { cards: ViewCard[]; files: ViewFile[] } = await resp.json();
+      const data = await fetchCardsPayload(`${slug}:${qs}`, url);
       setCards(data.cards);
       setFiles(data.files);
     } catch (e) {
@@ -251,6 +284,11 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
 
   // Subscribe to the box event stream for live updates
   const connectedOnceRef = useRef(false);
+  // Reconnect-driven resync goes through the coalescing/hidden-defer helper:
+  // N mounted instances of this same view (one per bound card visible in
+  // chat) all get onConnect in the same WS-reconnect tick, and a hidden tab
+  // shouldn't fetch at all until it's looked at again.
+  const triggerCardsResync = useDeferredResync(useCallback(() => { void loadCards(); }, [loadCards]));
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const fileChange = busEventData(event, "file-change");
@@ -279,8 +317,8 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
         connectedOnceRef.current = true;
         return;
       }
-      void loadCards();
-    }, [loadCards]),
+      triggerCardsResync();
+    }, [triggerCardsResync]),
   });
 
   const fileHelpers = useViewFileHelpers(apiBase);
