@@ -76,7 +76,21 @@ below still needs removal after prod verification.
 4. Longer-term: stop letting multi-MB payloads into transcript entries the
    history path serves at all (strip/sidecar them at write or render time).
 
-## Diagnostic infrastructure (still armed as of filing)
+## Prod acceptance (2026-08-04, post-deploy of directions 1-3)
+
+Re-ran the confirming measurement against the live box-family child via the
+inspector: the 10-parallel `chat.history` storm that cost **+216MB** heap
+pre-fix cost **+0.04MB** post-fix (coalesced to one read); sequential fetches
+oscillate ±20MB with no cumulative growth; responses stay ~126KB/0.27s. The
+concurrency multiplier — the mechanism that reached the 1.9GB cap — is gone.
+
+## Diagnostic infrastructure (REMOVED 2026-08-04 after the acceptance run)
+
+All of the below is torn down: the wrapper patch (deploys had already wiped
+it; left stock), the `/home/callback/diag` dir, the inspector helper script,
+and the wrapper backup. The technique (SIGUSR1 → inspector → `Runtime.evaluate`
+memoryUsage / `HeapProfiler.takeHeapSnapshot`) is reusable without any
+pre-arming. Original notes kept below for the record.
 
 Prod serve children run with `--heapsnapshot-near-heap-limit=1
 --heapsnapshot-signal=SIGUSR2 --diagnostic-dir=/home/callback/diag` via a
