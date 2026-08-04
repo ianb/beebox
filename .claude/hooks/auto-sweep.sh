@@ -10,6 +10,10 @@
 #   - SessionStart hook   → the sweep trigger. Catches /finish-in-main-context,
 #                           tab-close, and orphaned-session cases at the next
 #                           session start.
+#   - SessionEnd hook      → same trigger, so a long-lived main session doesn't
+#                           accumulate finished worktrees all day.
+#   - bin/codex-session-end → codex fires no hooks; its launcher-driven teardown
+#                           calls this for parity.
 # NOT wired to .husky/post-merge: sweep's `git worktree prune` is not
 # concurrency-safe against the deploy that post-merge also launches (it
 # corrupts the deploy's .deploy-checkout). Re-adding needs a shared worktree
@@ -17,9 +21,9 @@
 #
 # Safe to auto-run: `bin/worktrees sweep` removes a worktree only when it is
 # fully merged into main, clean (no non-deletion dirt), AND has no active
-# `claude`/`codex` session (checked via `pgrep -x claude`/`-x codex` +
-# `--worktree` argv + real process cwd — precise enough that stray
-# notifier/alerter procs don't match).
+# `claude`/`codex` session (checked via `ps -axo pid=,comm=` + `--worktree`
+# argv + real process cwd — NOT pgrep, which misses native-installed Claude
+# Code entirely; see bin/CLAUDE.md).
 set -u
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"

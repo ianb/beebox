@@ -236,10 +236,39 @@ AGENTS.md at their nearest directory scope. Their `paths` frontmatter remains a
 conditional applicability instruction; it is not copied into Codex's rules
 directory, because Codex command-execution rules have different semantics.
 
-Teardown differs from claude sessions: no WorktreeRemove/SessionEnd hook
-fires when a codex session ends, so the worktree persists until
-`bin/worktrees sweep` collects it (sweep counts a live `codex` process whose
-cwd is in a worktree as an active session, same as claude).
+**Teardown is driven by the launcher, not by hooks.** Codex reads none of
+`.claude/settings.json`, so no SessionEnd/WorktreeRemove ever fires for it —
+until this was fixed, a codex worktree lingered until someone ran
+`bin/worktrees sweep` by hand (~10 had piled up by 2026-08-04). So the
+launcher **runs codex in the foreground instead of `exec`ing it** (there'd
+otherwise be no "after codex exits" moment) and then calls
+**`bin/codex-session-end <worktree-path>`**, which gives codex the same
+teardown claude gets: auto-remove when the branch is merged into main and the
+tree is clean, and an interactive keep/remove prompt at the tty otherwise —
+codex's stand-in for Claude Code's own built-in prompt. Choosing *remove* with
+unmerged commits still keeps the **branch** (`--keep-branch`); only the tree,
+the box clone, and the router/cache state go. Anything other than an explicit
+`r` keeps: no tty, timeout, EOF, empty line. Closing the tab is still
+uncovered — SIGHUP kills the launcher before codex returns, the same gap a
+claude tab-kill has — and the next sweep collects it.
+
+`bin/launch-worktree-session` wraps the codex call in `trap 'true' INT`: bash
+defers a trap until the foreground command returns, so a Ctrl-C reaches codex
+(a trap with a body, unlike `''`, is reset to default in the child) without
+taking the launcher down before teardown. The teardown invoked is the **main
+checkout's** copy, and it `cd`s to main before touching anything — a script
+must not run destructive steps from inside the directory it deletes.
+
+**One implementation of the destructive path: `bin/lib/worktree-teardown.sh`**
+(sourced, not executed), shared by `.claude/hooks/session-end.sh` and
+`bin/codex-session-end`. It owns `wt_other_agent_live` (the fail-closed
+live-agent guard), `wt_work_state` (ahead/dirty/blockers), `wt_remove_now` (the
+trash-mv removal + private-issues + router stop + cache state), and `wt_log`
+(the shared `worktree-cleanup.log`, labeled `SessionEnd` / `CodexExit`).
+`bin/worktrees sweep` deliberately keeps its own: it takes ONE process snapshot
+for N worktrees and removes with `git worktree remove --force` rather than the
+trash-mv. Sweep still counts a live `codex` process whose cwd is in a worktree
+as an active session, same as claude.
 
 **Detecting a live agent process: use `ps -axo pid=,comm=`, never `pgrep -x
 claude`.** pgrep matches the 16-char accounting name (`ps ucomm`), and a
@@ -247,13 +276,17 @@ native-installed Claude Code reports that as its *version* (`2.1.221`), not
 `claude` — so `pgrep -x claude` misses live sessions almost entirely (10 of 11
 running sessions invisible when measured 2026-08-04). `ps comm` is the
 executable path; match on its basename. Both `bin/worktrees sweep` and
-`.claude/hooks/session-end.sh` do it that way for exactly this reason; a guard
+`bin/lib/worktree-teardown.sh` do it that way for exactly this reason; a guard
 built on pgrep silently protects nothing.
 
 **A nested `claude` run must not clean up the worktree it runs inside.**
-`session-end.sh` refuses to clean when another live `claude`/`codex` process
-belongs to the worktree, excluding the *nearest* agent ancestor of the hook
-(that one is the session that's ending). It checks the same two signals sweep
+`wt_other_agent_live` refuses to clean when another live `claude`/`codex`
+process belongs to the worktree. `session-end.sh` passes
+`--exclude-self-ancestor`, which excludes the *nearest* agent ancestor of the
+hook (that one is the session that's ending); `bin/codex-session-end` does not,
+because codex has already exited by the time it runs — there is no self to
+exclude, and not excluding one is the conservative answer for a hand-run.
+It checks the same two signals sweep
 does — `claude --worktree <name>` in argv, and process cwd inside the worktree —
 because a session launched by `bin/launch-worktree-session` runs claude from the
 main checkout, so cwd alone misses it. It **fails closed**: if `ps` or `lsof`

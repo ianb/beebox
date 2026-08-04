@@ -16,10 +16,11 @@
 # --worktree, so this path invokes the WorktreeCreate hook directly (same
 # worktree + box clone + installs; the hook also generates the gitignored
 # AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
-# execs codex in the worktree with full access/no-approvals (parity with claude
-# workers, which run unsandboxed). Cleanup differs:
-# no hook fires when a codex session ends, so the worktree persists until
-# `bin/worktrees sweep` collects it (merged + clean + no active session).
+# runs codex in the worktree with full access/no-approvals (parity with claude
+# workers, which run unsandboxed). Codex is run, not exec'd, because it fires no
+# hooks: the launcher needs an "after codex exits" moment to run
+# bin/codex-session-end, which gives codex the same teardown SessionEnd gives
+# claude (auto-remove when merged + clean; keep/remove prompt otherwise).
 #
 # Remote Control is enabled by default (`claude --remote-control <worktree>`),
 # so a session started here can be steered from elsewhere — these run unattended
@@ -205,11 +206,34 @@ codex_args=(
   -c project_doc_max_bytes=131072
 $model_line
 )
+
+# Codex is NOT exec'd (claude is), because codex fires no hooks — it reads none
+# of .claude/settings.json, so nothing cleans up when it exits and the worktree
+# lingers until someone runs \`bin/worktrees sweep\`. Running it in the
+# foreground gives us an "after codex exits" moment for bin/codex-session-end,
+# which is what SessionEnd is for claude.
+#
+# The INT trap keeps a Ctrl-C from taking this shell down with codex before the
+# teardown runs: bash defers a trap until the foreground command returns, and a
+# trap with a body (not '') is reset to default in the child, so codex still
+# gets a normal SIGINT. \`|| status=\$?\` keeps set -e from skipping teardown on
+# a non-zero exit.
+trap 'true' INT
+codex_status=0
 if [ -s "$prompt_file" ]; then
-  exec codex "\${codex_args[@]}" "\$(cat "$prompt_file")"
+  codex "\${codex_args[@]}" "\$(cat "$prompt_file")" || codex_status=\$?
 else
-  exec codex "\${codex_args[@]}"
+  codex "\${codex_args[@]}" || codex_status=\$?
 fi
+trap - INT
+
+teardown="$MONO/bin/codex-session-end"
+if [ -x "\$teardown" ]; then
+  "\$teardown" "\$wt_path" || true
+else
+  echo "launch-worktree-session: no \$teardown — leaving \$wt_path for \\\`bin/worktrees sweep\\\`" >&2
+fi
+exit \$codex_status
 EOF
 fi
 chmod +x "$launcher"

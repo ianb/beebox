@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# codex-session-end — teardown for a codex worktree session, run by the tab
+# that hosted it once `codex` returns.
+#
+#   bin/codex-session-end <worktree-path>
+#
+# Codex fires no hooks: it reads none of .claude/settings.json, so neither
+# SessionEnd nor WorktreeRemove ever runs for it, and until this existed a
+# codex worktree lingered until someone ran `bin/worktrees sweep` by hand
+# (~10 had piled up by 2026-08-04). bin/launch-worktree-session's codex path
+# therefore runs codex in the foreground instead of exec'ing it, and calls this
+# afterwards. Parity with what a claude session gets:
+#
+#   merged + clean  →  remove the worktree, box clone, branch, router/cache state
+#                      (same as .claude/hooks/session-end.sh)
+#   anything else   →  ask keep/remove at the tty (Claude Code's own built-in
+#                      prompt, which codex has no analog for)
+#
+# The guards and the removal come from bin/lib/worktree-teardown.sh — one
+# implementation of the destructive path, not a second one.
+#
+# Not covered, deliberately: closing the tab. That SIGHUPs this shell before
+# codex returns, so nothing runs — the same gap a claude tab-kill has (it sends
+# no SessionEnd either). The next `bin/worktrees sweep` collects it.
+
+set -euo pipefail
+
+worktree_path="${1:-}"
+if [ -z "$worktree_path" ]; then
+  echo "usage: codex-session-end <worktree-path>" >&2
+  exit 2
+fi
+
+WT_LOG_LABEL="CodexExit"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/worktree-teardown.sh"
+
+# Everything below may delete $worktree_path, which is very likely this shell's
+# cwd. Leave it first, so the destructive path never runs from inside its target.
+cd "$WT_MONO"
+
+name=$(basename "$worktree_path")
+wt_log "event: codex exited wt=$worktree_path"
+
+# Collect any OTHER finished worktrees on the way out — the same trigger the
+# claude SessionEnd hook fires, and the mechanism that catches tab-kills (which
+# reach no teardown at all). An EXIT trap so no early return below can skip it.
+#
+# On the way OUT, not in: session-end.sh has to trigger early (it's a hook on a
+# timeout, and it usually returns early), but that makes it race its own sweep
+# for the private-issues mutation lock, which shows up as
+# `private-issues: error` and defers the private worktree to the next sweep.
+# Nothing here is on a timeout, so it can just not race itself.
+trap '"$WT_MONO/.claude/hooks/auto-sweep.sh" codex-session-end >/dev/null 2>&1 || true' EXIT
+
+if [ ! -d "$worktree_path" ]; then
+  echo "codex-session-end: $worktree_path is already gone — nothing to do"
+  wt_log "decision=skip:worktree-missing wt=$worktree_path"
+  exit 0
+fi
+
+# No --exclude-self-ancestor: codex has already exited, so there is no "self"
+# among the live agents. (If this is ever run by hand from inside a live
+# session, not excluding an ancestor is the conservative answer.)
+wt_other_agent_live "$worktree_path"
+case "$WT_AGENT_STATE" in
+  none) ;;
+  live)
+    echo "codex-session-end: another live claude/codex session belongs to $name ($WT_AGENT_REASON) — leaving it alone"
+    wt_log "decision=skip:other-agent-live $WT_AGENT_REASON wt=$worktree_path"
+    exit 0 ;;
+  *)
+    echo "codex-session-end: cannot rule out a live agent ($WT_AGENT_REASON) — leaving $name alone"
+    wt_log "decision=skip:$WT_AGENT_REASON wt=$worktree_path"
+    exit 0 ;;
+esac
+
+wt_work_state "$worktree_path"
+if [ -z "$WT_BRANCH" ] || [ "$WT_BRANCH" = "main" ] || [ "$WT_BRANCH" = "HEAD" ]; then
+  echo "codex-session-end: $name is on branch '$WT_BRANCH' — not eligible for cleanup, leaving it alone"
+  wt_log "decision=skip:branch-ineligible branch='$WT_BRANCH' wt=$worktree_path"
+  exit 0
+fi
+
+if [ "$WT_AHEAD" = "0" ] && [ "$WT_DIRTY" = "0" ]; then
+  echo "codex-session-end: '$WT_BRANCH' is fully merged into main and clean — cleaning up"
+  wt_log "decision=clean branch=$WT_BRANCH ahead=0 dirty=0 wt=$worktree_path"
+  wt_remove_now "$worktree_path" "$WT_BRANCH"
+  wt_log "done: cleaned branch=$WT_BRANCH name=$name (box+worktree trashed, branch deleted)"
+  echo "codex-session-end: done"
+  exit 0
+fi
+
+# ── Unlanded work: ask ──────────────────────────────────────────────────
+#
+# Fail closed in every direction. No tty (a scripted/headless run) keeps the
+# worktree silently; so do a timeout, EOF, an empty line, and anything that
+# isn't an explicit "r". A worktree that lingers is collected by the next
+# sweep once it's merged; a worktree removed against the human's intent is gone.
+wt_log "decision=prompt branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY blockers=[$WT_BLOCKERS] wt=$worktree_path"
+
+echo
+echo "─── codex session ended: worktree '$name' still holds work ───"
+echo "  branch:      $WT_BRANCH"
+echo "  ahead of main: $WT_AHEAD commit(s)"
+echo "  uncommitted:   $WT_DIRTY file(s)"
+if [ "$WT_DIRTY" != "0" ]; then
+  git -C "$worktree_path" status --porcelain 2>/dev/null \
+    | grep -vE '^( D|D ) ' | head -8 | sed 's/^/    /' || true
+fi
+echo
+echo "  Removing deletes the worktree, its box clone, and its router state."
+echo "  Uncommitted changes above are lost. Committed work is not: the branch"
+echo "  '$WT_BRANCH' is kept, and \`git worktree add\` brings it back."
+echo "  Keeping leaves everything as it is."
+echo
+
+# `[ -e /dev/tty ]` is not the test: the device node exists even for a process
+# with no controlling terminal (a cron/`claude -p` run), where opening it fails
+# with ENXIO. Try the open, and read through the fd rather than redirecting
+# stdin — `read -p` only prints its prompt when stdin itself is a terminal.
+answer=""
+if { exec 3</dev/tty; } 2>/dev/null; then
+  printf '  [k] keep (default)  /  [r] remove: '
+  if ! read -r -t 300 answer <&3; then
+    answer=""
+    printf '\n  (no answer — keeping)'
+  fi
+  printf '\n\n'
+  exec 3<&-
+else
+  echo "  (no tty — keeping)"
+fi
+
+case "$answer" in
+  r|R|remove|Remove)
+    echo "codex-session-end: removing '$name' at your request"
+    # Re-check liveness: the prompt may have sat for minutes, and a sibling
+    # session can have started in this worktree in the meantime.
+    wt_other_agent_live "$worktree_path"
+    if [ "$WT_AGENT_STATE" != "none" ]; then
+      echo "codex-session-end: an agent is now live in $name ($WT_AGENT_STATE $WT_AGENT_REASON) — NOT removing"
+      wt_log "decision=abort-remove:$WT_AGENT_STATE $WT_AGENT_REASON wt=$worktree_path"
+      exit 0
+    fi
+    keep_branch=""
+    [ "$WT_AHEAD" = "0" ] || keep_branch="--keep-branch"
+    wt_remove_now "$worktree_path" "$WT_BRANCH" $keep_branch
+    wt_log "done: removed-on-request branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY name=$name keep_branch=${keep_branch:-no}"
+    echo "codex-session-end: done"
+    ;;
+  *)
+    echo "codex-session-end: keeping '$name' ($worktree_path)"
+    wt_log "decision=keep-on-request branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY wt=$worktree_path"
+    ;;
+esac

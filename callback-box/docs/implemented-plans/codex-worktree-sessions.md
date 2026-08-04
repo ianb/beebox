@@ -192,7 +192,13 @@ decision stands.
 
 ## Out of scope (v1)
 
-- Codex-side session-end cleanup (rely on sweep).
+- Codex-side session-end cleanup (rely on sweep). **Delivered later, 2026-08-04:**
+  relying on sweep meant codex worktrees only ever got collected by a manual
+  run, and ~10 piled up. The launcher now runs codex in the foreground instead
+  of `exec`ing it and calls `bin/codex-session-end` afterwards (auto-remove when
+  merged + clean; keep/remove prompt otherwise), sharing the guards and the
+  removal with `session-end.sh` via `bin/lib/worktree-teardown.sh`. See the
+  "Codex worktree sessions" section of `bin/CLAUDE.md`.
 - Remote-control analog for Codex sessions.
 - `.codex/hooks.json` / plugin config per worktree.
 - Box-agent (product) Codex support — this is dev-session tooling only.
