@@ -185,11 +185,43 @@ second router without touching the live one (which only picks up
 `~/src/boxes/test1` to `~/src/box-worktrees/<name>/test1/` (kept outside
 the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename
 stays `test1` so URL slugs match across worktrees and links like
-`/<wt>/test1/...` swap cleanly) and runs `pnpm install` at every level.
+`/<wt>/test1/...` swap cleanly), runs `pnpm install` at every level, and
+generates the gitignored AGENTS.md mirrors (next section).
 On session exit with no changes the worktree is auto-removed and the
 `WorktreeRemove` hook deletes the cloned box and tells the router to stop
 the worktree's dev server. With uncommitted changes, Claude Code prompts
 to keep or remove.
+
+## Codex worktree sessions
+
+`bin/launch-worktree-session --agent codex` spins up an OpenAI Codex CLI
+session in a fresh worktree the same way the default claude path does. Codex
+has no `--worktree`, so the launcher's generated launch script invokes
+`.claude/hooks/worktree-create.sh` directly (JSON `{name}` on stdin, worktree
+path on stdout; idempotent — a relaunch re-attaches), then execs `codex` in
+the worktree with a `workspace-write`/never-approve sandbox (`--add-dir` for
+the box clone and `~/.cache/callback-box`, network on, the worktree
+pre-trusted and `project_doc_max_bytes` raised via launch-scoped `-c`
+overrides — nothing persisted to `~/.codex/config.toml`). `--model` maps to
+`codex -m` (OpenAI model names). Remote Control is claude-only and ignored
+for codex.
+
+Codex reads AGENTS.md where Claude reads CLAUDE.md (root→cwd chain injected
+at startup; nested files discovered by the model as it works, per its own
+system prompt). `bin/generate-agents-md.ts` writes a gitignored AGENTS.md
+mirror next to every tracked CLAUDE.md — verbatim content plus a root-level
+Codex preamble (harness-feature mapping, worktree orientation, a
+`CODEX-AGENTS-LOADED` sentinel for verifying the docs actually loaded). No
+prose transformation, by design: the one committed find-replace AGENTS.md
+rotted and mangled commands (removed in 872450eb), so mirrors regenerate at
+every spin-up (both hook paths, fresh AND resume) and the generator refuses
+to overwrite a git-tracked AGENTS.md. The launcher's codex path fails closed
+if the root mirror is missing.
+
+Teardown differs from claude sessions: no WorktreeRemove/SessionEnd hook
+fires when a codex session ends, so the worktree persists until
+`bin/worktrees sweep` collects it (sweep counts a live `codex` process whose
+cwd is in a worktree as an active session, same as claude).
 
 ## Private-issues shadow repo (`private-issues`)
 

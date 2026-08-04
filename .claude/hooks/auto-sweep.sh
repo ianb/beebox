@@ -17,8 +17,9 @@
 #
 # Safe to auto-run: `bin/worktrees sweep` removes a worktree only when it is
 # fully merged into main, clean (no non-deletion dirt), AND has no active
-# `claude` session (checked via `pgrep -x claude` + `--worktree` argv + real
-# claude cwd — precise enough that stray notifier/alerter procs don't match).
+# `claude`/`codex` session (checked via `pgrep -x claude`/`-x codex` +
+# `--worktree` argv + real process cwd — precise enough that stray
+# notifier/alerter procs don't match).
 set -u
 
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
