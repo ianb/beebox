@@ -40,8 +40,9 @@ chat) never crashed — annex itself is not implicated.
 
 ## Fix directions (compose; roughly in value order)
 
-Directions 1 and 2 are **done** (2026-08-04, server-side only, no frontend
-change). Directions 3 and 4 are still open, which is why this item is.
+Directions 1, 2, and 3 are **done** (2026-08-04). Direction 4 is still open,
+and this item stays open regardless because the diagnostic instrumentation
+below still needs removal after prod verification.
 
 1. ~~**Coalesce/single-flight history reads per (session, slice)**~~ — done.
    `loadSessionHistory` (`callback-box/src/core/chat/session/load-history.ts`)
@@ -58,9 +59,20 @@ change). Directions 3 and 4 are still open, which is why this item is.
    `tool_result` turn, a system record, an SDK meta prompt, a synthetic
    assistant turn) is dropped instead of stubbed, so it does not become a
    message the parsed version never was.
-3. **Client: backoff + dedupe on the webview's reconnect refetch loop** — the
-   56-req/s storm is a bug regardless of server cost (`fetchHistoryActor`,
-   reconnect paths in `src/frontend/src/machines/chat-actors.ts`).
+3. ~~**Client: backoff + dedupe on the webview's reconnect refetch loop**~~ —
+   done (`add0c339`, hardened by cross-model review in `546310cb`). The
+   56-req/s storm was a coalescing/backoff gap across several call sites:
+   `createFetchCoalescer` (`src/frontend/src/lib/fetch-coalescer.ts`) gives
+   keyed load/refetch coalescing with trailing-refetch semantics,
+   `createReconnectRefreshGate` (`src/frontend/src/components/chat/reconnect-refresh-gate.ts`)
+   trailing-edge-coalesces reconnect-triggered refreshes, and
+   `useDeferredResync`/`createDeferredResync`
+   (`src/frontend/src/hooks/useDeferredResync.ts`,
+   `src/frontend/src/lib/deferred-resync.ts`) defer resync work while the tab
+   is backgrounded so a hidden webview stops contributing to the burst. Not
+   yet independently verified against the live prod storm — that acceptance
+   measurement (parallel history fetches against the running server) is
+   pending post-deploy.
 4. Longer-term: stop letting multi-MB payloads into transcript entries the
    history path serves at all (strip/sidecar them at write or render time).
 
