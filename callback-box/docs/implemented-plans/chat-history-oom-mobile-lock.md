@@ -114,6 +114,16 @@ nothing) and request coalescing/caching of concurrent identical parses. File
 follow-up issues if the forward-scan latency on very large sessions proves
 user-visible.
 
+**Follow-up landed (2026-08-04).** The deferred coalescing became necessary:
+bounded retention held, but the *transient* per-request parse cost times client
+concurrency took prod past the cap four more times
+(`issues/bugs/2026-08-04-chat-history-parse-transient-oom.md`). Two additions,
+both server-side: `loadSessionHistory` single-flights concurrent reads of the
+same `(logPath, slice)`, and the scan refuses to `JSON.parse` a line over
+`MAX_SESSION_LINE_BYTES` (`src/cli/lib/session-oversize.ts`), recording a
+placeholder entry instead — an entry-count slice never bounded bytes, and the
+offending session carried 14 lines over 1 MB.
+
 ## Track B — short stale window for request-scoped locks
 
 ### Diagnosis

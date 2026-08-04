@@ -73,7 +73,10 @@ function sendFiredTurn(deps: {
     const onDone = (msg: ChatMessageResult): void => {
       // Broadcast the refreshed transcript so the originating tab refreshes,
       // exactly as the old onFire did — harmless even on an errored turn.
-      session.getHistory(chatHistorySlice())
+      // `fresh: true`: this read is happening BECAUSE the turn we're
+      // broadcasting about just completed, so it must not join (and be
+      // answered by) a scan that started before that completion.
+      session.getHistory(chatHistorySlice(), { fresh: true })
         .then((history) => {
           eventBus.emit("chat-history", {
             sessionId: history.sessionId,

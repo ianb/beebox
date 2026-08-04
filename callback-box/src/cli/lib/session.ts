@@ -11,6 +11,7 @@ import * as readline from "node:readline";
 import { isRecord } from "../../lib/is-record.js";
 
 import { buildEntry } from "./session-entry.js";
+import { isOversizeLine, oversizeEntry } from "./session-oversize.js";
 import {
   SessionScan,
   type SessionLogResult,
@@ -51,6 +52,7 @@ export {
   stripSpeechWrappers,
 } from "./session-text.js";
 export { type SessionEntry } from "./session-entry.js";
+export { MAX_SESSION_LINE_BYTES } from "./session-oversize.js";
 
 /** One session transcript discovered on disk, tagged with its context root. */
 export interface SessionInfo {
@@ -300,7 +302,19 @@ export async function parseSessionLog(
 
   const scan = new SessionScan(slice);
 
+  let lineNumber = 0;
   for await (const line of rl) {
+    lineNumber += 1;
+    // A pathologically long line is never parsed — see `session-oversize.ts`.
+    // It is dropped if its head shows plumbing the scan would drop anyway;
+    // otherwise the stub it becomes counts as one displayable entry (so `total`
+    // and `hasMore` stay honest), is never a real user message, and carries no
+    // `tool_use` block for a later `tool_result` to graft onto.
+    if (isOversizeLine(line)) {
+      const stub = oversizeEntry(line, lineNumber);
+      if (stub) scan.record(stub);
+      continue;
+    }
     const raw = parseJsonlLine(line, "parseSessionLog");
     if (!raw) continue;
     const entry = buildEntry(raw, scan.recent());

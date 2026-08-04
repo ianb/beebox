@@ -27,6 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
 import { getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { useDeferredResync } from "../hooks/useDeferredResync";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import type { ActivityKind } from "@core/chat/card-activity.js";
@@ -169,6 +170,11 @@ function useFileData(path: string): LoadResult {
   // Skip the very first connect — the queries already load on mount, so a resync
   // there is a redundant refetch (and FileView is mounted many-at-once in chat).
   const connectedOnceRef = useRef(false);
+  // Reconnect-driven resync is per-instance (one per mounted FileView, i.e.
+  // per path), coalesced same-tick and deferred while the tab is hidden — a
+  // chat with many embedded files all reconnecting at once shouldn't each
+  // fire their own refetch, and a backgrounded tab shouldn't fetch at all.
+  const triggerResync = useDeferredResync(resync);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const fileChange = busEventData(event, "file-change");
@@ -183,8 +189,8 @@ function useFileData(path: string): LoadResult {
         connectedOnceRef.current = true;
         return;
       }
-      resync();
-    }, [resync]),
+      triggerResync();
+    }, [triggerResync]),
   });
 
   return useMemo<LoadResult>(() => {

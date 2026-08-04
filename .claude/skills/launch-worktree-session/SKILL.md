@@ -150,7 +150,7 @@ hook directly, since codex has no `--worktree`), plus generated AGENTS.md
 mirrors of every CLAUDE.md so codex gets the repo docs (mechanism:
 `bin/CLAUDE.md` → "Codex worktree sessions"). With codex, `--model` takes
 OpenAI names (`gpt-5.5` was the known-good pick when the account throttled the
-default model, 2026-07 — see the codex skill); Remote Control doesn't exist
+default model, 2026-07 — see the `cross-model` skill); Remote Control doesn't exist
 for codex and the flag is ignored; the briefing wrapper works the same. Only
 use this when the human asked for a Codex session. Cleanup also differs: no
 hook fires on codex exit, so the worktree lingers until `bin/worktrees sweep`

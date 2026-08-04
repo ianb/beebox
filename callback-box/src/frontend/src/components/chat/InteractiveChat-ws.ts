@@ -12,7 +12,9 @@ import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useDeferredResync } from "../../hooks/useDeferredResync";
 import { busEventData } from "../../lib/bus-events";
+import { createReconnectRefreshGate, type ReconnectRefreshGate } from "./reconnect-refresh-gate";
 import { getApiBase } from "../../api";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
@@ -146,22 +148,33 @@ export function useChatWs(opts: {
   const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
-  // The subscription's FIRST start is normally this mount establishing it, not
-  // a reconnect — and the history it would refresh was loaded moments ago by
-  // the mount's own bootstrap. Suppressed once, so every later start (socket
-  // drop → resubscribe) still refreshes. A session switch remounts this hook,
-  // so its first start is likewise a fresh mount.
-  //
-  // Bounded by elapsed time because "first start" is NOT always a fresh
-  // establishment: if the socket is down when this mounts, the first start is
-  // the reconnect, arriving whenever wsLink's backoff succeeds — and by then
-  // the preloaded history can be arbitrarily old. Past this window we take the
-  // refresh.
-  const subscriptionStarted = useRef(false);
-  const mountedAt = useRef<number | null>(null);
+  // Rate-gates reconnect-driven REFRESHes: a connect within PROMPT_SUBSCRIPTION_MS
+  // of the last one (or of mount, before the first) is redundant — either this
+  // mount's own bootstrap just loaded history, or the socket is flapping and
+  // already got a fresh REFRESH moments ago. Built once per mount (a session
+  // switch remounts this hook, so its baseline is likewise a fresh mount);
+  // `shouldRefresh()` re-evaluates on every later reconnect too, not just the
+  // first — a flapping socket used to send one REFRESH per flap.
+  const refreshGateRef = useRef<ReconnectRefreshGate | null>(null);
   useEffect(() => {
-    mountedAt.current = Date.now();
+    const gate = createReconnectRefreshGate({ minIntervalMs: PROMPT_SUBSCRIPTION_MS, baselineAt: Date.now() });
+    refreshGateRef.current = gate;
+    // Cancel any pending trailing refresh timer on unmount — a session switch
+    // remounts this hook, and a stale timer firing into a torn-down closure
+    // would REFRESH the wrong (or a since-unmounted) session.
+    return () => {
+      gate.dispose();
+      refreshGateRef.current = null;
+    };
   }, []);
+
+  // A reconnect-driven REFRESH is deferred while the tab is hidden — a
+  // backgrounded tab shouldn't round-trip chat history until it's looked at
+  // again — and fires once on becoming visible, no matter how many reconnects
+  // (gate-eligible or not) accumulated in the meantime.
+  const triggerRefresh = useDeferredResync(useCallback(() => {
+    send({ type: "REFRESH" });
+  }, [send]));
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
   // chat-history, chat-complete, chat-user-message, chat-session-assigned.
@@ -169,16 +182,14 @@ export function useChatWs(opts: {
   useBusSubscription({
     onConnect: useCallback(() => {
       console.debug("[chatfsm] ws-connect");
-      const first = !subscriptionStarted.current;
-      subscriptionStarted.current = true;
-      const sinceMount = mountedAt.current === null ? 0 : Date.now() - mountedAt.current;
-      if (first && sinceMount < PROMPT_SUBSCRIPTION_MS) return;
       // Re-sync on every RE-connect: a full history REFRESH backs up the
       // subscription's automatic lastEventId replay for gaps that exceed the
       // event-bus retention window. REFRESH is ignored in streaming, so it's
-      // safe to dispatch unconditionally.
-      send({ type: "REFRESH" });
-    }, [send]),
+      // safe to dispatch unconditionally (once the gate clears it). A
+      // reconnect inside the gate's window isn't dropped — the gate arms a
+      // trailing timer so it's still eventually serviced.
+      refreshGateRef.current?.notifyReconnect(triggerRefresh);
+    }, [triggerRefresh]),
     onEvent: useCallback((event: RealtimeEvent) => {
       const scheduleFired = busEventData(event, "schedule-fired");
       const history = busEventData(event, "chat-history");

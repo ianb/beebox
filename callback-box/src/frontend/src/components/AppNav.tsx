@@ -23,6 +23,7 @@ import { useCallback } from "react";
 import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../hooks/useCurrentUser";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { useDeferredResync } from "../hooks/useDeferredResync";
 import { trpc } from "../lib/trpc";
 import { useErrorCount, clearErrorCount } from "./DebugLog";
 import { Dropdown } from "./ui/Dropdown";
@@ -103,16 +104,23 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const statusQuery = trpc.status.navStatus.useQuery();
   const onPlateTodos = statusQuery.data ? statusQuery.data.counts.onPlateTodos : 0;
 
+  // A burst of card-created/file-change events (e.g. a bulk upload) would
+  // otherwise fire one invalidate per event; coalesce to one per burst, and
+  // skip it entirely while the tab is hidden — nothing on screen needs the
+  // count refreshed until the bar is looked at again.
+  const triggerNavStatusResync = useDeferredResync(
+    useCallback(() => { void utils.status.navStatus.invalidate(); }, [utils]),
+  );
   useBusSubscription({
     onEvent: useCallback(
       (event: RealtimeEvent) => {
         // Todos live in cards and files. The question events this used to
         // watch moved out with the questions badge.
         if (event.event === "card-created" || event.event === "file-change") {
-          void utils.status.navStatus.invalidate();
+          triggerNavStatusResync();
         }
       },
-      [utils],
+      [triggerNavStatusResync],
     ),
   });
 

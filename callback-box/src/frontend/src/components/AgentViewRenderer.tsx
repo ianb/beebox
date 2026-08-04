@@ -10,11 +10,14 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../api";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { useDeferredResync } from "../hooks/useDeferredResync";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";
 import { useViewFileHelpers, type ViewFile, type ViewFileHelpers } from "../hooks/useViewFileHelpers";
 import { trpc } from "../lib/trpc";
 import { busEventData } from "../lib/bus-events";
+import { RequestError } from "../lib/errors";
+import { createFetchCoalescer } from "../lib/fetch-coalescer";
 import {
   ViewHostProvider,
   useViewHost,
@@ -168,6 +171,40 @@ interface ViewModule {
   modes?: ViewMode[];
 }
 
+interface CardsPayload {
+  cards: ViewCard[];
+  files: ViewFile[];
+}
+
+/**
+ * Module-level cards-fetch coalescer, keyed by the FULL request URL
+ * (including `apiBase` — a box-specific origin, so two boxes' identical
+ * `slug`+`qs` must never share a key; an SPA navigation that swaps boxes
+ * while box A's request is still in flight must not hand box B's renderer
+ * A's cards). Every bound card visible in a chat mounts its own
+ * `AgentViewRenderer`, each with its own `useBusSubscription` — on a WS
+ * reconnect, every instance's `onConnect` fires in the same tick, and
+ * without this, each issued its own bare `fetch` (56 identical
+ * `/api/views/:slug/cards` GETs in one second, observed on prod).
+ *
+ * `refetch()` (used by the file-change and reconnect handlers below) is what
+ * makes that safe for a real edit: joining an in-flight fetch on those
+ * triggers risked applying a snapshot taken *before* the edit; `refetch()`
+ * instead schedules exactly one trailing fetch after the in-flight one
+ * settles. See `fetch-coalescer.ts`.
+ */
+const cardsFetchCache = createFetchCoalescer<CardsPayload>();
+
+async function fetchCardsJson(url: string): Promise<CardsPayload> {
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    const message = `Failed to load cards: ${resp.status}`;
+    throw new RequestError(message);
+  }
+  const data: CardsPayload = await resp.json();
+  return data;
+}
+
 export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
@@ -211,16 +248,13 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
   }, [apiBase, slug]);
 
   const paramsString = JSON.stringify(viewParams);
-  const loadCards = useCallback(async () => {
+  const loadCards = useCallback(async (opts?: { refetch?: boolean }) => {
     try {
       const qs = new URLSearchParams(viewParams).toString();
       const url = qs ? `${apiBase}/views/${slug}/cards?${qs}` : `${apiBase}/views/${slug}/cards`;
-      const resp = await fetch(url);
-      if (!resp.ok) {
-        setError(`Failed to load cards: ${resp.status}`);
-        return;
-      }
-      const data: { cards: ViewCard[]; files: ViewFile[] } = await resp.json();
+      const data = opts?.refetch
+        ? await cardsFetchCache.refetch(url, () => fetchCardsJson(url))
+        : await cardsFetchCache.load(url, () => fetchCardsJson(url));
       setCards(data.cards);
       setFiles(data.files);
     } catch (e) {
@@ -251,6 +285,11 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
 
   // Subscribe to the box event stream for live updates
   const connectedOnceRef = useRef(false);
+  // Reconnect-driven resync goes through the coalescing/hidden-defer helper:
+  // N mounted instances of this same view (one per bound card visible in
+  // chat) all get onConnect in the same WS-reconnect tick, and a hidden tab
+  // shouldn't fetch at all until it's looked at again.
+  const triggerCardsResync = useDeferredResync(useCallback(() => { void loadCards({ refetch: true }); }, [loadCards]));
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const fileChange = busEventData(event, "file-change");
@@ -262,12 +301,14 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
         }
         // Card changed — reload data. Non-card files reload too when they
         // sit under a dependency glob's static prefix (e.g. an attach-scope
-        // .jsonl the view renders).
+        // .jsonl the view renders). `refetch: true`: this event IS the "the
+        // data just changed" signal, so a fetch already in flight must not
+        // be trusted to already reflect it.
         const depPrefixes = (mod?.dependencies ?? [])
           .map((d) => d.split("*")[0] ?? "")
           .filter((prefix) => prefix !== "");
         if (changedPath.endsWith(".card") || depPrefixes.some((prefix) => changedPath.startsWith(prefix))) {
-          void loadCards();
+          void loadCards({ refetch: true });
         }
       }
     }, [slug, loadModule, loadCards, mod]),
@@ -279,8 +320,8 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
         connectedOnceRef.current = true;
         return;
       }
-      void loadCards();
-    }, [loadCards]),
+      triggerCardsResync();
+    }, [triggerCardsResync]),
   });
 
   const fileHelpers = useViewFileHelpers(apiBase);

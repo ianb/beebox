@@ -241,6 +241,31 @@ fires when a codex session ends, so the worktree persists until
 `bin/worktrees sweep` collects it (sweep counts a live `codex` process whose
 cwd is in a worktree as an active session, same as claude).
 
+**Detecting a live agent process: use `ps -axo pid=,comm=`, never `pgrep -x
+claude`.** pgrep matches the 16-char accounting name (`ps ucomm`), and a
+native-installed Claude Code reports that as its *version* (`2.1.221`), not
+`claude` — so `pgrep -x claude` misses live sessions almost entirely (10 of 11
+running sessions invisible when measured 2026-08-04). `ps comm` is the
+executable path; match on its basename. Both `bin/worktrees sweep` and
+`.claude/hooks/session-end.sh` do it that way for exactly this reason; a guard
+built on pgrep silently protects nothing.
+
+**A nested `claude` run must not clean up the worktree it runs inside.**
+`session-end.sh` refuses to clean when another live `claude`/`codex` process
+belongs to the worktree, excluding the *nearest* agent ancestor of the hook
+(that one is the session that's ending). It checks the same two signals sweep
+does — `claude --worktree <name>` in argv, and process cwd inside the worktree —
+because a session launched by `bin/launch-worktree-session` runs claude from the
+main checkout, so cwd alone misses it. It **fails closed**: if `ps` or `lsof`
+can't answer, it skips the cleanup, since a lingering worktree is collected by
+the next sweep and a deleted one is gone. Without this, a nested headless
+`claude -p` — what the `cross-model` skill runs for its Codex→Claude review —
+ends its own session, fires the hook, and deletes the worktree out from under
+the session that spawned it (this happened on 2026-08-04). Callers should
+*also* pass `--setting-sources user` so the project's hooks never load at all;
+the skill documents that as load-bearing. Two independent guards because the
+failure destroys work.
+
 ## Private-issues shadow repo (`private-issues`)
 
 `bin/private-issues` manages the per-developer private issue repo

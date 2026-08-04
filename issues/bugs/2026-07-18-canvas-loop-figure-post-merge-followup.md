@@ -72,7 +72,7 @@ Never done — codex was provider-throttled during the build, so only *targeted*
 reviews ran (plan, mount lifecycle, schema contract, route security, handled-ness
 fold; all findings applied) plus the finish agent's Track O diff pass. Codex now
 appears usable again (`~/.codex` updated 2026-07-16; the `-m gpt-5.5` + fenced-
-embed recipe worked — see `.claude/skills/codex/SKILL.md`). **Optional but
+embed recipe worked — see `.claude/skills/cross-model/SKILL.md`). **Optional but
 cheap:** a full `f57eb12c` vs the pre-branch base diff review now that it's on
 main, focused on the merge-reconciliation commit (figure-starters split ×
 container-fit rework) which no single reviewer saw whole.
