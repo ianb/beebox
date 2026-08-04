@@ -73,6 +73,61 @@ export function assetLargefilesExpression(): string {
 }
 
 /**
+ * First line of the managed `.git/info/attributes` block, so a human (or a
+ * grep) can tell our file from git-annex's default without diffing it.
+ */
+export const ANNEX_ATTRIBUTES_MARKER = "# Managed by callback-box — do not edit.";
+
+/**
+ * One glob segment matching `ext` in any case: `heic` → `[hH][eE][iI][cC]`.
+ *
+ * gitattributes patterns are matched case-sensitively (wildmatch), and so is
+ * `annex.largefiles` — verified with git-annex 10.20260717: `git annex
+ * matchexpression "include=*.jpg" --largefiles --file UPPER.JPG` exits 1. So a
+ * lowercase-only attribute list would already cover everything largefiles
+ * annexes. It is widened anyway because the two lists fail asymmetrically: an
+ * over-wide attribute line only runs a filter that then declines to annex,
+ * while a missing one leaves an annexed pointer unsmudged and the file reads
+ * back as `/annex/objects/…` text.
+ */
+function anyCaseGlob(ext: string): string {
+  return ext
+    .split("")
+    .map((ch) => (ch.toUpperCase() === ch ? ch : `[${ch}${ch.toUpperCase()}]`))
+    .join("");
+}
+
+/**
+ * {@link ASSET_EXTENSIONS} as the contents of `.git/info/attributes` — which
+ * paths git routes through the git-annex filter-process.
+ *
+ * **A scoped replacement for git-annex's own file.** `git annex init` writes
+ * `* filter=annex` there (exactly `"\n* filter=annex\n"`), and
+ * `.git/info/attributes` is the highest-precedence attributes file, so every
+ * `git add` and every pathspec commit hands each path to the annex
+ * filter-process — measured at ~0.3s of fixed cost per git invocation even when
+ * the only file is a two-line card. Since `annex.largefiles` is purely
+ * extension-based, restricting the filter to those same extensions changes
+ * nothing about what gets annexed and takes text-only commits (cards,
+ * manifests — every capture commit) off the filter path entirely.
+ *
+ * This must stay a SUPERSET of {@link assetLargefilesExpression}'s matches:
+ * anything largefiles annexes needs the filter to smudge its pointer back into
+ * bytes on checkout. `cb doctor annex` enforces both halves — the file matching
+ * this rendering, and every already-annexed path being covered by it.
+ */
+export function assetAnnexAttributes(): string {
+  return [
+    ANNEX_ATTRIBUTES_MARKER,
+    "# Rendered from ASSET_EXTENSIONS (src/lib/asset-extensions.ts); `cb doctor annex` restores it.",
+    "# Replaces git-annex's default `* filter=annex`, which puts every text commit",
+    "# through the annex filter-process for ~0.3s of nothing.",
+    ...ASSET_EXTENSIONS.map((ext) => `*.${anyCaseGlob(ext)} filter=annex`),
+    "",
+  ].join("\n");
+}
+
+/**
  * Capture staging is deliberately NOT annexed: a capture is pre-triage, and
  * gets renamed, re-encoded, and EXIF-rotated before reaching its final home,
  * so annexing on arrival would mint immutable objects for superseded and

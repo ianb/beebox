@@ -12,6 +12,7 @@
  *   - unignore : drop the asset ignore block so git-annex can see assets
  *                (git-annex migration; see docs/plans/asset-annex.md)
  *   - largefiles-expr : print the annex.largefiles expression
+ *   - annex-attributes: print the scoped .git/info/attributes contents
  *   - check-unlisted  : block on large attach-scope files git-annex won't annex
  *   - to-annex        : one-way migration onto git-annex (verifies before and
  *                       after; see core/annex/to-annex.ts)
@@ -46,7 +47,7 @@ import {
   runUnignore,
   runUntrackAssets,
 } from "./attachments-gitignore.js";
-import { assetLargefilesExpression } from "../../lib/asset-extensions.js";
+import { assetAnnexAttributes, assetLargefilesExpression } from "../../lib/asset-extensions.js";
 import { describeUnlistedBinaries, findUnlistedBinaries } from "../annex/unlisted-binaries.js";
 import { convertBoxToAnnex } from "../annex/to-annex.js";
 import { createGitAnnexService } from "../../services/git-annex.js";
@@ -95,6 +96,14 @@ async function executeAttachments(
       // definition of what an asset is rather than a hand-copied string.
       ctx.writeLine(assetLargefilesExpression());
       return { success: true, data: { expression: assetLargefilesExpression() } };
+    case "annex-attributes":
+      // The `.git/info/attributes` counterpart, for `cb attachments
+      // annex-attributes > .git/info/attributes` when repairing by hand.
+      // `assetAnnexAttributes()` ends in a newline and writeLine adds another;
+      // trailing blank lines in an attributes file are ignored by git, but the
+      // doctor compares exactly, so the trailing one is trimmed here.
+      ctx.writeLine(assetAnnexAttributes().trimEnd());
+      return { success: true, data: { attributes: assetAnnexAttributes() } };
     default:
       return { success: false, error: `Unknown subcommand: ${subcommand}` };
   }
