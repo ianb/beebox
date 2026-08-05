@@ -530,3 +530,13 @@ End your final message with a status line the caller can act on:
   unclear feedback item), what you completed before stopping, and what the human
   needs to decide. **Nothing has been merged to main** if you return BLOCKED
   before step 8 — say so.
+
+**New issues filed during this finish** — a tracked test flake, a plan scope gap
+you spun out, a Track O finding you filed instead of fixing, or any other
+`issues/` (or private-issues) item you created — get their OWN `NEW ISSUES:` block
+as the LAST thing in your report, after the RESULT/PRIVATE status lines. List each
+as `issues/<category>/<file>.md — <one-line title>`. This is load-bearing: the
+human often continues the session by fixing exactly what the finish surfaced, so
+it must be trivial to see and act on, never buried in prose. Omit the block only
+if you filed nothing new. (RESULT/PRIVATE are still grepped as the status markers,
+so a trailing NEW ISSUES block does not affect result parsing.)
