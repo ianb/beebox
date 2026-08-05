@@ -197,9 +197,52 @@ claude -p \
   --effort high \
   --setting-sources user \
   --no-session-persistence \
-  --tools "Read,Grep,Glob" \
+  --tools Read Grep Glob \
+  --output-format text \
   < scratch/cross-model-prompt.txt > scratch/cross-model-out.md 2>&1
 ```
+
+The shell command above is a normal foreground command. **When launching it
+through Codex's exec tool, a yielded tool call is not process completion.** If
+`exec_command` returns a `session_id`, Claude is still running even when
+`output` is empty. Preserve that ID and poll it with `write_stdin` until the
+result no longer has a `session_id` and reports an exit code. If the outer tool
+wrapper yields a `cell_id`, wait on that cell too. Discarding either ID detaches
+the review and makes a healthy, still-running Claude process look like a blank
+review.
+
+Use this orchestration shape in Codex API sessions (field names may be exposed
+by the local exec wrapper rather than directly):
+
+```javascript
+let result = await tools.exec_command({
+  cmd:
+    "claude -p --model opus --effort high --setting-sources user " +
+    "--no-session-persistence --tools Read Grep Glob --output-format text " +
+    "< scratch/cross-model-prompt.txt",
+  workdir: repoWorktree,
+  yield_time_ms: 30000,
+});
+let review = result.output;
+while (result.session_id) {
+  result = await tools.write_stdin({
+    session_id: result.session_id,
+    chars: "",
+    yield_time_ms: 30000,
+  });
+  review += result.output;
+}
+```
+
+Do not launch a replacement merely because the first yield had no output.
+First inspect exact processes:
+
+```bash
+ps -axo pid,etime,command | rg '[c]laude -p'
+```
+
+If a prior wrapper really orphaned a run, terminate only its exact PID; never
+use a broad `pkill` that could kill other Claude sessions.
 
 Run it **from the worktree** (your cwd), not the monorepo root — the diff and
 every cited path must be this worktree's. That is only safe because of
@@ -219,7 +262,7 @@ every cited path must be this worktree's. That is only safe because of
 > from running at all, which is a guard nothing can get wrong.)
 
 > ⚠️ **`--tools` is variadic, so it eats a positional prompt.** `claude -p
-> --tools "Read,Grep,Glob" "my prompt"` fails with *"Input must be provided
+> --tools Read Grep Glob "my prompt"` fails with *"Input must be provided
 > either through stdin or as a prompt argument"* — the prompt was parsed as
 > another tool name. Pipe from a file, as above.
 
@@ -232,7 +275,7 @@ Flag by flag:
   claims hold, which Opus does well and fast.
 - **`--effort high`** — the mirror of codex's `model_reasoning_effort="high"`.
 - **`--no-session-persistence`** — no transcript written for a throwaway review.
-- **`--tools "Read,Grep,Glob"`** — read-only by construction. No Bash means no
+- **`--tools Read Grep Glob`** — read-only by construction. No Bash means no
   permission prompt can hang a non-interactive run, and it structurally prevents
   recursion: the reviewer loads a CLAUDE.md that tells it to get a cross-model
   review, and without Bash it cannot act on that.
@@ -248,10 +291,12 @@ Other notes:
 - **Do NOT relocate `CLAUDE_CONFIG_DIR`** to keep writes inside the workspace.
   A fresh config dir loses auth entirely (`Not logged in · Please run /login`),
   and copying credentials into a worktree is not an option.
-- **Timeout: foreground, ~5 min is plenty.** A real 3-finding review of one file
-  took 27s — far faster than the codex direction.
-- Output is the final message on stdout, already clean — no `tokens used` tail
-  to hunt for and no double-printing. Read the file directly.
+- **Timeout: foreground, ~5 min is typical, not a completion signal.** A real
+  3-finding review of one file took 27s, but larger reviews can run longer than
+  an exec tool's first yield window. Follow the session-ID polling rule above.
+- Once the process actually exits, stdout is the clean final message — no
+  `tokens used` tail to hunt for and no double-printing. A yielded empty stdout
+  chunk is not the final message.
 
 ### Review / challenge modes (Codex → Claude)
 
