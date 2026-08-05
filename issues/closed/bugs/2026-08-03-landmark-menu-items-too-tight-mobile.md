@@ -3,13 +3,13 @@ title: "Mobile: landmark menu items are too tight — hard to tap the one you wa
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder on mobile
-needs: [manual-testing]
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — landmark menu rows bumped again: `py-2.5`
-> (~40px, still felt too tight) → `py-3.5` (~48px tap target) in
-> `LandmarkLinksPanel.tsx`. Tap around the bookmark menu on a phone and confirm
-> individual items are comfortably hittable now. Only Ian clears this.
+> **Fixed + confirmed on device 2026-08-05.** Landmark menu rows widened in two
+> steps — `py-2` → `py-2.5` (`64ded06f`), then `py-2.5` → `py-3.5` (~48px tap
+> target, `93f947a9`) — in `LandmarkLinksPanel.tsx`. Boxholder confirmed items are
+> easy to select.
 
 On mobile, the landmark menu (the bookmark-icon menu in chat,
 `components/chat/LandmarkLinksPanel.tsx`) packs its items too tightly — the rows are
@@ -19,7 +19,7 @@ The row spacing / tap-target height is below a comfortable mobile touch target
 (~44px). Fix: give each landmark row enough vertical padding / min-height and inter-
 row spacing to be a reliable touch target on a phone, without the menu overflowing
 (the clamping/scroll was just fixed —
-[landmark-menu-overflows-mobile](../closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md)
+[landmark-menu-overflows-mobile](2026-07-19-landmark-menu-overflows-mobile.md)
 — so this is the *density* of the items inside that now-fitting menu, a separate
 problem).
 
