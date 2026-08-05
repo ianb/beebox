@@ -111,6 +111,9 @@ tests:
   # `.refine()` answer; FIXED by a corrective in agent-guide/cards.ts ("rules Zod
   # can't express go in the schema's `validate` hook, not a `.refine()`"). See
   # docs/reports/knowledge-audit-rerun-2026-07-03.md.
+  # Status (2026-08-04): tab-arrangement-editing passed its first focused run
+  # (2 file reads, 0 searches). The agent preserved UUID identity, described
+  # close as an explicit partition, and kept status-ready separate from Apply.
 
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
@@ -155,6 +158,20 @@ tests:
     watch_for: "Mentions that a follow-up job is created from the directive, and (when the question declared learning:) that the job also records the confirmed belief"
     correct_contains: ["job", "directive"]
     tags: [questions, jobs]
+
+  - id: tab-arrangement-editing
+    prompt: >
+      I shared my browser tabs through Callback Clerk. You are revising the
+      resulting tab-arrangement card. How do you represent moving and closing
+      tabs, and what happens when the proposal is ready?
+    expected_level: knows_about
+    should_read: ["docs/generated/card-tab-arrangement.md"]
+    watch_for: >
+      Preserves the original per-tab UUIDs exactly once across proposed
+      windows or close, never substitutes URLs, and says status ready does not
+      itself change Chrome: the boxholder must explicitly Apply in the viewer.
+    correct_contains: ["UUID", "Apply"]
+    tags: [cards, schemas, tab-arrangement]
 
   # === Figure Cards (canvas-loop runtime) ===
   #

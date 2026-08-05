@@ -41,6 +41,11 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
      scope/verification honesty, any deferred cleanup like an unresolved feedback
      item). Remind them the worktree + box auto-clean on exit now that it's merged
      — so exit to clean up, or keep the session going to keep the worktree.
+     - If the report carries a **`NEW ISSUES:`** block (issues the finish filed —
+       a flake, a spun-out scope gap, a Track O finding), surface it **prominently
+       at the end**, each as its `issues/…` path + title. The human often wants to
+       continue the session by fixing exactly these, so make them easy to act on —
+       don't fold them into the prose.
    - **`RESULT: BLOCKED`** → it hit something needing a human call (on `main`, a
      merge conflict, a test failure, ambiguous uncommitted files, missing info,
      an unclear feedback item). Surface exactly what it reported, resolve it with

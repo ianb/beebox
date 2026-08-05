@@ -88,6 +88,45 @@ print(err2);
 BAD_REQUEST
 ```
 
+## tab arrangements are created once and retries are idempotent
+
+```ts continue
+const transferId = "00000000-0000-4000-8000-000000000000";
+const windowId = "10000000-0000-4000-8000-000000000000";
+const tabId = "20000000-0000-4000-8000-000000000000";
+const arrangement = {
+  transferId,
+  scope: "current-window",
+  capturedAt: "2026-08-04T12:00:00.000Z",
+  source: { windows: [{ id: windowId, tabs: [{ id: tabId, title: "Example", url: "https://example.com", pinned: false }] }] },
+  proposal: { windows: [{ id: windowId, tabs: [tabId] }], close: [] },
+};
+const first = await caller(box.root).clerk.tabArrangement(arrangement);
+const retry = await caller(box.root).clerk.tabArrangement(arrangement);
+const saved = await readFile(path.join(box.root, first.card), "utf-8");
+print(`same card: ${first.card === retry.card}`);
+print(`in inbox: ${first.card.startsWith("box/inbox/")}`);
+print(`opens organizer: ${first.open.includes("companion=")}`);
+print(`draft: ${saved.includes("status: draft")}`);
+=>
+same card: true
+in inbox: true
+opens organizer: true
+draft: true
+```
+
+## a transfer ID cannot be retried with a different source snapshot
+
+```ts continue
+const conflict = await caller(box.root).clerk.tabArrangement({
+  ...arrangement,
+  source: { windows: [{ id: windowId, tabs: [{ id: tabId, title: "Changed", url: "https://changed.example", pinned: false }] }] },
+}).then(() => "no-error", (e) => e.code);
+print(conflict);
+=>
+CONFLICT
+```
+
 ## commentaryDestinations lists commentary spots and passes the output schema
 
 The query carries a Zod `.output(commentaryDestinationsOutput)` — a real box
