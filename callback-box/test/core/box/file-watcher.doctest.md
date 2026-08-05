@@ -329,21 +329,121 @@ await box.cleanup();
 ## High-churn trees stay excluded
 
 `procedure/runs` and `store/trash` are never live-rendered and churn constantly;
-watching them exhausted the server's inotify limit on 2026-06-11. Dotfile trees
-(`.git`, `.callback-box`) are excluded for the same reason.
+watching them exhausted the server's inotify limit on 2026-06-11. The Gmail
+inbox is also a bulk-import tree where one attachment directory per thread can
+otherwise dominate the whole watch budget. Dotfile trees (`.git`,
+`.callback-box`) are excluded for the same reason.
 
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "procedure", "runs", "r1"), { recursive: true });
 await mkdir(join(box.root, "store", "trash", "old"), { recursive: true });
+await mkdir(join(box.root, "box", "inbox", "email", "thread.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
 
 watcher.watchedDirs().join(" ")
-=> . procedure store store/keep
+=> . box box/inbox box/inbox/email procedure store store/keep
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## A bulk-tree root still reports direct child changes
+
+The Gmail inbox itself stays live while its per-thread attachment directories
+remain unwatched. This preserves new-thread updates without paying one watcher
+per imported thread.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "box", "inbox", "email"), { recursive: true });
+
+const seen: string[] = [];
+bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
+const watcher = ensureBoxWatcher(box.root, bus);
+await watcher.ready;
+await waitForWatch(box.root, bus, "box/inbox/email");
+
+await mkdir(join(box.root, "box", "inbox", "email", "new-thread.attach"));
+await waitFor(() => seen.includes("box/inbox/email/new-thread.attach"), 5000, "the new email thread event");
+await watcher.settled();
+
+`event: ${seen.includes("box/inbox/email/new-thread.attach")} | descended: ${watcher.watchedDirs().includes("box/inbox/email/new-thread.attach")}`
+=> event: true | descended: false
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## A dotted ancestor outside the box does not disable watching
+
+Dot paths *inside* a box are ignored. A box root may itself live below a hidden
+directory, and that ancestor is outside the relative-path filter.
+
+```ts
+const outer = await makeTmpBox();
+const nestedRoot = join(outer.root, ".container", "content");
+await mkdir(join(nestedRoot, "store"), { recursive: true });
+const bus = createEventBus(nestedRoot, { pollInterval: 60_000 });
+
+const watcher = ensureBoxWatcher(nestedRoot, bus);
+await watcher.ready;
+
+watcher.watchedDirs().join(" ")
+=> . store
+```
+
+```ts cleanup
+await closeBoxWatcher(nestedRoot);
+bus.close();
+await outer.cleanup();
+```
+
+## The watcher has a hard directory budget
+
+An unexpectedly large imported tree must degrade live updates instead of
+allocating watchers until `cb serve` runs out of memory. Hitting the ceiling is
+reported exactly once, and the initial walk still resolves normally.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "bulk"), { recursive: true });
+for (let i = 0; i < 1100; i++) {
+  await mkdir(join(box.root, "bulk", `dir-${i}`));
+}
+
+const capLogs: string[] = [];
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const line = args.map(String).join(" ");
+  if (line.includes("directory watch limit")) {
+    capLogs.push(line);
+  } else {
+    originalConsoleError(...args);
+  }
+};
+let watcher;
+try {
+  watcher = ensureBoxWatcher(box.root, bus);
+  await watcher.ready;
+} finally {
+  console.error = originalConsoleError;
+}
+
+`bounded: ${watcher.watchedDirs().length === 1024} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("1,024") === true}`
+=> bounded: true | logs: 1 | named-limit: true
 ```
 
 ```ts cleanup
