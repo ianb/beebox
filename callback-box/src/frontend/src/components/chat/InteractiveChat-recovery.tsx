@@ -12,6 +12,18 @@ import { RecoveredDictation } from "./RecoveredDictation";
 import { joinTranscript } from "./InteractiveChat-helpers";
 import type { InputStore } from "./input-store";
 
+export const RECOVERED_DICTATION_MIN_CHARACTERS = 20;
+
+export function shouldSurfaceRecoveredDictation(text: string): boolean {
+  return text.trim().length > RECOVERED_DICTATION_MIN_CHARACTERS;
+}
+
+export function dropSmallRecoveredDictation(text: string, clearDraft: () => void): boolean {
+  if (shouldSurfaceRecoveredDictation(text)) return false;
+  clearDraft();
+  return true;
+}
+
 export function useRecoveredDictation(opts: {
   boxSlug: string | undefined;
   transcript: string;
@@ -37,6 +49,14 @@ export function useRecoveredDictation(opts: {
   });
   useEffect(() => { clearDraftRef.current = clearDraft; });
 
+  const shouldDropRecoveredDraft = recoveredDraft !== null
+    && !shouldSurfaceRecoveredDictation(recoveredDraft.text);
+  useEffect(() => {
+    if (recoveredDraft !== null) {
+      dropSmallRecoveredDictation(recoveredDraft.text, clearDraft);
+    }
+  }, [recoveredDraft, clearDraft]);
+
   const handleRecoverSend = useCallback(() => {
     if (!recoveredDraft) return;
     // No audio survives a drop, so the realtime text stands in for the HQ pass
@@ -60,7 +80,10 @@ export function useRecoveredDictation(opts: {
   // Surface the recovery widget only when idle: hidden while the mic is open
   // and while an HQ commit is in flight (the mic briefly idles between
   // segments — don't flash the just-committed text as "recovered").
-  const recoveredDictation = recoveredDraft && !isTranscribing && !hqInFlight ? (
+  const recoveredDictation = recoveredDraft
+    && !shouldDropRecoveredDraft
+    && !isTranscribing
+    && !hqInFlight ? (
     <RecoveredDictation
       draft={recoveredDraft}
       sessionId={sessionId}
