@@ -20,7 +20,7 @@
  * stored card content where they are expensive to notice.
  *
  * Exit status is always 0: this is a report, not a gate. It is wired into
- * `bin/update-agent-sdk-scheduled.sh` so the existing weekday maintenance log
+ * `bin/update-agent-sdk-scheduled.sh` so the existing daily maintenance log
  * carries the line, and it prints nothing when there is nothing to say (a
  * silent run is the normal one — routine-success chatter is a bug, CLAUDE.md).
  */

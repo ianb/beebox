@@ -12,8 +12,8 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 | Task | Command | Cadence | Output |
 |------|---------|---------|--------|
-| Agent SDK release monitor | `bin/update-agent-sdk-scheduled.sh` | Automated (launchd, daily); `--chat` to open its session | Filtered release ledger in `docs/agent-sdk-notes.md` |
-| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | When explicitly requested after reviewing the monitor notes | Bumped `package.json` + lockfile |
+| Agent SDK release monitor | `bin/update-agent-sdk-scheduled.sh` | Automated (launchd, daily) | Filtered release ledger in root `docs/agent-sdk-notes.md` |
+| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated after the settling window; manual anytime | Bumped `package.json` + lockfile |
 | Docling currency watch | `pnpm check-docling-update` (monorepo root) | Automated (rides the SDK-update launchd job); manual anytime | Console (silent when nothing to report) |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
@@ -36,17 +36,17 @@ A second category catches the kind of code-health issues that pile up if nobody 
 `bin/update-agent-sdk-scheduled.sh --install` (from the **main checkout**, once
 per machine) registers a daily launchd job. The job resumes one persistent Opus
 session. That session reads each new SDK release, checks it against callback-box's
-current SDK imports and runtime behavior, and prepends the result to
-[`agent-sdk-notes.md`](agent-sdk-notes.md). Applied entries stay in the ledger
+current SDK imports and runtime behavior, and prepends the result to the root
+[`agent-sdk-notes.md`](../../docs/agent-sdk-notes.md). Applied entries stay in the ledger
 as evidence for regression diagnosis and future opportunities. The current pin
 marks entries as applied or pending.
 
 The monitor includes releases younger than the normal two-day settling window.
 It marks callback-box-relevant security, memory, and correctness fixes as
-act-now. Routine releases can finish settling. It does not auto-bump. Open the
-same session with `bin/update-agent-sdk-scheduled.sh --chat`; an explicit bump
-request there lets the agent perform the update and verification flow below.
-Logs are in `~/Library/Logs/callback-box-sdk-update.log`.
+act-now and applies them immediately. Routine stable releases are automatically
+bumped after settling for two days. Successful bumps and failures notify the
+boxholder on the laptop; uneventful ledger-only checks stay silent. Logs are in
+`~/Library/Logs/callback-box-sdk-update.log`.
 
 ### Agent SDK update — `pnpm update-agent-sdk` (monorepo root)
 
@@ -60,9 +60,11 @@ is why the pin must stay exact (a caret plus the exclusion would resolve to
 minutes-old releases; and historically a `^0.x` caret also silently stopped
 crossing 0.x minors, which once left us on a two-month-old agent binary).
 
-**When to run:** after the boxholder explicitly requests a bump in the monitor
-session or another development session. Manual runs (`--check` to report the
-newest release that has cleared the settling window) work anytime.
+**When to run:** automated by the monitor after the settling window, or
+immediately when the monitor finds a callback-box-relevant security, memory, or
+correctness fix. Manual runs (`--check` to report the newest release that has
+cleared the settling window, exiting 1 when the installed version is behind)
+work anytime.
 
 **After a bump:** run `pnpm -C callback-box test`, then the steering probe —
 `node --import tsx callback-box/scripts/sdk-steering-probe.ts` (real API calls,
@@ -81,7 +83,7 @@ releases: Docling ships often, and a regression in a document extractor lands in
 stored card content where it is expensive to notice.
 
 **When to run:** automated — the check is appended to
-`bin/update-agent-sdk-scheduled.sh`, so it rides that job's weekday cadence and
+`bin/update-agent-sdk-scheduled.sh`, so it rides that job's daily cadence and
 writes into the same log (`~/Library/Logs/callback-box-sdk-update.log`). Manual
 runs work anytime.
 
