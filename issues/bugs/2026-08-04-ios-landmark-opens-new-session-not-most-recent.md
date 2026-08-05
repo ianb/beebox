@@ -1,9 +1,14 @@
 ---
 title: "iOS: selecting a landmark starts a NEW chat instead of resuming the landmark's most-recent session"
 area: callback-box
+needs: [manual-testing]
 filed-by: agent
 discovered-in: main session — boxholder on iOS
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `f8ecf363`; on an iPhone, start
+> from a fresh chat, open the place menu, and tap a landmark with prior chats.
+> The most-recent transcript must appear. Only Ian clears this.
 
 > **Job to be done:** *When I tap a landmark on my phone to pick up where I left
 > off, I want to land in the chat I was already having about that place, so I
@@ -26,23 +31,34 @@ resume-or-start:
 
 So the resume-vs-new decision hinges on that lookup and the `?session=` URL param.
 
-## Why iOS lands on "new" — to investigate
+## Diagnosis and fix (2026-08-05)
 
-There is no landmark code in `ios-app/` (grep), so the landmark UI runs in the
-WKWebView — yet iOS ends up on the `session=new` branch. Candidates:
+There is no native landmark picker. The iOS tap uses the web `PlacePill` and
+`useOpenLandmarkChat`. The lookup returns the existing session id. `ChatWebView`
+allows the same-origin navigation and does not replace its query parameters.
 
-- A **native landmark surface / entry** (or a mobile-web variant of the landmark
-  list) that builds the chat URL directly and hardcodes `session=new` instead of
-  calling `useOpenLandmarkChat` / `lastSessionForDirectory`.
-- The **native chat-URL construction** (`ChatWebView` `authenticatedChatURL`, or a
-  deep link) **dropping/overriding the `?session=<id>`** param so the webview loads
-  a fresh session.
-- `lastSessionForDirectory` returning null on the mobile path (less likely — same
-  backend — but worth confirming it's actually queried on iOS).
+The failure was in `ChatPage`. It used the URL shape alone to identify a new
+chat's server-id assignment. Every `session=new` to `session=<id>` transition
+kept the fresh chat machine mounted. A landmark selection from a fresh chat has
+the same URL shape, so `ChatPage` carried the blank machine onto the selected
+existing id instead of remounting and loading its history. Starting from an
+already-resolved web chat did remount, which explains the apparent web/iOS split.
 
-First step is to determine which surface the iOS landmark tap goes through and
-where `?session=<id>` is lost, then route iOS landmark selection through the same
-resume-most-recent logic the web uses.
+Commit `f8ecf363` adds an explicit assignment handshake. The live chat announces
+the backend-assigned id before it rewrites the fresh-chat URL. `ChatPage` carries
+the machine only when the announced id matches. An ordinary landmark or session
+navigation now remounts and loads history.
+
+Automated evidence:
+
+- `test/frontend/chat-session-transition.doctest.md` covers assignment, landmark
+  navigation, stale announcements, and ordinary session switches.
+- A mobile-width browser probe started at `session=new`, selected a landmark with
+  a seeded prior transcript, reached that transcript's UUID, and rendered both
+  prior messages.
+
+This changes internal React state coordination only. It does not change the
+web/iOS URL or bridge contract.
 
 ## Related
 

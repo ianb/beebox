@@ -144,8 +144,10 @@ export function useChatWs(opts: {
   onTaskEvent: (task: TaskEvent) => void;
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
   onScreenshotRequest: (request: ScreenshotRequest) => void;
+  /** Called immediately before assignment rewrites the fresh-chat URL. */
+  onSessionAssignment?: (sessionId: string) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, onSessionAssignment } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   // Rate-gates reconnect-driven REFRESHes: a connect within PROMPT_SUBSCRIPTION_MS
@@ -251,6 +253,7 @@ export function useChatWs(opts: {
   useEffect(() => {
     if (sessionInput !== "new") return;
     if (!sessionId) return;
+    onSessionAssignment?.(sessionId);
     // Spread the previous search so a live `?card=` (and any other param)
     // survives the id assignment — a fresh `{ session }` object would drop it.
     // toSearch() is the sanctioned router-boundary escape hatch (see routing.ts).
@@ -261,7 +264,7 @@ export function useChatWs(opts: {
       search: toSearch({ ...search, session: sessionId }),
       replace: true,
     });
-  }, [sessionInput, sessionId, navigate, boxSlug, search]);
+  }, [sessionInput, sessionId, navigate, boxSlug, search, onSessionAssignment]);
 
   // Load voice config from personality on mount
   useEffect(() => {
