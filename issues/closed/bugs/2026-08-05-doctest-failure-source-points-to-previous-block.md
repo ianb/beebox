@@ -3,7 +3,13 @@ title: "Doctest failure diagnostics can show source from the preceding block"
 area: agent-doctest
 filed-by: agent
 discovered-in: worktree-agent-sdk-monitor — debugging the file-watcher doctest flake
+resolution: implemented
 ---
+
+Resolved in `d590ed90`. The generator now attaches the original markdown line
+and example source to each TAP assertion. A real-loader regression test confirms
+that a failure points to the second block at line 18 and excludes the preceding
+passing block.
 
 While debugging `callback-box/test/core/box/file-watcher.doctest.md`, a failing
 subtest identified the block beginning around line 105, but its TAP diagnostic
