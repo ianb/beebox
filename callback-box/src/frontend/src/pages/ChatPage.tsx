@@ -10,7 +10,7 @@
  * fresh-chat shell that keys to `"new"`.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { InteractiveChat } from "../components/chat/InteractiveChat";
 import { ChatLoading } from "../components/chat/InteractiveChat-layout";
@@ -19,6 +19,7 @@ import { isNativeShell } from "../components/chat/native-post";
 import { trpc, type RouterOutput } from "../lib/trpc";
 import { chatTailSlice, type ChatInitialLoad } from "../machines/chat-types";
 import { href, toSearch } from "../lib/routing";
+import { carriesFreshChatMachine } from "./chat-session-transition";
 
 interface ChatSearch {
   session?: string;
@@ -151,7 +152,21 @@ export function ChatPage() {
   //  - `awaiting`: a NEW machine is about to mount with no data yet — the one
   //    case that must show a skeleton rather than mount and let the machine
   //    fetch (that fetch is the round trip bootstrap exists to remove).
-  const [keyState, setKeyState] = useState<{ epoch: number; prev: string | null; carried: boolean; awaiting: boolean }>({ epoch: 0, prev: null, carried: false, awaiting: false });
+  const [keyState, setKeyState] = useState<{
+    epoch: number;
+    prev: string | null;
+    carried: boolean;
+    awaiting: boolean;
+    announcedAssignment: string | null;
+  }>({ epoch: 0, prev: null, carried: false, awaiting: false, announcedAssignment: null });
+  // InteractiveChat announces a real backend assignment immediately before
+  // it rewrites `?session=new` to the assigned id. Without this handshake,
+  // an explicit landmark/session navigation from a fresh chat is
+  // indistinguishable from assignment and the blank machine is incorrectly
+  // carried onto the existing session instead of loading its transcript.
+  const announceSessionAssignment = useCallback((sessionId: string) => {
+    setKeyState((state) => ({ ...state, announcedAssignment: sessionId }));
+  }, []);
 
   // The one mount-time round trip. With `session` omitted the server resolves
   // the box's most-active session and answers for it; `?session=new` is a
@@ -223,12 +238,19 @@ export function ChatPage() {
   const sessionInput = sessionParam ?? resolvedDefault;
 
   if (sessionInput !== null && sessionInput !== keyState.prev) {
-    const isNewResolution = keyState.prev === "new" && sessionInput !== "new";
+    const isNewResolution = carriesFreshChatMachine({
+      previousSessionInput: keyState.prev,
+      nextSessionInput: sessionInput,
+      announcedAssignment: keyState.announcedAssignment,
+    });
     setKeyState({
       epoch: isNewResolution ? keyState.epoch : keyState.epoch + 1,
       prev: sessionInput,
       carried: isNewResolution,
       awaiting: !isNewResolution && !settled,
+      // Consume either a matching announcement or a stale one. A later
+      // explicit navigation must not inherit a prior carry signal.
+      announcedAssignment: null,
     });
   } else if (keyState.awaiting && settled) {
     setKeyState({ ...keyState, awaiting: false });
@@ -265,6 +287,7 @@ export function ChatPage() {
       card={card}
       emissionStore={emissionStore}
       sessionLabel={sessionLabel}
+      onSessionAssignment={announceSessionAssignment}
       embedded={embedded}
       nativeComposer={nativeComposer}
       openCaptureOnMount={openCaptureOnMount}
