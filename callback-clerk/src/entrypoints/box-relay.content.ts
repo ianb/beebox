@@ -16,9 +16,14 @@ import {
   captureResponse,
   parseRelayPageMessage,
   RELAY_CAPTURE,
+  RELAY_TAB_ARRANGEMENT,
   relayReady,
   type CaptureResult,
   type RelayCaptureMessage,
+  type RelayContentMessage,
+  type RelayTabArrangementMessage,
+  type TabArrangementResult,
+  tabArrangementResponse,
 } from "../domain/relay-messages.js";
 import { loadConfig } from "../platform/config-storage.js";
 
@@ -57,8 +62,67 @@ async function isEnabledBoxPage(): Promise<boolean> {
   return metaContent !== null && parseBoxIdentity({ metaContent, tabUrl: location.href }) !== null;
 }
 
-function postToPage(message: ReturnType<typeof relayReady>): void {
+function postToPage(message: RelayContentMessage): void {
   window.postMessage(message, location.origin);
+}
+
+async function requestTabArrangement(message: RelayTabArrangementMessage): Promise<TabArrangementResult> {
+  try {
+    // eslint-disable-next-line no-restricted-syntax -- Chrome's sendMessage return type is `any`; both ends validate this private protocol.
+    return (await chrome.runtime.sendMessage(message)) as TabArrangementResult;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return { ok: false, reason: "error", message: detail };
+  }
+}
+
+function confirmTabArrangement(message: RelayTabArrangementMessage): Promise<boolean> {
+  if (message.action === "status") return Promise.resolve(true);
+  const closeCount = message.proposal?.close.length ?? 0;
+  const tabCount = message.proposal?.windows.reduce((sum, window) => sum + window.tabs.length, 0) ?? 0;
+  const host = document.createElement("div");
+  const shadow = host.attachShadow({ mode: "closed" });
+  const panel = document.createElement("div");
+  panel.innerHTML = `
+    <style>
+      :host { all: initial; }
+      .backdrop { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: rgba(0,0,0,.45); font-family: system-ui,sans-serif; }
+      .dialog { width: min(420px, calc(100vw - 32px)); border-radius: 12px; background: white; color: #292524; padding: 20px; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+      h2 { margin: 0 0 8px; font-size: 18px; } p { margin: 0 0 16px; line-height: 1.45; }
+      .actions { display: flex; justify-content: flex-end; gap: 8px; }
+      button { border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; }
+      .cancel { background: #e7e5e4; color: #292524; } .apply { background: #0f766e; color: white; font-weight: 600; }
+    </style>
+    <div class="backdrop" role="dialog" aria-modal="true" aria-labelledby="clerk-confirm-title">
+      <div class="dialog">
+        <h2 id="clerk-confirm-title">Confirm in Callback Clerk</h2>
+        <p></p>
+        <div class="actions"><button class="cancel">Cancel</button><button class="apply"></button></div>
+      </div>
+    </div>`;
+  const text = panel.querySelector("p");
+  const apply = panel.querySelector<HTMLButtonElement>(".apply");
+  const cancel = panel.querySelector<HTMLButtonElement>(".cancel");
+  if (text === null || apply === null || cancel === null) return Promise.resolve(false);
+  text.textContent = message.action === "undo"
+    ? "Restore the previous layout? Closed tabs will be reopened without their back/forward history."
+    : `Move ${tabCount} tab${tabCount === 1 ? "" : "s"} and close ${closeCount}? Clerk will validate the live tabs first.`;
+  apply.textContent = message.action === "undo" ? "Undo arrangement" : "Apply arrangement";
+  shadow.append(panel);
+  document.documentElement.append(host);
+
+  return new Promise((resolve) => {
+    const finish = (confirmed: boolean): void => {
+      host.remove();
+      resolve(confirmed);
+    };
+    apply.addEventListener("click", (event) => {
+      if (event.isTrusted) finish(true);
+    });
+    cancel.addEventListener("click", (event) => {
+      if (event.isTrusted) finish(false);
+    });
+  });
 }
 
 async function requestCapture(correlationId: string): Promise<CaptureResult> {
@@ -87,6 +151,31 @@ function onMessage(event: MessageEvent): void {
     if (!ok) return;
     if (message.type === "relay-ping") {
       postToPage(relayReady());
+      return;
+    }
+    if (message.type !== "capture-request") {
+      const action = message.type === "tab-arrangement-status-request"
+        ? "status"
+        : message.type === "tab-arrangement-apply-request" ? "apply" : "undo";
+      const request: RelayTabArrangementMessage = {
+        type: RELAY_TAB_ARRANGEMENT,
+        action,
+        transferId: message.transferId,
+      };
+      if (message.type === "tab-arrangement-apply-request") request.proposal = message.proposal;
+      void confirmTabArrangement(request).then(async (confirmed) => {
+        if (!confirmed) {
+          postToPage(tabArrangementResponse(message.correlationId, {
+            ok: false,
+            reason: "invalid",
+            message: "Canceled in Callback Clerk; nothing was changed.",
+          }));
+          return;
+        }
+        request.confirmed = true;
+        const result = await requestTabArrangement(request);
+        postToPage(tabArrangementResponse(message.correlationId, result));
+      });
       return;
     }
     const { correlationId } = message;

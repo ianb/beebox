@@ -4,6 +4,7 @@ import { getActiveBox, type EnabledBox } from "../domain/config.js";
 import {
   isClerkMessage,
   type ActionFailure,
+  type ActionResponse,
   type ClerkMessage,
 } from "../domain/messages.js";
 import {
@@ -18,11 +19,21 @@ import {
 } from "../domain/relay-auth.js";
 import {
   isRelayCaptureMessage,
+  isRelayTabArrangementMessage,
   type CaptureResult,
+  type RelayTabArrangementMessage,
+  type TabArrangementResult,
 } from "../domain/relay-messages.js";
 import { ClerkApiError, postCommentary } from "../platform/clerk-api.js";
 import { loadConfig } from "../platform/config-storage.js";
 import { syncRelayRegistration } from "../platform/relay-registration.js";
+import {
+  latestTransferForBox,
+  openTabOrganizer,
+  shareTabs,
+} from "../platform/tab-transfer-actions.js";
+import { clearTabTransfer } from "../platform/tab-transfer-storage.js";
+import { tabArrangementAction } from "../platform/tab-arrangement-executor.js";
 
 class NoActiveBoxError extends Error {
   constructor() {
@@ -114,8 +125,21 @@ async function commentOnPage(tabId: number, destinationDir: string | undefined):
   }
 }
 
-function dispatch(message: ClerkMessage): Promise<void> {
-  return commentOnPage(message.tabId, message.destinationDir);
+async function dispatch(message: ClerkMessage): Promise<ActionResponse> {
+  const box = await requireActiveBox();
+  if (message.type === "commentOnPage") {
+    await commentOnPage(message.tabId, message.destinationDir);
+    return { ok: true };
+  }
+  if (message.type === "shareTabs") {
+    const result = await shareTabs(box, message);
+    return { ok: true, result };
+  }
+  if (message.type === "openTabOrganizer") {
+    await openTabOrganizer(box, message.transferId);
+    return { ok: true };
+  }
+  return { ok: true, result: await latestTransferForBox(box) };
 }
 
 // Re-reads the live tab record. Returns null if it can't be read (tab closed,
@@ -189,6 +213,32 @@ async function handleRelayCapture(
   return { ok: true, dataUrl };
 }
 
+async function handleRelayTabArrangement(
+  message: RelayTabArrangementMessage,
+  sender: chrome.runtime.MessageSender,
+): Promise<TabArrangementResult> {
+  const tabId = sender.tab?.id;
+  if (tabId === undefined) {
+    return { ok: false, reason: "not-enabled", message: "The request did not come from a browser tab." };
+  }
+  const current = await liveTab(tabId);
+  const currentUrl = current?.url;
+  if (currentUrl === undefined) {
+    return { ok: false, reason: "not-enabled", message: "The requesting box tab is no longer available." };
+  }
+  const config = await loadConfig();
+  const box = config.boxes.find((candidate) => isUrlUnderBoxUrl(currentUrl, candidate.boxUrl));
+  if (box === undefined) {
+    return { ok: false, reason: "not-enabled", message: "This page is not an enabled box." };
+  }
+  return tabArrangementAction({
+    action: message.action,
+    transferId: message.transferId,
+    boxUrl: box.boxUrl,
+    proposal: message.proposal,
+  });
+}
+
 function failureResponse(error: unknown): ActionFailure {
   if (error instanceof ClerkApiError) {
     return { ok: false, status: error.status, message: error.message };
@@ -246,9 +296,18 @@ export default defineBackground(() => {
         });
       return true;
     }
+    if (isRelayTabArrangementMessage(message)) {
+      handleRelayTabArrangement(message, sender)
+        .then(sendResponse)
+        .catch((error: unknown) => {
+          const detail = error instanceof Error ? error.message : String(error);
+          sendResponse({ ok: false, reason: "error", message: detail });
+        });
+      return true;
+    }
     if (!isClerkMessage(message)) return;
     dispatch(message)
-      .then(() => sendResponse({ ok: true }))
+      .then(sendResponse)
       .catch((e: unknown) => sendResponse(failureResponse(e)));
     return true;
   });
@@ -262,4 +321,12 @@ export default defineBackground(() => {
     .catch((e: unknown) => {
       console.error("[callback-clerk] relay registration sync failed on startup:", e);
     });
+
+  // Numeric Chrome tab IDs do not survive a browser restart. Preserve state
+  // across service-worker sleeps, but discard it when the browser itself starts.
+  chrome.runtime.onStartup.addListener(() => {
+    void clearTabTransfer().catch((error: unknown) => {
+      console.error("[callback-clerk] failed to clear stale tab transfer on browser startup:", error);
+    });
+  });
 });

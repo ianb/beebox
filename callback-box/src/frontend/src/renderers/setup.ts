@@ -24,3 +24,4 @@ import "./todo-view";
 import "./view";
 import "./chat-husk";
 import "./question";
+import "./tab-arrangement";
