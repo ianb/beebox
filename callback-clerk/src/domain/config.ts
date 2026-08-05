@@ -25,11 +25,10 @@ export function emptyConfig(): ClerkConfig {
   return { version: 1, boxes: [], activeBoxUrl: null };
 }
 
-/** Adds (or replaces) a box; the first enabled box becomes active. */
+/** Adds (or replaces) a box and makes it active. */
 export function addBox(config: ClerkConfig, box: EnabledBox): ClerkConfig {
   const others = config.boxes.filter((b) => b.boxUrl !== box.boxUrl);
-  const activeBoxUrl = config.activeBoxUrl === null ? box.boxUrl : config.activeBoxUrl;
-  return { version: 1, boxes: [...others, box], activeBoxUrl };
+  return { version: 1, boxes: [...others, box], activeBoxUrl: box.boxUrl };
 }
 
 /** Removes a box; if it was active, the first remaining box takes over. */
