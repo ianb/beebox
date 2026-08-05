@@ -182,6 +182,24 @@ For each track:
   open questions inside it** — open questions at the first-chunk level
   mean you're not done designing yet.
 
+### Could this be simpler?
+
+The mandatory complexity challenge. With the tracks sketched, state the
+**simplest version that could plausibly work** — a cruder, smaller, or more
+partial approach, even one you don't intend to ship — then say, concretely, what
+the plan's fuller approach buys over it, traced to a stated preference. "The
+simple version fails on `<specific case>`, per `<principle>`" — never "the simple
+version isn't as clean."
+
+If you can't name what the extra complexity buys, that IS the finding: shrink the
+plan toward the simple version. A plan that never considered a smaller shape
+hasn't earned its size — this section is a gate (like NOT-in-scope) that replaces
+trusting the author to have asked. Watch for the usual over-builds: a new
+abstraction where a caller arg would do, a channel/daemon where a one-shot would
+do, defense against a failure that can't happen (`stop-over-engineering`), a
+generalization with one caller. When reviewing: a missing or hand-wavy version of
+this section is itself a finding.
+
 ### Subplans (when a sub-question needs its own design step)
 
 A subplan is the right tool when a question inside the plan needs its
@@ -371,6 +389,7 @@ Structure:
 ## What already exists
 ## Prior art (external) — verified
 ## Stated preferences this plan trades against
+## Could this be simpler? (verified)
 ## Failure modes
 ## Agent-flow / user-flow edge cases
 ## Findings
