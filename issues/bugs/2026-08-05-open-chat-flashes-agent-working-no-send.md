@@ -51,3 +51,28 @@ first load, or debounce a transient busy that clears immediately).
 
 - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
 - The TargetStrip busy bar (`components/chat/TargetStrip.tsx`) is the indicator.
+
+## Second report + server-side evidence (2026-08-05, box-family)
+
+The boxholder independently reported the same flash on **iOS**, on box-family's
+active chat: opening the chat shows "agent working" for ~1s, every time, with no
+message sent — observed *before* any capture activity, so it is not
+capture-specific.
+
+Server logs from that session (`e88dee2e`) support **hypothesis #2, not #1**:
+across today's opens, every chat open logs `[ChatSession:init] Loaded session` /
+`[ChatSessionRegistry:create]` with **no `[ChatSession:start] Starting SDK chat
+run`** — the only run logged all afternoon was the one a real capture delivery
+started. So the bar is painted by attach/`starting`-phase busy, not by a real
+lingering turn.
+
+**This is not purely cosmetic — the same flag changes delivery behavior.**
+`deliverUserMessage` (`src/core/chat/session/deliver-user-message.ts:167`)
+branches on `session.isBusy()`: busy → `enqueue()` (message parked for the
+in-memory queue, `queued: true`), not busy → `await session.send()`. A session
+that reads busy while merely attaching can therefore make a capture (or any
+programmatic user message) take the queued path instead of being sent, which is
+a real behavioral fork, not a UI artifact. Whichever fix direction is taken,
+prefer narrowing the **backend** `isBusy()` so `starting`/attach is not busy —
+that fixes the indicator and the delivery fork together; a frontend-only gate
+leaves the delivery fork in place.
