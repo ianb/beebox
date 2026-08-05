@@ -7,6 +7,9 @@ import {
   RELAY_APP_SOURCE,
   RELAY_CAPTURE,
   RELAY_SOURCE,
+  isRelayTabArrangementMessage,
+  RELAY_TAB_ARRANGEMENT,
+  tabArrangementResponse,
 } from "../src/domain/relay-messages.js";
 
 test("parseRelayPageMessage: accepts a well-formed ping", async (t) => {
@@ -66,4 +69,51 @@ test("isRelayCaptureMessage: accepts the runtime message, rejects others", async
   t.equal(isRelayCaptureMessage({ type: RELAY_CAPTURE, correlationId: 1 }), false);
   t.equal(isRelayCaptureMessage({ type: "commentOnPage", tabId: 1 }), false);
   t.equal(isRelayCaptureMessage(null), false);
+});
+
+test("tab arrangement relay validates apply payloads on both hops", async (t) => {
+  const proposal = { windows: [{ id: "w", tabs: ["a"] }], close: ["b"] };
+  t.same(parseRelayPageMessage({
+    source: RELAY_APP_SOURCE,
+    type: "tab-arrangement-apply-request",
+    correlationId: "cid",
+    transferId: "tid",
+    proposal,
+  }), {
+    source: RELAY_APP_SOURCE,
+    type: "tab-arrangement-apply-request",
+    correlationId: "cid",
+    transferId: "tid",
+    proposal,
+  });
+  t.equal(isRelayTabArrangementMessage({
+    type: RELAY_TAB_ARRANGEMENT,
+    action: "apply",
+    transferId: "tid",
+    proposal,
+    confirmed: true,
+  }), true);
+  t.equal(isRelayTabArrangementMessage({
+    type: RELAY_TAB_ARRANGEMENT,
+    action: "apply",
+    transferId: "tid",
+    proposal,
+  }), false, "page-shaped apply without Clerk confirmation is rejected");
+  t.equal(isRelayTabArrangementMessage({
+    type: RELAY_TAB_ARRANGEMENT,
+    action: "apply",
+    transferId: "tid",
+    proposal: { windows: [{ id: "w", tabs: [3] }], close: [] },
+    confirmed: true,
+  }), false);
+  t.same(tabArrangementResponse("cid", {
+    ok: false,
+    reason: "stale",
+    message: "Nothing changed",
+  }), {
+    source: RELAY_SOURCE,
+    type: "tab-arrangement-response",
+    correlationId: "cid",
+    result: { ok: false, reason: "stale", message: "Nothing changed" },
+  });
 });

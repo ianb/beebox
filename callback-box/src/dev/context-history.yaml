@@ -3653,6 +3653,14 @@ test1:
       peak: 45725
       added: 2580
       turns: 6
+  tab-arrangement-editing:
+    - date: 2026-08-05T01:30:13.099Z
+      boxCommit: d5d65f9e78e90bfd5cf79141ebe46673a32fb627
+      repoCommit: 32679cfd6f69315bbb020e7abfe6e0ab5aeb2cf4
+      initial: 43168
+      peak: 45903
+      added: 2735
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

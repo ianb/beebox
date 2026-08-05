@@ -28,3 +28,35 @@ export interface CommentaryDestination {
   label: string;
   symbol: string | null;
 }
+
+/** Captured tabs and their proposed arrangement. */
+export interface TabArrangementPayload {
+  transferId: string;
+  scope: "current-window" | "all-windows";
+  capturedAt: string;
+  source: {
+    windows: Array<{
+      id: string;
+      tabs: Array<{
+        id: string;
+        title: string;
+        url: string;
+        pinned: boolean;
+      }>;
+    }>;
+  };
+  proposal: {
+    windows: Array<{
+      id: string;
+      tabs: string[];
+    }>;
+    close: string[];
+  };
+}
+
+/** Result of accepting a tab arrangement into the box. */
+export interface TabArrangementResult {
+  card: string;
+  open: string;
+  transferId: string;
+}

@@ -10,11 +10,13 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure, authedProcedure } from "../trpc.js";
 import {
   commentaryInput,
   commentaryOutput,
   commentaryDestinationsOutput,
+  tabArrangementPayload,
+  tabArrangementOutput,
 } from "./clerk-contract.js";
 import { createWebpageTemplate } from "../../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../../schemas/commentary.js";
@@ -22,6 +24,10 @@ import { attachmentPath } from "../../../shared/attach-path.js";
 import { listDestinations } from "../../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../../connectors/chat-utils.js";
 import { stageAndCommitPaths } from "../../../lib/git.js";
+import { createTabArrangementCard } from "../../../schemas/tab-arrangement.js";
+import { parseFrontmatterObject } from "../../../cards/index.js";
+import { withCardLock } from "../../../lib/card-lock.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 
 /** Default filing spot when no commentary destination is chosen. */
 const DEFAULT_COMMENTARY_DIR = "box/inbox";
@@ -90,6 +96,42 @@ export const clerkRouter = router({
       `&companion=${encodeURIComponent(companion)}`;
     return { created: createdPaths, open };
   }),
+
+  tabArrangement: authedProcedure
+    .input(tabArrangementPayload)
+    .output(tabArrangementOutput)
+    .mutation(async ({ input, ctx }) => {
+      const cardRel = path.join(DEFAULT_COMMENTARY_DIR, `Tabs_${input.transferId}.tab-arrangement.card`);
+      const absPath = path.join(ctx.boxRoot, cardRel);
+      await withCardLock(absPath, async () => {
+        const existing = await readIfPresent(absPath);
+        if (existing !== undefined) {
+          const fields = parseFrontmatterObject(existing);
+          const sameImmutablePayload =
+            fields?.["transfer-id"] === input.transferId &&
+            fields["scope"] === input.scope &&
+            fields["captured-at"] === input.capturedAt &&
+            JSON.stringify(fields["source"]) === JSON.stringify(input.source);
+          if (!sameImmutablePayload) {
+            throw new TRPCError({ code: "CONFLICT", message: "Tab transfer ID already belongs to different content" });
+          }
+          return;
+        }
+
+        await writeCard(absPath, createTabArrangementCard(input));
+        await stageAndCommitPaths(ctx.boxRoot, {
+          paths: [cardRel],
+          message: `Add tab arrangement from Clerk: ${input.transferId}`,
+          trailers: { "Created-By": "clerk-api" },
+        });
+      });
+
+      const companion = `view:${cardRel}`;
+      const open =
+        `chat?session=new&contextDir=${encodeURIComponent(DEFAULT_COMMENTARY_DIR)}` +
+        `&companion=${encodeURIComponent(companion)}`;
+      return { card: cardRel, open, transferId: input.transferId };
+    }),
 });
 
 function buildFilename(title: string, fallback: string): string {
@@ -101,6 +143,15 @@ function buildFilename(title: string, fallback: string): string {
 async function writeCard(filePath: string, content: string): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, "utf-8");
+}
+
+async function readIfPresent(filePath: string): Promise<string | undefined> {
+  try {
+    return await fs.readFile(filePath, "utf-8");
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return undefined;
+    throw error;
+  }
 }
 
 /**

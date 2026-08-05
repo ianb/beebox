@@ -16,12 +16,12 @@ test("the committed snapshot is up to date with the leaf schema", () => {
 });
 
 test("the printer throws on constructs outside the whitelist", () => {
-  // number: an unsupported primitive.
-  assert.throws(() => schemaToTs(z.object({ n: z.number() }), "output"), UnsupportedSchemaError);
-  // boolean: another unsupported primitive.
-  assert.throws(() => schemaToTs(z.object({ b: z.boolean() }), "output"), UnsupportedSchemaError);
-  // enum: not whitelisted yet — must fail loudly rather than misrender.
-  assert.throws(() => schemaToTs(z.object({ e: z.enum(["a", "b"]) }), "output"), UnsupportedSchemaError);
+  // Tuples need positional array emission, which this deliberately small
+  // printer does not support.
+  assert.throws(
+    () => schemaToTs(z.tuple([z.string(), z.number()]), "output"),
+    UnsupportedSchemaError,
+  );
   // catchall/passthrough: an open object would need an index signature we don't emit.
   assert.throws(
     () => schemaToTs(z.object({ k: z.string() }).catchall(z.string()), "output"),
@@ -35,6 +35,10 @@ test("the printer renders the whitelisted constructs correctly", () => {
     "{\n  a: string;\n  b?: string;\n  c: string | null;\n}",
   );
   assert.equal(schemaToTs(z.object({ list: z.array(z.string()) }), "output"), "{\n  list: string[];\n}");
+  assert.equal(
+    schemaToTs(z.object({ scope: z.enum(["one", "all"]), pinned: z.boolean(), index: z.number() }), "output"),
+    '{\n  scope: "one" | "all";\n  pinned: boolean;\n  index: number;\n}',
+  );
 });
 
 test("non-identifier property names are quoted, not emitted raw", () => {

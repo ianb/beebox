@@ -64,6 +64,7 @@ import { CourseSchema } from "./course.js";
 import { ExpositionPlanSchema } from "./exposition-plan.js";
 import { LessonPlanSchema } from "./lesson-plan.js";
 import { ProgressSchema } from "./progress.js";
+import { TabArrangementSchema } from "./tab-arrangement.js";
 import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -111,6 +112,7 @@ export const cardSchemas: CardSchema[] = [
   GsheetSchema,
   WebpageSchema,
   ExtfileSchema,
+  TabArrangementSchema,
   CaptureSessionSchema,
   UploadBatchSchema,
   ImageSchema,

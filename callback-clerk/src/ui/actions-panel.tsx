@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { EnabledBox } from "../domain/config.js";
-import type { ActionResponse, ClerkMessage } from "../domain/messages.js";
+import type { ActionResponse, ClerkMessage, SharedTabsResult } from "../domain/messages.js";
 import type { CommentaryDestination } from "../contract/clerk-contract.generated.js";
 import { getCommentaryDestinations } from "../platform/clerk-api.js";
 import { commentBlockedReason } from "../domain/commentary.js";
@@ -12,6 +12,7 @@ interface Notice {
 
 interface CurrentTab {
   id: number;
+  windowId: number;
   url: string;
   title: string;
 }
@@ -48,6 +49,7 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
   const [blocked, setBlocked] = useState<string | null>(null);
   const [destinations, setDestinations] = useState<CommentaryDestination[]>([]);
   const [selectedDir, setSelectedDir] = useState("");
+  const [sharedTabs, setSharedTabs] = useState<SharedTabsResult | null>(null);
 
   useEffect(() => {
     chrome.tabs
@@ -63,7 +65,7 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
           setBlocked("No page to comment on.");
           return;
         }
-        setTab({ id: current.id, url: current.url ?? "", title: current.title ?? "" });
+        setTab({ id: current.id, windowId: current.windowId, url: current.url ?? "", title: current.title ?? "" });
       })
       .catch((err: unknown) => {
         console.error("[clerk] failed to query active tab:", err);
@@ -85,6 +87,12 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
         setDestinations([]);
       });
   }, [box]);
+
+  useEffect(() => {
+    void sendAction({ type: "getLatestTabTransfer" }).then((response) => {
+      if (response.ok && response.result?.kind === "shared-tabs") setSharedTabs(response.result);
+    });
+  }, [box.boxUrl]);
 
   const runAction = useCallback(
     (params: { label: string; message: ClerkMessage; okText: string }) => {
@@ -110,6 +118,32 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
     runAction({ label: "comment", message, okText: "Commentary created — opening…" });
   }, [tab, selectedDir, runAction]);
 
+  const handleShare = useCallback((scope: "current-window" | "all-windows") => {
+    if (tab === null) return;
+    const label = scope === "current-window" ? "share-window" : "share-all";
+    setBusy(label);
+    setNotice(null);
+    void sendAction({ type: "shareTabs", scope, sourceWindowId: tab.windowId }).then((response) => {
+      setBusy(null);
+      if (response.ok && response.result?.kind === "shared-tabs") {
+        setSharedTabs(response.result);
+        const undoNote = response.result.replacedUndo === true ? " The previous arrangement can no longer be undone." : "";
+        setNotice({ kind: "ok", text: `Shared ${response.result.tabCount} tabs. Open the organizer when ready.${undoNote}` });
+        return;
+      }
+      setNotice(toNotice(response, "Tabs shared."));
+    });
+  }, [tab]);
+
+  const handleOpenOrganizer = useCallback(() => {
+    if (sharedTabs === null) return;
+    runAction({
+      label: "open-organizer",
+      message: { type: "openTabOrganizer", transferId: sharedTabs.transferId },
+      okText: "Organizer opened in a separate window.",
+    });
+  }, [runAction, sharedTabs]);
+
   const handleSelectDir = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedDir(e.target.value);
   }, []);
@@ -133,7 +167,59 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
         onSelectDir={handleSelectDir}
         onComment={handleComment}
       />
+      <TabShareSection
+        busyLabel={busy}
+        disabled={tab === null}
+        sharedTabs={sharedTabs}
+        onShare={handleShare}
+        onOpen={handleOpenOrganizer}
+      />
       {notice !== null ? <NoticeLine notice={notice} onOpenBox={handleOpenBox} /> : null}
+    </div>
+  );
+}
+
+interface TabShareSectionProps {
+  busyLabel: string | null;
+  disabled: boolean;
+  sharedTabs: SharedTabsResult | null;
+  onShare: (scope: "current-window" | "all-windows") => void;
+  onOpen: () => void;
+}
+
+function TabShareSection(props: TabShareSectionProps) {
+  const { busyLabel, disabled, sharedTabs, onShare, onOpen } = props;
+  const isBusy = busyLabel !== null;
+  return (
+    <div className="space-y-2 border-t border-gray-200 pt-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tab organizer</p>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => onShare("current-window")}
+          disabled={disabled || isBusy}
+          className="rounded border border-teal-600 px-2 py-2 text-xs font-semibold text-teal-700 hover:bg-teal-50 disabled:border-gray-300 disabled:text-gray-400"
+        >
+          {busyLabel === "share-window" ? "Sharing…" : "Share this window"}
+        </button>
+        <button
+          onClick={() => onShare("all-windows")}
+          disabled={disabled || isBusy}
+          className="rounded border border-teal-600 px-2 py-2 text-xs font-semibold text-teal-700 hover:bg-teal-50 disabled:border-gray-300 disabled:text-gray-400"
+        >
+          {busyLabel === "share-all" ? "Sharing…" : "Share all windows"}
+        </button>
+      </div>
+      {sharedTabs === null ? (
+        <p className="text-xs text-gray-500">Ungrouped tabs only. Nothing changes until you explicitly apply it in the box.</p>
+      ) : (
+        <button
+          onClick={onOpen}
+          disabled={isBusy}
+          className="w-full rounded bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:bg-gray-300"
+        >
+          {busyLabel === "open-organizer" ? "Opening…" : `Open organizer (${sharedTabs.tabCount} tabs)`}
+        </button>
+      )}
     </div>
   );
 }

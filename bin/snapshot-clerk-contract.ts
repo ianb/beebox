@@ -27,6 +27,8 @@ import {
   commentaryInput,
   commentaryOutput,
   commentaryDestination,
+  tabArrangementPayload,
+  tabArrangementOutput,
 } from "../callback-box/src/webapp/trpc/routers/clerk-contract.js";
 
 /** A construct outside the printer's whitelist — fail generation loudly. */
@@ -53,6 +55,8 @@ const CONTRACT: { schema: z.ZodType; io: "input" | "output"; name: string; doc: 
   { schema: commentaryInput, io: "input", name: "CommentaryPayload", doc: "Request body for `clerk.commentary`." },
   { schema: commentaryOutput, io: "output", name: "CommentaryResult", doc: "Result of a successful `clerk.commentary` capture." },
   { schema: commentaryDestination, io: "output", name: "CommentaryDestination", doc: "A single landmark commentary destination." },
+  { schema: tabArrangementPayload, io: "input", name: "TabArrangementPayload", doc: "Captured tabs and their proposed arrangement." },
+  { schema: tabArrangementOutput, io: "output", name: "TabArrangementResult", doc: "Result of accepting a tab arrangement into the box." },
 ];
 
 const INDENT = "  ";
@@ -73,11 +77,20 @@ function printType(node: unknown, depth: number): string {
 
   const type = node["type"];
   if (type === "string") {
-    if ("enum" in node || "const" in node) {
-      throw new UnsupportedSchemaError("string enum/const is not in the whitelist yet — extend the printer");
+    if (Array.isArray(node["enum"])) {
+      const values = node["enum"];
+      if (!values.every((value) => typeof value === "string")) {
+        throw new UnsupportedSchemaError("non-string member in string enum");
+      }
+      return values.map((value) => JSON.stringify(value)).join(" | ");
+    }
+    if (typeof node["const"] === "string") {
+      return JSON.stringify(node["const"]);
     }
     return "string";
   }
+  if (type === "boolean") return "boolean";
+  if (type === "number" || type === "integer") return "number";
   if (type === "null") return "null";
   if (type === "array") {
     const inner = printType(node["items"], depth);
