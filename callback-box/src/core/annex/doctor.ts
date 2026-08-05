@@ -36,6 +36,7 @@ import {
 } from "./info-attributes.js";
 import { findAttachScopes } from "../../lib/attach-scopes.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { gitignoreIgnoresAssets } from "../commands/attachments-gitignore.js";
 
 /** What a single check concluded. */
 export type AnnexCheckStatus =
@@ -299,7 +300,25 @@ export async function runAnnexDoctor(
   }
   checks.push({ id: "initialized", status: "ok", message: "repository is annex-initialized" });
 
-  // 3. annex.thin must be false. This is THE check that fires in practice:
+  // 3. Assets must be visible to git. Annex can be initialized while the box
+  //    still carries the manifest scheme's asset-ignore rules; in that state
+  //    git add never reaches annex.largefiles, so asset writes fail.
+  //    This remains report-only even in repair mode: unignoring must stay
+  //    sequenced after annex.largefiles is correct, and stray rules require
+  //    removal by hand.
+  if (await gitignoreIgnoresAssets(boxRoot)) {
+    checks.push({
+      id: "gitignore-assets",
+      status: "failed",
+      message:
+        ".gitignore still ignores assets. Run `cb attachments unignore` to complete the annex conversion; " +
+        "if it reports unmanaged rules, remove those rules from .gitignore by hand.",
+    });
+  } else {
+    checks.push({ id: "gitignore-assets", status: "ok", message: ".gitignore leaves assets visible to git" });
+  }
+
+  // 4. annex.thin must be false. This is THE check that fires in practice:
   //    annex.thin is plain git config, so it does not propagate to clones and
   //    every fresh clone silently inherits git-annex's default.
   //
@@ -328,7 +347,7 @@ export async function runAnnexDoctor(
     });
   }
 
-  // 4. annex.largefiles must match the asset classifier. A drifted expression
+  // 5. annex.largefiles must match the asset classifier. A drifted expression
   //    is worse than an absent one — it silently annexes the wrong set.
   const expected = assetLargefilesExpression();
   const largefiles = await annex.getAnnexConfig(repoRoot, "annex.largefiles");
@@ -351,11 +370,11 @@ export async function runAnnexDoctor(
     });
   }
 
-  // 5-6. Annexed-path coverage, then the scoped attributes file that coverage
+  // 6-7. Annexed-path coverage, then the scoped attributes file that coverage
   //      makes safe.
   checks.push(...(await filterScopeChecks(annex, { repoRoot, readOnly })));
 
-  // 7. No pointer standing in for content. Not repairable this iteration.
+  // 8. No pointer standing in for content. Not repairable this iteration.
   const pointers = await findContentlessPointers(boxRoot);
   if (pointers.length === 0) {
     checks.push({ id: "content-present", status: "ok", message: "no missing asset content" });
@@ -371,7 +390,7 @@ export async function runAnnexDoctor(
     });
   }
 
-  // 8. Journal flushed, so a clone can see location info and `git annex get`
+  // 9. Journal flushed, so a clone can see location info and `git annex get`
   //    works. An unflushed journal is why a fresh clone reports "0 copies".
   if (await annex.hasUnflushedJournal(repoRoot)) {
     if (readOnly) {
@@ -388,7 +407,7 @@ export async function runAnnexDoctor(
     checks.push({ id: "journal", status: "ok", message: "git-annex journal is flushed" });
   }
 
-  // 9. The pre-commit hook actually invokes annex. `git annex init` declines
+  // 10. The pre-commit hook actually invokes annex. `git annex init` declines
   //    to install its own hook when one already exists, and `cb init` leaves a
   //    foreign hook untouched — so integration cannot be inferred from either
   //    having run.

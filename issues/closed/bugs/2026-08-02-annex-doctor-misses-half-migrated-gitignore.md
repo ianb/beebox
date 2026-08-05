@@ -3,7 +3,13 @@ title: "cb doctor annex passes green on a half-migrated box whose .gitignore sti
 area: callback-box
 filed-by: agent
 discovered-in: main session — a clerk page-save 500'd; several boxes found half-migrated
+resolution: implemented
 ---
+
+Resolved by `7084030e`. `cb doctor annex` now uses the annex gate's shared
+`.gitignore` predicate and reports the half-migrated state with the existing
+`cb attachments unignore` repair. The secondary hardening ideas below were not
+part of this fix.
 
 Several boxes on a deployment were found in a broken half-migrated annex state:
 **git-annex initialized (`annex.uuid` set, `annex.largefiles` configured) BUT the box

@@ -2,8 +2,8 @@
  * cb doctor — check and repair box configuration.
  *
  * Currently one subcommand, `annex`, which verifies (and by default fixes)
- * the box's git-annex setup. Repair-by-default is the point: five of the seven
- * checks describe a state the box can put right, so making a human run the
+ * the box's git-annex setup. Repair-by-default is the point: when a check
+ * describes a state the box can safely put right, making a human run the
  * obvious command afterwards is a wasted round trip.
  *
  * Deliberately NOT a `cb serve` startup gate — see the header of
