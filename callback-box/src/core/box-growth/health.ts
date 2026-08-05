@@ -54,10 +54,19 @@ export class BoxGrowthAcceptanceError extends Error {
   }
 }
 
+class BoxGrowthStateInvalidError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BoxGrowthStateInvalidError";
+  }
+}
+
 export type MeasureBoxGrowthResult =
-  | { status: "skipped"; reason: "not-due"; state: BoxGrowthState }
-  | { status: "measured"; state: BoxGrowthState; findings: GrowthFinding[] }
-  | { status: "failed"; error: string; state: BoxGrowthState };
+  | { status: "skipped"; reason: "not-due" | "invalid-state"; state: BoxGrowthStateRead }
+  | { status: "measured"; state: BoxGrowthState; findings: GrowthFinding[]; notice: string | null }
+  | { status: "failed"; error: string; state: BoxGrowthStateRead };
+
+const lastAttemptByBox = new Map<string, number>();
 
 async function readStateFile(boxRoot: string): Promise<BoxGrowthStateRead> {
   const statePath = boxGrowthStatePath(boxRoot);
@@ -82,8 +91,9 @@ export async function readBoxGrowthState(boxRoot: string): Promise<BoxGrowthStat
 }
 
 async function writeState(boxRoot: string, state: BoxGrowthState): Promise<void> {
+  const validated = boxGrowthStateSchema.parse(state);
   await writeFileAtomic(boxGrowthStatePath(boxRoot), {
-    content: `${JSON.stringify(state, null, 2)}\n`,
+    content: `${JSON.stringify(validated, null, 2)}\n`,
   });
 }
 
@@ -112,22 +122,76 @@ function isAboveGlobalThreshold(measurement: GrowthMeasurement): boolean {
   );
 }
 
+function persistedAttemptTime(state: BoxGrowthStateRead): number | null {
+  if (state.status !== "measured" && state.status !== "unmeasured") return null;
+  return state.lastAttemptAt === null ? null : Date.parse(state.lastAttemptAt);
+}
+
+function resetNotice(state: BoxGrowthStateRead, hadPriorProcessAttempt: boolean): string | null {
+  if (state.status === "missing" && hadPriorProcessAttempt) {
+    return "Box growth state disappeared after this scheduler previously measured the box; a new baseline was created";
+  }
+  return null;
+}
+
+async function recordScanFailure(input: {
+  boxRoot: string;
+  before: BoxGrowthStateRead;
+  now: Date;
+  message: string;
+}): Promise<MeasureBoxGrowthResult> {
+  const { boxRoot, before, now, message } = input;
+  try {
+    return await updateState(boxRoot, async (latest) => {
+      if (latest.status === "invalid") throw new BoxGrowthStateInvalidError(latest.error);
+      const state: BoxGrowthState = latest.status === "measured"
+        ? { ...latest, lastAttemptAt: now.toISOString(), lastError: message }
+        : { version: 1, status: "unmeasured", lastAttemptAt: now.toISOString(), lastError: message };
+      await writeState(boxRoot, state);
+      return { status: "failed", error: message, state };
+    });
+  } catch (persistenceError) {
+    return {
+      status: "failed",
+      error: `${message}; could not persist scan failure: ${errorMessage(persistenceError)}`,
+      state: before,
+    };
+  }
+}
+
 export async function measureBoxGrowthIfDue(
   boxRoot: string,
   options: { now: Date; maxDurationMs?: number },
 ): Promise<MeasureBoxGrowthResult> {
   const before = await readStateFile(boxRoot);
-  if (before.status === "measured" || before.status === "unmeasured") {
-    const attemptedAt = before.lastAttemptAt === null ? null : Date.parse(before.lastAttemptAt);
-    if (attemptedAt !== null && options.now.getTime() - attemptedAt < BOX_GROWTH_MEASUREMENT_INTERVAL_MS) {
-      return { status: "skipped", reason: "not-due", state: before };
-    }
+  if (before.status === "invalid") {
+    return { status: "skipped", reason: "invalid-state", state: before };
+  }
+  const priorProcessAttempt = lastAttemptByBox.get(boxRoot);
+  const attemptedAt = Math.max(persistedAttemptTime(before) ?? 0, priorProcessAttempt ?? 0);
+  if (attemptedAt > 0 && options.now.getTime() - attemptedAt < BOX_GROWTH_MEASUREMENT_INTERVAL_MS) {
+    return { status: "skipped", reason: "not-due", state: before };
+  }
+  lastAttemptByBox.set(boxRoot, options.now.getTime());
+  let measurement: GrowthMeasurement;
+  try {
+    measurement = await measureBoxGrowth(boxRoot, options);
+  } catch (error) {
+    return recordScanFailure({ boxRoot, before, now: options.now, message: errorMessage(error) });
   }
   try {
-    const measurement = await measureBoxGrowth(boxRoot, options);
     return await updateState(boxRoot, async (latest) => {
+      if (latest.status === "invalid") throw new BoxGrowthStateInvalidError(latest.error);
+      const notice = resetNotice(latest, priorProcessAttempt !== undefined);
       const state: BoxGrowthState = latest.status === "measured"
-        ? { ...latest, previous: latest.current, current: measurement, lastAttemptAt: measurement.measuredAt, lastError: null }
+        ? {
+            ...latest,
+            previous: latest.current,
+            current: measurement,
+            lastAttemptAt: measurement.measuredAt,
+            lastError: null,
+            lastNotice: latest.lastNotice,
+          }
         : {
             version: 1,
             status: "measured",
@@ -137,20 +201,18 @@ export async function measureBoxGrowthIfDue(
             acknowledgedAt: isAboveGlobalThreshold(measurement) ? null : measurement.measuredAt,
             lastAttemptAt: measurement.measuredAt,
             lastError: null,
+            lastNotice: notice,
           };
       await writeState(boxRoot, state);
       const findings = evaluateBoxGrowth({ ...state });
-      return { status: "measured", state, findings };
+      return { status: "measured", state, findings, notice };
     });
   } catch (error) {
-    const message = errorMessage(error);
-    return updateState(boxRoot, async (latest) => {
-      const state: BoxGrowthState = latest.status === "measured"
-        ? { ...latest, lastAttemptAt: options.now.toISOString(), lastError: message }
-        : { version: 1, status: "unmeasured", lastAttemptAt: options.now.toISOString(), lastError: message };
-      await writeState(boxRoot, state);
-      return { status: "failed", error: message, state };
-    });
+    return {
+      status: "failed",
+      error: `Box growth measurement could not be persisted: ${errorMessage(error)}`,
+      state: before,
+    };
   }
 }
 
@@ -166,6 +228,7 @@ export async function acceptCurrentBoxGrowth(
       previous: latest.current,
       current: latest.current,
       acknowledgedAt: options.now.toISOString(),
+      lastNotice: null,
     };
     await writeState(boxRoot, state);
     return state;
@@ -202,16 +265,6 @@ function describeFinding(finding: GrowthFinding): string {
   return `${scope} grew by ${count(finding.actual)} ${unit}/hour (limit ${count(finding.threshold)})${detail}`;
 }
 
-function hasConnectorVersion(finding: GrowthFinding, findings: GrowthFinding[]): boolean {
-  if (finding.kind === "rate-directories") {
-    return findings.some((candidate) => candidate.kind === "rate-connector-directories");
-  }
-  if (finding.kind === "rate-files") {
-    return findings.some((candidate) => candidate.kind === "rate-connector-files");
-  }
-  return false;
-}
-
 export async function boxGrowthHealthCheck(
   boxRoot: string,
   options: { now: Date; schedulerStatus: "running" | "stale" | "never" },
@@ -226,14 +279,21 @@ export async function boxGrowthHealthCheck(
   if (state.status === "unmeasured") {
     return warning(state.lastError === null ? "Box growth has not been measured" : `Box growth scan failed: ${state.lastError}`);
   }
-  if (state.lastError !== null) return warning(`Box growth scan failed: ${state.lastError}`);
   if (options.now.getTime() - Date.parse(state.lastAttemptAt) > BOX_GROWTH_STALE_MS) {
     return warning("Box growth measurement is stale");
   }
   const findings = evaluateBoxGrowth({ ...state });
   const historyError = state.current.history.status === "unavailable" ? state.current.history.error : null;
-  if (findings.length === 0 && historyError === null) return healthy("Box growth is within accepted limits");
-  const parts = findings.filter((finding) => !hasConnectorVersion(finding, findings)).map(describeFinding);
-  if (historyError !== null) parts.push(`history measurement failed: ${historyError}`);
-  return warning(`Box growth warning: ${parts.join("; ")}`, findings.length > 0);
+  if (findings.length === 0 && state.lastError === null && state.lastNotice === null) {
+    return healthy(
+      historyError === null
+        ? "Box growth is within accepted limits"
+        : "Box growth is within accepted limits; Git history measurement is unavailable",
+    );
+  }
+  const parts = findings.map(describeFinding);
+  if (state.lastError !== null) parts.push(`latest scan failed: ${state.lastError}`);
+  if (state.lastNotice !== null) parts.push(state.lastNotice);
+  if (historyError !== null && findings.length > 0) parts.push(`history measurement failed: ${historyError}`);
+  return warning(`Box growth warning: ${parts.join("; ")}`, findings.length > 0 || state.lastNotice !== null);
 }

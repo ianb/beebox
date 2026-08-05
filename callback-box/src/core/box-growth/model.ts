@@ -34,6 +34,7 @@ export const subtreeCountsSchema = z.object({
 export const growthMeasurementSchema = z.object({
   measuredAt: z.iso.datetime(),
   counts: growthCountsSchema,
+  skippedDirectories: z.number().int().nonnegative().default(0),
   history: growthHistorySchema,
   largestSubtrees: z.array(subtreeCountsSchema).max(20),
 });
@@ -54,6 +55,7 @@ const measuredStateSchema = z.object({
   acknowledgedAt: z.iso.datetime().nullable(),
   lastAttemptAt: z.iso.datetime(),
   lastError: z.string().nullable(),
+  lastNotice: z.string().nullable().default(null),
 });
 
 export const boxGrowthStateSchema = z.discriminatedUnion("status", [

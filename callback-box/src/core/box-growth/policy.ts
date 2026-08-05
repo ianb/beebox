@@ -1,6 +1,7 @@
 import type { GrowthFinding, GrowthMeasurement } from "./model.js";
 
 type CountKind = "directories" | "files";
+const MAX_RETAINED_SUBTREES = 20;
 
 export const BOX_GROWTH_THRESHOLDS = {
   absoluteDirectories: 10_000,
@@ -38,7 +39,15 @@ function fastestGrowingSubtreePath(
   const { previous, current, kind } = input;
   const previousByPath = new Map(previous.largestSubtrees.map((item) => [item.path, item]));
   return current.largestSubtrees
-    .map((item) => ({ path: item.path, delta: item[kind] - (previousByPath.get(item.path)?.[kind] ?? item[kind]) }))
+    .map((item) => {
+      const retainedFloor = previous.largestSubtrees.length < MAX_RETAINED_SUBTREES
+        ? 0
+        : Math.min(...previous.largestSubtrees.map((previousItem) => previousItem[kind]));
+      let missingBaseline = item[kind];
+      if (item.source === "connector") missingBaseline = 0;
+      else if (item[kind] > retainedFloor) missingBaseline = retainedFloor;
+      return { path: item.path, delta: item[kind] - (previousByPath.get(item.path)?.[kind] ?? missingBaseline) };
+    })
     .filter((item) => item.delta > 0)
     .toSorted((a, b) => b.delta - a.delta)
     .at(0)?.path;
@@ -83,7 +92,9 @@ export function evaluateBoxGrowth(input: {
   const intervalMs = Date.parse(current.measuredAt) - Date.parse(previous.measuredAt);
   if (
     intervalMs < BOX_GROWTH_THRESHOLDS.minimumRateIntervalMs ||
-    intervalMs > BOX_GROWTH_THRESHOLDS.maximumRateIntervalMs
+    intervalMs > BOX_GROWTH_THRESHOLDS.maximumRateIntervalMs ||
+    previous.skippedDirectories > 0 ||
+    current.skippedDirectories > 0
   ) {
     return findings;
   }
@@ -116,9 +127,8 @@ export function evaluateBoxGrowth(input: {
   const previousByPath = new Map(previous.largestSubtrees.map((item) => [item.path, item]));
   for (const subtree of current.largestSubtrees.filter((item) => item.source === "connector")) {
     const prior = previousByPath.get(subtree.path);
-    if (prior === undefined) continue;
-    const subtreeDirectoryRate = rate(subtree.directories - prior.directories, intervalMs);
-    const subtreeFileRate = rate(subtree.files - prior.files, intervalMs);
+    const subtreeDirectoryRate = rate(subtree.directories - (prior?.directories ?? 0), intervalMs);
+    const subtreeFileRate = rate(subtree.files - (prior?.files ?? 0), intervalMs);
     const directoryThreshold = BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour * BOX_GROWTH_THRESHOLDS.connectorRateMultiplier;
     const fileThreshold = BOX_GROWTH_THRESHOLDS.rateFilesPerHour * BOX_GROWTH_THRESHOLDS.connectorRateMultiplier;
     if (subtreeDirectoryRate >= directoryThreshold) {

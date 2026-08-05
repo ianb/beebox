@@ -206,6 +206,13 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
               box: boxPath,
               error: growth.error,
             });
+          } else if (growth.status === "measured" && growth.notice !== null) {
+            await writeBoxLog(boxPath, {
+              ts: new Date().toISOString(),
+              event: "box-growth-scan",
+              box: boxPath,
+              warning: growth.notice,
+            });
           }
         } catch (err) {
           try {

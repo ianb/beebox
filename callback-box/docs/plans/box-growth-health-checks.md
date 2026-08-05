@@ -1,6 +1,6 @@
 # Box-growth health checks
 
-**Status:** implemented — verification and cross-model diff review in progress
+**Status:** implemented and verified
 
 This plan adds a low-cost, persisted measurement of box filesystem and Git
 growth. It reports large or fast-growing boxes before they exhaust server
@@ -116,6 +116,13 @@ choosing thresholds:
 5,376 KiB maximum RSS. This is cheap enough hourly in the scheduler. It is not
 appropriate on each dashboard request.
 
+The implemented scanner was also run against a synthetic tree containing
+100,001 regular files. Its own measured walk completed in 381 ms, retained 102
+directory counts, and skipped no directories. The enclosing fixture-build plus
+scan process completed in 7.71 seconds; its 441,860,096-byte maximum RSS includes
+creating the 100,001-file fixture and therefore is not a scanner-only memory
+measurement.
+
 The last 2,000 `box-family` commits confirm the reported `Created-By` gap: only
 32 commits (1.60%) have that one trailer. The broader existing provenance
 channel is materially healthier: 1,244 commits (62.20%) have at least one of
@@ -211,10 +218,15 @@ type BoxGrowthState =
     };
 ```
 
-The scanner counts regular files and directories under the operational box
-root. It does not follow symbolic links. It excludes `.git`, `node_modules`,
-and `.callback-box` from filesystem totals because they are implementation
-state, not box content; Git history is measured separately at the package root.
+The scanner counts files, symlink entries, and directories under the
+operational box root. It counts a symlink as a file but never follows it. It excludes every `.git`,
+`node_modules`, and `.callback-box` directory, including nested copies, from
+filesystem totals because they are implementation state, not box content; Git
+history is measured separately at the package root. If a queued directory
+disappears during the live walk, the scanner continues and records the skipped
+directory count rather than discarding the sample.
+Rate evaluation requires two complete samples, so a partial live-tree sample
+cannot make the following repaired count look like new growth.
 It retains the 20 largest path prefixes, aggregated to at most three directory
 segments, for actionable reporting without a state entry per directory.
 
@@ -230,11 +242,12 @@ as supporting text when available:
 - all other paths → unknown.
 
 The scanner also records `git rev-list --count HEAD`, `git count-objects -v`,
-and `HEAD`. Git failure does not discard a successful filesystem measurement.
-The Git fields live in a discriminated measured/unavailable history result and
-the health message says history measurement failed. The implementation can
-refine the sketched `GrowthCounts` into that union; it must not encode
-unavailable values as zero.
+and `HEAD`. Git failure does not discard or degrade an otherwise healthy
+filesystem measurement. The Git fields live in a discriminated
+available/unavailable history result; unavailable history is appended to an
+existing growth warning and is otherwise healthy diagnostic detail. The
+implementation refines the sketched `GrowthCounts` into that union and never
+encodes unavailable values as zero.
 
 The initial policy uses exported constants and pure evaluation:
 
@@ -264,6 +277,12 @@ is a re-baseline, not a timed snooze.
 If the tree changes during a scan, the result is a best-effort sample. A failed
 walk does not replace the last good measurement. It updates `lastAttemptAt` and
 `lastError` under the state lock, so both logs and health UI show the failure.
+Unreadable or invalid persisted state is never overwritten automatically. An
+in-process last-attempt map enforces the hourly backoff even when state is
+missing or cannot be written, preventing a full-tree scan on every scheduler
+cycle. A state file that disappears after this process measured the box creates
+a visible replacement-baseline notice rather than silently adopting a new
+normal.
 
 **Vocabulary lock-ins.** The check name is `box-growth`. The persisted filename
 is `box-growth-health.json`. The UI action is “Accept current size.” “Accept”
@@ -387,10 +406,11 @@ commit as the final behavior and add links from the module comments.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| The tree mutates during iteration | New filesystem doctest covers a controlled addition; exact race remains documented | Best-effort snapshot; next hourly pass repairs it | Clear in docs; no false transactional claim |
-| A directory becomes unreadable or disappears | New filesystem doctest with injected walker failure | Keep last good measurement, store attempt error | Clear warning + scheduler error |
-| Git commands fail while filesystem scan succeeds | New injected-Git doctest | Persist filesystem result with typed unavailable history | Clear warning detail |
-| State JSON is malformed or from an unknown version | New state doctest | Zod rejects; persist or return an unmeasured error without using bad counts | Clear warning + log |
+| The tree mutates during iteration | Nested-exclusion and deadline filesystem doctests; live deletion behavior is code-reviewed | Best-effort snapshot; vanished queued directories increment `skippedDirectories`; next hourly pass repairs it | Clear in state/docs; no false transactional claim |
+| A directory becomes unreadable or disappears | Deadline failure is tested; ENOENT/ENOTDIR continuation is code-reviewed | Continue past vanished directories; other read failures keep the last good measurement and store an attempt error | Clear measurement detail or warning + scheduler error |
+| Git commands fail while filesystem scan succeeds | Healthy unavailable-history state is covered in the core doctest | Persist filesystem result with typed unavailable history | Healthy diagnostic detail; appended to a real growth warning |
+| State JSON is malformed or from an unknown version | Core doctest covers corrupt JSON and repeated due attempts | Zod rejects and leaves the invalid file untouched | Clear warning; no rescan hot loop |
+| State is missing or cannot be written after an attempt | Core doctest removes state after a measurement and forces another due call | In-process attempt time preserves hourly backoff; replacement baseline carries a notice | Clear warning; no 60-second scan loop |
 | Scheduler dies after a good measurement | New pure stale-state test | A last attempt older than 26 hours warns | Clear |
 | Local box never runs a scheduler | New no-state test | Passing check says monitoring never ran; active/stale heartbeat without state warns | Clear; matches scheduler-heartbeat precedent |
 | Scheduler writer and acknowledgement race | New filesystem concurrency doctest | `withCardLock` plus request-scoped `withFileLock`; walk is outside both | Clear on lock failure |
@@ -400,7 +420,7 @@ commit as the final behavior and add links from the module comments.
 | A known connector writes outside its mapped subtree | Pure attribution test covers known mappings; unknown remains possible | Report path as unknown and include recent Git provenance when available | Clear as unknown, not falsely attributed |
 | A source has no trailers | Production evidence documents this case | Filesystem subtree delta remains authoritative | Clear as unknown/path-owned |
 | A symlink points outside or cycles into the box | New filesystem doctest | Scanner counts the symlink as a non-regular entry and never follows it | Clear and bounded |
-| A massive directory has millions of direct children | New synthetic walker test checks bounded retained detail and deadline | Async iteration, top-20 retention, counters only, and 10-second budget | Clear timeout; later boxes still tick |
+| A massive directory has millions of direct children | Real scanner benchmark covered 100,001 files; core doctest covers the deadline | Async iteration, top-20 retention, counters only, and 10-second budget | Clear timeout; later boxes still tick |
 
 ## Agent-flow / user-flow edge cases
 
@@ -487,6 +507,47 @@ because of account quota. The review produced eight findings.
   failures, and intentional growth must be dismissible and re-baselined. The
   plan narrows unsupported Git policy instead of removing the requested
   behavior.
+
+## Cross-model implementation review disposition
+
+Claude Opus reviewed the completed implementation diff on 2026-08-05. All
+eight findings were addressed before final verification:
+
+- Invalid state is left untouched, missing/unwritable state is protected by an
+  in-process hourly attempt guard, and a replacement baseline produces a
+  persistent owner-acknowledgeable notice.
+- Live ENOENT/ENOTDIR churn no longer aborts a walk; skipped directories are
+  recorded. Exclusions now apply at every depth.
+- Git parse output is validated. Git unavailability no longer creates a
+  standalone health warning, and scan failures are separated from persistence
+  failures so the writer does not make a second lock attempt.
+- Fixed connector roots are always retained ahead of generic top-N subtrees, so
+  a newly created connector path has an unambiguous zero baseline and is named
+  by the connector-weighted rate finding.
+- Writes validate the state schema before atomic replacement.
+- The real scanner completed the required 100,001-file synthetic benchmark in
+  381 ms. The existing 10-second deadline still bounds the scheduler's serial
+  work.
+
+The review suggested a separate Git-command deadline. That becomes unnecessary
+for health correctness once Git unavailability is healthy diagnostic detail;
+the commands remain bounded by the scan's total 10-second budget rather than
+extending scheduler latency beyond it.
+
+A focused follow-up review of the hardened diff found five further gaps; each
+was resolved before commit:
+
+- Box-wide rate findings now always render alongside connector findings, so a
+  smaller connector delta cannot hide a larger unrelated producer.
+- A newly retained non-connector subtree receives a conservative lower-bound
+  delta when its current count proves it would have appeared in the previous
+  retained set; genuinely new paths are therefore actionable without treating
+  ordinary top-20 churn as zero-based growth.
+- Symlink entries count as files but are never followed.
+- Box-shape lookup moved inside the Git-history failure boundary, preserving a
+  successful filesystem measurement when only package/Git metadata is invalid.
+- Partial scans suppress rate evaluation until two complete samples are
+  available, avoiding a false growth warning when a transient omission repairs.
 
 ## Knowledge audits
 

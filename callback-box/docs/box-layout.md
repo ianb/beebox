@@ -179,7 +179,7 @@ Generated and managed by callback-box itself; not hand-edited. Most contents are
 | `docs-generated-at` | Timestamp of last `generateDocs()` run. |
 | `events.db`, `events.db-shm`, `events.db-wal` | SQLite event bus database. |
 | `logs/` | Per-run agent session logs (`<sessionId>.log`). |
-| `box-growth-health.json` | Latest box file/directory/Git measurement plus the owner-accepted baseline used by the growth health warning. |
+| `box-growth-health.json` | Latest box file/directory/Git measurement plus the owner-accepted baseline used by the growth health warning. Machine-written and schema-validated; dismiss warnings through **Accept current size**, not by editing or deleting it. |
 | `scheduler.jsonl` | One JSONL line per scheduler tick. Records which scripts ran/skipped/errored. |
 | `usage.db` | Token-usage tracking database. |
 | `chat-session-history.json`, `chat-session-id.json`, `chat-sessions.json`, `chat-thread-sessions.json` | Active chat session state. |

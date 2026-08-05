@@ -1,13 +1,14 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
-import { errorMessage } from "../../lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import type { GrowthHistory, GrowthMeasurement, SubtreeCounts } from "./model.js";
 
 const EXCLUDED_ROOT_NAMES = new Set([".git", ".callback-box", "node_modules"]);
 const MAX_SUBTREES = 20;
 const MAX_PREFIX_SEGMENTS = 3;
+const CONNECTOR_ROOTS: readonly string[] = ["box/inbox/email", "store/calendar", "store/drive"];
 
 interface MutableSubtree {
   directories: number;
@@ -55,6 +56,12 @@ function sourceForPath(relativePath: string): Pick<SubtreeCounts, "source" | "so
   return { source: "unknown", sourceLabel: null };
 }
 
+function connectorRootForPath(relativePath: string): string | undefined {
+  return CONNECTOR_ROOTS.find(
+    (root) => relativePath === root || relativePath.startsWith(`${root}/`),
+  );
+}
+
 function addSubtree(input: {
   subtrees: Map<string, MutableSubtree>;
   relativePath: string;
@@ -63,7 +70,8 @@ function addSubtree(input: {
   const { subtrees, relativePath, kind } = input;
   const segments = relativePath.split(path.sep);
   const prefixSegments = kind === "file" && segments.length > 1 ? segments.slice(0, -1) : segments;
-  const prefix = prefixSegments.slice(0, MAX_PREFIX_SEGMENTS).join("/");
+  const genericPrefix = prefixSegments.slice(0, MAX_PREFIX_SEGMENTS).join("/");
+  const prefix = connectorRootForPath(relativePath) ?? genericPrefix;
   const counts = subtrees.get(prefix) ?? { directories: 0, files: 0 };
   counts[kind === "directory" ? "directories" : "files"] += 1;
   subtrees.set(prefix, counts);
@@ -76,22 +84,31 @@ function checkDeadline(deadline: number): void {
 async function scanTree(
   boxRoot: string,
   deadline: number,
-): Promise<Pick<GrowthMeasurement, "counts" | "largestSubtrees">> {
+): Promise<Pick<GrowthMeasurement, "counts" | "skippedDirectories" | "largestSubtrees">> {
   let directories = 0;
   let files = 0;
+  let skippedDirectories = 0;
   const subtrees = new Map<string, MutableSubtree>();
   const pending = [boxRoot];
   while (pending.length > 0) {
     checkDeadline(deadline);
     const current = pending.pop();
     if (current === undefined) break;
-    const dir = await fs.opendir(current);
+    let dir: Awaited<ReturnType<typeof fs.opendir>>;
+    try {
+      dir = await fs.opendir(current);
+    } catch (error) {
+      if (errnoCode(error) === "ENOENT" || errnoCode(error) === "ENOTDIR") {
+        skippedDirectories += 1;
+        continue;
+      }
+      throw error;
+    }
     for await (const entry of dir) {
       checkDeadline(deadline);
+      if (EXCLUDED_ROOT_NAMES.has(entry.name)) continue;
       const absolute = path.join(current, entry.name);
       const relative = path.relative(boxRoot, absolute);
-      const rootName = relative.split(path.sep).at(0) ?? "";
-      if (EXCLUDED_ROOT_NAMES.has(rootName)) continue;
       if (entry.isDirectory()) {
         directories += 1;
         addSubtree({ subtrees, relativePath: relative, kind: "directory" });
@@ -99,15 +116,22 @@ async function scanTree(
       } else if (entry.isFile()) {
         files += 1;
         addSubtree({ subtrees, relativePath: relative, kind: "file" });
+      } else if (entry.isSymbolicLink()) {
+        files += 1;
+        addSubtree({ subtrees, relativePath: relative, kind: "file" });
       }
     }
   }
-  const largestSubtrees = [...subtrees.entries()]
+  const rankedSubtrees = [...subtrees.entries()]
     .filter(([, counts]) => counts.directories + counts.files > 0)
     .map(([subtreePath, counts]) => ({ path: subtreePath, ...counts, ...sourceForPath(subtreePath) }))
-    .toSorted((a, b) => b.directories + b.files - (a.directories + a.files) || a.path.localeCompare(b.path))
-    .slice(0, MAX_SUBTREES);
-  return { counts: { directories, files }, largestSubtrees };
+    .toSorted((a, b) => b.directories + b.files - (a.directories + a.files) || a.path.localeCompare(b.path));
+  const connectorSubtrees = rankedSubtrees.filter((item) => item.source === "connector");
+  const otherSubtrees = rankedSubtrees.filter((item) => item.source !== "connector");
+  const largestSubtrees = [...connectorSubtrees, ...otherSubtrees]
+    .slice(0, MAX_SUBTREES)
+    .toSorted((a, b) => b.directories + b.files - (a.directories + a.files) || a.path.localeCompare(b.path));
+  return { counts: { directories, files }, skippedDirectories, largestSubtrees };
 }
 
 function numericField(output: string, name: string): number {
@@ -118,9 +142,16 @@ function numericField(output: string, name: string): number {
   return value;
 }
 
-async function measureHistory(packageRoot: string, deadline: number): Promise<GrowthHistory> {
+function numericOutput(output: string, command: string): number {
+  const value = Number(output.trim());
+  if (!Number.isFinite(value)) throw new GitCountObjectsParseError(command, "invalid");
+  return value;
+}
+
+async function measureHistory(boxRoot: string, deadline: number): Promise<GrowthHistory> {
   try {
     checkDeadline(deadline);
+    const { packageRoot } = await getBoxShape(boxRoot);
     const timeout = Math.max(1, deadline - Date.now());
     const [head, commits, objects] = await Promise.all([
       execa("git", ["rev-parse", "HEAD"], { cwd: packageRoot, timeout }),
@@ -134,7 +165,7 @@ async function measureHistory(packageRoot: string, deadline: number): Promise<Gr
     return {
       status: "available",
       gitHead: head.stdout.trim(),
-      commits: Number(commits.stdout.trim()),
+      commits: numericOutput(commits.stdout, "rev-list --count HEAD"),
       gitObjects: looseObjects + packedObjects,
       gitBytes: (looseKiB + packedKiB) * 1024,
     };
@@ -149,7 +180,6 @@ export async function scanBoxGrowth(
 ): Promise<GrowthMeasurement> {
   const deadline = Date.now() + options.maxDurationMs;
   const tree = await scanTree(boxRoot, deadline);
-  const { packageRoot } = await getBoxShape(boxRoot);
-  const history = await measureHistory(packageRoot, deadline);
+  const history = await measureHistory(boxRoot, deadline);
   return { measuredAt: options.now.toISOString(), ...tree, history };
 }
