@@ -3,7 +3,13 @@ title: "Give the agent one clear temp-file convention (it invents different plac
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder: the agent has different ideas about where temp files go
+resolution: implemented
 ---
+
+Resolved by `45322542`. The generated box-agent guide now directs general
+scratch files to the box-root `tmp/`, rejects the host `/tmp`, and warns that
+the uncommitted contents may be swept. A focused doctest and knowledge audit
+cover the convention. The optional validation nudge was not needed.
 
 The agent has **no single, discoverable convention** for where temporary files go,
 so it improvises different places (`/tmp`, the box root, an ad-hoc dir). The

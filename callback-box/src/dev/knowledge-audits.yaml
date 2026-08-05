@@ -26,6 +26,20 @@ tests:
     correct_contains: ["archive"]
     tags: [navigation, lifecycle]
 
+  # Status (2026-08-05): pass after making the box-root tmp/ versus host /tmp
+  # distinction explicit — 0 file reads, 0 searches (44k initial context); the
+  # agent chose box-root tmp/, said "never" host /tmp, and warned it may be swept.
+  - id: temp-file-location
+    prompt: "You need to create a temporary working file while operating this box. Should it go in the host /tmp or the box-root tmp/ directory, and can you rely on it staying there?"
+    expected_level: knows_directly
+    watch_for: "Chooses box-root tmp/ and explicitly rejects host /tmp without reading files; says it may be swept and must not be relied on for persistence"
+    correct_contains: ["tmp/", "/tmp", "never", "swept"]
+    tags: [navigation, temp-files]
+    notes: >
+      General box scratch belongs in tmp/, which is uncommitted and may be
+      swept, so it is not persistent storage. This is distinct from host /tmp
+      and the committed flow-specific tmp-capture/ and tmp-upload/ landing zones.
+
   # === How Items Enter the Box ===
   #
   # Status (2026-07-03): all 5 still pass after full rerun.

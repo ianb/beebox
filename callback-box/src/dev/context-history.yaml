@@ -3653,6 +3653,28 @@ test1:
       peak: 45725
       added: 2580
       turns: 6
+  temp-file-location:
+    - date: 2026-08-05T12:05:08.719Z
+      boxCommit: d1750ba8dafe8d877c4319ff8d142e3a208fb907
+      repoCommit: 5e2f07c47daa8db882f6684b931d8af49f909279
+      initial: 43784
+      peak: 43784
+      added: 0
+      turns: 2
+    - date: 2026-08-05T12:12:39.452Z
+      boxCommit: 849d1915b79f76e4db3d4eb4b877fadf2146e483
+      repoCommit: 5e2f07c47daa8db882f6684b931d8af49f909279
+      initial: 43796
+      peak: 43796
+      added: 0
+      turns: 2
+    - date: 2026-08-05T12:27:27.366Z
+      boxCommit: 849d1915b79f76e4db3d4eb4b877fadf2146e483
+      repoCommit: 2af5a240ca92da35d4f6307d32eabb7d7297a2b3
+      initial: 43895
+      peak: 43895
+      added: 0
+      turns: 1
   tab-arrangement-editing:
     - date: 2026-08-05T01:30:13.099Z
       boxCommit: d5d65f9e78e90bfd5cf79141ebe46673a32fb627
