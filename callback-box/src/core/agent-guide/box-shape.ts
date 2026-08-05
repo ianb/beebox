@@ -43,7 +43,7 @@ export function directoryLayoutSection(): string {
     row("people"),
     row("places"),
     row("config"),
-    "| `tmp/` | General scratch space for temporary files. Uncommitted; contents may be swept — never rely on persistence. |",
+    "| `tmp/` | General scratch space for temporary files. Use this box-root directory, never the host `/tmp`; it is uncommitted and may be swept, so never rely on persistence. |",
   ].join("\n");
 
   return `## Directory Layout

@@ -26,16 +26,14 @@ tests:
     correct_contains: ["archive"]
     tags: [navigation, lifecycle]
 
-  # Status (2026-08-05): pass after correcting sweep wording and excluding the
-  # host /tmp directory explicitly — 0 file reads, 0 searches (44k initial
-  # context); the agent named box-root tmp/ and warned it may be swept.
+  # Status (2026-08-05): pass after making the box-root tmp/ versus host /tmp
+  # distinction explicit — 0 file reads, 0 searches (44k initial context); the
+  # agent chose box-root tmp/, said "never" host /tmp, and warned it may be swept.
   - id: temp-file-location
-    prompt: "You need to create a temporary working file while operating this box. Where should it go, and can you rely on it staying there?"
+    prompt: "You need to create a temporary working file while operating this box. Should it go in the host /tmp or the box-root tmp/ directory, and can you rely on it staying there?"
     expected_level: knows_directly
-    watch_for: "Names tmp/ directly without reading files; says it may be swept and must not be relied on for persistence"
-    correct_contains: ["tmp/", "swept"]
-    response_not_matches:
-      - '(?:^|[\s`(])/tmp\b'
+    watch_for: "Chooses box-root tmp/ and explicitly rejects host /tmp without reading files; says it may be swept and must not be relied on for persistence"
+    correct_contains: ["tmp/", "/tmp", "never", "swept"]
     tags: [navigation, temp-files]
     notes: >
       General box scratch belongs in tmp/, which is uncommitted and may be
