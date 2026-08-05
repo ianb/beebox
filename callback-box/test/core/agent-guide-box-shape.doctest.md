@@ -17,6 +17,14 @@ const v2Shape: BoxShape = {
 };
 ```
 
+## The directory layout names the one general temp-file location
+
+```ts
+const layout = generateAgentGuide({ procedures: [], shape: v2Shape });
+layout.includes("| `tmp/` | General scratch space for temporary files. Uncommitted; contents may be swept — never rely on persistence. |")
+=> true
+```
+
 ## A package (shapeVersion 2) box is told code lives at the package root, reached via `../src/...`
 
 ```ts
