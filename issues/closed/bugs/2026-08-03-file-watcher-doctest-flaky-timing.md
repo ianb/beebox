@@ -6,7 +6,7 @@ discovered-in: worktree-top-nav-ia — /finish full-suite verification
 resolution: implemented
 ---
 
-Resolved by making the doctest prove that each macOS directory watcher has
+Resolved in `eded7086` by making the doctest prove that each macOS directory watcher has
 delivered an event before making timing-sensitive mutations. `fs.watch()` has
 no readiness event on macOS, so `watcher.ready` could complete before FSEvents
 was actually delivering. The updated test also throws when a polling deadline
