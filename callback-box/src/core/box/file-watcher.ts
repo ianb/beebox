@@ -18,8 +18,10 @@
  * Watching the ~200 directories instead costs **zero** FDs on macOS (the kernel
  * serves them from FSEvents) and ~7x fewer inotify watches on Linux, while
  * still reporting every child add/change/unlink. Node's own
- * `fs.watch(root, { recursive: true })` would also be FD-free, but it offers no
- * per-path filter hook, so the high-churn trees below could not be excluded.
+ * `fs.watch(root, { recursive: true })` would also be FD-free on macOS, but it
+ * offers no per-path watch filter, so the high-churn trees below could not be
+ * excluded. The directory-by-directory implementation also gives us an exact
+ * cross-platform ceiling on the watcher handles this subsystem creates.
  */
 
 import * as fs from "node:fs";
@@ -37,6 +39,16 @@ const DOT_SEGMENT = /(^|[/\\])\../;
  * 2026-06-11).
  */
 const HIGH_CHURN_DIRS = ["procedure/runs", "store/trash"];
+
+/**
+ * Absolute ceiling on live directory watches for one box. A watcher is a
+ * convenience for UI freshness; crossing this boundary degrades live updates
+ * instead of allowing an unusually large box to exhaust the server process.
+ */
+const MAX_WATCHED_DIRS = 1024;
+
+/** Ceiling for each kind of queued bookkeeping behind frontend freshness hints. */
+const MAX_NOTIFICATION_WORK = 1024;
 
 /**
  * Throttle window for a given `(event, path)` pair. `fs.watch` is chattier than
@@ -76,8 +88,13 @@ export interface BoxWatcherHandle {
 /** One box root's directory watches, plus the throttling state for its emits. */
 class BoxWatcher implements BoxWatcherHandle {
   private readonly dirs = new Map<string, WatchedDir>();
+  /** Directories with a reserved budget slot while their lstat/watch is pending. */
+  private readonly pendingDirs = new Map<string, symbol>();
   private readonly windows = new Map<string, EmitWindow>();
   private closed = false;
+  private limitReported = false;
+  private notificationLimitReported = false;
+  private pendingReconciles = 0;
   /**
    * Read `closed` through a call, not the field. Every check after an `await`
    * needs to re-read it (close can land mid-walk), and control-flow narrowing
@@ -96,69 +113,138 @@ class BoxWatcher implements BoxWatcherHandle {
 
   /** Whether `absPath` is excluded from watching and from emission. */
   private ignored(absPath: string): boolean {
-    if (DOT_SEGMENT.test(absPath)) return true;
     const rel = path.relative(this.boxRoot, absPath);
+    if (DOT_SEGMENT.test(rel)) return true;
     return HIGH_CHURN_DIRS.some((dir) => rel === dir || rel.startsWith(dir + path.sep));
   }
 
+  /** Reserve one of the bounded watch slots before the first filesystem await. */
+  private reserveDir(dir: string, reservation: symbol): boolean {
+    if (this.closed || this.dirs.has(dir) || this.pendingDirs.has(dir) || this.ignored(dir)) return false;
+    if (this.dirs.size + this.pendingDirs.size >= MAX_WATCHED_DIRS) {
+      this.reportWatchLimit(dir);
+      return false;
+    }
+    this.pendingDirs.set(dir, reservation);
+    return true;
+  }
+
+  /** Report directory-watch degradation once per watcher lifetime. */
+  private reportWatchLimit(dir: string): void {
+    if (this.limitReported) return;
+    this.limitReported = true;
+    console.error(
+      `[box-watcher] directory watch limit of ${MAX_WATCHED_DIRS.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
+        `live updates below ${path.relative(this.boxRoot, dir)} are disabled`,
+    );
+  }
+
+  /** Release `dir` only when this walk still owns its reservation. */
+  private releaseReservation(dir: string, reservation: symbol): void {
+    if (this.pendingDirs.get(dir) === reservation) this.pendingDirs.delete(dir);
+  }
+
+  /** Whether another entry can still consume useful bounded watcher state. */
+  private entryBudgetExhausted(dir: string, emitDiscovered: boolean): boolean {
+    const watchBudgetFull = this.dirs.size + this.pendingDirs.size >= MAX_WATCHED_DIRS;
+    const notificationBudgetFull =
+      emitDiscovered && this.windows.size >= MAX_NOTIFICATION_WORK;
+    if (watchBudgetFull) this.reportWatchLimit(dir);
+    if (notificationBudgetFull) this.reportNotificationLimit();
+    return watchBudgetFull || notificationBudgetFull;
+  }
+
+  /** Keep a usable stat, or release a reservation superseded while awaiting lstat. */
+  private usableReservedStat(
+    dir: string,
+    opts: { reservation: symbol; stat: fs.Stats | null },
+  ): fs.Stats | null {
+    const { reservation, stat } = opts;
+    const unusable =
+      stat === null ||
+      !stat.isDirectory() ||
+      this.isClosed() ||
+      this.dirs.has(dir) ||
+      this.pendingDirs.get(dir) !== reservation;
+    if (unusable) {
+      this.releaseReservation(dir, reservation);
+      return null;
+    }
+    return stat;
+  }
+
   /**
-   * Watch `dir` and, recursively, every directory under it. Idempotent per
-   * directory. Missing/unreadable directories are skipped: the tree is walked
-   * live, so a directory can vanish between the readdir that named it and the
-   * watch that would cover it.
+   * Watch `dir` and its descendants breadth-first. The iterative, sequential
+   * walk keeps transient work bounded and gives shallow box areas priority
+   * when the watch budget cannot cover the whole tree.
    *
    * With `emitDiscovered`, every entry the walk finds is announced. That is for
    * a directory that appeared at runtime: it may already hold files, written
    * before this watch existed, and nothing else will ever report them.
    */
   async addDir(dir: string, opts?: { emitDiscovered: boolean }): Promise<void> {
-    if (this.closed || this.dirs.has(dir) || this.ignored(dir)) return;
+    const reservation = Symbol("box-watcher-walk");
+    if (!this.reserveDir(dir, reservation)) return;
+    const queue = [dir];
 
-    // Read the inode before watching so `reconcile` can tell a replaced
-    // directory from the same one being touched again.
-    const stat = await fsp.lstat(dir).catch(() => null);
-    if (stat === null || !stat.isDirectory() || this.isClosed() || this.dirs.has(dir)) return;
-
-    let watcher: fs.FSWatcher;
     try {
-      watcher = fs.watch(dir, (event, filename) => {
-        this.onEvent(dir, { event, filename });
-      });
-    } catch (e: unknown) {
-      // ENOENT/ENOTDIR: the directory went away mid-walk. Anything else is
-      // worth seeing — a watch we silently dropped is a dead region of the UI.
-      if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
-        console.warn(`[box-watcher] cannot watch ${path.relative(this.boxRoot, dir)}:`, e);
-      }
-      return;
-    }
-    watcher.on("error", (error) => {
-      console.error(`[box-watcher] watch error on ${path.relative(this.boxRoot, dir)}:`, error);
-      this.dropSubtree(dir);
-    });
-    this.dirs.set(dir, { watcher, ino: stat.ino });
+      for (const current of queue) {
+        // Read the inode before watching so `reconcile` can tell a replaced
+        // directory from the same one being touched again.
+        const foundStat = await fsp.lstat(current).catch(() => null);
+        const stat = this.usableReservedStat(current, { reservation, stat: foundStat });
+        if (stat === null) continue;
 
-    let entries: fs.Dirent[];
-    try {
-      entries = await fsp.readdir(dir, { withFileTypes: true });
-    } catch (e: unknown) {
-      if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
-        console.warn(`[box-watcher] cannot list ${path.relative(this.boxRoot, dir)}:`, e);
+        let watcher: fs.FSWatcher;
+        try {
+          watcher = fs.watch(current, (event, filename) => {
+            this.onEvent(current, { event, filename });
+          });
+        } catch (e: unknown) {
+          this.releaseReservation(current, reservation);
+          // ENOENT/ENOTDIR: the directory went away mid-walk. Anything else is
+          // worth seeing — a watch we silently dropped is a dead region of the UI.
+          if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
+            console.warn(`[box-watcher] cannot watch ${path.relative(this.boxRoot, current)}:`, e);
+          }
+          continue;
+        }
+        watcher.on("error", (error) => {
+          console.error(`[box-watcher] watch error on ${path.relative(this.boxRoot, current)}:`, error);
+          this.dropSubtree(current);
+        });
+        this.dirs.set(current, { watcher, ino: stat.ino });
+        this.releaseReservation(current, reservation);
+
+        try {
+          const entries = await fsp.opendir(current);
+          for await (const entry of entries) {
+            // A rename may have replaced this inode while directory iteration
+            // was pending. Its reconcile owns the replacement walk.
+            if (this.dirs.get(current)?.ino !== stat.ino) break;
+            // Symlinked directories are deliberately not followed: a box may
+            // link outside itself (or into itself), and a cycle would walk forever.
+            const child = path.join(current, entry.name);
+            if (this.ignored(child)) continue;
+            const emitDiscovered = opts?.emitDiscovered === true;
+            if (emitDiscovered) this.emit("rename", child);
+            if (entry.isDirectory() && this.reserveDir(child, reservation)) {
+              queue.push(child);
+            }
+            // Once a safety budget fills, later entries can only be discarded.
+            if (this.entryBudgetExhausted(current, emitDiscovered)) break;
+          }
+        } catch (e: unknown) {
+          if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
+            console.warn(`[box-watcher] cannot list ${path.relative(this.boxRoot, current)}:`, e);
+          }
+        }
       }
-      return;
+    } finally {
+      // An unexpected error must not strand reservations and silently shrink
+      // the effective watch budget for the rest of this watcher lifetime.
+      for (const queued of queue) this.releaseReservation(queued, reservation);
     }
-    // Symlinked directories are deliberately not followed: a box may link
-    // outside itself (or into itself), and a cycle would walk forever.
-    // `Dirent.isDirectory()` is lstat-equivalent, so a symlink is simply not a
-    // directory here — `reconcile` uses `lstat` to match.
-    await Promise.all(
-      entries.map(async (entry) => {
-        const child = path.join(dir, entry.name);
-        if (this.ignored(child)) return;
-        if (opts?.emitDiscovered === true) this.emit("rename", child);
-        if (entry.isDirectory()) await this.addDir(child, opts);
-      }),
-    );
   }
 
   /**
@@ -170,6 +256,9 @@ class BoxWatcher implements BoxWatcherHandle {
    */
   private dropSubtree(dir: string): void {
     const prefix = dir + path.sep;
+    for (const pending of this.pendingDirs.keys()) {
+      if (pending === dir || pending.startsWith(prefix)) this.pendingDirs.delete(pending);
+    }
     for (const [watched, entry] of this.dirs) {
       if (watched !== dir && !watched.startsWith(prefix)) continue;
       this.dirs.delete(watched);
@@ -202,6 +291,11 @@ class BoxWatcher implements BoxWatcherHandle {
    * add and leave the subtree half-watched.
    */
   private reconcile(absPath: string): void {
+    if (this.pendingReconciles >= MAX_NOTIFICATION_WORK) {
+      this.reportNotificationLimit();
+      return;
+    }
+    this.pendingReconciles++;
     this.reconciling = this.reconciling
       .then(async () => {
         if (this.isClosed()) return;
@@ -227,7 +321,20 @@ class BoxWatcher implements BoxWatcherHandle {
       })
       .catch((e: unknown) => {
         console.warn(`[box-watcher] reconciling ${path.relative(this.boxRoot, absPath)} failed:`, e);
+      })
+      .finally(() => {
+        this.pendingReconciles--;
       });
+  }
+
+  /** Report bounded notification degradation once per watcher lifetime. */
+  private reportNotificationLimit(): void {
+    if (this.notificationLimitReported) return;
+    this.notificationLimitReported = true;
+    console.error(
+      `[box-watcher] notification work limit of ${MAX_NOTIFICATION_WORK.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
+        "excess live-update hints are being dropped",
+    );
   }
 
   /**
@@ -244,6 +351,10 @@ class BoxWatcher implements BoxWatcherHandle {
     const open = this.windows.get(key);
     if (open) {
       open.pending = true;
+      return;
+    }
+    if (this.windows.size >= MAX_NOTIFICATION_WORK) {
+      this.reportNotificationLimit();
       return;
     }
 
@@ -276,6 +387,7 @@ class BoxWatcher implements BoxWatcherHandle {
 
   close(): void {
     this.closed = true;
+    this.pendingDirs.clear();
     for (const dir of [...this.dirs.keys()]) this.dropSubtree(dir);
     for (const window of this.windows.values()) clearTimeout(window.timer);
     this.windows.clear();
