@@ -167,10 +167,11 @@ const VITE_DEV_ASSET_SEGMENTS = new Set<string>([
   "src",
 ]);
 
-/** Login SPA static-asset prefixes (Track A rewrites these under `<prefix>/`). */
-function isLoginAssetPath(rest: string): boolean {
+/** Public frontend static-asset paths (Track A rewrites these under `<prefix>/`). */
+function isPublicFrontendAssetPath(rest: string): boolean {
   return (
     rest === "/manifest.webmanifest" ||
+    rest === "/sw.js" ||
     rest === "/assets" ||
     rest.startsWith("/assets/") ||
     rest === "/icons" ||
@@ -219,8 +220,8 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   // callback). Method-agnostic: login is a POST, `/auth/me` a GET.
   if (rest === "/auth" || rest.startsWith("/auth/")) return { kind: "unauth-allowlist" };
 
-  // `/<w>/{assets,icons,manifest.webmanifest}` — login SPA static assets (GET).
-  if (method === "GET" && isLoginAssetPath(rest)) return { kind: "unauth-allowlist" };
+  // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
+  if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
 
   // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev browser (owner, read-only).
   if (rest === "/dev" || rest.startsWith("/dev/")) return { kind: "control-read", json: false };
