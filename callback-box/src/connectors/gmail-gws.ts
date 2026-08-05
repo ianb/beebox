@@ -56,6 +56,7 @@ export async function runReadOnlyGws(opts: {
   const token = await opts.auth.getAccessToken();
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [gwsRunnerPath(), ...opts.args], {
+      // TODO(env-migration) -- gws needs the caller's ambient CLI environment plus its token.
       env: { ...process.env, GOOGLE_WORKSPACE_CLI_TOKEN: token },
       stdio: "inherit",
     });

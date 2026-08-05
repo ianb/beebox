@@ -3,7 +3,15 @@ title: "The email connector has no volume limiters — a normal inbox lands ~69k
 area: callback-box
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — box-family, 2026-08-05
+resolution: implemented
 ---
+
+Resolved by `ba3bf436`, with review hardening in `30f1e6e3`. Gmail now
+defaults to creating no cards, treats live thread cards as a bounded working
+set, supports explicit tracking and named automatic rules with rolling caps,
+and exposes excess matches through bounded gitignored summaries. The existing
+per-message storage shape remains for tracked threads; changing that shape is
+separate from the forward volume fix. No existing real-box backlog was removed.
 
 > **Job to be done:** *I want the handful of emails that actually matter to live
 > in my box as real cards. I do not want my box to become a mirror of an inbox
@@ -11,7 +19,7 @@ discovered-in: ios-capture-upload-diag worktree — box-family, 2026-08-05
 
 box-family's `box/` tree is **68,869 directories** — essentially all of it email
 the connector synced. That is the direct cause of
-[the watcher OOM](2026-08-05-box-watcher-unbounded-scale-oom.md), and it is a
+[the watcher OOM](../../bugs/2026-08-05-box-watcher-unbounded-scale-oom.md), and it is a
 problem in its own right: it dominates the box's file count, its git history,
 every whole-tree scan, and the agent's view of what the box contains.
 

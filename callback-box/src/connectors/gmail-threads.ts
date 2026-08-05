@@ -6,6 +6,7 @@ import { parseFrontmatterObject } from "../cards/index.js";
 import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
 import { attachDirFor } from "../shared/attach-path.js";
+import { withCardLock } from "../lib/card-lock.js";
 import { invariant } from "../lib/invariant.js";
 import { safeDirectoryName, makeSnippet, type FetchedMessage } from "./gmail-mime.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
@@ -210,42 +211,44 @@ async function writeOneThread(opts: {
     subject: first.subject,
     tracked: opts.tracked,
   });
-  await fs.mkdir(path.dirname(location.cardPath), { recursive: true });
-  await fs.mkdir(location.attachDir, { recursive: true });
-  const existing = await readExistingMessages(location.attachDir);
-  const refs = [...existing.refs];
-  let newMessageCount = 0;
-  for (const message of opts.messages) {
-    opts.result.seenMessageIds.push(message.messageId);
-    if (existing.ids.has(message.messageId)) continue;
-    newMessageCount += 1;
-    const written = await writeMessage({
-      message,
-      messageNumber: existing.refs.length + newMessageCount,
-      attachDir: location.attachDir,
-      boxRoot: opts.boxRoot,
-    });
-    refs.push(written.ref);
-    opts.result.created.push(...written.paths);
-  }
-  const cardChanged = await writeThreadCard({
-    cardPath: location.cardPath,
-    threadId: opts.threadId,
-    messages: opts.messages,
-    refs,
-    isNew: location.isNew,
-  });
-  const cardRelPath = path.relative(opts.boxRoot, location.cardPath);
-  if (location.isNew) opts.result.created.push(cardRelPath);
-  else if (cardChanged) opts.result.updated.push(cardRelPath);
-  if (location.isNew || cardChanged || newMessageCount > 0) {
-    opts.result.notes.push({
-      subject: first.subject,
-      from: first.from,
+  await withCardLock(location.cardPath, async () => {
+    await fs.mkdir(path.dirname(location.cardPath), { recursive: true });
+    await fs.mkdir(location.attachDir, { recursive: true });
+    const existing = await readExistingMessages(location.attachDir);
+    const refs = [...existing.refs];
+    let newMessageCount = 0;
+    for (const message of opts.messages) {
+      opts.result.seenMessageIds.push(message.messageId);
+      if (existing.ids.has(message.messageId)) continue;
+      newMessageCount += 1;
+      const written = await writeMessage({
+        message,
+        messageNumber: existing.refs.length + newMessageCount,
+        attachDir: location.attachDir,
+        boxRoot: opts.boxRoot,
+      });
+      refs.push(written.ref);
+      opts.result.created.push(...written.paths);
+    }
+    const cardChanged = await writeThreadCard({
+      cardPath: location.cardPath,
+      threadId: opts.threadId,
+      messages: opts.messages,
+      refs,
       isNew: location.isNew,
-      messageCount: newMessageCount,
     });
-  }
+    const cardRelPath = path.relative(opts.boxRoot, location.cardPath);
+    if (location.isNew) opts.result.created.push(cardRelPath);
+    else if (cardChanged) opts.result.updated.push(cardRelPath);
+    if (location.isNew || cardChanged || newMessageCount > 0) {
+      opts.result.notes.push({
+        subject: first.subject,
+        from: first.from,
+        isNew: location.isNew,
+        messageCount: newMessageCount,
+      });
+    }
+  });
 }
 
 /** Write complete Gmail thread snapshots, creating cards only for unknown IDs. */

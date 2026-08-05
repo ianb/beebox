@@ -3,7 +3,18 @@ title: "Email storage: API access for the bulk, file-based cards only for thread
 area: callback-box
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — raised by the boxholder after the box-family watcher OOM, 2026-08-05
+resolution: implemented
 ---
+
+Resolved by `290aed82` and implemented by `ba3bf436`, with review hardening in
+`30f1e6e3`. Gmail remains authoritative for bulk and historical mail; agents
+reach it through the constrained read-only `gws` passthrough. A thread becomes
+durable box state only when explicitly tracked or selected by a bounded rule.
+The live `email-thread` card is the tracking registry, and deleting it untracks
+without deleting Gmail mail. Non-materialized mail has no pointer card; bounded
+private summaries provide event visibility. The generic seam is typed connector
+procedure triggers, while a broader high-volume-connector framework waits for a
+second adopter.
 
 > **Job to be done:** *I want my assistant to be able to reach any of my email
 > when it needs to — without my box having to physically contain all of it.*
@@ -22,7 +33,7 @@ history than a box should hold.
 ## Why it's live now
 
 box-family's email sync produced **68,869 directories**, which
-[OOM'd the server through the file watcher](../bugs/2026-08-05-box-watcher-unbounded-scale-oom.md)
+[OOM'd the server through the file watcher](../../bugs/2026-08-05-box-watcher-unbounded-scale-oom.md)
 and prompted
 [volume limiters for the connector](../bugs/2026-08-05-email-connector-needs-volume-limiters.md).
 Limiters bound the damage; this item asks whether the file-based default is
@@ -44,7 +55,7 @@ right at all for mail.
 - **History and search.** Whether search spans API-only mail, and what the
   agent is told about the boundary — an agent that believes the box contains
   all mail will answer wrongly about what it can't see (a
-  [cb-context](../../callback-box/CLAUDE.md) concern as much as a code one).
+  [cb-context](../../../callback-box/CLAUDE.md) concern as much as a code one).
 - **Generality.** Whether this becomes a connector-wide pattern
   (materialize-on-demand with a promotion rule) rather than an email special
   case — chat logs, calendars, and drive files have the same shape.

@@ -43,7 +43,7 @@ explains every discriminator the investigation kept hitting:
   — per-file watching was worse — but it moved an unbounded cost rather than
   bounding it.
 - Not the chat-history parse cost
-  ([that item](2026-08-04-chat-history-parse-transient-oom.md) was a real,
+  ([that item](../closed/bugs/2026-08-04-chat-history-parse-transient-oom.md) was a real,
   separately-verified bottleneck: +216MB→+0.04MB on a fetch storm — but fixing
   it did not stop the crashes).
 
@@ -67,8 +67,8 @@ explains every discriminator the investigation kept hitting:
    69k handles).
 
 The email inbox being 68,869 directories is its own problem — see
-[email connector needs volume limiters](2026-08-05-email-connector-needs-volume-limiters.md)
-and [file-based email doesn't scale to a real inbox](../decisions/2026-08-05-email-storage-api-vs-file-based.md).
+[email connector needs volume limiters](../closed/bugs/2026-08-05-email-connector-needs-volume-limiters.md)
+and [file-based email doesn't scale to a real inbox](../closed/decisions/2026-08-05-email-storage-api-vs-file-based.md).
 Fixing those shrinks this box but does not bound the watcher, which is why this
 is filed separately.
 

@@ -1,8 +1,15 @@
 # Email Volume and Materialization
 
-This plan keeps bulk mail in Gmail and materializes only selected threads as box cards. It separates an immediate volume-safety track from the later API-access and promotion decision.
+**Status:** parked 2026-08 — superseded by the tracked-working-set design
 
-**Status:** Proposal. The boxholder must approve the open design questions before implementation starts.
+This proposal was not implemented as written. The boxholder's subsequent
+design discussion replaced its callback-specific search/show/promote/demote
+surface with [email tracking instead of mailbox mirroring](../plans/email-tracking.md):
+card existence is the tracking registry, `cb connector gmail track` is the one
+materialization command, deletion untracks without touching Gmail, and broad
+remote access uses a constrained `gws` passthrough.
+
+This plan keeps bulk mail in Gmail and materializes only selected threads as box cards. It separates an immediate volume-safety track from the later API-access and promotion decision.
 
 **Job stories:**
 
@@ -25,10 +32,15 @@ This plan keeps bulk mail in Gmail and materializes only selected threads as box
 
 ## What already exists
 
-- The bare Gmail bootstrap already avoids an inbox backlog. `callback-box/src/connectors/gmail-pull.ts:47-51`: *"First-ever sync of the bare label:inbox default: the caller should mark all refs as seen WITHOUT importing"* and *"Label/query configs never set this"*. Reuse the baseline mechanism, but apply the new explicit initial policy to every selector and every full-list fallback.
-- Steady-state Gmail sync already uses the History API. `callback-box/src/connectors/gmail-pull.ts:4-8`: *"Steady state uses the history API (users.history.list) from a stored checkpoint"*. Reuse History discovery, not its current all-or-nothing return shape.
-- Candidate discovery is unbounded. `callback-box/src/connectors/gmail-pull.ts:64`: *"List every message id matching the query, paginating through results."* The current implementation materializes all refs in memory before returning.
-- Explicit labels and queries currently rely on intent as the resource bound. `callback-box/src/connectors/gmail-pull.ts:49-51`: *"Label/query configs never set this — there the matched set is bounded by explicit user intent."* The incident shows that intent is not a resource bound.
+- At proposal time, the now-retired Gmail pull module baselined only the bare
+  inbox default while treating explicit selector intent as its resource bound.
+  The incident showed that intent was not a resource bound. The replacement
+  lives in `callback-box/src/connectors/gmail-rules.ts` and baselines every new
+  rule without importing its backlog.
+- Steady-state Gmail sync already used the History API, but its old pull helper
+  could paginate and accumulate without a bound. The replacement
+  `callback-box/src/connectors/gmail-discovery.ts` persists a resumable bounded
+  cursor rather than retaining that all-or-nothing shape.
 - Gmail IDs are checked before body fetch. `callback-box/src/connectors/gmail.ts:175-180`: *"Refs whose Gmail id is already seen are skipped without an API call"*. Reuse this dedup for a persisted deferred queue.
 - Failed pulls already preserve the old checkpoint. `callback-box/src/connectors/gmail.ts:349-352`: *"do NOT advance the history checkpoint: the failed window replays next sync"*. Preserve this behavior for failures. A successful capped sync is different: it must advance the checkpoint and persist the omitted IDs atomically.
 - `SyncResult` has no non-error degradation field. `callback-box/src/connectors/index.ts:36-44` contains only `success`, `created`, `updated`, `pushed`, `jobs`, and `error`. Add structured notices.
@@ -55,7 +67,7 @@ This plan keeps bulk mail in Gmail and materializes only selected threads as box
 
 **What.** Bound automatic Gmail materialization by thread per pull invocation. Persist and display the exact number of candidate threads deferred.
 
-**Why this needs to change.** A real box accumulated 68,869 email directories. The issue records that this dominates file count, Git history, scans, and agent-visible state (`issues/bugs/2026-08-05-email-connector-needs-volume-limiters.md:12-16`). The bare inbox baseline is safe, but explicit selectors, large History windows, and expired-checkpoint fallbacks are not.
+**Why this needs to change.** A real box accumulated 68,869 email directories. The issue records that this dominates file count, Git history, scans, and agent-visible state (`issues/closed/bugs/2026-08-05-email-connector-needs-volume-limiters.md`). The bare inbox baseline is safe, but explicit selectors, large History windows, and expired-checkpoint fallbacks are not.
 
 **Direction.** Add one validated config module shared by the connector and admin router:
 

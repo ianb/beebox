@@ -19,3 +19,4 @@ Contrast with the siblings:
 | `query-cards.md` | Parked 2026-07-03; vocabulary explored but not planned for implementation. Parent design lives on in `../plans/interface-as-cards.md`. |
 | `capture-pipeline-redesign.md` | Parked 2026-03 — direction (simpler capture pipeline) may still be relevant; OCR vendor pricing in body is stale. |
 | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../plans/design-reconciliation.md` (rulings 3, 17, 18, 19); survivors harvested into `../design/identity.md`, `../design/extensibility.md`, `../design/representation.md`. |
+| `email-volume-and-materialization-superseded.md` | Superseded by `../plans/email-tracking.md` (2026-08-05) after the boxholder chose card-existence tracking, deletion-as-untracking, procedure triggers, and a constrained `gws` passthrough instead of callback-specific promote/demote and remote-search wrappers. |

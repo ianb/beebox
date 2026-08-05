@@ -1,6 +1,6 @@
 # Email tracking instead of mailbox mirroring
 
-**Status:** implemented on `worktree-email-volume-limits`; not merged or deployed
+**Status:** partially implemented 2026-08 — code complete; live knowledge audits and real-Gmail rollout remain
 
 This plan changes Gmail from a mailbox mirror into a remote source with an explicit tracked working set. Gmail remains the complete archive. An email thread enters Git only when a person, an agent, a procedure, or a bounded automatic rule chooses to track it.
 
@@ -38,23 +38,26 @@ These statements are the authority for the plan's user-facing model. The technic
 - `callback-box/CLAUDE.md` says, *"the filesystem is state, Git is history, the `cb` CLI is the universal interface."* Tracking therefore uses cards and `cb`, while remote discovery stays outside Git.
 - `callback-box/code-style.md` requires validated boundary data, explicit errors, typed results where callers branch, and no silent fallback from corrupt state.
 
-## What already exists
+## Pre-implementation snapshot
 
-- `src/schemas/email-thread.tsx:35-49` defines `*.email-thread.card` and requires a Gmail `thread-id`: *`"thread-id": z.string()`*. Reuse this identity. Do not add a second card type or pointer-card type.
-- `src/connectors/gmail.ts:21-35` documents the current tracked representation: one top-level `*.email-thread.card` with a sibling attach scope containing message cards, bodies, and attachments. Reuse this shape in the first implementation. A storage-shape redesign is separate.
-- `src/connectors/gmail-threads.ts:48-55` currently finds an existing thread only in one directory by a short ID suffix: *`entries.find((e) => e.endsWith(...))`*. Replace this lookup with a validated box-wide live-card index keyed by the full `thread-id` field.
-- `src/connectors/gmail.ts:318-348` currently turns every non-baseline candidate into files through `writeThreadCards`. Split candidate discovery from card materialization. Untracked candidates must not reach `writeThreadCards`.
-- `src/connectors/gmail-pull.ts:117-153` already consumes Gmail History records and returns message IDs plus thread IDs. Reuse it to detect new activity. Continue to fall back when a history checkpoint expires.
-- `src/connectors/gmail-pull.ts:64-81` currently paginates until it lists every query match. Do not use this unbounded helper on the automatic materialization path.
-- `src/connectors/gmail.ts:69-85` separates committed seen-message state from the gitignored history checkpoint. Retire committed `seenGmailIds` as the definition of tracking. Keep machine-local cursors, pending summaries, and budget events in transient state.
-- `src/connectors/transient-state.ts:1-9` defines `config/connectors/<name>.state.json` as machine-local and gitignored. `src/connectors/transient-state.ts:87-97` writes it atomically. Extend the Gmail transient-state schema instead of inventing another state store for the first implementation.
-- `src/core/list-cards.ts:14-20` provides a box-wide card glob. Reuse its walking conventions, but add a Gmail-specific live-card filter that excludes trash and non-content caches.
-- `src/services/google-gmail.ts:41-75` provides a typed Gmail interface with messages, history, labels, attachments, and draft creation. `src/services/google-gmail.ts:188-223` provides an observable fake. Keep this service as the automatic connector's data boundary and extend it with thread retrieval if required.
-- `src/services/google-gmail.ts:80-92` already obtains a Google access token for each request. Reuse the same auth service to pass a short-lived token to `gws`; do not create a second credential store.
-- `src/cli/commands/procedure.ts:20-40` supports `cb procedure run <name-or-path> --directive <text>`. Reuse the directive to tell a procedure which Gmail rule fired and where its bounded candidate data can be read.
-- `docs/procedure-implementation.md:29-39` gives procedures shell prechecks and agent steps. `docs/procedure-implementation.md:183` states that a procedure whose steps all skip leaves no persistent run. This supports frequent event-triggered procedures with cheap deterministic aborts.
-- `src/core/box/defaults.ts:228-239` already schedules Gmail checks every 15 minutes through `cb wakeup --connector gmail`, although the schedule ships disabled. Keep scheduled polling as the initial event source.
-- `src/connectors/index.ts:36-44` lets connector sync return created cards, updated cards, pushed cards, and jobs. Extend the orchestration result with typed procedure triggers, or introduce an equivalent typed post-sync result. Do not start a procedure from the middle of Gmail card writes.
+The original planning pass found mailbox-mirroring behavior in the old Gmail
+connector. That code has now been replaced. The durable implementation points
+are `src/connectors/gmail-tracking.ts` for the live-card registry,
+`src/connectors/gmail-discovery.ts` for bounded history traversal,
+`src/connectors/gmail-state.ts` for validated machine-local state,
+`src/connectors/gmail-threads.ts` for the existing card representation, and
+`src/connectors/gmail.ts` for tracked-only synchronization.
+
+- `src/schemas/email-thread.tsx` remains the card identity boundary and requires
+  the Gmail `thread-id` field. No pointer-card type was added.
+- `src/connectors/transient-state.ts` remains the atomic, gitignored state
+  mechanism; Gmail extends it rather than introducing another store.
+- `src/services/google-gmail.ts` remains the typed automatic-sync boundary and
+  now includes thread retrieval and bounded thread listing.
+- `src/core/commands/connector-procedure-triggers.ts` runs typed procedure
+  requests only after connector writes complete.
+- `docs/procedure-implementation.md` remains the reference for shell prechecks,
+  agent steps, and fully skipped procedures.
 - `docs/plans/cli-restructure.md` already proposes a `cb connector` command group. The Gmail commands in this plan use that namespace but do not require the rest of the CLI restructure to ship.
 
 ## Prior art (external)
@@ -357,21 +360,27 @@ There is no unresolved critical gap in the planned paths. The highest-risk path 
 - **Changing the `email-thread` storage shape.** Keep current thread card, message cards, bodies, and attachment scopes for the limited tracked set.
 - **Building a generic high-volume connector framework now.** Use generic vocabulary and typed trigger results, but implement Gmail only. Generalize after a second connector proves the shared shape.
 - **Automatically invoking a model for every new message.** Procedures can precheck and skip. No default procedure scans the whole inbox.
-- **Cross-model review.** Skipped at the boxholder's explicit request to conserve quota.
+- **Automatic cross-model review.** It was initially skipped to conserve quota;
+  the boxholder later explicitly requested an Opus review, and its eight findings
+  were fixed before finish.
 
-## Open design questions
+## Resolved implementation choices
 
-- **Exact home for the bounded pending summaries.** Lean: include them in validated `config/connectors/gmail.state.json` so cursor, budget, and pending updates are atomic. Expose them through `cb connector gmail pending`; do not encourage procedures to parse internal state directly.
-- **Exact live-card roots.** Lean: include `box/**` and durable archive content such as `store/archive/**`; exclude `store/trash/**`, procedure runs, caches, and dependencies. Implement one shared predicate and test moves across roots.
-- **Exact `gws` installation mechanism.** Lean: pin `@googleworkspace/cli` in callback-box and verify the platform binary installed by the package. Do not download a floating latest release at runtime.
-- **Procedure-trigger result shape.** Lean: add a generic typed post-sync trigger to connector orchestration because Drive and other connectors may later use it. Keep the Gmail rule data in the directive/pending adapter, not in the generic connector interface.
-- **Interactive versus automatic provenance.** Lean: `cb connector gmail track` is interactive by default; rule and procedure orchestration set an unforgeable internal execution context that applies the rolling budget. Do not rely only on an agent remembering an `--automatic` flag.
-
-None of these questions changes the user-facing first chunk. Resolve each before implementing its corresponding track.
+- Bounded pending summaries live in validated `config/connectors/gmail.state.json`
+  and are exposed through `cb connector gmail pending`.
+- The live-card registry scans `**/*.email-thread.card` and excludes trash,
+  procedure runs, caches, dependencies, and connector-private state.
+- Callback-box pins `@googleworkspace/cli`; it does not download a floating
+  release at runtime.
+- Connector sync results carry generic typed procedure requests. Gmail-specific
+  details stay in the bounded pending adapter and directive.
+- Automatic `track` rules consume the rolling budget. A procedure rule does not
+  create cards; an agent that deliberately runs the explicit track command is
+  making an interactive working-set decision.
 
 ## Knowledge audits
 
-Add and run these audits with the implementation:
+Definitions for these audits were added with the implementation:
 
 - **gmail-tracked-subset:** Ask whether Gmail cards represent all mail. Pass only if the agent says they are a tracked subset and names the `gws` surface for other mail.
 - **gmail-track-thread:** Ask how to bring one Gmail thread into box work. Pass only if the agent uses `cb connector gmail track <thread-id>` and explains ongoing sync.
@@ -379,7 +388,10 @@ Add and run these audits with the implementation:
 - **gmail-rule-procedure:** Ask where new-mail procedure routing is configured. Pass only if the agent names Gmail connector rules and distinguishes shell prechecks from agent steps.
 - **gmail-gws-safety:** Ask whether the agent can send or delete mail through the passthrough. Pass only if it says the initial `gws` surface is read-only.
 
-Run them against the isolated worktree test box. Record status comments in `src/dev/knowledge-audits.yaml` before implementation is complete.
+Their live agent run against the isolated test box remains outstanding because
+the boxholder asked to conserve model quota. Results belong in
+`src/dev/knowledge-audits.yaml`; until then this plan remains partially
+implemented rather than being archived as a fully implemented plan.
 
 ## Implementation order
 
@@ -412,11 +424,14 @@ Implementation completed the tracks below with these deliberate boundaries:
 ## Rollout shape
 
 - **Test posture:** tests come first for each substantial boundary.
-  - `test/connectors/connector-gmail-tracking.doctest.md`: live-card discovery, explicit tracking, deletion, tracked-only refresh, history expiry, concurrent/idempotent tracking.
-  - `test/connectors/connector-gmail-rules.doctest.md`: config validation, first-rule baseline, rolling limits, changed limits, excess reporting, and no deferred drain.
-  - `test/connectors/connector-gmail-procedures.doctest.md`: post-sync procedure requests, directives, skip behavior, failures, and automatic provenance.
-  - `test/connectors/connector-gmail-gws.doctest.md`: argument forwarding, authentication, version checks, read-only rejection, output/exit behavior, and malformed JSON.
-  - Extend `test/services/service-google-gmail.doctest.md` for full-thread retrieval.
+  - `test/connectors/gmail-tracking.doctest.md` covers live-card discovery,
+    explicit and concurrent tracking, deletion, tracked-only refresh, history
+    expiry, resumable bounds, config validation, rolling budgets, pending
+    summaries, and the read-only `gws` gate.
+  - `test/core/commands/connector-sync.doctest.md` covers post-sync procedure
+    execution and failure reporting.
+  - `test/services/service-google-gmail.doctest.md` covers full-thread retrieval
+    and bounded thread/history list behavior.
 - **Done-when assertions:**
   - A new Gmail message with no matching rule creates no Git changes.
   - A matching procedure rule may complete without an agent and without a persistent procedure run.
@@ -428,4 +443,6 @@ Implementation completed the tracks below with these deliberate boundaries:
 - **Migration:** support existing `query`/`labels` configuration during a bounded transition. Apply the default automatic tracking budget immediately. Migrate state away from the unbounded committed seen-ID list without replaying historical mail.
 - **Knowledge:** run all five Gmail audits listed above. Treat a failure as an incomplete agent-facing feature, not a documentation follow-up.
 - **Operational rollout:** first exercise with the fake Gmail service and the isolated test box. A real mailbox test requires explicit authorization and must use a deliberately narrow test label. Do not clean up or rewrite any existing real box as part of rollout.
-- **Shipping:** commit to `worktree-email-volume-limits`. Do not merge to `main` and do not deploy until the boxholder requests it.
+- **Shipping:** the boxholder subsequently invoked the finish flow, authorizing
+  merge to `main`. Deployment and real-mailbox validation remain separate facts
+  in the finish report.
