@@ -40,15 +40,15 @@ const DOT_SEGMENT = /(^|[/\\])\../;
  */
 const HIGH_CHURN_DIRS = ["procedure/runs", "store/trash"];
 
-/** Watch these roots for direct-child changes, but never descend below them. */
-const NO_DESCEND_DIRS = ["box/inbox/email"];
-
 /**
  * Absolute ceiling on live directory watches for one box. A watcher is a
  * convenience for UI freshness; crossing this boundary degrades live updates
  * instead of allowing an unusually large box to exhaust the server process.
  */
 const MAX_WATCHED_DIRS = 1024;
+
+/** Ceiling for each kind of queued bookkeeping behind frontend freshness hints. */
+const MAX_NOTIFICATION_WORK = 1024;
 
 /**
  * Throttle window for a given `(event, path)` pair. `fs.watch` is chattier than
@@ -93,6 +93,8 @@ class BoxWatcher implements BoxWatcherHandle {
   private readonly windows = new Map<string, EmitWindow>();
   private closed = false;
   private limitReported = false;
+  private notificationLimitReported = false;
+  private pendingReconciles = 0;
   /**
    * Read `closed` through a call, not the field. Every check after an `await`
    * needs to re-read it (close can land mid-walk), and control-flow narrowing
@@ -114,12 +116,6 @@ class BoxWatcher implements BoxWatcherHandle {
     const rel = path.relative(this.boxRoot, absPath);
     if (DOT_SEGMENT.test(rel)) return true;
     return HIGH_CHURN_DIRS.some((dir) => rel === dir || rel.startsWith(dir + path.sep));
-  }
-
-  /** Whether `absPath` is watched but its child directories are not. */
-  private noDescend(absPath: string): boolean {
-    const rel = path.relative(this.boxRoot, absPath);
-    return NO_DESCEND_DIRS.includes(rel);
   }
 
   /** Reserve one of the bounded watch slots before the first filesystem await. */
@@ -205,10 +201,6 @@ class BoxWatcher implements BoxWatcherHandle {
       this.dirs.set(current, { watcher, ino: stat.ino });
       this.releaseReservation(current, reservation);
 
-      // The watch on a bulk root reports direct-child changes. Listing it
-      // would recreate the same scale spike this policy is meant to avoid.
-      if (this.noDescend(current)) continue;
-
       let entries: fs.Dirent[];
       try {
         entries = await fsp.readdir(current, { withFileTypes: true });
@@ -280,6 +272,11 @@ class BoxWatcher implements BoxWatcherHandle {
    * add and leave the subtree half-watched.
    */
   private reconcile(absPath: string): void {
+    if (this.pendingReconciles >= MAX_NOTIFICATION_WORK) {
+      this.reportNotificationLimit();
+      return;
+    }
+    this.pendingReconciles++;
     this.reconciling = this.reconciling
       .then(async () => {
         if (this.isClosed()) return;
@@ -301,14 +298,24 @@ class BoxWatcher implements BoxWatcherHandle {
         // A new directory, or a different inode at a path we were watching —
         // the old watches point at something that is no longer here.
         if (existing) this.dropSubtree(absPath);
-        // The parent watcher still emits the direct-child rename. Descending
-        // here would defeat the bounded bulk-tree policy.
-        if (this.noDescend(path.dirname(absPath))) return;
         await this.addDir(absPath, { emitDiscovered: true });
       })
       .catch((e: unknown) => {
         console.warn(`[box-watcher] reconciling ${path.relative(this.boxRoot, absPath)} failed:`, e);
+      })
+      .finally(() => {
+        this.pendingReconciles--;
       });
+  }
+
+  /** Report bounded notification degradation once per watcher lifetime. */
+  private reportNotificationLimit(): void {
+    if (this.notificationLimitReported) return;
+    this.notificationLimitReported = true;
+    console.error(
+      `[box-watcher] notification work limit of ${MAX_NOTIFICATION_WORK.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
+        "excess live-update hints are being dropped",
+    );
   }
 
   /**
@@ -325,6 +332,10 @@ class BoxWatcher implements BoxWatcherHandle {
     const open = this.windows.get(key);
     if (open) {
       open.pending = true;
+      return;
+    }
+    if (this.windows.size >= MAX_NOTIFICATION_WORK) {
+      this.reportNotificationLimit();
       return;
     }
 

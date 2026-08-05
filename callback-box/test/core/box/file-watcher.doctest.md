@@ -329,10 +329,10 @@ await box.cleanup();
 ## High-churn trees stay excluded
 
 `procedure/runs` and `store/trash` are never live-rendered and churn constantly;
-watching them exhausted the server's inotify limit on 2026-06-11. The Gmail
-inbox is also a bulk-import tree where one attachment directory per thread can
-otherwise dominate the whole watch budget. Dotfile trees (`.git`,
-`.callback-box`) are excluded for the same reason.
+watching them exhausted the server's inotify limit on 2026-06-11. Dotfile trees
+(`.git`, `.callback-box`) are excluded for the same reason. Ordinary content
+trees receive no path-specific treatment: the generic watch budget is their
+safety boundary.
 
 ```ts
 const box = await makeTmpBox();
@@ -346,7 +346,7 @@ const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
 
 watcher.watchedDirs().join(" ")
-=> . box box/inbox box/inbox/email procedure store store/keep
+=> . box box/inbox box/inbox/email box/inbox/email/thread.attach procedure store store/keep
 ```
 
 ```ts cleanup
@@ -355,29 +355,46 @@ bus.close();
 await box.cleanup();
 ```
 
-## A bulk-tree root still reports direct child changes
+## Notification bookkeeping has a hard budget
 
-The Gmail inbox itself stays live while its per-thread attachment directories
-remain unwatched. This preserves new-thread updates without paying one watcher
-per imported thread.
+A directory can arrive already holding thousands of distinct files. Each path
+would normally open its own coalescing window, so this work is capped just like
+directory watches. Excess hints are deliberately dropped and the degradation is
+reported once; filesystem events are only a frontend freshness convenience.
 
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
-await mkdir(join(box.root, "box", "inbox", "email"), { recursive: true });
+await mkdir(join(box.root, "store"), { recursive: true });
+await mkdir(join(box.root, ".incoming"), { recursive: true });
+for (let i = 0; i < 1100; i++) {
+  await writeFile(join(box.root, ".incoming", `file-${i}.txt`), "x");
+}
 
-const seen: string[] = [];
-bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(String(e.data.path)); } });
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
-await waitForWatch(box.root, bus, "box/inbox/email");
+await waitForWatch(box.root, bus, "store");
 
-await mkdir(join(box.root, "box", "inbox", "email", "new-thread.attach"));
-await waitFor(() => seen.includes("box/inbox/email/new-thread.attach"), 5000, "the new email thread event");
-await watcher.settled();
+let events = 0;
+bus.subscribe({ listener: (e) => { if (e.event === "file-change") events++; } });
+const capLogs: string[] = [];
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const line = args.map(String).join(" ");
+  if (line.includes("notification work limit")) capLogs.push(line);
+  else originalConsoleError(...args);
+};
+try {
+  const { rename } = await import("node:fs/promises");
+  await rename(join(box.root, ".incoming"), join(box.root, "store", "arrived"));
+  await waitFor(() => capLogs.length === 1, 5000, "the notification work limit");
+  await watcher.settled();
+} finally {
+  console.error = originalConsoleError;
+}
 
-`event: ${seen.includes("box/inbox/email/new-thread.attach")} | descended: ${watcher.watchedDirs().includes("box/inbox/email/new-thread.attach")}`
-=> event: true | descended: false
+`bounded: ${events <= 1025} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("1,024") === true}`
+=> bounded: true | logs: 1 | named-limit: true
 ```
 
 ```ts cleanup
