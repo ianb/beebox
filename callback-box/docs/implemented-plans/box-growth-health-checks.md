@@ -36,6 +36,23 @@ the warning. It does not change file limits, directory limits, unrelated
 connector paths, or metrics that did not warn. A box-wide rate finding remains
 box-wide; the action text and runbook state that scope explicitly.
 
+## Production-scale scanner correction (2026-08-05)
+
+The first production scan against `box-family` disproved the synthetic
+benchmark's performance assumption. The one-directory-at-a-time Node walker
+used about 195 MiB and took 18.9 seconds even with warm filesystem caches. A
+cold native `find` pass took 47 seconds, so merely increasing the 10-second
+budget would still starve the serial scheduler.
+
+The corrected scanner delegates traversal to a portable `find` expression that
+streams NUL-delimited type/path pairs. On the warmed production tree it took
+1.23 seconds and about 5.8 MiB. The deadline remains load-bearing: if cold I/O
+still exceeds it, the scanner persists the counts and subtree attribution
+already streamed as incomplete lower bounds. Absolute limits apply to those
+lower bounds, while rate evaluation waits for two complete samples. A timeout
+therefore says “at least N” and names the largest contributor instead of
+discarding all evidence as a failed scan.
+
 > **Job to be done:** When an unattended import or other subsystem starts
 > expanding my box, I want a warning that names the growing area before the box
 > becomes unusable, so I can investigate, clean it up, or accept the new size.
@@ -140,12 +157,14 @@ choosing thresholds:
 | estate | 803 | 4,845 | 136,107 | 868,825 | 162,502 |
 | box-family | 69,062 | 139,138 | 2,478 | 244,465 | 97,719 |
 
-`box-family/content/box/inbox/email` alone held 68,853 directories and
-137,991 files. A full `find` traversal of its content tree took 0.55 seconds and
-5,376 KiB maximum RSS. This is cheap enough hourly in the scheduler. It is not
-appropriate on each dashboard request.
+`box-family/content/box/inbox/email` alone initially held 68,853 directories
+and 137,991 files. At the production verification after launch, it held 71,512
+directories and 143,329 files. The cold full-tree `find` pass took 47 seconds;
+after warming the filesystem cache, the native traversal took under two
+seconds with under 6 MiB maximum RSS. It remains appropriate in the bounded
+hourly scheduler, not on each dashboard request.
 
-The implemented scanner was also run against a synthetic tree containing
+The original Node scanner was also run against a synthetic tree containing
 100,001 regular files. Its own measured walk completed in 381 ms, retained 102
 directory counts, and skipped no directories. The enclosing fixture-build plus
 scan process completed in 7.71 seconds; its 441,860,096-byte maximum RSS includes
@@ -170,15 +189,14 @@ have `Pulled-By: telegram-webhook`, and all 665 template-sync commits have
 
 ## Prior art (external)
 
-- Node's `fsPromises.opendir(path, { recursive: true })` returns an async
-  iterable and buffers 32 directory entries by default. The API is designed for
-  iterative scanning and avoids materializing a whole-tree array:
-  <https://nodejs.org/api/fs.html#fspromisesopendirpath-options>.
-- Node documents that directory entries added or removed during iteration might
-  not appear in that pass. The scanner therefore records a point-in-time sample,
-  not a transactional filesystem snapshot; the next hourly sample repairs any
-  transient miss:
-  <https://nodejs.org/api/fs.html#dirsymbolasynciterator>.
+- GNU find documents `-prune`, NUL-safe output, and batched `-exec ... {} +`;
+  the implementation uses the portable subset so the same scanner runs on the
+  Linux server and macOS development boxes:
+  <https://www.gnu.org/software/findutils/manual/html_mono/find.html>.
+- Faster specialized walkers exist: `bfs` reports traversal benchmarks around
+  three times faster than GNU find. Adding a new server dependency was not
+  necessary once the portable native walk completed the warm production tree
+  in under two seconds: <https://tavianator.com/2023/bfs_3.0.html>.
 - Git's `count-objects -v` reports loose objects, packed objects, pack count,
   pack size, and garbage. The history measurement parses the stable machine
   fields without `--human-readable`:
@@ -350,8 +368,10 @@ OOMs and already knows every configured box.
 **Direction.** The scheduler calls the measurement immediately after
 `touchSchedulerHeartbeat` and before `runTick`. This ordering is deliberate: a
 box whose tick work is thrashing must still be measured. The scan has a
-10-second wall-clock budget checked during iteration. It aborts rather than
-holding the scheduler's serial box loop indefinitely. The helper reads the
+10-second wall-clock budget enforced around the native traversal. On deadline,
+it terminates the subprocess and persists streamed counts as incomplete lower
+bounds rather than holding the scheduler's serial box loop indefinitely or
+discarding all evidence. The helper reads the
 state's `lastAttemptAt` and returns without scanning inside the one-hour
 interval. Its try/catch is separate from the existing `runTick` try/catch. Scan
 failure is written as a `box-growth-scan` scheduler log entry and does not stop
@@ -455,8 +475,8 @@ commit as the final behavior and add links from the module comments.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| The tree mutates during iteration | Nested-exclusion and deadline filesystem doctests; live deletion behavior is code-reviewed | Best-effort snapshot; vanished queued directories increment `skippedDirectories`; next hourly pass repairs it | Clear in state/docs; no false transactional claim |
-| A directory becomes unreadable or disappears | Deadline failure is tested; ENOENT/ENOTDIR continuation is code-reviewed | Continue past vanished directories; other read failures keep the last good measurement and store an attempt error | Clear measurement detail or warning + scheduler error |
+| The tree mutates during iteration | Nested-exclusion, traversal-error, and deadline filesystem doctests | Best-effort lower bound; native traversal errors mark the sample incomplete; next hourly pass repairs it | Clear in state/docs; no false transactional claim |
+| A directory becomes unreadable or disappears | Traversal-error behavior is covered in the core doctest | Persist the streamed lower bound and native error as an incomplete measurement | Clear warning with retained counts |
 | Git commands fail while filesystem scan succeeds | Healthy unavailable-history state is covered in the core doctest | Persist filesystem result with typed unavailable history | Healthy diagnostic detail; appended to a real growth warning |
 | State JSON is malformed or from an unknown version | Core doctest covers corrupt JSON and repeated due attempts | Zod rejects and leaves the invalid file untouched | Clear warning; no rescan hot loop |
 | State is missing or cannot be written after an attempt | Core doctest removes state after a measurement and forces another due call | In-process attempt time preserves hourly backoff; replacement baseline carries a notice | Clear warning; no 60-second scan loop |
@@ -469,7 +489,7 @@ commit as the final behavior and add links from the module comments.
 | A known connector writes outside its mapped subtree | Pure attribution test covers known mappings; unknown remains possible | Report path as unknown and include recent Git provenance when available | Clear as unknown, not falsely attributed |
 | A source has no trailers | Production evidence documents this case | Filesystem subtree delta remains authoritative | Clear as unknown/path-owned |
 | A symlink points outside or cycles into the box | New filesystem doctest | Scanner counts the symlink as a non-regular entry and never follows it | Clear and bounded |
-| A massive directory has millions of direct children | Real scanner benchmark covered 100,001 files; core doctest covers the deadline | Async iteration, top-20 retention, counters only, and 10-second budget | Clear timeout; later boxes still tick |
+| A massive directory has millions of direct children | Production `box-family` benchmark plus core deadline doctest | Native streaming traversal, top-20 retention, partial lower bounds, and 10-second budget | Actionable “at least” warning; later boxes still tick |
 
 ## Agent-flow / user-flow edge cases
 
@@ -567,8 +587,9 @@ eight findings were addressed before final verification:
 - Invalid state is left untouched, missing/unwritable state is protected by an
   in-process hourly attempt guard, and a replacement baseline produces a
   persistent owner-acknowledgeable notice.
-- Live ENOENT/ENOTDIR churn no longer aborts a walk; skipped directories are
-  recorded. Exclusions now apply at every depth.
+- Live ENOENT/ENOTDIR churn no longer discards a walk; the native traversal's
+  streamed lower bound and error remain visible. Exclusions apply at every
+  depth.
 - Git parse output is validated. Git unavailability no longer creates a
   standalone health warning, and scan failures are separated from persistence
   failures so the writer does not make a second lock attempt.
@@ -576,9 +597,10 @@ eight findings were addressed before final verification:
   a newly created connector path has an unambiguous zero baseline and is named
   by the connector-weighted rate finding.
 - Writes validate the state schema before atomic replacement.
-- The real scanner completed the required 100,001-file synthetic benchmark in
-  381 ms. The existing 10-second deadline still bounds the scheduler's serial
-  work.
+- The original scanner completed the required 100,001-file synthetic benchmark
+  in 381 ms. Production later exposed its per-directory overhead; the
+  production-scale correction above supersedes that performance conclusion
+  while preserving the 10-second scheduler bound.
 
 The review suggested a separate Git-command deadline. That becomes unnecessary
 for health correctness once Git unavailability is healthy diagnostic detail;

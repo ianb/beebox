@@ -34,6 +34,8 @@ export const subtreeCountsSchema = z.object({
 export const growthMeasurementSchema = z.object({
   measuredAt: z.iso.datetime(),
   counts: growthCountsSchema,
+  complete: z.boolean().default(true),
+  filesystemError: z.string().nullable().default(null),
   skippedDirectories: z.number().int().nonnegative().default(0),
   history: growthHistorySchema,
   largestSubtrees: z.array(subtreeCountsSchema).max(20),

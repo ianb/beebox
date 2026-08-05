@@ -73,6 +73,22 @@ function fastestGrowingSubtreePath(
     .at(0)?.path;
 }
 
+function rateIntervalIsUsable(input: {
+  previous: GrowthMeasurement;
+  current: GrowthMeasurement;
+  intervalMs: number;
+}): boolean {
+  const { previous, current, intervalMs } = input;
+  return (
+    intervalMs >= BOX_GROWTH_THRESHOLDS.minimumRateIntervalMs &&
+    intervalMs <= BOX_GROWTH_THRESHOLDS.maximumRateIntervalMs &&
+    previous.complete !== false &&
+    current.complete !== false &&
+    previous.skippedDirectories === 0 &&
+    current.skippedDirectories === 0
+  );
+}
+
 export function evaluateBoxGrowth(input: {
   accepted: GrowthMeasurement;
   previous: GrowthMeasurement;
@@ -112,14 +128,7 @@ export function evaluateBoxGrowth(input: {
     });
   }
   const intervalMs = Date.parse(current.measuredAt) - Date.parse(previous.measuredAt);
-  if (
-    intervalMs < BOX_GROWTH_THRESHOLDS.minimumRateIntervalMs ||
-    intervalMs > BOX_GROWTH_THRESHOLDS.maximumRateIntervalMs ||
-    previous.skippedDirectories > 0 ||
-    current.skippedDirectories > 0
-  ) {
-    return findings;
-  }
+  if (!rateIntervalIsUsable({ previous, current, intervalMs })) return findings;
   const directoryRate = rate(current.counts.directories - previous.counts.directories, intervalMs);
   const fileRate = rate(current.counts.files - previous.counts.files, intervalMs);
   const directoryThreshold = rateThreshold({

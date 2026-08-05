@@ -1,19 +1,28 @@
-import * as fs from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import * as path from "node:path";
 import { execa } from "execa";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import type { GrowthHistory, GrowthMeasurement, SubtreeCounts } from "./model.js";
 
-const EXCLUDED_ROOT_NAMES = new Set([".git", ".callback-box", "node_modules"]);
 const MAX_SUBTREES = 20;
 const MAX_PREFIX_SEGMENTS = 3;
+const MAX_FIND_ERROR_BYTES = 8_192;
 const CONNECTOR_ROOTS: readonly string[] = ["box/inbox/email", "store/calendar", "store/drive"];
 
 interface MutableSubtree {
   directories: number;
   files: number;
 }
+
+interface TreeAccumulator {
+  directories: number;
+  files: number;
+  subtrees: Map<string, MutableSubtree>;
+}
+
+type FindBuffer = Buffer<ArrayBufferLike>;
 
 class BoxGrowthDeadlineError extends Error {
   constructor() {
@@ -26,6 +35,20 @@ class GitCountObjectsParseError extends Error {
   constructor(field: string, reason: "missing" | "invalid") {
     super(`git count-objects returned ${reason} field: ${field}`);
     this.name = "GitCountObjectsParseError";
+  }
+}
+
+class FindEntryKindError extends Error {
+  constructor(detail: string) {
+    super(`find returned invalid entry kind: ${detail}`);
+    this.name = "FindEntryKindError";
+  }
+}
+
+class FindIncompleteEntryError extends Error {
+  constructor() {
+    super("find returned an incomplete entry");
+    this.name = "FindIncompleteEntryError";
   }
 }
 
@@ -81,57 +104,117 @@ function checkDeadline(deadline: number): void {
   if (Date.now() >= deadline) throw new BoxGrowthDeadlineError();
 }
 
-async function scanTree(
-  boxRoot: string,
-  deadline: number,
-): Promise<Pick<GrowthMeasurement, "counts" | "skippedDirectories" | "largestSubtrees">> {
-  let directories = 0;
-  let files = 0;
-  let skippedDirectories = 0;
-  const subtrees = new Map<string, MutableSubtree>();
-  const pending = [boxRoot];
-  while (pending.length > 0) {
-    checkDeadline(deadline);
-    const current = pending.pop();
-    if (current === undefined) break;
-    let dir: Awaited<ReturnType<typeof fs.opendir>>;
-    try {
-      dir = await fs.opendir(current);
-    } catch (error) {
-      if (errnoCode(error) === "ENOENT" || errnoCode(error) === "ENOTDIR") {
-        skippedDirectories += 1;
-        continue;
-      }
-      throw error;
+function findArguments(boxRoot: string): string[] {
+  return [
+    boxRoot,
+    "(", "-name", ".git", "-o", "-name", ".callback-box", "-o", "-name", "node_modules", ")",
+    "-prune", "-o",
+    "(", "-type", "d", "-exec", "printf", "d\\000%s\\000", "{}", "+", ")", "-o",
+    "(", "(", "-type", "f", "-o", "-type", "l", ")",
+    "-exec", "printf", "f\\000%s\\000", "{}", "+", ")",
+  ];
+}
+
+function recordFindEntry(input: {
+  accumulator: TreeAccumulator;
+  boxRoot: string;
+  kind: "d" | "f";
+  absolutePath: string;
+}): void {
+  const { accumulator, boxRoot, kind, absolutePath } = input;
+  const relativePath = path.relative(boxRoot, absolutePath);
+  if (relativePath.length === 0) return;
+  if (kind === "d") accumulator.directories += 1;
+  else accumulator.files += 1;
+  addSubtree({
+    subtrees: accumulator.subtrees,
+    relativePath,
+    kind: kind === "d" ? "directory" : "file",
+  });
+}
+
+function consumeFindTokens(input: {
+  accumulator: TreeAccumulator;
+  boxRoot: string;
+  chunk: FindBuffer;
+  buffered: FindBuffer;
+  pendingKind: "d" | "f" | null;
+}): { buffered: FindBuffer; pendingKind: "d" | "f" | null } {
+  const { accumulator, boxRoot, chunk } = input;
+  let { buffered, pendingKind } = input;
+  buffered = Buffer.concat([buffered, chunk]);
+  let separator = buffered.indexOf(0);
+  while (separator >= 0) {
+    const token = buffered.subarray(0, separator).toString();
+    buffered = buffered.subarray(separator + 1);
+    if (pendingKind === null) {
+      if (token !== "d" && token !== "f") throw new FindEntryKindError(token);
+      pendingKind = token;
+    } else {
+      recordFindEntry({ accumulator, boxRoot, kind: pendingKind, absolutePath: token });
+      pendingKind = null;
     }
-    for await (const entry of dir) {
-      checkDeadline(deadline);
-      if (EXCLUDED_ROOT_NAMES.has(entry.name)) continue;
-      const absolute = path.join(current, entry.name);
-      const relative = path.relative(boxRoot, absolute);
-      if (entry.isDirectory()) {
-        directories += 1;
-        addSubtree({ subtrees, relativePath: relative, kind: "directory" });
-        pending.push(absolute);
-      } else if (entry.isFile()) {
-        files += 1;
-        addSubtree({ subtrees, relativePath: relative, kind: "file" });
-      } else if (entry.isSymbolicLink()) {
-        files += 1;
-        addSubtree({ subtrees, relativePath: relative, kind: "file" });
-      }
-    }
+    separator = buffered.indexOf(0);
   }
-  const rankedSubtrees = [...subtrees.entries()]
+  return { buffered, pendingKind };
+}
+
+function rankedSubtrees(subtrees: Map<string, MutableSubtree>): SubtreeCounts[] {
+  const ranked = [...subtrees.entries()]
     .filter(([, counts]) => counts.directories + counts.files > 0)
     .map(([subtreePath, counts]) => ({ path: subtreePath, ...counts, ...sourceForPath(subtreePath) }))
     .toSorted((a, b) => b.directories + b.files - (a.directories + a.files) || a.path.localeCompare(b.path));
-  const connectorSubtrees = rankedSubtrees.filter((item) => item.source === "connector");
-  const otherSubtrees = rankedSubtrees.filter((item) => item.source !== "connector");
-  const largestSubtrees = [...connectorSubtrees, ...otherSubtrees]
+  const connectorSubtrees = ranked.filter((item) => item.source === "connector");
+  const otherSubtrees = ranked.filter((item) => item.source !== "connector");
+  return [...connectorSubtrees, ...otherSubtrees]
     .slice(0, MAX_SUBTREES)
     .toSorted((a, b) => b.directories + b.files - (a.directories + a.files) || a.path.localeCompare(b.path));
-  return { counts: { directories, files }, skippedDirectories, largestSubtrees };
+}
+
+async function scanTree(
+  boxRoot: string,
+  options: { deadline: number; findCommand: string },
+): Promise<Pick<GrowthMeasurement, "complete" | "filesystemError" | "counts" | "skippedDirectories" | "largestSubtrees">> {
+  const accumulator: TreeAccumulator = { directories: 0, files: 0, subtrees: new Map() };
+  const child = spawn(options.findCommand, findArguments(boxRoot), { stdio: ["ignore", "pipe", "pipe"] });
+  const deadlineState = { timedOut: false };
+  const timer = setTimeout(() => {
+    deadlineState.timedOut = true;
+    child.kill("SIGTERM");
+  }, Math.max(0, options.deadline - Date.now()));
+  const closePromise = once(child, "close");
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk: string) => {
+    if (stderr.length < MAX_FIND_ERROR_BYTES) stderr += chunk.slice(0, MAX_FIND_ERROR_BYTES - stderr.length);
+  });
+  let parser: { buffered: FindBuffer; pendingKind: "d" | "f" | null } = {
+    buffered: Buffer.alloc(0),
+    pendingKind: null,
+  };
+  try {
+    for await (const rawChunk of child.stdout) {
+      const chunk = Buffer.isBuffer(rawChunk) ? rawChunk : Buffer.from(rawChunk);
+      parser = consumeFindTokens({ accumulator, boxRoot, chunk, ...parser });
+    }
+    await closePromise;
+    stderr = stderr.trim();
+    if (!deadlineState.timedOut && (parser.buffered.length > 0 || parser.pendingKind !== null)) {
+      throw new FindIncompleteEntryError();
+    }
+    const filesystemError = deadlineState.timedOut
+      ? "Box growth scan exceeded its time budget"
+      : child.exitCode === 0 ? null : stderr.length === 0 ? "find failed" : `find failed: ${stderr}`;
+    return {
+      complete: filesystemError === null,
+      filesystemError,
+      counts: { directories: accumulator.directories, files: accumulator.files },
+      skippedDirectories: 0,
+      largestSubtrees: rankedSubtrees(accumulator.subtrees),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function numericField(output: string, name: string): number {
@@ -176,10 +259,12 @@ async function measureHistory(boxRoot: string, deadline: number): Promise<Growth
 
 export async function scanBoxGrowth(
   boxRoot: string,
-  options: { now: Date; maxDurationMs: number },
+  options: { now: Date; maxDurationMs: number; findCommand?: string },
 ): Promise<GrowthMeasurement> {
   const deadline = Date.now() + options.maxDurationMs;
-  const tree = await scanTree(boxRoot, deadline);
-  const history = await measureHistory(boxRoot, deadline);
+  const tree = await scanTree(boxRoot, { deadline, findCommand: options.findCommand ?? "find" });
+  const history = tree.complete
+    ? await measureHistory(boxRoot, deadline)
+    : { status: "unavailable" as const, error: "Git history was not measured because the filesystem scan was incomplete" };
   return { measuredAt: options.now.toISOString(), ...tree, history };
 }
