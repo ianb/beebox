@@ -46,7 +46,7 @@ available, so repairing a transient omission does not look like new growth.
 
 The dashboard warns on either kind of anomaly:
 
-- absolute size: more than 1,000 directories or 10,000 files;
+- absolute size: more than 250 directories or 1,000 files;
 - hourly rate: at least 10 new directories, 25 new files, or 10 commits;
 - connector subtree rate: at least 5 new directories or 10 new files for a
   recognized connector-owned path such as `box/inbox/email`.

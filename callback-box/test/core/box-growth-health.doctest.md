@@ -93,7 +93,7 @@ rate-connector-files:box/inbox/email
 print(`${BOX_GROWTH_THRESHOLDS.absoluteDirectories}:${BOX_GROWTH_THRESHOLDS.absoluteFiles}`);
 print(`${BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour}:${BOX_GROWTH_THRESHOLDS.rateFilesPerHour}:${BOX_GROWTH_THRESHOLDS.rateCommitsPerHour}`);
 =>
-1000:10000
+250:1000
 10:25:10
 
 const absolute = { ...fast, counts: { directories: BOX_GROWTH_THRESHOLDS.absoluteDirectories + 1, files: 1 } };
@@ -105,14 +105,14 @@ print(`${absoluteFinding !== undefined}:${absoluteFinding?.path}`);
 evaluateBoxGrowth({ accepted: absolute, previous: absolute, current: absolute, acknowledgedAt: null }).some((item) => item.kind === "absolute-directories")
 => true
 
-const nextMilestone = { ...absolute, counts: { ...absolute.counts, directories: 2_003 } };
+const nextMilestone = { ...absolute, counts: { ...absolute.counts, directories: 503 } };
 evaluateBoxGrowth({
   accepted: absolute,
   previous: absolute,
   current: nextMilestone,
   acknowledgedAt: absolute.measuredAt,
 }).find((item) => item.kind === "absolute-directories")?.threshold
-=> 2002
+=> 502
 
 const enteredTopTwenty = { ...fast, largestSubtrees: [{ ...fast.largestSubtrees[0], path: "store/drive" }] };
 evaluateBoxGrowth({ accepted: base, previous: base, current: enteredTopTwenty }).some((item) => item.kind.startsWith("rate-connector"))

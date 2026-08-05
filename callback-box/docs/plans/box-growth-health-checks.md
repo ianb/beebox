@@ -19,7 +19,7 @@ The revised policy separates them:
   continue.” It stores durable expectations for the rate findings that are
   visible now, with 50% headroom, and then acknowledges the observation.
 
-The initial limits become deliberately sensitive: 1,000 directories, 10,000
+The initial limits become deliberately sensitive: 250 directories, 1,000
 files, 10 directories/hour, 25 files/hour, and 10 commits/hour. Connector
 subtrees warn at 5 directories/hour or 10 files/hour. Occasional warnings are
 an intended awareness mechanism, not a false-positive failure.
@@ -288,7 +288,7 @@ encodes unavailable values as zero.
 
 The initial policy uses exported constants and pure evaluation:
 
-- absolute warning: more than 1,000 content directories or 10,000 content
+- absolute warning: more than 250 content directories or 1,000 content
   files;
 - rate warning over a valid 30–120 minute sample interval: at least 10 new
   directories, 25 new files, or 10 new commits per hour;

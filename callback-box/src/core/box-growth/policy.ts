@@ -9,8 +9,8 @@ type CountKind = "directories" | "files";
 const MAX_RETAINED_SUBTREES = 20;
 
 export const BOX_GROWTH_THRESHOLDS = {
-  absoluteDirectories: 1_000,
-  absoluteFiles: 10_000,
+  absoluteDirectories: 250,
+  absoluteFiles: 1_000,
   rateDirectoriesPerHour: 10,
   rateFilesPerHour: 25,
   rateCommitsPerHour: 10,
