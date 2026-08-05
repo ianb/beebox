@@ -5,6 +5,12 @@ import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { requestScopedLock, withFileLock } from "../../lib/file-lock.js";
 import {
+  acknowledgedGrowthState,
+  BoxGrowthAcceptanceError,
+  expectedGrowthRateState,
+  isRateFindingKind,
+} from "./actions.js";
+import {
   boxGrowthStateSchema,
   type BoxGrowthState,
   type BoxGrowthStateRead,
@@ -24,6 +30,8 @@ export type {
   GrowthFindingKind,
   GrowthHistory,
   GrowthMeasurement,
+  GrowthRateExpectation,
+  GrowthRateFindingKind,
   SubtreeCounts,
 } from "./model.js";
 
@@ -44,14 +52,7 @@ export interface BoxGrowthHealthResult {
   ok: boolean;
   message: string;
   severity: "warning";
-  action?: "accept-box-growth";
-}
-
-export class BoxGrowthAcceptanceError extends Error {
-  constructor() {
-    super("Box growth has no current measurement to accept");
-    this.name = "BoxGrowthAcceptanceError";
-  }
+  actions?: Array<"acknowledge-box-growth" | "expect-box-growth-rates">;
 }
 
 class BoxGrowthStateInvalidError extends Error {
@@ -202,6 +203,7 @@ export async function measureBoxGrowthIfDue(
             lastAttemptAt: measurement.measuredAt,
             lastError: null,
             lastNotice: notice,
+            rateExpectations: [],
           };
       await writeState(boxRoot, state);
       const findings = evaluateBoxGrowth({ ...state });
@@ -216,20 +218,25 @@ export async function measureBoxGrowthIfDue(
   }
 }
 
-export async function acceptCurrentBoxGrowth(
+export async function acknowledgeCurrentBoxGrowth(
   boxRoot: string,
   options: { now: Date },
 ): Promise<BoxGrowthState> {
   return updateState(boxRoot, async (latest) => {
     if (latest.status !== "measured") throw new BoxGrowthAcceptanceError();
-    const state: BoxGrowthState = {
-      ...latest,
-      accepted: latest.current,
-      previous: latest.current,
-      current: latest.current,
-      acknowledgedAt: options.now.toISOString(),
-      lastNotice: null,
-    };
+    const state = acknowledgedGrowthState(latest, options.now);
+    await writeState(boxRoot, state);
+    return state;
+  });
+}
+
+export async function expectCurrentBoxGrowthRates(
+  boxRoot: string,
+  options: { now: Date },
+): Promise<BoxGrowthState> {
+  return updateState(boxRoot, async (latest) => {
+    if (latest.status !== "measured") throw new BoxGrowthAcceptanceError();
+    const state = expectedGrowthRateState(latest, options.now);
     await writeState(boxRoot, state);
     return state;
   });
@@ -239,8 +246,17 @@ function healthy(message: string): BoxGrowthHealthResult {
   return { name: "box-growth", ok: true, message, severity: "warning" };
 }
 
-function warning(message: string, action?: boolean): BoxGrowthHealthResult {
-  return { name: "box-growth", ok: false, message, severity: "warning", ...(action ? { action: "accept-box-growth" as const } : {}) };
+function warning(
+  message: string,
+  actions?: BoxGrowthHealthResult["actions"],
+): BoxGrowthHealthResult {
+  return {
+    name: "box-growth",
+    ok: false,
+    message,
+    severity: "warning",
+    ...(actions === undefined ? {} : { actions }),
+  };
 }
 
 function count(value: number): string {
@@ -295,5 +311,10 @@ export async function boxGrowthHealthCheck(
   if (state.lastError !== null) parts.push(`latest scan failed: ${state.lastError}`);
   if (state.lastNotice !== null) parts.push(state.lastNotice);
   if (historyError !== null && findings.length > 0) parts.push(`history measurement failed: ${historyError}`);
-  return warning(`Box growth warning: ${parts.join("; ")}`, findings.length > 0 || state.lastNotice !== null);
+  const actions: NonNullable<BoxGrowthHealthResult["actions"]> = [];
+  if (findings.length > 0 || state.lastNotice !== null) actions.push("acknowledge-box-growth");
+  if (findings.some((finding) => isRateFindingKind(finding.kind))) {
+    actions.push("expect-box-growth-rates");
+  }
+  return warning(`Box growth warning: ${parts.join("; ")}`, actions.length === 0 ? undefined : actions);
 }

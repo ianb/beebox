@@ -46,6 +46,21 @@ const unmeasuredStateSchema = z.object({
   lastError: z.string().nullable(),
 });
 
+export const growthRateFindingKindSchema = z.enum([
+  "rate-directories",
+  "rate-files",
+  "rate-commits",
+  "rate-connector-directories",
+  "rate-connector-files",
+]);
+
+export const growthRateExpectationSchema = z.object({
+  kind: growthRateFindingKindSchema,
+  path: z.string().nullable(),
+  thresholdPerHour: z.number().nonnegative(),
+  setAt: z.iso.datetime(),
+});
+
 const measuredStateSchema = z.object({
   version: z.literal(1),
   status: z.literal("measured"),
@@ -56,6 +71,7 @@ const measuredStateSchema = z.object({
   lastAttemptAt: z.iso.datetime(),
   lastError: z.string().nullable(),
   lastNotice: z.string().nullable().default(null),
+  rateExpectations: z.array(growthRateExpectationSchema).max(50).default([]),
 });
 
 export const boxGrowthStateSchema = z.discriminatedUnion("status", [
@@ -68,20 +84,19 @@ export type GrowthHistory = z.infer<typeof growthHistorySchema>;
 export type SubtreeCounts = z.infer<typeof subtreeCountsSchema>;
 export type GrowthMeasurement = z.infer<typeof growthMeasurementSchema>;
 export type BoxGrowthState = z.infer<typeof boxGrowthStateSchema>;
+export type GrowthRateExpectation = z.infer<typeof growthRateExpectationSchema>;
 
 export type BoxGrowthStateRead =
   | BoxGrowthState
   | { status: "missing" }
   | { status: "invalid"; error: string };
 
+export type GrowthRateFindingKind = z.infer<typeof growthRateFindingKindSchema>;
+
 export type GrowthFindingKind =
   | "absolute-directories"
   | "absolute-files"
-  | "rate-directories"
-  | "rate-files"
-  | "rate-commits"
-  | "rate-connector-directories"
-  | "rate-connector-files";
+  | GrowthRateFindingKind;
 
 export interface GrowthFinding {
   kind: GrowthFindingKind;

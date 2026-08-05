@@ -46,9 +46,9 @@ available, so repairing a transient omission does not look like new growth.
 
 The dashboard warns on either kind of anomaly:
 
-- absolute size: more than 10,000 directories or 100,000 files;
-- hourly rate: at least 200 new directories, 200 new files, or 100 commits;
-- connector subtree rate: half the global file/directory rate threshold for a
+- absolute size: more than 1,000 directories or 10,000 files;
+- hourly rate: at least 10 new directories, 25 new files, or 10 commits;
+- connector subtree rate: at least 5 new directories or 10 new files for a
   recognized connector-owned path such as `box/inbox/email`.
 
 Rate checks require two complete samples 30–120 minutes apart. A partial scan,
@@ -63,11 +63,17 @@ deletes, prunes, or moves box content. If Git cannot be sampled but filesystem
 growth is healthy, the check remains healthy and reports that history detail as
 unavailable; Git failure is appended to a real growth warning when both occur.
 
-An owner can choose **Accept current size** on the dashboard after confirming
-that the growth was intentional. Acceptance moves the baseline to the current
-measurement; it does not disable monitoring. A further 25% increase beyond an
-accepted above-global size warns again, and new rapid growth is evaluated from
-the accepted measurement.
+The dashboard offers two different owner decisions:
+
+- **Acknowledge this growth** records the current size and comparison baseline.
+  It does not change rate limits. The next absolute-size milestone is the larger
+  of the initial limit or twice the acknowledged size.
+- **Expect these rates** stores 150% of each currently warning rate as its new
+  durable threshold, then performs the same acknowledgement. Box-wide rates
+  remain box-wide; connector rates are stored separately by connector path.
+
+Neither action disables monitoring. Expected ongoing growth still crosses and
+warns at later cumulative-size milestones.
 
 If the warning is unexpected, inspect the named subtree before accepting it:
 
@@ -82,8 +88,8 @@ the source of unintended growth. Do not remove content merely to clear the
 warning. A failed scan or a measurement older than 26 hours is itself a warning;
 inspect `.callback-box/scheduler.jsonl` for `box-growth-scan` errors. A local box
 that has never run the scheduler reports monitoring as not yet run without
-degrading health. Do not delete the state file to dismiss a warning: use
-**Accept current size**. If the state file is corrupt, monitoring leaves it
+degrading health. Do not delete the state file to dismiss a warning: use one of
+the explicit dashboard actions. If the state file is corrupt, monitoring leaves it
 untouched and reports the validation error so an operator can inspect or remove
 it deliberately. If state disappears while the scheduler is running, the
 in-process hourly backoff prevents a rescan loop and the replacement baseline

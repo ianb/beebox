@@ -11,9 +11,10 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import {
   boxGrowthStatePath,
   BOX_GROWTH_THRESHOLDS,
-  acceptCurrentBoxGrowth,
+  acknowledgeCurrentBoxGrowth,
   boxGrowthHealthCheck,
   evaluateBoxGrowth,
+  expectCurrentBoxGrowthRates,
   measureBoxGrowth,
   measureBoxGrowthIfDue,
   readBoxGrowthState,
@@ -83,9 +84,17 @@ const fast = {
 const findings = evaluateBoxGrowth({ accepted: base, previous: base, current: fast });
 print(findings.map((finding) => `${finding.kind}:${finding.path ?? "box"}`).join("\n"));
 =>
+rate-directories:box/inbox/email
+rate-files:box/inbox/email
 rate-commits:box
 rate-connector-directories:box/inbox/email
 rate-connector-files:box/inbox/email
+
+print(`${BOX_GROWTH_THRESHOLDS.absoluteDirectories}:${BOX_GROWTH_THRESHOLDS.absoluteFiles}`);
+print(`${BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour}:${BOX_GROWTH_THRESHOLDS.rateFilesPerHour}:${BOX_GROWTH_THRESHOLDS.rateCommitsPerHour}`);
+=>
+1000:10000
+10:25:10
 
 const absolute = { ...fast, counts: { directories: BOX_GROWTH_THRESHOLDS.absoluteDirectories + 1, files: 1 } };
 const absoluteFinding = evaluateBoxGrowth({ accepted: base, previous: base, current: absolute })
@@ -95,6 +104,15 @@ print(`${absoluteFinding !== undefined}:${absoluteFinding?.path}`);
 
 evaluateBoxGrowth({ accepted: absolute, previous: absolute, current: absolute, acknowledgedAt: null }).some((item) => item.kind === "absolute-directories")
 => true
+
+const nextMilestone = { ...absolute, counts: { ...absolute.counts, directories: 2_003 } };
+evaluateBoxGrowth({
+  accepted: absolute,
+  previous: absolute,
+  current: nextMilestone,
+  acknowledgedAt: absolute.measuredAt,
+}).find((item) => item.kind === "absolute-directories")?.threshold
+=> 2002
 
 const enteredTopTwenty = { ...fast, largestSubtrees: [{ ...fast.largestSubtrees[0], path: "store/drive" }] };
 evaluateBoxGrowth({ accepted: base, previous: base, current: enteredTopTwenty }).some((item) => item.kind.startsWith("rate-connector"))
@@ -176,18 +194,20 @@ const replacementHealth = await boxGrowthHealthCheck(box.root, {
   now: at("2026-08-05T14:00:00Z"),
   schedulerStatus: "running",
 });
-print(`${replacementHealth.ok}:${replacementHealth.action}`);
-const accepted = await acceptCurrentBoxGrowth(box.root, { now: at("2026-08-05T14:01:00Z") });
+print(`${replacementHealth.ok}:${replacementHealth.actions?.join(",")}`);
+const accepted = await acknowledgeCurrentBoxGrowth(box.root, { now: at("2026-08-05T14:01:00Z") });
 print(accepted.status);
 print(accepted.status === "measured" && accepted.accepted.measuredAt === accepted.current.measuredAt);
+print(accepted.status === "measured" ? accepted.rateExpectations.length : -1);
 const health = await boxGrowthHealthCheck(box.root, { now: at("2026-08-05T14:01:00Z"), schedulerStatus: "running" });
-print(`${health.name}:${health.ok}:${health.action ?? "none"}`);
+print(`${health.name}:${health.ok}:${health.actions?.join(",") ?? "none"}`);
 =>
 true
 true
-false:accept-box-growth
+false:acknowledge-box-growth
 measured
 true
+0
 box-growth:true:none
 ```
 
@@ -281,8 +301,8 @@ const warningHealth = await boxGrowthHealthCheck(warningBox.root, {
   now: at("2026-08-05T12:01:00Z"),
   schedulerStatus: "running",
 });
-print(`${warningHealth.ok}:${warningHealth.action}:${warningHealth.message.includes("box/inbox/email")}`);
-=> false:accept-box-growth:true
+print(`${warningHealth.ok}:${warningHealth.actions?.join(",")}:${warningHealth.message.includes("box/inbox/email")}`);
+=> false:acknowledge-box-growth:true
 ```
 
 ```ts cleanup
@@ -328,7 +348,32 @@ const mixedHealth = await boxGrowthHealthCheck(mixedBox.root, {
   schedulerStatus: "running",
 });
 print(`${mixedHealth.message.includes("store/junk")}:${mixedHealth.message.includes("box/inbox/email")}`);
-=> true:true
+print(mixedHealth.actions?.join(","));
+const expectedRates = await expectCurrentBoxGrowthRates(mixedBox.root, {
+  now: at("2026-08-05T13:01:00Z"),
+});
+if (expectedRates.status !== "measured") throw new Error("expected measured state");
+print(expectedRates.rateExpectations.map((item) => `${item.kind}:${item.thresholdPerHour}`).sort().join("\n"));
+const repeatedCurrent = {
+  ...mixedCurrent,
+  measuredAt: "2026-08-05T14:00:00.000Z",
+  counts: { directories: 100, files: 1_300 },
+  largestSubtrees: [
+    { ...mixedCurrent.largestSubtrees[0], files: 220 },
+    { ...mixedCurrent.largestSubtrees[1], files: 1_000 },
+  ],
+};
+print(evaluateBoxGrowth({
+  ...expectedRates,
+  previous: expectedRates.current,
+  current: repeatedCurrent,
+}).some((item) => item.kind.startsWith("rate-")));
+=>
+true:true
+acknowledge-box-growth,expect-box-growth-rates
+rate-connector-files:150
+rate-files:900
+false
 ```
 
 ```ts cleanup

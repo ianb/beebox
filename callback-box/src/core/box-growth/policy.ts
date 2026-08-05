@@ -1,16 +1,23 @@
-import type { GrowthFinding, GrowthMeasurement } from "./model.js";
+import type {
+  GrowthFinding,
+  GrowthMeasurement,
+  GrowthRateExpectation,
+  GrowthRateFindingKind,
+} from "./model.js";
 
 type CountKind = "directories" | "files";
 const MAX_RETAINED_SUBTREES = 20;
 
 export const BOX_GROWTH_THRESHOLDS = {
-  absoluteDirectories: 10_000,
-  absoluteFiles: 100_000,
-  rateDirectoriesPerHour: 200,
-  rateFilesPerHour: 200,
-  rateCommitsPerHour: 100,
-  connectorRateMultiplier: 0.5,
-  acceptedGrowthMultiplier: 1.25,
+  absoluteDirectories: 1_000,
+  absoluteFiles: 10_000,
+  rateDirectoriesPerHour: 10,
+  rateFilesPerHour: 25,
+  rateCommitsPerHour: 10,
+  connectorRateDirectoriesPerHour: 5,
+  connectorRateFilesPerHour: 10,
+  acceptedGrowthMultiplier: 2,
+  expectedRateHeadroomMultiplier: 1.5,
   minimumRateIntervalMs: 30 * 60 * 1000,
   maximumRateIntervalMs: 2 * 60 * 60 * 1000,
 } as const;
@@ -27,6 +34,19 @@ function absoluteThreshold(input: {
   const { global, accepted, acknowledgedAt } = input;
   if (acknowledgedAt === null || acknowledgedAt === undefined) return global;
   return Math.max(global, Math.ceil(accepted * BOX_GROWTH_THRESHOLDS.acceptedGrowthMultiplier));
+}
+
+function rateThreshold(input: {
+  kind: GrowthRateFindingKind;
+  path?: string;
+  initial: number;
+  expectations: GrowthRateExpectation[];
+}): number {
+  const { kind, path, initial, expectations } = input;
+  const expected = expectations.find(
+    (item) => item.kind === kind && item.path === (path ?? null),
+  );
+  return Math.max(initial, expected?.thresholdPerHour ?? 0);
 }
 
 function largestSubtreePath(measurement: GrowthMeasurement, kind: CountKind): string | undefined {
@@ -58,8 +78,10 @@ export function evaluateBoxGrowth(input: {
   previous: GrowthMeasurement;
   current: GrowthMeasurement;
   acknowledgedAt?: string | null;
+  rateExpectations?: GrowthRateExpectation[];
 }): GrowthFinding[] {
   const { accepted, previous, current, acknowledgedAt } = input;
+  const expectations = input.rateExpectations ?? [];
   const findings: GrowthFinding[] = [];
   const directoryLimit = absoluteThreshold({
     global: BOX_GROWTH_THRESHOLDS.absoluteDirectories,
@@ -100,28 +122,43 @@ export function evaluateBoxGrowth(input: {
   }
   const directoryRate = rate(current.counts.directories - previous.counts.directories, intervalMs);
   const fileRate = rate(current.counts.files - previous.counts.files, intervalMs);
-  if (directoryRate >= BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour) {
+  const directoryThreshold = rateThreshold({
+    kind: "rate-directories",
+    initial: BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour,
+    expectations,
+  });
+  if (directoryRate >= directoryThreshold) {
     const subtreePath = fastestGrowingSubtreePath({ previous, current, kind: "directories" });
     findings.push({
       kind: "rate-directories",
       ...(subtreePath === undefined ? {} : { path: subtreePath }),
       actual: directoryRate,
-      threshold: BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour,
+      threshold: directoryThreshold,
     });
   }
-  if (fileRate >= BOX_GROWTH_THRESHOLDS.rateFilesPerHour) {
+  const fileThreshold = rateThreshold({
+    kind: "rate-files",
+    initial: BOX_GROWTH_THRESHOLDS.rateFilesPerHour,
+    expectations,
+  });
+  if (fileRate >= fileThreshold) {
     const subtreePath = fastestGrowingSubtreePath({ previous, current, kind: "files" });
     findings.push({
       kind: "rate-files",
       ...(subtreePath === undefined ? {} : { path: subtreePath }),
       actual: fileRate,
-      threshold: BOX_GROWTH_THRESHOLDS.rateFilesPerHour,
+      threshold: fileThreshold,
     });
   }
   if (previous.history.status === "available" && current.history.status === "available") {
     const commitRate = rate(current.history.commits - previous.history.commits, intervalMs);
-    if (commitRate >= BOX_GROWTH_THRESHOLDS.rateCommitsPerHour) {
-      findings.push({ kind: "rate-commits", actual: commitRate, threshold: BOX_GROWTH_THRESHOLDS.rateCommitsPerHour });
+    const commitThreshold = rateThreshold({
+      kind: "rate-commits",
+      initial: BOX_GROWTH_THRESHOLDS.rateCommitsPerHour,
+      expectations,
+    });
+    if (commitRate >= commitThreshold) {
+      findings.push({ kind: "rate-commits", actual: commitRate, threshold: commitThreshold });
     }
   }
   const previousByPath = new Map(previous.largestSubtrees.map((item) => [item.path, item]));
@@ -129,13 +166,23 @@ export function evaluateBoxGrowth(input: {
     const prior = previousByPath.get(subtree.path);
     const subtreeDirectoryRate = rate(subtree.directories - (prior?.directories ?? 0), intervalMs);
     const subtreeFileRate = rate(subtree.files - (prior?.files ?? 0), intervalMs);
-    const directoryThreshold = BOX_GROWTH_THRESHOLDS.rateDirectoriesPerHour * BOX_GROWTH_THRESHOLDS.connectorRateMultiplier;
-    const fileThreshold = BOX_GROWTH_THRESHOLDS.rateFilesPerHour * BOX_GROWTH_THRESHOLDS.connectorRateMultiplier;
-    if (subtreeDirectoryRate >= directoryThreshold) {
-      findings.push({ kind: "rate-connector-directories", path: subtree.path, actual: subtreeDirectoryRate, threshold: directoryThreshold });
+    const connectorDirectoryThreshold = rateThreshold({
+      kind: "rate-connector-directories",
+      path: subtree.path,
+      initial: BOX_GROWTH_THRESHOLDS.connectorRateDirectoriesPerHour,
+      expectations,
+    });
+    const connectorFileThreshold = rateThreshold({
+      kind: "rate-connector-files",
+      path: subtree.path,
+      initial: BOX_GROWTH_THRESHOLDS.connectorRateFilesPerHour,
+      expectations,
+    });
+    if (subtreeDirectoryRate >= connectorDirectoryThreshold) {
+      findings.push({ kind: "rate-connector-directories", path: subtree.path, actual: subtreeDirectoryRate, threshold: connectorDirectoryThreshold });
     }
-    if (subtreeFileRate >= fileThreshold) {
-      findings.push({ kind: "rate-connector-files", path: subtree.path, actual: subtreeFileRate, threshold: fileThreshold });
+    if (subtreeFileRate >= connectorFileThreshold) {
+      findings.push({ kind: "rate-connector-files", path: subtree.path, actual: subtreeFileRate, threshold: connectorFileThreshold });
     }
   }
   return findings;

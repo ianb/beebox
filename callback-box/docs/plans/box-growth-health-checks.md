@@ -7,6 +7,35 @@ growth. It reports large or fast-growing boxes before they exhaust server
 resources. The warning identifies the growing subtree and can be acknowledged;
 acknowledgement accepts the current size and resets the growth baseline.
 
+## Accepted-policy revision (2026-08-05)
+
+The first implementation used one action for two different owner decisions.
+The revised policy separates them:
+
+- **Acknowledge this growth** means “I understand this observed change.” It
+  moves the size and comparison baselines to the current measurement. It does
+  not change any rate threshold.
+- **Expect these rates** means “growth at the currently reported rates can
+  continue.” It stores durable expectations for the rate findings that are
+  visible now, with 50% headroom, and then acknowledges the observation.
+
+The initial limits become deliberately sensitive: 1,000 directories, 10,000
+files, 10 directories/hour, 25 files/hour, and 10 commits/hour. Connector
+subtrees warn at 5 directories/hour or 10 files/hour. Occasional warnings are
+an intended awareness mechanism, not a false-positive failure.
+
+Acknowledged absolute size advances by geometric milestones. The next size
+warning is the larger of the initial limit or twice the acknowledged count.
+Durable rate expectations never suppress those size milestones. Thus an owner
+can accept an expected continuous connector rate and still see the box cross
+successive cumulative-size bands.
+
+Each stored rate expectation is keyed by the exact finding kind and optional
+subtree path. “Expect these rates” updates only the rate signals currently in
+the warning. It does not change file limits, directory limits, unrelated
+connector paths, or metrics that did not warn. A box-wide rate finding remains
+box-wide; the action text and runbook state that scope explicitly.
+
 > **Job to be done:** When an unattended import or other subsystem starts
 > expanding my box, I want a warning that names the growing area before the box
 > becomes unusable, so I can investigate, clean it up, or accept the new size.
@@ -199,6 +228,13 @@ interface GrowthMeasurement {
   largestSubtrees: SubtreeCounts[];
 }
 
+interface GrowthRateExpectation {
+  kind: GrowthRateFindingKind;
+  path: string | null;
+  thresholdPerHour: number;
+  setAt: string;
+}
+
 type BoxGrowthState =
   | {
       version: 1;
@@ -215,6 +251,7 @@ type BoxGrowthState =
       acknowledgedAt: string | null;
       lastAttemptAt: string;
       lastError: string | null;
+      rateExpectations: GrowthRateExpectation[];
     };
 ```
 
@@ -251,13 +288,17 @@ encodes unavailable values as zero.
 
 The initial policy uses exported constants and pure evaluation:
 
-- absolute warning: more than 10,000 content directories or 100,000 content
+- absolute warning: more than 1,000 content directories or 10,000 content
   files;
-- rate warning over a valid 30–120 minute sample interval: at least 200 new
-  directories, 200 new files, or 100 new commits per hour;
-- connector-owned subtree rate warning: half the filesystem rate thresholds;
+- rate warning over a valid 30–120 minute sample interval: at least 10 new
+  directories, 25 new files, or 10 new commits per hour;
+- connector-owned subtree rate warning: at least 5 new directories or 10 new
+  files per hour;
 - after acknowledgement, the next absolute warning occurs at the larger of the
-  global threshold or 125% of the accepted count;
+  initial threshold or 200% of the acknowledged count;
+- “Expect these rates” raises only the currently visible rate thresholds to
+  150% of their observed values and persists those expectations by finding kind
+  and path;
 - Commit count, Git object count, and Git bytes are reported in details, but no
   Git absolute count warns in v1. Fleet evidence shows healthy boxes with
   136,107 and 204,233 commits and far more objects and bytes than the failed
@@ -285,9 +326,10 @@ a visible replacement-baseline notice rather than silently adopting a new
 normal.
 
 **Vocabulary lock-ins.** The check name is `box-growth`. The persisted filename
-is `box-growth-health.json`. The UI action is “Accept current size.” “Accept”
-means acknowledge the warning and re-baseline; it does not claim the size is
-universally healthy.
+is `box-growth-health.json`. The UI actions are “Acknowledge this growth” and
+“Expect these rates.” “Acknowledge” re-baselines only the observation.
+“Expect” changes only the visible rate thresholds and then acknowledges the
+same observation.
 
 **First implementation chunk.** Write a failing pure/filesystem doctest for
 tree counting, exclusions, subtree aggregation, initial absolute warnings,
@@ -333,29 +375,34 @@ and `src/core/schedule/scheduler.ts:169-171` rejects a path without the box's
 `.cb-box` marker. The scheduler and web server therefore address the same
 operational root. `getBoxShape(boxRoot).packageRoot` is used only for Git.
 
-The health response gains one optional action discriminator:
-`action?: "accept-box-growth"`. Only a failing `box-growth` warning can carry
-it. `cb health` continues to print the message and exits nonzero only for error
-severity, preserving `src/cli/commands/health.ts:148-150`.
+The health response gains an optional action list containing
+`"acknowledge-box-growth"` and, when rate findings exist,
+`"expect-box-growth-rates"`. Only a failing `box-growth` warning can carry
+these actions. `cb health` continues to print the message and exits nonzero
+only for error severity, preserving `src/cli/commands/health.ts:148-150`.
 
 **First implementation chunk.** Add scheduler and health doctest cases before
 wiring the call sites. Verify that a due scan runs before an injected failing
 tick, an in-window scan is skipped, a scan failure is logged without suppressing
 the tick, and `runHealthChecks` only reads state.
 
-### Track 3 — owner acknowledgement and dashboard control
+### Track 3 — owner acknowledgement, rate expectation, and dashboard controls
 
-**What.** Add `health.acceptBoxGrowth` as an owner-only tRPC mutation and render
-an “Accept current size” button beside the growth warning.
+**What.** Add owner-only acknowledgement and rate-expectation mutations and
+render two explicit controls beside the growth warning.
 
 **Why this needs to change.** Intentional bulk work should create a warning, but
-an accepted burst must not nag forever. The present health response has no
-acknowledgement action.
+acknowledging one event is not permission to hide the same ongoing rate. The
+owner must choose whether they accept only what happened or also expect the
+reported rates to continue.
 
-**Direction.** The mutation takes no user-provided measurement. Under the same
-same-process plus request-scoped state locks as the scheduler writer, it reloads
-the latest state, requires `status: "measured"`, and promotes `current` to the
-accepted baseline. After the mutation succeeds, the frontend uses the shared
+**Direction.** Neither mutation takes a client-provided measurement or rate.
+Under the same same-process plus request-scoped state locks as the scheduler
+writer, each reloads the latest state and requires `status: "measured"`.
+Acknowledgement promotes `current` to the accepted baseline without changing
+rate expectations. Rate expectation first evaluates the latest state, updates
+only its current rate findings with 50% headroom, and then performs the same
+acknowledgement. After either mutation succeeds, the frontend uses the shared
 `trpcClient` to query `health.check({ fresh: true })`, then writes that returned
 report into the ordinary no-input `health.check` query cache. The fresh path
 deliberately does not join an older in-flight refresh
@@ -364,10 +411,11 @@ primitive with `intent="secondary"` and `size="sm"`. While pending, the action
 is disabled and shows its loading label. A mutation or refresh error stays
 inline under the warning and is announced as text; it is not swallowed.
 
-The generic component only renders the action when the backend's discriminator
-is present and `useCurrentUser` identifies the viewer as the owner. This keeps
-non-owners from seeing a control the owner procedure will reject. Keyboard
-operation and authorization come from the real button and `ownerProcedure`.
+The generic component renders acknowledgement when the backend exposes a growth
+action. It renders rate expectation only when at least one rate finding exists.
+Both require `useCurrentUser` to identify the viewer as the owner. This keeps
+non-owners from seeing controls the owner procedures reject. Keyboard operation
+and authorization come from real buttons and `ownerProcedure`.
 
 **First implementation chunk.** Add the owner-gated route doctest and cache
 invalidation test. Then add the dashboard action and verify it in the browser at
@@ -392,7 +440,8 @@ normal dismissal path.
 1. inspect the reported subtree and recent Git provenance;
 2. decide whether the growth is intended;
 3. fix or bound the producer when unintended;
-4. accept the current size only when it is the intended new normal;
+4. acknowledge the observed change, or explicitly expect the reported rates
+   when they represent an ongoing normal;
 5. never delete content automatically as part of health handling.
 
 **First implementation chunk.** Update both reference documents in the same
@@ -424,8 +473,10 @@ commit as the final behavior and add links from the module comments.
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong action:** ADDRESSED. Only `action: "accept-box-growth"` renders the
-  control, and the mutation accepts no path or count supplied by the client.
+- **Wrong action:** ADDRESSED. The backend exposes acknowledgement for a
+  current growth observation and rate expectation only for current rate
+  findings. Neither mutation accepts a path, count, or threshold supplied by
+  the client.
 - **Stale warning:** ADDRESSED. The mutation reloads `current` under the lock;
   it never acknowledges the measurement embedded in a stale browser response.
 - **Two agents or browser tabs acknowledge together:** ADDRESSED. The shared
@@ -563,15 +614,16 @@ rule that a box agent must recall without reading `cb health` and the runbook.
    state transition, and acknowledgement.
 2. **Scheduler and health reader.** Add scheduler/health doctest cases, then
    wire the hourly pre-tick measurement and the cheap persisted-state warning.
-3. **Owner mutation and cache invalidation.** Add route and snapshot tests, then
-   add `health.acceptBoxGrowth` and the cache-clear seam.
-4. **Dashboard interaction.** Add the explicit action rendering, mutation error
-   state, and query invalidation. Verify desktop, narrow viewport, keyboard, and
-   browser console behavior.
+3. **Owner mutations and cache invalidation.** Add route and snapshot tests,
+   then add `health.acknowledgeBoxGrowth`, `health.expectBoxGrowthRates`, and
+   the cache-clear seam.
+4. **Dashboard interaction.** Add both explicit action renderings, shared
+   mutation error state, and query invalidation. Verify desktop, narrow
+   viewport, keyboard, and browser console behavior.
 5. **Reference docs and verification.** Update the runbook/layout docs. Run the
    focused doctests, full test suite, typecheck, ESLint, oxlint, and a production-
-   sized synthetic scan benchmark. Cross-model review the completed diff before
-   declaring the work done.
+   sized synthetic scan benchmark. The boxholder explicitly waived another
+   cross-model pass for this approved revision because Claude quota is low.
 
 ## Rollout shape
 
@@ -590,8 +642,8 @@ rule that a box agent must recall without reading `cb health` and the runbook.
   - full `pnpm test` passes;
   - a synthetic tree with at least 100,000 entries completes with bounded
     memory and produces the expected top-subtree report;
-  - the dashboard warning and “Accept current size” action work at desktop and
-    375-pixel widths with keyboard access and no console errors;
-  - the implementation diff receives the required cross-model review, and all
-    material findings are resolved or explicitly dispositioned.
+  - both dashboard actions work at desktop and 375-pixel widths with keyboard
+    access and no new console errors;
+  - no additional cross-model review runs, per the boxholder's explicit quota
+    constraint; the earlier plan and implementation reviews remain recorded.
 - The branch is committed but not merged or deployed until the boxholder asks.

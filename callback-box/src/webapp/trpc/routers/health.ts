@@ -11,7 +11,7 @@ import { constants as fsConstants } from "node:fs";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { createClaudeCliService, type ClaudeCliService } from "../../../services/claude-cli.js";
-import { router, publicProcedure, ownerProcedure } from "../trpc.js";
+import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
@@ -26,14 +26,15 @@ import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { getHealthSnapshot } from "./health-snapshot.js";
 import { checkSchedulerHeartbeat } from "../../../core/schedule/health-box.js";
-import { acceptCurrentBoxGrowth, boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
+import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
+import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
 
 export interface HealthCheck {
   name: string;
   ok: boolean;
   message: string;
   severity: "error" | "warning";
-  action?: "accept-box-growth";
+  actions?: Array<"acknowledge-box-growth" | "expect-box-growth-rates">;
 }
 
 export interface CommitInfo {
@@ -425,8 +426,6 @@ export const healthRouter = router({
         },
       });
     }),
-  acceptBoxGrowth: ownerProcedure.mutation(async ({ ctx }) => {
-    await acceptCurrentBoxGrowth(ctx.boxRoot, { now: getBoxTime(ctx.boxRoot) });
-    return { success: true as const };
-  }),
+  acknowledgeBoxGrowth: acknowledgeBoxGrowthProcedure,
+  expectBoxGrowthRates: expectBoxGrowthRatesProcedure,
 });

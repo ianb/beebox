@@ -10,18 +10,20 @@ type HealthResponse = RouterOutput["health"]["check"];
 
 interface HealthWarningsProps {
   health: HealthResponse | null;
-  canAcceptBoxGrowth: boolean;
-  acceptingBoxGrowth: boolean;
-  acceptanceError: string | null;
-  onAcceptBoxGrowth: () => Promise<void>;
+  canManageBoxGrowth: boolean;
+  growthActionPending: "acknowledge" | "expect-rates" | null;
+  growthActionError: string | null;
+  onAcknowledgeBoxGrowth: () => Promise<void>;
+  onExpectBoxGrowthRates: () => Promise<void>;
 }
 
 export function HealthWarnings({
   health,
-  canAcceptBoxGrowth,
-  acceptingBoxGrowth,
-  acceptanceError,
-  onAcceptBoxGrowth,
+  canManageBoxGrowth,
+  growthActionPending,
+  growthActionError,
+  onAcknowledgeBoxGrowth,
+  onExpectBoxGrowthRates,
 }: HealthWarningsProps) {
   if (!health) return null;
   if (health.status === "healthy") return null;
@@ -42,22 +44,46 @@ export function HealthWarnings({
           >
             {check.severity === "error" ? "\u2718" : "\u26A0"} {check.message}
           </div>
-          {check.action === "accept-box-growth" && canAcceptBoxGrowth ? (
-            <Button
-              intent="secondary"
-              size="sm"
-              loading={acceptingBoxGrowth}
-              loadingLabel="Accepting…"
-              onClick={onAcceptBoxGrowth}
-            >
-              Accept current size
-            </Button>
+          {check.actions !== undefined && canManageBoxGrowth ? (
+            <div className="space-y-1">
+              <div className="flex flex-wrap gap-2">
+                {check.actions.includes("acknowledge-box-growth") ? (
+                  <Button
+                    intent="secondary"
+                    size="sm"
+                    loading={growthActionPending === "acknowledge"}
+                    disabled={growthActionPending !== null}
+                    loadingLabel="Acknowledging…"
+                    onClick={onAcknowledgeBoxGrowth}
+                  >
+                    Acknowledge this growth
+                  </Button>
+                ) : null}
+                {check.actions.includes("expect-box-growth-rates") ? (
+                  <Button
+                    intent="secondary"
+                    size="sm"
+                    loading={growthActionPending === "expect-rates"}
+                    disabled={growthActionPending !== null}
+                    loadingLabel="Saving expectation…"
+                    onClick={onExpectBoxGrowthRates}
+                  >
+                    Expect these rates
+                  </Button>
+                ) : null}
+              </div>
+              {check.actions.includes("expect-box-growth-rates") ? (
+                <div className="text-xs text-warning-dark">
+                  Acknowledge records this milestone but keeps rate limits. Expecting these rates gives the displayed rates 50% headroom.
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ))}
-      {acceptanceError !== null ? (
+      {growthActionError !== null ? (
         <div role="alert" className="text-xs text-danger-dark">
-          Could not accept current size: {acceptanceError}
+          Could not update growth monitoring: {growthActionError}
         </div>
       ) : null}
     </section>

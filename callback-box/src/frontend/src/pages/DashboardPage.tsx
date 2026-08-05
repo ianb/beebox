@@ -20,10 +20,11 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 export function DashboardPage() {
   const utils = trpc.useUtils();
   const currentUser = useCurrentUser();
-  const [growthAcceptanceError, setGrowthAcceptanceError] = useState<string | null>(null);
+  const [growthActionError, setGrowthActionError] = useState<string | null>(null);
   const statusQuery = trpc.status.status.useQuery();
   const healthQuery = trpc.health.check.useQuery();
-  const acceptBoxGrowth = trpc.health.acceptBoxGrowth.useMutation();
+  const acknowledgeBoxGrowth = trpc.health.acknowledgeBoxGrowth.useMutation();
+  const expectBoxGrowthRates = trpc.health.expectBoxGrowthRates.useMutation();
   const schedulesQuery = trpc.scheduler.schedules.useQuery();
   const ticksQuery = trpc.scheduler.log.useQuery({ limit: 20, event: "tick" });
   const commitsQuery = trpc.status.activity.useQuery({ count: 15 });
@@ -58,16 +59,30 @@ export function DashboardPage() {
   const activityLoading = commitsQuery.isLoading || ticksQuery.isLoading;
   const activityError = commitsQuery.error || ticksQuery.error;
 
-  async function acceptCurrentGrowth(): Promise<void> {
-    setGrowthAcceptanceError(null);
+  async function refreshGrowthHealth(): Promise<void> {
+    const health = await trpcClient.health.check.query({ fresh: true });
+    utils.health.check.setData(undefined, health);
+  }
+
+  async function acknowledgeCurrentGrowth(): Promise<void> {
+    setGrowthActionError(null);
     try {
-      await acceptBoxGrowth.mutateAsync();
+      await acknowledgeBoxGrowth.mutateAsync();
       // Do not invalidate into an older in-flight snapshot. Force a live read,
       // then put that exact result into the normal dashboard query cache.
-      const health = await trpcClient.health.check.query({ fresh: true });
-      utils.health.check.setData(undefined, health);
+      await refreshGrowthHealth();
     } catch (error) {
-      setGrowthAcceptanceError(errorMessage(error));
+      setGrowthActionError(errorMessage(error));
+    }
+  }
+
+  async function expectCurrentGrowthRates(): Promise<void> {
+    setGrowthActionError(null);
+    try {
+      await expectBoxGrowthRates.mutateAsync();
+      await refreshGrowthHealth();
+    } catch (error) {
+      setGrowthActionError(errorMessage(error));
     }
   }
 
@@ -84,10 +99,15 @@ export function DashboardPage() {
 
           <HealthWarnings
             health={healthQuery.data ?? null}
-            canAcceptBoxGrowth={currentUser?.isOwner === true}
-            acceptingBoxGrowth={acceptBoxGrowth.isPending}
-            acceptanceError={growthAcceptanceError}
-            onAcceptBoxGrowth={acceptCurrentGrowth}
+            canManageBoxGrowth={currentUser?.isOwner === true}
+            growthActionPending={
+              acknowledgeBoxGrowth.isPending
+                ? "acknowledge"
+                : expectBoxGrowthRates.isPending ? "expect-rates" : null
+            }
+            growthActionError={growthActionError}
+            onAcknowledgeBoxGrowth={acknowledgeCurrentGrowth}
+            onExpectBoxGrowthRates={expectCurrentGrowthRates}
           />
 
           <AttentionCards
