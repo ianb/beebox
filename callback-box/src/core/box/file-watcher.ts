@@ -122,22 +122,36 @@ class BoxWatcher implements BoxWatcherHandle {
   private reserveDir(dir: string, reservation: symbol): boolean {
     if (this.closed || this.dirs.has(dir) || this.pendingDirs.has(dir) || this.ignored(dir)) return false;
     if (this.dirs.size + this.pendingDirs.size >= MAX_WATCHED_DIRS) {
-      if (!this.limitReported) {
-        this.limitReported = true;
-        console.error(
-          `[box-watcher] directory watch limit of ${MAX_WATCHED_DIRS.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
-            `live updates below ${path.relative(this.boxRoot, dir)} are disabled`,
-        );
-      }
+      this.reportWatchLimit(dir);
       return false;
     }
     this.pendingDirs.set(dir, reservation);
     return true;
   }
 
+  /** Report directory-watch degradation once per watcher lifetime. */
+  private reportWatchLimit(dir: string): void {
+    if (this.limitReported) return;
+    this.limitReported = true;
+    console.error(
+      `[box-watcher] directory watch limit of ${MAX_WATCHED_DIRS.toLocaleString("en-US")} reached for ${this.boxRoot}; ` +
+        `live updates below ${path.relative(this.boxRoot, dir)} are disabled`,
+    );
+  }
+
   /** Release `dir` only when this walk still owns its reservation. */
   private releaseReservation(dir: string, reservation: symbol): void {
     if (this.pendingDirs.get(dir) === reservation) this.pendingDirs.delete(dir);
+  }
+
+  /** Whether another entry can still consume useful bounded watcher state. */
+  private entryBudgetExhausted(dir: string, emitDiscovered: boolean): boolean {
+    const watchBudgetFull = this.dirs.size + this.pendingDirs.size >= MAX_WATCHED_DIRS;
+    const notificationBudgetFull =
+      emitDiscovered && this.windows.size >= MAX_NOTIFICATION_WORK;
+    if (watchBudgetFull) this.reportWatchLimit(dir);
+    if (notificationBudgetFull) this.reportNotificationLimit();
+    return watchBudgetFull || notificationBudgetFull;
   }
 
   /** Keep a usable stat, or release a reservation superseded while awaiting lstat. */
@@ -173,58 +187,63 @@ class BoxWatcher implements BoxWatcherHandle {
     if (!this.reserveDir(dir, reservation)) return;
     const queue = [dir];
 
-    for (const current of queue) {
-      // Read the inode before watching so `reconcile` can tell a replaced
-      // directory from the same one being touched again.
-      const foundStat = await fsp.lstat(current).catch(() => null);
-      const stat = this.usableReservedStat(current, { reservation, stat: foundStat });
-      if (stat === null) continue;
+    try {
+      for (const current of queue) {
+        // Read the inode before watching so `reconcile` can tell a replaced
+        // directory from the same one being touched again.
+        const foundStat = await fsp.lstat(current).catch(() => null);
+        const stat = this.usableReservedStat(current, { reservation, stat: foundStat });
+        if (stat === null) continue;
 
-      let watcher: fs.FSWatcher;
-      try {
-        watcher = fs.watch(current, (event, filename) => {
-          this.onEvent(current, { event, filename });
+        let watcher: fs.FSWatcher;
+        try {
+          watcher = fs.watch(current, (event, filename) => {
+            this.onEvent(current, { event, filename });
+          });
+        } catch (e: unknown) {
+          this.releaseReservation(current, reservation);
+          // ENOENT/ENOTDIR: the directory went away mid-walk. Anything else is
+          // worth seeing — a watch we silently dropped is a dead region of the UI.
+          if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
+            console.warn(`[box-watcher] cannot watch ${path.relative(this.boxRoot, current)}:`, e);
+          }
+          continue;
+        }
+        watcher.on("error", (error) => {
+          console.error(`[box-watcher] watch error on ${path.relative(this.boxRoot, current)}:`, error);
+          this.dropSubtree(current);
         });
-      } catch (e: unknown) {
+        this.dirs.set(current, { watcher, ino: stat.ino });
         this.releaseReservation(current, reservation);
-        // ENOENT/ENOTDIR: the directory went away mid-walk. Anything else is
-        // worth seeing — a watch we silently dropped is a dead region of the UI.
-        if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
-          console.warn(`[box-watcher] cannot watch ${path.relative(this.boxRoot, current)}:`, e);
-        }
-        continue;
-      }
-      watcher.on("error", (error) => {
-        console.error(`[box-watcher] watch error on ${path.relative(this.boxRoot, current)}:`, error);
-        this.dropSubtree(current);
-      });
-      this.dirs.set(current, { watcher, ino: stat.ino });
-      this.releaseReservation(current, reservation);
 
-      let entries: fs.Dirent[];
-      try {
-        entries = await fsp.readdir(current, { withFileTypes: true });
-      } catch (e: unknown) {
-        if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
-          console.warn(`[box-watcher] cannot list ${path.relative(this.boxRoot, current)}:`, e);
+        try {
+          const entries = await fsp.opendir(current);
+          for await (const entry of entries) {
+            // A rename may have replaced this inode while directory iteration
+            // was pending. Its reconcile owns the replacement walk.
+            if (this.dirs.get(current)?.ino !== stat.ino) break;
+            // Symlinked directories are deliberately not followed: a box may
+            // link outside itself (or into itself), and a cycle would walk forever.
+            const child = path.join(current, entry.name);
+            if (this.ignored(child)) continue;
+            const emitDiscovered = opts?.emitDiscovered === true;
+            if (emitDiscovered) this.emit("rename", child);
+            if (entry.isDirectory() && this.reserveDir(child, reservation)) {
+              queue.push(child);
+            }
+            // Once a safety budget fills, later entries can only be discarded.
+            if (this.entryBudgetExhausted(current, emitDiscovered)) break;
+          }
+        } catch (e: unknown) {
+          if (errnoOf(e) !== "ENOENT" && errnoOf(e) !== "ENOTDIR") {
+            console.warn(`[box-watcher] cannot list ${path.relative(this.boxRoot, current)}:`, e);
+          }
         }
-        continue;
       }
-      // A rename may have replaced this inode while readdir was pending. Its
-      // reconcile owns the replacement walk; do not enqueue the old children.
-      if (this.dirs.get(current)?.ino !== stat.ino) continue;
-      // Symlinked directories are deliberately not followed: a box may link
-      // outside itself (or into itself), and a cycle would walk forever.
-      // `Dirent.isDirectory()` is lstat-equivalent, so a symlink is simply not a
-      // directory here — `reconcile` uses `lstat` to match.
-      for (const entry of entries) {
-        const child = path.join(current, entry.name);
-        if (this.ignored(child)) continue;
-        if (opts?.emitDiscovered === true) this.emit("rename", child);
-        if (entry.isDirectory() && this.reserveDir(child, reservation)) {
-          queue.push(child);
-        }
-      }
+    } finally {
+      // An unexpected error must not strand reservations and silently shrink
+      // the effective watch budget for the rest of this watcher lifetime.
+      for (const queued of queue) this.releaseReservation(queued, reservation);
     }
   }
 

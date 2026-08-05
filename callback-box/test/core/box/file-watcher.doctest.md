@@ -451,7 +451,7 @@ console.error = (...args: unknown[]) => {
     originalConsoleError(...args);
   }
 };
-let watcher;
+let watcher: ReturnType<typeof ensureBoxWatcher>;
 try {
   watcher = ensureBoxWatcher(box.root, bus);
   await watcher.ready;
