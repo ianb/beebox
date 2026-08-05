@@ -24,7 +24,7 @@ import {
   MAX_SESSION_ENTRIES,
   parseSessionLog,
 } from "../lib/session.js";
-import { generateSessionReport } from "../../dev/lib/session-report.js";
+import { writeSessionReport } from "../../dev/lib/session-report.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
 import {
   partitionByAffinity,
@@ -184,8 +184,10 @@ export const sessionCommand = new Command("session")
 
       // --tool-report: generate critique-friendly report
       if (options.toolReport) {
-        const report = await generateSessionReport({ logPath });
-        process.stdout.write(report);
+        await writeSessionReport({
+          logPath,
+          rawTranscriptCommand: `cb session ${sessionId} --raw${options.allowHuge ? " --allow-huge" : ""}`,
+        });
         return;
       }
 
