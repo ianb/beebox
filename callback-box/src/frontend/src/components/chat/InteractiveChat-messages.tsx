@@ -54,10 +54,9 @@ function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveT
   return prev.uuid;
 }
 
-function LoadOlderHeader({ hasOlder, loadingOlder, earlierCount, onLoadOlder }: {
+function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
   hasOlder: boolean;
   loadingOlder: boolean;
-  earlierCount: number;
   onLoadOlder: () => void;
 }) {
   if (!hasOlder) return null;
@@ -68,7 +67,7 @@ function LoadOlderHeader({ hasOlder, loadingOlder, earlierCount, onLoadOlder }: 
         disabled={loadingOlder}
         className="text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
       >
-        {loadingOlder ? "Loading..." : `Show ${earlierCount} earlier messages`}
+        {loadingOlder ? "Loading..." : "Show earlier messages"}
       </button>
     </div>
   );
@@ -134,7 +133,6 @@ function MessageListInner({
 }) {
   const { boxSlug } = useParams({ strict: false });
   const hasOlder = totalEntries > messages.length;
-  const earlierCount = totalEntries - messages.length;
 
   // Keep the streamed bubble visible through `refreshing` too — the brief
   // fetchHistory roundtrip after a turn completes. The machine holds
@@ -232,7 +230,6 @@ function MessageListInner({
           <LoadOlderHeader
             hasOlder={hasOlder}
             loadingOlder={loadingOlder}
-            earlierCount={earlierCount}
             onLoadOlder={handleLoadOlder}
           />
           {data.map((item) => {
