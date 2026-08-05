@@ -12,7 +12,8 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 | Task | Command | Cadence | Output |
 |------|---------|---------|--------|
-| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated (launchd, weekdays); manual anytime | Bumped `package.json` + lockfile |
+| Agent SDK release monitor | `bin/update-agent-sdk-scheduled.sh` | Automated (launchd, daily); `--chat` to open its session | Filtered release ledger in `docs/agent-sdk-notes.md` |
+| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | When explicitly requested after reviewing the monitor notes | Bumped `package.json` + lockfile |
 | Docling currency watch | `pnpm check-docling-update` (monorepo root) | Automated (rides the SDK-update launchd job); manual anytime | Console (silent when nothing to report) |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
@@ -30,6 +31,23 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 ## Tasks
 
+### Agent SDK release monitor
+
+`bin/update-agent-sdk-scheduled.sh --install` (from the **main checkout**, once
+per machine) registers a daily launchd job. The job resumes one persistent Opus
+session. That session reads each new SDK release, checks it against callback-box's
+current SDK imports and runtime behavior, and prepends the result to
+[`agent-sdk-notes.md`](agent-sdk-notes.md). Applied entries stay in the ledger
+as evidence for regression diagnosis and future opportunities. The current pin
+marks entries as applied or pending.
+
+The monitor includes releases younger than the normal two-day settling window.
+It marks callback-box-relevant security, memory, and correctness fixes as
+act-now. Routine releases can finish settling. It does not auto-bump. Open the
+same session with `bin/update-agent-sdk-scheduled.sh --chat`; an explicit bump
+request there lets the agent perform the update and verification flow below.
+Logs are in `~/Library/Logs/callback-box-sdk-update.log`.
+
 ### Agent SDK update — `pnpm update-agent-sdk` (monorepo root)
 
 Bumps the exact pin of `@anthropic-ai/claude-agent-sdk` to the newest npm
@@ -42,19 +60,15 @@ is why the pin must stay exact (a caret plus the exclusion would resolve to
 minutes-old releases; and historically a `^0.x` caret also silently stopped
 crossing 0.x minors, which once left us on a two-month-old agent binary).
 
-**When to run:** automated — `bin/update-agent-sdk-scheduled.sh --install`
-(from the **main checkout**, once per machine) registers a launchd job that
-runs the check weekdays at 12:04 machine-local. Up to date → exits silently;
-behind → spawns a headless Claude session that does the full flow below and
-commits to `main` (or files an issue on failure). Logs:
-`~/Library/Logs/callback-box-sdk-update.log`. Manual runs (`--check` to just
-report, exit 1 when behind) work anytime.
+**When to run:** after the boxholder explicitly requests a bump in the monitor
+session or another development session. Manual runs (`--check` to report the
+newest release that has cleared the settling window) work anytime.
 
-**After a bump:** run `pnpm test`, then the steering probe —
-`node --import tsx scripts/sdk-steering-probe.ts` (real API calls, ~1 min) —
-which verifies the undocumented mid-turn input semantics the chat session
-depends on still hold. Then commit; prod picks the new version up on the next
-`main` deploy.
+**After a bump:** run `pnpm -C callback-box test`, then the steering probe —
+`node --import tsx callback-box/scripts/sdk-steering-probe.ts` (real API calls,
+~1 min) — which verifies the undocumented mid-turn input semantics the chat
+session depends on still hold. Then commit; prod picks the new version up on
+the next `main` deploy.
 
 ### Docling currency watch — `pnpm check-docling-update` (monorepo root)
 
