@@ -117,10 +117,13 @@ untrusted text files and are not automatically loaded as card instructions.
 
 ## Sync state and old installations
 
-`gmail.state.json` stores the history cursor, rule baselines, rolling-budget
-events, and bounded pending summaries. A corrupt file fails closed. An expired
-Gmail cursor establishes a new checkpoint, recounts rule matches, and refreshes
-tracked cards without listing the mailbox into Git.
+`gmail.state.json` stores the history cursor (including bounded-batch resume
+state), rule baseline counts, rolling-budget events, bounded pending summaries,
+and bounded summaries that could not be safely evaluated because their RFC
+Message-ID was absent or malformed. A corrupt owned value fails closed; obsolete
+top-level fields from the old GC implementation are discarded. An expired Gmail
+cursor establishes a new checkpoint and recounts rule matches without fetching
+or importing mailbox content.
 
 Older committed `gmail-state.json` files are no longer the tracking registry or
 written by sync. They may be removed in an explicitly authorized cleanup; the

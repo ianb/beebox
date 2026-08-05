@@ -18,7 +18,11 @@ import { uploadPendingDrafts } from "./gmail-drafts.js";
 import { getGoogleAuth } from "./google-auth.js";
 import { evaluateGmailRules } from "./gmail-rules.js";
 import { parseGmailTransientState, type GmailTransientState } from "./gmail-state.js";
-import { fetchGmailThreadMessages, gmailLabelMap } from "./gmail-track.js";
+import {
+  fetchGmailThreadMessages,
+  gmailLabelMap,
+  withGmailTrackingLock,
+} from "./gmail-track.js";
 import { findTrackedGmailThreads } from "./gmail-tracking.js";
 import { writeThreadCards, type WriteThreadsResult } from "./gmail-threads.js";
 import { registerConnector, type Connector, type SyncResult } from "./index.js";
@@ -62,27 +66,44 @@ function resetRuleBaselines(state: GmailTransientState): GmailTransientState {
 
 async function fetchCandidates(opts: {
   service: GoogleGmailService;
-  refs: Array<{ id: string }>;
+  refs: Array<{ id: string; threadId: string }>;
 }): Promise<GmailMessage[]> {
   const messages: GmailMessage[] = [];
-  for (const ref of opts.refs) messages.push(await opts.service.getMessage(ref.id));
+  const refsById = new Map(opts.refs.map((ref) => [ref.id, ref]));
+  for (const ref of refsById.values()) {
+    messages.push(await opts.service.getMessage(ref.id));
+  }
   return messages;
 }
 
-async function fetchThreadSnapshots(opts: {
+function appendWriteResult(target: WriteThreadsResult, source: WriteThreadsResult): void {
+  target.created.push(...source.created);
+  target.updated.push(...source.updated);
+  target.notes.push(...source.notes);
+  target.seenMessageIds.push(...source.seenMessageIds);
+}
+
+async function refreshThreadSnapshots(opts: {
+  boxRoot: string;
   service: GoogleGmailService;
   threadIds: Iterable<string>;
+  createThreadIds: ReadonlySet<string>;
   labelMap: Map<string, string>;
-}) {
-  const messages = [];
+}): Promise<WriteThreadsResult> {
+  const result: WriteThreadsResult = { created: [], updated: [], notes: [], seenMessageIds: [] };
   for (const threadId of new Set(opts.threadIds)) {
-    messages.push(...await fetchGmailThreadMessages({
+    const messages = await fetchGmailThreadMessages({
       service: opts.service,
       threadId,
       labelMap: opts.labelMap,
+    });
+    appendWriteResult(result, await writeThreadCards({
+      boxRoot: opts.boxRoot,
+      messages,
+      createThreadIds: opts.createThreadIds,
     }));
   }
-  return messages;
+  return result;
 }
 
 async function persistState(boxRoot: string, state: GmailTransientState): Promise<void> {
@@ -148,32 +169,46 @@ class GmailConnector implements Connector {
     const changes = await discoverGmailChanges({
       service: work.service,
       startHistoryId: work.state.historyId,
+      resume: work.state.historyResume,
     });
     const state = changes.historyExpired ? resetRuleBaselines(work.state) : work.state;
     if (changes.historyExpired) {
       console.warn("Gmail: history cursor expired; rule counts were refreshed without importing mail");
     }
     const labelMap = await gmailLabelMap(work.service);
+    const trackedThreadIds = new Set(tracked.keys());
     const candidates = work.config.rules.length === 0
       ? []
-      : await fetchCandidates({ service: work.service, refs: changes.refs });
+      : await fetchCandidates({
+          service: work.service,
+          refs: changes.refs,
+        });
     const evaluated = await evaluateGmailRules({
       service: work.service,
       config: work.config,
       state,
       candidates,
-      trackedThreadIds: new Set(tracked.keys()),
+      trackedThreadIds,
       labelMap,
       now: new Date(),
     });
-    const threadIds = [
-      ...tracked.keys(),
-      ...evaluated.trackRequests.map((request) => request.threadId),
-    ];
-    const messages = await fetchThreadSnapshots({ service: work.service, threadIds, labelMap });
-    const written = await writeThreadCards({ boxRoot: this.boxRoot, messages });
+    const createThreadIds = new Set(evaluated.trackRequests.map((request) => request.threadId));
+    const changedTrackedThreadIds = changes.refs
+      .map((ref) => ref.threadId)
+      .filter((threadId) => trackedThreadIds.has(threadId));
+    const written = await refreshThreadSnapshots({
+      boxRoot: this.boxRoot,
+      service: work.service,
+      threadIds: [...changedTrackedThreadIds, ...createThreadIds],
+      createThreadIds,
+      labelMap,
+    });
     await this.commitInbound(written);
-    await persistState(this.boxRoot, { ...evaluated.state, historyId: changes.historyId });
+    await persistState(this.boxRoot, {
+      ...evaluated.state,
+      historyId: changes.historyId,
+      historyResume: changes.historyResume,
+    });
     return {
       success: true,
       created: written.created,
@@ -196,6 +231,16 @@ class GmailConnector implements Connector {
     result.updated.push(...drafts.updated);
   }
 
+  private async syncUnderLock(service: GoogleGmailService): Promise<SyncResult> {
+    const result = await this.syncWorkingSet({
+      config: await readConfig(this.boxRoot),
+      state: await readState(this.boxRoot),
+      service,
+    });
+    await this.uploadDrafts(service, result);
+    return result;
+  }
+
   async sync(): Promise<SyncResult> {
     if (this.injectedService === undefined && !await isGoogleServiceAllowed(this.boxRoot, "gmail")) {
       return { success: true, created: [], updated: [] };
@@ -204,13 +249,11 @@ class GmailConnector implements Connector {
     if (service === null) return { success: true, created: [], updated: [] };
     try {
       await this.cleanupLegacySecret();
-      const result = await this.syncWorkingSet({
-        config: await readConfig(this.boxRoot),
-        state: await readState(this.boxRoot),
-        service,
+      return await withGmailTrackingLock({
+        boxRoot: this.boxRoot,
+        purpose: "gmail-sync",
+        action: () => this.syncUnderLock(service),
       });
-      await this.uploadDrafts(service, result);
-      return result;
     } catch (error) {
       return {
         success: false,

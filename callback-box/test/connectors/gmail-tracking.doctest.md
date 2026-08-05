@@ -20,8 +20,16 @@ import {
   remainingAutomaticTrackingBudget,
 } from "../../src/connectors/gmail-tracking.js";
 import { parseGmailConnectorConfig } from "../../src/connectors/gmail-config.js";
-import { trackGmailThread } from "../../src/connectors/gmail-track.js";
+import {
+  trackGmailThread,
+  withGmailTrackingLock,
+} from "../../src/connectors/gmail-track.js";
 import { evaluateGmailRules } from "../../src/connectors/gmail-rules.js";
+import { parseGmailTransientState } from "../../src/connectors/gmail-state.js";
+import {
+  discoverGmailChanges,
+  GMAIL_HISTORY_REF_LIMIT,
+} from "../../src/connectors/gmail-discovery.js";
 import { assertReadOnlyGwsArgs } from "../../src/connectors/gmail-gws.js";
 
 async function writeThread(root: string, relPath: string, threadId: string): Promise<void> {
@@ -334,6 +342,9 @@ baseline.trackRequests.length
 => 0
 
 baseline.state.rules?.["legacy-import"]?.additionalMatches
+=> undefined
+
+baseline.state.rules?.["legacy-import"]?.baselineMatches
 => 1
 ```
 
@@ -393,7 +404,7 @@ capped.state.rules?.["small-cap"]?.pending?.[0]?.threadId
 => new-thread
 
 capped.state.rules?.["small-cap"]?.additionalMatches
-=> 1
+=> 0
 ```
 
 Procedure rules coalesce matching messages into one post-sync request and keep
@@ -407,11 +418,15 @@ const procedureConfig = parseGmailConnectorConfig({
     action: { type: "procedure", ref: "config/procedures/review-mail.procedure.card" },
   }],
 });
+const nonMatchingSameThread = {
+  ...gmailMessage({ id: "not-matching", threadId: fresh.threadId, subject: "New", body: "New" }),
+  labelIds: ["INBOX"],
+};
 const procedureResult = await evaluateGmailRules({
   service: gmail,
   config: procedureConfig,
   state: { rules: { "review-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
-  candidates: [fresh, fresh],
+  candidates: [nonMatchingSameThread, fresh],
   trackedThreadIds: new Set(),
   labelMap: new Map([["Label_7", "callback"]]),
   now: new Date("2026-08-05T13:00:00.000Z"),
@@ -421,6 +436,130 @@ JSON.stringify(procedureResult.procedures)
 
 procedureResult.state.rules?.["review-mail"]?.pending?.length
 => 1
+```
+
+Messages without a safe RFC Message-ID are reported as unevaluated instead of
+being interpolated into Gmail's search syntax or silently treated as a miss.
+
+```ts continue
+const unsafe = gmailMessage({
+  id: "unsafe",
+  threadId: "unsafe-thread",
+  subject: "Unsafe identifier",
+  body: "Body",
+});
+unsafe.payload!.headers = unsafe.payload!.headers!.map((header) =>
+  header.name === "Message-ID"
+    ? { ...header, value: "<a@b.example) OR (label:inbox>" }
+    : header,
+);
+let unsafeQueries = 0;
+const originalListMessages = gmail.listMessages.bind(gmail);
+gmail.listMessages = async (opts) => {
+  unsafeQueries += 1;
+  return originalListMessages(opts);
+};
+const unsafeResult = await evaluateGmailRules({
+  service: gmail,
+  config: procedureConfig,
+  state: { rules: { "review-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
+  candidates: [unsafe],
+  trackedThreadIds: new Set(),
+  labelMap: new Map(),
+  now: new Date("2026-08-05T14:00:00.000Z"),
+});
+unsafeQueries
+=> 0
+
+unsafeResult.state.rules?.["review-mail"]?.unevaluated?.[0]?.threadId
+=> unsafe-thread
+```
+
+## History discovery is bounded and resumable
+
+A single oversized history record is consumed across sync checkpoints rather
+than loaded all at once or truncated.
+
+```ts
+const gmail = createFakeGoogleGmail();
+const refs = Array.from({ length: GMAIL_HISTORY_REF_LIMIT + 1 }, (_, index) => ({
+  message: { id: `message-${index}`, threadId: `thread-${index}` },
+}));
+let requestedMaxResults: number | undefined;
+gmail.listHistory = async (opts) => {
+  requestedMaxResults = opts.maxResults;
+  return {
+    history: [{ id: "2", messagesAdded: refs }],
+    historyId: "2",
+  };
+};
+const firstPage = await discoverGmailChanges({ service: gmail, startHistoryId: "1" });
+JSON.stringify({ count: firstPage.refs.length, historyId: firstPage.historyId, requestedMaxResults })
+=> {"count":500,"historyId":"1","requestedMaxResults":100}
+
+firstPage.historyResume?.refOffset
+=> 500
+
+const secondPage = await discoverGmailChanges({
+  service: gmail,
+  startHistoryId: firstPage.historyId,
+  resume: firstPage.historyResume,
+});
+JSON.stringify({ ids: secondPage.refs.map((ref) => ref.id), historyId: secondPage.historyId })
+=> {"ids":["message-500"],"historyId":"2"}
+
+secondPage.historyResume
+=> undefined
+```
+
+Legacy GC timestamps are discarded while owned state remains validated.
+
+```ts
+JSON.stringify(parseGmailTransientState({
+  historyId: "42",
+  lastReconcileAt: "2026-08-01T00:00:00.000Z",
+}))
+=> {"historyId":"42"}
+```
+
+Explicit tracking and scheduled sync share one lock, so their state and card
+writes cannot overlap.
+
+```ts
+const box = await makeTmpBox();
+const events: string[] = [];
+let releaseFirst!: () => void;
+const holdFirst = new Promise<void>((resolve) => { releaseFirst = resolve; });
+let firstEntered!: () => void;
+const entered = new Promise<void>((resolve) => { firstEntered = resolve; });
+const first = withGmailTrackingLock({
+  boxRoot: box.root,
+  purpose: "first",
+  action: async () => {
+    events.push("first-start");
+    firstEntered();
+    await holdFirst;
+    events.push("first-end");
+  },
+});
+await entered;
+const second = withGmailTrackingLock({
+  boxRoot: box.root,
+  purpose: "second",
+  action: async () => { events.push("second"); },
+});
+await new Promise((resolve) => setTimeout(resolve, 0));
+JSON.stringify(events)
+=> ["first-start"]
+
+releaseFirst();
+await Promise.all([first, second]);
+JSON.stringify(events)
+=> ["first-start","first-end","second"]
+```
+
+```ts cleanup
+await box.cleanup();
 ```
 
 ## The gws passthrough is remote-read-only

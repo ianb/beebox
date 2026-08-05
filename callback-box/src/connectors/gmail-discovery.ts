@@ -1,17 +1,33 @@
 /** Incremental Gmail change discovery without materializing mailbox contents. */
 
 import { NotFoundError } from "../lib/errors.js";
-import type { GmailMessageRef, GoogleGmailService } from "../services/google-gmail.js";
+import type {
+  GmailHistoryRecord,
+  GmailMessageRef,
+  GoogleGmailService,
+} from "../services/google-gmail.js";
+import type { GmailTransientState } from "./gmail-state.js";
+
+export const GMAIL_HISTORY_REF_LIMIT = 500;
+const GMAIL_HISTORY_RECORD_LIMIT = 100;
 
 export interface GmailChanges {
   refs: GmailMessageRef[];
   historyId: string;
+  historyResume: GmailTransientState["historyResume"];
   /** An expired cursor cannot reconstruct missed rule matches. */
   historyExpired: boolean;
 }
 
-function addRef(byId: Map<string, GmailMessageRef>, ref: GmailMessageRef): void {
-  byId.set(ref.id, { id: ref.id, threadId: ref.threadId });
+function refsForPage(history: GmailHistoryRecord[]): GmailMessageRef[] {
+  const refs = new Map<string, GmailMessageRef>();
+  for (const record of history) {
+    for (const added of record.messagesAdded ?? []) refs.set(added.message.id, added.message);
+    for (const labelled of record.labelsAdded ?? []) {
+      refs.set(labelled.message.id, labelled.message);
+    }
+  }
+  return [...refs.values()];
 }
 
 /**
@@ -21,32 +37,64 @@ function addRef(byId: Map<string, GmailMessageRef>, ref: GmailMessageRef): void 
 export async function discoverGmailChanges(opts: {
   service: GoogleGmailService;
   startHistoryId: string | undefined;
+  resume?: GmailTransientState["historyResume"];
 }): Promise<GmailChanges> {
   if (opts.startHistoryId === undefined) {
     const profile = await opts.service.getProfile();
-    return { refs: [], historyId: profile.historyId, historyExpired: false };
+    return {
+      refs: [],
+      historyId: profile.historyId,
+      historyResume: undefined,
+      historyExpired: false,
+    };
   }
 
-  const byId = new Map<string, GmailMessageRef>();
-  let historyId = opts.startHistoryId;
-  let pageToken: string | undefined;
+  const startHistoryId = opts.resume?.startHistoryId ?? opts.startHistoryId;
+  const pageToken = opts.resume?.pageToken;
+  const refOffset = opts.resume?.refOffset ?? 0;
   try {
-    do {
-      const request = pageToken === undefined
-        ? { startHistoryId: opts.startHistoryId }
-        : { startHistoryId: opts.startHistoryId, pageToken };
-      const page = await opts.service.listHistory(request);
-      historyId = page.historyId;
-      for (const record of page.history) {
-        for (const added of record.messagesAdded ?? []) addRef(byId, added.message);
-        for (const labelled of record.labelsAdded ?? []) addRef(byId, labelled.message);
-      }
-      pageToken = page.nextPageToken;
-    } while (pageToken !== undefined);
+    const page = await opts.service.listHistory({
+      startHistoryId,
+      ...(pageToken === undefined ? {} : { pageToken }),
+      maxResults: GMAIL_HISTORY_RECORD_LIMIT,
+    });
+    const pageRefs = refsForPage(page.history);
+    const refs = pageRefs.slice(refOffset, refOffset + GMAIL_HISTORY_REF_LIMIT);
+    const nextOffset = refOffset + refs.length;
+    if (nextOffset < pageRefs.length) {
+      return {
+        refs,
+        historyId: opts.startHistoryId,
+        historyResume: {
+          startHistoryId,
+          ...(pageToken === undefined ? {} : { pageToken }),
+          refOffset: nextOffset,
+        },
+        historyExpired: false,
+      };
+    }
+    if (page.nextPageToken !== undefined) {
+      return {
+        refs,
+        historyId: opts.startHistoryId,
+        historyResume: { startHistoryId, pageToken: page.nextPageToken, refOffset: 0 },
+        historyExpired: false,
+      };
+    }
+    return {
+      refs,
+      historyId: page.historyId,
+      historyResume: undefined,
+      historyExpired: false,
+    };
   } catch (error) {
     if (!(error instanceof NotFoundError)) throw error;
     const profile = await opts.service.getProfile();
-    return { refs: [], historyId: profile.historyId, historyExpired: true };
+    return {
+      refs: [],
+      historyId: profile.historyId,
+      historyResume: undefined,
+      historyExpired: true,
+    };
   }
-  return { refs: [...byId.values()], historyId, historyExpired: false };
 }

@@ -3,7 +3,7 @@
 import type { GmailMessage, GoogleGmailService } from "../services/google-gmail.js";
 import type { ConnectorProcedureTrigger } from "./index.js";
 import type { GmailConnectorConfig, GmailRule } from "./gmail-config.js";
-import { messageIdFor, summarizeGmailMessage } from "./gmail-mime.js";
+import { rfc822MessageIdFor, summarizeGmailMessage } from "./gmail-mime.js";
 import type { GmailPendingSummary, GmailRuleState, GmailTransientState } from "./gmail-state.js";
 import { remainingAutomaticTrackingBudget } from "./gmail-tracking.js";
 import { assertNever, invariant } from "../lib/invariant.js";
@@ -33,6 +33,16 @@ function setRuleState(opts: {
   return { ...opts.state, rules: { ...opts.state.rules, [opts.ruleName]: opts.ruleState } };
 }
 
+function groupCandidatesByThread(candidates: GmailMessage[]): Map<string, GmailMessage[]> {
+  const grouped = new Map<string, GmailMessage[]>();
+  for (const message of candidates) {
+    const messages = grouped.get(message.threadId) ?? [];
+    messages.push(message);
+    grouped.set(message.threadId, messages);
+  }
+  return grouped;
+}
+
 async function establishBaseline(opts: {
   service: GoogleGmailService;
   rule: GmailRule;
@@ -40,33 +50,57 @@ async function establishBaseline(opts: {
   nowIso: string;
 }): Promise<GmailTransientState> {
   const result = await opts.service.listThreads({ q: opts.rule.query, maxResults: 1 });
-  const additionalMatches = result.resultSizeEstimate ?? result.threads.length;
+  const baselineMatches = result.resultSizeEstimate ?? result.threads.length;
   return setRuleState({
     state: opts.state,
     ruleName: opts.rule.name,
     ruleState: {
       ...stateForRule(opts.state, opts.rule.name),
       baselineAt: opts.nowIso,
-      additionalMatches,
+      baselineMatches,
     },
   });
 }
 
-function rfcQuery(message: GmailMessage, rule: GmailRule): string {
-  const messageId = messageIdFor(message).replaceAll(/[<>]/g, "");
-  return `(${rule.query}) rfc822msgid:${messageId}`;
+function safeRfc822MessageId(message: GmailMessage): string | null {
+  const header = rfc822MessageIdFor(message);
+  if (header === undefined) return null;
+  const messageId = header.replace(/^<|>$/g, "");
+  return /^[\dA-Za-z._%+-]+@[\dA-Za-z.-]+$/u.test(messageId)
+    ? messageId
+    : null;
 }
 
 async function matchesRule(opts: {
   service: GoogleGmailService;
   message: GmailMessage;
   rule: GmailRule;
-}): Promise<boolean> {
+}): Promise<"match" | "no-match" | "unevaluated"> {
+  const messageId = safeRfc822MessageId(opts.message);
+  if (messageId === null) return "unevaluated";
   const result = await opts.service.listMessages({
-    q: rfcQuery(opts.message, opts.rule),
+    q: `(${opts.rule.query}) rfc822msgid:${messageId}`,
     maxResults: 1,
   });
-  return result.messages.some((ref) => ref.id === opts.message.id);
+  return result.messages.some((ref) => ref.id === opts.message.id) ? "match" : "no-match";
+}
+
+async function matchThreadRule(opts: {
+  service: GoogleGmailService;
+  messages: GmailMessage[];
+  rule: GmailRule;
+}): Promise<{ result: "match" | "no-match" | "unevaluated"; message: GmailMessage }> {
+  let unevaluated: GmailMessage | undefined;
+  for (const message of opts.messages) {
+    const result = await matchesRule({ service: opts.service, message, rule: opts.rule });
+    if (result === "match") return { result, message };
+    if (result === "unevaluated") unevaluated ??= message;
+  }
+  const first = opts.messages[0];
+  invariant(first !== undefined, "a candidate thread has at least one message");
+  return unevaluated === undefined
+    ? { result: "no-match", message: first }
+    : { result: "unevaluated", message: unevaluated };
 }
 
 function pendingSummary(opts: {
@@ -93,6 +127,22 @@ function addPending(opts: {
     ...opts.ruleState,
     pending: all.slice(0, PENDING_SUMMARY_LIMIT),
     additionalMatches: (opts.ruleState.additionalMatches ?? 0) + omitted,
+  };
+}
+
+function addUnevaluated(opts: {
+  ruleState: GmailRuleState;
+  summary: GmailPendingSummary;
+}): GmailRuleState {
+  const previous = (opts.ruleState.unevaluated ?? []).filter(
+    (item) => item.threadId !== opts.summary.threadId,
+  );
+  const all = [opts.summary, ...previous];
+  const omitted = Math.max(0, all.length - PENDING_SUMMARY_LIMIT);
+  return {
+    ...opts.ruleState,
+    unevaluated: all.slice(0, PENDING_SUMMARY_LIMIT),
+    additionalUnevaluated: (opts.ruleState.additionalUnevaluated ?? 0) + omitted,
   };
 }
 
@@ -157,41 +207,60 @@ export async function evaluateGmailRules(opts: {
   const trackRequests: GmailAutomaticTrackRequest[] = [];
   const procedures = new Map<string, ConnectorProcedureTrigger>();
   const selected = new Set<string>();
-  const handledRuleThreads = new Set<string>();
-  for (const message of opts.candidates) {
+  const candidatesByThread = groupCandidatesByThread(opts.candidates);
+  for (const messages of candidatesByThread.values()) {
+    const first = messages[0];
+    invariant(first !== undefined, "a candidate thread has at least one message");
     for (const rule of activeRules) {
-      const ruleThreadKey = `${rule.name}\0${message.threadId}`;
-      if (handledRuleThreads.has(ruleThreadKey)) continue;
-      if (!(await matchesRule({ service: opts.service, message, rule }))) continue;
-      handledRuleThreads.add(ruleThreadKey);
       let ruleState = stateForRule(state, rule.name);
+      if (rule.action.type === "track" && opts.trackedThreadIds.has(first.threadId)) continue;
+      const match = await matchThreadRule({ service: opts.service, messages, rule });
+      if (match.result === "no-match") continue;
+      if (match.result === "unevaluated") {
+        ruleState = addUnevaluated({
+          ruleState,
+          summary: pendingSummary({
+            message: match.message,
+            labelMap: opts.labelMap,
+            nowIso: opts.now.toISOString(),
+          }),
+        });
+        state = setRuleState({ state, ruleName: rule.name, ruleState });
+        continue;
+      }
       switch (rule.action.type) {
         case "track": {
-          if (opts.trackedThreadIds.has(message.threadId)) break;
           const tracking = automaticTrack({
             rule,
             ruleState,
-            threadId: message.threadId,
+            threadId: match.message.threadId,
             now: opts.now,
             selected,
           });
           ruleState = tracking.ruleState;
           if (tracking.selected) {
-            selected.add(message.threadId);
-            trackRequests.push({ threadId: message.threadId, ruleName: rule.name });
-          } else if (!selected.has(message.threadId)) {
+            selected.add(match.message.threadId);
+            trackRequests.push({ threadId: match.message.threadId, ruleName: rule.name });
+          } else if (!selected.has(match.message.threadId)) {
             ruleState = addPending({
               ruleState,
-              summary: pendingSummary({ message, labelMap: opts.labelMap, nowIso: opts.now.toISOString() }),
+              summary: pendingSummary({
+                message: match.message,
+                labelMap: opts.labelMap,
+                nowIso: opts.now.toISOString(),
+              }),
             });
-            ruleState.additionalMatches = (ruleState.additionalMatches ?? 0) + 1;
           }
           break;
         }
         case "procedure":
           ruleState = addPending({
             ruleState,
-            summary: pendingSummary({ message, labelMap: opts.labelMap, nowIso: opts.now.toISOString() }),
+            summary: pendingSummary({
+              message: match.message,
+              labelMap: opts.labelMap,
+              nowIso: opts.now.toISOString(),
+            }),
           });
           procedures.set(rule.name, procedureTrigger(rule));
           break;

@@ -4,7 +4,7 @@
 
 This plan changes Gmail from a mailbox mirror into a remote source with an explicit tracked working set. Gmail remains the complete archive. An email thread enters Git only when a person, an agent, a procedure, or a bounded automatic rule chooses to track it.
 
-Cross-model review is intentionally omitted. The boxholder requested no automatic cross-model comparison because the available model quota is low.
+An Opus cross-model review was run after the boxholder explicitly requested it. Its eight findings are addressed in the implementation: delta-only tracked refresh, legacy-state migration, resumable history bounds, safe Message-ID handling, delete-during-sync protection, connector serialization, shared procedure-trigger orchestration, and distinct baseline/overflow counts.
 
 ## Stated preferences this plan trades against
 
@@ -199,11 +199,12 @@ Use a validated shape equivalent to:
 - Do not use a calendar-week reset. Store automatic tracking timestamps and calculate a rolling window.
 - When the budget is exhausted, leave the threads in Gmail. Do not queue them for automatic tracking after the window clears.
 - Record a bounded, newest-first list of untracked thread summaries per rule. Include thread ID, sender, subject, date, snippet, labels, discovery time, and disposition where known.
-- Record `additionalMatches` when the bounded list omits matches. Excess must be visible through CLI status and procedure input.
+- Record `baselineMatches` for the pre-activation backlog and `additionalMatches` only when the bounded pending list omits matches. Keep malformed or missing RFC Message-IDs in a separate bounded `unevaluated` list. All three conditions must remain visible through CLI status and procedure input.
 - The state file is not a mailbox cache or an offline search index. `gws` remains the way to search omitted or older mail.
 - On the first activation of a rule, establish a baseline without tracking the existing backlog or running its procedure for every old match. Report the existing match count. The user can inspect and explicitly track selected existing threads.
 - Legacy top-level `query` and `labels` configuration must not retain unbounded import behavior. Migrate or interpret them as an automatic tracking rule with the default rolling budget, and emit a clear migration message.
-- With no rules, Gmail sync writes no new email cards. It only refreshes already-tracked cards and advances its change cursor.
+- With no rules, Gmail sync writes no new email cards. It refreshes tracked cards whose threads appear in the bounded Gmail History delta and advances its change cursor.
+- Consume at most 500 unique history references from one 100-record Gmail page per sync. Persist the page token and within-page offset so later syncs resume without dropping excess history.
 
 **Vocabulary lock-ins**
 
@@ -310,11 +311,11 @@ These questions do not block the Gmail tracked-working-set design.
 | Two live cards carry the same Gmail `thread-id` | Planned live-card doctest | Refuse synchronization for that thread and report both paths | Clear |
 | A tracked card has malformed frontmatter or no `thread-id` | Planned live-card doctest | Fail the card scan with its path; do not silently untrack it | Clear |
 | A card is deleted while sync is fetching its thread | Planned filesystem race doctest | Recheck card existence before writing; do not recreate it from the refresh path | Clear |
-| A rule matches tens of thousands of threads | Planned budget and connector doctests | Track only remaining rolling capacity; write bounded summaries plus `additionalMatches` | Clear |
+| A rule matches tens of thousands of threads | Budget, resumable-history, and connector doctests | Consume bounded history batches; track only remaining rolling capacity; write bounded summaries plus `additionalMatches` | Clear |
 | A budget fills partway through a multi-thread sync | Planned budget doctest | Commit the allowed subset and record all omitted counts without a deferred drain queue | Clear |
 | A new rule sees a large historical match set | Planned baseline doctest | Establish baseline, report count, and track none automatically | Clear |
-| Gmail History checkpoint expires | Existing fallback behavior; add tracked-only regression | Obtain a fresh checkpoint and reconcile tracked cards without importing untracked mail | Clear |
-| Gmail transient state is corrupt | Existing transient-state tests; extend shape tests | Existing loader fails closed and tells the user to inspect or deliberately reset | Clear |
+| Gmail History checkpoint expires | Tracked-only regression | Obtain a fresh checkpoint and re-baseline rules without importing or refetching mail | Clear |
+| Gmail transient state is corrupt or from the legacy GC shape | Existing transient-state tests plus Gmail legacy-shape regression | Corrupt owned values fail closed; obsolete top-level keys are stripped on the next write | Clear |
 | `gws` is missing or wrong version | Planned adapter doctest | Return an actionable setup/version error | Clear |
 | `gws` emits diagnostics mixed with JSON | Planned adapter doctest | Reject internal JSON consumption; preserve raw output for interactive use | Clear |
 | A procedure ref does not resolve | Planned config doctest | Reject config before executing connector actions | Clear |

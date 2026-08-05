@@ -26,6 +26,25 @@ export class EmptyGmailThreadError extends Error {
   }
 }
 
+/** Serialize explicit tracking and scheduled Gmail sync across processes. */
+export async function withGmailTrackingLock<T>(opts: {
+  boxRoot: string;
+  purpose: string;
+  threadId?: string;
+  action: () => Promise<T>;
+}): Promise<T> {
+  const lockPath = path.join(opts.boxRoot, ".callback-box/gmail-track.lock");
+  await fs.mkdir(path.dirname(lockPath), { recursive: true });
+  return withCardLock(lockPath, () => withFileLock({
+    lockPath,
+    metadata: {
+      purpose: opts.purpose,
+      ...(opts.threadId === undefined ? {} : { threadId: opts.threadId }),
+    },
+    waitMs: 10_000,
+  }, opts.action));
+}
+
 export async function gmailLabelMap(service: GoogleGmailService): Promise<Map<string, string>> {
   const labels = await service.listLabels();
   return new Map(labels.map((label) => [label.id, label.name]));
@@ -77,11 +96,10 @@ export async function trackGmailThread(opts: {
   threadId: string;
   trackedBy: string;
 }): Promise<TrackGmailThreadResult> {
-  const lockPath = path.join(opts.boxRoot, ".callback-box/gmail-track.lock");
-  await fs.mkdir(path.dirname(lockPath), { recursive: true });
-  return withCardLock(lockPath, () => withFileLock({
-    lockPath,
-    metadata: { purpose: "gmail-track", threadId: opts.threadId },
-    waitMs: 10_000,
-  }, () => trackUnderLock(opts)));
+  return withGmailTrackingLock({
+    boxRoot: opts.boxRoot,
+    purpose: "gmail-track",
+    threadId: opts.threadId,
+    action: () => trackUnderLock(opts),
+  });
 }

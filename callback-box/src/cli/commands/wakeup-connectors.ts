@@ -18,32 +18,8 @@ import {
   type ConnectorProcedureTrigger,
 } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { createCliContext, runCommand } from "../../core/commands/index.js";
-
-async function runRequestedProcedures(
-  boxRoot: string,
-  procedures: ConnectorProcedureTrigger[],
-): Promise<number> {
-  let errors = 0;
-  const ctx = createCliContext(boxRoot);
-  for (const procedure of procedures) {
-    console.log(`Running procedure ${procedure.procedureRef}...`);
-    try {
-      const result = await runCommand({
-        name: "procedure-run",
-        args: { name: procedure.procedureRef, directive: procedure.directive },
-        ctx,
-      });
-      if (result.success) continue;
-      console.error(`  Procedure failed: ${result.error}`);
-      errors += 1;
-    } catch (error) {
-      console.error(`  Procedure failed: ${errorMessage(error)}`);
-      errors += 1;
-    }
-  }
-  return errors;
-}
+import { createCliContext } from "../../core/commands/index.js";
+import { runConnectorProcedureTriggers } from "../../core/commands/connector-procedure-triggers.js";
 
 /**
  * Run the configured connectors and report results.
@@ -106,7 +82,7 @@ export async function runConnectors(
     }
   }
 
-  totalErrors += await runRequestedProcedures(boxRoot, procedures);
+  totalErrors += await runConnectorProcedureTriggers(createCliContext(boxRoot), procedures);
 
   const parts: string[] = [];
   if (totalPushed > 0) parts.push(`${totalPushed} pushed`);

@@ -15,15 +15,25 @@ const PendingSummarySchema = z.object({
 
 const GmailRuleStateSchema = z.object({
   baselineAt: z.string().datetime({ offset: true }).optional(),
+  baselineMatches: z.number().int().nonnegative().optional(),
   automaticTrackingEvents: z.array(z.string().datetime({ offset: true })).optional(),
   pending: z.array(PendingSummarySchema).optional(),
   additionalMatches: z.number().int().nonnegative().optional(),
+  unevaluated: z.array(PendingSummarySchema).optional(),
+  additionalUnevaluated: z.number().int().nonnegative().optional(),
+}).strict();
+
+const GmailHistoryResumeSchema = z.object({
+  startHistoryId: z.string(),
+  pageToken: z.string().optional(),
+  refOffset: z.number().int().nonnegative(),
 }).strict();
 
 const GmailTransientStateSchema = z.object({
   historyId: z.string().optional(),
+  historyResume: GmailHistoryResumeSchema.optional(),
   rules: z.record(z.string(), GmailRuleStateSchema).optional(),
-}).strict();
+});
 
 export type GmailPendingSummary = z.infer<typeof PendingSummarySchema>;
 export type GmailRuleState = z.infer<typeof GmailRuleStateSchema>;

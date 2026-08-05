@@ -252,15 +252,22 @@ async function writeOneThread(opts: {
 export async function writeThreadCards(opts: {
   boxRoot: string;
   messages: FetchedMessage[];
+  /** When supplied, unknown thread IDs are created only if explicitly allowed. */
+  createThreadIds?: ReadonlySet<string>;
 }): Promise<WriteThreadsResult> {
   const result: WriteThreadsResult = { created: [], updated: [], notes: [], seenMessageIds: [] };
   const tracked = await findTrackedGmailThreads(opts.boxRoot);
   for (const [threadId, messages] of groupByThread(opts.messages)) {
+    const existing = tracked.get(threadId);
+    if (existing === undefined && opts.createThreadIds?.has(threadId) === false) {
+      console.warn(`Gmail: tracked card disappeared during sync; not recreating thread ${threadId}`);
+      continue;
+    }
     await writeOneThread({
       boxRoot: opts.boxRoot,
       threadId,
       messages,
-      tracked: tracked.get(threadId),
+      tracked: existing,
       result,
     });
   }

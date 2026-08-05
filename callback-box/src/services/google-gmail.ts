@@ -71,11 +71,12 @@ export interface GoogleGmailService {
   /**
    * List mailbox changes since a previous historyId checkpoint (messageAdded
    * and labelAdded types). Throws NotFoundError when the checkpoint is too
-   * old or invalid — callers fall back to a full listMessages sync.
+   * old or invalid — callers establish a new checkpoint without listing mail.
    */
   listHistory(opts: {
     startHistoryId: string;
     pageToken?: string;
+    maxResults?: number;
   }): Promise<ListHistoryResult>;
 
   /**
@@ -174,6 +175,7 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
         ["historyTypes", "labelAdded"],
       ];
       if (opts.pageToken) searchParams.push(["pageToken", opts.pageToken]);
+      if (opts.maxResults !== undefined) searchParams.push(["maxResults", String(opts.maxResults)]);
       try {
         const data = await api
           .get("users/me/history", { searchParams })
@@ -239,9 +241,8 @@ export interface FakeGoogleGmailService extends GoogleGmailService {
   addLabelsToMessage(change: { id: string; labelIds: string[] }): void;
   /**
    * Remove labels from an existing message (e.g. the user archives it or drops
-   * a routing label). No history record is modeled — reconciliation diffs the
-   * full match set rather than consuming a labelsRemoved signal — but the
-   * checkpoint advances like a real mutation.
+   * a routing label). No labelsRemoved record is modeled, but the checkpoint
+   * advances like a real mutation.
    */
   removeLabelsFromMessage(change: { id: string; labelIds: string[] }): void;
   /** Invalidate all stored checkpoints — listHistory will throw NotFoundError. */
