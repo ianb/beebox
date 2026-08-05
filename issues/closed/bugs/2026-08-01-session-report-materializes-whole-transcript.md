@@ -23,9 +23,10 @@ transcript file. A transcript big enough to have OOM'd `cb serve`
 
 Reachable from `cb session <id> --tool-report` and `cb session --since …
 --tool-report` (which runs it per session in the window,
-`cli/commands/session-modes.ts`). CLI-only, so no server blast radius — but it
-is the last reader that can still materialize a whole transcript.
+`callback-box/src/cli/commands/session-modes.ts`). CLI-only, so no server blast
+radius — but it is the last reader that can still materialize a whole
+transcript.
 
 Fix shape: stream and emit report sections incrementally to stdout, or cap at
-`MAX_SESSION_ENTRIES` (`cli/lib/session-retention.ts`) with the same loud
-truncation note the other CLI consumers print.
+`MAX_SESSION_ENTRIES` (`callback-box/src/cli/lib/session-retention.ts`) with the
+same loud truncation note the other CLI consumers print.

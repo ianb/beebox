@@ -5,7 +5,8 @@ filed-by: agent
 discovered-in: worktree-session-report-bounded — /finish full-suite verification
 ---
 
-`test/cli/commands/view-check.doctest.md` failed during a full `pnpm test` run.
+`callback-box/test/cli/commands/view-check.doctest.md` failed during a full
+`pnpm test` run.
 The first scenario expected the `good.tsx` view result to have `ok: true`, but
 the result had `ok: false` instead:
 
