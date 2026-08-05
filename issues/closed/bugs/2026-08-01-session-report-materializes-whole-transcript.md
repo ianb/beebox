@@ -3,7 +3,14 @@ title: "cb session --tool-report materializes the whole transcript (worse than t
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
+resolution: implemented
 ---
+
+Resolved by `78391d6b`. Tool reports now use two line-oriented passes: one for
+header counts and one that writes each report section with backpressure while
+retaining only the current tool-use/result exchange. Existing per-tool output
+abbreviations now end with the exact `cb session <id> --raw` command that
+reveals the complete transcript.
 
 `generateSessionReport` / `collectRawEntries`
 (`callback-box/src/dev/lib/session-report.ts`) accumulates a `RawEntry` for
