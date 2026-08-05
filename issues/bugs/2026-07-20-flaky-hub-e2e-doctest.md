@@ -48,3 +48,20 @@ Practical consequence for agents in the meantime: **a red parallel run is not
 evidence of a regression.** Confirm with `-j1` before believing it. That
 convention costs a re-run; misreading a phantom failure as your own bug costs
 much more.
+
+## Another occurrence: TAP file timeout during CLI build (2026-08-05, worktree `ios-landmark-resume`)
+
+The full `pnpm test` run timed out this file after 300 seconds. The first and
+only test was still running its setup expression at
+`test/hub/hub-e2e.doctest.md:109`:
+
+```text
+not ok 1 - hub-e2e.doctest.md:109 — await execFileP("node", ["scripts/build-cli.mjs"], { cwd: PACKAGE_ROOT })
+not ok 462 - timeout!
+expired: test/hub/hub-e2e.doctest.md
+```
+
+The branch did not touch this test or the code that it exercises. An immediate
+isolated run passed 8/8 in about 96 seconds. This is a third parallel-load
+symptom: the process registered its test, but the setup and hub exercise did
+not complete within TAP's five-minute file timeout.
