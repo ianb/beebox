@@ -30,7 +30,7 @@ import { apiFileUrl } from "../lib/view-url";
 import type { Place } from "../lib/place-label";
 import { useOpenLandmarkChat } from "../hooks/useOpenLandmarkChat";
 import { useNavMenuEntries } from "../hooks/useNavMenuEntries";
-import { SwitchMenuBody, type SwitchPanel } from "./PlacePill-panels";
+import { SwitchMenuBody, type SwitchLandmark, type SwitchPanel } from "./PlacePill-panels";
 import { HereMenuBody } from "./PlacePill-here";
 import { AppBarHereSlot, useAppBarHereMenuClaimed, useAppBarRecentFilesClaimed } from "./app-bar-chrome";
 
@@ -145,6 +145,20 @@ export function PlacePill({
   // backend falls back to the card's filename, but this face must render
   // something even against an older server).
   const faceLabel = landmark === null ? place.label : landmark.label || place.label;
+
+  // The box root is always a switchable place, landmark card or not. With no
+  // root card, `byLandmark` has no root bucket (root chats ride `unassigned`),
+  // so the menu gets a synthetic row — otherwise a root chat has no row to be
+  // "current" on and the bar reads as a special case (boxholder, 2026-08-05).
+  const switchRows: SwitchLandmark[] | null = (() => {
+    if (switchData === undefined) return null;
+    if (switchData.landmarks.some((lm) => lm.dir === "")) return switchData.landmarks;
+    const rootFresh = switchData.unassigned.sessions.filter((s) => s.contextDir === "").length;
+    const root: SwitchLandmark = {
+      path: "", dir: "", label: "Box root", symbol: "🏠", symbolSrc: null, freshCount: rootFresh,
+    };
+    return [root, ...switchData.landmarks];
+  })();
   const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
 
   return (
@@ -169,9 +183,13 @@ export function PlacePill({
             {...ariaProps}
           >
             <span className="hidden sm:inline shrink-0 opacity-65">{boxName} ▸</span>
-            {landmark === null ? null : (
+            {landmark !== null ? (
               <FaceSymbol symbol={landmark.symbol} symbolSrc={landmark.symbolSrc} boxSlug={boxSlug} />
-            )}
+            ) : place.dir === "" ? (
+              // The box root is a place like any other — with no root landmark
+              // card it still gets a symbol, matching its switch-menu row.
+              <span className="shrink-0 leading-none" aria-hidden>🏠</span>
+            ) : null}
             <span className="min-w-0 truncate">{faceLabel}</span>
             <CaretIcon />
           </button>
@@ -182,7 +200,7 @@ export function PlacePill({
           boxSlug={boxSlug}
           boxName={boxName}
           currentDir={place.dir}
-          landmarks={switchData === undefined ? null : switchData.landmarks}
+          landmarks={switchRows}
           landmarksFailed={switchError !== null}
           onRetryLandmarks={() => { void switchQuery.refetch(); }}
           navEntries={navEntries}
