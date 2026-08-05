@@ -16,6 +16,7 @@ import {
 } from "../command-runner.js";
 import { getAllConnectors } from "../../connectors/index.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { runConnectorProcedureTriggers } from "./connector-procedure-triggers.js";
 
 /**
  * Arguments for the sync command.
@@ -81,6 +82,7 @@ async function executeSync(
       } else if (result.created.length === 0 && result.updated.length === 0) {
         ctx.writeLine("  No new items.");
       }
+      totalErrors += await runConnectorProcedureTriggers(ctx, result.procedures ?? []);
     } catch (err) {
       ctx.writeLine(`  Failed: ${errorMessage(err)}`);
       totalErrors++;

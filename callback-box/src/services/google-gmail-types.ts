@@ -4,6 +4,11 @@
  * counterpart lives in `google-gmail-schemas.ts` (Track D.2). Split out of
  * `google-gmail.ts` to keep that file under the line cap; re-exported from it so
  * existing `./google-gmail.js` imports still resolve.
+ *
+ * These remain explicit rather than `z.infer` because the recursive MIME
+ * payload schema is deliberately typed as `z.ZodType`; inference would erase
+ * the useful recursive payload shape used by the service fake. REST responses
+ * are still validated by the parallel schemas at the network boundary.
  */
 
 export interface GmailMessageRef {
@@ -41,6 +46,12 @@ export interface GmailMessage {
   payload?: GmailPayload;
 }
 
+export interface GmailThread {
+  id: string;
+  historyId?: string;
+  messages: GmailMessage[];
+}
+
 export interface GmailAttachmentData {
   /** base64url-encoded attachment bytes */
   data: string;
@@ -57,6 +68,13 @@ export interface GmailLabel {
 export interface ListMessagesResult {
   messages: GmailMessageRef[];
   nextPageToken?: string;
+  resultSizeEstimate?: number;
+}
+
+export interface ListThreadsResult {
+  threads: Array<{ id: string }>;
+  nextPageToken?: string;
+  resultSizeEstimate?: number;
 }
 
 export interface GmailDraft {

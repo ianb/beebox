@@ -34,6 +34,21 @@ export function GmailFiltersSection() {
     );
   }
 
+  if (gmailConfigQuery.data.usesRules) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-warm-800 mb-2">Gmail Rules</h2>
+        <p className="text-sm text-warm-700">
+          This box uses named, bounded Gmail rules. Edit them in{" "}
+          <code className="text-xs bg-warm-100 px-1 rounded">
+            config/connectors/gmail.json
+          </code>
+          . This legacy filter form is disabled so it cannot overwrite them.
+        </p>
+      </div>
+    );
+  }
+
   return <GmailFiltersForm initial={gmailConfigQuery.data} />;
 }
 
@@ -85,7 +100,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold text-warm-800 mb-2">Gmail Filters</h2>
       <p className="text-sm text-warm-700 mb-4">
-        Restrict which Gmail messages get pulled into this box. Uses{" "}
+        Automatically track new Gmail threads matching this legacy filter. Uses{" "}
         <a
           href="https://support.google.com/mail/answer/7190?hl=en"
           target="_blank"
@@ -94,8 +109,8 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
         >
           Gmail search syntax
         </a>
-        . If query is set, it overrides labels. If both are empty, the connector
-        defaults to <code className="text-xs bg-warm-100 px-1 rounded">label:inbox</code>.
+        . Automatic tracking is capped at 25 threads in a rolling seven-day
+        window. If both fields are empty, no new email cards are created.
       </p>
 
       <div className="mb-4">

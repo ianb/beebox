@@ -19,7 +19,16 @@ export function messageMatchesQuery(opts: {
 }): boolean {
   const { msg, query, labels } = opts;
   if (!query) return true;
-  const labelNames = [...query.matchAll(/label:(\S+)/g)].map((m) => {
+  const rfcMessageId = query.match(/rfc822msgid:<?([^\s)>]+)>?/i)?.[1];
+  if (rfcMessageId !== undefined) {
+    const header = msg.payload?.headers?.find(
+      (candidate) => candidate.name.toLowerCase() === "message-id",
+    )?.value;
+    if (header?.replaceAll(/[<>]/g, "") !== rfcMessageId.replaceAll(/[<>]/g, "")) {
+      return false;
+    }
+  }
+  const labelNames = [...query.matchAll(/label:([^\s)]+)/g)].map((m) => {
     invariant(m[1] !== undefined, "capture group 1 is non-optional in the label: pattern");
     return m[1];
   });

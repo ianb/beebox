@@ -100,6 +100,7 @@
     "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.2.0",
     "@google/genai": "^1.44.0",
+    "@googleworkspace/cli": "0.22.5",
     "@markdoc/markdoc": "^0.5.7",
     "@orama/orama": "3.1.18",
     "@orama/plugin-data-persistence": "3.1.18",

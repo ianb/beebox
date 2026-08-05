@@ -59,3 +59,4 @@ export { locationCommand } from "./location.js";
 export { pushCommand } from "./push.js";
 export { tailscaleCommand } from "./tailscale.js";
 export { todosCommand } from "./todos.js";
+export { connectorCommand } from "./connector.js";
