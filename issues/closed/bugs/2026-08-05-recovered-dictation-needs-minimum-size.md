@@ -6,7 +6,7 @@ discovered-in: main session — boxholder
 resolution: implemented
 ---
 
-Resolved by the accompanying change. Recovered drafts must contain more than
+Resolved by `efbf701a`. Recovered drafts must contain more than
 20 trimmed characters before the recovery affordance appears. The recovery hook
 silently clears smaller drafts through its existing `clearDraft()` path.
 
@@ -16,7 +16,7 @@ silently clears smaller drafts through its existing `clearDraft()` path.
 
 Recovered dictation was surfaced whenever a `recoveredDraft` existed, with no
 size floor — `useRecoveredDictation`
-(`src/frontend/src/components/chat/InteractiveChat-recovery.tsx:63`) gated only
+(`callback-box/src/frontend/src/components/chat/InteractiveChat-recovery.tsx:63`) gated only
 on `recoveredDraft && !isTranscribing && !hqInFlight`. So a trivially small
 recovery (a word or two) still popped the recovery affordance, which was not worth
 the interruption.
