@@ -114,6 +114,8 @@ interface InteractiveChatProps {
    * fresh chat (and until bootstrap settles); the chip then reads "New chat".
    */
   sessionLabel: string | null;
+  /** Announce a backend-assigned id before the fresh-chat URL is rewritten. */
+  onSessionAssignment?: (sessionId: string) => void;
 }
 
 /**
@@ -147,10 +149,9 @@ function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId,
   );
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel }: InteractiveChatProps) {
-  const isEmbedded = embedded === true;
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment }: InteractiveChatProps) {
   const usesNativeComposer = nativeComposer === true;
-  const usesNativeShell = isEmbedded || usesNativeComposer;
+  const usesNativeShell = embedded === true || usesNativeComposer;
   const [snapshot, send] = useMachine(chatMachine, {
     input: { sessionInput, contextDir, initial },
   });
@@ -162,9 +163,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const { boxSlug } = useParams({ strict: false });
   const backgroundTasks = useBackgroundTasks();
 
-  // Composer text lives in an external store, not React state, so a keystroke
-  // re-renders only the composer textareas — not the message history or the
-  // companion view pane (see input-store.ts and components/chat/CLAUDE.md).
+  // Composer text lives outside React state, so keystrokes re-render only its textareas.
   // The full emission store is a prop (see above); this derives the
   // text-only view every render — cheap, and stable in identity as long as
   // `emissionStore` is (it always is, across a session switch).
@@ -253,7 +252,6 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     startVoice: voice.startVoice,
     clearDraftRef,
   });
-
   const expiredAttachmentsNotice = (
     <ExpiredAttachmentsNotice names={expiredAttachments} onDismiss={dismissExpiredAttachments} />
   );
@@ -264,8 +262,8 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     onTaskEvent: backgroundTasks.onTaskEvent,
     onCaptureStatus: applyCaptureStatus,
     onScreenshotRequest: screenshots.onScreenshotRequest,
+    onSessionAssignment,
   });
-
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore,
@@ -326,7 +324,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       onVoiceSegmentSend={sendStopSend}
       send={send}
       reportCardActivity={cardSend.report}
-      embedded={isEmbedded}
+      embedded={embedded === true}
       nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}

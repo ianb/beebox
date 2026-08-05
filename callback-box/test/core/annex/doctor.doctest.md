@@ -13,6 +13,7 @@ import { createFakeGitAnnex } from "../../../src/services/git-annex.js";
 import { runAnnexDoctor, formatAnnexDoctor, ANNEX_PRECOMMIT_LINE } from "../../../src/core/annex/doctor.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
 import { writeAnnexInfoAttributes } from "../../../src/core/annex/info-attributes.js";
+import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../../../src/core/commands/attachments-gitignore.js";
 
 /** A fake in the fully-correct state, which individual tests then break. */
 function healthyFake() {
@@ -22,7 +23,7 @@ function healthyFake() {
   });
 }
 
-/** Write the managed pre-commit hook so check 7 passes. */
+/** Write the managed pre-commit hook so the hook check passes. */
 async function installHook(box: { packageRoot: string }): Promise<void> {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
@@ -46,7 +47,7 @@ await writeAnnexInfoAttributes(box.packageRoot);
 const annex = healthyFake();
 const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
 statuses(result)
-=> binary=ok initialized=ok thin=ok largefiles=ok annexed-coverage=ok attributes=ok content-present=ok journal=ok hook=ok
+=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=ok annexed-coverage=ok attributes=ok content-present=ok journal=ok hook=ok
 
 result.healthy
 => true
@@ -118,6 +119,7 @@ making its LFS content unreachable until `git annex uninit`.
 
 ```ts
 const box = await makeTmpBox();
+await box.write(".gitignore", GITIGNORE_BLOCK);
 const annex = createFakeGitAnnex({ initialized: false });
 const result = await runAnnexDoctor(annex, {
   repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
@@ -132,6 +134,66 @@ result.healthy
 => true
 
 result.checks[1]?.message.includes("cb attachments to-annex")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Annex initialization is not enough when `.gitignore` still hides assets
+
+The annex gate requires both halves of the migration: git-annex initialized and
+assets visible to `git add`. A box can have the annex directory while retaining
+the manifest scheme's asset-ignore block. The doctor must expose that broken
+half-state and name the existing repair:
+
+```ts
+const box = await makeTmpBox({ annex: true });
+await installHook(box);
+await writeAnnexInfoAttributes(box.packageRoot);
+await box.write(".gitignore", GITIGNORE_BLOCK);
+const halfMigrated = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot, boxRoot: box.root, options: { check: true },
+});
+halfMigrated.checks.find((c) => c.id === "gitignore-assets")?.status
+=> failed
+
+halfMigrated.checks.find((c) => c.id === "gitignore-assets")?.message.includes("cb attachments unignore")
+=> true
+
+halfMigrated.checks.find((c) => c.id === "gitignore-assets")?.message.includes("remove those rules")
+=> true
+
+halfMigrated.healthy
+=> false
+```
+
+Repair mode also reports this state instead of rewriting `.gitignore` outside
+the migration's load-bearing configuration sequence:
+
+```ts continue
+const repairMode = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot, boxRoot: box.root,
+});
+repairMode.checks.find((c) => c.id === "gitignore-assets")?.status
+=> failed
+
+await box.read(".gitignore") === GITIGNORE_BLOCK
+=> true
+```
+
+Once the box has the post-annex unignore block, the same check passes:
+
+```ts continue
+await box.write(".gitignore", UNIGNORE_BLOCK);
+const converted = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot, boxRoot: box.root, options: { check: true },
+});
+converted.checks.find((c) => c.id === "gitignore-assets")?.status
+=> ok
+
+converted.healthy
 => true
 ```
 
@@ -155,7 +217,7 @@ const result = await runAnnexDoctor(annex, {
   repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
-=> binary=ok initialized=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=repaired content-present=ok journal=repaired hook=ok
+=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=repaired content-present=ok journal=repaired hook=ok
 ```
 
 A *stale* largefiles is repaired, not just an absent one. That matters: the
