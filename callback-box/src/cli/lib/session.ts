@@ -213,7 +213,7 @@ function foldAssistantMetadata(
 
 /**
  * Scan a session log once and compute summary metadata. Turn counts match the
- * semantics used by --tool-report (`generateSessionReport`): user turns count
+ * semantics used by --tool-report (`writeSessionReport`): user turns count
  * entries with real text (not tool_result plumbing); assistant turns count
  * entries with text or tool_use.
  */

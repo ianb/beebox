@@ -16,7 +16,7 @@ import {
   parseSessionLog,
 } from "../lib/session.js";
 import { listSessionRoots } from "../../core/chat/session/history.js";
-import { generateSessionReport } from "../../dev/lib/session-report.js";
+import { writeSessionReport } from "../../dev/lib/session-report.js";
 import { parseDuration } from "../../schemas/scheduled-script.js";
 import {
   printListRow,
@@ -259,8 +259,10 @@ async function renderWindowedSession(options: {
   if (toolReport) {
     console.log(sessionDivider(meta));
     console.log();
-    const report = await generateSessionReport({ logPath: meta.path });
-    process.stdout.write(report);
+    await writeSessionReport({
+      logPath: meta.path,
+      rawTranscriptCommand: `cb session ${meta.sessionId} --raw${allowHuge ? " --allow-huge" : ""}`,
+    });
     return;
   }
 
