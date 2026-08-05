@@ -10,6 +10,8 @@ Key files:
 - `create-server.sh` — provision a Hetzner box
 - `setup-server.sh` — install software, create `callback` user, clone repos
 - `server-ip` — target server IP (not committed)
+- `prod-ssh` — SSH to prod as root for diagnostics and administration
+- `prod-curl` / `prod-browse` — inspect the authenticated production app
 
 ## Rollback
 
@@ -39,5 +41,10 @@ tail -15 deploy/.last-deploy.log
 Then confirm the server picked up the new commit:
 
 ```bash
-ssh root@$(cat deploy/server-ip) 'cat /opt/callback/callback-box/deploy-info.json'
+deploy/prod-ssh 'cat /opt/callback/callback-box/deploy-info.json'
 ```
+
+The production diagnostic tools resolve `server-ip` from the current checkout
+first, then from the main checkout via Git's common directory. `deploy.sh` is
+deliberately different: it requires a local `deploy/server-ip` so deployment
+remains main-checkout-only.
