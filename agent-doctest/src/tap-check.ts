@@ -17,23 +17,48 @@
  *   });
  */
 
-import { TestBase } from "@tapjs/core";
+import { TestBase, type Extra } from "@tapjs/core";
 import { inspect, type CheckOptions, type CheckResult, type Extractions } from "./check.js";
+
+type DoctestDiagnostic = Pick<Extra, "at" | "source">;
+
+interface DoctestCheckOptions {
+  check: string | CheckOptions;
+  diagnostic: DoctestDiagnostic;
+}
+
+interface DoctestThrowsOptions {
+  expected: string;
+  mode: "name" | "full";
+  diagnostic?: DoctestDiagnostic;
+}
+
+interface DoctestCheckResult {
+  result: CheckResult;
+  diagnostic?: DoctestDiagnostic;
+}
+
+function isDoctestCheckOptions(value: string | CheckOptions | DoctestCheckOptions): value is DoctestCheckOptions {
+  return typeof value === "object" && "check" in value;
+}
 
 declare module "@tapjs/core" {
   interface TestBase {
     check(
       actual: unknown,
-      expected: string | CheckOptions,
+      expected: string | CheckOptions | DoctestCheckOptions,
     ): Extractions | Promise<Extractions>;
     checkThrows(
       fn: () => unknown,
-      options: { expected: string; mode: "name" | "full" },
+      options: DoctestThrowsOptions,
     ): Extractions | Promise<Extractions>;
   }
 }
 
-function report(t: InstanceType<typeof TestBase>, result: CheckResult): Extractions {
+function report(
+  t: InstanceType<typeof TestBase>,
+  { result, diagnostic = {} }: DoctestCheckResult,
+): Extractions {
   (t as { currentAssert: unknown }).currentAssert = (t as { check: unknown }).check;
 
   if (result.pass) {
@@ -42,6 +67,7 @@ function report(t: InstanceType<typeof TestBase>, result: CheckResult): Extracti
   }
 
   t.fail(result.message, {
+    ...diagnostic,
     diff: result.diff,
     found: result.actual,
     wanted: result.expected,
@@ -49,14 +75,22 @@ function report(t: InstanceType<typeof TestBase>, result: CheckResult): Extracti
   return result.extractions;
 }
 
-TestBase.prototype.check = function tapCheck(actual: unknown, expected: string | CheckOptions): Extractions | Promise<Extractions> {
-  const result = inspect(actual, expected);
+TestBase.prototype.check = function tapCheck(
+  actual: unknown,
+  expected: string | CheckOptions | DoctestCheckOptions,
+): Extractions | Promise<Extractions> {
+  const check = isDoctestCheckOptions(expected) ? expected.check : expected;
+  const diagnostic = isDoctestCheckOptions(expected) ? expected.diagnostic : undefined;
+  const result = inspect(actual, check);
 
   if (result instanceof Promise) {
-    return result.then((r) => report(this, r));
+    return result.then((resolved) => report(this, {
+      result: resolved,
+      ...(diagnostic ? { diagnostic } : {}),
+    }));
   }
 
-  return report(this, result);
+  return report(this, { result, ...(diagnostic ? { diagnostic } : {}) });
 };
 
 /**
@@ -70,7 +104,7 @@ TestBase.prototype.check = function tapCheck(actual: unknown, expected: string |
  */
 TestBase.prototype.checkThrows = function tapCheckThrows(
   fn: () => unknown,
-  { expected, mode }: { expected: string; mode: "name" | "full" },
+  { expected, mode, diagnostic }: DoctestThrowsOptions,
 ): Extractions | Promise<Extractions> {
   (this as { currentAssert: unknown }).currentAssert = (this as { checkThrows: unknown }).checkThrows;
 
@@ -94,6 +128,7 @@ TestBase.prototype.checkThrows = function tapCheckThrows(
     }
 
     const extra: Record<string, unknown> = {
+      ...diagnostic,
       diff: result.diff,
       found: result.actual,
       wanted: result.expected,

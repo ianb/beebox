@@ -15,6 +15,11 @@ import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 
 const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 
+// This test verifies render correctness, not the production timeout threshold.
+// Full-suite contention has pushed a valid cold render past 40 seconds, so keep
+// enough headroom here while the outer doctest timeout still catches hangs.
+const TEST_VIEW_TIMEOUT_MS = 120000;
+
 // A v2 box renders views by resolving react/react-dom from its OWN
 // `node_modules` (writeNodeViewModule symlinks `packageRoot/node_modules`
 // into the render tmpdir). `makeTmpBox({ deps: true })` only symlinks
@@ -72,7 +77,7 @@ await writeView(box, "good.tsx", GOOD_VIEW);
 await writeView(box, "broken.tsx", BROKEN_VIEW);
 await box.write("box/inbox/Test.memo.card", MEMO_CARD);
 
-const result = await checkViews({ boxRoot: box.root, timeoutMs: 20000 });
+const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
 result.ok
 => false
 
@@ -96,7 +101,7 @@ await box.cleanup();
 const box = await makeViewBox();
 await writeView(box, "good.tsx", GOOD_VIEW);
 
-const result = await checkViews({ boxRoot: box.root, timeoutMs: 20000 });
+const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
 result.ok
 => true
 
@@ -112,7 +117,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-const result = await checkViews({ boxRoot: box.root, timeoutMs: 20000 });
+const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
 JSON.stringify(result)
 => {"ok":true,"views":[]}
 ```

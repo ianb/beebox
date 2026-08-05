@@ -139,8 +139,9 @@ function nextTemplateState(inTemplate, line) {
  *
  * No => means "just run, check it doesn't throw".
  *
- * Returns array of { expression, expected, lineOffset } where lineOffset
- * is the 0-based offset of the expression within the block.
+ * Returns array of { expression, expected, lineOffset, source } where
+ * lineOffset is the 0-based offset of the expression within the block and
+ * source is the original markdown example text used in failure diagnostics.
  */
 export function parseExamples(content) {
   const lines = content.split("\n");
@@ -190,6 +191,7 @@ export function parseExamples(content) {
           expected: throwsExpected,
           throws: true,
           lineOffset: exprStart,
+          source: lines.slice(exprStart, i).join("\n"),
         });
       } else {
         // Collect expected lines until blank line or end of block.
@@ -207,11 +209,17 @@ export function parseExamples(content) {
           expression,
           expected: expectedLines.join("\n").replace(/\s+$/, ""),
           lineOffset: exprStart,
+          source: lines.slice(exprStart, i).join("\n"),
         });
       }
     } else {
       // No => — just run, no assertion
-      examples.push({ expression, expected: null, lineOffset: exprStart });
+      examples.push({
+        expression,
+        expected: null,
+        lineOffset: exprStart,
+        source: lines.slice(exprStart, i).join("\n"),
+      });
     }
   }
 
@@ -290,9 +298,18 @@ function emitLines(out, lines, indent) {
  * Emit examples into the output array (shared by normal and continue blocks).
  * @param {string} indent - indentation prefix (default "  ")
  */
-function emitExamples(out, examples, indent = "  ") {
+function emitExamples(out, examples, filePath, blockLine, indent = "  ") {
   for (const ex of examples) {
     if (!ex.expression) continue;
+
+    const diagnostic = JSON.stringify({
+      at: {
+        fileName: filePath,
+        lineNumber: blockLine + ex.lineOffset,
+        columnNumber: 1,
+      },
+      source: `${ex.source}\n`,
+    });
 
     if (ex.throws) {
       const { setup, expr } = splitExpression(ex.expression);
@@ -300,11 +317,11 @@ function emitExamples(out, examples, indent = "  ") {
       const mode = ex.expected.includes(":") ? "full" : "name";
       // Async arrow + await so `=> throws` works on await-containing
       // expressions (rejections and sync throws both land in checkThrows).
-      out.push(`${indent}await t.checkThrows(async () => (${expr}), { expected: ${JSON.stringify(ex.expected)}, mode: ${JSON.stringify(mode)} });`);
+      out.push(`${indent}await t.checkThrows(async () => (${expr}), { expected: ${JSON.stringify(ex.expected)}, mode: ${JSON.stringify(mode)}, diagnostic: ${diagnostic} });`);
     } else if (ex.expected !== null) {
       const { setup, expr } = splitExpression(ex.expression);
       emitLines(out, setup, indent);
-      out.push(`${indent}await t.check(__withPrints(__prints, ${expr}), ${JSON.stringify(ex.expected)});`);
+      out.push(`${indent}await t.check(__withPrints(__prints, ${expr}), { check: ${JSON.stringify(ex.expected)}, diagnostic: ${diagnostic} });`);
     } else {
       // No assertion — just run the statements
       emitLines(out, ex.expression, indent);
@@ -400,7 +417,7 @@ export function generateTestSource(markdown, filePath) {
     if (isContinue && testOpen) {
       // Append to the open test function
       out.push(`  // --- continue (${fileName}:${block.line}) ---`);
-      emitExamples(out, examples);
+      emitExamples(out, examples, filePath, block.line);
     } else {
       if (isContinue) {
         throw new Error(
@@ -428,7 +445,7 @@ export function generateTestSource(markdown, filePath) {
         pendingCleanup = [];
       }
 
-      emitExamples(out, examples);
+      emitExamples(out, examples, filePath, block.line);
     }
   }
 

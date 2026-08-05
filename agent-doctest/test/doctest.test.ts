@@ -3,6 +3,9 @@
  */
 
 import { test } from "tap";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import "../src/tap-check.js";
 import {
   parseCodeBlocks,
@@ -160,6 +163,47 @@ foo("hello")
   t.ok(source.includes("foo(\"hello\")"), "should include expression");
   t.ok(source.includes('"world"'), "should include expected value");
   t.ok(source.includes("test.doctest.md:"), "should reference source file");
+});
+
+test("loader diagnostics show the failing markdown block", async (t) => {
+  const dir = await mkdtemp(join(process.cwd(), ".doctest-diagnostic-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  const fixture = join(dir, "source-location.doctest.md");
+  await writeFile(fixture, `# Source location fixture
+
+\`\`\`
+"FIRST_PASSING_MARKER" === "FIRST_PASSING_MARKER"
+=> true
+\`\`\`
+
+Prose deliberately separates the two blocks so a generated JavaScript line
+cannot accidentally point at both of them in the markdown source.
+
+More prose.
+
+Still more prose.
+
+And one last spacer.
+
+\`\`\`
+"SECOND_BROKEN_MARKER"
+=> expected-to-fail
+\`\`\`
+`);
+
+  const tapCheck = new URL("../src/tap-check.ts", import.meta.url).pathname;
+  const loader = new URL("../src/doctest-loader.ts", import.meta.url).pathname;
+  const result = spawnSync(
+    process.execPath,
+    [`--import=tsx`, `--import=${tapCheck}`, `--import=${loader}`, fixture],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+
+  t.not(result.status, 0, "fixture must fail so TAP emits a diagnostic");
+  t.match(result.stdout, /lineNumber: 18/, "diagnostic points to the failing markdown line");
+  const source = result.stdout.match(/source: \|[-+]?\n(?<source>(?: {6}.*\n)+)/)?.groups?.source ?? "";
+  t.match(source, /SECOND_BROKEN_MARKER/, "diagnostic source belongs to the failing block");
+  t.notMatch(source, /FIRST_PASSING_MARKER/, "diagnostic source excludes the preceding block");
 });
 
 test("generateTestSource: throws assertion emits an awaited async thunk", async (t) => {
