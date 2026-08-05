@@ -31,6 +31,48 @@ Anything that must not be stale asks for a live run:
 
 A hub restart (every deploy restarts the children) empties the cache, so a deploy never serves a pre-deploy verdict.
 
+## Box growth (files, directories, and Git history)
+
+The scheduler measures each box at most hourly and stores the latest baseline in
+`.callback-box/box-growth-health.json`. The scan counts files and directories
+separately, records the largest subtrees, and samples Git commit/object growth.
+Directories are a first-class signal because very large directory trees can
+exhaust watcher and traversal capacity even when their byte size is modest.
+
+The dashboard warns on either kind of anomaly:
+
+- absolute size: more than 10,000 directories or 100,000 files;
+- hourly rate: at least 200 new directories, 200 new files, or 100 commits;
+- connector subtree rate: half the global file/directory rate threshold for a
+  recognized connector-owned path such as `box/inbox/email`.
+
+The filesystem path is the authoritative source attribution. Git history is a
+supporting signal only: older commits do not consistently carry a `Created-By`
+trailer, while connector-owned paths remain identifiable regardless of the
+commit message or trailer coverage. The check reports anomalies but never
+deletes, prunes, or moves box content.
+
+An owner can choose **Accept current size** on the dashboard after confirming
+that the growth was intentional. Acceptance moves the baseline to the current
+measurement; it does not disable monitoring. A further 25% increase beyond an
+accepted above-global size warns again, and new rapid growth is evaluated from
+the accepted measurement.
+
+If the warning is unexpected, inspect the named subtree before accepting it:
+
+```bash
+find content -type d | wc -l
+find content -type f | wc -l
+git count-objects -v
+```
+
+Then identify the producing connector, import, capture, or procedure and stop
+the source of unintended growth. Do not remove content merely to clear the
+warning. A failed scan or a measurement older than 26 hours is itself a warning;
+inspect `.callback-box/scheduler.jsonl` for `box-growth-scan` errors. A local box
+that has never run the scheduler reports monitoring as not yet run without
+degrading health.
+
 ## google-auth (is the Google grant still alive?)
 
 `cb health`'s box-checks section and the dashboard's health warnings both carry a

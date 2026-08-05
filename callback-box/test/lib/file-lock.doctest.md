@@ -14,6 +14,7 @@ import {
   inspectLock,
   forceAcquireLock,
   scanLocks,
+  withFileLock,
   requestScopedLock,
   LOCK_STALE_MS,
   LockHeldError,
@@ -543,5 +544,29 @@ map.size
 
 ```ts cleanup
 await releaseLock(join(dir, "real.lock"));
+await box.cleanup();
+```
+
+## withFileLock preserves a request-scoped target
+
+The blocking wrapper accepts the same profiled target as the lower-level lock
+operations, so short request-bound state updates retain their crash-recovery
+window.
+
+```ts
+const box = await makeTmpBox();
+const path = join(box.root, "request-state.lock");
+const result = await withFileLock(
+  { lockPath: requestScopedLock(path), metadata: { who: "wrapper" }, waitMs: 100 },
+  async () => (await inspectLock(requestScopedLock(path)))?.metadata.who,
+);
+print(result);
+print(await inspectLock(requestScopedLock(path)));
+=>
+wrapper
+null
+```
+
+```ts cleanup
 await box.cleanup();
 ```

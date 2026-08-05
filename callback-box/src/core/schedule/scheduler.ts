@@ -12,6 +12,7 @@ import { BOX_MARKER } from "../../lib/paths.js";
 import { runTick, type TickResult } from "../../cli/commands/tick.js";
 import { getStatus, isRepo } from "../../lib/git.js";
 import { touchSchedulerHeartbeat } from "./health-box.js";
+import { measureBoxGrowthIfDue } from "../box-growth/health.js";
 import { checkHealthAndAlert } from "./health-alert.js";
 import { checkGoogleAuthAndAlert } from "./google-auth-alert.js";
 import {
@@ -192,6 +193,32 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
         // Heartbeat before the tick: even a tick that throws proves the
         // daemon is alive (schedule-health reads this file).
         await touchSchedulerHeartbeat(boxPath);
+
+        // Measure growth independently of the tick. A sick or unusually large
+        // box is exactly when this probe may fail, and that must not prevent
+        // scheduled work from getting its turn.
+        try {
+          const growth = await measureBoxGrowthIfDue(boxPath, { now: new Date() });
+          if (growth.status === "failed") {
+            await writeBoxLog(boxPath, {
+              ts: new Date().toISOString(),
+              event: "box-growth-scan",
+              box: boxPath,
+              error: growth.error,
+            });
+          }
+        } catch (err) {
+          try {
+            await writeBoxLog(boxPath, {
+              ts: new Date().toISOString(),
+              event: "box-growth-scan",
+              box: boxPath,
+              error: errorMessage(err),
+            });
+          } catch (logError) {
+            console.error(`[${new Date().toISOString()}] ${boxPath}: could not record box growth failure`, logError);
+          }
+        }
 
         const result = await runTick(boxPath, { quiet: true });
         await writeBoxLog(boxPath, {
