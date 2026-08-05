@@ -6,12 +6,15 @@ discovered-in: worktree-tab-organizer-clerk — full finish-suite verification
 resolution: implemented
 ---
 
-Resolved in `d590ed90` by upgrading the workspace from tsx 4.22.3 to 4.23.1.
-The newer resolver removes redundant extension probes under Node 24 synchronous
-module hooks. A stress run passed 24 simultaneous TAP files that import the
-schema registry (1,728/1,728 assertions). The six-job callback-box suite then
-passed 6,163/6,163 assertions in 140 seconds, compared with 588 seconds before
-the upgrade.
+Resolved in `d590ed90` with a deterministic loader guard added in this worktree.
+The workspace upgrade from tsx 4.22.3 to 4.23.1 removes redundant extension
+probes under Node 24 synchronous module hooks. The doctest resolver now also
+maps `./module.js` directly to an existing `module.tsx` when no `module.ts`
+exists, so a downstream probe cannot stop at the missing `.ts` candidate. A
+regression test forces that downstream failure. A stress run passed 24
+simultaneous schema-registry TAP files (1,728/1,728 assertions). The six-job
+callback-box suite passed 6,163/6,163 in 140 seconds, compared with 588 seconds
+before the upgrade.
 
 A full parallel `pnpm test` run produced 272 failures whose child processes
 reported missing modules such as `src/schemas/feedback.ts`, `guide.ts`,

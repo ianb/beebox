@@ -13,7 +13,7 @@
  *   test("example", async (t) => {
  *     t.check("actual", "expected");
  *     await t.check(asyncFn(), "expected");
- *     t.checkThrows(() => badCall(), "ErrorName", "name");
+ *     t.checkThrows(() => badCall(), { expected: "ErrorName", mode: "name" });
  *   });
  */
 

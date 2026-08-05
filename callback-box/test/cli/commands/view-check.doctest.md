@@ -18,7 +18,7 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 // This test verifies render correctness, not the production timeout threshold.
 // Full-suite contention has pushed a valid cold render past 40 seconds, so keep
 // enough headroom here while the outer doctest timeout still catches hangs.
-const TEST_VIEW_TIMEOUT_MS = 120000;
+const TEST_VIEW_TIMEOUT_MS = 60000;
 
 // A v2 box renders views by resolving react/react-dom from its OWN
 // `node_modules` (writeNodeViewModule symlinks `packageRoot/node_modules`

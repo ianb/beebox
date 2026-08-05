@@ -6,12 +6,14 @@ import { test } from "tap";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import "../src/tap-check.js";
 import {
   parseCodeBlocks,
   parseExample,
   parseExamples,
   generateTestSource,
+  resolve,
 } from "../src/doctest-hooks.mjs";
 
 test("parseCodeBlocks extracts fenced code blocks", async (t) => {
@@ -165,7 +167,42 @@ foo("hello")
   t.ok(source.includes("test.doctest.md:"), "should reference source file");
 });
 
-test("loader diagnostics show the failing markdown block", async (t) => {
+test("resolve handles an unambiguous TSX sibling before downstream loaders", async (t) => {
+  const dir = await mkdtemp(join(process.cwd(), ".doctest-resolve-"));
+  t.teardown(() => rm(dir, { recursive: true, force: true }));
+  const parent = join(dir, "parent.ts");
+  const tsxModule = join(dir, "module.tsx");
+  await writeFile(parent, "");
+  await writeFile(tsxModule, "export const value = 1;\n");
+
+  let downstreamCalls = 0;
+  const resolved = await resolve(
+    "./module.js",
+    { parentURL: pathToFileURL(parent).href },
+    () => {
+      downstreamCalls++;
+      throw Object.assign(new Error("stopped at module.ts"), { code: "ERR_MODULE_NOT_FOUND" });
+    },
+  );
+
+  t.equal(resolved.url, pathToFileURL(tsxModule).href);
+  t.equal(downstreamCalls, 0, "the missing .ts probe cannot prevent the .tsx resolution");
+
+  const tsModule = join(dir, "module.ts");
+  await writeFile(tsModule, "export const value = 2;\n");
+  const resolvedWithBoth = await resolve(
+    "./module.js",
+    { parentURL: pathToFileURL(parent).href },
+    () => {
+      downstreamCalls++;
+      return { url: pathToFileURL(tsModule).href };
+    },
+  );
+  t.equal(resolvedWithBoth.url, pathToFileURL(tsModule).href, ".ts keeps downstream precedence when both exist");
+  t.equal(downstreamCalls, 1);
+});
+
+test("loader diagnostics identify examples across normal, continue, and throws blocks", async (t) => {
   const dir = await mkdtemp(join(process.cwd(), ".doctest-diagnostic-"));
   t.teardown(() => rm(dir, { recursive: true, force: true }));
   const fixture = join(dir, "source-location.doctest.md");
@@ -174,25 +211,31 @@ test("loader diagnostics show the failing markdown block", async (t) => {
 \`\`\`
 "FIRST_PASSING_MARKER" === "FIRST_PASSING_MARKER"
 => true
-\`\`\`
 
-Prose deliberately separates the two blocks so a generated JavaScript line
-cannot accidentally point at both of them in the markdown source.
+"SAME_BLOCK_PASSING_MARKER" === "SAME_BLOCK_PASSING_MARKER"
+=> true
 
-More prose.
-
-Still more prose.
-
-And one last spacer.
-
-\`\`\`
 "SECOND_BROKEN_MARKER"
 => expected-to-fail
 \`\`\`
+
+Prose separates a continue block from the first block.
+
+\`\`\`ts continue
+"CONTINUE_BROKEN_MARKER"
+=> expected-to-fail
+\`\`\`
+
+Prose separates a throws block from the continued test.
+
+\`\`\`
+JSON.parse("{bad json")
+=> throws RangeError
+\`\`\`
 `);
 
-  const tapCheck = new URL("../src/tap-check.ts", import.meta.url).pathname;
-  const loader = new URL("../src/doctest-loader.ts", import.meta.url).pathname;
+  const tapCheck = fileURLToPath(new URL("../src/tap-check.ts", import.meta.url));
+  const loader = fileURLToPath(new URL("../src/doctest-loader.ts", import.meta.url));
   const result = spawnSync(
     process.execPath,
     [`--import=tsx`, `--import=${tapCheck}`, `--import=${loader}`, fixture],
@@ -200,10 +243,16 @@ And one last spacer.
   );
 
   t.not(result.status, 0, "fixture must fail so TAP emits a diagnostic");
-  t.match(result.stdout, /lineNumber: 18/, "diagnostic points to the failing markdown line");
-  const source = result.stdout.match(/source: \|[-+]?\n(?<source>(?: {6}.*\n)+)/)?.groups?.source ?? "";
-  t.match(source, /SECOND_BROKEN_MARKER/, "diagnostic source belongs to the failing block");
-  t.notMatch(source, /FIRST_PASSING_MARKER/, "diagnostic source excludes the preceding block");
+  t.match(result.stdout, /fileName: .*source-location\.doctest\.md/, "diagnostic names the markdown file");
+  t.match(result.stdout, /lineNumber: 10/, "same-block failure points to its example line");
+  t.match(result.stdout, /lineNumber: 17/, "continue failure points to its example line");
+  t.match(result.stdout, /lineNumber: 24/, "throws failure points to its example line");
+  const sources = [...result.stdout.matchAll(/source: \|[-+]?\n(?<source>(?: {6}.*\n)+)/g)]
+    .map((match) => match.groups?.source ?? "");
+  t.ok(sources.some((source) => source.includes("SECOND_BROKEN_MARKER")), "same-block source is correct");
+  t.ok(sources.some((source) => source.includes("CONTINUE_BROKEN_MARKER")), "continue source is correct");
+  t.ok(sources.some((source) => source.includes("JSON.parse")), "throws source is correct despite its error stack");
+  t.notOk(sources.some((source) => source.includes("FIRST_PASSING_MARKER")), "failure sources exclude passing examples");
 });
 
 test("generateTestSource: throws assertion emits an awaited async thunk", async (t) => {

@@ -6,7 +6,7 @@ discovered-in: worktree-session-report-bounded — /finish full-suite verificati
 resolution: implemented
 ---
 
-Resolved in `d590ed90`. The correctness fixture now gives each child render 120
+Resolved in `d590ed90`. The correctness fixture now gives each child render 60
 seconds while the doctest file retains its 300-second outer hang limit. The
 production command's timeout is unchanged. The focused test passed 7/7, and the
 six-job callback-box suite passed 6,163/6,163.
