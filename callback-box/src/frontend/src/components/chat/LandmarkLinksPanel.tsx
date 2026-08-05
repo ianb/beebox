@@ -83,7 +83,7 @@ function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: Resol
       type="button"
       role="menuitem"
       onClick={() => { close(); onPanel(link); }}
-      className="w-full text-left px-3 py-2.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
+      className="w-full text-left px-3 py-3.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
     >
       <span className="truncate">{link.label ?? link.title}</span>
       {!link.exists ? <span className="text-xs text-danger shrink-0">(missing)</span> : null}
@@ -118,7 +118,7 @@ function MenuGroup({ group, onPanel }: { group: ResolvedGroup; onPanel: (link: R
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="w-full text-left px-3 py-2.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
+        className="w-full text-left px-3 py-3.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
       >
         <GroupChevron open={open} />
         <span className="truncate font-medium">{group.label}</span>
