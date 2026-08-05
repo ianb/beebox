@@ -3,7 +3,22 @@ title: "`core/box/file-watcher.doctest.md` flakes intermittently under load"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-top-nav-ia — /finish full-suite verification
+resolution: implemented
 ---
+
+Resolved by making the doctest prove that each macOS directory watcher has
+delivered an event before making timing-sensitive mutations. `fs.watch()` has
+no readiness event on macOS, so `watcher.ready` could complete before FSEvents
+was actually delivering. The updated test also throws when a polling deadline
+expires instead of silently proceeding.
+
+Verification: the focused file passed 30 consecutive runs (the original failed
+by run 2), and the full callback-box suite passed 6,136/6,136 assertions.
+
+The reported `grew < 20` failure was misleading: the failing TAP subtest was a
+later event-delivery assertion, while the diagnostic `source` field pointed to
+the preceding doctest block. That separate reporting problem is tracked in
+`issues/bugs/2026-08-05-doctest-failure-source-points-to-previous-block.md`.
 
 `test/core/box/file-watcher.doctest.md` (added in `9b2aa44d` / `054cc4f4`, the
 chokidar→directory-watch FD-exhaustion fix) fails intermittently, both inside

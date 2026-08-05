@@ -11,7 +11,7 @@ fails with `EBADF`, so the chat agent could not start at all
 
 ```ts setup
 import { ensureBoxWatcher, closeBoxWatcher } from "../../../src/core/box/file-watcher.js";
-import { createEventBus } from "../../../src/core/event-bus.js";
+import { createEventBus, type EventBus } from "../../../src/core/event-bus.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";
@@ -25,10 +25,38 @@ const openFDs = () => readdirSync("/dev/fd").length;
  * latency guarantee — a fixed sleep either flakes under load or wastes time —
  * so every timing-sensitive assertion below waits for its condition.
  */
-async function waitFor(check: () => boolean, ms: number): Promise<void> {
+async function waitFor(check: () => boolean, ms: number, label: string): Promise<void> {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline && !check()) {
     await new Promise((r) => setTimeout(r, 20));
+  }
+  if (!check()) throw new Error(`Timed out waiting for ${label}`);
+}
+
+/**
+ * Prove that one directory's fs watcher is delivering before testing it.
+ * Constructing `fs.watch()` has no readiness event on macOS; without this
+ * handshake, an immediate write can beat FSEvents registration.
+ */
+async function waitForWatch(root: string, bus: EventBus, relativeDir: string): Promise<void> {
+  const markerRel = join(relativeDir, `watch-ready-${process.pid}.tmp`);
+  const marker = join(root, markerRel);
+  let seen = false;
+  const subscription = bus.subscribe({
+    listener: (event) => {
+      if (event.event === "file-change" && event.data.path === markerRel) seen = true;
+    },
+  });
+  try {
+    const deadline = Date.now() + 5000;
+    let attempt = 0;
+    while (!seen && Date.now() < deadline) {
+      await writeFile(marker, String(attempt++));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    if (!seen) throw new Error(`Timed out waiting for fs.watch delivery in ${relativeDir}`);
+  } finally {
+    subscription.unsubscribe();
   }
 }
 
@@ -110,9 +138,10 @@ bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(Stri
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
+await waitForWatch(box.root, bus, "store");
 
 await writeFile(join(box.root, "store", "Note.memo.card"), "---\nstatus: new\n---\nhi\n");
-await waitFor(() => seen.includes("store/Note.memo.card"), 5000);
+await waitFor(() => seen.includes("store/Note.memo.card"), 5000, "the card file-change event");
 
 seen.includes("store/Note.memo.card")
 => true
@@ -136,9 +165,10 @@ await mkdir(join(box.root, "store"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
+await waitForWatch(box.root, bus, "store");
 
 await mkdir(join(box.root, "store", "Trip.attach"), { recursive: true });
-await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach"), 5000);
+await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach"), 5000, "the new directory watch");
 
 watcher.watchedDirs().includes("store/Trip.attach")
 => true
@@ -164,12 +194,13 @@ await mkdir(join(box.root, "store", "Trip.attach", "old"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
+await waitForWatch(box.root, bus, "store");
 
 const { rm, rename } = await import("node:fs/promises");
 await rm(join(box.root, "store", "Trip.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "Staging", "fresh"), { recursive: true });
 await rename(join(box.root, "store", "Staging"), join(box.root, "store", "Trip.attach"));
-await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5000);
+await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5000, "the replacement subtree watches");
 await watcher.settled();
 
 watcher.watchedDirs().join(" ")
@@ -198,6 +229,7 @@ bus.subscribe({ listener: (e) => { if (e.event === "file-change") seen.push(Stri
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
+await waitForWatch(box.root, bus, "store");
 
 // Build the tree out of sight, then swap it in whole — no watch can have seen
 // the file being written.
@@ -205,7 +237,7 @@ const { rename } = await import("node:fs/promises");
 await mkdir(join(box.root, "staging"), { recursive: true });
 await writeFile(join(box.root, "staging", "Photo.md"), "hi\n");
 await rename(join(box.root, "staging"), join(box.root, "store", "Trip.attach"));
-await waitFor(() => seen.includes("store/Trip.attach/Photo.md"), 5000);
+await waitFor(() => seen.includes("store/Trip.attach/Photo.md"), 5000, "the discovered file event");
 await watcher.settled();
 
 seen.includes("store/Trip.attach/Photo.md")
@@ -232,6 +264,7 @@ await mkdir(join(box.root, "procedure", "runs", "noisy"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
+await waitForWatch(box.root, bus, "store");
 
 const { symlink } = await import("node:fs/promises");
 await symlink(join(box.root, "procedure", "runs"), join(box.root, "store", "link"));
@@ -239,7 +272,7 @@ await symlink(join(box.root, "procedure", "runs"), join(box.root, "store", "link
 // absence is only meaningful once we know the notifications arrived — a bare
 // sleep would pass vacuously whenever delivery was merely slow.
 await mkdir(join(box.root, "store", "real"), { recursive: true });
-await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000);
+await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000, "the real directory watch");
 await watcher.settled();
 
 watcher.watchedDirs().join(" ")
@@ -272,6 +305,7 @@ await writeFile(card, "---\nstatus: new\n---\nv1\n");
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
+await waitForWatch(box.root, bus, "store");
 
 let events = 0;
 bus.subscribe({ listener: (e) => { if (e.event === "file-change" && e.data.path === "store/Note.memo.card") events++; } });
