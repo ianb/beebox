@@ -1,15 +1,21 @@
 # Clerk tab arrangements
 
-## Implementation status (2026-08-04)
+**Status:** partially implemented 2026-08 — the explicit one-transfer experiment landed; fuller recovery and review UX remain planned
 
-The experimental first version is implemented on the `tab-organizer-clerk`
-worktree. It keeps one latest transfer in Clerk, adds an extension-owned second
+## Landed slice (2026-08-05)
+
+The experimental first slice keeps one latest transfer in Clerk, adds an extension-owned second
 confirmation before Apply or Undo, binds numeric Chrome IDs to a
 `chrome.storage.session` browser-session marker, rejects stale layouts before
 mutation, verifies again before explicit closes, and attempts rollback when a
 failure happens before closes.
 
-Two intentionally lean deviations from the fuller design below:
+It also adds current-window/all-normal-windows capture, grouped-tab rejection,
+idempotent box intake, a `tab-arrangement` card schema and renderer, the
+one-response box relay, explicit organizer opening, identity-preserving moves,
+explicit closes, and best-effort Undo.
+
+Intentional lean deviations from the fuller design below:
 
 - Closed-tab Undo reopens the captured URL with `chrome.tabs.create`, avoiding
   the additional `sessions` permission. The replacement loses history and is
@@ -19,6 +25,24 @@ Two intentionally lean deviations from the fuller design below:
   visible partial state and requires inspection/share-again.
 
 Tab groups remain excluded and are tracked in the linked follow-up issue.
+
+The fuller plan is not complete. Remaining work includes:
+
+- durable `sending`/Retry/Discard intake state instead of retaining only a
+  successfully accepted latest transfer;
+- a richer review surface that separately shows the source layout, validation
+  details, stale reasons, and a direct Share-again recovery path;
+- event-aware concurrent-edit detection and the before/target/unknown
+  worker-loss classification described in Track 4;
+- a pure compiled-operation layer and the full table-driven Chrome boundary
+  suite described below;
+- more granular partial-close and partial-Undo reporting; and
+- a real-Chrome Share → confirm → Apply → Undo exercise. Automated and browser
+  rendering checks do not substitute for that final extension test.
+
+The tracks below describe the fuller target. Where they exceed the landed slice
+above, they remain prospective requirements rather than descriptions of current
+behavior.
 
 This plan lets a boxholder explicitly share the tabs in one normal Chrome window, or in all normal Chrome windows, with a box. The box agent edits a card that describes a proposed arrangement. The card viewer can then ask Callback Clerk to apply that arrangement to the original tab instances.
 

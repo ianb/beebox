@@ -13,6 +13,10 @@ export interface StoredTabTransfer {
   payload: TabArrangementPayload;
   locations: Record<string, TabLocation>;
   state: "ready" | "applying" | "applied" | "partial";
+  // These are execution-journal evidence, not state-exclusive payload fields:
+  // a partial record may retain both the before-image and attempted target for
+  // diagnosis. A discriminated union would either duplicate those fields or
+  // incorrectly discard useful recovery context during a transition.
   beforeApply?: TabArrangementPayload["proposal"] | undefined;
   appliedProposal?: TabArrangementPayload["proposal"] | undefined;
   error?: string | undefined;
