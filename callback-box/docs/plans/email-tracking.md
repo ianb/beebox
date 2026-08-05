@@ -8,6 +8,23 @@ Cross-model review is intentionally omitted. The boxholder requested no automati
 
 ## Stated preferences this plan trades against
 
+### Boxholder decisions from the design discussion (2026-08-05)
+
+These statements are the authority for the plan's user-facing model. The technical tracks below implement them; they do not replace them with planner-invented terminology.
+
+- On the default boundary: *"No automatic email showing up in git."*
+- On deliberate labels: *"The way I'm using labels, I'm usually labeling things I know I want to send to the agent, so those things can be promoted directly. Though with that use I actually don't want all my email in the box at all."* In the settled vocabulary, those labeled threads can be **tracked** directly.
+- On excess visibility: *"We need a way to know there's excess mail in gmail."*
+- On private staging: *"I do think a file is very reasonable, and if we don't want it tracked in git that's reasonable, but creating that file and then waking an agent (if we want to do that) is reasonable."*
+- On the lifecycle metaphor: *"'Promote' is what we're saying, it doesn't seem like the right metaphor for the agent. It's more like track-as-card. Or add-to-working-set. Or something... it should make sense to you, but should make sense from the agent perspective, not just from our design discussion here."*
+- On the exact tracking transition: *"Tracking means create a card. Untracking is just deleting the card (which should not delete the email)."*
+- On the tracking registry: *"I assume the connector will literally look for \*\*/\*.email-thread.card (or whatever the type is, I forget) and use that to do syncing."*
+- On procedure orchestration: *"I believe procedures can wake agents, but also can embed other rules and scripts before waking the agent, so 'running a procedure' is probably more the style than 'waking an agent'."*
+- On the safety limiter: *"The cap has to be for a certain time or something... over time any cap will be reached. So more like 25/week or something."*
+- On broad Gmail access: *"I am inclined to make some of the other wrapper calls fairly lightweight and show the gws interface instead of trying to wrap every piece of it. Like cb connector gmail gws [gws args]."*
+- On the remaining state boundary: *"Tracking gmail and responding to things still needs state that gws itself doesn't have."*
+- On the agreed summary: *"Regular sync and tracking"*, *"Triggers for procedures"*, *"The track command promotes emails into cards"*, *"Deleting the card simply untracks the email"*, and *"We mostly wrap gws for other query types."* Here, *promotes* describes the transition informally; the agent-facing verb remains **track**.
+
 - **Job story — intentional handoff:** When I label a Gmail thread for my assistant, I want the thread to become a card and stay synchronized, so the assistant can work with it as durable box state.
 - **Job story — broad access without mirroring:** When I need information from other mail, I want the agent to search and read Gmail on demand, so the box does not contain my entire mailbox.
 - **Job story — safe automation:** When I configure a query or procedure for incoming mail, I want a bad match rule to stop at a visible limit, so one mistake cannot flood the repository.
