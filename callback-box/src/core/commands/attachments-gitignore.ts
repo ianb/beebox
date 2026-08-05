@@ -152,6 +152,18 @@ export function isAssetIgnoreRule(line: string): boolean {
   return line.trim().startsWith("**/*.attach/**/*.");
 }
 
+/** Does the box `.gitignore` still hide asset binaries from git? */
+export async function gitignoreIgnoresAssets(boxRoot: string): Promise<boolean> {
+  let text: string;
+  try {
+    text = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return false;
+    throw e;
+  }
+  return text.split("\n").some((line) => isAssetIgnoreRule(line));
+}
+
 /** Is `index` inside the managed asset block that starts at `start`? */
 function inManagedBlock(lines: string[], opts: { index: number; start: number }): boolean {
   const { index, start } = opts;
