@@ -34,15 +34,19 @@ A hub restart (every deploy restarts the children) empties the cache, so a deplo
 ## Box growth (files, directories, and Git history)
 
 The scheduler measures each box at most hourly and stores the latest baseline in
-`.callback-box/box-growth-health.json`. The scan counts files and directories
+`.callback-box/box-growth-health.json`. A native `find` subprocess streams
+NUL-delimited type/path pairs so the Node scheduler does not reopen every
+directory or retain every path. The scan counts files and directories
 separately, records the largest subtrees, and samples Git commit/object growth.
 Directories are a first-class signal because very large directory trees can
 exhaust watcher and traversal capacity even when their byte size is modest.
 It counts symlink entries as files but does not follow them, and excludes
 `.git`, `.callback-box`, and `node_modules` directories at any depth.
-Directories that disappear while the live tree is being walked are skipped and
-counted in the measurement. Rate checks pause until two complete samples are
-available, so repairing a transient omission does not look like new growth.
+The filesystem walk has a 10-second budget. If it reaches that deadline or
+encounters a traversal error, the state retains the counts and attribution
+already streamed, marks them as incomplete lower bounds, and warns. Absolute
+limits still apply to those lower bounds; rate checks pause until two complete
+samples are available, so partial traversal does not look like new growth.
 
 The dashboard warns on either kind of anomaly:
 
@@ -85,7 +89,8 @@ git count-objects -v
 
 Then identify the producing connector, import, capture, or procedure and stop
 the source of unintended growth. Do not remove content merely to clear the
-warning. A failed scan or a measurement older than 26 hours is itself a warning;
+warning. An incomplete scan, a failed scan, or a measurement older than 26
+hours is itself a warning;
 inspect `.callback-box/scheduler.jsonl` for `box-growth-scan` errors. A local box
 that has never run the scheduler reports monitoring as not yet run without
 degrading health. Do not delete the state file to dismiss a warning: use one of

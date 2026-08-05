@@ -263,13 +263,14 @@ function count(value: number): string {
   return Math.round(value).toLocaleString("en-US");
 }
 
-function describeFinding(finding: GrowthFinding): string {
+function describeFinding(finding: GrowthFinding, lowerBound: boolean): string {
+  const actual = `${lowerBound ? "at least " : ""}${count(finding.actual)}`;
   const pathDetail = finding.path === undefined ? "" : `; largest contributor: ${finding.path}`;
   if (finding.kind === "absolute-directories") {
-    return `${count(finding.actual)} directories total (limit ${count(finding.threshold)})${pathDetail}`;
+    return `${actual} directories total (limit ${count(finding.threshold)})${pathDetail}`;
   }
   if (finding.kind === "absolute-files") {
-    return `${count(finding.actual)} files total (limit ${count(finding.threshold)})${pathDetail}`;
+    return `${actual} files total (limit ${count(finding.threshold)})${pathDetail}`;
   }
   if (finding.kind === "rate-commits") {
     return `${count(finding.actual)} commits/hour (limit ${count(finding.threshold)})`;
@@ -299,15 +300,20 @@ export async function boxGrowthHealthCheck(
     return warning("Box growth measurement is stale");
   }
   const findings = evaluateBoxGrowth({ ...state });
-  const historyError = state.current.history.status === "unavailable" ? state.current.history.error : null;
-  if (findings.length === 0 && state.lastError === null && state.lastNotice === null) {
+  const incomplete = !state.current.complete;
+  const historyError = !incomplete && state.current.history.status === "unavailable" ? state.current.history.error : null;
+  if (findings.length === 0 && state.lastError === null && state.lastNotice === null && !incomplete) {
     return healthy(
       historyError === null
         ? "Box growth is within accepted limits"
         : "Box growth is within accepted limits; Git history measurement is unavailable",
     );
   }
-  const parts = findings.map(describeFinding);
+  const parts = findings.map((finding) => describeFinding(finding, incomplete));
+  if (incomplete) {
+    const reason = state.current.filesystemError === null ? "" : ` (${state.current.filesystemError})`;
+    parts.push(`filesystem scan incomplete${reason}; counts are lower bounds`);
+  }
   if (state.lastError !== null) parts.push(`latest scan failed: ${state.lastError}`);
   if (state.lastNotice !== null) parts.push(state.lastNotice);
   if (historyError !== null && findings.length > 0) parts.push(`history measurement failed: ${historyError}`);

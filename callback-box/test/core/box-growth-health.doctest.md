@@ -19,6 +19,7 @@ import {
   measureBoxGrowthIfDue,
   readBoxGrowthState,
 } from "../../src/core/box-growth/health.js";
+import { scanBoxGrowth } from "../../src/core/box-growth/scan.js";
 
 const at = (iso) => new Date(iso);
 ```
@@ -30,6 +31,7 @@ const box = await makeTmpBox({ git: true });
 await box.write("box/inbox/email/thread/message.txt", "mail");
 await box.write("store/chat/session/transcript.md", "chat");
 await box.write("store/drive/folder/deep/document.md", "drive");
+await box.write("store/drive/folder/deep/line\nbreak.md", "drive with newline");
 await box.write("tmp-upload/image.jpg", "image");
 await box.write(".callback-box/ignored.txt", "state");
 await fs.mkdir(box.path("node_modules/pkg"), { recursive: true });
@@ -44,13 +46,15 @@ box.commitAll("seed growth fixture");
 const measured = await measureBoxGrowth(box.root, { now: at("2026-08-05T12:00:00Z") });
 print(`directories: ${measured.counts.directories}`);
 print(`files: ${measured.counts.files}`);
+print(`complete: ${measured.complete}`);
 print(`history: ${measured.history.status}`);
 print(measured.largestSubtrees.filter((item) => item.files > 0).map((item) => `${item.path}:${item.source}:${item.files}`).join("\n"));
 =>
 directories: 12
-files: 6
+files: 7
+complete: true
 history: available
-store/drive:connector:1
+store/drive:connector:2
 box/inbox/email:connector:1
 store/chat/session:chat:1
 tmp-upload:user-input:1
@@ -70,6 +74,8 @@ await box.cleanup();
 ```ts
 const base = {
   measuredAt: "2026-08-05T12:00:00.000Z",
+  complete: true,
+  skippedDirectories: 0,
   counts: { directories: 100, files: 100 },
   history: { status: "available", gitHead: "a", commits: 10, gitObjects: 20, gitBytes: 30 },
   largestSubtrees: [{ path: "box/inbox/email", directories: 20, files: 20, source: "connector", sourceLabel: "Gmail" }],
@@ -133,7 +139,7 @@ evaluateBoxGrowth({ accepted: base, previous: base, current: newImport })
   .find((item) => item.kind === "rate-files")?.path
 => store/import-2026/batch1
 
-const partial = { ...fast, skippedDirectories: 1 };
+const partial = { ...fast, complete: false };
 evaluateBoxGrowth({ accepted: base, previous: base, current: partial })
   .some((item) => item.kind.startsWith("rate-"))
 => false
@@ -239,17 +245,63 @@ const failed = await measureBoxGrowthIfDue(failedBox.root, {
 });
 print(failed.status);
 const failedState = await readBoxGrowthState(failedBox.root);
-print(`${failedState.status}:${failedState.lastError !== null}`);
+print(`${failedState.status}:${failedState.status === "measured" && failedState.current.complete}`);
+print(failedState.status === "measured" ? failedState.current.filesystemError : "wrong state");
 =>
 false:true
 skipped:invalid-state
-failed
-unmeasured:true
+measured
+measured:false
+Box growth scan exceeded its time budget
 ```
 
 ```ts cleanup
 await corrupt.cleanup();
 await failedBox.cleanup();
+```
+
+A native traversal that times out retains every complete type/path pair it
+already streamed.
+
+```ts
+const partialBox = await makeTmpBox();
+const fakeFind = partialBox.path("fake-find.sh");
+await fs.writeFile(fakeFind, [
+  "#!/bin/sh",
+  "printf 'd\\000%s\\000' \"$1/box\"",
+  "printf 'd\\000%s\\000' \"$1/box/inbox/email\"",
+  "printf 'f\\000%s\\000' \"$1/box/inbox/email/message.txt\"",
+  "exec sleep 5",
+].join("\n"));
+await fs.chmod(fakeFind, 0o700);
+const partialMeasurement = await scanBoxGrowth(partialBox.root, {
+  now: at("2026-08-05T13:00:00Z"),
+  maxDurationMs: 500,
+  findCommand: fakeFind,
+});
+print(`${partialMeasurement.complete}:${partialMeasurement.counts.directories}:${partialMeasurement.counts.files}`);
+print(`${partialMeasurement.largestSubtrees[0]?.path}:${partialMeasurement.filesystemError}`);
+=>
+false:2:1
+box/inbox/email:Box growth scan exceeded its time budget
+```
+
+```ts cleanup
+await partialBox.cleanup();
+```
+
+A traversal error also retains whatever the native walker reported instead of
+discarding the sample.
+
+```ts
+const vanished = await makeTmpBox();
+const vanishedRoot = vanished.root;
+await vanished.cleanup();
+const vanishedMeasurement = await measureBoxGrowth(vanishedRoot, {
+  now: at("2026-08-05T13:00:00Z"),
+});
+print(`${vanishedMeasurement.complete}:${vanishedMeasurement.filesystemError !== null}`);
+=> false:true
 ```
 
 ## Missing and stale scheduler state stay explicit
@@ -282,6 +334,7 @@ acknowledgement action.
 const warningBox = await makeTmpBox();
 const warningMeasurement = {
   measuredAt: "2026-08-05T12:00:00.000Z",
+  complete: false,
   counts: { directories: 20_000, files: 1_000 },
   history: { status: "available", gitHead: "head", commits: 10, gitObjects: 20, gitBytes: 30 },
   largestSubtrees: [{ path: "box/inbox/email", directories: 19_000, files: 900, source: "connector", sourceLabel: "Gmail" }],
@@ -302,7 +355,10 @@ const warningHealth = await boxGrowthHealthCheck(warningBox.root, {
   schedulerStatus: "running",
 });
 print(`${warningHealth.ok}:${warningHealth.actions?.join(",")}:${warningHealth.message.includes("box/inbox/email")}`);
-=> false:acknowledge-box-growth:true
+print(`${warningHealth.message.includes("at least")}:${warningHealth.message.includes("lower bounds")}`);
+=>
+false:acknowledge-box-growth:true
+true:true
 ```
 
 ```ts cleanup
