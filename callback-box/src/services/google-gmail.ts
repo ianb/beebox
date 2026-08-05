@@ -13,6 +13,7 @@ import { validateResponse } from "./connector-response.js";
 import {
   gmailListMessagesSchema,
   gmailMessageSchema,
+  gmailThreadSchema,
   gmailAttachmentDataSchema,
   gmailListLabelsSchema,
   gmailProfileSchema,
@@ -22,6 +23,7 @@ import {
 import type {
   GmailMessageRef,
   GmailMessage,
+  GmailThread,
   GmailAttachmentData,
   GmailLabel,
   GmailProfile,
@@ -29,8 +31,10 @@ import type {
   GmailHistoryMessageStub,
   GmailHistoryRecord,
   ListMessagesResult,
+  ListThreadsResult,
   ListHistoryResult,
 } from "./google-gmail-types.js";
+import { listGmailThreads } from "./google-gmail-threads.js";
 
 // Raw-response types live in google-gmail-types.ts; re-export so existing
 // `./google-gmail.js` type imports keep resolving.
@@ -46,8 +50,14 @@ export interface GoogleGmailService {
     maxResults?: number;
   }): Promise<ListMessagesResult>;
 
+  /** List Gmail threads matching a search query without fetching contents. */
+  listThreads(opts: { q?: string; maxResults?: number }): Promise<ListThreadsResult>;
+
   /** Fetch a full parsed message (format=full). */
   getMessage(id: string): Promise<GmailMessage>;
+
+  /** Fetch every message in a Gmail thread (format=full). */
+  getThread(id: string): Promise<GmailThread>;
 
   /** Fetch a single attachment's content (base64url-encoded). */
   getAttachment(messageId: string, attachmentId: string): Promise<GmailAttachmentData>;
@@ -101,11 +111,16 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
       }
       const data = await api
         .get("users/me/messages", { searchParams })
-        .json<{ messages?: GmailMessageRef[]; nextPageToken?: string }>();
+        .json<{ messages?: GmailMessageRef[]; nextPageToken?: string; resultSizeEstimate?: number }>();
       validateResponse(data, { schema: gmailListMessagesSchema, service: "gmail", operation: "listMessages" });
       const result: ListMessagesResult = { messages: data.messages ?? [] };
       if (data.nextPageToken) result.nextPageToken = data.nextPageToken;
+      if (data.resultSizeEstimate !== undefined) result.resultSizeEstimate = data.resultSizeEstimate;
       return result;
+    },
+
+    async listThreads(opts) {
+      return listGmailThreads(api, opts);
     },
 
     async getMessage(id) {
@@ -115,6 +130,16 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
         })
         .json<GmailMessage>();
       validateResponse(data, { schema: gmailMessageSchema, service: "gmail", operation: "getMessage" });
+      return data;
+    },
+
+    async getThread(id) {
+      const data = await api
+        .get(`users/me/threads/${encodeURIComponent(id)}`, {
+          searchParams: { format: "full" },
+        })
+        .json<GmailThread>();
+      validateResponse(data, { schema: gmailThreadSchema, service: "gmail", operation: "getThread" });
       return data;
     },
 
@@ -296,10 +321,23 @@ export function createFakeGoogleGmail(
     },
 
     async listMessages(listOpts) {
+      const matches = fake.messages.filter((message) =>
+        messageMatchesQuery({ msg: message, query: listOpts.q, labels: fake.labels }));
       return {
-        messages: fake.messages
-          .filter((m) => messageMatchesQuery({ msg: m, query: listOpts.q, labels: fake.labels }))
+        messages: matches
+          .slice(0, listOpts.maxResults)
           .map((m) => ({ id: m.id, threadId: m.threadId })),
+        resultSizeEstimate: matches.length,
+      };
+    },
+
+    async listThreads(listOpts) {
+      const matches = fake.messages.filter((message) =>
+        messageMatchesQuery({ msg: message, query: listOpts.q, labels: fake.labels }));
+      const threadIds = [...new Set(matches.map((message) => message.threadId))];
+      return {
+        threads: threadIds.slice(0, listOpts.maxResults).map((id) => ({ id })),
+        resultSizeEstimate: threadIds.length,
       };
     },
 
@@ -307,6 +345,12 @@ export function createFakeGoogleGmail(
       const msg = fake.messages.find((m) => m.id === id);
       if (!msg) throw new NotFoundError(id, "Message");
       return msg;
+    },
+
+    async getThread(id) {
+      const messages = fake.messages.filter((message) => message.threadId === id);
+      if (messages.length === 0) throw new NotFoundError(id, "Thread");
+      return { id, messages };
     },
 
     async getAttachment(messageId, attachmentId) {

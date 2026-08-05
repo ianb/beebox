@@ -41,6 +41,12 @@ export interface GmailMessage {
   payload?: GmailPayload;
 }
 
+export interface GmailThread {
+  id: string;
+  historyId?: string;
+  messages: GmailMessage[];
+}
+
 export interface GmailAttachmentData {
   /** base64url-encoded attachment bytes */
   data: string;
@@ -57,6 +63,13 @@ export interface GmailLabel {
 export interface ListMessagesResult {
   messages: GmailMessageRef[];
   nextPageToken?: string;
+  resultSizeEstimate?: number;
+}
+
+export interface ListThreadsResult {
+  threads: Array<{ id: string }>;
+  nextPageToken?: string;
+  resultSizeEstimate?: number;
 }
 
 export interface GmailDraft {

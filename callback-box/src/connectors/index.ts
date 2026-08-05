@@ -41,7 +41,14 @@ export interface SyncResult {
   pushed?: string[];
   /** Job cards created during sync */
   jobs?: string[];
+  /** Procedures requested by a connector, run after connector writes complete. */
+  procedures?: ConnectorProcedureTrigger[];
   error?: string;
+}
+
+export interface ConnectorProcedureTrigger {
+  procedureRef: string;
+  directive: string;
 }
 
 const registry = new Map<string, Connector>();

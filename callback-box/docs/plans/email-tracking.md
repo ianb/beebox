@@ -1,6 +1,6 @@
 # Email tracking instead of mailbox mirroring
 
-**Status:** active — design agreed in discussion; implementation has not started
+**Status:** implemented on `worktree-email-volume-limits`; not merged or deployed
 
 This plan changes Gmail from a mailbox mirror into a remote source with an explicit tracked working set. Gmail remains the complete archive. An email thread enters Git only when a person, an agent, a procedure, or a bounded automatic rule chooses to track it.
 
@@ -381,6 +381,22 @@ Add and run these audits with the implementation:
 Run them against the isolated worktree test box. Record status comments in `src/dev/knowledge-audits.yaml` before implementation is complete.
 
 ## Implementation order
+
+Implementation completed the tracks below with these deliberate boundaries:
+
+- Automatic `track` rules enforce the rolling budget. A procedure action does
+  not track anything by itself; an agent choosing to run the explicit track
+  command is an intentional working-set decision, matching the boxholder's
+  requirement that the agent must do something to add the thread.
+- Existing committed `gmail-state.json` data is no longer read or written, but
+  is not deleted automatically. Removing real-box backlog or rewriting history
+  remains a separately authorized operation.
+- The message-card and attach-scope representation remains unchanged. Bounding
+  the tracked set addresses growth without foreclosing a later storage-shape
+  migration.
+- Five knowledge-audit definitions were added, but their live agent run was
+  deferred to conserve the boxholder's remaining model quota. Unit/doctest,
+  lint, type, and documentation verification do not consume that quota.
 
 1. **Tests and vocabulary.** Add the agent-facing wording, live-card discovery doctest, config/budget pure doctests, and knowledge-audit entries. Commit the design boundary before connector mutation.
 2. **Live-card index.** Implement validated, duplicate-detecting discovery. Adapt current writer lookup to use full thread IDs across live locations.

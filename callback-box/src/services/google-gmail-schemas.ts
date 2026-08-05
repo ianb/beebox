@@ -45,9 +45,22 @@ export const gmailMessageSchema = z.object({
   payload: gmailPayloadSchema.optional(),
 });
 
+export const gmailThreadSchema = z.object({
+  id: z.string(),
+  historyId: z.string().optional(),
+  messages: z.array(gmailMessageSchema),
+});
+
 export const gmailListMessagesSchema = z.object({
   messages: z.array(gmailMessageRefSchema).optional(),
   nextPageToken: z.string().optional(),
+  resultSizeEstimate: z.number().optional(),
+});
+
+export const gmailListThreadsSchema = z.object({
+  threads: z.array(z.object({ id: z.string() })).optional(),
+  nextPageToken: z.string().optional(),
+  resultSizeEstimate: z.number().optional(),
 });
 
 export const gmailAttachmentDataSchema = z.object({

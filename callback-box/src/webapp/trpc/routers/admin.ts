@@ -36,6 +36,9 @@ const boxConfigSchema = z.object({
 const gmailConfigSchema = z.object({
   query: z.string().default(""),
   labels: z.array(z.string()).default([]),
+  rules: z.array(z.unknown()).optional(),
+  gc: z.boolean().optional(),
+  gcIntervalHours: z.number().optional(),
 });
 
 /**
@@ -176,7 +179,11 @@ export const adminRouter = router({
       }
       config = gmailConfigSchema.parse({});
     }
-    return { query: config.query, labels: config.labels };
+    return {
+      query: config.query,
+      labels: config.labels,
+      usesRules: config.rules !== undefined,
+    };
   }),
 
   updateGmailConfig: ownerProcedure
@@ -187,21 +194,37 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const next: { query?: string; labels?: string[] } = {};
-      const trimmedQuery = input.query.trim();
-      if (trimmedQuery) next.query = trimmedQuery;
-      const cleanedLabels = input.labels.map((l) => l.trim()).filter((l) => l.length > 0);
-      if (cleanedLabels.length > 0) next.labels = cleanedLabels;
-
       const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
-      await fs.mkdir(path.dirname(configPath), { recursive: true });
-      await fs.writeFile(configPath, JSON.stringify(next, null, 2) + "\n");
-      await stageAndCommitPaths(ctx.boxRoot, {
-        paths: ["config/connectors/gmail.json"],
-        message: "Update Gmail filter config",
+      return withCardLock(configPath, async () => {
+        let existing: z.infer<typeof gmailConfigSchema> = gmailConfigSchema.parse({});
+        try {
+          existing = gmailConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
+        } catch (error) {
+          if (errnoCode(error) !== "ENOENT") throw error;
+        }
+        if (existing.rules !== undefined) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Named Gmail rules must be edited in config/connectors/gmail.json",
+          });
+        }
+        const next: Record<string, unknown> = {};
+        const trimmedQuery = input.query.trim();
+        if (trimmedQuery) next.query = trimmedQuery;
+        const cleanedLabels = input.labels.map((label) => label.trim()).filter(Boolean);
+        if (cleanedLabels.length > 0) next.labels = cleanedLabels;
+        if (existing.gc !== undefined) next.gc = existing.gc;
+        if (existing.gcIntervalHours !== undefined) {
+          next.gcIntervalHours = existing.gcIntervalHours;
+        }
+        await fs.mkdir(path.dirname(configPath), { recursive: true });
+        await fs.writeFile(configPath, JSON.stringify(next, null, 2) + "\n");
+        await stageAndCommitPaths(ctx.boxRoot, {
+          paths: ["config/connectors/gmail.json"],
+          message: "Update Gmail filter config",
+        });
+        return { query: trimmedQuery, labels: cleanedLabels };
       });
-
-      return { query: next.query ?? "", labels: next.labels ?? [] };
     }),
 
   updateBoxConfig: ownerProcedure

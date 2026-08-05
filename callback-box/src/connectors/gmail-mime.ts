@@ -261,3 +261,29 @@ export async function parseGmailMessage(
 export function messageIdFor(raw: GmailMessage): string {
   return getHeader(raw.payload, "Message-ID") || raw.id;
 }
+
+export interface GmailMessageSummary {
+  messageId: string;
+  threadId: string;
+  from: string;
+  subject: string;
+  date: string;
+  snippet: string;
+  labels: string[];
+}
+
+/** Build bounded triage metadata without downloading bodies or attachments. */
+export function summarizeGmailMessage(
+  raw: GmailMessage,
+  labelMap: Map<string, string>,
+): GmailMessageSummary {
+  return {
+    messageId: raw.id,
+    threadId: raw.threadId,
+    from: getHeader(raw.payload, "From") || "unknown",
+    subject: getHeader(raw.payload, "Subject") || "(no subject)",
+    date: isoDateFromInternal(raw.internalDate),
+    snippet: raw.snippet ?? "",
+    labels: (raw.labelIds ?? []).map((id) => labelMap.get(id) ?? id),
+  };
+}

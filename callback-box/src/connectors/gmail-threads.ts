@@ -1,326 +1,268 @@
-/**
- * Gmail thread-card writing — given freshly fetched messages, groups them by
- * thread and writes/updates the on-disk card structure under
- * box/inbox/email/: one `*.email-thread.card` per thread plus a sibling
- * `*.attach/` scope holding per-message `*.email-message.card` files, body
- * text, and downloaded attachments.
- *
- * The connector hands us the fetched messages and the box root; we own the
- * filesystem layout decisions (basename matching, message numbering, ref
- * merging) and report back what was created/updated plus per-thread notes.
- */
+/** Write complete Gmail thread snapshots into tracked email-thread cards. */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode } from "../lib/error-guards.js";
+import { parseFrontmatterObject } from "../cards/index.js";
 import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
-import { type FetchedMessage, makeSnippet, safeDirectoryName } from "./gmail-mime.js";
-import type { ThreadNote } from "./gmail-commit.js";
-import { preserveAgentFields } from "./preserve-agent-fields.js";
+import { attachDirFor } from "../shared/attach-path.js";
 import { invariant } from "../lib/invariant.js";
+import { safeDirectoryName, makeSnippet, type FetchedMessage } from "./gmail-mime.js";
+import { preserveAgentFields } from "./preserve-agent-fields.js";
+import { findTrackedGmailThreads, type TrackedGmailThread } from "./gmail-tracking.js";
+import type { ThreadNote } from "./gmail-commit.js";
 
 const MESSAGE_CARD_RE = /^msg-\d+\.email-message\.card$/;
 
-interface WriteThreadsResult {
+export interface WriteThreadsResult {
   created: string[];
   updated: string[];
   notes: ThreadNote[];
-  /** messageIds that were written, to fold into seenMessageIds */
   seenMessageIds: string[];
 }
 
-/** Group flat fetched messages into per-thread buckets. */
+interface ExistingMessages {
+  ids: Set<string>;
+  refs: string[];
+}
+
+export class InvalidTrackedGmailMessageCardError extends Error {
+  readonly cardPath: string;
+
+  constructor(cardPath: string) {
+    super(`Tracked Gmail message card has no valid message-id: ${cardPath}`);
+    this.name = "InvalidTrackedGmailMessageCardError";
+    this.cardPath = cardPath;
+  }
+}
+
 function groupByThread(messages: FetchedMessage[]): Map<string, FetchedMessage[]> {
   const threads = new Map<string, FetchedMessage[]>();
-  for (const msg of messages) {
-    const existing = threads.get(msg.threadId) || [];
-    existing.push(msg);
-    threads.set(msg.threadId, existing);
+  for (const message of messages) {
+    const existing = threads.get(message.threadId) ?? [];
+    existing.push(message);
+    threads.set(message.threadId, existing);
   }
   return threads;
 }
 
-/**
- * Find the basename of an existing thread card for this thread (matched by the
- * short ID suffix), or null if this thread is new.
- */
-async function findExistingBasename(emailDir: string, threadId: string): Promise<string | null> {
+async function readExistingMessages(attachDir: string): Promise<ExistingMessages> {
+  let entries: string[];
   try {
-    const entries = await fs.readdir(emailDir);
-    const suffix = `-${threadId.slice(-8)}`;
-    const existingCard = entries.find((e) => e.endsWith(`${suffix}.email-thread.card`));
-    if (existingCard) {
-      return existingCard.slice(0, -".email-thread.card".length);
+    entries = await fs.readdir(attachDir);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return { ids: new Set(), refs: [] };
     }
-  } catch (e) {
-    // emailDir doesn't exist yet — treat thread as new
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("Gmail: could not scan email dir for existing thread, treating as new:", e);
-    }
+    throw error;
   }
-  return null;
+  const refs = entries.filter((entry) => MESSAGE_CARD_RE.test(entry)).toSorted();
+  const ids = new Set<string>();
+  for (const ref of refs) {
+    const cardPath = path.join(attachDir, ref);
+    const fields = parseFrontmatterObject(await fs.readFile(cardPath, "utf-8"));
+    const messageId = fields?.["message-id"];
+    if (typeof messageId !== "string" || messageId === "") {
+      throw new InvalidTrackedGmailMessageCardError(cardPath);
+    }
+    ids.add(messageId);
+  }
+  return { ids, refs };
 }
 
-/** Count existing `msg-NNN.email-message.card` files in a thread attach dir. */
-async function countExistingMessages(attachDir: string): Promise<number> {
-  try {
-    const files = await fs.readdir(attachDir);
-    return files.filter((f) => f.match(MESSAGE_CARD_RE)).length;
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("Gmail: could not read attach dir to count messages:", e);
-    }
-    return 0;
-  }
-}
-
-/** Collect the distinct participant addresses across a thread's messages. */
-function collectParticipants(threadMessages: FetchedMessage[]): Set<string> {
+function collectParticipants(messages: FetchedMessage[]): string[] {
   const participants = new Set<string>();
-  for (const msg of threadMessages) {
-    participants.add(msg.from);
-    for (const field of [msg.to, msg.cc]) {
-      if (!field) continue;
-      for (const addr of field.split(",").map((s) => s.trim())) {
-        if (addr) participants.add(addr);
+  for (const message of messages) {
+    participants.add(message.from);
+    for (const field of [message.to, message.cc]) {
+      if (field === undefined) continue;
+      for (const address of field.split(",").map((value) => value.trim())) {
+        if (address !== "") participants.add(address);
       }
     }
   }
-  return participants;
+  return [...participants];
 }
 
-/** Build the email-message template options for one message. */
-function messageTemplateOpts(
-  tmsg: FetchedMessage,
+function messageTemplateOptions(
+  message: FetchedMessage,
   bodyFilename: string,
 ): Parameters<typeof createEmailMessageTemplate>[0] {
-  const opts: Parameters<typeof createEmailMessageTemplate>[0] = {
-    messageId: tmsg.messageId,
-    threadId: tmsg.threadId,
-    from: tmsg.from,
-    to: tmsg.to,
-    date: tmsg.date,
-    subject: tmsg.subject,
-    snippet: makeSnippet(tmsg.textBody),
+  return {
+    messageId: message.messageId,
+    threadId: message.threadId,
+    from: message.from,
+    to: message.to,
+    ...(message.cc === undefined ? {} : { cc: message.cc }),
+    date: message.date,
+    subject: message.subject,
+    snippet: makeSnippet(message.textBody),
     bodyFile: bodyFilename,
+    ...(message.attachments.length === 0
+      ? {}
+      : {
+          attachments: message.attachments.map((attachment) => ({
+            ref: `attachments/${attachment.filename}`,
+            contentType: attachment.contentType,
+            size: attachment.size,
+          })),
+        }),
   };
-  if (tmsg.cc) {
-    opts.cc = tmsg.cc;
-  }
-  if (tmsg.attachments.length > 0) {
-    opts.attachments = tmsg.attachments.map((a) => ({
-      ref: `attachments/${a.filename}`,
-      contentType: a.contentType,
-      size: a.size,
-    }));
-  }
-  return opts;
 }
 
-/** Write one message's card, body, and attachment files; return paths created. */
 async function writeMessage(opts: {
-  tmsg: FetchedMessage;
-  msgNum: string;
+  message: FetchedMessage;
+  messageNumber: number;
   attachDir: string;
   boxRoot: string;
-}): Promise<{ created: string[]; cardFilename: string }> {
-  const { tmsg, msgNum, attachDir, boxRoot } = opts;
-  const messageBasename = `msg-${msgNum}`;
-  const cardFilename = `${messageBasename}.email-message.card`;
-  const bodyFilename = `${messageBasename}.body.txt`;
-  const messageAttachDir = path.join(attachDir, `${messageBasename}.attach`);
-  const created: string[] = [];
-
-  const cardContent = createEmailMessageTemplate(messageTemplateOpts(tmsg, bodyFilename));
-  const cardPath = path.join(attachDir, cardFilename);
-  await fs.writeFile(cardPath, await preserveAgentFields(cardContent, { existingPath: cardPath }));
-  created.push(path.relative(boxRoot, cardPath));
-
+}): Promise<{ paths: string[]; ref: string }> {
+  const number = String(opts.messageNumber).padStart(3, "0");
+  const basename = `msg-${number}`;
+  const ref = `${basename}.email-message.card`;
+  const bodyFilename = `${basename}.body.txt`;
+  const messageAttachDir = path.join(opts.attachDir, `${basename}.attach`);
   await fs.mkdir(messageAttachDir, { recursive: true });
+  const cardPath = path.join(opts.attachDir, ref);
+  await fs.writeFile(
+    cardPath,
+    createEmailMessageTemplate(messageTemplateOptions(opts.message, bodyFilename)),
+  );
   const bodyPath = path.join(messageAttachDir, bodyFilename);
-  await fs.writeFile(bodyPath, tmsg.textBody);
-  created.push(path.relative(boxRoot, bodyPath));
-
-  if (tmsg.attachments.length > 0) {
-    const attachmentsSubdir = path.join(messageAttachDir, "attachments");
-    await fs.mkdir(attachmentsSubdir, { recursive: true });
-    for (const att of tmsg.attachments) {
-      const attPath = path.join(attachmentsSubdir, att.filename);
-      await fs.writeFile(attPath, att.content);
-      created.push(path.relative(boxRoot, attPath));
+  await fs.writeFile(bodyPath, opts.message.textBody);
+  const paths = [path.relative(opts.boxRoot, cardPath), path.relative(opts.boxRoot, bodyPath)];
+  if (opts.message.attachments.length > 0) {
+    const attachmentDir = path.join(messageAttachDir, "attachments");
+    await fs.mkdir(attachmentDir, { recursive: true });
+    for (const attachment of opts.message.attachments) {
+      const attachmentPath = path.join(attachmentDir, attachment.filename);
+      await fs.writeFile(attachmentPath, attachment.content);
+      paths.push(path.relative(opts.boxRoot, attachmentPath));
     }
   }
-
-  return { created, cardFilename };
+  return { paths, ref };
 }
 
-/** Merge any pre-existing message-card refs into the new refs list. */
-async function mergeExistingRefs(attachDir: string, messageRefs: string[]): Promise<void> {
-  try {
-    const files = await fs.readdir(attachDir);
-    const existingRefs = files.filter((f) => f.match(MESSAGE_CARD_RE)).toSorted();
-    for (const ref of existingRefs) {
-      if (!messageRefs.includes(ref)) {
-        messageRefs.unshift(ref);
-      }
-    }
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("Gmail: could not read attach dir to merge message refs:", e);
-    }
-  }
-}
-
-/** Build and write the thread-level card; return its relative path. */
-async function writeThreadCard(opts: {
-  emailDir: string;
-  cardFilename: string;
+function cardLocation(opts: {
+  boxRoot: string;
   threadId: string;
   subject: string;
-  participants: Set<string>;
-  threadMessages: FetchedMessage[];
-  messageRefs: string[];
-  isNew: boolean;
-  boxRoot: string;
-}): Promise<string> {
-  const {
-    emailDir, cardFilename, threadId, subject, participants,
-    threadMessages, messageRefs, isNew, boxRoot,
-  } = opts;
-
-  const allLabels = new Set<string>();
-  for (const msg of threadMessages) {
-    for (const label of msg.labels) allLabels.add(label);
+  tracked: TrackedGmailThread | undefined;
+}): { cardPath: string; attachDir: string; isNew: boolean } {
+  if (opts.tracked !== undefined) {
+    return {
+      cardPath: opts.tracked.absPath,
+      attachDir: attachDirFor(opts.tracked.absPath),
+      isNew: false,
+    };
   }
-
-  const firstMsg = threadMessages[0];
-  const lastMsg = threadMessages[threadMessages.length - 1];
-  invariant(
-    firstMsg !== undefined && lastMsg !== undefined,
-    "groupByThread never produces an empty thread bucket",
-  );
-  const threadOpts: Parameters<typeof createEmailThreadTemplate>[0] = {
-    threadId,
-    subject,
-    participants: Array.from(participants),
-    dateStart: firstMsg.date,
-    dateEnd: lastMsg.date,
-    messageRefs: messageRefs.toSorted(),
-  };
-  if (allLabels.size > 0) {
-    threadOpts.labels = Array.from(allLabels);
-  }
-  if (isNew) {
-    threadOpts.status = "new";
-  }
-
-  const threadCardPath = path.join(emailDir, cardFilename);
-  await fs.writeFile(
-    threadCardPath,
-    await preserveAgentFields(createEmailThreadTemplate(threadOpts), {
-      existingPath: threadCardPath,
-    })
-  );
-  return path.relative(boxRoot, threadCardPath);
+  const emailDir = path.join(opts.boxRoot, "box/inbox/email");
+  const basename = safeDirectoryName(opts.subject, opts.threadId);
+  const cardPath = path.join(emailDir, `${basename}.email-thread.card`);
+  return { cardPath, attachDir: attachDirFor(cardPath), isNew: true };
 }
 
-/** Write the full card structure for a single thread. */
-async function writeOneThread(opts: {
-  emailDir: string;
+async function writeThreadCard(opts: {
+  cardPath: string;
   threadId: string;
-  threadMessages: FetchedMessage[];
+  messages: FetchedMessage[];
+  refs: string[];
+  isNew: boolean;
+}): Promise<boolean> {
+  const first = opts.messages[0];
+  const last = opts.messages.at(-1);
+  invariant(first !== undefined && last !== undefined, "a Gmail thread snapshot has at least one message");
+  const labels = new Set(opts.messages.flatMap((message) => message.labels));
+  const template = createEmailThreadTemplate({
+    threadId: opts.threadId,
+    subject: first.subject,
+    participants: collectParticipants(opts.messages),
+    dateStart: first.date,
+    dateEnd: last.date,
+    messageRefs: opts.refs.toSorted(),
+    ...(labels.size === 0 ? {} : { labels: [...labels] }),
+    ...(opts.isNew ? { status: "new" } : {}),
+  });
+  const content = await preserveAgentFields(template, { existingPath: opts.cardPath });
+  let existing: string | null = null;
+  try {
+    existing = await fs.readFile(opts.cardPath, "utf-8");
+  } catch (_error) {
+    // A new tracked card has no existing content to compare.
+  }
+  if (existing === content) return false;
+  await fs.writeFile(opts.cardPath, content);
+  return true;
+}
+
+async function writeOneThread(opts: {
   boxRoot: string;
+  threadId: string;
+  messages: FetchedMessage[];
+  tracked: TrackedGmailThread | undefined;
   result: WriteThreadsResult;
 }): Promise<void> {
-  const { emailDir, threadId, threadMessages, boxRoot, result } = opts;
-
-  threadMessages.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const firstMsg = threadMessages[0];
-  invariant(firstMsg !== undefined, "groupByThread never produces an empty thread bucket");
-  const subject = firstMsg.subject;
-
-  const existingBasename = await findExistingBasename(emailDir, threadId);
-  const actualBasename = existingBasename ?? safeDirectoryName(subject, threadId);
-  const actualCardFilename = `${actualBasename}.email-thread.card`;
-  const actualAttachDir = path.join(emailDir, `${actualBasename}.attach`);
-  await fs.mkdir(actualAttachDir, { recursive: true });
-
-  const existingCount = await countExistingMessages(actualAttachDir);
-  const participants = collectParticipants(threadMessages);
-
-  const messageRefs: string[] = [];
-  for (const [i, threadMessage] of threadMessages.entries()) {
-    const msgNum = String(existingCount + i + 1).padStart(3, "0");
-    const { created, cardFilename } = await writeMessage({
-      tmsg: threadMessage,
-      msgNum,
-      attachDir: actualAttachDir,
-      boxRoot,
+  opts.messages.sort((left, right) => Date.parse(left.date) - Date.parse(right.date));
+  const first = opts.messages[0];
+  invariant(first !== undefined, "a grouped Gmail thread has at least one message");
+  const location = cardLocation({
+    boxRoot: opts.boxRoot,
+    threadId: opts.threadId,
+    subject: first.subject,
+    tracked: opts.tracked,
+  });
+  await fs.mkdir(path.dirname(location.cardPath), { recursive: true });
+  await fs.mkdir(location.attachDir, { recursive: true });
+  const existing = await readExistingMessages(location.attachDir);
+  const refs = [...existing.refs];
+  let newMessageCount = 0;
+  for (const message of opts.messages) {
+    opts.result.seenMessageIds.push(message.messageId);
+    if (existing.ids.has(message.messageId)) continue;
+    newMessageCount += 1;
+    const written = await writeMessage({
+      message,
+      messageNumber: existing.refs.length + newMessageCount,
+      attachDir: location.attachDir,
+      boxRoot: opts.boxRoot,
     });
-    result.created.push(...created);
-    messageRefs.push(cardFilename);
+    refs.push(written.ref);
+    opts.result.created.push(...written.paths);
   }
-
-  await mergeExistingRefs(actualAttachDir, messageRefs);
-
-  const threadCardRelPath = await writeThreadCard({
-    emailDir,
-    cardFilename: actualCardFilename,
-    threadId,
-    subject,
-    participants,
-    threadMessages,
-    messageRefs,
-    isNew: !existingBasename,
-    boxRoot,
+  const cardChanged = await writeThreadCard({
+    cardPath: location.cardPath,
+    threadId: opts.threadId,
+    messages: opts.messages,
+    refs,
+    isNew: location.isNew,
   });
-  if (existingBasename) {
-    result.updated.push(threadCardRelPath);
-  } else {
-    result.created.push(threadCardRelPath);
-  }
-
-  result.notes.push({
-    subject,
-    from: firstMsg.from,
-    isNew: !existingBasename,
-    messageCount: threadMessages.length,
-  });
-
-  for (const msg of threadMessages) {
-    if (!result.seenMessageIds.includes(msg.messageId)) {
-      result.seenMessageIds.push(msg.messageId);
-    }
+  const cardRelPath = path.relative(opts.boxRoot, location.cardPath);
+  if (location.isNew) opts.result.created.push(cardRelPath);
+  else if (cardChanged) opts.result.updated.push(cardRelPath);
+  if (location.isNew || cardChanged || newMessageCount > 0) {
+    opts.result.notes.push({
+      subject: first.subject,
+      from: first.from,
+      isNew: location.isNew,
+      messageCount: newMessageCount,
+    });
   }
 }
 
-/**
- * Group fetched messages by thread and write/update all thread + message cards.
- * Returns created/updated relative paths, per-thread notes, and the messageIds
- * that were written (for folding into the connector's seenMessageIds set).
- */
+/** Write complete Gmail thread snapshots, creating cards only for unknown IDs. */
 export async function writeThreadCards(opts: {
   boxRoot: string;
   messages: FetchedMessage[];
 }): Promise<WriteThreadsResult> {
-  const { boxRoot, messages } = opts;
-  const result: WriteThreadsResult = {
-    created: [],
-    updated: [],
-    notes: [],
-    seenMessageIds: [],
-  };
-
-  const threads = groupByThread(messages);
-
-  const emailDir = path.join(boxRoot, "box/inbox/email");
-  await fs.mkdir(emailDir, { recursive: true });
-
-  for (const [threadId, threadMessages] of threads) {
-    await writeOneThread({ emailDir, threadId, threadMessages, boxRoot, result });
+  const result: WriteThreadsResult = { created: [], updated: [], notes: [], seenMessageIds: [] };
+  const tracked = await findTrackedGmailThreads(opts.boxRoot);
+  for (const [threadId, messages] of groupByThread(opts.messages)) {
+    await writeOneThread({
+      boxRoot: opts.boxRoot,
+      threadId,
+      messages,
+      tracked: tracked.get(threadId),
+      result,
+    });
   }
-
   return result;
 }
