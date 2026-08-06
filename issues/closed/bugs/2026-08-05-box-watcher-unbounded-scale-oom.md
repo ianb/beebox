@@ -3,7 +3,16 @@ title: "The box file watcher watches every directory in the box — 69k watches 
 area: callback-box
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — heap snapshot of the live prod box-family child, 2026-08-05
+resolution: implemented
 ---
+
+> **Fixed.** The watcher is now bounded (`90ededb8` "Bound box file watcher scale",
+> `19fdd325` notification-work bound, `7bc48388` streamed bounded traversal,
+> `054cc4f4` Codex-review hardening): a hard `MAX_WATCHED_DIRS = 1024` cap it
+> refuses to exceed with a loud limit-reported log and graceful degradation (the
+> over-cap subtree stops live-updating instead of OOMing), plus the `HIGH_CHURN_DIRS`
+> exclusion and a `MAX_NOTIFICATION_WORK` bound. The 69k-directory box caps to
+> 1024 — the OOM cause is gone.
 
 > **Job to be done:** *When one part of my box is huge or pathological, I want
 > that to degrade that part — not take down the whole server for every other
@@ -38,12 +47,12 @@ explains every discriminator the investigation kept hitting:
   Crashes cluster ~10s after `[ChatSession:init] Loaded session`.
 - **Started 2026-08-03.** The per-directory watcher shipped 2026-08-02
   (`9b2aa44d`, the fix for
-  [spawn-EBADF FD exhaustion](../closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md));
+  [spawn-EBADF FD exhaustion](2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md));
   the first heap OOM is the next evening. The rewrite was correct for the FD bug
   — per-file watching was worse — but it moved an unbounded cost rather than
   bounding it.
 - Not the chat-history parse cost
-  ([that item](../closed/bugs/2026-08-04-chat-history-parse-transient-oom.md) was a real,
+  ([that item](2026-08-04-chat-history-parse-transient-oom.md) was a real,
   separately-verified bottleneck: +216MB→+0.04MB on a fetch storm — but fixing
   it did not stop the crashes).
 
@@ -67,8 +76,8 @@ explains every discriminator the investigation kept hitting:
    69k handles).
 
 The email inbox being 68,869 directories is its own problem — see
-[email connector needs volume limiters](../closed/bugs/2026-08-05-email-connector-needs-volume-limiters.md)
-and [file-based email doesn't scale to a real inbox](../closed/decisions/2026-08-05-email-storage-api-vs-file-based.md).
+[email connector needs volume limiters](2026-08-05-email-connector-needs-volume-limiters.md)
+and [file-based email doesn't scale to a real inbox](../decisions/2026-08-05-email-storage-api-vs-file-based.md).
 Fixing those shrinks this box but does not bound the watcher, which is why this
 is filed separately.
 

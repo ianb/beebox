@@ -33,7 +33,7 @@ history than a box should hold.
 ## Why it's live now
 
 box-family's email sync produced **68,869 directories**, which
-[OOM'd the server through the file watcher](../../bugs/2026-08-05-box-watcher-unbounded-scale-oom.md)
+[OOM'd the server through the file watcher](../bugs/2026-08-05-box-watcher-unbounded-scale-oom.md)
 and prompted
 [volume limiters for the connector](../bugs/2026-08-05-email-connector-needs-volume-limiters.md).
 Limiters bound the damage; this item asks whether the file-based default is
