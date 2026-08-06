@@ -119,7 +119,9 @@ echo
 echo "  Removing deletes the worktree, its box clone, and its router state."
 echo "  Uncommitted changes above are lost. Committed work is not: the branch"
 echo "  '$WT_BRANCH' is kept, and \`git worktree add\` brings it back."
-echo "  Keeping leaves everything as it is."
+echo "  Keeping leaves everything as it is — to resume this codex session in it:"
+echo "      cd \"$worktree_path\" && codex resume --last -s danger-full-access"
+echo "  (the -s flag matches how the launcher runs codex, so its git writes work.)"
 echo
 
 # `[ -e /dev/tty ]` is not the test: the device node exists even for a process

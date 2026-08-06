@@ -33,6 +33,7 @@ import {
 
 // Re-exported so existing callers of `cli/lib/session` keep their imports.
 export {
+  MAX_RETAINED_BYTES,
   MAX_SESSION_ENTRIES,
   type SessionLogResult,
   type SessionLogSlice,
