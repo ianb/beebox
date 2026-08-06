@@ -456,7 +456,7 @@ struct NativeComposerView: View {
             return
         }
         switch intent.action {
-        case .send, .sendClose:
+        case .send, .sendHq, .sendClose:
             sendKeywordIntent(intent)
         case .cancel:
             selectedPhotoItems = []
@@ -489,6 +489,7 @@ struct NativeComposerView: View {
         let audioURL = dictation.consumeRecordedAudioURL()
         switch NativeVoiceKeywordSendPlan.make(
             liveTranscript: intent.processedTranscript,
+            action: intent.action,
             narrationEnabled: narrationEnabled
         ) {
         case .live(let text):

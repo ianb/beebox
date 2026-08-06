@@ -92,6 +92,26 @@ detectKeyword("send and stop the mic")?.action
 => sendClose
 ```
 
+## Clean up and send
+
+Both deliberate phrasings request an HQ transcription pass before the normal
+send. They use the ordinary send tag because HQ is client-side preparation,
+not a distinct command for the agent:
+
+```ts
+detectKeyword("clean up and send")?.action
+=> sendHq
+
+detectKeyword("clean up and send")?.processedTranscript
+=> <send-message phrase="clean up and send" />
+
+detectKeyword("OK send and clean up")?.action
+=> sendHq
+
+detectKeyword("OK send and clean up")?.processedTranscript
+=> OK <send-message phrase="send and clean up" />
+```
+
 ## Cancel commands
 
 ```ts

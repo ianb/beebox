@@ -17,14 +17,15 @@ import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { useMachine } from "@xstate/react";
 import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
-import { detectKeyword, appendSendKeywordTag } from "../../lib/audio/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
 import { retainVoiceAudio, markVoiceAudioAbsent } from "../../lib/audio/last-audio";
 import { sendSound, tick, recordingStop } from "../../lib/audio/earcons";
 import { joinTranscript } from "./InteractiveChat-helpers";
 import { draftAttachments, type Emission } from "../../input/emission";
 import type { EmissionStore } from "../../input/emission-store";
-import { buildVoiceSubmitEmission, type VoiceIntent } from "../../input/voice-intent";
+import {
+  buildVoiceSubmitEmission, prepareVoiceSubmitEmission, type VoiceIntent,
+} from "../../input/voice-intent";
 import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import type { SpeechSegment } from "../../lib/audio/speech-parsing";
@@ -56,8 +57,9 @@ interface VoiceDevices {
  * Run the realtime-transcription `onKeywordSend` flow: commit the utterance and
  * either restart the mic so the user can keep talking (plain `send`) or close it
  * and leave it closed (`closeMic`, the "send and close" sign-off). Narration
- * mode runs a high-quality transcription pass before sending; the `hq` region of
- * the composer machine carries the in-flight + pending-draft state for the UI.
+ * mode and the explicit cleanup keyword run a high-quality transcription pass
+ * before sending; the `hq` region of the composer machine carries the
+ * in-flight + pending-draft state for the UI.
  * Module-level so the hook body stays under the per-function line budget.
  */
 function runKeywordSend(opts: {
@@ -79,7 +81,7 @@ function runKeywordSend(opts: {
   inputStore: InputStore;
 }) {
   const { intent, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments, dispatchEmission, clearDraftRef, inputStore } = opts;
-  const { text, matchedPhrase, audioBlob, closeMic } = intent;
+  const { text, audioBlob, closeMic } = intent;
   // Restart the mic for a continuous conversation, or — for "send and close" —
   // end dictation (STOP_DICTATION clears turnTaking, suppressing the
   // post-response re-arm too). Called at every exit below.
@@ -114,13 +116,7 @@ function runKeywordSend(opts: {
   }
   sendSound.play();
   stopTickRef.current = tick.repeatPlay(1000, 30000);
-  const submit = (finalText: string, submitOpts?: { diarized?: boolean }) => {
-    const diarized = submitOpts !== undefined && submitOpts.diarized === true;
-    // The HQ audio (and the realtime text) cover only the spoken segment, so
-    // fold the prior composer text back in at submit time. The frozen
-    // selections snapshot rides the emission — additions during the HQ
-    // window belong to the next message.
-    const emission = buildVoiceSubmitEmission({ priorInput, finalText, selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized });
+  const submit = (emission: Emission) => {
     dispatchEmission(emission);
     // Keep the original recording around, keyed by this emission's id, so the
     // agent can fetch it via `cb chat get-last-audio` — retention is
@@ -133,35 +129,38 @@ function runKeywordSend(opts: {
     // widget doesn't resurface the text we just sent.
     clearDraftRef.current();
   };
-  if (narrationEnabledRef.current && audioBlob) {
+  const runHq = narrationEnabledRef.current || intent.hq;
+  if (runHq && audioBlob) {
     composerSend({ type: "START_HQ", text: joinTranscript(priorInput, text) });
-    void postAudioForHqTranscription(audioBlob, { sessionId })
-      .then((hqResult) => {
-        // Clear the in-flight/pending state before submit so the pending
-        // bubble doesn't overlap the real user message about to land.
-        composerSend({ type: "HQ_DONE" });
-        if (hqResult === null) {
-          console.warn("[hq-transcribe] returned null — falling back to realtime");
-          submit(text);
-          return;
-        }
-        // Re-run keyword detection on the HQ text so the agent sees the
-        // send-message (or other) keyword as a pill, not plain words.
-        // The realtime pass heard the trigger (that's what fired this send),
-        // so when HQ normalized it away, re-inject the tag rather than let
-        // the trigger silently vanish from the persistent record.
-        const keyword = detectKeyword(hqResult.text);
-        const hqText = keyword
-          ? keyword.processedTranscript
-          : appendSendKeywordTag(hqResult.text, { action: closeMic ? "sendClose" : "send", matchedPhrase });
-        submit(hqText, { diarized: hqResult.diarized });
-      })
-      .catch(() => { composerSend({ type: "HQ_DONE" }); });
+    void prepareVoiceSubmitEmission({
+      intent,
+      priorInput,
+      selectionsSnapshot,
+      imagesSnapshot,
+      filesSnapshot,
+      runHq,
+      transcribe: (blob) => postAudioForHqTranscription(blob, { sessionId }),
+    }).then(({ emission, usedHq }) => {
+      // Clear the in-flight/pending state before submit so the pending
+      // bubble doesn't overlap the real user message about to land.
+      composerSend({ type: "HQ_DONE" });
+      if (!usedHq) {
+        console.warn("[hq-transcribe] unavailable — falling back to realtime");
+      }
+      submit(emission);
+    });
   } else {
-    if (narrationEnabledRef.current) {
-      console.warn("[hq-transcribe] narration enabled but no audioBlob — submitting realtime text");
+    if (runHq) {
+      console.warn("[hq-transcribe] HQ requested but no audioBlob — submitting realtime text");
     }
-    submit(text);
+    submit(buildVoiceSubmitEmission({
+      priorInput,
+      finalText: text,
+      selectionsSnapshot,
+      imagesSnapshot,
+      filesSnapshot,
+      diarized: false,
+    }));
   }
   settleMic();
 }

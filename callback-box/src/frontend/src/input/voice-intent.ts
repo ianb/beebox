@@ -19,6 +19,7 @@
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
 import { joinTranscript } from "../components/chat/InteractiveChat-helpers";
+import { appendSendKeywordTag, detectKeyword } from "../lib/audio/speech-keywords";
 import { createVoiceEmission, type Emission, type EmissionFile } from "./emission";
 
 export type VoiceIntent =
@@ -32,6 +33,8 @@ export type VoiceIntent =
       audioBlob: Blob | null;
       /** "Send and close": after commit, leave the mic closed (no re-arm). */
       closeMic: boolean;
+      /** This keyword explicitly requests HQ cleanup, independently of narration mode. */
+      hq: boolean;
     }
   | { kind: "cancel" }
   | { kind: "mic-off" }
@@ -64,4 +67,59 @@ export function buildVoiceSubmitEmission(opts: {
     selections: opts.selectionsSnapshot,
     diarized: opts.diarized,
   });
+}
+
+interface HqTranscript {
+  text: string;
+  diarized: boolean;
+}
+
+/**
+ * Resolve an optional HQ pass against one frozen keyword-send snapshot. The
+ * caller may keep accepting composer input while this awaits: only the values
+ * passed here can reach the returned emission. A missing or rejected HQ result
+ * deliberately falls back to the realtime text rather than losing the send.
+ */
+export async function prepareVoiceSubmitEmission(opts: {
+  intent: Extract<VoiceIntent, { kind: "submit" }>;
+  priorInput: string;
+  selectionsSnapshot: readonly SelectionItem[];
+  imagesSnapshot: readonly ChatImageAttachment[];
+  filesSnapshot: readonly EmissionFile[];
+  runHq: boolean;
+  transcribe: (audio: Blob) => Promise<HqTranscript | null>;
+}): Promise<{ emission: Emission; usedHq: boolean }> {
+  const {
+    intent, priorInput, selectionsSnapshot, imagesSnapshot, filesSnapshot, runHq, transcribe,
+  } = opts;
+  let finalText = intent.text;
+  let diarized = false;
+  let usedHq = false;
+
+  if (runHq && intent.audioBlob !== null) {
+    let hqResult: HqTranscript | null = null;
+    try {
+      hqResult = await transcribe(intent.audioBlob);
+    } catch (_e) {
+      // The realtime transcript below is the durable failure fallback.
+    }
+    if (hqResult !== null) {
+      const keyword = detectKeyword(hqResult.text);
+      finalText = keyword
+        ? keyword.processedTranscript
+        : appendSendKeywordTag(hqResult.text, {
+          action: intent.closeMic ? "sendClose" : "send",
+          matchedPhrase: intent.matchedPhrase,
+        });
+      diarized = hqResult.diarized;
+      usedHq = true;
+    }
+  }
+
+  return {
+    emission: buildVoiceSubmitEmission({
+      priorInput, finalText, selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized,
+    }),
+    usedHq,
+  };
 }

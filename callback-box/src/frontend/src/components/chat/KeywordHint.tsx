@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
  * "start over", "stop listening", "deliver the message" work too). Ordered so
  * the rotation leads with the one the user most likely wants next.
  */
-const WITH_TEXT_HINTS = ['"send message"', '"send and close"', '"erase message"', '"cancel message"', '"microphone off"'] as const;
+const WITH_TEXT_HINTS = ['"send message"', '"clean up and send"', '"send and close"', '"erase message"', '"cancel message"', '"microphone off"'] as const;
 /** Before anything is said, only ending the session is meaningful. */
 const EMPTY_HINTS = ['"microphone off"'] as const;
 const ROTATE_MS = 10000;

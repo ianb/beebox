@@ -9,7 +9,7 @@ freeze boundary means composer state added after the snapshot was taken
 never appears here — it belongs to the next message instead.
 
 ```ts setup
-import { buildVoiceSubmitEmission } from "../../src/frontend/src/input/voice-intent.js";
+import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission } from "../../src/frontend/src/input/voice-intent.js";
 ```
 
 ## Prior composer text folds in ahead of the new utterance
@@ -84,4 +84,65 @@ const a = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsS
 const b = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
 a.id !== b.id
 => true
+```
+
+## Cleanup-send holds this frozen message for HQ
+
+The async HQ result is applied to the composer context captured when the
+keyword fired. Text that appears in the live composer while HQ is pending is
+not part of this emission.
+
+```ts
+const hqIntent = {
+  kind: "submit" as const,
+  text: "rough words <send-message phrase=\"clean up and send\" />",
+  matchedPhrase: "clean up and send",
+  audioBlob: new Blob(["audio"], { type: "audio/wav" }),
+  closeMic: false,
+  hq: true,
+};
+let finishHq: () => void = () => {};
+const hqGate = new Promise<void>((resolve) => { finishHq = resolve; });
+const pending = prepareVoiceSubmitEmission({
+  intent: hqIntent,
+  priorInput: "frozen draft",
+  selectionsSnapshot: [],
+  imagesSnapshot: [],
+  filesSnapshot: [],
+  runHq: true,
+  transcribe: async () => {
+    await hqGate;
+    return { text: "clean words", diarized: true };
+  },
+});
+const nextComposerText = "belongs to the next message";
+finishHq();
+const prepared = await pending;
+prepared.emission.text
+=> frozen draft clean words <send-message phrase="clean up and send" />
+
+prepared.emission.text.includes(nextComposerText)
+=> false
+
+prepared.emission.diarized
+=> true
+```
+
+## Cleanup-send falls back to the realtime message on HQ failure
+
+```ts continue
+const fallback = await prepareVoiceSubmitEmission({
+  intent: hqIntent,
+  priorInput: "frozen draft",
+  selectionsSnapshot: [],
+  imagesSnapshot: [],
+  filesSnapshot: [],
+  runHq: true,
+  transcribe: async () => { throw new Error("offline"); },
+});
+fallback.usedHq
+=> false
+
+fallback.emission.text
+=> frozen draft rough words <send-message phrase="clean up and send" />
 ```

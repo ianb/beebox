@@ -164,16 +164,18 @@ function dispatchKeyword(
   ctx: {
     send: (event: { type: "STOP" | "CANCEL" | "START" }) => void;
     optionsRef: React.MutableRefObject<UseRealtimeTranscriptionOptions | undefined>;
-    pendingSendRef: React.MutableRefObject<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean } | null>;
+    pendingSendRef: React.MutableRefObject<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean; hq: boolean } | null>;
   }
 ): void {
   const { send, optionsRef, pendingSendRef } = ctx;
   switch (keyword.action) {
     case "send":
+    case "sendHq":
     case "sendClose": {
-      // Both variants run the same send path; the only difference is whether
-      // the mic re-arms afterward, which the chat layer decides off `closeMic`.
+      // All send variants use one path. `closeMic` controls re-arming, while
+      // `hq` asks the chat layer to run HQ even when narration mode is off.
       const closeMic = keyword.action === "sendClose";
+      const hq = keyword.action === "sendHq";
       const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
       if (wantBlob) {
         // Slow path: park the text and STOP so the machine finalizes and
@@ -184,6 +186,7 @@ function dispatchKeyword(
           processedTranscript: keyword.processedTranscript,
           matchedPhrase: keyword.matchedPhrase,
           closeMic,
+          hq,
         };
         send({ type: "STOP" });
       } else {
@@ -197,6 +200,7 @@ function dispatchKeyword(
           matchedPhrase: keyword.matchedPhrase,
           audioBlob: null,
           closeMic,
+          hq,
         });
       }
       break;
@@ -234,7 +238,7 @@ export function useRealtimeTranscription(
    * text + matched phrase are parked here in the meantime; the
    * idle-transition effect picks them up and fires onKeywordSend.
    */
-  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean } | null>(null);
+  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean; hq: boolean } | null>(null);
   /**
    * Set by `start({ earcon: true })`. The recording-start earcon plays only
    * when the machine actually reaches `recording` — so the "you're recording
@@ -291,6 +295,7 @@ export function useRealtimeTranscription(
       text: pending.processedTranscript,
       matchedPhrase: pending.matchedPhrase,
       closeMic: pending.closeMic,
+      hq: pending.hq,
       audioBlob: snapshot.context.audioBlob,
     });
   }, [state, snapshot.context.audioBlob]);

@@ -341,8 +341,9 @@ the contract.
 
 - **Wire shape:** `{ enabled: boolean }` on `callbackboxNarrationState`.
 - **Semantics:** the web chat posts the current session's narration flag whenever it changes. Native
-  defaults to off. A native voice keyword send uses its Apple live transcript directly while off;
-  only narration-on sends enter durable HQ audio preparation.
+  defaults to off. A normal native voice keyword send uses its Apple live transcript directly while
+  off; the explicit `clean up and send` / `send and clean up` keyword enters durable HQ audio
+  preparation regardless of narration state.
 - **Anchors:** web `use-native-bridge.ts` — `useNativeNarrationBridge`; native
   `Views/ChatWebView.swift` — `receiveNarrationState`; `Views/NativeComposerView.swift` —
   `sendKeywordIntent`.
