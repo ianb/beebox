@@ -9,7 +9,7 @@ resolution: implemented
 > (`InteractiveChat-composer.tsx` — `[capture] [camera]`, the `+` menu capture item);
 > rich-text input (TenTap) is **wontfix** (boxholder: not doing it). The one live idea
 > — capturing feedback FROM a chat (not just cards) — is split out to
-> [capture-feedback-from-chat](../features/2026-08-06-capture-feedback-from-chat.md).
+> [capture-feedback-from-chat](../../features/2026-08-06-capture-feedback-from-chat.md).
 
 Several things for the chat page:
 
