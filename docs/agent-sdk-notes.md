@@ -9,11 +9,56 @@ releases and immediately applies callback-box-relevant security, memory, and
 correctness fixes.
 
 - **Current pin:** `0.3.222`
-- **Latest reviewed upstream version:** `0.3.222`
+- **Latest reviewed upstream version:** `0.3.223`
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** No pending releases.
+- **Current recommendation:** Let `0.3.223` finish the two-day settling window,
+  then bump. Nothing in it is act-now for callback-box.
 
 ## Release ledger
+
+### 0.3.223 — pending
+
+- **Upstream:** Added the `resumeDropsTurn` option (paired with
+  `resumeSessionAt`) so a truncating resume must declare the turn it drops;
+  result messages for repeated 529 overload failures now carry
+  `api_error_status: 529`; bare headless runs (`-p` / `query()` without
+  `canUseTool`) now emit `system/permission_denied` stream events when a tool
+  call is auto-denied; documented that on stream-json results `usage` is
+  main-loop-only and per-turn while `modelUsage` is cumulative across the whole
+  query pipeline and is the field intended for cost accounting. No Claude Code
+  parity claim in this release.
+- **Callback-box applicability:** Nothing breaking and nothing act-now.
+  - `resumeSessionAt`/`resumeDropsTurn`: unused. Callback-box resumes by
+    session id (`resumeSessionId` in `src/core/chat/session/start-run.ts`) and
+    never truncates a resume, so the new option does not apply.
+  - `system/permission_denied`: callback-box passes no `canUseTool`, so it is a
+    bare headless consumer and will start seeing these events.
+    `adaptSdkMessage` (`src/core/chat/session/messages.ts:165`) returns `null`
+    for unrecognized `system` subtypes, so the new event is silently dropped
+    rather than mishandled. Agent runs use
+    `permissionMode: "bypassPermissions"` (`src/core/agent/run.ts:72`), so
+    auto-denials should be rare there. This is a future opportunity if we ever
+    want to surface denied tool calls in the chat UI.
+  - `api_error_status: 529`: `isTransientClaudeFailure`
+    (`src/services/scan-vision-claude.ts:239`) currently decides retry-worthiness
+    by regex-matching `/rate.?limit|overloaded|529|429/` against the result
+    subtype/error text. The new structural field is the intended replacement for
+    exactly that text match — worth switching to once pinned, keeping the regex
+    as a fallback for 429/rate-limit cases the field does not cover.
+  - `usage` vs `modelUsage`: `toBatchUsage`
+    (`src/services/scan-vision-claude.ts:228`) computes scan token accounting
+    from `result.usage`, which upstream now documents as main-loop-only and
+    per-turn. Scan batches are single-turn, but any subagent or
+    query-pipeline calls would be excluded, so the reported batch token counts
+    can undercount. `modelUsage` is the documented field for cost accounting.
+    Note `src/core/usage.ts` is unaffected — it aggregates token usage from
+    session JSONL assistant messages, not from SDK result messages.
+- **Action:** Published 2026-08-05, still inside the normal two-day settling
+  window as of 2026-08-06. No act-now security, memory, or correctness fix, so
+  it waits for the window to clear rather than being force-applied. The two
+  scan-vision follow-ups above are callback-box code opportunities, not
+  blockers on the bump.
+- **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.223), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03223)
 
 ### 0.3.222 — applied
 
