@@ -128,12 +128,18 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
       if (response.ok && response.result?.kind === "shared-tabs") {
         setSharedTabs(response.result);
         const undoNote = response.result.replacedUndo === true ? " The previous arrangement can no longer be undone." : "";
-        setNotice({ kind: "ok", text: `Shared ${response.result.tabCount} tabs. Open the organizer when ready.${undoNote}` });
+        const openNote = response.result.organizerOpened === true
+          ? " The organizer is open and ready."
+          : " Clerk couldn't open the organizer automatically; use Open organizer below.";
+        setNotice({
+          kind: "ok",
+          text: `Shared ${response.result.tabCount} tabs to ${box.title}.${openNote}${undoNote}`,
+        });
         return;
       }
       setNotice(toNotice(response, "Tabs shared."));
     });
-  }, [tab]);
+  }, [box.title, tab]);
 
   const handleOpenOrganizer = useCallback(() => {
     if (sharedTabs === null) return;

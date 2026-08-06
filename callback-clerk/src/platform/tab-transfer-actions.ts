@@ -26,20 +26,29 @@ export async function shareTabs(
   if (existing?.state === "applying") throw new ApplyingTabTransferError();
   const captured = await captureTabs(options.scope, options.sourceWindowId);
   const result = await postTabArrangement(box, captured.payload);
+  const openUrl = commentaryOpenUrl(box.boxUrl, result.open);
   await saveTabTransfer({
     version: 1,
     browserSessionId: await browserSessionId(),
     boxUrl: box.boxUrl,
-    openUrl: commentaryOpenUrl(box.boxUrl, result.open),
+    openUrl,
     payload: captured.payload,
     locations: captured.locations,
     state: "ready",
   });
+  let organizerOpened = true;
+  try {
+    await chrome.windows.create({ url: openUrl, type: "popup" });
+  } catch (error) {
+    organizerOpened = false;
+    console.error("[callback-clerk] tabs shared but organizer did not open:", error);
+  }
   return {
     kind: "shared-tabs",
     transferId: captured.payload.transferId,
     tabCount: Object.keys(captured.locations).length,
     replacedUndo: existing?.state === "applied",
+    organizerOpened,
   };
 }
 
