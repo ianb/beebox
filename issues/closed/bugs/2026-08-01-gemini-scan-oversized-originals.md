@@ -1,6 +1,10 @@
 ---
 title: Gemini scan path sends unnormalized originals (TIFF, 8–10 MB photos)
+resolution: implemented
 ---
+
+Resolved by `0499b247`. The shared scan runner now creates bounded JPEGs for
+both vision backends while it leaves the archived originals unchanged.
 
 `cb scan-import`'s photo flow archives input files verbatim and sends those
 copies to the analysis backend (`callback-box/src/core/commands/scan-import.ts`
