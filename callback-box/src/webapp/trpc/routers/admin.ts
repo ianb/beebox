@@ -16,6 +16,7 @@ import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
 import { canonicalizeEmail, getLocalOwnerEmail } from "../../local-users.js";
+import { inviteAdminProcedures } from "./admin-invites.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
@@ -43,10 +44,10 @@ const gmailConfigSchema = z.object({
   gcIntervalHours: z.number().optional(),
 });
 
-/**
- * Per-box admin router (Telegram, box config).
- */
+/** Per-box admin router (Telegram, box config). */
 export const adminRouter = router({
+  ...inviteAdminProcedures,
+
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (!config) {

@@ -40,7 +40,7 @@ const loginBodySchema = z.object({ email: z.string().max(254), password: z.strin
 const setupBodySchema = z.object({
   email: z.string().max(254),
   name: z.string().max(200),
-  password: z.string().max(1024),
+  password: z.string().min(8).max(1024),
   token: z.string().max(256),
 });
 
@@ -120,7 +120,7 @@ async function readJsonBody(request: FastifyRequest): Promise<unknown> {
 }
 
 /** Read a urlencoded form body from the (undrained) raw stream. */
-async function readFormBody(request: FastifyRequest): Promise<URLSearchParams> {
+export async function readAuthFormBody(request: FastifyRequest): Promise<URLSearchParams> {
   const raw = await readRawBody(request.raw);
   return new URLSearchParams(raw);
 }
@@ -153,7 +153,8 @@ function setupErrorLocation({ prefix, token, kind }: { prefix: string; token: st
 /** Sign a session for `user` and set the `cb_session` cookie — the SAME options
  *  the Google callback uses (`path:/`, httpOnly, `secure` iff https, sameSite
  *  lax, the 30-day max-age). */
-function setSessionCookie(reply: FastifyReply, { request, user }: { request: FastifyRequest; user: SessionUser }): void {
+export function setSessionCookie(reply: FastifyReply, options: { request: FastifyRequest; user: SessionUser }): void {
+  const { request, user } = options;
   reply.setCookie(COOKIE_NAME, signSession(user), {
     path: "/",
     httpOnly: true,
@@ -183,7 +184,7 @@ async function readLoginCredentials({
   if (form) {
     let params: URLSearchParams;
     try {
-      params = await readFormBody(request);
+      params = await readAuthFormBody(request);
     } catch (_e) {
       /* ignore: oversize/unreadable form body is untrusted input — treat as malformed. */
       return null;
@@ -270,7 +271,7 @@ async function readSetupFields({ request, form }: { request: FastifyRequest; for
   if (form) {
     let params: URLSearchParams;
     try {
-      params = await readFormBody(request);
+      params = await readAuthFormBody(request);
     } catch (_e) {
       /* ignore: oversize/unreadable form body is untrusted input — treat as malformed. */
       return { kind: "bad" };
