@@ -67,9 +67,16 @@ export function assetGitignorePatterns(): string {
  * LFS filters be removed. Behavior for those paths is unchanged — they were
  * already kept out of git's object database, just by a different tool that does
  * not verify content.
+ *
+ * git-annex matches these globs case-sensitively. Emit the ordinary lowercase
+ * spelling and the all-uppercase spelling used by cameras (not every mixed-case
+ * permutation). The attributes renderer below deliberately remains wider:
+ * routing an extra mixed-case path through the filter is harmless.
  */
 export function assetLargefilesExpression(): string {
-  return ASSET_EXTENSIONS.map((ext) => `include=*.${ext}`).join(" or ");
+  return ASSET_EXTENSIONS.flatMap((ext) => [ext, ext.toUpperCase()])
+    .map((ext) => `include=*.${ext}`)
+    .join(" or ");
 }
 
 /**
@@ -84,11 +91,11 @@ export const ANNEX_ATTRIBUTES_MARKER = "# Managed by callback-box — do not edi
  * gitattributes patterns are matched case-sensitively (wildmatch), and so is
  * `annex.largefiles` — verified with git-annex 10.20260717: `git annex
  * matchexpression "include=*.jpg" --largefiles --file UPPER.JPG` exits 1. So a
- * lowercase-only attribute list would already cover everything largefiles
- * annexes. It is widened anyway because the two lists fail asymmetrically: an
- * over-wide attribute line only runs a filter that then declines to annex,
- * while a missing one leaves an annexed pointer unsmudged and the file reads
- * back as `/annex/objects/…` text.
+ * lower-and-uppercase attribute list would already cover everything largefiles
+ * annexes. It is widened to mixed case anyway because the two lists fail
+ * asymmetrically: an over-wide attribute line only runs a filter that then
+ * declines to annex, while a missing one leaves an annexed pointer unsmudged
+ * and the file reads back as `/annex/objects/…` text.
  */
 function anyCaseGlob(ext: string): string {
   return ext
