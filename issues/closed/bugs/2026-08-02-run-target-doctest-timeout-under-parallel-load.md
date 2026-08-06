@@ -6,8 +6,8 @@ discovered-in: worktree-scanner-ingest — /finish full-suite run
 resolution: implemented
 ---
 
-Resolved in `worktree-run-target-timeout-investigate`. The test now completes
-its simulated file mutation before the fake server answers the check request.
+Resolved by `f4aaba04`. The test now completes its simulated file mutation
+before the fake server answers the check request.
 
 `test/run-target.doctest.md` failed with `not ok 9 - timeout!` (`expired:
 test/run-target.doctest.md`) in a full `pnpm test` run of `scan-uploader/`
