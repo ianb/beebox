@@ -55,7 +55,9 @@ hasOwnerEmailField: true
 ## updateBoxConfig still accepts allowedEmails and filters non-emails
 
 ```ts continue
-const res2 = await caller(box.root).admin.updateBoxConfig({ allowedEmails: ["a@example.com", "not-an-email"] });
+const res2 = await caller(box.root).admin.updateBoxConfig({
+  allowedEmails: [" A@Example.COM ", "a@example.com", "not-an-email"],
+});
 print(JSON.stringify(res2.allowedEmails));
 =>
 ["a@example.com"]

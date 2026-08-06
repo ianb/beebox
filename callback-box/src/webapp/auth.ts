@@ -18,7 +18,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyRequest } from "fastify";
 import { parseCookieHeader } from "../lib/cookies.js";
 import { errnoCode } from "../lib/error-guards.js";
-import { getLocalOwnerEmail, getLocalUser } from "./local-users.js";
+import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "./local-users.js";
 import { getLocalUserCached } from "./local-users-cache.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
@@ -215,9 +215,10 @@ function currentGenForEmail(email: string): number | undefined {
  * BOTH login paths (password POST and Google callback) get it uniformly.
  */
 export function signSession(user: SessionUser): string {
-  const gen = currentGenForEmail(user.email);
+  const email = canonicalizeEmail(user.email);
+  const gen = currentGenForEmail(email);
   const payload = JSON.stringify({
-    email: user.email,
+    email,
     name: user.name,
     ...(user.picture ? { picture: user.picture } : {}),
     ...(gen !== undefined ? { gen } : {}),
@@ -271,7 +272,7 @@ export function verifySession(cookie: string): SessionUser | null {
     if (typeof data.email !== "string") return null;
     const gen = typeof data.gen === "number" ? data.gen : undefined;
     return {
-      email: data.email,
+      email: canonicalizeEmail(data.email),
       name: data.name || data.email,
       picture: data.picture,
       ...(gen !== undefined ? { gen } : {}),
@@ -326,9 +327,10 @@ let loggedAuthStoreUnavailable = false;
  * very sessions revocation exists to kill; this owner-lookup path is not that.
  */
 export function getOwnerEmail(): string | null {
-  if (process.env.CB_OWNER_EMAIL) return process.env.CB_OWNER_EMAIL;
+  if (process.env.CB_OWNER_EMAIL) return canonicalizeEmail(process.env.CB_OWNER_EMAIL);
   try {
-    return getLocalOwnerEmail();
+    const localOwner = getLocalOwnerEmail();
+    return localOwner ? canonicalizeEmail(localOwner) : null;
   } catch (e) {
     if (e instanceof AuthStoreUnavailableError) {
       if (!loggedAuthStoreUnavailable) {
@@ -416,7 +418,8 @@ export function resolveRequestIdentity(
     if (!verifyHubSecret(request)) return { email: null, name: null, source: null };
     const emailHeader = request.headers[HUB_EMAIL_HEADER];
     if (typeof emailHeader === "string" && emailHeader.length > 0) {
-      return { email: emailHeader, name: emailHeader, source: "hub" };
+      const email = canonicalizeEmail(emailHeader);
+      return { email, name: email, source: "hub" };
     }
     if (request.headers[HUB_AUTH_OFF_HEADER] === "off") {
       return { email: null, name: null, source: "open" };

@@ -43,6 +43,11 @@ export type GoogleServiceName = "calendar" | "gmail" | "drive";
 
 const cache = new Map<string, { config: BoxConfig; mtime: number }>();
 
+/** Explicit invalidation after a same-process config mutation. */
+export function clearBoxConfigCache(boxRoot: string): void {
+  cache.delete(boxRoot);
+}
+
 /**
  * Check if a Google service is allowed for this box.
  * Returns false if googleServices is not configured or the service is not enabled.
