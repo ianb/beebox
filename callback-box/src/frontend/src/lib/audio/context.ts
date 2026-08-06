@@ -42,12 +42,42 @@ interface MediaDiagnosticState {
   readyState: number;
 }
 
+const MEDIA_ERROR_NAMES: Record<number, string> = {
+  1: "MEDIA_ERR_ABORTED",
+  2: "MEDIA_ERR_NETWORK",
+  3: "MEDIA_ERR_DECODE",
+  4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
+};
+
+const NETWORK_STATE_NAMES: Record<number, string> = {
+  0: "NETWORK_EMPTY",
+  1: "NETWORK_IDLE",
+  2: "NETWORK_LOADING",
+  3: "NETWORK_NO_SOURCE",
+};
+
+const READY_STATE_NAMES: Record<number, string> = {
+  0: "HAVE_NOTHING",
+  1: "HAVE_METADATA",
+  2: "HAVE_CURRENT_DATA",
+  3: "HAVE_FUTURE_DATA",
+  4: "HAVE_ENOUGH_DATA",
+};
+
+function labeledMediaValue(value: number, names: Record<number, string>): string {
+  return `${names[value] ?? "UNKNOWN"}(${value})`;
+}
+
 export function formatMediaElementFailure(
   operation: MediaOperation,
   state: MediaDiagnosticState,
 ): string {
-  return `[audio] operation=${operation} mediaErrorCode=${state.error?.code ?? "none"}`
-    + ` networkState=${state.networkState} readyState=${state.readyState}`;
+  const mediaError = state.error
+    ? labeledMediaValue(state.error.code, MEDIA_ERROR_NAMES)
+    : "none";
+  return `[audio] operation=${operation} mediaError=${mediaError}`
+    + ` networkState=${labeledMediaValue(state.networkState, NETWORK_STATE_NAMES)}`
+    + ` readyState=${labeledMediaValue(state.readyState, READY_STATE_NAMES)}`;
 }
 
 export function formatPlaybackRejection(operation: MediaOperation, error: unknown): string {

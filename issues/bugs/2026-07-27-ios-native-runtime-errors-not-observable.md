@@ -51,5 +51,6 @@ exercise speech playback. If practical, trigger a rejected media playback. Then
 inspect the box's `.callback-box/client-debug.log`. Confirm that it contains
 timestamped `[ios]` scene, navigation, speech, response, and audio-session lines.
 Confirm that media failures include the operation, error name or media error
-code, network state, and ready state. Leave the phone offline long enough for a
+code, network state, and ready state, with symbolic labels rather than bare
+numbers. Leave the phone offline long enough for a
 navigation retry, then reconnect and confirm that retries did not flood the log.

@@ -71,3 +71,13 @@ ios-app/scripts/capture-composer-fixtures booted /tmp/composer-fixtures
 
 The full state list and simulator/device verification boundary are documented
 in [`CLAUDE.md`](CLAUDE.md#native-testing-boundary).
+
+## Runtime Diagnostics
+
+Native failures and selected state transitions are regularly uploaded to the
+paired box's `.callback-box/client-debug.log`, alongside browser diagnostics.
+Entries tagged `[ios]` came from the native app; `[ios@<timestamp>]` records the
+device event time when an offline queue arrived later. See
+[`client-debug-log.md`](../callback-box/docs/client-debug-log.md) for log
+locations and interpretation. Contributor requirements for instrumenting new
+iOS features live in [`CLAUDE.md`](CLAUDE.md#runtime-diagnostics).
