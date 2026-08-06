@@ -41,6 +41,7 @@ import {
 } from "../login-page.js";
 import { handleLoginPost, handleSetupPost } from "./auth-password-post.js";
 import { registerAuthInviteRoutes } from "./auth-invite.js";
+import { currentUserHasPassword, handlePasswordChange } from "./auth-password-change.js";
 
 export interface AuthRoutesOptions {
   boxes: BoxSpec[];
@@ -176,6 +177,7 @@ async function registerPasswordRoutes(server: FastifyInstance, options: AuthRout
     formScope.post("/auth/login", async (request, reply) => handleLoginPost(request, reply));
     formScope.post("/auth/setup", async (request, reply) => handleSetupPost(request, reply));
     await registerAuthInviteRoutes(formScope, options.boxes);
+    formScope.post("/auth/password", async (request, reply) => handlePasswordChange(request, reply));
   });
 }
 
@@ -214,6 +216,7 @@ function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): vo
         name: identity.name ?? email,
         picture: sessionUser?.email === email ? sessionUser.picture : undefined,
         isOwner: email === ownerEmail,
+        hasPassword: currentUserHasPassword(email),
         boxes: accessibleBoxes,
       };
     }

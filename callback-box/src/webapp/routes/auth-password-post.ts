@@ -109,7 +109,7 @@ function readRawBody(raw: IncomingMessage): Promise<string> {
  * hub, the wildcard parser leaves it undefined without draining, so the raw
  * stream is read here. Throws (oversize/invalid JSON) — the caller answers 400.
  */
-async function readJsonBody(request: FastifyRequest): Promise<unknown> {
+export async function readAuthJsonBody(request: FastifyRequest): Promise<unknown> {
   // `request.body !== undefined` — NOT `isRecord(...)` — is the correct test for
   // "a content-type parser already consumed the stream". Standalone, Fastify's
   // JSON parser populates `body` for EVERY valid JSON value; an `isRecord` check
@@ -196,7 +196,7 @@ async function readLoginCredentials({
   }
   let body: unknown;
   try {
-    body = await readJsonBody(request);
+    body = await readAuthJsonBody(request);
   } catch (_e) {
     /* ignore: oversize/unparseable JSON body is untrusted input — treat as malformed. */
     return null;
@@ -289,7 +289,7 @@ async function readSetupFields({ request, form }: { request: FastifyRequest; for
   }
   let body: unknown;
   try {
-    body = await readJsonBody(request);
+    body = await readAuthJsonBody(request);
   } catch (_e) {
     /* ignore: oversize/unparseable JSON body is untrusted input — treat as malformed. */
     return { kind: "bad" };

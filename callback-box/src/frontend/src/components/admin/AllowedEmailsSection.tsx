@@ -1,6 +1,6 @@
 /**
  * Allowed-emails access control for a box. Owner is always listed and cannot
- * be removed. Empty allowlist means any authenticated user can access.
+ * be removed. Empty allowlist means the box is owner-only.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -82,7 +82,7 @@ export function AllowedEmailsSection() {
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold text-warm-800 mb-2">Allowed Users</h2>
       <p className="text-sm text-warm-700 mb-4">
-        Email addresses that can access this box. Leave empty to allow all authenticated users.
+        Email addresses that can access this box. Leave empty to keep the box owner-only.
       </p>
 
       {ownerEmail ? (
@@ -110,7 +110,7 @@ export function AllowedEmailsSection() {
         </div>
       ) : (
         <div className="mb-4 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-600">
-          No restrictions — all authenticated users can access this box.
+          Owner-only — no additional users can access this box.
         </div>
       )}
 

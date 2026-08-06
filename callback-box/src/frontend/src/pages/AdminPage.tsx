@@ -12,6 +12,7 @@ import { GmailFiltersSection } from "../components/admin/GmailFiltersSection";
 import { TelegramSection } from "../components/admin/TelegramSection";
 import { NotificationsSection } from "../components/admin/NotificationsSection";
 import { TailscaleSection } from "../components/admin/TailscaleSection";
+import { InviteSection } from "../components/admin/InviteSection";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
@@ -32,6 +33,7 @@ export function AdminPage() {
         <Stack gap="lg">
           <ClaudeCodeSection />
           <AllowedEmailsSection />
+          <InviteSection />
           <GoogleServicesSection />
           <GmailFiltersSection />
           <TelegramSection />

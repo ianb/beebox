@@ -21,6 +21,7 @@ export interface CurrentUser {
   name: string;
   picture?: string;
   isOwner: boolean;
+  hasPassword: boolean;
 }
 
 interface AuthMeResponse {
@@ -28,6 +29,7 @@ interface AuthMeResponse {
   name?: string;
   picture?: string;
   isOwner?: boolean;
+  hasPassword?: boolean;
   open?: boolean;
 }
 
@@ -55,6 +57,7 @@ async function fetchCurrentUser(): Promise<CurrentUser | null> {
     name: data.name ?? data.email,
     picture: data.picture,
     isOwner: data.isOwner ?? false,
+    hasPassword: data.hasPassword ?? false,
   };
 }
 
