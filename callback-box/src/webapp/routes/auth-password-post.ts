@@ -131,7 +131,7 @@ export async function readAuthFormBody(request: FastifyRequest): Promise<URLSear
  *  `application/json; x=application/x-www-form-urlencoded` (which Fastify parses
  *  as JSON, consuming the stream) is correctly treated as JSON here rather than
  *  routed to `readFormBody` on an already-drained stream. */
-function isFormRequest(request: FastifyRequest): boolean {
+export function isFormRequest(request: FastifyRequest): boolean {
   const contentType = request.headers["content-type"];
   if (typeof contentType !== "string") return false;
   const essence = contentType.split(";", 1)[0]?.trim().toLowerCase();

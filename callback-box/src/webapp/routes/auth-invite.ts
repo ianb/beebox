@@ -20,7 +20,7 @@ import { hashPassword } from "../local-users-scrypt.js";
 import { resetLocalUserCache } from "../local-users-cache.js";
 import { loginThrottle } from "../login-throttle.js";
 import { readBasePrefix } from "../base-prefix.js";
-import { readAuthFormBody, setSessionCookie } from "./auth-password-post.js";
+import { isFormRequest, readAuthFormBody, setSessionCookie } from "./auth-password-post.js";
 
 const inviteFieldsSchema = z.object({
   token: z.string().min(1).max(256),
@@ -38,20 +38,27 @@ function tokenThrottleKey(token: string): string {
   return `invite:${crypto.createHash("sha256").update(token).digest("hex")}`;
 }
 
-async function readFields(request: FastifyRequest): Promise<z.infer<typeof inviteFieldsSchema> | null> {
+type InviteFieldsResult =
+  | { status: "valid"; fields: z.infer<typeof inviteFieldsSchema> }
+  | { status: "invalid"; token: string };
+
+async function readFields(request: FastifyRequest): Promise<InviteFieldsResult> {
   try {
     const params = await readAuthFormBody(request);
+    const token = params.get("token") ?? "";
     const parsed = inviteFieldsSchema.safeParse({
-      token: params.get("token") ?? "",
+      token,
       email: params.get("email") ?? undefined,
       name: params.get("name") ?? "",
       password: params.get("password") ?? "",
       confirmPassword: params.get("confirmPassword") ?? "",
     });
-    if (!parsed.success || parsed.data.password !== parsed.data.confirmPassword) return null;
-    return parsed.data;
+    if (!parsed.success || parsed.data.password !== parsed.data.confirmPassword) {
+      return { status: "invalid", token: token.length <= 256 ? token : "" };
+    }
+    return { status: "valid", fields: parsed.data };
   } catch (_error) {
-    return null;
+    return { status: "invalid", token: "" };
   }
 }
 
@@ -70,16 +77,37 @@ async function openEmailIsClaimable(options: { boxes: BoxSpec[]; email: string }
   return true;
 }
 
+async function classifyInviteEmail(options: {
+  boxes: BoxSpec[];
+  invite: AuthInvite;
+  submittedEmail?: string | undefined;
+}): Promise<{ email: string; status: "claimable" | "collision" | "malformed" }> {
+  const email = canonicalizeEmail(options.invite.email ?? options.submittedEmail ?? "");
+  if (!email.includes("@")) return { email, status: "malformed" };
+  const claimable = options.invite.email
+    ? email !== getOwnerEmail() && !listUsers().some((user) => user.email === email)
+    : await openEmailIsClaimable({ boxes: options.boxes, email });
+  return { email, status: claimable ? "claimable" : "collision" };
+}
+
 function genericFailure(options: {
   reply: FastifyReply;
   prefix: string;
   token: string;
+  email?: string | undefined;
   status?: number | undefined;
 }): FastifyReply {
   return responseHeaders(options.reply)
     .status(options.status ?? 400)
     .type("text/html")
-    .send(renderInvitePage({ prefix: options.prefix, token: options.token, error: true }));
+    .send(
+      renderInvitePage({
+        prefix: options.prefix,
+        token: options.token,
+        ...(options.email === undefined ? {} : { email: options.email }),
+        error: true,
+      }),
+    );
 }
 
 function storeUnavailable(reply: FastifyReply): FastifyReply {
@@ -93,22 +121,24 @@ async function acceptInvite(options: {
 }): Promise<FastifyReply> {
   const { request, reply, boxes } = options;
   const prefix = readBasePrefix(request.headers);
-  const fields = await readFields(request);
-  if (!fields) return genericFailure({ reply, prefix, token: "" });
+  const parsedFields = await readFields(request);
+  const token = parsedFields.status === "valid" ? parsedFields.fields.token : parsedFields.token;
+  if (!token) return genericFailure({ reply, prefix, token: "" });
   const now = Date.now();
-  const initialKey = tokenThrottleKey(fields.token);
+  const initialKey = tokenThrottleKey(token);
   const initialDecision = loginThrottle.check({ ip: request.ip, email: initialKey, now });
-  if (!initialDecision.allowed) return genericFailure({ reply, prefix, token: fields.token, status: 429 });
+  if (!initialDecision.allowed) return genericFailure({ reply, prefix, token, status: 429 });
 
   let inspected;
   try {
-    inspected = await inspectAuthInvite({ token: fields.token, now });
+    inspected = await inspectAuthInvite({ token, now });
   } catch (error) {
     if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
     throw error;
   }
   if (inspected.status !== "valid") {
     loginThrottle.recordFailure({ ip: request.ip, email: initialKey, now });
+    console.warn(`[auth-invite] rejected: category=dead-token ip=${request.ip}`);
     return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
   }
   const box = targetBox(boxes, inspected.invite);
@@ -116,18 +146,29 @@ async function acceptInvite(options: {
     console.warn(`[auth-invite] valid invite names an unregistered box root: ${inspected.invite.boxRoot}`);
     return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
   }
-  const email = canonicalizeEmail(inspected.invite.email ?? fields.email ?? "");
-  const claimable = inspected.invite.email
-    ? email !== getOwnerEmail() && !listUsers().some((user) => user.email === email)
-    : await openEmailIsClaimable({ boxes, email });
-  if (!email.includes("@") || !claimable) {
+  if (parsedFields.status === "invalid") {
+    return genericFailure({
+      reply,
+      prefix,
+      token,
+      ...(inspected.invite.email === undefined ? {} : { email: inspected.invite.email }),
+    });
+  }
+  const fields = parsedFields.fields;
+  const emailResult = await classifyInviteEmail({ boxes, invite: inspected.invite, submittedEmail: fields.email });
+  const { email } = emailResult;
+  if (emailResult.status === "malformed") {
+    return genericFailure({ reply, prefix, token, ...(inspected.invite.email === undefined ? {} : { email }) });
+  }
+  if (emailResult.status === "collision") {
     loginThrottle.recordFailure({ ip: request.ip, email: initialKey, now });
-    await consumeAuthInvite({ token: fields.token });
+    console.warn(`[auth-invite] rejected: category=collision ip=${request.ip}`);
+    await consumeAuthInvite({ token });
     return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
   }
   const emailDecision = loginThrottle.check({ ip: request.ip, email, now });
   if (!emailDecision.allowed || !loginThrottle.acquireHashSlot()) {
-    return genericFailure({ reply, prefix, token: fields.token, status: 429 });
+    return genericFailure({ reply, prefix, token, status: 429 });
   }
 
   try {
@@ -135,10 +176,10 @@ async function acceptInvite(options: {
     const stillClaimable = inspected.invite.email
       ? email !== getOwnerEmail() && !listUsers().some((user) => user.email === email)
       : await openEmailIsClaimable({ boxes, email });
-    if (!stillClaimable) return genericFailure({ reply, prefix, token: fields.token });
+    if (!stillClaimable) return genericFailure({ reply, prefix, token });
     let consumed;
     try {
-      consumed = await consumeAuthInvite({ token: fields.token });
+      consumed = await consumeAuthInvite({ token });
     } catch (error) {
       if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
       throw error;
@@ -203,5 +244,10 @@ export async function registerAuthInviteRoutes(server: FastifyInstance, boxes: B
         }),
       );
   });
-  server.post("/auth/invite", async (request, reply) => acceptInviteSafely({ boxes, request, reply }));
+  server.post("/auth/invite", async (request, reply) => {
+    if (!isFormRequest(request)) {
+      return genericFailure({ reply, prefix: readBasePrefix(request.headers), token: "" });
+    }
+    return acceptInviteSafely({ boxes, request, reply });
+  });
 }

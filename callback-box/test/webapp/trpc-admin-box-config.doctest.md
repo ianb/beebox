@@ -65,6 +65,17 @@ JSON.stringify(await caller(inviteBox.root).admin.localAccountStatus({ email: " 
 => {"exists":true}
 ```
 
+Pinned invites cannot replace an existing local identity.
+
+```ts continue
+const pinnedConflict = await caller(inviteBox.root).admin.createInvite({ email: "claimed@example.com" }).then(
+  () => "allowed",
+  (error) => error.code,
+);
+pinnedConflict
+=> CONFLICT
+```
+
 A corrupt capability store is a typed, generic precondition failure on the
 owner surface; its filesystem path is not exposed in the error message.
 
@@ -83,6 +94,29 @@ await inviteBox.cleanup();
 await rm(inviteAuthDir, { recursive: true, force: true });
 delete process.env.CB_AUTH_FILE;
 delete process.env.CB_AUTH_SCRYPT_N;
+delete process.env.CB_OWNER_EMAIL;
+```
+
+Minting also fails before creating a capability when the deployment has no
+matching local owner account.
+
+```ts
+const noOwnerAuthDir = await mkdtemp(join(tmpdir(), "cb-admin-no-owner-"));
+process.env.CB_AUTH_FILE = join(noOwnerAuthDir, "auth.json");
+process.env.CB_OWNER_EMAIL = "owner@example.com";
+const noOwnerBox = await makeTmpBox({ git: true });
+const noOwnerResult = await caller(noOwnerBox.root).admin.createInvite({}).then(
+  () => "allowed",
+  (error) => error.code,
+);
+noOwnerResult
+=> PRECONDITION_FAILED
+```
+
+```ts cleanup
+await noOwnerBox.cleanup();
+await rm(noOwnerAuthDir, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
 delete process.env.CB_OWNER_EMAIL;
 ```
 

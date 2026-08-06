@@ -5,7 +5,8 @@ only its SHA-256 hash. The store is shared by the box child that mints an invite
 and the root auth process that consumes it.
 
 ```ts setup
-import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -22,6 +23,27 @@ async function rejectionName(fn) {
   } catch (error) {
     return error.name;
   }
+}
+
+const PACKAGE_ROOT = join(import.meta.dirname, "../..");
+
+async function consumeInChild(token) {
+  const code = `const { consumeAuthInvite } = await import("./src/webapp/auth-invites.ts"); console.log((await consumeAuthInvite({ token: process.env.TEST_INVITE_TOKEN })).status);`;
+  const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", code], {
+    cwd: PACKAGE_ROOT,
+    env: { ...process.env, TEST_INVITE_TOKEN: token },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.on("data", (chunk) => { stdout += String(chunk); });
+  child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+  const codeResult = await new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("exit", resolve);
+  });
+  if (codeResult !== 0) throw new Error(`invite child failed (${codeResult}): ${stderr}`);
+  return stdout.trim();
 }
 ```
 
@@ -98,8 +120,36 @@ await rejectionName(() => inspectAuthInvite({ token: "anything" }))
 => AuthInviteStoreError
 ```
 
+```ts continue
+await rm(inviteStorePath());
+const symlinkTarget = join(dir3, "invite-target.json");
+await writeFile(symlinkTarget, JSON.stringify({ version: 1, invites: [] }), { mode: 0o600 });
+await symlink(symlinkTarget, inviteStorePath());
+
+await rejectionName(() => inspectAuthInvite({ token: "anything" }))
+=> AuthInviteStoreError
+```
+
 ```ts cleanup
 await rm(dir3, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
+```
+
+## The live-invite cap fails closed
+
+```ts
+const dir5 = await mkdtemp(join(tmpdir(), "cb-invites-cap-"));
+process.env.CB_AUTH_FILE = join(dir5, "auth.json");
+for (let index = 0; index < 100; index += 1) {
+  await mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com" });
+}
+
+await rejectionName(() => mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com" }))
+=> AuthInviteCapacityError
+```
+
+```ts cleanup
+await rm(dir5, { recursive: true, force: true });
 delete process.env.CB_AUTH_FILE;
 ```
 
@@ -109,11 +159,8 @@ delete process.env.CB_AUTH_FILE;
 const dir4 = await mkdtemp(join(tmpdir(), "cb-invites-race-"));
 process.env.CB_AUTH_FILE = join(dir4, "auth.json");
 const minted4 = await mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com" });
-const raced = await Promise.all([
-  consumeAuthInvite({ token: minted4.token }),
-  consumeAuthInvite({ token: minted4.token }),
-]);
-raced.map((result) => result.status).sort().join(",")
+const raced = await Promise.all([consumeInChild(minted4.token), consumeInChild(minted4.token)]);
+raced.sort().join(",")
 => consumed,invalid-or-gone
 ```
 

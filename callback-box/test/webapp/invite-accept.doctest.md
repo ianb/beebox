@@ -46,6 +46,34 @@ JSON.stringify({ status: page.statusCode, noStore: page.headers["cache-control"]
 => {"status":200,"noStore":"no-store","referrer":"no-referrer","pinned":true}
 ```
 
+Wrong content types are rejected immediately, before reading or throttling the
+public form body.
+
+```ts continue
+const wrongType = await ctx.server.inject({
+  method: "POST",
+  url: "/auth/invite",
+  headers: { "content-type": "application/json" },
+  payload: { token: minted.token },
+});
+wrongType.statusCode
+=> 400
+```
+
+A confirmation typo preserves the live token and pinned identity, so correcting
+the form can still accept the same invitation.
+
+```ts continue
+const mismatch = await ctx.server.inject(inviteForm({
+  token: minted.token,
+  name: "Member",
+  password: "member-password",
+  confirmPassword: "member-typo",
+}));
+JSON.stringify({ status: mismatch.statusCode, token: mismatch.payload.includes(`value="${minted.token}"`), pinned: mismatch.payload.includes("member@example.com") })
+=> {"status":400,"token":true,"pinned":true}
+```
+
 ```ts continue
 const accepted = await ctx.server.inject(inviteForm({
   token: minted.token,
@@ -67,14 +95,41 @@ JSON.parse(await ctx.read("config/box.json")).allowedEmails.join(",")
 Replay has the same dead-link response as an expired or unknown token.
 
 ```ts continue
+const originalReplayWarn = console.warn;
+const replayWarnings = [];
+console.warn = (...args) => replayWarnings.push(args);
 const replay = await ctx.server.inject(inviteForm({
   token: minted.token,
   name: "Again",
   password: "member-password",
   confirmPassword: "member-password",
 }));
-replay.statusCode
-=> 410
+console.warn = originalReplayWarn;
+JSON.stringify({ status: replay.statusCode, category: String(replayWarnings[0]?.[0]).includes("dead-token") })
+=> {"status":410,"category":true}
+```
+
+Malformed open-invite email input does not consume the bearer capability.
+
+```ts continue
+loginThrottle.reset();
+const retryableInvite = await mintAuthInvite({ boxRoot: ctx.boxRoot, createdBy: "owner@example.com" });
+const badEmail = await ctx.server.inject(inviteForm({
+  token: retryableInvite.token,
+  email: "",
+  name: "Retryable",
+  password: "member-password",
+  confirmPassword: "member-password",
+}));
+const retried = await ctx.server.inject(inviteForm({
+  token: retryableInvite.token,
+  email: "retryable@example.com",
+  name: "Retryable",
+  password: "member-password",
+  confirmPassword: "member-password",
+}));
+JSON.stringify({ bad: badEmail.statusCode, retried: retried.statusCode, cookie: typeof retried.headers["set-cookie"] === "string" })
+=> {"bad":400,"retried":302,"cookie":true}
 ```
 
 Credential-store failures during account creation are sanitized and fail
@@ -192,6 +247,9 @@ const ctx2 = await makeTestServer({ openAccess: false });
 await ctx2.seed("config/box.json", JSON.stringify({ allowedEmails: ["GoogleOnly@Example.COM"] }));
 const openOwner = await mintAuthInvite({ boxRoot: ctx2.boxRoot, createdBy: "owner@example.com" });
 
+const originalCollisionWarn = console.warn;
+const collisionWarnings = [];
+console.warn = (...args) => collisionWarnings.push(args);
 const ownerClaim = await ctx2.server.inject(inviteForm({
   token: openOwner.token,
   email: " OWNER@EXAMPLE.COM ",
@@ -199,8 +257,9 @@ const ownerClaim = await ctx2.server.inject(inviteForm({
   password: "attacker-password",
   confirmPassword: "attacker-password",
 }));
-ownerClaim.statusCode
-=> 410
+console.warn = originalCollisionWarn;
+JSON.stringify({ status: ownerClaim.statusCode, logged: collisionWarnings.length, category: String(collisionWarnings[0]?.[0]).includes("collision"), leakedToken: collisionWarnings.some((args) => args.some((value) => String(value).includes(openOwner.token))) })
+=> {"status":410,"logged":1,"category":true,"leakedToken":false}
 ```
 
 The collision burns the capability, so it cannot be reused to probe another
@@ -208,6 +267,8 @@ address or claim a valid one.
 
 ```ts continue
 loginThrottle.reset();
+const originalReuseWarn = console.warn;
+console.warn = () => {};
 const reuseAfterCollision = await ctx2.server.inject(inviteForm({
   token: openOwner.token,
   email: "new-member@example.com",
@@ -215,6 +276,7 @@ const reuseAfterCollision = await ctx2.server.inject(inviteForm({
   password: "attacker-password",
   confirmPassword: "attacker-password",
 }));
+console.warn = originalReuseWarn;
 reuseAfterCollision.statusCode
 => 410
 ```
@@ -225,6 +287,8 @@ dead-link response and is likewise consumed.
 ```ts continue
 loginThrottle.reset();
 const openAllowlisted = await mintAuthInvite({ boxRoot: ctx2.boxRoot, createdBy: "owner@example.com" });
+const originalAllowlistedWarn = console.warn;
+console.warn = () => {};
 const allowlistedClaim = await ctx2.server.inject(inviteForm({
   token: openAllowlisted.token,
   email: "googleonly@example.com",
@@ -232,6 +296,7 @@ const allowlistedClaim = await ctx2.server.inject(inviteForm({
   password: "attacker-password",
   confirmPassword: "attacker-password",
 }));
+console.warn = originalAllowlistedWarn;
 allowlistedClaim.statusCode
 => 410
 

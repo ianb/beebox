@@ -150,9 +150,10 @@ owner-only Admin mutation that mints one invite for the current box.
 
 - Add `src/webapp/auth-invites.ts`. Derive a sibling path from `authFilePath()`
   so tests remain isolated via `CB_AUTH_FILE`; do not alter the v1 user schema.
-- Require minting in the box child and acceptance in the hub to resolve the same
-  `authFilePath()`; fail closed at registration if their configured auth roots
-  differ rather than creating two invite stores.
+- Propagate `CB_AUTH_FILE` from the hub to each box child so minting and
+  acceptance resolve the same `authFilePath()` and invite store. A future
+  deployment that bypasses the hub's child environment must preserve that
+  invariant explicitly.
 - Validate the complete file with Zod, refuse symlinks, enforce 0600, write
   atomically, and serialize read-modify-write with `withFileLock`. Corrupt or
   unreadable storage makes mint and acceptance unavailable; it never looks empty.
@@ -501,13 +502,13 @@ deterministic red doctest and lands only with its focused checks green.
 
 ## Implementation evidence
 
-- Seven implementation commits cover the capability store, canonical identity
+- Eight implementation commits cover the capability store, canonical identity
   and ACL writes, acceptance, owner/password UI, operations, and security-review
   hardening.
 - Focused route and service doctests cover minting, pinned and open acceptance,
   expiry/replay, collisions, throttling, partial storage failures, password
   rotation, OAuth identity, hub propagation, and sanitized HTTP errors.
-- The final full run passed 6,368 assertions in 475 suites with zero failures.
+- The final full run passed 6,376 assertions in 476 suites with zero failures.
 - Backend and frontend typechecks, lint, documentation checks, and the repository
   commit hooks passed.
 - Desktop and mobile signed-out/loading states were checked in a real browser.
@@ -525,3 +526,14 @@ not add compensating account deletion after an ACL-file write failure:
 `removeUser` can itself fail, adding a second mutation and failure mode without
 eliminating the need for explicit recovery. The plan distinguishes a visible
 safe pre-write orphan from post-write Git degradation.
+
+The final implementation review found validation-retry, malformed-email,
+content-type, logging, documentation, and coverage gaps. The shipped route
+preserves a live token and pinned email after correctable form errors, consumes
+only identity-collision probes, rejects non-form bodies before reading them, and
+logs secret-free rejection categories. The follow-up tests cover symlinks,
+capacity, local-owner and pinned-conflict prerequisites, and real child-process
+contention for both capability consumption and ACL writes. Documentation now
+describes the Admin existing-account warning as advisory and records
+`CB_AUTH_FILE` propagation, rather than claiming an unimplemented registration
+guard.
