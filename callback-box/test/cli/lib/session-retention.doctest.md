@@ -9,7 +9,11 @@ took a prod `cb serve` past its heap cap while serving one big chat
 (2026-08-01).
 
 ```ts setup
-import { parseSessionLog, MAX_SESSION_ENTRIES } from "../../../src/cli/lib/session.js";
+import {
+  parseSessionLog,
+  MAX_RETAINED_BYTES,
+  MAX_SESSION_ENTRIES,
+} from "../../../src/cli/lib/session.js";
 import { writeBigSessionLog } from "../../helpers/session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { spawn } from "node:child_process";
@@ -85,6 +89,57 @@ print(`hasMore: ${pageOut.hasMore}`);
 exit: 0
 entries: 40
 total: 1800
+hasMore: true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Serialized bytes co-limit the retained tail
+
+The parser separately stubs any single raw line over 256 KiB. A transcript can
+still contain hundreds of entries just under that line limit, so the response
+window also has a 32 MiB serialized-payload ceiling. This fixture uses
+near-limit image and `Write` payloads: `tail: 200` asks for the ordinary full
+chat window, but the byte budget keeps only a shorter suffix while the exact
+`total` and `hasMore` still describe the whole transcript.
+
+```ts
+const box = await makeTmpBox();
+const logPath = box.path("byte-budget.jsonl");
+await writeBigSessionLog({ logPath, lines: 320, payloadBytes: 180_000 });
+
+const result = await parseSessionLog({
+  logPath,
+  slice: { mode: "tail", tail: 200 },
+});
+print(`budget MiB: ${MAX_RETAINED_BYTES / (1024 * 1024)}`);
+print(`entries below tail: ${result.entries.length < 200}`);
+print(`total: ${result.total}`);
+print(`hasMore: ${result.hasMore}`);
+=>
+budget MiB: 32
+entries below tail: true
+total: 240
+hasMore: true
+```
+
+Page mode stops before the first entry that would cross the same budget. Its
+short page reports `hasMore`, so callers advance by the number actually
+returned and can fetch the next contiguous page without skipping entries.
+
+```ts continue
+const page = await parseSessionLog({
+  logPath,
+  slice: { mode: "page", offset: 0, limit: 200 },
+});
+print(`entries below limit: ${page.entries.length < 200}`);
+print(`total: ${page.total}`);
+print(`hasMore: ${page.hasMore}`);
+=>
+entries below limit: true
+total: 240
 hasMore: true
 ```
 
