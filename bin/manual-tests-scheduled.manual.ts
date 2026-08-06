@@ -5,78 +5,101 @@ import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
 
-test("scheduled manual-test failure leaves a local issue and per-run log", async (t) => {
-  const fixture = await fs.mkdtemp(path.join(os.tmpdir(), "manual-tests-scheduled-"));
-  t.after(() => fs.rm(fixture, { recursive: true, force: true }));
+type FixtureMode = "clean" | "issue" | "append" | "failed-clean" | "stale";
 
+async function makeFixture(mode: FixtureMode) {
+  const fixture = await fs.mkdtemp(path.join(os.tmpdir(), `manual-tests-agent-${mode}-`));
   const fixtureBin = path.join(fixture, "bin");
-  const fixtureIssues = path.join(fixture, "issues", "bugs");
-  const fixtureCodeQuality = path.join(fixture, "issues", "code-quality");
-  const fixtureHomeBin = path.join(fixture, "home", ".local", "bin");
+  const fakeBin = path.join(fixture, "home", ".local", "bin");
   await Promise.all([
     fs.mkdir(fixtureBin, { recursive: true }),
-    fs.mkdir(fixtureIssues, { recursive: true }),
-    fs.mkdir(fixtureCodeQuality, { recursive: true }),
-    fs.mkdir(fixtureHomeBin, { recursive: true }),
+    fs.mkdir(fakeBin, { recursive: true }),
+    fs.mkdir(path.join(fixture, "issues", "bugs"), { recursive: true }),
   ]);
 
-  const sourceScript = path.join(import.meta.dirname, "manual-tests-scheduled.sh");
-  const fixtureScript = path.join(fixtureBin, "manual-tests-scheduled.sh");
-  const fakeOsascript = path.join(fixtureHomeBin, "osascript");
-  const fixtureDriver = path.join(fixtureBin, "exercise-reporting.sh");
-  const notificationArgs = path.join(fixture, "home", "notification-args");
-  await fs.copyFile(sourceScript, fixtureScript);
-  await fs.writeFile(fakeOsascript, "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$HOME/notification-args\"\n");
-  await fs.writeFile(path.join(fixtureIssues, "2026-01-01-unrelated.md"), "---\ntitle: Unrelated\n---\n");
-  await fs.writeFile(fixtureDriver, [
-    "#!/bin/bash",
-    "set -euo pipefail",
-    "export MANUAL_TESTS_SOURCE_ONLY=1",
-    `export MANUAL_TESTS_OSASCRIPT=${JSON.stringify(fakeOsascript)}`,
-    `. ${JSON.stringify(fixtureScript)}`,
-    "failure_kind=tests",
-    "run_commit=abc123",
-    "run_branch=main",
-    "setup_run_log",
-    "echo \"repo: $run_commit branch=$run_branch\"",
-    "echo 'synthetic manual-test failure'",
-    "test -z \"$(find_open_failure_issue)\"",
-    "issue_path=\"$(record_failure_issue 7)\"",
-    "notify_failure \"$issue_path\"",
-    "mv \"$REPO_ROOT/$issue_path\" \"$REPO_ROOT/issues/code-quality/2026-01-02-renamed-failure.md\"",
-    "RUN_ID=second-run",
-    "failure_log=logs/manual-tests/second-run.log",
-    "record_failure_issue 7 >/dev/null",
-  ].join("\n"));
-  await Promise.all([
-    fs.chmod(fixtureScript, 0o755),
-    fs.chmod(fakeOsascript, 0o755),
-    fs.chmod(fixtureDriver, 0o755),
-  ]);
+  const script = path.join(fixtureBin, "manual-tests-scheduled.sh");
+  await fs.copyFile(path.join(import.meta.dirname, "manual-tests-scheduled.sh"), script);
+  const commands: Record<string, string> = {
+    node: "#!/bin/sh\necho 'synthetic reporter test'\n",
+    pnpm: mode === "clean"
+      ? "#!/bin/sh\necho 'synthetic TAP success'\n"
+      : "#!/bin/sh\necho 'synthetic TAP failure' >&2\nexit 7\n",
+    git: [
+      "#!/bin/sh",
+      "if [ \"$1 $2\" = 'rev-parse --short' ]; then echo abc123; exit 0; fi",
+      "if [ \"$1 $2\" = 'branch --show-current' ]; then echo main; exit 0; fi",
+      "if [ \"$1 $2\" = 'status --porcelain' ]; then echo '?? issues/bugs/2026-01-01-synthetic.md'; exit 0; fi",
+      "exit 2",
+    ].join("\n"),
+    osascript: "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$HOME/notification-args\"\n",
+    claude: mode === "clean" || mode === "failed-clean"
+      ? "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$HOME/claude-args\"\ncat > \"$HOME/triage-prompt\"\necho 'TRIAGE: clean.'\n"
+      : mode === "stale"
+        ? "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$HOME/claude-args\"\ncat > \"$HOME/triage-prompt\"\necho 'TRIAGE: issues/bugs/2026-01-01-synthetic.md'\n"
+        : [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" > \"$HOME/claude-args\"",
+        "cat > \"$HOME/triage-prompt\"",
+        mode === "append"
+          ? "echo 'Agent diagnosis.' >> issues/bugs/2026-01-01-synthetic.md"
+          : "printf '%s\\n' '---' 'title: Synthetic scheduled failure' '---' 'Agent diagnosis.' > issues/bugs/2026-01-01-synthetic.md",
+        "echo 'TRIAGE: issues/bugs/2026-01-01-synthetic.md'",
+      ].join("\n"),
+  };
+  if (mode === "append" || mode === "stale") {
+    await fs.writeFile(
+      path.join(fixture, "issues", "bugs", "2026-01-01-synthetic.md"),
+      "---\ntitle: Existing failure\n---\nExisting diagnosis.\n",
+    );
+  }
+  await Promise.all(Object.entries(commands).map(async ([name, content]) => {
+    const command = path.join(fakeBin, name);
+    await fs.writeFile(command, content);
+    await fs.chmod(command, 0o755);
+  }));
+  await fs.chmod(script, 0o755);
+  return { fixture, script };
+}
 
-  const run = await execa(fixtureDriver, {
-    cwd: fixture,
-    env: {
-      HOME: path.join(fixture, "home"),
-    },
-  });
-  assert.equal(run.exitCode, 0);
+test("scheduled runner delegates clean and failing results to a constrained issue agent", async (t) => {
+  for (const mode of ["clean", "issue", "append", "failed-clean", "stale"] as const) {
+    const { fixture, script } = await makeFixture(mode);
+    t.after(() => fs.rm(fixture, { recursive: true, force: true }));
+    const home = path.join(fixture, "home");
+    const result = await execa(script, {
+      cwd: fixture,
+      env: {
+        HOME: home,
+        MANUAL_TESTS_OSASCRIPT: path.join(home, ".local", "bin", "osascript"),
+      },
+      reject: false,
+    });
+    const expectedExit = mode === "clean" ? 0 : mode === "issue" || mode === "append" ? 7 : 1;
+    assert.equal(result.exitCode, expectedExit);
 
-  const logDir = path.join(fixture, "logs", "manual-tests");
-  const latestTarget = await fs.readlink(path.join(logDir, "latest.log"));
-  const latest = await fs.readFile(path.join(logDir, latestTarget), "utf8");
-  assert.match(latest, /repo: [0-9a-f]+ branch=main/);
-  assert.match(latest, /synthetic manual-test failure/);
-  assert.deepEqual(await fs.readdir(fixtureIssues), ["2026-01-01-unrelated.md"]);
+    const claudeArgs = await fs.readFile(path.join(home, "claude-args"), "utf8");
+    assert.match(claudeArgs, /--permission-mode\ndontAsk/);
+    assert.match(claudeArgs, /--setting-sources\nuser/);
+    assert.match(claudeArgs, /Read\(callback-box\/\*\*\)/);
+    assert.match(claudeArgs, /Edit\(issues\/bugs\/\*\*\)/);
+    assert.match(claudeArgs, /Read\(private-issues\/\*\*\)/);
+    assert.doesNotMatch(claudeArgs, /^Bash$/m);
+    const prompt = await fs.readFile(path.join(home, "triage-prompt"), "utf8");
+    assert.match(prompt, /Diagnosis and open-issue creation\/update are the terminal\s+actions/);
 
-  const renamedIssue = path.join(fixtureCodeQuality, "2026-01-02-renamed-failure.md");
-  const issue = await fs.readFile(renamedIssue, "utf8");
-  assert.match(issue, /title: "Weekly manual tests failed"/);
-  assert.match(issue, /labels: \[scheduled-manual-tests\]/);
-  assert.ok(issue.includes(`log \`logs/manual-tests/${latestTarget}\``));
-  assert.match(issue, /log `logs\/manual-tests\/second-run\.log`/);
-  assert.equal(issue.match(/test suite failure; exit 7/g)?.length, 2);
-
-  const notification = await fs.readFile(notificationArgs, "utf8");
-  assert.ok(notification.includes(`Log: logs/manual-tests/${latestTarget}.`));
+    const logDir = path.join(fixture, "logs", "manual-tests");
+    const latest = await fs.readFile(path.join(logDir, "latest.log"), "utf8");
+    assert.match(latest, mode === "clean" ? /synthetic TAP success/ : /synthetic TAP failure/);
+    const issuePath = path.join(fixture, "issues", "bugs", "2026-01-01-synthetic.md");
+    if (mode === "clean") {
+      await assert.rejects(fs.access(issuePath));
+      await assert.rejects(fs.access(path.join(home, "notification-args")));
+    } else if (mode === "issue" || mode === "append") {
+      assert.match(await fs.readFile(issuePath, "utf8"), /Agent diagnosis/);
+      assert.match(await fs.readFile(path.join(home, "notification-args"), "utf8"), /agent triage completed/);
+    } else {
+      const notification = await fs.readFile(path.join(home, "notification-args"), "utf8");
+      assert.match(notification, mode === "failed-clean" ? /created no issue/ : /triage failed/);
+    }
+  }
 });
