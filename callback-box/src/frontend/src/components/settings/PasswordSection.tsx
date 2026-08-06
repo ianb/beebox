@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { withBase } from "../../api";
-import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useCurrentUserQuery } from "../../hooks/useCurrentUser";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
@@ -10,7 +10,7 @@ import { TextField } from "../ui/fields";
 type FieldErrors = Partial<Record<"current" | "next" | "confirm", string>>;
 
 export function PasswordSection() {
-  const user = useCurrentUser();
+  const userQuery = useCurrentUserQuery();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -18,8 +18,16 @@ export function PasswordSection() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  if (!user) {
+  if (userQuery.isLoading) {
     return <Card as="section" aria-label="Password"><Text tone="muted">Loading account…</Text></Card>;
+  }
+  const user = userQuery.data;
+  if (!user) {
+    return (
+      <Card as="section" aria-label="Password">
+        <Text tone="muted">Sign in to manage a local password.</Text>
+      </Card>
+    );
   }
   if (!user.hasPassword) {
     return (

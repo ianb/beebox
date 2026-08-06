@@ -109,6 +109,9 @@ const optionalString = z.string().min(1).optional();
  */
 export const baseEnvSchema = z.object({
   NODE_ENV: optionalString,
+  // Global local-user store; the invite store is its 0600 sibling file. The
+  // hub passes this path to children so minting and acceptance share state.
+  CB_AUTH_FILE: optionalString,
   // Public base URL cascade (see lib/public-url.ts). Both are optional; the
   // resolver picks CB_PUBLIC_URL over PUBLIC_URL over a caller fallback.
   CB_PUBLIC_URL: optionalString,

@@ -201,6 +201,13 @@ URL the server prints to its log. This uses the built-in local password method â
 no external service. Credentials are scrypt-hashed in `~/.cb-auth.json` (mode
 0600) inside the box volume.
 
+Once that owner exists, use a box's Admin page to create a 15-minute,
+single-use member invite. It can be pinned to an email or left open for the
+recipient to enter one, and the recipient sets their own password. Signed-in
+local users can change their password from Settings. Invites and credentials
+are global to this installation, while each accepted invite grants access only
+to the box that issued it.
+
 **Google OAuth (optional additional method).** To also allow Google sign-in
 (e.g. from more than one device), set a Google OAuth client:
 

@@ -63,6 +63,11 @@ async function fetchCurrentUser(): Promise<CurrentUser | null> {
 
 /** The signed-in user, or `null` when signed out (including open mode). */
 export function useCurrentUser(): CurrentUser | null {
-  const query = useQuery({ queryKey: ["auth", "me"], queryFn: fetchCurrentUser });
+  const query = useCurrentUserQuery();
   return query.data ?? null;
+}
+
+/** Full query state for account settings that must distinguish loading from signed out. */
+export function useCurrentUserQuery() {
+  return useQuery({ queryKey: ["auth", "me"], queryFn: fetchCurrentUser });
 }

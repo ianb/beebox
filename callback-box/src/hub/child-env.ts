@@ -58,6 +58,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "PUBLIC_URL", // src/lib/public-url.ts, telegram-helpers.ts, script-env.ts fallback.
   "CB_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
   "CB_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
+  "CB_AUTH_FILE", // src/webapp/local-users.ts + auth-invites.ts -- shared credential/capability store path, not a credential.
   "CB_DIAG_API_KEY", // src/webapp/auth.ts verifyDiagBearerKey -- shared read-only diag bearer key.
   "CB_GOOGLE_TOKENS_FILE", // src/connectors/google-auth.ts, requirements.ts -- a path, not a credential.
   "GOOGLE_OAUTH_CLIENT_ID", // src/connectors/google-auth.ts getGoogleClientCreds() -- app identity, shared per-box by design (see block comment above).

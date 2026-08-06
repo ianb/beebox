@@ -4,7 +4,12 @@ import * as crypto from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { BoxSpec } from "../server-types.js";
-import { consumeAuthInvite, inspectAuthInvite, type AuthInvite } from "../auth-invites.js";
+import {
+  AuthInviteStoreError,
+  consumeAuthInvite,
+  inspectAuthInvite,
+  type AuthInvite,
+} from "../auth-invites.js";
 import { getOwnerEmail } from "../auth.js";
 import { grantBoxAccess, normalizeAllowedEmails } from "../box-config-write.js";
 import { loadBoxConfig } from "../../core/box/config.js";
@@ -76,6 +81,10 @@ function genericFailure(options: {
     .send(renderInvitePage({ prefix: options.prefix, token: options.token, error: true }));
 }
 
+function storeUnavailable(reply: FastifyReply): FastifyReply {
+  return responseHeaders(reply).status(503).type("text/html").send(renderInviteUnavailablePage());
+}
+
 async function acceptInvite(options: {
   boxes: BoxSpec[];
   request: FastifyRequest;
@@ -90,7 +99,13 @@ async function acceptInvite(options: {
   const initialDecision = loginThrottle.check({ ip: request.ip, email: initialKey, now });
   if (!initialDecision.allowed) return genericFailure({ reply, prefix, token: fields.token, status: 429 });
 
-  const inspected = await inspectAuthInvite({ token: fields.token, now });
+  let inspected;
+  try {
+    inspected = await inspectAuthInvite({ token: fields.token, now });
+  } catch (error) {
+    if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
+    throw error;
+  }
   if (inspected.status !== "valid") {
     loginThrottle.recordFailure({ ip: request.ip, email: initialKey, now });
     return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
@@ -116,7 +131,13 @@ async function acceptInvite(options: {
       ? email !== getOwnerEmail() && !listUsers().some((user) => user.email === email)
       : await openEmailIsClaimable({ boxes, email });
     if (!stillClaimable) return genericFailure({ reply, prefix, token: fields.token });
-    const consumed = await consumeAuthInvite({ token: fields.token });
+    let consumed;
+    try {
+      consumed = await consumeAuthInvite({ token: fields.token });
+    } catch (error) {
+      if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
+      throw error;
+    }
     if (consumed.status !== "consumed") {
       return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
     }
@@ -143,7 +164,13 @@ async function acceptInvite(options: {
 export async function registerAuthInviteRoutes(server: FastifyInstance, boxes: BoxSpec[]): Promise<void> {
   server.get<{ Querystring: { token?: string; error?: string } }>("/auth/invite", async (request, reply) => {
     const token = request.query.token ?? "";
-    const result = await inspectAuthInvite({ token });
+    let result;
+    try {
+      result = await inspectAuthInvite({ token });
+    } catch (error) {
+      if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
+      throw error;
+    }
     if (result.status !== "valid" || !targetBox(boxes, result.invite)) {
       return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
     }

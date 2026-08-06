@@ -50,6 +50,7 @@ const sourceEnv = {
   HOME: "/home/callback",
   NODE_ENV: "production",
   PUBLIC_URL: "https://cb.example.org",
+  CB_AUTH_FILE: "/home/callback/.cb-auth.json",
   CB_DIAG_API_KEY: "diag-key-value",
   CB_GOOGLE_TOKENS_FILE: "/home/callback/.google-tokens.json",
   THINKING_OPENAI_API_KEY: "sk-thinking-value",
@@ -78,6 +79,7 @@ JSON.stringify({
   home: env.HOME,
   nodeEnv: env.NODE_ENV,
   publicUrl: env.PUBLIC_URL,
+  authFile: env.CB_AUTH_FILE,
   diagKey: env.CB_DIAG_API_KEY,
   tokensFile: env.CB_GOOGLE_TOKENS_FILE,
   thinkingKey: env.THINKING_OPENAI_API_KEY,
@@ -88,7 +90,7 @@ JSON.stringify({
   geminiKey: env.GEMINI_KEY,
   hubSecret: env.CB_HUB_SECRET,
 })
-=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
+=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","authFile":"/home/callback/.cb-auth.json","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
 ```
 
 ```ts continue

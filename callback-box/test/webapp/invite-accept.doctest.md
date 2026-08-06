@@ -5,7 +5,7 @@ Acceptance creates one global member, grants one box, sets the normal session
 cookie, and consumes the token exactly once.
 
 ```ts setup
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTestServer } from "../helpers/doctest-server.js";
@@ -75,6 +75,16 @@ const replay = await ctx.server.inject(inviteForm({
 }));
 replay.statusCode
 => 410
+```
+
+A corrupt capability store fails closed with an unavailable response rather
+than exposing a generic server error or treating the token as valid.
+
+```ts continue
+await writeFile(`${process.env.CB_AUTH_FILE}.invites.json`, "not json", { mode: 0o600 });
+const corruptStore = await ctx.server.inject({ method: "GET", url: `/auth/invite?token=${minted.token}` });
+corruptStore.statusCode
+=> 503
 ```
 
 ```ts cleanup
