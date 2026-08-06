@@ -220,6 +220,7 @@ final class ComposerDraftReducerTests: XCTestCase {
         XCTAssertEqual(
             NativeVoiceKeywordSendPlan.make(
                 liveTranscript: "native words <send-message phrase=\"send now\" />",
+                action: .send,
                 narrationEnabled: false
             ),
             .live(text: "native words <send-message phrase=\"send now\" />")
@@ -228,7 +229,22 @@ final class ComposerDraftReducerTests: XCTestCase {
 
     func testVoiceKeywordSendUsesHQPreparationWhenNarrationIsOn() {
         XCTAssertEqual(
-            NativeVoiceKeywordSendPlan.make(liveTranscript: "native words", narrationEnabled: true),
+            NativeVoiceKeywordSendPlan.make(
+                liveTranscript: "native words",
+                action: .send,
+                narrationEnabled: true
+            ),
+            .hq
+        )
+    }
+
+    func testCleanupKeywordUsesHQPreparationWhenNarrationIsOff() {
+        XCTAssertEqual(
+            NativeVoiceKeywordSendPlan.make(
+                liveTranscript: "native words",
+                action: .sendHq,
+                narrationEnabled: false
+            ),
             .hq
         )
     }

@@ -25,12 +25,16 @@ import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { getHealthSnapshot } from "./health-snapshot.js";
+import { checkSchedulerHeartbeat } from "../../../core/schedule/health-box.js";
+import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
+import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
 
 export interface HealthCheck {
   name: string;
   ok: boolean;
   message: string;
   severity: "error" | "warning";
+  actions?: Array<"acknowledge-box-growth" | "expect-box-growth-rates">;
 }
 
 export interface CommitInfo {
@@ -294,6 +298,9 @@ export async function runHealthChecks(
 
   checks.push(...(await annexHealthChecks({ repoRoot: gitRoot, boxRoot })));
   checks.push(await unfiledCapturesCheck(boxRoot));
+  const now = getBoxTime(boxRoot);
+  const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
+  checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
 
   // --- Interface card checks ---
 
@@ -419,4 +426,6 @@ export const healthRouter = router({
         },
       });
     }),
+  acknowledgeBoxGrowth: acknowledgeBoxGrowthProcedure,
+  expectBoxGrowthRates: expectBoxGrowthRatesProcedure,
 });

@@ -34,6 +34,60 @@ class StreamingSpeechPlaybackError extends Error {
 
 let sharedAudio: HTMLAudioElement | null = null;
 
+type MediaOperation = "unlock" | "url" | "blob" | "stream";
+
+interface MediaDiagnosticState {
+  error: { code: number } | null;
+  networkState: number;
+  readyState: number;
+}
+
+const MEDIA_ERROR_NAMES: Record<number, string> = {
+  1: "MEDIA_ERR_ABORTED",
+  2: "MEDIA_ERR_NETWORK",
+  3: "MEDIA_ERR_DECODE",
+  4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
+};
+
+const NETWORK_STATE_NAMES: Record<number, string> = {
+  0: "NETWORK_EMPTY",
+  1: "NETWORK_IDLE",
+  2: "NETWORK_LOADING",
+  3: "NETWORK_NO_SOURCE",
+};
+
+const READY_STATE_NAMES: Record<number, string> = {
+  0: "HAVE_NOTHING",
+  1: "HAVE_METADATA",
+  2: "HAVE_CURRENT_DATA",
+  3: "HAVE_FUTURE_DATA",
+  4: "HAVE_ENOUGH_DATA",
+};
+
+function labeledMediaValue(value: number, names: Record<number, string>): string {
+  return `${names[value] ?? "UNKNOWN"}(${value})`;
+}
+
+export function formatMediaElementFailure(
+  operation: MediaOperation,
+  state: MediaDiagnosticState,
+): string {
+  const mediaError = state.error
+    ? labeledMediaValue(state.error.code, MEDIA_ERROR_NAMES)
+    : "none";
+  return `[audio] operation=${operation} mediaError=${mediaError}`
+    + ` networkState=${labeledMediaValue(state.networkState, NETWORK_STATE_NAMES)}`
+    + ` readyState=${labeledMediaValue(state.readyState, READY_STATE_NAMES)}`;
+}
+
+export function formatPlaybackRejection(operation: MediaOperation, error: unknown): string {
+  return `[audio] operation=${operation} play() rejected ${formatThrownError(error)}`;
+}
+
+export function formatThrownError(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
 export function isIOS(): boolean {
   return /iP(ad|hone|od)/.test(navigator.userAgent);
 }
@@ -71,7 +125,7 @@ export function unlockAudioContext(): void {
   const audio = new Audio(withBase("/earcons/silence.mp3"));
   audio.preload = "auto";
   audio.play().catch((e) => {
-    console.warn("[audio] Failed to unlock audio:", e);
+    console.warn(formatPlaybackRejection("unlock", e));
   });
   sharedAudio = audio;
 }
@@ -110,12 +164,12 @@ export function playAudioUrl(url: string, opts?: { volume?: number; label?: stri
     audio.volume = volume;
     audio.onplaying = () => logSpeechEvent("audio.start", { label });
     audio.onended = () => { logSpeechEvent("audio.end", { label }); resolve(); };
-    audio.onerror = (e) => {
-      console.error("[audio] playAudioUrl error:", e);
+    audio.onerror = () => {
+      console.error(formatMediaElementFailure("url", audio));
       resolve();
     };
     audio.play().catch((e) => {
-      console.warn("[audio] playAudioUrl play() rejected:", e);
+      console.warn(formatPlaybackRejection("url", e));
       resolve();
     });
   });
@@ -161,16 +215,16 @@ export function playAudioBlob(
       logSpeechEvent("audio.end", { label });
       resolve();
     };
-    audio.onerror = (e) => {
+    audio.onerror = () => {
       URL.revokeObjectURL(url);
-      console.error("[audio] playAudioBlob error:", e);
+      console.error(formatMediaElementFailure("blob", audio));
       reject(new BufferedSpeechPlaybackError());
     };
     audio.src = url;
     audio.volume = 1;
     audio.play().catch((e) => {
       URL.revokeObjectURL(url);
-      console.error("[audio] playAudioBlob play() rejected:", e);
+      console.error(formatPlaybackRejection("blob", e));
       reject(e instanceof Error ? e : new Error(String(e)));
     });
   });
@@ -270,9 +324,9 @@ export function playAudioStream(
     logSpeechEvent("audio.end", { label });
     settleFinished();
   };
-  audio.onerror = (e) => {
+  audio.onerror = () => {
     cleanup();
-    console.error("[audio] playAudioStream audio error:", e);
+    console.error(formatMediaElementFailure("stream", audio));
     settleBuffer(null);
     rejectFinished(new StreamingSpeechPlaybackError());
   };
@@ -284,7 +338,7 @@ export function playAudioStream(
       try {
         sourceBuffer = mediaSource.addSourceBuffer(mimeType);
       } catch (e) {
-        console.error("[audio] addSourceBuffer failed:", e);
+        console.error(`[audio] addSourceBuffer failed ${formatThrownError(e)}`);
         settleBuffer(null);
         rejectFinished(e instanceof Error ? e : new Error(String(e)));
         cleanup();
@@ -307,7 +361,7 @@ export function playAudioStream(
             try { mediaSource.endOfStream(); } catch (_e) { /* ignore */ }
           }
         } catch (e) {
-          console.error("[audio] playAudioStream pump error:", e);
+          console.error(`[audio] playAudioStream pump error ${formatThrownError(e)}`);
           settleBuffer(null);
           rejectFinished(e instanceof Error ? e : new Error(String(e)));
         }
@@ -319,7 +373,7 @@ export function playAudioStream(
   audio.src = url;
   audio.volume = 1;
   audio.play().catch((e) => {
-    console.warn("[audio] playAudioStream play() rejected:", e);
+    console.warn(formatPlaybackRejection("stream", e));
     settleBuffer(null);
     rejectFinished(e instanceof Error ? e : new Error(String(e)));
   });

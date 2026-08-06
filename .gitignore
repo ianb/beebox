@@ -2,6 +2,11 @@ node_modules/
 dist/
 *.log
 
+# Machine-local scheduled-maintenance output. Individual logs are ignored by
+# the rule above; ignore the directory too so symlinks such as latest.log can
+# never become repository state.
+/logs/
+
 # Deploy build checkout + latest-wins lock state (see callback-box/deploy/deploy.sh).
 # The checkout is a disposable detached git worktree; the other two are runtime
 # lock/coordination files. All live at the main repo root.

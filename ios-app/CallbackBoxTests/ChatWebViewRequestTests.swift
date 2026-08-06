@@ -201,6 +201,7 @@ final class ChatWebViewRequestTests: XCTestCase {
         loadInCurrentContext: @escaping (WKWebView, URLRequest) -> Void = { _, _ in }
     ) -> ChatWebView.Coordinator {
         ChatWebView.Coordinator(
+            boxID: UUID(),
             allowedOrigin: "https://box.example.com",
             onSessionChange: { _ in },
             onEmissionDeliveryAttempt: onAttempt,

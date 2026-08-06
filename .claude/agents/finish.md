@@ -386,9 +386,18 @@ message still leaves the file sitting in an open category directory. Check befor
 merging — this has silently rotted before (a mobile bug was fixed 2026-07-17 by a
 commit naming the issue path, and stayed filed as open until a human noticed).
 
-Find candidates: the branch's own commit messages often name the issue path, and
-the worktree briefing usually names the issue it came from. Also grep `issues/`
-for the files/symptoms this branch touched.
+Find candidates — do ALL of these, this is exactly where issues get forgotten:
+
+- the **plan's "Issues addressed" list** — if the branch introduced or modified a
+  plan doc (`docs/plans/`), it names the issues to reconcile; start there;
+- the branch's own commit messages (they often name the issue path) and the
+  worktree briefing (it usually names the issue it came from);
+- a grep of `issues/` for the files/symptoms/symbols this branch touched;
+- for every issue you find, its **related and duplicate** issues — follow the
+  cross-links in its body AND grep the queue for its slug/keywords/symptom. A fix
+  commonly resolves a sibling too, and closing one while its twin sits open (or
+  leaving a now-moot duplicate) is the exact rot this step exists to prevent.
+  Reconcile the whole cluster, not just the one you started from.
 
 For each issue this work **actually resolves** (per `issues/CLAUDE.md`):
 

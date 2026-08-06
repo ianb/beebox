@@ -342,5 +342,5 @@ re-injection (including XML-escaped phrases).
 
 ```ts
 runFamily("speech-keywords", validateSpeechKeyword)
-=> {"family":"speech-keywords","cases":37,"pass":37}
+=> {"family":"speech-keywords","cases":39,"pass":39}
 ```

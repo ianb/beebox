@@ -16,7 +16,8 @@ A connector's `sync()` method:
 5. Optionally pushes local changes back to the service (two-way sync)
 6. Creates job cards for downstream processing (e.g., chat jobs for new messages)
 
-Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, error? }`.
+Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, procedures?, error? }`.
+Procedure requests are run by wakeup orchestration after connector writes finish.
 
 Sync rebuilds a connector-managed card's content wholesale from its template; any agent-added field the template doesn't know about is lost unless it's one of the few fields `preserve-agent-fields.ts` explicitly carries forward (currently just `contains`).
 
@@ -44,8 +45,12 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 Each connector reads its config from `config/connectors/`:
 - `telegram.secret.json` — `{ botToken, webhookSecret }`
 - `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
-- `gmail.json` — `{ query }` or `{ labels }`, plus optional `{ gc, gcIntervalHours }` (auth is the shared Google OAuth tokens; no per-connector secret). Persistent dedup ids live in `gmail-state.json` (committed), the history-API checkpoint + last-GC timestamp in `gmail.state.json` (gitignored).
-  - **Garbage collection** (`gmail-gc.ts`): when a thread loses its triggering label upstream, a reconciliation pass withdraws the *still-pending* card (one that's still in `box/inbox/email/` — a thread an agent has moved out is left alone) to `store/trash/`. Runs at most every `gcIntervalHours` (default 24; `0` = every sync); set `gc: false` to disable. Seen ids are kept, so re-applying a label after GC does not auto-reimport.
+- `gmail.json` — named Gmail query rules with either a bounded `track` action or
+  a `procedure` action. No file means no automatic email cards. Legacy `query`
+  and `labels` shapes become a bounded track rule. The history cursor, budgets,
+  and bounded pending summaries live in gitignored `gmail.state.json`.
+  A live email-thread card is the sole tracking registry; deleting it untracks
+  the thread without changing Gmail. See [gmail-setup.md](gmail-setup.md).
 
 Transient state (last sync offsets, mappings) goes in `config/connectors/<name>.state.json` or `<name>-state.json`.
 

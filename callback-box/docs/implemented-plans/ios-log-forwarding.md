@@ -5,6 +5,13 @@ instrumentation all shipped and tested (route doctests + `LogForwarderTests`,
 193/193 iOS suite). Manual iPhone verification (below) is still pending as of
 merge — the boxholder is exercising it against prod post-merge.
 
+**Update 2026-08-06:** the boxholder chose regular box-hosted diagnostics over
+the issue's proposed on-device export/share bundle. The forwarder now also sends
+selected `info` state transitions, evicts routine info before error/warn under
+queue pressure, and the existing browser forwarder receives structured media
+element failure metadata. Design:
+`docs/implemented-plans/ios-diagnostic-forwarding-completion.md`.
+
 Give the iOS app a native logging layer (`os.Logger`) whose errors and warnings
 are forwarded to the paired box's existing client debug log
 (`.callback-box/client-debug.log`), so native failures — capture uploads first —
@@ -186,11 +193,12 @@ vocabulary lock-ins, stated once:
 
 **iOS logging facade.** `BoxLog` exposes `error(_:category:)` /
 `warn(_:category:)` / `info(_:category:)` with categories as an enum
-(`capture`, `upload`, `net`, `pairing`, `composer`, `webview`). Every call logs
+(`capture`, `upload`, `net`, `pairing`, `composer`, `webview`, `lifecycle`,
+`audio`). Every call logs
 to unified logging (subsystem `app.callbackbox.ios`) — the conventional Apple
-path, visible in Console.app/Xcode. `error` and `warn` additionally enqueue to
-`LogForwarder`; `info` stays on-device only (mirrors the web's
-always-forward-error/warn, verbose-only-log/info split).
+path, visible in Console.app/Xcode. All three levels enqueue to `LogForwarder`;
+info is limited to selected lifecycle/navigation/audio transitions rather than
+general verbose logging.
 
 Two durability tiers (Codex finding 4 — a sync facade cannot promise
 crash-survival):
@@ -212,7 +220,9 @@ its batch in-flight (one in-flight batch per box, concurrent flush calls
 no-op), and on 2xx removes exactly the acknowledged ids, never "the first N"
 (Codex finding 3). Bounds: 200 entries per box, 500 globally, drop-oldest; a
 drop inserts one synthetic `warn` marker entry counting what was dropped (no
-silent cap). Entries for boxes no longer in `PairedBoxStore` are purged when
+silent cap). Routine info entries are evicted before error/warn entries, so
+transition chatter cannot replace the failure it is meant to explain. Entries
+for boxes no longer in `PairedBoxStore` are purged when
 the box map updates — no orphan queue for removed/re-paired boxes (Codex
 finding 9). Persistence is one small JSON file in Application Support (atomic
 writes, `ComposerDraftRepository` pattern), written on every enqueue —
@@ -227,7 +237,8 @@ guarantee everywhere else (Codex finding 1):
    current — `CaptureUploadRuntime` pattern). This is where entries persisted
    by a suspended/killed/offline run finally land server-side.
 2. Foregrounding (`scenePhase == .active`).
-3. Debounced after enqueue while foreground (2s cancel-and-replace `Task`).
+3. Debounced after enqueue while foreground (one 2s `Task`, armed by the first
+   entry in a burst so steady info traffic cannot postpone it indefinitely).
 4. On `scenePhase == .background` and on the background-URLSession completion
    path, the forwarder only guarantees persistence. A flush attempt is made
    under `beginBackgroundTask` with an expiration handler (best-effort; the

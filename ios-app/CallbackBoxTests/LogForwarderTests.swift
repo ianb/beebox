@@ -22,8 +22,8 @@ final class LogForwarderTests: XCTestCase {
 
     // MARK: - Debounce
 
-    /// A burst of failures must produce one POST, not one per line: the
-    /// debounce is cancel-and-replace, so only the last scheduled flush runs.
+    /// A burst of entries must produce one POST, not one per line, while also
+    /// retaining the first entry's deadline instead of postponing forever.
     func testDebounceCoalescesABurstIntoOneFlush() async {
         let clock = Gate()
         let transport = StubLogTransport()
@@ -35,6 +35,9 @@ final class LogForwarderTests: XCTestCase {
         for index in 0..<3 {
             await forwarder.record(makeEntry(message: "e\(index)"))
         }
+        await waitUntil { await clock.arrivals == 1 }
+        let debounceArrivals = await clock.arrivals
+        XCTAssertEqual(debounceArrivals, 1, "later entries must not restart the debounce clock")
         await clock.open()
 
         await fulfillment(of: [flushed], timeout: 5)
@@ -113,6 +116,36 @@ final class LogForwarderTests: XCTestCase {
         XCTAssertEqual(real.filter { $0.boxID == boxes[0].id }.count, 100, "the oldest box loses its oldest lines")
         let markers = queued.filter { $0.droppedCount != nil }
         XCTAssertEqual(markers.map(\.droppedCount), [100])
+    }
+
+    /// Routine transition chatter is useful context, but it must never replace
+    /// the failure the context is meant to explain.
+    func testPerBoxBoundEvictsInfoBeforeFailures() async {
+        let forwarder = makeForwarder()
+        await forwarder.record(makeEntry(message: "critical", level: .error))
+        for index in 0...LogForwarder.perBoxLimit {
+            await forwarder.record(makeEntry(message: "state\(index)", level: .info))
+        }
+
+        let queued = await forwarder.queuedEntries().filter { $0.droppedCount == nil }
+        XCTAssertEqual(queued.count, LogForwarder.perBoxLimit)
+        XCTAssertTrue(queued.contains { $0.message == "critical" })
+        XCTAssertEqual(queued.filter { $0.level == .info }.count, LogForwarder.perBoxLimit - 1)
+    }
+
+    func testGlobalBoundEvictsInfoBeforeFailures() async {
+        let forwarder = makeForwarder()
+        let boxes = (0..<3).map { _ in makeBox(authToken: nil) }
+        for box in boxes {
+            await forwarder.record(makeEntry(message: "critical", level: .error, boxID: box.id))
+            for index in 0..<LogForwarder.perBoxLimit {
+                await forwarder.record(makeEntry(message: "state\(index)", level: .info, boxID: box.id))
+            }
+        }
+
+        let queued = await forwarder.queuedEntries().filter { $0.droppedCount == nil }
+        XCTAssertEqual(queued.count, LogForwarder.globalLimit)
+        XCTAssertEqual(queued.filter { $0.message == "critical" }.count, boxes.count)
     }
 
     // MARK: - Persistence
@@ -220,6 +253,19 @@ final class LogForwarderTests: XCTestCase {
             )
             try? FileManager.default.removeItem(at: storageURL)
         }
+    }
+
+    func testInfoEntryUsesTheExistingWireLevel() async {
+        let transport = StubLogTransport()
+        let forwarder = makeForwarder(transport: transport)
+        await forwarder.updateBoxes([box], selectedBoxID: box.id)
+        await forwarder.record(makeEntry(message: "scene phase=active", level: .info, category: .lifecycle))
+
+        await forwarder.flush()
+
+        let sent = transport.batches.first?.first
+        XCTAssertEqual(sent?["level"] as? String, "info")
+        XCTAssertEqual(sent?["message"] as? String, "lifecycle: scene phase=active")
     }
 
     /// More than one POST's worth of queue drains in batches rather than being
@@ -494,11 +540,12 @@ final class LogForwarderTests: XCTestCase {
 
     private func makeEntry(
         message: String,
+        level: BoxLogLevel = .error,
         category: BoxLogCategory = .net,
         boxID: UUID? = nil
     ) -> LogEntry {
         LogEntry(
-            level: .error,
+            level: level,
             category: category,
             message: message,
             boxID: boxID ?? box.id

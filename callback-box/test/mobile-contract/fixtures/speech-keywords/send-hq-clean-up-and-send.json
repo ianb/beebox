@@ -1,0 +1,11 @@
+{
+  "op": "detect",
+  "input": {
+    "transcript": "clean up and send"
+  },
+  "expected": {
+    "action": "sendHq",
+    "processedTranscript": "<send-message phrase=\"clean up and send\" />",
+    "matchedPhrase": "clean up and send"
+  }
+}

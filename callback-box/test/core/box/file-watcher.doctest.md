@@ -330,20 +330,137 @@ await box.cleanup();
 
 `procedure/runs` and `store/trash` are never live-rendered and churn constantly;
 watching them exhausted the server's inotify limit on 2026-06-11. Dotfile trees
-(`.git`, `.callback-box`) are excluded for the same reason.
+(`.git`, `.callback-box`) are excluded for the same reason. Ordinary content
+trees receive no path-specific treatment: the generic watch budget is their
+safety boundary.
 
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "procedure", "runs", "r1"), { recursive: true });
 await mkdir(join(box.root, "store", "trash", "old"), { recursive: true });
+await mkdir(join(box.root, "box", "inbox", "email", "thread.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, bus);
 await watcher.ready;
 
 watcher.watchedDirs().join(" ")
-=> . procedure store store/keep
+=> . box box/inbox box/inbox/email box/inbox/email/thread.attach procedure store store/keep
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## Notification bookkeeping has a hard budget
+
+A directory can arrive already holding thousands of distinct files. Each path
+would normally open its own coalescing window, so this work is capped just like
+directory watches. Excess hints are deliberately dropped and the degradation is
+reported once; filesystem events are only a frontend freshness convenience.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "store"), { recursive: true });
+await mkdir(join(box.root, ".incoming"), { recursive: true });
+for (let i = 0; i < 1100; i++) {
+  await writeFile(join(box.root, ".incoming", `file-${i}.txt`), "x");
+}
+
+const watcher = ensureBoxWatcher(box.root, bus);
+await watcher.ready;
+await waitForWatch(box.root, bus, "store");
+
+let events = 0;
+bus.subscribe({ listener: (e) => { if (e.event === "file-change") events++; } });
+const capLogs: string[] = [];
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const line = args.map(String).join(" ");
+  if (line.includes("notification work limit")) capLogs.push(line);
+  else originalConsoleError(...args);
+};
+try {
+  const { rename } = await import("node:fs/promises");
+  await rename(join(box.root, ".incoming"), join(box.root, "store", "arrived"));
+  await waitFor(() => capLogs.length === 1, 5000, "the notification work limit");
+  await watcher.settled();
+} finally {
+  console.error = originalConsoleError;
+}
+
+`bounded: ${events <= 1025} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("1,024") === true}`
+=> bounded: true | logs: 1 | named-limit: true
+```
+
+```ts cleanup
+await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## A dotted ancestor outside the box does not disable watching
+
+Dot paths *inside* a box are ignored. A box root may itself live below a hidden
+directory, and that ancestor is outside the relative-path filter.
+
+```ts
+const outer = await makeTmpBox();
+const nestedRoot = join(outer.root, ".container", "content");
+await mkdir(join(nestedRoot, "store"), { recursive: true });
+const bus = createEventBus(nestedRoot, { pollInterval: 60_000 });
+
+const watcher = ensureBoxWatcher(nestedRoot, bus);
+await watcher.ready;
+
+watcher.watchedDirs().join(" ")
+=> . store
+```
+
+```ts cleanup
+await closeBoxWatcher(nestedRoot);
+bus.close();
+await outer.cleanup();
+```
+
+## The watcher has a hard directory budget
+
+An unexpectedly large imported tree must degrade live updates instead of
+allocating watchers until `cb serve` runs out of memory. Hitting the ceiling is
+reported exactly once, and the initial walk still resolves normally.
+
+```ts
+const box = await makeTmpBox();
+const bus = createEventBus(box.root, { pollInterval: 60_000 });
+await mkdir(join(box.root, "bulk"), { recursive: true });
+for (let i = 0; i < 1100; i++) {
+  await mkdir(join(box.root, "bulk", `dir-${i}`));
+}
+
+const capLogs: string[] = [];
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const line = args.map(String).join(" ");
+  if (line.includes("directory watch limit")) {
+    capLogs.push(line);
+  } else {
+    originalConsoleError(...args);
+  }
+};
+let watcher: ReturnType<typeof ensureBoxWatcher>;
+try {
+  watcher = ensureBoxWatcher(box.root, bus);
+  await watcher.ready;
+} finally {
+  console.error = originalConsoleError;
+}
+
+`bounded: ${watcher.watchedDirs().length === 1024} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("1,024") === true}`
+=> bounded: true | logs: 1 | named-limit: true
 ```
 
 ```ts cleanup

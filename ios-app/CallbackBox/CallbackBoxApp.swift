@@ -28,10 +28,11 @@ struct CallbackBoxApp: App {
                 }
                 .onReceive(store.$selectedBoxID) { selectedBoxID in
                     let boxes = store.boxes
+                    let effectiveBoxID = selectedBoxID ?? boxes.first?.id
                     Task {
                         await LogForwarder.shared.updateBoxes(
                             boxes,
-                            selectedBoxID: selectedBoxID ?? boxes.first?.id
+                            selectedBoxID: effectiveBoxID
                         )
                     }
                 }

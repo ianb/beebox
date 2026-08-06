@@ -87,6 +87,7 @@ test("classifier: exhaustive route-shape mapping", () => {
   assert.deepEqual(c("GET", "/main/assets/index-abc.js"), { kind: "unauth-allowlist" });
   assert.deepEqual(c("GET", "/main/icons/icon.svg"), { kind: "unauth-allowlist" });
   assert.deepEqual(c("GET", "/main/manifest.webmanifest"), { kind: "unauth-allowlist" });
+  assert.deepEqual(c("GET", "/main/sw.js"), { kind: "unauth-allowlist" });
   assert.deepEqual(c("GET", "/favicon.png"), { kind: "unauth-allowlist" });
   assert.deepEqual(c("POST", "/main/test1/api/pairing/redeem"), { kind: "unauth-allowlist" });
   assert.deepEqual(c("POST", "/api/pairing/redeem"), { kind: "unauth-allowlist" });

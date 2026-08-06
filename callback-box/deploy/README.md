@@ -132,17 +132,44 @@ Pulls callback-box, rebuilds, and restarts services.
 ./deploy/rebuild.sh
 ```
 
-### `ssh-server.sh` — SSH into the server
+### `prod-ssh` — SSH into the production server
 
 ```bash
 # Interactive shell
-./deploy/ssh-server.sh
+./deploy/prod-ssh
 
 # Run a command
-./deploy/ssh-server.sh systemctl status cb-hub
+./deploy/prod-ssh systemctl status cb-hub
 ```
 
 Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations on the server.
+In a worktree, the command falls back to the main checkout's gitignored
+`deploy/server-ip`; a non-empty local copy takes precedence. This fallback is
+for diagnostics only: `deploy.sh` intentionally requires `server-ip` in the
+invoking checkout.
+
+### Production app diagnostics
+
+`prod-curl` and `prod-browse` authenticate as the configured owner
+(`CB_OWNER_EMAIL`) to inspect production behind the OAuth wall. This grants no
+new access: both commands require the boxholder's existing root SSH key, and
+must never be modified to mint a session for another identity without the
+boxholder's express, in-the-moment permission.
+
+```bash
+# Fetch HTML or an API response; extra arguments pass through to remote curl.
+./deploy/prod-curl /test1/ -sI
+
+# Open the rendered app in bin/browse's clean browser profile.
+./deploy/prod-browse /test1/
+bin/browse screenshot --slug prod
+```
+
+`prod-curl` keeps the signed session cookie on the server. `prod-browse` puts it
+in the local isolated browser profile and also requires the production base URL
+in gitignored `deploy/public-url`; from a worktree it falls back to the main
+checkout's copy just like `server-ip`. Never print or persist either cookie or
+URL in tracked files.
 
 ## Server layout
 
@@ -323,7 +350,7 @@ Per-box secrets go in each box's `config/connectors/` directory:
 
 ```bash
 # SSH in and create secrets
-./deploy/ssh-server.sh
+./deploy/prod-ssh
 cd /home/callback/boxes/hearth/config/connectors/
 echo '{"botToken":"...","webhookSecret":"..."}' > telegram.secret.json
 ```

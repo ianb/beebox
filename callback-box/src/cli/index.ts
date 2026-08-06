@@ -67,6 +67,7 @@ import {
   pushCommand,
   tailscaleCommand,
   todosCommand,
+  connectorCommand,
 } from "./commands/index.js";
 
 // Validate the environment before any command runs (Track D.8). The CLI
@@ -141,6 +142,7 @@ program.addCommand(locationCommand);
 program.addCommand(pushCommand);
 program.addCommand(tailscaleCommand);
 program.addCommand(todosCommand);
+program.addCommand(connectorCommand);
 
 // ============================================
 // Inspection commands

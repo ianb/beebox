@@ -116,7 +116,7 @@ to people; close when the soft launch happens. Builds on
    (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 5. **Issues scrub** — done except one open question: whether "the ledger
    box" in
-   [stale-image-refs-after-renames](../bugs/2026-05-14-stale-image-refs-after-renames.md)
+   [stale-image-refs-after-renames](../closed/bugs/2026-05-14-stale-image-refs-after-renames.md)
    is a real box or the example slug (boxholder to confirm).
 6. **Blessed-path bug review** (full ranking 2026-07-20; "high priority
    bugs 100% should be addressed or at least reviewed" — boxholder).

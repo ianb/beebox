@@ -171,6 +171,50 @@ tests:
     correct_contains: ["UUID", "Apply"]
     tags: [cards, schemas, tab-arrangement]
 
+  # === Gmail tracked working set ===
+  # Status (2026-08-05): definitions added; focused run deferred to conserve
+  # the boxholder's remaining model quota.
+
+  - id: gmail-tracked-subset
+    prompt: "Do the email cards in this box represent all of Gmail? How do you reach mail that is not present locally?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Says cards are a tracked subset and uses the connector gws surface for other mail"
+    correct_contains: ["tracked", "cb connector gmail gws"]
+    tags: [gmail, cards, connectors]
+
+  - id: gmail-track-thread
+    prompt: "You found one useful Gmail thread that is not in the box. How do you add it to the working set, and what happens afterward?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Uses the explicit track command with a thread ID and says regular sync keeps the resulting card current"
+    correct_contains: ["cb connector gmail track", "sync"]
+    tags: [gmail, cards, connectors]
+
+  - id: gmail-delete-card
+    prompt: "What happens in Gmail if I delete or trash a tracked email-thread card?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Says card deletion stops tracking but does not delete the remote Gmail thread"
+    correct_contains: ["stops tracking", "does not delete"]
+    tags: [gmail, cards, lifecycle]
+
+  - id: gmail-rule-procedure
+    prompt: "Where do I configure a procedure to react to newly matching Gmail, and can it avoid starting an agent when a deterministic check finds nothing?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Names config/connectors/gmail.json rules and says a procedure shell precheck can skip before an agent step"
+    correct_contains: ["config/connectors/gmail.json", "precheck"]
+    tags: [gmail, connectors, procedures]
+
+  - id: gmail-gws-safety
+    prompt: "Can you send, relabel, trash, or delete Gmail through cb connector gmail gws?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-email-thread.md"]
+    watch_for: "Says the passthrough is read-only and rejects Gmail mutations"
+    correct_contains: ["read-only"]
+    tags: [gmail, connectors, safety]
+
   # === Figure Cards (canvas-loop runtime) ===
   #
   # Status (2026-07-15): 2/2 pass (knows_directly; agent read only the

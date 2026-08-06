@@ -1,10 +1,14 @@
 ---
 title: "iOS native and web-view runtime errors are not observable"
-needs: [design]
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main — diagnosing automatic speech playback failures in the iOS app
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `b39545a4`; exercise the app
+> on a physical iPhone and confirm the box log receives useful native state and
+> media diagnostics without retry flooding. Only Ian clears this.
 
 When behavior fails only inside the iOS shell, there is no durable, user-accessible
 diagnostic record. Xcode's console helps only while a development build is attached,
@@ -31,3 +35,22 @@ capture upload/acquisition, bulk photo batch, chat API degradations, webview
 process death and navigation failures. Still open from this issue's scope: a
 user-facing on-device export/share of a diagnostic bundle, and timestamped app
 state transitions beyond failure sites.
+
+**Design decision 2026-08-06:** the boxholder does not want a separate
+on-device bundle or share workflow. The box and its logs are the same privacy
+space. Complete this issue by regularly uploading selected state transitions
+and useful browser media failure metadata through the existing forwarder. Do
+not add a second journal, export renderer, share sheet, or export-specific
+scrubbing. Active design:
+`../../callback-box/docs/implemented-plans/ios-diagnostic-forwarding-completion.md`.
+
+## Manual verification
+
+On a physical iPhone, open a paired box, background and foreground the app, and
+exercise speech playback. If practical, trigger a rejected media playback. Then
+inspect the box's `.callback-box/client-debug.log`. Confirm that it contains
+timestamped `[ios]` scene, navigation, speech, response, and audio-session lines.
+Confirm that media failures include the operation, error name or media error
+code, network state, and ready state, with symbolic labels rather than bare
+numbers. Leave the phone offline long enough for a
+navigation retry, then reconnect and confirm that retries did not flood the log.

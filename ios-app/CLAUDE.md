@@ -177,3 +177,32 @@ requires the simulator's hardware-keyboard connection to be disabled.
 
 For user-facing composer or capture work, record which of these were actually
 tested. Do not describe a simulator-only pass as device verification.
+
+## Runtime diagnostics
+
+Diagnostic coverage is part of an iOS feature, not follow-up cleanup. When a
+change adds a native workflow, bridge interaction, media path, or background
+operation, identify the failure boundaries and state transitions needed to
+diagnose it after the phone is disconnected from Xcode. Add metadata-only
+`BoxLog` entries in the same change, or state explicitly in the plan/review why
+the feature introduces no new runtime state or failure boundary.
+
+- Use `BoxLog.error`/`warn` for failures and selected `info` transitions for
+  context. When the call site knows the box, use the targeted overload so a box
+  switch cannot misattribute the entry.
+- Log stable names plus bounded metadata: state/role names, operation names,
+  counts, status codes, and labeled platform error values. A bare numeric enum
+  value is not diagnostic; include its symbolic label. Never log transcripts,
+  composer/message text, credentials, device tokens, request bodies, media
+  content, or full box URLs.
+- Repeated callbacks must log transitions rather than retries. An offline reload
+  loop must not fill the queue with identical lines.
+- Add focused coverage for new formatting, queue, or deduplication behavior.
+
+Native entries are uploaded through `Services/BoxLog.swift` and
+`Services/LogForwarder.swift` to the paired box's rolling
+`.callback-box/client-debug.log`, alongside browser diagnostics. Start runtime
+debugging there; `[ios]` identifies native entries and `[ios@<timestamp>]`
+preserves the device event time after a delayed/offline flush. See
+`../callback-box/docs/client-debug-log.md` for locations and interpretation and
+`../callback-box/docs/mobile-contract.md` §5.7 for the wire/durability contract.

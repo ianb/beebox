@@ -3,7 +3,17 @@ title: "annex.largefiles is case-sensitive — an iOS .HEIC is committed to git 
 area: callback-box
 filed-by: agent
 discovered-in: capture-agent-driven worktree — scoping the annex filter attributes
+resolution: implemented
 ---
+
+Resolved in `5aed3eef`. `assetLargefilesExpression()` now emits lowercase and
+all-uppercase clauses for every asset extension. It deliberately does not match
+mixed-case spellings. The wider attributes filter continues to match mixed case.
+
+For an existing annex box, start with a clean worktree. Run `cb doctor annex`
+to refresh `annex.largefiles`, then run `git add --renormalize .`. Review and
+commit the staged changes. This moves currently tracked uppercase assets into
+the annex going forward. Their old bytes remain in Git history.
 
 `assetLargefilesExpression()` renders `include=*.heic or include=*.jpg or …`,
 all lowercase. git-annex matches those globs **case-sensitively**, so an

@@ -15,6 +15,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Agent SDK release monitor | `bin/update-agent-sdk-scheduled.sh` | Automated (launchd, daily) | Filtered release ledger in root `docs/agent-sdk-notes.md` |
 | Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated after the settling window; manual anytime | Bumped `package.json` + lockfile |
 | Docling currency watch | `pnpm check-docling-update` (monorepo root) | Automated (rides the SDK-update launchd job); manual anytime | Console (silent when nothing to report) |
+| Manual test suite | `bin/manual-tests-scheduled.sh` | Automated (launchd, weekly) | `logs/manual-tests/latest.log`; local issue + notification on failure |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Prompt viewer | `pnpm prompt-viewer` | After prompt or schema-instruction changes | `dev/prompts/data.json` + size ledger (browse at `/<worktree>/dev/prompts/`) |
@@ -92,6 +93,26 @@ re-read `docling convert --help` for flag changes (the CLI has moved flags
 between releases), bump the constant, then `cb document reanalyze` a sample
 document and diff the output. See
 `docs/plans/scanner-ingest-docling-decisions.md` (D3).
+
+### Manual test suite — `pnpm --dir callback-box test:manual`
+
+Runs the small explicit allowlist of executable tests that are unsuitable for
+every `pnpm test` invocation. The current set includes a real Claude SDK/API
+check and a filesystem deadline check with a fixed wall-clock delay. The weekly
+runner also checks its own log, issue, and notification reporting path before
+starting that allowlist. Human-only `.manual.md` checklists are not part of this
+command.
+
+`bin/manual-tests-scheduled.sh --install`, run once from the main checkout,
+registers the Sunday 11:17 local-time launchd job. Each run records its exact
+Git commit and branch in a separate gitignored file under
+`logs/manual-tests/`; `latest.log` points to the newest run. On runner or test
+failure, the job creates one uncommitted issue under `issues/bugs/` and raises
+a macOS notification that points to the issue and log. Later failures reuse an
+existing open scheduled-test issue instead of creating duplicates. The job does
+not commit automatically. Enrollment is explicit: adding a file under
+`test/manual/` does not schedule it until its path is added to the `test:manual`
+package script.
 
 ### Knowledge audits — `npm run knowledge-audit`
 

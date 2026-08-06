@@ -13,7 +13,9 @@ Services run as the **`callback` user** (User/Group in systemd unit files), not 
 | `/home/callback/.env` | `callback` | Environment variables for services (API keys, `CB_DIAG_API_KEY`, etc.) |
 | `/home/callback/.claude/.credentials.json` | `callback` | Claude Code OAuth credentials (see below) |
 
-Server IP is pinned at [`deploy/server-ip`](../deploy/server-ip). SSH as root for admin (`ssh root@$(cat deploy/server-ip)`); SSH as `callback` for manual data work.
+Server IP is pinned at gitignored `deploy/server-ip`. Use
+`deploy/prod-ssh` for root administration; it finds the main checkout's copy
+when invoked from a worktree. SSH as `callback` for manual data work.
 
 ## Connecting for debugging / inspection
 
@@ -22,14 +24,14 @@ For ad-hoc inspection of the running server (reading logs, checking box state, r
 **Always SSH to the IP, never the hostname.** `box.example.com` resolves to Cloudflare (the web proxy in front of the box), so `ssh root@box.example.com` fails with "No route to host." Use the pinned IP:
 
 ```bash
-ssh root@$(cat deploy/server-ip)
+deploy/prod-ssh
 # or for data work as the service user:
 ssh callback@$(cat deploy/server-ip)
 ```
 
 **Do not pass `-o StrictHostKeyChecking=no`.** That flag belongs in first-contact provisioning scripts (`add-box.sh`, `setup-server.sh`) where the host hasn't been seen yet. For ad-hoc work the host is already in `~/.ssh/known_hosts` and disabling the check just removes a real safety. If you get a host-key error, investigate it — don't suppress it.
 
-**Common inspection targets** (run via `ssh root@<ip> '<cmd>'`):
+**Common inspection targets** (run via `deploy/prod-ssh '<cmd>'`):
 
 | What | Where |
 |------|-------|
@@ -46,7 +48,7 @@ ssh callback@$(cat deploy/server-ip)
 **Running `cb` commands on the server** — must be as the `callback` user so file ownership stays correct:
 
 ```bash
-ssh root@$(cat deploy/server-ip) "su - callback -c 'cb boxes list'"
+deploy/prod-ssh "su - callback -c 'cb boxes list'"
 # or after sshing in as root:
 su - callback -c "cd /home/callback/boxes/<box> && cb validate"
 ```
@@ -61,7 +63,7 @@ su - callback -c "cd /home/callback/boxes/<box> && cb validate"
 > check sees what the services see:
 >
 > ```bash
-> ssh root@$(cat deploy/server-ip) \
+> deploy/prod-ssh \
 >   "su - callback -c 'set -a; . /home/callback/.env; cb health --box /home/callback/boxes/<box>/content'"
 > ```
 >
@@ -77,13 +79,13 @@ su - callback -c "cd /home/callback/boxes/<box> && cb validate"
 **Restart services after deploying or after manual config changes:**
 
 ```bash
-ssh root@$(cat deploy/server-ip) "systemctl restart cb-hub callback-scheduler"
+deploy/prod-ssh "systemctl restart cb-hub callback-scheduler"
 ```
 
 `hub.json` doesn't hot-reload — adding, removing, or re-pointing a box entry needs a `cb-hub`
 restart, not just a config edit.
 
-For helper `ssh-server.sh` see `deploy/`.
+For IP-resolution details, see `deploy/README.md`.
 
 ## Writing scripts that run on the server
 

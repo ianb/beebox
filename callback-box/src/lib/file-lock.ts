@@ -435,7 +435,7 @@ function delay(ms: number): Promise<void> {
  * retry loop. The lock is always released, including when `fn` throws.
  */
 export async function withFileLock<T>(
-  opts: { lockPath: string; metadata: Record<string, unknown>; waitMs: number },
+  opts: { lockPath: LockTarget; metadata: Record<string, unknown>; waitMs: number },
   fn: () => Promise<T>,
 ): Promise<T> {
   const { lockPath, metadata, waitMs } = opts;
