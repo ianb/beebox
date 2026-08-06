@@ -135,11 +135,11 @@ export function assetAnnexAttributes(): string {
 }
 
 /**
- * Capture staging is deliberately NOT annexed: a capture is pre-triage, and
- * gets renamed, re-encoded, and EXIF-rotated before reaching its final home,
- * so annexing on arrival would mint immutable objects for superseded and
- * discarded versions. Keeping the staging area gitignored is the whole
- * mechanism — a gitignored file never reaches the annex.
+ * Capture-staging media is deliberately NOT annexed: a capture is pre-triage,
+ * and gets renamed, re-encoded, and EXIF-rotated before reaching its final
+ * home, so annexing its bytes on arrival would mint immutable objects for
+ * superseded and discarded versions. Committed metadata inside the same
+ * attach scopes is re-included by the managed block writer.
  *
  * Unanchored on purpose: delivery targets `<contextDir>/tmp-capture/`, not
  * only the box root, so a root-anchored rule would miss real captures and

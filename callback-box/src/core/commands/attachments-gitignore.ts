@@ -124,6 +124,18 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
 const UNIGNORE_BLOCK_MARKER = "# cb-assets (managed by cb attachments unignore)";
 
 /**
+ * Capture staging contains committed card metadata alongside unannexed media.
+ * Re-include directories first: Git cannot re-include a file while one of its
+ * parent directories remains excluded.
+ */
+const CAPTURE_STAGING_TRACKED_PATTERNS: readonly string[] = [
+  "!**/tmp-capture/**/*.attach/**/",
+  "!**/tmp-capture/**/*.attach/**/*.card",
+  "!**/tmp-capture/**/*.attach/**/manifest.json",
+  "!**/tmp-capture/**/*.attach/**/*.timing.json",
+];
+
+/**
  * The git-annex block: assets are tracked, only capture staging stays ignored.
  * The annex-converted counterpart of {@link GITIGNORE_BLOCK}, and likewise
  * exported so `cb init` writes the identical text rather than a near-copy.
@@ -136,6 +148,7 @@ export const UNIGNORE_BLOCK = `${UNIGNORE_BLOCK_MARKER}
 # arrival would mint objects for superseded versions. It joins the annex when
 # an agent files it. See docs/plans/asset-annex.md.
 ${CAPTURE_STAGING_IGNORE_PATTERN}
+${CAPTURE_STAGING_TRACKED_PATTERNS.join("\n")}
 `;
 
 /**
@@ -179,7 +192,12 @@ function inManagedBlock(lines: string[], opts: { index: number; start: number })
  * {@link isManagedBlockLine} — a comment or the capture-staging pattern.
  */
 function isUnignoreBlockLine(line: string): boolean {
-  return line.startsWith("#") || line.trim() === CAPTURE_STAGING_IGNORE_PATTERN;
+  const trimmed = line.trim();
+  return (
+    line.startsWith("#") ||
+    trimmed === CAPTURE_STAGING_IGNORE_PATTERN ||
+    CAPTURE_STAGING_TRACKED_PATTERNS.includes(trimmed)
+  );
 }
 
 /**

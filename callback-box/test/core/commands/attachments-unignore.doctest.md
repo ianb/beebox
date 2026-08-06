@@ -9,6 +9,7 @@ consulted by `git add`, which never sees an ignored path — so leaving the bloc
 in place produces a box where no asset is annexed and nothing reports it.
 
 ```ts setup
+import { spawnSync } from "node:child_process";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runInitGitignore, runUnignore } from "../../../src/core/commands/attachments-gitignore.js";
 
@@ -17,13 +18,25 @@ function ctxFor(root: string): { boxRoot: string; writeLine: (s: string) => void
   const lines: string[] = [];
   return { boxRoot: root, writeLine: (s: string) => lines.push(s), lines };
 }
+
+function checkIgnore(packageRoot: string, boxRelativePath: string): { ignored: boolean; rule: string } {
+  const result = spawnSync(
+    "git",
+    ["check-ignore", "-v", "--no-index", "--", `content/${boxRelativePath}`],
+    { cwd: packageRoot, encoding: "utf-8" },
+  );
+  if (result.status !== 0 && result.status !== 1) throw new Error(result.stderr);
+  const source = result.stdout.split("\t")[0] ?? "";
+  const rule = source.split(":").at(-1) ?? "";
+  return { ignored: result.status === 0 && !rule.startsWith("!"), rule };
+}
 ```
 
 Starting from a box with the asset block installed, `unignore` removes the
 extension patterns and leaves the capture-staging rule behind:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ git: true });
 const c1 = ctxFor(box.root);
 await runInitGitignore(c1);
 (await box.read(".gitignore")).includes("**/*.attach/**/*.jpg")
@@ -51,6 +64,41 @@ annexed before an agent files it:
 ```ts continue
 after.includes("**/tmp-capture/**/*.attach/**")
 => true
+```
+
+The broad staging rule must not swallow the committed metadata alongside the
+media. The directory negation is load-bearing here: without it Git will not
+re-include a manifest below a nested child `.attach/` directory.
+
+```ts continue
+await box.write("tmp-capture/cap.attach/photo-001.image.card", "card");
+await box.write("tmp-capture/cap.attach/photo-001.attach/manifest.json", "{}");
+await box.write("tmp-capture/cap.attach/audio-001.attach/audio-001.timing.json", "{}");
+await box.write("tmp-capture/cap.attach/photo-001.attach/photo-001.jpg", "media");
+[
+  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/photo-001.image.card"),
+  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/photo-001.attach/manifest.json"),
+  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/audio-001.attach/audio-001.timing.json"),
+  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/photo-001.attach/photo-001.jpg"),
+]
+=> [
+  {
+    "ignored": false,
+    "rule": "!**/tmp-capture/**/*.attach/**/*.card"
+  },
+  {
+    "ignored": false,
+    "rule": "!**/tmp-capture/**/*.attach/**/manifest.json"
+  },
+  {
+    "ignored": false,
+    "rule": "!**/tmp-capture/**/*.attach/**/*.timing.json"
+  },
+  {
+    "ignored": true,
+    "rule": "**/tmp-capture/**/*.attach/**"
+  }
+]
 ```
 
 The rule is unanchored. Delivery targets `<contextDir>/tmp-capture/`, not only
@@ -103,4 +151,27 @@ await runUnignore(c);
 => true
 
 await fresh.cleanup();
+```
+
+An existing annex box carrying the old managed block is refreshed in place,
+so rerunning `cb attachments unignore` is the migration path:
+
+```ts
+const stale = await makeTmpBox({ git: true });
+await stale.write(
+  ".gitignore",
+  "# cb-assets (managed by cb attachments unignore)\n**/tmp-capture/**/*.attach/**\n",
+);
+const c = ctxFor(stale.root);
+const refreshed = await runUnignore(c);
+refreshed.data?.["changed"]
+=> true
+
+c.lines.join("")
+=> Refreshed the git-annex block in .gitignore.
+
+(await stale.read(".gitignore")).includes("!**/tmp-capture/**/*.attach/**/manifest.json")
+=> true
+
+await stale.cleanup();
 ```
