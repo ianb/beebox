@@ -10,7 +10,7 @@ the issue's proposed on-device export/share bundle. The forwarder now also sends
 selected `info` state transitions, evicts routine info before error/warn under
 queue pressure, and the existing browser forwarder receives structured media
 element failure metadata. Design:
-`docs/plans/ios-diagnostic-forwarding-completion.md`.
+`docs/implemented-plans/ios-diagnostic-forwarding-completion.md`.
 
 Give the iOS app a native logging layer (`os.Logger`) whose errors and warnings
 are forwarded to the paired box's existing client debug log

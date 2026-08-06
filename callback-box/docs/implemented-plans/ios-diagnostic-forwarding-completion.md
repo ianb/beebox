@@ -1,6 +1,6 @@
 # iOS diagnostic forwarding completion
 
-**Status:** active — boxholder approved box-hosted logging instead of on-device export
+**Status:** implemented 2026-08 — boxholder approved box-hosted logging instead of on-device export
 
 This plan completes iOS runtime observability through the existing box-owned
 `client-debug.log`. It adds useful state transitions and media failure details
@@ -200,8 +200,8 @@ None. This introduces no box-agent concept or convention.
 3. Add the selected native transition logs.
 4. Improve media failure metadata at existing browser log sites.
 5. Update docs and reconcile the issue.
-6. Run cross-model diff review and final verification. Do not merge without a
-   separate boxholder instruction.
+6. Run cross-model diff review and final verification. The boxholder then
+   approved the merge through the finish workflow.
 
 ## Rollout shape
 
