@@ -3,7 +3,16 @@ title: "Session-log retention is bounded by entry count, not bytes"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Codex review of Track A
+resolution: implemented
 ---
+
+> **Fixed in `9c578c78`** (merged `26f95c78`). Added a generous 32 MiB
+> `MAX_RETAINED_BYTES` co-limit alongside the entry count in `session-retention.ts`:
+> per-entry serialized size is tracked as a running total, tail-mode evicts on
+> whichever limit trips first, page-mode clips at the byte budget (`hasMore` reflects
+> it), the graft window is byte-bounded too, and evicted slots are cleared so large
+> payloads become collectible. Mirrors the sibling turn-buffer byte budget. Doctest
+> + typecheck green.
 
 `parseSessionLog` no longer retains a whole transcript
 (`callback-box/src/cli/lib/session-retention.ts`), which removes the OOM this
