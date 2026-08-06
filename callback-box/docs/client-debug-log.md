@@ -32,23 +32,31 @@ The log file is plain text, one line per entry: `2024-01-15T10:00:00.000Z [error
 
 ## iOS native logging
 
-The native companion app forwards its own `error`/`warn` entries (via `os.Logger` +
-`Services/LogForwarder.swift`) to the same `debugLog.submit` sink, tagged `[ios]` so
-native and web entries are distinguishable in one place:
+The native companion app forwards its own `error`, `warn`, and selected `info`
+entries (via `os.Logger` + `Services/LogForwarder.swift`) to the same
+`debugLog.submit` sink, tagged `[ios]` so native and web entries are
+distinguishable in one place. Info entries cover app scene phase, selected box,
+web-view navigation, speech/response activity, and audio-session role
+transitions; routine info is evicted before failures if the offline queue fills.
 
 ```
 2026-08-03T12:00:04.000Z [error] [ios] capture: upload failed status=500 attempt=2
 ```
 
 A queued entry can flush long after the incident it describes — the app persists
-entries on-device and only flushes when it has network (launch, foreground, or a
-background best-effort attempt), so an offline or killed run's entries land whenever
-the app next gets a chance to send them. Each entry carries its own device-side `at`
+entries on-device and flushes on launch, foreground, two seconds after the first
+new foreground entry in a burst, or a background best-effort attempt. An offline or killed
+run's entries therefore land whenever the app next gets a chance to send them.
+Each entry carries its own device-side `at`
 timestamp for exactly this reason; once `at` drifts more than ~5s from the server's
 receipt time, the log line tags both: `[ios@2026-08-03T09:00:00.000Z]`. Read the
 bracketed time as when the incident actually happened, not the line's leading
 timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 wire contract and `docs/implemented-plans/ios-log-forwarding.md` for the full design.
+
+Browser media failures use the existing console forwarder. Playback diagnostics
+include the operation plus `MediaError.code`, `networkState`, and `readyState`,
+instead of trying to serialize the opaque `Event` passed to `audio.onerror`.
 
 ### In the browser
 
