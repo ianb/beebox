@@ -4,7 +4,11 @@
  */
 
 import { useState } from "react";
-import { invariant } from "@shared/invariant";
+import { assertNever, invariant } from "@shared/invariant";
+import {
+  parseDeliveredUserMessageParts,
+  type DeliveredUserMessagePart,
+} from "@shared/delivered-user-message";
 import { Image } from "../ui/Image";
 import { Pre } from "../ui/Pre";
 import { getApiBase } from "../../api";
@@ -20,8 +24,6 @@ import {
   stripUserDisplayTags,
   type TaskNotification,
 } from "./message-parsing";
-import { parseCaptureWrapper } from "./capture-message";
-import { parseUploadWrapper } from "./upload-message";
 import { CaptureChip } from "./CaptureChip";
 import { UploadChip } from "./UploadChip";
 import { UserMessageText } from "./user-message-text";
@@ -127,6 +129,35 @@ function MessageFileChip({ name }: { name: string }) {
   );
 }
 
+function DeliveredMessagePart({ part }: { part: DeliveredUserMessagePart }) {
+  switch (part.kind) {
+    case "text":
+      if (stripUserDisplayTags(part.text).trim() === "") return null;
+      return (
+        <div className="text-sm whitespace-pre-wrap">
+          <UserMessageText text={part.text} />
+        </div>
+      );
+    case "capture":
+      return <CaptureChip model={part} />;
+    case "upload":
+      return <UploadChip model={part} />;
+    default:
+      return assertNever(part);
+  }
+}
+
+function DeliveredMessageParts({ text }: { text: string }) {
+  const parts = parseDeliveredUserMessageParts(text);
+  return (
+    <>
+      {parts.map((part, index) => (
+        <DeliveredMessagePart key={`${part.kind}-${String(index)}`} part={part} />
+      ))}
+    </>
+  );
+}
+
 /**
  * Render a user entry's content blocks: text blocks go through the normal
  * tag-stripping display, image blocks render as clickable thumbnails. File
@@ -146,24 +177,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
               <Pre key={key} size="xs">{block.text ?? ""}</Pre>
             );
           }
-          // A delivered capture is a `<capture …>` wrapper — render it as a
-          // compact chip linking to the capture document, not as raw markup.
-          const capture = parseCaptureWrapper(block.text ?? "");
-          if (capture) {
-            return <CaptureChip key={key} model={capture} />;
-          }
-          // A delivered bulk batch is an `<upload …>` wrapper — same treatment,
-          // with the boxholder's own introduction rendered as their text rather
-          // than left inside the markup.
-          const upload = parseUploadWrapper(block.text ?? "");
-          if (upload) {
-            return <UploadChip key={key} model={upload} />;
-          }
-          return (
-            <div key={key} className="text-sm whitespace-pre-wrap">
-              <UserMessageText text={block.text ?? ""} />
-            </div>
-          );
+          return <DeliveredMessageParts key={key} text={block.text ?? ""} />;
         }
         if (block.type === "image") {
           const src = imageBlockSrc(block);

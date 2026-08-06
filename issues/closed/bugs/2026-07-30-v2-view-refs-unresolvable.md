@@ -1,12 +1,34 @@
 ---
 title: "View cardRefs are unresolvable on a v2 box (views live outside the box root)"
 area: callback-box
+resolution: implemented
 ---
+
+Fixed in `52a21dd3`. View refs now use the operational box root as their
+resolution base for validation, canonical reporting and repair, and `cb mv`
+rewrites. Legacy card and dossier resolution semantics are unchanged.
 
 On a package-shaped (v2) box, `listBoxViewFiles` returns views from
 `<packageRoot>/src/views/` — which is *outside* the operational box root
 (`<packageRoot>/content/`). Every ref check that resolves "from" a view file
 therefore fails closed:
+
+For example, consider this valid v2 box:
+
+```text
+my-box/
+  content/
+    people/alice.person.card
+  src/views/
+    people.tsx  # contains cardRef="/people/alice.person.card"
+```
+
+The leading `/` makes the ref box-root-absolute, so it correctly names
+`content/people/alice.person.card`. Today, `cb validate` still reports it as
+broken. The resolver starts from `src/views/people.tsx`, but that file is
+outside `content/`, so it rejects the starting path before it can resolve the
+ref. A view with several valid links therefore produces a wall of false
+`Broken reference` warnings, one for every `cardRef`.
 
 - `lintViewRefs` → `resolveRefExists` → `boxRelativeFrom(boxRoot, viewAbsPath)`
   returns `null` (the path starts with `..`), so the ref resolves to nothing and

@@ -45,6 +45,7 @@ import {
 } from "./canonical-refs.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "./list-cards.js";
 import { extractInlineLinks } from "./markdown-lint-rules.js";
+import { resolveRefExists } from "./ref-exists.js";
 import {
   collectCardRefTokens,
   collectViewRefTokens,
@@ -151,7 +152,7 @@ async function canonicalizeTokenFile(
   absPath: string,
   { boxRoot, form }: { boxRoot: string; form: "card" | "view" }
 ): Promise<FileOutcome> {
-  const fromPath = boxRelativeDoc(boxRoot, absPath);
+  const fromPath = form === "view" ? "" : boxRelativeDoc(boxRoot, absPath);
   if (fromPath === null) return NOTHING;
   let text: string;
   try {
@@ -169,7 +170,10 @@ async function canonicalizeTokenFile(
     form === "card"
       ? collectCardRefTokens({ text, skipFencedCode: true })
       : collectViewRefTokens(text);
-  const exists = cardRefProbe({ absPath, boxRoot });
+  const exists =
+    form === "view"
+      ? (ref: string) => resolveRefExists({ ref, fromPath: "", boxRoot })
+      : cardRefProbe({ absPath, boxRoot });
   const sameTarget = new Map<string, string>();
   const repairs = new Map<string, string>();
   let ambiguous = 0;

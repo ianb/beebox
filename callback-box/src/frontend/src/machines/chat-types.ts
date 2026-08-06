@@ -6,6 +6,7 @@
 
 import type {
   SessionEntry,
+  PendingSessionEntry,
   SessionContentBlock,
   ChatImageAttachment,
 } from "../api";
@@ -24,7 +25,7 @@ export type ChatEvent =
   | { type: "STREAM_QUEUED" }
   | { type: "STREAM_ERROR"; error: string }
   | { type: "STREAM_RESULT" }
-  | { type: "STREAM_FAILED"; error: string }
+  | { type: "STREAM_FAILED"; error: string; accepted: boolean }
   // Like STREAM_FAILED but silent (no error banner): the per-turn stream went
   // quiet — typically its connection was dropped while the tab was backgrounded
   // — but the server reports the turn already finished, so recover by refreshing
@@ -55,8 +56,8 @@ export function chatTailSlice(): HistorySlice {
 
 export interface ChatContext {
   messages: SessionEntry[];
-  /** Messages sent while agent was busy — preserved across refreshes until server catches up. */
-  pendingMessages: SessionEntry[];
+  /** Client-created messages preserved across snapshots until server history echoes them. */
+  pendingMessages: PendingSessionEntry[];
   streamText: string;
   streamTools: SessionContentBlock[];
   /** True when tools ran since the last text — the next text block needs a paragraph separator. */

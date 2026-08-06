@@ -9,10 +9,10 @@
  * heterogeneous file dump misdirected into "whatever chat was most active".
  */
 
-import { invariant } from "../../lib/invariant.js";
-import { humanBytes } from "../../lib/human-bytes.js";
 import { loadHistory } from "../chat/session/history.js";
 import type { DeliveryTarget } from "../chat/session/deliver-user-message.js";
+
+export { buildUploadWrapper } from "../../shared/delivered-user-message.js";
 
 /** Raised when a bulk batch's target chat no longer resolves at delivery. Retryable. */
 export class BulkTargetGoneError extends Error {
@@ -20,51 +20,6 @@ export class BulkTargetGoneError extends Error {
     super(`Bulk batch target chat ${targetSessionId} no longer exists`);
     this.name = "BulkTargetGoneError";
   }
-}
-
-/**
- * Build the `<upload …>` chat-message wrapper (a first-class user message
- * pointing at the committed batch card). Pure — the exact string is a
- * chat-vocabulary lock-in, doctested exact.
- *
- * The `failed` attribute is omitted entirely when zero (a clean batch carries
- * no failed marker); `files` counts the received items and `bytes` is the
- * server-computed total.
- *
- * The body is the user's introduction (when they submitted one with the batch),
- * then a blank line, then the batch's one-line summary. A batch with no
- * introduction renders byte-identical to the pre-note form — summary alone.
- * The note is body text, never an attribute: it is free-form user prose that may
- * contain the quotes and newlines the `doc` invariant below exists to reject.
- */
-export function buildUploadWrapper(opts: {
-  /** Box-relative path of the upload-batch card. */
-  docPath: string;
-  fileCount: number;
-  totalBytes: number;
-  failedCount: number;
-  summary: string;
-  /** The user's verbatim introduction, when the batch carried one. */
-  note?: string | undefined;
-}): string {
-  // `doc` is a server-generated path (`<contextDir>/tmp-upload/<slug>/…`); a
-  // double quote or newline in it would break the wrapper's attribute parsing.
-  // These characters can't occur in the generated basename, and a landmark
-  // contextDir carrying one is a broken invariant, not runtime input — fail
-  // loudly rather than emit an unparseable message (parity with buildCaptureWrapper).
-  invariant(
-    !/[\n\r"]/.test(opts.docPath),
-    `Upload doc path contains a quote or newline: ${JSON.stringify(opts.docPath)}`,
-  );
-  const attrs = [
-    `doc="${opts.docPath}"`,
-    `files="${String(opts.fileCount)}"`,
-    `bytes="${humanBytes(opts.totalBytes)}"`,
-  ];
-  if (opts.failedCount > 0) attrs.push(`failed="${String(opts.failedCount)}"`);
-  const note = opts.note?.trim();
-  const body = note !== undefined && note !== "" ? `${note}\n\n${opts.summary.trim()}` : opts.summary.trim();
-  return `<upload ${attrs.join(" ")}>\n${body}\n</upload>`;
 }
 
 /**

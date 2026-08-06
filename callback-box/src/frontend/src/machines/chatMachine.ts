@@ -32,6 +32,7 @@ import {
   appendOtherUserMessage,
   promoteLastToPending,
   applyStreamError,
+  untrackLastSend,
   clearInterrupt,
   sendInterrupt,
 } from "./chat-actions";
@@ -159,22 +160,27 @@ export const chatMachine = setup({
           target: "streaming",
           actions: [
             ({ event }) => logFsm("send-from-idle", { len: event.message.length }),
-            assign(({ context, event }) => ({
-              error: null,
-              interrupting: false,
-              streamText: "",
-              streamTools: [],
-              liveTurnId: event.messageId, // keys the live bubble across finalize
-              messages: [
-                ...context.messages,
-                {
-                  uuid: `user-${Date.now()}`,
-                  type: "user" as const,
-                  timestamp: new Date().toISOString(),
-                  content: buildOptimisticContent(event.message, event.images),
-                },
-              ],
-            })),
+            assign(({ context, event }) => {
+              const entry = {
+                uuid: event.messageId,
+                type: "user" as const,
+                timestamp: new Date().toISOString(),
+                content: buildOptimisticContent(event.message, event.images),
+                reconcileKnownUuids: context.messages.map((message) => message.uuid),
+              };
+              return {
+                error: null,
+                interrupting: false,
+                streamText: "",
+                streamTools: [],
+                liveTurnId: event.messageId, // keys the live bubble across finalize
+                messages: [...context.messages, entry],
+                // SET_MESSAGES is global and can carry a server snapshot taken
+                // before this send. Track the optimistic entry until history
+                // echoes it so reconcilePending cannot erase it mid-turn.
+                pendingMessages: [...context.pendingMessages, entry],
+              };
+            }),
           ],
         },
         DISMISS_ERROR: { actions: assign({ error: null }) },
@@ -252,17 +258,18 @@ export const chatMachine = setup({
         },
         STREAM_BUSY: {
           target: "idle",
-          actions: assign({
-            error: "Agent is busy with another request",
-          }),
+          actions: [
+            assign(untrackLastSend),
+            assign({ error: "Agent is busy with another request" }),
+          ],
         },
         STREAM_QUEUED: {
           target: "idle",
-          // Backend was busy → this message is queued. Promote the just-added
+          // Backend was busy → this message is queued. Promote the active
           // optimistic user message to pending so reconcile keeps it visible
           // (dimmed) until the server has actually processed the queued turn.
-          // Without this, the optimistic message is unprotected by reconcile
-          // and there's no visible signal that work is still pending.
+          // It is already protected by reconcile; promotion adds the visible
+          // queued state and enables the missed-chat-complete recovery poll.
           actions: assign(promoteLastToPending),
         },
         // A user interrupt ends the turn with is_error — suppress that

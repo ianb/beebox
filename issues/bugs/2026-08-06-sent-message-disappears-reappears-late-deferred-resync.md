@@ -1,9 +1,22 @@
 ---
-title: "Sent message disappears then reappears ~20s later (regression: deferred-resync parks the post-send refresh while the tab is hidden)"
+title: "Sent message disappears then reappears ~20s later when an intermediate history snapshot omits it"
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder; got much worse recently
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `4ceb0de6`; send typed, capture,
+> and voice messages during a long turn and confirm each message stays visible
+> through intermediate history updates. Only Ian clears this.
+
+The fix tracks every optimistic send until a new durable history entry echoes that
+specific send. It also preserves distinct repeated messages and messages that the
+server merges from its queue. The state-machine regression tests reproduce the
+clearing `SET_MESSAGES` event and verify that no disappearance gap or duplicate
+entry remains. The work did not capture the live source or frequency of the
+mid-turn `chat-history` events, so the real browser behavior still needs the check
+above.
 
 > **Job to be done:** *When I send a message — a capture, a voice memo, or typed —
 > I want to see it stay put in the conversation. Watching it vanish and only

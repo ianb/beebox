@@ -1,10 +1,11 @@
 # Capture message chip parser
 
-`parseCaptureWrapper` turns a delivered `<capture …>` user message (built by
-`core/capture/deliver.ts` `buildCaptureWrapper`) back into the chip model the
-transcript renders. `captureChipLabel` builds the one-line "Capture — N photos,
-M:SS audio" label. Both are pure — the wrapper string is a chat-vocabulary
-lock-in, so these are asserted against the exact output of `buildCaptureWrapper`.
+`parseCaptureWrapper` is the single-wrapper compatibility helper used by the
+capture dev harness. Production transcript rendering uses the shared ordered-
+parts parser so text can surround the chip. `captureChipLabel` builds the
+one-line "Capture — N photos, M:SS audio" label. Both are pure — the wrapper
+string is a chat-vocabulary lock-in, so these are asserted against the exact
+output of `buildCaptureWrapper`.
 
 ```ts setup
 import { parseCaptureWrapper, captureChipLabel } from "../../src/frontend/src/components/chat/capture-message.js";
@@ -61,7 +62,7 @@ const wrapper = buildCaptureWrapper({
 });
 const model = parseCaptureWrapper(wrapper);
 JSON.stringify([model.audio, captureChipLabel(model)])
-=> ["","Capture — 2 photos"]
+=> ["0:00","Capture — 2 photos"]
 ```
 
 ## Non-capture text is not a capture
@@ -74,12 +75,12 @@ parseCaptureWrapper("<capture images=\"1\">no doc attr</capture>")
 => null
 ```
 
-## Only a message that is ENTIRELY the wrapper renders as a chip (X6)
+## The compatibility helper accepts exactly one wrapper
 
-A real delivered capture is nothing but the wrapper (surrounding whitespace is
-tolerated). Text before or after the block means it's ordinary prose that merely
-mentions `<capture>` — parsing it as a chip would swallow the surrounding text,
-so it returns `null` and renders as plain text.
+The compatibility helper returns one model or `null`, so surrounding whitespace
+is tolerated but surrounding visible text is rejected. The production
+transcript parser does not have this restriction: it returns ordered text and
+capture parts without swallowing either.
 
 ```ts
 const wrapper = buildCaptureWrapper({
@@ -96,11 +97,11 @@ parseCaptureWrapper(wrapper) !== null
 parseCaptureWrapper("\n\n" + wrapper + "\n") !== null
 => true
 
-// Leading prose → not a chip.
+// Leading prose cannot reduce to one compatibility model.
 parseCaptureWrapper("see this: " + wrapper)
 => null
 
-// Trailing prose → not a chip.
+// Neither can trailing prose.
 parseCaptureWrapper(wrapper + " what do you think?")
 => null
 ```
