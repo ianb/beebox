@@ -1,12 +1,9 @@
 ---
 title: "iOS: switching boxes via the web-view boxes menu dead-ends on a stuck screen — box-switching should be native-only"
-needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder on iOS
 ---
-
-> **⏳ Awaiting manual testing** — fix landed in `13584136`; in the iOS app, open the web place menu and its Box panel. Confirm it still names the current box but has no “Other boxes” row. Then switch boxes through the native + menu and confirm the app does not land on a stuck screen. Only Ian clears this.
 
 > **Job to be done:** *When I'm in a box on my phone and I see the boxes menu, I
 > expect it to just show me where I am — not offer to jump to another box and drop
