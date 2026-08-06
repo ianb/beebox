@@ -13,6 +13,7 @@ import {
   renderEntries,
   renderSessionCompact,
 } from "../../../src/core/chat/transcript-render.js";
+import { MAX_SESSION_ENTRIES } from "../../../src/cli/lib/session.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -34,6 +35,18 @@ function agentEntry(uuid: string, text: string) {
     timestamp: "2026-07-28T03:00:01Z",
     content: [{ type: "text" as const, text }],
   };
+}
+
+async function captureWarnings(action: () => Promise<void>): Promise<string[]> {
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); };
+  try {
+    await action();
+  } finally {
+    console.warn = originalWarn;
+  }
+  return warnings;
 }
 ```
 
@@ -121,12 +134,16 @@ function raw(uuid: string, text: string) {
 }
 
 const shortPath = await seed("short", [raw("u1", "hello"), raw("u2", "again")]);
-const shortOut = await renderSessionCompact(shortPath);
+let shortOut = "";
+const shortWarnings = await captureWarnings(async () => { shortOut = await renderSessionCompact(shortPath); });
 shortOut === elideMiddle(shortOut, MAX_RENDERED_CHARS)
 => true
 
 shortOut.includes("elided")
 => false
+
+shortWarnings.length
+=> 0
 ```
 
 ```ts continue
@@ -138,6 +155,23 @@ bigOut.length <= MAX_RENDERED_CHARS + 100
 => true
 
 bigOut.includes("chars of conversation elided")
+=> true
+```
+
+An entry-count cap is a separate limit from character elision. A transcript
+past that cap still renders the same first page, but it now announces the
+degradation instead of silently hiding the later entries.
+
+```ts continue
+const overCapPath = await seed(
+  "over-cap",
+  Array.from({ length: MAX_SESSION_ENTRIES + 1 }, (_, i) => raw(`cap-${i}`, "x")),
+);
+const capWarnings = await captureWarnings(async () => { await renderSessionCompact(overCapPath); });
+capWarnings.length
+=> 1
+
+capWarnings[0]?.includes(`has ${String(MAX_SESSION_ENTRIES + 1)} entries; rendering the first ${String(MAX_SESSION_ENTRIES)}.`)
 => true
 ```
 
