@@ -3,7 +3,21 @@ title: "Chat turn stream never arrives — UI stuck on 'Agent is working…'"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-remove-cb-render — browser-verifying the chat surfaces after removing cb render
+resolution: superseded
 ---
+
+> **Closed 2026-08-06.** Two halves:
+> - **Transport** (the tRPC WebSocket upgrade failing at the router, the actual
+>   cause of the missing stream) is the same root cause as
+>   [dev-router-worktree-websocket-1006](2026-08-02-dev-router-worktree-websocket-1006.md)
+>   — being fixed there (`worktree-router-ws-1006`). No separate transport work here.
+> - **Client resilience** (a lost turn stream hangs the UI on "Agent is working…"
+>   forever instead of timing out / showing a reconnect state) is **deliberately
+>   deferred, not pursued** (boxholder call): a lot of chat live-update work is in
+>   flight — the router WS fix, the sent-message-disappears reconcile, receipt
+>   reconciliation — and the intent is to see how it all settles together before
+>   adding more resilience machinery. If the silent-hang persists after that work
+>   lands, refile.
 
 The chat UI never leaves the streaming state. The agent turn completes normally
 on the server, but no stream event reaches the browser, so the reply never
