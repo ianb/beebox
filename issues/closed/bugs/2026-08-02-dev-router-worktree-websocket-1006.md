@@ -3,7 +3,19 @@ title: "Dev router: tRPC WebSocket upgrade closes 1006; UI shows Disconnected"
 area: bin
 filed-by: agent
 discovered-in: worktree-top-nav-ia — unified app bar browse walk
+resolution: implemented
 ---
+
+Resolved in `e4014a52`. The router upgrade forwarding was not the cause. The
+lazy box hub intentionally returned HTTP 503 when a stopped box received a
+WebSocket upgrade. It does not cold-start boxes from reconnecting sockets,
+because an abandoned tab could otherwise keep a box alive indefinitely.
+
+The old visible-tab keepalive reached only the outer worktree and Vite. It did
+not reach the box-scoped hub path. The fix adds a cheap box-scoped HTTP
+keepalive, awaits it before each development tRPC WebSocket open, and sends it
+periodically while the tab is visible. This preserves the hub's fail-closed
+WebSocket policy and removes the cold-start race.
 
 Browsing a box through the shared dev router
 (`http://localhost:3210/<checkout>/<box>/...`), the tRPC WebSocket never
