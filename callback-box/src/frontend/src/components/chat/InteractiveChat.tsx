@@ -197,7 +197,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView, boxSlug });
   const cardSend = useCompanionCard({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
   const schedules = useChatSchedules({ messages, loaded: !isLoading, isStreaming, send });
-  usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
+  usePendingMessagePoll({ pendingCount: pendingMessages.filter((entry) => entry.pending === true).length, sessionId, send });
   const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, isStreamingState: snapshot.matches("streaming"), sessionId, send });
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
@@ -306,7 +306,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       processRunning={processRunning}
       sessionId={sessionId}
       totalEntries={totalEntries}
-      pendingCount={pendingMessages.length}
+      pendingCount={pendingMessages.filter((entry) => entry.pending === true).length}
       error={error}
       currentUserEmail={currentUser ? currentUser.email : undefined}
       modelMarkers={model.modelMarkers}

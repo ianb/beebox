@@ -25,6 +25,7 @@ transcript.
 ```ts setup
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../src/frontend/src/machines/chatMachine.js";
+import { applyStreamError, promoteLastToPending } from "../../src/frontend/src/machines/chat-actions.js";
 
 const EMPTY = { entries: [], total: 0, sessionId: "s1", running: false, busy: false };
 
@@ -114,4 +115,163 @@ actor.getSnapshot().matches("idle")
 actor.send({ type: "REFRESH" });
 actor.getSnapshot().matches("refreshing")
 => true
+```
+
+## An intermediate server snapshot cannot erase the active optimistic send
+
+`chat-history` is delivered as the global `SET_MESSAGES` event, including
+while the machine is streaming. Its snapshot can predate the active send. The
+optimistic user entry must remain visible until a later snapshot contains its
+durable counterpart; that later reconciliation must replace it exactly once.
+
+```ts
+const oldUser = {
+  uuid: "server-old",
+  type: "user" as const,
+  timestamp: "2026-01-01T00:00:00Z",
+  content: [{ type: "text" as const, text: "<typed>old</typed>" }],
+};
+const durableSend = {
+  uuid: "server-new",
+  type: "user" as const,
+  timestamp: "2026-01-01T00:00:01Z",
+  content: [{ type: "text" as const, text: "<typed>new</typed>" }],
+};
+const actor = createActor(
+  chatMachine.provide({
+    actors: {
+      fetchInitial: fromPromise(async () => ({ ...EMPTY, entries: [oldUser] })),
+      fetchHistory: fromPromise(() => new Promise(() => {})),
+      stream: fromCallback(() => {}),
+    },
+  }),
+  { input: { sessionInput: "s1" } },
+);
+actor.start();
+await Promise.resolve();
+actor.send({ type: "SEND", message: "<typed>new</typed>", messageId: "m-new" });
+
+actor.send({ type: "SET_MESSAGES", messages: [oldUser], sessionId: "s1" });
+JSON.stringify(actor.getSnapshot().context.messages.map((entry) => entry.uuid))
+=> ["server-old","«*»"]
+
+actor.getSnapshot().context.pendingMessages.length
+=> 1
+
+actor.send({ type: "SET_MESSAGES", messages: [oldUser, durableSend], sessionId: "s1" });
+JSON.stringify(actor.getSnapshot().context.messages.map((entry) => entry.uuid))
+=> ["server-old","server-new"]
+
+actor.getSnapshot().context.pendingMessages.length
+=> 0
+```
+
+## Failure and queue promotion target the active emission, not the list tail
+
+A second send can already be queued while the first send's start request is
+still settling. Cleanup and promotion address the first turn by its stable
+emission UUID; they must not mutate the newer queued entry merely because it
+is last.
+
+```ts
+const actor = createActor(
+  chatMachine.provide({
+    actors: {
+      fetchInitial: fromPromise(async () => EMPTY),
+      fetchHistory: fromPromise(() => new Promise(() => {})),
+      stream: fromCallback(() => {}),
+    },
+  }),
+  { input: { sessionInput: "s1" } },
+);
+actor.start();
+await Promise.resolve();
+actor.send({ type: "SEND", message: "<typed>first</typed>", messageId: "m-first" });
+const activeContext = actor.getSnapshot().context;
+const active = activeContext.pendingMessages[0]!;
+const queued = { ...active, uuid: "m-second", pending: true };
+const overlappingContext = {
+  ...activeContext,
+  messages: [...activeContext.messages, queued],
+  pendingMessages: [active, queued],
+};
+
+const failed = applyStreamError({
+  context: overlappingContext,
+  event: { type: "STREAM_FAILED", error: "not accepted", accepted: false },
+});
+JSON.stringify(failed.pendingMessages?.map((entry) => entry.uuid))
+=> ["m-second"]
+
+const promoted = promoteLastToPending({ context: overlappingContext });
+JSON.stringify(promoted.messages?.map((entry) => [entry.uuid, entry.pending === true]))
+=> [["m-first",true],["m-second",true]]
+
+promoted.pendingMessages?.length
+=> 2
+```
+
+## A busy response promotes the already-tracked send to queued
+
+Ordinary sends are tracked without queued styling. If the backend reports that
+the turn was queued, `STREAM_QUEUED` promotes that same entry rather than
+adding a second reconciliation record.
+
+```ts
+const actor = createActor(
+  chatMachine.provide({
+    actors: {
+      fetchInitial: fromPromise(async () => EMPTY),
+      fetchHistory: fromPromise(() => new Promise(() => {})),
+      stream: fromCallback(() => {}),
+    },
+  }),
+  { input: { sessionInput: "s1" } },
+);
+actor.start();
+await Promise.resolve();
+actor.send({ type: "SEND", message: "<typed>queued</typed>", messageId: "m-queued" });
+actor.getSnapshot().context.pendingMessages[0]?.pending === true
+=> false
+
+actor.send({ type: "STREAM_QUEUED" });
+actor.getSnapshot().context.pendingMessages.length
+=> 1
+
+actor.getSnapshot().context.pendingMessages[0]?.pending
+=> true
+```
+
+## A send rejected before acceptance is not protected forever
+
+`STREAM_FAILED accepted=false` means no durable entry can ever arrive. The
+refresh may remove that optimistic bubble instead of re-appending a permanent,
+undimmed ghost after every future snapshot.
+
+```ts
+const actor = createActor(
+  chatMachine.provide({
+    actors: {
+      fetchInitial: fromPromise(async () => EMPTY),
+      fetchHistory: fromPromise(async () => EMPTY),
+      stream: fromCallback(() => {}),
+    },
+  }),
+  { input: { sessionInput: "s1" } },
+);
+actor.start();
+await Promise.resolve();
+actor.send({ type: "SEND", message: "<typed>rejected</typed>", messageId: "m-rejected" });
+actor.send({ type: "STREAM_FAILED", error: "not accepted", accepted: false });
+await Promise.resolve();
+await Promise.resolve();
+
+actor.getSnapshot().matches("idle")
+=> true
+
+actor.getSnapshot().context.messages.length
+=> 0
+
+actor.getSnapshot().context.pendingMessages.length
+=> 0
 ```

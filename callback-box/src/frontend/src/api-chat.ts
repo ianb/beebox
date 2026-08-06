@@ -71,11 +71,21 @@ export interface SessionEntry {
   /**
    * Client-only flag: this entry was queued because the agent was busy
    * and hasn't yet been confirmed by the server as delivered. Rendered
-   * with a "sending" indicator. Cleared when the server history catches
-   * up (see reconcilePending in chatMachine).
+   * with a "sending" indicator. The client entry is replaced when server
+   * history catches up (see reconcilePending in chatMachine).
    */
   pending?: boolean;
+  /**
+   * Client-only UUID baseline captured when an optimistic entry is created.
+   * Reconciliation only treats server entries absent from this baseline as a
+   * possible durable echo, so an older identical message cannot confirm a new
+   * send. Kept on the entry so later snapshots retain the original baseline.
+   */
+  reconcileKnownUuids?: string[];
 }
+
+/** A client-created entry tracked until authoritative history echoes it. */
+export type PendingSessionEntry = SessionEntry & { reconcileKnownUuids: string[] };
 
 export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
   return trpcClient.chat.status.query({ session: params.sessionId ?? undefined });

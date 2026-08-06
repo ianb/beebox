@@ -294,7 +294,10 @@ export const streamActor = fromCallback(
           return;
         }
         if (!result.turnId) {
-          terminal({ type: "STREAM_FAILED", error: "Send returned no turn id" });
+          // The route contract always returns exactly one of turnId, queued,
+          // or deduplicated. An empty outcome is a rejected/malformed start,
+          // not an accepted turn whose optimistic entry needs protection.
+          terminal({ type: "STREAM_FAILED", error: "Send returned no turn id", accepted: false });
           return;
         }
 
@@ -317,7 +320,7 @@ export const streamActor = fromCallback(
                 // box's client-debug.log — this path once surfaced a tRPC
                 // protocol error in the banner with no trace in any log.
                 console.error(`[chat] turn stream error frame: ${frame.error}`);
-                terminal({ type: "STREAM_FAILED", error: frame.error });
+                terminal({ type: "STREAM_FAILED", error: frame.error, accepted: true });
                 return;
               }
               handleTurnMessage(frame.msg, { sessionInput: input.sessionInput, sendBack, terminal, state });
@@ -325,14 +328,14 @@ export const streamActor = fromCallback(
             onError: (err: { message: string }) => {
               console.error(`[chat] turn stream subscription failed: ${err.message}`);
               logFsm("stream-throw", { msg: err.message, msgCount });
-              if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message });
+              if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message, accepted: true });
             },
             onComplete: () => {
               // The subscription ended without a terminal (turn closed without a
               // result frame) — fall back to a history refresh.
               if (!terminalFired) {
                 logFsm("stream-eof-no-terminal", { msgCount });
-                sendBack({ type: "STREAM_FAILED", error: "Stream ended without result" });
+                sendBack({ type: "STREAM_FAILED", error: "Stream ended without result", accepted: true });
               }
             },
           },
@@ -345,7 +348,7 @@ export const streamActor = fromCallback(
         console.error(`[chat] send failed: ${msg}`);
         logFsm("stream-throw", { msg, msgCount });
         settleReceipt({ disposition: "rejected", emissionId: input.messageId, reason: msg });
-        sendBack({ type: "STREAM_FAILED", error: msg });
+        sendBack({ type: "STREAM_FAILED", error: msg, accepted: false });
       });
 
     return () => {
