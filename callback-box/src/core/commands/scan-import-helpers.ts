@@ -12,6 +12,9 @@
 
 import { invariant } from "../../lib/invariant.js";
 import { sleep } from "../../lib/sleep.js";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import Sharp from "sharp";
 import {
   type RawScanAnalysis,
   type ScanPageAnalysis,
@@ -92,6 +95,43 @@ export interface RunScanBatchesResult {
 }
 
 /**
+ * Re-encode every archived page once before batch planning: honor EXIF
+ * orientation, bound the long edge, and emit JPEG. The originals remain in
+ * the archive for card emission; only these scratch files cross the service
+ * boundary to Claude or Gemini.
+ */
+async function normalizeScanImages(
+  imagePaths: string[],
+): Promise<{ imagePaths: string[]; tempDir: string | null }> {
+  const firstPath = imagePaths[0];
+  if (firstPath === undefined) return { imagePaths: [], tempDir: null };
+
+  const tempDir = await fs.mkdtemp(path.join(path.dirname(firstPath), ".scan-normalized-"));
+  try {
+    const normalizedPaths: string[] = [];
+    for (const [index, imagePath] of imagePaths.entries()) {
+      const outputPath = path.join(tempDir, `page-${String(index + 1).padStart(3, "0")}.jpg`);
+      const buffer = await Sharp(imagePath)
+        .rotate()
+        .resize({
+          width: 2000,
+          height: 2000,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 88 })
+        .toBuffer();
+      await fs.writeFile(outputPath, buffer);
+      normalizedPaths.push(outputPath);
+    }
+    return { imagePaths: normalizedPaths, tempDir };
+  } catch (error) {
+    await fs.rm(tempDir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+/**
  * Run all batches with sliding overlap. Retry policy (per
  * `docs/plans/scan-vision-claude.md`): `transient` errors get up to 3
  * attempts with exponential backoff, then the batch fails; `split` errors
@@ -105,6 +145,17 @@ export interface RunScanBatchesResult {
  * before storing.
  */
 export async function runScanBatches(args: RunScanBatchesArgs): Promise<RunScanBatchesResult> {
+  const normalized = await normalizeScanImages(args.imagePaths);
+  try {
+    return await runNormalizedScanBatches({ ...args, imagePaths: normalized.imagePaths });
+  } finally {
+    if (normalized.tempDir !== null) {
+      await fs.rm(normalized.tempDir, { recursive: true, force: true });
+    }
+  }
+}
+
+async function runNormalizedScanBatches(args: RunScanBatchesArgs): Promise<RunScanBatchesResult> {
   const { vision, imagePaths } = args;
   const batchSize = args.batchSize ?? vision.batchSize;
   const log = args.log ?? (() => {});

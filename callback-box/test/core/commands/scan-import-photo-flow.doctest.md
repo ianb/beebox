@@ -12,18 +12,22 @@ import { createCollectorContext } from "../../../src/core/commands/index.js";
 import { parseCardText } from "../../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../../src/schemas/registry.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { writeFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import Sharp from "sharp";
 
 const schemas = await createCardSchemaMap();
 
 // Seed page files OUTSIDE the box (originals stay untouched; the flow
-// archives copies). The fake never decodes them, so any bytes do.
+// archives copies). The shared runner decodes and normalizes them before the
+// fake backend sees them, so these are small but real JPEGs.
 async function seedPages(box, count) {
   const paths = [];
   for (let i = 0; i < count; i++) {
     const p = join(box.packageRoot, `page-${i}.jpg`);
-    await writeFile(p, `fake jpeg ${i}`);
+    await Sharp({
+      create: { width: 32, height: 24, channels: 3, background: { r: i * 20, g: 40, b: 80 } },
+    }).jpeg().toFile(p);
     paths.push(p);
   }
   return paths;
