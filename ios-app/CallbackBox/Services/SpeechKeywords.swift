@@ -2,6 +2,7 @@ import Foundation
 
 enum SpeechKeywordAction: String, Codable, Sendable {
     case send
+    case sendHq
     case sendClose
     case cancel
     case micOff
@@ -69,6 +70,11 @@ private struct InputMatch {
 /// owns native dictation, but the persisted chat text is still read by the same
 /// box-side prompt/display code as web voice input, so drift here is user-visible.
 enum SpeechKeywords {
+    private static let sendHqPatterns = [
+        ["clean", "up", "and", "send"],
+        ["send", "and", "clean", "up"],
+    ].flatMap(expand)
+
     private static let sendClosePatterns = [
         ["send", "and", "close"],
         ["send", "and", "stop"],
@@ -115,6 +121,9 @@ enum SpeechKeywords {
         if let match = firstMatch(patterns: sendClosePatterns, words: words, atStart: atStart) {
             return result(action: .sendClose, match: match)
         }
+        if let match = firstMatch(patterns: sendHqPatterns, words: words, atStart: atStart) {
+            return result(action: .sendHq, match: match)
+        }
         if let match = firstMatch(patterns: micOffPatterns, words: words, atStart: atStart) {
             return result(action: .micOff, match: match)
         }
@@ -158,6 +167,8 @@ enum SpeechKeywords {
     private static func tagName(for action: SpeechKeywordAction) -> String {
         switch action {
         case .send:
+            "send-message"
+        case .sendHq:
             "send-message"
         case .sendClose:
             "send-close-message"
@@ -286,8 +297,12 @@ enum NativeVoiceKeywordSendPlan: Equatable {
     case live(text: String)
     case hq
 
-    static func make(liveTranscript: String, narrationEnabled: Bool) -> NativeVoiceKeywordSendPlan {
-        narrationEnabled ? .hq : .live(text: liveTranscript)
+    static func make(
+        liveTranscript: String,
+        action: SpeechKeywordAction,
+        narrationEnabled: Bool
+    ) -> NativeVoiceKeywordSendPlan {
+        narrationEnabled || action == .sendHq ? .hq : .live(text: liveTranscript)
     }
 }
 

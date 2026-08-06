@@ -3,7 +3,12 @@ title: "Voice keyword that finishes the message AND runs an HQ-transcription fix
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder
+resolution: implemented
 ---
+
+Implemented in `62ac30ff`. The web and native iOS voice paths now recognize
+`clean up and send` and `send and clean up`, hold the frozen current message for
+HQ transcription, and send the realtime transcript if HQ transcription fails.
 
 > **Job to be done:** *When I've dictated a message and the live on-device
 > transcription came out rough (names, jargon, a garbled clause), I want to say one

@@ -7,6 +7,14 @@ const sendPattern = KeywordPattern.compile(`
   send now
 `);
 
+// Deliberate HQ fixup: unlike plain send, this asks the caller to hold the
+// message for the high-quality transcription pass before committing it. Both
+// word orders are explicit enough to avoid ordinary-speech false positives.
+const sendHqPattern = KeywordPattern.compile(`
+  clean up and send
+  send and clean up
+`);
+
 // "Send and close": send the message, then close the mic and leave it closed
 // (the deliberate "I'm done, take it from here" sign-off), in contrast to plain
 // `send`, which restarts the mic for a continuous conversation. Checked FIRST in
@@ -39,7 +47,7 @@ const erasePattern = KeywordPattern.compile(`
   start over
 `);
 
-export type KeywordAction = "send" | "sendClose" | "cancel" | "micOff" | "erase";
+export type KeywordAction = "send" | "sendHq" | "sendClose" | "cancel" | "micOff" | "erase";
 
 export interface KeywordResult {
   action: KeywordAction;
@@ -59,6 +67,8 @@ export interface DetectKeywordOptions {
 
 const ACTION_TAG_NAMES: Record<KeywordAction, string> = {
   send: "send-message",
+  // HQ is preparation for a normal send, not a distinct agent-side command.
+  sendHq: "send-message",
   sendClose: "send-close-message",
   cancel: "cancel-message",
   micOff: "mic-off",
@@ -112,6 +122,9 @@ export function detectKeyword(
   // mic`). Both of those should send-and-close, not just send / just mute.
   const sendCloseMatch = tryMatch(sendClosePattern);
   if (sendCloseMatch) return asResult("sendClose", sendCloseMatch);
+
+  const sendHqMatch = tryMatch(sendHqPattern);
+  if (sendHqMatch) return asResult("sendHq", sendHqMatch);
 
   const micOffMatch = tryMatch(micOffPattern);
   if (micOffMatch) return asResult("micOff", micOffMatch);
