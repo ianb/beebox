@@ -1,6 +1,6 @@
 # Invite links and self-service password change
 
-**Status:** Proposed. Revised after cross-model review; awaiting boxholder approval.
+**Status:** Implemented 2026-08-06 after boxholder approval and cross-model review.
 
 This plan adds the complete no-password-sharing lifecycle for member accounts.
 An owner can invite one person to one box. The invitee chooses their own
@@ -20,8 +20,8 @@ Google OAuth remains an optional login method for the same email identity.
 
 ## Issues addressed
 
-- `issues/features/2026-07-20-invite-links.md`
-- `issues/features/2026-07-20-web-password-change.md`
+- `issues/closed/features/2026-07-20-invite-links.md`
+- `issues/closed/features/2026-07-20-web-password-change.md`
 
 The stale empty-allowlist copy recorded in
 `docs/reports/user-stories-audit-2026-06-26.md:325-329` is corrected because the
@@ -438,10 +438,9 @@ operator-visible persistence problem, not an authentication rollback.
 - A general cross-file transaction coordinator. Safe ordering and explicit
   partial recovery cover this feature's two stores.
 
-## Open design questions
+## Approved design choices
 
-None inside the recommendation. Boxholder approval is requested for these
-settled choices:
+The boxholder approved these settled choices before implementation:
 
 - first release is Admin-only;
 - minting requires an initialized matching local owner;
@@ -451,8 +450,6 @@ settled choices:
 - TTL is fixed at 15 minutes;
 - password change is a raw cookie-renewing auth route;
 - listing/revocation and Google-only password bootstrap are deferred.
-
-Implementation must not start until the boxholder approves these choices.
 
 ## Knowledge audits
 
@@ -498,9 +495,24 @@ deterministic red doctest and lands only with its focused checks green.
 - **Rollback.** Removing invite/password surfaces leaves created users and ACLs
   as ordinary valid state. Existing CLI recovery remains. Leave the unused invite
   store in place; never delete it automatically.
-- **Ship boundary.** After implementation review, move both source issues and
-  this plan to their closed/implemented locations. Merge/deploy only on separate
-  boxholder instruction.
+- **Ship boundary.** Both source issues and this plan moved to their
+  closed/implemented locations after implementation review. Merge/deploy remains
+  a separate boxholder instruction.
+
+## Implementation evidence
+
+- Seven implementation commits cover the capability store, canonical identity
+  and ACL writes, acceptance, owner/password UI, operations, and security-review
+  hardening.
+- Focused route and service doctests cover minting, pinned and open acceptance,
+  expiry/replay, collisions, throttling, partial storage failures, password
+  rotation, OAuth identity, hub propagation, and sanitized HTTP errors.
+- The final full run passed 6,368 assertions in 475 suites with zero failures.
+- Backend and frontend typechecks, lint, documentation checks, and the repository
+  commit hooks passed.
+- Desktop and mobile signed-out/loading states were checked in a real browser.
+  A signed-in owner mint and successful acceptance remain useful post-merge
+  smoke tests because the isolated browser had no owner credentials.
 
 ## Cross-model review disposition
 
