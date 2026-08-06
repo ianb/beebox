@@ -1,6 +1,7 @@
 /** Public invite inspection and acceptance routes. */
 
 import * as crypto from "node:crypto";
+import * as path from "node:path";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { BoxSpec } from "../server-types.js";
@@ -55,7 +56,7 @@ async function readFields(request: FastifyRequest): Promise<z.infer<typeof invit
 }
 
 function targetBox(boxes: BoxSpec[], invite: AuthInvite): BoxSpec | null {
-  return boxes.find((box) => box.boxRoot === invite.boxRoot) ?? null;
+  return boxes.find((box) => path.resolve(box.boxRoot) === path.resolve(invite.boxRoot)) ?? null;
 }
 
 async function openEmailIsClaimable(options: { boxes: BoxSpec[]; email: string }): Promise<boolean> {
@@ -111,14 +112,18 @@ async function acceptInvite(options: {
     return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
   }
   const box = targetBox(boxes, inspected.invite);
-  if (!box) return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
+  if (!box) {
+    console.warn(`[auth-invite] valid invite names an unregistered box root: ${inspected.invite.boxRoot}`);
+    return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
+  }
   const email = canonicalizeEmail(inspected.invite.email ?? fields.email ?? "");
   const claimable = inspected.invite.email
     ? email !== getOwnerEmail() && !listUsers().some((user) => user.email === email)
     : await openEmailIsClaimable({ boxes, email });
   if (!email.includes("@") || !claimable) {
     loginThrottle.recordFailure({ ip: request.ip, email: initialKey, now });
-    return genericFailure({ reply, prefix, token: fields.token });
+    await consumeAuthInvite({ token: fields.token });
+    return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
   }
   const emailDecision = loginThrottle.check({ ip: request.ip, email, now });
   if (!emailDecision.allowed || !loginThrottle.acquireHashSlot()) {
@@ -161,6 +166,19 @@ async function acceptInvite(options: {
   }
 }
 
+async function acceptInviteSafely(options: {
+  boxes: BoxSpec[];
+  request: FastifyRequest;
+  reply: FastifyReply;
+}): Promise<FastifyReply> {
+  try {
+    return await acceptInvite(options);
+  } catch (error) {
+    console.error("[auth-invite] acceptance failed closed:", error);
+    return storeUnavailable(options.reply);
+  }
+}
+
 export async function registerAuthInviteRoutes(server: FastifyInstance, boxes: BoxSpec[]): Promise<void> {
   server.get<{ Querystring: { token?: string; error?: string } }>("/auth/invite", async (request, reply) => {
     const token = request.query.token ?? "";
@@ -185,5 +203,5 @@ export async function registerAuthInviteRoutes(server: FastifyInstance, boxes: B
         }),
       );
   });
-  server.post("/auth/invite", async (request, reply) => acceptInvite({ boxes, request, reply }));
+  server.post("/auth/invite", async (request, reply) => acceptInviteSafely({ boxes, request, reply }));
 }

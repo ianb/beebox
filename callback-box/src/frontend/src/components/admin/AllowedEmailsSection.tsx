@@ -16,6 +16,8 @@ export function AllowedEmailsSection() {
   const [error, setError] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [pendingExistingEmail, setPendingExistingEmail] = useState<string | null>(null);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -52,15 +54,31 @@ export function AllowedEmailsSection() {
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const email = newEmail.trim().toLowerCase();
     if (!email || !email.includes("@")) return;
     if (emails.includes(email)) {
       setNewEmail("");
       return;
     }
+    if (pendingExistingEmail !== email) {
+      setChecking(true);
+      try {
+        const status = await trpcClient.admin.localAccountStatus.query({ email });
+        if (status.exists) {
+          setPendingExistingEmail(email);
+          return;
+        }
+      } catch (err) {
+        setError(errorMessage(err));
+        return;
+      } finally {
+        setChecking(false);
+      }
+    }
     const updated = [...emails, email];
     setNewEmail("");
+    setPendingExistingEmail(null);
     // saveEmails catches its own errors into `error` state.
     void saveEmails(updated);
   };
@@ -120,21 +138,31 @@ export function AllowedEmailsSection() {
           hideLabel
           type="email"
           value={newEmail}
-          onChange={setNewEmail}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+          onChange={(value) => {
+            setNewEmail(value);
+            setPendingExistingEmail(null);
+          }}
+          onKeyDown={(e) => { if (e.key === "Enter") void handleAdd(); }}
           placeholder="user@example.com"
           className="flex-1"
         />
         <Button
           intent="primary"
-          onClick={handleAdd}
+          onClick={() => void handleAdd()}
           disabled={!newEmail.trim().includes("@")}
-          loading={saving}
-          loadingLabel="Saving…"
+          loading={saving || checking}
+          loadingLabel={checking ? "Checking…" : "Saving…"}
         >
           Add
         </Button>
       </div>
+
+      {pendingExistingEmail ? (
+        <div className="mt-3 p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
+          A local password account already exists for {pendingExistingEmail}. Adding it grants that existing account
+          access; click Add again to confirm.
+        </div>
+      ) : null}
 
       {error ? (
         <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">

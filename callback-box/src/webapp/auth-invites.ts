@@ -144,7 +144,7 @@ export async function mintAuthInvite(options: {
   const token = crypto.randomBytes(TOKEN_BYTES).toString("base64url");
   const record: InviteRecord = {
     tokenHash: hashToken(token),
-    boxRoot: options.boxRoot,
+    boxRoot: path.resolve(options.boxRoot),
     ...(options.email === undefined ? {} : { email: canonicalizeEmail(options.email) }),
     createdBy: canonicalizeEmail(options.createdBy),
     createdAt: now,

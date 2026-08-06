@@ -9,10 +9,10 @@ the change, and returns both fields.
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { simpleGit } from "simple-git";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createFirstUser } from "../../src/webapp/local-users.js";
+import { addUser, createFirstUser } from "../../src/webapp/local-users.js";
 
 // Owner context (ownerProcedure requires ctx.isOwner).
 function caller(boxRoot, user = { email: "owner@example.com", name: "Owner" }) {
@@ -54,6 +54,28 @@ const openResult = await caller(inviteBox.root, null).admin.createInvite({}).the
 );
 openResult
 => UNAUTHORIZED
+```
+
+The owner can detect when an allowlist addition would grant an already-created
+local account, including an identity previously claimed through an open invite.
+
+```ts continue
+await addUser({ email: "claimed@example.com", name: "Claimed", password: "claimed-password", role: "member" });
+JSON.stringify(await caller(inviteBox.root).admin.localAccountStatus({ email: " Claimed@Example.COM " }))
+=> {"exists":true}
+```
+
+A corrupt capability store is a typed, generic precondition failure on the
+owner surface; its filesystem path is not exposed in the error message.
+
+```ts continue
+await writeFile(`${process.env.CB_AUTH_FILE}.invites.json`, "not json", { mode: 0o600 });
+const unavailableInvite = await caller(inviteBox.root).admin.createInvite({}).then(
+  () => ({ code: "none", message: "" }),
+  (error) => ({ code: error.code, message: error.message }),
+);
+JSON.stringify(unavailableInvite)
+=> {"code":"PRECONDITION_FAILED","message":"The invite store is unavailable."}
 ```
 
 ```ts cleanup
@@ -109,4 +131,29 @@ const err = await caller(box.root).admin.updateBoxConfig({}).then(() => "none", 
 print(err);
 =>
 BAD_REQUEST
+```
+
+## A Git failure does not falsely report that the saved config rolled back
+
+```ts
+const noGitBox = await makeTmpBox();
+const originalConsoleError = console.error;
+const commitErrors = [];
+console.error = (...args) => commitErrors.push(args);
+const degraded = await caller(noGitBox.root).admin.updateBoxConfig({
+  allowedEmails: ["member@example.com"],
+});
+console.error = originalConsoleError;
+const savedWithoutGit = JSON.parse(await noGitBox.read("config/box.json"));
+JSON.stringify({
+  success: degraded.success,
+  warning: degraded.commitWarning,
+  saved: savedWithoutGit.allowedEmails,
+  logged: commitErrors.length,
+})
+=> {"success":true,"warning":"Saved, but the Git commit failed.","saved":["member@example.com"],"logged":1}
+```
+
+```ts cleanup
+await noGitBox.cleanup();
 ```

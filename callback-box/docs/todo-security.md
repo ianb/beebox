@@ -42,7 +42,10 @@ Residual, accepted for now:
 - **Open invites do not verify email ownership.** Anyone holding an open invite
   may enter any otherwise-unclaimed email. This is an explicit bearer-link
   tradeoff: pin the invite when the recipient email is known, and transmit all
-  invite URLs through a trusted channel.
+  invite URLs through a trusted channel. Claiming an email also pre-positions
+  that account for any access the owner later grants to the same email; the
+  Admin allowlist checks for an existing local account and requires a second
+  confirmation click before making that later grant.
 - **Cross-process lock lease-steal.** `src/lib/file-lock.ts` is backed by
   `proper-lockfile` (atomic guard-dir `mkdir` + a 5-min staleness lease). Like
   every lease-based lock, a holder suspended past the lease (>5 min) can have

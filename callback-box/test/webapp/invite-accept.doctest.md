@@ -36,7 +36,7 @@ process.env.CB_OWNER_EMAIL = "Owner@Example.COM";
 await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
 const ctx = await makeTestServer({ openAccess: false });
 const minted = await mintAuthInvite({
-  boxRoot: ctx.boxRoot,
+  boxRoot: `${ctx.boxRoot}/`,
   createdBy: "owner@example.com",
   email: "Member@Example.COM",
 });
@@ -77,6 +77,34 @@ replay.statusCode
 => 410
 ```
 
+Credential-store failures during account creation are sanitized and fail
+closed without leaking the store path or burning through Fastify's default
+error response.
+
+```ts continue
+const authFailureInvite = await mintAuthInvite({ boxRoot: ctx.boxRoot, createdBy: "owner@example.com" });
+await writeFile(process.env.CB_AUTH_FILE, "not json", { mode: 0o600 });
+loginThrottle.reset();
+const originalConsoleError = console.error;
+const acceptanceErrors = [];
+console.error = (...args) => acceptanceErrors.push(args);
+const corruptAuth = await ctx.server.inject(inviteForm({
+  token: authFailureInvite.token,
+  email: "second@example.com",
+  name: "Second",
+  password: "member-password",
+  confirmPassword: "member-password",
+}));
+console.error = originalConsoleError;
+JSON.stringify({
+  status: corruptAuth.statusCode,
+  leaksPath: corruptAuth.payload.includes(process.env.CB_AUTH_FILE),
+  leaksCorruption: corruptAuth.payload.includes("corrupt"),
+  logged: acceptanceErrors.length,
+})
+=> {"status":503,"leaksPath":false,"leaksCorruption":false,"logged":1}
+```
+
 A corrupt capability store fails closed with an unavailable response rather
 than exposing a generic server error or treating the token as valid.
 
@@ -87,9 +115,67 @@ corruptStore.statusCode
 => 503
 ```
 
+```ts continue
+loginThrottle.reset();
+const corruptPost = await ctx.server.inject(inviteForm({
+  token: minted.token,
+  name: "Member",
+  password: "member-password",
+  confirmPassword: "member-password",
+}));
+JSON.stringify({
+  status: corruptPost.statusCode,
+  leaksPath: corruptPost.payload.includes(process.env.CB_AUTH_FILE),
+  leaksCorruption: corruptPost.payload.includes("corrupt"),
+})
+=> {"status":503,"leaksPath":false,"leaksCorruption":false}
+```
+
 ```ts cleanup
 await ctx.cleanup();
 await rm(authDir, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
+delete process.env.CB_OWNER_EMAIL;
+loginThrottle.reset();
+```
+
+## A box-config failure leaves an explicit, signed-out partial account
+
+```ts
+const partialAuthDir = await mkdtemp(join(tmpdir(), "cb-invite-partial-"));
+process.env.CB_AUTH_FILE = join(partialAuthDir, "auth.json");
+process.env.CB_OWNER_EMAIL = "owner@example.com";
+await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
+const partialCtx = await makeTestServer({ openAccess: false });
+await partialCtx.seed("config/box.json", "not json");
+const partialInvite = await mintAuthInvite({
+  boxRoot: partialCtx.boxRoot,
+  createdBy: "owner@example.com",
+  email: "partial@example.com",
+});
+const originalPartialError = console.error;
+const partialErrors = [];
+console.error = (...args) => partialErrors.push(args);
+const partial = await partialCtx.server.inject(inviteForm({
+  token: partialInvite.token,
+  name: "Partial",
+  password: "partial-password",
+  confirmPassword: "partial-password",
+}));
+console.error = originalPartialError;
+JSON.stringify({
+  status: partial.statusCode,
+  namesEmail: partial.payload.includes("partial@example.com"),
+  cookie: partial.headers["set-cookie"] ?? null,
+  account: listUsers().some((user) => user.email === "partial@example.com"),
+  logged: partialErrors.length,
+})
+=> {"status":503,"namesEmail":true,"cookie":null,"account":true,"logged":1}
+```
+
+```ts cleanup
+await partialCtx.cleanup();
+await rm(partialAuthDir, { recursive: true, force: true });
 delete process.env.CB_AUTH_FILE;
 delete process.env.CB_OWNER_EMAIL;
 loginThrottle.reset();
@@ -114,23 +200,40 @@ const ownerClaim = await ctx2.server.inject(inviteForm({
   confirmPassword: "attacker-password",
 }));
 ownerClaim.statusCode
-=> 400
+=> 410
 ```
 
-The collision failure does not consume the capability, but another privileged
-identity is rejected identically.
+The collision burns the capability, so it cannot be reused to probe another
+address or claim a valid one.
 
 ```ts continue
 loginThrottle.reset();
-const allowlistedClaim = await ctx2.server.inject(inviteForm({
+const reuseAfterCollision = await ctx2.server.inject(inviteForm({
   token: openOwner.token,
+  email: "new-member@example.com",
+  name: "Not owner",
+  password: "attacker-password",
+  confirmPassword: "attacker-password",
+}));
+reuseAfterCollision.statusCode
+=> 410
+```
+
+A separate capability rejects an already-authorized identity with the same
+dead-link response and is likewise consumed.
+
+```ts continue
+loginThrottle.reset();
+const openAllowlisted = await mintAuthInvite({ boxRoot: ctx2.boxRoot, createdBy: "owner@example.com" });
+const allowlistedClaim = await ctx2.server.inject(inviteForm({
+  token: openAllowlisted.token,
   email: "googleonly@example.com",
   name: "Not Google user",
   password: "attacker-password",
   confirmPassword: "attacker-password",
 }));
 allowlistedClaim.statusCode
-=> 400
+=> 410
 
 listUsers().length
 => 1

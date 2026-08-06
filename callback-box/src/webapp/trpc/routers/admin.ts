@@ -15,7 +15,7 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
-import { canonicalizeEmail, getLocalOwnerEmail } from "../../local-users.js";
+import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
 
 /**
@@ -173,6 +173,13 @@ export const adminRouter = router({
     };
   }),
 
+  localAccountStatus: ownerProcedure
+    .input(z.object({ email: z.string().max(254) }))
+    .query(({ input }) => {
+      const email = canonicalizeEmail(input.email);
+      return { exists: getLocalUser(email) !== null };
+    }),
+
   gmailConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
     let config: z.infer<typeof gmailConfigSchema>;
@@ -249,10 +256,13 @@ export const adminRouter = router({
         ...(input.allowedEmails === undefined ? {} : { allowedEmails: input.allowedEmails }),
         ...(input.googleServices === undefined ? {} : { googleServices: input.googleServices }),
       });
-      if (result.commitError) throw result.commitError;
+      if (result.commitError) {
+        console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
+      }
       const saved = boxConfigSchema.parse(result.config);
       return {
         success: true,
+        commitWarning: result.commitError === null ? null : "Saved, but the Git commit failed.",
         allowedEmails: saved.allowedEmails,
         googleServices: saved.googleServices,
       };

@@ -72,6 +72,7 @@ import {
 import { invariant } from "../lib/invariant.js";
 import type { HubVerdict } from "./hub-health.js";
 import { registerHealthRoutes } from "./hub-health-routes.js";
+import { registerHubErrorHandler } from "./hub-http-error.js";
 
 export interface HubHealth {
   /** Derived in `cli/commands/hub.ts` via `hubVerdict()` — `"unhealthy"`
@@ -309,6 +310,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // instance so the hub's own routes (box picker, /api/boxes) consult a
   // per-instance flag instead of the environment. No CLI path sets it.
   app.decorate("openAccess", openAccess);
+
+  registerHubErrorHandler(app);
 
   // The hub's login routes (routes/auth.ts) read the session cookie via
   // @fastify/cookie's request decoration, same as a standalone box server.

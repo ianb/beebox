@@ -26,6 +26,7 @@ export function renderInvitePage(options: {
     : "";
   const body =
     "<h1>Create your account</h1>" +
+    '<p class="hint">If you are already signed in, accepting this invite replaces that browser session with the new member account.</p>' +
     error +
     `<form method="POST" action="${escapeHtml(`${options.prefix}/auth/invite`)}">` +
     `<input type="hidden" name="token" value="${escapeHtml(options.token)}">` +

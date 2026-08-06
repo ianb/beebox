@@ -2,7 +2,7 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { mintAuthInvite } from "../../auth-invites.js";
+import { AuthInviteCapacityError, AuthInviteStoreError, mintAuthInvite } from "../../auth-invites.js";
 import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
 import { ownerProcedure } from "../trpc.js";
 
@@ -30,11 +30,22 @@ export const inviteAdminProcedures = {
           throw new TRPCError({ code: "CONFLICT", message: "That email cannot be invited." });
         }
       }
-      const invite = await mintAuthInvite({
-        boxRoot: ctx.boxRoot,
-        createdBy: currentEmail,
-        ...(email === undefined ? {} : { email }),
-      });
+      let invite;
+      try {
+        invite = await mintAuthInvite({
+          boxRoot: ctx.boxRoot,
+          createdBy: currentEmail,
+          ...(email === undefined ? {} : { email }),
+        });
+      } catch (error) {
+        if (error instanceof AuthInviteCapacityError) {
+          throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many live invites; wait for one to expire." });
+        }
+        if (error instanceof AuthInviteStoreError) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "The invite store is unavailable." });
+        }
+        throw error;
+      }
       return {
         invitePath: `/auth/invite?token=${encodeURIComponent(invite.token)}`,
         expiresAt: invite.expiresAt,
