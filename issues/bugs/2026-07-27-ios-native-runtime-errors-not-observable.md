@@ -31,3 +31,11 @@ capture upload/acquisition, bulk photo batch, chat API degradations, webview
 process death and navigation failures. Still open from this issue's scope: a
 user-facing on-device export/share of a diagnostic bundle, and timestamped app
 state transitions beyond failure sites.
+
+**Design decision 2026-08-06:** the boxholder does not want a separate
+on-device bundle or share workflow. The box and its logs are the same privacy
+space. Complete this issue by regularly uploading selected state transitions
+and useful browser media failure metadata through the existing forwarder. Do
+not add a second journal, export renderer, share sheet, or export-specific
+scrubbing. Active design:
+`../../callback-box/docs/plans/ios-diagnostic-forwarding-completion.md`.

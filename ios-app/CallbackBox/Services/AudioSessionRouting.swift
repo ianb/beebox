@@ -1,5 +1,4 @@
 import AVFoundation
-import os
 
 /// What the app is doing with audio right now.
 ///
@@ -7,7 +6,7 @@ import os
 /// two configurations and one owner for them. Design and the AVFoundation
 /// citations behind every option below:
 /// `callback-box/docs/plans/ios-audio-session-routing.md`.
-enum AudioSessionRole {
+enum AudioSessionRole: String {
     /// Nothing is recording. Playback (earcons, voice memos, web audio) is the
     /// only client.
     case idle
@@ -95,15 +94,22 @@ protocol AudioSessionControlling {
 }
 
 struct SystemAudioSession: AudioSessionControlling {
-    private static let log = Logger(subsystem: "app.callbackbox.ios", category: "audio")
-
     func activateRecording() throws {
         let session = AVAudioSession.sharedInstance()
-        try apply(role: .recording, to: session)
-        // No `.notifyOthersOnDeactivation` here: it is "only valid on session
-        // deactivation" (AVAudioSessionTypes.h:658-660). Both original call
-        // sites passed it on activation.
-        try session.setActive(true)
+        do {
+            try apply(role: .recording, to: session)
+            // No `.notifyOthersOnDeactivation` here: it is "only valid on session
+            // deactivation" (AVAudioSessionTypes.h:658-660). Both original call
+            // sites passed it on activation.
+            try session.setActive(true)
+            BoxLog.info("audio session role=recording", category: .audio)
+        } catch {
+            BoxLog.error(
+                "audio session activation failed: \(error.localizedDescription)",
+                category: .audio
+            )
+            throw error
+        }
     }
 
     func deactivate() {
@@ -115,8 +121,9 @@ struct SystemAudioSession: AudioSessionControlling {
         do {
             try session.setActive(false, options: .notifyOthersOnDeactivation)
         } catch {
-            Self.log.error(
-                "Audio session deactivation failed: \(error.localizedDescription, privacy: .public)"
+            BoxLog.error(
+                "audio session deactivation failed: \(error.localizedDescription)",
+                category: .audio
             )
         }
         prepareIdle()
@@ -125,12 +132,14 @@ struct SystemAudioSession: AudioSessionControlling {
     func prepareIdle() {
         do {
             try apply(role: .idle, to: AVAudioSession.sharedInstance())
+            BoxLog.info("audio session role=idle", category: .audio)
         } catch {
             // Leaves the previous category installed, which after a recording
             // means quiet, speaker-bound playback — the defect this file
             // exists to prevent. Loud enough to find in a device log.
-            Self.log.error(
-                "Idle audio configuration failed: \(error.localizedDescription, privacy: .public)"
+            BoxLog.error(
+                "idle audio configuration failed: \(error.localizedDescription)",
+                category: .audio
             )
         }
     }

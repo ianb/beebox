@@ -10,10 +10,12 @@ enum BoxLogCategory: String, Codable, CaseIterable, Sendable {
     case pairing
     case composer
     case webview
+    case lifecycle
+    case audio
 }
 
 /// Native logging facade: unified logging always, plus forwarding to the paired
-/// box's `client-debug.log` for `error` and `warn`.
+/// box's `client-debug.log` for all three levels.
 ///
 /// **Message discipline — metadata only.** A forwarded message leaves the
 /// device, so it may carry only what a diagnosis needs: session/item ids,
@@ -37,8 +39,6 @@ enum BoxLogCategory: String, Codable, CaseIterable, Sendable {
 ///   that tier directly, because those are exactly the failures a suspension or
 ///   crash would otherwise erase.
 ///
-/// `info` is on-device only; it is never forwarded (mirroring the web
-/// forwarder's always-forward-error/warn, never-forward-info split).
 enum BoxLog {
     static func error(_ message: String, category: BoxLogCategory) {
         logger(for: category).error("\(message, privacy: .public)")
@@ -52,6 +52,22 @@ enum BoxLog {
 
     static func info(_ message: String, category: BoxLogCategory) {
         logger(for: category).info("\(message, privacy: .public)")
+        forward(.info, message: message, category: category)
+    }
+
+    /// Fire-and-forget an info line for a known box. UI callbacks already carry
+    /// this identity, so preserve it instead of resolving the selected box
+    /// later when the actor happens to service the task.
+    static func info(_ message: String, category: BoxLogCategory, targetBoxID: UUID) {
+        logger(for: category).info("\(message, privacy: .public)")
+        Task {
+            await LogForwarder.shared.record(
+                level: .info,
+                category: category,
+                message: message,
+                boxID: targetBoxID
+            )
+        }
     }
 
     static func logger(for category: BoxLogCategory) -> Logger {
