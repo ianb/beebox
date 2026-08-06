@@ -1,9 +1,13 @@
 ---
-title: "iOS uploads float-format WAV to HQ transcription — decoder tolerance unverified"
+title: "iOS Float32 WAV is accepted by HQ transcription providers"
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+resolution: wontfix
 ---
+
+Closed after live verification on 2026-08-06. Every selectable HQ transcription path accepted a
+48 kHz mono IEEE Float32 WAV and returned the expected speech. No format conversion is needed.
 
 `SpeechDictation` (`ios-app/CallbackBox/`) writes the dictation WAV using the microphone's native
 input format (`inputNode.outputFormat`), which is typically 32-bit float PCM, and uploads it to
@@ -51,13 +55,20 @@ Provider documentation gives these results:
   uploaded `File`. Neither page lists supported containers, PCM encodings, or sample widths. The docs
   therefore do not establish float-PCM WAV support.
 
-This issue cannot close from documentation alone. OpenAI and Mistral need an end-to-end tiebreaker:
-send a short, known-speech IEEE-float WAV through the same provider calls and require a non-empty,
-correct transcript. For Voxtral, also verify that the diarized call returns usable text. This was not
-run because it requires real provider credentials and billable external requests.
+### Live verification
+
+The tiebreaker used a 3.32-second, 48 kHz mono WAV whose source bit depth was Float32. The spoken
+phrase was "The callback box float wave test says cedar lantern seven."
+
+- The repository's `transcribeAudioHq` client returned the expected non-empty phrase from all three
+  OpenAI choices: `whisper`, `whisper-llm`, and `whisper-llm-mini`.
+- Mistral `voxtral-mini-latest` returned the expected non-empty phrase from the same file.
+- The Voxtral diarized request also returned the phrase, one segment, and a `speaker_1` label.
+
+These calls exercised both OpenAI request shapes and both Voxtral request shapes used by the HQ
+dispatch. Deepgram is not an HQ option, and its documentation explicitly covers Float32 WAV.
 
 A provider rejection is not silent: the box returns HTTP 500, and iOS shows "HQ transcription
 failed; sending live dictation." A provider that returns HTTP 200 with empty or garbled text can still
-degrade silently. If either live check fails, normalize the recording to 16-bit linear PCM WAV on iOS
-before upload. That makes the wire format deterministic and is preferable to relying on undocumented
-provider decoder behavior.
+degrade silently. The live checks returned usable text in every HQ mode, so no iOS-side format
+conversion is needed.
