@@ -37,6 +37,9 @@ import {
 import { findAttachScopes } from "../../lib/attach-scopes.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { gitignoreIgnoresAssets } from "../commands/attachments-gitignore.js";
+import { checkAnnexSmudgeHooks } from "./smudge-hooks.js";
+
+export { ANNEX_SMUDGE_LINE } from "./smudge-hooks.js";
 
 /** What a single check concluded. */
 export type AnnexCheckStatus =
@@ -84,15 +87,15 @@ export const ANNEX_PRECOMMIT_LINE = "git annex pre-commit";
  * which is exactly what this check exists to catch. So: the line must be
  * uncommented.
  */
-function invokesAnnexPreCommit(hook: string): boolean {
+function invokesAnnexCommand(hook: string, command: string): boolean {
   return hook
     .split("\n")
-    .some((line) => !line.trimStart().startsWith("#") && line.includes(ANNEX_PRECOMMIT_LINE));
+    .some((line) => !line.trimStart().startsWith("#") && line.includes(command));
 }
 
-async function readHook(repoRoot: string): Promise<string | null> {
+async function readHook(repoRoot: string, hookName: string): Promise<string | null> {
   try {
-    return await fs.readFile(path.join(repoRoot, ".git", "hooks", "pre-commit"), "utf-8");
+    return await fs.readFile(path.join(repoRoot, ".git", "hooks", hookName), "utf-8");
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;
     throw e;
@@ -407,12 +410,17 @@ export async function runAnnexDoctor(
     checks.push({ id: "journal", status: "ok", message: "git-annex journal is flushed" });
   }
 
-  // 10. The pre-commit hook actually invokes annex. `git annex init` declines
+  // 10. Checkout and merge must refresh unlocked annex content. These hooks
+  //     belong solely to git-annex, unlike the composite hooks cb manages, so
+  //     replacing a missing or foreign one is both narrow and deterministic.
+  checks.push({ id: "smudge-hooks", ...(await checkAnnexSmudgeHooks(repoRoot, readOnly)) });
+
+  // 11. The pre-commit hook actually invokes annex. `git annex init` declines
   //    to install its own hook when one already exists, and `cb init` leaves a
   //    foreign hook untouched — so integration cannot be inferred from either
   //    having run.
-  const hook = await readHook(repoRoot);
-  if (hook !== null && invokesAnnexPreCommit(hook)) {
+  const hook = await readHook(repoRoot, "pre-commit");
+  if (hook !== null && invokesAnnexCommand(hook, ANNEX_PRECOMMIT_LINE)) {
     checks.push({ id: "hook", status: "ok", message: "pre-commit hook invokes git annex pre-commit" });
   } else {
     checks.push({
