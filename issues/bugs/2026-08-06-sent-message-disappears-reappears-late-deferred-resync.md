@@ -1,9 +1,22 @@
 ---
-title: "Sent message disappears then reappears ~20s later (regression: deferred-resync parks the post-send refresh while the tab is hidden)"
+title: "Sent message disappears then reappears ~20s later when an intermediate history snapshot omits it"
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder; got much worse recently
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `4ceb0de6`; send typed, capture,
+> and voice messages during a long turn and confirm each message stays visible
+> through intermediate history updates. Only Ian clears this.
+
+The fix tracks every optimistic send until a new durable history entry echoes that
+specific send. It also preserves distinct repeated messages and messages that the
+server merges from its queue. The state-machine regression tests reproduce the
+clearing `SET_MESSAGES` event and verify that no disappearance gap or duplicate
+entry remains. The work did not capture the live source or frequency of the
+mid-turn `chat-history` events, so the real browser behavior still needs the check
+above.
 
 > **Job to be done:** *When I send a message — a capture, a voice memo, or typed —
 > I want to see it stay put in the conversation. Watching it vanish and only
@@ -68,3 +81,31 @@ reactive background refetch still is. Reproduce the disappear before fixing.
 - `add0c339` / `546310cb` — the OOM/refetch-storm fixes this regressed out of.
 - `components/chat/CLAUDE.md` — the streaming→finalize "streamText survives until
   history lands" invariant the deferral breaks.
+
+## Correction (2026-08-06) — the deferred-resync hypothesis is likely WRONG
+
+Boxholder reports it happens **a lot and WITHOUT any tab change** — so the tab is
+visible throughout, which rules out the `useDeferredResync` visibility-*park* as the
+cause. And on inspection the post-turn refreshes don't go through the deferred/gated
+path at all:
+
+- `chat-complete` → **direct** `send({ type: "REFRESH" })` (`InteractiveChat-ws.ts:216`).
+- server-injected `<capture>`/`<upload>` (`userMessage.user === null`) → **direct**
+  `send({ type: "REFRESH" })` (`:231`).
+- only the **reconnect** path (`onConnect` → `notifyReconnect(triggerRefresh)`) is
+  deferred/gated, and `PROMPT_SUBSCRIPTION_MS` is **5000ms**, not ~20s.
+
+So the delay is not a deferred refresh. The likelier shape: the optimistic/pending
+message shows on send, then an **intermediate `SET_MESSAGES`/`REFRESH`** (a mid-turn
+`chat-history` event, or a reconnect-driven REFRESH) lands *server* history that does
+**not yet contain the just-sent message** — and `reconcilePending`
+(`machines/chatMachine.ts`, the guard added at ~:262 to "keep the optimistic message
+visible") **fails to protect it**, so it disappears. It reappears when `chat-complete`
+fires at turn end (~20s ≈ the turn duration) and its REFRESH lands the durable entry.
+
+Corrected fix direction: make the optimistic/pending message **survive any
+`SET_MESSAGES`/`REFRESH` until its OWN durable entry is present** — i.e. fix
+`reconcilePending` to keep an un-echoed pending message rather than dropping it when
+an intermediate server-history snapshot omits it. Then no intermediate refresh (from
+any source) can open a disappear-gap, regardless of timing. Confirm the exact clearing
+event by instrumentation before fixing (cb-debug).

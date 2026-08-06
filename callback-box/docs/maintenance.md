@@ -15,7 +15,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Agent SDK release monitor | `bin/update-agent-sdk-scheduled.sh` | Automated (launchd, daily) | Filtered release ledger in root `docs/agent-sdk-notes.md` |
 | Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated after the settling window; manual anytime | Bumped `package.json` + lockfile |
 | Docling currency watch | `pnpm check-docling-update` (monorepo root) | Automated (rides the SDK-update launchd job); manual anytime | Console (silent when nothing to report) |
-| Manual test suite | `bin/manual-tests-scheduled.sh` | Automated (launchd, weekly) | `~/Library/Logs/callback-box-manual-tests.log`; notification on failure |
+| Manual test suite | `bin/manual-tests-scheduled.sh` | Automated (launchd, weekly) | `logs/manual-tests/latest.log`; local issue + notification on failure |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Prompt viewer | `pnpm prompt-viewer` | After prompt or schema-instruction changes | `dev/prompts/data.json` + size ledger (browse at `/<worktree>/dev/prompts/`) |
@@ -99,14 +99,29 @@ document and diff the output. See
 Runs the small explicit allowlist of executable tests that are unsuitable for
 every `pnpm test` invocation. The current set includes a real Claude SDK/API
 check and a filesystem deadline check with a fixed wall-clock delay. Human-only
-`.manual.md` checklists are not part of this command.
+`.manual.md` checklists are not part of this command. The weekly runner first
+executes its own fake-command integration check; that check is also excluded
+from every default suite.
 
 `bin/manual-tests-scheduled.sh --install`, run once from the main checkout,
 registers the Sunday 11:17 local-time launchd job. Each run records its exact
-Git commit and branch in `~/Library/Logs/callback-box-manual-tests.log` and
-raises a macOS notification on runner or test failure. Enrollment is explicit:
-adding a file under `test/manual/` does not schedule it until its path is added
-to the `test:manual` package script.
+Git commit and branch in a separate gitignored file under
+`logs/manual-tests/`; `latest.log` points to the newest run. A constrained
+Sonnet agent reviews every result. It reads the log and source, diagnoses
+failures, and creates or appends to the best matching open issue. A clean run
+normally changes nothing, but the agent can append recovery evidence to a
+relevant open issue. The agent can only edit open `issues/` Markdown files: it
+cannot run commands, edit code, commit, push, fix defects, close issues, or read
+private issue data. Private-issue tool paths are denied as an additional guard.
+Its changes remain uncommitted for human review. Before triage, the runner saves
+a local snapshot of every open issue. An existing issue passes validation only
+when the agent appended to its exact prior contents; the snapshot is also the
+recovery copy if validation fails. Every scheduled run makes one Sonnet triage
+call with a $2 maximum budget, in addition to any API use inside the manual
+tests themselves. Failures and issue changes raise a macOS notification that
+points to the agent-selected issue and exact run log.
+Enrollment is explicit: adding a file under `test/manual/` does not schedule it
+until its path is added to the `test:manual` package script.
 
 ### Knowledge audits — `npm run knowledge-audit`
 

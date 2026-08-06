@@ -1,11 +1,11 @@
 import Foundation
 import os
 
-/// The levels that are forwarded. `info` never reaches the queue, so it has no
-/// case here; the box's `debugLog.submit` accepts a wider enum for the web.
+/// The levels the native app forwards to the box's `debugLog.submit` sink.
 enum BoxLogLevel: String, Codable, Sendable {
     case error
     case warn
+    case info
 }
 
 /// One queued log line. The `id` is what makes acknowledgement safe: actors are
@@ -51,7 +51,7 @@ struct URLSessionLogTransport: LogTransport {
     }
 }
 
-/// Persisted, bounded queue of native error/warn lines, flushed to each paired
+/// Persisted, bounded queue of native diagnostic lines, flushed to each paired
 /// box's `debugLog.submit`.
 ///
 /// Persistence is the guarantee; the network flush is opportunistic. Every
@@ -364,10 +364,9 @@ actor LogForwarder {
     }
 
     private func scheduleFlush() {
-        guard isActive else {
+        guard isActive, debounceTask == nil else {
             return
         }
-        debounceTask?.cancel()
         debounceTask = Task { [weak self] in
             guard let self else {
                 return
@@ -377,6 +376,9 @@ actor LogForwarder {
     }
 
     private func debouncedFlush() async {
+        defer {
+            debounceTask = nil
+        }
         do {
             try await sleep(Self.debounceNanoseconds)
         } catch {
@@ -404,20 +406,37 @@ actor LogForwarder {
             guard excess > 0 else {
                 continue
             }
-            let evictable = indices.filter { protected.contains(entries[$0].id) == false }
-            drop(indices: Set(evictable.prefix(excess)), counting: &dropped)
+            drop(
+                indices: prioritizedEvictions(from: indices, protected: protected, count: excess),
+                counting: &dropped
+            )
         }
 
         let realIndices = entries.indices.filter { entries[$0].droppedCount == nil }
         let globalExcess = realIndices.count - Self.globalLimit
         if globalExcess > 0 {
-            let evictable = realIndices.filter { protected.contains(entries[$0].id) == false }
-            drop(indices: Set(evictable.prefix(globalExcess)), counting: &dropped)
+            drop(
+                indices: prioritizedEvictions(from: realIndices, protected: protected, count: globalExcess),
+                counting: &dropped
+            )
         }
 
         for (boxID, count) in dropped.sorted(by: { $0.key.uuidString < $1.key.uuidString }) {
             noteDrops(count, boxID: boxID)
         }
+    }
+
+    /// Routine info transitions are the first eviction tier. They provide
+    /// context for failures and must not replace those failures under pressure.
+    private func prioritizedEvictions(
+        from indices: [Int],
+        protected: Set<UUID>,
+        count: Int
+    ) -> Set<Int> {
+        let evictable = indices.filter { protected.contains(entries[$0].id) == false }
+        let info = evictable.filter { entries[$0].level == .info }
+        let failures = evictable.filter { entries[$0].level != .info }
+        return Set((info + failures).prefix(count))
     }
 
     private func drop(indices: Set<Int>, counting dropped: inout [UUID: Int]) {

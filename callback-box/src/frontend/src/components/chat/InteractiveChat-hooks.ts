@@ -349,44 +349,6 @@ export function usePendingMessagePoll(opts: {
 }
 
 /**
- * Poll status every 5s while the agent is busy with no live stream attached —
- * the reloaded-mid-turn case. That "processing" indicator is otherwise a
- * one-time `busy` snapshot taken at load, cleared only by a pushed
- * chat-complete event; if that event is missed (and the event bus never
- * reconnects to re-fire its onConnect REFRESH), the indicator sticks after the
- * turn has actually finished. Polling actively reconfirms the turn is still
- * running, and dispatches a single REFRESH the moment the server reports it
- * done — pulling the completed response just like chat-complete would.
- *
- * Only `/status` is hit while busy (cheap, no state transition, so the throbber
- * doesn't flicker); REFRESH fires once, on completion. Skipped during a live
- * stream / in-flight refresh (`isStreaming`) — the SSE turn reports its own
- * completion there.
- */
-export function useProcessingStatusPoll(opts: {
-  processBusy: boolean;
-  isStreaming: boolean;
-  sessionId: string | null;
-  send: (event: ChatEvent) => void;
-}) {
-  const { processBusy, isStreaming, sessionId, send } = opts;
-  useEffect(() => {
-    if (!processBusy || isStreaming || !sessionId) return;
-    const poll = () => {
-      getChatStatus({ sessionId })
-        .then((status) => {
-          if (!status.busy) send({ type: "REFRESH" });
-        })
-        .catch((e: unknown) => {
-          console.warn(`[chatfsm] processing-status poll failed: ${e instanceof Error ? e.message : String(e)}`);
-        });
-    };
-    const id = setInterval(poll, 5000);
-    return () => clearInterval(id);
-  }, [processBusy, isStreaming, sessionId, send]);
-}
-
-/**
  * Recover a stalled stream when the tab is brought back to the foreground.
  *
  * The per-turn POST stream can have its connection dropped while the tab is
@@ -429,4 +391,3 @@ export function useChatStallRecovery(opts: {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [send]);
 }
-

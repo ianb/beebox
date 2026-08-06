@@ -57,6 +57,8 @@ interface ChatBodyProps {
   streamText: string;
   streamTools: SessionContentBlock[];
   processBusy: boolean;
+  /** Confirmed display state; raw processBusy still owns queue affordances. */
+  showAgentWorking: boolean;
   processRunning: boolean;
   sessionId: string | null;
   totalEntries: number;
@@ -268,7 +270,7 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
+  const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
   const {
     handleAddSelection,
@@ -325,9 +327,9 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             onCancelSchedule={schedules.handleCancelSchedule}
           />
           <TargetStrip
-            status={chatTargetStatus({ isStreaming, processBusy })}
+            status={chatTargetStatus({ isStreaming: showAgentWorking, processBusy: false })}
             pendingCount={pendingCount}
-            isStreaming={isStreaming}
+            isStreaming={showAgentWorking}
             onInterrupt={actions.handleInterrupt}
             speechPlaying={voice.speechPlayback.isPlaying}
             onStopSpeech={voice.handleStopSpeech}

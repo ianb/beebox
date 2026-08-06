@@ -14,7 +14,7 @@
  */
 
 import { query, type SDKUserMessage, type SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
-import Sharp from "sharp";
+import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { MODEL_ID } from "../shared/model-ids.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
@@ -35,11 +35,6 @@ import {
   type ScanVisionResult,
   type ScanVisionService,
 } from "./scan-vision.js";
-
-/** Long-edge bound + JPEG quality for normalized pages — the exact recipe the
- *  model-comparison `prepared/` images used. */
-const NORMALIZE_LONG_EDGE = 2000;
-const NORMALIZE_QUALITY = 88;
 
 const MAX_TURNS = 8;
 
@@ -209,22 +204,6 @@ export function foldSlotsIntoReviewFlags(page: ClaudeScanAnalysis): RawScanAnaly
   };
 }
 
-/** Re-encode a page for the model: honor EXIF orientation, bound the long
- *  edge, emit JPEG. Makes TIFF and 8–10 MB phone originals legal and cheap. */
-async function normalizeScanImage(imagePath: string): Promise<string> {
-  const buffer = await Sharp(imagePath)
-    .rotate()
-    .resize({
-      width: NORMALIZE_LONG_EDGE,
-      height: NORMALIZE_LONG_EDGE,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .jpeg({ quality: NORMALIZE_QUALITY })
-    .toBuffer();
-  return buffer.toString("base64");
-}
-
 function toBatchUsage(result: SDKResultMessage): BatchUsage {
   const usage = result.usage;
   return {
@@ -250,7 +229,7 @@ export function createClaudeScanVision({ boxRoot }: { boxRoot: string }): ScanVi
     async analyzeBatch(args): Promise<ScanVisionResult> {
       const images = [];
       for (const imagePath of args.imagePaths) {
-        images.push(await normalizeScanImage(imagePath));
+        images.push((await fs.readFile(imagePath)).toString("base64"));
       }
       const text = buildScanPrompt(args.boxholderContext) + "\n" + CLAUDE_SCAN_NOTE;
 

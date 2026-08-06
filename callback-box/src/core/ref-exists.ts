@@ -24,7 +24,7 @@ import { errnoCode } from "../lib/error-guards.js";
 interface RefExistsInput {
   /** The raw ref string as written in the card. */
   ref: string;
-  /** Absolute path of the card the ref was written in. */
+  /** Absolute path of the card the ref was written in, or `""` for the box root. */
   fromPath: string;
   /** Absolute box root, used to resolve box-root-absolute (`/…`) refs. */
   boxRoot: string;
@@ -39,7 +39,7 @@ interface RefExistsInput {
  * is dropped: it addresses a location *within* the target, not a different file.
  */
 export function resolveRefToPath(input: RefExistsInput): string | null {
-  const fromPath = boxRelativeFrom(input.boxRoot, input.fromPath);
+  const fromPath = input.fromPath === "" ? "" : boxRelativeFrom(input.boxRoot, input.fromPath);
   if (fromPath === null) return null;
   const resolved = resolveRefPath({ fromPath, ref: parseRef(input.ref).path, kind: "card" });
   return resolved === null ? null : resolve(input.boxRoot, resolved);

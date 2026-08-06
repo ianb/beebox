@@ -570,6 +570,12 @@ See §1.3 (full request/response/errors).
   `message` is capped at 4000 chars server-side; iOS enforces the identical cap client-side before
   persisting, so a conforming client's batch can never 400 for size. Up to 100 entries per batch.
   Auth: `Authorization: Bearer <device token>` like every other native call (§2).
+- **Native level policy:** iOS sends `error`, `warn`, and selected `info`
+  transitions. Its offline queue evicts the oldest info entry before an
+  error/warn entry at both per-box and global bounds. Info currently covers app
+  scene phase, selected box, web-view navigation, speech/response activity, and
+  audio-session role. This is behavior within the existing wire enum; no request
+  field changed.
 - **Response 200:** the tRPC HTTP-RPC envelope `{"result":{"data":{"ok":true}}}` — the procedure
   returns `{ ok: true }`, but the raw bytes a native client reads are wrapped (the native side only
   checks the status code, so it never unwraps this). A 2xx means the batch is **durably written** — the route's file

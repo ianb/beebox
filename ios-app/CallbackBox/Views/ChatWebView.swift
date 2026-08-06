@@ -153,6 +153,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onScreenshotResult = onScreenshotResult
         context.coordinator.onComposerCommand = onComposerCommand
         context.coordinator.onComposerCommandAcknowledgementDelivered = onComposerCommandAcknowledgementDelivered
+        context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
         context.coordinator.locationShareRequest = locationShareRequest
@@ -169,6 +170,7 @@ struct ChatWebView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
+            boxID: box.id,
             allowedOrigin: Self.origin(from: box.baseURL),
             onSessionChange: onSessionChange,
             onEmissionDeliveryAttempt: onEmissionDeliveryAttempt,
@@ -185,6 +187,7 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
+        var boxID: PairedBox.ID
         var allowedOrigin: String?
         var onSessionChange: (String?) -> Void
         var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
@@ -211,12 +214,16 @@ struct ChatWebView: UIViewRepresentable {
         /// One log line per transition into navigation failure; cleared by the
         /// next successful load.
         private var navigationFailureLogged = false
+        /// Start is latched through offline retries and cleared only by a
+        /// successful load, matching the failure latch below.
+        private var navigationStartLogged = false
         private let receiptTimeoutDelay: TimeInterval
         private let evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)?
         private let openExternalURL: (URL) -> Void
         private let loadInCurrentContext: (WKWebView, URLRequest) -> Void
 
         init(
+            boxID: PairedBox.ID,
             allowedOrigin: String?,
             onSessionChange: @escaping (String?) -> Void,
             onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void,
@@ -237,6 +244,7 @@ struct ChatWebView: UIViewRepresentable {
                 webView.load(request)
             }
         ) {
+            self.boxID = boxID
             self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
             self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
@@ -259,6 +267,8 @@ struct ChatWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             pageLoaded = true
             navigationFailureLogged = false
+            navigationStartLogged = false
+            BoxLog.info("chat navigation finished", category: .webview, targetBoxID: boxID)
             onSessionChange(ChatWebView.visibleSessionID(from: webView.url))
             deliver(pendingEmissions, to: webView)
             deliverLocationRequest(to: webView)
@@ -268,6 +278,10 @@ struct ChatWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             pageLoaded = false
+            if navigationStartLogged == false {
+                navigationStartLogged = true
+                BoxLog.info("chat navigation started", category: .webview, targetBoxID: boxID)
+            }
             inflightEmissionIDs.removeAll()
             receiptTimeouts.values.forEach { $0.cancel() }
             receiptTimeouts.removeAll()

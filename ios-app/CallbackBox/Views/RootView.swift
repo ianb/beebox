@@ -68,6 +68,13 @@ struct RootView: View {
             PairBoxView()
         }
         .onChange(of: store.selectedBox?.id) { _, newBoxID in
+            if let newBoxID {
+                BoxLog.info(
+                    "selected box id=\(newBoxID.uuidString)",
+                    category: .lifecycle,
+                    targetBoxID: newBoxID
+                )
+            }
             resignProtectedFirstResponder()
             boxLockManager.relock()
             visibleChatBoxID = newBoxID
@@ -91,6 +98,13 @@ struct RootView: View {
             await pendingEmissionStore.activate(boxID: boxID)
         }
         .onChange(of: scenePhase) { _, phase in
+            if let boxID = store.selectedBox?.id {
+                BoxLog.info(
+                    "scene phase=\(scenePhaseName(phase))",
+                    category: .lifecycle,
+                    targetBoxID: boxID
+                )
+            }
             if phase == .active {
                 Task {
                     await LogForwarder.shared.setActive(true)
@@ -164,9 +178,23 @@ struct RootView: View {
                 narrationEnabled = enabled
             },
             onSpeechPlaybackStateChange: { playing in
+                if speechPlaybackActive != playing {
+                    BoxLog.info(
+                        "speech playback active=\(playing)",
+                        category: .audio,
+                        targetBoxID: box.id
+                    )
+                }
                 speechPlaybackActive = playing
             },
             onResponseStateChange: { active in
+                if responseActive != active {
+                    BoxLog.info(
+                        "response active=\(active)",
+                        category: .lifecycle,
+                        targetBoxID: box.id
+                    )
+                }
                 responseActive = active
             },
             onScreenshotResult: { result in
@@ -219,6 +247,19 @@ struct RootView: View {
         case .rejection(let acknowledgement):
             composerCommandAcknowledgements.removeAll { $0.id == acknowledgement.id }
             composerCommandAcknowledgements.append(acknowledgement)
+        }
+    }
+
+    private func scenePhaseName(_ phase: ScenePhase) -> String {
+        switch phase {
+        case .active:
+            "active"
+        case .inactive:
+            "inactive"
+        case .background:
+            "background"
+        @unknown default:
+            "unknown"
         }
     }
 }

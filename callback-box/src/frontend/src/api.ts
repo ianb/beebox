@@ -27,6 +27,7 @@ export type {
   ChatImageAttachment,
   ChatSessionInfo,
   HqTranscriptionResult,
+  PendingSessionEntry,
   SessionContentBlock,
   SessionEntry,
 } from "./api-chat";
@@ -54,4 +55,3 @@ export interface HistoryCommit {
   trailers?: Record<string, string | string[]>;
   fileStat?: { added: number; modified: number; deleted: number; renamed: number; insertions: number; deletions: number };
 }
-

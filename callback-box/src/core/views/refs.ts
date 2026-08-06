@@ -12,8 +12,9 @@
  * Only literal quoted attributes are tracked; an expression form
  * (`cardRef={expr}`) is unresolvable statically and is skipped, not flagged.
  * Targeting the specific `cardRef` attribute (not a bare `ref=`) avoids matching
- * ordinary JSX DOM refs. View refs are resolved relative to the view file's
- * directory, so authors should write box-absolute refs (`/store/…`).
+ * ordinary JSX DOM refs. A view has no document-relative base inside the box,
+ * so its refs resolve from the box root. Authors should write box-absolute refs
+ * (`/store/…`).
  */
 
 import { promises as fs } from "node:fs";
@@ -63,7 +64,7 @@ export async function lintViewRefs(viewAbsPath: string, boxRoot: string): Promis
   for (const { path: refPath, ref } of extractViewRefs(source)) {
     const qIdx = ref.indexOf("?");
     const refPathOnly = qIdx === -1 ? ref : ref.slice(0, qIdx);
-    const exists = await resolveRefExists({ ref: refPathOnly, fromPath: viewAbsPath, boxRoot });
+    const exists = await resolveRefExists({ ref: refPathOnly, fromPath: "", boxRoot });
     if (!exists) {
       warnings.push(`Broken reference at ${refPath}: ${ref} does not exist`);
     }
