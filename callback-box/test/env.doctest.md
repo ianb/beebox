@@ -108,6 +108,6 @@ keeping it in the base schema is what lets a validated hub pass the same path
 to its children.
 
 ```ts
-loadEnv(cliEnvSchema, { CB_AUTH_FILE: "/srv/callback/auth.json" }).CB_AUTH_FILE
+JSON.stringify(loadEnv(cliEnvSchema, { CB_AUTH_FILE: "/srv/callback/auth.json" }).CB_AUTH_FILE)
 => "/srv/callback/auth.json"
 ```
