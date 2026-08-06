@@ -122,6 +122,6 @@ Driven against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
 - **The renderer toggle** writing `?view=<name>`, and that reloading keeps that
   renderer — needs a card type with more than one renderer.
 
-Related: the [iOS new-tab/nav work](../../bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
+Related: the [iOS new-tab/nav work](2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
 leans on in-app history + back; browse having correct history makes that path
 more viable there too.
