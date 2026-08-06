@@ -8,6 +8,23 @@ On a package-shaped (v2) box, `listBoxViewFiles` returns views from
 (`<packageRoot>/content/`). Every ref check that resolves "from" a view file
 therefore fails closed:
 
+For example, consider this valid v2 box:
+
+```text
+my-box/
+  content/
+    people/alice.person.card
+  src/views/
+    people.tsx  # contains cardRef="/people/alice.person.card"
+```
+
+The leading `/` makes the ref box-root-absolute, so it correctly names
+`content/people/alice.person.card`. Today, `cb validate` still reports it as
+broken. The resolver starts from `src/views/people.tsx`, but that file is
+outside `content/`, so it rejects the starting path before it can resolve the
+ref. A view with several valid links therefore produces a wall of false
+`Broken reference` warnings, one for every `cardRef`.
+
 - `lintViewRefs` → `resolveRefExists` → `boxRelativeFrom(boxRoot, viewAbsPath)`
   returns `null` (the path starts with `..`), so the ref resolves to nothing and
   `cb validate` reports **every** `cardRef="…"` in a v2 box's views as a broken

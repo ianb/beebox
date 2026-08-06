@@ -9,10 +9,13 @@ body-ref machinery — a different surface, the same `{path, ref}` shape.
 
 ```ts setup
 import { extractViewRefs, lintViewRefs } from "../../src/core/views/refs.js";
+import { collectViewCanonicalWarnings } from "../../src/core/canonical-refs.js";
+import { canonicalizeBox } from "../../src/core/canonicalize-refs.js";
 import { rewriteViewRefs } from "../../src/core/rewrite-card-refs.js";
 import { listBoxViewFiles } from "../../src/core/list-cards.js";
+import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -140,6 +143,40 @@ found.map((p) => p.endsWith("src/views/dashboard.tsx"))
 => [
   true
 ]
+
+await mkdir(join(v2box.boxRoot, "people"), { recursive: true });
+await writeFile(join(v2box.boxRoot, "people/alice.person.card"), "---\ntype: person\n---\nAlice\n");
+const v2view = join(v2box.root, "src/views/dashboard.tsx");
+await writeFile(
+  v2view,
+  '<CardLink cardRef="/people/alice.person.card" /><CardRef cardRef="/people/missing.person.card" />',
+);
+const v2Warnings = await lintViewRefs(v2view, v2box.boxRoot);
+v2Warnings.join("\n")
+=> Broken reference at view:1:1: /people/missing.person.card does not exist
+
+await writeFile(v2view, '<CardLink cardRef="people/alice.person.card" />');
+const canonicalWarnings = await collectViewCanonicalWarnings([v2view], v2box.boxRoot);
+canonicalWarnings.join("\n")
+=> ../src/views/dashboard.tsx: Non-canonical ref at view:1:0: people/alice.person.card → /people/alice.person.card
+
+const fixed = await canonicalizeBox(v2box.boxRoot, {
+  ignore: await loadValidationIgnore(v2box.boxRoot),
+});
+JSON.stringify({ refs: fixed.refsRewritten, files: fixed.filesChanged, view: await readFile(v2view, "utf-8") })
+=> {"refs":1,"files":1,"view":"<CardLink cardRef=\"/people/alice.person.card\" />"}
+
+const moved = rewriteViewRefs({
+  boxRoot: v2box.boxRoot,
+  viewAbsPath: v2view,
+  text: '<CardLink cardRef="/people/alice.person.card" /><CardRef cardRef="people/alice.person.card" />',
+  remap: (abs) =>
+    abs === join(v2box.boxRoot, "people/alice.person.card")
+      ? join(v2box.boxRoot, "people/alicia.person.card")
+      : null,
+});
+JSON.stringify(moved)
+=> {"text":"<CardLink cardRef=\"/people/alicia.person.card\" /><CardRef cardRef=\"people/alicia.person.card\" />","count":2}
 ```
 
 ```ts cleanup
