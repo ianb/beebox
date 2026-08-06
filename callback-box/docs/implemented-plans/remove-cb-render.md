@@ -583,7 +583,7 @@ subscription never delivers — the server finishes the turn in ~2s and the clie
 waits forever. This is **not** caused by this plan: a WebSocket connect to the
 tRPC endpoint fails identically for `main`, which still had the SSR machinery at
 the time. Filed as
-[chat-turn-stream-never-arrives-ws](../../../issues/bugs/2026-08-01-chat-turn-stream-never-arrives-ws.md).
+[chat-turn-stream-never-arrives-ws](../../../issues/closed/bugs/2026-08-01-chat-turn-stream-never-arrives-ws.md).
 
 `realtimeTranscriptionMachine` was exercised only as far as the voice-input
 control rendering in its narration-mode state; driving a real microphone capture
