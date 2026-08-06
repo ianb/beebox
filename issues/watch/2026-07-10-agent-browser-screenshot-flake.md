@@ -1,7 +1,19 @@
 ---
 title: "agent-browser screenshot op flakes with os error 35"
-needs: [decision]
+area: bin
+filed-by: agent
 ---
+
+> **Watch (moved to watch/ 2026-08-06).** Root-caused UPSTREAM in
+> `vercel-labs/agent-browser` (`connection.rs:1032` — `is_transient_error`
+> string-matches `(os error 35)`, which also matches an expired `SO_RCVTIMEO`
+> read), which ships as a precompiled binary we can't patch. Dormant lately (tours
+> / screenshots not run heavily) — NOT fixed. **Re-check trigger:** a new
+> `agent-browser` release (does its retry logic now distinguish EAGAIN from an
+> expired read-timeout?), or the next time it bites during a tour/screenshot run.
+> If it resurfaces before upstream fixes it, the local stopgap is an outer retry
+> with a longer budget in `browse/src/cli.ts` (papers over the wait failure; can't
+> prevent the post-failure indefinite hang the research also saw).
 
 `bin/browse screenshot` (and therefore every tour checkpoint)
 intermittently fails with `Failed to read: Resource temporarily
