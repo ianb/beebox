@@ -23,7 +23,8 @@ import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
 import { useRecoveredDictation } from "./InteractiveChat-recovery";
 import { ChatLoading, ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
-import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
+import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
+import { useProcessingStatusPoll } from "./processing-status-display";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments, useEnsureComposerVisible } from "./InteractiveChat-attachments";
 import { useBulkUploadLaunch, type BulkUploadLaunch } from "./use-bulk-upload-launch";
@@ -197,7 +198,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const cardSend = useCompanionCard({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
   const schedules = useChatSchedules({ messages, loaded: !isLoading, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
-  useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });
+  const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, isStreamingState: snapshot.matches("streaming"), sessionId, send });
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
@@ -301,7 +302,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       isStreaming={isStreaming}
       streamText={streamText}
       streamTools={streamTools}
-      processBusy={Boolean(processBusy)}
+      processBusy={Boolean(processBusy)} showAgentWorking={showAgentWorking}
       processRunning={processRunning}
       sessionId={sessionId}
       totalEntries={totalEntries}

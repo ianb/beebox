@@ -98,8 +98,8 @@ the forwarding patch. Automatic speech playback can therefore skip with no
 useful reason in the box log.
 
 **Direction.** At the URL, blob, and streaming `audio.onerror` handlers, log a
-fixed metadata string containing operation, `audio.error?.code`,
-`audio.networkState`, and `audio.readyState`. Keep the existing promise
+fixed metadata string containing operation plus symbolic labels and raw values
+for `audio.error?.code`, `audio.networkState`, and `audio.readyState`. Keep the existing promise
 resolution/rejection behavior unchanged. At `play().catch` and streaming setup
 or pump exceptions, log operation and a stable error name/message string. Do
 not add a new WKScriptMessage channel: the browser console forwarder already

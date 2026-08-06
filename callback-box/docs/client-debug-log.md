@@ -55,8 +55,29 @@ timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for t
 wire contract and `docs/implemented-plans/ios-log-forwarding.md` for the full design.
 
 Browser media failures use the existing console forwarder. Playback diagnostics
-include the operation plus `MediaError.code`, `networkState`, and `readyState`,
-instead of trying to serialize the opaque `Event` passed to `audio.onerror`.
+include the operation plus labeled `MediaError`, `networkState`, and
+`readyState` values instead of trying to serialize the opaque `Event` passed to
+`audio.onerror`. The browser-standard symbolic name comes first and the raw
+number remains in parentheses, for example:
+
+```
+[audio] operation=url mediaError=MEDIA_ERR_DECODE(3) networkState=NETWORK_LOADING(2) readyState=HAVE_METADATA(1)
+```
+
+Common native info messages are literal state transitions:
+
+| Entry | Meaning |
+|---|---|
+| `lifecycle: scene phase=active` | The app entered the foreground. |
+| `lifecycle: selected box id=<uuid>` | The visible paired box changed; no URL or credential is logged. |
+| `webview: chat navigation started/finished` | A main-frame chat load began/completed; offline retries are deduplicated until success. |
+| `audio: speech playback active=true/false` | The web chat reported that spoken-response playback started/stopped. |
+| `lifecycle: response active=true/false` | The web chat reported an active/inactive response. |
+| `audio: audio session role=recording/idle` | Native audio-session configuration successfully changed for capture/dictation or playback. |
+
+These are diagnostic breadcrumbs, not a complete event stream. Absence of a
+routine info line does not prove the corresponding feature never ran: info is
+evicted before warnings/errors when the bounded offline queue fills.
 
 ### In the browser
 
