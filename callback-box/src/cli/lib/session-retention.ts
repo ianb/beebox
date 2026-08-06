@@ -14,8 +14,9 @@
  * - **tail**: a capped ring of the last N entries, evicting from the front.
  * - **page**: only the entries whose index falls in `[offset, offset+limit)`.
  *
- * Both are additionally clamped by {@link MAX_SESSION_ENTRIES}, so no
- * parameter combination can ask for unbounded retention.
+ * Both are additionally clamped by {@link MAX_SESSION_ENTRIES} and
+ * {@link MAX_RETAINED_BYTES}, so no parameter combination can ask for
+ * unbounded retention.
  */
 
 import { invariant } from "../../lib/invariant.js";
@@ -29,6 +30,13 @@ import type { SessionEntry } from "./session-entry.js";
  * no real user messages in it) still cannot allocate the whole file.
  */
 export const MAX_SESSION_ENTRIES = 5000;
+
+/**
+ * Serialized-payload co-limit for one scan's response window. 32 MiB is
+ * generous for ordinary text and tool transcripts while preventing a window
+ * full of near-line-limit payloads from exhausting the heap.
+ */
+export const MAX_RETAINED_BYTES = 32 * 1024 * 1024;
 
 /**
  * How far back a `tool_result` may graft onto its `tool_use`.
@@ -78,6 +86,8 @@ interface Retained {
   entry: SessionEntry;
   /** Precomputed so eviction doesn't re-scan the entry's blocks. */
   realUser: boolean;
+  /** Serialized UTF-8 size, computed once when the entry is retained. */
+  bytes: number;
 }
 
 /**
@@ -90,10 +100,15 @@ interface Retained {
 export class SessionScan {
   private readonly slice: SessionLogSlice;
   private readonly graftWindow: SessionEntry[] = [];
+  private readonly graftWindowBytes: number[] = [];
+  private graftBytes = 0;
   /** Retained entries, front-trimmed lazily via `head` (see `evictFront`). */
-  private retained: Retained[] = [];
+  private retained: Array<Retained | undefined> = [];
   private head = 0;
   private realUsers = 0;
+  private retainedBytes = 0;
+  /** Page mode stops at the first entry that would cross the byte budget. */
+  private pageClipped = false;
   private count = 0;
 
   constructor(slice: SessionLogSlice) {
@@ -128,38 +143,63 @@ export class SessionScan {
   record(entry: SessionEntry): void {
     const index = this.count;
     this.count += 1;
+    let measuredBytes: number | undefined;
+    const entryBytes = (): number => {
+      measuredBytes ??= Buffer.byteLength(JSON.stringify(entry), "utf8");
+      return measuredBytes;
+    };
 
     // The graft window is the trailing assistant run and nothing else: a
     // non-assistant entry is where `graftToolResults` stops looking, so
     // everything before it is dead weight we would otherwise keep alive.
     if (entry.type === "assistant") {
       this.graftWindow.push(entry);
-      if (this.graftWindow.length > GRAFT_LOOKBACK) this.graftWindow.shift();
+      const bytes = entryBytes();
+      this.graftWindowBytes.push(bytes);
+      this.graftBytes += bytes;
+      while (this.graftWindow.length > GRAFT_LOOKBACK || this.graftBytes > MAX_RETAINED_BYTES) {
+        this.graftWindow.shift();
+        const droppedBytes = this.graftWindowBytes.shift();
+        if (droppedBytes !== undefined) this.graftBytes -= droppedBytes;
+      }
     } else if (this.graftWindow.length > 0) {
       this.graftWindow.length = 0;
+      this.graftWindowBytes.length = 0;
+      this.graftBytes = 0;
     }
 
     if (this.slice.mode === "page") {
       const { offset, limit } = this.slice;
-      if (index >= offset && index < offset + limit) {
-        this.retained.push({ entry, realUser: false });
+      if (!this.pageClipped && index >= offset && index < offset + limit) {
+        const bytes = entryBytes();
+        if (this.retainedBytes + bytes > MAX_RETAINED_BYTES) {
+          this.pageClipped = true;
+        } else {
+          this.retained.push({ entry, realUser: false, bytes });
+          this.retainedBytes += bytes;
+        }
       }
       return;
     }
 
     const realUser = isRealUserMessage(entry);
-    this.retained.push({ entry, realUser });
+    const bytes = entryBytes();
+    this.retained.push({ entry, realUser, bytes });
+    this.retainedBytes += bytes;
     if (realUser) this.realUsers += 1;
     while (this.shouldEvict()) this.evictFront();
   }
 
   /** Finish the scan. */
   result(): SessionLogResult {
-    const entries = this.retained.slice(this.head).map((r) => r.entry);
+    const entries = this.retained.slice(this.head).map((retained) => {
+      invariant(retained !== undefined, "live retained window contains no empty slots");
+      return retained.entry;
+    });
     const total = this.count;
     const hasMore =
       this.slice.mode === "page"
-        ? this.slice.offset + this.slice.limit < total
+        ? this.pageClipped || this.slice.offset + this.slice.limit < total
         : entries.length < total;
     return { entries, total, hasMore };
   }
@@ -176,7 +216,7 @@ export class SessionScan {
   private shouldEvict(): boolean {
     invariant(this.slice.mode === "tail", "shouldEvict is tail-mode only");
     const size = this.size();
-    if (size > MAX_SESSION_ENTRIES) return true;
+    if (size > MAX_SESSION_ENTRIES || this.retainedBytes > MAX_RETAINED_BYTES) return true;
     if (size <= this.slice.tail) return false;
     const minUsers = this.slice.minRealUserMessages ?? 0;
     if (minUsers <= 0) return true;
@@ -186,16 +226,18 @@ export class SessionScan {
   }
 
   /**
-   * Drop the oldest retained entry. Advances a head pointer and compacts once
+   * Drop the oldest retained entry. Clears its slot immediately so a large
+   * payload becomes collectible, then advances a head pointer and compacts once
    * the dead prefix reaches half the array (or {@link MAX_DEAD_PREFIX}) —
    * amortized O(1) per entry, versus an `Array#shift` that memmoves the whole
-   * window on every line, and never holding more than the window plus that
-   * bounded prefix alive.
+   * window on every line.
    */
   private evictFront(): void {
     const front = this.retained[this.head];
     invariant(front !== undefined, "evictFront called on an empty window");
     if (front.realUser) this.realUsers -= 1;
+    this.retainedBytes -= front.bytes;
+    this.retained[this.head] = undefined;
     this.head += 1;
     if (this.head >= MAX_DEAD_PREFIX || this.head * 2 >= this.retained.length) {
       this.retained = this.retained.slice(this.head);
