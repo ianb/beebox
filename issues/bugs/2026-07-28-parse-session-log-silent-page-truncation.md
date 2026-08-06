@@ -60,3 +60,17 @@ transcript is longer:
 
 Chat review's variant of the same problem is filed separately as
 `issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md`.
+
+## Update 2026-08-06 — material readers now announce truncation
+
+Commit `dfaf9fd0` makes the two material first-page readers announce when the
+exact transcript total exceeds the retained entries:
+
+- `renderSessionCompact` warns that it renders only the first page.
+- `extractBehavior` warns for both the main session log and every truncated
+  subagent log.
+
+Focused doctests cover quiet short reads and visible over-cap reads. The issue
+stays open for `countUserMessages`. That read remains silent, but its cap only
+affects the retrospective eligibility threshold and does not omit material from
+an observation.

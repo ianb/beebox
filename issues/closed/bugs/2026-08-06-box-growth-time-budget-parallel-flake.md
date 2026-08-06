@@ -3,7 +3,14 @@ title: "Box-growth partial-scan doctest flakes under parallel load"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-router-ws-1006 — finish full-suite re-verification
+resolution: implemented
 ---
+
+Resolved in `e084243e`. The wall-clock partial-retention check now runs
+serially in the explicit weekly manual-test allowlist instead of the default
+parallel suite. This deliberately preserves occasional coverage rather than
+making the fixture deterministic: its 500 ms deadline is too expensive for
+every normal test run, and serial execution removes the parallel-load flake.
 
 `test/core/box-growth-health.doctest.md` can fail its partial-scan case under
 parallel full-suite load. The fake `find` process emits two directory records

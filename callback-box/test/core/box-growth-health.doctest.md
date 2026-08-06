@@ -19,8 +19,6 @@ import {
   measureBoxGrowthIfDue,
   readBoxGrowthState,
 } from "../../src/core/box-growth/health.js";
-import { scanBoxGrowth } from "../../src/core/box-growth/scan.js";
-
 const at = (iso) => new Date(iso);
 ```
 
@@ -258,36 +256,6 @@ Box growth scan exceeded its time budget
 ```ts cleanup
 await corrupt.cleanup();
 await failedBox.cleanup();
-```
-
-A native traversal that times out retains every complete type/path pair it
-already streamed.
-
-```ts
-const partialBox = await makeTmpBox();
-const fakeFind = partialBox.path("fake-find.sh");
-await fs.writeFile(fakeFind, [
-  "#!/bin/sh",
-  "printf 'd\\000%s\\000' \"$1/box\"",
-  "printf 'd\\000%s\\000' \"$1/box/inbox/email\"",
-  "printf 'f\\000%s\\000' \"$1/box/inbox/email/message.txt\"",
-  "exec sleep 5",
-].join("\n"));
-await fs.chmod(fakeFind, 0o700);
-const partialMeasurement = await scanBoxGrowth(partialBox.root, {
-  now: at("2026-08-05T13:00:00Z"),
-  maxDurationMs: 500,
-  findCommand: fakeFind,
-});
-print(`${partialMeasurement.complete}:${partialMeasurement.counts.directories}:${partialMeasurement.counts.files}`);
-print(`${partialMeasurement.largestSubtrees[0]?.path}:${partialMeasurement.filesystemError}`);
-=>
-false:2:1
-box/inbox/email:Box growth scan exceeded its time budget
-```
-
-```ts cleanup
-await partialBox.cleanup();
 ```
 
 A traversal error also retains whatever the native walker reported instead of
