@@ -10,7 +10,12 @@ round trip. `check: true` is the read-only mode.
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createFakeGitAnnex } from "../../../src/services/git-annex.js";
-import { runAnnexDoctor, formatAnnexDoctor, ANNEX_PRECOMMIT_LINE } from "../../../src/core/annex/doctor.js";
+import {
+  runAnnexDoctor,
+  formatAnnexDoctor,
+  ANNEX_PRECOMMIT_LINE,
+  ANNEX_SMUDGE_LINE,
+} from "../../../src/core/annex/doctor.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
 import { writeAnnexInfoAttributes } from "../../../src/core/annex/info-attributes.js";
 import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../../../src/core/commands/attachments-gitignore.js";
@@ -23,12 +28,28 @@ function healthyFake() {
   });
 }
 
-/** Write the managed pre-commit hook so the hook check passes. */
-async function installHook(box: { packageRoot: string }): Promise<void> {
+async function installSmudgeHooks(box: { packageRoot: string }): Promise<void> {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
   const dir = path.join(box.packageRoot, ".git", "hooks");
   await fs.mkdir(dir, { recursive: true });
+  const hook = `#!/bin/sh\n${ANNEX_SMUDGE_LINE}\n`;
+  await Promise.all([
+    fs.writeFile(path.join(dir, "post-checkout"), hook),
+    fs.writeFile(path.join(dir, "post-merge"), hook),
+  ]);
+  await Promise.all([
+    fs.chmod(path.join(dir, "post-checkout"), 0o755),
+    fs.chmod(path.join(dir, "post-merge"), 0o755),
+  ]);
+}
+
+/** Write the annex hooks so hook checks pass. */
+async function installHooks(box: { packageRoot: string }): Promise<void> {
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const dir = path.join(box.packageRoot, ".git", "hooks");
+  await installSmudgeHooks(box);
   await fs.writeFile(path.join(dir, "pre-commit"), `#!/bin/bash\n${ANNEX_PRECOMMIT_LINE}\n`);
 }
 
@@ -41,13 +62,13 @@ A correctly configured repository reports every check clean and changes
 nothing:
 
 ```ts
-const box = await makeTmpBox();
-await installHook(box);
+const box = await makeTmpBox({ annex: true });
+await installHooks(box);
 await writeAnnexInfoAttributes(box.packageRoot);
 const annex = healthyFake();
 const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
 statuses(result)
-=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=ok annexed-coverage=ok attributes=ok content-present=ok journal=ok hook=ok
+=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=ok annexed-coverage=ok attributes=ok content-present=ok journal=ok smudge-hooks=ok hook=ok
 
 result.healthy
 => true
@@ -70,7 +91,7 @@ not notice.
 
 ```ts
 const box = await makeTmpBox();
-await installHook(box);
+await installHooks(box);
 const annex = createFakeGitAnnex({
   gitConfig: { "annex.thin": "true" },
   annexConfig: { "annex.largefiles": assetLargefilesExpression() },
@@ -150,7 +171,7 @@ half-state and name the existing repair:
 
 ```ts
 const box = await makeTmpBox({ annex: true });
-await installHook(box);
+await installHooks(box);
 await writeAnnexInfoAttributes(box.packageRoot);
 await box.write(".gitignore", GITIGNORE_BLOCK);
 const halfMigrated = await runAnnexDoctor(healthyFake(), {
@@ -207,7 +228,7 @@ On a box that IS annexed:
 
 ```ts
 const box = await makeTmpBox();
-await installHook(box);
+await installHooks(box);
 const annex = createFakeGitAnnex({
   gitConfig: { "annex.thin": "false" },
   annexConfig: { "annex.largefiles": "include=*.attach/*" },
@@ -217,7 +238,7 @@ const result = await runAnnexDoctor(annex, {
   repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
-=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=repaired content-present=ok journal=repaired hook=ok
+=> binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=repaired content-present=ok journal=repaired smudge-hooks=ok hook=ok
 ```
 
 A *stale* largefiles is repaired, not just an absent one. That matters: the
@@ -246,7 +267,7 @@ default:
 
 ```ts
 const box = await makeTmpBox();
-await installHook(box);
+await installHooks(box);
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
 const attrPath = path.join(box.packageRoot, ".git", "info", "attributes");
@@ -302,7 +323,7 @@ rather than performing the change that would strand the file.
 
 ```ts
 const box = await makeTmpBox();
-await installHook(box);
+await installHooks(box);
 const annex = createFakeGitAnnex({
   gitConfig: { "annex.thin": "false" },
   annexConfig: { "annex.largefiles": assetLargefilesExpression() },
@@ -371,7 +392,7 @@ is nowhere to fetch from, so this reports rather than repairs:
 
 ```ts
 const box = await makeTmpBox();
-await installHook(box);
+await installHooks(box);
 await box.write(
   "notes.attach/photo.jpg",
   "/annex/objects/SHA256E-s300000--" + "a".repeat(64) + ".jpg\n",
@@ -397,7 +418,7 @@ direct-children-only scan would report "no missing content" while an email's
 
 ```ts
 const box = await makeTmpBox();
-await installHook(box);
+await installHooks(box);
 await box.write(
   "mail.attach/attachments/inline.png",
   "/annex/objects/SHA256E-s900--" + "b".repeat(64) + ".png\n",
@@ -411,7 +432,99 @@ result.checks.find((c) => c.id === "content-present")?.message.includes("mail.at
 await box.cleanup();
 ```
 
-## Hook integration
+## Checkout and merge hook integration
+
+The annex smudge hooks are easy to lose without making `git annex info` look
+unhealthy. Read-only mode reports both a foreign `post-checkout` and a missing
+`post-merge` without touching either one:
+
+```ts
+const box = await makeTmpBox({ annex: true });
+await installHooks(box);
+const fs = await import("node:fs/promises");
+const path = await import("node:path");
+const hooksDir = path.join(box.packageRoot, ".git", "hooks");
+const postCheckoutPath = path.join(hooksDir, "post-checkout");
+const postMergePath = path.join(hooksDir, "post-merge");
+const postCommitPath = path.join(hooksDir, "post-commit");
+const foreignCheckout = "#!/bin/sh\necho foreign checkout hook\n";
+const compositePostCommit = [
+  "#!/bin/sh",
+  "echo foreign tool",
+  "# >>> callback-box url-check (managed) >>>",
+  "echo callback-box",
+  "# <<< callback-box url-check (managed) <<<",
+  "",
+].join("\n");
+await fs.writeFile(postCheckoutPath, foreignCheckout);
+await fs.unlink(postMergePath);
+await fs.writeFile(postCommitPath, compositePostCommit);
+const readOnly = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot,
+  boxRoot: box.root,
+  options: { check: true },
+});
+readOnly.checks.find((c) => c.id === "smudge-hooks")?.status
+=> failed
+
+await fs.readFile(postCheckoutPath, "utf-8") === foreignCheckout
+=> true
+
+await fs.access(postMergePath).then(() => "exists", () => "missing")
+=> missing
+```
+
+Repair mode reinstalls only those two canonical hooks. In particular, a
+composite `post-commit` that does not invoke annex is healthy and stays
+byte-for-byte untouched:
+
+```ts continue
+const repaired = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot,
+  boxRoot: box.root,
+});
+repaired.checks.find((c) => c.id === "smudge-hooks")?.status
+=> repaired
+
+(await fs.readFile(postCheckoutPath, "utf-8")).includes(ANNEX_SMUDGE_LINE)
+=> true
+
+(await fs.readFile(postMergePath, "utf-8")).includes(ANNEX_SMUDGE_LINE)
+=> true
+
+((await fs.stat(postCheckoutPath)).mode & 0o111) !== 0
+=> true
+
+await fs.readFile(postCommitPath, "utf-8") === compositePostCommit
+=> true
+
+const healthy = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot,
+  boxRoot: box.root,
+});
+healthy.checks.find((c) => c.id === "smudge-hooks")?.status
+=> ok
+```
+
+Merely mentioning the smudge command in a comment does not count as invoking
+it:
+
+```ts continue
+await fs.writeFile(postCheckoutPath, `#!/bin/sh\n# ${ANNEX_SMUDGE_LINE}\n`);
+const commentedSmudge = await runAnnexDoctor(healthyFake(), {
+  repoRoot: box.packageRoot,
+  boxRoot: box.root,
+  options: { check: true },
+});
+commentedSmudge.checks.find((c) => c.id === "smudge-hooks")?.status
+=> failed
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Pre-commit hook integration
 
 `git annex init` declines to install its own pre-commit hook when one already
 exists, and `cb init` leaves a foreign hook untouched — so annex integration
@@ -423,6 +536,7 @@ const box = await makeTmpBox();
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
 await fs.mkdir(path.join(box.packageRoot, ".git", "hooks"), { recursive: true });
+await installSmudgeHooks(box);
 await fs.writeFile(path.join(box.packageRoot, ".git", "hooks", "pre-commit"), "#!/bin/bash\necho hi\n");
 const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
 result.checks.find((c) => c.id === "hook")?.status
