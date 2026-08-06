@@ -21,12 +21,19 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { t as tap } from "tap";
 import { detectBoxTarget, scaffoldPackageRoot } from "../../src/core/box/package.js";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../src/core/box/index.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import { signSession } from "../../src/webapp/auth.js";
 
 const execFileP = promisify(execFile);
+
+// This file builds the CLI and boots two real processes. Under parallel suite
+// load that setup can exceed the suite's default five-minute per-file timeout.
+tap.setTimeout(600_000);
+
+const STARTUP_TIMEOUT_MS = 120_000;
 
 // Auth is always-on now — there is no open-mode opt-out anymore, so the spawned
 // `cb hub` always enforces the wall. This e2e therefore authenticates for real:
@@ -133,14 +140,14 @@ hubProcess.stdout.on("data", (d) => (hubStdout += d.toString()));
 const hubPort = await waitFor(() => {
   const m = /Hub running at http:\/\/127\.0\.0\.1:(\d+)/.exec(hubStdout);
   return m ? Number(m[1]) : null;
-}, { timeoutMs: 30000, intervalMs: 200 });
+}, { timeoutMs: STARTUP_TIMEOUT_MS, intervalMs: 200 });
 
 const health = await waitFor(async () => {
   const res = await fetch(`http://127.0.0.1:${hubPort}/healthz`, diagAuth);
   const body = await res.json();
   const box = body.boxes.find((b) => b.slug === "fixture");
   return box && box.status === "running" ? box : null;
-}, { timeoutMs: 30000, intervalMs: 300 });
+}, { timeoutMs: STARTUP_TIMEOUT_MS, intervalMs: 300 });
 
 health.status
 => running
