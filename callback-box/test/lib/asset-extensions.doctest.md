@@ -24,7 +24,7 @@ history came from exactly that kind of split:
 assetGitignorePatterns().split("\n").length === ASSET_EXTENSIONS.length
 => true
 
-assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length
+assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length * 2
 => true
 ```
 
@@ -34,13 +34,29 @@ LFS, which was itself unscoped, and anchoring to `.attach/` would strand LFS's
 content (legacy captures under `box/inbox/`) with no mechanism at all.
 
 ```ts
-assetLargefilesExpression().startsWith("include=*.jpg or include=*.jpeg")
+assetLargefilesExpression().startsWith("include=*.jpg or include=*.JPG or include=*.jpeg")
 => true
 
 assetLargefilesExpression().includes("include=*.frozen")
 => true
 
 assetLargefilesExpression().includes(".attach/")
+=> false
+```
+
+git-annex's globs are case-sensitive, while cameras commonly produce
+all-uppercase extensions. Each asset extension therefore gets its lowercase
+and uppercase spelling. Mixed case is deliberately left to the wider
+attributes filter below rather than multiplying the largefiles expression:
+
+```ts
+ASSET_EXTENSIONS.every((ext) => assetLargefilesExpression().includes(`include=*.${ext}`))
+=> true
+
+ASSET_EXTENSIONS.every((ext) => assetLargefilesExpression().includes(`include=*.${ext.toUpperCase()}`))
+=> true
+
+assetLargefilesExpression().includes("include=*.HeIc")
 => false
 ```
 
@@ -109,11 +125,11 @@ assetAnnexAttributes().includes("\n* filter=annex")
 
 The character classes are deliberate. gitattributes globs are case-sensitive,
 and so is `annex.largefiles` (verified with git-annex 10.20260717: `include=*.jpg`
-does not match `UPPER.JPG`), so lowercase-only lines would already cover
-everything annex annexes. The wider list is the safe side of an asymmetry — an
-over-wide attribute line runs a filter that then declines to annex, while a
-missing one leaves an annexed pointer unsmudged and the file reads back as
-`/annex/objects/…` text:
+does not match `UPPER.JPG`). Largefiles explicitly covers lowercase and
+uppercase; attributes additionally cover mixed case. That wider list is the
+safe side of an asymmetry — an over-wide attribute line runs a filter that then
+declines to annex, while a missing one strands a pointer and the file reads back
+as `/annex/objects/…` text:
 
 ```ts
 assetAnnexAttributes().includes("*.[hH][eE][iI][cC] filter=annex")
