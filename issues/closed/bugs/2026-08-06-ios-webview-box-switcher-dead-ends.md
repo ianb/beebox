@@ -3,7 +3,11 @@ title: "iOS: switching boxes via the web-view boxes menu dead-ends on a stuck sc
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder on iOS
+resolution: implemented
 ---
+
+Resolved in `13584136`. The native-shell `PlacePill` keeps the current-box
+routes but no longer offers the web box selector. Browser behavior is unchanged.
 
 > **Job to be done:** *When I'm in a box on my phone and I see the boxes menu, I
 > expect it to just show me where I am — not offer to jump to another box and drop
