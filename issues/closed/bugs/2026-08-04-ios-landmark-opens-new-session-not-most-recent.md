@@ -1,14 +1,15 @@
 ---
 title: "iOS: selecting a landmark starts a NEW chat instead of resuming the landmark's most-recent session"
 area: callback-box
-needs: [manual-testing]
+resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder on iOS
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in `f8ecf363`; on an iPhone, start
-> from a fresh chat, open the place menu, and tap a landmark with prior chats.
-> The most-recent transcript must appear. Only Ian clears this.
+> **Fixed + confirmed on device 2026-08-06.** `f8ecf363` — an explicit
+> assignment handshake so `ChatPage` only carries the fresh-chat machine forward
+> when the announced id matches; a landmark selection now remounts and loads the
+> resumed session's history. Boxholder confirmed on iPhone.
 
 > **Job to be done:** *When I tap a landmark on my phone to pick up where I left
 > off, I want to land in the chat I was already having about that place, so I
