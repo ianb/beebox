@@ -185,15 +185,13 @@ async function removeFixtures(paths: string[]): Promise<void> {
  * Sub-agent response text is NOT merged into responseText; only the main
  * agent's text reply is evaluated.
  */
-async function extractBehavior(
-  logDir: string,
-  sessionId: string,
-): Promise<AgentBehavior> {
+export async function extractBehavior(logDir: string, sessionId: string): Promise<AgentBehavior> {
   const logPath = getSessionLogPath(logDir, sessionId);
-  const { entries } = await parseSessionLog({
+  const { entries, total } = await parseSessionLog({
     logPath,
     slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
   });
+  warnIfBehaviorReadTruncated({ logPath, entriesRead: entries.length, total });
 
   const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
   const responseChunks: string[] = [];
@@ -218,10 +216,11 @@ async function extractBehavior(
     for (const file of subagentFiles) {
       if (!file.endsWith(".jsonl")) continue;
       const subagentLog = path.join(subagentDir, file);
-      const { entries: subEntries } = await parseSessionLog({
+      const { entries: subEntries, total: subTotal } = await parseSessionLog({
         logPath: subagentLog,
         slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
       });
+      warnIfBehaviorReadTruncated({ logPath: subagentLog, entriesRead: subEntries.length, total: subTotal });
       for (const entry of subEntries) {
         if (entry.type === "assistant") {
           for (const block of entry.content) {
@@ -252,6 +251,16 @@ async function extractBehavior(
     responseLength: responseText.split(/\s+/).length,
     context,
   };
+}
+
+function warnIfBehaviorReadTruncated(args: {
+  logPath: string; entriesRead: number; total: number;
+}): void {
+  const { logPath, entriesRead, total } = args;
+  if (entriesRead >= total) return;
+  console.warn(
+    `[test-runner] Behavior extraction from ${logPath} has ${String(total)} entries; using the first ${String(entriesRead)}.`,
+  );
 }
 
 interface BehaviorAccumulator {
