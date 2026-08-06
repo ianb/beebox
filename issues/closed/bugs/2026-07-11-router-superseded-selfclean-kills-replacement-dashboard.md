@@ -3,8 +3,15 @@ title: "Router: a superseded start's self-clean can stop the replacement generat
 area: bin/router
 filed-by: agent
 discovered-in: router-state-formalization Phase A (codex review, finding #1)
-needs: [decision]
+resolution: wontfix
 ---
+
+> **Closed 2026-08-06 — wontfix (negligible impact).** The only consequence is a
+> dev-only agent-browser dashboard daemon getting killed and auto-restarting on
+> next use — no worktree/data impact — and the boxholder doesn't use the dashboard.
+> Not worth the generation-scoping fix. The proper fix is recorded below
+> (generation-scoped dashboard socket dir / a generation token the `dashboard stop`
+> checks) if the impact ever changes.
 
 The agent-browser dashboard is keyed by worktree NAME, not generation:
 `browseDirsFor(name)` returns the same `socket`/`profile` dir for every
