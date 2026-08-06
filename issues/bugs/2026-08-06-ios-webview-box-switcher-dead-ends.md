@@ -1,9 +1,12 @@
 ---
 title: "iOS: switching boxes via the web-view boxes menu dead-ends on a stuck screen — box-switching should be native-only"
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder on iOS
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `13584136`; in the iOS app, open the web place menu and its Box panel. Confirm it still names the current box but has no “Other boxes” row. Then switch boxes through the native + menu and confirm the app does not land on a stuck screen. Only Ian clears this.
 
 > **Job to be done:** *When I'm in a box on my phone and I see the boxes menu, I
 > expect it to just show me where I am — not offer to jump to another box and drop
@@ -48,3 +51,15 @@ stuck screen) — but the primary fix is not offering the switch at all.
 
 - `docs/mobile-contract.md` / cb-ios-overlap — web/iOS shared surface; the gate is a
   native-shell conditional in the web UI.
+
+## Implemented
+
+`13584136` gates the `PlacePill` Box panel with the existing `isNativeShell()`
+bridge detector. The panel still shows the current box and its Overview, Browse,
+and History routes. It omits only `Other boxes →`, which was the route to the web
+box selector. Browser tabs keep the row.
+
+This commit does not add the secondary native navigation fallback. The current
+`WKNavigationDelegate` allows all same-origin main-frame routes and has no callback
+that opens the native + menu. A correct fallback needs a separate base-path policy
+and native-flow handoff; the primary fix does not require that larger Swift change.
