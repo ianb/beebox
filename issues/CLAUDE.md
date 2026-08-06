@@ -199,6 +199,17 @@ orphan that `bin/worktrees sweep` reports until resolved. Details:
 dev issues browser (`/dev/issues/`) marked `private` — that page is
 owner-session-gated.
 
+## Taking on an issue (agents)
+
+Before you start working an issue, **grep the queue for related and duplicate
+items** — by the issue's slug, its keywords, the files/symbols it names, and the
+symptom. A fix often resolves a sibling too, and there are frequently near-dupes
+filed from different angles. Decide up front which of the cluster this work should
+address *together* (fixing one and leaving its twin open is wasted future work),
+and **list every issue in the cluster in the plan** (cb-plan's "Issues addressed"
+header) so `/finish` knows the full set to reconcile — issues that aren't listed
+are the ones that get forgotten.
+
 ## Filing (agents)
 
 Filing is at your discretion — no thresholds or quotas. When you notice something

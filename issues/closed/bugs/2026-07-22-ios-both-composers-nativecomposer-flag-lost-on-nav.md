@@ -88,4 +88,4 @@ native-only. Then send from the native composer and confirm it's acknowledged.
 
 Sits on the [iOS input-plane parity](../../features/2026-07-19-ios-input-plane-parity.md)
 surface and is downstream of the new-window routing change
-([ios new-tab](../../bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)).
+([ios new-tab](2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)).

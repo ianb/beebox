@@ -41,7 +41,7 @@ modal model in the responsive web layout first; the native shells inherit it.
 
 Net: document + composer + callouts, with voice as the default input — the
 "expand the tab" idea from
-[iOS new-tab / focus-a-card](../bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
+[iOS new-tab / focus-a-card](../closed/bugs/2026-07-21-ios-no-new-tab-needs-back-or-overlay.md)
 generalized into the mobile layout philosophy. That issue's expand-tab section is
 the seed; this is its proper home.
 

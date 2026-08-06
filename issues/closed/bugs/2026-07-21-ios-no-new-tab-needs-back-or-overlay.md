@@ -3,8 +3,13 @@ title: "iOS: 'open in a new tab' does nothing — needs in-place nav (+ back) or
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it trying to focus a card on iOS
-needs: [manual-testing]
+resolution: implemented
 ---
+
+> **Fixed + confirmed on device 2026-08-06.** `ChatWebView.swift` now
+> implements the WebKit new-window boundary (`createWebViewWith`, `targetFrame ==
+> nil` detection): same-origin loads in place, cross-origin/non-web go to
+> `UIApplication.shared.open`. Boxholder confirmed.
 
 ## Implemented 2026-07-21
 
@@ -71,7 +76,7 @@ The fix differs by link destination:
 
 The codebase already solved a very similar trap. Following a media link used to
 full-page-navigate and strand you with no way back; it was fixed
-([mobile media view trap](../closed/bugs/2026-07-17-mobile-media-view-no-back.md),
+([mobile media view trap](2026-07-17-mobile-media-view-no-back.md),
 commit 59a0d3ea) by opening the file in a global **`ViewOverlay`** — a dismissible
 sheet over the current context with its own ✕/Escape/backdrop, *chrome-independent*
 so it works identically in a tab, a PWA, and the iOS wrapper. `useViewNavigate`

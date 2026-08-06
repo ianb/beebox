@@ -3,7 +3,17 @@ title: "Box agents occasionally leak a macOS notification — they inherit the u
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder gets occasional stray notification popups from boxes
+resolution: implemented
 ---
+
+> **Closed 2026-08-06 — symptom fixed (boxholder call).** The stray popups stopped
+> after a fix on the notifier side (the boxholder's personal `~/.claude/hooks/notify.sh`
+> now suppresses tab-less/box invocations). NOTE the repo-side root is still latent:
+> box-agent spawns (`src/core/agent/run.ts:88`) set only PreToolUse/PostToolUse and
+> don't neutralize the inherited `Notification` hook, so a dev/CI without that
+> notify.sh guard could still leak. The small repo-side fix (neutralize the
+> Notification hook in the inline `hooks` object) remains available if it ever
+> matters, but the boxholder's symptom is resolved.
 
 Occasionally a macOS notification popup appears "from a box" that's normally
 suppressed. Diagnosed via cb-debug; **strong mechanism, not yet reproduced with a

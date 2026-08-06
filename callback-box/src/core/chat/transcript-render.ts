@@ -81,9 +81,14 @@ export function renderEntries(entries: SessionEntry[]): string {
  * issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md.
  */
 export async function renderSessionCompact(logPath: string): Promise<string> {
-  const { entries } = await parseSessionLog({
+  const { entries, total } = await parseSessionLog({
     logPath,
     slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
   });
+  if (entries.length < total) {
+    console.warn(
+      `renderSessionCompact: transcript ${logPath} has ${String(total)} entries; rendering the first ${String(entries.length)}.`,
+    );
+  }
   return elideMiddle(renderEntries(entries), MAX_RENDERED_CHARS);
 }

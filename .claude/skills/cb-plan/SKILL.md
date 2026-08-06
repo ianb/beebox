@@ -100,6 +100,14 @@ Title and a 1-2 sentence statement of what this plan is and why. Don't
 recap the conversation; state the plan's purpose as if the reader has
 no context.
 
+**Issues addressed.** List the `issues/<category>/<file>.md` item(s) this plan
+resolves — and any **related or duplicate** issues you turned up (grep the queue
+by slug/keyword/symptom before planning; a fix often closes more than the one you
+started from, and a duplicate left open is wasted future work). This list is
+load-bearing: `/finish` reads it to know which issues to reconcile/close, so an
+issue left off here is an issue that gets forgotten. Say "none" if the work isn't
+tied to a filed issue.
+
 ### Stated preferences this plan trades against
 
 Pointers to the engineering principles the plan should be evaluated
