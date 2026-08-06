@@ -1,7 +1,12 @@
 ---
 title: "View cardRefs are unresolvable on a v2 box (views live outside the box root)"
 area: callback-box
+resolution: implemented
 ---
+
+Fixed in `52a21dd3`. View refs now use the operational box root as their
+resolution base for validation, canonical reporting and repair, and `cb mv`
+rewrites. Legacy card and dossier resolution semantics are unchanged.
 
 On a package-shaped (v2) box, `listBoxViewFiles` returns views from
 `<packageRoot>/src/views/` — which is *outside* the operational box root
