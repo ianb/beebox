@@ -9,6 +9,12 @@ discovered-in: main session — boxholder opened a landmark's most-recent chat
 > back up — I want it to just show me the conversation, not a false "Agent is
 > working" that makes me think it's off doing something I never asked for.*
 
+**Partial resolution (2026-08-06):** Commit `988b2014` fixes the false status
+strip on the shared web/iOS chat surface by confirming a load-time busy snapshot
+before displaying it. The backend `isBusy()` delivery fork described below is
+unchanged and remains open; the original production session and a physical iOS
+device were not used for post-fix validation.
+
 Opening the most-recent chat in a landmark (observed on a heavy prod box's
 `Library` landmark) shows the **"Agent is working…"** bar for a moment, then it
 clears — **on both web and iOS**, with **no message sent**.
@@ -42,7 +48,7 @@ was not inspected from this worktree.
 If it reproduces on a fresh local session that merely cold-starts on open, it's #2;
 if only that specific session flashes, it's data-specific (#1).
 
-## Implemented direction
+## Implemented UI direction
 
 Keep backend `busy` unchanged: it remains the authoritative send-admission /
 queue signal, including `starting`. The frontend now withholds only the status
