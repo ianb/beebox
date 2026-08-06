@@ -381,11 +381,22 @@ export interface RequestIdentity {
  * headers gated by `CB_HUB_SECRET` — the session cookie is never
  * consulted, even if one is present. This is deliberate, not an oversight:
  * the session-cookie secret is symmetric (HMAC), so any box that can VERIFY
- * a cookie could also FORGE one for a sibling box. Under the plan's trust
- * model (hub trusted, boxes mutually untrusting) that is unacceptable, so
- * the hub is the only process that ever holds the session secret, and a
- * hub-mode box authenticates a request purely from the secret-gated
- * header the hub attached after checking the cookie itself.
+ * a cookie could also FORGE one for a sibling box, so the hub is the only
+ * process that ever holds the session secret, and a hub-mode box authenticates
+ * a request purely from the secret-gated header the hub attached after checking
+ * the cookie itself.
+ *
+ * Scope, stated honestly: this closes cross-box *authentication* forgery at the
+ * SERVER. It does NOT give boxes browser-level isolation — boxes are path
+ * siblings on ONE origin (`/<slug>/…`), so a script in one box can make
+ * same-origin requests to another box's API with that box's ambient credentials.
+ * We do not claim otherwise. That is acceptable because a callback-box instance is
+ * SINGLE-OPERATOR: every box on an origin belongs to one operator, running content
+ * they or their agents authored — no operator co-hosts a *different* operator's
+ * boxes on the same origin (e.g. all of one person's boxes live on their own
+ * domain). So cross-box browser isolation is a non-goal, not a gap. If boxes ever
+ * render third-party-authored views or are shared between people, revisit
+ * (per-box origins or sandboxed content). See `docs/content-security-policy.md`.
  *
  * - Missing/invalid `x-cb-hub-secret` -> unauthenticated (`source: null`).
  *   Fails closed; a hub-mode box NEVER falls back to cookie verification —

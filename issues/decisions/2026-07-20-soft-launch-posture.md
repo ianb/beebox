@@ -104,7 +104,7 @@ to people; close when the soft launch happens. Builds on
    ([dev-router-lan-exposure](../closed/bugs/2026-07-21-dev-router-lan-exposure.md),
    HIGH — a regression from this session's own dev-router fix; resolution
    decided (dev-never-open), implementation pending).
-2. **[boxes-share-one-origin](2026-07-19-boxes-share-one-origin.md)** —
+2. **[boxes-share-one-origin](../closed/decisions/2026-07-19-boxes-share-one-origin.md)** —
    either fix or stop claiming isolation in `auth.ts`/docs. Honest-docs is
    the acceptable launch answer; the fix can follow.
 3. **README front door** (the release plan's Track E; item 11 in

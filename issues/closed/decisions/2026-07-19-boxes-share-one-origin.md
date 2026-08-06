@@ -3,8 +3,19 @@ title: "Boxes are path siblings on one origin, so per-box isolation isn't enforc
 area: callback-box
 filed-by: agent
 discovered-in: worktree-mobile-token-handshake — cross-model review of the cb_mobile cookie design
-needs: [decision]
+resolution: wontfix
 ---
+
+> **Resolved 2026-08-06 — option 3 (accept + say so), boxholder call.** Per-box
+> browser isolation (options 1/2) is a NON-GOAL, not a gap: a callback-box instance
+> is single-operator — every box on an origin belongs to one operator running content
+> they/their agents authored, and no operator co-hosts a *different* operator's boxes
+> on the same origin (e.g. all of one person's boxes live on their own domain). The
+> server side still prevents cross-box AUTH forgery; the accepted residual is
+> same-origin ambient access between one operator's own boxes. Documented honestly in
+> `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
+> (new "Cross-box isolation: single-operator by design" section). Revisit only if
+> boxes ever render third-party views or are shared between people.
 
 `src/webapp/auth.ts:276` states the trust model plainly: *"the session-cookie secret is
 symmetric (HMAC), so any box that can VERIFY a cookie could also FORGE one for a sibling

@@ -51,6 +51,22 @@ Every non-`'self'` origin is a real, verified browser connection:
 - `style-src 'unsafe-inline'` — React inline `style={{…}}` props compile to
   governed `style=""` attributes.
 
+## Cross-box isolation: single-operator by design
+
+Boxes are path siblings on ONE origin (`/<slug>/…`), so the same-origin policy is
+shared between them — a script under one box can make same-origin requests to another
+box's API carrying that box's ambient session. **This is not browser-level isolation,
+and we don't claim it is.** It's acceptable because a callback-box instance is
+**single-operator**: every box on an origin belongs to one operator, running content
+they or their agents authored — no operator co-hosts a *different* operator's boxes on
+the same origin (e.g. all of one person's boxes live on their own domain). The server
+side still prevents cross-box *authentication* forgery (the hub holds the session
+secret; boxes never verify cookies — see `src/webapp/auth.ts`), so a box can't
+authenticate AS another; the accepted residual is same-origin ambient access between
+one operator's own boxes. Revisit (per-box origins, or sandboxed untrusted content)
+only if boxes ever render third-party-authored views or are shared between different
+people.
+
 ## Adding a new external origin
 
 If you add a browser-side call to a new external host (a new STT/TTS provider, an

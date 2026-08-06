@@ -4,7 +4,13 @@ area: docs
 filed-by: agent
 discovered-in: main session — boxholder created the forum during soft-launch prep
 labels: [soft-launch]
+resolution: implemented
 ---
+
+> **Done 2026-08-06.** The Zulip forum is live at https://callback-box.zulipchat.com/
+> and linked in the root README under Community — the soft-launch discussion-channel
+> gate is satisfied. Any further cross-surface links fold into the README front-door
+> gate.
 
 The project's discussion forum is live on Zulip:
 [callback-box.zulipchat.com](https://callback-box.zulipchat.com/). It's listed in
@@ -28,9 +34,9 @@ The one real need — *"it needs to be noted so people can find it."* The README
 done; the rest is the other places a newcomer looks:
 
 - **A Zulip invite link** rather than the bare org URL, so joining is one click —
-  see [invite-links](../closed/features/2026-07-20-invite-links.md). Swap it into the
+  see [invite-links](../features/2026-07-20-invite-links.md). Swap it into the
   README once it exists.
-- **The [GitHub Pages site](../features/2026-07-20-github-pages-site.md)** should
+- **The [GitHub Pages site](../../features/2026-07-20-github-pages-site.md)** should
   link it when that lands.
 - **The GitHub repo's About/description** (the sidebar link field) — a one-time
   setting, easy to forget.
