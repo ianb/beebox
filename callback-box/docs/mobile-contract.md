@@ -432,7 +432,8 @@ See §1.3 (full request/response/errors).
   |---|---|
   | native caller | `ios-app/CallbackBox/Services/ChatAPI.swift` — `ChatAPI.transcribeAudio(fileURL:)`, `applyAuth`, `HqTranscriptionResult { text, diarized }` |
   | box handler | `src/webapp/routes/chat-audio-routes.ts` — `POST /api/chat/transcribe-audio` (→ `transcribeAudioHq({ audioBuffer, filename, boxRoot })`) |
-- **Drift:** LOUD (5xx surfaced) / SILENT if a float-format WAV is mis-decoded — see §9 (I8, needs verify).
+- **Drift:** LOUD for provider rejection (5xx surfaced). A provider HTTP 200 with unusable text would
+  be SILENT. Float32 WAV compatibility was verified against every selectable HQ path on 2026-08-06.
 
 ### 5.3 `GET /api/chat/default` — session resolution
 
@@ -656,7 +657,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B7 | Narration state | web→native | `{enabled}` via `callbackboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `callbackboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `callbackboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
-| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD / SILENT if float-WAV mis-decoded — **I8** |
+| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
@@ -776,8 +777,9 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   `hub-server.ts` / `server-box-scope.ts` / `server-root.ts`.
 - **Benign field drifts.** Redeem `{boxSlug,label,deviceId,deviceLabel}` ignored by iOS; receipt
   `deduplicated` ignored by iOS; `User-Agent: CallbackBox-iOS/0.1` never branched on server-side.
-- **I8 (needs verify).** Native records WAV in the mic's native format (typically 32-bit float PCM)
-  and uploads as `audio/wav`; if the HQ decoder expects 16-bit int PCM the leg silently no-ops.
+- **I8 — float WAV decoder compatibility (RESOLVED 2026-08-06).** Live calls with a 48 kHz mono
+  Float32 WAV returned the expected speech from all OpenAI HQ variants and from Voxtral in both plain
+  and diarized modes. See `issues/closed/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`.
 - **Legacy `embed=1` vs `nativeComposer=1` duality.** The web side still reads a legacy `embed=1`
   (header-suppress) alongside `nativeComposer=1`; both reach the same `usesNativeShell`. iOS uses
   only `nativeComposer=1`, which is the standard a new platform must adopt.
