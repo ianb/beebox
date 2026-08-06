@@ -1,6 +1,7 @@
 # Invite links and self-service password change
 
-**Status:** Implemented 2026-08-06 after boxholder approval and cross-model review.
+**Status:** Partially implemented 2026-08-06 — source complete after boxholder
+approval and cross-model review; signed-in browser smoke testing remains.
 
 This plan adds the complete no-password-sharing lifecycle for member accounts.
 An owner can invite one person to one box. The invitee chooses their own
@@ -162,9 +163,10 @@ owner-only Admin mutation that mints one invite for the current box.
   `boxRoot`, and canonical `createdBy`. Never persist or log the bearer token.
 - Use the setup flow's fixed 15-minute TTL. Prune expired records on mutation and
   enforce a small hard live-record cap without evicting live capabilities.
-- `inspectInvite` returns `valid`, `invalid-or-gone`, or `unavailable`.
-  `consumeInvite` rechecks and removes under the lock so exactly one concurrent
-  acceptance obtains metadata.
+- `inspectInvite` returns `valid` or `invalid-or-gone`; unreadable storage throws
+  a typed unavailable error that the public route and Admin caller map to
+  fail-closed responses. `consumeInvite` rechecks and removes under the lock so
+  exactly one concurrent acceptance obtains metadata.
 - Add `admin.createInvite({ email?: string })`. It requires both
   `ownerProcedure` and a concrete `ctx.user`, takes `boxRoot` only from context,
   and calls the same service as future minting surfaces.
@@ -213,9 +215,10 @@ to the box.
 - Before token validation, throttle by request IP plus token hash so guessed
   emails cannot push a victim's login bucket into backoff. After a valid token
   establishes the canonical email, also apply the existing email bucket and
-  global scrypt slot. Invalid,
-  expired, replayed, malformed, collision, and unknown-target cases share one
-  public status/message shape. Logs include a category, never token/password.
+  global scrypt slot. Invalid, expired, replayed, collision, and unknown-target
+  cases share the dead-link shape. Correctable malformed form input preserves
+  the live token and re-renders the form. Logs include a category, never
+  token/password.
 - For an open invite, reject the chosen email if it is the canonical owner, an
   existing local user, or appears in the canonicalized `allowedEmails` of **any**
   box registered on this auth surface. This prevents a bearer from claiming a
@@ -508,7 +511,8 @@ deterministic red doctest and lands only with its focused checks green.
 - Focused route and service doctests cover minting, pinned and open acceptance,
   expiry/replay, collisions, throttling, partial storage failures, password
   rotation, OAuth identity, hub propagation, and sanitized HTTP errors.
-- The final full run passed 6,376 assertions in 476 suites with zero failures.
+- The post-main-integration full run passed 6,381 assertions in 476 suites with
+  zero failures.
 - Backend and frontend typechecks, lint, documentation checks, and the repository
   commit hooks passed.
 - Desktop and mobile signed-out/loading states were checked in a real browser.

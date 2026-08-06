@@ -5,7 +5,12 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+resolution: implemented
 ---
+
+Closed by `604080ed` and its preceding invite-auth implementation commits. The
+shipped design uses Admin-minted, 15-minute, single-use links with optional
+pinned email, a hashed persistent capability store, and one-box member access.
 
 Today adding a member means the operator runs `cb auth add-user` and hands
 the person a password out of band. The boxholder wants to invite people
@@ -34,4 +39,4 @@ no-password-sharing lifecycle. Mind the same throttling/enumeration
 discipline the login surface already has.
 
 Launch-adjacent, not a gate
-([soft-launch posture](../decisions/2026-07-20-soft-launch-posture.md)).
+([soft-launch posture](../../decisions/2026-07-20-soft-launch-posture.md)).

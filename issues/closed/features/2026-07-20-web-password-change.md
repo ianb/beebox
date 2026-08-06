@@ -4,7 +4,12 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+resolution: implemented
 ---
+
+Closed by `604080ed` and its preceding invite-auth implementation commits. The
+shipped route verifies the current password, rotates the stored hash and session
+generation, and returns a fresh cookie to the Settings UI.
 
 A logged-in user cannot change their own password in the web UI — the only
 password surfaces are login, first-run setup, and the host-side CLI
@@ -19,4 +24,4 @@ new password, rate-limited like login) and a small settings page. The
 mutation revokes other outstanding sessions the same way the CLI does.
 
 Boxholder approved 2026-07-20; launch-adjacent, not a gate
-([soft-launch posture](../decisions/2026-07-20-soft-launch-posture.md)).
+([soft-launch posture](../../decisions/2026-07-20-soft-launch-posture.md)).
