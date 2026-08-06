@@ -1,9 +1,10 @@
 # Upload wrapper parsing
 
-`parseUploadWrapper` turns the `<upload …>` chat-message wrapper back into the
-chip model the transcript renders. The wrapper is built server-side by
+`parseUploadWrapper` is a single-wrapper compatibility helper over the shared
+ordered-parts parser. Production transcript rendering consumes the shared
+parser directly. The wrapper is built server-side by
 `core/bulk-upload/deliver.ts` `buildUploadWrapper` — these cases are written
-against that exact output, so the two can't drift.
+against that exact output, so generation and parsing cannot drift silently.
 
 Without this parser the wrapper fell through to the plain-text renderer and the
 boxholder saw literal markup in their own chat log (prod, 2026-08-01). That

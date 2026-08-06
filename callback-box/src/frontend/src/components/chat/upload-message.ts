@@ -16,50 +16,21 @@
  * their own introduction rides INSIDE the body, so their words were wrapped in
  * angle brackets too.
  *
- * Kept import-free (no React, no view-url) so it doctests against the exact
- * wrapper string and `user-message` can consume it without a cycle. Mirrors
- * `capture-message.ts`.
+ * The shared delivered-user-message codec owns wire parsing. This module keeps
+ * the upload-specific compatibility parser for callers that expect one model.
  */
 
+import {
+  parseDeliveredUserMessageParts,
+  type UploadUserMessage,
+} from "@shared/delivered-user-message";
+
 /** The parsed shape an upload chip renders from. */
-export interface UploadChipModel {
-  /** Box-relative path of the upload-batch card (`doc=`). */
-  doc: string;
-  /** Number of files whose bytes arrived. */
-  files: number;
-  /** Human total size, already formatted server-side (e.g. `135 MB`). */
-  bytes: string;
-  /** Files the uploader reported failing (0 when the attribute is absent). */
-  failed: number;
-  /**
-   * The boxholder's own introduction, when they submitted one — the first
-   * paragraph of the body. Rendered as their words, NOT as batch metadata.
-   */
-  note: string;
-  /** The generated one-line summary (last paragraph of the body). */
-  summary: string;
-}
-
-const UPLOAD_RE = /<upload\b([^>]*)>([\S\s]*?)<\/upload>/i;
-
-const DOC_RE = /\bdoc="([^"]*)"/i;
-const FILES_RE = /\bfiles="([^"]*)"/i;
-const BYTES_RE = /\bbytes="([^"]*)"/i;
-const FAILED_RE = /\bfailed="([^"]*)"/i;
-
-function readStringAttr(attrs: string, re: RegExp): string {
-  const match = re.exec(attrs);
-  return match ? (match[1] ?? "") : "";
-}
-
-function readIntAttr(attrs: string, re: RegExp): number {
-  const raw = readStringAttr(attrs, re);
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
+export type UploadChipModel = Omit<UploadUserMessage, "kind">;
 
 /**
- * Parse an `<upload …>` wrapper, or `null` when the text isn't one.
+ * Parse one `<upload …>` wrapper, or `null` when the text is not solely an
+ * upload plus optional surrounding whitespace.
  *
  * The body is `note\n\nsummary` when the batch carried an introduction, and just
  * `summary` when it didn't — the server omits the note entirely rather than
@@ -67,23 +38,16 @@ function readIntAttr(attrs: string, re: RegExp): number {
  * the LAST blank line keeps a multi-paragraph introduction intact.
  */
 export function parseUploadWrapper(text: string): UploadChipModel | null {
-  const match = UPLOAD_RE.exec(text.trim());
-  if (!match) return null;
-  const attrs = match[1] ?? "";
-  const doc = readStringAttr(attrs, DOC_RE);
-  if (doc === "") return null;
-
-  const body = (match[2] ?? "").trim();
-  const split = body.lastIndexOf("\n\n");
-  const note = split === -1 ? "" : body.slice(0, split).trim();
-  const summary = split === -1 ? body : body.slice(split + 2).trim();
-
+  const parts = parseDeliveredUserMessageParts(text)
+    .filter((part) => part.kind !== "text" || part.text.trim() !== "");
+  const part = parts.length === 1 ? parts.at(0) : undefined;
+  if (part?.kind !== "upload") return null;
   return {
-    doc,
-    files: readIntAttr(attrs, FILES_RE),
-    bytes: readStringAttr(attrs, BYTES_RE),
-    failed: readIntAttr(attrs, FAILED_RE),
-    note,
-    summary,
+    doc: part.doc,
+    files: part.files,
+    bytes: part.bytes,
+    failed: part.failed,
+    note: part.note,
+    summary: part.summary,
   };
 }

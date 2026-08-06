@@ -20,7 +20,8 @@ import {
   UserMessageDeliveryError,
   type DeliveryTarget,
 } from "../chat/session/deliver-user-message.js";
-import { invariant } from "../../lib/invariant.js";
+
+export { buildCaptureWrapper } from "../../shared/delivered-user-message.js";
 
 /** Raised when the non-busy `send()` of a capture message fails. Retryable. */
 export class CaptureDeliveryError extends Error {
@@ -28,47 +29,6 @@ export class CaptureDeliveryError extends Error {
     super("Capture delivery send failed");
     this.name = "CaptureDeliveryError";
   }
-}
-
-/** Format a total seconds count as `M:SS` for the wrapper's `audio` attr. */
-function formatAudioDuration(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  const minutes = Math.floor(s / 60);
-  const seconds = s % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-/**
- * Build the `<capture …>` chat-message wrapper (a first-class user message
- * pointing at the committed capture document). Pure — the exact string is a
- * chat-vocabulary lock-in, doctested exact.
- */
-export function buildCaptureWrapper(opts: {
-  /** Box-relative path of the capture-session card. */
-  docPath: string;
-  imageCount: number;
-  audioSeconds: number;
-  summary: string;
-  partial?: boolean;
-  transcriptionFailed?: boolean;
-}): string {
-  // `doc` is a server-generated path (`<contextDir>/tmp-capture/capture-…`);
-  // a double quote or newline in it would break the wrapper's attribute
-  // parsing. These characters can't occur in the generated basename, and a
-  // landmark contextDir carrying one is a broken invariant, not runtime input —
-  // fail loudly rather than emit an unparseable message.
-  invariant(
-    !/[\n\r"]/.test(opts.docPath),
-    `Capture doc path contains a quote or newline: ${JSON.stringify(opts.docPath)}`,
-  );
-  const attrs = [
-    `doc="${opts.docPath}"`,
-    `images="${String(opts.imageCount)}"`,
-    `audio="${formatAudioDuration(opts.audioSeconds)}"`,
-  ];
-  if (opts.partial === true) attrs.push("partial=\"1\"");
-  if (opts.transcriptionFailed === true) attrs.push("transcription-failed=\"1\"");
-  return `<capture ${attrs.join(" ")}>\n${opts.summary.trim()}\n</capture>`;
 }
 
 /** First sentence of a transcript, or the whole trimmed text if no boundary. */

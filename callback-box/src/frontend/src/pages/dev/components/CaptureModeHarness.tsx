@@ -18,10 +18,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureLiveStatus } from "../../../components/chat/capture-bubble";
 import { CaptureChip } from "../../../components/chat/CaptureChip";
+import { UserMessage } from "../../../components/chat/user-message";
 import { CaptureOverlay } from "../../../components/capture/CaptureOverlay";
 import { CaptureApiProvider, type CaptureApi } from "../../capture/capture-api-context";
 import { parseCaptureWrapper } from "../../../components/chat/capture-message";
 import { UploadAbortedError } from "../../../lib/binary-upload";
+import type { SessionEntry } from "../../../api";
 
 const COUNTS = { photos: 2, files: 1, audioSegments: 3 };
 
@@ -150,10 +152,25 @@ function ScriptedBubble() {
   );
 }
 
+const DELIVERED_CAPTURE_WRAPPER = "<capture doc=\"tmp-capture/capture-20260709T1432-ab3f.capture-session.card\" images=\"3\" audio=\"4:10\">\nWalked through the kitchen.\n</capture>";
 const DELIVERED_WRAPPERS = [
-  "<capture doc=\"tmp-capture/capture-20260709T1432-ab3f.capture-session.card\" images=\"3\" audio=\"4:10\">\nWalked through the kitchen.\n</capture>",
+  DELIVERED_CAPTURE_WRAPPER,
   "<capture doc=\"tmp-capture/capture-20260709T1500-77cd.capture-session.card\" images=\"0\" audio=\"1:20\" partial=\"1\" transcription-failed=\"1\">\nquick note about the leak\n</capture>",
 ];
+
+const MIXED_DELIVERED_ENTRY: SessionEntry = {
+  uuid: "mixed-delivered-message",
+  type: "user",
+  timestamp: "2026-08-06T12:00:00Z",
+  content: [{
+    type: "text",
+    text: '<chat-app narration="off" prose="on" local-time="Thursday 2026-08-06 07:00 CDT"/>\n' +
+      "Keep these with the project.\n\n" +
+      DELIVERED_CAPTURE_WRAPPER +
+      '\n\n<upload doc="tmp-upload/reference/Batch.upload-batch.card" files="3" bytes="2 KB">\n' +
+      "Background material.\n\n3 files uploaded (2 KB).\n</upload>\n\nThen compare the notes.",
+  }],
+};
 
 function OverlayDemo() {
   const [open, setOpen] = useState(false);
@@ -236,6 +253,12 @@ export function CaptureModeHarness() {
                 </div>
               ) : null;
             })}
+          </div>
+          <div className="mt-3 bg-gradient-to-b from-warm-50 to-warm-100 border border-warm-300 rounded-lg p-4">
+            <div className="mb-2 text-xs font-mono text-warm-500">
+              snapshot + text + capture + upload + text
+            </div>
+            <UserMessage entries={[MIXED_DELIVERED_ENTRY]} />
           </div>
         </section>
 
