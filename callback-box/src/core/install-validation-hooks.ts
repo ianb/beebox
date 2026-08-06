@@ -213,11 +213,20 @@ function upsertPostCommitBlock(existing: string | null, block: string): string {
  */
 const PRE_COMMIT_MARKER = "# callback-box validation hook (managed)";
 
+// `git annex init` installs this hook when the pre-commit slot is empty. It is
+// safe for us to adopt because `preCommitBody()` preserves its only behavior
+// (`git annex pre-commit`) before adding callback-box's validation gates. Keep
+// this deliberately exact: an arbitrary foreign hook that happens to mention
+// git-annex still belongs to its author and must remain untouched.
+const GIT_ANNEX_PRE_COMMIT_BODY = "#!/bin/sh\n# automatically configured by git-annex\ngit annex pre-commit .";
+
 function preCommitBody(cbBin: string, boxRelFromPackageRoot: string): string {
   // v2's git-hooks trap (see the module doc): git always invokes this hook
   // with cwd = the package root, so a v2 box needs an explicit `cd` into
-  // `content/` first — otherwise `requireBoxRoot()` never finds
-  // `content/.cb-box` (it only walks UP from cwd). No-op for a legacy box.
+  // `content/` before invoking cb — otherwise `requireBoxRoot()` never finds
+  // `content/.cb-box` (it only walks UP from cwd). Annex deliberately runs
+  // before that cd, preserving the package-root `.` scope of its own generated
+  // hook. No-op for a legacy box.
   const cd = boxRelFromPackageRoot === "" ? "" : `cd ${JSON.stringify(boxRelFromPackageRoot)}\n`;
   return `#!/usr/bin/env bash
 ${PRE_COMMIT_MARKER}
@@ -226,7 +235,6 @@ ${PRE_COMMIT_MARKER}
 # Regenerate via \`cb init\` if you delete this file.
 
 set -e
-${cd}
 
 # git-annex FIRST, above the cb fallback: \`git annex init\` declines to install
 # its own hook when ours exists, so this line is the only thing running annex at
@@ -237,9 +245,9 @@ ${cd}
 # still on the manifest model must keep committing normally, or every unmigrated
 # box breaks at its next commit. Once annexed, a missing binary is fatal —
 # committing without the clean filter puts asset bytes straight into history.
-if [ -d "$(git rev-parse --git-dir)/annex" ]; then
+if [ -d "$(git rev-parse --git-common-dir)/annex" ]; then
   if command -v git-annex >/dev/null 2>&1; then
-    git annex pre-commit
+    git annex pre-commit .
   else
     echo "pre-commit: this repo uses git-annex but git-annex is not installed;" >&2
     echo "  assets would be committed as raw bytes. Install it" >&2
@@ -247,6 +255,8 @@ if [ -d "$(git rev-parse --git-dir)/annex" ]; then
     exit 1
   fi
 fi
+
+${cd}
 
 CB=${JSON.stringify(cbBin)}
 if [ ! -x "$CB" ]; then
@@ -459,7 +469,8 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
     }
 
     const isManaged = existing !== null && existing.includes(PRE_COMMIT_MARKER);
-    const foreignHook = existing !== null && !isManaged;
+    const isGitAnnexGenerated = existing !== null && existing.replaceAll("\r\n", "\n").trimEnd() === GIT_ANNEX_PRE_COMMIT_BODY;
+    const foreignHook = existing !== null && !isManaged && !isGitAnnexGenerated;
     if (foreignHook) {
       console.warn(
         `[install-validation-hooks] ${PRE_COMMIT_PATH} exists and isn't ours — leaving it alone. Add the contents of cb's hook manually if you want card validation.`
