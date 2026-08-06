@@ -185,9 +185,9 @@ async function runPhotoMode(
   const filesToStage: string[] = [];
 
   // Copy each input into a scratch dir so the originals stay untouched and
-  // the archive copy lives inside the session for safety. Gemini handles
-  // ~3000-pixel JPEGs directly, so we send the same files for analysis —
-  // no separate API render needed. The scratch dir is removed before commit.
+  // the archive copy lives inside the session for safety. The shared batch
+  // runner derives bounded JPEGs from these archive copies for either vision
+  // backend. The archive dir is removed after its originals are filed.
   const archiveDir = path.join(sessionAttachAbsDir, ".scan-archive");
   await fs.mkdir(archiveDir, { recursive: true });
   const archivePages: string[] = [];
