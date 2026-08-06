@@ -212,6 +212,8 @@ interface SwitchMenuProps {
    * recent files are the session's, so there is nothing to list elsewhere.
    */
   recentFilesClaimed: boolean;
+  /** False when the native shell owns cross-box navigation through its own box menu. */
+  boxSwitchingAvailable: boolean;
   onOpenBoxPanel: () => void;
   onOpenRecentFiles: () => void;
   onBackToRoot: () => void;
@@ -228,6 +230,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
   const {
     panel, boxSlug, boxName, currentDir, landmarks, landmarksFailed,
     onRetryLandmarks, navEntries, problemCount, recentFilesClaimed,
+    boxSwitchingAvailable,
     onOpenBoxPanel, onOpenRecentFiles, onBackToRoot, onSelectLandmark,
   } = props;
   switch (panel) {
@@ -273,10 +276,14 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           <MenuItem to={href(`/${boxSlug}/dashboard`)}>Overview</MenuItem>
           <MenuItem to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
           <MenuItem to={href(`/${boxSlug}/history`)}>History</MenuItem>
-          <MenuDivider />
-          {/* The front page (box selector) is outside the box's route tree —
-              a plain navigation, not a router Link. */}
-          <MenuItem href={withBase("/")}>Other boxes →</MenuItem>
+          {boxSwitchingAvailable ? (
+            <>
+              <MenuDivider />
+              {/* The front page (box selector) is outside the box's route tree —
+                  a plain navigation, not a router Link. */}
+              <MenuItem href={withBase("/")}>Other boxes →</MenuItem>
+            </>
+          ) : null}
         </>
       );
     case "recent-files":
