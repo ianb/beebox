@@ -204,10 +204,9 @@ export function boxRelativeDoc(boxRoot: string, absPath: string): string | null 
  * resolved as card refs (`views/refs.ts`), so they are classified the same way
  * and counted in the card-ref bucket.
  *
- * A view that lies OUTSIDE the box root is skipped: on a v2 box views live at
- * `<packageRoot>/src/views/`, so there is no `fromPath` to resolve a relative
- * ref against — the shared algebra fails closed there exactly as
- * `resolveRefExists` already does for the same files.
+ * A view has no document-relative base inside the box, so its refs resolve from
+ * the box root (`fromPath: ""`) regardless of whether the source file lives at
+ * the legacy in-box path or the v2 package-side path.
  */
 export async function collectViewCanonicalWarnings(
   viewPaths: string[],
@@ -215,8 +214,8 @@ export async function collectViewCanonicalWarnings(
 ): Promise<string[]> {
   const out: string[] = [];
   for (const viewPath of viewPaths) {
-    const fromPath = boxRelativeDoc(boxRoot, viewPath);
-    if (fromPath === null) continue;
+    const label = path.relative(boxRoot, viewPath).split(path.sep).join("/");
+    const fromPath = "";
     let source: string;
     try {
       source = await fs.readFile(viewPath, "utf-8");
@@ -224,11 +223,11 @@ export async function collectViewCanonicalWarnings(
       // An unreadable view is the compile-check's concern, not this walk's.
       continue;
     }
-    const exists = cardRefProbe({ absPath: viewPath, boxRoot });
+    const exists: RefExistsProbe = (ref) => resolveRefExists({ ref, fromPath, boxRoot });
     for (const { path: locator, ref } of extractViewRefs(source)) {
       const plan = await planCanonicalRef({ ref, fromPath, kind: "card" }, { exists });
       const message = canonicalIssueMessage({ locator, ref }, plan);
-      if (message !== null) out.push(`${fromPath}: ${message}`);
+      if (message !== null) out.push(`${label}: ${message}`);
     }
   }
   return out;

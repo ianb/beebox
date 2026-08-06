@@ -80,10 +80,11 @@ JSON.stringify(buildUploadWrapper({
 => "<upload doc=\"chats/2026-07-30/tmp-upload/upload-20260730T1912-9f3c1e00/Batch.upload-batch.card\" files=\"70\" bytes=\"40 MB\">\nReceipts from the Tokyo trip — file them under the 2026 travel folder.\n\n70 files uploaded (40 MB).\n</upload>"
 ```
 
-## The note is body text, so quotes and newlines in it are safe
+## The note is body text, so quotes and ordinary newlines are safe
 
-Unlike `doc`, the note is free-form user prose and can contain anything a person
-types. It goes in the body precisely so it can never break attribute parsing.
+Unlike `doc`, the note is free-form user prose rather than an attribute, so
+quotes and ordinary newlines cannot break attribute parsing. The pseudo-XML
+closing tag remains a reserved body delimiter.
 
 ```ts
 JSON.stringify(buildUploadWrapper({
@@ -123,9 +124,9 @@ blankNote === withoutNote
 => true
 ```
 
-## A doc path with a quote or newline is a broken invariant (throws)
+## A doc path with an attribute/tag delimiter is a broken invariant (throws)
 
-The `doc` path is server-generated; a quote or newline would break attribute
+The `doc` path is server-generated; a quote, newline, or `>` would break tag
 parsing, so it fails loudly rather than emitting an unparseable message.
 
 ```ts
@@ -139,6 +140,14 @@ await catchName(() => buildUploadWrapper({
 ```ts continue
 await catchName(() => buildUploadWrapper({
   docPath: "tmp-upload/a\nb.card",
+  fileCount: 1, totalBytes: 1, failedCount: 0, summary: "x",
+}))
+=> InvariantError
+```
+
+```ts continue
+await catchName(() => buildUploadWrapper({
+  docPath: "tmp-upload/a>b.card",
   fileCount: 1, totalBytes: 1, failedCount: 0, summary: "x",
 }))
 => InvariantError

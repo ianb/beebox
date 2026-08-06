@@ -64,10 +64,11 @@ function resolveRefToAbs(params: {
   boxRoot: string;
   cardAbsPath: string;
   pathPart: string;
+  fromPath?: string;
 }): string | null {
   const { boxRoot, cardAbsPath, pathPart } = params;
   if (isExternalRef(pathPart)) return null;
-  const fromPath = boxRelativeFrom(boxRoot, cardAbsPath);
+  const fromPath = params.fromPath ?? boxRelativeFrom(boxRoot, cardAbsPath);
   if (fromPath === null) {
     console.warn(`rewrite-card-refs: ${cardAbsPath} is outside ${boxRoot}; leaving its refs unchanged`);
     return null;
@@ -100,11 +101,12 @@ function restyleRef(params: {
   newAbs: string;
   wasAbsolute: boolean;
   suffix: string;
+  relativeBase?: string;
 }): string {
   const { boxRoot, cardAbsPath, newAbs, wasAbsolute, suffix } = params;
   const body = wasAbsolute
     ? "/" + path.relative(boxRoot, newAbs)
-    : path.relative(path.dirname(cardAbsPath), newAbs);
+    : path.relative(params.relativeBase ?? path.dirname(cardAbsPath), newAbs);
   return body + suffix;
 }
 
@@ -117,11 +119,18 @@ function transformForReferrer(params: {
   boxRoot: string;
   cardAbsPath: string;
   remap: Remap;
+  fromPath?: string;
+  relativeBase?: string;
 }): RefTransform {
   const { boxRoot, cardAbsPath, remap } = params;
   return (rawRef) => {
     const parsed = parseRef(rawRef);
-    const abs = resolveRefToAbs({ boxRoot, cardAbsPath, pathPart: parsed.path });
+    const abs = resolveRefToAbs({
+      boxRoot,
+      cardAbsPath,
+      pathPart: parsed.path,
+      ...(params.fromPath === undefined ? {} : { fromPath: params.fromPath }),
+    });
     if (abs === null) return rawRef;
     const newAbs = remap(abs);
     if (newAbs === null) return rawRef;
@@ -131,6 +140,7 @@ function transformForReferrer(params: {
       newAbs,
       wasAbsolute: parsed.path.startsWith("/"),
       suffix: formatRefSuffix(parsed),
+      ...(params.relativeBase === undefined ? {} : { relativeBase: params.relativeBase }),
     });
   };
 }
@@ -298,6 +308,8 @@ export function rewriteViewRefs(params: {
     boxRoot: params.boxRoot,
     cardAbsPath: params.viewAbsPath,
     remap: params.remap,
+    fromPath: "",
+    relativeBase: params.boxRoot,
   });
   return applyViewTransform(params.text, transform);
 }
