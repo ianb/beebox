@@ -1,6 +1,6 @@
 # Exhaustive delivered-user-message codec
 
-**Status:** active — implementation and verification complete; awaiting explicit finish/merge
+**Status:** implemented 2026-08 — shipped as the closed capture/upload delivery codec
 
 This plan makes the supported server-delivered user-message vocabulary a closed TypeScript codec. It keeps the existing `<capture>` and `<upload>` wire strings, but it makes serialization, transcript parsing, test fixtures, and frontend rendering exhaustive over one discriminated union.
 

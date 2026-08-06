@@ -3,7 +3,15 @@ title: "Delivered capture renders as raw <capture> markup when the message was q
 area: callback-box
 filed-by: agent
 discovered-in: worktree-fixup-capture — boxholder reported it while reporting the capture upload failures
+resolution: implemented
 ---
+
+**Closed 2026-08-06** — resolved by `ab43e787`. Delivered capture and upload
+wrappers now share a closed codec, and the transcript renderer parses them as
+ordered parts alongside queue-combined prose. The implementation also strips
+the persisted `<chat-app>` snapshot before recognition, which proved to be an
+additional ordinary trigger beyond the originally suspected multi-message
+queue shape.
 
 The boxholder's delivered capture showed the raw `<capture doc="…" images="…">`
 tag text in the chat transcript instead of the compact chip.
