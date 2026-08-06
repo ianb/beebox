@@ -288,6 +288,20 @@ lazyProvider.ensureCalls
 => 2
 ```
 
+A box-scoped keepalive uses the ordinary HTTP path, so it wakes the stopped
+box before the frontend retries its WebSocket upgrade. The fixture box accepts
+every HTTP path; the load-bearing assertion is that the hub calls
+`ensureRunning` before proxying this request:
+
+```ts continue
+const wakeResponse = await fetch(`${lazyHub.base}/lazybox/api/keepalive`, { method: "HEAD" });
+wakeResponse.status
+=> 200
+
+lazyProvider.ensureCalls
+=> 3
+```
+
 ```ts continue
 for (const socket of lazyHub.sockets) socket.destroy();
 await new Promise((resolve) => lazyHub.server.close(resolve));

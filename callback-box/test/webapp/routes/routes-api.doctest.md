@@ -7,6 +7,29 @@ import { makeTestServer } from "../../helpers/doctest-server.js";
 import { execSync } from "node:child_process";
 ```
 
+## Keeping a visible box awake
+
+The frontend's visible-tab heartbeat uses a cheap box-scoped `HEAD` request.
+Reaching the box scope lets a lazy hub start or refresh that box without doing
+the full work of `/api/health`:
+
+```ts
+const ctx = await makeTestServer();
+const response = await ctx.rawRequest({ method: "HEAD", url: "/api/keepalive" });
+response.statusCode
+=> 204
+
+response.headers["cache-control"]
+=> no-store
+
+response.payload
+=>
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 ## Browsing directories
 
 `GET /api/browse/*` lists directory contents with parsed card metadata:

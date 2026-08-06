@@ -51,6 +51,16 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
  * (keeps module load SSR-safe).
  */
 let wsClientSingleton: ReturnType<typeof createWSClient> | null = null;
+
+async function wakeDevBox(): Promise<void> {
+  if (!import.meta.env.DEV) return;
+  try {
+    await fetch(`${getApiBase()}/keepalive`, { method: "HEAD", cache: "no-store" });
+  } catch (_error) {
+    // A failed wake should not suppress tRPC's normal reconnect behavior.
+  }
+}
+
 function getWsClient(): ReturnType<typeof createWSClient> {
   if (!wsClientSingleton) {
     wsClientSingleton = createWSClient({
@@ -63,6 +73,11 @@ function getWsClient(): ReturnType<typeof createWSClient> {
       // socket open (lazy + 30s closeMs, so this is rare), in exchange for
       // removing that failure mode entirely.
       url: async () => {
+        // A lazy hub deliberately refuses to cold-start a box from a WebSocket
+        // upgrade. Wake it over HTTP first, then open the socket only after the
+        // box child is ready. This stays dev-only; production hubs keep their
+        // existing upgrade behavior.
+        await wakeDevBox();
         if (isMobileAuthenticated()) await refreshMobileSession(getApiBase());
         return getWebSocketUrl();
       },
