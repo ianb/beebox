@@ -11,7 +11,7 @@ false })` subtest got `actual: "undefined"` where a redirect Location header
 (e.g. `/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card`) was expected — but
 passed cleanly (11/11) run in isolation (`npx tap
 test/webapp/login-redirect.doctest.md`). Same shape as the tracked
-[flaky-mobile-spa-fallback-doctest](2026-07-10-flaky-mobile-spa-fallback-doctest.md)
+[flaky-mobile-spa-fallback-doctest](../closed/bugs/2026-07-10-flaky-mobile-spa-fallback-doctest.md)
 flake: a request that should redirect instead comes back with no `location`
 header, only reproducible under the full suite's parallel load (`.taprc`
 `jobs: 6`).

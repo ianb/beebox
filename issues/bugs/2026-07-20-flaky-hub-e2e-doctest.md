@@ -15,7 +15,7 @@ a heavy `pnpm install` (the SDK bump churned ~400 packages), and two subsequent
 full runs on the *same* bumped tree were green 4462/4462 — as was a control run
 on the pre-bump tree. So the trigger looks like machine load / cold page cache
 during the run, not the SDK version and not a defect in hub startup. Same family
-as [flaky-mobile-spa-fallback-doctest](2026-07-10-flaky-mobile-spa-fallback-doctest.md)
+as [flaky-mobile-spa-fallback-doctest](../closed/bugs/2026-07-10-flaky-mobile-spa-fallback-doctest.md)
 and the `.taprc` `jobs: 6` thundering-herd hazard noted there.
 
 The tension is whether the fix is a bigger `timeoutMs` for this particular
