@@ -1,8 +1,19 @@
 ---
 title: "stale image refs after renames"
-needs: [design]
 area: callback-box
+resolution: wontfix
 ---
+
+> **Closed 2026-08-06 — the warning backstop is stiff enough (boxholder call).**
+> `cb mv` rewrites refs correctly on the normal path; a rename that BYPASSES it
+> still dangles refs, but every commit's pre-commit hook surfaces them loudly:
+> `cb validate --staged` prints a yellow `(N broken refs)` count for staged cards,
+> and a box-wide `cb validate --links` warn-only scan surfaces every dangling link
+> to fix with `cb mv`. Deliberately non-blocking (refs go transiently stale). The
+> stronger measures once considered — a pre-commit BLOCK on new broken refs, or a
+> basename-based periodic repair job — are declined as not worth it; the visible,
+> recurring warning is the accepted backstop. (The validator's broken-ref summary
+> count landed earlier — `lint-format.ts` `countBrokenRefs`.)
 
 Surfaced during the attach-layout migration test on the ledger box. Many archived capture-session cards reference their image children by the original `photo-NNN.image.card` form, but agents renamed those image cards to descriptive forms long ago (`photo-001-arrow-invoice.image.card`, etc.) without updating the session card's `<image-ref>` entries. ~1,166 broken refs on ledger trace back to this pattern.
 
