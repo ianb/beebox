@@ -19,7 +19,7 @@ separate from the forward volume fix. No existing real-box backlog was removed.
 
 box-family's `box/` tree is **68,869 directories** — essentially all of it email
 the connector synced. That is the direct cause of
-[the watcher OOM](../../bugs/2026-08-05-box-watcher-unbounded-scale-oom.md), and it is a
+[the watcher OOM](2026-08-05-box-watcher-unbounded-scale-oom.md), and it is a
 problem in its own right: it dominates the box's file count, its git history,
 every whole-tree scan, and the agent's view of what the box contains.
 
