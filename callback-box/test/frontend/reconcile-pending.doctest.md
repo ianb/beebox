@@ -3,11 +3,12 @@
 `reconcilePending` decides which optimistic ("pending") user messages
 should still be displayed after a fresh server-history fetch arrives.
 A pending entry is dropped when the server has caught up to it; the
-rest stay so the UI keeps showing them dimmed as "queued — waiting".
+rest stay visible. Entries explicitly queued while the agent is busy also
+carry `pending: true`, which gives them the dimmed "queued — waiting" UI.
 
 ```ts setup
 import { reconcilePending } from "../../src/frontend/src/machines/chat-shared.js";
-import type { SessionEntry } from "../../src/frontend/src/api.js";
+import type { PendingSessionEntry, SessionEntry } from "../../src/frontend/src/api.js";
 
 function userEntry(uuid: string, text: string): SessionEntry {
   return {
@@ -16,6 +17,10 @@ function userEntry(uuid: string, text: string): SessionEntry {
     timestamp: "2026-01-01T00:00:00Z",
     content: [{ type: "text", text }],
   };
+}
+
+function pendingEntry(uuid: string, text: string, reconcileKnownUuids: string[] = []): PendingSessionEntry {
+  return { ...userEntry(uuid, text), reconcileKnownUuids };
 }
 ```
 
@@ -35,7 +40,7 @@ pending: 0
 
 ```ts
 const server = [userEntry("s1", "<typed>hi there</typed>")];
-const pending = [userEntry("p1", "<typed>hi there</typed>")];
+const pending = [pendingEntry("p1", "<typed>hi there</typed>")];
 const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
 print(`messages: ${result.messages.length}`);
 print(`pending: ${result.pendingMessages.length}`);
@@ -48,7 +53,7 @@ pending: 0
 
 ```ts
 const server = [userEntry("s1", "<typed>old</typed>")];
-const pending = [userEntry("p1", "<typed>new</typed>")];
+const pending = [pendingEntry("p1", "<typed>new</typed>")];
 const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
 print(`messages: ${result.messages.length}`);
 print(`last message uuid: ${result.messages[result.messages.length - 1]?.uuid}`);
@@ -75,7 +80,7 @@ const server = [userEntry(
   "s1",
   '<typed user="Ian" user-email="ian@example.com" local-time="9:00 AM">hello world</typed>',
 )];
-const pending = [userEntry(
+const pending = [pendingEntry(
   "p1",
   '<typed local-time="9:00 AM">hello world</typed>',
 )];
@@ -100,11 +105,82 @@ const server = [userEntry(
   '<typed local-time="9:00 AM">say hi</typed>\n\n<typed local-time="9:00 AM">say hi</typed>',
 )];
 const pending = [
-  userEntry("p1", '<typed local-time="9:00 AM">say hi</typed>'),
-  userEntry("p2", '<typed local-time="9:00 AM">say hi</typed>'),
+  pendingEntry("p1", '<typed local-time="9:00 AM">say hi</typed>'),
+  pendingEntry("p2", '<typed local-time="9:00 AM">say hi</typed>'),
 ];
 const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
 print(`pending (0 expected): ${result.pendingMessages.length}`);
 =>
 pending (0 expected): 0
+```
+
+## An older identical message cannot confirm the new send
+
+Short repeated replies are common. A snapshot containing only the already
+visible older `"yes"` must keep the new optimistic `"yes"`; only a new server
+UUID can confirm it.
+
+```ts
+const oldYes = userEntry("s-old", "<typed>yes</typed>");
+const pending = [pendingEntry("p-new", "<typed>yes</typed>", [oldYes.uuid])];
+const stale = reconcilePending({
+  serverMessages: [oldYes],
+  pendingMessages: pending,
+});
+print(`messages after stale snapshot: ${stale.messages.length}`);
+print(`pending after stale snapshot: ${stale.pendingMessages.length}`);
+
+const durableYes = userEntry("s-new", "<typed>yes</typed>");
+const caughtUp = reconcilePending({
+  serverMessages: [oldYes, durableYes],
+  pendingMessages: stale.pendingMessages,
+});
+print(`messages after durable snapshot: ${caughtUp.messages.length}`);
+print(`pending after durable snapshot: ${caughtUp.pendingMessages.length}`);
+=>
+messages after stale snapshot: 2
+pending after stale snapshot: 1
+messages after durable snapshot: 2
+pending after durable snapshot: 0
+```
+
+## One durable occurrence confirms only one identical pending send
+
+Two client sends need two server occurrences. A snapshot containing only the
+first durable `"yes"` keeps the second optimistic copy visible.
+
+```ts
+const durable = userEntry("s-one", "<typed>yes</typed>");
+const pending = [
+  pendingEntry("p-one", "<typed>yes</typed>"),
+  pendingEntry("p-two", "<typed>yes</typed>"),
+];
+const result = reconcilePending({ serverMessages: [durable], pendingMessages: pending });
+print(`messages: ${result.messages.length}`);
+print(`remaining uuid: ${result.pendingMessages[0]?.uuid}`);
+=>
+messages: 2
+remaining uuid: p-two
+```
+
+## Chronological matching respects each send's baseline
+
+When the second identical send was created after the first durable UUID was
+already known, the first pending entry must consume the first echo. Matching
+newest-first would consume the second echo incorrectly and strand the newer
+pending entry behind its baseline.
+
+```ts
+const firstEcho = userEntry("s-first", "<typed>yes</typed>");
+const secondEcho = userEntry("s-second", "<typed>yes</typed>");
+const pending = [
+  pendingEntry("p-first", "<typed>yes</typed>"),
+  pendingEntry("p-second", "<typed>yes</typed>", [firstEcho.uuid]),
+];
+const result = reconcilePending({
+  serverMessages: [firstEcho, secondEcho],
+  pendingMessages: pending,
+});
+result.pendingMessages.length
+=> 0
 ```
