@@ -38,7 +38,7 @@ export async function shareTabs(
   });
   let organizerOpened = true;
   try {
-    await chrome.windows.create({ url: openUrl, type: "popup" });
+    await chrome.tabs.create({ url: openUrl });
   } catch (error) {
     organizerOpened = false;
     console.error("[callback-clerk] tabs shared but organizer did not open:", error);
@@ -57,7 +57,7 @@ export async function openTabOrganizer(box: EnabledBox, transferId: string): Pro
   if (transfer === null || transfer.payload.transferId !== transferId || transfer.boxUrl !== box.boxUrl) {
     throw new MissingTabTransferError();
   }
-  await chrome.windows.create({ url: transfer.openUrl, type: "popup" });
+  await chrome.tabs.create({ url: transfer.openUrl });
 }
 
 export async function latestTransferForBox(box: EnabledBox): Promise<SharedTabsResult | undefined> {

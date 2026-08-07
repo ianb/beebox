@@ -1,9 +1,9 @@
 import { test } from "tap";
 import { shareTabs } from "../src/platform/tab-transfer-actions.js";
 
-test("shareTabs saves the transfer before opening its organizer", async (t) => {
+test("shareTabs saves the transfer before opening its organizer in a tab", async (t) => {
   const events: string[] = [];
-  let openedWith: chrome.windows.CreateData | undefined;
+  let openedWith: chrome.tabs.CreateProperties | undefined;
   const fakeChrome = {
     storage: {
       local: {
@@ -15,17 +15,19 @@ test("shareTabs saves the transfer before opening its organizer", async (t) => {
         set: async () => {},
       },
     },
+    tabs: {
+      create: async (createProperties: chrome.tabs.CreateProperties) => {
+        events.push("opened");
+        openedWith = createProperties;
+        return { id: 12 };
+      },
+    },
     windows: {
       getAll: async () => [{
         id: 7,
         incognito: false,
         tabs: [{ id: 11, groupId: -1, pinned: false, title: "One", url: "https://one.example" }],
       }],
-      create: async (createData: chrome.windows.CreateData) => {
-        events.push("opened");
-        openedWith = createData;
-        return { id: 8 };
-      },
     },
   };
   Object.defineProperty(globalThis, "chrome", { value: fakeChrome, configurable: true });
@@ -57,7 +59,6 @@ test("shareTabs saves the transfer before opening its organizer", async (t) => {
   t.same(events, ["uploaded", "saved", "opened"]);
   t.same(openedWith, {
     url: "https://box.example/personal/chat?companion=view%3Abox%2Finbox%2FTabs.card",
-    type: "popup",
   });
   t.equal(result.organizerOpened, true);
 });
