@@ -146,7 +146,7 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
     runAction({
       label: "open-organizer",
       message: { type: "openTabOrganizer", transferId: sharedTabs.transferId },
-      okText: "Organizer opened in a separate window.",
+      okText: "Organizer opened in a new tab.",
     });
   }, [runAction, sharedTabs]);
 
