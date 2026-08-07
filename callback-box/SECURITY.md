@@ -36,10 +36,15 @@ open queue (`issues/`).
 callback-box assumes a **single trusted operator** (plus, optionally, a
 few invited members they personally trust). It defends the box from the
 network — authentication is structurally always-on; there is no flag,
-env var, or config field that disables the login wall — and it defends
-your credentials from the box's own moving parts (per-box processes
-never see the session-signing secret; agent subprocesses get a stripped
-environment). It does **not** defend you from your own agent: the agent
+env var, or config field that disables the login wall — and it limits
+what the box's own moving parts inherit: per-box processes and agent
+subprocesses get an allowlisted environment that omits the
+session-signing secret and other cross-box credentials. Be precise
+about what that is: **env-level isolation, not OS-level.** Everything
+runs as one OS user, and the secret is also a 0600 file that same-user
+code could read — the stripping stops accidents and lazy exfiltration,
+not a determined same-user process. It does **not** defend you from
+your own agent: the agent
 is the product, and it runs with real power (next section). It also does
 not currently treat invited members as adversaries — membership grants
 broad capability short of admin operations
@@ -50,9 +55,10 @@ broad capability short of admin operations
 Plainly: the box agent runs Claude Code with `bypassPermissions` and no
 tool allowlist. It can execute arbitrary shell commands as the user the
 box runs as, and read or write any file in the box. Its working scope is
-the box directory, and nothing in the code widens it beyond that — but
-that is a convention the agent operates within, not a sandbox that
-contains it. If prompt-injected content (an email, a web clipping) can
+the box directory, and no current call site widens it beyond that — but
+the scope parameter itself is unguarded caller input, and either way it
+is a convention the agent operates within, not a sandbox that contains
+it. If prompt-injected content (an email, a web clipping) can
 steer the agent, the agent's full capability is the exposure. Tighter
 containment is tracked in
 [agent-containment-allowed-directories](../issues/features/2026-07-20-agent-containment-allowed-directories.md);
@@ -78,6 +84,9 @@ The summary:
   the vendor under a short-lived key minted by your box. Search
   embeddings, when configured, send each card's text and your search
   queries to OpenAI. All of these are per-box configurable or omittable.
+  A generic adapter proxy can also forward requests to Replicate,
+  Mistral, Anthropic, or OpenAI with the box's stored key — used by
+  box-local code, never automatically.
 - **Google** — if you connect it: Gmail (read + **drafts only** — the
   code requests no send scope, so autonomous email sending is
   impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,
@@ -88,10 +97,15 @@ The summary:
   (Google/Mozilla/Apple).
 - **Your git remote** — every wakeup pushes the box's full history to
   the remote *you* configured; no remote, no push.
-- **Cloudflare** — only if you set up publishing, and only when you
-  interactively confirm a publish (below).
-- **Nothing else.** No telemetry, no analytics, no crash reporting, no
-  update phone-home — verified absent, not just unpromised.
+- **Cloudflare** — only if you set up publishing. `cb pub setup` itself
+  calls Cloudflare's API to provision buckets and deploy the worker (no
+  box content); box content uploads only when you interactively confirm
+  a publish (below).
+- **Nothing else.** The running system sends no telemetry, analytics,
+  crash reports, or update checks — verified absent, not just
+  unpromised. (The monorepo's developer maintenance scripts in `bin/`
+  query package registries; they are not shipped and never run on a
+  box.)
 
 One caveat worth naming: the iOS app's dictation prefers Apple's
 on-device recognizer, but on older systems it falls back to Apple's

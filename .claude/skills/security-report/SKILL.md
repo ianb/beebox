@@ -74,7 +74,7 @@ it current (step 4 above).
 | Category | Paths |
 |---|---|
 | Endpoints & auth | `callback-box/src/webapp/`, `callback-box/src/hub/`, `callback-box/pub-worker/src/` |
-| Credentials | `callback-box/src/lib/auth*`, `callback-box/src/webapp/auth*`, `callback-box/src/core/external/`, `callback-box/deploy/`, any `process.env` addition anywhere |
+| Credentials | `callback-box/src/webapp/auth*`, `callback-box/src/webapp/local-users*`, `callback-box/src/webapp/auth-invites.ts`, `callback-box/src/webapp/setup-token.ts`, `callback-box/src/core/token-store.ts`, `callback-box/src/core/agent/token.ts`, `callback-box/src/core/mobile/`, `callback-box/src/core/scan/tokens.ts`, `callback-box/src/core/*-key.ts`, `callback-box/src/core/search/embeddings-key.ts`, `callback-box/src/connectors/google-token-store.ts`, `callback-box/src/connectors/google-auth.ts`, `callback-box/src/webapp/trpc/routers/admin.ts`, `callback-box/src/publish/connector-secret.ts`, `callback-box/src/lib/env.ts`, `callback-box/deploy/`, any `process.env` addition anywhere |
 | Data egress | `callback-box/src/connectors/`, `callback-box/src/core/agent/`, `callback-box/src/core/transcription/`, `callback-box/src/services/`, `callback-box/src/publish/`, `callback-box/src/core/external/` |
 | Internal practices | `callback-box/src/shared/ref-path.ts`, `callback-box/src/lib/file-lock.ts`, `callback-box/src/lib/card-lock.ts`, `callback-box/src/webapp/` (CSP, throttles), `callback-box/src/lib/atomic-write.ts` |
 | Operational | `callback-box/deploy/`, `callback-box/src/services/tailscale-exposure.ts`, `callback-box/src/hub/` (child-env allowlist), systemd units |

@@ -56,9 +56,13 @@ client-supplied `x-cb-*` headers (`auth.ts:373-449`,
 `hub-server.ts:249-294`).
 
 tRPC procedure tiers (`src/webapp/trpc/trpc.ts`): `ownerProcedure`
-narrows to the owner; `publicProcedure`/`authedProcedure` both admit any
-wall-passing identity (member or machine credential). The distinction
-only matters on multi-member boxes — see the member-tier gap below.
+narrows to the owner; `authedProcedure` checks `ctx.authed`;
+`publicProcedure` is plain `t.procedure` with **no auth middleware of
+its own** — it is safe only because the transport wall already ran, a
+transport-level guarantee, not a procedure-tier one. In practice the
+two non-owner tiers admit the same population (member or machine
+credential); the distinction only matters on multi-member boxes — see
+the member-tier gap below.
 
 ### Intentionally public (no credential of any kind)
 
@@ -112,7 +116,7 @@ pub-worker routes are in §6.
 | Credential | Lives at | Gates (blast radius) | Scope | Lifetime / revocation | State |
 |---|---|---|---|---|---|
 | Local password store — `~/.cb-auth.json` (`local-users.ts:87`) | 0600 self-healing (`:124-127`), symlink-rejected, scrypt N=2^17, atomic writes | Account takeover for stored users | **Machine-global** (all local boxes) | Permanent; password change bumps `gen`, revoking live sessions | ok |
-| Session secret — `~/.cb-session-secret` / `CB_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — withheld from box children and agent subprocesses | Cookie TTL 30 days; revocation via `gen` bump only | ok |
+| Session secret — `~/.cb-session-secret` / `CB_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env.ts:119-127` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
 | Invite capabilities — `~/.cb-auth.json.invites.json` (`auth-invites.ts`) | SHA-256 hash at rest, 0600, atomic + locked | Create one member account on one box | Per-box | 15-min TTL, single-use, 100-live cap | ok |
 | Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§7) |
 | `CB_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; stripped from agent subprocesses (`script-env.ts:116`) | Hub process lifetime | ok |
@@ -139,6 +143,11 @@ reasoned comment. `script-env.ts:109-127` additionally strips
 `CB_HUB_SECRET`/`CB_DIAG_API_KEY`/`CB_SESSION_SECRET` from agent
 subprocesses. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
+**Scope of the control**: env-level, not OS-level. Everything runs as
+one OS user, so file-backed secrets (`~/.cb-session-secret`,
+`~/.cb-auth.json`) stay readable by any process that goes looking; the
+allowlist stops inheritance and accident, not a determined same-user
+reader.
 
 ## 3. Data egress
 
@@ -158,12 +167,13 @@ wakeup cycle or routine use without a per-action confirmation.
 | **Telegram** (`connectors/telegram.ts`, `telegram-outbound.ts`) | Automatic once configured | Agent-authored reply text (no attachment path); registers the public webhook URL | Per-box bot token | Presence of the secret file | ok |
 | **Web Push** (`send-push.ts`, `services/push.ts`) | Automatic on finalize | Full notification payload (agent-authored title/body/URL), VAPID-encrypted, through the browser's push service (FCM/Mozilla/Apple) | Server VAPID keypair | Browser subscription | ok |
 | **Box git remote** (`lib/git.ts:416-460`, `wakeup.ts:149`) | Automatic at the end of every wakeup | **The entire incremental box history** — every card, email, chat | Host git credentials | Operator-chosen remote; no remote → skipped | ok (stated plainly; see [git-push-confirmation](../../issues/decisions/2026-07-20-git-push-confirmation.md)) |
-| **Cloudflare (publish)** (`publish/setup.ts`, `go.ts`) | Human-gated CLI only; `cb pub go` requires an interactive TTY confirm | Provisioning: static config, no content. Publish: the rendered bundle + a stripped edge manifest (no box identifiers) | Operator's wrangler OAuth (never stored on the box); box holds only the ingestion-scoped token | Never run `cb pub setup` → fully inert | ok |
+| **Cloudflare (publish)** (`publish/setup.ts`, `go.ts`) | Human-gated CLI only. `cb pub setup` itself calls Cloudflare's API (buckets, subdomain, Access provisioning, worker deploy — `setup.ts:165-207`) with no confirm beyond running it; **content** uploads only on `cb pub go`'s interactive TTY confirm | Provisioning: static config, no content. Publish: the rendered bundle + a stripped edge manifest (no box identifiers) | Operator's wrangler OAuth (never stored on the box); box holds only the ingestion-scoped token | Never run `cb pub setup` → fully inert | ok |
 | **Tailscale** (`tailscale-setup.ts`) | Manual CLI | Traffic to the tailnet via `tailscale serve` — **never `funnel`** (a discovered funnel grant is a hard failure); control-plane traffic belongs to the OS daemon | — | `cb tailscale stop` / don't install | ok |
+| **Adapter proxy** (`api-adapters.ts:33-104`) | Box-local code calling `/api/adapters/:adapter/*` (never automatic) | The authed request body, forwarded to **Replicate**, Mistral, Anthropic, or OpenAI with the box's stored key injected server-side | Per-box stored keys | Only reachable behind the wall; inert without a stored key | ok |
 | **Outbound URL fetches** (`proxy-image.ts`, `url-fetch.ts`) | Image proxy per render; link check on validate | The URL itself (query strings can carry data) | None forwarded | — | mitigated — SSRF guards, §4 |
 | **iOS app** | — | All box traffic goes only to the paired box. Exception: legacy dictation fallback streams mic audio to **Apple** cloud speech, no app-level opt-out | — | On-device path preferred (iOS 26+) | gap — [ios-cloud-speech-fallback-no-optout](../../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md) |
 | **Chrome extension** (`callback-clerk`) | User-initiated capture | Readability-extracted page markdown, URL, optional screenshot + frozen HTML; selected tab titles/URLs — only to the user's own enabled box (per-origin permission granted at enable time) | Browser session cookie | Per-box enablement | ok |
-| **Telemetry / analytics / update checks** | — | **None — verified absent.** No analytics/crash/telemetry dependency in any `package.json`; no version-check network call anywhere | — | — | ok |
+| **Telemetry / analytics / update checks** | — | **None in the running system — verified absent.** No analytics/crash/telemetry dependency in any `package.json`; no version/update check on any box or server code path. (Developer maintenance scripts in the monorepo's `bin/` query npm/PyPI; they are not shipped and never run on a box) | — | — | ok |
 
 ## 4. Internal security practices
 
@@ -180,7 +190,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §7 |
 | Input validation | Zod at tRPC/route boundaries; `cb validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
-| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root, `additionalDirectories` widens to the box, never beyond, in any code path found; hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
+| **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
 | Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md) |
 
 ## 5. Operational security
