@@ -19,7 +19,7 @@ import { serveIssues, findClosedIssueLinkHrefs, appendClosedIssuePills } from ".
 // Per-worktree extra cards for the /dev/ manifest, declared in the worktree's
 // tracked `dev/tools.json` and served straight from disk — so a worktree can add
 // its own tools without a router-code change + main-merge. Universal tools (doc
-// browser, issue browser, site preview) stay in code; this is for the rest.
+// browser and site preview) stay in code; this is for the rest.
 const devToolSchema = z
   .object({
     title: z.string().min(1),
@@ -304,8 +304,6 @@ export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
 async function renderDevManifest(name: string, base: string, devRoot: string): Promise<string> {
   let builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
     + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`
-    + `<li><a class="title" href="${base}/issues/">🗂️ Issue browser</a>`
-    + `<div class="desc">Browse the monorepo's <code>issues/</code> queue, overlaid with what every active worktree has added, changed, or closed relative to main.</div></li>`
     + `<li><a class="title" href="/${encodeURIComponent(name)}/site/">🌐 Public site preview</a>`
     + `<div class="desc">This worktree's build of the front-door site (<code>site/dist/</code> — run <code>pnpm --dir site build</code> first). What GitHub Pages will serve.</div></li>`;
 
