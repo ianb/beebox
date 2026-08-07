@@ -1,11 +1,18 @@
 ---
 title: "No web password reset / account recovery — a member who forgets their password is stuck"
 area: callback-box
-needs: [decision]
 labels: [soft-launch]
 filed-by: agent
 discovered-in: main session — boxholder asked whether password reset works over the web
 ---
+
+> **Decided (2026-08-07):** build **option 2** — an operator-driven member
+> password reset that reuses the invite-link machinery: the operator mints a
+> reset link (a fresh invite-style capability pinned to the member's email) and
+> hands it to the member, who sets their own new password. **Option 3 (email
+> self-service) is rejected** — outbound mail is operationally complex. Option 1
+> (document `cb auth set-password` host recovery) is the interim floor until this
+> lands.
 
 > **Job to be done:** *When I'm an invited member of someone's box and I've
 > forgotten my password, I want to get back in on my own — the way every web app
@@ -59,8 +66,9 @@ boxholder is now reconsidering it specifically because members exist.
    identity the system deliberately doesn't have yet. Bigger; likely a fast-follow,
    not a launch item.
 
-Recommendation to decide: option 1 as the minimum launch answer, option 2 if it's
-cheap on top of the invite machinery; option 3 deferred. This is the account-
+**Decided (2026-08-07):** option 2 — operator-driven, invite-machinery-based
+member reset; option 3 rejected (email operationally complex); option 1 is the
+interim floor. This is the account-
 recovery half of the same auth lifecycle that
 [web-password-change](../closed/features/2026-07-20-web-password-change.md) and
 [invite-links](../closed/features/2026-07-20-invite-links.md) opened; it feeds the
