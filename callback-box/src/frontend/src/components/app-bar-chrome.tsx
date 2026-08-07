@@ -60,7 +60,7 @@ interface AppBarChromeValues {
   place: AppBarPlace | null;
   /**
    * The bar's chip container, or null before the bar mounts (it never does
-   * under `?embed=1`). Exactly one: the bar is a single responsive row (C3),
+   * under `?nativeComposer=1`). Exactly one: the bar is a single responsive row (C3),
    * so there is no hidden duplicate to portal into.
    */
   chipSlot: HTMLElement | null;
@@ -220,7 +220,7 @@ export function useAppBarRecentFilesClaim(claimed: boolean): void {
 }
 
 /** The portal targets a page can render into. Null until the bar mounts
- *  (it doesn't at all under `?embed=1`), so callers must guard on presence. */
+ *  (it doesn't at all under `?nativeComposer=1`), so callers must guard on presence. */
 export function useAppBarSlots(): {
   chipSlot: HTMLElement | null;
   hereSlot: AppBarMenuSlot | null;

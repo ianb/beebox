@@ -261,13 +261,12 @@ struct ChatAPI: Sendable {
             throw ChatAPIError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
-            // Silent degradation until now (mobile-contract §5.3): everything
-            // downstream believes the user asked for a new chat.
-            BoxLog.warn(
-                "default-session lookup failed status=\(http.statusCode); falling back to a new session",
+            let message = "Default-session lookup failed with HTTP status \(http.statusCode)."
+            BoxLog.error(
+                "default-session lookup failed status=\(http.statusCode)",
                 category: .net
             )
-            return "new"
+            throw ChatAPIError.server(message)
         }
         let result: DefaultSessionResult
         do {

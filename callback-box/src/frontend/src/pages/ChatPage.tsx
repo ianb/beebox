@@ -41,11 +41,6 @@ interface ChatSearch {
    */
   card?: string;
   /**
-   * Native companion embed mode: render the conversation as a web client, but
-   * leave input to the native shell.
-   */
-  embed?: string | number;
-  /**
    * Keep the normal web navigation and chat header, but leave message input to
    * the native shell.
    */
@@ -129,7 +124,6 @@ export function ChatPage() {
   const contextDir = search.contextDir;
   const companion = search.companion;
   const card = search.card;
-  const embedded = String(search.embed) === "1";
   // The `?nativeComposer=1` param only rides the initial chat URL; after an
   // in-app navigation it's gone, which un-suppressed the web composer under the
   // native one. Detect the native shell by its always-present bridge instead, so
@@ -288,7 +282,6 @@ export function ChatPage() {
       emissionStore={emissionStore}
       sessionLabel={sessionLabel}
       onSessionAssignment={announceSessionAssignment}
-      embedded={embedded}
       nativeComposer={nativeComposer}
       openCaptureOnMount={openCaptureOnMount}
     />

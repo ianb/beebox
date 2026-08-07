@@ -187,14 +187,14 @@ authenticated-but-unattributed behavior.
 ### 3.1 The URL the app loads
 
 - **Wire shape:** `<baseURL>/chat?nativeComposer=1[&session=<id>][&mobileToken=<token>]`.
-- **Contract param:** `nativeComposer=1` (NOT the legacy `embed=1` — see §9). Mirrored: native
+- **Contract param:** `nativeComposer=1`. Mirrored: native
   `PairedBox.chatURL` builds `nativeComposer=1` (with an in-code "keep in sync" comment); web
   `ChatPage` reads it and the router schema declares it.
 - **Anchors:**
   | side | anchor |
   |---|---|
   | native URL build | `ios-app/CallbackBox/Models/PairedBox.swift` — `PairedBox.chatURL`; `ios-app/CallbackBox/Views/ChatWebView.swift` — `authenticatedChatURL` (appends `&mobileToken=`) |
-  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `embed` + `nativeComposer`); `src/frontend/src/router.tsx` (route schema `nativeComposer`) |
+  | web parse | `src/frontend/src/pages/ChatPage.tsx` (reads `nativeComposer`); `src/frontend/src/router.tsx` (route schema `nativeComposer`) |
 - **Drift:** SILENT (wrong/missing param → web composer not suppressed, bridges never enabled).
 
 ### 3.2 What `nativeComposer` changes web-side
@@ -444,8 +444,8 @@ See §1.3 (full request/response/errors).
   |---|---|
   | native caller | `ios-app/CallbackBox/Services/ChatAPI.swift` — `ChatAPI.resolvedSession()`, `DefaultSessionResult { sessionId? }` |
   | box handler | `src/webapp/routes/chat.ts` — `GET /api/chat/default` (→ `getMostActive(boxRoot)`) |
-- **Drift:** SILENT (on any non-2xx `resolvedSession` returns `"new"` — a transient 5xx silently
-  forks a new session).
+- **Drift:** LOUD (non-2xx `resolvedSession` throws; a transient 5xx does not silently fork a new
+  session).
 
 ### 5.4 `POST /api/chat/upload-file` — composer file upload
 
@@ -771,8 +771,6 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending
   pairings live only in process memory (10-min TTL) and can be lost to a lazy 5-min box idle-stop
   mid-flow.
-- **`isPairingRedeemUrl` unanchored** suffix match (`routes/pairing.ts`) — `/anything/api/pairing/redeem`
-  matches. Low risk (token-gated).
 - **`mobileTokenFromUrl` duplicated 3×** — a security-relevant parser copied verbatim across
   `hub-server.ts` / `server-box-scope.ts` / `server-root.ts`.
 - **Benign field drifts.** Redeem `{boxSlug,label,deviceId,deviceLabel}` ignored by iOS; receipt
@@ -780,9 +778,6 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
 - **I8 — float WAV decoder compatibility (RESOLVED 2026-08-06).** Live calls with a 48 kHz mono
   Float32 WAV returned the expected speech from all OpenAI HQ variants and from Voxtral in both plain
   and diarized modes. See `issues/closed/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md`.
-- **Legacy `embed=1` vs `nativeComposer=1` duality.** The web side still reads a legacy `embed=1`
-  (header-suppress) alongside `nativeComposer=1`; both reach the same `usesNativeShell`. iOS uses
-  only `nativeComposer=1`, which is the standard a new platform must adopt.
 
 ---
 

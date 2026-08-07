@@ -104,8 +104,6 @@ const chatRoute = createRoute({
     // active card changes. Distinct from `companion`, which is a one-shot
     // deep-link opened only on mount.
     card: z.string().optional(),
-    // Native companion embed mode: conversation-only chat, no web composer.
-    embed: z.union([z.literal("1"), z.literal(1)]).optional(),
     // Native iOS mode: preserve web navigation and chat controls while the
     // shell supplies a keyboard-safe native composer.
     nativeComposer: z.union([z.literal("1"), z.literal(1)]).optional(),

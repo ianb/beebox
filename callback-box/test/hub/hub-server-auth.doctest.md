@@ -99,7 +99,7 @@ apiResponse.status
 ## A mobile bearer token proxies without a browser session
 
 ```ts continue
-const mobileResponse = await fetch(`${hubBase}/test1/chat?embed=1`, {
+const mobileResponse = await fetch(`${hubBase}/test1/chat?nativeComposer=1`, {
   headers: { authorization: `Bearer ${mobileToken}` },
 });
 const mobileBody = await mobileResponse.json();
@@ -109,7 +109,7 @@ JSON.stringify({
   email: mobileBody.xCbAuthenticatedEmail,
   secret: mobileBody.xCbHubSecret,
 })
-=> {"status":200,"url":"/test1/chat?embed=1","email":null,"secret":null}
+=> {"status":200,"url":"/test1/chat?nativeComposer=1","email":null,"secret":null}
 ```
 
 ## A bogus mobile credential does NOT get past the hub
@@ -163,7 +163,7 @@ const mobileCookie = signMobileSession(mobileBox.root, {
   createdBy: null,
   ttlMs: MOBILE_SESSION_TTL_MS,
 });
-const cookieResponse = await fetch(`${hubBase}/test1/chat?embed=1`, {
+const cookieResponse = await fetch(`${hubBase}/test1/chat?nativeComposer=1`, {
   headers: { cookie: `${MOBILE_COOKIE_NAME}=${mobileCookie}` },
 });
 cookieResponse.status
