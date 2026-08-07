@@ -3,7 +3,10 @@ title: "bin/private-issues status misreports the MAIN checkout as state=invalid"
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked to set up private issues, status said invalid
+resolution: implemented
 ---
+
+> **Resolved in `105187ec`** — main-checkout mounts now validate against the private repository's primary tree, and the removal path protects the main checkout.
 
 `bin/private-issues status <main-checkout>` prints `state=invalid` for a **correctly
 set up** main checkout. The mount is fine — the symlink resolves to the private
