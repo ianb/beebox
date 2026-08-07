@@ -221,7 +221,8 @@ interface DefaultSchedule {
   source: string;
   createAfterSuccess?: Array<{ path: string; args: Record<string, string> }>;
   lockGroup?: string;
-  enabled?: boolean;
+  /** Every seeded schedule declares its initial state; true is omitted from cards. */
+  enabled: boolean;
   requires?: string[];
 }
 
@@ -276,16 +277,9 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 7 * * 1",
     notBefore: "3d",
     onWakeup: false,
-    // Ships ENABLED for ALL boxes, deliberately. generateDocs() re-syncs
-    // templates on every reactor cycle and chat-session start, so this flips
-    // retro on for every box (overwriting unmodified disabled cards, installing
-    // it fresh-and-enabled where absent). It's a weekly no-op on boxes with no
-    // qualifying chat sessions — both the scan and integrate prechecks hit
-    // CHECK_SKIP and invoke no agent — and only edits belief cards (a reviewable
-    // Retro-Run commit) when there's real signal. medium is the inferred
-    // ceiling; user-stated beliefs, speaking-voice, and the briefing body are
-    // never direct-edited.
-    enabled: true,
+    // Seeded disabled: retrospective learning is opt-in because it can spend
+    // the boxholder's agent quota and edit belief cards.
+    enabled: false,
     lockGroup: "retro",
     runs: "cb procedure run process-retrospective",
     source: "Weekly Monday-morning sweep; enable per box once trialed",
@@ -297,13 +291,9 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 4 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Ships ENABLED for all boxes (boxholder's call, 2026-07-28 — "we built it
-    // to try it"). Note what that means: generateDocs() re-syncs templates on
-    // every reactor cycle and chat-session start, so this turns on everywhere
-    // at once, and the pass writes generated prose onto git-tracked cards that
-    // get pushed off the machine. `enabled` is a box-owned field, so a box that
-    // turns it off keeps it off across template updates.
-    enabled: true,
+    // Seeded disabled: chat review scans transcripts and writes generated
+    // prose to git-tracked cards, so it must be explicitly opted into.
+    enabled: false,
     // Shares retro's group: both walk every transcript under ~/.claude, and
     // there is no reason to have them do it concurrently.
     lockGroup: "retro",
