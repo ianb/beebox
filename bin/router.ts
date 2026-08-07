@@ -706,6 +706,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
 <body>
 <h1>callback-box dev router</h1>
 <p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s. <strong>dev ↗</strong> opens that worktree's visualizations &amp; doc browser (served from disk, no start).</p>
+<p><a href="/main/dev/issues/" class="dash" title="Browse the main checkout's issue queue">issues ↗</a></p>
 <ul>${rows}</ul>
 
 <div class="help">
