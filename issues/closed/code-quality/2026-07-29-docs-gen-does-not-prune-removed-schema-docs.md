@@ -3,7 +3,13 @@ title: "docs-gen never prunes docs/generated/card-<type>.md for a removed schema
 area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — retiring the todo-list card type
+resolution: implemented
 ---
+
+Fixed in commit `ebbe0190` (worktree `docs-gen-prune`): `writeCardDocs`
+(`src/core/docs-gen/index.ts`) now `readdir`s `docs/generated/` after writing
+the current set of `card-<type>.md` files and `unlink`s any `card-*.md` whose
+type isn't in `allCardSchemas`, mirroring `init-rules.ts`'s existing cleanup.
 
 `src/core/docs-gen/index.ts`'s `writeCardDocs` only *writes* a
 `docs/generated/card-<type>.md` for each currently-registered schema with
