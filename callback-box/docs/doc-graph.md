@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-06T23:12:45Z
-Total documents: 247
+Generated: 2026-08-07T22:21:00Z
+Total documents: 248
 
 ## Issues
 
@@ -39,7 +39,6 @@ These documents are not referenced by any other document.
 - **docs/plans/invite-links-and-password-change.md** — "Invite links and self-service password change" (544 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (49 lines)
 
@@ -424,7 +423,7 @@ References:
 
 #### README.md
 
-Title: "callback-box" | 84 lines
+Title: "callback-box" | 98 lines
 
 Referenced by:
 - docs/adding-a-box.md:27 (link) — see the root [`README.md`](../README.md) for that path. This doc is about
@@ -432,7 +431,8 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:75 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:13 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/private-issues-shadow-repo.md:158 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
-- ../issues/docs-and-chores/2026-07-21-community-forum-zulip.md:11 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
+- ../.claude/skills/security-report/SKILL.md:191 (mention) — `callback-box/README.md` keeps a short "What leaves your machine" section
+- ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:17 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../research/CLAUDE.md:11 (mention) — `pai/`, …) with a `README.md` index: a table of the corpus's documents plus
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:4 (link) — architecture framing in the first-pass [README](README.md)). This is a code-reading
 - ../research/backend-alternatives/2026-07-18-synthesis.md:3 (link) — *2026-07-18. Supersedes the first-pass [README](README.md) analysis (kept as a record
@@ -451,10 +451,39 @@ References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (link)
 - → CLAUDE.md (mention)
 - → docs/box-layout.md (link)
+- → SECURITY.md (link)
 - → docs/cards-as-markdown.md (link)
 - → docs/adding-schemas.md (link)
 - → docs/adding-a-box.md (link)
 - → docs/migrations.md (link)
+
+#### SECURITY.md
+
+Title: "Security" | 165 lines
+
+Referenced by:
+- README.md:88 (link) — what the agent can actually do — is in [SECURITY.md](SECURITY.md).
+- docs/plans/github-pages-site.md:225 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
+- docs/security-report.md:11 (link) — The exhaustive accounting behind [SECURITY.md](../SECURITY.md). An agent
+- docs/todo-security.md:10 (link) — and [SECURITY.md](../SECURITY.md) (the readable report).
+- ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security
+- ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:34 (mention) — `callback-box/docs/todo-security.md` for the SECURITY.md security report.
+- ../issues/code-quality/2026-08-07-member-level-writing-procedures.md:34 (mention) — that in the invite flow and SECURITY.md), or the config-writing and
+- ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:5 (mention) — discovered-in: main session — todo-security breakdown for the SECURITY.md report
+- ../issues/decisions/2026-07-20-soft-launch-posture.md:65 (mention) — - **Agent-legible docs as capability** (the SECURITY.md /
+- ../issues/features/2026-07-20-agent-containment-allowed-directories.md:52 (mention) — honesty means SECURITY.md describes what IS true today — but it's the
+- ../issues/features/2026-07-20-agent-maintained-security-report.md:10 (mention) — The launch needs a SECURITY.md-shaped "what this can touch" page (the
+- ../issues/features/2026-07-20-export-md-agent-instructions.md:9 (mention) — Data export on the SECURITY.md pattern (boxholder, 2026-07-20): not a
+- ../research/openclaw-hermes/compare-security.md:9 (mention) — - **OpenClaw** (`SECURITY.md`): single trusted-operator boundary; authenticated Gateway callers,
+- ../research/openclaw-hermes/deep-installation.md:160 (mention) — a threat model a skeptical stranger can read. A short SECURITY.md-shaped
+
+References:
+- → docs/security-report.md (link)
+- → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
+- → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
+- → ../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
+- → ../issues/features/2026-08-07-web-password-reset-account-recovery.md (link)
+- → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
 
 ### deploy/
 
@@ -548,7 +577,7 @@ Title: "Adding a Box" | 131 lines
 
 Referenced by:
 - CLAUDE.md:162 (mention) — | Adding a box | `docs/adding-a-box.md` |
-- README.md:81 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
+- README.md:95 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
 - deploy/README.md:123 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/implemented-plans/remove-box-shape-v1.md:250 (mention) — `docs/migrations.md` (remove box-packageify section), `docs/adding-a-box.md:91`,
@@ -586,7 +615,7 @@ Title: "Adding a New Card Schema" | 279 lines
 
 Referenced by:
 - CLAUDE.md:137 (mention) — | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/template
-- README.md:80 (link) — - [`docs/adding-schemas.md`](docs/adding-schemas.md) — adding a new card type
+- README.md:94 (link) — - [`docs/adding-schemas.md`](docs/adding-schemas.md) — adding a new card type
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For 
 - docs/glossary.md:22 (mention) — **card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.
 - docs/implemented-plans/box-schema-reload.md:247 (mention) — - Mirror in `docs/adding-schemas.md` if it implies `cb init` re-registers.
@@ -636,6 +665,7 @@ Referenced by:
 - docs/plans/asset-annex.md:534 (mention) — The agent row has no code fix. It gets a `docs/assets.md` sentence and
 - docs/plans/scanner-ingest.md:127 (mention) — on 2026-07-31 (`docs/assets.md:6`: *"Status: implemented; all local boxes
 - docs/server-operations.md:240 (link) — [`assets.md`](./assets.md).
+- ../issues/decisions/2026-08-07-server-backup-story.md:11 (mention) — `numcopies: 1` with no annex remote (`docs/assets.md`); only migrations
 
 References:
 - → docs/implemented-plans/asset-manifests.md (link)
@@ -715,7 +745,7 @@ Title: "Cards as Markdown" | 135 lines
 
 Referenced by:
 - CLAUDE.md:42 (mention) — **Validation**: Cards validate on load; `cb validate` checks all cards, a file list, or `--staged`. `cb init` installs p
-- README.md:79 (link) — - [`docs/cards-as-markdown.md`](docs/cards-as-markdown.md) — the card format
+- README.md:93 (link) — - [`docs/cards-as-markdown.md`](docs/cards-as-markdown.md) — the card format
 - docs/card-validation.md:66 (mention) — Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-mar
 - docs/design/README.md:36 (mention) — - **§3 File formats and envelopes** — taught the XML envelope; cards are YAML frontmatter + markdown (`../cards-as-markd
 - docs/glossary.md:22 (mention) — **card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.
@@ -867,15 +897,16 @@ References:
 
 #### docs/content-security-policy.md
 
-Title: "Content-Security-Policy" | 80 lines
+Title: "Content-Security-Policy" | 96 lines
 
 Referenced by:
 - CLAUDE.md:168 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/plans/publish-pages.md:43 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source 
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
+- docs/security-report.md:177 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy source sha
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
-- ../issues/decisions/2026-07-19-boxes-share-one-origin.md:22 (mention) — - This is not hypothetical content: `docs/content-security-policy.md` notes *"box views and
+- ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:16 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
 References:
 - → docs/scheduled/csp-violation-review.md (mention)
@@ -1266,7 +1297,7 @@ Title: "Box Migrations" | 317 lines
 
 Referenced by:
 - CLAUDE.md:144 (mention) — | Box migration runbook | `docs/migrations.md` |
-- README.md:82 (link) — - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
+- README.md:96 (link) — - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
 - docs/design/representation.md:65 (link) — controlled migration ([`../migrations.md`](../migrations.md)), not silent
 - docs/implemented-plans/agent-applied-migrations.md:33 (mention) — `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
 - docs/implemented-plans/box-migration.subplan.md:48 (mention) — - **`docs/migrations.md`** — the established migration framework: `cb migrate`
@@ -1302,7 +1333,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 868 lines
+Title: "Cross-Platform Mobile Contract" | 863 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1327,8 +1358,8 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:78 (mention) — to the mobile contract (`docs/mobile-contract.md`) and the iOS composer
 - ../issues/closed/bugs/2026-08-04-ios-landmark-opens-new-session-not-most-recent.md:66 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — this is a web/iOS parity gap on a
 - ../issues/closed/bugs/2026-08-06-ios-webview-box-switcher-dead-ends.md:53 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — web/iOS shared surface; the gate is a
+- ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:13 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
 - ../issues/closed/features/2026-08-03-ios-self-screenshot.md:65 (mention) — into the native bridge + `docs/mobile-contract.md`.
-- ../issues/code-quality/2026-07-19-mobile-contract-small-cleanups.md:27 (mention) — one so a future Android client has one thing to learn. `docs/mobile-contract.md` §8 lists
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:29 (mention) — web (`docs/mobile-contract.md` §2).
 - ../issues/docs-and-chores/2026-08-03-mobile-contract-missing-capture-bulk-rows.md:8 (mention) — `docs/mobile-contract.md` presents itself as the canonical Contract Surface
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:11 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
@@ -1434,6 +1465,7 @@ Referenced by:
 - ../.claude/skills/cb-context/SKILL.md:20 (mention) — `callback-box/docs/prompt-surface-review.md`; this skill routes a single
 - ../.claude/skills/cb-guide-schemas/SKILL.md:32 (mention) — `docs/prompt-surface-review.md` before writing more than a couple of
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:24 (link) — [prompt-surface-review.md](../../callback-box/docs/prompt-surface-review.md)
+- ../issues/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:49 (mention) — - `callback-box/docs/prompt-surface-review.md` — the workflow for reasoning about
 - ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
 
 References:
@@ -1518,6 +1550,36 @@ Referenced by:
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:86 (mention) — (`docs/scheduler.md` / the scheduled-task health state at
 - ../research/pai/README.md:65 (mention) — | Scheduling | Pulse daemon, `[[job]]` cron in one TOML | `cb tick` + per-box `scheduled-script.card`s (`docs/scheduler.
 
+#### docs/security-report.md
+
+Title: "Security report — structured version" | 266 lines
+
+Referenced by:
+- SECURITY.md:20 (link) — [docs/security-report.md](docs/security-report.md): every endpoint and
+- docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
+- ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security
+
+References:
+- → SECURITY.md (link)
+- → ../issues/bugs/2026-08-07-task-output-route-not-box-scoped.md (link)
+- → ../issues/bugs/2026-08-07-proxy-image-auth-comment-mismatch.md (link)
+- → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
+- → ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md (link)
+- → ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md (link)
+- → ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md (link)
+- → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
+- → ../issues/bugs/2026-08-07-connector-secret-file-modes.md (link)
+- → ../issues/decisions/2026-07-20-git-push-confirmation.md (link)
+- → ../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
+- → docs/content-security-policy.md (link)
+- → ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md (link)
+- → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
+- → ../issues/features/2026-07-20-schedules-off-by-default.md (link)
+- → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (link)
+- → ../issues/decisions/2026-08-07-server-backup-story.md (link)
+- → ../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md (link)
+- → ../issues/features/2026-08-07-web-password-reset-account-recovery.md (link)
+
 #### docs/server-operations.md
 
 Title: "Server Operations" | 457 lines
@@ -1531,7 +1593,9 @@ Referenced by:
 - docs/plans/scanner-ingest.md:8 (mention) — (`docs/server-operations.md` runbook), merge to main. Post-merge steps:
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:366 (mention) — - **`CB_DIAG_API_KEY` becomes per-box** (it lives in each box's `.env`). The bypass curl pattern in `server-operations.m
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
+- ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:12 (mention) — only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server-operations.md`).
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:18 (mention) — rollback runbook: `docs/server-operations.md`. A Codex adversarial review
+- ../issues/decisions/2026-08-07-server-backup-story.md:9 (mention) — `docs/server-operations.md` defers to "whatever backup mechanism is
 
 References:
 - → deploy/README.md (link)
@@ -1631,6 +1695,7 @@ Referenced by:
 - ../issues/closed/features/2026-03-04-session-output-critique-tool.md:7 (mention) — **Closed:** Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Sessi
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:48 (mention) — (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:23 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
+- ../issues/features/2026-08-06-agent-driven-integration-tests.md:59 (mention) — `docs/testing.md`) already does multi-step end-to-end fixtures with checkpoints and
 - ../research/external-skills-harvest.md:289 (mention) — - [x] **X1 — reconcile cb-plan's test posture with `docs/testing.md`. DONE →
 
 References:
@@ -1644,7 +1709,7 @@ References:
 
 #### docs/todo-security.md
 
-Title: "Security TODOs" | 80 lines
+Title: "Security TODOs (dissolved)" | 24 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.md:543 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
@@ -1654,12 +1719,21 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:40 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:34 (mention) — `callback-box/docs/todo-security.md` for the SECURITY.md security report.
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:95 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
+- ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:26 (mention) — Broken out of `callback-box/docs/todo-security.md` ("No true socket-level WS-auth
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:101 (mention) — was accepted as near-nil-reachability and documented in `todo-security.md`).
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:116 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:28 (link) — [todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
+- ../issues/features/2026-07-28-google-auth-policy-proxy.md:212 (mention) — `callback-box/docs/todo-security.md` fold in here rather than standing as their
+- ../issues/features/2026-08-07-web-password-reset-account-recovery.md:48 (mention) — have the host. The subagent breakdown of `todo-security.md` classified
 
 References:
-- → docs/implemented-plans/local-password-auth.md (mention)
+- → ../issues/features/2026-07-20-agent-maintained-security-report.md (link)
+- → docs/security-report.md (link)
+- → SECURITY.md (link)
+- → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
+- → ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md (link)
+- → ../issues/features/2026-08-07-web-password-reset-account-recovery.md (link)
+- → ../issues/bugs/2026-08-07-connector-secret-file-modes.md (link)
 
 #### docs/tours.md
 
@@ -2650,9 +2724,9 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.review.md:3 (mention) — Adversarial review of `local-password-auth.md` by OpenAI Codex
 - docs/implemented-plans/remove-open-mode.md:20 (mention) — - Precedent: `docs/implemented-plans/local-password-auth.md` (auth default-on;
 - docs/plans/invite-links-and-password-change.md:53 (mention) — - `docs/implemented-plans/local-password-auth.md`: preserve global email
-- docs/todo-security.md:8 (mention) — `docs/implemented-plans/local-password-auth.md`). A box always requires a
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:3 (mention) — design: ../../callback-box/docs/implemented-plans/local-password-auth.md
 - ../issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md:37 (mention) — `../../callback-box/docs/implemented-plans/local-password-auth.md`.
+- ../issues/features/2026-08-07-web-password-reset-account-recovery.md:44 (mention) — (`docs/implemented-plans/local-password-auth.md`, NOT-in-scope: "requires outbound
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -2743,8 +2817,8 @@ Referenced by:
 - docs/mobile-contract.md:751 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:10 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:12 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
+- ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:39 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:12 (mention) — The cb_mobile cookie work (`../../callback-box/docs/implemented-plans/mobile-token-handshake.md`) removed
-- ../issues/decisions/2026-07-19-boxes-share-one-origin.md:28 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -3690,6 +3764,7 @@ References:
 - → CLAUDE.md (mention)
 - → docs/tours.md (mention)
 - → docs/agent-install.md (mention)
+- → SECURITY.md (mention)
 - → docs/plans/README.md (mention)
 - → ../issues/features/2026-07-20-agent-maintained-security-report.md (link)
 - → docs/plans/github-pages-site-story-extraction.subplan.md (link)
@@ -4180,7 +4255,7 @@ References:
 Title: "Scheduled routine: CSP violation review" | 95 lines
 
 Referenced by:
-- docs/content-security-policy.md:76 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
+- docs/content-security-policy.md:92 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
 - docs/plans/docs-reorg.md:196 (mention) — `scheduled/csp-violation-review.md` is half dev reference, half the literal
 - docs/scheduled/csp-violation-review.md:11 (mention) — `callback-box/docs/scheduled/csp-violation-review.md`."* Everything it needs is
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
@@ -4378,14 +4453,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 13 lines
-
-No references in or out.
-
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
@@ -4420,8 +4487,8 @@ Referenced by:
 - docs/chat-schedules.md:96 (mention) — Schedules persist to `.callback-box/chat-schedules.json` and are re-armed when a box's `cb serve` process boots (overdue
 - docs/implemented-plans/mobile-token-handshake.md:75 (mention) — unacceptable."* `src/hub/CLAUDE.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
 - docs/plans/docs-reorg.md:319 (mention) — conventions documented at colocated homes (new `src/hub/CLAUDE.md`,
+- ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:24 (mention) — withholding `CB_SESSION_SECRET` from boxes (`src/hub/CLAUDE.md`).
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:32 (mention) — `callback-box/src/hub/CLAUDE.md`,
-- ../issues/decisions/2026-07-19-boxes-share-one-origin.md:13 (mention) — withholding `CB_SESSION_SECRET` from boxes (`src/hub/CLAUDE.md`).
 
 References:
 - → docs/health-checks.md (mention)
@@ -4430,7 +4497,7 @@ References:
 
 #### src/services/CLAUDE.md
 
-Title: "Services" | 127 lines
+Title: "Services" | 125 lines
 
 Referenced by:
 - CLAUDE.md:99 (mention) — **Services** — Every external dependency is wrapped in a typed interface with real + fake implementations. Fakes have ob

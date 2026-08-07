@@ -1,0 +1,164 @@
+<!--
+generated-by: .claude/skills/security-report/SKILL.md
+generated-at-rev: 3f65b3d1a7cad712f307a6c7df5665ff0bf04867
+date: 2026-08-07
+model: claude-fable-5
+reviewed-by: DRAFT — unreviewed
+-->
+
+# Security
+
+callback-box is a personal assistant that a Claude Code agent operates on
+your behalf: it reads your email, listens to your voice memos, edits your
+files, and runs shell commands. A system like that deserves a blunt
+security document, so this one leads with blast radius, not reassurance.
+
+This document is **maintained by an agent, reviewed by a human**. The
+process that generates it — an ordered inventory and evaluation rubric —
+is committed at `.claude/skills/security-report/SKILL.md` (repo root),
+and the full accounting it produces is
+[docs/security-report.md](docs/security-report.md): every endpoint and
+its auth, every credential and its blast radius, every place data leaves
+the machine. You can't verify a security doc wasn't shaped by error or
+malice, but you can read the rubric that produced it, the diff of every
+regeneration, and the review header above. That's the claim this document
+makes: it is auditable as a process, honest about where it isn't
+verifiable as an artifact.
+
+## Reporting a vulnerability
+
+Email ianbicking@gmail.com. Please don't open a public issue for
+anything exploitable; everything else about security is welcome in the
+open queue (`issues/`).
+
+## Threat model, briefly
+
+callback-box assumes a **single trusted operator** (plus, optionally, a
+few invited members they personally trust). It defends the box from the
+network — authentication is structurally always-on; there is no flag,
+env var, or config field that disables the login wall — and it defends
+your credentials from the box's own moving parts (per-box processes
+never see the session-signing secret; agent subprocesses get a stripped
+environment). It does **not** defend you from your own agent: the agent
+is the product, and it runs with real power (next section). It also does
+not currently treat invited members as adversaries — membership grants
+broad capability short of admin operations
+([details](../issues/code-quality/2026-08-07-member-level-writing-procedures.md)).
+
+## What the agent can do
+
+Plainly: the box agent runs Claude Code with `bypassPermissions` and no
+tool allowlist. It can execute arbitrary shell commands as the user the
+box runs as, and read or write any file in the box. Its working scope is
+the box directory, and nothing in the code widens it beyond that — but
+that is a convention the agent operates within, not a sandbox that
+contains it. If prompt-injected content (an email, a web clipping) can
+steer the agent, the agent's full capability is the exposure. Tighter
+containment is tracked in
+[agent-containment-allowed-directories](../issues/features/2026-07-20-agent-containment-allowed-directories.md);
+until then, treat "what can the agent do" and "what can callback-box do"
+as the same question. On fresh boxes, scheduled agent runs are off by
+default — nothing runs until you turn it on.
+
+## What leaves your machine
+
+The complete inventory is
+[§3 of the structured report](docs/security-report.md#3-data-egress).
+The summary:
+
+- **Anthropic** — the core engine. Every agent turn sends its context to
+  Anthropic: your prompts, and whatever box files the agent reads while
+  working (cards, emails, chat history), plus uploaded and scanned
+  images. Auth is your Claude subscription login; the system actively
+  strips `ANTHROPIC_API_KEY` so a stray key can't take over billing.
+  There is no opt-out — this is the product.
+- **Transcription vendors** — voice goes to Mistral (the default),
+  OpenAI Whisper, or Deepgram, per your `config/transcription.json`.
+  Live dictation streams microphone audio from your browser directly to
+  the vendor under a short-lived key minted by your box. Search
+  embeddings, when configured, send each card's text and your search
+  queries to OpenAI. All of these are per-box configurable or omittable.
+- **Google** — if you connect it: Gmail (read + **drafts only** — the
+  code requests no send scope, so autonomous email sending is
+  impossible today), Calendar (two-way), Drive/Sheets/Docs (two-way,
+  broad `drive` scope by design). One shared OAuth token covers all
+  boxes on a server — see accepted risks below.
+- **Telegram** — if you connect a bot: message text in and out.
+- **Web push** — notification text transits your browser's push service
+  (Google/Mozilla/Apple).
+- **Your git remote** — every wakeup pushes the box's full history to
+  the remote *you* configured; no remote, no push.
+- **Cloudflare** — only if you set up publishing, and only when you
+  interactively confirm a publish (below).
+- **Nothing else.** No telemetry, no analytics, no crash reporting, no
+  update phone-home — verified absent, not just unpromised.
+
+One caveat worth naming: the iOS app's dictation prefers Apple's
+on-device recognizer, but on older systems it falls back to Apple's
+cloud speech service without an app-level opt-out
+([issue](../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md)).
+
+## The authentication surface
+
+Every box route — HTTP and the WebSocket upgrade alike — sits behind one
+auth wall. A request gets in with a logged-in session (local password,
+scrypt-hashed, throttled; or Google OAuth), a scoped machine credential
+(mobile device token, per-box agent token, scan token), or not at all.
+Box access fails closed: a box with no explicit member list is
+owner-only. A corrupt credential store answers 503, never "logged out."
+
+The deliberately unauthenticated surface is small enough to list: the
+CSP violation report sink (spec-required, tightly capped), a build-info
+probe (a hash and a flag), the login/static assets needed to reach the
+login page, and — for its 15-minute first-run window — the setup route,
+gated by a token printed only to the server console. Everything else
+that skips the session wall carries its own dedicated credential
+(Telegram webhook secret, diagnostic bearer key, Cloudflare Access JWT).
+The full route-by-route table is
+[§1 of the structured report](docs/security-report.md#1-endpoints-auth-abilities).
+
+## Publishing
+
+Publishing a document is the one flow that deliberately makes box
+content public, so it gets its own controls: a leak scan runs before
+anything enters git history, and flipping a publication live requires a
+human typing a confirmation at an interactive terminal — an agent can't
+do it through the blessed path. Be clear about two things the design
+says out loud: the leak scan is a **backstop, not a gate** (it can't
+read prose or the inside of images — the file-by-file preview you
+confirm is the real control), and a published bundle is **fully public
+content** regardless of tier. Tiers gate who can *reach* a page —
+`secret` means an unguessable capability URL with no login, `accounts`
+means Cloudflare Access with an email allowlist — not what a viewer does
+with it after loading it.
+
+## Known limitations and accepted risks
+
+The full register with rationale is
+[§7 of the structured report](docs/security-report.md#7-accepted-risks-roll-up).
+The ones you should actually weigh:
+
+- **First-run window**: until an owner account exists, a box with an
+  exposed port is claimable for up to 15 minutes. Create the owner
+  account promptly.
+- **No MFA, no web password reset yet**: recovery is `cb auth
+  set-password` on the host
+  ([tracked](../issues/features/2026-08-07-web-password-reset-account-recovery.md)).
+- **One Google token, broad scopes, all boxes**: per-box service policy
+  is enforced in application code, not by Google. Compromise of the
+  token file is fleet-wide Google access
+  ([hardening direction](../issues/features/2026-07-28-google-auth-policy-proxy.md)).
+- **Boxes share a browser origin**: scripts in one box can make
+  same-origin requests to a sibling box. Fine single-operator; known
+  limitation otherwise.
+- **CSP is report-only** so far; enforcement is a staged flip.
+- **Open invite links don't verify email ownership**: pin the invite to
+  an email when you know it, and send invite URLs over a channel you
+  trust.
+
+Known **gaps** (tracked, not yet accepted or fixed) live in the issue
+queue with `file:line` specifics — at this writing they include
+plain-HTTP between Cloudflare's edge and the origin on the public deploy
+path, two connector secret files written without restrictive
+permissions, and a handful of member-tier authorization questions. The
+structured report links each one.

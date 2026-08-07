@@ -73,6 +73,20 @@ for the full directory reference.
 Upgrading the engine (bumping the `callback-box` dependency and running data
 migrations) is `cb upgrade`, run from the package root.
 
+## What leaves your machine
+
+Your box's files stay on your machine, but the agent that operates them
+runs on Anthropic's API — every agent turn sends its working context
+(your prompts, and whatever cards or emails the agent reads during the
+turn) to Anthropic, billed against your Claude subscription. Voice goes
+to a transcription vendor (Mistral by default; configurable). Connect
+Google or Telegram and those sync in both directions. Each wakeup pushes
+the box's git history to whatever remote you configured — and nowhere
+else. There is no telemetry or analytics of any kind.
+
+The full accounting — every endpoint, credential, and egress point, and
+what the agent can actually do — is in [SECURITY.md](SECURITY.md).
+
 ## Where to go next
 
 - [`docs/box-layout.md`](docs/box-layout.md) — the full on-disk layout reference
