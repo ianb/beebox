@@ -68,6 +68,15 @@ A dead husk is not inert — it is actively misleading:
 - [Chat review](../../callback-box/docs/chat-review.md) skips it too (correctly —
   there is nothing to read), so it will never be titled or summarized. Its
   content is unrecoverable.
+- **Resuming it crashes the turn — it is not merely a dead link.** Confirmed
+  2026-08-07 against our SDK (`@anthropic-ai/claude-agent-sdk@0.3.222`): asking the
+  SDK to resume a session whose `.jsonl` is gone exits with code 1 ("No
+  conversation found with session ID" —
+  [claude-agent-sdk-typescript#47](https://github.com/anthropics/claude-agent-sdk-typescript/issues/47)).
+  So the `Open chat →` link on a dead husk does not fail gracefully; it hard-
+  crashes the chat subprocess. This turns open question #4 below from cosmetic
+  into a real bug: the link must be disabled/guarded when the transcript is
+  missing, before a delete/lifecycle feature ships.
 
 ## Why it matters more now
 
