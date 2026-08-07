@@ -95,3 +95,64 @@ prose seeds the structured version's accepted-risks entries. It dissolves into
 **README linkage:** the README keeps a short, personal "what leaves your machine"
 section and links here; SECURITY-level detail lives in these two artifacts, not
 duplicated in the README.
+
+## Breakdown sweep (2026-08-07): report content outline + adjudication
+
+Three subagents broke down `callback-box/docs/todo-security.md`. Most findings are
+**report content** (what the structured version must cover), not new issues —
+captured here so the report author has the outline.
+
+**Filed as issues:**
+- WS-auth socket-level integration test →
+  [no-socket-level-ws-auth-test](../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
+- Incremental auth + per-box Google API audit logging → folded into
+  [google-auth-policy-proxy](2026-07-28-google-auth-policy-proxy.md) as conditional
+  sub-mitigations.
+
+**Already fixed / already tracked (seed the accepted-risks + inventory sections;
+do not re-file):**
+- **File permissions: FIXED** — token writes use `writeFileAtomic` mode `0600`;
+  `deploy/add-box.sh` chmods copied secrets; `~/.cb-session-secret` is `0600`,
+  written with mode `0600`. So `todo-security.md`'s "File permissions" section is
+  now stale.
+- Residual accept-forever: setup-token window, no MFA/reset, open-invite email
+  ownership, cross-process lock lease-steal (closed issue) — documented tradeoffs.
+- Agent blast radius (`permissionMode: "bypassPermissions"`, no tool allowlist —
+  `src/core/agent/run.ts`) → tracked in
+  [agent-containment-allowed-directories](2026-07-20-agent-containment-allowed-directories.md).
+- Mobile token at rest →
+  [ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md),
+  [mobile-device-token-no-expiry](../code-quality/2026-07-19-mobile-device-token-no-expiry.md).
+
+**Report content outline (structure + pointers the report must cover):**
+- **Endpoints / auth / abilities** — every route + its auth; enumerate the
+  intentionally-unauthenticated-by-design ones with justification: setup-token,
+  the CSP-report sink (`api-csp-report.ts`, amplification-bounded), dev-only
+  `GET /api/external` (prod-excluded). Note the hub health endpoints are now
+  diag-key-gated (were open, leaked slugs/PIDs/ports).
+- **Credentials inventory** — `~/.cb-auth.json`, `~/.cb-session-secret`, the
+  Google token file, mobile device tokens, invite capabilities, and the env-var
+  secrets: `CB_DIAG_API_KEY`, `CB_HUB_SECRET`, `CB_BROWSE_API_KEY`,
+  `CB_AGENT_TOKEN`, `CB_VAPID_PRIVATE_KEY`, `ANTHROPIC_API_KEY`,
+  `GOOGLE_OAUTH_CLIENT_SECRET`. Each: what it gates, where it lives, blast radius.
+  Cite the hub's allowlisted child env keeping `CB_SESSION_SECRET` from sibling
+  boxes as a positive control.
+- **Data egress (biggest gap — only Google documented today)** — Anthropic (the
+  agent + `scan-vision-claude.ts` images), OpenAI (`openai-audio.ts` voice,
+  `openai-embeddings.ts` text), Google APIs, Cloudflare
+  (`cloudflare-provisioning.ts`, publish), Tailscale. Per host: what data, which
+  credential, box-scoping, opt-out.
+- **Internal security practices** — fail-closed patterns, locks, the WS-auth test
+  gap above.
+- **Operational security** — Tailscale loopback exposure
+  (`services/tailscale-exposure.ts`), the Cloudflare Access publish gate
+  (`pub-worker/src/access-auth.ts`, fail-closed), the hub child-env allowlist.
+- **Feature-specific — publishing (largest single content gap)** —
+  `src/publish/leak-scan.ts` (a backstop, not a gate, with stated blind spots),
+  `pub-worker` access-auth + submit, and "bundles are fully public regardless of
+  tier" (the tier gates who can view, not what a viewer does after loading).
+
+**Flagged as an optional issue (boxholder's call):** an external-egress
+**data-handling / minimization review** (does OpenAI retain our audio? is
+vision-scan image data logged? per-connector minimization) — real due-diligence,
+distinct from merely documenting the inventory. File on request.
