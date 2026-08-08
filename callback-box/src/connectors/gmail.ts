@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { errorMessage, errnoCode } from "../lib/error-guards.js";
 import { stageAndCommitPaths } from "../lib/git.js";
+import { getBoxTime } from "../lib/time.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import {
   createGoogleGmailService,
@@ -190,7 +191,7 @@ class GmailConnector implements Connector {
       candidates,
       trackedThreadIds,
       labelMap,
-      now: new Date(),
+      now: getBoxTime(this.boxRoot),
     });
     const createThreadIds = new Set(evaluated.trackRequests.map((request) => request.threadId));
     const changedTrackedThreadIds = changes.refs
