@@ -175,8 +175,13 @@ Ordered by implementation dependency, then surface size.
 - **Direction:** Run directory `~/src/boxes/field-runs/<scenario>-<timestamp>/`
   containing `box/` (fresh `cb init`, test-box marker, any connector config the
   scenario declares — seeded here so the operator never touches setup — as the
-  git-committed baseline),
-  `screenshots/`, `report.md` + `findings.json`, and the operator transcript.
+  git-committed baseline; that seeding includes the **box-agent model**: the
+  scenario pins which model the product's own agents run (chat's persisted
+  model setting and the reactor's), default `opus`, because the existing
+  setting is opaque and letting it float would make weekly runs
+  incomparable),
+  `screenshots/`, `report.md` (+ `questionnaires/` with each debrief's answers
+  verbatim), and the operator transcript.
   Server: `cb serve <box> --port <free port>`, `CB_TIME` set to the scenario's
   start time, `CB_FAKE_GMAIL` pointing into the run dir. Browser: a dedicated
   `bin/browse --session field-<ts>` with `CB_BROWSE_API_KEY` set (auth is out
@@ -191,7 +196,8 @@ Ordered by implementation dependency, then surface size.
   operator's cheat-sheet always go through it.
   **Activity loop:** for each checklist item — (1) harness performs the item's
   `pre` actions (inject email, advance day); (2) harness sends the item's brief
-  to the operator session and waits for its structured activity report;
+  to the operator session, waits for it to finish, then runs the
+  questionnaire debrief (Track 3);
   (3) harness waits for box quiescence — a **composite** check, because
   `chat.status` reports one session only and returns idle for unknown ids
   (`chat-control-procedures.ts:44-55`): every live chat session idle (a small
@@ -223,8 +229,8 @@ Ordered by implementation dependency, then surface size.
 
 - **What:** One persistent Opus session that is the persona for the whole run:
   receives checklist items as messages, drives `bin/browse` itself, perceives
-  via screenshots + a11y snapshots, and returns a structured activity report
-  per item.
+  via screenshots + a11y snapshots, and answers a questionnaire debrief after
+  each item.
 - **Why:** Boxholder decisions: single session ("a person is a single
   identity"); open-ended within an activity ("succeed or fail based on how well
   the whole thing actually works"); discernment mandate (hidden-but-possible is
@@ -238,16 +244,25 @@ Ordered by implementation dependency, then surface size.
   instruction), Read (for screenshots and provided assets). System prompt: the
   persona brief, the discernment mandate ("you are evaluating whether this is
   usable, not proving it can be done; confusion is a finding, not your
-  failure"), the browse cheat-sheet, and the report format. Each activity ends
-  with the operator emitting a fenced JSON activity report:
-  `{ outcome: "smooth" | "friction" | "blocked", observations: [{ severity,
-  note, screenshots: [...] }] }` — every observation must cite at least one
-  screenshot it took (evidence requirement; see fabrication edge case). The
-  harness parses the fence; a malformed report is re-requested once, then
-  recorded as a harness finding (principle #4).
-- **Vocabulary lock-ins:** outcome values `smooth | friction | blocked`.
-- **First implementation chunk:** the session wrapper + report-fence parsing,
-  exercised by a doctest with the fake chat backend
+  failure"), and the browse cheat-sheet. Each activity ends with a
+  **questionnaire debrief**, not a JSON report: after the operator says it is
+  done (or gives up), the harness sends the questionnaire as the next message —
+  after, so the questions cannot prime behavior during the activity. A standard
+  question set elicits specifics with room for long prose answers: Did you
+  accomplish it, and how do you know? What did you try first, and why? Where
+  did you hesitate, backtrack, or guess? What surprised you or seemed wrong or
+  broken? What did you expect to exist that didn't? Which screenshots show
+  what you're describing? Plus a scenario item's optional extra questions
+  (`questions:` per checklist item). One question is constrained for the report
+  table — "Overall: smooth, friction, or blocked?" — the rest are free
+  markdown, stored verbatim. The harness checks only that every question got a
+  non-empty answer and that screenshot references resolve; a skipped question
+  is re-asked once, then recorded as a harness finding (principle #4).
+- **Vocabulary lock-ins:** outcome values `smooth | friction | blocked` (the
+  one constrained questionnaire answer); `questions:` (per-item extra
+  questionnaire entries in `scenario.yaml`).
+- **First implementation chunk:** the session wrapper + questionnaire
+  delivery/answer collection, exercised by a doctest with the fake chat backend
   (`src/services/claude-chat-fake.ts` precedent) — the wrapper's mechanics are
   testable without a real operator.
 
@@ -259,7 +274,11 @@ Ordered by implementation dependency, then surface size.
   hand the operator (it cannot take photos; every asset must be provided).
 - **Direction:** `callback-box/field-tests/<scenario>/` (in-repo: reviewable,
   doc-checked; run artifacts stay out at `field-runs/`):
-  - `scenario.yaml` — start time; the ordered checklist: per item an `id`, the
+  - `scenario.yaml` — start time; `models:` (`operator:` and `box:`, both
+    defaulting to `opus`) — pinning the product-agent model is part of the
+    scenario definition, and both models appear in the report header so no run
+    is ambiguous about what it tested; the ordered checklist: per item an
+    `id`, the
     persona-voiced `brief` (goals, never steps; may reference `assets/` files
     by path), optional `pre` actions (`inject-email: <fixture>`,
     `advance-days: <n>`), `cleanup: keep|commit|reset`, and `checks: [<script>]`.
@@ -282,12 +301,14 @@ Ordered by implementation dependency, then surface size.
 
 ### Track 5 — Reporting and docs
 
-- **What:** Merge operator findings + check results + harness events into
-  `report.md` / `findings.json` in the run dir; document the tier in
-  `docs/testing.md`; wire an optional entry into `bin/manual-tests-scheduled.sh`.
+- **What:** Merge questionnaire answers + check results + harness events into
+  `report.md` (with per-debrief answers preserved verbatim in
+  `questionnaires/`) in the run dir; document the tier in `docs/testing.md`;
+  wire an optional entry into `bin/manual-tests-scheduled.sh`.
 - **Why:** A run whose output needs archaeology will not be read weekly
   (principle #12 — the reader is often a triage agent).
-- **Direction:** `report.md` leads with a per-item table (outcome, checks,
+- **Direction:** `report.md` leads with a run header (scenario, operator
+  model, box-agent model, start time) and a per-item table (outcome, checks,
   cleanup applied), then findings ordered by severity with screenshot links,
   then harness events (retries, resets, timeouts). Findings are triaged by a
   human (or a triage agent) into `issues/` — no auto-filing.
@@ -324,7 +345,7 @@ nothing here depends on it.
 > **Critical gap (accepted as documented risk):** operator self-consistency —
 > an operator that hallucinates UI it did not see, or reports success it did
 > not verify, produces a false-clean weekly report. Mitigated (not eliminated)
-> by the screenshot-evidence requirement per observation and hard asserts the
+> by the questionnaire's screenshot-evidence question and hard asserts the
 > operator never sees; the checks are the spine, the operator is the color.
 > No automated test can fully verify judgment quality; the first few runs get
 > human review of the full transcript.
@@ -336,7 +357,7 @@ nothing here depends on it.
 | `cb serve` fails to start / port collision | Track 2 doctest (lifecycle module) | Free-port allocation + health-check with timeout; run aborts before operator starts | Clear |
 | Browse daemon dies or screenshot flakes (os error 35, known) | No (external flake) | One retry per browse call in harness `pre`/setup paths; operator instructed to retry once then report | Clear (logged as harness event) |
 | Box never goes quiescent (composite check stuck: busy session, lingering job card, in-flight upload batch) | Track 2 doctest with fake status | Poll timeout per activity → harness records `blocked` naming the stuck component, applies `reset` policy if set, continues | Clear |
-| Operator emits unparseable activity report | Track 3 doctest | One re-request, then harness finding | Clear |
+| Operator skips questionnaire questions or cites missing screenshots | Track 3 doctest | Unanswered question re-asked once, then harness finding; unresolvable screenshot ref flagged in report | Clear |
 | Operator exceeds per-activity turn cap | Track 3 doctest | SDK turn cap → recorded as `blocked` with partial transcript | Clear |
 | Operator session dies mid-run (API error, quota) | No | Run aborts; report written with completed items + abort reason; no resume in v1 | Clear |
 | Day-advance restart loses in-flight box-agent work | No | Quiescence wait precedes every day advance | Clear (ordering) |
@@ -358,8 +379,9 @@ nothing here depends on it.
 - **Hand-edit drift** — n/a; no human edits during a run. **ADDRESSED** by
   scope.
 - **Fabricated free-form value** — the operator inventing observations.
-  **ADDRESSED** (partially): evidence requirement — each observation cites a
-  screenshot; the critical-gap note covers the residual risk.
+  **ADDRESSED** (partially): the questionnaire asks which screenshots show
+  what's being described and the harness verifies the refs resolve; the
+  critical-gap note covers the residual risk.
 - **Validation error UX** — when a `checks/` script fails, the report shows the
   script name, exit code, and stderr verbatim. **ADDRESSED** (Track 5).
 - **Partial migration / transition state** — none; this is all-new surface.
