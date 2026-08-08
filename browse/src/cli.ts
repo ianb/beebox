@@ -27,6 +27,22 @@ async function waitForReady(): Promise<void> {
 
 async function main(): Promise<number> {
   let args = process.argv.slice(2);
+  // `--session <name>` is agent-browser's global session selector, and callers
+  // put it before the subcommand (`bin/browse --session s open /`). Left in
+  // place it hides the subcommand from everything below — the open rewrite and
+  // browse-key cookie, the settle waits, the screenshot enhancer — so all of it
+  // silently skipped for named sessions (the field-test spine run's operator
+  // landed on the login wall exactly this way). Hoist it into the env var the
+  // binary honors; every child this process spawns then targets that session,
+  // waitForReady's own calls included.
+  if (args[0] === "--session") {
+    const name = args[1];
+    if (name === undefined || name === "" || name.startsWith("-")) {
+      throw new BrowseConfigError("--session requires a session name");
+    }
+    process.env["AGENT_BROWSER_SESSION"] = name;
+    args = args.slice(2);
+  }
   const noWaitIdx = args.indexOf("--no-wait");
   const skipWait = noWaitIdx !== -1;
   if (skipWait) args = [...args.slice(0, noWaitIdx), ...args.slice(noWaitIdx + 1)];
