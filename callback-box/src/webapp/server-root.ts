@@ -22,6 +22,7 @@ import { loginRedirect } from "./base-prefix.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
+import { verifyBrowseKey } from "../core/browse-key.js";
 
 /** Body of `POST /api/push/resubscribe` — validated at the HTTP boundary. */
 const resubscribeBodySchema = z.object({
@@ -245,6 +246,13 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // Root-level box list endpoint (filtered by user access when auth required)
   server.get("/api/boxes", async (request, reply) => {
     if (!request.server.openAccess) {
+      // The browse key already passes the box-scoped auth gate for every box
+      // on this server (server-box-scope.ts), so listing them here grants
+      // nothing new — without this branch the SPA's box resolution sees an
+      // empty list and renders "Box not found" for a browse-key session.
+      if (verifyBrowseKey(request.headers)) {
+        return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+      }
       const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       // Through the shared resolver (FIX 1): a corrupt store answers 503, and a
@@ -303,6 +311,13 @@ export function registerSpaFallback(
     // there is no share feature in the tree, and an unused hole in the wall is
     // exactly the exception that outlives its rationale (always-on-auth plan).
     if ((!request.server.openAccess || isHubMode()) && url !== "/" && !url.startsWith("/auth/")) {
+      // Browse-key sessions pass the box-scoped auth gate; a page navigation
+      // that falls through to here must not bounce them to login.
+      if (verifyBrowseKey(request.headers)) {
+        return reply.type("text/html").send(
+          fs.readFileSync(path.join(opts.frontendPath, "index.html"), "utf-8")
+        );
+      }
       const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
       if (identity.source === "unavailable") {
         // Credential store corrupt/unreadable: fail closed and distinctly (503),
