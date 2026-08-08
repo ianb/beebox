@@ -19,13 +19,13 @@ import { getStatus } from "../../src/lib/git.js";
 
 ## A free port is a real, unbound port
 
+Nothing is asserted about two calls returning different ports — the OS is free
+to hand back the same ephemeral port once it's released, and the guarantee this
+module actually relies on is the readiness probe below, not port uniqueness.
+
 ```ts
 const port = await allocateFreePort();
 port > 1024 && port < 65536
-=> true
-
-const second = await allocateFreePort();
-second !== port
 => true
 ```
 
@@ -59,16 +59,25 @@ status.clean
 => true
 ```
 
-The server starts on its own port and answers `/` before `startFieldServer`
-returns. `baseUrl` is what the harness hands browse as `BROWSE_BASE_URL`.
+The server is serving THIS box before `startFieldServer` returns — readiness is
+the box-scoped health query authenticated with the run's own random diagnostic
+key, so a stray server that won the port cannot satisfy it. `baseUrl` is what
+the harness hands browse as `BROWSE_BASE_URL`.
 
 ```ts continue
 const server = await startFieldServer(box, { env: { CB_TIME: "2026-08-08T09:00:00Z" } });
 server.baseUrl === `${server.origin}/${box.slug}`
 => true
 
-const response = await fetch(`${server.origin}/`);
-response.status
+const health = await fetch(`${server.baseUrl}/api/trpc/health.check`, {
+  headers: { Authorization: `Bearer ${server.diagKey}` },
+});
+health.status
+=> 200
+
+// The box is really reachable as a page, too.
+const page = await fetch(`${server.origin}/`);
+page.status
 => 200
 ```
 
@@ -82,6 +91,14 @@ serverProcessAlive(server)
 const afterStop = await fetch(`${server.origin}/`).then(() => "still serving", () => "refused");
 afterStop
 => refused
+```
+
+A second run may not reuse the directory: `cb init` over an existing box is an
+update, and a run that inherits the last run's state is not a fresh start.
+
+```ts continue
+await createFieldBox(runDir)
+=> throws FieldBoxExistsError
 ```
 
 ```ts cleanup

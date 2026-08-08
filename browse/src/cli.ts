@@ -65,13 +65,14 @@ async function main(): Promise<number> {
   return runPassthrough(args);
 }
 
-// Auto-attaches the box's agent-token bearer when `url` is this worktree's
-// own origin (see worktree.ts `authHeaderFor`), using agent-browser's
-// native origin-scoped `open <url> --headers <json>` (the header is only
-// ever sent to that origin, never to a target the same session later
-// navigates to). A caller-supplied `--headers` wins outright — we don't
-// merge into it, since we can't know it's safe to layer our bearer onto
-// whatever origin the caller already scoped it to.
+// Auto-attaches the browse-key cookie when `url` is this worktree's own base
+// (see worktree.ts `authHeaderFor`; a `BROWSE_BASE_URL` override moves that
+// base and the cookie's scope together), using agent-browser's native
+// origin-scoped `open <url> --headers <json>` (the header is only ever sent
+// to that origin, never to a target the same session later navigates to). A
+// caller-supplied `--headers` wins outright — we don't merge into it, since
+// we can't know it's safe to layer our credential onto whatever origin the
+// caller already scoped it to.
 function buildOpenArgs(url: string, { rest, ctx }: { rest: readonly string[]; ctx: WorktreeContext }): string[] {
   if (rest.includes("--headers")) return ["open", url, ...rest];
   const authHeader = authHeaderFor(url, ctx);

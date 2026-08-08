@@ -14,11 +14,13 @@
  * `waitForHttp` — that one accepts any HTTP response, deliberately, because a
  * hub child's `/healthz` may legitimately answer 401/503 while healthy. A
  * field run's operator is about to drive this origin with a browser, so
- * nothing short of a real 200 on `/` means ready.
+ * readiness here has to prove the box is served by THIS child (see
+ * `probeReady`).
  */
 
 import { execa, type ResultPromise } from "execa";
 import * as net from "node:net";
+import { randomBytes } from "node:crypto";
 import { sleep } from "../lib/sleep.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { killGroup, pidAlive } from "../hub/child-process-utils.js";
@@ -49,6 +51,10 @@ export interface FieldServer {
   /** `<origin>/<slug>` — the box's URL base, i.e. what `BROWSE_BASE_URL`
    *  wants so browse's `/`-leading paths land in THIS run's box. */
   baseUrl: string;
+  /** The `CB_DIAG_API_KEY` this server was started with — a per-run random
+   *  value unless the caller supplied one. The harness needs it to query the
+   *  box's diagnostics (quiescence checks, Track 2 chunk 2). */
+  diagKey: string;
   pid: number | undefined;
   /** Terminate the server: SIGTERM to the process group, SIGKILL after a
    *  grace period, then wait for the child to be reaped. Idempotent. */
@@ -92,18 +98,25 @@ export class FreePortError extends Error {
   }
 }
 
-/** One captured-output sink for both child streams, capped at the tail. */
-function captureOutput(child: ResultPromise, onChunk: (text: string) => void): void {
-  for (const stream of [child.stdout, child.stderr]) {
-    stream?.on("data", (chunk: Buffer) => onChunk(chunk.toString("utf-8")));
-  }
-}
-
-/** `true` once `origin`/ answers 200. Any other outcome (connection refused
- *  mid-boot, a non-200 status) is "not yet" and the caller keeps polling. */
-async function probeRoot(origin: string): Promise<boolean> {
+/**
+ * Readiness probe: the box-scoped `health.check` tRPC query, authenticated
+ * with the per-run diagnostic key.
+ *
+ * Deliberately NOT a bare 200 on `/`. A free port is a TOCTOU promise (see
+ * `allocateFreePort`), and `/` answers 200 from any web server that won the
+ * race — a run would then hand its operator a browser pointed at somebody
+ * else's app. This URL proves both halves: only THIS child knows the random
+ * key (`CB_DIAG_API_KEY`, minted per run below), and only a server with this
+ * box mounted under this slug routes the path at all. `health.check` and
+ * `debugLog.get` are the two procedures the diag-key bypass whitelists
+ * (`src/webapp/auth.ts`).
+ */
+async function probeReady({ url, diagKey }: { url: string; diagKey: string }): Promise<boolean> {
   try {
-    const response = await fetch(`${origin}/`, { redirect: "manual" });
+    const response = await fetch(url, {
+      redirect: "manual",
+      headers: { Authorization: `Bearer ${diagKey}` },
+    });
     // Drain so the socket is released rather than left half-read.
     await response.text();
     return response.status === 200;
@@ -116,23 +129,43 @@ async function probeRoot(origin: string): Promise<boolean> {
   }
 }
 
+/** One captured-output sink for both child streams, capped at the tail. */
+function captureOutput(child: ResultPromise, onChunk: (text: string) => void): void {
+  for (const stream of [child.stdout, child.stderr]) {
+    stream?.on("data", (chunk: Buffer) => onChunk(chunk.toString("utf-8")));
+  }
+}
+
 /**
- * Start `cb serve` for `box` on a freshly allocated port and return once it
- * answers 200 on `/`. Throws `FieldServerStartError` (carrying the child's
- * captured output) if the child exits early or never becomes ready; the child
- * is killed before the throw, so a failed start leaves no process behind.
+ * Start `cb serve` for `box` on a freshly allocated port and return once the
+ * box answers its authenticated health query. Throws `FieldServerStartError`
+ * (carrying the child's captured output) if the child exits early or never
+ * becomes ready; the child is killed before the throw, so a failed start
+ * leaves no process behind.
  */
 export async function startFieldServer(box: FieldBox, options: FieldServerOptions): Promise<FieldServer> {
   const port = await allocateFreePort();
+  // `--host 127.0.0.1` rather than `cb serve`'s "localhost" default, so the
+  // interface the server binds is exactly the one this module probes and
+  // hands the operator (a "localhost" that resolves to ::1 first would have
+  // them disagree).
   const origin = `http://127.0.0.1:${String(port)}`;
+  // Per-run diagnostic key: this is what makes readiness provably OUR child
+  // (see probeReady). A caller-supplied one wins — the harness may want the
+  // same key across a day-advance restart.
+  const diagKey = options.env["CB_DIAG_API_KEY"] ?? randomBytes(24).toString("hex");
 
-  const child = execa(cbBinary(), ["serve", box.packageRoot, "--port", String(port), "--slug", box.slug], {
-    cwd: box.packageRoot,
-    env: { ...process.env, ...options.env },
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
-    cleanup: true,
-  });
+  const child = execa(
+    cbBinary(),
+    ["serve", box.packageRoot, "--port", String(port), "--host", "127.0.0.1", "--slug", box.slug],
+    {
+      cwd: box.packageRoot,
+      env: { ...process.env, ...options.env, CB_DIAG_API_KEY: diagKey },
+      stdio: ["ignore", "pipe", "pipe"],
+      detached: true,
+      cleanup: true,
+    }
+  );
 
   let output = "";
   captureOutput(child, (text) => {
@@ -164,6 +197,7 @@ export async function startFieldServer(box: FieldBox, options: FieldServerOption
     port,
     origin,
     baseUrl: `${origin}/${box.slug}`,
+    diagKey,
     pid: child.pid,
     stop: async () => {
       // Read the flag through a call so the narrowing from one check doesn't
@@ -189,14 +223,14 @@ export async function startFieldServer(box: FieldBox, options: FieldServerOption
       await server.stop();
       throw new FieldServerStartError({ port, reason: describeExit(exit, state.failure), output });
     }
-    if (await probeRoot(origin)) return server;
+    if (await probeReady({ url: `${server.baseUrl}/api/trpc/health.check`, diagKey })) return server;
     await sleep(READY_POLL_MS);
   }
 
   await server.stop();
   throw new FieldServerStartError({
     port,
-    reason: `did not answer 200 on / within ${String(timeoutMs)}ms`,
+    reason: `did not serve box "${box.slug}" within ${String(timeoutMs)}ms`,
     output,
   });
 }

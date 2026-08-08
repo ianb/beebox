@@ -20,6 +20,7 @@ import { mkdir } from "node:fs/promises";
 import { execa } from "execa";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
+import { fileExists } from "../lib/file-exists.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { getStatus, stageAll, commit } from "../lib/git.js";
 import { resolveBoxRoot } from "../hub/child-spawn.js";
@@ -58,6 +59,16 @@ export class FieldBoxInitError extends Error {
   }
 }
 
+export class FieldBoxExistsError extends Error {
+  constructor(packageRoot: string) {
+    super(
+      `${packageRoot} already exists — a field run must create its box from nothing ` +
+        "(`cb init` over an existing directory updates it in place, inheriting the previous run's state)."
+    );
+    this.name = "FieldBoxExistsError";
+  }
+}
+
 /** Absolute path to the `cb` this checkout ships — the same binary
  *  `src/hub/child-spawn.ts` falls back to for a box with no installed engine. */
 export function cbBinary(): string {
@@ -67,14 +78,20 @@ export function cbBinary(): string {
 /**
  * Create the run's box at `<runDir>/box`: `cb init`, write the test-box
  * marker, commit the baseline. Returns the resolved roots and slug the server
- * half needs.
- *
- * The directory must not already hold a box — `cb init` over an existing one
- * is an *update*, which would silently reuse a previous run's state.
+ * half needs. Refuses a `<runDir>/box` that already exists.
  */
 export async function createFieldBox(runDir: string): Promise<FieldBox> {
   const packageRoot = path.join(runDir, "box");
   await mkdir(runDir, { recursive: true });
+
+  // Enforced, not merely intended: `cb init` over an existing directory is an
+  // UPDATE (`src/cli/commands/init.ts` — `detectBoxTarget` returns a non-fresh
+  // mode, and the baseline commit at the end is skipped), so a reused run
+  // directory would quietly inherit the previous run's cards, git history and
+  // connector state. A run must start from nothing.
+  if (await fileExists(packageRoot)) {
+    throw new FieldBoxExistsError(packageRoot);
+  }
 
   const result = await execa(cbBinary(), ["init", packageRoot], {
     cwd: runDir,

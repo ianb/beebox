@@ -62,12 +62,30 @@ function resolveBase({ port, worktree, box }: { port: number; worktree: string; 
   if (override === undefined || override === "") {
     return `http://localhost:${String(port)}/${worktree}/${box}`;
   }
-  if (!override.startsWith("http://") && !override.startsWith("https://")) {
-    throw new BrowseConfigError(`BROWSE_BASE_URL must be an absolute http(s) URL: ${override}`);
+  // Parsed, not prefix-checked. `isOwnOrigin` below is a string-prefix test,
+  // so a value the eye reads as one host but the browser resolves as another
+  // would attach the browse key to that other host: `http://localhost:1234@x`
+  // has origin `x`, yet every rewritten URL starts with the configured base
+  // and would pass the own-origin test. Rejecting userinfo (and rebuilding
+  // from the parsed parts) closes that.
+  let parsed: URL;
+  try {
+    parsed = new URL(override);
+  } catch (_e) {
+    throw new BrowseConfigError(`BROWSE_BASE_URL is not a valid URL: ${override}`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new BrowseConfigError(`BROWSE_BASE_URL must be http(s): ${override}`);
+  }
+  if (parsed.username !== "" || parsed.password !== "") {
+    throw new BrowseConfigError(`BROWSE_BASE_URL must not carry credentials: ${override}`);
+  }
+  if (parsed.search !== "" || parsed.hash !== "") {
+    throw new BrowseConfigError(`BROWSE_BASE_URL must be an origin plus optional path only: ${override}`);
   }
   // A trailing slash would make every rewritten path double-slashed and every
   // own-origin check miss (`base + "/foo"` vs `base + "//foo"`).
-  return override.replace(/\/+$/, "");
+  return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
 }
 
 export function rewriteOpenUrl(url: string, ctx: WorktreeContext): string {
