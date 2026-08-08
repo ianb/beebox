@@ -61,7 +61,7 @@ Where each kind of thing goes:
   situational context, the box's purpose, or facts about people (those are the
   briefing).
 
-**Retrospective-inferred beliefs.** The weekly \`process-retrospective\` mines past
+**Retrospective-inferred beliefs.** When enabled, the weekly \`process-retrospective\` mines past
 chat sessions and writes what it learned into personality/guide cards as
 \`source: inferred\` entries — treat those as the agent's own working hypotheses:
 don't promote them past \`medium\`, and don't use them to contradict a

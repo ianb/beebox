@@ -12,6 +12,11 @@ import {
   getDirectoryForSession,
   getLastSessionForDirectory,
   resolveSessionLogPath,
+  removeSessionFromHistory,
+  clearMostActiveIfMatches,
+  getMostActive,
+  getMostActiveSavedAt,
+  setMostActive,
 } from "../../src/core/chat/session/history.js";
 import { getSessionDir } from "../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -36,6 +41,43 @@ async function cleanupSessionLogs(boxRoot: string, contextDirs: string[]): Promi
     await rm(dir, { recursive: true, force: true });
   }
 }
+```
+
+## Deletion removes exact duplicates and conditionally clears the pointer
+
+Removal is idempotent, preserves unrelated rows and the migration marker, and
+clears the most-active id without erasing its activity timestamp.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  ".callback-box/chat-session-history.json",
+  JSON.stringify({ sessions: [{ id: "keep" }, { id: "gone" }, { id: "gone", contextDir: "store/x" }], migrated: true }),
+);
+await setMostActive(box.root, "gone");
+const savedAt = await getMostActiveSavedAt(box.root);
+const removed = await removeSessionFromHistory(box.root, "gone");
+await clearMostActiveIfMatches(box.root, "gone");
+JSON.stringify({ removed: removed.length, ids: await loadHistory(box.root), active: await getMostActive(box.root) })
+=> {"removed":2,"ids":["keep"],"active":null}
+```
+
+```ts continue
+(await getMostActiveSavedAt(box.root))?.toISOString() === savedAt?.toISOString()
+=> true
+```
+
+A newer pointer wins the compare-and-clear race:
+
+```ts continue
+await setMostActive(box.root, "newer");
+await clearMostActiveIfMatches(box.root, "gone");
+await getMostActive(box.root)
+=> newer
+```
+
+```ts cleanup
+await box.cleanup();
 ```
 
 ## Reading a v1 file

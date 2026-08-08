@@ -81,7 +81,7 @@ const server = await makeTestServer();
 
 const empty = await caller(server).chat.bootstrap({ slice: TAIL });
 JSON.stringify(empty)
-=> {"sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
+=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
 ```
 
 ## An explicit session id returns that session's history and status
@@ -150,6 +150,7 @@ const atomic = await c.chat.bootstrap({ slice: TAIL });
 // no equivalent — so it sits out the comparison.
 const { label, ...composed } = atomic;
 JSON.stringify(composed) === JSON.stringify({
+  kind: "resumable",
   sessionId: viaDefault.sessionId,
   history: viaHistory,
   status: viaStatus,
@@ -171,7 +172,7 @@ doesn't.)
 ```ts continue
 const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
 JSON.stringify(missing)
-=> {"sessionId":"no-such-session","history":{"sessionId":"no-such-session","entries":[],"total":0},"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null}}
+=> {"kind":"unavailable","sessionId":"no-such-session","history":null,"label":null,"status":{"sessionId":"no-such-session","running":false,"busy":false,"model":null},"reason":"missing-local-transcript","huskPath":null}
 ```
 
 Input still validates: a non-string session is rejected before any work, and so
@@ -244,7 +245,7 @@ than a session named `""`:
 ```ts continue
 await setDefaultSession(server, "");
 JSON.stringify(await caller(server).chat.bootstrap({ slice: TAIL }))
-=> {"sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
+=> {"kind":"empty","sessionId":null,"history":null,"label":null,"status":{"sessionId":null,"running":false,"busy":false,"model":null}}
 ```
 
 ```ts cleanup

@@ -23,6 +23,9 @@ import { memo, useState, type ReactNode } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { AdvancedPanel } from "./SessionChip-advanced-panels";
+import { DeleteChatDialog } from "../chat-delete/DeleteChatDialog";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
 import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
 
@@ -100,20 +103,10 @@ interface SessionChipBodyProps {
  * `SessionChipPanel` member at compile time without one).
  */
 function SessionChipBody(props: SessionChipBodyProps): ReactNode {
-  const {
-    panel, onNewSession, currentModelLabel, onOpenModel, selectedModel, onSelectModel,
-    onOpenAdvanced, onBackToRoot, advancedProps,
-  } = props;
+  const { panel, onNewSession, currentModelLabel, onOpenModel, selectedModel, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
   switch (panel) {
     case "root":
-      return (
-        <RootPanel
-          onNewSession={onNewSession}
-          currentModelLabel={currentModelLabel}
-          onOpenModel={onOpenModel}
-          onOpenAdvanced={onOpenAdvanced}
-        />
-      );
+      return <RootPanel onNewSession={onNewSession} currentModelLabel={currentModelLabel} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
     case "model":
       return <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
     case "advanced":
@@ -141,10 +134,25 @@ export interface SessionChipProps {
 
 export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const {
-    label, onNewSession, selectedModel, onSelectModel, onStopProcess, onRestartProcess,
-    onCompactSession, sessionId, running, busy, debugView, onToggleDebugView, showDebugLog, onToggleDebugLog,
+    label,
+    onNewSession,
+    selectedModel,
+    onSelectModel,
+    onStopProcess,
+    onRestartProcess,
+    onCompactSession,
+    sessionId,
+    running,
+    busy,
+    debugView,
+    onToggleDebugView,
+    showDebugLog,
+    onToggleDebugLog,
   } = props;
   const [panel, setPanel] = useState<SessionChipPanel>("root");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const navigate = useNavigate();
+  const { boxSlug } = useParams({ strict: false });
   const currentModelLabel = MODEL_OPTIONS.find((o) => o.model === selectedModel)?.label ?? "Default";
   // Editorial title or nothing: `label` is the husk's `title` (null until
   // the nightly chat review or a hand edit names the session). With no real
@@ -154,56 +162,75 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const accessibleName = titled ? `Session: ${label}` : "Session menu";
 
   return (
-    <Dropdown
-      align="right"
-      width="w-56"
-      panelIndex={panel === "root" ? 0 : 1}
-      onClose={() => setPanel("root")}
-      trigger={({ toggle, ariaProps }) => (
-        <button
-          type="button"
-          onClick={toggle}
-          className="min-h-[40px] min-w-[40px] px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-          title={accessibleName}
-          aria-label={accessibleName}
-          {...ariaProps}
-        >
-          <span className={titled ? "sm:hidden" : ""}>
-            <SlidersIcon />
-          </span>
-          {titled ? (
-            <>
-              <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span>
-              <span className="hidden sm:flex">
-                <CaretIcon />
-              </span>
-            </>
-          ) : null}
-        </button>
+    <>
+      <Dropdown
+        align="right"
+        width="w-56"
+        panelIndex={panel === "root" ? 0 : 1}
+        onClose={() => setPanel("root")}
+        trigger={({ toggle, ariaProps }) => (
+          <button
+            type="button"
+            onClick={toggle}
+            className="min-h-[40px] min-w-[40px] px-2 sm:px-3 flex items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            title={accessibleName}
+            aria-label={accessibleName}
+            {...ariaProps}
+          >
+            <span className={titled ? "sm:hidden" : ""}>
+              <SlidersIcon />
+            </span>
+            {titled ? (
+              <>
+                <span className="hidden sm:inline max-w-[11rem] truncate">{label}</span>
+                <span className="hidden sm:flex">
+                  <CaretIcon />
+                </span>
+              </>
+            ) : null}
+          </button>
+        )}
+      >
+        <SessionChipBody
+          panel={panel}
+          onNewSession={onNewSession}
+          currentModelLabel={currentModelLabel}
+          onOpenModel={() => setPanel("model")}
+          selectedModel={selectedModel}
+          onSelectModel={onSelectModel}
+          onOpenAdvanced={() => setPanel("advanced")}
+          onBackToRoot={() => setPanel("root")}
+          advancedProps={{
+            debugView,
+            onToggleDebugView,
+            showDebugLog,
+            onToggleDebugLog,
+            onCompactSession,
+            busy,
+            onRestartProcess,
+            onStopProcess,
+            running,
+            sessionId,
+            onDeleteConversation: () => setDeleteOpen(true),
+          }}
+        />
+      </Dropdown>
+      {sessionId === null ? null : (
+        <DeleteChatDialog
+          open={deleteOpen}
+          sessionId={sessionId}
+          label={label}
+          onClose={() => setDeleteOpen(false)}
+          onResult={(result) => {
+            if (result.status === "deleted" || result.storage !== "present") {
+              void navigate({
+                to: href(`/${boxSlug}/chat`),
+                search: toSearch({ session: "new" }),
+              });
+            }
+          }}
+        />
       )}
-    >
-      <SessionChipBody
-        panel={panel}
-        onNewSession={onNewSession}
-        currentModelLabel={currentModelLabel}
-        onOpenModel={() => setPanel("model")}
-        selectedModel={selectedModel}
-        onSelectModel={onSelectModel}
-        onOpenAdvanced={() => setPanel("advanced")}
-        onBackToRoot={() => setPanel("root")}
-        advancedProps={{
-          debugView,
-          onToggleDebugView,
-          showDebugLog,
-          onToggleDebugLog,
-          onCompactSession,
-          busy,
-          onRestartProcess,
-          onStopProcess,
-          running,
-          sessionId,
-        }}
-      />
-    </Dropdown>
+    </>
   );
 });

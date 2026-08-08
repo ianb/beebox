@@ -18,9 +18,9 @@ cb chat review run               # do it
 
 Boxes get a `chat-review` scheduled script (nightly at 04:00, `lockGroup: retro`)
 installed by `cb init` at
-`config/schedules/chat-review.scheduled-script.card`, shipping **enabled**.
+`config/schedules/chat-review.scheduled-script.card`, shipping **disabled**.
 
-To turn it off for a box, set `enabled: false` on that card. `enabled` is a
+To turn it on for a box, set `enabled: true` on that card. `enabled` is a
 box-owned field, so the setting survives template updates rather than being
 re-flipped by the next sync.
 

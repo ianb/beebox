@@ -26,6 +26,7 @@ import { getMostActive } from "../../core/chat/session/history.js";
 import { chatHistorySlice } from "../../core/chat/session/load-history.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { ChatSchedule } from "../../core/chat/schedules.js";
+import { resolveSessionAvailability } from "../../core/chat/session/availability.js";
 
 export interface ScheduleFireDeps {
   boxRoot: string;
@@ -54,11 +55,7 @@ function buildFiredMessage(schedule: ChatSchedule): string {
  * ended with `is_error` (the unresumable case), or the run closed/errored
  * before a result — a false is the caller's cue to try a fresh session.
  */
-function sendFiredTurn(deps: {
-  session: ChatSession;
-  eventBus: EventBus;
-  firedMessage: string;
-}): Promise<boolean> {
+function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string }): Promise<boolean> {
   const { session, eventBus, firedMessage } = deps;
   return new Promise<boolean>((resolve) => {
     let settled = false;
@@ -76,7 +73,8 @@ function sendFiredTurn(deps: {
       // `fresh: true`: this read is happening BECAUSE the turn we're
       // broadcasting about just completed, so it must not join (and be
       // answered by) a scan that started before that completion.
-      session.getHistory(chatHistorySlice(), { fresh: true })
+      session
+        .getHistory(chatHistorySlice(), { fresh: true })
         .then((history) => {
           eventBus.emit("chat-history", {
             sessionId: history.sessionId,
@@ -107,11 +105,10 @@ function sendFiredTurn(deps: {
  * into the originating session (or the most-active one for a legacy entry),
  * with a one-shot fresh-session fallback when the target can't run its turn.
  */
-export async function fireChatSchedule(
-  deps: ScheduleFireDeps,
-  schedule: ChatSchedule,
-): Promise<void> {
+export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSchedule): Promise<void> {
   const { boxRoot, registry, eventBus, wireSession } = deps;
+
+  if (schedule.sessionId !== undefined && registry.deletion.isBlocked(schedule.sessionId)) return;
 
   // Alarm/TTS broadcast stays first, before any session work.
   eventBus.emit("schedule-fired", {
@@ -134,25 +131,43 @@ export async function fireChatSchedule(
     }
   }
 
+  const availability = await resolveSessionAvailability({
+    boxRoot,
+    sessionId: targetId,
+    registry,
+  });
+  if (availability.kind === "unavailable") {
+    console.warn(`[schedule] Session ${targetId} is unavailable locally; using a fresh session`);
+    const fresh = registry.createNew();
+    wireSession(fresh);
+    await sendFiredTurn({ session: fresh, eventBus, firedMessage });
+    return;
+  }
+
   const target = registry.getOrCreate(targetId);
   wireSession(target);
   registry.enforceLiveCap(targetId);
   registry.touch(targetId, { subprocessUse: true });
-  const delivered = await sendFiredTurn({ session: target, eventBus, firedMessage });
+  const delivered = await sendFiredTurn({
+    session: target,
+    eventBus,
+    firedMessage,
+  });
   if (delivered) return;
+  if (registry.deletion.isBlocked(targetId)) return;
 
   // Fresh-session fallback: the target couldn't run its turn (e.g. an
   // unresumable pre-v2 session). Re-send once into a brand-new session so the
   // fired schedule's response is never silently lost.
-  console.warn(
-    `[schedule] Fired turn failed for session ${targetId}; retrying in a fresh session`,
-  );
+  console.warn(`[schedule] Fired turn failed for session ${targetId}; retrying in a fresh session`);
   const fresh = registry.createNew();
   wireSession(fresh);
-  const retried = await sendFiredTurn({ session: fresh, eventBus, firedMessage });
+  const retried = await sendFiredTurn({
+    session: fresh,
+    eventBus,
+    firedMessage,
+  });
   if (!retried) {
-    console.error(
-      `[schedule] Fresh-session retry also failed for schedule "${schedule.label}"; giving up`,
-    );
+    console.error(`[schedule] Fresh-session retry also failed for schedule "${schedule.label}"; giving up`);
   }
 }
