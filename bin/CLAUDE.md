@@ -48,11 +48,23 @@ for a real gate. Companion to the home-path guard above.
 
 `bin/land [branch]` fast-forwards a finished worktree branch onto `main`. It's
 what `/finish` step 8 calls, and what you run by hand to land a branch a finish
-left merge-ready. With no argument it auto-detects the single merge-ready
-branch and refuses if several qualify; `--list` shows candidates, `--dry-run`
-previews. It resolves the main checkout from `--git-common-dir` and targets it
-explicitly, so the same invocation works from the main checkout or from inside
-a worktree.
+left merge-ready. It resolves the main checkout from `--git-common-dir` and
+targets it explicitly, so the same invocation works from the main checkout or
+from inside a worktree.
+
+With no argument: **from a worktree it lands that worktree's own branch**; from
+the main checkout it auto-detects the single merge-ready branch and refuses if
+several qualify. `--list` shows candidates, `--dry-run` previews.
+
+**Invoke it plainly — no `$(…)`.** A worktree-isolated session refuses any Bash
+command containing a command substitution as "too complex to verify that it
+stays inside the worktree," so `bin/land "$(git rev-parse --abbrev-ref HEAD)"`
+is rejected even though it only ever targets your own worktree. This is a
+*second* isolation behavior, distinct from the git-redirect block below, with
+its own refusal text; pipes are unaffected. The worktree default above exists
+precisely so the normal call is a bare `bin/land` with nothing to substitute.
+Need an explicit name? Get it with its own `git rev-parse --abbrev-ref HEAD`
+call and type it literally.
 
 **Why it's a script and not `git -C`.** Claude Code isolates a `--worktree`
 session and every subagent it spawns from the main checkout, refusing any Bash
