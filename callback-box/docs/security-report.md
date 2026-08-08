@@ -3,7 +3,7 @@ generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 3f65b3d1a7cad712f307a6c7df5665ff0bf04867
 date: 2026-08-07
 model: claude-fable-5
-reviewed-by: "DRAFT — unreviewed"
+reviewed-by: Ian Bicking
 ---
 
 # Security report — structured version
