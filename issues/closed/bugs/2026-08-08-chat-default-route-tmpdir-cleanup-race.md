@@ -33,8 +33,8 @@ pnpm exec tap test/webapp/chat-default-route.doctest.md -j1
 ```
 
 This is the same class of tmp-dir-cleanup-under-load race as the closed
-[auth-command parallel state flake](../closed/bugs/2026-08-04-auth-command-doctest-parallel-state-flake.md)
-and [publish-go parallel timeout](../closed/bugs/2026-08-04-publish-go-doctest-parallel-timeout.md).
+[auth-command parallel state flake](2026-08-04-auth-command-doctest-parallel-state-flake.md)
+and [publish-go parallel timeout](2026-08-04-publish-go-doctest-parallel-timeout.md).
 Determine whether the test should await/disable the background backfill before
 tearing down its tmpdir, or whether the backfill write itself needs to
 tolerate a removed target directory.

@@ -10,6 +10,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";
 import { chatControlProcedures } from "./chat-control-procedures.js";
 import { chatBootstrapProcedure } from "./chat-bootstrap-procedure.js";
+import { chatPlaceMenuProcedure } from "./chat-place-menu-procedure.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
@@ -78,6 +79,7 @@ export const chatRouter = router({
   ...chatSessionProcedures,
   ...chatControlProcedures,
   ...chatBootstrapProcedure,
+  ...chatPlaceMenuProcedure,
   /**
    * Most-recently-created session associated with a directory, or null
    * if no chat has been started for that directory.

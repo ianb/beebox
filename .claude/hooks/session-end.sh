@@ -64,15 +64,22 @@ wt_log "event: session=$session_id reason=$reason cwd=$cwd"
 # `~/.claude/projects/<encoded-path>/<uuid>.jsonl`.
 worktree_path=""
 case "$cwd" in
-  "$HOME/src/callback-worktrees/"*) worktree_path="$cwd" ;;
+  "$WT_ROOT/"*) worktree_path="$cwd" ;;
 esac
 
 if [ -z "$worktree_path" ]; then
   tpath=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
+  # Claude Code encodes the launch directory by replacing every `/` with `-`, so
+  # the encoded worktree root is derived from WT_ROOT rather than spelled out.
+  # Matched and split with parameter expansion, not sed: WT_ROOT is a literal
+  # here, and a path component that happened to be a regex metacharacter would
+  # otherwise mis-parse the name.
+  wt_root_encoded=$(printf '%s' "$WT_ROOT" | tr '/' '-')
   case "$tpath" in
-    *"-src-callback-worktrees-"*)
-      name=$(printf '%s' "$tpath" | sed -E 's|.*-src-callback-worktrees-([^/]+)/.*|\1|')
-      candidate="$HOME/src/callback-worktrees/$name"
+    *"$wt_root_encoded-"*)
+      name=${tpath#*"$wt_root_encoded-"}
+      name=${name%%/*}
+      candidate="$WT_ROOT/$name"
       if [ -d "$candidate" ]; then
         echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
         worktree_path="$candidate"

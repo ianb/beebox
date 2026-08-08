@@ -3,7 +3,23 @@ title: "`bin/worktrees sweep`'s live-agent guard fails OPEN when ps/lsof can't a
 area: bin
 filed-by: agent
 discovered-in: worktree-codex-exit-cleanup — cross-model (codex) review of the codex teardown work
+design: ../../../callback-box/docs/plans/worktree-control-surface.md
+resolution: implemented
 ---
+
+Resolved 2026-08 in `worktree-worktree-seam` (the worktree control surface
+refactor, Track B). `bin/worktrees sweep` now uses the shared tri-state
+`wt_other_agent_live` via `wt_agent_snapshot_capture`, so a `ps`/`lsof` that
+can't answer skips the worktree instead of authorizing the delete. The
+secondary issue named below (the argv signal's name pattern) is also
+addressed — worktree names are now validated at the CLI boundary
+(`wt_paths_valid_name`), and the shared guard checks process cwd in addition
+to argv, so a name that doesn't match the argv pattern still resolves via cwd.
+
+> **Was being fixed as part of a plan.** Track B / chunk 2 of
+> [the worktree control surface plan](../../../callback-box/docs/plans/worktree-control-surface.md)
+> took the "fold sweep onto `wt_other_agent_live` with a snapshot passed in"
+> option sketched below.
 
 `bin/worktrees sweep` removes a worktree when it is merged + clean + has no
 active agent session. The active-session guard stands in front of an

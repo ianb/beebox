@@ -14,57 +14,109 @@
  */
 
 import * as fs from "node:fs/promises";
-import { findChatHuskEntry, listChatHusks } from "../husk.js";
+import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel } from "../session-label.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 
-export interface ChatSessionRow {
+/**
+ * A chat's *identity and activity* — everything derivable from its husk card
+ * plus one `stat`. Deliberately unlabeled: naming a chat can cost a transcript
+ * read, and a caller that only counts chats must not pay for names it discards.
+ */
+export interface ChatSessionEntry {
   sessionId: string;
   /** "" for root-bound, undefined for legacy unbound (treated as root). */
   contextDir: string | undefined;
   mtime: Date;
-  label: string;
   /** Box-relative path of the session's husk card. */
   huskPath: string;
+  /**
+   * Absolute transcript path. Carried rather than recomputed: the enumeration
+   * already resolved it to `stat` the file, and labelling would otherwise
+   * re-derive it. Host-side only — never forwarded to a client.
+   */
+  logPath: string;
+  /** The husk's editorial `title`, when it has one. Free — it rode the husk. */
+  title: string | undefined;
 }
 
-/** Every resumable web chat, most-recently-active first. */
-export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]> {
+/** A chat as a *list* shows it — an entry plus its display name. */
+export interface ChatSessionRow extends ChatSessionEntry {
+  label: string;
+}
+
+/**
+ * Every resumable web chat, most-recently-active first, **without labels**.
+ *
+ * This is the cheap enumeration: one husk read and one `stat` per chat, no
+ * transcript I/O. Use it whenever you need to know *which* chats exist, where
+ * they're bound, or how recently they were touched — grouping, counting,
+ * freshness — and reach for `loadAllSessions` only when rows will actually be
+ * rendered with names.
+ *
+ * Husks are resolved concurrently, not in sequence: the app bar's place menu
+ * waits on the whole set. `allSettled` per code-style — one husk's failure is
+ * already a per-husk skip, and must not abandon the others.
+ */
+export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEntry[]> {
   const husks = await listChatHusks(boxRoot);
-  const rows: ChatSessionRow[] = [];
-  for (const husk of husks) {
-    const logPath = huskTranscriptPath(boxRoot, husk);
-    let mtime: Date;
-    try {
-      mtime = (await fs.stat(logPath)).mtime;
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        // Not "the transcript was cleaned up" — the file may well be there and
-        // unreadable (EACCES, EIO). Dropping the chat from every list is the
-        // same outcome either way, so say so loudly rather than silently.
-        console.warn(`[chat] husk ${husk.path}: transcript unreadable, omitting session:`, e);
-      }
-      // Nothing to resume — skip it. The husk card stays browsable.
+  const settled = await Promise.allSettled(husks.map((husk) => loadSessionEntry(boxRoot, husk)));
+  const entries: ChatSessionEntry[] = [];
+  for (const [i, outcome] of settled.entries()) {
+    if (outcome.status === "rejected") {
+      console.warn(`[chat] husk ${husks[i]?.path}: could not resolve session:`, outcome.reason);
       continue;
     }
-
-    const label = await resolveSessionLabel({
-      sessionId: husk.session,
-      logPath,
-      title: husk.title,
-    });
-
-    rows.push({
-      sessionId: husk.session,
-      contextDir: husk.contextDir,
-      mtime,
-      label,
-      huskPath: husk.path,
-    });
+    if (outcome.value !== null) entries.push(outcome.value);
   }
-  rows.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
-  return rows;
+  entries.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+  return entries;
+}
+
+/**
+ * Every resumable web chat, most-recently-active first, each with the label a
+ * list shows (husk `title`, then the transcript's first user message, then the
+ * id prefix). The naming half is what costs I/O — see `listSessionEntries` for
+ * the enumeration on its own.
+ */
+export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]> {
+  const entries = await listSessionEntries(boxRoot);
+  return Promise.all(entries.map(async (entry) => ({
+    ...entry,
+    label: await resolveSessionLabel({
+      sessionId: entry.sessionId,
+      logPath: entry.logPath,
+      title: entry.title,
+    }),
+  })));
+}
+
+/** One husk's entry, or null when there's no transcript left to resume. */
+async function loadSessionEntry(boxRoot: string, husk: ChatHuskEntry): Promise<ChatSessionEntry | null> {
+  const logPath = huskTranscriptPath(boxRoot, husk);
+  let mtime: Date;
+  try {
+    mtime = (await fs.stat(logPath)).mtime;
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      // Not "the transcript was cleaned up" — the file may well be there and
+      // unreadable (EACCES, EIO). Dropping the chat from every list is the
+      // same outcome either way, so say so loudly rather than silently.
+      console.warn(`[chat] husk ${husk.path}: transcript unreadable, omitting session:`, e);
+    }
+    // Nothing to resume — skip it. The husk card stays browsable.
+    return null;
+  }
+
+  return {
+    sessionId: husk.session,
+    contextDir: husk.contextDir,
+    mtime,
+    huskPath: husk.path,
+    logPath,
+    title: husk.title,
+  };
 }
 
 /**
