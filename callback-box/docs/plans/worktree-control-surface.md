@@ -11,6 +11,10 @@ client of the same command. Behavior does not change. Who can call it does.
 
 **Issues addressed:**
 
+- [worktree/session workflow redesign](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
+  — this plan is that issue's *enabling refactor*, and does not close it. It
+  makes the pieces recombinable; the workflow change stays there.
+
 - [derive public worktree paths](../../../issues/code-quality/2026-08-01-derive-public-worktree-paths.md)
   — the hardcoded `~/src/…` paths live in exactly the files this plan rewrites.
   Deriving them is folded into Track A, not left as a separate sweep.
@@ -26,12 +30,15 @@ client of the same command. Behavior does not change. Who can call it does.
 is open and unresolved. Nothing in this plan may assume more `manual-testing`
 items exist or design a flow that produces them. See NOT in scope.
 
-**A queue item asking for "a worktree/session management system" does not
-exist.** I grepped every open category directory for `worktree` (109 files hit)
-and read every candidate title. The closest items are the two listed above plus
-[plans as execution state](../../../issues/decisions/2026-07-30-plans-as-execution-state.md),
-which is about plan checkboxes, not worktrees. This plan doc is the first written
-record of the idea.
+**On the "issue about making the system":** no such item existed when this plan
+was written — I grepped every open category directory for `worktree` (109 files
+hit) and read every candidate title. The boxholder filed
+[the redesign issue](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
+later the same day, and it agrees with this plan on the substance: the two-case
+distinction, the rejection of Conductor and the desktop app as unbuildable-upon,
+the Codex-must-stay-first-class constraint, and the three-way status
+recomputation. It carries scope this plan does not: the issue↔worktree data link,
+box forking, and the `/dev/issues/` extension.
 
 ## What this plan builds now
 
