@@ -8,11 +8,10 @@
 #   - .claude/hooks/session-end.sh   (Claude Code SessionEnd)
 #   - bin/codex-session-end          (codex tab exit, via launch-worktree-session)
 #
-# `bin/worktrees sweep` uses the liveness guard here (via
-# wt_agent_snapshot_capture, which lets it keep ONE system-wide process snapshot
-# across N worktrees) but NOT the removal below: it removes with
-# `git worktree remove --force` rather than the trash-mv, and converging that is
-# a separate change with its own risk.
+# `bin/worktrees` (create excepted) is a caller too: `sweep` and `remove` both
+# use wt_other_agent_live and wt_remove_now from here, and `list` uses the guard
+# alone. Sweep keeps its ONE system-wide process snapshot across N worktrees via
+# wt_agent_snapshot_capture rather than a private copy of the guard.
 #
 # Everything here stands in front of an irreversible delete, so every "can't
 # tell" answer resolves to "don't delete". A worktree that lingers is collected
@@ -20,11 +19,17 @@
 
 # Locations — WT_MONO (where the git bookkeeping runs), WT_BOX_ROOT, and
 # WT_STATE_DIR all come from the shared derivation, so this file makes no $HOME
-# assumption of its own. If derivation fails, WT_MONO stays empty and
-# wt_remove_now's `cd "$WT_MONO"` bails out before touching anything — the
-# fail-closed answer, and better than the old `$HOME/src/callback-box` fallback,
+# assumption of its own. Better than the old `$HOME/src/callback-box` fallback,
 # which could point the destructive path at a checkout that isn't the one in
 # play.
+#
+# On derivation failure the four repo-relative roots are cleared, so nothing
+# outside WT_STATE_DIR is reachable: the box trash is guarded on a non-empty
+# WT_BOX_ROOT and `cd "$WT_MONO"` fails before the worktree trash-mv and the
+# branch delete. WT_STATE_DIR is NOT cleared — it comes from $CALLBACK_STATE_DIR
+# or the fixed cache path, neither of which depends on the derivation — so
+# router-stop and browse/log/pid cleanup still run. That is deliberate: those
+# are this tool's own regenerable cache, not anybody's work.
 # shellcheck source=worktree-paths.sh
 . "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
@@ -412,10 +417,23 @@ wt_remove_satellites() {
 # Kick the detached delete of everything trashed so far. Clears earlier
 # leftovers too. git-annex locks its object tree read-only, so unlock it first
 # or macOS leaves annex remnants.
+#
+# It deletes the trash dir's ENTRIES, never the trash dir itself, and it snapshots
+# the entry list here rather than globbing inside the detached shell. Both matter
+# once a caller removes several worktrees in a row: `bin/worktrees sweep` calls
+# wt_remove_now per eligible worktree, so a reaper from removal N-1 is still
+# running when removal N does its `mv` into the same directory. Deleting the root
+# would make that `mv` fail — leaving a worktree half-removed, its box and cache
+# already gone — and a glob expanded inside the reaper could sweep up an entry
+# that was moved in after it started.
 wt_trash_reap() {
   local trash="${WT_TRASH:-$WT_STATE_DIR/trash}"
   [ -d "$trash" ] || return 0
-  nohup sh -c 'chmod -R u+w "$1" 2>/dev/null || true; rm -rf "$1"' sh "$trash" >/dev/null 2>&1 &
+  local entries=("$trash"/*)
+  # An unmatched glob stays literal; nothing to reap.
+  [ -e "${entries[0]}" ] || return 0
+  nohup sh -c 'for p in "$@"; do chmod -R u+w "$p" 2>/dev/null || true; rm -rf "$p"; done' \
+    sh "${entries[@]}" >/dev/null 2>&1 &
   disown 2>/dev/null || true
   return 0
 }

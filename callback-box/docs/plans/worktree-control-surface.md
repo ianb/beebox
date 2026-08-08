@@ -50,8 +50,8 @@ That draws the line precisely, and it moves one track:
 
 - **Tracks A, B, C are built.** They move code and unify computation. Every
   existing motion — `claude --worktree`, `bin/launch-worktree-session`, `sweep`,
-  the hooks — behaves exactly as it does today. `list --json` is additive and
-  changes nothing that exists.
+  the hooks — behaves as it does today, with two deliberate exceptions recorded
+  under "Behavior drift accepted" below.
 - **Track D (`resume`) is designed here but NOT built.** A new motion is a
   workflow change, which is the thing being deferred, not enabled-then-deferred.
   Its design stays in this document because it is the load-bearing test of
@@ -61,6 +61,25 @@ That draws the line precisely, and it moves one track:
   existed to serve `resume`.
 
 So the deliverable is: the same workflow, over pieces that can be recombined.
+
+### Behavior drift accepted
+
+Two changes a user or caller could notice. Both were chosen, and a cross-model
+review flagged both as drift that "no workflow change" would otherwise deny.
+
+- **`bin/worktrees list` no longer aliases `status`.** On `main` they were the
+  same router-status JSON. `list` is now the unified worktree table and `status`
+  is the raw router JSON. Accepted after grepping every tracked file for both
+  commands: only `status` had callers (`bin/CLAUDE.md`, the `browse` skill), and
+  `list` as a router-status alias was referenced nowhere. Reusing the better name
+  for the better view beats keeping a dead alias.
+- **`bin/launch-worktree-session` no longer falls back to `$HOME/src/callback-box`.**
+  Concrete case that used to work and now fails: the launcher *copied* (not
+  symlinked) into `~/.local/bin`, where self-location finds no checkout. It now
+  refuses instead of launching a session against a checkout it merely guessed.
+  That is the fail-closed rule the derive-paths issue asks for, applied
+  consistently; the script already resolves symlinks, so the supported install
+  shape is unaffected.
 
 ## The problem this exists to solve
 
@@ -506,7 +525,7 @@ shape.
 | `remove` runs while an agent is live and `ps`/`lsof` fail | To add — inject a failing `ps` and assert refusal | Partly — `wt_other_agent_live` returns `unknown` (`bin/lib/worktree-teardown.sh:65-67`); sweep currently ignores it (`bin/worktrees:145,155-160`) | Today: **silent** — this is the filed bug. After Track B: clear, skip with printed reason |
 | `remove --force` is used on a worktree with a live agent | To add | To add — `--force` must not override the liveness check | Clear: refuse, and say `--force` does not apply to liveness |
 | `list --json` runs with no router | To add — doctest asserting `runtime.state == "unknown"` | To add — degrade, never fail the whole command | Clear: per-field `unknown`, not an omitted field |
-| `list --json` runs while a worktree is being removed (directory half-gone) | To add | To add — a per-worktree error is caught and reported as a record with `git.state: "unreadable"`, not a crash | Clear: one bad row, rest of the list intact |
+| `list --json` runs while a worktree is being removed (directory half-gone) | Built + exercised | Built — the row's `git.ahead`/`dirty`/`merged` are `null`, never `0`, and the rest of the list is unaffected. (Shipped as nulls rather than the `git.state: "unreadable"` field this plan first proposed: `wt_work_state` already answers `"?"` for "could not tell", and a null carries that through JSON without a second vocabulary for the same fact.) | Clear: one bad row, rest of the list intact |
 | A client parses `agent.state` and treats `unknown` as `none` | Not testable in this repo — it is a contract risk for future clients | Mitigation: the field is a three-value enum with no boolean shorthand, and `bin/CLAUDE.md` documents the rule | Clear only if documented — Rollout shape requires the doc line |
 | `resume` targets a worktree that was swept away | To add | Yes by construction — `create` is idempotent and recreates it, on the same branch if the branch survives (`.claude/hooks/worktree-create.sh:113-115`) | Clear: logs "attaching without -b" |
 | The session file names an agent that is not installed | To add | To add — `resume` verifies the binary before opening a tab | Clear: fail before the tab, not inside it |
@@ -621,7 +640,12 @@ beats convention).
 Each chunk is a commit or a few related commits. All land before the plan ships.
 
 1. **Path derivation helper** (`bin/lib/worktree-paths.sh`), consumed by
-   `bin/worktrees sweep` only. Includes the refuse-on-mismatch assertion.
+   `bin/worktrees sweep` only. The planned refuse-on-mismatch assertion (derived
+   roots must equal the old hardcoded ones) was **not** shipped as runtime code:
+   it is a one-time migration check, not a durable invariant, and it was verified
+   by hand instead — all five derived locations matched exactly. What `wt_paths_init`
+   does refuse at runtime is a checkout with no `callback-box/`, and an override
+   that would aim a destructive root at the source box or the main checkout.
 2. **Tri-state liveness in sweep** — snapshot parameter on
    `wt_other_agent_live`, sweep's inline `ps`/`lsof` deleted. Closes
    [the fail-open bug](../../../issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
@@ -657,8 +681,7 @@ Each chunk is a commit or a few related commits. All land before the plan ships.
 - Chunk 4 — assert refusal on unmerged, on dirty, on live-agent, and that
   `--force` overrides the first two but not the third.
 - Chunks 5-6 — doctest the JSON shape, including `runtime.state == "unknown"`
-  with no router and a per-worktree `unreadable` row for a half-removed
-  directory.
+  with no router and null (never `0`) git counts for a half-removed directory.
 - Chunk 7 — assert `resume` refuses a missing agent binary before opening a tab.
 
 The done-when for the plan is those assertions passing, not "the commands feel

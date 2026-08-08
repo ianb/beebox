@@ -72,5 +72,35 @@ wt_paths_init() {
   WT_ROOT="${CALLBACK_WORKTREE_ROOT:-$WT_PARENT/callback-worktrees}"
   WT_BOX_ROOT="${CALLBACK_BOX_ROOT:-$WT_PARENT/box-worktrees}"
   WT_BOX_SRC="${CALLBACK_BOX_SRC:-$WT_PARENT/boxes/test1}"
+
+  # The roots feed paths that get deleted, so an override must not be able to
+  # aim them at data that is not a worktree's to lose. The source box is the
+  # one that would hurt: `CALLBACK_BOX_ROOT=<dir holding the real boxes>` plus a
+  # worktree whose name matches a real box makes teardown trash that box.
+  case "$WT_BOX_SRC" in
+    "$WT_BOX_ROOT"|"$WT_BOX_ROOT"/*)
+      echo "worktree-paths: box root '$WT_BOX_ROOT' contains the source box '$WT_BOX_SRC' — refusing" >&2
+      return 1 ;;
+  esac
+  case "$WT_MONO" in
+    "$WT_ROOT"|"$WT_ROOT"/*)
+      echo "worktree-paths: worktree root '$WT_ROOT' contains the main checkout '$WT_MONO' — refusing" >&2
+      return 1 ;;
+  esac
   return 0
+}
+
+# wt_paths_valid_name <name>
+#
+# A worktree name is a single path segment, matching what
+# bin/launch-worktree-session accepts. EVERY caller that turns a name into a
+# path must check this first: `<root>/$name` with an unchecked name is a path
+# traversal into a destructive command — `remove ../boxes/test1` resolves
+# outside WT_ROOT entirely, passes an `-d` existence check, and trashes whatever
+# is there.
+wt_paths_valid_name() {
+  case "$1" in
+    ""|*/*|.|..) return 1 ;;
+  esac
+  [[ "$1" =~ ^[a-zA-Z0-9_-]+$ ]]
 }

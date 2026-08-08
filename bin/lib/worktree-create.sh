@@ -82,6 +82,13 @@ wt_create() {
   local NAME="$1" base_ref="$2" worktree_path="${3:-}"
 
   wt_paths_init || return 1
+  # Same rule as removal: a name becomes a path, and a name with a slash in it
+  # would put the worktree (and its branch) somewhere nothing else can find or
+  # clean up. Matches what bin/launch-worktree-session already enforces.
+  if ! wt_paths_valid_name "$NAME"; then
+    echo "[worktree-create] FATAL: '$NAME' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2
+    return 1
+  fi
 
   local new_branch="worktree-$NAME"
   [ -n "$worktree_path" ] || worktree_path="$WT_ROOT/$NAME"
