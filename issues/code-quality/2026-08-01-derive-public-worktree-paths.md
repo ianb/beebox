@@ -6,6 +6,14 @@ discovered-in: worktree-private-issues — while building the private-issues sha
 design: ../../callback-box/docs/plans/worktree-control-surface.md
 ---
 
+> **Mostly resolved 2026-08 in `worktree-worktree-seam`.** The new
+> `bin/lib/worktree-paths.sh` (`wt_paths_init`) now covers the
+> WorktreeCreate/Remove hooks, `session-end.sh`, `bin/worktrees sweep`, and
+> `bin/launch-worktree-session` — the first three bullets below are done.
+> **Still outstanding:** the fourth bullet, `bin/private-issues
+> cmd_report_orphans`'s `callback-worktrees` sibling-basename assumption.
+> Leaving this open for that one item rather than re-triaging from scratch.
+
 > **Folded into a plan.** The derivation helper is Track A / chunk 1 of
 > [the worktree control surface plan](../../callback-box/docs/plans/worktree-control-surface.md),
 > which rewrites three of the four files listed below anyway. The tension that

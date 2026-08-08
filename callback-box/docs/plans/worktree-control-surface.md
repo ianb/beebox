@@ -1,7 +1,8 @@
 # An agent-neutral worktree control surface
 
-**Status:** active — Tracks A-C implementing; Track D (`resume`) deferred by
-decision, see "What this plan builds now."
+**Status:** Tracks A-C implemented 2026-08; Track D (`resume`) deferred by
+boxholder decision, see "What this plan builds now." Stays in `docs/plans/` as
+an active document holding Track D's design.
 
 The repo's worktree logic works, but it lives behind a Claude Code hook
 interface. Any other frontend must impersonate Claude Code to use it. This plan
@@ -21,7 +22,7 @@ client of the same command. Behavior does not change. Who can call it does.
 - [dev scripts into bin](../../../issues/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)
   — `bin/` is the brand for first-class dev tools. This plan applies that
   principle to the single largest piece of dev tooling still outside `bin/`.
-- [sweep's live-agent guard fails open](../../../issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md)
+- [sweep's live-agent guard fails open](../../../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md)
   — the fix that issue sketches ("fold sweep onto `wt_other_agent_live`") is the
   same convergence Track B performs. The plan carries it.
 
@@ -312,7 +313,7 @@ convergence of sweep's guard onto `wt_other_agent_live`.
 `bin/lib/worktree-teardown.sh`, and sweep's inline block
 (`bin/worktrees:205-231`). Only two share an implementation. Sweep's liveness
 guard is two-state where the shared one is tri-state, and
-[the filed bug](../../../issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md)
+[the filed bug](../../../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md)
 records the consequence: a failed `ps`/`lsof` reads as "nothing running" and the
 delete proceeds. Principle §4 — this is the exact "resilient to the impossible"
 inversion, a guard that fails open in front of an irreversible action.
@@ -648,7 +649,7 @@ Each chunk is a commit or a few related commits. All land before the plan ships.
    that would aim a destructive root at the source box or the main checkout.
 2. **Tri-state liveness in sweep** — snapshot parameter on
    `wt_other_agent_live`, sweep's inline `ps`/`lsof` deleted. Closes
-   [the fail-open bug](../../../issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
+   [the fail-open bug](../../../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
    Depends on nothing; can swap order with 1.
 3. **`bin/worktrees create`** — logic moved verbatim from the hook, hook reduced
    to an adapter, `bin/launch-worktree-session` codex path switched off the JSON
