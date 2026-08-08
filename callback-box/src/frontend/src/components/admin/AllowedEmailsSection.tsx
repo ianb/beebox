@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { withBase } from "../../api";
-import { trpc, trpcClient } from "../../lib/trpc";
+import { trpc, trpcClient, type RouterOutput } from "../../lib/trpc";
+import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { InlineAction } from "../ui/InlineAction";
@@ -18,9 +19,41 @@ interface ResetLink {
   expiresAt: number;
 }
 
+type AllowedUserDetail = RouterOutput["admin"]["boxConfig"]["allowedUserDetails"][number];
+type LocalPasswordStatus = RouterOutput["admin"]["boxConfig"]["localPasswordStatus"];
+
+function AccountBadge({ kind }: { kind: AllowedUserDetail["kind"] }) {
+  if (kind === "local-member") return <Badge tone="success">Password member</Badge>;
+  if (kind === "owner-entry") return <Badge tone="neutral">Owner entry — redundant</Badge>;
+  if (kind === "unknown") return <Badge tone="warning">Password status unavailable</Badge>;
+  return <Badge tone="info">Access only — no local password</Badge>;
+}
+
+function LocalPasswordNotice({ status }: { status: LocalPasswordStatus }) {
+  if (status === "ready") return null;
+  if (status === "not-initialized") {
+    return (
+      <Card background="info" border="subtle" padding="sm">
+        <Stack gap="xs">
+          <Text size="sm">Local password accounts are not initialized for this owner.</Text>
+          <Text as="div" size="sm" mono>cb auth create-user</Text>
+        </Stack>
+      </Card>
+    );
+  }
+  const message = status === "owner-mismatch"
+    ? "The signed-in owner does not match the server's local password owner. Invite links and password resets are unavailable."
+    : "The local password store is unavailable. Password-account details and resets cannot be loaded.";
+  return (
+    <div role="alert">
+      <Text as="p" size="sm" tone="danger">{message}</Text>
+    </div>
+  );
+}
+
 function AllowedUserRows(options: {
   emails: string[];
-  eligible: Set<string>;
+  details: Map<string, AllowedUserDetail>;
   resettingEmail: string | null;
   removingEmail: string | null;
   onReset: (email: string) => Promise<void>;
@@ -38,9 +71,12 @@ function AllowedUserRows(options: {
       {options.emails.map((email) => (
         <Card key={email} background="warm" border="subtle" padding="sm">
           <Row justify="between" wrap>
-            <Text size="sm" breakAll className="min-w-0 flex-1">{email}</Text>
+            <Stack gap="xs" className="min-w-0 flex-1">
+              <Text size="sm" breakAll>{email}</Text>
+              <div><AccountBadge kind={options.details.get(email)?.kind ?? "unknown"} /></div>
+            </Stack>
             <Row gap="md">
-              {options.eligible.has(email) ? (
+              {options.details.get(email)?.resetEligible === true ? (
                 <InlineAction onClick={() => options.onReset(email)} disabled={options.resettingEmail === email}>
                   Reset password
                 </InlineAction>
@@ -176,7 +212,7 @@ export function AllowedEmailsSection() {
 
   const queryError = configQuery.error?.message ?? null;
   const mutationError = resetMutation.error?.message ?? updateMutation.error?.message ?? localError;
-  const eligible = new Set(configQuery.data?.passwordResetEligibleEmails);
+  const details = new Map(configQuery.data?.allowedUserDetails.map((user) => [user.email, user]));
 
   return (
     <Card as="section" aria-label="Allowed users" shadow>
@@ -197,9 +233,11 @@ export function AllowedEmailsSection() {
           </Card>
         ) : null}
 
+        {configQuery.data ? <LocalPasswordNotice status={configQuery.data.localPasswordStatus} /> : null}
+
         <AllowedUserRows
           emails={emails}
-          eligible={eligible}
+          details={details}
           resettingEmail={resettingEmail}
           removingEmail={removingEmail}
           onReset={createReset}
