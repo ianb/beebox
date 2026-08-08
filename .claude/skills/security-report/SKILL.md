@@ -31,14 +31,24 @@ Both artifacts carry a YAML frontmatter provenance block:
 
 ```yaml
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: <git rev the inventory reflects>
+generated-at-rev: <the HEAD the reviewed report reflects>
 date: <YYYY-MM-DD>
 model: <model id that produced the draft>
 reviewed-by: <human name, or "DRAFT — unreviewed">
 ```
 
 `generated-at-rev` is the **update anchor** — the claim "this accounting
-reflects the tree as of this rev."
+reflects the tree as of this rev." It must be the **HEAD the report
+actually reflects at review time**, i.e. the commit the reviewed draft is
+current against — NOT the rev an inventory was first derived from.
+
+This distinction is load-bearing and was gotten wrong on the first
+creation: the anchor was set to the pre-work rev the inventory started
+from, so the *next* update's `<anchor>..HEAD` range dragged in the report
+system's entire construction history as diff noise. Set it to the current
+`HEAD` at draft time (step 7 does this), and on a fresh creation set it to
+the **sign-off HEAD**, not wherever the inventory began. Correct anchoring
+is what makes the update range == "the commits not yet reflected."
 
 ## Update procedure (the normal case)
 
@@ -51,17 +61,49 @@ reflects the tree as of this rev."
    changed ones, move removed ones to nothing (delete; git history is the
    archive). If a change doesn't alter the security posture, it needs no
    edit.
+
+   **Reason by ancestry, never by commit dates.** With a correct anchor,
+   every commit in `<anchor>..HEAD` is unreflected *by construction* —
+   adjudicate each on its merits. Do NOT conclude a change is "already
+   handled" because its commit date looks old, because it landed on
+   another branch before the last report edit, or because a nearby
+   cross-reference happens to look current. A merge-heavy range routinely
+   contains commits *dated* before the report's own edits that were not in
+   the report's tree until a later merge. If you must ask whether a
+   specific commit was in the reflected tree, answer with
+   `git merge-base --is-ancestor <commit> <generated-at-rev>` (true = it
+   was reflected) — never a timestamp comparison. (First-run evidence: an
+   updater mislabeled correctly-caught drift as a pre-existing report bug
+   precisely by trusting commit-date order over ancestry.)
 4. Sweep for **new surface outside the map**: `git diff --stat` the full
    range unscoped; any new route registration, `process.env` secret,
    outbound `fetch`/SDK client, or spawned process in files the map missed
    means the map is stale — update the map in this skill in the same change.
+   **Also reconcile renamed/deleted map paths:** for every path the map
+   names *explicitly* (not one covered only by a directory or glob entry),
+   confirm it still exists — a rename is caught by a coarser entry in the
+   diff, so nothing errors, and the map silently points at a dead path
+   until you check. Update the table to the new path in the same change.
 5. **Scan the private security tier separately.** The surface map cannot
    reach `private-issues/security/` (a different repo, gitignored mount).
    Read it directly: has any privately-tracked defect been fixed since
    the last report? A fixed one becomes ordinary public history — move it
    back to the public queue and let the report reference it directly.
    Are there new private items to reference by class?
-6. Re-derive any SECURITY.md paragraph whose underlying items changed.
+6. Re-derive any SECURITY.md paragraph whose underlying items changed —
+   and expect that to be **few or none**. The two artifacts have different
+   jobs: **every** security-relevant detail belongs in
+   `security-report.md`; SECURITY.md changes **only** when the
+   reader-facing overall picture does (a new egress destination, a changed
+   blast-radius claim, a new accepted risk, a materially different auth
+   story). Do not feel obligated to touch SECURITY.md just because you
+   edited the structured report — most per-item accounting changes need no
+   SECURITY.md edit at all, and a change that's already represented there
+   often needs no *more* exposure than it has. When SECURITY.md does need
+   to move, **prefer a small edit to an addition**: if an existing
+   sentence can be clarified or corrected in place, do that rather than
+   append new content. The structured report grows with detail; SECURITY.md
+   stays a tight synthesis.
 7. Update the provenance headers (new rev, date, model,
    `reviewed-by: DRAFT — unreviewed`); present the diff to the boxholder.
 
@@ -103,7 +145,7 @@ it current (step 4 above).
 | Category | Paths |
 |---|---|
 | Endpoints & auth | `callback-box/src/webapp/`, `callback-box/src/hub/`, `callback-box/pub-worker/src/` |
-| Credentials | `callback-box/src/webapp/auth*`, `callback-box/src/webapp/local-users*`, `callback-box/src/webapp/auth-invites.ts`, `callback-box/src/webapp/setup-token.ts`, `callback-box/src/core/token-store.ts`, `callback-box/src/core/agent/token.ts`, `callback-box/src/core/mobile/`, `callback-box/src/core/scan/tokens.ts`, `callback-box/src/core/*-key.ts`, `callback-box/src/core/search/embeddings-key.ts`, `callback-box/src/connectors/google-token-store.ts`, `callback-box/src/connectors/google-auth.ts`, `callback-box/src/webapp/trpc/routers/admin.ts`, `callback-box/src/publish/connector-secret.ts`, `callback-box/src/lib/env.ts`, `callback-box/deploy/`, any `process.env` addition anywhere |
+| Credentials | `callback-box/src/webapp/auth*`, `callback-box/src/webapp/local-users*`, `callback-box/src/webapp/auth-capabilities.ts`, `callback-box/src/webapp/setup-token.ts`, `callback-box/src/core/token-store.ts`, `callback-box/src/core/agent/token.ts`, `callback-box/src/core/mobile/`, `callback-box/src/core/scan/tokens.ts`, `callback-box/src/core/*-key.ts`, `callback-box/src/core/search/embeddings-key.ts`, `callback-box/src/connectors/google-token-store.ts`, `callback-box/src/connectors/google-auth.ts`, `callback-box/src/webapp/trpc/routers/admin.ts`, `callback-box/src/publish/connector-secret.ts`, `callback-box/src/lib/env.ts`, `callback-box/deploy/`, any `process.env` addition anywhere |
 | Data egress | `callback-box/src/connectors/`, `callback-box/src/core/agent/`, `callback-box/src/core/transcription/`, `callback-box/src/services/`, `callback-box/src/publish/`, `callback-box/src/core/external/` |
 | Internal practices | `callback-box/src/shared/ref-path.ts`, `callback-box/src/lib/file-lock.ts`, `callback-box/src/lib/card-lock.ts`, `callback-box/src/webapp/` (CSP, throttles), `callback-box/src/lib/atomic-write.ts` |
 | Operational | `callback-box/deploy/`, `callback-box/src/services/tailscale-exposure.ts`, `callback-box/src/hub/` (child-env allowlist), systemd units |
@@ -271,6 +313,17 @@ backed by an item there. Shape:
 Register: honest, specific, unpromotional. Weaknesses are stated as
 plainly as strengths — the OpenClaw lesson is that an explicit blast-radius
 doc is what earns trust, not reassurance.
+
+**What reaches this document — and what doesn't.** SECURITY.md is a
+synthesis, not a mirror of the structured report. Its job is to give a
+reader an accurate *overall picture*; it is not obligated to surface every
+item, and an item it already covers rarely needs more prominence. A great
+many structured-report changes leave SECURITY.md untouched, and that is the
+correct outcome — the pressure to "reflect the update somewhere visible" is
+a trap that bloats the synthesis and buries the picture. When you do edit
+it, reach for the smallest change that keeps it true: correct or clarify an
+existing sentence in place before adding a new one. Length is a cost here;
+the structured report is where completeness lives.
 
 ## README linkage
 

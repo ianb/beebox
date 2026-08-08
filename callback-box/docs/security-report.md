@@ -1,8 +1,8 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 3f65b3d1a7cad712f307a6c7df5665ff0bf04867
-date: 2026-08-07
-model: claude-fable-5
+generated-at-rev: e2d0c20dc7b063fd7c2be44cc57b47b81c1dcae5
+date: 2026-08-08
+model: claude-sonnet-5
 reviewed-by: Ian Bicking
 ---
 
@@ -81,6 +81,7 @@ the member-tier gap below.
 | `/auth/login`, `/auth/methods`, `/auth/me`, `/auth/logout` (`src/webapp/routes/auth.ts:144-228`) | Login is the credential; throttled scrypt verify (per-IP + per-account backoff, global scrypt cap) | ok | — | public | Necessarily pre-auth |
 | `/auth/setup` (`setup-token.ts`) | One-time in-memory token, 15-min TTL, printed to server console only | accepted | high | public | The setup-token window: a zero-user box with an exposed port is claimable until the owner account exists. Accepted with the TTL + self-disabling route as mitigation; provision promptly (`cb auth create-user`). |
 | `/auth/invite` (`auth-invite.ts:224,247`) | 32-byte single-use invite capability, 15-min TTL, hash-at-rest, throttled | ok | — | public | See invite items in §2 and the open-invite accepted risk in §8 |
+| `/auth/reset-password` (`auth-password-reset.ts`) | 32-byte single-use password-reset capability (same store as invites), 15-min TTL, hash-at-rest, its own throttle isolated from login/invite throttles, re-checks the member is still eligible (role + `allowedEmails`) at both inspect and consume time | ok | — | public | Operator-minted per member from Allowed Users (`admin.createPasswordReset`, ownerProcedure); success bumps `gen`, revoking the member's other sessions. See §6b account lifecycle and §2 credentials |
 | `/auth/password` (`auth-password-change.ts`) | Session + current-password re-verify; bumps `gen` | ok | — | authed | |
 | `/auth/google`, `/auth/callback` (`auth-google.ts:46,62`) | Google-issued code/state; `email_verified` required; registered only when `GOOGLE_OAUTH_CLIENT_ID` set | ok | — | public | |
 | `/auth/google-services/callback` (`routes/admin.ts:27`) | Single-use OAuth `state` nonce + owner binding (403 on mismatch) | mitigated | med | public | Nonce closes the historical token-fixation hole (`google-oauth-state.ts`) |
@@ -97,6 +98,7 @@ Notable abilities, and the items that are more than routine:
 | Surface | Abilities | State | Sev | Reach | Notes |
 |---|---|---|---|---|---|
 | `api-files.ts`, `api-files-write.ts`, `api-browse.ts`, `api-image.ts`, `history.ts` | Read/write/delete/commit raw box files; read any historical git blob | ok | — | authed | Path containment via `ref-path.ts` + route guards |
+| tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
 | `ANY /api/adapters/:adapter/*` (`api-adapters.ts:63`) | Proxy to Replicate/Mistral/Anthropic/OpenAI, injecting the box's stored key server-side | ok | — | authed | Key never reaches the client |
@@ -118,13 +120,13 @@ pub-worker routes are in §6a.
 |---|---|---|---|---|---|
 | Local password store — `~/.cb-auth.json` (`local-users.ts:87`) | 0600 self-healing (`:124-127`), symlink-rejected, scrypt N=2^17, atomic writes | Account takeover for stored users | **Machine-global** (all local boxes) | Permanent; password change bumps `gen`, revoking live sessions | ok |
 | Session secret — `~/.cb-session-secret` / `CB_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env.ts:119-127` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
-| Invite capabilities — `~/.cb-auth.json.invites.json` (`auth-invites.ts`) | SHA-256 hash at rest, 0600, atomic + locked | Create one member account on one box | Per-box | 15-min TTL, single-use, 100-live cap | ok |
+| Invite & password-reset capabilities — `~/.cb-auth.json.invites.json` (`auth-capabilities.ts`, one shared store since `68c5e537`; the file keeps its legacy name, on-disk `version: 2`, auto-upgrades from `version: 1` on first write) | SHA-256 hash at rest, 0600, atomic + locked | Invite: create one member account on one box. Reset: replace one existing member's password on one box | Per-box | 15-min TTL, single-use, 100-live cap shared across both kinds | ok |
 | Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§8) |
 | `CB_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; stripped from agent subprocesses (`script-env.ts:116`) | Hub process lifetime | ok |
 | `CB_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `CB_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router) | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.callback-box/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `CB_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
-| Mobile device tokens — `.callback-box/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `cb_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md); on-device storage: [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md) |
+| Mobile device tokens — `.callback-box/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `cb_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md). On-device (iOS) storage moved from plaintext JSON to Keychain (`AfterFirstUnlockThisDeviceOnly`, shared app-group access group for the main app + the new share extension) in `571bb83f` — [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md), now closed |
 | Mobile session secret — `.callback-box/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.callback-box/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
 | Google OAuth client — `GOOGLE_OAUTH_CLIENT_ID/SECRET` (`google-auth.ts:48-52`) | Env; redacted; shared to children by design | OAuth app identity | Fleet | Operator-set | ok |
@@ -245,10 +247,11 @@ gathered here so the lifecycle reads as one story.
 | Item | Detail | State | Sev | Reach |
 |---|---|---|---|---|
 | First-run setup | `POST /auth/setup` claims the owner account on a zero-user box; in-memory token, 15-min TTL, printed to server console, self-disabling (`setup-token.ts`) | accepted | high | public | The setup-token window (§1, §8.1) — provision the owner promptly |
-| Invite onboarding | 32-byte single-use capability, 15-min TTL, SHA-256 at rest, throttled; `/auth/invite` (`auth-invite.ts`, `auth-invites.ts`) | ok | — | public | The credential itself is a §2 row |
+| Invite onboarding | 32-byte single-use capability, 15-min TTL, SHA-256 at rest, throttled; `/auth/invite` (`auth-invite.ts`, `auth-capabilities.ts`) | ok | — | public | The credential itself is a §2 row |
 | Open-invite email ownership | An open invite lets the holder claim any unclaimed email; pinning to a known email is the mitigation | accepted | med | public | Bearer-link tradeoff (§8.3); pre-positions the claimed email for later grants |
 | Password change | `/auth/password` requires the current password, bumps `gen`, revokes other sessions (`auth-password-change.ts`) | ok | — | authed | |
-| Recovery / reset | No web-side reset; recovery is `cb auth set-password` on the host; no MFA | accepted | med | local→owner | §8.2 — [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md) |
+| Member password reset (operator-issued) | Owner mints a 15-min single-use reset link for one Allowed-User member (`admin.createPasswordReset`, `68c5e537`); member redeems it at `/auth/reset-password` without exposing the new password to the owner; consuming it bumps `gen`, revoking the member's other sessions; eligibility (member role + still on `allowedEmails`) is re-checked at redemption | ok | — | public route, owner-only mint | Reuses the invite-capability store/guarantees (§2). Implements option 2 of [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md) |
+| Recovery / reset | Members now self-serve via an operator-issued reset link (row above). Owner recovery is still host-side only: `cb auth set-password`. Full email self-service reset was explicitly rejected (no outbound-mail identity); no MFA | accepted | med | local→owner | §8.2 — [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md) (resolution: implemented, option 2; option 3 rejected) |
 | Member capability tier | A logged-in non-owner member reaches every non-`ownerProcedure` surface, including `scheduler.trigger` (member-level shell execution) and `drive`/`calendar.updateConfig` | gap | med | authed | Moot single-operator (fail-closed owner-only); a multi-member design decision — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 
 ## 7. Cross-cutting threats
@@ -308,10 +311,13 @@ Every `accepted` item, with its rationale:
 1. **Setup-token window** — first-run setup is reachable unauthenticated
    until an owner exists; 15-min TTL + self-disabling route; provision
    promptly. (§1)
-2. **No MFA; recovery is host-side** — `cb auth set-password` on the
-   host; web-side reset tracked in
-   [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md);
-   MFA/passkeys deferred. (§1)
+2. **No MFA; owner recovery is host-side** — members can now self-serve a
+   forgotten password through an operator-issued reset link
+   ([web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md),
+   implemented in `68c5e537`); the *owner's* own recovery is still
+   `cb auth set-password` on the host, and full email self-service reset
+   was explicitly rejected (no outbound-mail identity). MFA/passkeys
+   deferred. (§1, §6b)
 3. **Open invites don't verify email ownership** — an explicit
    bearer-link tradeoff; pin the invite when the email is known, transmit
    through a trusted channel. Claiming an email pre-positions that
