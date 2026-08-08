@@ -9,6 +9,11 @@
 #                      This is the agent-neutral entry point — Claude Code's
 #                      WorktreeCreate hook and bin/launch-worktree-session are
 #                      both thin clients of it.
+#   remove <name>      Remove one worktree, its box clone, and its router/cache
+#                      state. Refuses when the branch is unmerged, the tree is
+#                      dirty, or an agent is live in it. --force overrides the
+#                      first two; nothing overrides the liveness check.
+#                      --keep-branch keeps the branch, --dry-run just reports.
 #   serve              Run the router in the foreground.
 #   status, list       Show what the router is currently running.
 #   down <name>        Tell the router to stop a worktree's processes.
@@ -70,6 +75,61 @@ case "$cmd" in
     trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree may be partially set up at ${WT_CREATED_PATH:-unknown}." >&2; exit $rc' ERR
     wt_create "$name" "$base_ref" "$want_path"
     printf '%s\n' "$WT_CREATED_PATH" >&3
+    ;;
+
+  remove)
+    name=""
+    force=false
+    keep_branch=""
+    dry_run=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --force)       force=true; shift ;;
+        --keep-branch) keep_branch="--keep-branch"; shift ;;
+        --dry-run)     dry_run=true; shift ;;
+        -*)            echo "worktrees remove: unknown option $1" >&2; exit 1 ;;
+        *)             [ -z "$name" ] || { echo "worktrees remove: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+      esac
+    done
+    [ -n "$name" ] || { echo "usage: worktrees remove <name> [--force] [--keep-branch] [--dry-run]" >&2; exit 1; }
+
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    WT_LOG_LABEL="Remove"
+    WT_SAY_PREFIX="  "
+    target="$WT_ROOT/$name"
+    [ -d "$target" ] || { echo "worktrees remove: no worktree at $target" >&2; exit 1; }
+
+    # The liveness check is NOT subject to --force. Merged/dirty are judgements
+    # about work you can still recover from a branch; a live agent is work in
+    # flight, and there is no version of "I meant it" that makes deleting the
+    # directory out from under a running session correct. `unknown` counts as
+    # live — see wt_other_agent_live.
+    wt_other_agent_live "$target"
+    if [ "$WT_AGENT_STATE" != "none" ]; then
+      echo "refusing: $name has agent=$WT_AGENT_STATE ($WT_AGENT_REASON)" >&2
+      echo "  (--force does not apply to liveness; close the session first)" >&2
+      exit 1
+    fi
+
+    wt_work_state "$target"
+    if [ "$force" = false ] && { [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; }; then
+      echo "refusing: $name has ahead=$WT_AHEAD non-deletion-dirty=$WT_DIRTY" >&2
+      [ -n "$WT_BLOCKERS" ] && echo "  blockers: $WT_BLOCKERS" >&2
+      echo "  (pass --force to remove anyway; --keep-branch to keep the commits)" >&2
+      exit 1
+    fi
+
+    if [ "$dry_run" = true ]; then
+      echo "would remove $name (branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY)"
+      exit 0
+    fi
+    echo "remove $name (branch=$WT_BRANCH)"
+    if [ -n "$keep_branch" ]; then
+      wt_remove_now "$target" "$WT_BRANCH" --keep-branch
+    else
+      wt_remove_now "$target" "$WT_BRANCH"
+    fi
     ;;
 
   serve)
@@ -179,8 +239,6 @@ case "$cmd" in
     # shellcheck source=lib/worktree-paths.sh
     . "$REPO_DIR/bin/lib/worktree-paths.sh"
     wt_paths_init "$REPO_DIR" || exit 1
-    MONO="$WT_MONO"
-    BOX_ROOT="$WT_BOX_ROOT"
 
     # Which worktrees have an active claude/codex session (never touch them)?
     # This uses the SHARED guard in bin/lib/worktree-teardown.sh rather than a
@@ -228,30 +286,14 @@ case "$cmd" in
       branch="$WT_BRANCH"
       echo "remove $name (branch=$branch)"
       if [ "$dry_run" = false ]; then
-        # Private-issues shadow worktree: remove iff merged + strictly
-        # clean, else preserve as an orphan (reported below on every run).
-        # The mount is a symlink, so the public removal below can't touch
-        # private files either way.
-        if [ -x "$REPO_DIR/bin/private-issues" ]; then
-          pi_result=$("$REPO_DIR/bin/private-issues" remove-if-safe "$d" 2>/dev/null || echo "error")
-          # || true: under set -e a failed [ ] as a line's last command kills
-          # the whole sweep.
-          { [ "$pi_result" != "nothing" ] && echo "  private-issues: $pi_result"; } || true
-        fi
-        curl -fsS -X POST -m 3 --unix-socket "$ROUTER_SOCK" "http://router/__router/stop/$name" >/dev/null 2>&1 || true
-        git -C "$MONO" worktree remove --force "$d" 2>/dev/null || true
-        # A half-deleted worktree can defeat `worktree remove` — fall back
-        # to deleting the directory and pruning the registration.
-        if [ -d "$d" ]; then
-          rm -rf "$d"
-          git -C "$MONO" worktree prune 2>/dev/null || true
-        fi
-        [ -n "$branch" ] && git -C "$MONO" branch -D "$branch" >/dev/null 2>&1 || true
-        # git-annex locks its object tree read-only. Unlock the cloned box
-        # before removal or macOS leaves annex remnants behind.
-        [ ! -d "$BOX_ROOT/$name" ] || chmod -R u+w "$BOX_ROOT/$name" 2>/dev/null || true
-        rm -rf "$BOX_ROOT/$name" "$BROWSE_ROOT/$name"
-        rm -f "$LOGS_ROOT/$name.log" "$PID_DIR/$name.json"
+        # One destructive implementation, shared with the SessionEnd and
+        # codex-exit hooks. Sweep used to inline its own: `git worktree remove
+        # --force` plus a synchronous `rm -rf` of the box, versus the shared
+        # path's rename-into-trash and detached delete. The trash form is the
+        # one hardened against being killed mid-delete (the 2026-06 half-deleted
+        # worktree accumulation), and sweep — which runs unattended at every
+        # session start and end — is the caller that most needs that.
+        wt_remove_now "$d" "$branch"
         removed=$((removed + 1))
       fi
     done

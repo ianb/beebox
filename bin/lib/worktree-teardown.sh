@@ -349,26 +349,20 @@ wt_work_state() {
 # and its uncommitted changes go, but `git branch -D` on unmerged commits is a
 # different order of loss for no benefit — the branch costs nothing and
 # `git worktree add` resurrects the work.
-wt_remove_now() {
-  local worktree_path="$1" branch="$2" keep_branch=""
-  [ "${3:-}" = "--keep-branch" ] && keep_branch=1
-  local name
-  name=$(basename "$worktree_path")
 
-  # Private-issues shadow worktree (bin/private-issues): remove it iff merged
-  # into private main AND strictly clean; anything else is preserved as an
-  # orphan OUTSIDE this worktree (the mount is only a symlink, so the public
-  # cleanup below cannot touch private files) and re-reported by every sweep
-  # until resolved. Must run BEFORE the trash-mv below (it classifies the
-  # mount via the symlink). Never blocks public cleanup.
-  local pi_cli pi_result
-  pi_cli="$worktree_path/bin/private-issues"
-  [ -x "$pi_cli" ] || pi_cli="$WT_MONO/bin/private-issues" # worktree predates the CLI
-  if [ -x "$pi_cli" ]; then
-    pi_result=$("$pi_cli" remove-if-safe "$worktree_path" 2>/dev/null || echo "error")
-    wt_say "private-issues: $pi_result"
-    wt_log "private-issues result=$pi_result wt=$worktree_path"
-  fi
+# ── The satellites: everything a worktree owns OUTSIDE its own directory ─
+#
+# wt_remove_satellites <name>
+#
+# The box clone, the router's processes, and the browse/log/pid cache state.
+# Split out because the WorktreeRemove hook needs exactly this and nothing more
+# — Claude Code removes the git worktree itself there, and deleting its branch
+# would be a different and much less recoverable act. Before this split, that
+# hook carried its own copy of all of it.
+#
+# Sets WT_TRASH so the caller can add to the same batch before reaping it.
+wt_remove_satellites() {
+  local name="$1"
 
   # Tell the dev router to stop this worktree's processes immediately so
   # there's nothing left binding the cloned-box files when we delete them.
@@ -390,36 +384,17 @@ wt_remove_now() {
   # rename everything into a trash dir (instant), do the cheap git bookkeeping,
   # and let a detached background process do the slow delete — it survives both
   # the caller and the session.
-  local trash="$WT_STATE_DIR/trash" ts
-  mkdir -p "$trash"
+  WT_TRASH="$WT_STATE_DIR/trash"
+  mkdir -p "$WT_TRASH"
+  local ts
   ts=$(date +%s)
 
   # Trash the cloned box tree ($name/, which contains test1/).
   local box_dest="$WT_BOX_ROOT/$name"
-  if [ -d "$box_dest" ]; then
-    mv "$box_dest" "$trash/box-$name-$ts"
+  if [ -n "$WT_BOX_ROOT" ] && [ -d "$box_dest" ]; then
+    mv "$box_dest" "$WT_TRASH/box-$name-$ts"
     wt_say "trashed $box_dest"
   fi
-
-  # Move out of the worktree dir before removing it.
-  cd "$WT_MONO" || return 0
-
-  # Trash the worktree directory, then prune the now-dangling registration.
-  if mv "$worktree_path" "$trash/wt-$name-$ts" 2>/dev/null; then
-    wt_say "trashed worktree $worktree_path"
-  fi
-  git worktree prune 2>/dev/null || true
-
-  if [ -n "$keep_branch" ]; then
-    wt_say "kept branch $branch (unmerged work; \`git worktree add\` to resume)"
-  elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
-    wt_say "deleted branch $branch"
-  fi
-
-  # Slow delete, detached. Clears earlier leftovers too. git-annex locks its
-  # object tree read-only, so unlock it first or macOS leaves annex remnants.
-  nohup sh -c 'chmod -R u+w "$1" 2>/dev/null || true; rm -rf "$1"' sh "$trash" >/dev/null 2>&1 &
-  disown 2>/dev/null || true
 
   # Cache state: browse profile + socket dir, router log, pid file.
   # These don't show up in any UI, but they accumulate, and there's no reason
@@ -431,5 +406,62 @@ wt_remove_now() {
   [ -f "$log_file" ]   && rm -f  "$log_file"   && wt_say "removed $log_file"
   [ -f "$pid_file" ]   && rm -f  "$pid_file"   && wt_say "removed $pid_file"
 
+  return 0
+}
+
+# Kick the detached delete of everything trashed so far. Clears earlier
+# leftovers too. git-annex locks its object tree read-only, so unlock it first
+# or macOS leaves annex remnants.
+wt_trash_reap() {
+  local trash="${WT_TRASH:-$WT_STATE_DIR/trash}"
+  [ -d "$trash" ] || return 0
+  nohup sh -c 'chmod -R u+w "$1" 2>/dev/null || true; rm -rf "$1"' sh "$trash" >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+  return 0
+}
+
+# The private-issues shadow worktree (bin/private-issues): remove it iff merged
+# into private main AND strictly clean; anything else is preserved as an orphan
+# OUTSIDE this worktree (the mount is only a symlink, so public cleanup cannot
+# touch private files) and re-reported by every sweep until resolved. Must run
+# BEFORE the public trash-mv (it classifies the mount via the symlink). Never
+# blocks public cleanup.
+wt_remove_private_issues() {
+  local worktree_path="$1"
+  local pi_cli pi_result
+  pi_cli="$worktree_path/bin/private-issues"
+  [ -x "$pi_cli" ] || pi_cli="$WT_MONO/bin/private-issues" # worktree predates the CLI
+  [ -x "$pi_cli" ] || return 0
+  pi_result=$("$pi_cli" remove-if-safe "$worktree_path" 2>/dev/null || echo "error")
+  wt_say "private-issues: $pi_result"
+  wt_log "private-issues result=$pi_result wt=$worktree_path"
+  return 0
+}
+
+wt_remove_now() {
+  local worktree_path="$1" branch="$2" keep_branch=""
+  [ "${3:-}" = "--keep-branch" ] && keep_branch=1
+  local name
+  name=$(basename "$worktree_path")
+
+  wt_remove_private_issues "$worktree_path"
+  wt_remove_satellites "$name"
+
+  # Move out of the worktree dir before removing it.
+  cd "$WT_MONO" || return 0
+
+  # Trash the worktree directory, then prune the now-dangling registration.
+  if mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)" 2>/dev/null; then
+    wt_say "trashed worktree $worktree_path"
+  fi
+  git worktree prune 2>/dev/null || true
+
+  if [ -n "$keep_branch" ]; then
+    wt_say "kept branch $branch (unmerged work; \`git worktree add\` to resume)"
+  elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
+    wt_say "deleted branch $branch"
+  fi
+
+  wt_trash_reap
   return 0
 }
