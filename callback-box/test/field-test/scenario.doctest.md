@@ -71,6 +71,32 @@ spine.persona.includes('"an AI chat and knowledge-base app for family and househ
 => true
 ```
 
+## The onboarding scenario loads
+
+The real corpus scenario, checked here rather than discovered at minute forty of
+a run: every check script, every asset a brief mentions, and every email fixture
+a `pre` action names has to exist.
+
+```ts
+const onboarding = await loadFieldScenario(fieldScenarioDir("onboarding-first-days"));
+[onboarding.name, onboarding.startTime, onboarding.checklist.length].join(" | ")
+=> onboarding-first-days | 2026-08-10T08:40:00Z | 6
+
+onboarding.checklist.map((i) => i.id).join(",")
+=> first-contact,save-recipe,upload-photos,recall-recipe,dentist-email,whats-needed
+```
+
+Three simulated days, one arriving email, and a check on every item that claims
+something happened:
+
+```ts continue
+onboarding.checklist.flatMap((i) => i.pre.map((p) => `${i.id}:${p.type}`)).join(" ")
+=> recall-recipe:advance-days dentist-email:inject-email whats-needed:advance-days
+
+onboarding.checklist.filter((i) => i.checks.length > 0).length
+=> 5
+```
+
 ## Models default to opus, in code
 
 A scenario may omit `models:` entirely; both halves still come back pinned,
