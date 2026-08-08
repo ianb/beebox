@@ -179,7 +179,7 @@ The ones you should actually weigh:
   account promptly.
 - **No MFA, no web password reset yet**: recovery is `cb auth
   set-password` on the host
-  ([tracked](../issues/features/2026-08-07-web-password-reset-account-recovery.md)).
+  ([tracked](../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md)).
 - **One Google token, broad scopes, all boxes**: per-box service policy
   is enforced in application code, not by Google. Compromise of the
   token file is fleet-wide Google access

@@ -124,7 +124,7 @@ pub-worker routes are in §6a.
 | `CB_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `CB_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router) | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.callback-box/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `CB_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
-| Mobile device tokens — `.callback-box/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `cb_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md); on-device storage: [ios-token-plaintext-not-keychain](../../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md) |
+| Mobile device tokens — `.callback-box/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `cb_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md); on-device storage: [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md) |
 | Mobile session secret — `.callback-box/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.callback-box/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
 | Google OAuth client — `GOOGLE_OAUTH_CLIENT_ID/SECRET` (`google-auth.ts:48-52`) | Env; redacted; shared to children by design | OAuth app identity | Fleet | Operator-set | ok |
@@ -248,7 +248,7 @@ gathered here so the lifecycle reads as one story.
 | Invite onboarding | 32-byte single-use capability, 15-min TTL, SHA-256 at rest, throttled; `/auth/invite` (`auth-invite.ts`, `auth-invites.ts`) | ok | — | public | The credential itself is a §2 row |
 | Open-invite email ownership | An open invite lets the holder claim any unclaimed email; pinning to a known email is the mitigation | accepted | med | public | Bearer-link tradeoff (§8.3); pre-positions the claimed email for later grants |
 | Password change | `/auth/password` requires the current password, bumps `gen`, revokes other sessions (`auth-password-change.ts`) | ok | — | authed | |
-| Recovery / reset | No web-side reset; recovery is `cb auth set-password` on the host; no MFA | accepted | med | local→owner | §8.2 — [web-password-reset-account-recovery](../../issues/features/2026-08-07-web-password-reset-account-recovery.md) |
+| Recovery / reset | No web-side reset; recovery is `cb auth set-password` on the host; no MFA | accepted | med | local→owner | §8.2 — [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md) |
 | Member capability tier | A logged-in non-owner member reaches every non-`ownerProcedure` surface, including `scheduler.trigger` (member-level shell execution) and `drive`/`calendar.updateConfig` | gap | med | authed | Moot single-operator (fail-closed owner-only); a multi-member design decision — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 
 ## 7. Cross-cutting threats
@@ -310,7 +310,7 @@ Every `accepted` item, with its rationale:
    promptly. (§1)
 2. **No MFA; recovery is host-side** — `cb auth set-password` on the
    host; web-side reset tracked in
-   [web-password-reset-account-recovery](../../issues/features/2026-08-07-web-password-reset-account-recovery.md);
+   [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md);
    MFA/passkeys deferred. (§1)
 3. **Open invites don't verify email ownership** — an explicit
    bearer-link tradeoff; pin the invite when the email is known, transmit

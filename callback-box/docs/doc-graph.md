@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-08T18:35:19Z
-Total documents: 248
+Generated: 2026-08-08T18:39:11Z
+Total documents: 252
 
 ## Issues
 
@@ -36,8 +36,9 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (411 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (373 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (544 lines)
-- **docs/plans/invite-links-and-password-change.md** — "Invite links and self-service password change" (544 lines)
+- **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
+- **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (707 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (49 lines)
@@ -119,7 +120,7 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:45 (mention) — - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — degraded
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:23 (mention) — `CLAUDE.md`. We share what Track 2 forces us to share. We do not
 - docs/implemented-plans/todo-annotation.md:128 (mention) — CLAUDE.md that @-imports MAP.md"). **Reused** as the channel for
-- docs/implemented-plans/top-nav-ia.md:441 (mention) — | Voice/session chips regress companion-pane memo stability (bar re-renders on chat state) | Render-count probe (chat CL
+- docs/implemented-plans/top-nav-ia.md:446 (mention) — | Voice/session chips regress companion-pane memo stability (bar re-renders on chat state) | Render-count probe (chat CL
 - docs/implemented-plans/user-location.md:255 (mention) — CLAUDE.md default; the raw-route carve-out doesn't apply. (An earlier
 - docs/implemented-plans/view-render-testing.md:258 (mention) — of the orphan-prone dev machinery in CLAUDE.md — no router, no Vite, no Fastify,
 - docs/implemented-plans/web-push-notifications.md:192 (mention) — prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
@@ -137,6 +138,7 @@ Referenced by:
 - docs/plans/github-pages-site.md:29 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/ios-companion-app.md:25 (mention) — - `callback-box/CLAUDE.md` — the tRPC-vs-raw-Fastify boundary (`CLAUDE.md`: *"Raw Fastify routes … are only for … file u
 - docs/plans/ios-companion-review-2026-07-09.md:56 (mention) — Every successful verify does a full read-modify-write of the shared JSON with no `withCardLock`/`file-lock` — the CLAUDE
+- docs/plans/operator-member-password-reset.md:83 (mention) — - **HTTP route boundary.** `CLAUDE.md:110` says: *“HTTP endpoints go in tRPC by
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
 - docs/plans/publish-pages.md:154 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
 - docs/plans/scan-vision-claude.md:488 (mention) — | Box CLAUDE.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` — 
@@ -353,11 +355,13 @@ Referenced by:
 - docs/plans/asset-offbox-storage.md:74 (mention) — - `code-style.md` — no `any`, max 2 positional params, `Result<T,E>`
 - docs/plans/box-commentary-surface.md:94 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/plans/chat-photo-batch-upload.md:30 (link) — - [`code-style.md`](../../code-style.md) — no default parameters, max 2
+- docs/plans/chat-session-delete.md:75 (mention) — - **`code-style.md`:** exceptions carry causal detail for infrastructure
 - docs/plans/email-tracking.md:39 (mention) — - `callback-box/code-style.md` requires validated boundary data, explicit errors, typed results where callers branch, an
 - docs/plans/invite-links-and-password-change.md:51 (mention) — - `code-style.md:24-51`: use typed failures, minimal catches, and the shared
 - docs/plans/ios-companion-app.md:26 (mention) — - `callback-box/code-style.md` — standard mechanical rules for the box-side TS.
 - docs/plans/ios-input-plane-parity.md:58 (mention) — - `code-style.md`: TypeScript uses validated `unknown` boundaries, exhaustive
 - docs/plans/ios-native-capture-mode.md:24 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
+- docs/plans/operator-member-password-reset.md:93 (mention) — - **Failure visibility.** `code-style.md:67-69` requires every non-rethrowing
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
 - docs/plans/publish-pages.md:29 (mention) — - `callback-box/code-style.md` — mechanical rules for all box-side TS and the Worker package.
 - docs/plans/scan-guide-card.md:27 (mention) — - `callback-box/code-style.md`: no default parameters, max 2 positional
@@ -403,11 +407,13 @@ Referenced by:
 - docs/implemented-plans/remove-cb-render.md:288 (mention) — plus its description in `frontend.md:60`.
 - docs/implemented-plans/responsive-figures.md:42 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:103 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
-- docs/implemented-plans/top-nav-ia.md:110 (mention) — palette. Read frontend.md before writing UI"; components own their
+- docs/implemented-plans/top-nav-ia.md:114 (mention) — palette. Read frontend.md before writing UI"; components own their
 - docs/implemented-plans/user-location.md:63 (mention) — - `callback-box/frontend.md` — UI primitives + the `className`-only-for-
+- docs/plans/chat-session-delete.md:78 (mention) — - **`frontend.md`:** destructive appearance uses the semantic `danger` role,
 - docs/plans/design-reconciliation.md:39 (mention) — capture, dashboard, views, and a real design system (frontend.md).
 - docs/plans/invite-links-and-password-change.md:56 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
+- docs/plans/operator-member-password-reset.md:97 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
 - frontend.md:113 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:71 (mention) — read `frontend.md` before reaching for utility classes.
@@ -472,6 +478,7 @@ Referenced by:
 - ../issues/code-quality/2026-08-07-member-level-writing-procedures.md:34 (mention) — that in the invite flow and SECURITY.md), or the config-writing and
 - ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:5 (mention) — discovered-in: main session — todo-security breakdown for the SECURITY.md report
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:65 (mention) — - **Agent-legible docs as capability** (the SECURITY.md /
+- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:10 (mention) — a cadence** — Agent SDK updates, the SECURITY.md regeneration, manual testing,
 - ../issues/features/2026-07-20-agent-containment-allowed-directories.md:52 (mention) — honesty means SECURITY.md describes what IS true today — but it's the
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:13 (mention) — > `callback-box/SECURITY.md`, cross-model-reviewed (7 findings applied).
 - ../issues/features/2026-07-20-export-md-agent-instructions.md:9 (mention) — Data export on the SECURITY.md pattern (boxholder, 2026-07-20): not a
@@ -483,7 +490,7 @@ References:
 - → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
 - → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
 - → ../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
-- → ../issues/features/2026-08-07-web-password-reset-account-recovery.md (link)
+- → ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md (link)
 - → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
 
 ### deploy/
@@ -500,7 +507,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 377 lines
+Title: "Deploy" | 383 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -515,6 +522,7 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:289 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
+- docs/plans/operator-member-password-reset.md:485 (mention) — - Update `deploy/README.md`, `docs/docker-install.md`, and
 - docs/security-report.md:208 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require 
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see [`
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:85 (mention) — succeeded via `deploy/README.md`'s health runbook).
@@ -784,7 +792,7 @@ Referenced by:
 - ../issues/bugs/2026-07-29-chat-review-journal-is-machine-local.md:8 (link) — [Chat review](../../callback-box/docs/chat-review.md) keeps two pieces of state
 - ../issues/bugs/2026-08-01-chat-review-capped-at-max-session-entries.md:36 (mention) — - Accept the cap and say so in `docs/chat-review.md`.
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:10 (link) — See [docs/chat-review.md](../../../callback-box/docs/chat-review.md) for the
-- ../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md:68 (link) — - [Chat review](../../callback-box/docs/chat-review.md) skips it too (correctly —
+- ../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md:75 (link) — - [Chat review](../../callback-box/docs/chat-review.md) skips it too (correctly —
 
 References:
 - → docs/implemented-plans/chat-review.md (link)
@@ -828,7 +836,7 @@ Referenced by:
 - CLAUDE.md:166 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
 - docs/implemented-plans/architectural-review-followups.md:271 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
-- docs/implemented-plans/top-nav-ia.md:409 (mention) — bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
+- docs/implemented-plans/top-nav-ia.md:414 (mention) — bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
 - ../issues/code-quality/2026-07-06-chat-session-shared-core.md:50 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:51 (mention) — (See `docs/chat-session-lifecycle.md`.)
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:70 (link) — - [Chat session lifecycle](../../callback-box/docs/chat-session-lifecycle.md) — how
@@ -925,7 +933,7 @@ Referenced by:
 
 #### docs/developer-install.md
 
-Title: "Developer install (from source)" | 147 lines
+Title: "Developer install (from source)" | 150 lines
 
 Referenced by:
 - CLAUDE.md:131 (mention) — | Developer install (from source) | `docs/developer-install.md` |
@@ -933,6 +941,7 @@ Referenced by:
 - docs/agent-install.md:45 (link) — ([developer-install.md](developer-install.md)) is the one. Ask which
 - docs/implemented-plans/local-password-auth.md:539 (mention) — **What.** `docs/developer-install.md` + `docs/docker-install.md` +
 - docs/plans/installation-story.md:128 (mention) — in `docs/developer-install.md`.
+- docs/plans/operator-member-password-reset.md:486 (mention) — `docs/developer-install.md` where they describe invite/password lifecycle.
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:79 (mention) — gotcha `docs/developer-install.md` has to warn about — a real argument for a
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:11 (mention) — (`developer-install.md`, `docker-install.md`), and added to the agent's
 - ../issues/features/2026-07-19-installation-remaining-work.md:14 (mention) — - From-source developer install: `callback-box/docs/developer-install.md`,
@@ -957,7 +966,7 @@ Referenced by:
 
 #### docs/docker-install.md
 
-Title: "Docker install (local + VPS)" | 266 lines
+Title: "Docker install (local + VPS)" | 269 lines
 
 Referenced by:
 - CLAUDE.md:132 (mention) — | Docker install (local + VPS) | `docs/docker-install.md` |
@@ -968,6 +977,7 @@ Referenced by:
 - docs/implemented-plans/remove-open-mode.md:48 (mention) — - Docs mentioning the opt-out: `docs/docker-install.md`,
 - docs/implemented-plans/tailscale-expose-and-protect.md:74 (mention) — - **The documented-but-untested path.** `callback-box/docs/docker-install.md:119`
 - docs/plans/installation-story.md:427 (mention) — - **Guide**: `docs/docker-install.md` — local usage first (init, auth,
+- docs/plans/operator-member-password-reset.md:485 (mention) — - Update `deploy/README.md`, `docs/docker-install.md`, and
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:11 (mention) — (`developer-install.md`, `docker-install.md`), and added to the agent's
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:31 (mention) — `docs/docker-install.md`. Interacts with the deferred npm-publish rung
@@ -1014,11 +1024,12 @@ Referenced by:
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
 - docs/implemented-plans/tailscale-expose-and-protect.md:48 (mention) — - `callback-box/docs/engineering-principles.md` — especially fail-closed /
 - docs/implemented-plans/todo-annotation.md:53 (mention) — - `callback-box/docs/engineering-principles.md` — especially
-- docs/implemented-plans/top-nav-ia.md:107 (mention) — - `callback-box/docs/engineering-principles.md` — reuse-over-rebuild,
+- docs/implemented-plans/top-nav-ia.md:111 (mention) — - `callback-box/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/plans/android-companion-app.md:25 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
 - docs/plans/asset-annex.md:62 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent),
 - docs/plans/asset-offbox-storage.md:65 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent —
 - docs/plans/chat-photo-batch-upload.md:19 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
+- docs/plans/chat-session-delete.md:58 (mention) — - **`docs/engineering-principles.md`:**
 - docs/plans/clerk-tab-arrangements.md:61 (mention) — - Engineering principle 1, **Types are structure**, applies to transfer IDs, tab UUIDs, proposal states, and apply resul
 - docs/plans/github-pages-site-story-extraction.subplan.md:36 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/github-pages-site.md:22 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
@@ -1027,6 +1038,8 @@ Referenced by:
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
 - docs/plans/ios-input-plane-parity.md:41 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
 - docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
+- docs/plans/ios-share-extension-capture.md:32 (mention) — - `docs/engineering-principles.md` principle 3, validate at boundaries. The extension validates provider values, and the
+- docs/plans/operator-member-password-reset.md:46 (mention) — - **Principle 1, types are structure.** `docs/engineering-principles.md:12-21`
 - docs/plans/publish-pages.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/scan-guide-card.md:17 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-vision-claude.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — especially
@@ -1153,7 +1166,7 @@ Referenced by:
 - docs/implemented-plans/google-auth-reauth-health.md:127 (mention) — 7. **Docs** — `docs/google-setup.md` troubleshooting, `docs/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:4 (mention) — canary route all shipped; see `docs/health-checks.md` for the current
 - docs/implemented-plans/tailscale-expose-and-protect.md:414 (mention) — on the server plus a short runbook note in `docs/health-checks.md`'s style
-- docs/implemented-plans/top-nav-ia.md:440 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/health-checks.md`); Overview reacha
+- docs/implemented-plans/top-nav-ia.md:445 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/health-checks.md`); Overview reacha
 - docs/plans/asset-annex.md:476 (mention) — the deploy runbooks (`docs/health-checks.md`) without touching
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:205 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
@@ -1198,6 +1211,7 @@ Referenced by:
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:18 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
+- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:51 (mention) — for someone to remember (`callback-box/docs/knowledge-audits.md`).
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:40 (link) — ([docs](../../callback-box/docs/knowledge-audits.md)) and the doc-generation
 
 References:
@@ -1248,7 +1262,7 @@ Referenced by:
 - docs/implemented-plans/clerk-webpage-capture.md:264 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
 - docs/implemented-plans/nav-card.md:136 (mention) — links (see `docs/landmarks.md`).
 - docs/implemented-plans/open-chat-from-card.md:96 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
-- docs/implemented-plans/top-nav-ia.md:193 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
+- docs/implemented-plans/top-nav-ia.md:198 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
 - docs/landmark-curation.md:5 (mention) — For the design and schema of the card itself, see `docs/landmarks.md` and `docs/generated/card-landmark.md`.
 - docs/reports/user-stories-audit-2026-06-26.md:732 (mention) — The file src/core/frontmatter-field.ts exports two functions that implement the exact capability described. lookupField(
 - docs/unimplemented-plans/design-vision-superseded.md:7 (mention) — > retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
@@ -1281,6 +1295,7 @@ Referenced by:
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:16 (mention) — `~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:15 (mention) — `callback-box/docs/maintenance.md` with a cadence, or a scheduled routine):
+- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:17 (mention) — `callback-box/docs/maintenance.md` catalogs the periodic tasks, and there are
 - ../issues/exploration/2026-07-25-opengrep-self-cve-scanner.md:33 (mention) — Registered in `callback-box/docs/maintenance.md` (run before releases and when
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:62 (mention) — `docs/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
 
@@ -1338,7 +1353,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 863 lines
+Title: "Cross-Platform Mobile Contract" | 896 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1353,6 +1368,7 @@ Referenced by:
 - docs/plans/chat-photo-batch-upload.md:59 (link) — [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
 - docs/plans/invite-links-and-password-change.md:123 (mention) — `mobile-contract.md` change is required.
 - docs/plans/ios-input-plane-parity.md:119 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
+- docs/plans/ios-share-extension-capture.md:48 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/CallbackBox/Services/LogForwarder.swift:283` posts 
 - ../.claude/skills/cb-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `callback-box/docs/mobile-contract.md`**
 - ../CLAUDE.md:10 (mention) — - **ios-app/** — Native SwiftUI companion app; a thin shell around the web chat (`WKWebView`) plus native pairing, compo
 - ../issues/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md:55 (mention) — `docs/mobile-contract.md` governs the receipt contract.
@@ -1370,6 +1386,7 @@ Referenced by:
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:11 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:87 (mention) — `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
 - ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md:47 (mention) — reload path (`docs/mobile-contract.md`; cb-ios-overlap territory).
+- ../issues/features/2026-08-08-ios-siri-app-intent-capture.md:74 (link) — and the contract is [mobile-contract.md](../../callback-box/docs/mobile-contract.md).)
 
 References:
 - → docs/implemented-plans/mobile-parity-sync.md (mention)
@@ -1571,7 +1588,7 @@ References:
 - → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
 - → ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md (link)
 - → ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md (link)
-- → ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md (link)
+- → ../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md (link)
 - → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
 - → ../issues/bugs/2026-08-07-connector-secret-file-modes.md (link)
 - → ../issues/decisions/2026-07-20-git-push-confirmation.md (link)
@@ -1585,7 +1602,7 @@ References:
 - → deploy/README.md (mention)
 - → ../issues/decisions/2026-08-07-server-backup-story.md (link)
 - → ../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md (link)
-- → ../issues/features/2026-08-07-web-password-reset-account-recovery.md (link)
+- → ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md (link)
 
 #### docs/server-operations.md
 
@@ -1716,21 +1733,22 @@ References:
 
 #### docs/todo-security.md
 
-Title: "Security TODOs (dissolved)" | 24 lines
+Title: "Security TODOs (dissolved)" | 31 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.md:543 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 - docs/plans/invite-links-and-password-change.md:350 (mention) — - Update `docs/todo-security.md`: hashes at rest, single use, open-link email
+- docs/plans/operator-member-password-reset.md:185 (mention) — - **Security documentation.** `docs/todo-security.md:20-28` records hashed,
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:40 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:34 (mention) — `callback-box/docs/todo-security.md` for the SECURITY.md security report.
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:95 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
+- ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md:55 (mention) — have the host. The subagent breakdown of `todo-security.md` classified
 - ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:26 (mention) — Broken out of `callback-box/docs/todo-security.md` ("No true socket-level WS-auth
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:101 (mention) — was accepted as near-nil-reachability and documented in `todo-security.md`).
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:116 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
 - ../issues/features/2026-07-20-agent-maintained-security-report.md:35 (link) — [todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
 - ../issues/features/2026-07-28-google-auth-policy-proxy.md:212 (mention) — `callback-box/docs/todo-security.md` fold in here rather than standing as their
-- ../issues/features/2026-08-07-web-password-reset-account-recovery.md:48 (mention) — have the host. The subagent breakdown of `todo-security.md` classified
 
 References:
 - → ../issues/features/2026-07-20-agent-maintained-security-report.md (link)
@@ -1738,7 +1756,7 @@ References:
 - → SECURITY.md (link)
 - → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
 - → ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md (link)
-- → ../issues/features/2026-08-07-web-password-reset-account-recovery.md (link)
+- → ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md (link)
 - → ../issues/bugs/2026-08-07-connector-secret-file-modes.md (link)
 
 #### docs/tours.md
@@ -2731,8 +2749,8 @@ Referenced by:
 - docs/implemented-plans/remove-open-mode.md:20 (mention) — - Precedent: `docs/implemented-plans/local-password-auth.md` (auth default-on;
 - docs/plans/invite-links-and-password-change.md:53 (mention) — - `docs/implemented-plans/local-password-auth.md`: preserve global email
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:3 (mention) — design: ../../callback-box/docs/implemented-plans/local-password-auth.md
+- ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md:51 (mention) — (`docs/implemented-plans/local-password-auth.md`, NOT-in-scope: "requires outbound
 - ../issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md:37 (mention) — `../../callback-box/docs/implemented-plans/local-password-auth.md`.
-- ../issues/features/2026-08-07-web-password-reset-account-recovery.md:44 (mention) — (`docs/implemented-plans/local-password-auth.md`, NOT-in-scope: "requires outbound
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -2820,7 +2838,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 506 lines
 
 Referenced by:
-- docs/mobile-contract.md:751 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:784 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:10 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:12 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:39 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -2871,7 +2889,7 @@ References:
 Title: "Nav as a card — first interface-as-cards slice" | 143 lines
 
 Referenced by:
-- docs/implemented-plans/top-nav-ia.md:120 (mention) — and `docs/implemented-plans/nav-card.md` (card-driven nav — this plan
+- docs/implemented-plans/top-nav-ia.md:124 (mention) — and `docs/implemented-plans/nav-card.md` (card-driven nav — this plan
 - docs/plans/interface-as-cards.md:289 (mention) — | Nav | curated `refs` card + per-entry overrides — **shipped 2026-07** (`docs/implemented-plans/nav-card.md`; nav form/
 
 References:
@@ -3340,7 +3358,7 @@ References:
 
 #### docs/implemented-plans/top-nav-ia.md
 
-Title: "Unified app bar: one nav for chat and everything else" | 531 lines
+Title: "Unified app bar: one nav for chat and everything else" | 536 lines
 
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:6 (mention) — **Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
@@ -3566,6 +3584,27 @@ References:
 - → docs/mobile-contract.md (link)
 - → ../issues/features/2026-03-05-share-to-box-images-files.md (link)
 - → docs/mobile-parity.md (mention)
+
+#### docs/plans/chat-session-delete.md
+
+Title: "Chat Session Delete — Plan" | 772 lines
+
+Referenced by:
+- docs/plans/chat-session-delete.review.md:4 (mention) — fenced to `chat-session-delete.md`, both linked issues, the installed SDK
+
+References:
+- → ../issues/features/2026-07-20-chat-thread-management.md (link)
+- → ../issues/features/2026-07-29-stale-husks-outlive-their-transcripts.md (link)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → frontend.md (mention)
+
+#### docs/plans/chat-session-delete.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — Chat Session Delete" | 154 lines
+
+References:
+- → docs/plans/chat-session-delete.md (mention)
 
 #### docs/plans/clerk-tab-arrangements.md
 
@@ -3839,9 +3878,12 @@ References:
 - → docs/implemented-plans/nav-card.md (mention)
 - → docs/plans/chat-husks.md (mention)
 
-#### docs/plans/invite-links-and-password-change.md **[ORPHAN]**
+#### docs/plans/invite-links-and-password-change.md
 
 Title: "Invite links and self-service password change" | 544 lines
+
+Referenced by:
+- docs/plans/operator-member-password-reset.md:105 (mention) — - **Shipped precedent.** `docs/plans/invite-links-and-password-change.md:59-123`
 
 References:
 - → docs/reports/user-stories-audit-2026-06-26.md (mention)
@@ -3886,15 +3928,15 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 149 lines
 
 Referenced by:
-- docs/mobile-contract.md:745 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:778 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:8 (mention) — follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
 - docs/plans/ios-companion-review-2026-07-09.md:3 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
-- ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-ios-hq-transcription-window-unlocked.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-ios-send-hangs-webview-unloaded.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -3947,6 +3989,18 @@ References:
 - → docs/plans/ios-native-capture-mode.md (mention)
 - → docs/implemented-plans/capture-mode.md (mention)
 
+#### docs/plans/ios-share-extension-capture.md
+
+Title: "iOS Share Extension Capture" | 351 lines
+
+Referenced by:
+- ../issues/features/2026-05-11-ios-share-sheet-capture.md:5 (mention) — design: ../callback-box/docs/plans/ios-share-extension-capture.md
+- ../issues/features/2026-08-08-ios-siri-app-intent-capture.md:73 (link) — [the share-extension capture plan](../../callback-box/docs/plans/ios-share-extension-capture.md),
+
+References:
+- → docs/engineering-principles.md (mention)
+- → docs/mobile-contract.md (mention)
+
 #### docs/plans/narration-mode.md
 
 Title: "Narration Mode — Design" | 465 lines
@@ -3961,6 +4015,21 @@ References:
 - → docs/activities-retrospective.md (link)
 - → frontend.md (mention)
 - → docs/activities-design.md (mention)
+
+#### docs/plans/operator-member-password-reset.md **[ORPHAN]**
+
+Title: "Operator-driven member password reset" | 707 lines
+
+References:
+- → docs/engineering-principles.md (mention)
+- → CLAUDE.md (mention)
+- → code-style.md (mention)
+- → frontend.md (mention)
+- → docs/plans/invite-links-and-password-change.md (mention)
+- → docs/todo-security.md (mention)
+- → deploy/README.md (mention)
+- → docs/docker-install.md (mention)
+- → docs/developer-install.md (mention)
 
 #### docs/plans/pdf-intake-design.md
 
@@ -4265,6 +4334,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:196 (mention) — `scheduled/csp-violation-review.md` is half dev reference, half the literal
 - docs/scheduled/csp-violation-review.md:11 (mention) — `callback-box/docs/scheduled/csp-violation-review.md`."* Everything it needs is
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
+- ../issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:32 (mention) — - **CSP violation review** (`callback-box/docs/scheduled/csp-violation-review.md`)
 
 References:
 - → docs/content-security-policy.md (mention)
