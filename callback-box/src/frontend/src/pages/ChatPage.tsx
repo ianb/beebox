@@ -213,7 +213,7 @@ export function ChatPage() {
   const utils = trpc.useUtils();
 
   // Warm the app bar's place-switch menu once this page is interactive. Its
-  // `chat.byLandmark` query stays lazy (PlacePill's header explains why a bar
+  // `chat.placeMenu` query stays lazy (PlacePill's header explains why a bar
   // that mounts everywhere must not carry it at rest) — but "lazy" made the
   // first open after every page load sit on "Loading…". Gating on `settled`,
   // and running from idle time, is what keeps this off the critical path: the
@@ -224,7 +224,7 @@ export function ChatPage() {
   // expire before a user who reads for a while ever clicks. Freshness is
   // unaffected: the first open still refetches in the background (the entry is
   // stale by then), and every later open invalidates.
-  useIdlePrefetch(() => utils.chat.byLandmark.prefetch(undefined, { gcTime: 60 * 60 * 1000 }), {
+  useIdlePrefetch(() => utils.chat.placeMenu.prefetch(undefined, { gcTime: 60 * 60 * 1000 }), {
     enabled: settled,
   });
 
