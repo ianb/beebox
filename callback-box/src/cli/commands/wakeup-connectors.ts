@@ -13,6 +13,7 @@ import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { createPublishSubmissionsConnector } from "../../connectors/publish-submissions.js";
 import {
+  ConnectorFatalError,
   getAllConnectors,
   type Connector,
   type ConnectorProcedureTrigger,
@@ -77,6 +78,10 @@ export async function runConnectors(
       totalErrors += counts.errors;
       procedures.push(...(result.procedures ?? []));
     } catch (err) {
+      // A misconfiguration is not a sync failure: counting it would let the
+      // wakeup continue into intake, the reactor and push having quietly
+      // decided the box has no new mail. Abort the cycle instead.
+      if (err instanceof ConnectorFatalError) throw err;
       console.error(`  Failed: ${errorMessage(err)}`);
       totalErrors++;
     }

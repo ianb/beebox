@@ -52,12 +52,10 @@ export type {
   GmailAttachmentData,
   GmailLabel,
   ListMessagesResult,
-  FakeGoogleGmailService,
 } from "./google-gmail.js";
-export {
-  createGoogleGmailService,
-  createFakeGoogleGmail,
-} from "./google-gmail.js";
+export { createGoogleGmailService } from "./google-gmail.js";
+export type { FakeGoogleGmailService } from "./google-gmail-fake.js";
+export { createFakeGoogleGmail } from "./google-gmail-fake.js";
 
 export type { OpenAIAudioService, TTSResult } from "./openai-audio.js";
 export {

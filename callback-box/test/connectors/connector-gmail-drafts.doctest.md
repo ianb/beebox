@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { readFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
-import { createFakeGoogleGmail } from "../../src/services/google-gmail.js";
+import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake.js";
 import { createGmailConnector } from "../../src/connectors/gmail.js";
 ```
 
