@@ -242,9 +242,35 @@ Ordered by implementation dependency, then surface size.
   turn-hungry: each snapshot/click/screenshot is a turn; the cap exists only
   so a truly stuck activity cannot eat the run, not to pressure the operator). Tools: Bash (for `bin/browse` and nothing else by
   instruction), Read (for screenshots and provided assets). System prompt: the
-  persona brief, the discernment mandate ("you are evaluating whether this is
-  usable, not proving it can be done; confusion is a finding, not your
-  failure"), and the browse cheat-sheet. Each activity ends with a
+  operator prompt, four deliberately separated layers:
+  1. **Persona** (from `persona.md`) — who you are, household situation, tech
+     comfort ("comfortable with normal apps, doesn't read documentation,
+     ~ten minutes of patience per task" — counteracting the model's default
+     expert-user behavior), and what you know coming in. The knowledge dial is
+     scenario-controlled content in `persona.md`; for onboarding it is: *"an
+     AI chat and knowledge-base app for family and household management
+     tasks"* (boxholder wording, 2026-08-08) — situated a little, but no
+     feature names, no vocabulary the UI hasn't taught yet.
+  2. **Evaluator mandate** — you are evaluating whether this is usable, not
+     proving it can be done; try the obvious thing first; running out of your
+     persona's patience is a result to report, not your failure; never work
+     around brokenness silently; don't use developer intuition to find hidden
+     paths a real person wouldn't. **Asking the app's own chat for help is a
+     legitimate user move** — the chat should know more about the app than you
+     do, and how well it orients you is itself part of what you are
+     evaluating.
+  3. **Mechanics** — the browse cheat-sheet (snapshot/click/fill/upload/
+     screenshot; re-snapshot after changes), reading your own screenshots,
+     `assets/` as "files on your computer," and the activity/debrief rhythm.
+  4. **Hard boundaries** — the app is ONLY the browser: never read the box's
+     files on disk, never use the `cb` CLI, never read source or docs; Bash is
+     for `bin/browse` and nothing else. (Instruction-level in v1; the
+     transcript makes violations visible; tighten with tool restrictions if
+     the prototype shows cheating.)
+  Known structural leak, accepted: the operator is a Claude model evaluating a
+  Claude-backed app and may "know" what such an app expects; layers 1–2 bound
+  it, and the step-0 prototype exists largely to watch whether the naive-user
+  act holds. Each activity ends with a
   **questionnaire debrief**, not a JSON report: after the operator says it is
   done (or gives up), the harness sends the questionnaire as the next message —
   after, so the questions cannot prime behavior during the activity. A standard
