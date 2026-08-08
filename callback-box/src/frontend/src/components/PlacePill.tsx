@@ -21,6 +21,12 @@
  * rows paint instantly and refresh behind them. A bar that mounts on every
  * page must not carry that at rest (the rationale AppNav already states for
  * `status.navStatus`). The same applies to the `nav.card` section's query.
+ *
+ * The gate stays; what changed is that the cache is no longer empty when the
+ * user reaches for it. ChatPage warms `chat.byLandmark` from idle time once its
+ * own bootstrap has settled (`useIdlePrefetch`), so the first open paints rows
+ * instead of "Loading…". This query owns none of that — it still just reads
+ * whatever cache exists — and a page that doesn't prefetch still opens cold.
  */
 
 import { useEffect, useState } from "react";

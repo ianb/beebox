@@ -14,7 +14,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { findChatHuskEntry, listChatHusks } from "../husk.js";
+import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk.js";
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel } from "../session-label.js";
 import { errnoCode } from "../../../lib/error-guards.js";
@@ -29,42 +29,59 @@ export interface ChatSessionRow {
   huskPath: string;
 }
 
-/** Every resumable web chat, most-recently-active first. */
+/**
+ * Every resumable web chat, most-recently-active first.
+ *
+ * Husks are resolved concurrently, not in sequence: each one costs a `stat`
+ * plus (when it has no editorial title) a transcript read, and the landmark
+ * picker waits on the whole set. `allSettled` per code-style — one husk's
+ * failure is already a per-husk skip, and must not abandon the others.
+ */
 export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]> {
   const husks = await listChatHusks(boxRoot);
+  const settled = await Promise.allSettled(husks.map((husk) => loadSessionRow(boxRoot, husk)));
   const rows: ChatSessionRow[] = [];
-  for (const husk of husks) {
-    const logPath = huskTranscriptPath(boxRoot, husk);
-    let mtime: Date;
-    try {
-      mtime = (await fs.stat(logPath)).mtime;
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        // Not "the transcript was cleaned up" — the file may well be there and
-        // unreadable (EACCES, EIO). Dropping the chat from every list is the
-        // same outcome either way, so say so loudly rather than silently.
-        console.warn(`[chat] husk ${husk.path}: transcript unreadable, omitting session:`, e);
-      }
-      // Nothing to resume — skip it. The husk card stays browsable.
+  for (const [i, outcome] of settled.entries()) {
+    if (outcome.status === "rejected") {
+      console.warn(`[chat] husk ${husks[i]?.path}: could not resolve session:`, outcome.reason);
       continue;
     }
-
-    const label = await resolveSessionLabel({
-      sessionId: husk.session,
-      logPath,
-      title: husk.title,
-    });
-
-    rows.push({
-      sessionId: husk.session,
-      contextDir: husk.contextDir,
-      mtime,
-      label,
-      huskPath: husk.path,
-    });
+    if (outcome.value !== null) rows.push(outcome.value);
   }
   rows.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
   return rows;
+}
+
+/** One husk's row, or null when there's no transcript left to resume. */
+async function loadSessionRow(boxRoot: string, husk: ChatHuskEntry): Promise<ChatSessionRow | null> {
+  const logPath = huskTranscriptPath(boxRoot, husk);
+  let mtime: Date;
+  try {
+    mtime = (await fs.stat(logPath)).mtime;
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      // Not "the transcript was cleaned up" — the file may well be there and
+      // unreadable (EACCES, EIO). Dropping the chat from every list is the
+      // same outcome either way, so say so loudly rather than silently.
+      console.warn(`[chat] husk ${husk.path}: transcript unreadable, omitting session:`, e);
+    }
+    // Nothing to resume — skip it. The husk card stays browsable.
+    return null;
+  }
+
+  const label = await resolveSessionLabel({
+    sessionId: husk.session,
+    logPath,
+    title: husk.title,
+  });
+
+  return {
+    sessionId: husk.session,
+    contextDir: husk.contextDir,
+    mtime,
+    label,
+    huskPath: husk.path,
+  };
 }
 
 /**

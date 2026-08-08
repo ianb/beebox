@@ -11,7 +11,7 @@
  * title was invisible there. See docs/implemented-plans/chat-review.md § Track D.
  */
 
-import { getSessionMetadata } from "../../cli/lib/session.js";
+import { readFirstUserSnippet } from "../../cli/lib/session-snippet.js";
 
 /** Chars of the first user message used when there is no title. */
 export const SNIPPET_MAX_LEN = 400;
@@ -31,12 +31,8 @@ export async function resolveSessionLabel(args: {
   if (title !== undefined && title !== "") return title;
 
   try {
-    const meta = await getSessionMetadata({
-      sessionId,
-      logPath,
-      snippetMaxLen: SNIPPET_MAX_LEN,
-    });
-    if (meta.firstUserSnippet) return meta.firstUserSnippet;
+    const snippet = await readFirstUserSnippet({ logPath, snippetMaxLen: SNIPPET_MAX_LEN });
+    if (snippet !== null) return snippet;
   } catch (e) {
     console.warn(`chat: could not read metadata for session ${sessionId}, using id prefix:`, e);
   }
