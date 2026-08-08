@@ -84,7 +84,8 @@ export function formatTimePassed(ms: number): string | null {
 
 /**
  * Model options surfaced in the chat debug menu. `null` = CLI default.
- * Ordered as presented to the user.
+ * Ordered as presented to the user: Default first, then ascending skill
+ * (least → most capable): Haiku → Sonnet → Opus → Fable.
  *
  * The model-ID strings come from the canonical `MODEL_ID` source
  * (`shared/model-ids.ts`) that the procedure engine's MODEL_MAP also uses — one
@@ -96,10 +97,10 @@ export function formatTimePassed(ms: number): string | null {
  */
 export const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Default (Opus)", model: null },
-  { label: "Opus 5", model: MODEL_ID.opus },
-  { label: "Sonnet 5", model: MODEL_ID.sonnet },
-  { label: "Fable 5", model: MODEL_ID.fable },
   { label: "Haiku 4.5", model: MODEL_ID.haiku },
+  { label: "Sonnet 5", model: MODEL_ID.sonnet },
+  { label: "Opus 5", model: MODEL_ID.opus },
+  { label: "Fable 5", model: MODEL_ID.fable },
 ];
 
 /**
