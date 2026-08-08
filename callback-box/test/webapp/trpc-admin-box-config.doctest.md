@@ -158,6 +158,48 @@ print(JSON.stringify(res2.allowedEmails));
 ["a@example.com"]
 ```
 
+Only allowed local members are exposed as password-reset targets. The owner and
+allowed addresses without a local account are excluded.
+
+```ts continue
+const memberAuthDir = await mkdtemp(join(tmpdir(), "cb-admin-members-"));
+process.env.CB_AUTH_FILE = join(memberAuthDir, "auth.json");
+process.env.CB_AUTH_SCRYPT_N = "1024";
+await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
+await addUser({ email: "member@example.com", name: "Member", password: "member-password", role: "member" });
+await caller(box.root).admin.updateBoxConfig({
+  allowedEmails: ["member@example.com", "invited@example.com", "owner@example.com"],
+});
+const memberConfig = await caller(box.root).admin.boxConfig();
+JSON.stringify(memberConfig.passwordResetEligibleEmails)
+=> ["member@example.com"]
+```
+
+The owner can mint a reset only for that eligible member; the returned link is
+root-auth-relative and never contains the email address.
+
+```ts continue
+const reset = await caller(box.root).admin.createPasswordReset({ email: " MEMBER@EXAMPLE.COM " });
+JSON.stringify({
+  path: reset.resetPath.startsWith("/auth/reset-password?token="),
+  leaksEmail: reset.resetPath.includes("member@example.com"),
+  future: reset.expiresAt > Date.now(),
+})
+=> {"path":true,"leaksEmail":false,"future":true}
+
+await caller(box.root).admin.createPasswordReset({ email: "invited@example.com" }).then(
+  () => "allowed",
+  (error) => error.code,
+)
+=> NOT_FOUND
+```
+
+```ts cleanup
+await rm(memberAuthDir, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
+delete process.env.CB_AUTH_SCRYPT_N;
+```
+
 ## empty input is rejected
 
 ```ts continue

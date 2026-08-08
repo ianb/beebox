@@ -2,7 +2,11 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { AuthInviteCapacityError, AuthInviteStoreError, mintAuthInvite } from "../../auth-invites.js";
+import {
+  AuthCapabilityCapacityError,
+  AuthCapabilityStoreError,
+  mintAuthInvite,
+} from "../../auth-capabilities.js";
 import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
 import { ownerProcedure } from "../trpc.js";
 
@@ -38,10 +42,10 @@ export const inviteAdminProcedures = {
           ...(email === undefined ? {} : { email }),
         });
       } catch (error) {
-        if (error instanceof AuthInviteCapacityError) {
+        if (error instanceof AuthCapabilityCapacityError) {
           throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many live invites; wait for one to expire." });
         }
-        if (error instanceof AuthInviteStoreError) {
+        if (error instanceof AuthCapabilityStoreError) {
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "The invite store is unavailable." });
         }
         throw error;

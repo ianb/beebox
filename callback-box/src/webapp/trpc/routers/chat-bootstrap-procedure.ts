@@ -16,19 +16,14 @@
 import { z } from "zod";
 import { publicProcedure } from "../trpc.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
-import {
-  historySliceSchema,
-  loadHistoryForSession,
-  type SessionHistory,
-} from "./chat-session-procedures.js";
+import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./chat-session-procedures.js";
 import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
 import { titleForSession } from "../../../core/chat/session/list.js";
+import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
+import { getChatRuntime } from "../../chat-runtime.js";
+import { TRPCError } from "@trpc/server";
 
-export interface ChatBootstrap {
-  /** The resolved session, or null when the box has no chat session yet. */
-  sessionId: string | null;
-  /** Null exactly when `sessionId` is null — there is no history to load. */
-  history: SessionHistory | null;
+interface ChatBootstrapBase {
   /**
    * The session's *editorial* title — the husk card's `title`, or null when
    * it has none (or `sessionId` is null). Deliberately NOT the pickers'
@@ -40,13 +35,38 @@ export interface ChatBootstrap {
   status: ChatSessionStatus;
 }
 
+export type ChatBootstrap =
+  | (ChatBootstrapBase & {
+      kind: "empty";
+      sessionId: null;
+      history: null;
+      label: null;
+    })
+  | (ChatBootstrapBase & {
+      kind: "resumable";
+      sessionId: string;
+      history: SessionHistory;
+    })
+  | (ChatBootstrapBase & {
+      kind: "unavailable";
+      sessionId: string;
+      history: null;
+      reason: "missing-local-transcript" | "deletion-in-progress";
+      huskPath: string | null;
+    });
+
 export const chatBootstrapProcedure = {
   bootstrap: publicProcedure
     // `session` omitted means "whatever the default session is" — the same
     // resolution `chat.defaultSession` does. An empty string is not a session
     // id: accepting one would report `sessionId: ""` alongside a status that
     // (correctly) says there's no session.
-    .input(z.object({ session: z.string().min(1).optional(), slice: historySliceSchema }))
+    .input(
+      z.object({
+        session: z.string().min(1).optional(),
+        slice: historySliceSchema,
+      }),
+    )
     .query(async ({ input, ctx }): Promise<ChatBootstrap> => {
       const { session, slice } = input;
       const resolved = session ?? (await getMostActive(ctx.boxRoot));
@@ -55,16 +75,43 @@ export const chatBootstrapProcedure = {
       const sessionId = resolved === "" ? null : resolved;
       if (sessionId === null) {
         return {
+          kind: "empty",
           sessionId: null,
           history: null,
           label: null,
           status: readSessionStatus(ctx.boxRoot, null),
         };
       }
-      const [history, label] = await Promise.all([
-        loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }),
-        titleForSession(ctx.boxRoot, sessionId),
-      ]);
-      return { sessionId, history, label, status: readSessionStatus(ctx.boxRoot, sessionId) };
+      const runtime = getChatRuntime(ctx.boxRoot);
+      if (runtime === undefined) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Chat runtime not initialized for this box",
+        });
+      }
+      const availability = await resolveSessionAvailability({
+        boxRoot: ctx.boxRoot,
+        sessionId,
+        registry: runtime.registry,
+      });
+      if (availability.kind === "unavailable") {
+        return {
+          kind: "unavailable",
+          sessionId,
+          history: null,
+          label: await titleForSession(ctx.boxRoot, sessionId),
+          status: readSessionStatus(ctx.boxRoot, sessionId),
+          reason: availability.reason,
+          huskPath: availability.huskPath,
+        };
+      }
+      const [history, label] = await Promise.all([loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }), titleForSession(ctx.boxRoot, sessionId)]);
+      return {
+        kind: "resumable",
+        sessionId,
+        history,
+        label,
+        status: readSessionStatus(ctx.boxRoot, sessionId),
+      };
     }),
 };

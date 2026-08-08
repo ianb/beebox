@@ -2,9 +2,16 @@
 title: "No web password reset / account recovery — a member who forgets their password is stuck"
 area: callback-box
 labels: [soft-launch]
+resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked whether password reset works over the web
 ---
+
+Implemented by `68c5e537`: owners can mint a short-lived reset capability for
+an existing allowed member from Allowed Users, and the member chooses a new
+password without exposing it to the owner. Successful redemption revokes old
+sessions and returns the member to ordinary login; email self-service remains
+intentionally out of scope.
 
 > **Decided (2026-08-07):** build **option 2** — an operator-driven member
 > password reset that reuses the invite-link machinery: the operator mints a
@@ -31,7 +38,7 @@ discovered-in: main session — boxholder asked whether password reset works ove
 
 So a **single-operator** always recovers themselves (they own the host). The gap
 is **invited members**: invite links ship at launch
-([invite-links](../closed/features/2026-07-20-invite-links.md)), so a box can now
+([invite-links](2026-07-20-invite-links.md)), so a box can now
 have users who are *not* the operator. If one forgets their password, they cannot
 self-serve, there is no admin-UI reset button, and the only path is: contact the
 operator out-of-band → operator SSHes in → `cb auth set-password` → new password
@@ -59,8 +66,8 @@ boxholder is now reconsidering it specifically because members exist.
    admin user list that sets a member a fresh temporary password (or re-issues an
    invite-style link), so the operator recovers a member without SSH. Uses the
    existing invite-capability machinery
-   ([web-password-change](../closed/features/2026-07-20-web-password-change.md) and
-   [invite-links](../closed/features/2026-07-20-invite-links.md) are the adjacent
+   ([web-password-change](2026-07-20-web-password-change.md) and
+   [invite-links](2026-07-20-invite-links.md) are the adjacent
    pieces). Medium; keeps recovery operator-mediated but removes the shell step.
 3. **Full self-service email reset** — the real thing, but needs outbound mail
    identity the system deliberately doesn't have yet. Bigger; likely a fast-follow,
@@ -70,7 +77,7 @@ boxholder is now reconsidering it specifically because members exist.
 member reset; option 3 rejected (email operationally complex); option 1 is the
 interim floor. This is the account-
 recovery half of the same auth lifecycle that
-[web-password-change](../closed/features/2026-07-20-web-password-change.md) and
-[invite-links](../closed/features/2026-07-20-invite-links.md) opened; it feeds the
+[web-password-change](2026-07-20-web-password-change.md) and
+[invite-links](2026-07-20-invite-links.md) opened; it feeds the
 identity/credentials section of the
-[agent-maintained security report](2026-07-20-agent-maintained-security-report.md).
+[agent-maintained security report](../../features/2026-07-20-agent-maintained-security-report.md).

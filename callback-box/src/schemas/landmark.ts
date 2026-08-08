@@ -107,7 +107,8 @@ export type LandmarkNavigationData = z.infer<typeof LandmarkNavigation>;
  * `commentary`). `rules`/`procedure` are only meaningful when `for`
  * includes `triage`. `procedure` is a card ref — `{ ref: <box path> }`,
  * leading `/` (a landmark-dir-relative path still resolves) — to the
- * handler procedure run at the handle stage.
+ * handler procedure run at the handle stage. `share` advertises the directory
+ * as a native share-sheet save target.
  */
 export const LandmarkDestination = z.object({
   for: z.array(z.string()),
@@ -172,11 +173,12 @@ Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **colla
 
 \`\`\`yaml
 destinations:
-  - for: [triage]           # kinds: triage (inbox→triage routing target) and/or commentary
+  - for: [triage]           # kinds: triage, commentary, and/or share
     rules: "Recipes — anything describing how to cook a dish."  # read by the triage agent
     procedure:                # handler run at the handle stage; a card ref ({ ref: <box path> })
       ref: /config/procedures/archive-recipe.procedure.card
   - for: [commentary]       # a commentary-only spot needs neither rules nor procedure
+  - for: [share]            # appears under "Save in" in the native iOS share sheet
 \`\`\`
 
 A pure routing target (an archive humans don't browse) can have only \`destinations\`; a pure bookmark can have only \`navigation\`.

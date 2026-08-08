@@ -1,0 +1,47 @@
+import * as path from "node:path";
+import { simpleGit } from "simple-git";
+import { gitBoxPrefix } from "../../lib/git.js";
+import { attachDirFor } from "../../shared/attach-path.js";
+import type { TrashMove, TrashReceipt } from "./trash.js";
+
+export class TrashReceiptRecoveryError extends Error {
+  constructor(destPath: string) {
+    super(`Could not recover the pending git rename for ${destPath}`);
+    this.name = "TrashReceiptRecoveryError";
+  }
+}
+
+function withoutBoxPrefix(filePath: string, prefix: string): string {
+  return prefix !== "" && filePath.startsWith(prefix) ? filePath.slice(prefix.length) : filePath;
+}
+
+/** Reconstruct an uncommitted trash receipt from git's rename status after restart. */
+export async function recoverTrashReceipt(boxRoot: string, destPaths: string[]): Promise<TrashReceipt> {
+  const [status, prefix] = await Promise.all([simpleGit(boxRoot).status(), gitBoxPrefix(boxRoot)]);
+  const renamed = status.renamed.map((entry) => ({
+    from: withoutBoxPrefix(entry.from, prefix),
+    to: withoutBoxPrefix(entry.to, prefix),
+  }));
+  const moves: TrashMove[] = [];
+  const gitPaths: string[] = [];
+  for (const destPath of destPaths) {
+    let cardRename = renamed.find((entry) => entry.to === destPath);
+    if (cardRename === undefined) {
+      const changed = [...status.staged, ...status.created, ...status.modified, ...status.deleted, ...status.not_added].map((entry) => withoutBoxPrefix(entry, prefix));
+      if (!changed.includes(destPath)) continue;
+      const deleted = status.deleted.map((entry) => withoutBoxPrefix(entry, prefix)).filter((entry) => entry.endsWith(".chat.card"));
+      const sameName = deleted.filter((entry) => path.basename(entry) === path.basename(destPath));
+      const sourcePath = sameName.length === 1 ? sameName[0] : deleted.length === 1 ? deleted[0] : undefined;
+      if (sourcePath === undefined) throw new TrashReceiptRecoveryError(destPath);
+      cardRename = { from: sourcePath, to: destPath };
+    }
+    moves.push({ sourcePath: cardRename.from, destPath, relatedFiles: [] });
+    gitPaths.push(cardRename.from, destPath);
+    const sourceAttach = path.relative(boxRoot, attachDirFor(path.join(boxRoot, cardRename.from)));
+    const destAttach = path.relative(boxRoot, attachDirFor(path.join(boxRoot, destPath)));
+    for (const entry of renamed) {
+      if (entry.from.startsWith(`${sourceAttach}${path.sep}`) || entry.to.startsWith(`${destAttach}${path.sep}`)) gitPaths.push(entry.from, entry.to);
+    }
+  }
+  return { moves, gitPaths: [...new Set(gitPaths)] };
+}

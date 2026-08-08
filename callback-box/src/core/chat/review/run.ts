@@ -19,32 +19,16 @@
  */
 
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { acquireLock, releaseLock, LockHeldError } from "../../../lib/file-lock.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { elideMiddle, MAX_RENDERED_CHARS, renderEntries } from "../transcript-render.js";
-import {
-  discoverSessions,
-  QUIESCENCE_MS,
-  readSessionWindow,
-  warnDeferredBoundary,
-  type QualifiedSession,
-} from "./discovery.js";
+import { discoverSessions, QUIESCENCE_MS, readSessionWindow, warnDeferredBoundary, type QualifiedSession } from "./discovery.js";
 import { appliedSpanFor, computeSpanId, prefixHash } from "./span.js";
 import { applyReviewToHusk, readHuskFields } from "./husk-write.js";
 import type { ChatReviewer } from "./reviewer.js";
 import { contentHash } from "../../../lib/content-hash.js";
 import { resolveTitleOwner } from "./husk-write.js";
-import {
-  loadReviewState,
-  MAX_REVIEW_ATTEMPTS,
-  METADATA_CONSUMER,
-  saveReviewState,
-  sessionState,
-  type ReviewState,
-} from "./state.js";
-
-const LOCK_FILE = ".callback-box/chat-review/run.lock";
+import { loadReviewState, MAX_REVIEW_ATTEMPTS, METADATA_CONSUMER, saveReviewState, sessionState, type ReviewState } from "./state.js";
+import { LockHeldError, withChatReviewLock } from "./lock.js";
 
 export interface RunOptions {
   reviewer: ChatReviewer;
@@ -113,7 +97,12 @@ function recordFailure(state: ReviewState, args: { sessionId: string; spanId: st
 
 async function reviewOne(
   session: QualifiedSession,
-  args: { boxRoot: string; options: RunOptions; state: ReviewState; summary: RunSummary },
+  args: {
+    boxRoot: string;
+    options: RunOptions;
+    state: ReviewState;
+    summary: RunSummary;
+  },
 ): Promise<void> {
   const { boxRoot, options, state, summary } = args;
 
@@ -168,10 +157,7 @@ async function reviewOne(
     summary.bootstrapped += 1;
     if (span.bootstrap !== "no-journal") {
       summary.rewritten += 1;
-      console.warn(
-        `chat-review: transcript for ${session.sessionId} was rewritten (${span.bootstrap}); `
-          + "re-reading from the top and keeping the existing account",
-      );
+      console.warn(`chat-review: transcript for ${session.sessionId} was rewritten (${span.bootstrap}); ` + "re-reading from the top and keeping the existing account");
     }
   }
 
@@ -216,9 +202,7 @@ async function reviewOne(
         ...previous,
         applied: { ...previous.applied, [METADATA_CONSUMER]: applied },
         titleOwner: owner,
-        titleHash: owner === "generated" && husk.title !== null
-          ? contentHash(husk.title)
-          : previous.titleHash,
+        titleHash: owner === "generated" && husk.title !== null ? contentHash(husk.title) : previous.titleHash,
         attempts: 0,
       };
     }
@@ -281,45 +265,44 @@ async function reviewOne(
  * thrown away.
  */
 export async function runChatReview(boxRoot: string, options: RunOptions): Promise<RunSummary> {
-  const lockPath = path.join(boxRoot, LOCK_FILE);
-  await acquireLock(lockPath, { holder: "chat-review" });
-  try {
-    const state = await loadReviewState(boxRoot);
-    const discovery = await discoverSessions(boxRoot, {
-      now: options.now,
-      quiescenceMs: QUIESCENCE_MS,
-      state,
-    });
-    const planned = discovery.qualified.slice(0, options.maxSessions);
-    const summary = emptySummary();
-    summary.overflow = discovery.qualified.length - planned.length;
-    // Seeded before the loop, not assigned after it: reviewOne can add to
-    // missingTranscripts when a transcript disappears between the two reads.
-    summary.missingTranscripts = discovery.missingTranscripts;
-    summary.deferredActive = discovery.deferredActive.length;
-    summary.belowThreshold = discovery.belowThreshold;
-    // Seeded like missingTranscripts: reviewOne can add to it when a transcript
-    // crosses the read cap between discovery's read and the reviewer's.
-    summary.boundaryBeyondWindow = discovery.boundaryBeyondWindow;
+  return withChatReviewLock(boxRoot, {
+    holder: "chat-review",
+    fn: async () => {
+      const state = await loadReviewState(boxRoot);
+      const discovery = await discoverSessions(boxRoot, {
+        now: options.now,
+        quiescenceMs: QUIESCENCE_MS,
+        state,
+      });
+      const planned = discovery.qualified.slice(0, options.maxSessions);
+      const summary = emptySummary();
+      summary.overflow = discovery.qualified.length - planned.length;
+      // Seeded before the loop, not assigned after it: reviewOne can add to
+      // missingTranscripts when a transcript disappears between the two reads.
+      summary.missingTranscripts = discovery.missingTranscripts;
+      summary.deferredActive = discovery.deferredActive.length;
+      summary.belowThreshold = discovery.belowThreshold;
+      // Seeded like missingTranscripts: reviewOne can add to it when a transcript
+      // crosses the read cap between discovery's read and the reviewer's.
+      summary.boundaryBeyondWindow = discovery.boundaryBeyondWindow;
 
-    // One unreadable transcript or unwritable husk must not cost the night's
-    // other sessions, nor the journal advances already earned.
-    for (const session of planned) {
-      try {
-        await reviewOne(session, { boxRoot, options, state, summary });
-      } catch (e) {
-        console.error(`chat-review: session ${session.sessionId} failed:`, e);
-        recordFailure(state, { sessionId: session.sessionId, spanId: "" });
-        summary.sessionErrors += 1;
+      // One unreadable transcript or unwritable husk must not cost the night's
+      // other sessions, nor the journal advances already earned.
+      for (const session of planned) {
+        try {
+          await reviewOne(session, { boxRoot, options, state, summary });
+        } catch (e) {
+          console.error(`chat-review: session ${session.sessionId} failed:`, e);
+          recordFailure(state, { sessionId: session.sessionId, spanId: "" });
+          summary.sessionErrors += 1;
+        }
       }
-    }
 
-    state.lastRunAt = options.now.toISOString();
-    await saveReviewState(boxRoot, state);
-    return summary;
-  } finally {
-    await releaseLock(lockPath);
-  }
+      state.lastRunAt = options.now.toISOString();
+      await saveReviewState(boxRoot, state);
+      return summary;
+    },
+  });
 }
 
 export { LockHeldError };

@@ -18,8 +18,16 @@ import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js"
 import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
 import { createEventBus } from "../../../src/core/event-bus.js";
 import { setMostActive } from "../../../src/core/chat/session/history.js";
+import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { waitForRuns, plainTestPrompt } from "../../helpers/chat-session-spawner-helpers.js";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
+const SESSION_A = "11111111-1111-4111-8111-111111111111";
+const SESSION_B = "22222222-2222-4222-8222-222222222222";
+const SESSION_MOST_ACTIVE = "33333333-3333-4333-8333-333333333333";
+const SESSION_DEAD = "44444444-4444-4444-8444-444444444444";
 
 function makeRegistry(boxRoot: string, backend: ReturnType<typeof createFakeChatBackend>) {
   return new ChatSessionRegistry(boxRoot, {
@@ -29,6 +37,12 @@ function makeRegistry(boxRoot: string, backend: ReturnType<typeof createFakeChat
 }
 
 const noopWire = (_s: unknown): void => {};
+
+async function makeTranscript(boxRoot: string, sessionId: string): Promise<void> {
+  const logPath = getSessionLogPath(boxRoot, sessionId);
+  await fs.mkdir(path.dirname(logPath), { recursive: true });
+  await fs.writeFile(logPath, "{}\n");
+}
 
 function makeSchedule(opts: { sessionId?: string }) {
   return {
@@ -54,18 +68,19 @@ const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box.root, backend);
 const eventBus = createEventBus(box.root);
-await setMostActive(box.root, "sess-B");
+await setMostActive(box.root, SESSION_B);
+await makeTranscript(box.root, SESSION_A);
 
 const firePromise = fireChatSchedule(
   { boxRoot: box.root, registry, eventBus, wireSession: noopWire },
-  makeSchedule({ sessionId: "sess-A" }),
+  makeSchedule({ sessionId: SESSION_A }),
 );
 await waitForRuns(backend, { count: 1, timeoutMs: 2000 });
 backend.runs[0]?.emitResult();
 await firePromise;
 
 JSON.stringify({ runs: backend.runs.length, resumed: backend.runs[0]?.startOptions.resumeSessionId })
-=> {"runs":1,"resumed":"sess-A"}
+=> {"runs":1,"resumed":"11111111-1111-4111-8111-111111111111"}
 ```
 
 ```ts continue
@@ -90,7 +105,8 @@ const box2 = await makeTmpBox();
 const backend2 = createFakeChatBackend();
 const registry2 = makeRegistry(box2.root, backend2);
 const eventBus2 = createEventBus(box2.root);
-await setMostActive(box2.root, "sess-most-active");
+await setMostActive(box2.root, SESSION_MOST_ACTIVE);
+await makeTranscript(box2.root, SESSION_MOST_ACTIVE);
 
 const firePromise2 = fireChatSchedule(
   { boxRoot: box2.root, registry: registry2, eventBus: eventBus2, wireSession: noopWire },
@@ -101,7 +117,7 @@ backend2.runs[0]?.emitResult();
 await firePromise2;
 
 JSON.stringify({ runs: backend2.runs.length, resumed: backend2.runs[0]?.startOptions.resumeSessionId })
-=> {"runs":1,"resumed":"sess-most-active"}
+=> {"runs":1,"resumed":"33333333-3333-4333-8333-333333333333"}
 ```
 
 ```ts cleanup
@@ -120,10 +136,11 @@ const box3 = await makeTmpBox();
 const backend3 = createFakeChatBackend();
 const registry3 = makeRegistry(box3.root, backend3);
 const eventBus3 = createEventBus(box3.root);
+await makeTranscript(box3.root, SESSION_DEAD);
 
 const firePromise3 = fireChatSchedule(
   { boxRoot: box3.root, registry: registry3, eventBus: eventBus3, wireSession: noopWire },
-  makeSchedule({ sessionId: "sess-dead" }),
+  makeSchedule({ sessionId: SESSION_DEAD }),
 );
 // First run targets the dead session and errors instantly.
 await waitForRuns(backend3, { count: 1, timeoutMs: 2000 });
@@ -138,7 +155,7 @@ JSON.stringify({
   first: backend3.runs[0]?.startOptions.resumeSessionId ?? null,
   second: backend3.runs[1]?.startOptions.resumeSessionId ?? null,
 })
-=> {"runs":2,"first":"sess-dead","second":null}
+=> {"runs":2,"first":"44444444-4444-4444-8444-444444444444","second":null}
 ```
 
 ```ts cleanup

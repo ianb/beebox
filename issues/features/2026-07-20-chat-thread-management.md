@@ -6,6 +6,11 @@ discovered-in: worktree-open-source-readiness — first-run UX audit for the sof
 labels: [soft-launch]
 ---
 
+**Implementation update (2026-08-07):** The permanent single-conversation
+DELETE slice is implemented by `worktree-chat-session-delete`, including the
+ordered lifecycle, confirmation disclosures, and missing-transcript guards.
+This umbrella issue remains open for rename and archive.
+
 No thread-lifecycle operation exists at all — audited 2026-07-20: the chat
 tRPC routers (`src/webapp/trpc/routers/chat.ts`,
 `chat-session-procedures.ts`, `chat-control-procedures.ts`) expose

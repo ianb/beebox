@@ -20,6 +20,7 @@ import { trpc, type RouterOutput } from "../lib/trpc";
 import { chatTailSlice, type ChatInitialLoad } from "../machines/chat-types";
 import { href, toSearch } from "../lib/routing";
 import { carriesFreshChatMachine } from "./chat-session-transition";
+import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
 
 interface ChatSearch {
   session?: string;
@@ -101,10 +102,7 @@ function useSessionLabel({
   bootstrapped: RouterOutput["chat"]["bootstrap"] | undefined;
 }): string | null {
   const assigned = carried && rendered !== null && rendered !== "new" ? rendered : null;
-  const query = trpc.chat.label.useQuery(
-    { session: assigned ?? "" },
-    { enabled: assigned !== null, refetchOnWindowFocus: false },
-  );
+  const query = trpc.chat.label.useQuery({ session: assigned ?? "" }, { enabled: assigned !== null, refetchOnWindowFocus: false });
   if (bootstrapped !== undefined && bootstrapped.sessionId === rendered) return bootstrapped.label;
   return query.data === undefined ? null : query.data.label;
 }
@@ -152,7 +150,13 @@ export function ChatPage() {
     carried: boolean;
     awaiting: boolean;
     announcedAssignment: string | null;
-  }>({ epoch: 0, prev: null, carried: false, awaiting: false, announcedAssignment: null });
+  }>({
+    epoch: 0,
+    prev: null,
+    carried: false,
+    awaiting: false,
+    announcedAssignment: null,
+  });
   // InteractiveChat announces a real backend assignment immediately before
   // it rewrites `?session=new` to the assigned id. Without this handshake,
   // an explicit landmark/session navigation from a fresh chat is
@@ -183,8 +187,7 @@ export function ChatPage() {
   // about to refetch, and the machine reads its preload exactly once. Mounting
   // on a stale cache entry would show an old transcript that the completed
   // refetch could no longer correct.
-  const settled = isFreshChat || keyState.carried
-    || ((bootstrap.data !== undefined || bootstrap.isError) && !bootstrap.isFetching);
+  const settled = isFreshChat || keyState.carried || ((bootstrap.data !== undefined || bootstrap.isError) && !bootstrap.isFetching);
 
   // Bare `/chat`: adopt whatever the server resolved. A failed bootstrap falls
   // through to the fresh-chat shell, as the old default-session lookup did.
@@ -197,7 +200,7 @@ export function ChatPage() {
   // onto a real session id.
   const resolvedDefault = ((): string | null => {
     if (sessionParam !== undefined) return null;
-    const candidate = bootstrap.data ? bootstrap.data.sessionId ?? "new" : (bootstrap.isError ? "new" : null);
+    const candidate = bootstrap.data ? (bootstrap.data.sessionId ?? "new") : bootstrap.isError ? "new" : null;
     if (candidate === null) return null;
     return keyState.prev === null || keyState.prev === candidate ? candidate : null;
   })();
@@ -220,13 +223,14 @@ export function ChatPage() {
     // navigation below changes this page's query input from "default session"
     // to `session=<id>`, which is a different cache key — without the seed,
     // react-query would fetch the very same bootstrap a second time.
-    utils.chat.bootstrap.setData(
-      { slice: chatTailSlice(), session: resolvedId },
-      data,
-    );
+    utils.chat.bootstrap.setData({ slice: chatTailSlice(), session: resolvedId }, data);
     // navigate()'s promise only rejects on a superseded/redirected
     // navigation (not a user-facing failure) -- fire-and-forget.
-    void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ ...search, session: resolvedId }), replace: true });
+    void navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: toSearch({ ...search, session: resolvedId }),
+      replace: true,
+    });
   }, [sessionParam, bootstrap.data, boxSlug, navigate, search, utils.chat.bootstrap, keyState.prev]);
 
   const sessionInput = sessionParam ?? resolvedDefault;
@@ -269,13 +273,22 @@ export function ChatPage() {
     return <ChatLoading />;
   }
 
+  const unavailable = bootstrap.data?.kind === "unavailable" && bootstrap.data.sessionId === rendered ? bootstrap.data : null;
+  if (unavailable !== null) {
+    return <UnavailableChat boxSlug={boxSlug} sessionId={unavailable.sessionId} label={unavailable.label} huskPath={unavailable.huskPath} />;
+  }
+
   // contextDir is only meaningful when starting a "new" chat; once the
   // session is assigned, the dir is recorded server-side.
   return (
     <InteractiveChat
       key={keyState.epoch}
       sessionInput={rendered}
-      initial={initialLoadFrom({ rendered, data: bootstrap.data, error: bootstrap.error })}
+      initial={initialLoadFrom({
+        rendered,
+        data: bootstrap.data,
+        error: bootstrap.error,
+      })}
       contextDir={rendered === "new" ? contextDir : undefined}
       companion={companion}
       card={card}

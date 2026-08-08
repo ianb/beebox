@@ -8,14 +8,22 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { publicProcedure } from "../trpc.js";
+import { ownerProcedure, publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 import { loadPersistedChatModel } from "../../../core/chat/session/state.js";
+import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../core/chat/session/delete.js";
+import { sdkSessionIdSchema } from "../../../core/chat/session/session-id.js";
+import { SessionDeletingError } from "../../../core/chat/session/registry.js";
+import { LockHeldError } from "../../../core/chat/review/lock.js";
+import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
 
 function requireRuntime(boxRoot: string): ChatRuntime {
   const runtime = getChatRuntime(boxRoot);
   if (!runtime) {
-    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Chat runtime not initialized for this box" });
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "Chat runtime not initialized for this box",
+    });
   }
   return runtime;
 }
@@ -37,7 +45,12 @@ export function readSessionStatus(boxRoot: string, sessionId: string | null): Ch
   const { registry } = requireRuntime(boxRoot);
   const persistedModel = loadPersistedChatModel(boxRoot);
   if (!sessionId) {
-    return { sessionId: null, running: false, busy: false, model: persistedModel };
+    return {
+      sessionId: null,
+      running: false,
+      busy: false,
+      model: persistedModel,
+    };
   }
   const target = registry.get(sessionId);
   if (!target) {
@@ -52,39 +65,87 @@ export function readSessionStatus(boxRoot: string, sessionId: string | null): Ch
 }
 
 export const chatControlProcedures = {
+  deleteSession: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
+    const runtime = requireRuntime(ctx.boxRoot);
+    try {
+      return await deleteChatSession({
+        boxRoot: ctx.boxRoot,
+        sessionId: input.sessionId,
+        runtime,
+      });
+    } catch (error) {
+      if (error instanceof ChatSessionNotFoundError) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Conversation not found",
+        });
+      }
+      if (error instanceof SessionStorageContextMismatchError) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "The chat card and local transcript index disagree. No files were deleted.",
+        });
+      }
+      if (error instanceof SessionDeletingError || error instanceof LockHeldError) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Conversation cleanup is already in progress",
+        });
+      }
+      console.error("chat-delete: mutation failed", {
+        sessionId: input.sessionId,
+        error,
+      });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Could not delete the conversation",
+      });
+    }
+  }),
+
+  sessionAvailability: publicProcedure.input(z.object({ sessionId: z.string().min(1) })).query(async ({ input, ctx }) => {
+    const { registry } = requireRuntime(ctx.boxRoot);
+    return resolveSessionAvailability({
+      boxRoot: ctx.boxRoot,
+      sessionId: input.sessionId,
+      registry,
+    });
+  }),
   // Session status (running/busy/model).
-  status: publicProcedure
-    .input(z.object({ session: z.string().optional() }))
-    .query(({ input, ctx }) => readSessionStatus(ctx.boxRoot, input.session ?? null)),
+  status: publicProcedure.input(z.object({ session: z.string().optional() })).query(({ input, ctx }) => readSessionStatus(ctx.boxRoot, input.session ?? null)),
 
   // Change a session's active model. getOrCreate re-registers an evicted session
   // rather than 404'ing; the live subprocess is restarted so the next turn picks
   // up the new model (a live `set_model` control request isn't honored).
-  setModel: publicProcedure
-    .input(z.object({ session: z.string().min(1), model: z.string().nullable() }))
-    .mutation(({ input, ctx }) => {
-      const { registry, wireSession } = requireRuntime(ctx.boxRoot);
-      const target = registry.getOrCreate(input.session);
-      wireSession(target);
-      target.setModel(input.model);
-      let restarted = false;
-      if (target.isRunning()) {
-        if (target.isBusy()) {
-          // Mid-turn — defer restart to the turn's end so the response isn't lost.
-          target.once("done", () => {
-            if (target.isRunning()) target.restart();
-          });
-        } else {
-          target.restart();
-          restarted = true;
-        }
+  setModel: publicProcedure.input(z.object({ session: z.string().min(1), model: z.string().nullable() })).mutation(({ input, ctx }) => {
+    const { registry, wireSession } = requireRuntime(ctx.boxRoot);
+    const target = registry.getOrCreate(input.session);
+    wireSession(target);
+    target.setModel(input.model);
+    let restarted = false;
+    if (target.isRunning()) {
+      if (target.isBusy()) {
+        // Mid-turn — defer restart to the turn's end so the response isn't lost.
+        target.once("done", () => {
+          if (target.isRunning()) target.restart();
+        });
+      } else {
+        target.restart();
+        restarted = true;
       }
-      return { ok: true, model: target.getCurrentModel(), restarted };
-    }),
+    }
+    return { ok: true, model: target.getCurrentModel(), restarted };
+  }),
 
   // Read a session's feature map (validated + resolved) and change a flag.
   setFeature: publicProcedure
-    .input(z.object({ session: z.string().min(1), feature: z.string().min(1), value: z.string() }))
+    .input(
+      z.object({
+        session: z.string().min(1),
+        feature: z.string().min(1),
+        value: z.string(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const { registry, wireSession } = requireRuntime(ctx.boxRoot);
       const target = registry.getOrCreate(input.session);
@@ -92,7 +153,10 @@ export const chatControlProcedures = {
       try {
         await target.setFeature(input.feature, input.value);
       } catch (e) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: e instanceof Error ? e.message : String(e) });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: e instanceof Error ? e.message : String(e),
+        });
       }
       // wireSession bridges the session's features-changed event onto the bus,
       // so the broadcast already fired; no restart needed (per-turn snapshot).

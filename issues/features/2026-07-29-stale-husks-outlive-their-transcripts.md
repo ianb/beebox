@@ -5,6 +5,13 @@ filed-by: agent
 discovered-in: worktree-compacting — eval'ing chat review against real boxes
 ---
 
+**Implementation update (2026-08-07):** `worktree-chat-session-delete` makes
+missing local transcripts an explicit unavailable state, disables the unsafe
+`Open chat` path, and guards bootstrap, raw-send, and schedule-resume paths.
+This issue remains open for the broader stale-husk lifecycle policy: marking,
+archiving or garbage collection, expiry attribution, and durable review
+coverage.
+
 Chat husks are permanent git-tracked cards. Their transcripts are not: Claude
 Code prunes `~/.claude/projects/**/*.jsonl` on a retention timer
 (`cleanupPeriodDays`, default 30; raised to 60 on this machine 2026-07-29). So

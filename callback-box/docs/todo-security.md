@@ -14,10 +14,17 @@ design:
   WS-auth socket-level test →
   [no-socket-level-ws-auth-test](../../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md);
   MFA / web password reset →
-  [web-password-reset-account-recovery](../../issues/features/2026-08-07-web-password-reset-account-recovery.md).
+  [web-password-reset-account-recovery](../../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md).
   The old "File permissions" section was fixed outright (0600 across the
   credential stores; two residual exceptions tracked in
   [connector-secret-file-modes](../../issues/bugs/2026-08-07-connector-secret-file-modes.md)).
 
 Nothing accumulates here anymore — file security tensions as issues, and
 posture changes flow into the report via `/security-report`.
+
+Everything the old body of this file tracked (structurally-always-on auth,
+invite onboarding, the setup-token window, the WS-auth test gap, MFA/recovery,
+open-invite email ownership, the cross-process lock lease-steal, and the
+Google OAuth shared-token/file-permissions items) is now current in
+[docs/security-report.md](security-report.md) / [SECURITY.md](../SECURITY.md),
+tracked via the issue links above.
