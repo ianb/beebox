@@ -3,7 +3,12 @@ title: "Chat-embedded image that doesn't exist yet stays 404 until a full page r
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder report
+resolution: implemented
 ---
+
+Closed by `e209e50a` (`Retry chat images that appear after rendering`). Chat-embedded
+in-box images now retry on a bounded leaf-local backoff, while external proxy
+fallbacks retain their existing behavior.
 
 When the agent embeds an image in chat, the `<img>` sometimes renders **before the
 file exists** (the agent hasn't written it yet), so it 404s. It then stays broken
