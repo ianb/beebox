@@ -44,6 +44,24 @@ value** (printing it would re-leak exactly what you're purging; look it up with
 convenience not enforcement — pair with server-side push protection / a CI scan
 for a real gate. Companion to the home-path guard above.
 
+## Landing a worktree branch (`land`)
+
+`bin/land [branch]` fast-forwards a finished worktree branch onto `main` — what
+`/finish` step 8 calls, and what you run by hand to land a branch a finish left
+merge-ready. It resolves the main checkout from `--git-common-dir` and targets
+it explicitly, so it works from the main checkout or from inside a worktree
+(where a plain `git -C ~/src/callback-box merge` is blocked by Claude Code's
+worktree isolation).
+
+With no argument: from a worktree it lands that worktree's own branch; from the
+main checkout it auto-detects the single merge-ready branch and refuses if
+several qualify. `--list` shows candidates, `--dry-run` previews.
+
+It enforces the preflight — main checkout clean, on `main`, `--ff-only` — and
+nothing more. Landing is a fast-forward by construction, since `/finish` merges
+main INTO the worktree and verifies there; a not-a-fast-forward refusal means
+main moved, and the fix belongs back in the worktree.
+
 ## Router architecture
 
 One router (`router.ts`, port 3210) serves the main checkout and every

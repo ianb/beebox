@@ -443,10 +443,10 @@ merging, all three must hold:
 2. **Post-green commits re-verified** per the path-precise rule in step 4 (a
    Track O code fix means the full tier ran again after it; a doc move means
    doc-check ran).
-3. **Main checkout clean and on `main`**: `git -C ~/src/callback-box status
-   --porcelain` is empty AND `git -C ~/src/callback-box rev-parse
-   --abbrev-ref HEAD` prints `main` (check both — a clean checkout parked on
-   another branch would mis-target the merge).
+3. **Main checkout clean and on `main`** (a clean checkout parked on another
+   branch would mis-target the merge). Don't check this yourself — `bin/land`
+   below enforces both and refuses with a precise message; treat its refusal
+   as the BLOCKED reason.
 4. **Private leg only:** `git -C private-issues status --porcelain` empty
    (strictly — deletions count), and the private PRIMARY checkout (the
    `repo=` path from `bin/private-issues status .`) is on `main` and clean —
@@ -458,10 +458,14 @@ self-healing one — see the PRIVATE contract below). You're INSIDE the
 worktree, so operate on the main checkout with `-C`:
 
 ```bash
-MONO=~/src/callback-box
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git -C "$MONO" merge --ff-only "$BRANCH"
+bin/land
 ```
+
+Run bare — from a worktree, `bin/land` lands that worktree's own branch. Use it
+rather than `git -C ~/src/callback-box merge`: worktree isolation blocks a
+worktree session (and its subagents) from running git against the main
+checkout. `bin/land` also performs the main-checkout preflight in item 3 above
+and prints the merge hash and log that step 9 reports.
 
 You merged main in at step 3, so this fast-forwards unless `main` moved during
 this run (e.g. another finish landed). If `--ff-only` refuses: go back to step
@@ -496,9 +500,7 @@ it) and mergeable later. It MUST surface in the `PRIVATE:` report line.
 
 ### 9. Report
 
-```bash
-git -C ~/src/callback-box log --oneline -3
-```
+Quote the merge hash and log that `bin/land` already printed at step 8.
 
 Return a report whose language matches the truth. Be straight about: **scope**
 (is the planned work complete, or did this land part? name what's outstanding —

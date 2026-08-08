@@ -7,6 +7,13 @@ discovered-in: worktree-open-source-readiness — launch-readiness conversation 
 labels: [soft-launch]
 ---
 
+> **Status 2026-08-07** — built on `worktree-security-report`: the
+> `/security-report` skill (the committed rubric), the structured report
+> (`callback-box/docs/security-report.md`), and a DRAFT
+> `callback-box/SECURITY.md`, cross-model-reviewed (7 findings applied).
+> Awaiting boxholder review of the two report artifacts before merge;
+> the headers carry `reviewed-by: DRAFT — unreviewed` until then.
+
 The launch needs a SECURITY.md-shaped "what this can touch" page (the
 OpenClaw lesson from
 [the competitive research](../../research/openclaw-hermes/README.md):

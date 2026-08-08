@@ -7,6 +7,20 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { CheckboxField, TextField } from "../ui/fields";
 
+const LOCAL_OWNER_REQUIRED =
+  "Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links.";
+
+function InviteError({ message }: { message: string }) {
+  return (
+    <div role="alert">
+      <Stack gap="xs">
+        <Text as="p" size="sm" tone="danger">{message}</Text>
+        {message === LOCAL_OWNER_REQUIRED ? <Text as="div" size="sm" mono>cb auth create-user</Text> : null}
+      </Stack>
+    </div>
+  );
+}
+
 export function InviteSection() {
   const [openInvite, setOpenInvite] = useState(false);
   const [email, setEmail] = useState("");
@@ -74,7 +88,7 @@ export function InviteSection() {
           <Button type="submit" intent="primary" loading={createInvite.isPending} loadingLabel="Creating…">
             Create invite link
           </Button>
-          {createInvite.error ? <Text size="sm" tone="danger">{createInvite.error.message}</Text> : null}
+          {createInvite.error ? <InviteError message={createInvite.error.message} /> : null}
           {inviteUrl ? (
             <Card background="warm" border="subtle" padding="sm">
               <Stack gap="sm">

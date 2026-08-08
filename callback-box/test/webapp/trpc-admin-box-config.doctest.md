@@ -106,11 +106,14 @@ process.env.CB_AUTH_FILE = join(noOwnerAuthDir, "auth.json");
 process.env.CB_OWNER_EMAIL = "owner@example.com";
 const noOwnerBox = await makeTmpBox({ git: true });
 const noOwnerResult = await caller(noOwnerBox.root).admin.createInvite({}).then(
-  () => "allowed",
-  (error) => error.code,
+  () => ({ code: "allowed", message: "" }),
+  (error) => ({ code: error.code, message: error.message }),
 );
-noOwnerResult
-=> PRECONDITION_FAILED
+JSON.stringify(noOwnerResult)
+=> {"code":"PRECONDITION_FAILED","message":"Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links."}
+
+(await caller(noOwnerBox.root).admin.boxConfig()).localPasswordStatus
+=> not-initialized
 ```
 
 ```ts cleanup
@@ -171,8 +174,13 @@ await caller(box.root).admin.updateBoxConfig({
   allowedEmails: ["member@example.com", "invited@example.com", "owner@example.com"],
 });
 const memberConfig = await caller(box.root).admin.boxConfig();
-JSON.stringify(memberConfig.passwordResetEligibleEmails)
-=> ["member@example.com"]
+const memberConfigSummary = {
+  eligible: memberConfig.passwordResetEligibleEmails,
+  status: memberConfig.localPasswordStatus,
+  details: memberConfig.allowedUserDetails,
+};
+JSON.stringify(memberConfigSummary)
+=> {"eligible":["member@example.com"],"status":"ready","details":[{"email":"member@example.com","kind":"local-member","resetEligible":true},{"email":"invited@example.com","kind":"access-only","resetEligible":false},{"email":"owner@example.com","kind":"owner-entry","resetEligible":false}]}
 ```
 
 The owner can mint a reset only for that eligible member; the returned link is
