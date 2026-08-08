@@ -42,6 +42,18 @@ export interface FieldServerOptions {
   env: NodeJS.ProcessEnv;
   /** Override the readiness timeout (tests use a short one). */
   readyTimeoutMs?: number | undefined;
+  /**
+   * Bind this exact port instead of allocating a free one.
+   *
+   * A run RESTARTS its server — after a `reset` cleanup and at every simulated
+   * day boundary — and the operator's base URL is baked into a system prompt
+   * written once, at the start of the run. A restart on a fresh port would
+   * leave the persona driving a browser at a dead port with no way to learn
+   * the new one, so a run allocates once and re-binds the same port. If the
+   * old child has not released it, the readiness probe fails loudly rather
+   * than the run continuing against nothing.
+   */
+  port?: number | undefined;
 }
 
 export interface FieldServer {
@@ -144,7 +156,7 @@ function captureOutput(child: ResultPromise, onChunk: (text: string) => void): v
  * leaves no process behind.
  */
 export async function startFieldServer(box: FieldBox, options: FieldServerOptions): Promise<FieldServer> {
-  const port = await allocateFreePort();
+  const port = options.port ?? (await allocateFreePort());
   // `--host 127.0.0.1` rather than `cb serve`'s "localhost" default, so the
   // interface the server binds is exactly the one this module probes and
   // hands the operator (a "localhost" that resolves to ::1 first would have

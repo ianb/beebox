@@ -1,13 +1,18 @@
 /**
  * `cb field-test` — the agent field-test tier's harness commands
- * (`docs/plans/agent-field-tests.md`). Track 1 ships `inject-email`; `run` and
- * `list` land with Track 2.
+ * (`docs/plans/agent-field-tests.md`): `run` a scenario, `list` the corpus, and
+ * `inject-email` for driving a fake mailbox by hand.
  */
 
+import * as path from "node:path";
+import { readdir } from "node:fs/promises";
 import { Command } from "commander";
 import chalk from "chalk";
 import { errorMessage } from "../../lib/error-guards.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { loadEmailFixture } from "../../field-test/email-fixture.js";
+import { fieldScenarioDir, loadFieldScenario } from "../../field-test/scenario.js";
+import { runFieldScenario, DEFAULT_RUNS_ROOT } from "../../field-test/run.js";
 import { FAKE_GMAIL_ENV } from "../../field-test/fake-gmail-gate.js";
 import {
   appendMessageToState,
@@ -77,6 +82,66 @@ const injectEmailCommand = new Command("inject-email")
     }
   });
 
+/** A scenario argument is either a corpus name (`onboarding-first-days`) or a
+ *  path to a scenario directory — a path is what a one-off or an in-progress
+ *  scenario looks like before it joins the corpus. */
+function resolveScenarioArgument(scenario: string): string {
+  if (scenario.includes(path.sep) || scenario.startsWith(".")) return path.resolve(scenario);
+  return fieldScenarioDir(scenario);
+}
+
+const listCommand = new Command("list")
+  .description("List the checked-in field-test scenarios")
+  .action(async () => {
+    const corpusDir = path.join(PACKAGE_ROOT, "field-tests");
+    const entries = (await readdir(corpusDir, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .toSorted();
+    for (const name of entries) {
+      try {
+        const scenario = await loadFieldScenario(path.join(corpusDir, name));
+        const items = `${String(scenario.checklist.length)} item(s)`;
+        console.log(`${chalk.bold(scenario.name)}  ${chalk.dim(items)}\n  ${scenario.description.trim()}`);
+      } catch (error) {
+        // A scenario that no longer loads is exactly what `list` should shout
+        // about: the alternative is discovering it when a run starts.
+        console.log(`${chalk.bold(name)}  ${chalk.red("does not load")}\n  ${errorMessage(error)}`);
+      }
+    }
+  });
+
+const runCommand = new Command("run")
+  .description("Run a field-test scenario end to end (real operator, real box, real browser)")
+  .argument("<scenario>", "Scenario name from field-tests/, or a path to a scenario directory")
+  .option("--runs-root <dir>", `Where the run directory is created (default: ${DEFAULT_RUNS_ROOT})`)
+  .action(async (scenario: string, options: { runsRoot?: string }) => {
+    try {
+      const result = await runFieldScenario({
+        scenarioDir: resolveScenarioArgument(scenario),
+        runsRoot: options.runsRoot,
+      });
+      const failedChecks = result.items.flatMap((item) => item.checks.filter((c) => !c.passed));
+      console.log("");
+      for (const item of result.items) {
+        const checks = `${String(item.checks.filter((c) => c.passed).length)}/${String(item.checks.length)} checks`;
+        console.log(`  ${item.id}: ${item.debrief?.outcome ?? "no debrief"} — ${checks}`);
+      }
+      if (result.aborted) {
+        console.error(chalk.red(`Run aborted at ${result.aborted.itemId ?? "(setup)"}: ${result.aborted.reason}`));
+        process.exit(1);
+      }
+      // A failing hard assert is the tier's whole point; exit non-zero so an
+      // unattended run cannot be mistaken for a clean one.
+      if (failedChecks.length > 0) process.exit(1);
+    } catch (error) {
+      console.error(chalk.red(errorMessage(error)));
+      process.exit(1);
+    }
+  });
+
 export const fieldTestCommand = new Command("field-test")
   .description("Agent field-test runs (persona operator against a real box)")
+  .addCommand(runCommand)
+  .addCommand(listCommand)
   .addCommand(injectEmailCommand);

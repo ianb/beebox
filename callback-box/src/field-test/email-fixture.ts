@@ -139,11 +139,24 @@ async function readFixtureFile(fixturePath: string): Promise<z.infer<typeof Emai
   return result.data;
 }
 
+export interface LoadEmailFixtureOptions {
+  /**
+   * What "now" means for a fixture with no `date:`. The harness passes the
+   * run's SIMULATED clock, which its own process does not share — a message
+   * that arrives on today's real date during a run set in August is mail the
+   * box will sort under the wrong day. Defaults to the box clock.
+   */
+  now?: Date | undefined;
+}
+
 /**
  * Read a fixture and build the Gmail message it describes, reading any
  * attachment files relative to the fixture itself.
  */
-export async function loadEmailFixture(fixturePath: string): Promise<LoadedEmailFixture> {
+export async function loadEmailFixture(
+  fixturePath: string,
+  options?: LoadEmailFixtureOptions,
+): Promise<LoadedEmailFixture> {
   const fixture = await readFixtureFile(fixturePath);
   const id = fixture.id ?? path.basename(fixturePath).replace(/\.ya?ml$/, "");
   if (!ID_PATTERN.test(id)) {
@@ -153,7 +166,8 @@ export async function loadEmailFixture(fixturePath: string): Promise<LoadedEmail
     });
   }
   const threadId = fixture.threadId ?? `t-${id}`;
-  const date = fixture.date === undefined ? getBoxTime() : new Date(fixture.date);
+  const date =
+    fixture.date === undefined ? (options?.now ?? getBoxTime()) : new Date(fixture.date);
 
   const headers = [
     { name: "Message-ID", value: `<${id}@example.com>` },

@@ -81,6 +81,23 @@ page.status
 => 200
 ```
 
+A run restarts its server — after a `reset` cleanup, and at every simulated day
+boundary — and re-binds the SAME port when told to. That is what keeps the base
+URL baked into the operator's system prompt (written once, at the start of the
+run) pointing at something alive.
+
+```ts continue
+await server.stop();
+const restarted = await startFieldServer(box, {
+  env: { CB_TIME: "2026-08-11T09:00:00Z" },
+  port: server.port,
+});
+restarted.baseUrl === server.baseUrl
+=> true
+
+await restarted.stop();
+```
+
 Teardown kills the child; nothing is left listening.
 
 ```ts continue

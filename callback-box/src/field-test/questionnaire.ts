@@ -15,7 +15,8 @@
  */
 
 import * as path from "node:path";
-import { fileExists } from "../lib/file-exists.js";
+import { readdir } from "node:fs/promises";
+import { errnoCode } from "../lib/error-guards.js";
 
 /** The one constrained answer, plus the sentinel for an unparseable one. */
 export type ActivityOutcome = "smooth" | "friction" | "blocked";
@@ -167,6 +168,22 @@ export interface ScreenshotRef {
 const SCREENSHOT_PATTERN = /[\w.@-]+\.(?:png|jpe?g|webp)/gi;
 
 /**
+ * Every image file under `screenshotsDir`, by basename. Recursive because each
+ * activity gets its own subdirectory (`screenshots/<item-id>/`) while the
+ * operator cites screenshots by bare filename — matching on basename anywhere
+ * in the tree is what makes a citation resolvable at all.
+ */
+async function screenshotBasenames(screenshotsDir: string): Promise<Set<string>> {
+  try {
+    const entries = await readdir(screenshotsDir, { recursive: true });
+    return new Set(entries.map((entry) => path.basename(entry)));
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return new Set();
+    throw e;
+  }
+}
+
+/**
  * Every image filename mentioned anywhere in the answers, checked against the
  * screenshots directory. A missing one is recorded, never thrown: the operator
  * citing evidence that does not exist is precisely the fabrication signal the
@@ -182,11 +199,8 @@ export async function verifyScreenshotRefs(
       names.add(path.basename(match[0].trim()));
     }
   }
-  const refs: ScreenshotRef[] = [];
-  for (const filename of [...names].toSorted()) {
-    refs.push({ filename, resolved: await fileExists(path.join(screenshotsDir, filename)) });
-  }
-  return refs;
+  const present = await screenshotBasenames(screenshotsDir);
+  return [...names].toSorted().map((filename) => ({ filename, resolved: present.has(filename) }));
 }
 
 export interface QuestionAnswer {
