@@ -254,7 +254,7 @@ The smallest plausible feature would accept only URLs, always save one minimal w
 
 That version fails the approved job in three ways. It cannot send a URL directly to a known conversation. It cannot file an item into an explicitly chosen landmark. It puts a durable non-expiring token in a broader plaintext container. The destination split, shared Keychain, and server-side allowlists buy correct intent and fail-closed auth under principles 3, 5, 10, and 12.
 
-The next smaller version would support URL/text completely and defer saved media. That avoids the capture target and attachment-safe movement work. It leaves Photos, Voice Memos, and Files with a misleading UI where chat works but Save does not. Because the feature registers those types, consistent destination semantics are worth the extra bounded reuse. Multi-item sharing, background continuation, a box picker, and a full chat browser do not buy enough for v1 and remain out of scope.
+The next smaller version would support URL/text completely and defer saved media. That avoids the capture target and attachment-safe movement work. It leaves Photos, Voice Memos, and Files with a misleading UI where chat works but Save does not. Because the feature registers those types, consistent destination semantics are worth the extra bounded reuse. Multi-item sharing, background continuation, a full box browser, and a full chat browser do not buy enough for v1 and remain out of scope.
 
 ## Failure modes
 
