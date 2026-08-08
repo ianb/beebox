@@ -104,16 +104,18 @@ while [ -L "$self" ]; do
   esac
 done
 script_dir=$(cd "$(dirname "$self")" && pwd)
-common_dir=$(cd "$script_dir/.." && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
-MONO=""
-if [ -n "$common_dir" ]; then
-  MONO=$(dirname "$common_dir")
+# One derivation, shared with every other piece of worktree tooling. It fails
+# closed rather than falling back to a hardcoded $HOME path — launching a
+# session against the wrong checkout is worse than not launching one.
+# shellcheck source=lib/worktree-paths.sh
+. "$script_dir/lib/worktree-paths.sh"
+if ! wt_paths_init "$script_dir/.."; then
+  echo "launch-worktree-session: cannot locate the monorepo from $script_dir" >&2
+  exit 1
 fi
-if [ -z "$MONO" ] || [ ! -x "$MONO/bin/launch-worktree-session" ] || [ ! -d "$MONO/callback-box" ]; then
-  MONO="$HOME/src/callback-box"
-fi
-if [ ! -x "$MONO/bin/launch-worktree-session" ] || [ ! -d "$MONO/callback-box" ]; then
-  echo "launch-worktree-session: cannot locate the monorepo (tried self-locating from $script_dir, then $MONO)" >&2
+MONO="$WT_MONO"
+if [ ! -x "$MONO/bin/launch-worktree-session" ]; then
+  echo "launch-worktree-session: resolved monorepo $MONO has no bin/launch-worktree-session" >&2
   exit 1
 fi
 
