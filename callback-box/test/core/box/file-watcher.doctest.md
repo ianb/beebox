@@ -399,7 +399,11 @@ console.error = (...args: unknown[]) => {
 try {
   const { rename } = await import("node:fs/promises");
   await rename(join(box.root, ".incoming"), join(box.root, "store", "arrived"));
-  await waitFor(() => capLogs.length === 1, 5000, "the notification work limit");
+  // The bounded reconcile still stats up to 1,024 files sequentially. Under
+  // six-way suite contention that can legitimately exceed five seconds, so
+  // keep polling for the outcome instead of imposing an interactive latency
+  // budget on this scale test.
+  await waitFor(() => capLogs.length === 1, 30_000, "the notification work limit");
   await watcher.settled();
 } finally {
   console.error = originalConsoleError;

@@ -20,6 +20,20 @@ touch the watcher test or implementation. The one permitted full-suite rerun
 then passed 6,291/6,291 assertions.
 
 This differs from the resolved
-[watcher assertion-race issue](../closed/bugs/2026-08-03-file-watcher-doctest-flaky-timing.md).
+[watcher assertion-race issue](2026-08-03-file-watcher-doctest-flaky-timing.md).
 That issue recorded individual timing assertion failures. This occurrence
 expired the entire test file under parallel suite load.
+
+## Resolution
+
+Later full-suite runs localized the apparent whole-file expiration to the
+notification-budget scale assertion. Reconciliation deliberately stats up to
+1,024 discovered files sequentially, but the doctest allowed only five seconds
+for that bounded work to reach its limit log. Under six-way suite contention
+the scan could exceed that assertion deadline even though it completed and the
+same file passed 12/12 in isolation.
+
+The test still polls for the exact limit outcome, but now gives this scale
+fixture a 30-second condition deadline. This does not add a sleep or change the
+production watcher; successful runs still finish as soon as the limit is
+observed.
