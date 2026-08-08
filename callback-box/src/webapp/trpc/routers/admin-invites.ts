@@ -22,7 +22,7 @@ export const inviteAdminProcedures = {
       if (!localOwner || canonicalizeEmail(localOwner) !== currentEmail) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Initialize the matching local owner account with `cb auth create-user` before creating invites.",
+          message: "Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links.",
         });
       }
       const email = input.email === undefined ? undefined : canonicalizeEmail(input.email);

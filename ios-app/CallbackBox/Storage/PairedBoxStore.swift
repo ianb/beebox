@@ -216,7 +216,7 @@ final class PairedBoxStore: ObservableObject {
             boxes = []
             selectedBoxID = nil
         }
-        selectedBoxStore.persist(selectedBox)
+        publishSharedBoxes()
     }
 
     private func save() {
@@ -232,7 +232,11 @@ final class PairedBoxStore: ObservableObject {
         } catch {
             assertionFailure("Failed to save paired boxes: \(error)")
         }
-        selectedBoxStore.persist(selectedBox)
+        publishSharedBoxes()
+    }
+
+    private func publishSharedBoxes() {
+        selectedBoxStore.persist(boxes: boxes, selectedBoxID: selectedBoxID)
     }
 
     private func persistableBox(_ box: PairedBox) -> PairedBox {

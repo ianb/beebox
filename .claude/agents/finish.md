@@ -443,10 +443,10 @@ merging, all three must hold:
 2. **Post-green commits re-verified** per the path-precise rule in step 4 (a
    Track O code fix means the full tier ran again after it; a doc move means
    doc-check ran).
-3. **Main checkout clean and on `main`**: don't check this yourself — you're
-   isolated in a worktree and `git -C ~/src/callback-box` is blocked by the
-   harness (see the merge step below). `bin/land` enforces both conditions and
-   refuses with a precise message; treat its refusal as the BLOCKED reason.
+3. **Main checkout clean and on `main`** (a clean checkout parked on another
+   branch would mis-target the merge). Don't check this yourself — `bin/land`
+   below enforces both and refuses with a precise message; treat its refusal
+   as the BLOCKED reason.
 4. **Private leg only:** `git -C private-issues status --porcelain` empty
    (strictly — deletions count), and the private PRIMARY checkout (the
    `repo=` path from `bin/private-issues status .`) is on `main` and clean —
@@ -454,28 +454,24 @@ merging, all three must hold:
 
 Then merge — fast-forward only, **public first, then private** (the merges
 can't be atomic across two repos; this order makes the failure mode the
-self-healing one — see the PRIVATE contract below).
-
-Use `bin/land`, never a bare `git -C`. Claude Code isolates a worktree session
-and every subagent it spawns from the main checkout, refusing any Bash command
-that redirects git there — `git -C <main>`, `--git-dir`, `GIT_DIR`/`GIT_WORK_TREE`,
-or a `cd` into main. That check reads the command string and doesn't follow into
-a script, so `bin/land` completes the merge; a bare `git -C` fails outright:
+self-healing one — see the PRIVATE contract below). You're INSIDE the
+worktree, so operate on the main checkout with `-C`:
 
 ```bash
-bin/land "$(git rev-parse --abbrev-ref HEAD)"
+bin/land
 ```
 
-`bin/land` resolves the main checkout itself and enforces the whole preflight —
-main clean, main on `main`, and fast-forward-only — so its refusal message is
-your BLOCKED reason verbatim. It also prints the resulting hash and short log,
-which is what step 9 reports.
+Run bare — from a worktree, `bin/land` lands that worktree's own branch. Use it
+rather than `git -C ~/src/callback-box merge`: worktree isolation blocks a
+worktree session (and its subagents) from running git against the main
+checkout. `bin/land` also performs the main-checkout preflight in item 3 above
+and prints the merge hash and log that step 9 reports.
 
 You merged main in at step 3, so this fast-forwards unless `main` moved during
-this run (e.g. another finish landed). If it refuses as not-a-fast-forward: go
-back to step 3 (merge the new main in, re-verify), then return here — never
-create a merge commit from the main checkout. The monorepo `post-merge` hook
-triggers the deploy.
+this run (e.g. another finish landed). If `--ff-only` refuses: go back to step
+3 (merge the new main in, re-verify), then return here — never create a merge
+commit from the main checkout. The monorepo `post-merge` hook triggers the
+deploy.
 
 **Private leg**, immediately after the public merge succeeds (skip if the
 private branch has no commits beyond private main — then `PRIVATE: no
@@ -504,8 +500,7 @@ it) and mergeable later. It MUST surface in the `PRIVATE:` report line.
 
 ### 9. Report
 
-`bin/land` already printed the merge hash and the top of main's log — quote
-those. Do not re-run `git -C ~/src/callback-box log`; it's blocked from here.
+Quote the merge hash and log that `bin/land` already printed at step 8.
 
 Return a report whose language matches the truth. Be straight about: **scope**
 (is the planned work complete, or did this land part? name what's outstanding —

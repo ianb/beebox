@@ -18,14 +18,17 @@ The first implemented slice supports sharing from other apps to a selected paire
 URL and text shares send as chat text when a chat destination is chosen.
 URL saves use the same page-card shape used by Clerk page capture, with reduced metadata.
 
-The shared selected-box metadata is stored in App Group UserDefaults, while device tokens are stored in shared Keychain.
+All paired boxes' non-secret metadata and the main app's selected-box id are stored in App Group
+UserDefaults, while device tokens are stored per box in shared Keychain. The extension names the
+current box and offers a picker when more than one box is paired; changing it affects only that
+share action.
 
 ## Scope
 
 - Native iOS app required (no PWA or Shortcut fallback in this feature).
-- One selected box only.
+- Defaults to the main app's selected box, with an explicit picker for other paired boxes.
 - One item per share action.
-- No full chat picker and no box picker in v1.
+- No full chat picker in v1.
 
 ## Implementation notes
 
@@ -37,7 +40,11 @@ does not advertise those types until capture staging supports exact chat and sav
 ## Scripted verification (manual-device)
 
 > **⏳ Awaiting manual testing** — share a URL from Safari and selected text from another iOS app into a paired box. Confirm:
-> 1) share to a chat lands in the selected chat as a chat message, and
-> 2) share to "Save in" writes the expected card in Inbox or the selected `[share]` landmark.
+> 1) the sheet names the main app's selected box,
+> 2) with two paired boxes, choosing the other box reloads its destinations without changing the
+>    main app's selected box,
+> 3) share to a chat lands in the selected chat as a chat message, and
+> 4) share to "Save in" writes the expected card in Inbox or the selected `[share]` landmark in the
+>    box named by the sheet.
 
 Only Ian should clear `needs: [manual-testing]`.

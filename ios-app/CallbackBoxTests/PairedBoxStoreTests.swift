@@ -38,7 +38,8 @@ final class PairedBoxStoreTests: XCTestCase {
         XCTAssertEqual(credentialStore.tokens[boxID], "legacy-token")
         let raw = try String(contentsOf: storage)
         XCTAssertFalse(raw.contains("\"authToken\""), "Token should not be persisted in token-free metadata")
-        XCTAssertEqual(snapshotStore.snapshot?.id, boxID)
+        XCTAssertEqual(snapshotStore.snapshot?.selectedBoxID, boxID)
+        XCTAssertEqual(snapshotStore.snapshot?.boxes.map(\.id), [boxID])
     }
 
     func testLoadRestoresTokenFromCredentialStoreWhenSnapshotHasNoToken() throws {
@@ -71,7 +72,7 @@ final class PairedBoxStoreTests: XCTestCase {
 
         XCTAssertEqual(store.boxes.count, 1)
         XCTAssertEqual(store.boxes.first?.authToken, "keychain-token")
-        XCTAssertEqual(snapshotStore.snapshot?.id, boxID)
+        XCTAssertEqual(snapshotStore.snapshot?.selectedBoxID, boxID)
     }
 
     func testFailedLegacyMigrationKeepsPlaintextFallbackAcrossLaterSave() throws {
@@ -125,6 +126,116 @@ final class PairedBoxStoreTests: XCTestCase {
         )
 
         XCTAssertFalse(result)
+    }
+
+    func testSharedSnapshotPublishesEveryPairedBoxAndCurrentSelection() throws {
+        let files = FileManager.default.temporaryDirectory
+            .appendingPathComponent("callback-box-ios-store-tests-\(UUID().uuidString)-all-boxes")
+        try FileManager.default.createDirectory(at: files, withIntermediateDirectories: true)
+        let credentialStore = FakeCredentialStore()
+        let snapshotStore = FakeSelectedBoxSnapshotStore()
+        let store = PairedBoxStore(
+            storageURL: files.appendingPathComponent("paired-boxes.json"),
+            credentialStore: credentialStore,
+            selectedBoxStore: snapshotStore
+        )
+        XCTAssertTrue(store.addOrSelectBox(
+            label: "Personal",
+            baseURL: URL(string: "https://personal.example.test")!,
+            sessionID: nil,
+            authToken: "personal-token"
+        ))
+        XCTAssertTrue(store.addOrSelectBox(
+            label: "Work",
+            baseURL: URL(string: "https://work.example.test")!,
+            sessionID: nil,
+            authToken: "work-token"
+        ))
+
+        let personal = try XCTUnwrap(store.boxes.first { $0.label == "Personal" })
+        store.select(personal)
+
+        XCTAssertEqual(snapshotStore.snapshot?.boxes.map(\.label), ["Personal", "Work"])
+        XCTAssertEqual(snapshotStore.snapshot?.selectedBoxID, personal.id)
+    }
+
+    func testSharedSnapshotStoreReadsLegacySelectedBoxSnapshot() throws {
+        let suiteName = "callback-box-ios-shared-snapshot-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let boxID = UUID()
+        let payload = """
+        {
+          "id": "\(boxID.uuidString)",
+          "label": "Legacy Box",
+          "baseURL": "https://legacy.example.test",
+          "requiresDeviceUnlock": true
+        }
+        """
+        defaults.set(Data(payload.utf8), forKey: SharedSelectedBoxStore.key)
+
+        let snapshot = SharedSelectedBoxStore(defaults: defaults).read()
+
+        XCTAssertEqual(snapshot?.selectedBoxID, boxID)
+        XCTAssertEqual(snapshot?.boxes.count, 1)
+        XCTAssertEqual(snapshot?.selectedBox?.label, "Legacy Box")
+        XCTAssertEqual(snapshot?.selectedBox?.requiresDeviceUnlock, true)
+    }
+
+    func testSharedSnapshotStorePersistsAllBoxesWithoutTokens() throws {
+        let suiteName = "callback-box-ios-shared-snapshot-tests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let personal = PairedBox(
+            id: UUID(),
+            label: "Personal",
+            baseURL: URL(string: "https://personal.example.test")!,
+            sessionID: "personal-chat",
+            authToken: "personal-secret",
+            requiresDeviceUnlock: false
+        )
+        let work = PairedBox(
+            id: UUID(),
+            label: "Work",
+            baseURL: URL(string: "https://work.example.test")!,
+            sessionID: "work-chat",
+            authToken: "work-secret",
+            requiresDeviceUnlock: true
+        )
+        let store = SharedSelectedBoxStore(defaults: defaults)
+
+        store.persist(boxes: [personal, work], selectedBoxID: work.id)
+
+        let raw = try XCTUnwrap(defaults.data(forKey: SharedSelectedBoxStore.key))
+        let encoded = try XCTUnwrap(String(data: raw, encoding: .utf8))
+        XCTAssertFalse(encoded.contains("secret"))
+        XCTAssertFalse(encoded.contains("authToken"))
+        XCTAssertFalse(encoded.contains("sessionID"))
+        XCTAssertEqual(store.read()?.boxes.map(\.label), ["Personal", "Work"])
+        XCTAssertEqual(store.read()?.selectedBoxID, work.id)
+    }
+
+    func testSharedSnapshotFallsBackToFirstBoxWhenSelectionIsStale() {
+        let first = SharedPairedBoxMetadata(box: PairedBox(
+            id: UUID(),
+            label: "First",
+            baseURL: URL(string: "https://first.example.test")!,
+            sessionID: nil,
+            authToken: nil,
+            requiresDeviceUnlock: false
+        ))
+        let snapshot = SharedPairedBoxesSnapshot(boxes: [first], selectedBoxID: UUID())
+
+        XCTAssertEqual(snapshot.selectedBox, first)
+    }
+
+    func testDestinationLoadTrackerRejectsEarlierLoadAfterSwitch() {
+        var tracker = ShareDestinationLoadTracker()
+        let firstLoad = tracker.begin()
+        let secondLoad = tracker.begin()
+
+        XCTAssertFalse(tracker.accepts(firstLoad))
+        XCTAssertTrue(tracker.accepts(secondLoad))
     }
 
     func testRemoveFailsClosedWhenTokenDeletionFails() throws {
@@ -248,22 +359,20 @@ private final class FakeCredentialStore: PairedBoxCredentialStoreProtocol {
 }
 
 private final class FakeSelectedBoxSnapshotStore: SharedSelectedBoxSnapshotStoreProtocol {
-    var snapshot: SharedSelectedBoxSnapshot?
+    var snapshot: SharedPairedBoxesSnapshot?
     var events: [String] = []
 
-    func read() -> SharedSelectedBoxSnapshot? {
+    func read() -> SharedPairedBoxesSnapshot? {
         snapshot
     }
 
-    func persist(_ selectedBox: PairedBox?) {
-        if let selectedBox {
-            snapshot = SharedSelectedBoxSnapshot(
-                id: selectedBox.id,
-                label: selectedBox.label,
-                baseURL: selectedBox.baseURL,
-                requiresDeviceUnlock: selectedBox.requiresDeviceUnlock
+    func persist(boxes: [PairedBox], selectedBoxID: PairedBox.ID?) {
+        if boxes.isEmpty == false {
+            snapshot = SharedPairedBoxesSnapshot(
+                boxes: boxes.map(SharedPairedBoxMetadata.init),
+                selectedBoxID: selectedBoxID
             )
-            events.append("persist:\(selectedBox.id.uuidString)")
+            events.append("persist:\(selectedBoxID?.uuidString ?? "nil")")
         } else {
             snapshot = nil
             events.append("persist:nil")

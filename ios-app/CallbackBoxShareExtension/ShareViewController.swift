@@ -32,9 +32,15 @@ final class ShareViewModel: ObservableObject {
     @Published var selection: Selection?
     @Published var errorMessage: String?
     @Published var isWorking = false
+    @Published private(set) var pairedBoxes: [SharedPairedBoxMetadata] = []
+    @Published private(set) var selectedBoxID: PairedBox.ID?
+    @Published private(set) var isLoadingDestinations = false
+    @Published private(set) var hasAttemptedSubmission = false
 
     private weak var extensionContext: NSExtensionContext?
     private var api: ShareExtensionAPI?
+    private var destinationLoadTracker = ShareDestinationLoadTracker()
+    private var unlockedBoxIDs: Set<PairedBox.ID> = []
     private let operationID = UUID()
     private let capturedAt = Date()
 
@@ -49,6 +55,7 @@ final class ShareViewModel: ObservableObject {
 
     func submit() {
         guard let item, let selection, let api else { return }
+        hasAttemptedSubmission = true
         isWorking = true
         errorMessage = nil
         Task {
@@ -72,45 +79,92 @@ final class ShareViewModel: ObservableObject {
         }
     }
 
+    func selectBox(_ boxID: PairedBox.ID) {
+        guard
+            isWorking == false,
+            hasAttemptedSubmission == false,
+            let metadata = pairedBoxes.first(where: { $0.id == boxID })
+        else { return }
+        selectedBoxID = boxID
+        destinations = nil
+        selection = nil
+        errorMessage = nil
+        isLoadingDestinations = true
+        api = nil
+        let loadID = destinationLoadTracker.begin()
+        Task { await loadDestinations(for: metadata, loadID: loadID) }
+    }
+
+    func retryDestinationLoad() {
+        guard let selectedBoxID else { return }
+        selectBox(selectedBoxID)
+    }
+
+    var canRetryDestinationLoad: Bool {
+        selectedBoxID != nil && destinations == nil && isLoadingDestinations == false && hasAttemptedSubmission == false
+    }
+
     private func load() async {
         do {
-            guard let snapshot = SharedSelectedBoxStore().read() else {
+            guard
+                let snapshot = SharedSelectedBoxStore().read(),
+                let defaultBox = snapshot.selectedBox
+            else {
                 throw ShareLoadError.noBox
             }
-            guard let token = PairedBoxCredentialStore().readToken(for: snapshot.id) else {
-                throw ShareLoadError.noCredential
-            }
-            let box = PairedBox(
-                id: snapshot.id,
-                label: snapshot.label,
-                baseURL: snapshot.baseURL,
-                sessionID: nil,
-                authToken: token,
-                requiresDeviceUnlock: snapshot.requiresDeviceUnlock
-            )
-            try await unlockIfNeeded(snapshot.requiresDeviceUnlock)
-            let loadedItem = try await loadSharedItem()
-            let loadedAPI = ShareExtensionAPI(box: box)
-            let loadedDestinations = try await loadedAPI.destinations()
-            item = loadedItem
-            api = loadedAPI
-            destinations = loadedDestinations
-            selection = loadedDestinations.saves.first.map(Selection.save)
+            item = try await loadSharedItem()
+            pairedBoxes = snapshot.boxes
+            selectBox(defaultBox.id)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    private func unlockIfNeeded(_ required: Bool) async throws {
-        guard required else { return }
+    private func loadDestinations(for metadata: SharedPairedBoxMetadata, loadID: UUID) async {
+        do {
+            try await unlockIfNeeded(metadata, loadID: loadID)
+            guard destinationLoadTracker.accepts(loadID) else { return }
+            guard let token = PairedBoxCredentialStore().readToken(for: metadata.id) else {
+                throw ShareLoadError.noCredential(metadata.label)
+            }
+            let box = metadata.pairedBox(withToken: token)
+            let loadedAPI = ShareExtensionAPI(box: box)
+            let loadedDestinations = try await loadedAPI.destinations()
+            guard destinationLoadTracker.accepts(loadID) else { return }
+            api = loadedAPI
+            destinations = loadedDestinations
+            isLoadingDestinations = false
+        } catch {
+            guard destinationLoadTracker.accepts(loadID) else { return }
+            isLoadingDestinations = false
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func unlockIfNeeded(_ metadata: SharedPairedBoxMetadata, loadID: UUID) async throws {
+        guard metadata.requiresDeviceUnlock, unlockedBoxIDs.contains(metadata.id) == false else { return }
         let context = LAContext()
-        let allowed = try await context.evaluatePolicy(
-            .deviceOwnerAuthentication,
-            localizedReason: "Unlock your Callback Box before sharing."
-        )
+        var policyError: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &policyError) else {
+            if policyError?.code == LAError.passcodeNotSet.rawValue {
+                throw ShareLoadError.passcodeRequired
+            }
+            throw policyError ?? ShareLoadError.unlockFailed
+        }
+        let allowed: Bool
+        do {
+            allowed = try await context.evaluatePolicy(
+                .deviceOwnerAuthentication,
+                localizedReason: "Unlock \(metadata.label) before sharing."
+            )
+        } catch let error as LAError where error.code == .userCancel || error.code == .appCancel {
+            throw ShareLoadError.unlockCancelled
+        }
         if allowed == false {
             throw ShareLoadError.unlockFailed
         }
+        guard destinationLoadTracker.accepts(loadID) else { return }
+        unlockedBoxIDs.insert(metadata.id)
     }
 
     private func loadSharedItem() async throws -> SharedTextualItem {
@@ -144,23 +198,29 @@ final class ShareViewModel: ObservableObject {
 
 private enum ShareLoadError: LocalizedError {
     case noBox
-    case noCredential
+    case noCredential(String)
     case oneItemOnly
     case unsupported
     case unlockFailed
+    case unlockCancelled
+    case passcodeRequired
 
     var errorDescription: String? {
         switch self {
         case .noBox:
             "Open Callback Box and pair a box first."
-        case .noCredential:
-            "The selected box needs to be paired again."
+        case .noCredential(let label):
+            "\(label) needs to be paired again."
         case .oneItemOnly:
             "Share one item at a time."
         case .unsupported:
             "This version can share a web link or text."
         case .unlockFailed:
             "Callback Box could not be unlocked."
+        case .unlockCancelled:
+            "Unlock was cancelled."
+        case .passcodeRequired:
+            "Set a device passcode before sharing to this protected box."
         }
     }
 }
@@ -171,42 +231,82 @@ private struct ShareExtensionView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if let destinations = model.destinations {
+                if model.pairedBoxes.isEmpty == false {
                     List {
-                        if destinations.chats.isEmpty == false {
-                            Section("Send to a chat") {
-                                ForEach(destinations.chats) { chat in
+                        Section("Box") {
+                            Menu {
+                                ForEach(model.pairedBoxes) { box in
                                     Button {
-                                        model.selection = .chat(chat)
+                                        model.selectBox(box.id)
+                                    } label: {
+                                        if model.selectedBoxID == box.id {
+                                            Label(box.displayLabel, systemImage: "checkmark")
+                                        } else {
+                                            Text(box.displayLabel)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Label(selectedBoxLabel, systemImage: "shippingbox")
+                                    Spacer()
+                                    if model.pairedBoxes.count > 1 {
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .disabled(
+                                model.pairedBoxes.count < 2
+                                    || model.isWorking
+                                    || model.hasAttemptedSubmission
+                            )
+                        }
+                        if let destinations = model.destinations {
+                            if destinations.chats.isEmpty == false {
+                                Section("Send to a chat") {
+                                    ForEach(destinations.chats) { chat in
+                                        Button {
+                                            model.selection = .chat(chat)
+                                        } label: {
+                                            destinationRow(
+                                                symbol: chat.landmark.symbol,
+                                                title: chat.landmark.label,
+                                                subtitle: chat.label,
+                                                selected: model.selection == .chat(chat)
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                        .disabled(model.hasAttemptedSubmission)
+                                    }
+                                }
+                            }
+                            Section("Save in") {
+                                ForEach(destinations.saves) { destination in
+                                    Button {
+                                        model.selection = .save(destination)
                                     } label: {
                                         destinationRow(
-                                            symbol: chat.landmark.symbol,
-                                            title: chat.landmark.label,
-                                            subtitle: chat.label,
-                                            selected: model.selection == .chat(chat)
+                                            symbol: destination.symbol,
+                                            title: destination.label,
+                                            subtitle: nil,
+                                            selected: model.selection == .save(destination)
                                         )
                                     }
                                     .buttonStyle(.plain)
+                                    .disabled(model.hasAttemptedSubmission)
                                 }
                             }
-                        }
-                        Section("Save in") {
-                            ForEach(destinations.saves) { destination in
-                                Button {
-                                    model.selection = .save(destination)
-                                } label: {
-                                    destinationRow(
-                                        symbol: destination.symbol,
-                                        title: destination.label,
-                                        subtitle: nil,
-                                        selected: model.selection == .save(destination)
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                            }
+                        } else if model.isLoadingDestinations {
+                            Section { ProgressView("Loading destinations…") }
                         }
                         if let message = model.errorMessage {
-                            Section { Text(message).foregroundStyle(.red) }
+                            Section {
+                                Text(message).foregroundStyle(.red)
+                                if model.canRetryDestinationLoad {
+                                    Button("Retry") { model.retryDestinationLoad() }
+                                }
+                            }
                         }
                     }
                 } else if let message = model.errorMessage {
@@ -226,6 +326,10 @@ private struct ShareExtensionView: View {
                 }
             }
         }
+    }
+
+    private var selectedBoxLabel: String {
+        model.pairedBoxes.first { $0.id == model.selectedBoxID }?.displayLabel ?? "Choose a box"
     }
 
     private var actionTitle: String {
