@@ -1,10 +1,10 @@
-<!--
+---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 3f65b3d1a7cad712f307a6c7df5665ff0bf04867
 date: 2026-08-07
 model: claude-fable-5
-reviewed-by: DRAFT — unreviewed
--->
+reviewed-by: "DRAFT — unreviewed"
+---
 
 # Security
 
@@ -15,8 +15,9 @@ security document, so this one leads with blast radius, not reassurance.
 
 This document is **maintained by an agent, reviewed by a human**. The
 process that generates it — an ordered inventory and evaluation rubric —
-is committed at `.claude/skills/security-report/SKILL.md` (repo root),
-and the full accounting it produces is
+is committed at
+[`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/callback-box/blob/main/.claude/skills/security-report/SKILL.md)
+(repo root), and the full accounting it produces is
 [docs/security-report.md](docs/security-report.md): every endpoint and
 its auth, every credential and its blast radius, every place data leaves
 the machine. You can't verify a security doc wasn't shaped by error or
@@ -58,13 +59,34 @@ box runs as, and read or write any file in the box. Its working scope is
 the box directory, and no current call site widens it beyond that — but
 the scope parameter itself is unguarded caller input, and either way it
 is a convention the agent operates within, not a sandbox that contains
-it. If prompt-injected content (an email, a web clipping) can
-steer the agent, the agent's full capability is the exposure. Tighter
-containment is tracked in
-[agent-containment-allowed-directories](../issues/features/2026-07-20-agent-containment-allowed-directories.md);
-until then, treat "what can the agent do" and "what can callback-box do"
-as the same question. On fresh boxes, scheduled agent runs are off by
-default — nothing runs until you turn it on.
+it. Treat "what can the agent do" and "what can callback-box do" as the
+same question. On fresh boxes, scheduled agent runs are off by default —
+nothing runs until you turn it on.
+
+## Prompt injection — the risk we most want you to understand
+
+callback-box is, by design, an agent that reads your private data,
+ingests untrusted external content, and acts with no tool allowlist.
+Those three together are the well-known "lethal trifecta": text written
+by someone else — an email body, a web clipping, a calendar invite, a
+Telegram message, even words inside a photographed image — can reach the
+agent's context and try to steer it. If that succeeds, the attacker
+isn't limited to reading one card; they have whatever the agent has,
+which is arbitrary shell as your box's user.
+
+We're telling you this plainly because the honest mitigations today are
+thin. There is no injection filter and no containment sandbox. What
+actually reduces the risk is the shape of how you run it: it's your own
+single-operator box (the blast radius is your data, not a stranger's),
+scheduled processing is off until you enable it, and the few dangerous
+actions — publishing, changing credentials — refuse to happen without a
+human present. That's a real posture, but it's mitigation-by-how-you-
+deploy, not a guarantee the agent can't be turned against you. Tighter
+containment is
+[tracked](../issues/features/2026-07-20-agent-containment-allowed-directories.md)
+and not yet built. Until it is, be deliberate about which untrusted
+sources you connect, and don't leave the agent processing them
+unattended in a box that can reach anything you'd mind losing.
 
 ## What leaves your machine
 
@@ -149,7 +171,7 @@ with it after loading it.
 ## Known limitations and accepted risks
 
 The full register with rationale is
-[§7 of the structured report](docs/security-report.md#7-accepted-risks-roll-up).
+[§8 of the structured report](docs/security-report.md#8-accepted-risks-roll-up).
 The ones you should actually weigh:
 
 - **First-run window**: until an owner account exists, a box with an
@@ -171,8 +193,17 @@ The ones you should actually weigh:
   trust.
 
 Known **gaps** (tracked, not yet accepted or fixed) live in the issue
-queue with `file:line` specifics — at this writing they include
-plain-HTTP between Cloudflare's edge and the origin on the public deploy
-path, two connector secret files written without restrictive
-permissions, and a handful of member-tier authorization questions. The
-structured report links each one.
+queue — at this writing they include plain-HTTP between Cloudflare's edge
+and the origin on the public deploy path, two connector secret files
+written without restrictive permissions, deploy-time infra config drift,
+and how much capability an invited member should hold. The structured
+report lists each with a pointer.
+
+A few gaps are **tracked privately** rather than in the public queue:
+where a defect is specific and unpatched enough that publishing its
+exact location would be a roadmap to a live hole, we hold it until it's
+fixed and name it only by class here. That's a deliberate rule, not
+concealment of the *kind* of problem — the structured report says which
+category is affected, just not the `file:line`. It is the mirror of the
+prompt-injection section above: architectural risks we disclose loudly;
+location-precise unpatched defects we disclose once they're closed.

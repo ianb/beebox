@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-08-07T22:21:00Z
+Generated: 2026-08-08T18:35:19Z
 Total documents: 248
 
 ## Issues
@@ -431,7 +431,7 @@ Referenced by:
 - docs/implemented-plans/cards-as-markdown-rfc.md:75 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:13 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/private-issues-shadow-repo.md:158 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
-- ../.claude/skills/security-report/SKILL.md:191 (mention) — `callback-box/README.md` keeps a short "What leaves your machine" section
+- ../.claude/skills/security-report/SKILL.md:277 (mention) — `callback-box/README.md` keeps a short "What leaves your machine" section
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:17 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../research/CLAUDE.md:11 (mention) — `pai/`, …) with a `README.md` index: a table of the corpus's documents plus
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:4 (link) — architecture framing in the first-pass [README](README.md)). This is a code-reading
@@ -459,10 +459,11 @@ References:
 
 #### SECURITY.md
 
-Title: "Security" | 165 lines
+Title: "Security" | 210 lines
 
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [SECURITY.md](SECURITY.md).
+- docs/maintenance.md:30 (mention) — | Security report | `/security-report` (skill) | At release boundaries; when the staleness diff (`git diff <generated-at
 - docs/plans/github-pages-site.md:225 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, SECURITY.md
 - docs/security-report.md:11 (link) — The exhaustive accounting behind [SECURITY.md](../SECURITY.md). An agent
 - docs/todo-security.md:10 (link) — and [SECURITY.md](../SECURITY.md) (the readable report).
@@ -472,7 +473,7 @@ Referenced by:
 - ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:5 (mention) — discovered-in: main session — todo-security breakdown for the SECURITY.md report
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:65 (mention) — - **Agent-legible docs as capability** (the SECURITY.md /
 - ../issues/features/2026-07-20-agent-containment-allowed-directories.md:52 (mention) — honesty means SECURITY.md describes what IS true today — but it's the
-- ../issues/features/2026-07-20-agent-maintained-security-report.md:10 (mention) — The launch needs a SECURITY.md-shaped "what this can touch" page (the
+- ../issues/features/2026-07-20-agent-maintained-security-report.md:13 (mention) — > `callback-box/SECURITY.md`, cross-model-reviewed (7 findings applied).
 - ../issues/features/2026-07-20-export-md-agent-instructions.md:9 (mention) — Data export on the SECURITY.md pattern (boxholder, 2026-07-20): not a
 - ../research/openclaw-hermes/compare-security.md:9 (mention) — - **OpenClaw** (`SECURITY.md`): single trusted-operator boundary; authenticated Gateway callers,
 - ../research/openclaw-hermes/deep-installation.md:160 (mention) — a threat model a skeptical stranger can read. A short SECURITY.md-shaped
@@ -514,10 +515,12 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:289 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
+- docs/security-report.md:208 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require 
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see [`
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:85 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:17 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
 - ../issues/code-quality/2026-07-04-web-push-followup-testing.md:51 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
+- ../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:10 (mention) — (`deploy/README.md` documents this as a known gap). So a change to the
 - ../research/openclaw-hermes/deep-installation.md:96 (mention) — and `callback-box/deploy/README.md`.
 
 References:
@@ -904,7 +907,7 @@ Referenced by:
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/plans/publish-pages.md:43 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source 
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:177 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy source sha
+- docs/security-report.md:188 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy source sha
 - src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:16 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
 
@@ -1195,7 +1198,7 @@ Referenced by:
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:18 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
-- ../issues/features/2026-07-20-agent-maintained-security-report.md:33 (link) — ([docs](../../callback-box/docs/knowledge-audits.md)) and the doc-generation
+- ../issues/features/2026-07-20-agent-maintained-security-report.md:40 (link) — ([docs](../../callback-box/docs/knowledge-audits.md)) and the doc-generation
 
 References:
 - → CLAUDE.md (mention)
@@ -1262,7 +1265,7 @@ References:
 
 #### docs/maintenance.md
 
-Title: "Code Maintenance" | 208 lines
+Title: "Code Maintenance" | 226 lines
 
 Referenced by:
 - CLAUDE.md:169 (mention) — | Periodic maintenance | `docs/maintenance.md` |
@@ -1273,6 +1276,7 @@ Referenced by:
 - docs/plans/cli-restructure.md:137 (mention) — - **Card normalization story.** `cb format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML
 - docs/plans/docs-reorg.md:392 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
+- ../.claude/skills/security-report/SKILL.md:87 (mention) — listed in `callback-box/docs/maintenance.md` alongside knowledge-audits
 - ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:13 (mention) — semantics. Documented in `callback-box/docs/maintenance.md`.
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:16 (mention) — `~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
@@ -1283,7 +1287,8 @@ Referenced by:
 References:
 - → CLAUDE.md (mention)
 - → docs/doc-graph.md (mention)
-- → docs/todo-security.md (mention)
+- → SECURITY.md (mention)
+- → docs/security-report.md (mention)
 - → docs/implemented-plans/mobile-parity-sync.md (mention)
 - → ../docs/agent-sdk-notes.md (link)
 - → docs/plans/scanner-ingest-docling-decisions.md (mention)
@@ -1310,7 +1315,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:456 (mention) — `docs/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:324 (mention) — it now means "from `src/cards/`"); retire `docs/migrations.md` references to
 - docs/implemented-plans/todo-annotation.md:8 (mention) — `docs/migrations.md`'s `todo-list-to-doc` entry. The suggested way to make a
-- docs/maintenance.md:160 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
+- docs/maintenance.md:178 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
 - docs/plans/asset-annex.md:749 (mention) — since it accurately records a system that existed. `docs/migrations.md`
 - docs/plans/asset-offbox-storage.md:563 (mention) — nothing in `docs/migrations.md`. The only state change is Track A2
 - docs/plans/docs-reorg.gap-analysis.md:161 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
@@ -1552,17 +1557,17 @@ Referenced by:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 266 lines
+Title: "Security report — structured version" | 352 lines
 
 Referenced by:
-- SECURITY.md:20 (link) — [docs/security-report.md](docs/security-report.md): every endpoint and
+- SECURITY.md:21 (link) — [docs/security-report.md](docs/security-report.md): every endpoint and
+- docs/maintenance.md:30 (mention) — | Security report | `/security-report` (skill) | At release boundaries; when the staleness diff (`git diff <generated-at
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security
+- ../issues/features/2026-07-20-agent-maintained-security-report.md:12 (mention) — > (`callback-box/docs/security-report.md`), and a DRAFT
 
 References:
 - → SECURITY.md (link)
-- → ../issues/bugs/2026-08-07-task-output-route-not-box-scoped.md (link)
-- → ../issues/bugs/2026-08-07-proxy-image-auth-comment-mismatch.md (link)
 - → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
 - → ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md (link)
 - → ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md (link)
@@ -1576,6 +1581,8 @@ References:
 - → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
 - → ../issues/features/2026-07-20-schedules-off-by-default.md (link)
 - → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (link)
+- → ../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md (link)
+- → deploy/README.md (mention)
 - → ../issues/decisions/2026-08-07-server-backup-story.md (link)
 - → ../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md (link)
 - → ../issues/features/2026-08-07-web-password-reset-account-recovery.md (link)
@@ -1713,7 +1720,6 @@ Title: "Security TODOs (dissolved)" | 24 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.md:543 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
-- docs/maintenance.md:30 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 - docs/plans/invite-links-and-password-change.md:350 (mention) — - Update `docs/todo-security.md`: hashes at rest, single use, open-link email
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:40 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
@@ -1722,7 +1728,7 @@ Referenced by:
 - ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:26 (mention) — Broken out of `callback-box/docs/todo-security.md` ("No true socket-level WS-auth
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:101 (mention) — was accepted as near-nil-reachability and documented in `todo-security.md`).
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:116 (link) — (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
-- ../issues/features/2026-07-20-agent-maintained-security-report.md:28 (link) — [todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
+- ../issues/features/2026-07-20-agent-maintained-security-report.md:35 (link) — [todo-security.md](../../callback-box/docs/todo-security.md) is the seed —
 - ../issues/features/2026-07-28-google-auth-policy-proxy.md:212 (mention) — `callback-box/docs/todo-security.md` fold in here rather than standing as their
 - ../issues/features/2026-08-07-web-password-reset-account-recovery.md:48 (mention) — have the host. The subagent breakdown of `todo-security.md` classified
 
@@ -1808,7 +1814,7 @@ Title: "Architecture Docs" | 59 lines
 
 Referenced by:
 - docs/design/README.md:5 (link) — narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
-- docs/maintenance.md:199 (mention) — **When to run:** after editing `docs/architecture/*.md` text that drives image prompts, or after editing `.mmd` Mermaid 
+- docs/maintenance.md:217 (mention) — **When to run:** after editing `docs/architecture/*.md` text that drives image prompts, or after editing `.mmd` Mermaid 
 - src/dev/CLAUDE.md:14 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 
 References:

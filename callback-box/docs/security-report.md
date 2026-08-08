@@ -11,7 +11,8 @@ reviewed-by: "DRAFT — unreviewed"
 The exhaustive accounting behind [SECURITY.md](../SECURITY.md). An agent
 is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
-`.claude/skills/security-report/SKILL.md` (repo root). Item vocabulary:
+[`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/callback-box/blob/main/.claude/skills/security-report/SKILL.md)
+(repo root). Item vocabulary:
 
 - **State**: `ok` (as intended) / `mitigated` (real risk, named control) /
   `accepted` (known weakness, deliberate decision, rationale linked) /
@@ -79,7 +80,7 @@ the member-tier gap below.
 |---|---|---|---|---|---|
 | `/auth/login`, `/auth/methods`, `/auth/me`, `/auth/logout` (`src/webapp/routes/auth.ts:144-228`) | Login is the credential; throttled scrypt verify (per-IP + per-account backoff, global scrypt cap) | ok | — | public | Necessarily pre-auth |
 | `/auth/setup` (`setup-token.ts`) | One-time in-memory token, 15-min TTL, printed to server console only | accepted | high | public | The setup-token window: a zero-user box with an exposed port is claimable until the owner account exists. Accepted with the TTL + self-disabling route as mitigation; provision promptly (`cb auth create-user`). |
-| `/auth/invite` (`auth-invite.ts:224,247`) | 32-byte single-use invite capability, 15-min TTL, hash-at-rest, throttled | ok | — | public | See invite items in §2 and the open-invite accepted risk in §7 |
+| `/auth/invite` (`auth-invite.ts:224,247`) | 32-byte single-use invite capability, 15-min TTL, hash-at-rest, throttled | ok | — | public | See invite items in §2 and the open-invite accepted risk in §8 |
 | `/auth/password` (`auth-password-change.ts`) | Session + current-password re-verify; bumps `gen` | ok | — | authed | |
 | `/auth/google`, `/auth/callback` (`auth-google.ts:46,62`) | Google-issued code/state; `email_verified` required; registered only when `GOOGLE_OAUTH_CLIENT_ID` set | ok | — | public | |
 | `/auth/google-services/callback` (`routes/admin.ts:27`) | Single-use OAuth `state` nonce + owner binding (403 on mismatch) | mitigated | med | public | Nonce closes the historical token-fixation hole (`google-oauth-state.ts`) |
@@ -99,8 +100,8 @@ Notable abilities, and the items that are more than routine:
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
 | `ANY /api/adapters/:adapter/*` (`api-adapters.ts:63`) | Proxy to Replicate/Mistral/Anthropic/OpenAI, injecting the box's stored key server-side | ok | — | authed | Key never reaches the client |
-| `GET /api/task-output` (`routes/api.ts:78`) | Reads `/tmp`-wide task outputs, not box-scoped | gap | med | authed | Cross-box/session transcript leak on shared hosts — [task-output-route-not-box-scoped](../../issues/bugs/2026-08-07-task-output-route-not-box-scoped.md) |
-| `GET /api/proxy-image` (`proxy-image.ts:130`) | Server-side fetch of arbitrary public image URLs | gap | low | authed | SSRF-guarded (see §4). Header comment claims it serves sandboxed frames unauthenticated, but it registers inside the wall — comment/behavior mismatch, unverified either way: [proxy-image-auth-comment-mismatch](../../issues/bugs/2026-08-07-proxy-image-auth-comment-mismatch.md) |
+| `GET /api/task-output` | Reads task-output files, not box-scoped | gap | med | authed | A cross-box read gap on multi-box servers, **tracked privately** (location-precise defect; disclosure withheld until fixed per the rubric's disclosure rule) |
+| `GET /api/proxy-image` | Server-side fetch of arbitrary public image URLs | gap | low | authed | SSRF-guarded (see §4). A possible auth-scope mismatch is under verification and **tracked privately** until confirmed harmless or fixed |
 | `GET /api/external` (`api-external.ts:47`) | Reads allowlisted paths outside the box root | ok | — | local | Dev-only: registered only when `NODE_ENV !== "production"`; never mounted on a deployed server |
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
 | tRPC `scheduler.trigger`, `commands.executeSync`, `drive.updateConfig`, `calendar.updateConfig` | Run scheduled script cards / registered commands; rewrite sync config | gap | med | authed | Member-level code execution and config writes; moot single-operator (fail-closed owner-only), bites on multi-member boxes — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
@@ -109,7 +110,7 @@ Notable abilities, and the items that are more than routine:
 | Hub catch-all proxy + WS proxy (`hub-server.ts`) | Routes `/<slug>/...` to children with injected identity | ok | — | public→authed | WS reconnects never cold-start an idle box (anti-resurrection-storm) |
 | WS-auth end-to-end test coverage | — | gap | low | — | The `gen`/identity resolver is unit-tested but no test drives a real socket-level subscription upgrade — [no-socket-level-ws-auth-test](../../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md) |
 
-pub-worker routes are in §6.
+pub-worker routes are in §6a.
 
 ## 2. Credentials
 
@@ -118,7 +119,7 @@ pub-worker routes are in §6.
 | Local password store — `~/.cb-auth.json` (`local-users.ts:87`) | 0600 self-healing (`:124-127`), symlink-rejected, scrypt N=2^17, atomic writes | Account takeover for stored users | **Machine-global** (all local boxes) | Permanent; password change bumps `gen`, revoking live sessions | ok |
 | Session secret — `~/.cb-session-secret` / `CB_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env.ts:119-127` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
 | Invite capabilities — `~/.cb-auth.json.invites.json` (`auth-invites.ts`) | SHA-256 hash at rest, 0600, atomic + locked | Create one member account on one box | Per-box | 15-min TTL, single-use, 100-live cap | ok |
-| Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§7) |
+| Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§8) |
 | `CB_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; stripped from agent subprocesses (`script-env.ts:116`) | Hub process lifetime | ok |
 | `CB_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
 | `CB_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router) | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
@@ -127,7 +128,7 @@ pub-worker routes are in §6.
 | Mobile session secret — `.callback-box/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.callback-box/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
 | Google OAuth client — `GOOGLE_OAUTH_CLIENT_ID/SECRET` (`google-auth.ts:48-52`) | Env; redacted; shared to children by design | OAuth app identity | Fleet | Operator-set | ok |
-| Google tokens — `CB_GOOGLE_TOKENS_FILE` (`google-token-store.ts`) | 0600 atomic, double-locked, fail-closed read-for-update | **All authorized Google services (gmail/calendar/drive), fleet-wide** — one shared refresh token | **Fleet** (legacy per-box fallback exists) | Effectively permanent; dead-grant tracking | accepted (§7) — [google-auth-policy-proxy](../../issues/features/2026-07-28-google-auth-policy-proxy.md) |
+| Google tokens — `CB_GOOGLE_TOKENS_FILE` (`google-token-store.ts`) | 0600 atomic, double-locked, fail-closed read-for-update | **All authorized Google services (gmail/calendar/drive), fleet-wide** — one shared refresh token | **Fleet** (legacy per-box fallback exists) | Effectively permanent; dead-grant tracking | accepted (§8) — [google-auth-policy-proxy](../../issues/features/2026-07-28-google-auth-policy-proxy.md) |
 | VAPID keys — `CB_VAPID_*` (`send-push.ts:46-60`) | Env only; redacted | Send push notifications as the box (no data access) | Server-wide | Operator-set | ok |
 | Provider keys — Mistral / Deepgram / OpenAI (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`) | Box `config/connectors/<name>.secret.json` first, env fallback; all in `SECRET_ENV_NAMES` + hub allowlist | Spend/abuse the provider account | Per-box (file) or server (env) | Operator-set | gap — hand-placed files have no mode enforcement: [connector-secret-file-modes](../../issues/bugs/2026-08-07-connector-secret-file-modes.md) |
 | Telegram — `config/connectors/telegram.secret.json` (`routers/admin.ts:96-101`) | Written **without** an explicit 0600 mode | Bot token = full bot control; webhook secret = forge inbound updates | Per-box | Permanent until re-setup | gap — same issue as above |
@@ -163,7 +164,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | **Google Gemini** (`scan-vision.ts:79-106`) | Only when `CB_SCAN_VISION=gemini` (default is Claude) | Scanned photos | `GEMINI_KEY` | Env opt-in | ok |
 | **Google Gmail** (`gmail.ts`, `gmail-drafts.ts`) | Automatic sync | IN: full messages/attachments. OUT: **drafts only — no `gmail.send` scope exists**; autonomous sending is architecturally impossible today | Shared fleet OAuth token | `googleServices.gmail` per-box flag (default off) | ok |
 | **Google Calendar** (`google-calendar.ts`) | Automatic sync | Event create/edit/delete (title, description, attendees) | Same token | `googleServices.calendar` | ok |
-| **Google Drive/Sheets/Docs** (`google-drive.ts`, handlers) | Automatic sync | Two-way edits to files the box already tracks; **full `drive` scope**, not `drive.file` (deliberate, to sync pre-existing docs by URL) | Same token | `googleServices.drive` | accepted (§7 — shared broad token) |
+| **Google Drive/Sheets/Docs** (`google-drive.ts`, handlers) | Automatic sync | Two-way edits to files the box already tracks; **full `drive` scope**, not `drive.file` (deliberate, to sync pre-existing docs by URL) | Same token | `googleServices.drive` | accepted (§8 — shared broad token) |
 | **Telegram** (`connectors/telegram.ts`, `telegram-outbound.ts`) | Automatic once configured | Agent-authored reply text (no attachment path); registers the public webhook URL | Per-box bot token | Presence of the secret file | ok |
 | **Web Push** (`send-push.ts`, `services/push.ts`) | Automatic on finalize | Full notification payload (agent-authored title/body/URL), VAPID-encrypted, through the browser's push service (FCM/Mozilla/Apple) | Server VAPID keypair | Browser subscription | ok |
 | **Box git remote** (`lib/git.ts:416-460`, `wakeup.ts:149`) | Automatic at the end of every wakeup | **The entire incremental box history** — every card, email, chat | Host git credentials | Operator-chosen remote; no remote → skipped | ok (stated plainly; see [git-push-confirmation](../../issues/decisions/2026-07-20-git-push-confirmation.md)) |
@@ -187,7 +188,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy source shared prod/dev; **currently Report-Only** — blocks nothing; promotion to enforcing is a deliberate gated step (`pnpm csp-digest`) |
 | Cross-box browser isolation | — | accepted | Boxes share one origin; a script in one box can make same-origin requests to a sibling. Accepted single-operator; server-side forgery still blocked (session secret never reaches boxes). [boxes-share-one-origin](../../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md) |
 | SSRF guards | `proxy-image.ts:50-121`, `url-fetch.ts:122-190` | ok | http(s) only; DNS-resolved block of loopback/private/link-local (incl. cloud metadata)/CGNAT/multicast, v4+v6+mapped; every redirect hop re-validated (max 3); 25MB/10s caps; `image/*` only; no cookie/Referer forwarding |
-| Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §7 |
+| Locking | `lib/file-lock.ts` (proper-lockfile, atomic mkdir guard), `lib/card-lock.ts` | ok | Hand-rolled reclaim retired after failing adversarial review; lease-steal residual in §8 |
 | Input validation | Zod at tRPC/route boundaries; `cb validate` for cards; strict manifest unions (`publish/manifest.ts`) | ok | |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
 | **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user. This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
@@ -198,16 +199,18 @@ wakeup cycle or routine use without a per-action confirmation.
 | Item | Detail | State | Sev | Reach |
 |---|---|---|---|---|
 | Process model | `cb hub` (systemd, dedicated non-root `callback` user) spawns one `cb serve` child per box, bundled `dist/cli.mjs` | ok | — | — |
-| Bind defaults | `cb serve` → `localhost` (`serve.ts:99`); hub → `127.0.0.1` (`hub-config.ts:104`); no `0.0.0.0` anywhere in `src/` | accepted | med | local | Operator-overridable — nothing refuses a non-loopback bind; safety is default + convention (nginx is the only public listener) |
+| Bind defaults | `cb serve` → `localhost` (`serve.ts:99`); hub → `127.0.0.1` (`hub-config.ts:104`); no `0.0.0.0` anywhere in `src/` | mitigated | med | local | Control is default-loopback + nginx as the only public listener. Residual: operator-overridable — nothing in code *refuses* a non-loopback bind. (No recorded decision that this is fine, so it is not marked `accepted`.) |
 | TLS — public path | Cloudflare-proxied, SSL mode "Flexible": **edge→origin is plain HTTP** (nginx :80 → 127.0.0.1) | gap | high | public (passive on-path) | [cloudflare-flexible-ssl-origin-plaintext](../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md) |
 | TLS — Tailscale path | Terminated by `tailscale serve` (LE certs), tailnet-only | ok | — | — |
 | Tailscale exposure gate | `tailscale-target.ts`, `tailscale-setup.ts:100-160` | mitigated | — | — | Refuses to expose a target that can't prove an auth-enforcing posture (`/auth/me` probe, anonymous-401 check); funnel never invoked, detected funnel = hard failure |
 | Cross-box env isolation | Hub child-env allowlist (§2) | mitigated | — | — | |
 | Secrets on the server | `/home/callback/.env`, 0600 (`setup-server.sh:186`) | ok | — | — | |
-| Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` — documented known gap | accepted | low | — | Infra changes require manual application |
+| Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require manual application; documented in `deploy/README.md` but not decided-acceptable — [deploy-infra-drift-setup-server-not-rerun](../../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md) |
 | Backups | No first-class mechanism; box git remotes optional; annex `numcopies: 1`, no annex remote | gap | med | — | [server-backup-story](../../issues/decisions/2026-08-07-server-backup-story.md) |
 
-## 6. Publishing (feature-specific)
+## 6. Feature-specific
+
+### 6a. Publishing
 
 The flow: `cb pub draft` renders a single named doc to a static bundle
 and **leak-scans it before anything enters git history**
@@ -232,7 +235,73 @@ credential living outside the box, the interactive confirm, and the git +
 | Revoke (`lifecycle.ts:253-298`) | Tombstone written first, synchronously (R2 strongly consistent — next request 410s); bundle deletion best-effort after; `Cache-Control: no-store` throughout so revoked URLs can't serve from cache; partial cleanup risks orphaned bytes, never re-exposure | ok | — | — |
 | Pre-auth oracle + log flood on `/a/` routes | Manifest status readable before Access verification; `any-account` access-log writes before asset validation | gap | low | public | [pub-worker-preauth-oracle-and-log-flood](../../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md) |
 
-## 7. Accepted risks (roll-up)
+### 6b. Account lifecycle
+
+Onboarding and recovery have their own threat shape: who can claim an
+identity, and what happens when someone is locked out. The rows below
+also appear in §1/§2/§8 where they belong structurally; they are
+gathered here so the lifecycle reads as one story.
+
+| Item | Detail | State | Sev | Reach |
+|---|---|---|---|---|
+| First-run setup | `POST /auth/setup` claims the owner account on a zero-user box; in-memory token, 15-min TTL, printed to server console, self-disabling (`setup-token.ts`) | accepted | high | public | The setup-token window (§1, §8.1) — provision the owner promptly |
+| Invite onboarding | 32-byte single-use capability, 15-min TTL, SHA-256 at rest, throttled; `/auth/invite` (`auth-invite.ts`, `auth-invites.ts`) | ok | — | public | The credential itself is a §2 row |
+| Open-invite email ownership | An open invite lets the holder claim any unclaimed email; pinning to a known email is the mitigation | accepted | med | public | Bearer-link tradeoff (§8.3); pre-positions the claimed email for later grants |
+| Password change | `/auth/password` requires the current password, bumps `gen`, revokes other sessions (`auth-password-change.ts`) | ok | — | authed | |
+| Recovery / reset | No web-side reset; recovery is `cb auth set-password` on the host; no MFA | accepted | med | local→owner | §8.2 — [web-password-reset-account-recovery](../../issues/features/2026-08-07-web-password-reset-account-recovery.md) |
+| Member capability tier | A logged-in non-owner member reaches every non-`ownerProcedure` surface, including `scheduler.trigger` (member-level shell execution) and `drive`/`calendar.updateConfig` | gap | med | authed | Moot single-operator (fail-closed owner-only); a multi-member design decision — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
+
+## 7. Cross-cutting threats
+
+Sections 1–6 inventory what exists. This section names a threat that does
+not reduce to any single row — it is the emergent risk of the
+architecture. Prompt injection is the first and, today, the only entry;
+add an entry when a second architecture-level threat earns one.
+
+### 7a. Prompt injection via external content
+
+**This is the most consequential security property of the system, and its
+mitigations are thin. Stated plainly rather than reassured.**
+
+callback-box is, by design, an agent that (a) reads your private data,
+(b) ingests untrusted external content, and (c) acts with no tool
+allowlist under `bypassPermissions`. That is the lethal trifecta: content
+authored by someone else, reaching the agent's context, can attempt to
+steer the agent's full capability (§4 agent blast radius is the "what it
+can do" half of this; this is the "who can trigger it" half).
+
+**Attack surface — every channel by which outside content becomes agent
+context:**
+
+| Channel | Source | file:line |
+|---|---|---|
+| Email bodies + attachments | Gmail connector | `src/connectors/gmail.ts` |
+| Web clippings + frozen-page HTML | Chrome extension (`callback-clerk`) | `callback-clerk/src/platform/clerk-api.ts` |
+| Telegram message text | Telegram connector | `src/connectors/telegram.ts` |
+| Calendar event content | Calendar connector (attendee-supplied titles/descriptions) | `src/connectors/google-calendar.ts` |
+| Image text (OCR/vision) | Scan-import + vision models — injection can hide *in a screenshot* | `src/services/scan-vision-claude.ts` |
+| Voice transcripts | Transcription pipeline | `src/core/transcription/` |
+| Card bodies generally | Any of the above lands as a card, and cards become agent context | `src/core/card-io.ts` |
+
+**State: `gap` — high severity, largely unmitigated.** There is no tool
+allowlist, no injection filter, no content-provenance boundary in agent
+context. The controls that exist are indirect and deployment-shaped, not
+containment:
+
+- **Deployment model** — the audience is single-operator boxes; the
+  blast radius is your own data, not other tenants'.
+- **Schedules off by default** — nothing auto-processes untrusted input
+  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/features/2026-07-20-schedules-off-by-default.md)).
+- **Human-in-the-loop on the few gated actions** — the publish flip and
+  credential-writing `cb auth` refuse to proceed unattended.
+
+Honest read: a determined injection that reaches the agent has the
+agent's full shell/file capability, and nothing structural stops it. The
+containment direction is [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md);
+until that lands, this is a real and accepted-by-deployment-model risk,
+not a solved one.
+
+## 8. Accepted risks (roll-up)
 
 Every `accepted` item, with its rationale:
 
@@ -264,12 +333,19 @@ Every `accepted` item, with its rationale:
    >5-min mid-critical-section suspension against a sub-millisecond
    synchronous RMW; effectively unreachable on the server deploy path.
    Accepted 2026-07-21 over fencing-token CAS. (§4)
-9. **Bind host is convention-guarded** — loopback by default, nothing
-   refuses an operator override. (§5)
-10. **Deploy infra drift** — nginx/systemd config changes need manual
-    re-application. (§5)
-11. **Leak-scan blind spots + bundles-are-public** — the human
-    file-by-file preview is the real publish gate; binaries ship
-    unscanned; tier gates viewers, not content. (§6)
-12. **`secret`-tier publications are capability URLs** — unguessability
-    (≥128-bit) is the entire access control. (§6)
+9. **Leak-scan blind spots + bundles-are-public** — the human
+   file-by-file preview is the real publish gate; binaries ship
+   unscanned; tier gates viewers, not content. (§6a)
+10. **`secret`-tier publications are capability URLs** — unguessability
+    (≥128-bit) is the entire access control. (§6a)
+11. **Prompt injection is unmitigated by containment** — accepted for now
+    on the strength of the single-operator deployment model, not because
+    the agent is contained; see §7a. This is the roll-up's most important
+    entry.
+
+Not in this roll-up because no acceptance decision has been made — these
+are **gaps**, tracked, awaiting fix or a decision: bind host being
+override-able (`mitigated`, §5), deploy infra drift (§5), the
+member-capability tier (§6b), Cloudflare Flexible SSL edge→origin
+plaintext (§5), the connector secret-file modes (§2), and two
+location-precise defects tracked privately (§1).

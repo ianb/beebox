@@ -27,8 +27,7 @@ unreviewed` until then.
 
 ## Provenance header
 
-Both artifacts start with an HTML comment block (SECURITY.md) or YAML
-frontmatter (structured version) carrying:
+Both artifacts carry a YAML frontmatter provenance block:
 
 ```yaml
 generated-by: .claude/skills/security-report/SKILL.md
@@ -56,8 +55,14 @@ reflects the tree as of this rev."
    range unscoped; any new route registration, `process.env` secret,
    outbound `fetch`/SDK client, or spawned process in files the map missed
    means the map is stale — update the map in this skill in the same change.
-5. Re-derive any SECURITY.md paragraph whose underlying items changed.
-6. Update the provenance headers (new rev, date, model,
+5. **Scan the private security tier separately.** The surface map cannot
+   reach `private-issues/security/` (a different repo, gitignored mount).
+   Read it directly: has any privately-tracked defect been fixed since
+   the last report? A fixed one becomes ordinary public history — move it
+   back to the public queue and let the report reference it directly.
+   Are there new private items to reference by class?
+6. Re-derive any SECURITY.md paragraph whose underlying items changed.
+7. Update the provenance headers (new rev, date, model,
    `reviewed-by: DRAFT — unreviewed`); present the diff to the boxholder.
 
 **Full regeneration** (first run, or when drift is suspected): execute the
@@ -65,6 +70,30 @@ inventory below from scratch — fan out read-only subagents per category —
 then reconcile against the existing structured version item by item rather
 than blind-replacing it, so deliberate wording and accepted-risk rationale
 survive.
+
+## When to update
+
+Anchored to events, not a calendar (there is no reliable do-at-a-cadence
+process to lean on):
+
+- **At release boundaries** — regenerate as a step in any release / cut
+  that will be shown to people. This is the primary human trigger, and it
+  rides something that already happens.
+- **When the staleness signal fires** — `generated-at-rev` plus the
+  surface map answer "have security surfaces changed since this report?"
+  Surfacing that drift (a `git diff --stat <rev>..HEAD -- <map>` that
+  comes back non-empty) is what tells you it's time; it converts a
+  cadence you don't keep into a signal you can see. This report is also
+  listed in `callback-box/docs/maintenance.md` alongside knowledge-audits
+  as slow-drift maintenance.
+- **On demand** — invoking `/security-report` is always the thing that
+  does the update; the triggers above just say *when* to invoke it.
+
+Deliberately **not** a cron job or a blocking commit gate: this is
+judgment work under human review, so it must not fire unattended or block
+unrelated commits. A scheduled *reminder* that only runs the staleness
+check and notifies (never writing) is an acceptable future addition — it
+automates the nudge, never the judgment.
 
 ## Surface map
 
@@ -105,6 +134,37 @@ the layout may fit the section):
 
 Severity+reachability exist so a reader can sort: a `high`/`public` gap is
 a launch blocker; a `low`/`unreachable` accepted risk is a footnote.
+
+**Two calls must never be made silently — make both fail-closed and
+surface them to the reviewer, never resolve them alone:**
+
+- **`accepted` vs `gap`.** `accepted` asserts *a human deliberately chose
+  to live with this* — putting words in the boxholder's mouth, in the
+  direction that reads as safe. Default: **no recorded decision (a dated
+  call, an issue resolution, a doc) ⇒ `gap`, not `accepted`.** If a
+  weakness has a real control but no accept-decision, it is `mitigated`,
+  not `accepted`. Do not mark `accepted` to describe the status quo.
+- **Public issue vs private (the disclosure rule).** The repo is
+  source-available, so a public issue is world-readable. Before filing a
+  weakness publicly, ask: **does disclosing it hand an attacker
+  materially more than reading the architecture already does?**
+  - *No* — it is inherent, class-level, or evident from the design
+    (prompt injection, the agent blast radius, boxes sharing an origin,
+    the `secret`-tier capability URL). File **public**, and if it is
+    scary, say so loudly. Concealing an architectural risk only deceives
+    the operator deciding whether to trust the system.
+  - *Yes* — it is a specific, unpatched defect where the disclosure *is*
+    the recipe (a route + line where a check is missing, on a live
+    surface). File in **`private-issues/security/`**; the public report
+    references it **by class only** — no `file:line`, no link (a
+    public→private link dangles and is forbidden). Such an item is
+    private *until fixed*, then it becomes ordinary public history.
+  - When genuinely unsure which side it falls on: **private until someone
+    decides** (over-hiding costs some transparency; under-hiding hands
+    out a roadmap).
+
+  Both calls are the boxholder's to confirm — draft your classification,
+  then let the human adjudicate the borderline ones at review.
 
 ### 1. Endpoints, auth, abilities
 
@@ -153,12 +213,38 @@ scripts, backup/git-push destinations.
 ### 6. Feature-specific sections
 
 One subsection per feature whose security shape is its own story.
-Currently: **Publishing** (the bundle pipeline, the leak scan as backstop
-not gate with its stated blind spots, the access gate, and the
-tier-gates-viewers-not-content honesty). Add subsections as features with
-their own threat shape land (e.g. a future plugin system).
+Currently:
+- **6a. Publishing** — the bundle pipeline, the leak scan as backstop not
+  gate with its stated blind spots, the access gate, and the
+  tier-gates-viewers-not-content honesty.
+- **6b. Account lifecycle** — onboarding and recovery: the setup-token
+  window, invite capabilities (pinned vs open, the email-ownership
+  tradeoff), password change, the absence of web reset/MFA, and the
+  member-capability tier. These rows also live structurally in §1/§2/§8;
+  gather them here so the lifecycle reads as one story.
 
-### 7. Accepted risks (roll-up)
+Add subsections as features with their own threat shape land (e.g. a
+future plugin system).
+
+### 7. Cross-cutting threats
+
+Sections 1–6 are inventories — accountings of things that exist. A
+threat here is a risk that does not reduce to any single row; it is
+emergent from the architecture. Each entry names the attack surface (the
+concrete channels) and assesses mitigations **honestly, without implying
+containment that isn't there** — overstatement is worst in exactly this
+section.
+
+Currently: **7a. Prompt injection via external content** — the lethal
+trifecta (agent reads private data + ingests untrusted content + acts
+with no tool allowlist). Enumerate every channel by which outside content
+becomes agent context (each connector, vision/OCR, transcripts, card
+bodies) and state plainly that structural mitigation is thin — the real
+controls are deployment-shaped (single-operator, schedules-off-by-default,
+human-in-the-loop on dangerous actions), not containment. Add a threats
+entry only when a second architecture-level threat earns one.
+
+### 8. Accepted risks (roll-up)
 
 Every `accepted` item from the sections above, repeated as a flat list
 with its rationale. This is the "residual risks" register a reader can
