@@ -23,6 +23,7 @@ export function AdvancedPanel({
   onStopProcess,
   running,
   sessionId,
+  onDeleteConversation,
 }: {
   onBack: () => void;
   debugView: boolean;
@@ -35,6 +36,7 @@ export function AdvancedPanel({
   onStopProcess: () => void;
   running: boolean;
   sessionId: string | null;
+  onDeleteConversation: () => void;
 }) {
   return (
     <>
@@ -47,14 +49,24 @@ export function AdvancedPanel({
         <MenuItem onClick={onToggleDebugLog}>{showDebugLog ? "✓ " : "  "}Debug Log</MenuItem>
       </span>
       <MenuDivider />
-      <MenuItem onClick={onCompactSession} disabled={busy}>Run /compact</MenuItem>
-      <MenuItem onClick={onRestartProcess} disabled={!running}>Restart Subprocess</MenuItem>
-      <MenuItem onClick={onStopProcess} disabled={!running}>Stop Process</MenuItem>
+      <MenuItem onClick={onCompactSession} disabled={busy}>
+        Run /compact
+      </MenuItem>
+      <MenuItem onClick={onRestartProcess} disabled={!running}>
+        Restart Subprocess
+      </MenuItem>
+      <MenuItem onClick={onStopProcess} disabled={!running}>
+        Stop Process
+      </MenuItem>
       <MenuDivider />
       <div className="px-3 py-1.5 text-xs text-warm-500">
         <div>Session: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
         <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
       </div>
+      <MenuDivider />
+      <MenuItem danger disabled={sessionId === null} onClick={onDeleteConversation}>
+        Delete conversation…
+      </MenuItem>
     </>
   );
 }

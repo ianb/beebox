@@ -16,6 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
 
 const STATE_FILE = ".callback-box/chat-review/state.json";
 
@@ -129,8 +130,46 @@ export async function loadReviewState(boxRoot: string): Promise<ReviewState> {
   return parsed.data;
 }
 
+/** Strict mutation read: missing is empty, but unreadable or malformed aborts deletion. */
+async function loadReviewStateForMutation(boxRoot: string): Promise<ReviewState> {
+  const filePath = path.join(boxRoot, STATE_FILE);
+  try {
+    const text = await fs.readFile(filePath, "utf-8");
+    return ReviewStateSchema.parse(JSON.parse(text));
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return emptyReviewState();
+    throw error;
+  }
+}
+
+/** Preflight destructive mutation without changing the journal. */
+export async function assertReviewStateReadableForDeletion(boxRoot: string): Promise<void> {
+  await loadReviewStateForMutation(boxRoot);
+}
+
 export async function saveReviewState(boxRoot: string, state: ReviewState): Promise<void> {
   const filePath = path.join(boxRoot, STATE_FILE);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+  await writeFileAtomic(filePath, {
+    content: JSON.stringify(state, null, 2) + "\n",
+  });
+}
+
+/** Remove one session's review journal entry, preserving all other state. */
+export async function removeSessionFromReview(boxRoot: string, sessionId: string): Promise<ReviewSessionState | null> {
+  const state = await loadReviewStateForMutation(boxRoot);
+  const previous = state.sessions[sessionId];
+  if (previous === undefined) return null;
+  delete state.sessions[sessionId];
+  await saveReviewState(boxRoot, state);
+  return previous;
+}
+
+/** Restore one removed journal entry after a compensated pre-storage failure. */
+export async function restoreSessionToReview(boxRoot: string, options: { sessionId: string; previous: ReviewSessionState | null }): Promise<void> {
+  const { sessionId, previous } = options;
+  if (previous === null) return;
+  const state = await loadReviewStateForMutation(boxRoot);
+  if (state.sessions[sessionId] !== undefined) return;
+  state.sessions[sessionId] = previous;
+  await saveReviewState(boxRoot, state);
 }
