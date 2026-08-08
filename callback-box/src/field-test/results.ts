@@ -13,6 +13,8 @@
  */
 
 import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { z } from "zod";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import type { DebriefResult } from "./questionnaire.js";
 import type { OperatorTurnStatus } from "./operator-turns.js";
@@ -107,4 +109,107 @@ export async function writeRunResults(result: FieldRunResult): Promise<void> {
   await writeFileAtomic(path.join(result.runDir, RESULTS_FILENAME), {
     content: `${JSON.stringify(result, null, 2)}\n`,
   });
+}
+
+// Read-side validation (principle #3, validate-at-boundaries): `results.json`
+// is written by this module, but `loadRunResults` reads it back in a SEPARATE
+// process (`cb field-test report <run-dir>`, run any time after the writer
+// exited), so a hand-edited or truncated file must fail loudly here rather
+// than flow a malformed value into the report writer. Kept in lockstep with
+// the interfaces above by hand — there is no schema-from-type derivation in
+// this codebase's zod usage, so a shape change to any interface above needs
+// the matching schema edit below.
+
+const PreActionResultSchema = z.strictObject({
+  type: z.enum(["inject-email", "advance-days"]),
+  detail: z.string(),
+  ok: z.boolean(),
+  error: z.string().nullable(),
+});
+
+const CheckResultSchema = z.strictObject({
+  script: z.string(),
+  passed: z.boolean(),
+  exitCode: z.number().nullable(),
+  stdout: z.string(),
+  stderr: z.string(),
+});
+
+const ActivityStatusSchema = z.enum(["completed", "turn-capped", "timed-out", "error", "harness-skipped"]);
+
+const ActivityResultSchema = z.strictObject({
+  status: ActivityStatusSchema,
+  turns: z.number(),
+  note: z.string(),
+  error: z.string().nullable(),
+});
+
+const CleanupResultSchema = z.strictObject({
+  policy: z.enum(["keep", "commit", "reset"]),
+  tag: z.string(),
+  head: z.string(),
+  resetTo: z.string().nullable(),
+  serverRestarted: z.boolean(),
+  error: z.string().nullable(),
+});
+
+const QuestionAnswerSchema = z.strictObject({
+  id: z.string(),
+  question: z.string(),
+  answer: z.string(),
+  reAsked: z.boolean(),
+});
+
+const ScreenshotRefSchema = z.strictObject({ filename: z.string(), resolved: z.boolean() });
+
+const DebriefResultSchema = z.strictObject({
+  answers: z.array(QuestionAnswerSchema),
+  outcome: z.enum(["smooth", "friction", "blocked", "unresolved"]),
+  outcomeReason: z.string().nullable(),
+  unanswered: z.array(z.string()),
+  screenshotRefs: z.array(ScreenshotRefSchema),
+  missingScreenshots: z.array(z.string()),
+});
+
+const QuiescenceOutcomeSchema = z.strictObject({
+  quiescent: z.boolean(),
+  waitedMs: z.number(),
+  stuck: z.array(z.strictObject({ name: z.string(), detail: z.string().nullable() })),
+});
+
+const ItemResultSchema = z.strictObject({
+  id: z.string(),
+  brief: z.string(),
+  screenshotsDir: z.string(),
+  pre: z.array(PreActionResultSchema),
+  activity: ActivityResultSchema,
+  debrief: DebriefResultSchema.nullable(),
+  debriefSkipped: z.string().nullable(),
+  quiescence: QuiescenceOutcomeSchema,
+  checks: z.array(CheckResultSchema),
+  cleanup: CleanupResultSchema,
+  events: z.array(z.string()),
+});
+
+const FieldRunResultSchema = z.strictObject({
+  scenario: z.string(),
+  scenarioDir: z.string(),
+  runDir: z.string(),
+  startedAt: z.string(),
+  finishedAt: z.string().nullable(),
+  boxTimeStart: z.string(),
+  boxTimeEnd: z.string(),
+  models: z.strictObject({ operator: z.string(), box: z.string() }),
+  serverBaseUrl: z.string(),
+  browseSession: z.string(),
+  items: z.array(ItemResultSchema),
+  aborted: z.strictObject({ itemId: z.string().nullable(), reason: z.string() }).nullable(),
+  events: z.array(z.string()),
+});
+
+/** Read and validate `results.json` from a run directory (the report writer's
+ *  input when regenerating a report from an already-finished run). */
+export async function loadRunResults(runDir: string): Promise<FieldRunResult> {
+  const raw = await fs.readFile(path.join(runDir, RESULTS_FILENAME), "utf-8");
+  return FieldRunResultSchema.parse(JSON.parse(raw));
 }

@@ -41,6 +41,7 @@ import { advanceDays, baselineGmailSync } from "./pre-actions.js";
 import { runChecklistItem } from "./run-item.js";
 import { resolveBrowseCommand, resolveBrowseKey } from "./run-env.js";
 import { writeRunResults, type FieldRunResult, type ItemResult } from "./results.js";
+import { writeFieldReport } from "./report.js";
 import type { FieldRunContext, QuiescenceBudget } from "./run-context.js";
 
 /** Where runs land unless the caller says otherwise. Outside the repo: run
@@ -336,7 +337,12 @@ export async function runFieldScenario(options: RunFieldScenarioOptions): Promis
       result.events.push(`browse session close failed: ${errorMessage(e)}`);
     });
     await writeRunResults(result);
-    emit(`run finished; results in ${path.join(runDir, "results.json")}`);
+    // A report is written even after an abort: the whole point of writing
+    // results.json after every item is that a run that dies at item five
+    // still leaves four items' evidence behind, and that evidence is worth
+    // nothing to a weekly triage read if it never becomes a report.
+    await writeFieldReport(result);
+    emit(`run finished; results in ${path.join(runDir, "results.json")}, report in ${path.join(runDir, "report.md")}`);
   }
 
   return result;

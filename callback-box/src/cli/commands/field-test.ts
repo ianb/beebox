@@ -13,6 +13,8 @@ import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { loadEmailFixture } from "../../field-test/email-fixture.js";
 import { fieldScenarioDir, loadFieldScenario } from "../../field-test/scenario.js";
 import { runFieldScenario, DEFAULT_RUNS_ROOT } from "../../field-test/run.js";
+import { loadRunResults } from "../../field-test/results.js";
+import { writeFieldReport, REPORT_FILENAME } from "../../field-test/report.js";
 import { FAKE_GMAIL_ENV } from "../../field-test/fake-gmail-gate.js";
 import {
   appendMessageToState,
@@ -140,8 +142,28 @@ const runCommand = new Command("run")
     }
   });
 
+const reportCommand = new Command("report")
+  .description(`Regenerate ${REPORT_FILENAME} from a run's results.json`)
+  .argument("<run-dir>", "Run directory (contains results.json)")
+  .action(async (runDir: string) => {
+    try {
+      const resolvedDir = path.resolve(runDir);
+      const loaded = await loadRunResults(resolvedDir);
+      // Write to the directory the caller pointed at, not `results.json`'s own
+      // stored `runDir`: a run directory that was moved or copied since it ran
+      // still has to write its report where it now lives.
+      const result = { ...loaded, runDir: resolvedDir };
+      await writeFieldReport(result);
+      console.log(`Wrote ${path.join(result.runDir, REPORT_FILENAME)}`);
+    } catch (error) {
+      console.error(chalk.red(errorMessage(error)));
+      process.exit(1);
+    }
+  });
+
 export const fieldTestCommand = new Command("field-test")
   .description("Agent field-test runs (persona operator against a real box)")
   .addCommand(runCommand)
   .addCommand(listCommand)
-  .addCommand(injectEmailCommand);
+  .addCommand(injectEmailCommand)
+  .addCommand(reportCommand);

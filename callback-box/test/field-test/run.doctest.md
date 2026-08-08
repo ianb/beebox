@@ -343,6 +343,16 @@ const onDisk = JSON.parse(await readFile(join(result.runDir, "results.json"), "u
 => loop-fixture | 4 | opus | null
 ```
 
+The run also writes `report.md` in the same `finally`, so a triage read never
+needs to regenerate one by hand — `cb field-test report <run-dir>` exists for
+the rare case a run directory moves or the writer's format changes later.
+
+```ts continue
+const reportMd = await readFile(join(result.runDir, "report.md"), "utf-8");
+[reportMd.includes("# Field test report: loop-fixture"), reportMd.includes("| first | completed | smooth |")].join(" | ")
+=> true | true
+```
+
 ```ts cleanup
 await rm(tmp, { recursive: true, force: true });
 ```
