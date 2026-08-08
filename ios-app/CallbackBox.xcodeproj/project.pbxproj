@@ -69,6 +69,17 @@
 		5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001152C3C000100000001 /* CaptureStoreTests.swift */; };
 		5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */; };
 		5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */; };
+		5A1001BC2C3C000100000001 /* PairedBoxCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */; };
+		5A1001BD2C3C000100000001 /* SharedSelectedBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */; };
+		5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */; };
+		E2A000012D7B000100000001 /* CallbackBoxShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = E2A000102D7B000100000001 /* CallbackBoxShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E2A000022D7B000100000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000112D7B000100000001 /* ShareViewController.swift */; };
+		E2A000032D7B000100000001 /* ShareExtensionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000122D7B000100000001 /* ShareExtensionAPI.swift */; };
+		E2A000042D7B000100000001 /* PairedBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000122C3C000100000001 /* PairedBox.swift */; };
+		E2A000052D7B000100000001 /* PairedBoxCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */; };
+		E2A000062D7B000100000001 /* SharedSelectedBoxSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */; };
+		E2A000072D7B000100000001 /* ShareExtensionAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000122D7B000100000001 /* ShareExtensionAPI.swift */; };
+		E2A000082D7B000100000001 /* ShareExtensionAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,7 +90,28 @@
 			remoteGlobalIDString = 5A1000502C3C000100000001;
 			remoteInfo = CallbackBox;
 		};
+		E2A000202D7B000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5A1000702C3C000100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E2A000302D7B000100000001;
+			remoteInfo = CallbackBoxShareExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E2A000402D7B000100000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E2A000012D7B000100000001 /* CallbackBoxShareExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		5A1000102C3C000100000001 /* CallbackBox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CallbackBox.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -89,6 +121,8 @@
 		5A1000142C3C000100000001 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		5A1000152C3C000100000001 /* PairBoxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairBoxView.swift; sourceTree = "<group>"; };
 		5A1000162C3C000100000001 /* ChatWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatWebView.swift; sourceTree = "<group>"; };
+		5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBoxCredentialStore.swift; sourceTree = "<group>"; };
+		5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSelectedBoxSnapshot.swift; sourceTree = "<group>"; };
 		B72000022C3C000100000001 /* NativeComposerContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeComposerContract.swift; sourceTree = "<group>"; };
 		B72000122C3C000100000001 /* ComposerDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraft.swift; sourceTree = "<group>"; };
 		B72000142C3C000100000001 /* ComposerDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerDraftRepository.swift; sourceTree = "<group>"; };
@@ -147,6 +181,14 @@
 		5A1001152C3C000100000001 /* CaptureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStoreTests.swift; sourceTree = "<group>"; };
 		5A1001162C3C000100000001 /* CaptureUploadCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinatorTests.swift; sourceTree = "<group>"; };
 		5A1001172C3C000100000001 /* CaptureAcquisitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisitionTests.swift; sourceTree = "<group>"; };
+		5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairedBoxStoreTests.swift; sourceTree = "<group>"; };
+		E2A000102D7B000100000001 /* CallbackBoxShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CallbackBoxShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2A000112D7B000100000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		E2A000122D7B000100000001 /* ShareExtensionAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionAPI.swift; sourceTree = "<group>"; };
+		E2A000132D7B000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E2A000142D7B000100000001 /* CallbackBoxShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CallbackBoxShareExtension.entitlements; sourceTree = "<group>"; };
+		E2A000152D7B000100000001 /* CallbackBox.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CallbackBox.entitlements; sourceTree = "<group>"; };
+		E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionAPITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,6 +206,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E2A000502D7B000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -171,6 +220,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1000312C3C000100000001 /* CallbackBox */,
+				E2A000602D7B000100000001 /* CallbackBoxShareExtension */,
 				5A1001122C3C000100000001 /* CallbackBoxTests */,
 				5A1000322C3C000100000001 /* Products */,
 			);
@@ -188,6 +238,7 @@
 				5A1000182C3C000100000001 /* Assets.xcassets */,
 				D94000202C3C000100000001 /* Earcons */,
 				5A1000172C3C000100000001 /* Info.plist */,
+				E2A000152D7B000100000001 /* CallbackBox.entitlements */,
 			);
 			path = CallbackBox;
 			sourceTree = "<group>";
@@ -197,6 +248,7 @@
 			children = (
 				5A1000102C3C000100000001 /* CallbackBox.app */,
 				5A1001102C3C000100000001 /* CallbackBoxTests.xctest */,
+				E2A000102D7B000100000001 /* CallbackBoxShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -218,6 +270,8 @@
 			isa = PBXGroup;
 			children = (
 				5A1000132C3C000100000001 /* PairedBoxStore.swift */,
+				5A1001B92C3C000100000001 /* PairedBoxCredentialStore.swift */,
+				5A1001BA2C3C000100000001 /* SharedSelectedBoxSnapshot.swift */,
 				5A1000332C3C000100000001 /* CaptureStore.swift */,
 				B72000142C3C000100000001 /* ComposerDraftRepository.swift */,
 				B72000162C3C000100000001 /* ComposerDraftStore.swift */,
@@ -285,6 +339,7 @@
 			isa = PBXGroup;
 			children = (
 				C83000042C3C000100000001 /* BoxLockTests.swift */,
+				5A1001BB2C3C000100000001 /* PairedBoxStoreTests.swift */,
 				5A100AD02C3C000100000001 /* AudioSessionRoutingTests.swift */,
 				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
 				5A1001132C3C000100000001 /* CaptureModelsTests.swift */,
@@ -298,8 +353,20 @@
 				B720009B2C3C000100000001 /* BulkUploadTests.swift */,
 				E1A000072C3C000100000001 /* LogForwarderTests.swift */,
 				B720001C2C3C000100000001 /* ChatAPITests.swift */,
+				E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */,
 			);
 			path = CallbackBoxTests;
+			sourceTree = "<group>";
+		};
+		E2A000602D7B000100000001 /* CallbackBoxShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				E2A000112D7B000100000001 /* ShareViewController.swift */,
+				E2A000122D7B000100000001 /* ShareExtensionAPI.swift */,
+				E2A000132D7B000100000001 /* Info.plist */,
+				E2A000142D7B000100000001 /* CallbackBoxShareExtension.entitlements */,
+			);
+			path = CallbackBoxShareExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -312,10 +379,12 @@
 				5A1000602C3C000100000001 /* Sources */,
 				5A1000202C3C000100000001 /* Frameworks */,
 				5A1000612C3C000100000001 /* Resources */,
+				E2A000402D7B000100000001 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E2A000212D7B000100000001 /* PBXTargetDependency */,
 			);
 			name = CallbackBox;
 			productName = CallbackBox;
@@ -340,6 +409,23 @@
 			productReference = 5A1001102C3C000100000001 /* CallbackBoxTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		E2A000302D7B000100000001 /* CallbackBoxShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E2A000802D7B000100000001 /* Build configuration list for PBXNativeTarget "CallbackBoxShareExtension" */;
+			buildPhases = (
+				E2A000702D7B000100000001 /* Sources */,
+				E2A000502D7B000100000001 /* Frameworks */,
+				E2A000712D7B000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CallbackBoxShareExtension;
+			productName = CallbackBoxShareExtension;
+			productReference = E2A000102D7B000100000001 /* CallbackBoxShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -356,6 +442,9 @@
 					5A1001502C3C000100000001 = {
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = 5A1000502C3C000100000001;
+					};
+					E2A000302D7B000100000001 = {
+						CreatedOnToolsVersion = 16.0;
 					};
 				};
 			};
@@ -374,6 +463,7 @@
 			targets = (
 				5A1000502C3C000100000001 /* CallbackBox */,
 				5A1001502C3C000100000001 /* CallbackBoxTests */,
+				E2A000302D7B000100000001 /* CallbackBoxShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -395,6 +485,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5A1001612C3C000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E2A000712D7B000100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -434,6 +531,8 @@
 				5A1000222C3C000100000001 /* CallbackBoxAppDelegate.swift in Sources */,
 				5A1000232C3C000100000001 /* PairingURLInbox.swift in Sources */,
 				5A1000272C3C000100000001 /* SpeechAnalyzerSession.swift in Sources */,
+				5A1001BC2C3C000100000001 /* PairedBoxCredentialStore.swift in Sources */,
+				5A1001BD2C3C000100000001 /* SharedSelectedBoxSnapshot.swift in Sources */,
 				5A1000292C3C000100000001 /* ComposerActionsView.swift in Sources */,
 				5A10002B2C3C000100000001 /* CaptureModels.swift in Sources */,
 				5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */,
@@ -448,6 +547,7 @@
 				5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */,
 				5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */,
 				5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */,
+				E2A000072D7B000100000001 /* ShareExtensionAPI.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -464,11 +564,25 @@
 				5A1001042C3C000100000001 /* CaptureStoreTests.swift in Sources */,
 				5A1001052C3C000100000001 /* CaptureUploadCoordinatorTests.swift in Sources */,
 				5A1001062C3C000100000001 /* CaptureAcquisitionTests.swift in Sources */,
+				5A1001BE2C3C000100000001 /* PairedBoxStoreTests.swift in Sources */,
 				B72000172C3C000100000001 /* ComposerDraftTests.swift in Sources */,
 				B720009A2C3C000100000001 /* BulkUploadTests.swift in Sources */,
 				E1A000062C3C000100000001 /* LogForwarderTests.swift in Sources */,
 				B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */,
 				C83000032C3C000100000001 /* BoxLockTests.swift in Sources */,
+				E2A000082D7B000100000001 /* ShareExtensionAPITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E2A000702D7B000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E2A000022D7B000100000001 /* ShareViewController.swift in Sources */,
+				E2A000032D7B000100000001 /* ShareExtensionAPI.swift in Sources */,
+				E2A000042D7B000100000001 /* PairedBox.swift in Sources */,
+				E2A000052D7B000100000001 /* PairedBoxCredentialStore.swift in Sources */,
+				E2A000062D7B000100000001 /* SharedSelectedBoxSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,6 +593,11 @@
 			isa = PBXTargetDependency;
 			target = 5A1000502C3C000100000001 /* CallbackBox */;
 			targetProxy = 5A1001402C3C000100000001 /* PBXContainerItemProxy */;
+		};
+		E2A000212D7B000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E2A000302D7B000100000001 /* CallbackBoxShareExtension */;
+			targetProxy = E2A000202D7B000100000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -604,6 +723,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CallbackBox/CallbackBox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -633,6 +753,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CallbackBox/CallbackBox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -707,6 +828,60 @@
 			};
 			name = Release;
 		};
+		E2A000812D7B000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = CallbackBoxShareExtension/CallbackBoxShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 44AJ3D25ZD;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CallbackBoxShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = app.callbackbox.ios.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E2A000822D7B000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = CallbackBoxShareExtension/CallbackBoxShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 44AJ3D25ZD;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CallbackBoxShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = app.callbackbox.ios.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -733,6 +908,15 @@
 			buildConfigurations = (
 				5A1001812C3C000100000001 /* Debug */,
 				5A1001822C3C000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E2A000802D7B000100000001 /* Build configuration list for PBXNativeTarget "CallbackBoxShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E2A000812D7B000100000001 /* Debug */,
+				E2A000822D7B000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

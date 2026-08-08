@@ -17,6 +17,7 @@ import { type ChatMessage, type ChatSession } from "../../core/chat/session/inde
 import { getMostActive } from "../../core/chat/session/history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { mergeSeedFeatures } from "../../core/chat/features.js";
+import { isResumableSession } from "../../core/chat/session/recent-landmark.js";
 import { summarizeWhatsChanged } from "../../core/chat/whats-changed.js";
 import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat/turn-buffer.js";
 import { getSessionUser } from "../auth.js";
@@ -145,6 +146,20 @@ async function resolveSendTarget(
   return { session, id: sessionParam };
 }
 
+async function validateExactSessionTarget(
+  boxRoot: string,
+  request: { sessionId: string; exactSession: boolean },
+): Promise<{ status: 400 | 404; error: string } | null> {
+  if (!request.exactSession) return null;
+  if (request.sessionId === "new") {
+    return { status: 400, error: "exactSession requires an existing session id" };
+  }
+  if (!(await isResumableSession(boxRoot, request.sessionId))) {
+    return { status: 404, error: `Chat session is no longer available: ${request.sessionId}` };
+  }
+  return null;
+}
+
 function pruneMessageIds(processedMessageIds: Map<string, number>): void {
   const cutoff = Date.now() - MESSAGE_ID_TTL_MS;
   for (const [id, ts] of processedMessageIds) {
@@ -210,7 +225,18 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       warnOnUnnormalizedImageOrientation(images);
     }
 
-    const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, { sessionParam, contextDir, requestSeedFeatures: seedFeatures });
+    const exactTargetError = await validateExactSessionTarget(boxRoot, {
+      sessionId: sessionParam,
+      exactSession: parsed.data.exactSession ?? false,
+    });
+    if (exactTargetError !== null) {
+      return reply.status(exactTargetError.status).send({ error: exactTargetError.error });
+    }
+    const { session: chatSession, id: knownId } = await resolveSendTarget(ctx, {
+      sessionParam,
+      contextDir,
+      requestSeedFeatures: seedFeatures,
+    });
 
     // Identify the sender. A cookie session is the desktop/web path; a paired
     // mobile device authenticates with a bearer token or cb_mobile cookie and

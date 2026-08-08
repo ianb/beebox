@@ -411,8 +411,8 @@ the contract.
 
 ## 5. Direct HTTP calls from native code
 
-Only five endpoints are hit by native code. (`/chat/send` is called by the **web layer inside the
-webview**, not natively — §6.)
+The main app and its Share Extension use the endpoints below. Ordinarily `/chat/send` is called by
+the **web layer inside the webview**; the Share Extension is the deliberate native exception.
 
 ### 5.1 `POST /api/pairing/redeem`
 
@@ -608,6 +608,36 @@ See §1.3 (full request/response/errors).
   drops that box's queued batch rather than retrying forever against a device that will never regain
   access.
 
+### 5.8 Share Extension — textual destinations and delivery
+
+- **Shared pairing state:** the main app writes selected-box metadata (id, label, base URL, lock
+  requirement) to App Group `group.app.callbackbox.ios`. The device token is never written there;
+  it is a generic-password Keychain item shared through access group
+  `44AJ3D25ZD.group.app.callbackbox.ios` (the resolved access group for the app's signing team), service
+  `app.callbackbox.ios.device-token`, account `<box UUID>`. Both targets carry both entitlements.
+- **`GET /api/trpc/share.destinations`:** bearer-authenticated query. The tRPC envelope's `data` is
+  `{ chats, saves }`; `chats` contains at most two fresh resumable landmark chats, each
+  `{sessionId,label,lastActivity,landmark:{dir,label,symbol}}`. `saves` starts with Inbox and then
+  landmarks advertising `destinations: [{for:[share]}]` as
+  `{destination:{kind:"inbox"}|{kind:"landmark",dir},label,symbol}`.
+- **`POST /api/chat/send`:** a URL or text sent to chat uses
+  `{message,messageId,session,exactSession:true}`. Exact mode rejects `new` and missing/archived
+  sessions; it never creates the requested id or falls back to another chat. The URL is the message.
+- **`POST /api/trpc/share.saveTextual`:** input is `{kind:"url",shareId,url,title?,capturedAt,
+  destination}` or `{kind:"text",shareId,text,title?,capturedAt,destination}`. A URL creates one
+  `.webpage.card` with the Clerk-compatible Markdown-link fallback; text creates one `.doc.card`.
+  Both carry optional `share-id` provenance. A retry finds the id even after the card moves and
+  returns that path only for identical immutable content; changed content or card type is 409.
+- **Current native activation:** URL and plain text, one provider at a time. Image, audio, and file
+  activation remains deferred until capture staging supports exact chat and save targets; the
+  extension does not advertise unsupported types.
+- **Anchors:** native `CallbackBoxShareExtension/ShareExtensionAPI.swift`,
+  `ShareViewController.swift`, app `Storage/PairedBoxCredentialStore.swift` and
+  `SharedSelectedBoxSnapshot.swift`; box `trpc/routers/share.ts`, `share-contract.ts`, and
+  `routes/chat-send-routes.ts`.
+- **Drift:** LOUD. Malformed envelopes, stale destinations, stale chats, authentication failure,
+  and conflicting retries remain visible in the sheet and do not dismiss it.
+
 ---
 
 ## 6. Server-side "mobile" awareness
@@ -661,6 +691,9 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
 | H4 | `POST /api/chat/upload-file` | native→box | multipart `file`; res `{path,originalName,size,mimetype}` | `Services/ChatAPI.swift` · `uploadFile` | `routes/chat-uploads.ts` · `registerChatUploadRoutes` | LOUD |
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
+| S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
+| S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
+| S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-routes.ts` · `validateExactSessionTarget` | LOUD |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
