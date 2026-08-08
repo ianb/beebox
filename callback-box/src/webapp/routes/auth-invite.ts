@@ -6,11 +6,11 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { BoxSpec } from "../server-types.js";
 import {
-  AuthInviteStoreError,
+  AuthCapabilityStoreError,
   consumeAuthInvite,
   inspectAuthInvite,
   type AuthInvite,
-} from "../auth-invites.js";
+} from "../auth-capabilities.js";
 import { getOwnerEmail } from "../auth.js";
 import { grantBoxAccess, normalizeAllowedEmails } from "../box-config-write.js";
 import { loadBoxConfig } from "../../core/box/config.js";
@@ -133,7 +133,7 @@ async function acceptInvite(options: {
   try {
     inspected = await inspectAuthInvite({ token, now });
   } catch (error) {
-    if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
+    if (error instanceof AuthCapabilityStoreError) return storeUnavailable(reply);
     throw error;
   }
   if (inspected.status !== "valid") {
@@ -181,7 +181,7 @@ async function acceptInvite(options: {
     try {
       consumed = await consumeAuthInvite({ token });
     } catch (error) {
-      if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
+      if (error instanceof AuthCapabilityStoreError) return storeUnavailable(reply);
       throw error;
     }
     if (consumed.status !== "consumed") {
@@ -227,7 +227,7 @@ export async function registerAuthInviteRoutes(server: FastifyInstance, boxes: B
     try {
       result = await inspectAuthInvite({ token });
     } catch (error) {
-      if (error instanceof AuthInviteStoreError) return storeUnavailable(reply);
+      if (error instanceof AuthCapabilityStoreError) return storeUnavailable(reply);
       throw error;
     }
     if (result.status !== "valid" || !targetBox(boxes, result.invite)) {

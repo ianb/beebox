@@ -344,13 +344,21 @@ async function rehash(opts: { email: string; password: string }): Promise<void> 
 
 /** Set a user's password and bump `gen` (revokes every outstanding session). */
 export async function setPassword(opts: { email: string; password: string }): Promise<LocalUser> {
-  const email = canonicalizeEmail(opts.email);
   const scrypt = await hashPassword(opts.password);
+  return setPasswordWithPasswordHash({ email: opts.email, scrypt });
+}
+
+/** Replace a password after hashing outside the credential-store lock. */
+export async function setPasswordWithPasswordHash(opts: {
+  email: string;
+  scrypt: StoredScrypt;
+}): Promise<LocalUser> {
+  const email = canonicalizeEmail(opts.email);
   return withAuthFileLock((file) => {
     if (!file) throw new NoSuchUserError(email);
     const record = file.users.find((u) => u.email === email);
     if (!record) throw new NoSuchUserError(email);
-    record.scrypt = scrypt;
+    record.scrypt = opts.scrypt;
     record.gen += 1;
     writeAuthFile(file);
     return toPublic(record);

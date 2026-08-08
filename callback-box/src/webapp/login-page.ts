@@ -72,6 +72,8 @@ export function pageShell({ title, body }: { title: string; body: string }): str
     "button:hover{background:#1d4ed8}" +
     ".error{margin:0 0 1rem;padding:.6rem .7rem;border-radius:8px;font-size:.9rem;" +
     "background:#fde8e8;color:#9b1c1c;border:1px solid #f5c2c2}" +
+    ".success{margin:0 0 1rem;padding:.6rem .7rem;border-radius:8px;font-size:.9rem;" +
+    "background:#e8f8ee;color:#176b3a;border:1px solid #b7e4c7}" +
     ".alt{margin:1rem 0 0;text-align:center}" +
     ".alt a{color:#2563eb;text-decoration:none;font-weight:600}" +
     ".alt a:hover{text-decoration:underline}" +
@@ -84,6 +86,7 @@ export function pageShell({ title, body }: { title: string; body: string }): str
     ".card{background:#1c1c1e;box-shadow:0 4px 24px rgba(0,0,0,.5)}" +
     "input{background:#2a2a2c;border-color:#444}" +
     ".error{background:#3b1414;color:#f5b5b5;border-color:#7a2626}" +
+    ".success{background:#123522;color:#a7e8bd;border-color:#276b43}" +
     ".hint{color:#aaa}.hint code{background:#2a2a2c}.divider{color:#999}}" +
     "</style></head><body>" +
     `<div class="card">${body}</div>` +
@@ -102,11 +105,12 @@ export interface LoginPageState {
   error: boolean;
   googleConfigured: boolean;
   setupRequired: boolean;
+  passwordReset: boolean;
 }
 
 /** Render the bare login page. `returnTo` is pre-sanitized by the caller. */
 export function renderLoginPage(state: LoginPageState): string {
-  const { prefix, returnTo, error, googleConfigured, setupRequired } = state;
+  const { prefix, returnTo, error, googleConfigured, setupRequired, passwordReset } = state;
   const returnToAttr = escapeHtml(returnTo);
   const google = googleConfigured
     ? "<div class=\"divider\">or</div>" +
@@ -119,6 +123,7 @@ export function renderLoginPage(state: LoginPageState): string {
     : "";
   const body =
     "<h1>Sign in</h1>" +
+    (passwordReset ? '<div class="success" role="status">Password reset. Sign in with your new password.</div>' : "") +
     errorBanner(error ? "Incorrect email or password." : null) +
     `<form method="POST" action="${escapeHtml(`${prefix}/auth/login`)}">` +
     `<input type="hidden" name="returnTo" value="${returnToAttr}">` +

@@ -2,9 +2,16 @@
 title: "No web password reset / account recovery — a member who forgets their password is stuck"
 area: callback-box
 labels: [soft-launch]
+resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked whether password reset works over the web
 ---
+
+Implemented by `68c5e537`: owners can mint a short-lived reset capability for
+an existing allowed member from Allowed Users, and the member chooses a new
+password without exposing it to the owner. Successful redemption revokes old
+sessions and returns the member to ordinary login; email self-service remains
+intentionally out of scope.
 
 > **Decided (2026-08-07):** build **option 2** — an operator-driven member
 > password reset that reuses the invite-link machinery: the operator mints a

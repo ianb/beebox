@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { createFirstUser, listUsers } from "../../src/webapp/local-users.js";
-import { mintAuthInvite } from "../../src/webapp/auth-invites.js";
+import { mintAuthInvite } from "../../src/webapp/auth-capabilities.js";
 import { loginThrottle } from "../../src/webapp/login-throttle.js";
 
 process.env.CB_AUTH_SCRYPT_N = "1024";

@@ -14,11 +14,13 @@ import {
   addUser,
   verifyPassword,
   setPassword,
+  setPasswordWithPasswordHash,
   removeUser,
   listUsers,
   getLocalUser,
   getLocalOwnerEmail,
 } from "../../src/webapp/local-users.js";
+import { hashPassword } from "../../src/webapp/local-users-scrypt.js";
 
 // Small work factor keeps scrypt fast in tests (2^14 vs the 2^17 prod default).
 process.env.CB_AUTH_SCRYPT_N = String(2 ** 14);
@@ -134,7 +136,25 @@ await verifyPassword({ email: "member@example.com", password: "s3cret" })
 
 (await verifyPassword({ email: "member@example.com", password: "n3wsecret" }))?.gen
 => 2
+```
 
+The reset flow can do expensive hashing before entering the credential-store
+lock, while preserving the same generation bump and user metadata.
+
+```ts continue
+const resetHash = await hashPassword("reset-secret");
+const resetUser = await setPasswordWithPasswordHash({ email: " MEMBER@example.com ", scrypt: resetHash });
+JSON.stringify({ name: resetUser.name, role: resetUser.role, gen: resetUser.gen })
+=> {"name":"Member","role":"member","gen":3}
+
+await verifyPassword({ email: "member@example.com", password: "n3wsecret" })
+=> null
+
+(await verifyPassword({ email: "member@example.com", password: "reset-secret" }))?.gen
+=> 3
+```
+
+```ts continue
 await rejectName(() => setPassword({ email: "ghost@example.com", password: "x" }))
 => NoSuchUserError
 ```

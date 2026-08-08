@@ -15,8 +15,10 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
-import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
+import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser, listUsers } from "../../local-users.js";
+import { AuthStoreUnavailableError } from "../../local-users-errors.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
+import { passwordResetAdminProcedures } from "./admin-password-resets.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
@@ -47,6 +49,7 @@ const gmailConfigSchema = z.object({
 /** Per-box admin router (Telegram, box config). */
 export const adminRouter = router({
   ...inviteAdminProcedures,
+  ...passwordResetAdminProcedures,
 
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
@@ -162,9 +165,18 @@ export const adminRouter = router({
       }
       config = boxConfigSchema.parse({});
     }
+    const allowedEmails = normalizeAllowedEmails(config.allowedEmails);
+    let memberEmails = new Set<string>();
+    try {
+      memberEmails = new Set(listUsers().filter((user) => user.role === "member").map((user) => user.email));
+    } catch (error) {
+      if (!(error instanceof AuthStoreUnavailableError)) throw error;
+      console.warn("[admin.boxConfig] local auth store unavailable; hiding password reset actions:", error);
+    }
     return {
       boxSlug: ctx.boxSlug,
-      allowedEmails: normalizeAllowedEmails(config.allowedEmails),
+      allowedEmails,
+      passwordResetEligibleEmails: allowedEmails.filter((email) => memberEmails.has(email)),
       publicUrl: config.publicUrl,
       ownerEmail: process.env.CB_OWNER_EMAIL
         ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
