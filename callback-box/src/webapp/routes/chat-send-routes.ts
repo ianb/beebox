@@ -103,6 +103,17 @@ function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { turnId:
   return { cancel };
 }
 
+function validateInboundImages(images: SendBody["images"]): { error: string; status: number } | null {
+  if (images === undefined || images.length === 0) return null;
+  const invalid = validateImages(images);
+  if (invalid !== null) return invalid;
+  // Contract check: images should arrive orientation-normalized (see
+  // shared/image-orientation.ts). Log, don't reject — there is no server
+  // codec to correct it, and rejecting a real photo would be user-hostile.
+  warnOnUnnormalizedImageOrientation(images);
+  return null;
+}
+
 function pruneMessageIds(processedMessageIds: Map<string, number>): void {
   const cutoff = Date.now() - MESSAGE_ID_TTL_MS;
   for (const [id, ts] of processedMessageIds) {
@@ -149,7 +160,6 @@ function persistProcessedMessageIds(boxRoot: string, processedMessageIds: Map<st
 
 export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   const { server, boxRoot, eventBus, registry, scheduleManager, processedMessageIds } = ctx;
-
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody | undefined }>("/api/chat/send", async (request, reply) => {
     const parsed = sendBodySchema.safeParse(request.body ?? {});
@@ -160,20 +170,18 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     }
     const { message, messageId, images, session: sessionParam, contextDir, seedFeatures } = parsed.data;
     const body = parsed.data;
-
-    if (images && images.length > 0) {
-      const invalid = validateImages(images);
-      if (invalid) return reply.status(invalid.status).send({ error: invalid.error });
-      // Contract check: images should arrive orientation-normalized (see
-      // shared/image-orientation.ts). Log, don't reject — there is no server
-      // codec to correct it, and rejecting a real photo would be user-hostile.
-      warnOnUnnormalizedImageOrientation(images);
-    }
+    const invalid = validateInboundImages(images);
+    if (invalid !== null) return reply.status(invalid.status).send({ error: invalid.error });
 
     const target = await resolveSendTargetForRoute({
       ctx,
       reply,
-      args: { sessionParam, contextDir, requestSeedFeatures: seedFeatures },
+      args: {
+        sessionParam,
+        contextDir,
+        requestSeedFeatures: seedFeatures,
+        exactSession: parsed.data.exactSession ?? false,
+      },
     });
     if (target === null) return;
     const { session: chatSession, id: knownId } = target;

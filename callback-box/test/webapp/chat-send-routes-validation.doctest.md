@@ -56,6 +56,41 @@ const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload: 
 await ctx.cleanup();
 ```
 
+An exact target must name an existing resumable chat. It never creates the
+requested id through the registry fallback:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "https://example.com", session: "missing-session", exactSession: true },
+});
+`${res.statusCode} ${res.body.error}`
+=> 404 Chat session is no longer available: missing-session
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+The `new` sentinel is also invalid in exact mode:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "https://example.com", session: "new", exactSession: true },
+});
+`${res.statusCode} ${res.body.error}`
+=> 400 exactSession requires an existing session id
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 An empty-string `message` is also rejected (not just an absent field):
 
 ```ts

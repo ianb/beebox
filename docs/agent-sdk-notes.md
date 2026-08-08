@@ -8,17 +8,59 @@ opportunities elsewhere in the code. The monitor automatically bumps settled
 releases and immediately applies callback-box-relevant security, memory, and
 correctness fixes.
 
-- **Current pin:** `0.3.222`
-- **Latest reviewed upstream version:** `0.3.224`
+- **Current pin:** `0.3.225`
+- **Latest reviewed upstream version:** `0.3.226`
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Hold one more turn, then bump to the newest
-  settled version. As of 2026-08-07T16:24Z `0.3.223` is ~42h old and `0.3.224`
-  ~15h old, so neither has cleared the 48h settling window. Nothing in either is
-  act-now for callback-box.
+- **Current recommendation:** Nothing pending is act-now. `0.3.226` is the only
+  version ahead of the pin; let it finish the 48h settling window, then bump.
 
 ## Release ledger
 
-### 0.3.224 — pending
+### 0.3.226 — pending
+
+- **Upstream:** "Updated to parity with Claude Code v2.1.226." The matching
+  Claude Code 2.1.226 entry says only "Bug fixes and reliability improvements" —
+  no itemized changes to evaluate.
+- **Callback-box applicability:** Nothing specific to assess. The parity target
+  names no behavior callback-box depends on, and the release adds no API
+  surface. Nothing relevant, nothing act-now.
+- **Action:** Published 2026-08-08T01:48Z, ~14h old. Deliberately not taken in
+  this turn's act-now bump: the act-now fix callback-box needed landed in
+  `0.3.225`, and `0.3.226` adds nothing that justifies skipping its settling
+  window. It should be picked up by the normal settled-version path next turn.
+- **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.226), [Claude Code 2.1.226](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21226)
+
+### 0.3.225 — applied (act-now)
+
+- **Upstream:** Single fix — background subagents in headless/SDK sessions never
+  resumed when a background shell command or Monitor they had left running
+  completed, so the subagent never saw the result. No Claude Code parity claim.
+- **Callback-box applicability:** **Act-now correctness fix, directly in
+  callback-box's execution shape.** Every callback-box query is a headless SDK
+  session (`src/core/agent/run.ts`, `src/services/claude-chat.ts`), and none of
+  them restrict the toolset — `buildQueryOptions` sets `permissionMode`,
+  `maxTurns`, hooks, and system-prompt options but passes no `allowedTools`/
+  `disallowedTools`, so box agents have Task and background Bash available and
+  can hit this. Callback-box also actively surfaces background-task lifecycle
+  events in the chat UI: `adaptTaskMessage`
+  (`src/core/chat/session/messages.ts`) normalizes `task_started`,
+  `task_progress`, `task_updated`, and `task_notification` into `task`
+  messages. The upstream symptom — a subagent that never resumes — would
+  present here as a background task that starts, ticks, and then never settles,
+  wedging the turn. Unlike 0.3.224's >200-char path bug, there is no
+  precondition that callback-box fails to meet; it only needs a subagent to
+  background a command, which is ordinary agent behavior.
+- **Action:** Applied this turn as an act-now bump from `0.3.222`, skipping the
+  settling window. Pinned to `0.3.225` specifically: it is the newest version
+  *required* by the act-now fix, and taking `0.3.226` instead would pull an
+  unsettled release that adds nothing needed. Verified with
+  `pnpm -C callback-box typecheck` (clean), `pnpm -C callback-box test`
+  (6444/6444 pass), and `scripts/sdk-steering-probe.ts` (all four steering
+  behaviors hold: mid-tool injection, boundary race, priority-now soft
+  interrupt, priority-later queueing).
+- **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.225), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03225)
+
+### 0.3.224 — applied
 
 - **Upstream:** Added `crossSessionInbound` and `dialogExpiry` settings —
   cross-session messages sent to a session running with bypassed permissions
@@ -62,12 +104,13 @@ correctness fixes.
   - Archive plugin source and sandbox credential masking: callback-box ships its
     plugins from a local path (`plugins/`) and configures no SDK sandbox
     credential masking. Nothing relevant.
-- **Action:** Published 2026-08-07T01:39Z; ~15h old, inside the settling window.
-  No act-now security, memory, or correctness fix that callback-box can reach,
-  so it waits.
+- **Action:** Published 2026-08-07T01:39Z. Never bumped to on its own merits —
+  it was still inside the settling window, with no act-now fix callback-box
+  could reach. Carried in by the `0.3.225` act-now bump on 2026-08-08, so the
+  cross-project session-directory fix is now present at the pin.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.224), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03224)
 
-### 0.3.223 — pending
+### 0.3.223 — applied
 
 - **Upstream:** Added the `resumeDropsTurn` option (paired with
   `resumeSessionAt`) so a truncating resume must declare the turn it drops;
@@ -104,10 +147,11 @@ correctness fixes.
     can undercount. `modelUsage` is the documented field for cost accounting.
     Note `src/core/usage.ts` is unaffected — it aggregates token usage from
     session JSONL assistant messages, not from SDK result messages.
-- **Action:** Published 2026-08-05T22:50Z. Still pending. Re-reviewed
-  2026-08-07 at ~42h old — just short of the 48h settling window, and still
-  nothing act-now, so it waits one more turn. The two scan-vision follow-ups
-  above are callback-box code opportunities, not blockers on the bump.
+- **Action:** Published 2026-08-05T22:50Z; cleared the settling window on
+  2026-08-07 but was overtaken before a settled bump ran. Carried in by the
+  `0.3.225` act-now bump on 2026-08-08. The two scan-vision follow-ups above are
+  now live opportunities at the current pin — `api_error_status: 529` and
+  `modelUsage` are both available to use.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.223), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03223)
 
 ### 0.3.222 — applied

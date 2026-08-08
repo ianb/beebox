@@ -49,6 +49,8 @@ export const sendBodySchema = z.object({
   session: z
     .string({ error: "session is required (id or 'new')" })
     .min(1, "session is required (id or 'new')"),
+  /** Require the named existing session; never create or fall back. */
+  exactSession: z.boolean().optional(),
   /**
    * Optional image attachments referenced by `[imageN]` tokens in `message`.
    * Tokens are replaced with the image block in the content array sent to

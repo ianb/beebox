@@ -27,7 +27,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Doc images | `pnpm generate:doc-images` | After editing architecture diagrams or prompts | `docs/architecture/images/` |
 | Box data migrations | `cb migrate` (per box) | After adding a new migrator to `src/core/migrations.ts` | Box working tree |
 | Broken-ref cleanup | `npx tsx scripts/clean-broken-refs.ts <boxRoot>` | One-off; when `cb validate` shows ref errors that pre-date a migration | Box working tree |
-| Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
+| Security report | `/security-report` (skill) | At release boundaries; when the staleness diff (`git diff <generated-at-rev>..HEAD` over the surface map) is non-empty | Draft `SECURITY.md` + `docs/security-report.md` for boxholder review |
 | Mobile parity audit | agent procedure (prompt in `docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of mobile work; quarterly otherwise | Issues filed for contract/matrix drift |
 
 ## Tasks
@@ -130,6 +130,24 @@ Runs YAML-defined tests against a real box agent, checking responses and tool us
 **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 
 **When to run:** after touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know. Also on a periodic cadence (monthly is probably enough) to catch slow drift.
+
+### Security report — `/security-report` (skill)
+
+Regenerates the two committed security artifacts: `docs/security-report.md`
+(the structured, per-item accounting) and `SECURITY.md` (the readable
+synthesis). The skill body is the committed rubric — an ordered inventory
++ evaluation process — so a regeneration is auditable as a process. It
+**drafts** for boxholder review and never auto-commits: the provenance
+header carries `reviewed-by`, which stays `DRAFT — unreviewed` until a
+human signs off.
+
+**When to run:** at any release boundary, and whenever the staleness diff
+is non-empty — `git diff <generated-at-rev>..HEAD` scoped to the rubric's
+surface map shows whether security surfaces changed since the last report.
+Like knowledge audits, treat it as slow-drift maintenance rather than a
+per-commit gate. Exploitable, location-precise findings go to
+`private-issues/security/`, not the public queue (the rubric's disclosure
+rule).
 
 ### Prompt report — `npm run prompt-report`
 

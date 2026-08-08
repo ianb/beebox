@@ -8,14 +8,26 @@ final class PairedBoxStore: ObservableObject {
     @Published var selectedBoxID: PairedBox.ID?
 
     private let storageURL: URL
+    private let credentialStore: PairedBoxCredentialStoreProtocol
+    private let selectedBoxStore: SharedSelectedBoxSnapshotStoreProtocol
 
     convenience init() {
         let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        self.init(storageURL: supportDirectory.appendingPathComponent("paired-boxes.json"))
+        self.init(
+            storageURL: supportDirectory.appendingPathComponent("paired-boxes.json"),
+            credentialStore: PairedBoxCredentialStore(),
+            selectedBoxStore: SharedSelectedBoxStore()
+        )
     }
 
-    init(storageURL: URL) {
+    init(
+        storageURL: URL,
+        credentialStore: PairedBoxCredentialStoreProtocol = PairedBoxCredentialStore(),
+        selectedBoxStore: SharedSelectedBoxSnapshotStoreProtocol = SharedSelectedBoxStore()
+    ) {
         self.storageURL = storageURL
+        self.credentialStore = credentialStore
+        self.selectedBoxStore = selectedBoxStore
         load()
     }
 
@@ -27,31 +39,75 @@ final class PairedBoxStore: ObservableObject {
     }
 
     func addManualBox(label: String, baseURL: URL, sessionID: String?) {
-        addOrSelectBox(label: label, baseURL: baseURL, sessionID: sessionID, authToken: nil)
+        _ = addOrSelectBox(label: label, baseURL: baseURL, sessionID: sessionID, authToken: nil)
     }
 
-    func addOrSelectBox(label: String, baseURL: URL, sessionID: String?, authToken: String?) {
+    @discardableResult func addOrSelectBox(
+        label: String,
+        baseURL: URL,
+        sessionID: String?,
+        authToken: String?
+    ) -> Bool {
         let cleanLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanSessionID = sessionID?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         let cleanAuthToken = authToken?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        if let existingIndex = boxes.firstIndex(where: { $0.baseURL == baseURL && $0.sessionID == cleanSessionID }) {
-            boxes[existingIndex].label = cleanLabel.isEmpty ? boxes[existingIndex].label : cleanLabel
-            boxes[existingIndex].authToken = cleanAuthToken ?? boxes[existingIndex].authToken
-            selectedBoxID = boxes[existingIndex].id
-            save()
-            return
-        }
-        let normalized = PairedBox(
-            id: UUID(),
-            label: cleanLabel.isEmpty ? baseURL.host ?? "Callback Box" : cleanLabel,
+        return addOrSelectBoxInternal(
+            label: cleanLabel,
             baseURL: baseURL,
             sessionID: cleanSessionID,
-            authToken: cleanAuthToken,
+            authToken: cleanAuthToken
+        )
+    }
+
+    @discardableResult private func addOrSelectBoxInternal(
+        label: String,
+        baseURL: URL,
+        sessionID: String?,
+        authToken: String?
+    ) -> Bool {
+        let resolvedLabel = label.isEmpty ? (baseURL.host ?? "Callback Box") : label
+
+        if let existingIndex = boxes.firstIndex(where: { $0.baseURL == baseURL && $0.sessionID == sessionID }) {
+            let cleanLabel = label.isEmpty ? boxes[existingIndex].label : label
+            var existing = boxes[existingIndex]
+            existing.label = cleanLabel
+
+            if let authToken {
+                do {
+                    try persistToken(authToken, for: existing.id)
+                    existing.authToken = authToken
+                } catch {
+                    return false
+                }
+            }
+
+            boxes[existingIndex] = existing
+            selectedBoxID = existing.id
+            save()
+            return true
+        }
+
+        let resolvedID = UUID()
+        if let authToken {
+            do {
+                try persistToken(authToken, for: resolvedID)
+            } catch {
+                return false
+            }
+        }
+
+        let normalized = PairedBox(
+            id: resolvedID,
+            label: resolvedLabel,
+            baseURL: baseURL,
+            sessionID: sessionID,
+            authToken: authToken,
             requiresDeviceUnlock: false
         )
         boxes.append(normalized)
         selectedBoxID = normalized.id
         save()
+        return true
     }
 
     func pair(from url: URL) async -> Bool {
@@ -72,13 +128,12 @@ final class PairedBoxStore: ObservableObject {
         if let pairingToken = queryItems.value(named: "pairingToken") ?? queryItems.value(named: "token") {
             do {
                 let redeemed = try await redeemPairing(baseURL: baseURL, pairingToken: pairingToken)
-                addOrSelectBox(
+                return addOrSelectBox(
                     label: label,
                     baseURL: baseURL,
                     sessionID: queryItems.value(named: "session"),
                     authToken: redeemed.token
                 )
-                return true
             } catch {
                 return false
             }
@@ -88,13 +143,12 @@ final class PairedBoxStore: ObservableObject {
         #else
         let directAuthToken: String? = nil
         #endif
-        addOrSelectBox(
+        return addOrSelectBox(
             label: label,
             baseURL: baseURL,
             sessionID: queryItems.value(named: "session"),
             authToken: directAuthToken
         )
-        return true
     }
 
     #if DEBUG
@@ -103,7 +157,7 @@ final class PairedBoxStore: ObservableObject {
             assertionFailure("Local test box URL is invalid")
             return
         }
-        addOrSelectBox(label: "Local test box", baseURL: url, sessionID: nil, authToken: nil)
+        _ = addOrSelectBox(label: "Local test box", baseURL: url, sessionID: nil, authToken: nil)
     }
     #endif
 
@@ -121,19 +175,32 @@ final class PairedBoxStore: ObservableObject {
     }
 
     func remove(at offsets: IndexSet) {
-        for index in offsets.sorted(by: >) {
-            boxes.remove(at: index)
+        let toRemove = offsets.compactMap { boxes[safe: $0] }
+        do {
+            try removeBoxes(toRemove)
+        } catch {
+            // Failed pairing cleanup is intentionally non-fatal; keep metadata unchanged.
         }
-        if let selectedBoxID, boxes.contains(where: { $0.id == selectedBoxID }) == false {
-            self.selectedBoxID = boxes.first?.id
-        }
-        save()
     }
 
     func remove(_ box: PairedBox) {
-        boxes.removeAll { $0.id == box.id }
-        if selectedBoxID == box.id {
-            selectedBoxID = boxes.first?.id
+        do {
+            try removeBoxes([box])
+        } catch {
+            // Failed pairing cleanup is intentionally non-fatal; keep metadata unchanged.
+        }
+    }
+
+    private func removeBoxes(_ boxesToRemove: [PairedBox]) throws {
+        guard boxesToRemove.isEmpty == false else {
+            return
+        }
+
+        try deleteTokensFirst(for: boxesToRemove)
+        let removing = Set(boxesToRemove.map(\.id))
+        boxes.removeAll { removing.contains($0.id) }
+        if let selectedBoxID, removing.contains(selectedBoxID) {
+            self.selectedBoxID = boxes.first?.id
         }
         save()
     }
@@ -144,10 +211,12 @@ final class PairedBoxStore: ObservableObject {
             let snapshot = try JSONDecoder().decode(StoreSnapshot.self, from: data)
             boxes = snapshot.boxes
             selectedBoxID = snapshot.selectedBoxID
+            _ = migrateOrRestoreTokens()
         } catch {
             boxes = []
             selectedBoxID = nil
         }
+        selectedBoxStore.persist(selectedBox)
     }
 
     private func save() {
@@ -157,11 +226,83 @@ final class PairedBoxStore: ObservableObject {
                 withIntermediateDirectories: true,
                 attributes: nil
             )
-            let snapshot = StoreSnapshot(boxes: boxes, selectedBoxID: selectedBoxID)
+        let snapshot = StoreSnapshot(boxes: boxes.map(persistableBox), selectedBoxID: selectedBoxID)
             let data = try JSONEncoder().encode(snapshot)
             try data.write(to: storageURL, options: [.atomic])
         } catch {
             assertionFailure("Failed to save paired boxes: \(error)")
+        }
+        selectedBoxStore.persist(selectedBox)
+    }
+
+    private func persistableBox(_ box: PairedBox) -> PairedBox {
+        let keychainHasToken = box.authToken.map { credentialStore.readToken(for: box.id) == $0 } ?? true
+        return PairedBox(
+            id: box.id,
+            label: box.label,
+            baseURL: box.baseURL,
+            sessionID: box.sessionID,
+            authToken: keychainHasToken ? nil : box.authToken,
+            requiresDeviceUnlock: box.requiresDeviceUnlock
+        )
+    }
+
+    private func migrateOrRestoreTokens() -> Bool {
+        let hasLegacyToken = boxes.contains { $0.authToken != nil }
+        let allLegacyTokensMigrated = boxes.enumerated().reduce(into: true) { allMigrated, item in
+            let index = item.offset
+            var box = item.element
+            if let legacy = box.authToken {
+                if allMigrated {
+                    do {
+                        try persistToken(legacy, for: box.id)
+                    } catch {
+                        allMigrated = false
+                    }
+                }
+                box.authToken = legacy
+            } else if let token = credentialStore.readToken(for: box.id) {
+                box.authToken = token
+            }
+            boxes[index] = box
+        }
+
+        _ = credentialStore.purgeOrphanTokens(knownBoxIDs: Set(boxes.map(\.id)))
+        guard hasLegacyToken, allLegacyTokensMigrated else {
+            return false
+        }
+        // Once all legacy tokens verify in keychain, persist a token-free snapshot
+        // so plaintext files drop over time.
+        save()
+        return true
+    }
+
+    private func persistToken(_ token: String, for boxID: UUID) throws {
+        do {
+            try credentialStore.writeToken(token, for: boxID)
+            guard credentialStore.readToken(for: boxID) == token else {
+                throw MissingTokenReadback.error
+            }
+        } catch {
+            throw error
+        }
+    }
+
+    private func deleteTokensFirst(for boxesToRemove: [PairedBox]) throws {
+        var removed: [(UUID, String)] = []
+        for box in boxesToRemove {
+            let previousToken = box.authToken ?? credentialStore.readToken(for: box.id)
+            do {
+                try credentialStore.deleteToken(for: box.id)
+            } catch {
+                for (id, token) in removed.reversed() {
+                    try persistToken(token, for: id)
+                }
+                throw error
+            }
+            if let token = previousToken {
+                removed.append((box.id, token))
+            }
         }
     }
 
@@ -179,6 +320,16 @@ final class PairedBoxStore: ObservableObject {
             throw URLError(.userAuthenticationRequired)
         }
         return try JSONDecoder().decode(PairingRedeemResponse.self, from: data)
+    }
+
+    private struct MissingTokenReadback: Swift.Error {
+        static let error = MissingTokenReadback()
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 
@@ -202,7 +353,7 @@ private extension String {
     }
 }
 
-private extension [URLQueryItem] {
+private extension Array where Element == URLQueryItem {
     func value(named name: String) -> String? {
         first { $0.name == name }?.value
     }

@@ -7,6 +7,13 @@ discovered-in: worktree-open-source-readiness — launch-readiness conversation 
 labels: [soft-launch]
 ---
 
+> **Status 2026-08-07** — built on `worktree-security-report`: the
+> `/security-report` skill (the committed rubric), the structured report
+> (`callback-box/docs/security-report.md`), and a DRAFT
+> `callback-box/SECURITY.md`, cross-model-reviewed (7 findings applied).
+> Awaiting boxholder review of the two report artifacts before merge;
+> the headers carry `reviewed-by: DRAFT — unreviewed` until then.
+
 The launch needs a SECURITY.md-shaped "what this can touch" page (the
 OpenClaw lesson from
 [the competitive research](../../research/openclaw-hermes/README.md):
@@ -121,7 +128,7 @@ do not re-file):**
   `src/core/agent/run.ts`) → tracked in
   [agent-containment-allowed-directories](2026-07-20-agent-containment-allowed-directories.md).
 - Mobile token at rest →
-  [ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md),
+  [ios-token-plaintext-not-keychain](../closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md),
   [mobile-device-token-no-expiry](../code-quality/2026-07-19-mobile-device-token-no-expiry.md).
 
 **Report content outline (structure + pointers the report must cover):**

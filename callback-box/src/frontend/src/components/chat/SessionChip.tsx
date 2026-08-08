@@ -5,8 +5,10 @@
  * panel-swap idiom), but the face is the session's own name, because an
  * unlabeled `⋯` stops working once every other menu face names its object.
  *
- * "Recent chats" is deliberately gone — the pill's switch menu owns finding
- * sessions now.
+ * "Recent chats ›" lives here, as it did on the old `⋯` menu: the pill's
+ * switch menu moves between landmarks and resumes each one's newest chat, so
+ * it can't reach a sibling session in the landmark you're already in. Finding
+ * *a session* is a chat concern; finding *a place* is the pill's.
  *
  * Face, following the bar's one-flexible-member rule: the session label
  * (truncated) from `sm:` up, a sliders icon below it — the chip is the third
@@ -27,12 +29,13 @@ import { DeleteChatDialog } from "../chat-delete/DeleteChatDialog";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { ModelPanel } from "./SessionChip-model-panel";
+import { SessionListPanel } from "./SessionListPanel";
 import { MODEL_OPTIONS } from "./InteractiveChat-helpers";
 
 // Single-panel submenu pattern: the dropdown swaps which set of rows it
 // renders rather than spawning a flyout. Better on touch and avoids
 // positioning complexity. Resets to "root" when the dropdown closes.
-type SessionChipPanel = "root" | "model" | "advanced";
+type SessionChipPanel = "root" | "sessions" | "model" | "advanced";
 
 /** Three sliders — "settings for this thing", the phone-width face. */
 function SlidersIcon() {
@@ -52,14 +55,16 @@ function CaretIcon() {
   );
 }
 
-/** Root panel: New session, "Model ›", divider, "Advanced ›". */
+/** Root panel: New session, "Recent chats ›", "Model ›", divider, "Advanced ›". */
 function RootPanel({
   onNewSession,
+  onOpenSessions,
   currentModelLabel,
   onOpenModel,
   onOpenAdvanced,
 }: {
   onNewSession: () => void;
+  onOpenSessions: () => void;
   currentModelLabel: string;
   onOpenModel: () => void;
   onOpenAdvanced: () => void;
@@ -67,6 +72,12 @@ function RootPanel({
   return (
     <>
       <MenuItem onClick={onNewSession}>New session</MenuItem>
+      <MenuItem onClick={onOpenSessions} keepOpen>
+        <span className="flex justify-between gap-2 w-full">
+          <span>Recent chats</span>
+          <span className="text-warm-500">›</span>
+        </span>
+      </MenuItem>
       <MenuItem onClick={onOpenModel} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Model</span>
@@ -84,9 +95,24 @@ function RootPanel({
   );
 }
 
+/** "Recent chats" sub-panel: back row + the shared `SessionListPanel` body. */
+function SessionsPanel({ onBack, contextDir }: { onBack: () => void; contextDir: string | null }) {
+  return (
+    <>
+      <MenuItem onClick={onBack} keepOpen>
+        <span className="text-warm-500">‹ Recent chats</span>
+      </MenuItem>
+      <MenuDivider />
+      <SessionListPanel contextDir={contextDir} />
+    </>
+  );
+}
+
 interface SessionChipBodyProps {
   panel: SessionChipPanel;
   onNewSession: () => void;
+  contextDir: string | null;
+  onOpenSessions: () => void;
   currentModelLabel: string;
   onOpenModel: () => void;
   selectedModel: string | null;
@@ -103,10 +129,12 @@ interface SessionChipBodyProps {
  * `SessionChipPanel` member at compile time without one).
  */
 function SessionChipBody(props: SessionChipBodyProps): ReactNode {
-  const { panel, onNewSession, currentModelLabel, onOpenModel, selectedModel, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
+  const { panel, onNewSession, contextDir, onOpenSessions, currentModelLabel, onOpenModel, selectedModel, onSelectModel, onOpenAdvanced, onBackToRoot, advancedProps } = props;
   switch (panel) {
     case "root":
-      return <RootPanel onNewSession={onNewSession} currentModelLabel={currentModelLabel} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
+      return <RootPanel onNewSession={onNewSession} onOpenSessions={onOpenSessions} currentModelLabel={currentModelLabel} onOpenModel={onOpenModel} onOpenAdvanced={onOpenAdvanced} />;
+    case "sessions":
+      return <SessionsPanel onBack={onBackToRoot} contextDir={contextDir} />;
     case "model":
       return <ModelPanel onBack={onBackToRoot} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
     case "advanced":
@@ -117,6 +145,8 @@ function SessionChipBody(props: SessionChipBodyProps): ReactNode {
 export interface SessionChipProps {
   /** The session's display name (`chat.bootstrap`'s `label`), or null before one exists. */
   label: string | null;
+  /** Landmark dir this chat is bound to — orders the Recent chats panel. */
+  contextDir: string | null;
   onNewSession: () => void;
   selectedModel: string | null;
   onSelectModel: (model: string | null) => void;
@@ -135,6 +165,7 @@ export interface SessionChipProps {
 export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const {
     label,
+    contextDir,
     onNewSession,
     selectedModel,
     onSelectModel,
@@ -165,7 +196,10 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
     <>
       <Dropdown
         align="right"
-        width="w-56"
+        // The Recent-chats panel renders two-line rows (label, id, timestamp,
+        // landmark) that want 28rem; the other panels keep the compact menu
+        // width. Dropdown's viewport clamp still bounds it on narrow screens.
+        width={panel === "sessions" ? "w-[28rem]" : "w-56"}
         panelIndex={panel === "root" ? 0 : 1}
         onClose={() => setPanel("root")}
         trigger={({ toggle, ariaProps }) => (
@@ -194,6 +228,8 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
         <SessionChipBody
           panel={panel}
           onNewSession={onNewSession}
+          contextDir={contextDir}
+          onOpenSessions={() => setPanel("sessions")}
           currentModelLabel={currentModelLabel}
           onOpenModel={() => setPanel("model")}
           selectedModel={selectedModel}

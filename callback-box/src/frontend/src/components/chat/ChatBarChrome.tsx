@@ -100,6 +100,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
     <>
       <SessionChip
         label={sessionLabel}
+        contextDir={contextDir}
         onNewSession={onNewSession}
         selectedModel={selectedModel}
         onSelectModel={onSelectModel}

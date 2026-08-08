@@ -19,6 +19,8 @@ export const DocSchema = cardSchema("doc", {
   category: "authored",
   fields: {
     title: z.string(),
+    /** Stable id supplied by an external share operation for retry deduplication. */
+    "share-id": z.string().uuid().optional(),
     body: body(z.string()),
   },
   instructions: `# Doc Cards
@@ -80,10 +82,13 @@ Never a top-level or shared \`images/\` directory.
 
 export type DocFields = InferCardFields<typeof DocSchema>;
 
-export function createDocTemplate(options: { title: string; body?: string }): string {
+export function createDocTemplate(options: { title: string; body?: string; shareId?: string }): string {
   const fields: Record<string, unknown> = {
     title: options.title,
   };
+  if (options.shareId !== undefined && options.shareId !== "") {
+    fields["share-id"] = options.shareId;
+  }
   const bodyText = options.body ?? "";
   const bodyTail = bodyText === "" ? "" : `${bodyText}${bodyText.endsWith("\n") ? "" : "\n"}`;
   return `---\n${stringifyYaml(fields)}---\n${bodyTail}`;

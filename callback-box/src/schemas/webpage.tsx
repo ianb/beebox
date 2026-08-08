@@ -33,6 +33,8 @@ export const WebpageSchema = cardSchema("webpage", {
     // In-box ref to the frozen, self-contained snapshot (attach/page.frozen),
     // stored under a `ref` key like every other card reference.
     frozen: z.object({ ref: z.string() }).optional(),
+    /** Stable id supplied by an external share operation for retry deduplication. */
+    "share-id": z.string().uuid().optional(),
     // The readable markdown rendering of the page. The card IS the document.
     body: body(z.string()),
   },
@@ -88,6 +90,7 @@ export function createWebpageTemplate(options: {
   byline?: string | undefined;
   excerpt?: string | undefined;
   frozenRef?: string | undefined;
+  shareId?: string | undefined;
 }): string {
   const fields: Record<string, unknown> = {
     title: options.title,
@@ -107,6 +110,9 @@ export function createWebpageTemplate(options: {
   }
   if (options.frozenRef !== undefined && options.frozenRef !== "") {
     fields["frozen"] = { ref: options.frozenRef };
+  }
+  if (options.shareId !== undefined && options.shareId !== "") {
+    fields["share-id"] = options.shareId;
   }
   const yamlText = stringifyYaml(fields);
   const bodyText = options.content;
