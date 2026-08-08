@@ -594,10 +594,13 @@ shape.
   properly, but the failure is rare and the mitigation is known. **Lean: add a
   `mkdir`-based lock, matching `pi_lock` in `bin/private-issues`** — the pattern
   already exists, so the cost is small. Not in the first chunk.
-- **Does `list --json` belong in bash or TypeScript?** `bin/worktrees` is bash;
-  the JSON join with per-worktree error handling is the kind of thing bash does
-  badly. **Lean: TypeScript, invoked through the bash dispatcher like `serve`
-  already does (`bin/worktrees:34`).** That precedent exists and costs nothing.
+- ~~**Does `list --json` belong in bash or TypeScript?**~~ **Settled during
+  implementation: bash.** The lean was TypeScript on ergonomic grounds, but the
+  agent-liveness answer has to come from `wt_other_agent_live` and a TS
+  implementation would have meant a second copy of the exact guard whose
+  duplication caused the fail-open bug this plan closes. `jq` does the JSON
+  assembly, which was the only real argument for TS. Traces to §8, one way to do
+  each thing — and it outranks ergonomics for a safety-critical guard.
 
 ## Knowledge audits
 

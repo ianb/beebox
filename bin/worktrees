@@ -14,8 +14,12 @@
 #                      dirty, or an agent is live in it. --force overrides the
 #                      first two; nothing overrides the liveness check.
 #                      --keep-branch keeps the branch, --dry-run just reports.
+#   list [--json]      Every worktree, joined across all three signals: git
+#                      (ahead/dirty/merged), the router (cold/ready/ports), and
+#                      agent liveness (none/live/unknown). Works with no router
+#                      running — the runtime column degrades to "unknown".
 #   serve              Run the router in the foreground.
-#   status, list       Show what the router is currently running.
+#   status             Raw router status JSON (what the router itself reports).
 #   down <name>        Tell the router to stop a worktree's processes.
 #   panic              Kill the router + any known children, wipe state.
 #                      Use when you suspect orphans.
@@ -136,7 +140,87 @@ case "$cmd" in
     exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/bin/router.ts" "$@"
     ;;
 
-  status | list)
+  list)
+    as_json=false
+    [ "${1:-}" = "--json" ] && as_json=true
+
+    # Implemented in bash, not TypeScript, for one reason: the agent-liveness
+    # answer must come from wt_other_agent_live and nowhere else. A second
+    # implementation of a guard that stands in front of an irreversible delete is
+    # exactly the duplication that produced the fail-open bug this refactor
+    # closed, and a TS reimplementation would be precisely that.
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    WT_LOG_LABEL="List"
+    wt_agent_snapshot_capture
+
+    # One router query for the whole listing. A router that is down, wedged, or
+    # simply not started is normal — every runtime field then reports "unknown",
+    # which is distinct from a worktree the router knows to be "cold".
+    router_json=$(curl -fsS -m 3 --unix-socket "$ROUTER_SOCK" "http://router/__router/status" 2>/dev/null || true)
+
+    rows="[]"
+    for d in "$WT_ROOT"/*; do
+      [ -d "$d" ] || continue
+      name=$(basename "$d")
+
+      wt_other_agent_live "$d"
+      wt_work_state "$d"
+
+      # `git status` failing yields "?" from wt_work_state. Carry that through as
+      # JSON null rather than coercing it to a number — a reader must not be able
+      # to mistake "could not tell" for "clean".
+      merged="null"
+      [ "$WT_AHEAD" = "0" ] && merged=true
+      [ "$WT_AHEAD" != "0" ] && [ "$WT_AHEAD" != "?" ] && merged=false
+
+      if [ -n "$router_json" ]; then
+        runtime=$(printf '%s' "$router_json" | jq -c --arg n "$name" '.worktrees[$n] // {state:"unknown"}')
+      else
+        runtime='{"state":"unknown"}'
+      fi
+
+      rows=$(jq -c \
+        --argjson rows "$rows" \
+        --arg name "$name" \
+        --arg branch "$WT_BRANCH" \
+        --arg path "$d" \
+        --arg ahead "$WT_AHEAD" \
+        --arg dirty "$WT_DIRTY" \
+        --argjson merged "$merged" \
+        --argjson runtime "$runtime" \
+        --arg agentState "$WT_AGENT_STATE" \
+        --arg agentReason "$WT_AGENT_REASON" \
+        --arg box "$WT_BOX_ROOT/$name/test1" \
+        --arg url "http://localhost:${ROUTER_PORT}/$name/" \
+        -n '$rows + [{
+              name: $name, branch: $branch, path: $path, box: $box, url: $url,
+              git: {
+                ahead:  (if $ahead == "?" then null else ($ahead | tonumber) end),
+                dirty:  (if $dirty == "?" then null else ($dirty | tonumber) end),
+                merged: $merged
+              },
+              runtime: $runtime,
+              agent: { state: $agentState, reason: $agentReason }
+            }]')
+    done
+
+    if [ "$as_json" = true ]; then
+      printf '%s\n' "$rows" | jq .
+    else
+      printf '%s\n' "$rows" | jq -r '
+        (["WORKTREE","AGENT","GIT","RUNTIME"] | @tsv),
+        (.[] | [
+          .name,
+          .agent.state,
+          ((if .git.ahead == null then "ahead=?" else "ahead=\(.git.ahead)" end) +
+           (if .git.dirty == null then " dirty=?" elif .git.dirty > 0 then " dirty=\(.git.dirty)" else "" end)),
+          .runtime.state
+        ] | @tsv)' | column -t -s "$(printf '\t')"
+    fi
+    ;;
+
+  status)
     if ! [ -f "$ROUTER_PID_FILE" ] || ! kill -0 "$(cat "$ROUTER_PID_FILE" 2>/dev/null)" 2>/dev/null; then
       echo "router not running"
       if [ -d "$PID_DIR" ] && [ -n "$(ls -A "$PID_DIR" 2>/dev/null)" ]; then
