@@ -26,6 +26,10 @@ for another registered box. Invite inspection and acceptance use generic
 failure responses plus the login throttle and global scrypt concurrency cap.
 Local users can change their own password only after supplying the current
 password; success bumps their session generation and returns a fresh cookie.
+For a member who has forgotten it, an owner can mint a 15-minute, single-use
+reset capability from that box's Allowed Users list. The capability is pinned
+to the existing member, lets the member choose the replacement password, and
+revokes all of that member's sessions without signing the browser in.
 Verified Google OAuth and local passwords converge on the same canonical email
 identity.
 
@@ -37,8 +41,9 @@ Residual, accepted for now:
 - **No true socket-level WS-auth integration test.** The `gen`/identity resolver
   the WS `createContext` depends on is unit-tested, but no test drives a real
   tRPC subscription upgrade end to end. Covered by manual verification.
-- **No MFA / password reset.** Recovery is `cb auth set-password` on the host;
-  MFA/passkeys are deferred (see the plan's NOT-in-scope).
+- **No MFA / self-service recovery.** Members need a box owner to issue a reset
+  link; owner recovery remains `cb auth set-password` on the host. Email/SMS
+  recovery, MFA, and passkeys are deferred.
 - **Open invites do not verify email ownership.** Anyone holding an open invite
   may enter any otherwise-unclaimed email. This is an explicit bearer-link
   tradeoff: pin the invite when the recipient email is known, and transmit all

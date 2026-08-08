@@ -1,4 +1,4 @@
-# Invite capability store (`auth-invites.ts`)
+# Auth capability store (`auth-capabilities.ts`)
 
 Invite URLs carry a random bearer token, but the machine-local store retains
 only its SHA-256 hash. The store is shared by the box child that mints an invite
@@ -11,10 +11,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   consumeAuthInvite,
+  consumeAuthPasswordReset,
   inspectAuthInvite,
-  inviteStorePath,
+  inspectAuthPasswordReset,
+  authCapabilityStorePath,
   mintAuthInvite,
-} from "../../src/webapp/auth-invites.js";
+  mintAuthPasswordReset,
+} from "../../src/webapp/auth-capabilities.js";
 
 async function rejectionName(fn) {
   try {
@@ -28,7 +31,7 @@ async function rejectionName(fn) {
 const PACKAGE_ROOT = join(import.meta.dirname, "../..");
 
 async function consumeInChild(token) {
-  const code = `const { consumeAuthInvite } = await import("./src/webapp/auth-invites.ts"); console.log((await consumeAuthInvite({ token: process.env.TEST_INVITE_TOKEN })).status);`;
+  const code = `const { consumeAuthInvite } = await import("./src/webapp/auth-capabilities.ts"); console.log((await consumeAuthInvite({ token: process.env.TEST_INVITE_TOKEN })).status);`;
   const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", code], {
     cwd: PACKAGE_ROOT,
     env: { ...process.env, TEST_INVITE_TOKEN: token },
@@ -67,8 +70,8 @@ JSON.stringify({ email: minted.email, lifetime: minted.expiresAt - now, tokenLen
 The clear token is absent from disk and the file is private.
 
 ```ts continue
-const raw = await readFile(inviteStorePath(), "utf-8");
-JSON.stringify({ containsToken: raw.includes(minted.token), mode: ((await stat(inviteStorePath())).mode & 0o777).toString(8) })
+const raw = await readFile(authCapabilityStorePath(), "utf-8");
+JSON.stringify({ containsToken: raw.includes(minted.token), mode: ((await stat(authCapabilityStorePath())).mode & 0o777).toString(8) })
 => {"containsToken":false,"mode":"600"}
 ```
 
@@ -114,20 +117,20 @@ delete process.env.CB_AUTH_FILE;
 ```ts
 const dir3 = await mkdtemp(join(tmpdir(), "cb-invites-bad-"));
 process.env.CB_AUTH_FILE = join(dir3, "auth.json");
-await writeFile(inviteStorePath(), "{bad json", { mode: 0o600 });
+await writeFile(authCapabilityStorePath(), "{bad json", { mode: 0o600 });
 
 await rejectionName(() => inspectAuthInvite({ token: "anything" }))
-=> AuthInviteStoreError
+=> AuthCapabilityStoreError
 ```
 
 ```ts continue
-await rm(inviteStorePath());
+await rm(authCapabilityStorePath());
 const symlinkTarget = join(dir3, "invite-target.json");
 await writeFile(symlinkTarget, JSON.stringify({ version: 1, invites: [] }), { mode: 0o600 });
-await symlink(symlinkTarget, inviteStorePath());
+await symlink(symlinkTarget, authCapabilityStorePath());
 
 await rejectionName(() => inspectAuthInvite({ token: "anything" }))
-=> AuthInviteStoreError
+=> AuthCapabilityStoreError
 ```
 
 ```ts cleanup
@@ -145,7 +148,7 @@ for (let index = 0; index < 100; index += 1) {
 }
 
 await rejectionName(() => mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com" }))
-=> AuthInviteCapacityError
+=> AuthCapabilityCapacityError
 ```
 
 ```ts cleanup
@@ -166,5 +169,90 @@ raced.sort().join(",")
 
 ```ts cleanup
 await rm(dir4, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
+```
+
+## Password resets are typed siblings and replace older links
+
+```ts
+const resetDir = await mkdtemp(join(tmpdir(), "cb-password-resets-"));
+process.env.CB_AUTH_FILE = join(resetDir, "auth.json");
+const firstReset = await mintAuthPasswordReset({
+  boxRoot: "/boxes/family",
+  createdBy: "Owner@Example.COM",
+  email: "Member@Example.COM",
+});
+
+JSON.stringify({
+  email: firstReset.email,
+  inviteSeesReset: (await inspectAuthInvite({ token: firstReset.token })).status,
+  resetSeesReset: (await inspectAuthPasswordReset({ token: firstReset.token })).status,
+})
+=> {"email":"member@example.com","inviteSeesReset":"invalid-or-gone","resetSeesReset":"valid"}
+```
+
+Minting a replacement invalidates the older link before capacity is checked.
+
+```ts continue
+for (let index = 0; index < 99; index += 1) {
+  await mintAuthInvite({ boxRoot: `/boxes/${String(index)}`, createdBy: "owner@example.com" });
+}
+const replacement = await mintAuthPasswordReset({
+  boxRoot: "/boxes/other",
+  createdBy: "owner@example.com",
+  email: "member@example.com",
+});
+
+`${(await inspectAuthPasswordReset({ token: firstReset.token })).status},${(await inspectAuthPasswordReset({ token: replacement.token })).status}`
+=> invalid-or-gone,valid
+```
+
+Consumption invalidates every reset link for that account and cannot consume an
+invite token.
+
+```ts continue
+const unrelatedInvite = await consumeAuthInvite({ token: replacement.token });
+const consumedReset = await consumeAuthPasswordReset({ token: replacement.token });
+JSON.stringify({ invite: unrelatedInvite.status, reset: consumedReset.status, replay: (await consumeAuthPasswordReset({ token: replacement.token })).status })
+=> {"invite":"invalid-or-gone","reset":"consumed","replay":"invalid-or-gone"}
+```
+
+```ts cleanup
+await rm(resetDir, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
+```
+
+## A v1 invite store upgrades on mutation without losing its invites
+
+```ts
+const migrationDir = await mkdtemp(join(tmpdir(), "cb-capability-migration-"));
+process.env.CB_AUTH_FILE = join(migrationDir, "auth.json");
+const legacyToken = "legacy-token";
+const legacyHash = (await import("node:crypto")).createHash("sha256").update(legacyToken).digest("hex");
+await writeFile(authCapabilityStorePath(), JSON.stringify({
+  version: 1,
+  invites: [{
+    tokenHash: legacyHash,
+    boxRoot: "/boxes/legacy",
+    email: "legacy@example.com",
+    createdBy: "owner@example.com",
+    createdAt: 1,
+    expiresAt: Date.now() + 60_000,
+  }],
+}), { mode: 0o600 });
+
+(await inspectAuthInvite({ token: legacyToken })).status
+=> valid
+
+await mintAuthPasswordReset({ boxRoot: "/boxes/legacy", createdBy: "owner@example.com", email: "legacy@example.com" });
+JSON.parse(await readFile(authCapabilityStorePath(), "utf-8")).version
+=> 2
+
+(await inspectAuthInvite({ token: legacyToken })).status
+=> valid
+```
+
+```ts cleanup
+await rm(migrationDir, { recursive: true, force: true });
 delete process.env.CB_AUTH_FILE;
 ```

@@ -310,14 +310,20 @@ email or left open for its recipient to enter one; accepting it creates a
 member account with the recipient's own password and grants access only to that
 box. Open invites cannot claim an existing local user, the owner identity, or
 an email already authorized for another box. Signed-in local users change their
-own password from Settings. Local password and Google sign-in share one
+own password from Settings. If a member forgets it, the owner can create a
+15-minute reset link beside that member in the box's Allowed Users list; the
+member chooses the new password, and all of their existing sessions are revoked.
+Owner recovery still requires `cb auth set-password` on the host. Local password and Google sign-in share one
 case-insensitive email identity, so a verified Google login with the same email
 uses the same account and box access.
 
-Invite capabilities are stored only as SHA-256 hashes in a mode-0600 sibling
+Invite and password-reset capabilities are stored only as SHA-256 hashes in a mode-0600 sibling
 of the global credential store (`CB_AUTH_FILE.invites.json`). If
 `CB_AUTH_FILE` is overridden, the hub passes the same path to every child;
-credential and invite state therefore remain fleet-global.
+credential and capability state therefore remain fleet-global.
+The capability file upgrades from version 1 to version 2 on its next mutation.
+Rolling back to a release that predates password resets requires restoring the
+pre-upgrade capability file (or removing it, which invalidates outstanding links).
 
 The hub terminates login and forwards the authenticated identity to each box child over a
 trusted internal header (`x-cb-authenticated-email`, verified by a per-boot `CB_HUB_SECRET`

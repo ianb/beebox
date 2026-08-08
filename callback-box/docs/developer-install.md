@@ -125,7 +125,10 @@ first boot). The credential store is home-level (`~/.cb-auth.json`), so one
 account works across every worktree's dev server — you set it up once.
 
 After the owner account exists, its Admin page can issue 15-minute, single-use
-member invites; local users can change their own password from Settings.
+member invites; local users can change their own password from Settings. The
+Allowed Users list can also issue a 15-minute reset link for an existing member
+who forgot their password; the member chooses the replacement password and is
+then returned to ordinary login.
 
 Authentication is always on: there is no operator opt-out to run a box
 unauthenticated. (An in-process `openAccess` construction option exists purely
