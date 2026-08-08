@@ -232,8 +232,9 @@ Ordered by implementation dependency, then surface size.
 - **Direction:** A thin wrapper over `@anthropic-ai/claude-agent-sdk` in
   streaming-input mode (the same SDK the box agents use, but *not* through
   `runAgent` — the operator is multi-turn and rooted in the run directory, not
-  a box). Model `opus`; per-activity turn cap (start: 25) so one stuck activity
-  cannot eat the run. Tools: Bash (for `bin/browse` and nothing else by
+  a box). Model `opus`; per-activity turn cap (start: 100 — browse-driven work is
+  turn-hungry: each snapshot/click/screenshot is a turn; the cap exists only
+  so a truly stuck activity cannot eat the run, not to pressure the operator). Tools: Bash (for `bin/browse` and nothing else by
   instruction), Read (for screenshots and provided assets). System prompt: the
   persona brief, the discernment mandate ("you are evaluating whether this is
   usable, not proving it can be done; confusion is a finding, not your
