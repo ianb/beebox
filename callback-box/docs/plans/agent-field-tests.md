@@ -75,8 +75,9 @@ runs weekly or on demand, never as a CI gate.
   rooted in the run directory.
 - **Completion detection**: tRPC `chat.status`
   (`src/webapp/trpc/routers/chat-control-procedures.ts:115`) returns
-  `{ sessionId, running, busy, model }` — the harness's "wait until the box
-  agent finishes" poll. **Reused as-is.**
+  `{ sessionId, running, busy, model }` for **one** session, and reports idle
+  for missing/unknown ids (`:44-55`). **Reused as one ingredient** of the
+  composite quiescence check (Track 2); it is not box-wide on its own.
 - **`CB_TIME`** resolved in `src/lib/time.ts:51-52` (*"CB_TIME env var takes
   priority"*) and read by server-side modules (chat session registry, capture
   sweep, bulk-upload sweep, question aging, login throttle). **Reused** for
@@ -90,9 +91,12 @@ runs weekly or on demand, never as a CI gate.
   (`docs/testing.md:271`) and session critiques (`docs/testing.md:409`) both
   talk to real agents; `bin/manual-tests-scheduled.sh` is the weekly real-service
   cadence. Field tests slot in beside these as a new tier in `docs/testing.md`.
-- **Fake agent for doctests** (`test/helpers/fake-agent.ts:128`) — the reason no
-  existing tier covers what field tests cover: everything below this tier fakes
-  the agent.
+- **Fake agent for doctests** (`test/helpers/fake-agent.ts:128`) — doctests
+  fake the agent; scenario `prompt:` validations and session critiques do talk
+  to real agents (`docs/testing.md:271`, `:409`). The gap field tests fill is
+  narrower and stated precisely: no existing tier has a persistent persona
+  operator driving the real UI, with hard asserts, against a real product
+  agent.
 
 ## Prior art (external)
 
@@ -126,18 +130,33 @@ Ordered by implementation dependency, then surface size.
   intake job → reactor), not in the server. In-process DI
   (`createGmailConnector(boxRoot, service?)`) cannot cross the process
   boundary. Today there is no way to run the *real* pipeline on synthetic mail.
-- **Direction:** A JSON state file holding the fake's `messages` / `labels` /
-  `attachments` arrays (same shapes `createFakeGoogleGmail` accepts). The
-  connector factory checks `CB_FAKE_GMAIL=<path>`: if set AND the box root
+- **Direction:** A JSON state file holding the fake's **full serialized
+  state** — `messages`, `labels`, `attachments` (base64-encoded records; the
+  in-memory fake uses a `Map`, so this is an explicit serialized format with
+  its own Zod schema, new work in this track), **and the history machinery**:
+  `historyId`, `oldestValidHistoryId`, `historyRecords`. The cursor is NOT
+  derived from array length — the connector's sync depends on a persisted
+  `historyId` round-trip (`src/connectors/gmail.ts:169`, `:207`), and the fake
+  models constructor-seeded messages as predating history
+  (`src/services/google-gmail.ts:256`) while `addMessage()` appends a
+  `messagesAdded` record (`:272-278`); the file preserves exactly those
+  semantics. "An email arrives" = `cb field-test inject-email <fixture>`, a
+  helper that appends the message plus its `messagesAdded` history record to
+  the state file, then runs `cb wakeup --connector gmail`.
+  The connector factory checks `CB_FAKE_GMAIL=<path>`: if set AND the box
   contains the test-box marker (below), it builds the fake from the file;
   if set without the marker, it **throws** (fail-closed, principle #4 — never
   silently divert; principle #3 — the gate is validated at the boundary).
-  "An email arrives" = the harness appends a message object to the file and
-  runs `cb wakeup --connector gmail`. The fake's history cursor is derived from
-  array length, so successive wakeups see only new messages.
-  **Test-box marker:** a `test-box` marker file inside the box's `config/`
-  directory, written by `cb field-test` box creation, committed with the box.
-  Real boxes never contain it.
+  **Test-box marker:** a `test-box` marker file in the box's `config/`
+  directory, resolved against the same operational box root `cb serve`
+  resolves (`src/cli/commands/serve.ts:48` — in a v2 package that is
+  `content/config/test-box`), written by `cb field-test` box creation,
+  committed with the box. Real boxes never contain it.
+  **Also in this track:** Gmail rule evaluation currently uses the real clock
+  (`src/connectors/gmail.ts:193` — `now: new Date()`), so simulated-day mail
+  behavior would ignore `CB_TIME`. Switch it to `getBoxTime()`
+  (`src/lib/time.ts:51-52`) — a small product-wide correctness fix, not
+  test-only plumbing.
 - **Vocabulary lock-ins:** `CB_FAKE_GMAIL` (env var), `config/test-box` (marker
   file), `field-test` (the tier's name everywhere: command, directory, docs).
 - **First implementation chunk:** the marker + gate + file-backed factory path +
@@ -159,21 +178,38 @@ Ordered by implementation dependency, then surface size.
   Server: `cb serve <box> --port <free port>`, `CB_TIME` set to the scenario's
   start time, `CB_FAKE_GMAIL` pointing into the run dir. Browser: a dedicated
   `bin/browse --session field-<ts>` with `CB_BROWSE_API_KEY` set (auth is out
-  of scope; the operator lands post-login).
+  of scope; the operator lands post-login). **Browse targeting:** `bin/browse`
+  rewrites `/`-leading paths to the dev router's worktree base and injects the
+  browse-key cookie only for that origin (`browse/src/worktree.ts:38-46`,
+  hardcoded `http://localhost:<ROUTER_PORT>/<worktree>/<box>`), so as-is it
+  would drive the shared router's `test1`, not the field-run server. Track 2
+  adds an explicit base-URL override to the browse wrapper (e.g.
+  `BROWSE_BASE_URL=http://localhost:<port>` scoping both the path rewrite and
+  the cookie injection to the run server's origin); the harness and the
+  operator's cheat-sheet always go through it.
   **Activity loop:** for each checklist item — (1) harness performs the item's
   `pre` actions (inject email, advance day); (2) harness sends the item's brief
   to the operator session and waits for its structured activity report;
-  (3) harness waits for box-agent quiescence (`chat.status` poll until
-  `busy === false`, plus a settle delay); (4) harness runs the item's `checks/`
-  scripts against the box; (5) harness applies the item's **cleanup policy**:
+  (3) harness waits for box quiescence — a **composite** check, because
+  `chat.status` reports one session only and returns idle for unknown ids
+  (`chat-control-procedures.ts:44-55`): every live chat session idle (a small
+  new `chat.statusAll`-style query over the session registry), no pending
+  `*.job.card` files in `box/jobs/`, no in-flight bulk-upload batch, plus a
+  settle delay (harness-spawned CLI subprocesses are already awaited
+  synchronously); (4) harness runs the item's `checks/` scripts against the
+  box; (5) harness applies the item's **cleanup policy**:
   `keep` (default — residue is realistic), `commit` (checkpoint, continue), or
   `reset` (hard-reset the box to the previous checkpoint so a messy attempt
   does not contaminate later items; the server is restarted after a reset).
   Every item ends with a git checkpoint tag either way — that is what makes
   `reset` and post-hoc inspection cheap.
-  **Day advance:** stop the server, set the new `CB_TIME`, run `cb wakeup` /
-  `cb tick`-due work at the new time, restart the server. Long-lived in-server
-  state does not survive across simulated days by construction.
+  **Day advance:** stop the server, set the new `CB_TIME`, run the day's
+  maintenance at the new time, restart the server. Two explicitly distinct
+  wakeup phases (they are not interchangeable — `cb wakeup --connector gmail`
+  skips on-wakeup scripts by design, `src/cli/commands/wakeup.ts:189`):
+  email *injection* uses the connector-scoped wakeup (sync + intake only);
+  day *advance* runs a full `cb wakeup` plus due scheduled scripts. Long-lived
+  in-server state does not survive across simulated days by construction.
 - **Vocabulary lock-ins:** `cb field-test` (command), `field-runs/` (run
   artifacts), cleanup policy values `keep | commit | reset`.
 - **First implementation chunk:** box+server lifecycle only — create, serve on
@@ -293,10 +329,10 @@ nothing here depends on it.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | `CB_FAKE_GMAIL` set on a box without the test-box marker | Track 1 doctest | Throws at connector construction | Clear |
-| Malformed fake-Gmail state file | Track 1 doctest | Zod parse at load; wakeup fails loudly | Clear |
+| Malformed fake-Gmail state file | Track 1 doctest | Zod parse at load (new schema, built in Track 1); wakeup fails loudly | Clear |
 | `cb serve` fails to start / port collision | Track 2 doctest (lifecycle module) | Free-port allocation + health-check with timeout; run aborts before operator starts | Clear |
 | Browse daemon dies or screenshot flakes (os error 35, known) | No (external flake) | One retry per browse call in harness `pre`/setup paths; operator instructed to retry once then report | Clear (logged as harness event) |
-| Box agent never goes quiescent (`chat.status.busy` stuck) | Track 2 doctest with fake status | Poll timeout per activity → harness records `blocked`, applies `reset` policy if set, continues | Clear |
+| Box never goes quiescent (composite check stuck: busy session, lingering job card, in-flight upload batch) | Track 2 doctest with fake status | Poll timeout per activity → harness records `blocked` naming the stuck component, applies `reset` policy if set, continues | Clear |
 | Operator emits unparseable activity report | Track 3 doctest | One re-request, then harness finding | Clear |
 | Operator exceeds per-activity turn cap | Track 3 doctest | SDK turn cap → recorded as `blocked` with partial transcript | Clear |
 | Operator session dies mid-run (API error, quota) | No | Run aborts; report written with completed items + abort reason; no resume in v1 | Clear |
@@ -367,20 +403,27 @@ run by construction.)
 
 ## Implementation order
 
+Spine-first (per cross-model review): prove the browser is driving the
+intended box with one real activity and one hard assert before any fake-email
+work lands.
+
 0. **Prototype (no code):** hand-run the operator concept once — a Claude
    session with a persona prompt driving `bin/browse` against a scratch box —
    to pressure-test the persona/report prompt design before Track 3 hardens it.
-1. Track 1: test-box marker + `CB_FAKE_GMAIL` gate + file-backed fake +
-   doctests.
-2. Track 2 chunk 1: box/server/browse lifecycle module + doctests.
-3. Track 4: scenario format loader + `onboarding-first-days` + assets + email
-   fixtures + checks.
-4. Track 3: operator session wrapper + report parsing + doctests.
-5. Track 2 chunk 2: the activity loop (wires 1–4 together) + cleanup policies +
-   day advance.
-6. Track 5: report writer + `docs/testing.md` tier section.
-7. First full real run; human transcript review; fix-round.
-8. (Post-plan, after stability) scheduled-runner wiring.
+1. Track 2 chunk 1: box/server/browse lifecycle module (including the
+   `BROWSE_BASE_URL` override) + doctests.
+2. Track 3: operator session wrapper + report parsing + doctests.
+3. Track 4 (minimal): scenario loader + a one-activity spine scenario.
+4. **v0 spine run:** fresh box, dedicated server, one operator activity, one
+   check, one quiescence wait — verified end-to-end against the run server's
+   URL before proceeding.
+5. Track 1: test-box marker + `CB_FAKE_GMAIL` gate + file-backed fake +
+   `inject-email` helper + the Gmail rule-clock fix + doctests.
+6. Track 2 chunk 2: the full activity loop + cleanup policies + day advance;
+   Track 4 completed (`onboarding-first-days`, assets, email fixtures, checks).
+7. Track 5: report writer + `docs/testing.md` tier section.
+8. First full real run; human transcript review; fix-round.
+9. (Post-plan, after stability) scheduled-runner wiring.
 
 ## Rollout shape
 
