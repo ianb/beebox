@@ -36,9 +36,12 @@ export interface QuestionnaireQuestion {
 }
 
 /**
- * The standard eight. Ordered so the constrained question is last: everything
+ * The standard nine. Ordered so the constrained question is last: everything
  * before it is recall, and the one-word summary should come after the operator
- * has re-read its own experience, not before.
+ * has re-read its own experience, not before. The `rendering` question is
+ * deliberately low-trust by design: the operator's visual judgment is not
+ * relied on — its flags are collected WITH screenshots for a human to vet
+ * (report writers surface them as unvetted visual flags, never as findings).
  */
 export const STANDARD_QUESTIONS: readonly QuestionnaireQuestion[] = [
   {
@@ -70,6 +73,11 @@ export const STANDARD_QUESTIONS: readonly QuestionnaireQuestion[] = [
     id: "wording",
     kind: "free",
     text: "Was there any wording — a label, a button, a message — you didn't understand? Quote it exactly.",
+  },
+  {
+    id: "rendering",
+    kind: "free",
+    text: "Did anything LOOK visually off or badly rendered — clipped, overlapping, squashed, misaligned, unstyled, broken images, content cut off? List every suspect, each with the screenshot that shows it. Flag things you are unsure about too — a person will vet these from your screenshots, so a false alarm is cheap and a miss is not.",
   },
   {
     id: "screenshots",

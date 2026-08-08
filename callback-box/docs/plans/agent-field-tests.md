@@ -273,12 +273,22 @@ Ordered by implementation dependency, then surface size.
   act holds. Each activity ends with a
   **questionnaire debrief**, not a JSON report: after the operator says it is
   done (or gives up), the harness sends the questionnaire as the next message —
-  after, so the questions cannot prime behavior during the activity. A standard
+  after, so the questions cannot prime behavior during the activity.
+  **Screenshots are first-class:** the mechanics layer sets the pattern — a
+  per-activity subdirectory (named in each activity's brief), files numbered
+  in the order taken (`01-first-screen.png`), shot at minimum on every new
+  screen, before/after significant actions, and immediately on anything that
+  looks visually wrong. **Visual quality is watched but not trusted**
+  (boxholder, 2026-08-08): the operator flags rendering that looks off with a
+  screenshot per flag; its visual judgment is explicitly NOT relied on — flags
+  go to the report's unvetted section for human eyes, never merged with
+  findings. A standard
   question set elicits specifics with room for long prose answers: Did you
   accomplish it, and how do you know? What did you try first, and why? Where
   did you hesitate, backtrack, or guess? What surprised you or seemed wrong or
-  broken? What did you expect to exist that didn't? Which screenshots show
-  what you're describing? Plus a scenario item's optional extra questions
+  broken? What did you expect to exist that didn't? Did anything LOOK visually
+  off — flag unsure suspects too, each with its screenshot? Which screenshots
+  show what you're describing? Plus a scenario item's optional extra questions
   (`questions:` per checklist item). One question is constrained for the report
   table — "Overall: smooth, friction, or blocked?" — the rest are free
   markdown, stored verbatim. The harness checks only that every question got a
@@ -336,7 +346,9 @@ Ordered by implementation dependency, then surface size.
 - **Direction:** `report.md` leads with a run header (scenario, operator
   model, box-agent model, start time) and a per-item table (outcome, checks,
   cleanup applied), then findings ordered by severity with screenshot links,
-  then harness events (retries, resets, timeouts). Findings are triaged by a
+  then a **"Visual flags (unvetted)"** section — every rendering suspect the
+  operator raised, each with its screenshot link, explicitly labeled as
+  needing human eyes — then harness events (retries, resets, timeouts). Findings are triaged by a
   human (or a triage agent) into `issues/` — no auto-filing.
 - **First implementation chunk:** report writer + the `docs/testing.md`
   section; the scheduled-runner wiring waits until a few manual runs prove

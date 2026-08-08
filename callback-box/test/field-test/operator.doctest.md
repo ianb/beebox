@@ -160,7 +160,7 @@ skipped one is identifiable; answers are stored verbatim.
 ```ts continue
 const questions = debriefQuestions(["Did the recipe look right when you found it again?"]);
 questions.length
-=> 9
+=> 10
 
 const debriefRun = session.runDebrief(questions);
 await replyEach(run, [
@@ -170,6 +170,7 @@ await replyEach(run, [
   "Nothing broke, but nothing confirmed the save either.",
   "I expected a 'saved' toast.",
   "'Capture' — I didn't know if that meant camera or upload.",
+  "The tag chips overlapped the title a little — see home-empty.png; might be nothing.",
   "home-empty.png shows the empty state; recipe-saved.png shows it afterwards.",
   "It looked right, yes.",
   "Friction — it worked, but I guessed twice.",
@@ -206,7 +207,7 @@ An unparseable outcome answer never throws — it becomes `unresolved` with a
 reason, so the eight good answers beside it survive into the report.
 
 ```ts continue
-const third = session.runDebrief(STANDARD_QUESTIONS.slice(7));
+const third = session.runDebrief(STANDARD_QUESTIONS.slice(8));
 await replyEach(run, ["Honestly it was somewhere between fine and awful."]);
 const thirdResult = await third;
 [thirdResult.outcome, thirdResult.outcomeReason].join(" | ")
