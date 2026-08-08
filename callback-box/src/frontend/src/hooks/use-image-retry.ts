@@ -39,7 +39,8 @@ export function useImageRetry(src: string, enabled: boolean): RetryingImageSrc {
     const waitingState = state;
     const timeout = window.setTimeout(() => {
       if (retryStates.get(src) === waitingState) {
-        retryStates.set(src, { phase: "loading", attempt: waitingState.attempt + 1 });
+        const attempt = waitingState.attempt + 1;
+        retryStates.set(src, { phase: "loading", attempt });
       }
       rerender();
     }, Math.max(0, waitingState.retryAt - Date.now()));
