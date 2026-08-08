@@ -11,10 +11,15 @@
  * The glob that discovers which cards exist is deliberately NOT cached, so an
  * added or deleted landmark shows up on the very next call with no invalidation
  * logic to get wrong. A cached entry is used only when the file's inode,
- * nanosecond mtime, and size all still match — so an edit (in place or by
- * atomic replace) misses, and a same-millisecond double write is caught by the
- * nanosecond field and the inode rather than trusted. The cost of a hit is one
- * `stat`.
+ * nanosecond mtime and ctime, and size all still match — so an edit (in place
+ * or by atomic replace) misses. The cost of a hit is one `stat`.
+ *
+ * The failure this must never have is a *sticky* stale entry: a wrong answer
+ * that keeps being served until someone writes the file again. Everything in
+ * `readLandmarkCard` below is arranged around that, and the comments there say
+ * which race each step closes. A merely *transient* staleness — answering from
+ * a cache entry that went out of date microseconds ago — is fine and
+ * unavoidable; the next call corrects it.
  *
  * The returned `LandmarkFields` is shared between callers. Treat it as
  * immutable; nothing in the codebase mutates a parsed card's fields.
@@ -49,34 +54,49 @@ const cache = new Map<string, CacheEntry>();
  * re-parsed on every scan either. Filesystem errors propagate to the caller.
  */
 export async function readLandmarkCard(absPath: string): Promise<LandmarkFields | null> {
-  const before = await fs.stat(absPath, { bigint: true });
+  // Hit check is one cheap path-stat. A file replaced *just* after this stat
+  // still answers from cache — that answer was correct microseconds ago, and
+  // the next call sees the new identity. Transient, not sticky.
+  const seen = await fs.stat(absPath, { bigint: true });
   const hit = cache.get(absPath);
-  if (hit !== undefined && hit.key === identity(before)) return hit.fields;
+  if (hit !== undefined && hit.key === identity(seen)) return hit.fields;
 
-  // Key the stored parse on a stat of the OPEN HANDLE taken after the read, not
-  // on the pre-read stat: a write that lands between them would otherwise cache
-  // the new bytes under the old identity and go stale until the *next* write.
-  // A replace-by-rename leaves this handle on the old inode, so the key names
-  // the file we actually read and the next call misses on the new inode.
+  // Miss: read through a handle and fstat that handle BOTH SIDES of the read.
+  // Only an unchanged identity across the read proves the bytes and the key
+  // describe the same content. Keying on the post-read stat alone was wrong:
+  // an in-place rewrite landing between the read and the stat would store the
+  // OLD bytes under the NEW identity, and the cache would then serve stale
+  // content on every later call until something wrote the file again — silent,
+  // sticky staleness, which is the one failure this cache must not have.
+  // (Codex cross-model review, 2026-08-08.)
   const handle = await fs.open(absPath, "r");
   let bytes: Buffer;
+  let before;
   let after;
   try {
+    before = await handle.stat({ bigint: true });
     bytes = await handle.readFile();
     after = await handle.stat({ bigint: true });
   } finally {
     await handle.close();
   }
   const fields = parseLandmarkFields(bytes.toString("utf-8"));
-  // A size disagreement means the file was being written as we read it: the
-  // bytes are a torn snapshot, so answer from them but remember nothing.
-  if (BigInt(bytes.byteLength) !== after.size) return fields;
+  // Changed under us: answer from the bytes we have, remember nothing.
+  if (identity(before) !== identity(after)) return fields;
   if (cache.size >= MAX_ENTRIES) cache.clear();
   cache.set(absPath, { key: identity(after), fields });
   return fields;
 }
 
-/** The file identity a cached parse is valid for. */
-function identity(stat: { ino: bigint; mtimeNs: bigint; size: bigint }): string {
-  return `${stat.ino}:${stat.mtimeNs}:${stat.size}`;
+/**
+ * The file identity a cached parse is valid for.
+ *
+ * `ctimeNs` alongside `mtimeNs` because mtime is forgeable and coarse-able:
+ * `utimes` can restore an old timestamp onto new content, and ctime moves on
+ * any inode change whether or not mtime does. `ino` catches replace-by-rename
+ * (and, with the timestamps, makes inode reuse after a delete/create
+ * vanishingly unlikely to collide).
+ */
+function identity(stat: { ino: bigint; mtimeNs: bigint; ctimeNs: bigint; size: bigint }): string {
+  return `${stat.ino}:${stat.mtimeNs}:${stat.ctimeNs}:${stat.size}`;
 }

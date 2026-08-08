@@ -17,6 +17,14 @@
  *
  * Fires once per mount. A prefetch is a warm-up, not a refresh: keeping a
  * cache entry current is `invalidate()`'s job at the point of use.
+ *
+ * **It is visible to `data-cb-loading`.** That attribute (see
+ * `lib/trpc/provider.tsx`) reflects "any react-query fetch is in flight", so a
+ * prefetch keeps it `true` a little past the point where the page is usable,
+ * and headless automation that waits on it waits for the warm-up too. Left as
+ * is on purpose: the flag's contract is *is the app still fetching*, and it is
+ * — a prefetch that raced ahead of the readiness signal would be a lie in the
+ * other direction. Keep prefetches cheap and this stays a non-issue.
  */
 
 import { useEffect, useRef } from "react";

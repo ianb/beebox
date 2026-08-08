@@ -13,6 +13,10 @@ import { type LandmarkSymbolData } from "../../schemas/landmark.js";
 import { readLandmarkCard } from "./card-cache.js";
 import { findDestination, type DestinationKind } from "./destination.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { mapInBatchesSettled } from "../../lib/map-batched.js";
+
+/** Landmark cards read at once — see {@link mapInBatchesSettled}. */
+const READ_CONCURRENCY = 64;
 
 export interface DestinationInfo {
   /** Box-relative directory containing the landmark (empty string = box root). */
@@ -61,9 +65,13 @@ export async function listDestinations(
     ignore: ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"],
   });
 
-  // Independent files, read concurrently (`allSettled` per code-style — one
-  // bad card must not abandon the rest of the box's destinations).
-  const read = await Promise.allSettled(matches.map((relPath) => readDestination(boxRoot, { relPath, kind })));
+  // Independent files, read concurrently but in bounded batches — one handle
+  // per landmark at once is an fd-exhaustion risk on a large box. `allSettled`
+  // per code-style: one bad card must not abandon the rest of the destinations.
+  const read = await mapInBatchesSettled(matches, {
+    size: READ_CONCURRENCY,
+    map: (relPath) => readDestination(boxRoot, { relPath, kind }),
+  });
   const out: DestinationInfo[] = [];
   for (const [i, outcome] of read.entries()) {
     if (outcome.status === "rejected") {

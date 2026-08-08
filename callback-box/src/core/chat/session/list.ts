@@ -18,6 +18,14 @@ import { findChatHuskEntry, listChatHusks, type ChatHuskEntry } from "../husk.js
 import { huskTranscriptPath } from "../husk-transcript.js";
 import { resolveSessionLabel } from "../session-label.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { mapInBatches, mapInBatchesSettled } from "../../../lib/map-batched.js";
+
+/**
+ * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
+ * absorbs its own failures (it falls back to the id prefix), so the labelling
+ * pass can use the plain `mapInBatches`.
+ */
+const READ_CONCURRENCY = 64;
 
 /**
  * A chat's *identity and activity* — everything derivable from its husk card
@@ -61,7 +69,10 @@ export interface ChatSessionRow extends ChatSessionEntry {
  */
 export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEntry[]> {
   const husks = await listChatHusks(boxRoot);
-  const settled = await Promise.allSettled(husks.map((husk) => loadSessionEntry(boxRoot, husk)));
+  const settled = await mapInBatchesSettled(husks, {
+    size: READ_CONCURRENCY,
+    map: (husk) => loadSessionEntry(boxRoot, husk),
+  });
   const entries: ChatSessionEntry[] = [];
   for (const [i, outcome] of settled.entries()) {
     if (outcome.status === "rejected") {
@@ -82,14 +93,19 @@ export async function listSessionEntries(boxRoot: string): Promise<ChatSessionEn
  */
 export async function loadAllSessions(boxRoot: string): Promise<ChatSessionRow[]> {
   const entries = await listSessionEntries(boxRoot);
-  return Promise.all(entries.map(async (entry) => ({
-    ...entry,
-    label: await resolveSessionLabel({
-      sessionId: entry.sessionId,
-      logPath: entry.logPath,
-      title: entry.title,
+  // Bounded: an untitled chat's label comes from a transcript read, so this is
+  // one open stream per chat and a box's chat count only ever grows.
+  return mapInBatches(entries, {
+    size: READ_CONCURRENCY,
+    map: async (entry) => ({
+      ...entry,
+      label: await resolveSessionLabel({
+        sessionId: entry.sessionId,
+        logPath: entry.logPath,
+        title: entry.title,
+      }),
     }),
-  })));
+  });
 }
 
 /** One husk's entry, or null when there's no transcript left to resume. */

@@ -12,7 +12,11 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
 import { readLandmarkCard } from "./card-cache.js";
+import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { errnoCode } from "../../lib/error-guards.js";
+
+/** Landmark cards read at once — see {@link mapInBatchesSettled}. */
+const READ_CONCURRENCY = 64;
 
 /**
  * Display label for each of a known set of landmark directories ("" = the box
@@ -161,9 +165,15 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
   });
 
   // Read the cards concurrently — they're independent files and the picker
-  // waits on all of them. `allSettled` per code-style; an unreadable card is
-  // already handled per-card below and must not abandon the rest.
-  const read = await Promise.allSettled(matches.map((relPath) => readSummary(boxRoot, relPath)));
+  // waits on all of them — but in bounded batches, not one handle per card at
+  // once: a large box has enough landmarks to matter, and this codebase has
+  // already been bitten by fd exhaustion (see core/box/file-watcher.ts's
+  // header). `allSettled` per code-style; an unreadable card is already handled
+  // per-card below and must not abandon the rest.
+  const read = await mapInBatchesSettled(matches, {
+    size: READ_CONCURRENCY,
+    map: (relPath) => readSummary(boxRoot, relPath),
+  });
 
   const out: LandmarkSummary[] = [];
   const problems: LandmarkProblem[] = [];

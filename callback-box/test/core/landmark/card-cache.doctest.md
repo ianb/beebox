@@ -123,6 +123,25 @@ await labels(box.root)
 await box.cleanup();
 ```
 
+## Not covered here: a rewrite landing *during* the read
+
+`readLandmarkCard` brackets its read with two fstats of the same handle and
+refuses to cache when they disagree — the race where a write lands after the
+bytes are read but before the identity is taken, which would file OLD bytes
+under the NEW identity and then be served on every later call.
+
+**There is no test for that below, deliberately.** Two attempts failed to make
+the interleave happen: writing between scans doesn't enter the window at all,
+and racing a write against a 12MB read (large enough that `readFile` spans
+several event-loop turns) still never landed inside it — the guarded and
+unguarded versions both passed, so the test discriminated nothing. A test that
+cannot fail is worse than no test, because it reads as coverage.
+
+The guard stays on the strength of the argument, not a test: it is three lines,
+it cannot make a correct case wrong (identical identities always cache), and the
+failure it prevents is sticky rather than transient. If you change this
+function, you are changing untested code — re-read the comments there first.
+
 ## A missing card is the caller's error, not a cached null
 
 `readLandmarkCard` distinguishes "doesn't parse as a landmark" (null, and

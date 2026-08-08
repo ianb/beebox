@@ -17,6 +17,10 @@ import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js"
 import { readFirstUserSnippet } from "../../cli/lib/session-snippet.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
+import { mapInBatchesSettled } from "../../lib/map-batched.js";
+
+/** Husk cards read at once — see {@link mapInBatchesSettled}. */
+const READ_CONCURRENCY = 64;
 
 export const CHAT_HUSK_DIR = "store/chat/web";
 /** Keep husk titles bookmark-sized, not transcript-sized. */
@@ -134,12 +138,13 @@ export async function listChatHusksUnder(boxRoot: string, relDir: string): Promi
     throw e;
   }
   // Read concurrently: every chat list in the app waits on this, and the husks
-  // are independent files. `allSettled` per code-style — an unreadable husk is
-  // already a per-file skip and must not abandon the rest of the directory.
-  const settled = await Promise.allSettled(
-    names
-      .filter((name) => name.endsWith(".chat.card"))
-      .map((name) => readChatHusk(boxRoot, `${relDir}/${name}`)),
+  // are independent files. Bounded, though — a box accumulates one husk per
+  // chat forever, so this list grows without limit and unbounded fan-out here
+  // would eventually exhaust file descriptors. `allSettled` per code-style: an
+  // unreadable husk is already a per-file skip and must not abandon the rest.
+  const settled = await mapInBatchesSettled(
+    names.filter((name) => name.endsWith(".chat.card")),
+    { size: READ_CONCURRENCY, map: (name) => readChatHusk(boxRoot, `${relDir}/${name}`) },
   );
   const out: ChatHuskEntry[] = [];
   for (const outcome of settled) {
