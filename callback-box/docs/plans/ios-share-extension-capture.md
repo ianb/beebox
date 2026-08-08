@@ -1,6 +1,17 @@
 # iOS Share Extension Capture
 
-This plan adds a native iOS Share Extension to the Callback Box companion app. The extension lets a person send one shared item to a recent landmark chat or save it in Inbox or a landmark that advertises itself as a share destination.
+**Status:** partially implemented 2026-08 — URL/text share destinations and delivery ship; media capture and attachment-safe follow-ups remain planned.
+
+This plan defines a native iOS Share Extension for the Callback Box companion app. Its shipped first slice lets a person send one shared URL or text item to a recent landmark chat or save it in Inbox or a landmark that advertises itself as a share destination.
+
+## Implemented first slice
+
+- Track 1's shared selected-box snapshot, shared-Keychain credential migration, app/extension entitlements, and failure-preserving tests are implemented.
+- Tracks 2–3's `share` landmark role, two-row recent landmark-chat query, exact direct chat sends, and Inbox/landmark textual saves are implemented.
+- Track 6's extension target and destination UI activate URL and text only. Unsupported media types are deliberately not advertised.
+- Track 7's URL/text contract, fixtures, simulator build/XCTest, and backend doctests are implemented. The issue remains open with `needs: [manual-testing]` for the physical-device script.
+
+Tracks 4–5 (exact capture targets, terminal receipts/status, and attachment-safe movement), and the media portions of Tracks 6–7 remain future work. The later sections preserve their original design so those follow-ups can land without reopening the destination model.
 
 **Issues addressed.**
 
@@ -299,7 +310,7 @@ There is no accepted silent critical gap in the planned paths. Physical extensio
 
 ## Open design questions
 
-None. The boxholder approved the chat/save split, recent landmark chats, Inbox plus landmark save destinations, `share` as the destination role, direct URL chat delivery without a card, and `.webpage.card` for saved URLs. Implementation still requires a separate build authorization.
+None. The boxholder approved the chat/save split, recent landmark chats, Inbox plus landmark save destinations, `share` as the destination role, direct URL chat delivery without a card, and `.webpage.card` for saved URLs. The approved URL/text slice is implemented; the remaining media and capture work remains intentionally deferred.
 
 ## Knowledge audits
 

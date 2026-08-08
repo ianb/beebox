@@ -121,7 +121,7 @@ do not re-file):**
   `src/core/agent/run.ts`) → tracked in
   [agent-containment-allowed-directories](2026-07-20-agent-containment-allowed-directories.md).
 - Mobile token at rest →
-  [ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md),
+  [ios-token-plaintext-not-keychain](../closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md),
   [mobile-device-token-no-expiry](../code-quality/2026-07-19-mobile-device-token-no-expiry.md).
 
 **Report content outline (structure + pointers the report must cover):**
