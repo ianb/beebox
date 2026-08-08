@@ -1,6 +1,13 @@
 # Operator-driven member password reset
 
-**Status:** active — approved direction; implementation has not started
+**Status:** partially implemented 2026-08 — feature and automated credential-path coverage shipped; isolated browser validation remains
+
+The operator and member flows described below are implemented. Automated tests
+cover capability migration/isolation, authorization, reset redemption, session
+revocation, replay, throttling, scrypt capacity, and failure pages. The isolated
+browser checklist and direct route-level post-consume race injection were not
+performed; the locked credential mutation's `NoSuchUserError` seam and the
+route's 410 mapping are covered separately.
 
 This plan lets a box owner create a short-lived password-reset link for an
 existing member. The member chooses the new password. The owner never sees the
