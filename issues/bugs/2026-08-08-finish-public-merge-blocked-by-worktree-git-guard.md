@@ -14,12 +14,30 @@ harness refuses with:
 > git to the shared checkout via -C. Refusing to run it — a
 > worktree-isolated session's git operations must target its own worktree."
 
-This is a **harness-level guard**, not one of this repo's hooks (the
-message text appears nowhere in `.claude/` or `bin/`). It refuses the
-bare command, variable-indirected `-C`, a `sh -c` wrapper, and even a
-read-only `git -C … log`, and is not lifted by `dangerouslyDisableSandbox`.
-It is scoped to the main monorepo checkout path specifically — a
-`git -C` against the *private-issues* repo path is unaffected.
+This is **intended, documented Claude Code behavior**, not a bug and not
+one of this repo's hooks (the message text appears nowhere in `.claude/`
+or `bin/`). The official docs section "How Claude Code enforces
+isolation" (https://code.claude.com/docs/en/worktrees) states that a
+worktree-isolated session blocks any Bash command that redirects git into
+the main checkout "through `git -C`, `--git-dir`, a `GIT_DIR` or
+`GIT_WORK_TREE` variable, or a `cd` into the main checkout before running
+git," and that the same enforcement "covers every subagent Claude spawns
+from the isolated session." It refuses the bare command, variable-
+indirected `-C`, a `sh -c` wrapper, and even a read-only `git -C … log`,
+and is not lifted by `dangerouslyDisableSandbox`; there is no documented
+flag to disable the git-redirect check.
+
+Timing: worktree isolation shipped ~Feb 2026, but the enforcement was
+extended to cover Bash / `git -C` in **every** session type including
+subagents around **v2.1.218 (2026-07-22)** — which is why the flow
+worked before and blocks now. The guard is scoped to the repository the
+worktree is linked from, so a `git -C` against the *private-issues* repo
+(a separate repository) is unaffected — that is why the private leg still
+lands.
+
+The intended upstream model is that you integrate to `main` **from the
+main checkout, not from inside the worktree** (`git checkout main &&
+git merge <branch>`). Our `/finish` predates that model.
 
 **Why it breaks `/finish`:** `.claude/agents/finish.md` step 8 performs
 the public merge as `git -C ~/src/callback-box merge --ff-only "$BRANCH"`
@@ -49,5 +67,8 @@ that is not worktree-isolated (the main checkout itself):
   so the documented flow matches what the harness actually allows.
 
 Until then, every worktree `/finish` will BLOCK at the public merge and
-need a human to run the one command. This is a soft-launch-adjacent
-process breakage, not a code defect in the shipped product.
+need a human to run the one command **from the main checkout**. This is a
+process breakage in our own tooling caused by an intended upstream
+isolation change, not a code defect in the shipped product and not a
+Claude Code regression — the fix is on our side (adapt the finish flow to
+the documented model).
