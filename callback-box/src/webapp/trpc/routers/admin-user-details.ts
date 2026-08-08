@@ -3,7 +3,7 @@
 import { AuthStoreUnavailableError } from "../../local-users-errors.js";
 import { listUsers, type LocalUser } from "../../local-users.js";
 
-type AllowedUserKind = "local-member" | "owner-entry" | "access-only" | "unknown";
+type AllowedUserKind = "local-member" | "local-owner" | "owner-entry" | "access-only" | "unknown";
 type LocalPasswordStatus = "ready" | "not-initialized" | "owner-mismatch" | "unavailable";
 
 interface AllowedUserDetail {
@@ -45,7 +45,9 @@ export function describeAllowedUsers(options: {
         ? "unknown"
         : localUser?.role === "member"
           ? "local-member"
-          : "access-only";
+          : localUser?.role === "owner"
+            ? "local-owner"
+            : "access-only";
     return { email, kind, resetEligible: kind === "local-member" };
   });
   return { allowedUserDetails, localPasswordStatus, ownerEmail };

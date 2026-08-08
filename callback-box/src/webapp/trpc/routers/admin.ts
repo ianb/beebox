@@ -19,6 +19,7 @@ import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
 import { passwordResetAdminProcedures } from "./admin-password-resets.js";
 import { describeAllowedUsers } from "./admin-user-details.js";
+import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
@@ -181,6 +182,7 @@ export const adminRouter = router({
         .map((user) => user.email),
       publicUrl: config.publicUrl,
       ownerEmail: userDetails.ownerEmail,
+      googleLoginConfigured: getGoogleClientCreds() !== null,
       googleServices: config.googleServices,
     };
   }),
