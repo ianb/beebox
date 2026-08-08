@@ -62,6 +62,8 @@ export interface TrashReceipt {
 }
 
 async function pathExists(target: string): Promise<boolean> {
+  // Deliberately stricter than lib/file-exists: an unreadable destination
+  // cannot safely be treated as absent before a destructive rename.
   try {
     await fs.access(target);
     return true;

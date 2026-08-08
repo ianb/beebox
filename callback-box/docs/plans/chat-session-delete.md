@@ -1,7 +1,10 @@
 # Chat Session Delete — Plan
 
-**Status:** implemented in `worktree-chat-session-delete` — design and
-implementation cross-model reviewed; verification complete, awaiting landing.
+**Status:** partially implemented 2026-08 — Tracks A-E shipped in
+`worktree-chat-session-delete`; design and implementation cross-model reviewed.
+Automated verification and non-destructive dialog keyboard checks passed. The
+disposable destructive, phone-width, restart, and phase-by-phase crash
+rehearsals in Rollout shape remain future release validation.
 
 **Issues:**
 [chat thread management](../../../issues/features/2026-07-20-chat-thread-management.md)

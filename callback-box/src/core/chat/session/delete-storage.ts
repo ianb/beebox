@@ -42,6 +42,8 @@ export interface SessionStoragePresence {
 }
 
 async function exists(target: string): Promise<boolean> {
+  // Deliberately stricter than lib/file-exists: permission and I/O failures
+  // must abort a destructive postcheck, not look like successful deletion.
   try {
     await fs.access(target);
     return true;
@@ -52,8 +54,10 @@ async function exists(target: string): Promise<boolean> {
 }
 
 function projectsRoot(): string {
+  // TODO(env-migration): test/storage-path override is intentionally lazy.
   const callbackOverride = process.env["CB_CLAUDE_PROJECTS_DIR"];
   if (callbackOverride !== undefined) return callbackOverride;
+  // TODO(env-migration): Claude's own config-root override is intentionally lazy.
   const claudeConfig = process.env["CLAUDE_CONFIG_DIR"];
   return path.join(claudeConfig ?? path.join(os.homedir(), ".claude"), "projects");
 }
