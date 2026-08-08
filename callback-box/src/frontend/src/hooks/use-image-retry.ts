@@ -10,10 +10,6 @@ type RetryState =
 // outside the component so a remount cannot reset the bounded request budget.
 const retryStates = new Map<string, RetryState>();
 
-function logRetry(src: string, { message, ...detail }: { message: string } & Record<string, unknown>): void {
-  console.log("[chat-image-retry]", message, { src, ...detail });
-}
-
 function appendRetryToken(url: string, attempt: number): string {
   const hashIndex = url.indexOf("#");
   const beforeHash = hashIndex === -1 ? url : url.slice(0, hashIndex);
@@ -45,9 +41,6 @@ export function useImageRetry(src: string, enabled: boolean): RetryingImageSrc {
       if (retryStates.get(src) === waitingState) {
         const attempt = waitingState.attempt + 1;
         retryStates.set(src, { phase: "loading", attempt });
-        logRetry(src, { message: "retrying", attempt, displaySrc: appendRetryToken(src, attempt) });
-      } else {
-        logRetry(src, { message: "scheduled retry skipped because state changed", attempt: waitingState.attempt + 1 });
       }
       rerender();
     }, Math.max(0, waitingState.retryAt - Date.now()));
@@ -60,18 +53,12 @@ export function useImageRetry(src: string, enabled: boolean): RetryingImageSrc {
 
     const current = retryStates.get(src);
     if (current?.phase === "waiting" || current?.phase === "failed") {
-      logRetry(src, { message: "duplicate error ignored", phase: current.phase, attempt: current.attempt });
       rerender();
       return;
     }
 
     const attempt = current?.attempt ?? 0;
     const delay = RETRY_DELAYS_MS[attempt];
-    if (delay === undefined) {
-      logRetry(src, { message: "retry budget exhausted", attempts: attempt });
-    } else {
-      logRetry(src, { message: "load failed; scheduling retry", attempt: attempt + 1, delayMs: delay });
-    }
     retryStates.set(
       src,
       delay === undefined
@@ -86,7 +73,6 @@ export function useImageRetry(src: string, enabled: boolean): RetryingImageSrc {
     const current = retryStates.get(src);
     if (current?.phase === "loading") {
       retryStates.set(src, { phase: "loaded", attempt: current.attempt });
-      logRetry(src, { message: "retry loaded", attempt: current.attempt, displaySrc: appendRetryToken(src, current.attempt) });
     }
   };
 

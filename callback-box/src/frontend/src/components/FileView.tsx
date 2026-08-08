@@ -43,7 +43,6 @@ import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
 import { StatusBadge } from "./ui/StatusBadge";
-import { useMissingChatCardLog } from "../hooks/use-missing-chat-card-log";
 
 export type FileViewMode = "page" | "chat" | "companion" | "embed";
 
@@ -124,7 +123,7 @@ interface LoadResult {
   error: string | null;
 }
 
-function useFileData(path: string, { logMissingCard }: { logMissingCard: boolean }): LoadResult {
+function useFileData(path: string): LoadResult {
   const isCard = isCardPath(path);
   const isDir = isDirectoryPath(path);
   const isBinary = isBinaryPath(path);
@@ -139,7 +138,6 @@ function useFileData(path: string, { logMissingCard }: { logMissingCard: boolean
     { path },
     { enabled: isCard },
   );
-  const { logFileChange, logReconnect } = useMissingChatCardLog({ enabled: logMissingCard && isCard, path, cardLoaded: Boolean(card), error: cardError });
 
   // Text content via /api/files/* (managed by React Query)
   const textQuery = useQuery({
@@ -183,19 +181,16 @@ function useFileData(path: string, { logMissingCard }: { logMissingCard: boolean
       if (!fileChange) return;
       // Tolerant compare: normalize both sides so a stray leading slash on this
       // view's path can't silently drop the event (the original refresh bug).
-      const matches = boxRelativePath(fileChange.path) === boxRelativePath(path);
-      logFileChange(fileChange.path, matches);
-      if (!matches) return;
+      if (boxRelativePath(fileChange.path) !== boxRelativePath(path)) return;
       resync();
-    }, [path, resync, logFileChange]),
+    }, [path, resync]),
     onConnect: useCallback(() => {
       if (!connectedOnceRef.current) {
         connectedOnceRef.current = true;
         return;
       }
-      logReconnect();
       triggerResync();
-    }, [triggerResync, logReconnect]),
+    }, [triggerResync]),
   });
 
   return useMemo<LoadResult>(() => {
@@ -317,7 +312,7 @@ function PageHeader({
 
 export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption }: FileViewProps) {
   const mode = modeProp ?? "page";
-  const { data, loading, error } = useFileData(path, { logMissingCard: mode === "embed" });
+  const { data, loading, error } = useFileData(path);
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
     if (onAddSelection === undefined) return;
