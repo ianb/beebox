@@ -73,10 +73,14 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // the boot critical path; the reconcile is idempotent and repeats each boot,
   // so a session that misses this pass is picked up by the next one.
   // See docs/plans/chat-husks.md.
-  const maintenance = runBackfillIfNeeded(boxRoot).then(() => reconcileChatHusks(boxRoot));
-  void maintenance.catch((e: unknown) => {
+  const maintenance = runBackfillIfNeeded(boxRoot).then(() => reconcileChatHusks(boxRoot)).catch((e: unknown) => {
     console.error("[chat] session backfill failed:", e instanceof Error ? e.message : e);
   });
+  // Registration starts maintenance in the background, but shutdown still owns
+  // its lifetime. Tests and production teardown may remove the box immediately
+  // after Fastify closes; wait here so the task cannot write into a disappearing
+  // directory after `server.close()` has resolved.
+  server.addHook("onClose", () => maintenance);
 
   // Per-box registry of ChatSession instances, keyed by sessionId.
   // Turn on partial-message streaming so the per-turn SSE feed delivers

@@ -1,8 +1,8 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 3f65b3d1a7cad712f307a6c7df5665ff0bf04867
-date: 2026-08-07
-model: claude-fable-5
+generated-at-rev: e2d0c20dc7b063fd7c2be44cc57b47b81c1dcae5
+date: 2026-08-08
+model: claude-sonnet-5
 reviewed-by: Ian Bicking
 ---
 
@@ -177,9 +177,14 @@ The ones you should actually weigh:
 - **First-run window**: until an owner account exists, a box with an
   exposed port is claimable for up to 15 minutes. Create the owner
   account promptly.
-- **No MFA, no web password reset yet**: recovery is `cb auth
-  set-password` on the host
-  ([tracked](../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md)).
+- **No MFA; owner recovery is host-side**: an invited member who forgets
+  their password now gets a self-service reset — the owner mints a
+  15-minute link from Allowed Users and the member picks their own new
+  password without exposing it
+  ([details](../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md)).
+  The owner's own recovery is still `cb auth set-password` on the host;
+  full email self-service reset was rejected as operationally complex,
+  and MFA/passkeys are deferred.
 - **One Google token, broad scopes, all boxes**: per-box service policy
   is enforced in application code, not by Google. Compromise of the
   token file is fleet-wide Google access

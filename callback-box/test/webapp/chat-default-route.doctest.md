@@ -6,7 +6,7 @@ chat session before native-only audio transcription calls. It mirrors
 
 ```ts setup
 import Fastify from "fastify";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerChatRoutes } from "../../src/webapp/routes/chat.js";
@@ -48,15 +48,18 @@ await writeFile(
   join(boxRoot, ".callback-box/chat-session-id.json"),
   JSON.stringify({ sessionId: "ios-session-123", savedAt: "2026-07-10T12:00:00.000Z" }),
 );
-await getDefaultSession()
+const existing = await getDefaultSession();
+await server.close();
+const history = JSON.parse(await readFile(join(boxRoot, ".callback-box/chat-session-history.json"), "utf8"));
+`${existing}\nmaintenance migrated: ${history.migrated}`
 =>
 200
 {
   "sessionId": "ios-session-123"
 }
+maintenance migrated: true
 ```
 
 ```ts cleanup
-await server.close();
 await rm(boxRoot, { recursive: true, force: true });
 ```
