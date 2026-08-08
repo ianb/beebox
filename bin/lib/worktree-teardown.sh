@@ -8,30 +8,33 @@
 #   - .claude/hooks/session-end.sh   (Claude Code SessionEnd)
 #   - bin/codex-session-end          (codex tab exit, via launch-worktree-session)
 #
-# `bin/worktrees sweep` deliberately does NOT use this: it takes ONE
-# system-wide process snapshot and reuses it across N worktrees, and removes
-# with `git worktree remove --force` rather than the trash-mv below. Converging
-# it is a separate change with its own risk.
+# `bin/worktrees sweep` uses the liveness guard here (via
+# wt_agent_snapshot_capture, which lets it keep ONE system-wide process snapshot
+# across N worktrees) but NOT the removal below: it removes with
+# `git worktree remove --force` rather than the trash-mv, and converging that is
+# a separate change with its own risk.
 #
 # Everything here stands in front of an irreversible delete, so every "can't
 # tell" answer resolves to "don't delete". A worktree that lingers is collected
 # by the next `bin/worktrees sweep`; a worktree deleted under live work is gone.
 
-WT_STATE_DIR="${CALLBACK_STATE_DIR:-$HOME/.cache/callback-box}"
-
-# The MAIN checkout — where the git bookkeeping (prune, branch -D) has to run.
-# Derived from this file's own location, then resolved through git-common-dir so
-# a worktree's copy still points at main. Falls back to the historical path.
-_wt_lib_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd || echo "")
-WT_MONO=""
-if [ -n "$_wt_lib_dir" ]; then
-  _wt_common=$(git -C "$_wt_lib_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
-  [ -n "$_wt_common" ] && WT_MONO=$(dirname "$_wt_common")
+# Locations — WT_MONO (where the git bookkeeping runs), WT_BOX_ROOT, and
+# WT_STATE_DIR all come from the shared derivation, so this file makes no $HOME
+# assumption of its own. If derivation fails, WT_MONO stays empty and
+# wt_remove_now's `cd "$WT_MONO"` bails out before touching anything — the
+# fail-closed answer, and better than the old `$HOME/src/callback-box` fallback,
+# which could point the destructive path at a checkout that isn't the one in
+# play.
+# shellcheck source=worktree-paths.sh
+. "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
+if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
+  # Leave every derived location empty rather than half-set: `cd ""` and
+  # `[ -d "" ]` both fail, so each destructive step declines on its own.
+  WT_MONO=""
+  WT_ROOT=""
+  WT_BOX_ROOT=""
+  WT_BOX_SRC=""
 fi
-if [ -z "$WT_MONO" ] || [ ! -d "$WT_MONO/callback-box" ]; then
-  WT_MONO="$HOME/src/callback-box"
-fi
-unset _wt_lib_dir _wt_common
 
 # ── Append-only lifecycle log ───────────────────────────────────────────
 # Diagnostic for the recurring "worktrees don't get cleaned up" problem. It
@@ -94,6 +97,84 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 # not "claude" — so pgrep misses live sessions entirely (verified 2026-08-04:
 # 10 of 11 running sessions invisible to it). `ps comm` is the executable path,
 # which is reliable; match on its basename.
+#
+# ── Reusing one snapshot across many worktrees ──────────────────────────
+#
+# wt_agent_snapshot_capture
+#
+# Takes ONE system-wide process + argv + cwd snapshot into WT_SNAP_*, which
+# wt_other_agent_live then uses instead of shelling out per call. This is what
+# lets `bin/worktrees sweep` ask about N worktrees at the cost of one `ps` and
+# one `lsof`, which is the property that kept it on its own two-state copy of
+# this guard until now (and gave it a fail-OPEN hole:
+# issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
+#
+# WT_SNAP_STATE carries what the snapshot could and could not establish, so the
+# tri-state answer survives the batching:
+#   ok         — processes, argv, and cwds all readable
+#   no-agents  — process list readable, no claude/codex running at all
+#   no-procs   — `ps` could not answer; nothing can be concluded
+#   no-argv    — agents are running but their argv could not be read
+#   no-cwds    — agents are running but `lsof` could not answer for them
+#
+# A snapshot MUST NOT be combined with --exclude-self-ancestor: the snapshot
+# holds every agent's argv and cwd with no way to attribute a cwd line back to
+# the pid it came from, so "everything except me" cannot be expressed. The
+# callers split cleanly along that line anyway — hooks exclude self and take no
+# snapshot, sweep takes a snapshot and has no self to exclude.
+wt_agent_snapshot_capture() {
+  WT_SNAP_STATE=""
+  WT_SNAP_PIDS=""
+  WT_SNAP_ARGS=""
+  WT_SNAP_CWDS=""
+
+  local procs
+  procs=$(ps -axo pid=,comm= 2>/dev/null || true)
+  if [ -z "$procs" ]; then
+    WT_SNAP_STATE="no-procs"
+    return 0
+  fi
+
+  WT_SNAP_PIDS=$(printf '%s\n' "$procs" \
+    | awk '{ n = $2; sub(/.*\//, "", n); if (n == "claude" || n == "codex") print $1 }')
+  if [ -z "$WT_SNAP_PIDS" ]; then
+    WT_SNAP_STATE="no-agents"
+    return 0
+  fi
+
+  local pid_csv
+  pid_csv=$(printf '%s\n' "$WT_SNAP_PIDS" | tr '\n' ',' | sed 's/,$//')
+
+  # argv for exactly those pids, one `pid command...` line each.
+  WT_SNAP_ARGS=$(ps -axo pid=,command= 2>/dev/null \
+    | awk -v csv="$pid_csv" \
+        'BEGIN { n = split(csv, a, ","); for (i = 1; i <= n; i++) want[a[i]] = 1 }
+         want[$1] { line = $0; sub(/^[[:space:]]+/, "", line); print line }' || true)
+  if [ -z "$WT_SNAP_ARGS" ]; then
+    # We know these pids are agents but cannot read their argv. Signal 1 is
+    # therefore unusable, and an unusable signal is not an absent one.
+    WT_SNAP_STATE="no-argv"
+    return 0
+  fi
+
+  WT_SNAP_CWDS=$(lsof -a -d cwd -p "$pid_csv" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u || true)
+  if [ -z "$WT_SNAP_CWDS" ]; then
+    WT_SNAP_STATE="no-cwds"
+    return 0
+  fi
+
+  WT_SNAP_STATE="ok"
+  return 0
+}
+
+# Discard a snapshot so later calls go back to querying live.
+wt_agent_snapshot_clear() {
+  WT_SNAP_STATE=""
+  WT_SNAP_PIDS=""
+  WT_SNAP_ARGS=""
+  WT_SNAP_CWDS=""
+}
+
 wt_other_agent_live() {
   local worktree_path="$1" exclude_self=""
   [ "${2:-}" = "--exclude-self-ancestor" ] && exclude_self=1
@@ -103,6 +184,48 @@ wt_other_agent_live() {
   WT_AGENT_STATE="unknown"
   WT_AGENT_REASON=""
   WT_AGENT_SELF=""
+
+  # ── Snapshot path (sweep). See wt_agent_snapshot_capture. ──
+  if [ -n "${WT_SNAP_STATE:-}" ]; then
+    if [ -n "$exclude_self" ]; then
+      # Refuse rather than answer wrongly: excluding self from a snapshot that
+      # can't attribute cwds to pids would silently drop a live sibling too.
+      WT_AGENT_REASON="snapshot-with-exclude-self-unsupported"
+      return 0
+    fi
+    case "$WT_SNAP_STATE" in
+      no-agents) WT_AGENT_STATE="none"; return 0 ;;
+      no-procs)  WT_AGENT_REASON="cannot-enumerate-processes"; return 0 ;;
+      no-argv)   WT_AGENT_REASON="cannot-read-agent-argv"; return 0 ;;
+      no-cwds)   WT_AGENT_REASON="cannot-read-agent-cwds"; return 0 ;;
+    esac
+
+    local snap_line snap_cwd
+    while IFS= read -r snap_line; do
+      [ -n "$snap_line" ] || continue
+      case "$snap_line" in
+        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+          WT_AGENT_STATE="live"
+          WT_AGENT_REASON="signal=argv pid=${snap_line%% *}"
+          return 0 ;;
+      esac
+    done <<EOF
+$WT_SNAP_ARGS
+EOF
+    while IFS= read -r snap_cwd; do
+      [ -n "$snap_cwd" ] || continue
+      case "$snap_cwd" in
+        "$worktree_path"|"$worktree_path"/*)
+          WT_AGENT_STATE="live"
+          WT_AGENT_REASON="signal=cwd"
+          return 0 ;;
+      esac
+    done <<EOF
+$WT_SNAP_CWDS
+EOF
+    WT_AGENT_STATE="none"
+    return 0
+  fi
 
   if [ -n "$exclude_self" ]; then
     local probe=$$ pcomm
@@ -272,7 +395,7 @@ wt_remove_now() {
   ts=$(date +%s)
 
   # Trash the cloned box tree ($name/, which contains test1/).
-  local box_dest="$HOME/src/box-worktrees/$name"
+  local box_dest="$WT_BOX_ROOT/$name"
   if [ -d "$box_dest" ]; then
     mv "$box_dest" "$trash/box-$name-$ts"
     wt_say "trashed $box_dest"

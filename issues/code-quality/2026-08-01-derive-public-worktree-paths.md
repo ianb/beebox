@@ -3,7 +3,14 @@ title: "Public worktree tooling hardcodes ~/src/… paths; derive like private-i
 area: router
 filed-by: agent
 discovered-in: worktree-private-issues — while building the private-issues shadow repo
+design: ../../callback-box/docs/plans/worktree-control-surface.md
 ---
+
+> **Folded into a plan.** The derivation helper is Track A / chunk 1 of
+> [the worktree control surface plan](../../callback-box/docs/plans/worktree-control-surface.md),
+> which rewrites three of the four files listed below anyway. The tension that
+> remains here is the fourth (`bin/private-issues`'s `callback-worktrees`
+> basename assumption) and the care the sweep demands.
 
 The private-issues mechanism derives every location from the checkout
 (`git rev-parse --git-common-dir` → peers of the main checkout; see

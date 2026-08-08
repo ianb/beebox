@@ -3,7 +3,13 @@ title: "`bin/worktrees sweep`'s live-agent guard fails OPEN when ps/lsof can't a
 area: bin
 filed-by: agent
 discovered-in: worktree-codex-exit-cleanup — cross-model (codex) review of the codex teardown work
+design: ../../callback-box/docs/plans/worktree-control-surface.md
 ---
+
+> **Being fixed as part of a plan.** Track B / chunk 2 of
+> [the worktree control surface plan](../../callback-box/docs/plans/worktree-control-surface.md)
+> takes the "fold sweep onto `wt_other_agent_live` with a snapshot passed in"
+> option sketched below.
 
 `bin/worktrees sweep` removes a worktree when it is merged + clean + has no
 active agent session. The active-session guard stands in front of an

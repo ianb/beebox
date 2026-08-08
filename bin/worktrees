@@ -130,37 +130,30 @@ case "$cmd" in
   sweep)
     dry_run=false
     [ "${1:-}" = "--dry-run" ] && dry_run=true
-    MONO="$REPO_DIR"
-    WT_ROOT="$HOME/src/callback-worktrees"
-    BOX_ROOT="$HOME/src/box-worktrees"
     BROWSE_ROOT="$STATE_DIR/browse"
     LOGS_ROOT="$STATE_DIR/logs"
 
+    # Locations are derived, never hardcoded — see bin/lib/worktree-paths.sh.
+    # shellcheck source=lib/worktree-paths.sh
+    . "$REPO_DIR/bin/lib/worktree-paths.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    MONO="$WT_MONO"
+    BOX_ROOT="$WT_BOX_ROOT"
+
     # Which worktrees have an active claude/codex session (never touch them)?
-    # Two signals, both required to be absent before removal:
-    #   1. argv — sessions launched as `claude --worktree <name>`
-    #   2. process cwd — resumed claude sessions and all codex sessions don't
-    #      carry the --worktree argv, but their process's cwd is in the
-    #      worktree. lsof on the claude+codex pids surfaces those.
-    active=$(ps -axo command 2>/dev/null | grep -oE "claude --worktree [a-zA-Z0-9_-]+" | awk '{print $NF}' | sort -u)
-    # Codex sessions count too (launch-worktree-session --agent codex): no
-    # argv marker to grep (codex takes no worktree name), but the process cwd
-    # check below covers them — a codex TUI's cwd is the worktree it runs in.
-    # NOT `pgrep -x claude`: pgrep matches the 16-char accounting name
-    # (`ps ucomm`), and a native-installed Claude Code reports that as its
-    # VERSION ("2.1.221"), not "claude" — so pgrep silently missed 10 of 11
-    # live sessions when this was measured (2026-08-04), leaving signal 2 doing
-    # nothing and the whole guard resting on the argv signal alone. `ps comm` is
-    # the executable path and is reliable; match on its basename.
-    agent_pids=$(ps -axo pid=,comm= 2>/dev/null \
-      | awk '{ n = $2; sub(/.*\//, "", n); if (n == "claude" || n == "codex") print $1 }' \
-      | tr '\n' ',' | sed 's/,$//')
-    active_cwds=""
-    if [ -n "$agent_pids" ]; then
-      active_cwds=$(lsof -a -d cwd -p "$agent_pids" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u)
-    fi
+    # This uses the SHARED guard in bin/lib/worktree-teardown.sh rather than a
+    # local copy. Sweep's reason for keeping its own — one process snapshot
+    # reused across N worktrees — is now expressed by the snapshot API, and the
+    # local copy's two-state answer was a fail-OPEN hole in front of an
+    # irreversible delete (issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md):
+    # a `ps` or `lsof` that could not answer read as "nothing is running".
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    WT_LOG_LABEL="Sweep"
+    wt_agent_snapshot_capture
 
     removed=0
+    skipped_unknown=0
     for d in "$WT_ROOT"/*; do
       [ -e "$d" ] || continue
       name=$(basename "$d")
@@ -169,38 +162,28 @@ case "$cmd" in
         echo "stray (not a directory): $d — leaving alone, inspect manually"
         continue
       fi
-      if echo "$active" | grep -qxF "$name"; then
-        echo "skip $name: active claude session (argv)"
+      # `unknown` is NOT `none`. A ps/lsof that could not answer leaves the
+      # worktree alone and says so; the next sweep collects it if it really is
+      # idle, whereas a worktree deleted under live work is gone.
+      wt_other_agent_live "$d"
+      if [ "$WT_AGENT_STATE" != "none" ]; then
+        echo "skip $name: agent=$WT_AGENT_STATE ($WT_AGENT_REASON)"
+        [ "$WT_AGENT_STATE" = "unknown" ] && skipped_unknown=$((skipped_unknown + 1))
         continue
       fi
-      # Literal prefix match, not `grep -E "^$d(/|$)"`: a worktree path holding
-      # a regex metacharacter would either mis-match or (with an unbalanced
-      # `[`) make the test silently false — turning a guard that stands in
-      # front of an irreversible delete off exactly when it matters.
-      cwd_hit=""
-      while IFS= read -r acwd; do
-        [ -n "$acwd" ] || continue
-        case "$acwd" in
-          "$d"|"$d"/*) cwd_hit=1; break ;;
-        esac
-      done <<EOF
-$active_cwds
-EOF
-      if [ -n "$cwd_hit" ]; then
-        echo "skip $name: active claude/codex session (cwd)"
-        continue
-      fi
-      ahead=$(git -C "$d" rev-list --count main..HEAD 2>/dev/null || echo "?")
-      # Deletion-only entries don't block removal: a cleanup killed mid-
-      # delete (the old hook-timeout bug) leaves phantom `D` lines for
-      # tracked files whose content is all in git. Real dirt (modified,
-      # untracked, renamed, conflicted) still blocks.
-      dirty=$(git -C "$d" status --porcelain 2>/dev/null | grep -cvE '^( D|D ) ' || true)
+      # Shared with the hook teardown path: sets WT_BRANCH, WT_AHEAD, WT_DIRTY.
+      # Deletion-only working-tree entries don't count as dirt (a cleanup killed
+      # mid-delete leaves phantom `D` lines whose content is all in git), and a
+      # `git status` that ERRORS reports "?" rather than the 0 that a bare
+      # `grep -c` would have produced — "?" blocks, 0 authorizes.
+      wt_work_state "$d"
+      ahead="$WT_AHEAD"
+      dirty="$WT_DIRTY"
       if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
         echo "skip $name: ahead=$ahead non-deletion-dirty=$dirty (has unmerged work)"
         continue
       fi
-      branch=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+      branch="$WT_BRANCH"
       echo "remove $name (branch=$branch)"
       if [ "$dry_run" = false ]; then
         # Private-issues shadow worktree: remove iff merged + strictly
@@ -277,6 +260,9 @@ EOF
 
     suffix=""
     [ "$dry_run" = true ] && suffix=" (dry-run; nothing removed)"
+    # Surfaced, not silent: an unknown-liveness skip means a guard declined to
+    # answer, which is worth seeing if it ever becomes routine.
+    [ "$skipped_unknown" -gt 0 ] && suffix="$suffix ($skipped_unknown skipped: liveness unknown)"
     echo "sweep done: $removed worktrees, $orphan_browse browse, $orphan_logs logs, $orphan_pids pids$suffix"
     ;;
 
