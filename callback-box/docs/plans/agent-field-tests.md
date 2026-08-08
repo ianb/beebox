@@ -173,7 +173,9 @@ Ordered by implementation dependency, then surface size.
   (boxholder). Nothing existing manages a server + browser + box as one
   disposable unit.
 - **Direction:** Run directory `~/src/boxes/field-runs/<scenario>-<timestamp>/`
-  containing `box/` (fresh `cb init`, test-box marker, git-committed baseline),
+  containing `box/` (fresh `cb init`, test-box marker, any connector config the
+  scenario declares — seeded here so the operator never touches setup — as the
+  git-committed baseline),
   `screenshots/`, `report.md` + `findings.json`, and the operator transcript.
   Server: `cb serve <box> --port <free port>`, `CB_TIME` set to the scenario's
   start time, `CB_FAKE_GMAIL` pointing into the run dir. Browser: a dedicated
@@ -364,8 +366,13 @@ nothing here depends on it.
 
 ## NOT in scope
 
-- **Auth, login, pairing** — boxholder decision; the browse key skips the wall.
-  Login UX stays untested; noted in `docs/testing.md`.
+- **Configuration flows of any kind** — boxholder decision (2026-08-08):
+  field tests exercise *operating order*, never setup. Auth/login/pairing (the
+  browse key skips the wall), connector setup UI, email configuration — all
+  pre-arranged by the harness. When a scenario involves email, the box starts
+  with `config/connectors/gmail.json` (rules included) already seeded at box
+  creation, as if setup happened before the story begins. Setup UX stays
+  untested; noted in `docs/testing.md`.
 - **Calendar / Drive / Telegram fakes** — email is the one connector class in
   v1; the `CB_FAKE_*` pattern extends later if scenarios need it.
 - **Demo-family box** — separate issue; later scenarios can seed from it.
