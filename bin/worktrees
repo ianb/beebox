@@ -443,6 +443,19 @@ case "$cmd" in
       fi
     fi
 
+    # Drain the trash even when nothing was removed this run. Otherwise the only
+    # thing that reaps is a removal, so a reaper killed partway (sleep, reboot)
+    # leaves its ~1GB box tree in the cache until the NEXT removal happens —
+    # which may be never. Sweep already runs at every session start and end and
+    # already prunes orphaned state, so this is the same job.
+    if [ "$dry_run" = false ]; then
+      trash_left=$(find "$STATE_DIR/trash" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$trash_left" != "0" ]; then
+        echo "reaping $trash_left trashed tree(s) in $STATE_DIR/trash"
+        wt_trash_reap
+      fi
+    fi
+
     suffix=""
     [ "$dry_run" = true ] && suffix=" (dry-run; nothing removed)"
     # Surfaced, not silent: an unknown-liveness skip means a guard declined to
