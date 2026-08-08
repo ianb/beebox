@@ -90,7 +90,20 @@ is what makes the update range == "the commits not yet reflected."
    the last report? A fixed one becomes ordinary public history — move it
    back to the public queue and let the report reference it directly.
    Are there new private items to reference by class?
-6. Re-derive any SECURITY.md paragraph whose underlying items changed.
+6. Re-derive any SECURITY.md paragraph whose underlying items changed —
+   and expect that to be **few or none**. The two artifacts have different
+   jobs: **every** security-relevant detail belongs in
+   `security-report.md`; SECURITY.md changes **only** when the
+   reader-facing overall picture does (a new egress destination, a changed
+   blast-radius claim, a new accepted risk, a materially different auth
+   story). Do not feel obligated to touch SECURITY.md just because you
+   edited the structured report — most per-item accounting changes need no
+   SECURITY.md edit at all, and a change that's already represented there
+   often needs no *more* exposure than it has. When SECURITY.md does need
+   to move, **prefer a small edit to an addition**: if an existing
+   sentence can be clarified or corrected in place, do that rather than
+   append new content. The structured report grows with detail; SECURITY.md
+   stays a tight synthesis.
 7. Update the provenance headers (new rev, date, model,
    `reviewed-by: DRAFT — unreviewed`); present the diff to the boxholder.
 
@@ -300,6 +313,17 @@ backed by an item there. Shape:
 Register: honest, specific, unpromotional. Weaknesses are stated as
 plainly as strengths — the OpenClaw lesson is that an explicit blast-radius
 doc is what earns trust, not reassurance.
+
+**What reaches this document — and what doesn't.** SECURITY.md is a
+synthesis, not a mirror of the structured report. Its job is to give a
+reader an accurate *overall picture*; it is not obligated to surface every
+item, and an item it already covers rarely needs more prominence. A great
+many structured-report changes leave SECURITY.md untouched, and that is the
+correct outcome — the pressure to "reflect the update somewhere visible" is
+a trap that bloats the synthesis and buries the picture. When you do edit
+it, reach for the smallest change that keeps it true: correct or clarify an
+existing sentence in place before adding a new one. Length is a cost here;
+the structured report is where completeness lives.
 
 ## README linkage
 
