@@ -2,6 +2,13 @@
 # CLI for the callback-box dev router and worktrees.
 #
 # Commands:
+#   create <name>      Create (or re-attach to) a worktree, ready to work in:
+#                      box clone, installs, Codex mirrors, box hooks. Prints the
+#                      worktree path on stdout; logs go to stderr. Idempotent.
+#                      Options: --base-ref <ref> (default main), --path <dir>.
+#                      This is the agent-neutral entry point — Claude Code's
+#                      WorktreeCreate hook and bin/launch-worktree-session are
+#                      both thin clients of it.
 #   serve              Run the router in the foreground.
 #   status, list       Show what the router is currently running.
 #   down <name>        Tell the router to stop a worktree's processes.
@@ -30,6 +37,41 @@ cmd="${1:-status}"
 shift || true
 
 case "$cmd" in
+  create)
+    name=""
+    base_ref="main"
+    want_path=""
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --base-ref) [ $# -ge 2 ] || { echo "worktrees create: --base-ref needs a value" >&2; exit 1; }; base_ref="$2"; shift 2 ;;
+        --base-ref=*) base_ref="${1#--base-ref=}"; shift ;;
+        --path)     [ $# -ge 2 ] || { echo "worktrees create: --path needs a value" >&2; exit 1; }; want_path="$2"; shift 2 ;;
+        --path=*)   want_path="${1#--path=}"; shift ;;
+        -*)         echo "worktrees create: unknown option $1" >&2; exit 1 ;;
+        *)          [ -z "$name" ] || { echo "worktrees create: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+      esac
+    done
+    [ -n "$name" ] || { echo "usage: worktrees create <name> [--base-ref <ref>] [--path <dir>]" >&2; exit 1; }
+
+    # Stdout carries exactly one thing: the resulting worktree path. Claude
+    # Code's WorktreeCreate hook contract requires it, and every other caller
+    # wants it too.
+    #
+    # Enforced structurally rather than by discipline: stash the real stdout on
+    # fd 3 and point fd 1 at stderr for the whole command, so every child
+    # process inherits a stdout that is already stderr. Individual `>&2` in the
+    # steps below are then belt-and-braces. Without this, any child that prints
+    # to stdout silently corrupts the contract — `bin/generate-agents-md.ts`
+    # does exactly that ("wrote 18 AGENTS.md mirror(s)…"), and its line landed in
+    # the returned path until this was added.
+    exec 3>&1 1>&2
+    # shellcheck source=lib/worktree-create.sh
+    . "$REPO_DIR/bin/lib/worktree-create.sh"
+    trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree may be partially set up at ${WT_CREATED_PATH:-unknown}." >&2; exit $rc' ERR
+    wt_create "$name" "$base_ref" "$want_path"
+    printf '%s\n' "$WT_CREATED_PATH" >&3
+    ;;
+
   serve)
     exec "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/bin/router.ts" "$@"
     ;;

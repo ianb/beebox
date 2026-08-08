@@ -13,8 +13,8 @@
 # be spun up on a specific model; omit to use the agent's default.
 #
 # --agent codex runs OpenAI's codex CLI instead of claude. Codex has no
-# --worktree, so this path invokes the WorktreeCreate hook directly (same
-# worktree + box clone + installs; the hook also generates the gitignored
+# --worktree, so this path calls `bin/worktrees create` directly (same
+# worktree + box clone + installs; it also generates the gitignored
 # AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
 # runs codex in the worktree with full access/no-approvals (parity with claude
 # workers, which run unsandboxed). Codex is run, not exec'd, because it fires no
@@ -167,9 +167,12 @@ else
 fi
 EOF
 else
-  # Codex path. No --worktree in codex, so run the WorktreeCreate hook
-  # directly — it's idempotent (a relaunch re-attaches and refreshes the
-  # AGENTS.md mirrors) and prints the worktree path on stdout, logs on stderr.
+  # Codex path. No --worktree in codex, so call the repo's own worktree CLI —
+  # it's idempotent (a relaunch re-attaches and refreshes the AGENTS.md mirrors)
+  # and prints the worktree path on stdout, logs on stderr. Claude Code reaches
+  # the same command through its WorktreeCreate hook adapter, so both agents run
+  # identical setup; this path no longer has to impersonate a Claude hook to get
+  # there.
   #
   # Full access (danger-full-access + never-approve), matching claude workers,
   # which run unsandboxed via --dangerously-skip-permissions. A workspace-write
@@ -186,7 +189,7 @@ else
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$MONO"
-wt_path=\$(printf '{"name":"%s"}' "$wt" | .claude/hooks/worktree-create.sh)
+wt_path=\$(./bin/worktrees create "$wt")
 if [ ! -f "\$wt_path/AGENTS.md" ]; then
   echo "launch-worktree-session: no AGENTS.md in \$wt_path (generation failed?) — refusing to launch codex without repo docs" >&2
   exit 1
