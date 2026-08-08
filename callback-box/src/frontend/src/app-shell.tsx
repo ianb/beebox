@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Outlet, useParams, useNavigate, useLocation } from "@tanstack/react-router";
+import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
 import { BrowsePage, type BrowseNavigateOptions } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
@@ -51,9 +51,6 @@ export function AppLayout() {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
-  const location = useLocation();
-  const embeddedChat = location.pathname.endsWith("/chat") &&
-    new URLSearchParams(location.searchStr).get("embed") === "1";
 
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;
@@ -78,12 +75,10 @@ export function AppLayout() {
     <AppBarChromeProvider>
       <ViewOverlayProvider>
         <Column className="h-app">
-          {embeddedChat ? null : (
-            <AppNav
-              onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
-              onToggleSourceView={handleToggleSourceView}
-            />
-          )}
+          <AppNav
+            onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
+            onToggleSourceView={handleToggleSourceView}
+          />
           <main className="flex-1 min-h-0">
             {boxExists ? (
               <Outlet />

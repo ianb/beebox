@@ -9,8 +9,8 @@ const RedeemBody = z.object({
 });
 
 export function isPairingRedeemUrl(url: string): boolean {
-  const path = url.split("?")[0];
-  return path === "/api/pairing/redeem" || path?.endsWith("/api/pairing/redeem") === true;
+  const path = url.split("?")[0] ?? "";
+  return path === "/api/pairing/redeem" || /^\/[^/]+\/api\/pairing\/redeem$/.test(path);
 }
 
 export function registerPairingRoutes(

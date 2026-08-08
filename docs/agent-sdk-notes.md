@@ -9,12 +9,63 @@ releases and immediately applies callback-box-relevant security, memory, and
 correctness fixes.
 
 - **Current pin:** `0.3.222`
-- **Latest reviewed upstream version:** `0.3.223`
+- **Latest reviewed upstream version:** `0.3.224`
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Let `0.3.223` finish the two-day settling window,
-  then bump. Nothing in it is act-now for callback-box.
+- **Current recommendation:** Hold one more turn, then bump to the newest
+  settled version. As of 2026-08-07T16:24Z `0.3.223` is ~42h old and `0.3.224`
+  ~15h old, so neither has cleared the 48h settling window. Nothing in either is
+  act-now for callback-box.
 
 ## Release ledger
+
+### 0.3.224 — pending
+
+- **Upstream:** Added `crossSessionInbound` and `dialogExpiry` settings —
+  cross-session messages sent to a session running with bypassed permissions
+  are held for approval, while messages to other sessions auto-deliver; added
+  `subkind: 'peer-send-message'` to the `task-notification` member of
+  `SDKMessageOrigin`; added a `source: 'archive'` plugin config variant to
+  `Settings` (`url` + optional `sha256`, install from a zip over HTTPS); added
+  sandbox credential-masking fields to `Settings` (`decode: 'jwt'` with
+  `maskClaims`, `extract`/`onExtractNoMatch` on `envVars`, `awsPairs`/`sigv4`
+  for AWS SigV4 re-signing); fixed long (>200 char) project paths resolving to
+  another project's session directory under a shared sanitized prefix, so
+  session list/get/rename/tag/fork/delete and `/resume` no longer cross
+  projects. No Claude Code parity claim.
+- **Callback-box applicability:** One genuinely adjacent fix, but not reachable;
+  the rest is unused surface.
+  - Cross-project session directories: this is the closest thing to a
+    correctness fix for callback-box, because callback-box owns the same
+    encoding — `src/core/chat/session/transcript-paths.ts` maps an SDK cwd to
+    `~/.claude/projects/<encoded-cwd>/`, and
+    `src/core/chat/session/history.ts:145` enumerates every such directory a
+    box's sessions can live in. **The >200-char precondition does not hold on
+    real paths**: the longest encoded project directory on this machine is 137
+    chars and the longest box cwd is 77 (`~/src/box-worktrees/<name>/test1/content`);
+    prod boxes at `/home/callback/boxes/<slug>/content` are shorter still. So
+    this is not act-now — but it is worth keeping as evidence if a box is ever
+    placed under a deeply nested path, where the symptom would be a session
+    resolving into a *different* box's transcripts.
+  - `crossSessionInbound`/`dialogExpiry`: callback-box has no cross-session
+    `SendMessage` usage at all, so nothing is inbound to hold. Note for later:
+    callback-box runs `permissionMode: "bypassPermissions"` in all three of its
+    query call sites (`src/core/agent/run.ts:72`,
+    `src/services/claude-chat.ts:96`, `scripts/sdk-steering-probe.ts:78`), which
+    is exactly the mode whose inbound messages are held for approval. If
+    callback-box ever adopts cross-session messaging, unattended box agents would
+    stall on that default and would need `crossSessionInbound` set explicitly.
+  - `subkind: 'peer-send-message'`: additive optional field. `adaptTaskMessage`
+    (`src/core/chat/session/messages.ts`) switches on `subtype` and terminates
+    with `assertNever`, so a new *field* on `task_notification` does not affect
+    it. (A new task *subtype* would be a compile error by design — that guard
+    is working as intended and did not fire here.)
+  - Archive plugin source and sandbox credential masking: callback-box ships its
+    plugins from a local path (`plugins/`) and configures no SDK sandbox
+    credential masking. Nothing relevant.
+- **Action:** Published 2026-08-07T01:39Z; ~15h old, inside the settling window.
+  No act-now security, memory, or correctness fix that callback-box can reach,
+  so it waits.
+- **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.224), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03224)
 
 ### 0.3.223 — pending
 
@@ -53,11 +104,10 @@ correctness fixes.
     can undercount. `modelUsage` is the documented field for cost accounting.
     Note `src/core/usage.ts` is unaffected — it aggregates token usage from
     session JSONL assistant messages, not from SDK result messages.
-- **Action:** Published 2026-08-05, still inside the normal two-day settling
-  window as of 2026-08-06. No act-now security, memory, or correctness fix, so
-  it waits for the window to clear rather than being force-applied. The two
-  scan-vision follow-ups above are callback-box code opportunities, not
-  blockers on the bump.
+- **Action:** Published 2026-08-05T22:50Z. Still pending. Re-reviewed
+  2026-08-07 at ~42h old — just short of the 48h settling window, and still
+  nothing act-now, so it waits one more turn. The two scan-vision follow-ups
+  above are callback-box code opportunities, not blockers on the bump.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.223), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03223)
 
 ### 0.3.222 — applied

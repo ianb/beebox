@@ -49,8 +49,8 @@ to people; close when the soft launch happens. Builds on
   section (resolves
   [release-cloud-provider-honesty](../closed/decisions/2026-07-08-release-cloud-provider-honesty.md)).
 - **Auth**: local password stays the default;
-  [invite links](../features/2026-07-20-invite-links.md) and
-  [web password change](../features/2026-07-20-web-password-change.md) are
+  [invite links](../closed/features/2026-07-20-invite-links.md) and
+  [web password change](../closed/features/2026-07-20-web-password-change.md) are
   wanted; GitHub OAuth rejected (first members are developers, their
   collaborators aren't); Tailscale identity rejected (footgun-prone); Google
   OAuth stays the documented optional extra.
@@ -104,7 +104,7 @@ to people; close when the soft launch happens. Builds on
    ([dev-router-lan-exposure](../closed/bugs/2026-07-21-dev-router-lan-exposure.md),
    HIGH — a regression from this session's own dev-router fix; resolution
    decided (dev-never-open), implementation pending).
-2. **[boxes-share-one-origin](2026-07-19-boxes-share-one-origin.md)** —
+2. **[boxes-share-one-origin](../closed/decisions/2026-07-19-boxes-share-one-origin.md)** —
    either fix or stop claiming isolation in `auth.ts`/docs. Honest-docs is
    the acceptable launch answer; the fix can follow.
 3. **README front door** (the release plan's Track E; item 11 in
@@ -162,8 +162,8 @@ instance).
 Filed — features:
 [inline-bug-submission](../features/2026-07-20-inline-bug-submission.md),
 [agent-maintained-security-report](../features/2026-07-20-agent-maintained-security-report.md),
-[web-password-change](../features/2026-07-20-web-password-change.md),
-[invite-links](../features/2026-07-20-invite-links.md),
+[web-password-change](../closed/features/2026-07-20-web-password-change.md),
+[invite-links](../closed/features/2026-07-20-invite-links.md),
 [github-pages-site](../features/2026-07-20-github-pages-site.md),
 [explicit-api-key-config](../features/2026-07-20-explicit-api-key-config.md),
 [export-md-agent-instructions](../features/2026-07-20-export-md-agent-instructions.md),

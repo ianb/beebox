@@ -86,6 +86,12 @@ verifyHubSecret(validHubRequest)
 
 JSON.stringify(resolveRequestIdentity(validHubRequest, { openAccess: false }))
 => {"email":"person@example.com","name":"person@example.com","source":"hub"}
+
+const mixedCaseHubRequest = fakeRequest({
+  headers: { "x-cb-hub-secret": "hub-secret-abc123", "x-cb-authenticated-email": " Person@Example.COM " },
+});
+JSON.stringify(resolveRequestIdentity(mixedCaseHubRequest, { openAccess: false }))
+=> {"email":"person@example.com","name":"person@example.com","source":"hub"}
 ```
 
 ## A valid secret + no email header is unauthenticated UNLESS `x-cb-hub-auth: off` is also set

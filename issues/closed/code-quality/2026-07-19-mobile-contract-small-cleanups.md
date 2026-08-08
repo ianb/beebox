@@ -3,9 +3,16 @@ title: "Mobile contract small cleanups: unanchored redeem-URL match, embed=1 par
 area: callback-box
 filed-by: agent
 discovered-in: worktree-mobile-token-handshake — carried over from the closed parser-plumbing issue
+resolution: implemented
 ---
 
-Sibling to [iOS small cleanups](2026-07-17-ios-small-cleanups.md) — that one is native-side
+Resolved 2026-08-07 in `worktree-mobile-contract-cleanups`, commit 294ac811. All three bullets
+fixed: `isPairingRedeemUrl` now anchors the box-prefixed match with
+`/^\/[^/]+\/api\/pairing\/redeem$/`; the web frontend retired `embed=1` in favor of
+`nativeComposer=1` only; and iOS `ChatAPI.resolvedSession()` now throws on non-2xx instead of
+silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
+
+Sibling to [iOS small cleanups](../../code-quality/2026-07-17-ios-small-cleanups.md) — that one is native-side
 housekeeping, this one is the cross-platform contract surface; worth triaging together.
 
 The three bullets that survived

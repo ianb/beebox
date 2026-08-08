@@ -18,7 +18,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyRequest } from "fastify";
 import { parseCookieHeader } from "../lib/cookies.js";
 import { errnoCode } from "../lib/error-guards.js";
-import { getLocalOwnerEmail, getLocalUser } from "./local-users.js";
+import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "./local-users.js";
 import { getLocalUserCached } from "./local-users-cache.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
@@ -215,9 +215,10 @@ function currentGenForEmail(email: string): number | undefined {
  * BOTH login paths (password POST and Google callback) get it uniformly.
  */
 export function signSession(user: SessionUser): string {
-  const gen = currentGenForEmail(user.email);
+  const email = canonicalizeEmail(user.email);
+  const gen = currentGenForEmail(email);
   const payload = JSON.stringify({
-    email: user.email,
+    email,
     name: user.name,
     ...(user.picture ? { picture: user.picture } : {}),
     ...(gen !== undefined ? { gen } : {}),
@@ -271,7 +272,7 @@ export function verifySession(cookie: string): SessionUser | null {
     if (typeof data.email !== "string") return null;
     const gen = typeof data.gen === "number" ? data.gen : undefined;
     return {
-      email: data.email,
+      email: canonicalizeEmail(data.email),
       name: data.name || data.email,
       picture: data.picture,
       ...(gen !== undefined ? { gen } : {}),
@@ -326,9 +327,10 @@ let loggedAuthStoreUnavailable = false;
  * very sessions revocation exists to kill; this owner-lookup path is not that.
  */
 export function getOwnerEmail(): string | null {
-  if (process.env.CB_OWNER_EMAIL) return process.env.CB_OWNER_EMAIL;
+  if (process.env.CB_OWNER_EMAIL) return canonicalizeEmail(process.env.CB_OWNER_EMAIL);
   try {
-    return getLocalOwnerEmail();
+    const localOwner = getLocalOwnerEmail();
+    return localOwner ? canonicalizeEmail(localOwner) : null;
   } catch (e) {
     if (e instanceof AuthStoreUnavailableError) {
       if (!loggedAuthStoreUnavailable) {
@@ -379,11 +381,22 @@ export interface RequestIdentity {
  * headers gated by `CB_HUB_SECRET` — the session cookie is never
  * consulted, even if one is present. This is deliberate, not an oversight:
  * the session-cookie secret is symmetric (HMAC), so any box that can VERIFY
- * a cookie could also FORGE one for a sibling box. Under the plan's trust
- * model (hub trusted, boxes mutually untrusting) that is unacceptable, so
- * the hub is the only process that ever holds the session secret, and a
- * hub-mode box authenticates a request purely from the secret-gated
- * header the hub attached after checking the cookie itself.
+ * a cookie could also FORGE one for a sibling box, so the hub is the only
+ * process that ever holds the session secret, and a hub-mode box authenticates
+ * a request purely from the secret-gated header the hub attached after checking
+ * the cookie itself.
+ *
+ * Scope, stated honestly: this closes cross-box *authentication* forgery at the
+ * SERVER. It does NOT give boxes browser-level isolation — boxes are path
+ * siblings on ONE origin (`/<slug>/…`), so a script in one box can make
+ * same-origin requests to another box's API with that box's ambient credentials.
+ * We do not claim otherwise. That is acceptable because a callback-box instance is
+ * SINGLE-OPERATOR: every box on an origin belongs to one operator, running content
+ * they or their agents authored — no operator co-hosts a *different* operator's
+ * boxes on the same origin (e.g. all of one person's boxes live on their own
+ * domain). So cross-box browser isolation is a non-goal, not a gap. If boxes ever
+ * render third-party-authored views or are shared between people, revisit
+ * (per-box origins or sandboxed content). See `docs/content-security-policy.md`.
  *
  * - Missing/invalid `x-cb-hub-secret` -> unauthenticated (`source: null`).
  *   Fails closed; a hub-mode box NEVER falls back to cookie verification —
@@ -416,7 +429,8 @@ export function resolveRequestIdentity(
     if (!verifyHubSecret(request)) return { email: null, name: null, source: null };
     const emailHeader = request.headers[HUB_EMAIL_HEADER];
     if (typeof emailHeader === "string" && emailHeader.length > 0) {
-      return { email: emailHeader, name: emailHeader, source: "hub" };
+      const email = canonicalizeEmail(emailHeader);
+      return { email, name: email, source: "hub" };
     }
     if (request.headers[HUB_AUTH_OFF_HEADER] === "off") {
       return { email: null, name: null, source: "open" };

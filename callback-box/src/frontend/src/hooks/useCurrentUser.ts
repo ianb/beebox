@@ -21,6 +21,7 @@ export interface CurrentUser {
   name: string;
   picture?: string;
   isOwner: boolean;
+  hasPassword: boolean;
 }
 
 interface AuthMeResponse {
@@ -28,6 +29,7 @@ interface AuthMeResponse {
   name?: string;
   picture?: string;
   isOwner?: boolean;
+  hasPassword?: boolean;
   open?: boolean;
 }
 
@@ -55,11 +57,17 @@ async function fetchCurrentUser(): Promise<CurrentUser | null> {
     name: data.name ?? data.email,
     picture: data.picture,
     isOwner: data.isOwner ?? false,
+    hasPassword: data.hasPassword ?? false,
   };
 }
 
 /** The signed-in user, or `null` when signed out (including open mode). */
 export function useCurrentUser(): CurrentUser | null {
-  const query = useQuery({ queryKey: ["auth", "me"], queryFn: fetchCurrentUser });
+  const query = useCurrentUserQuery();
   return query.data ?? null;
+}
+
+/** Full query state for account settings that must distinguish loading from signed out. */
+export function useCurrentUserQuery() {
+  return useQuery({ queryKey: ["auth", "me"], queryFn: fetchCurrentUser });
 }

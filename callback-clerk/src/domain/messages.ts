@@ -45,6 +45,7 @@ export interface SharedTabsResult {
   transferId: string;
   tabCount: number;
   replacedUndo?: boolean | undefined;
+  organizerOpened?: boolean | undefined;
 }
 
 export type ActionResponse = { ok: true; result?: SharedTabsResult | undefined } | ActionFailure;

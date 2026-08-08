@@ -12,6 +12,7 @@ import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { TextLink } from "../components/ui/TextLink";
+import { PasswordSection } from "../components/settings/PasswordSection";
 
 export function SettingsPage() {
   const { boxSlug } = useParams({ strict: false });
@@ -26,6 +27,8 @@ export function SettingsPage() {
         <Text as="h1" size="2xl" weight="bold">Settings</Text>
 
         <CompanionPairingSection />
+
+        <PasswordSection />
 
         <ScanUploaderSection />
 

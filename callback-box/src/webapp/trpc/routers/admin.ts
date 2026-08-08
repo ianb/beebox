@@ -14,6 +14,9 @@ import { googleAdminProcedures } from "./admin-google.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
+import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
+import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
+import { inviteAdminProcedures } from "./admin-invites.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
@@ -41,10 +44,10 @@ const gmailConfigSchema = z.object({
   gcIntervalHours: z.number().optional(),
 });
 
-/**
- * Per-box admin router (Telegram, box config).
- */
+/** Per-box admin router (Telegram, box config). */
 export const adminRouter = router({
+  ...inviteAdminProcedures,
+
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (!config) {
@@ -161,12 +164,21 @@ export const adminRouter = router({
     }
     return {
       boxSlug: ctx.boxSlug,
-      allowedEmails: config.allowedEmails,
+      allowedEmails: normalizeAllowedEmails(config.allowedEmails),
       publicUrl: config.publicUrl,
-      ownerEmail: process.env.CB_OWNER_EMAIL || null,
+      ownerEmail: process.env.CB_OWNER_EMAIL
+        ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
+        : getLocalOwnerEmail(),
       googleServices: config.googleServices,
     };
   }),
+
+  localAccountStatus: ownerProcedure
+    .input(z.object({ email: z.string().max(254) }))
+    .query(({ input }) => {
+      const email = canonicalizeEmail(input.email);
+      return { exists: getLocalUser(email) !== null };
+    }),
 
   gmailConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
@@ -239,45 +251,21 @@ export const adminRouter = router({
         }),
     )
     .mutation(async ({ input, ctx }) => {
-      const configPath = path.join(ctx.boxRoot, "config/box.json");
-
-      // Serialize the read-merge-write on box.json so a concurrent
-      // allowedEmails update and a googleServices update can't drop one.
-      return withCardLock(configPath, async () => {
-        let existing: Record<string, unknown> = {};
-        try {
-          existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
-        } catch (e) {
-          if (errnoCode(e) !== "ENOENT") {
-            console.debug("box.json missing or unreadable, starting fresh config:", e);
-          }
-        }
-
-        const changed: string[] = [];
-        if (input.allowedEmails) {
-          existing.allowedEmails = input.allowedEmails.filter(
-            (e) => typeof e === "string" && e.includes("@"),
-          );
-          changed.push("allowedEmails");
-        }
-        if (input.googleServices) {
-          existing.googleServices = input.googleServices;
-          changed.push("googleServices");
-        }
-        await fs.mkdir(path.dirname(configPath), { recursive: true });
-        await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
-        await stageAndCommitPaths(ctx.boxRoot, {
-          paths: ["config/box.json"],
-          message: `Update box config: ${changed.join(", ")}`,
-        });
-
-        const saved = boxConfigSchema.parse(existing);
-        return {
-          success: true,
-          allowedEmails: saved.allowedEmails,
-          googleServices: saved.googleServices,
-        };
+      const result = await updateBoxConfigFields({
+        boxRoot: ctx.boxRoot,
+        ...(input.allowedEmails === undefined ? {} : { allowedEmails: input.allowedEmails }),
+        ...(input.googleServices === undefined ? {} : { googleServices: input.googleServices }),
       });
+      if (result.commitError) {
+        console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
+      }
+      const saved = boxConfigSchema.parse(result.config);
+      return {
+        success: true,
+        commitWarning: result.commitError === null ? null : "Saved, but the Git commit failed.",
+        allowedEmails: saved.allowedEmails,
+        googleServices: saved.googleServices,
+      };
     }),
 
   ...googleAdminProcedures,

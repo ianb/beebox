@@ -124,8 +124,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
     </>
   );
 
-  // No slots at all under `?embed=1` — AppLayout renders no bar there, so
-  // there is nothing to portal into and this renders nothing.
+  // Native composer mode keeps the app chrome; portal only when a slot exists.
   return (
     <>
       {chipSlot === null ? null : createPortal(chips, chipSlot)}

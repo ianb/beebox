@@ -55,7 +55,11 @@ export async function findChatHusk(boxRoot: string, sessionId: string): Promise<
 async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<string | null> {
   try {
     const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-    const meta = await getSessionMetadata({ sessionId, logPath, snippetMaxLen: TITLE_MAX_LEN });
+    const meta = await getSessionMetadata({
+      sessionId,
+      logPath,
+      snippetMaxLen: TITLE_MAX_LEN,
+    });
     const snippet = meta.firstUserSnippet?.trim();
     return snippet !== undefined && snippet !== "" ? snippet : null;
   } catch (_e) {
@@ -70,10 +74,7 @@ async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<str
  * Idempotent. `date` names the file (defaults to now; backfill passes the
  * transcript mtime so old husks sort by when the chat happened).
  */
-export async function ensureChatHusk(
-  boxRoot: string,
-  opts: { sessionId: string; contextDir?: string; date?: Date },
-): Promise<string> {
+export async function ensureChatHusk(boxRoot: string, opts: { sessionId: string; contextDir?: string; date?: Date }): Promise<string> {
   const existing = await findChatHusk(boxRoot, opts.sessionId);
   if (existing !== null) return existing;
 
@@ -125,9 +126,14 @@ export interface ChatHuskEntry {
  * Unparseable or session-less files are skipped with a warning.
  */
 export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
+  return listChatHusksUnder(boxRoot, CHAT_HUSK_DIR);
+}
+
+/** Read chat cards directly under a box-relative directory (active or Trash). */
+export async function listChatHusksUnder(boxRoot: string, relDir: string): Promise<ChatHuskEntry[]> {
   let names: string[];
   try {
-    names = await fs.readdir(path.join(boxRoot, CHAT_HUSK_DIR));
+    names = await fs.readdir(path.join(boxRoot, relDir));
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return [];
     throw e;
@@ -135,7 +141,7 @@ export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
   const out: ChatHuskEntry[] = [];
   for (const name of names) {
     if (!name.endsWith(".chat.card")) continue;
-    const entry = await readChatHusk(boxRoot, `${CHAT_HUSK_DIR}/${name}`);
+    const entry = await readChatHusk(boxRoot, `${relDir}/${name}`);
     if (entry !== null) out.push(entry);
   }
   return out;
@@ -146,7 +152,7 @@ export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
  * usable husk. The per-file half of `listChatHusks`, split out so a single
  * session can be resolved without reading every husk in the box.
  */
-async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskEntry | null> {
+export async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskEntry | null> {
   let content: string;
   try {
     content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
@@ -184,10 +190,7 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
  * back to reading the husks and matching the field, which is what the pickers
  * would have found.
  */
-export async function findChatHuskEntry(
-  boxRoot: string,
-  sessionId: string,
-): Promise<ChatHuskEntry | null> {
+export async function findChatHuskEntry(boxRoot: string, sessionId: string): Promise<ChatHuskEntry | null> {
   const relPath = await findChatHusk(boxRoot, sessionId);
   if (relPath !== null) {
     const entry = await readChatHusk(boxRoot, relPath);
@@ -214,10 +217,7 @@ export async function findChatHuskEntry(
  * work only for the sessions actually missing a husk.
  */
 export async function reconcileChatHusks(boxRoot: string): Promise<void> {
-  const [entries, husks] = await Promise.all([
-    loadHistoryEntries(boxRoot),
-    listChatHusks(boxRoot),
-  ]);
+  const [entries, husks] = await Promise.all([loadHistoryEntries(boxRoot), listChatHusks(boxRoot)]);
   const husked = new Set(husks.map((h) => h.session));
 
   for (const entry of entries) {

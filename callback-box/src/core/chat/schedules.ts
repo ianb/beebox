@@ -10,10 +10,10 @@
  */
 
 import * as fs from "node:fs";
-import { parseAttrs } from "../../shared/parse-attrs.js";
 import * as path from "node:path";
 import { z } from "zod";
-import { parseDuration } from "../../schemas/scheduled-script.js";
+
+export { parseCancelScheduleTags, parseScheduleTags } from "./schedule-tags.js";
 
 // Zod schema per entry, mirroring location-store.ts's pattern (Track D.6):
 // the persisted shape is validated on load, an unparseable `firesAt` never
@@ -38,6 +38,20 @@ const chatScheduleSchema = z.object({
 });
 
 export type ChatSchedule = z.infer<typeof chatScheduleSchema>;
+
+export interface DetachedSchedulesReceipt {
+  sessionId: string;
+  schedules: ChatSchedule[];
+}
+
+class ScheduleForDeletingSessionError extends Error {
+  readonly sessionId: string;
+  constructor(sessionId: string) {
+    super("Cannot schedule work for a conversation being deleted");
+    this.name = "ScheduleForDeletingSessionError";
+    this.sessionId = sessionId;
+  }
+}
 
 /** Best-effort label for a schedule entry that failed validation, for the skip warning. */
 function describeEntry(entry: unknown, index: number): string {
@@ -74,13 +88,7 @@ function log(...args: unknown[]): void {
  * crashing the load. Returns ALL surviving entries, including overdue-unfired
  * ones — an overdue schedule still needs the box up to fire.
  */
-export function loadChatSchedules({
-  boxRoot,
-  schedulesFile,
-}: {
-  boxRoot: string;
-  schedulesFile?: string | undefined;
-}): ChatSchedule[] {
+export function loadChatSchedules({ boxRoot, schedulesFile }: { boxRoot: string; schedulesFile?: string | undefined }): ChatSchedule[] {
   const filePath = path.join(boxRoot, schedulesFile || SCHEDULES_FILE);
   if (!fs.existsSync(filePath)) return [];
 
@@ -124,6 +132,9 @@ export class ChatScheduleManager {
   private timers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private onFire: ScheduleCallback;
   private idCounter = 0;
+  private readonly blockedSessionIds = new Set<string>();
+  private readonly generations = new Map<string, number>();
+  private readonly inFlight = new Map<string, Promise<void>>();
 
   constructor(boxRoot: string, { onFire, schedulesFile }: { onFire: ScheduleCallback; schedulesFile?: string | undefined }) {
     this.boxRoot = boxRoot;
@@ -142,6 +153,9 @@ export class ChatScheduleManager {
     /** Originating chat session id; omitted for callers that don't track one. */
     sessionId?: string;
   }): ChatSchedule {
+    if (opts.sessionId !== undefined && this.blockedSessionIds.has(opts.sessionId)) {
+      throw new ScheduleForDeletingSessionError(opts.sessionId);
+    }
     const id = `sch_${Date.now()}_${this.idCounter++}`;
     const now = new Date();
     const firesAt = new Date(now.getTime() + opts.durationMs);
@@ -165,6 +179,45 @@ export class ChatScheduleManager {
     return schedule;
   }
 
+  /** Prevent linked timers and newly emitted tags from delivering during deletion. */
+  blockForDeletion(sessionId: string): void {
+    this.blockedSessionIds.add(sessionId);
+  }
+
+  /** Remove every armed or firing schedule linked to one session in one persisted write. */
+  async detachForSession(sessionId: string): Promise<DetachedSchedulesReceipt> {
+    const schedules = [...this.schedules.values()].filter((schedule) => schedule.sessionId === sessionId);
+    for (const schedule of schedules) {
+      this.clearTimer(schedule.id);
+      this.generations.set(schedule.id, (this.generations.get(schedule.id) ?? 0) + 1);
+      this.schedules.delete(schedule.id);
+    }
+    this.saveToDisk();
+    const deliveries = schedules.map((schedule) => this.inFlight.get(schedule.id)).filter((delivery): delivery is Promise<void> => delivery !== undefined);
+    await Promise.allSettled(deliveries);
+    return { sessionId, schedules };
+  }
+
+  /** Restore exactly a prior detach receipt after a compensated deletion failure. */
+  restoreDetachedSchedules(receipt: DetachedSchedulesReceipt): void {
+    for (const schedule of receipt.schedules) {
+      if (this.schedules.has(schedule.id)) continue;
+      this.schedules.set(schedule.id, schedule);
+      this.armTimer(schedule);
+    }
+    this.blockedSessionIds.delete(receipt.sessionId);
+    this.saveToDisk();
+  }
+
+  /** Leave schedules detached but release the temporary delivery block. */
+  finishDeletion(sessionId: string): void {
+    this.blockedSessionIds.delete(sessionId);
+  }
+
+  isBlockedForDeletion(sessionId: string): boolean {
+    return this.blockedSessionIds.has(sessionId);
+  }
+
   cancelByLabel(label: string): boolean {
     for (const [id, schedule] of this.schedules) {
       if (schedule.label === label) {
@@ -180,9 +233,7 @@ export class ChatScheduleManager {
 
   getActive(): ChatSchedule[] {
     const now = Date.now();
-    return [...this.schedules.values()].filter(
-      (s) => new Date(s.firesAt).getTime() > now
-    );
+    return [...this.schedules.values()].filter((s) => new Date(s.firesAt).getTime() > now);
   }
 
   /**
@@ -197,9 +248,7 @@ export class ChatScheduleManager {
     const lines = active.map((s) => {
       const remainMs = new Date(s.firesAt).getTime() - now;
       const remainMin = Math.max(1, Math.round(remainMs / 60000));
-      const timeStr = remainMin >= 60
-        ? `${Math.floor(remainMin / 60)}h${remainMin % 60 > 0 ? `${remainMin % 60}m` : ""}`
-        : `${remainMin}m`;
+      const timeStr = remainMin >= 60 ? `${Math.floor(remainMin / 60)}h${remainMin % 60 > 0 ? `${remainMin % 60}m` : ""}` : `${remainMin}m`;
       return `- "${s.label}" fires in ${timeStr}${s.alarm ? " (alarm)" : ""}`;
     });
 
@@ -216,12 +265,12 @@ export class ChatScheduleManager {
     const delay = new Date(schedule.firesAt).getTime() - Date.now();
     if (delay <= 0) {
       // Already past — fire immediately
-      this.fireSchedule(schedule);
+      this.startFire(schedule);
       return;
     }
 
     const timer = setTimeout(() => {
-      this.fireSchedule(schedule);
+      this.startFire(schedule);
     }, delay);
 
     // Don't keep process alive just for schedules
@@ -230,21 +279,33 @@ export class ChatScheduleManager {
     this.timers.set(schedule.id, timer);
   }
 
-  private fireSchedule(schedule: ChatSchedule): void {
+  private startFire(schedule: ChatSchedule): void {
+    const delivery = this.fireSchedule(schedule);
+    this.inFlight.set(schedule.id, delivery);
+    void delivery.finally(() => {
+      if (this.inFlight.get(schedule.id) === delivery) this.inFlight.delete(schedule.id);
+    });
+  }
+
+  private async fireSchedule(schedule: ChatSchedule): Promise<void> {
     log(`Firing schedule "${schedule.label}"`);
     this.timers.delete(schedule.id);
-    this.schedules.delete(schedule.id);
-    this.saveToDisk();
-    // The timer callback can't await delivery; onFire may be async (it
-    // injects the message into a live chat session), so log a rejection
-    // instead of letting it become an unhandled rejection. The .then()
-    // wrapper (rather than Promise.resolve(this.onFire(...))) also routes a
-    // SYNCHRONOUS throw from a sync ScheduleCallback into the same catch.
-    void Promise.resolve()
-      .then(() => this.onFire({ schedule }))
-      .catch((err: unknown) => {
-        console.error(`[ChatSchedules] onFire failed for "${schedule.label}":`, err);
-      });
+    const generation = (this.generations.get(schedule.id) ?? 0) + 1;
+    this.generations.set(schedule.id, generation);
+    try {
+      if (schedule.sessionId === undefined || !this.blockedSessionIds.has(schedule.sessionId)) {
+        await this.onFire({ schedule });
+      }
+    } catch (error) {
+      console.error(`[ChatSchedules] onFire failed for "${schedule.label}":`, error);
+    } finally {
+      // A detach/restore advances the generation. Its late callback must not
+      // consume the restored timer.
+      if (this.generations.get(schedule.id) === generation) {
+        this.schedules.delete(schedule.id);
+        this.saveToDisk();
+      }
+    }
   }
 
   private clearTimer(id: string): void {
@@ -275,7 +336,7 @@ export class ChatScheduleManager {
         for (const id of expired) {
           const schedule = this.schedules.get(id);
           if (schedule) {
-            this.fireSchedule(schedule);
+            this.startFire(schedule);
           }
         }
       }, 2000);
@@ -283,7 +344,10 @@ export class ChatScheduleManager {
   }
 
   private loadFromDisk(): void {
-    const loaded = loadChatSchedules({ boxRoot: this.boxRoot, schedulesFile: this.schedulesFile });
+    const loaded = loadChatSchedules({
+      boxRoot: this.boxRoot,
+      schedulesFile: this.schedulesFile,
+    });
     for (const schedule of loaded) this.schedules.set(schedule.id, schedule);
     if (loaded.length > 0) log(`Loaded ${loaded.length} schedule(s) from disk`);
   }
@@ -295,81 +359,9 @@ export class ChatScheduleManager {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(
-        filePath,
-        JSON.stringify([...this.schedules.values()], null, 2)
-      );
+      fs.writeFileSync(filePath, JSON.stringify([...this.schedules.values()], null, 2));
     } catch (e) {
       log(`Failed to save schedules: ${e}`);
     }
   }
 }
-
-/**
- * Parse <schedule> tags from assistant response text.
- * Returns parsed schedule data for each tag found.
- */
-export function parseScheduleTags(text: string): Array<{
-  label: string;
-  alarm: boolean;
-  announce: string | null;
-  content: string;
-  durationMs: number;
-}> {
-  const results: Array<{
-    label: string;
-    alarm: boolean;
-    announce: string | null;
-    content: string;
-    durationMs: number;
-  }> = [];
-
-  const regex = /<schedule\s+([^>]*)>([\S\s]*?)<\/schedule>/gi;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const attrsStr = match[1] || "";
-    const content = (match[2] || "").trim();
-
-    const attrs = parseAttrs(attrsStr);
-    const inAttr = attrs.in;
-    if (!inAttr) {
-      log("Skipping <schedule> tag without 'in' attribute");
-      continue;
-    }
-
-    let durationMs: number;
-    try {
-      durationMs = parseDuration(inAttr);
-    } catch (e) {
-      log(`Invalid duration in <schedule>: ${e}`);
-      continue;
-    }
-
-    results.push({
-      label: attrs.label || "timer",
-      alarm: attrs.alarm === "1",
-      announce: attrs.announce || null,
-      content,
-      durationMs,
-    });
-  }
-
-  return results;
-}
-
-/**
- * Parse <cancel-schedule> tags from assistant response text.
- */
-export function parseCancelScheduleTags(text: string): string[] {
-  const labels: string[] = [];
-  const regex = /<cancel-schedule\s+([^/>]*)\/?\s*>/gi;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const attrs = parseAttrs(match[1] || "");
-    if (attrs.label) {
-      labels.push(attrs.label);
-    }
-  }
-  return labels;
-}
-

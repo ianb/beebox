@@ -40,6 +40,8 @@ import {
   type SetupErrorKind,
 } from "../login-page.js";
 import { handleLoginPost, handleSetupPost } from "./auth-password-post.js";
+import { registerAuthInviteRoutes } from "./auth-invite.js";
+import { currentUserHasPassword, handlePasswordChange } from "./auth-password-change.js";
 
 export interface AuthRoutesOptions {
   boxes: BoxSpec[];
@@ -85,7 +87,7 @@ export interface AuthRoutesOptions {
  * that from becoming a second, drifting copy of the login flow.
  */
 export async function registerAuthSurface(server: FastifyInstance, options: AuthRoutesOptions): Promise<void> {
-  await registerPasswordRoutes(server);
+  await registerPasswordRoutes(server, options);
   if (process.env.GOOGLE_OAUTH_CLIENT_ID) {
     await server.register(registerAuthRoutes, options);
   }
@@ -136,7 +138,7 @@ function loginPageState(request: FastifyRequest, query: { returnTo?: string; err
  * (`auth-password-post.ts`) accept both the bare page's form submission and the
  * SPA/programmatic JSON API.
  */
-async function registerPasswordRoutes(server: FastifyInstance): Promise<void> {
+async function registerPasswordRoutes(server: FastifyInstance, options: AuthRoutesOptions): Promise<void> {
   invariant(!isHubMode(), "registerPasswordRoutes must never run in hub mode — the hub owns fleet login");
 
   server.get<{ Querystring: { returnTo?: string; error?: string } }>("/auth/login", async (request, reply) => {
@@ -174,6 +176,8 @@ async function registerPasswordRoutes(server: FastifyInstance): Promise<void> {
     formScope.addContentTypeParser("application/x-www-form-urlencoded", (_request, _payload, done) => done(null));
     formScope.post("/auth/login", async (request, reply) => handleLoginPost(request, reply));
     formScope.post("/auth/setup", async (request, reply) => handleSetupPost(request, reply));
+    await registerAuthInviteRoutes(formScope, options.boxes);
+    formScope.post("/auth/password", async (request, reply) => handlePasswordChange(request, reply));
   });
 }
 
@@ -212,6 +216,7 @@ function registerAuthMe(server: FastifyInstance, options: AuthRoutesOptions): vo
         name: identity.name ?? email,
         picture: sessionUser?.email === email ? sessionUser.picture : undefined,
         isOwner: email === ownerEmail,
+        hasPassword: currentUserHasPassword(email),
         boxes: accessibleBoxes,
       };
     }

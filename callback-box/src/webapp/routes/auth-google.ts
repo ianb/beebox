@@ -16,6 +16,7 @@ import { sanitizeReturnTo } from "../login-page.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { getGoogleClientCreds } from "../../connectors/google-auth.js";
 import type { AuthRoutesOptions } from "./auth.js";
+import { canonicalizeEmail } from "../local-users.js";
 
 /** Thrown when auth is enabled (GOOGLE_OAUTH_CLIENT_ID set) but the paired
  * GOOGLE_OAUTH_CLIENT_SECRET is missing — a misconfiguration, not a request
@@ -99,10 +100,10 @@ export async function registerAuthRoutes(
           audience: clientId,
         });
         const payload = ticket.getPayload();
-        if (!payload?.email) {
-          return reply.status(400).send({ error: "No email in token" });
+        if (!payload?.email || payload.email_verified !== true) {
+          return reply.status(400).send({ error: "No verified email in token" });
         }
-        email = payload.email;
+        email = canonicalizeEmail(payload.email);
         displayName = payload.name || email;
         picture = payload.picture;
       } catch (err: unknown) {

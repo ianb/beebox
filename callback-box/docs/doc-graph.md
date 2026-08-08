@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-06T20:59:15Z
-Total documents: 246
+Generated: 2026-08-06T23:12:45Z
+Total documents: 247
 
 ## Issues
 
@@ -36,6 +36,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (411 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (373 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (544 lines)
+- **docs/plans/invite-links-and-password-change.md** — "Invite links and self-service password change" (544 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
@@ -354,6 +355,7 @@ Referenced by:
 - docs/plans/box-commentary-surface.md:94 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/plans/chat-photo-batch-upload.md:30 (link) — - [`code-style.md`](../../code-style.md) — no default parameters, max 2
 - docs/plans/email-tracking.md:39 (mention) — - `callback-box/code-style.md` requires validated boundary data, explicit errors, typed results where callers branch, an
+- docs/plans/invite-links-and-password-change.md:51 (mention) — - `code-style.md:24-51`: use typed failures, minimal catches, and the shared
 - docs/plans/ios-companion-app.md:26 (mention) — - `callback-box/code-style.md` — standard mechanical rules for the box-side TS.
 - docs/plans/ios-input-plane-parity.md:58 (mention) — - `code-style.md`: TypeScript uses validated `unknown` boundaries, exhaustive
 - docs/plans/ios-native-capture-mode.md:24 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
@@ -405,6 +407,7 @@ Referenced by:
 - docs/implemented-plans/top-nav-ia.md:110 (mention) — palette. Read frontend.md before writing UI"; components own their
 - docs/implemented-plans/user-location.md:63 (mention) — - `callback-box/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/design-reconciliation.md:39 (mention) — capture, dashboard, views, and a real design system (frontend.md).
+- docs/plans/invite-links-and-password-change.md:56 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - frontend.md:113 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
@@ -467,7 +470,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 362 lines
+Title: "Deploy" | 377 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
@@ -888,7 +891,7 @@ Referenced by:
 
 #### docs/developer-install.md
 
-Title: "Developer install (from source)" | 144 lines
+Title: "Developer install (from source)" | 147 lines
 
 Referenced by:
 - CLAUDE.md:131 (mention) — | Developer install (from source) | `docs/developer-install.md` |
@@ -920,7 +923,7 @@ Referenced by:
 
 #### docs/docker-install.md
 
-Title: "Docker install (local + VPS)" | 259 lines
+Title: "Docker install (local + VPS)" | 266 lines
 
 Referenced by:
 - CLAUDE.md:132 (mention) — | Docker install (local + VPS) | `docs/docker-install.md` |
@@ -986,6 +989,7 @@ Referenced by:
 - docs/plans/github-pages-site-story-extraction.subplan.md:36 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/github-pages-site.md:22 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/installation-story.md:47 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
+- docs/plans/invite-links-and-password-change.md:33 (mention) — - `docs/engineering-principles.md:37-47`: validate disk, form, OAuth, and config
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
 - docs/plans/ios-input-plane-parity.md:41 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
 - docs/plans/ios-native-capture-mode.md:14 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
@@ -1298,7 +1302,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 866 lines
+Title: "Cross-Platform Mobile Contract" | 868 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1311,6 +1315,7 @@ Referenced by:
 - docs/plans/android-companion-app.md:7 (mention) — grounded in the same-day contract inventory (`docs/mobile-contract.md`), the iOS
 - docs/plans/capture-fast-landing.md:287 (mention) — (`docs/mobile-contract.md` unaffected).
 - docs/plans/chat-photo-batch-upload.md:59 (link) — [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
+- docs/plans/invite-links-and-password-change.md:123 (mention) — `mobile-contract.md` change is required.
 - docs/plans/ios-input-plane-parity.md:119 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - ../.claude/skills/cb-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `callback-box/docs/mobile-contract.md`**
 - ../CLAUDE.md:10 (mention) — - **ios-app/** — Native SwiftUI companion app; a thin shell around the web chat (`WKWebView`) plus native pairing, compo
@@ -1347,7 +1352,7 @@ Referenced by:
 - docs/implemented-plans/bulk-file-upload.md:309 (mention) — `docs/mobile-parity.md` row (also correct its stale "≤4 photos" cell — the
 - docs/implemented-plans/ios-per-box-device-lock.md:259 (mention) — **Direction.** Add **Per-box local device lock** to `docs/mobile-parity.md` as
 - docs/implemented-plans/mobile-parity-sync.md:97 (mention) — ### 3. `docs/mobile-parity.md` — the parity matrix (to build)
-- docs/plans/android-companion-app.md:592 (mention) — - The parity matrix (`docs/mobile-parity.md`, owned by the sync plan) lists each
+- docs/plans/android-companion-app.md:593 (mention) — - The parity matrix (`docs/mobile-parity.md`, owned by the sync plan) lists each
 - docs/plans/chat-photo-batch-upload.md:454 (mention) — caller anchor, a threshold row), `docs/mobile-parity.md`, and the
 - ../.claude/skills/cb-ios-overlap/SKILL.md:24 (mention) — update the doc while you're in it. `callback-box/docs/mobile-parity.md`
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:12 (mention) — tripwire anchor manifest), `docs/mobile-parity.md`, shared golden fixtures
@@ -1639,12 +1644,13 @@ References:
 
 #### docs/todo-security.md
 
-Title: "Security TODOs" | 61 lines
+Title: "Security TODOs" | 80 lines
 
 Referenced by:
 - docs/implemented-plans/local-password-auth.md:543 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
 - docs/maintenance.md:30 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
+- docs/plans/invite-links-and-password-change.md:350 (mention) — - Update `docs/todo-security.md`: hashes at rest, single use, open-link email
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:40 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:34 (mention) — `callback-box/docs/todo-security.md` for the SECURITY.md security report.
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:95 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
@@ -2174,7 +2180,7 @@ Title: "Bulk file upload" | 457 lines
 
 Referenced by:
 - docs/box-layout.md:103 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:486 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:487 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:9 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:15 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -2643,6 +2649,7 @@ Title: "Local password auth, default-on" | 706 lines
 Referenced by:
 - docs/implemented-plans/local-password-auth.review.md:3 (mention) — Adversarial review of `local-password-auth.md` by OpenAI Codex
 - docs/implemented-plans/remove-open-mode.md:20 (mention) — - Precedent: `docs/implemented-plans/local-password-auth.md` (auth default-on;
+- docs/plans/invite-links-and-password-change.md:53 (mention) — - `docs/implemented-plans/local-password-auth.md`: preserve global email
 - docs/todo-security.md:8 (mention) — `docs/implemented-plans/local-password-auth.md`). A box always requires a
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:3 (mention) — design: ../../callback-box/docs/implemented-plans/local-password-auth.md
 - ../issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md:37 (mention) — `../../callback-box/docs/implemented-plans/local-password-auth.md`.
@@ -2718,7 +2725,7 @@ Referenced by:
 - docs/maintenance.md:31 (mention) — | Mobile parity audit | agent procedure (prompt in `docs/implemented-plans/mobile-parity-sync.md` §6) | After a burst of
 - docs/mobile-contract.md:14 (mention) — contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`.
 - docs/mobile-parity.md:4 (mention) — Maintained under the process in `docs/implemented-plans/mobile-parity-sync.md`; wire-level
-- docs/plans/android-companion-app.md:576 (mention) — **What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
+- docs/plans/android-companion-app.md:577 (mention) — **What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
 
 References:
 - → docs/plans/android-companion-app.md (mention)
@@ -2733,7 +2740,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 506 lines
 
 Referenced by:
-- docs/mobile-contract.md:750 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:751 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:10 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:12 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:12 (mention) — The cb_mobile cookie work (`../../callback-box/docs/implemented-plans/mobile-token-handshake.md`) removed
@@ -3364,7 +3371,7 @@ References:
 
 #### docs/plans/android-companion-app.md
 
-Title: "Native Android companion app" | 763 lines
+Title: "Native Android companion app" | 764 lines
 
 Referenced by:
 - docs/implemented-plans/mobile-parity-sync.md:7 (mention) — the planned Android app (`docs/plans/android-companion-app.md`), and the
@@ -3463,7 +3470,7 @@ References:
 Title: "Chat photo batch upload" | 488 lines
 
 Referenced by:
-- docs/mobile-contract.md:485 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:486 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/bugs/2026-07-30-capture-teardown-race.md:10 (link) — [chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:7 (mention) — design: ../../callback-box/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:22 (link) — [chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
@@ -3751,6 +3758,19 @@ References:
 - → docs/implemented-plans/nav-card.md (mention)
 - → docs/plans/chat-husks.md (mention)
 
+#### docs/plans/invite-links-and-password-change.md **[ORPHAN]**
+
+Title: "Invite links and self-service password change" | 544 lines
+
+References:
+- → docs/reports/user-stories-audit-2026-06-26.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/implemented-plans/local-password-auth.md (mention)
+- → frontend.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/todo-security.md (mention)
+
 #### docs/plans/ios-companion-app.md
 
 Title: "iOS Companion App for Callback Box" | 216 lines
@@ -3785,14 +3805,14 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 149 lines
 
 Referenced by:
-- docs/mobile-contract.md:744 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:745 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:8 (mention) — follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
 - docs/plans/ios-companion-review-2026-07-09.md:3 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
-- ../issues/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/bugs/2026-07-17-ios-token-plaintext-not-keychain.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-ios-hq-transcription-window-unlocked.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+- ../issues/closed/bugs/2026-07-17-ios-hq-wav-float-format-needs-verify.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-ios-send-hangs-webview-unloaded.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:5 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -3827,7 +3847,7 @@ Title: "Native iOS capture mode" | 619 lines
 
 Referenced by:
 - docs/mobile-parity.md:36 (mention) — | Capture mode | done (`docs/plans/ios-native-capture-mode.md`; recorder silent-stop tracked in `issues/bugs/`) | not pl
-- docs/plans/android-companion-app.md:676 (mention) — (`docs/plans/ios-native-capture-mode.md`); Android follows once it ships.
+- docs/plans/android-companion-app.md:677 (mention) — (`docs/plans/ios-native-capture-mode.md`); Android follows once it ships.
 - docs/plans/ios-input-plane-parity.md:68 (mention) — - Active precedent: `docs/plans/ios-native-capture-mode.md` keeps capture media
 - docs/plans/ios-native-capture-mode.review.md:3 (mention) — Review of `docs/plans/ios-native-capture-mode.md`, performed against the shipped
 
@@ -4129,6 +4149,7 @@ Referenced by:
 - docs/implemented-plans/questions-end-to-end.md:618 (mention) — `bin/browse` checks, per `docs/reports/user-stories-audit-2026-06-26.md`'s
 - docs/implemented-plans/remove-cb-render.md:363 (mention) — `docs/reports/user-stories-audit-2026-06-26.md`, and the closed issues under
 - docs/implemented-plans/user-story-audit-followups.md:5 (mention) — This plan triages the 95 `IAN:` comments left on `docs/reports/user-stories-audit-2026-06-26.md` (the
+- docs/plans/invite-links-and-password-change.md:28 (mention) — `docs/reports/user-stories-audit-2026-06-26.md:325-329` is corrected because the
 - docs/plans/source-available-release.md:173 (mention) — name), `docs/reports/user-stories-audit-2026-06-26.md:671` (real email).
 - docs/reports/user-stories-audit-2026-06-26.md:2509 (mention) — **Verifier (flagged):** The story is partially accurate. Core features (markdown export, lossy detection, warning displa
 

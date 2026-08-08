@@ -25,6 +25,24 @@ const res = await ctx.request({ method: "POST", url: "/api/chat/send", payload: 
 await ctx.cleanup();
 ```
 
+A concrete session whose local transcript is missing is a named 410, never an
+SDK resume attempt or generic 500:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "hi", session: "55555555-5555-4555-8555-555555555555" },
+});
+JSON.stringify({ status: res.statusCode, code: res.body.code })
+=> {"status":410,"code":"CHAT_SESSION_UNAVAILABLE"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
 Missing `session` returns 400:
 
 ```ts

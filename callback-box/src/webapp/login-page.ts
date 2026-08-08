@@ -48,7 +48,7 @@ export function sanitizeReturnTo({ raw, prefix }: { raw: string | undefined; pre
 }
 
 /** Shared page shell — one inline stylesheet, no external references. */
-function pageShell({ title, body }: { title: string; body: string }): string {
+export function pageShell({ title, body }: { title: string; body: string }): string {
   return (
     "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">" +
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +

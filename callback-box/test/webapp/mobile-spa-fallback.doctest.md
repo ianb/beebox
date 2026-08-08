@@ -48,7 +48,7 @@ if (!redeemed) throw new Error("mobile pairing failed");
 ```ts
 const unauthenticated = await server.inject({
   method: "GET",
-  url: "/test/chat?embed=1",
+  url: "/test/chat?nativeComposer=1",
 });
 JSON.stringify({
   status: unauthenticated.statusCode,
@@ -62,7 +62,7 @@ JSON.stringify({
 ```ts continue
 const bearerResponse = await server.inject({
   method: "GET",
-  url: "/test/chat?embed=1",
+  url: "/test/chat?nativeComposer=1",
   headers: { authorization: `Bearer ${redeemed.deviceToken}` },
 });
 JSON.stringify({
@@ -85,7 +85,7 @@ const cookie = signMobileSession(box.root, {
 });
 const cookieResponse = await server.inject({
   method: "GET",
-  url: "/test/chat?embed=1",
+  url: "/test/chat?nativeComposer=1",
   headers: { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` },
 });
 JSON.stringify({
@@ -104,7 +104,7 @@ device. Passing it as `?mobileToken=` now authenticates nothing.
 ```ts continue
 const queryResponse = await server.inject({
   method: "GET",
-  url: `/test/chat?embed=1&mobileToken=${encodeURIComponent(redeemed.deviceToken)}`,
+  url: `/test/chat?nativeComposer=1&mobileToken=${encodeURIComponent(redeemed.deviceToken)}`,
 });
 queryResponse.statusCode
 => 401
@@ -122,7 +122,7 @@ const foreignCookie = signMobileSession(otherBox.root, {
 });
 const foreignResponse = await server.inject({
   method: "GET",
-  url: "/test/chat?embed=1",
+  url: "/test/chat?nativeComposer=1",
   headers: { cookie: `${MOBILE_COOKIE_NAME}=${foreignCookie}` },
 });
 foreignResponse.statusCode

@@ -8,6 +8,7 @@ filesystem side effects (or their absence) are the actual assertion, not a
 mock's call log.
 
 ```ts setup
+import { writeFileSync } from "node:fs";
 import { mkdir, readdir, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -194,7 +195,7 @@ await mkdir(raceFolder);
 const racePath = await writeSettledFile(raceFolder, "growing.pdf", "first pass bytes");
 const serverE: FakeScanServer = await startFakeScanServer({
   checkState: () => {
-    void writeFile(racePath, "scanner appended more bytes after this hash was taken");
+    writeFileSync(racePath, "scanner appended more bytes after this hash was taken");
     return { state: "unknown" };
   },
   putOutcome: () => ({ status: 200, body: { status: "accepted" } }),

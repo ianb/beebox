@@ -17,6 +17,18 @@ store fails **closed** (503), never open. Login is throttled (per-IP + per-accou
 backoff, a global scrypt-concurrency cap, a bounded map). The `CB_DIAG_API_KEY`
 bearer and the `CB_HUB_SECRET` header-trust boundary are unchanged.
 
+Member onboarding uses 32-byte bearer invite capabilities stored only as
+SHA-256 hashes in a mode-0600 sibling of the global credential store. They are
+single-use, expire after 15 minutes, are bounded to 100 live records, and grant
+access to exactly one box. Invites may pin an email or be open; open invites
+cannot claim the owner, an existing local user, or an email already authorized
+for another registered box. Invite inspection and acceptance use generic
+failure responses plus the login throttle and global scrypt concurrency cap.
+Local users can change their own password only after supplying the current
+password; success bumps their session generation and returns a fresh cookie.
+Verified Google OAuth and local passwords converge on the same canonical email
+identity.
+
 Residual, accepted for now:
 - **Setup-token window.** First-run setup is reachable unauthenticated until an
   account exists; mitigated by a 15-minute token TTL and a self-disabling route,
@@ -27,6 +39,13 @@ Residual, accepted for now:
   tRPC subscription upgrade end to end. Covered by manual verification.
 - **No MFA / password reset.** Recovery is `cb auth set-password` on the host;
   MFA/passkeys are deferred (see the plan's NOT-in-scope).
+- **Open invites do not verify email ownership.** Anyone holding an open invite
+  may enter any otherwise-unclaimed email. This is an explicit bearer-link
+  tradeoff: pin the invite when the recipient email is known, and transmit all
+  invite URLs through a trusted channel. Claiming an email also pre-positions
+  that account for any access the owner later grants to the same email. The
+  Admin UI warns when a local account already exists, but that warning is
+  advisory and cannot cover an account created concurrently.
 - **Cross-process lock lease-steal.** `src/lib/file-lock.ts` is backed by
   `proper-lockfile` (atomic guard-dir `mkdir` + a 5-min staleness lease). Like
   every lease-based lock, a holder suspended past the lease (>5 min) can have

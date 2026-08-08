@@ -25,7 +25,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../lib/error-guards.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
-import { currentScryptParams, deriveKey, dummyVerify, hashPassword } from "./local-users-scrypt.js";
+import { currentScryptParams, deriveKey, dummyVerify, hashPassword, type StoredScrypt } from "./local-users-scrypt.js";
 import {
   AuthFileCorruptError,
   AuthFileLockError,
@@ -268,8 +268,19 @@ export async function addUser(opts: {
   password: string;
   role: LocalRole;
 }): Promise<LocalUser> {
-  const email = canonicalizeEmail(opts.email);
   const scrypt = await hashPassword(opts.password);
+  return addUserWithPasswordHash({ ...opts, scrypt });
+}
+
+/** Insert a member after its password was hashed outside the store lock. */
+export async function addUserWithPasswordHash(opts: {
+  email: string;
+  name: string;
+  role: LocalRole;
+  scrypt: StoredScrypt;
+}): Promise<LocalUser> {
+  const email = canonicalizeEmail(opts.email);
+  const { scrypt } = opts;
   return withAuthFileLock((file) => {
     if (!file) throw new NoOwnerError();
     if (file.users.some((u) => u.email === email)) throw new UserExistsError(email);

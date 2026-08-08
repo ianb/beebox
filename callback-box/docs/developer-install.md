@@ -124,6 +124,9 @@ wall. Create your account once with `cb auth create-user` (or open the
 first boot). The credential store is home-level (`~/.cb-auth.json`), so one
 account works across every worktree's dev server — you set it up once.
 
+After the owner account exists, its Admin page can issue 15-minute, single-use
+member invites; local users can change their own password from Settings.
+
 Authentication is always on: there is no operator opt-out to run a box
 unauthenticated. (An in-process `openAccess` construction option exists purely
 as a test seam — no CLI flag, env var, or config field turns it on.)
