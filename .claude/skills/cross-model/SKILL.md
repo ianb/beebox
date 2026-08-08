@@ -58,8 +58,7 @@ there's a diff against `main` → ask review-or-challenge.
 ## Shared rules (both directions, every mode)
 
 1. **Run from the repo root that makes cited paths resolve.** The monorepo is
-   one git repo; find the root with `git rev-parse --show-toplevel` as its own
-   command and pass the path literally (see Invocation — no `$(…)`).
+   one git repo: `ROOT=$(git rev-parse --show-toplevel)`.
 2. **Orientation glue (callback-specific).** Always tell the reviewer the layout
    so it doesn't rediscover it: *"This targets the `callback-box/` subproject.
    Paths like `src/…`, `docs/…`, `test/…` are under `callback-box/`; `bin/…` is
@@ -131,17 +130,13 @@ Start every prompt with:
 
 ### Invocation
 
-Get the repo root with its own command — `git rev-parse --show-toplevel` — and
-type the path in literally below. Don't write `ROOT=$(…)`: from a worktree
-session, Claude Code refuses any command carrying a substitution as "too complex
-to verify that it stays inside the worktree."
-
 ```bash
+ROOT=$(git rev-parse --show-toplevel)
 mkdir -p scratch
 cat > scratch/cross-model-prompt.txt <<'PROMPT_EOF'
 …full prompt here…
 PROMPT_EOF
-codex exec - -s read-only -C <repo-root> -m gpt-5.5 \
+codex exec - -s read-only -C "$ROOT" -m gpt-5.5 \
   -c 'model_reasoning_effort="high"' \
   < scratch/cross-model-prompt.txt > scratch/cross-model-out.md 2>&1
 ```

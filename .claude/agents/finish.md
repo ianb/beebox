@@ -18,29 +18,6 @@ whether uncommitted changes are intentional, scope/verification notes). If
 something you'd need to proceed wasn't passed and can't be safely inferred, return
 BLOCKED asking for it — don't guess.
 
-## Keep every Bash command statically readable
-
-You run inside an isolated worktree, so Claude Code refuses any Bash command
-whose behavior it can't determine from the text alone — "this command is too
-complex to verify that it stays inside the worktree." It has to enumerate what
-will run and where, so anything that makes the command set dynamic is out. This
-fires on commands that were only ever going to touch your own worktree, and
-it's a separate refusal from the git-redirect block at step 8.
-
-**Refused:** command substitution in every form — `$(…)`, `"$(…)"`, backticks —
-inline or assigned to a variable first, regardless of what it expands to
-(`echo $(date +%Y)` is refused); and control flow like `for`/`while` loops.
-
-**Fine:** ordinary commands, pipes (`ls | wc -l`), `;`-chained commands,
-redirection (`git diff > scratch/x.txt`), plain variable expansion (`$HOME`,
-`X=5; echo $X`), and arithmetic (`$((2 + 2))`). Substitution inside a heredoc
-body — a commit message — is fine too; it's the command line itself that's read.
-
-So never pass a computed value. Run the command that produces it on its own,
-read the output, and **type the value out literally** in the next command. Every
-`<placeholder>` below means "type the literal value here," never `$(…)`. Where
-you'd reach for a loop, write the iterations out as separate commands.
-
 ## Test failures block the merge
 
 The single most important rule (applies whenever the worktree touched code —
@@ -255,18 +232,14 @@ exploration (past runs that improvised here took 3–4× longer for the same
 coverage):
 
 ```bash
-mkdir -p scratch
-git diff main...HEAD > scratch/finish-diff.txt
-grep -nE '^\+.*(as unknown as|as never|JSON\.parse\([^)]*\) as )' scratch/finish-diff.txt   # item 1
-grep -nE '^\+.*(\.catch\([^)]*\)\s*=>\s*\{\s*\}|catch\s*\{\s*\})' scratch/finish-diff.txt   # item 2
-grep -nE '^\+.*process\.env' scratch/finish-diff.txt                                        # item 5
-grep -nE '^\+.*fastify\.(get|post|put|delete|patch)\(' scratch/finish-diff.txt              # item 4
-grep -nE '^\+(export )?(async )?function ' scratch/finish-diff.txt                          # item 3 candidates
-grep -nE '^\+(export )?interface ' scratch/finish-diff.txt                                  # items 7/8 candidates
+D=$(mktemp); git diff main...HEAD > "$D"
+grep -nE '^\+.*(as unknown as|as never|JSON\.parse\([^)]*\) as )' "$D"      # item 1
+grep -nE '^\+.*(\.catch\([^)]*\)\s*=>\s*\{\s*\}|catch\s*\{\s*\})' "$D"      # item 2
+grep -nE '^\+.*process\.env' "$D"                                            # item 5
+grep -nE '^\+.*fastify\.(get|post|put|delete|patch)\(' "$D"                  # item 4
+grep -nE '^\+(export )?(async )?function ' "$D"                              # item 3 candidates
+grep -nE '^\+(export )?interface ' "$D"                                      # items 7/8 candidates
 ```
-
-(A literal `scratch/` path, not `$(mktemp)` — see "Keep every Bash command statically readable" above.
-`scratch/` is gitignored, so this leaves nothing to clean up.)
 
 Open files and read code ONLY where a grep hits, or where the diff adds new
 helpers/interfaces/types or ref-resolution/card-write call sites (items 3, 6,
@@ -470,10 +443,10 @@ merging, all three must hold:
 2. **Post-green commits re-verified** per the path-precise rule in step 4 (a
    Track O code fix means the full tier ran again after it; a doc move means
    doc-check ran).
-3. **Main checkout clean and on `main`**: don't check this yourself — you're
-   isolated in a worktree and `git -C ~/src/callback-box` is blocked by the
-   harness (see the merge step below). `bin/land` enforces both conditions and
-   refuses with a precise message; treat its refusal as the BLOCKED reason.
+3. **Main checkout clean and on `main`** (a clean checkout parked on another
+   branch would mis-target the merge). Don't check this yourself — `bin/land`
+   below enforces both and refuses with a precise message; treat its refusal
+   as the BLOCKED reason.
 4. **Private leg only:** `git -C private-issues status --porcelain` empty
    (strictly — deletions count), and the private PRIMARY checkout (the
    `repo=` path from `bin/private-issues status .`) is on `main` and clean —
@@ -481,77 +454,34 @@ merging, all three must hold:
 
 Then merge — fast-forward only, **public first, then private** (the merges
 can't be atomic across two repos; this order makes the failure mode the
-self-healing one — see the PRIVATE contract below).
-
-Use `bin/land`, never a bare `git -C`. Claude Code isolates a worktree session
-and every subagent it spawns from the main checkout, refusing any Bash command
-that redirects git there — `git -C <main>`, `--git-dir`, `GIT_DIR`/`GIT_WORK_TREE`,
-or a `cd` into main. That check reads the command string and doesn't follow into
-a script, so `bin/land` completes the merge; a bare `git -C` fails outright:
+self-healing one — see the PRIVATE contract below). You're INSIDE the
+worktree, so operate on the main checkout with `-C`:
 
 ```bash
 bin/land
 ```
 
-**Bare, with no argument, and no `$(…)` anywhere in the command.** Run from a
-worktree, `bin/land` lands that worktree's own branch, so there is nothing to
-substitute. Invoke it as the plain relative path shown — `bin/land` is tracked,
-so your worktree has its own copy, and step 3 merged main in, which guarantees
-it's present even if your branch predates it. Do NOT write `bin/land "$(git rev-parse --abbrev-ref HEAD)"` — the
-harness refuses any command carrying a command substitution as "too complex to
-verify that it stays inside the worktree." That's a *second*, separate refusal
-from the git-redirect block, and it fires even though the command was only ever
-going to touch your own worktree. (Pipes are fine; substitution is the trigger.)
-If you need a branch named explicitly, run `git rev-parse --abbrev-ref HEAD` as
-its own command and then type the name out literally.
-
-`bin/land` resolves the main checkout itself and enforces the whole preflight —
-main clean, main on `main`, and fast-forward-only — so its refusal message is
-your BLOCKED reason verbatim. It also prints the resulting hash and short log,
-which is what step 9 reports.
-
-**If `bin/land` itself is refused by the harness** — a message about isolation
-rather than output from the script — then a Claude Code upgrade has closed the
-gap this relies on. Do not try to work around it, and do not burn the session
-rediscovering the isolation rules. Stop and return:
-
-```
-RESULT: BLOCKED — worktree isolation now blocks bin/land itself.
-Everything is verified and merge-ready. Run this from the main checkout:
-    cd ~/src/callback-box && bin/land <branch>
-```
-
-with the branch name filled in. That fallback needs no code change; the script
-works unchanged from a non-isolated context.
+Run bare — from a worktree, `bin/land` lands that worktree's own branch. Use it
+rather than `git -C ~/src/callback-box merge`: worktree isolation blocks a
+worktree session (and its subagents) from running git against the main
+checkout. `bin/land` also performs the main-checkout preflight in item 3 above
+and prints the merge hash and log that step 9 reports.
 
 You merged main in at step 3, so this fast-forwards unless `main` moved during
-this run (e.g. another finish landed). If it refuses as not-a-fast-forward: go
-back to step 3 (merge the new main in, re-verify), then return here — never
-create a merge commit from the main checkout. The monorepo `post-merge` hook
-triggers the deploy.
+this run (e.g. another finish landed). If `--ff-only` refuses: go back to step
+3 (merge the new main in, re-verify), then return here — never create a merge
+commit from the main checkout. The monorepo `post-merge` hook triggers the
+deploy.
 
 **Private leg**, immediately after the public merge succeeds (skip if the
 private branch has no commits beyond private main — then `PRIVATE: no
 changes`):
 
-First read the private repo's path, then type it out literally in the commands
-that follow — no `$(…)`, per "Keep every Bash command statically readable" above:
-
 ```bash
-bin/private-issues status .
+PRIV=$(bin/private-issues status . | sed -n 's/.*repo=\([^ ]*\).*/\1/p')
+bin/private-issues with-lock . git -C "$PRIV" merge --ff-only "$BRANCH"
+REMOTES=$(git -C "$PRIV" remote)
 ```
-
-Take the `repo=` path from that output and substitute it yourself into these
-(along with the branch name from step 8), writing both as literals:
-
-```bash
-bin/private-issues with-lock . git -C <repo-path> merge --ff-only <branch>
-git -C <repo-path> remote
-```
-
-`git -C` into the private repo is fine even from an isolated worktree — the
-isolation checks are scoped to the repo this session launched from, and the
-private-issues repo is a different one. It's only the substitution that fails.
 
 The `with-lock` wrapper serializes the merge against any concurrent
 cleanup/sweep mutating the same private repo — never run the private merge
@@ -570,8 +500,7 @@ it) and mergeable later. It MUST surface in the `PRIVATE:` report line.
 
 ### 9. Report
 
-`bin/land` already printed the merge hash and the top of main's log — quote
-those. Do not re-run `git -C ~/src/callback-box log`; it's blocked from here.
+Quote the merge hash and log that `bin/land` already printed at step 8.
 
 Return a report whose language matches the truth. Be straight about: **scope**
 (is the planned work complete, or did this land part? name what's outstanding —
