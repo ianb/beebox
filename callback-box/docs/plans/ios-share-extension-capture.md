@@ -6,7 +6,7 @@ This plan defines a native iOS Share Extension for the Callback Box companion ap
 
 ## Implemented first slice
 
-- Track 1's shared selected-box snapshot, shared-Keychain credential migration, app/extension entitlements, and failure-preserving tests are implemented.
+- Track 1's shared paired-box snapshot, selected-box default, shared-Keychain credential migration, app/extension entitlements, and failure-preserving tests are implemented.
 - Tracks 2–3's `share` landmark role, two-row recent landmark-chat query, exact direct chat sends, and Inbox/landmark textual saves are implemented.
 - Track 6's extension target and destination UI activate URL and text only. Unsupported media types are deliberately not advertised.
 - Track 7's URL/text contract, fixtures, simulator build/XCTest, and backend doctests are implemented. The issue remains open with `needs: [manual-testing]` for the physical-device script.
@@ -38,12 +38,12 @@ The selected destination determines the effect. A chat destination sends the con
 - `ios-app/CLAUDE.md:8-18`: *"The app is a native SwiftUI shell around the existing web chat"* and wire changes must update Swift, TypeScript, the mobile contract, and shared fixtures together. The extension reuses those server contracts and does not add a second chat model.
 - `ios-app/CLAUDE.md:46-60`: *"Adding a `.swift` file on disk is insufficient"*. The new target and every shared source file need explicit Xcode project membership.
 - `ios-app/CLAUDE.md:120-135`: runtime diagnostics are part of an iOS feature. The plan includes metadata-only extension diagnostics and a durable App Group spool.
-- `callback-box/CLAUDE.md` requires the smallest feature that satisfies the task. V1 accepts one logical item, one selected box, two recent chats, and explicit save destinations. It does not add automatic routing or a full chat browser.
+- `callback-box/CLAUDE.md` requires the smallest feature that satisfies the task. V1 accepts one logical item, one explicitly named paired box, two recent chats, and explicit save destinations. It does not add automatic routing or a full chat browser.
 
 ## What already exists
 
-- The app already has a selected-box rule. `ios-app/CallbackBox/Storage/PairedBoxStore.swift:22-26` returns *"boxes.first { $0.id == selectedBoxID } ?? boxes.first"*. Reuse that result. Do not add a box picker in v1.
-- The selected box is not extension-readable and its token is plaintext. `ios-app/CallbackBox/Storage/PairedBoxStore.swift:160-162` encodes the snapshot and writes it to the app container. `ios-app/CallbackBox/Models/PairedBox.swift:42-43` encodes `authToken`. Move the token to shared Keychain access and publish only non-secret selected-box metadata through an App Group.
+- The app already has a selected-box rule. `ios-app/CallbackBox/Storage/PairedBoxStore.swift` returns the selected id or falls back to the first paired box. Use that as the extension's default while allowing a per-share choice among every paired box.
+- Paired-box metadata was not extension-readable and its token was plaintext. Move the token to shared Keychain access and publish only non-secret metadata for every paired box, plus the selected id, through an App Group.
 - Native HTTP auth has one shaping helper. `ios-app/CallbackBox/Services/BoxRequest.swift:3-9` says `ChatAPI`, `CaptureAPI`, `BulkUploadAPI`, and `LogForwarder` share the same credential, and `:21-27` applies the bearer token. Compile this helper into the extension.
 - Swift already demonstrates direct non-batched tRPC calls. `ios-app/CallbackBox/Services/LogForwarder.swift:283` posts to `trpc/debugLog.submit`. The mobile contract describes this as raw JSON input at `callback-box/docs/mobile-contract.md` section 5.7. Reuse that request shape for share mutations.
 - The tRPC server explicitly permits POST for queries. `callback-box/src/webapp/server-box-scope.ts:195-198` sets `allowMethodOverride: true`. Lock the extension's non-batched POST query shape in a server doctest and the mobile contract instead of relying on an undocumented client assumption.
@@ -71,25 +71,26 @@ The selected destination determines the effect. A chat destination sends the con
 
 ## Tracks / scope
 
-### Track 1 — Shared selected-box metadata and Keychain credential
+### Track 1 — Shared paired-box metadata and Keychain credentials
 
-**What.** Add an App Group to the app and extension. Publish the selected box's non-secret metadata to the group. Store each paired device token in Keychain under the same shared group.
+**What.** Add an App Group to the app and extension. Publish every paired box's non-secret metadata and the selected box id to the group. Store each paired device token in Keychain under the same shared group.
 
 **Why this needs to change.** The extension cannot read the main app's private Application Support file. Copying the existing plaintext token into the group container would broaden the plaintext exposure and leave the open Keychain issue unresolved.
 
 **Direction.**
 
 - Register `group.app.callbackbox.ios`. Add its App Groups entitlement to the app and Share Extension targets.
-- Add `SharedSelectedBoxSnapshot { id, label, baseURL, requiresDeviceUnlock }`. Store one encoded snapshot in `UserDefaults(suiteName: "group.app.callbackbox.ios")`. The main app is the only writer. The extension is read-only.
+- Add `SharedPairedBoxesSnapshot { boxes, selectedBoxID }`, where each box contains `{ id, label, baseURL, requiresDeviceUnlock }`. Store one encoded snapshot in `UserDefaults(suiteName: "group.app.callbackbox.ios")`. The main app is the only writer. The extension is read-only. Continue decoding the first shipped single-box snapshot until the app republishes the complete list.
 - Add `PairedBoxCredentialStore`. Store one generic-password item per box UUID with service `app.callbackbox.ios.device-token`, access group `group.app.callbackbox.ios`, and `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`.
 - Keep `PairedBox.authToken` in memory so existing callers do not change. New persisted JSON omits it. Legacy decoding still accepts it.
 - Migrate in this order: decode legacy metadata, write each token to Keychain, read it back, then rewrite token-free metadata and publish the selected snapshot. If any write or verification fails, retain the legacy token and show/log the migration failure.
 - New pairing writes Keychain before publishing metadata. Re-pair replaces the item only after redeem succeeds. Explicit removal deletes the Keychain item first; if deletion fails, retain metadata and report the failure.
 - Treat missing metadata plus missing App Group snapshot as a fresh install. Purge orphan items for this service before a new pairing. Treat corrupt metadata as recovery state: retain Keychain items and fail closed.
-- The extension reads the snapshot and matching token into an in-memory request target. Missing or mismatched state shows **Open Callback Box and pair a box first** and sends nothing.
-- If the selected box requires device unlock, run the existing device-owner authentication gate before reading content or sending. Cancellation leaves the extension open.
+- The extension defaults to `selectedBoxID`, names the current box even when it is the only one, and offers the other paired boxes when present. A choice is local to the current extension process and does not write back to the main app's selection.
+- On each choice, the extension reads that box's matching token into an in-memory request target and reloads destinations. A late response for an earlier choice is discarded. Missing or mismatched state is shown in the sheet and sends nothing.
+- If the chosen box requires device unlock, run the existing device-owner authentication gate before loading destinations or sending. Provider classification may run first so unsupported input fails without an unnecessary authentication prompt. Cancellation leaves the extension open and offers a retry.
 
-**Vocabulary lock-ins.** App Group `group.app.callbackbox.ios`; `SharedSelectedBoxSnapshot`; `PairedBoxCredentialStore`; Keychain service `app.callbackbox.ios.device-token`.
+**Vocabulary lock-ins.** App Group `group.app.callbackbox.ios`; `SharedPairedBoxesSnapshot`; `PairedBoxCredentialStore`; Keychain service `app.callbackbox.ios.device-token`.
 
 **First implementation chunk.** Add injected credential and snapshot stores with migration, replacement, removal, corruption, and fresh-install tests. Then wire `PairedBoxStore` and add both entitlements. This chunk contains no extension UI.
 
@@ -213,12 +214,13 @@ The selected destination determines the effect. A chat destination sends the con
 - Add bundle identifier `app.callbackbox.ios.share`, extension point `com.apple.share-services`, and embed the `.appex` in `CallbackBox.app`.
 - Activate for one logical text value, web URL, image, or file. Validate the one-item rule at runtime because one provider may advertise several representations.
 - Use deterministic representation precedence: M4A audio, image, web URL, plain text, then generic file. A file URL is a file, not a web URL. Reject a provider whose concrete value does not match its advertised type.
-- Load the selected box and run its lock gate. Then call `share.destinations`.
+- Default to the main app's selected box, visibly name it, and offer a picker when more than one box is paired. Run the chosen box's lock gate, then call `share.destinations` for that box.
 - Render two sections under the item preview:
   - **Send to a chat**: zero to two recent landmark chat rows. Each row shows landmark symbol/label and chat label.
   - **Save in**: Inbox followed by `[share]` landmark rows.
 - Require one destination selection. Use one primary button whose label changes to **Send** or **Save**. Disable it while the operation is in flight.
-- Do not add a box picker, full chat picker, automatic route suggestion, or "More" screen in v1. An empty chat list is valid; save destinations remain available.
+- Once a submission has been attempted, keep its box and destination fixed for any retry because the first request may have committed before its response was lost.
+- Do not add a full chat picker, automatic route suggestion, or "More" screen in v1. An empty chat list is valid; save destinations remain available.
 - URL/text chat rows call direct chat send. URL/text save rows call `share.saveTextual`. Media rows use capture staging with the selected exact-chat or save target.
 - Call `completeRequest` only after direct chat acceptance, committed textual save, or terminal media state `delivered`/`stored`. Keep the sheet open for retryable failures.
 - On cancel after server staging exists, wait for confirmed `DELETE`. If confirmation fails, say **Discard could not be confirmed; this item may still arrive.**
@@ -296,7 +298,7 @@ There is no accepted silent critical gap in the planned paths. Physical extensio
 ## NOT in scope
 
 - Multiple shared items. V1 accepts one logical item to bound memory, partial failure, and UI complexity.
-- A box picker. V1 uses and names the main app's selected box.
+- Changing the main app's selected box from the Share Extension. The extension's box choice is local to one share action.
 - Automatic destination inference. Inbox is the explicit uncertain choice; the extension does not run triage before saving.
 - A full landmark/chat picker or search. V1 shows two recent landmark chats and all explicit `[share]` save destinations.
 - Creating a new chat from the share sheet. Chat delivery targets only an existing recent session.
@@ -338,13 +340,14 @@ No audit is needed for the Swift extension lifecycle or wire shapes. Box agents 
 - Inspect the built app and extension entitlements for `group.app.callbackbox.ios`. Inspect the app and extension Keychain access lists if a separate Keychain Sharing entitlement is used.
 - Simulator: pair the isolated worktree box, load destination fixtures, send a URL to a recent chat, save a URL to Inbox and a `[share]` landmark, and exercise image/file save states where the simulator host supports them. Simulator results do not close physical share-sheet behavior.
 - Physical device, boxholder-owned:
-  1. Install and launch the signed app once so token migration and selected-box publication run.
-  2. In Safari, share a URL to Callback Box. Select a recent landmark chat. Confirm the exact URL appears as a user message in that chat and no `.webpage.card` is created.
-  3. Share the URL again. Select Inbox. Confirm one minimal `.webpage.card` appears with the correct `source`, title fallback, timestamp, and link body.
-  4. Add a landmark with `destinations: [{ for: [share] }]`. Share the URL to it and confirm the card lands directly in that directory.
-  5. Share one photo from Photos to Inbox. Run intake/triage and confirm the capture-session card and its `.attach/` scope move together and remain readable.
-  6. Share one Voice Memo to a recent landmark chat. Confirm it lands in that exact chat and transcribes when its stream is AAC.
-  7. Remove or archive a listed chat before submission and confirm the extension reports a stale target without sending elsewhere.
-  8. Repeat one save with a protected box and confirm device-owner authentication appears.
-  9. Revoke the paired device and confirm the extension reports auth failure instead of success.
-- When automated work is complete, the issue remains open with `needs: [manual-testing]` until the boxholder completes at least steps 2, 3, and 5. Only the boxholder clears that need.
+  1. When upgrading from the first Share Extension build, invoke the share sheet once before first launching the updated app and confirm its legacy selected box still loads. Then launch the signed app so paired-box publication runs. Pair two boxes and select one in the main app.
+  2. In Safari, share a URL to Callback Box. Confirm the sheet names the main app's selected box. Choose the other box, confirm its destinations load, then reopen the main app and confirm its selection did not change.
+  3. Select a recent landmark chat. Confirm the exact URL appears as a user message in that chat and no `.webpage.card` is created.
+  4. Share the URL again. Select Inbox. Confirm one minimal `.webpage.card` appears with the correct `source`, title fallback, timestamp, and link body.
+  5. Add a landmark with `destinations: [{ for: [share] }]`. Share the URL to it and confirm the card lands directly in that directory.
+  6. Share one photo from Photos to Inbox. Run intake/triage and confirm the capture-session card and its `.attach/` scope move together and remain readable.
+  7. Share one Voice Memo to a recent landmark chat. Confirm it lands in that exact chat and transcribes when its stream is AAC.
+  8. Remove or archive a listed chat before submission and confirm the extension reports a stale target without sending elsewhere.
+  9. Repeat one save with a protected box and confirm device-owner authentication appears.
+  10. Revoke the paired device and confirm the extension reports auth failure instead of success.
+- When automated work is complete, the issue remains open with `needs: [manual-testing]` until the boxholder completes at least steps 2, 3, 5, and 9. Only the boxholder clears that need.
