@@ -183,9 +183,17 @@ for `.css/.svg/.png`.
 
 Two plugins: the doctest transform (`generateTestSource`, `loader: "ts"`,
 `resolveDir` = the file's directory), and a resolution plugin consuming rules
-**extracted** from `doctest-hooks.mjs` into `agent-doctest/src/resolve-rules.ts`,
-with the `@shared/*` alias passed in as a parameter — `agent-doctest` is a
-standalone published package and must not learn this repo's tsconfig.
+**extracted** from `doctest-hooks.mjs`.
+
+The extraction target is specified, because leaving it open would put an
+unresolved question inside a first chunk: **`agent-doctest/src/resolve-rules.mjs`**
+— `.mjs`, matching the hook that consumes it, so no cross-language boundary is
+introduced into a published package. Added to `exports` as `./resolve-rules`
+alongside the existing four (`agent-doctest/package.json:6-10`); imported
+relatively by `doctest-hooks.mjs` and by path from `bin/test-graph.ts`. The
+`@shared/*` alias is a parameter, never baked in — `agent-doctest` is a
+standalone package and must not learn this repo's tsconfig. No existing consumer
+changes, and `agent-doctest`'s own suite must be green after the move.
 
 **Candidates must be filtered to files, not directories.** The spike's first
 failure was `Cannot read file "src/frontend/src/lib/trpc": is a directory` — the
@@ -292,16 +300,30 @@ same diff means a green loop run predicts a green finish.
 `pretest` does not fire for `test:changed`, and a stale `dist/cli.mjs` would
 defeat `alwaysRun`'s whole purpose.
 
+**Full on the first invocation in a branch.** `test:changed` runs the whole suite
+the first time it is called on a branch — detected from the ledger: no record for
+this branch since it diverged from `main` — and selects thereafter. One full run
+per branch buys back the integration signal the loop would otherwise defer to the
+headless gate, and gives the ledger a clean per-branch baseline. Promoted from an
+open question by the third review's finding 7.
+
 **`pnpm test` keeps its meaning** — narrowing it would weaken
 `.claude/agents/finish.md:27-32`.
 
-**What this costs the ledger, stated up front.** With the loop selected, a test
-skipped mid-iteration cannot be observed failing mid-iteration. Ground truth
-moves to `/finish`, which still runs everything: roughly one clean data point per
-branch rather than many. Over the measured period that is still hundreds of
-branches. The loss is resolution, not signal — but transient misses (a test that
-would have failed mid-branch and was incidentally fixed before merge) are
-invisible, so the ledger's miss count is a **lower** bound.
+**What this costs, stated up front.** Two things, and the second is worse.
+
+*Resolution.* A test skipped mid-iteration cannot be observed failing
+mid-iteration, so transient misses — a failure that would have surfaced mid-branch
+and got incidentally fixed before merge — are invisible. The ledger's miss count
+is therefore a **lower** bound. `implicated` is still recorded on every run, so
+what survives is the counterfactual rather than the observation.
+
+*Where failures land.* Real integration breakage moves out of the coding loop and
+into `/finish` — a **headless subagent that cannot ask questions and must block on
+any unexpected failure** (`.claude/agents/finish.md:10-14`, `:27-32`). That is the
+worst actor to discover an integration bug in: attribution is weakest there, the
+fix loop is longest, and the human is not in it. Mitigated by the first-invocation
+full run below.
 
 **Guidance.** `callback-box/CLAUDE.md:11` and `:17` become the two-command story;
 per-worktree `AGENTS.md` mirrors regenerate from it.
@@ -318,65 +340,87 @@ selection's future — does a full run on an unaccounted branch ever catch anyth
 — is unanswerable from git history, because history records what was committed,
 not what failed on the way.
 
-**Direction.** A tap output capture (reporter or wrapper) on `pnpm test` and
-`pnpm test:changed`, appending **one JSONL record per run** — green runs
-included — to `$(git rev-parse --git-common-dir)/callback-test-ledger.jsonl`.
-The file sits **inside `.git/`, so it is never committed and appears in no
-diff**, while `--git-common-dir` resolves the same path from the main checkout
-and every worktree, so one ledger serves them all.
+**The capture seam.** tap's `--output-file` writes raw TAP to a file **while
+reporter output still goes to stdout** — so the capture does not replace the
+configured `reporter: tap`, which `.taprc:31-36` chose deliberately for
+agent-readable diagnostics. The wrapper runs tap with `--output-file`, preserves
+the exit status exactly (per `.claude/agents/finish.md:198-202`, a pipe returns
+the last command's status and can mask a failed suite), and parses the file
+afterwards. Per-file `# time=Nms` records are in that file — precisely how the
+`## Research (2026-08-08)` profiling collected them. No custom reporter is
+written.
 
-**Green runs are recorded because they are the denominator.** A failure count
-answers "which file keeps breaking"; a failure *rate* answers "is this getting
-worse", and that needs to know how often the file ran and passed. The asymmetry
-is what decides it: the denominator is free to collect now and **impossible to
-reconstruct later** — start with failures only and the rate is permanently
-unavailable for however long that ran.
+**Direction.** One JSONL record per run — green ones included — appended to
+`$(git rev-parse --git-common-dir)/callback-test-ledger.jsonl`. The file sits
+**inside `.git/`, so it is never committed and appears in no diff**, while
+`--git-common-dir` resolves the same path from the main checkout and every
+worktree, so one ledger serves them all.
 
 ```jsonc
-{ "ts": "...", "commit": "...", "branch": "...", "dirty": true,
+{ "ts": "...", "commit": "...", "branch": "...", "treeHash": "...",
   "mode": "full",                              // or "selected"
-  "ran": 484, "passed": 483, "ms": 566500,
-  "changed": ["callback-box/src/..."],         // the diff at that moment
-  "selected": [],                              // file list, only when mode = "selected"
+  "ranFiles": "sha256:ab12…",                  // key into the sidecar manifest
+  "selected": "sha256:cd34…",                  // what the shipped rule would run
+  "implicated": "sha256:ef56…",                // the counterfactual — see below
+  "changed": ["callback-box/src/..."],
   "durations": { "test/webapp/routes/scan-upload.doctest.md": 58177 },
-  "failures": [ { "file": "test/...", "class": "attached" } ] }
+  "failures": ["test/webapp/routes/scan-upload.doctest.md"] }
 ```
 
-A `full` record needs no file list — "full" means every entrypoint at that
-commit — so the common case stays small. Only `selected` runs carry one (median
-62 paths). Per-file denominator = full runs + selected runs that included it.
+**`ranFiles` is recorded exactly, not implied.** An earlier draft stored no file
+list for `full` runs, on the theory that "full means every entrypoint at that
+commit". That is not reconstructible: `.taprc:10-14` controls membership, test
+files are added and deleted constantly, and a dirty tree matches no commit.
+Without an exact set, per-file rates, never-failed, and duration trends all break
+across renames. File lists are stored as a content hash into a sidecar
+`{hash: [files]}` manifest — the entrypoint set changes rarely, so the manifest
+stays small while every record carries an exact, rename-proof membership set.
 
-**Per-file durations come free, and pay a debt.** The capture is already parsing
-tap output, which carries `# time=Nms` per file. Recording it means the
-`## Research (2026-08-08)` profiling — hand-collected, on a loaded machine,
-never repeated — becomes something the ledger accumulates continuously. That is
-the measurement
-`issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md` needs, and
-the quiet-machine baseline this plan still owes stops being a one-off exercise.
+**Two selections are recorded, and the second is the point.** `selected` is what
+the shipped rule would run — which escapes to the full suite whenever any changed
+path is unaccounted. `implicated` is the counterfactual: what the graph alone
+points at, *ignoring* that escape.
 
-**Classification is mechanical, not a judgement call.** `attached` vs `missed`
-falls out of the graph and the diff, which the capture already has. No agent
-decides it, so it cannot vary between sessions or be argued with after the fact.
+Recording only `selected` would leave the ledger unable to learn the thing it
+exists to learn. On a branch that goes `FULL` the selection is everything, so no
+failure could ever be classified missed — and `FULL` branches are 75% of them,
+the exact population in question. `implicated` is computable on every run
+regardless of mode, and it answers the boxholder's actual question: **if we
+stopped running the whole suite for changes to code no test imports, what would
+we have missed?**
 
-**Classification.**
+**Classification, all mechanical.** Per failing file, computed from the record —
+no agent judgement, so nothing varies between sessions:
 
-- **attached** — the failing file is in the selection for this diff. The graph
-  explains it.
-- **missed** — the failing file is *not* in the selection. The graph said it was
-  unrelated and it failed anyway. **This is the number that decides selection's
-  future**, and it is only observable on a `full` run, which is why `/finish`
-  keeps running everything.
-- **unknown** — recorded when the diff or the graph could not be computed. Never
-  silently folded into either of the others.
-- **flaky** is a *later* determination, not a field written at capture time. It
-  comes from `/finish`'s existing isolated re-run
-  (`.claude/agents/finish.md:34-52`): same file, same commit, passes on re-run,
-  branch touched neither the test nor the code it exercises. `/finish` already
-  performs this and discards the result; Track 5 has it append the outcome.
+- **attached** — the file is in `implicated`. The graph explains the failure.
+- **missed** — the file is not in `implicated`. Nothing pointed at it and it
+  failed anyway. **This is the number that decides selection's future.**
+- **covered-only-by-policy** — not in `implicated`, but in `selected` because the
+  run escaped to `FULL`, or because it is in `alwaysRun` / `unresolved` / is a
+  changed test entrypoint. Selected without a graph explanation; conflating these
+  with `attached` would flatter the graph.
+- **unknown** — the diff or the graph could not be computed. Never silently
+  folded into any of the others.
 
-**`bin/test-ledger report`** answers: failure rate per file over time, with the
-flake share broken out; the miss count and which files produced it; which files
-have never failed; and per-file duration trends. A local query, not a dashboard.
+**Flakiness is derived from the ledger, not adjudicated by an agent.** An earlier
+draft delegated it to `/finish`'s tracked-flake protocol
+(`.claude/agents/finish.md:34-52`) — but that involves grepping issues, matching
+signatures, and judging whether a branch touched "the code it exercises". What
+that records is *flakes a finish subagent was willing to pass*, not flake rate.
+Instead: a file that **failed in one run and passed in a later run at the same
+`commit` and `treeHash`** is flaky by definition, computed by `report`. No agent,
+no prose, and it catches flakes that surface during ordinary iteration rather
+than only those a merge happened to adjudicate.
+
+**`bin/test-ledger report`** answers: failure rate per file over time (with the
+flake share broken out), the miss count and which files produced it, and per-file
+duration trends.
+
+It also lists files **never observed failing** — as an observation, with no
+implication about worth. `docs/testing.md:5-11` puts decomposition and
+documentation ahead of regression-catching, so a test that never fails may be
+doing its main job perfectly. That list is the start of a human question, not a
+delete-list.
 
 **Nothing branches on the ledger.** It is observational. A write failure warns
 and the run proceeds. That is what makes shipping it risk-free, and why it lands
@@ -506,16 +550,16 @@ beyond "warn" is defensiveness against a failure with no consequence
 - **How much ledger data is enough to act on.** Needs a denominator in *failures
   observed*, not weeks elapsed. I do not know the number, and it should be set
   before anyone reads the report, not after.
-- **Whether the loop should occasionally run full to sample the counterfactual.**
-  With selection on the loop, mid-iteration misses are invisible (Track 4). A
-  cheap fix is to run full on, say, the first invocation of each branch: one full
-  run per branch, and some resolution recovered. Not proposed for v1 because it
-  partly undoes the speedup that motivated selecting on the loop — revisit once
-  the ledger shows how sparse misses are.
-- **What to do about tests that never fail.** The ledger will produce that list.
-  Deleting them is one answer and probably wrong for regression anchors; the
-  interesting version is asking which of them *could* have failed. No plan yet —
-  the data comes first.
+- **Whether first-invocation-full is enough sampling.** It is now in Track 4, so
+  the open part is only whether one full run per branch recovers enough
+  mid-iteration signal, or whether a periodic full run within a long branch is
+  also wanted. The ledger will show it: if misses cluster on long branches, it is
+  not enough.
+- **What to do about tests that never fail.** The ledger produces the list, and
+  the list does not mean what it looks like it means: `docs/testing.md:5-11` puts
+  decomposition and documentation ahead of regression-catching, so never-failed is
+  not evidence of low value. The interesting version of the question is which of
+  them *could* have failed. No plan yet — the data comes first.
 - **Whether the ledger should be shared beyond one machine.** It is per-machine by
   construction (in the git common dir). Aggregation would need a real decision
   about where it lives; not now.
@@ -534,22 +578,31 @@ test. The agent-facing surface for this work is `callback-box/CLAUDE.md`,
 
 ## Implementation order
 
-1. **Track 3** — the four precision guards. First: cheap, independent of the
-   mechanism, and 3c generates the `alwaysRun` list Track 2 needs while 3d
-   protects a scope assumption Track 2 rests on.
-2. **Track 1** — `bin/test-graph`, including the `resolve-rules` extraction from
-   `doctest-hooks.mjs`, with `agent-doctest`'s suite green afterwards.
-3. **Track 2** — `bin/test-select`.
-4. **Track 5a** — the ledger capture and `report`, wired to `pnpm test` first,
-   while every run is still a full run. **Deliberately before Track 4**: it gets
-   a period of clean full-run ground truth before selection narrows anything.
-5. **First full green run on a quiet machine** — the owed baseline, and the
-   ledger's first records.
-6. **Track 4** — `test:changed` / `pretest:changed`, `--base`, CLAUDE.md
-   guidance. The point at which behavior changes for agents.
-7. **Track 5b** — the `/finish` flake-outcome capture, and the nightly.
+**The ledger lands first**, needing only the graph. The third review's finding 4
+was right that an earlier order built the selector before the instrument: if the
+ledger is the valuable thing and its payoff is months out, every week it is not
+collecting is a week of data lost, while the selector's benefit is available any
+time.
 
-Note what is absent: any change to what `/finish` verifies.
+1. **Track 1** — `bin/test-graph`, including the `resolve-rules` extraction from
+   `doctest-hooks.mjs`, with `agent-doctest`'s suite green afterwards. Needed by
+   the ledger for `implicated`.
+2. **Track 5a** — the ledger: the `--output-file` capture, the sidecar manifest,
+   both selections, mechanical classification, and `report`. Wired to `pnpm test`
+   while **every run is still a full run**, so it collects clean ground truth
+   before anything narrows.
+3. **First full green run on a quiet machine** — the owed baseline, and the
+   ledger's first records. From here it accumulates continuously.
+4. **Track 3** — the four precision guards. 3c generates the `alwaysRun` list and
+   3d protects a scope assumption, both of which Track 2 needs.
+5. **Track 2** — `bin/test-select`.
+6. **Track 4** — `test:changed` / `pretest:changed`, first-invocation-full,
+   `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
+   and deliberately last.
+7. **Track 5b** — the nightly.
+
+Note what is absent: any change to what `/finish` verifies, and any dependence on
+`/finish`'s prose protocol for flake classification.
 
 ---
 
@@ -565,10 +618,13 @@ Note what is absent: any change to what `/finish` verifies.
   handling; `unresolved` pass-through; every `FULL` condition; non-zero exit on
   internal error.
 - `bin/test-ledger.test.ts` — a green run appends a record with no failures; a
-  synthetic failing run classifies attached vs missed correctly; an uncomputable
-  diff yields `unknown`, never a guess; a write failure warns without failing the
-  run; `report` computes a per-file rate whose denominator counts full runs plus
-  the selected runs that included that file.
+  synthetic failing run classifies **attached / missed / covered-only-by-policy**
+  correctly, including the case where the run escaped to `FULL` (which must NOT
+  read as `attached`); an uncomputable diff yields `unknown`, never a guess; a
+  write failure warns without failing the run; the exit status of the wrapped tap
+  run is preserved exactly; `report` derives flakiness from a fail-then-pass pair
+  at identical `commit` + `treeHash`, and computes per-file rates from the
+  recorded `ranFiles` sets rather than from run counts.
 - `test/dev/import-coverage.doctest.md` — 3a–3d pass on the current tree and each
   fails when its assumption is violated.
 

@@ -212,3 +212,96 @@ graph builder consume, with the callback-box-specific alias passed in.
 resolved by keeping `/finish` always-full: the tracked-flake protocol lives at
 that gate, and a full run there keeps flake signatures visible at the point where
 attribution is strongest.
+
+---
+
+# Third pass — pre-implementation review (2026-08-09)
+
+Reviewer: OpenAI Codex (`gpt-5.5`, high effort), read-only, against the
+ledger-centred rewrite at commit `d5f8a1c`. Framed as a build-spec review since
+implementation was about to start. Eight findings; the three High ones are
+defects in the ledger, the new centrepiece.
+
+## Findings (verbatim, abridged where the citation repeats)
+
+> **1. High: `attached` / `missed` is not well-defined under the new trust model.**
+> Track 5 says `missed` means "not in the selection" and is the number that decides selection's future, while Track 2 says any unaccounted changed path makes selection `FULL`. On the branches the plan most wants to study, `FULL` makes every failing test "selected," so `missed` collapses to zero unless the ledger computes a separate counterfactual selector that the plan does not define. Also, `alwaysRun`, `unresolved`, and changed test entrypoints are selected without a graph explanation.
+>
+> **2. High: the per-file denominator is not computable from the proposed record.**
+> A `full` record stores no file list because "full means every entrypoint at that commit", but records can be dirty, `.taprc` controls membership (`callback-box/.taprc:10-14`), and test files change over time. Without recording the exact `ranFiles` for every run, `report` cannot correctly answer per-file rates, "never failed," or duration trends across renames/adds/deletes.
+>
+> **3. High: flake classification is not mechanical.**
+> The plan claims classification is mechanical and not an agent judgement call, then delegates `flaky` to `/finish`'s prose protocol. That protocol requires grepping issues, matching a failure signature, and deciding whether the branch touched "the code it exercises" (`.claude/agents/finish.md:40-52`). That produces a record of "flakes the finish subagent was allowed to pass," not actual flake rate per file.
+>
+> **4. High: after the failed gate, selection-on-loop is a rationalized carryover.**
+> Track 0 says 25% branch accountability failed the pre-set bar and explicitly says current coverage makes the safe selector "not worth building". The plan's own simpler alternative is "ship only the ledger", yet implementation still builds guards, graph, and selector before the ledger. A fresh build spec should start with the ledger and the per-file floor, not ship behavior change for a quarter of branches.
+>
+> **5. Medium: `resolve-rules` extraction has an unresolved package boundary.**
+> `agent-doctest` currently exports only `./check`, `./tap`, `./loader`, `./hooks` (`agent-doctest/package.json:6-10`), and the loader registers an `.mjs` hook. The first chunk does not specify whether this is a public export, an internal import, or how the `.mjs` hook consumes a `.ts` resolver without breaking non-callback-box consumers.
+>
+> **6. Medium: TAP capture is not a finished seam.**
+> `.taprc` deliberately uses raw `reporter: tap` for agent-readable diagnostics (`callback-box/.taprc:31-36`). TAP's custom reporter path replaces the configured reporter, while a wrapper has to preserve exit status exactly as `/finish` warns (`.claude/agents/finish.md:198-202`). "Per-file durations come free" is true only for a raw-TAP parser that preserves the current output contract.
+>
+> **7. Medium: selected loop pushes integration failures into the worst actor.**
+> The worse effect than invisible transient misses is that real integration feedback moves from the coding loop to the headless finish subagent, which cannot ask questions and must block on any unexpected failure (`.claude/agents/finish.md:10-14`, `:27-32`). That degrades attribution and repair timing even if `/finish` remains full.
+>
+> **8. Medium: the ledger will not answer "dead weight or regression anchor."**
+> The plan says a never-failed test is either load-bearing or dead weight and "there is no way to tell them apart", then lists "which files have never failed" as a report output. That data still cannot distinguish valuable regression anchors from useless tests; it only says no observed failure occurred. The testing philosophy values decomposition and documentation before regression catching (`callback-box/docs/testing.md:5-11`).
+
+> **Single Change** — Before implementation starts, rewrite v1 as **ledger-only on existing full runs**, with an explicit machine-owned schema that records exact `ranFiles`, exact durations, graph-counterfactual classification, and flake outcomes as structured events. Defer `test:changed` and the selector behavior change until that ledger has produced usable data.
+
+## Disposition
+
+**1 — accepted; the fix is a second classification, not a tweak.** The collapse is
+real: on a `FULL` branch everything ran, so nothing can be `missed`. The ledger
+now records **two** selections per run — `selected` (the shipped rule, which
+escapes to FULL on any unaccounted path) and `implicated` (the counterfactual:
+what the graph alone points at, ignoring the escape). A failure is classified
+against both. `implicated` is what answers the boxholder's actual question —
+*if we stopped running everything for changes to untested code, what would we
+have missed?* — and it is computable on every run, including the 75% that go
+FULL. Without it the ledger could never have learned anything about the
+population it exists to study.
+
+**2 — accepted.** `ranFiles` is now recorded explicitly. To keep records small,
+the file list is stored as a content hash with a sidecar `{hash: [files]}`
+manifest — the entrypoint set changes rarely, so the manifest stays at a few
+hundred entries while every record gains an exact, rename-proof membership set.
+
+**3 — accepted, and the fix removes the agent entirely.** Flakiness is now
+derived *from the ledger itself*: same file, same commit, same working-tree
+hash, failed in one run and passed in a later one. No `/finish` prose, no agent
+judgement, and it works for flakes that surface during ordinary iteration rather
+than only those a finish subagent happened to adjudicate.
+
+**4 — accepted in part, and the part that was accepted is the ordering.** The
+ledger now lands first, needing only the graph; guards, selector, and the loop
+change follow. The stronger claim — do not ship selection at all — contradicts a
+decision the boxholder made explicitly after seeing the Track 0 result, so it is
+surfaced rather than acted on. The reordering means the ledger begins collecting
+during the period selection is still being built, which is the reviewer's real
+point and costs nothing.
+
+**5 — accepted.** Specified: `agent-doctest/src/resolve-rules.mjs` (matching the
+hook's existing `.mjs`, so no cross-language boundary), added to `exports` as
+`./resolve-rules`, imported relatively by `doctest-hooks.mjs` and by path from
+`bin/test-graph.ts`. No existing consumer changes.
+
+**6 — accepted, and the reviewer's own search surfaced the right seam.** tap's
+`--output-file` writes raw TAP to a file *while reporter output still goes to
+stdout*. So the capture is: run tap with `--output-file`, preserve the exit
+status, parse the file afterwards. The configured `reporter: tap` contract is
+untouched, no custom reporter is written, and per-file `# time=Nms` records are
+in the captured file — which is exactly how the 2026-08-08 profiling collected
+them in the first place.
+
+**7 — accepted as a documented consequence**, and it promotes the mitigation
+that was sitting in open questions: run full on the first invocation in a
+branch, so integration breakage surfaces in the loop rather than at the headless
+gate.
+
+**8 — accepted; the claim was overreaching.** "Never failed" is not evidence of
+low value — `docs/testing.md` puts decomposition and documentation ahead of
+regression-catching, so a test that never fails may be doing its main job. The
+report now presents never-failed as an observation, with no implication about
+worth.
