@@ -538,13 +538,18 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   TypeScript — the bash implementation is the single liveness authority
   (the control-surface plan settled this exact question in favor of bash
   for exactly this reason; a TS re-derivation would be the fail-open
-  duplication again). Render the three strata from Track C. All links the
+  duplication again). Render all five Track C strata (In progress, Merged ✓,
+  Untouched, Held for testing, Recently culled — plus the dimmed
+  force-removed list); D1 ships them all, since they are render branches
+  over one JSON, not separate features. All links the
   page emits are **request-relative** (`/<name>/…`, `/workstreams/…`) — the
   `url` field in `list --json` is `http://localhost:<port>/…`
   (`bin/worktrees:211`) and is CLI display data only; rendered into a page
   viewed over Tailscale it would point at the viewer's own device
   (cross-model review finding).
-- **Action endpoints:** `POST /workstreams/action/{focus|resume|close|recreate}/<name>`
+- **Action endpoints:** `POST /workstreams/action/{focus|resume|close|reset-test|confirm-tested}/<name-or-basename>`
+  (no `recreate` endpoint — recreation is `resume`'s culled-state branch,
+  not a verb; the CLI has no `recreate` subcommand by design)
   → execa `bin/workstreams <verb> <name>` with `<name>` validated by the same
   `[a-zA-Z0-9_-]+` rule as `wt_paths_valid_name` *before* building argv, no
   other request data reaching the command line. Response: 303 back to `/workstreams/`
@@ -708,7 +713,9 @@ branch" without an agent reading 19k lines, and worktree sessions must be
   root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
   the existing hook with zero new hook machinery — a session that files an
   issue without `workstream:` simply cannot commit it. Enforces, for
-  plans: frontmatter present on every file under the three plan dirs, all
+  plans: frontmatter present on every *plan* file under the three plan dirs
+  — `README.md` and `*.review.md` are exempt (reviews are artifacts about
+  plans, not plans; `*.subplan.md` files ARE plans and get the schema), all
   required fields, `status` in the enum and consistent with the directory
   (implemented-plans/ ⇒ implemented; unimplemented-plans/ ⇒
   superseded|parked), `issues:` paths resolve, `superseded-by` only with
@@ -762,7 +769,12 @@ branch" without an agent reading 19k lines, and worktree sessions must be
     resolving workstream differs from the filed value (an issue filed
     `unattached` and resolved by this workstream gets its name —
     provenance of the *fix*, which is what "pull up the workstream that
-    did this" needs).
+    did this" needs). **The stamp happens on RESOLVE, not only on close**
+    (cross-model finding): an issue /finish resolves but must leave open
+    because it carries `manual-testing` gets its `workstream:` corrected
+    in the same pass — otherwise the Track G pin, which greps open issues
+    by `workstream:`, would never hold the very worktree whose repro that
+    issue is waiting on.
     The manual-testing guard (never close `needs: [manual-testing]`,
     finish.md:419-421) is untouched.
   - **New step — merge the box clone's `keep` branch home** (spec in
@@ -856,10 +868,18 @@ conversation that built the thing.
   `resolution: implemented` when nothing else in `needs:` remains (else it
   just clears the flag), runs `doc-check --fix`, and commits (issues/ is not
   a deployed path, so the post-commit deploy hook self-skips). The
-  only-Ian-clears-it rule is preserved in substance: the button sits behind
-  the owner-session gate, so the click *is* the boxholder clearing it;
-  agents still may never run the helper (documented in `issues/CLAUDE.md`,
-  same standing as the existing rule). Basename validated against the same
+  only-Ian-clears-it rule is **enforced, not documented** (cross-model
+  finding — prose-only protection would violate this plan's own
+  enforcement-over-convention premise): the helper reuses the
+  `src/lib/agent-context.ts` refusal pattern that `cb auth` established —
+  it refuses in an agent session unless passed `--agent-confirmed`, the
+  flag that asserts *a human explicitly asked*, and the router's
+  owner-gated endpoint is the one caller that passes it. Preflights before
+  touching anything (the same finalization discipline `/finish` applies,
+  finish.md:446-449): the main checkout is on `main`, has no active
+  merge/rebase, and the issue file itself is unmodified in the working
+  tree; any failed preflight or commit leaves the file untouched — never
+  half-edited-uncommitted. Basename validated against the same
   no-traversal rule as workstream names before any path is built.
 - **Issue detail pages** in `/workstreams/issues/` grow the same two buttons
   whenever the item carries the flag — the queue view is a filter, not the
@@ -939,23 +959,35 @@ conversation that built the thing.
   queue page where it belongs. This amends the control-surface plan's
   "eligibility rules unchanged" lock and the vocabulary bullet above;
   recorded as the one exception.
-- **Culls preserve `keep`, discard activity; recreate restores what was
-  kept.** At cull time, an unmerged `keep` branch (the abandoned-without-
-  /finish case) is pushed to the **source test1 repo** as
+- **Override removals preserve `keep`; normal culls never see one.**
+  Precision the first draft lacked (cross-model finding — the pin makes
+  "push at cull" unreachable on the normal path): a *normal* cull only
+  fires when eligibility passes, and an unmerged `keep` branch fails
+  eligibility (pin (a)), so the preservation push lives in the **override
+  paths only** — Release, `remove --force`, and `codex-session-end`'s
+  interactive `[r]emove` — which are exactly the removals that can
+  encounter an unmerged `keep`. There, before the box is trashed, the
+  branch is pushed to the **source test1 repo** as
   `keep/<workstream>-<date>` — lightweight storage, never merged to
   test1's main, pruned only with the boxholder's approval during periodic
-  maintenance — and the ref is recorded in the registry's `removed`
-  record; recreate checks the restored clone out at that ref. Everything
-  else in the clone is activity by definition and dies with the cull — no
+  maintenance — and the ref is recorded in the registry's `removed` record
+  as `boxRef`. If the push fails, the removal refuses and the worktree
+  stays — never trash the only copy on a failed save (§4). Everything else
+  in the clone is activity by definition and dies with any removal — no
   divergence heuristic, no universal archiving (boxholder decision,
   superseding an earlier divergence-gated design: the boxholder's own
   testing naturally diverges a clone, so divergence cannot signal intent;
-  only the named branch does). If the preservation push fails, the cull
-  refuses and the worktree stays — never trash the only copy on a failed
-  save (§4). The testing view's **Release** button is "cull despite the
-  pin" (owner-approved): any `keep` branch is preserved as above, and an
-  unconfirmed throwaway repro dies — if it mattered, it belonged on
-  `keep`.
+  only the named branch does). An unconfirmed throwaway repro dies on
+  Release — if it mattered, it belonged on `keep`.
+- **Restoring a preserved box needs real plumbing** (cross-model finding —
+  `wt_create` clones the source box with no ref option,
+  `bin/lib/worktree-create.sh:137-142`): `create` gains `--box-ref <ref>` —
+  after the normal box clone, it resets the clone's main to that
+  source-repo ref (`git -C <clone> fetch origin <ref> && git -C <clone>
+  reset --hard FETCH_HEAD`), so the restored box *is* the preserved state.
+  `resume`'s culled-state branch passes the registry's `removed.boxRef`
+  when present. This is the one new `create` flag this plan adds; without
+  it the restore claim is fiction.
 
 **Pre-merge vs deployed testing — the decision.** Local-first: the worktree
 URL covers "test my local trees" with no new machinery, and it is the only
@@ -969,6 +1001,19 @@ subsystem with its own failure modes — and the boxholder's own lean is
 local-first. Track F files it as an exploration issue so the idea is kept,
 not built. What this plan guarantees is that when it IS built, the queue
 view's test-target column is the one place it plugs in.
+
+**The Track G state machine** (added at cross-model review's direction —
+the authoritative event table; if prose elsewhere disagrees, this wins):
+
+| Event | Clone `main` | Clone `keep` | Clone `test-setup` | Source test1 | Registry | Cull-eligible after? |
+|---|---|---|---|---|---|---|
+| Worker stages + snapshots | advances (app commits) | worker cherry-picks onto it | created (snapshot of main) | untouched | — | No (pins a, c) |
+| `/finish` | untouched | **merged into source main** (branch left in clone; pin (a)'s ancestry check now passes, so no deletion needed) | untouched | main gains `keep` content | — | No while `test-setup`/flag remain; else Yes |
+| `reset-test` | **hard-reset to `test-setup`** | untouched | untouched | untouched | — | unchanged |
+| `confirm-tested` | untouched | untouched | **deleted** | untouched (issue commit is monorepo-side) | — | Yes, once no pin remains |
+| Normal cull (sweep/session-end) | dies (trash) | *cannot exist* (pin (a) blocked eligibility) | *cannot exist* (pin (c)) | untouched | `removed{at, finalSha, merged:true}` | — (it just happened) |
+| Release / `remove --force` / codex `[r]` | dies | **pushed as `keep/<ws>-<date>`**, then dies (push-fail ⇒ removal refused) | dies | gains the `keep/*` ref only | `removed{…, boxRef}` | — |
+| `resume` of culled ws | fresh clone; reset to `boxRef` when recorded | absent | absent | untouched | new session fields | No while a pin recurs; else Yes |
 
 **First implementation chunk.** The `## Manual testing` section validation
 in E1's validator (flag ⇒ section present) + the anchor link rendering —
@@ -1253,7 +1298,18 @@ ships. Codex-implementable: no chunk contains an open question.
   `bin/CLAUDE.md`). CLI verbs and the registry work immediately on merge.
 - **Migration.** Plan-frontmatter corpus migration is atomic with its
   validator (E1). The registry needs no migration by construction (absence
-  is defined). No box data is touched anywhere in this plan.
+  is defined). **Box repos ARE changed data in this plan** (corrected by
+  cross-model review — an earlier draft claimed otherwise): Track G writes
+  branches in worktree box clones, merges `keep` into the source test1's
+  main, pushes `keep/<workstream>-<date>` refs to it, and hard-resets
+  clone mains. The containment guarantees: the *source* test1 is only ever
+  touched by (1) /finish's `keep` merge — conflict-refusing, boxholder-
+  reviewable like any /finish output — and (2) namespaced `keep/*` ref
+  pushes that touch no working state; clone-side operations are all
+  confined to disposable clones. No migration of existing boxes is needed
+  (all new branches are created-on-write), and the rehearsal for the
+  riskiest operation (`reset-test` under a running serve) is a named chunk
+  test, not an assumption.
 - **Cross-model review** (`/cross-model`) runs on this plan before
   implementation starts, and on the diff before the plan is called done —
   it defines a state contract (registry), a web surface with an auth
