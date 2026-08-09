@@ -52,6 +52,29 @@ Today both pin a tab. Separating them is what makes the first case disposable.
 - **No unified status.** Git ahead/dirty, router running/idle, and session
   liveness each recompute independently in three places and none persist.
 
+## The enabling refactor is landing (2026-08-08, `worktree-seam`)
+
+[The agent-neutral worktree control surface](../../callback-box/docs/plans/worktree-control-surface.md)
+is the plan for the pieces this redesign needs, deliberately scoped to change
+**no** workflow — only to make the pieces recombinable. What it removes from the
+gap list above:
+
+- Worktree creation and removal are now `bin/worktrees create` /
+  `bin/worktrees remove`. Claude Code's hooks and `bin/launch-worktree-session`
+  are thin clients of the same command, so a new frontend (a web button, a
+  packaged tool) no longer has to impersonate Claude Code to reach the repo's own
+  worktree logic. That is what makes trying Conductor cost one script instead of a
+  bet.
+- The three-way liveness recomputation is collapsing onto one shared, tri-state
+  guard — `unknown` no longer reads as "nothing running", which was a fail-open
+  hole in front of an irreversible delete.
+- `bin/worktrees list --json` is the planned join of the three signals, and the
+  thing `/dev/issues/` would consume instead of re-deriving worktree state.
+
+**`resume` is designed in that plan and deliberately NOT built**, because a new
+motion is a workflow change — this issue's territory, not the refactor's. The
+plan records the design so this issue can pick it up.
+
 ## Direction (not settled)
 
 Extend `/dev/issues/` rather than build a dashboard — it has the facets, the
@@ -61,9 +84,9 @@ doing; Ian dislikes tty switchers, which rules out ccmanager/Claude Squad.
 Packaged tools were evaluated and rejected: Conductor (conductor.build) and
 Claude Code's desktop app are monoliths that own the layer we've customized most
 and can't be built on top of. **Codex must stay first-class**, so nothing may be
-Claude-Code-only. The enabling refactor is tracked separately in
-[the agent-neutral worktree seam](../code-quality/2026-08-01-derive-public-worktree-paths.md)'s
-neighborhood — see the plan from `worktree-seam`.
+Claude-Code-only. The enabling refactor has its own plan —
+[the agent-neutral worktree control surface](../../callback-box/docs/plans/worktree-control-surface.md),
+summarized above.
 
 ## Open dependencies
 
