@@ -643,16 +643,48 @@ branch" without an agent reading 19k lines, and worktree sessions must be
   discards unknown fields, `router-issues.ts:161`) and a branch column in
   the issues view joined against live worktrees, since a validated field
   nobody renders answers nothing.
-- **`/finish` integration:** step 6 writes `status:` frontmatter instead of
-  the prose line; step 7b reads `issues:` (falling back to the prose section
-  during the long tail of unmigrated habits); when marking a plan `partial`,
-  /finish **surfaces** the leftover work as a proposed issue body in its
-  report rather than auto-filing (the plan-lifecycle issue's open question,
-  resolved toward "surface, don't perform" — auto-filed fragments are how
-  the queue fills with items nobody chose; agents arrange context, humans
-  keep judgment). cb-plan's template adds the frontmatter block; the
-  "Issues addressed" prose section stays as the human-readable rendering of
-  the same list.
+- **`/finish` integration — the concrete edits** (all in
+  `.claude/agents/finish.md`; `.claude/skills/finish/SKILL.md` is a thin
+  dispatcher and needs no change):
+  - **Step 5b (scope verification):** the requirement list now starts from
+    the plan's `issues:` frontmatter instead of hunting for an "Issues
+    addressed" section (prose section as fallback during the habit tail).
+    No other change — MET/PARTIAL/UNMET stays evidence-only.
+  - **Step 6 (plan disposition):** each disposition writes `status:`
+    frontmatter instead of the prose first line — `implemented` +
+    `git mv` to implemented-plans/; `partial` (stays put, prose edited to
+    mark real vs future); `superseded`/`parked` + `git mv` to
+    unimplemented-plans/. The validator's directory-consistency rule is the
+    enforcement backstop: a /finish that moves a plan without updating
+    `status:` (or vice versa) fails its own pre-commit, so drift between
+    the agent's habits and the schema is self-correcting rather than
+    review-caught (§11). **After any plan `git mv`, run
+    `pnpm --dir callback-box doc-check --fix`** — the moved plan's own
+    relative `issues:`/`superseded-by:` paths and every inbound link
+    re-resolve; today finish.md only prescribes this after *issue* moves
+    (finish.md:423-425), and E1's frontmatter-path repair is what makes it
+    work for the frontmatter class too.
+  - **Step 6, `partial` case:** /finish **surfaces** the leftover work as a
+    fully-drafted issue body (title, category, `branch:` prefilled with the
+    worktree branch) in its final report, and does NOT file it — the
+    plan-lifecycle issue's open question, resolved toward "surface, don't
+    perform": auto-filed fragments are how the queue fills with items
+    nobody chose; agents arrange context, humans keep judgment.
+  - **Step 7b (issue closing):** finds resolvable issues from the plan's
+    `issues:` list first (prose fallback), then the existing
+    commit-message/briefing/grep sweep unchanged. On close it already
+    writes `resolution:`; it now also corrects `branch:` when the merging
+    branch differs from the filed value (an issue filed `unattached` and
+    resolved by this worktree gets the worktree's branch — provenance of
+    the *fix*, which is what "pull up the worktree that did this" needs).
+    The manual-testing guard (never close `needs: [manual-testing]`,
+    finish.md:419-421) is untouched.
+  - **No registry interaction:** /finish merges and reports; the worktree's
+    cull still happens through session-end/sweep, which is where the
+    Track A removal record is written. /finish touching the registry would
+    be a second writer for the same fact (§8).
+  - cb-plan's template adds the frontmatter block; the "Issues addressed"
+    prose section stays as the human-readable rendering of the same list.
 - **`/ide/plans/`:** a read-only server-rendered list — status facets,
   branch column joined against `list --json` (a plan whose branch has a live
   worktree links to its front-page row), each plan linking to the existing
