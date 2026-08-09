@@ -75,6 +75,29 @@ async function runCb(opts: {
   return String(result.all);
 }
 
+/**
+ * Drain the box's pending jobs to completion. A single wakeup runs only ONE
+ * reactor cycle (`maxCycles: 1`, `src/cli/commands/wakeup.ts`), so a job the
+ * arrival spawns — or a low-priority follow-up a connector-scoped cycle skips
+ * (`src/core/reactor/cycle.ts`: an all-low-priority cycle is skipped under
+ * `skipLowPriority`) — survives it and sits in `box/jobs`. That lone leftover
+ * keeps the box from ever going quiescent, so without this every email item and
+ * every day boundary burns its full quiescence timeout (seen in the first
+ * onboarding run: a `gmail.intake` job left by the dentist email was still
+ * pending two items later). `cb reactor` processes every source, low priority
+ * included, across several cycles — leaving the box the way a user finds it
+ * "later", with the arrived work finished and nothing pending. It does not sync
+ * (no `--sync`) or push, so it only drains what already exists.
+ */
+async function drainJobs(opts: { packageRoot: string; env: NodeJS.ProcessEnv; action: string }): Promise<void> {
+  await runCb({
+    args: ["reactor", "--max-cycles", "5"],
+    packageRoot: opts.packageRoot,
+    env: opts.env,
+    action: opts.action,
+  });
+}
+
 export interface BaselineGmailSyncOptions {
   statePath: string;
   packageRoot: string;
@@ -136,12 +159,16 @@ export async function injectEmail(options: InjectEmailOptions): Promise<string> 
     attachments: loaded.attachments,
   });
   await saveFakeGmailState(statePath, state);
+  const wakeupEnv = { ...env, CB_FAKE_GMAIL: statePath };
   await runCb({
     args: ["wakeup", "--connector", "gmail", "--skip-push", "--skip-housekeeping"],
     packageRoot,
-    env: { ...env, CB_FAKE_GMAIL: statePath },
+    env: wakeupEnv,
     action: `inject-email ${fixture}`,
   });
+  // The connector-scoped wakeup syncs the mail and runs one reactor cycle; drain
+  // the rest so the box is fully caught up before the operator looks at it.
+  await drainJobs({ packageRoot, env: wakeupEnv, action: `inject-email ${fixture} drain` });
   return loaded.message.id;
 }
 
@@ -166,5 +193,9 @@ export async function advanceDays(options: AdvanceDaysOptions): Promise<Date> {
   const dayEnv = { ...env, CB_TIME: to.toISOString() };
   await runCb({ args: ["wakeup", "--skip-push"], packageRoot, env: dayEnv, action: `advance-days ${String(days)}` });
   await runCb({ args: ["tick"], packageRoot, env: dayEnv, action: `advance-days ${String(days)}` });
+  // The wakeup and tick each run one reactor cycle; drain any jobs they queued
+  // (a new day's scheduled work, mail refreshed overnight) so the next item does
+  // not open on a box that is still churning and never goes quiescent.
+  await drainJobs({ packageRoot, env: dayEnv, action: `advance-days ${String(days)} drain` });
   return to;
 }

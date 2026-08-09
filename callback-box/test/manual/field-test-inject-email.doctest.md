@@ -140,6 +140,17 @@ files.filter((f) => f.endsWith(".email-message.card")).length > 0
 => true
 ```
 
+And it leaves no intake job pending. A single wakeup runs one reactor cycle, so
+the intake job the arrival creates — or a follow-up it spawns — can outlive the
+wakeup and sit in `box/jobs`, where it keeps the box from ever going quiescent
+(the first onboarding run stalled every email item exactly this way). `inject`
+now drains to completion, so the box is caught up before the operator looks.
+
+```ts continue
+files.filter((f) => f.endsWith(".intake.job.card"))
+=> []
+```
+
 ```ts cleanup
 await rm(runDir, { recursive: true, force: true });
 ```
