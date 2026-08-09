@@ -71,7 +71,7 @@ const ScenarioFileSchema = z.strictObject({
   description: z.string().min(1),
   startTime: z.iso.datetime({ offset: true }),
   models: z
-    .strictObject({ operator: z.string().min(1).optional(), box: z.string().min(1).optional() })
+    .strictObject({ operator: z.string().min(1).optional(), chat: z.string().min(1).optional() })
     .optional(),
   checklist: z.array(ChecklistItemSchema).min(1),
 });
@@ -103,7 +103,7 @@ export interface FieldScenario {
   description: string;
   /** ISO timestamp the run's `CB_TIME` starts at. */
   startTime: string;
-  models: { operator: string; box: string };
+  models: { operator: string; chat: string };
   /** Verbatim `persona.md` — prompt layer 1. */
   persona: string;
   /** Absolute `assets/` path, handed to the operator as "your files". */
@@ -277,7 +277,7 @@ export async function loadFieldScenario(dir: string): Promise<FieldScenario> {
     startTime: file.startTime,
     models: {
       operator: file.models?.operator ?? DEFAULT_MODEL,
-      box: file.models?.box ?? DEFAULT_MODEL,
+      chat: file.models?.chat ?? DEFAULT_MODEL,
     },
     persona,
     assetsDir: path.join(absoluteDir, "assets"),

@@ -36,7 +36,7 @@ import { loadFieldScenario, type FieldScenario } from "./scenario.js";
 import { seedFieldBox, scenarioNeedsGmail } from "./run-seed.js";
 import { tagBaseline, BASELINE_TAG, checkpointTag } from "./checkpoints.js";
 import { assembleOperatorPrompt } from "./operator-prompt.js";
-import { startOperatorSession } from "./operator.js";
+import { startOperatorSession, type OperatorSession } from "./operator.js";
 import { advanceDays, baselineGmailSync } from "./pre-actions.js";
 import { runChecklistItem } from "./run-item.js";
 import { resolveBrowseCommand, resolveBrowseKey } from "./run-env.js";
@@ -219,29 +219,6 @@ export async function runFieldScenario(options: RunFieldScenarioOptions): Promis
     emit(`server restarted: ${state.server.baseUrl}`);
   };
 
-  const systemPrompt = assembleOperatorPrompt({
-    persona: scenario.persona,
-    browseCommand,
-    browseSession,
-    appBaseUrl: state.server.baseUrl,
-    screenshotsDir: screenshotsRoot,
-    assetsDir: scenario.assetsDir,
-  });
-  await writeFileAtomic(path.join(runDir, "operator-system-prompt.md"), { content: systemPrompt });
-
-  const operator = startOperatorSession({
-    backend: options.backend ?? createChatBackend(),
-    systemPrompt,
-    cwd: runDir,
-    model: scenario.models.operator,
-    tools: OPERATOR_TOOLS,
-    // The FULL env, not just the overlay: an SDK subprocess handed a bare
-    // overlay loses the Claude login it needs to exist at all.
-    env: { ...process.env, BROWSE_BASE_URL: state.server.baseUrl, CB_BROWSE_API_KEY: browseKey },
-    screenshotsDir: screenshotsRoot,
-    ...options.operator,
-  });
-
   const result: FieldRunResult = {
     scenario: scenario.name,
     scenarioDir: scenario.dir,
@@ -258,43 +235,75 @@ export async function runFieldScenario(options: RunFieldScenarioOptions): Promis
     events: [],
   };
 
-  const ctx: FieldRunContext = {
-    scenario,
-    box,
-    runDir,
-    screenshotsRoot,
-    operator,
-    server: () => state.server,
-    boxTime: () => state.boxTime,
-    fakeGmailStatePath,
-    quiescence: { ...DEFAULT_QUIESCENCE, ...options.quiescence },
-    childEnv,
-    restartServer,
-    advanceDays: async (days: number): Promise<Date> => {
-      await state.server.stop();
-      try {
-        state.boxTime = await advanceDays({
-          days,
-          from: state.boxTime,
-          packageRoot: box.packageRoot,
-          env: childEnv(),
-        });
-        result.boxTimeEnd = state.boxTime.toISOString();
-      } finally {
-        // Restart even when the day's maintenance failed: leaving the run
-        // without a server would turn one bad wakeup into a dead run.
-        state.server = await startAgain();
-      }
-      emit(`advanced ${String(days)} day(s) to ${state.boxTime.toISOString()}`);
-      return state.boxTime;
-    },
-    event: (message: string) => {
-      result.events.push(message);
-      emit(message);
-    },
-  };
-
+  // The system-prompt write, the operator session, and the loop all live inside
+  // the try. A live box and server already exist by this point (prepareRun
+  // built them), so a failure starting the operator is a real teardown gap, not
+  // a "run never existed" case: it must still stop the server, close the browse
+  // session, and write results.json + report.md recording the abort. Only
+  // prepareRun (before this) throws outright, and it owns cleanup of whatever it
+  // half-built.
+  let operator: OperatorSession | null = null;
   try {
+    const systemPrompt = assembleOperatorPrompt({
+      persona: scenario.persona,
+      browseCommand,
+      browseSession,
+      appBaseUrl: state.server.baseUrl,
+      screenshotsDir: screenshotsRoot,
+      assetsDir: scenario.assetsDir,
+    });
+    await writeFileAtomic(path.join(runDir, "operator-system-prompt.md"), { content: systemPrompt });
+
+    const op = startOperatorSession({
+      backend: options.backend ?? createChatBackend(),
+      systemPrompt,
+      cwd: runDir,
+      model: scenario.models.operator,
+      tools: OPERATOR_TOOLS,
+      // The FULL env, not just the overlay: an SDK subprocess handed a bare
+      // overlay loses the Claude login it needs to exist at all.
+      env: { ...process.env, BROWSE_BASE_URL: state.server.baseUrl, CB_BROWSE_API_KEY: browseKey },
+      screenshotsDir: screenshotsRoot,
+      ...options.operator,
+    });
+    operator = op;
+
+    const ctx: FieldRunContext = {
+      scenario,
+      box,
+      runDir,
+      screenshotsRoot,
+      operator: op,
+      server: () => state.server,
+      boxTime: () => state.boxTime,
+      fakeGmailStatePath,
+      quiescence: { ...DEFAULT_QUIESCENCE, ...options.quiescence },
+      childEnv,
+      restartServer,
+      advanceDays: async (days: number): Promise<Date> => {
+        await state.server.stop();
+        try {
+          state.boxTime = await advanceDays({
+            days,
+            from: state.boxTime,
+            packageRoot: box.packageRoot,
+            env: childEnv(),
+          });
+          result.boxTimeEnd = state.boxTime.toISOString();
+        } finally {
+          // Restart even when the day's maintenance failed: leaving the run
+          // without a server would turn one bad wakeup into a dead run.
+          state.server = await startAgain();
+        }
+        emit(`advanced ${String(days)} day(s) to ${state.boxTime.toISOString()}`);
+        return state.boxTime;
+      },
+      event: (message: string) => {
+        result.events.push(message);
+        emit(message);
+      },
+    };
+
     let previousTag = BASELINE_TAG;
     for (const [index, item] of scenario.checklist.entries()) {
       emit(`item ${String(index + 1)}/${String(scenario.checklist.length)}: ${item.id}`);
@@ -323,11 +332,22 @@ export async function runFieldScenario(options: RunFieldScenarioOptions): Promis
           `checks ${String(itemResult.checks.filter((c) => c.passed).length)}/${String(itemResult.checks.length)}`,
       );
     }
+  } catch (e) {
+    // A failure in setup (prompt write, operator session) or in the loop's own
+    // control flow rather than one item. Record it as an abort with no item id
+    // (the report renders that as "(setup)") unless something more specific was
+    // already recorded, then fall through to teardown.
+    if (result.aborted === null) {
+      result.aborted = { itemId: null, reason: errorMessage(e) };
+      emit(`aborted during setup: ${result.aborted.reason}`);
+    }
   } finally {
     result.finishedAt = new Date().toISOString();
-    await operator.stop().catch((e: unknown) => {
-      result.events.push(`operator stop failed: ${errorMessage(e)}`);
-    });
+    if (operator !== null) {
+      await operator.stop().catch((e: unknown) => {
+        result.events.push(`operator stop failed: ${errorMessage(e)}`);
+      });
+    }
     await state.server.stop().catch((e: unknown) => {
       result.events.push(`server stop failed: ${errorMessage(e)}`);
     });

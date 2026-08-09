@@ -8,7 +8,7 @@ description: >-
 startTime: "2026-08-10T09:15:00Z"
 models:
   operator: opus
-  box: opus
+  chat: opus
 
 checklist:
   - id: save-recipe

@@ -46,7 +46,7 @@ mundane flows a real user does. Each is exercised through the real UI + the agen
   intake deterministically).
 - **Fake personas for the user(s)** — CREATE, or revive/reuse what exists. This ties
   directly to
-  [modeled-demo-family-box](2026-07-22-modeled-demo-family-box.md): the fictional
+  [modeled-demo-family-box](../../features/2026-07-22-modeled-demo-family-box.md): the fictional
   family is the personas + the realistic starting data these tests act as / act on.
 - **Box lifecycle** — create a fresh box, seed personas/data, run the activities,
   interact with it (browser + CLI), tear it down.
@@ -75,8 +75,8 @@ mundane flows a real user does. Each is exercised through the real UI + the agen
 
 ## Related
 
-- [modeled-demo-family-box](2026-07-22-modeled-demo-family-box.md) — the personas +
+- [modeled-demo-family-box](../../features/2026-07-22-modeled-demo-family-box.md) — the personas +
   realistic data (create-or-revive); the natural fixture source for this.
-- [demo-readiness](../docs-and-chores/2026-05-22-demo-readiness.md) — adjacent
+- [demo-readiness](../../docs-and-chores/2026-05-22-demo-readiness.md) — adjacent
   demo-prep chore.
 - `docs/testing.md` — the scenario/doctest tiers this sits above.

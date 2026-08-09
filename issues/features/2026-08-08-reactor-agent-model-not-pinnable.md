@@ -1,43 +1,50 @@
 ---
-title: "A field-test scenario's models.box pins chat only — the reactor's agent model floats"
+title: "No box-level agent model: the reactor's model floats while chat's can be pinned"
 area: callback-box
 filed-by: agent
 discovered-in: field-test Track 2 chunk 2 (cross-model review finding)
-labels: [field-test-findings, code-error, harness]
+labels: [field-test-findings, code-error]
+needs: [design]
 ---
 
-`callback-box/field-tests/<scenario>/scenario.yaml` declares `models.box`, and
-the plan (`docs/implemented-plans/agent-field-tests.md`, Track 2) states its purpose
-plainly: *"the scenario pins which model the product's own agents run (chat's
-persisted model setting and the reactor's) … because the existing setting is
-opaque and letting it float would make weekly runs incomparable."*
+A box can pin the model its **chat** agent uses (`.callback-box/chat-model.json`,
+read by `loadPersistedChatModel`, `src/core/chat/session/state.ts`). Nothing
+pins the model its **reactor** agent uses. The reactor invokes agents through
+`createAgent` (`src/core/reactor/batch-jobs.ts:53`, `chat-jobs.ts`) and never
+passes a `model`, and `runAgent` (`src/core/agent/run.ts:30`) leaves it at the
+SDK default. So intake, job processing, and the email→task step run on whatever
+the SDK defaults to that week, even on a box whose owner deliberately chose a
+model.
 
-Only half of that is achievable today. `run-seed.ts` writes
-`.callback-box/chat-model.json`, which pins **chat**. The reactor's agent
-invocations go through `runAgent` (`src/core/agent/run.ts`), which takes an
-optional `model` that the reactor never passes and no env var overrides — so
-reactor work (intake, job processing, the email→task step this tier exists to
-watch) runs on whatever the SDK defaults to that week.
+"Which model does my box think with?" is a question a boxholder can answer about
+chat and not about the reactor — and the reactor is where most of the box's
+autonomous work happens.
 
-So a weekly report header that says `box: opus` is telling the reader something
-that is true of chat and not true of the agent that processed their email. Two
-runs a month apart are not comparable in the way the plan claims.
+## Field-test side: settled (do not conflate with this)
 
-**Options**
+This surfaced because the field-test tier wanted to pin the product's model for
+run-to-run comparability. That half is resolved (`50cd2248`): the scenario field
+is `models.chat`, and the run report states plainly that the reactor model is
+unpinned rather than claiming a `box:` model that was only ever chat's. So the
+harness is honest today; what remains is the product feature below, and it is
+NOT a harness item.
 
-1. Plumb a box-level agent-model setting the reactor reads (the honest fix, and
-   probably useful outside field tests — "which model does my box think with?"
-   is a question a boxholder can already ask about chat but not about the
-   reactor).
-2. Narrow the vocabulary instead: rename `models.box` to `models.chat` and have
-   the report header say the reactor model is unpinned. Cheap, but it concedes
-   the comparability the tier wanted.
+## The product feature
 
-Option 1 is the one worth doing; option 2 is what to do if it turns out the
-reactor genuinely should not be pinnable. Until then `run-seed.ts` carries a
-comment saying exactly what it does and does not pin.
+Plumb a box-level agent model the reactor reads and passes to its agent runs.
+Design questions to settle first (hence `needs: design`):
 
-This is the one real dependency inside the field-test finding set: it is a
-product gap (no reactor-model setting) that surfaces as a harness limitation
-(`models.box` half-works). Fixing it here resolves both — so it is a
-fix-together, not two independent items.
+- **One setting or two?** Generalize `chat-model.json` into "the box's model"
+  that both chat and reactor honor, or a separate reactor-model pointer? A
+  single "box model" is simpler to reason about; a split lets someone run chat
+  on a big model and batch reactor work on a cheaper one.
+- **Behavior change for existing boxes.** Any box that has already pinned a chat
+  model would suddenly pin its reactor too, changing what runs on their nightly
+  wakeup. That is arguably desirable but must be an intended, announced change,
+  not a silent one — which is the whole reason this is `needs: design` and not a
+  quick fix.
+- **Where it reads.** The reactor's `createAgent`/`runAgent` path is the seam;
+  decide whether the model is resolved once per reactor run or per job.
+
+Once it lands, the field test can pin the reactor too and the report can drop
+the "unpinned" caveat.

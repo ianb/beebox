@@ -15,7 +15,7 @@ import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execa } from "execa";
-import { createFakeChatBackend, type FakeChatBackend } from "../../src/services/claude-chat.js";
+import { createFakeChatBackend, type FakeChatBackend, type ChatBackend } from "../../src/services/claude-chat.js";
 import { runFieldScenario } from "../../src/field-test/run.js";
 import { createFieldBox } from "../../src/field-test/run-box.js";
 import { loadFieldScenario } from "../../src/field-test/scenario.js";
@@ -127,7 +127,7 @@ stuck.stuck.map((s) => `${s.name}: ${s.detail}`).join("; ")
 
 A scenario that involves email starts with the connector already configured, as
 if the boxholder had connected their mail last month — field tests exercise
-operating order, never setup. The box-agent model is pinned at the same moment,
+operating order, never setup. The box's chat model is pinned at the same moment,
 and deliberately as gitignored runtime state, so a `reset` cannot rewind the
 run onto a different model than it started with.
 
@@ -147,7 +147,7 @@ await writeFile(
     "description: One item whose pre action injects mail.",
     'startTime: "2026-08-10T09:00:00Z"',
     "models:",
-    "  box: sonnet",
+    "  chat: sonnet",
     "checklist:",
     "  - id: mail",
     "    brief: See what arrived.",
@@ -339,7 +339,7 @@ run that dies part-way still leaves the completed items behind.
 
 ```ts continue
 const onDisk = JSON.parse(await readFile(join(result.runDir, "results.json"), "utf-8"));
-[onDisk.scenario, onDisk.items.length, onDisk.models.box, String(onDisk.aborted)].join(" | ")
+[onDisk.scenario, onDisk.items.length, onDisk.models.chat, String(onDisk.aborted)].join(" | ")
 => loop-fixture | 4 | opus | null
 ```
 
@@ -355,4 +355,62 @@ const reportMd = await readFile(join(result.runDir, "report.md"), "utf-8");
 
 ```ts cleanup
 await rm(tmp, { recursive: true, force: true });
+```
+
+## A setup failure after the server starts still tears down and reports
+
+The box and server exist before the operator session opens, so a failure
+starting the operator is a teardown gap, not a "run never existed" case. It must
+still stop the server, close the browse session, and leave a `results.json` +
+`report.md` recording the abort — otherwise a run that broke while booting the
+persona leaves a live server and no evidence.
+
+```ts
+const bootTmp = await mkdtemp(join(tmpdir(), "cb-field-boot-"));
+const bootScenarioDir = await writeScenario(join(bootTmp, "scenario"), [
+  "  - id: never-runs",
+  "    cleanup: keep",
+  "    brief: The operator never boots, so this item is never reached.",
+  "",
+].join("\n"));
+
+// A backend whose start() throws is exactly the operator-session boot failure
+// this guards: it happens after prepareRun has a real box and server live.
+const throwingBackend: ChatBackend = {
+  start: () => {
+    throw new Error("operator boot failed");
+  },
+};
+
+const bootResult = await runFieldScenario({
+  scenarioDir: bootScenarioDir,
+  runsRoot: join(bootTmp, "runs"),
+  runDirName: "run",
+  backend: throwingBackend,
+  browseCommand: "/bin/echo",
+  browseKey: "test-browse-key",
+  onEvent: () => {},
+});
+
+// No item ran; the abort is recorded with a null item id (the report renders
+// that as "(setup)"), and the run resolved rather than threw.
+[bootResult.items.length, String(bootResult.aborted?.itemId), bootResult.aborted?.reason].join(" | ")
+=> 0 | null | operator boot failed
+```
+
+Both artifacts are on disk — the teardown `finally` ran even though nothing
+after the operator boot did.
+
+```ts continue
+const bootOnDisk = JSON.parse(await readFile(join(bootResult.runDir, "results.json"), "utf-8"));
+[await fileExists(join(bootResult.runDir, "report.md")), String(bootOnDisk.aborted.itemId)].join(" | ")
+=> true | null
+
+const bootReport = await readFile(join(bootResult.runDir, "report.md"), "utf-8");
+bootReport.includes("Aborted** at item `(setup)`: operator boot failed")
+=> true
+```
+
+```ts cleanup
+await rm(bootTmp, { recursive: true, force: true });
 ```

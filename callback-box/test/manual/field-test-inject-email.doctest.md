@@ -85,7 +85,7 @@ await seedFieldBox({ box, scenario });
 await fileExists(join(box.boxRoot, "config/connectors/gmail.json"))
 => true
 
-// The pinned box-agent model is gitignored runtime state, not part of the
+// The pinned chat model is gitignored runtime state, not part of the
 // committed baseline a `reset` rewinds to.
 await fileExists(join(box.boxRoot, ".callback-box/chat-model.json"))
 => true
@@ -138,6 +138,25 @@ files.filter((f) => f.endsWith(".email-thread.card")).length > 0
 
 files.filter((f) => f.endsWith(".email-message.card")).length > 0
 => true
+```
+
+And it leaves no reactor job pending. A single wakeup runs one reactor cycle, so
+the intake job the arrival creates — or a follow-up it spawns — can outlive the
+wakeup and sit in `box/jobs`, where it keeps the box from ever going quiescent
+(the first onboarding run stalled every email item exactly this way). `inject`
+now drains to completion, so the box is caught up before the operator looks. The
+filter mirrors the harness's own quiescence definition: no `*.job.card` except
+the background maintenance types quiescence ignores
+(`BACKGROUND_JOB_TYPES` in `src/field-test/quiescence.ts`).
+
+```ts continue
+files.filter(
+  (f) =>
+    f.endsWith(".job.card") &&
+    !f.endsWith(".contains-backfill.job.card") &&
+    !f.endsWith(".todo-review.job.card"),
+)
+=> []
 ```
 
 ```ts cleanup
