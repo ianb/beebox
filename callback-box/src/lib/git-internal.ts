@@ -7,6 +7,7 @@
  * value-import cycle.
  */
 
+import { spawn } from "node:child_process";
 import { simpleGit } from "simple-git";
 
 /**
@@ -69,6 +70,92 @@ export function isNothingToCommitError(err: unknown): boolean {
  */
 const MAX_AUTO_STAGE_BYTES = 10 * 1024 * 1024;
 
+/** `git cat-file --batch-check` answered something other than one line per input. */
+export class GitBatchMismatchError extends Error {
+  constructor(expected: number, received: number) {
+    super(`git cat-file --batch-check returned ${received} lines for ${expected} paths`);
+    this.name = "GitBatchMismatchError";
+  }
+}
+
+/** A git process spawned for a batch query exited non-zero. */
+export class GitBatchFailedError extends Error {
+  constructor(failure: { args: string[]; code: number | null; stderr: string }) {
+    const status = failure.code === null ? "on a signal" : String(failure.code);
+    super(`git ${failure.args.join(" ")} exited ${status}: ${failure.stderr.trim()}`);
+    this.name = "GitBatchFailedError";
+  }
+}
+
+/** Run a git command that takes its work list on stdin, and collect stdout. */
+function gitWithInput(options: { cwd: string; args: string[]; input: string }): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", options.args, { cwd: options.cwd, stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf-8");
+    child.stderr.setEncoding("utf-8");
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve(stdout);
+      else reject(new GitBatchFailedError({ args: options.args, code, stderr }));
+    });
+    child.stdin.end(options.input);
+  });
+}
+
+/**
+ * Staged blob sizes for repo-root-relative paths, in ONE git process.
+ *
+ * `git cat-file -s :path` per file is the obvious spelling and costs a process
+ * spawn each. That is not a micro-optimisation: a fresh `cb init` stages 126
+ * files, and spawning `cat-file` 126 times accounted for roughly 4 of its 5.7
+ * seconds — a cost every boxholder and every housekeeping commit pays, since
+ * `stageAll` is on the wakeup path.
+ *
+ * `--batch-check` takes every spec on stdin and answers them in order, one
+ * process total. `-z` makes the INPUT NUL-delimited, so a path containing a
+ * newline cannot shift the correlation; output stays line-delimited, exactly
+ * one line per input, which is what lets results be matched back by position.
+ *
+ * A path with no staged blob — a staged deletion — answers `<spec> missing`
+ * and is simply absent from the result, matching the per-file version's
+ * behaviour of catching that error and skipping (a deletion is not "adding a
+ * big file").
+ */
+async function stagedBlobSizes(boxRoot: string, paths: string[]): Promise<Map<string, number>> {
+  const sizes = new Map<string, number>();
+  if (paths.length === 0) return sizes;
+
+  const stdout = await gitWithInput({
+    cwd: boxRoot,
+    args: ["cat-file", "--batch-check", "-z"],
+    input: paths.map((path) => `:${path}\u0000`).join(""),
+  });
+  const lines = stdout.split("\n").filter((line) => line !== "");
+  // Results are correlated by position, so a length mismatch means the
+  // correlation is unsound — report rather than silently attribute one file's
+  // size to another and unstage the wrong thing.
+  if (lines.length !== paths.length) {
+    throw new GitBatchMismatchError(paths.length, lines.length);
+  }
+
+  for (const [index, path] of paths.entries()) {
+    const line = lines[index];
+    if (line === undefined || line.endsWith(" missing")) continue;
+    // `<sha> <type> <size>`
+    const bytes = Number.parseInt(line.split(" ")[2] ?? "", 10);
+    if (Number.isFinite(bytes)) sizes.set(path, bytes);
+  }
+  return sizes;
+}
+
 /**
  * After a blind `add -A`, unstage any staged file whose object exceeds
  * MAX_AUTO_STAGE_BYTES. Best-effort: a failure in the size check must never
@@ -80,18 +167,8 @@ export async function unstageOversizedBlobs(boxRoot: string): Promise<void> {
     const out = await git.raw(["diff", "--cached", "--name-only", "-z"]);
     const paths = out.split("\0").filter((p) => p.length > 0);
     const oversized: Array<{ path: string; bytes: number }> = [];
-    for (const path of paths) {
-      // `:path` is the staged (index) blob — a tiny pointer for LFS files.
-      // Missing for staged deletions; those throw and are skipped (a
-      // deletion isn't "adding a big file").
-      try {
-        const bytes = Number.parseInt((await git.raw(["cat-file", "-s", `:${path}`])).trim(), 10);
-        if (Number.isFinite(bytes) && bytes > MAX_AUTO_STAGE_BYTES) {
-          oversized.push({ path, bytes });
-        }
-      } catch (_e) {
-        continue;
-      }
+    for (const [path, bytes] of await stagedBlobSizes(boxRoot, paths)) {
+      if (bytes > MAX_AUTO_STAGE_BYTES) oversized.push({ path, bytes });
     }
     if (oversized.length > 0) {
       // `diff --cached` / `cat-file :path` paths are repo-root-relative, but a
