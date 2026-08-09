@@ -38,7 +38,7 @@ test("handler serves the read-only page with its own CSP", async () => {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
   } as unknown as ServerResponse;
-  const deps: WorkstreamsDeps = { list: async () => [row({})], run: async () => undefined };
+  const deps: WorkstreamsDeps = { list: async () => [row({})], run: async () => undefined, documents: async () => ({ issues: [], plans: [] }) };
   await serveWorkstreams({ method: "GET", pathname: "/workstreams/", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 200);
   assert.equal(captured.headers["content-security-policy"], "default-src 'none'; style-src 'unsafe-inline'");
@@ -54,13 +54,14 @@ test("handler redirects the bare path and rejects detail paths", async () => {
   const deps: WorkstreamsDeps = {
     list: async () => { throw new Error("must not list"); },
     run: async () => { throw new Error("must not run"); },
+    documents: async () => { throw new Error("must not read documents"); },
   };
 
   await serveWorkstreams({ method: "GET", pathname: "/workstreams", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 301);
   assert.equal(captured.headers.location, "/workstreams/");
 
-  await serveWorkstreams({ method: "GET", pathname: "/workstreams/not-built/", repoRoot: "/unused", res, deps });
+  await serveWorkstreams({ method: "GET", pathname: "/workstreams/not.built/", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 404);
 });
 
@@ -74,6 +75,7 @@ test("actions validate the path and redirect with command results", async () => 
   const deps: WorkstreamsDeps = {
     list: async () => [],
     run: async (verb, name) => { calls.push(`${verb}:${name}`); },
+    documents: async () => ({ issues: [], plans: [] }),
   };
 
   await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/focus/good_name-2", repoRoot: "/unused", res, deps });
@@ -95,6 +97,7 @@ test("an action failure flashes only the first stderr line", async () => {
   const deps: WorkstreamsDeps = {
     list: async () => [],
     run: async () => { throw Object.assign(new Error("fallback"), { stderr: "TCC denied\nsecond line" }); },
+    documents: async () => ({ issues: [], plans: [] }),
   };
 
   await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/close/seam", repoRoot: "/unused", res, deps });
@@ -117,7 +120,7 @@ test("issues are mounted canonically under workstreams", async () => {
     },
     end(body?: string) { captured.body = body ?? ""; return res; },
   } as unknown as ServerResponse;
-  const deps: WorkstreamsDeps = { list: async () => [], run: async () => undefined };
+  const deps: WorkstreamsDeps = { list: async () => [], run: async () => undefined, documents: async () => ({ issues: [], plans: [] }) };
 
   await serveWorkstreams({
     method: "GET", pathname: "/workstreams/issues/", repoRoot: root,
@@ -135,4 +138,30 @@ test("legacy worktree issue URLs redirect permanently without losing suffixes", 
     "/workstreams/issues/bugs/example.md?state=open",
   );
   assert.equal(legacyIssuesRedirect("/dev/issues-not-really"), null);
+});
+
+test("detail joins a workstream to its plans", async () => {
+  const captured = { status: 0, headers: {} as Record<string, string>, body: "" };
+  const res = {
+    writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
+    end(body?: string) { captured.body = body ?? ""; return res; },
+  } as unknown as ServerResponse;
+  const deps: WorkstreamsDeps = {
+    list: async () => [row({ name: "seam" })],
+    run: async () => undefined,
+    documents: async () => ({ issues: [], plans: [{ title: "Seam design", status: "active", workstream: "seam", relPath: "callback-box/docs/plans/seam.md" }] }),
+  };
+  await serveWorkstreams({ method: "GET", pathname: "/workstreams/seam/", repoRoot: "/unused", res, deps });
+  assert.equal(captured.status, 200);
+  assert.match(captured.body, /Seam design/);
+  assert.match(captured.body, /1 ahead, 0 dirty/);
+});
+
+test("front-page search includes culled registry rows and plan titles", () => {
+  const html = renderWorkstreams(
+    [row({ name: "old-seam", path: null })], "", "seam",
+    { issues: [], plans: [{ title: "Seam design", status: "active", workstream: "seam", relPath: "callback-box/docs/plans/seam.md" }] },
+  );
+  assert.match(html, /old-seam/);
+  assert.match(html, /Seam design/);
 });

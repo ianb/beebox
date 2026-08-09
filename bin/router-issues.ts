@@ -18,6 +18,7 @@ type Category = (typeof CATEGORIES)[number];
 
 export interface IssueFrontmatter {
   title: string;
+  workstream: string;
   needs: string[];
   labels: string[];
   area?: string;
@@ -170,6 +171,7 @@ export function parseIssueFile(relPath: string, src: string, visibility?: Visibi
     slug,
     frontmatter: {
       title,
+      workstream: asString(data.workstream) ?? "unknown",
       needs: asStringList(data.needs),
       labels: asStringList(data.labels),
       ...(area !== undefined ? { area } : {}),
