@@ -780,6 +780,22 @@ Two caveats, both of which make 25% an **upper** bound:
   the tap suite. Counting it as unaccounted instead would drop the per-commit
   accounted rate from 63% to 27%.
 
+### Correction (2026-08-09): treat 25% as provisional
+
+While reading the quiet-run per-file timings, `callback-box/test/field-test/`
+turned out to be a live directory whose five doctests are graph entrypoints —
+one of them, `run.doctest.md`, is the single most expensive file in the suite.
+An earlier session note called that directory deleted, which was a
+path-resolution mistake by the agent, not a fact about the tree.
+
+The replay script itself resolved existence correctly (it tested full
+repo-relative paths), so the blame table above is not known to be wrong. But
+the mistake was load-bearing in how the result was *explained*, and no one has
+re-checked the classifier since. **Re-derive the accounted rate before anyone
+relies on 25% for a decision.** That is now cheap: `bin/test-graph` ships the
+graph and `bin/test-graph-query` the accounted/implicated rules, so the replay
+is a short script over merge commits rather than a bespoke spike.
+
 ### Salvage
 
 The graph builder works and takes 1.8 s. Even with selection shelved, "which
