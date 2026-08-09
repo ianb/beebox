@@ -10,8 +10,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
+import { parseLandmarkFields } from "../../schemas/landmark.js";
 import { readLandmarkCard } from "./card-cache.js";
+import { readLandmarkSymbol } from "./symbol.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -93,22 +94,6 @@ export interface LandmarkSummaries {
 }
 
 /**
- * Pull the navigation `symbol`'s text and image src (if any). A string symbol
- * is text; a `{ src }` symbol is an image whose path is resolved from "relative
- * to the landmark directory" to "box-relative" so the frontend can request it.
- */
-function readSymbol(
-  navigation: LandmarkNavigationData | undefined,
-  { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
-): { text: string; src: string | null } {
-  const symbol = navigation === undefined ? undefined : navigation.symbol;
-  if (symbol === undefined) return { text: "", src: null };
-  if (typeof symbol === "string") return { text: symbol.trim(), src: null };
-  const absolute = path.resolve(landmarkDir, symbol.src);
-  return { text: "", src: path.relative(boxRoot, absolute) };
-}
-
-/**
  * One card's contribution to the summaries: its tile metadata, a parse
  * `problem`, or null when the file couldn't be read at all (there's nothing to
  * say about a card we never saw).
@@ -132,7 +117,7 @@ async function readSummary(boxRoot: string, relPath: string): Promise<CardOutcom
 
   const navigation = fields.navigation;
   const dir = path.dirname(relPath);
-  const symbol = readSymbol(navigation, { landmarkDir: path.dirname(absPath), boxRoot });
+  const symbol = readLandmarkSymbol(navigation, { landmarkPath: relPath });
   return {
     problem: false,
     summary: {

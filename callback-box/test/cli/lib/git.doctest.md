@@ -319,7 +319,7 @@ pass — here we just verify a plain oversized file is left unstaged while a
 normal file alongside it stages fine.
 
 ```ts setup
-import { writeFile as writeFileFs } from "node:fs/promises";
+import { writeFile as writeFileFs, rm as rmFs } from "node:fs/promises";
 import { join as joinPath } from "node:path";
 ```
 
@@ -347,6 +347,44 @@ status.staged.includes("content/big.bin")
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## stageAll stages deletions, and still catches an oversized file alongside one
+
+The size check asks git for each staged path's blob. A staged *deletion* has no
+blob, so it answers "missing" — and that must be a skip, not a failure: a
+deletion is not "adding a big file". The case is worth pinning because the
+check is batched into one `git cat-file --batch-check` call, where a thrown
+error would abandon the whole check and let a genuinely oversized file through
+whenever a deletion happened to be staged in the same sweep.
+
+```ts
+const dbox = await makeTmpBox({ git: true });
+await writeFileFs(joinPath(dbox.root, "doomed.txt"), "delete me");
+await stageAll(dbox.root);
+await commit(dbox.root, { message: "add doomed.txt" });
+
+// Now delete it, and add an oversized file in the same sweep.
+await rmFs(joinPath(dbox.root, "doomed.txt"));
+await writeFileFs(joinPath(dbox.root, "huge.bin"), Buffer.alloc(11 * 1024 * 1024, 1));
+
+const _warn2 = console.warn; console.warn = () => {};
+await stageAll(dbox.root);
+console.warn = _warn2;
+
+const dstatus = await getStatus(dbox.root);
+// The deletion staged normally...
+dstatus.staged.includes("content/doomed.txt")
+=> true
+
+// ...and the oversized file was still caught, which is what would break if a
+// missing blob aborted the check.
+dstatus.staged.includes("content/huge.bin")
+=> false
+```
+
+```ts cleanup
+await dbox.cleanup();
 ```
 
 ## isNothingToCommitError recognizes git's empty-commit message
