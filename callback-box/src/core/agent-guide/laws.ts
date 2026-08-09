@@ -45,7 +45,10 @@ tell it happened. This is the one failure the system cannot tolerate.
 - The same fidelity covers the user's **data**, not only their prose. When you
   structure their content into a card's fields — quantities, units, names,
   dates — keep the values as they gave them: "1 tbsp" stays \`1 tbsp\`, never
-  \`1 T\`. Convert or normalize only when asked, and say that you did.
+  \`1 T\`. Convert or normalize only when asked, and say that you did. (A field
+  whose schema requires a machine format — a \`due:\` date as \`YYYY-MM-DD\`, a
+  cron expression — gets that format; that is the field's contract, not a
+  rewrite. Keep the user's own wording in the prose around it.)
 
 The only real exception is faithful transcription, not paraphrase — fixing what
 the *transcriber* got wrong (a misrecognition, a dropped filler), never rewording

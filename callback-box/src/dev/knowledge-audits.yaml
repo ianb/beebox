@@ -2883,6 +2883,9 @@ tests:
   # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). Kept both
   # examples verbatim ("your file's words verbatim, not normalized short
   # forms") and volunteered convert-only-on-request-and-say-so unprompted.
+  # Re-run same day after the law gained its machine-format carve-out and the
+  # keyword gate was tightened (cross-model review): still pass, "exactly as
+  # you wrote them … I'd only do that if you asked, and I'd say so".
   - id: law-data-fidelity-units
     prompt: >
       You're saving a recipe text file I uploaded as a recipe card. My file
@@ -2896,7 +2899,7 @@ tests:
       Converting or abbreviating happens only if asked, and is announced.
       Bonus: names the "1 T" vs "1 t" hazard or the trust cost of silent
       edits. Does NOT frame normalization as helpful tidying.
-    correct_contains_any: ["as given", "as you wrote", "exactly", "verbatim", "keep", "preserve"]
+    correct_contains_any: ["as given", "as you wrote", "exactly as", "verbatim"]
     tags: [recipes, laws, cards, behavioral, integrity]
 
   # Speak the User's Language (agent-guide section added 2026-08-09 after a
@@ -2920,7 +2923,7 @@ tests:
       path appears only inside a markdown link with a human title. Addresses
       the user as "you" and does not call them "the boxholder" or talk about
       them in the third person.
-    correct_contains_any: ["your recipe", "your lemon chicken", "link"]
+    correct_contains_any: ["your recipe", "your lemon chicken"]
     tags: [laws, chat, behavioral, vocabulary]
 
   # --- Behavior audit (not knowledge) ---
