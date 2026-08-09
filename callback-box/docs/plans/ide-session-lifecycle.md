@@ -535,25 +535,46 @@ dispatch).
 
 ### Track E — plan/issue frontmatter and the plans view
 
-**What.** YAML frontmatter for `docs/plans/*` (and the two sibling dirs),
-migration of the 48-file corpus, doc-check validation, a `branch:` field on
-issues, `/finish` + cb-plan updates, and `/ide/plans/`.
+**What.** The full, enforced frontmatter schemas for BOTH `docs/plans/*`
+(and its two sibling dirs) and `issues/*`, a backfill of both corpora,
+doc-check validation that rides the existing pre-commit hook, `/finish` +
+cb-plan + issues-skill updates, and `/ide/plans/`.
 
 **Why.** 44+ active plans, 0 machine-readable; the plan↔issue join exists in
-3 of 44 files as prose. The /ide/ views need to answer "which plans are in
-flight and from which branch" without an agent reading 19k lines (§11, §12 —
-enforcement over convention; the maintainer is an agent).
+3 of 44 files as prose; issue frontmatter is a convention no tool checks.
+The /ide/ views need to answer "which plans are in flight and from which
+branch" without an agent reading 19k lines, and worktree sessions must be
+*forced* to record provenance at commit time, not asked to remember (§11,
+§12 — enforcement over convention; the maintainer is an agent).
 
 **Direction.**
 
-- **Plan frontmatter schema** (deliberately minimal, mirroring issues/):
+- **The provenance field and its sentinels (vocabulary lock-in).** `branch:`
+  is **required** on every plan and every issue — but required fields need
+  an honest empty value or they attract garbage, so two sentinels are part
+  of the enum:
+  - `branch: worktree-<name>` — the worktree branch that carried (or is
+    carrying) the work.
+  - `branch: unattached` — deliberately not worktree-born: filed from a
+    main-checkout session, hand-written, or predating any specific work.
+    This is the normal value for a fresh issue that merely *records* a
+    tension.
+  - `branch: unknown` — provenance existed but is lost. **Backfill-only**:
+    agents never write `unknown` for new items (they always know whether
+    they're in a worktree — it's their own branch name), and the validator
+    could enforce that via the backfill commit being the only one that
+    introduces it, but a lint can't see time — so the rule is documented in
+    `issues/CLAUDE.md` and checked in review, while the schema itself
+    accepts it anywhere (a later re-file of a lost-provenance item must
+    stay expressible).
+- **Plan frontmatter schema** (full):
 
   ```yaml
   ---
-  title: "An agent-neutral worktree control surface"
-  status: active        # draft | active | partial | implemented | superseded | parked
-  branch: worktree-seam # the worktree branch that carried the work; omit if none
-  issues:               # machine-readable "Issues addressed"
+  title: "An agent-neutral worktree control surface"   # required
+  status: active        # required: draft | active | partial | implemented | superseded | parked
+  branch: worktree-seam # required: worktree-<name> | unattached | unknown
+  issues:               # required list; [] allowed and means "no issue drove this"
     - ../../issues/features/2026-08-08-worktree-session-workflow-redesign.md
   superseded-by: other-plan.md   # only with status: superseded
   ---
@@ -563,30 +584,61 @@ enforcement over convention; the maintainer is an agent).
   status encodings would drift (§8). `docs/plans/README.md` is rewritten to
   document the frontmatter as the convention. Body H1 stays (unlike issues/)
   — plans are long documents read as documents.
-- **Migration:** one mechanical pass over all 48 + implemented-plans/ +
-  unimplemented-plans/ (status derivable from directory + existing prose
-  line; `issues:` populated only where an "Issues addressed" section already
-  names them; `branch:` left absent historically). Lands in the same commit
-  as the validator so there is no bilingual window.
-- **Validation in doc-check:** a new check in
+- **Issue frontmatter schema** (full — formalizing `issues/CLAUDE.md`'s
+  existing fields, which no tool validates today, plus the new field):
+
+  ```yaml
+  ---
+  title: "Short human title"        # required (already universal)
+  branch: unattached                # required: worktree-<name> | unattached | unknown
+  needs: [design]                   # optional: design | decision | manual-testing
+  design: ../../callback-box/docs/plans/foo.md   # optional; must resolve
+  area: callback-box                # optional string
+  labels: [soft-launch]             # optional kebab-case list
+  filed-by: agent                   # optional
+  discovered-in: worktree-foo — while doing X    # optional free text
+  resolution: implemented           # required under closed/, forbidden elsewhere:
+                                    #   implemented | wontfix | superseded
+  ---
+  ```
+
+  `discovered-in:` stays as prose color; `branch:` is the queryable
+  counterpart. `needs:` values and the `resolution:`/`closed/` consistency
+  rule move from convention to validation.
+- **Backfill:** one mechanical pass over both corpora, landing in the same
+  commit as the validator so there is no bilingual window:
+  - Plans (48 + implemented-plans/ + unimplemented-plans/): `status` derived
+    from directory + existing prose line; `issues:` populated where an
+    "Issues addressed" section already names them, else `[]`; `branch:
+    unknown` (except this plan and worktree-control-surface.md, whose
+    branches are known).
+  - Issues (~452): existing fields pass through untouched; `branch:` added
+    — `unknown` across the board, except items whose `discovered-in:`
+    already names a `worktree-<name>` verbatim, which the backfill script
+    promotes mechanically (no guessing beyond exact pattern match).
+- **Validation in doc-check — which IS the commit hook:** a new check in
   `callback-box/src/dev/doc-check.ts` using the `yaml` package + a
   fence-splitter patterned on `src/cards/frontmatter.ts:39` (NOT the
   router's hand-rolled parser — that one stays deliberately minimal for
-  rendering). Enforces: frontmatter present on every file under the three
-  plan dirs, `status` in the enum and consistent with the directory
+  rendering). `doc-check` already runs in the root pre-commit chain on
+  every commit (`.husky/` dispatch; it runs even on docs-only commits, per
+  root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
+  the existing hook with zero new hook machinery — a worktree session that
+  files an issue without `branch:` simply cannot commit it. Enforces, for
+  plans: frontmatter present on every file under the three plan dirs, all
+  required fields, `status` in the enum and consistent with the directory
   (implemented-plans/ ⇒ implemented; unimplemented-plans/ ⇒
-  superseded|parked), `issues:` paths resolve (they join the existing link
-  graph, so `doc-check --fix` heals them on issue moves for free),
-  `superseded-by` only with the matching status. **Frontmatter paths are a
+  superseded|parked), `issues:` paths resolve, `superseded-by` only with
+  the matching status. For issues: required `title` + `branch` (enum:
+  `worktree-[a-zA-Z0-9_-]+` | `unattached` | `unknown`), `needs:` values in
+  the enum, `resolution:` present-iff-closed, `design:` resolves. **Frontmatter paths are a
   new link class for doc-check, not a free rider**: today's `--fix` repairs
   only body markdown links via `repairLinks` (`doc-check.ts:161`) and has
   no frontmatter model at all (cross-model review finding), so E1
   explicitly includes feeding `issues:`/`superseded-by`/`design:` paths
   into the reference graph AND teaching `--fix` to rewrite them on moves —
   otherwise the validator would detect breakage `--fix` can't heal, which
-  is worse than today. Issues gain an *optional* `branch:` scalar —
-  validated as `worktree-[a-zA-Z0-9_-]+` when present, never required —
-  and E3 carries the full consumer side: `IssueFrontmatter` +
+  is worse than today. E3 carries the full consumer side of `branch:`: `IssueFrontmatter` +
   `parseFrontmatter` projection in `bin/router-issues.ts` (which today
   discards unknown fields, `router-issues.ts:161`) and a branch column in
   the issues view joined against live worktrees, since a validated field
@@ -606,14 +658,18 @@ enforcement over convention; the maintainer is an agent).
   worktree links to its front-page row), each plan linking to the existing
   `/main/dev/docs/` rendering of the file. Small: it is the issues browser's
   shape over a 50-file corpus.
-- **Who stamps `branch:`?** cb-plan writes it at plan-creation time (the
-  session knows its own branch); /finish stamps it on issues it closes or
-  flags. Free-text `discovered-in:` stays for prose color; `branch:` is the
-  queryable field.
+- **Who stamps `branch:`?** The filing session, at filing time — it always
+  knows its own branch (`git branch --show-current`), and writes
+  `unattached` when that is `main`. cb-plan's template and the issues
+  skill/`issues/CLAUDE.md` both gain the rule; the pre-commit validator is
+  what makes forgetting impossible rather than discouraged. /finish
+  additionally corrects `branch:` on issues it closes when the merging
+  branch differs from the filed one. Free-text `discovered-in:` stays for
+  prose color; `branch:` is the queryable field.
 
-**First implementation chunk.** The doc-check validator + the 48-file
-migration in one commit (validator green over the migrated corpus is the
-test), touching no consumer yet.
+**First implementation chunk.** The doc-check validator + the full backfill
+of both corpora (48+ plans, ~452 issues) in one commit (validator green over
+the backfilled corpora is the test), touching no consumer yet.
 
 ### Track F — record what this plan decided elsewhere
 
@@ -811,8 +867,9 @@ ships. Codex-implementable: no chunk contains an open question.
     TCC exercised). Depends on B3/B4, D1.
 11. **D3 — issues browser move** (mount at /ide/issues/, 301s, link sweep).
     Depends on D1 only.
-12. **E1 — plan frontmatter: validator + frontmatter-path repair in
-    `--fix` + 48-file migration**, one commit.
+12. **E1 — frontmatter schemas: validator (plans + issues) +
+    frontmatter-path repair in `--fix` + full backfill of both corpora**,
+    one commit.
 13. **E2 — /finish + cb-plan updates** (frontmatter writer, `issues:`
     reader, surface-don't-file for partials, `branch:` stamping). Depends on
     E1.
@@ -820,7 +877,9 @@ ships. Codex-implementable: no chunk contains an open question.
     (`IssueFrontmatter` field, parser, branch column in the issues view).
     Depends on D1, E1.
 15. **F — watch issue, `design:` links, redesign-issue gap corrections,
-    `bin/CLAUDE.md` + `docs/plans/README.md` + `dev/README.md` docs.**
+    `bin/CLAUDE.md` + `docs/plans/README.md` + `issues/CLAUDE.md` +
+    `dev/README.md` docs (including the branch-sentinel rules and the
+    "backfill-only `unknown`" convention).**
 
 ## Rollout shape
 
