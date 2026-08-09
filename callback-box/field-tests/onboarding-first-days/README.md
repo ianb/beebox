@@ -23,6 +23,14 @@ runs a full `cb wakeup` plus `cb tick`, and restarts. Mail arrives with
 `pre: inject-email`, which appends to the run's fake-Gmail state and runs a
 connector-scoped wakeup. Neither is something the operator can see or do.
 
+**Briefs never name weekdays or dates** — the box clock (`startTime` + the
+accumulated advances) is the only time authority, and a brief that says
+"Saturday" while the clock says Wednesday makes the app look wrong when it
+is right (run 2 hit exactly this). Relative time ("the next evening", "two
+days after the dentist email") is always safe. The one deliberate exception
+is the dentist fixture's wrong weekday — see the comment in
+`emails/dentist-reminder.yaml` before touching it.
+
 Every item is `cleanup: keep` — residue is realistic, and a box that gets
 messier over three days is part of what is being measured. Each item still ends
 with a checkpoint tag, so any item can be inspected (or re-run from) afterwards.

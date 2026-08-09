@@ -56,6 +56,11 @@ interface Landmark {
 const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
 
 function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
+  // The root landmark has no meaningful path — a bare "/" under its title
+  // reads as leftover plumbing (a field-test operator stared at it and
+  // guessed "a separator with the parts missing"). The tile's label carries
+  // its identity; skip the line entirely for root.
+  if (dir === "") return null;
   return (
     <Link
       to={href(`/${boxSlug}/browse/${dir}`)}
@@ -69,7 +74,7 @@ function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
        * link refs below truncate, but those have a label above them and this
        * doesn't.
        */}
-      <Text as="span" size="xs" tone="muted" breakAll>{dir ? `${dir}/` : "/"}</Text>
+      <Text as="span" size="xs" tone="muted" breakAll>{`${dir}/`}</Text>
     </Link>
   );
 }

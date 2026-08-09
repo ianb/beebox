@@ -117,9 +117,9 @@ checklist:
     pre:
       - advance-days: 1
     brief: |
-      A quiet moment on Saturday morning. Ask the app what needs your
-      attention, however you would naturally ask that, and see whether what
-      comes back is any use to you.
+      A quiet morning moment, two days after the dentist email. Ask the app
+      what needs your attention, however you would naturally ask that, and
+      see whether what comes back is any use to you.
     checks:
       - dentist-followup-exists.sh
     questions:

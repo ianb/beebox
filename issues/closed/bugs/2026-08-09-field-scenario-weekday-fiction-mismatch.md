@@ -4,8 +4,16 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, whats-needed item
 labels: [field-test-findings, test-content]
+resolution: implemented
 ---
 
+> **Closed 2026-08-09.** Took the strip-the-fiction option: the final brief's
+> "Saturday morning" is now "A quiet morning moment, two days after the
+> dentist email" (relative time only), and the scenario README states the
+> rule — briefs never name weekdays or dates; the box clock is the only time
+> authority. The dentist fixture's wrong weekday is now documented IN the
+> fixture as a deliberate error (it produced the run's best agent moment),
+> so nobody "fixes" it.
 The `onboarding-first-days` briefs narrate fictional wall time ("It's the
 next evening", "Saturday morning, a quiet moment") while the box clock is
 `startTime` plus the accumulated `advance-days` — which lands on unrelated

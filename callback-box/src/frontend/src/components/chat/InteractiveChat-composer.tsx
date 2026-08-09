@@ -200,7 +200,10 @@ export function ChatInputArea({
         <Dropdown
           align="left"
           vertical="above"
-          width="w-44"
+          // Wide enough that the "(send a message first)" disabled reasons
+          // stay on one line — at w-44 they wrapped mid-phrase and the menu
+          // read as squashed (field-test run 2 visual flag).
+          width="w-72"
           trigger={({ toggle, ariaProps }) => (
             <button
               type="button"
