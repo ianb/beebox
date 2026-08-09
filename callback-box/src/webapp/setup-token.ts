@@ -1,7 +1,7 @@
 /**
  * First-run setup token.
  *
- * When authentication is required and the credential store has zero users, the
+ * When authentication is required and the credential store does not exist, the
  * server prints a one-time claim link to the console at listen time (the Jupyter
  * shape — a boot-logged token — rather than Portainer's self-terminating
  * service, which on a personal server would read as a crash). The token gates
@@ -21,7 +21,7 @@
 
 import * as crypto from "node:crypto";
 import { getOwnerEmail } from "./auth.js";
-import { listUsers } from "./local-users.js";
+import { isLocalAuthStoreInitialized } from "./local-users.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
 
 const SETUP_TOKEN_TTL_MS = 15 * 60 * 1000;
@@ -86,9 +86,9 @@ export function maybeArmFirstRunSetup({ publicUrl, openAccess }: { publicUrl: st
   // An owner already exists (env override or a local owner account) — there is
   // nothing to claim, so no token and no link.
   if (getOwnerEmail() !== null) return;
-  let userCount: number;
+  let storeInitialized: boolean;
   try {
-    userCount = listUsers().length;
+    storeInitialized = isLocalAuthStoreInitialized();
   } catch (e) {
     if (e instanceof AuthStoreUnavailableError) {
       console.error("[auth] cannot check for first-run setup — credential store unavailable:", e);
@@ -96,7 +96,7 @@ export function maybeArmFirstRunSetup({ publicUrl, openAccess }: { publicUrl: st
     }
     throw e;
   }
-  if (userCount > 0) return;
+  if (storeInitialized) return;
   const token = armSetupToken({ now: Date.now() });
   console.log(`First-run setup: ${publicUrl}/auth/setup?token=${token}`);
 }
