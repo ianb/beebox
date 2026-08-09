@@ -10,10 +10,11 @@
  *   - check() is always available (via tap-check.ts --import)
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { basename } from "node:path";
 import { transformSync } from "esbuild";
+import { tsxOnlyFallback } from "./resolve-rules.mjs";
 
 // ── Loader hooks ────────────────────────────────────────────────────────────
 
@@ -23,23 +24,14 @@ export async function resolve(specifier, context, nextResolve) {
     return { url, shortCircuit: true };
   }
 
-  // tsx normally maps a NodeNext `./module.js` import to module.tsx after
-  // trying module.ts. Under heavy parallel startup that fallback has
-  // intermittently stopped at the missing .ts candidate. Resolve the
-  // unambiguous TSX-only case here so doctest loading does not depend on that
-  // downstream extension-probe sequence.
-  if (
-    context.parentURL?.startsWith("file:") &&
-    /^\.\.?\//.test(specifier) &&
-    specifier.endsWith(".js")
-  ) {
-    const stem = specifier.slice(0, -3);
-    const tsUrl = new URL(`${stem}.ts`, context.parentURL);
-    const tsxUrl = new URL(`${stem}.tsx`, context.parentURL);
-    if (!existsSync(fileURLToPath(tsUrl)) && existsSync(fileURLToPath(tsxUrl))) {
-      return { url: tsxUrl.href, shortCircuit: true };
-    }
-  }
+  // The unambiguous TSX-only case, resolved here rather than depending on
+  // tsx's downstream extension-probe sequence (which has intermittently
+  // stopped at the missing .ts candidate under heavy parallel startup).
+  // The rule itself lives in resolve-rules.mjs so that a static consumer of
+  // the same import graph cannot disagree with the runner about it.
+  const tsxUrl = tsxOnlyFallback(specifier, context.parentURL);
+  if (tsxUrl !== null) return { url: tsxUrl, shortCircuit: true };
+
   return nextResolve(specifier, context);
 }
 
