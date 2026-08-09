@@ -52,6 +52,10 @@ await registryShell(stateDir, `session_registry_merge seam '{"baseSha":"later"}'
 const baseRecord = JSON.parse(await readFile(join(stateDir, "workstreams/seam.json"), "utf8"));
 baseRecord.baseSha
 => first
+
+const codexSummary = await registryShell(stateDir, `session_registry_merge codex-only '{"agent":"codex"}'; session_registry_summary codex-only`);
+JSON.parse(codexSummary.stdout).hasSession
+=> true
 ```
 
 ```ts cleanup

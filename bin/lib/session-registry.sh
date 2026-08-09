@@ -16,11 +16,29 @@ session_registry_read() {
   local name="$1" file
   file=$(session_registry_file "$name") || return 1
   [ -f "$file" ] || return 1
-  if ! jq -e 'type == "object"' "$file" 2>/dev/null; then
+  if ! jq -e 'type == "object"' "$file" >/dev/null 2>&1; then
     echo "session-registry: ignoring invalid registry file $file" >&2
     return 1
   fi
   jq -c . "$file"
+}
+
+session_registry_summary() {
+  local name="$1" record
+  record=$(session_registry_read "$name" || true)
+  if [ -z "$record" ]; then
+    printf '%s\n' '{"agent":null,"hasSession":false,"tty":null,"emoji":null,"baseSha":null,"removed":null}'
+    return 0
+  fi
+  printf '%s' "$record" | jq -c '
+    {
+      agent: (.agent // null),
+      hasSession: (((.sessionId // null) != null) or ((.agent // null) == "codex")),
+      tty: (.tty // null),
+      emoji: (.emoji // null),
+      baseSha: (.baseSha // null),
+      removed: (.removed // null)
+    }'
 }
 
 session_registry_unlock() {
