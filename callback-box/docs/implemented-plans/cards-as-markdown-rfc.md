@@ -1,9 +1,13 @@
+---
+title: "RFC: Cards as Markdown + YAML Frontmatter"
+status: implemented
+workstream: unknown
+issues: []
+---
 > Frozen record of the XML→YAML/Markdoc RFC — implemented 2026-05. Kept verbatim for the design reasoning and migration history; not maintained.
 > The living format reference is `docs/cards-as-markdown.md`.
 
 # RFC: Cards as Markdown + YAML Frontmatter
-
-**Status:** Implemented (2026-05). Most schemas converted; a handful deferred pending a Markdoc story.
 
 > **History:** This document started as exploration. The "case for / case against / open problems" sections below are the original RFC; the Implementation status section directly below records what was actually built. Treat the RFC body as historical reasoning, the status section as current truth.
 

@@ -1,7 +1,8 @@
 ---
 title: Add Android parity for the device-local per-box lock
+workstream: unknown
 area: callback-box
-needs: [design, implementation, manual-testing]
+needs: [design, manual-testing]
 filed-by: agent
 discovered-in: iOS per-box device lock implementation
 ---

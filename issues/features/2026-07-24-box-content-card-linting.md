@@ -1,5 +1,6 @@
 ---
 title: "Box-content linting: shellcheck procedure-card shells + duplicate-key guard"
+workstream: openclaw-security-lints
 area: callback-box
 labels: [lint, security, openclaw-borrow]
 filed-by: agent

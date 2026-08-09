@@ -1,13 +1,10 @@
+---
+title: "Native Android companion app"
+status: partial
+workstream: unknown
+issues: []
+---
 # Native Android companion app
-
-**Status:** partially implemented 2026-07-17 — Track 0 (platform-neutral
-web→native posting, box-side + iOS prerequisite) has shipped; the Android app
-itself (`android-app/`) does not exist yet. Stack (native Kotlin + Compose),
-depth, and monorepo location were chosen by the boxholder; the rest is
-grounded in the same-day contract inventory (`docs/mobile-contract.md`), the iOS
-follow-up review (`ios-companion-review-2026-07-17.md`), and Android platform
-research, pending boxholder review. Mirrors the shipped iOS companion app against
-the same box wire contract.
 
 This plan adds a native Kotlin/Jetpack Compose Android app that pairs with one or
 more self-hosted Callback Box instances and reproduces the iOS companion's stance:

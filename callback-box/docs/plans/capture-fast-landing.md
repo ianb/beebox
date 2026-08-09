@@ -1,3 +1,9 @@
+---
+title: "Capture fast landing — deliver first, process behind the message"
+status: active
+workstream: unknown
+issues: []
+---
 # Capture fast landing — deliver first, process behind the message
 
 Status: PROPOSAL (measurement done; Codex-reviewed 2026-08-04 — this revision

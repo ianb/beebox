@@ -1,5 +1,6 @@
 ---
 title: "Card views cannot scroll — content below the fold is unreachable in all three views"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)

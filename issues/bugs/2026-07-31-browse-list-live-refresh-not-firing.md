@@ -1,5 +1,6 @@
 ---
 title: "Browse sidebar live-refresh did not fire for a file added to the open directory"
+workstream: browse-back-url
 area: callback-box
 filed-by: agent
 discovered-in: worktree-browse-back-url — first real-browser verification after the browse-key auth work

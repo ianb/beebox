@@ -1,5 +1,6 @@
 ---
 title: "Regenerable video capture of app interaction (demo/marketing, kept up to date)"
+workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wants a shareable demo video an agent can keep current

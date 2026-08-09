@@ -1,5 +1,6 @@
 ---
 title: "Directories as viewable things in browse/ (+ in-place lenses like a card's own todo view)"
+workstream: todo-annotation
 area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — designing the todo-view card surface

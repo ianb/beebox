@@ -89,6 +89,10 @@ wt_create() {
     echo "[worktree-create] FATAL: '$NAME' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2
     return 1
   fi
+  if [ "$NAME" = "unattached" ] || [ "$NAME" = "unknown" ]; then
+    echo "[worktree-create] FATAL: '$NAME' is reserved for frontmatter provenance" >&2
+    return 1
+  fi
 
   local new_branch="worktree-$NAME"
   [ -n "$worktree_path" ] || worktree_path="$WT_ROOT/$NAME"

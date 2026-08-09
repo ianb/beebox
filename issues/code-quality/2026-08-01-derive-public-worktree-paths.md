@@ -1,5 +1,6 @@
 ---
 title: "Public worktree tooling hardcodes ~/src/… paths; derive like private-issues does"
+workstream: private-issues
 area: router
 filed-by: agent
 discovered-in: worktree-private-issues — while building the private-issues shadow repo

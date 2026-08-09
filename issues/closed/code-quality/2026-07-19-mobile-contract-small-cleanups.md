@@ -1,5 +1,6 @@
 ---
 title: "Mobile contract small cleanups: unanchored redeem-URL match, embed=1 param drift, resolvedSession swallows 5xx"
+workstream: mobile-token-handshake
 area: callback-box
 filed-by: agent
 discovered-in: worktree-mobile-token-handshake — carried over from the closed parser-plumbing issue

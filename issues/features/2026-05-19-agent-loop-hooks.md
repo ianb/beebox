@@ -1,5 +1,6 @@
 ---
 title: "agent loop hooks"
+workstream: unknown
 needs: [design]
 area: callback-box
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Engine-dev knowledge audits (a parallel audit surface)"
+workstream: unknown
 ---
 
 The knowledge-audit harness (`src/dev/knowledge-audit.ts`,

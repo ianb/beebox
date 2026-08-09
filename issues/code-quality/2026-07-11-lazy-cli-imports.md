@@ -1,5 +1,6 @@
 ---
 title: "Lazy-import heavy deps in the CLI bundle (~100MB heap allocated per process at import time)"
+workstream: memory-use
 area: callback-box
 filed-by: agent
 discovered-in: worktree-memory-use — investigating prod memory usage

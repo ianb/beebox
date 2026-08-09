@@ -1,5 +1,6 @@
 ---
 title: "Google connector OAuth callback saves centralized tokens without an auth/owner/nonce check"
+workstream: local-password-auth
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #2, pre-existing)
 area: callback-box

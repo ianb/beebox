@@ -70,11 +70,13 @@ clickable, not informative.)
 
 ## Frontmatter
 
-`title:` is required; everything else is optional — omit what doesn't apply.
+`title:` and `workstream:` are required; everything else is optional — omit
+what doesn't apply.
 
 ```yaml
 ---
 title: "Short human title"    # required — the H1 replacement
+workstream: unattached        # bare workstream name; unknown is backfill-only
 needs: [design, decision]     # what must happen before this can be called done
 design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
@@ -84,6 +86,12 @@ discovered-in: worktree-foo — while doing X    # pair with filed-by: agent
 resolution: implemented       # closed/ only: implemented | wontfix | superseded
 ---
 ```
+
+- `workstream:` is the current branch name minus `worktree-`, or `unattached`
+  when deliberately filed outside a workstream. `unknown` exists only for lost
+  historical provenance and is never written for a new issue. When another
+  workstream resolves an issue, `/finish` stamps the resolving workstream even
+  if `manual-testing` keeps the issue open.
 
 - `needs:` values: `design` (needs a design/plan written), `decision` (a fork
   only Ian can resolve), `manual-testing` (see below). Research-needed is

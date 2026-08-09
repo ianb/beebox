@@ -1,3 +1,9 @@
+---
+title: "Chat streaming/finalize unification: one stably-keyed assistant turn"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Chat streaming/finalize unification: one stably-keyed assistant turn
 
 When a streamed assistant response finalizes, the live streaming bubble is

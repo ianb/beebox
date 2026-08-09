@@ -1,9 +1,10 @@
+---
+title: "Responsive Figures"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Responsive Figures
-
-**Status:** implemented 2026-07 — backstop, schema rewrite, and audits shipped;
-applying the re-authored tides sketches to the prod personal box is a separate,
-boxholder-gated follow-on (see Open design questions) and not part of this
-plan's completion.
 
 > **Post-review amendments (2026-07-14, from the codex cross-model review of
 > the implemented diff):** (1) The "loud validate error" claim below for the

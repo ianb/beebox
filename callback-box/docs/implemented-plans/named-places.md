@@ -1,3 +1,9 @@
+---
+title: "Named Places (`place` cards + `cb location mark`)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Named Places (`place` cards + `cb location mark`)
 
 > **Status: implemented (2026-06-29).** Frozen design record. Code:

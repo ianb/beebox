@@ -1,7 +1,10 @@
+---
+title: "The /workstreams/ app and disposable sessions"
+status: active
+workstream: workstreams
+issues: []
+---
 # The /workstreams/ app and disposable sessions
-
-**Status:** active — designed 2026-08-09, not yet implemented; written for Codex
-implementation.
 
 A new top-level router app at `/workstreams/` — a development control surface
 that is not worktree-bound — plus the lifecycle machinery it fronts: a

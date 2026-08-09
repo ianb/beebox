@@ -1,5 +1,6 @@
 ---
 title: "Make cb-debug's circuit-breaker mechanical — a hook that counts repeated failures"
+workstream: elixir-skills-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix

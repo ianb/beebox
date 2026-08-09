@@ -1,6 +1,10 @@
+---
+title: "Email tracking instead of mailbox mirroring"
+status: partial
+workstream: unknown
+issues: []
+---
 # Email tracking instead of mailbox mirroring
-
-**Status:** partially implemented 2026-08 — code complete; live knowledge audits and real-Gmail rollout remain
 
 This plan changes Gmail from a mailbox mirror into a remote source with an explicit tracked working set. Gmail remains the complete archive. An email thread enters Git only when a person, an agent, a procedure, or a bounded automatic rule chooses to track it.
 

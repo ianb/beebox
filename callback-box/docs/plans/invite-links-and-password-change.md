@@ -1,7 +1,10 @@
+---
+title: "Invite links and self-service password change"
+status: partial
+workstream: unknown
+issues: []
+---
 # Invite links and self-service password change
-
-**Status:** Partially implemented 2026-08-06 — source complete after boxholder
-approval and cross-model review; signed-in browser smoke testing remains.
 
 This plan adds the complete no-password-sharing lifecycle for member accounts.
 An owner can invite one person to one box. The invitee chooses their own

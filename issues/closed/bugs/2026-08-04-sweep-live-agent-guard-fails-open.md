@@ -1,5 +1,6 @@
 ---
 title: "`bin/workstreams sweep`'s live-agent guard fails OPEN when ps/lsof can't answer"
+workstream: codex-exit-cleanup
 area: bin
 filed-by: agent
 discovered-in: worktree-codex-exit-cleanup — cross-model (codex) review of the codex teardown work

@@ -1,9 +1,10 @@
+---
+title: "PDF Intake"
+status: partial
+workstream: unknown
+issues: []
+---
 # PDF Intake
-
-**Status:** partly implemented, and **amended by
-[`scanner-ingest.md`](scanner-ingest.md) (Track 4)** — read that first where
-the two disagree. The decisions actually taken during implementation are logged
-in [`scanner-ingest-docling-decisions.md`](scanner-ingest-docling-decisions.md).
 
 Three things here are **superseded**; they are marked SUPERSEDED inline below:
 

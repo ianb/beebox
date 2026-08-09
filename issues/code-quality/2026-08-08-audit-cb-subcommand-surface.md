@@ -1,5 +1,6 @@
 ---
 title: "Audit the `cb` subcommand surface — only box-agent commands belong there"
+workstream: unknown
 area: callback-box
 needs: [decision]
 labels: [cli, agent-surface]

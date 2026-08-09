@@ -1,8 +1,10 @@
 ---
 title: "`file-watcher.doctest.md` can time out as a whole under parallel suite load"
+workstream: ios-box-switcher-gate
 area: callback-box
 filed-by: agent
 discovered-in: worktree-ios-box-switcher-gate — /finish full-suite verification
+resolution: implemented
 ---
 
 The full `pnpm test` suite timed out while running

@@ -1,5 +1,6 @@
 ---
 title: "Durable mobile device token rides in the ?mobileToken= URL query (S2)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md

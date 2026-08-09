@@ -1,5 +1,6 @@
 ---
 title: "tmp-capture annex ignore glob swallows child cards + manifests — capture commits are silently lossy"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: capture-agent-driven worktree — capture-latency measurement pass

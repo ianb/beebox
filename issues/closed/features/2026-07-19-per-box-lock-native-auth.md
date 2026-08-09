@@ -1,7 +1,8 @@
 ---
 title: "Per-box lock: require re-auth (biometric/device) to open a sensitive box in a multi-box client"
+workstream: unknown
 area: callback-box
-design: ../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
+design: ../../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder raised it while working through the queue

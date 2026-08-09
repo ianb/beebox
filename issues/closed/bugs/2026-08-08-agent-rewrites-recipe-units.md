@@ -1,5 +1,6 @@
 ---
 title: "Agent silently rewrites user-supplied measurements when structuring a recipe"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 1)

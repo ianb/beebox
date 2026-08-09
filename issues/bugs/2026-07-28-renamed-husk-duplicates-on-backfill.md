@@ -1,5 +1,6 @@
 ---
 title: "Renaming a chat husk (which we encourage) silently creates a duplicate on re-backfill"
+workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — while eval'ing chat review against real boxes

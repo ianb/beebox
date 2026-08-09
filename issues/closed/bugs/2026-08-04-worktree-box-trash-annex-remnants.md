@@ -1,5 +1,6 @@
 ---
 title: Worktree box trash never fully deletes — git-annex objects are write-protected
+workstream: unknown
 resolution: implemented
 ---
 

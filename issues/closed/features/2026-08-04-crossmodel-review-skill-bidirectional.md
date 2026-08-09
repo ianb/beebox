@@ -1,5 +1,6 @@
 ---
 title: "Make the cross-model review skill bidirectional (rename `codex` → `cross-model`, review with the *other* model family)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder noticed while landing codex worktree parity

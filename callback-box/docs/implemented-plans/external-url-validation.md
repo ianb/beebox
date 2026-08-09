@@ -1,3 +1,9 @@
+---
+title: "External URL validation (`cb validate --urls`)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # External URL validation (`cb validate --urls`)
 
 Extends the internal-link validation (CB001/CB002 + `cb relink`) to **external**

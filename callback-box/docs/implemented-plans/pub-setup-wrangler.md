@@ -1,9 +1,10 @@
+---
+title: "Plan: `cb pub setup` via wrangler login + Access via the CF API"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Plan: `cb pub setup` via wrangler login + Access via the CF API
-
-**Status:** implemented 2026-07 — all three forks approved as recommended;
-fake-tested; live verification pending (see the gaps section and the driving
-issue's manual-testing checklist). Extends `publish-pages.md` Track E; driven
-by [pub Access setup via API](../../../issues/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
 
 ## Goal
 

@@ -1,5 +1,6 @@
 ---
 title: "Markdown and source-citation markup render raw in agent output and cards"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (multiple activities)

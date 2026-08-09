@@ -1,3 +1,9 @@
+---
+title: "Remove cardworks and all XML from callback-box"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Remove cardworks and all XML from callback-box
 
 This plan retires the XML card format and the `cardworks` package. It

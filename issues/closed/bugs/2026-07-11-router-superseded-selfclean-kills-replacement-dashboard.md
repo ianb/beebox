@@ -1,5 +1,6 @@
 ---
 title: "Router: a superseded start's self-clean can stop the replacement generation's agent-browser dashboard (name-scoped socket dir)"
+workstream: unknown
 area: bin/router
 filed-by: agent
 discovered-in: router-state-formalization Phase A (codex review, finding #1)

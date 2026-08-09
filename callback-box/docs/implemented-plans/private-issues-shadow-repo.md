@@ -1,11 +1,10 @@
+---
+title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Private issues: a shadow repo mounted at `<checkout>/private-issues/`
-
-**Status:** implemented 2026-08-01 (same worktree, after two plan-review
-rounds). Everything below is built and exercised end-to-end on the real
-machine (orphan preservation, relink, merged removal, gitignore-symlink
-guard, doc-check rule, browser tests) EXCEPT: the finish push leg is
-untested until a private remote exists, and the dev browser serves private
-issues only after this lands on main and the router restarts.
 
 ## Problem
 

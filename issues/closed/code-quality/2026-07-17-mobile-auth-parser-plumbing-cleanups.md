@@ -1,5 +1,6 @@
 ---
 title: "Mobile auth parser/plumbing cleanups: duplicated token parser, unanchored redeem-URL match, no token expiry, param drift"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md

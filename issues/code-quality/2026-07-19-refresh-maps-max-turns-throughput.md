@@ -1,5 +1,6 @@
 ---
 title: "refresh-maps max-turns:40 is an unmeasured throughput knob"
+workstream: refresh-maps-convergence
 filed-by: agent
 discovered-in: refresh-maps convergence work (worktree-refresh-maps-convergence)
 area: callback-box

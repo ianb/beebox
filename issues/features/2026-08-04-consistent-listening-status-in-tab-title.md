@@ -1,5 +1,6 @@
 ---
 title: "Show a consistent 'listening/session active' status in the tab title (not the browser's flickering mic/speaker icons)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a steady session-on indicator

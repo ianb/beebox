@@ -1,5 +1,6 @@
 ---
 title: "New chat: the first user message doesn't display until the agent starts working (~10s blank)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder report

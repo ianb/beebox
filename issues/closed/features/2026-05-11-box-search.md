@@ -1,5 +1,6 @@
 ---
 title: "Full-text + semantic search over a box"
+workstream: unknown
 area: callback-box
 resolution: implemented
 ---

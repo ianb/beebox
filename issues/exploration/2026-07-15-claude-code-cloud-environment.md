@@ -1,5 +1,6 @@
 ---
 title: "What would it take to run this project on the Claude Code cloud environment?"
+workstream: unknown
 filed-by: agent
 discovered-in: main session — boxholder asked what it would take; research kicked off with the filing
 area: dev-infra

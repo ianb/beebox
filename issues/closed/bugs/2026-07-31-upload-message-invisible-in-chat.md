@@ -1,5 +1,6 @@
 ---
 title: "<upload> has no chat renderer — it shows as raw markup, not a chip"
+workstream: unknown
 area: callback-box
 filed-by: agent
 resolution: implemented

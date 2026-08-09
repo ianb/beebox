@@ -1,5 +1,6 @@
 ---
 title: "bulk-upload attach blobs of arbitrary extension aren't gitignored"
+workstream: unknown
 needs: [design]
 area: callback-box
 resolution: implemented

@@ -1,8 +1,10 @@
+---
+title: "Lightbox mobile gestures: double-tap zoom + pan, pinch, swipe-to-dismiss"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Lightbox mobile gestures: double-tap zoom + pan, pinch, swipe-to-dismiss
-
-**Status:** implemented 2026-07 — code shipped and reviewed; on-device manual
-verification (pinch feel, flick thresholds, iOS Safari overlay behavior) still
-pending, tracked by `needs: [manual-testing]` on the issue below.
 
 Issue: `issues/features/2026-07-20-lightbox-mobile-gestures.md` (monorepo root).
 Target: `src/frontend/src/components/ImageLightbox.tsx` (+ its only in-repo

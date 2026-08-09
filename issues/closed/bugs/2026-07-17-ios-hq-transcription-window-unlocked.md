@@ -1,5 +1,6 @@
 ---
 title: "iOS HQ-transcription window in the native composer isn't locked"
+workstream: unknown
 area: callback-box
 resolution: implemented
 filed-by: agent

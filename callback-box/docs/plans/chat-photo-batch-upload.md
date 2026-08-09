@@ -1,3 +1,9 @@
+---
+title: "Chat photo batch upload"
+status: active
+workstream: unknown
+issues: []
+---
 # Chat photo batch upload
 
 Submitting many photos to a box's chat fails today: the composer base64-inlines

@@ -1,9 +1,10 @@
 ---
 title: "Consolidate the frontend's local helper copies into src/shared/"
+workstream: architectural-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boundary.md Track 2)
-design: ../../callback-box/docs/plans/clerk-contract-and-import-boundary.md
+design: ../../../callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md
 resolution: implemented
 ---
 

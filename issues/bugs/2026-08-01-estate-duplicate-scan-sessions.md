@@ -1,5 +1,6 @@
 ---
 title: Estate box holds three duplicate scan sessions of one photo pair
+workstream: unknown
 ---
 
 Found while sampling the estate box for the scanner model-comparison

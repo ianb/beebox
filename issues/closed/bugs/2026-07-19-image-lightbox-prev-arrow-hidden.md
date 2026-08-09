@@ -1,5 +1,6 @@
 ---
 title: "Image lightbox shows only the next arrow — a wide image paints over the previous one"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it paging through images

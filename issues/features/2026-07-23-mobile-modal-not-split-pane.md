@@ -1,5 +1,6 @@
 ---
 title: "Mobile: go modal, not split-pane — lean on voice + callouts when a document is open"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder using chat + a document on a phone

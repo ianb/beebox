@@ -1,5 +1,6 @@
 ---
 title: "Image orientation can break when EXIF metadata is dropped across upload boundaries"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session - testing camera attachments in the iOS companion app

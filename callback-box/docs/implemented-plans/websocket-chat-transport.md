@@ -1,3 +1,9 @@
+---
+title: "WebSocket chat transport"
+status: implemented
+workstream: unknown
+issues: []
+---
 # WebSocket chat transport
 
 > **Status: implemented** (2026-06). Frozen historical record. Deviations from

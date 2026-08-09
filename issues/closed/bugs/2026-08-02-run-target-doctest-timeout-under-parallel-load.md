@@ -1,5 +1,6 @@
 ---
 title: "run-target doctest times out under parallel suite runs"
+workstream: scanner-ingest
 area: scan-uploader
 filed-by: agent
 discovered-in: worktree-scanner-ingest — /finish full-suite run

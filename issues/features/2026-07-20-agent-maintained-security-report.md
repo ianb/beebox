@@ -1,5 +1,6 @@
 ---
 title: "Agent-maintained security report: committed prompts, regenerated document"
+workstream: open-source-readiness
 needs: [design]
 area: callback-box
 filed-by: agent

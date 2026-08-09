@@ -1,5 +1,6 @@
 ---
 title: "TurnBuffer bounds frame count, not bytes — heavy turns hold arbitrary memory"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep

@@ -34,8 +34,9 @@ don't file trivia you'd be embarrassed to see triaged.
    personal/operational specifics, or non-public identifiers goes private.
    **When unsure, ask before filing publicly.**
 4. File one `<category>/YYYY-MM-DD-<slug>.md`, `title:` in frontmatter (not an
-   H1), plus `filed-by: agent` and `discovered-in: <worktree — what you were
-   doing>`.
+   H1), plus `workstream: <current bare workstream name>` (`unattached` from
+   main), `filed-by: agent`, and `discovered-in: <worktree — what you were
+   doing>`. Never use the backfill-only `unknown` sentinel for a new issue.
 5. Private issues are a separate repo — commit them from *inside*
    `private-issues/`, never `git add -A` at the monorepo root.
 

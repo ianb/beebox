@@ -1,5 +1,6 @@
 ---
 title: "Recipe view abbreviates units at display time (tbsp → \"T\", 1/2 → \"½\")"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — cross-model review of the category-2 field-test fixes

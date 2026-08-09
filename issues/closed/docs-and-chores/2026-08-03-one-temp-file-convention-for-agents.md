@@ -1,8 +1,9 @@
 ---
 title: "Give the agent one clear temp-file convention (it invents different places today)"
+workstream: unknown
 area: callback-box
 filed-by: agent
-discovered-in: main session — boxholder: the agent has different ideas about where temp files go
+discovered-in: "main session — boxholder: the agent has different ideas about where temp files go"
 resolution: implemented
 ---
 

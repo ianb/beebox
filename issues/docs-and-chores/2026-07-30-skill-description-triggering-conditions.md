@@ -1,5 +1,6 @@
 ---
 title: "Skill descriptions should be triggering conditions, not workflow summaries"
+workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix

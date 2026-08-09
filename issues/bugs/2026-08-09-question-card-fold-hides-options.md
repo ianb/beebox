@@ -1,5 +1,6 @@
 ---
 title: "Question card opens with its options and Submit below invisible folds"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, dentist-email item

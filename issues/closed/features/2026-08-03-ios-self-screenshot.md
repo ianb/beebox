@@ -1,5 +1,6 @@
 ---
 title: "Add self-screenshot to the iOS app (the agent-visible screen capture clerk gives on desktop)"
+workstream: unknown
 resolution: implemented
 area: callback-box
 filed-by: agent

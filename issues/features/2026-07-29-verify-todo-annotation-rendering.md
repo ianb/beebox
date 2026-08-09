@@ -1,5 +1,6 @@
 ---
 title: "Manually verify {% todo %} rendering and the stock todo-view plate card"
+workstream: todo-annotation
 area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — landing the todo-annotation system

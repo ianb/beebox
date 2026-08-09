@@ -1,3 +1,9 @@
+---
+title: "Route-level code splitting — plan and cost/benefit"
+status: active
+workstream: unknown
+issues: []
+---
 # Route-level code splitting — plan and cost/benefit
 
 Status: **proposed, with a conditional-no recommendation** — written 2026-08-01

@@ -1,13 +1,10 @@
+---
+title: "The input — interface design"
+status: active
+workstream: unknown
+issues: []
+---
 # The input — interface design
-
-**Status:** active — design 2026-07. Revised 2026-07: capture is a
-*mode of the input*, not a target — `PlaceTarget` is dropped (see
-"Capture mode"). The Emission/editor/persistence/chat-target foundation
-has since shipped as `input-extraction`
-(`docs/implemented-plans/input-extraction.md`), and the capture-mode
-slice has since shipped as `capture-mode`
-(`docs/implemented-plans/capture-mode.md`). The remaining open section
-of this design is "Interaction stances: conversation vs listening."
 
 Extracts the chat composer and
 its satellites into a distinct component with a firm API. Grows out of

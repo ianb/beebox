@@ -1,5 +1,6 @@
 ---
 title: Field-test run setup failure between server start and the try/finally leaks resources and writes no report
+workstream: unknown
 filed-by: agent
 discovered-in: worktree integration-tests — implementing Track 5 (reporting) of docs/implemented-plans/agent-field-tests.md, cross-model review
 labels: [field-test-findings, harness]

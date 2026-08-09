@@ -1,3 +1,9 @@
+---
+title: "State Management Comparison: Zustand vs MobX-State-Tree vs Valtio vs XState"
+status: implemented
+workstream: unknown
+issues: []
+---
 # State Management Comparison: Zustand vs MobX-State-Tree vs Valtio vs XState
 
 Modeling the **HistoryPage** in both frameworks to compare developer experience, testability, and the "hand it a JSON blob" workflow.

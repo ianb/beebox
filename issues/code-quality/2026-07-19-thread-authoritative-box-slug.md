@@ -1,5 +1,6 @@
 ---
 title: "Delivery paths derive the box slug from disk instead of using the served slug"
+workstream: box-slug-helper
 filed-by: agent
 discovered-in: worktree-box-slug-helper — while fixing the basename(boxRoot) slug bug
 area: callback-box

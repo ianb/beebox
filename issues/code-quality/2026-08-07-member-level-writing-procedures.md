@@ -1,5 +1,6 @@
 ---
 title: "Member-level tRPC procedures include config writes and code execution"
+workstream: security-report
 needs: [decision]
 area: callback-box
 filed-by: agent

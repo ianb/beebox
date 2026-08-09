@@ -1,6 +1,10 @@
+---
+title: "Google owners can administer local member credentials"
+status: partial
+workstream: unknown
+issues: []
+---
 # Google owners can administer local member credentials
-
-**Status:** partially implemented 2026-08 — implementation and automated verification are complete; authenticated browser verification remains outstanding.
 
 This plan lets an authenticated Google owner create invite and password-reset
 links without first creating a local owner password on the host. Invite

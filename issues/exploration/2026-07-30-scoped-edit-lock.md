@@ -1,5 +1,6 @@
 ---
 title: "Scoped edit-locks — a sentinel file plus a PreToolUse gate"
+workstream: elixir-skills-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix

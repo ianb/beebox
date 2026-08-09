@@ -1,5 +1,6 @@
 ---
 title: "Soft-launch posture: decisions made, gates remaining"
+workstream: open-source-readiness
 area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder

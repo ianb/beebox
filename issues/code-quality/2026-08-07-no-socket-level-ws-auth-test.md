@@ -1,5 +1,6 @@
 ---
 title: "No socket-level integration test for WS tRPC subscription auth"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — todo-security breakdown for the SECURITY.md report

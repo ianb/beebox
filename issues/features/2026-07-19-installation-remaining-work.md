@@ -1,5 +1,6 @@
 ---
 title: "Installation: what's verified, what still needs testing, what's not built yet"
+workstream: unknown
 design: ../../callback-box/docs/plans/installation-story.md
 needs: [manual-testing]
 ---

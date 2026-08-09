@@ -1,6 +1,10 @@
+---
+title: "iOS Share Extension Capture"
+status: partial
+workstream: unknown
+issues: []
+---
 # iOS Share Extension Capture
-
-**Status:** partially implemented 2026-08 — URL/text share destinations and delivery ship; media capture and attachment-safe follow-ups remain planned.
 
 This plan defines a native iOS Share Extension for the Callback Box companion app. Its shipped first slice lets a person send one shared URL or text item to a recent landmark chat or save it in Inbox or a landmark that advertises itself as a share destination.
 

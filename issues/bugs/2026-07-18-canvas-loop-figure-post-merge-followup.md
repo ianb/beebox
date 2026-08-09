@@ -1,5 +1,6 @@
 ---
 title: "canvas-loop figure runtime: post-merge follow-up — responsive overflow + verification punch-list"
+workstream: quick-seeing-p5js
 area: callback-box
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — after merging the canvas-loop library + figure runtime to main (f57eb12c)

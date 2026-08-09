@@ -1,3 +1,9 @@
+---
+title: "Card-aware widgets for box-authored views"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Card-aware widgets for box-authored views
 
 A reusable widget set — `<CardLink>` and `<CardRef>` — that box-authored JSX

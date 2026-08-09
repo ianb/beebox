@@ -1,3 +1,9 @@
+---
+title: "Card View Plugin System"
+status: parked
+workstream: unknown
+issues: []
+---
 # Card View Plugin System
 
 **Not implemented as written.** Superseded by the shipped renderer system: `src/frontend/src/renderers/` + the file-types registry, keyed off frontmatter `type` rather than the XML `tagName`-based plugin registry this doc designs.

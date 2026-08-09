@@ -1,5 +1,6 @@
 ---
 title: "Cloudflare 'Flexible' SSL leaves edge-to-origin traffic plain HTTP"
+workstream: security-report
 area: callback-box
 labels: [soft-launch]
 filed-by: agent

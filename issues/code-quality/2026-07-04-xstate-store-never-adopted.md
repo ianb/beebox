@@ -1,5 +1,6 @@
 ---
 title: "@xstate/store: recorded as adopted, never installed"
+workstream: unknown
 ---
 
 2026-07-04 · decision needed.

@@ -1,3 +1,9 @@
+---
+title: "slopo adoption + duplication triage"
+status: implemented
+workstream: unknown
+issues: []
+---
 # slopo adoption + duplication triage
 
 Adopt `slopo` (embedding-based near-duplicate detector) as an **optional,

@@ -1,3 +1,9 @@
+---
+title: "Plan: Garbage-collect unlabeled Gmail messages"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Plan: Garbage-collect unlabeled Gmail messages
 
 > Superseded 2026-08-05 by [email tracking instead of mailbox mirroring](../plans/email-tracking.md).

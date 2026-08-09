@@ -1,5 +1,6 @@
 ---
 title: "Inline bug submission: agent-drafted, user-confirmed reports to the public repo"
+workstream: open-source-readiness
 needs: [design]
 area: callback-box
 filed-by: agent

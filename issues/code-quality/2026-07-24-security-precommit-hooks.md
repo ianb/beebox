@@ -1,5 +1,6 @@
 ---
 title: "Adopt openclaw-style security pre-commit hooks (dev-repo scope)"
+workstream: openclaw-security-lints
 area: callback-box
 labels: [lint, security, openclaw-borrow]
 filed-by: agent

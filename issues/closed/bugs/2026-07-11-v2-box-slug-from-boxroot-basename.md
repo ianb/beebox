@@ -1,5 +1,6 @@
 ---
 title: "v2 boxes: slug/box-name derived from basename(boxRoot) is \"content\" everywhere"
+workstream: unknown
 status: closed
 created: 2026-07-11
 tags: [box-shape, v2, push, slug, correctness]

@@ -1,5 +1,6 @@
 ---
 title: "bin/private-issues status misreports the MAIN checkout as state=invalid"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked to set up private issues, status said invalid

@@ -1,5 +1,6 @@
 ---
 title: "Chat shows 'Agent is working…' long after the turn finished; Recent files / landmarks deny the saved card meanwhile"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test v0 spine run (Priya, save-recipe)

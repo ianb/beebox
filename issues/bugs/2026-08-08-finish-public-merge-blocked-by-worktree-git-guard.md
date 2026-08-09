@@ -1,5 +1,6 @@
 ---
 title: "/finish public merge blocked: harness forbids worktree-session git against the main checkout"
+workstream: security-report
 area: bin
 labels: [soft-launch]
 filed-by: agent

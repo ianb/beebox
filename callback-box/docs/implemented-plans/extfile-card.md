@@ -1,3 +1,9 @@
+---
+title: "`extfile` Card — an In-Box Pointer to a Live External File"
+status: implemented
+workstream: unknown
+issues: []
+---
 # `extfile` Card — an In-Box Pointer to a Live External File
 
 > **Implemented (2026-06).** Shipped as Tracks A–D: the `extfile` schema

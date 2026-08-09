@@ -1,5 +1,6 @@
 ---
 title: "cb session --tool-report materializes the whole transcript (worse than the fixed OOM)"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep

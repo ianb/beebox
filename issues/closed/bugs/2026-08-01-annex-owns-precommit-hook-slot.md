@@ -1,5 +1,6 @@
 ---
 title: git-annex owns the pre-commit hook slot, so card-validation hooks never install on annexed boxes
+workstream: unknown
 resolution: implemented
 ---
 

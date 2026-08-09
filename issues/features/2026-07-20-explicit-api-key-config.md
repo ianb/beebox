@@ -1,5 +1,6 @@
 ---
 title: "Explicit-config Anthropic API key as an alternative to subscription auth"
+workstream: open-source-readiness
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder

@@ -1,3 +1,9 @@
+---
+title: "Input extraction — isolating the composer behind the Emission/Input/Target API"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Input extraction — isolating the composer behind the Emission/Input/Target API
 
 Implementation plan for extracting the chat composer and its satellites into

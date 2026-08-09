@@ -1,5 +1,6 @@
 ---
 title: "Pick a discussion channel for the soft launch"
+workstream: open-source-readiness
 resolution: implemented
 area: docs
 filed-by: agent

@@ -1,5 +1,6 @@
 ---
 title: "Reload during/just after a chat turn can lose the user's in-flight question"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test spine run; spun out of chat-status-lies-after-completion

@@ -1,5 +1,6 @@
 ---
 title: "switch deploy rsync to git push"
+workstream: unknown
 area: callback-box
 resolution: implemented
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Two-and-a-half box registries: unify or document as separate?"
+workstream: unknown
 ---
 
 2026-07-04 · needs adjudication — boxholder wants to put this to an agent

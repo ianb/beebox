@@ -1,3 +1,9 @@
+---
+title: "Web Push notifications"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Web Push notifications
 
 > **Status: implemented and merged** (Tracks A–E). All doctests + the full suite

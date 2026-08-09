@@ -1,8 +1,9 @@
 ---
 title: "iOS Share Sheet capture via native extension"
+workstream: unknown
 area: callback-box
 needs: [manual-testing]
-design: ../callback-box/docs/plans/ios-share-extension-capture.md
+design: ../../callback-box/docs/plans/ios-share-extension-capture.md
 ---
 
 ## Current design decision

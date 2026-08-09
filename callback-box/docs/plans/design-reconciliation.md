@@ -1,6 +1,10 @@
+---
+title: "Design reconciliation — adjudication list"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Design reconciliation — adjudication list
-
-**Status:** implemented 2026-07 — rulings recorded and executed; see docs/design/
 
 The design documents disagree with each other and with the code, and none of them
 can be presumed right: the boxholder's design preferences have been developing

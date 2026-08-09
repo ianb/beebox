@@ -1,5 +1,6 @@
 ---
 title: "Seeded schedules stay disabled until the user activates them"
+workstream: open-source-readiness
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch

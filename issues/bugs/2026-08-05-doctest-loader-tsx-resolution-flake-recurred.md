@@ -1,5 +1,6 @@
 ---
 title: "Doctest TSX resolution flake recurred after the loader fix"
+workstream: load-older-label
 area: callback-box
 filed-by: agent
 discovered-in: worktree-load-older-label — full finish-suite verification

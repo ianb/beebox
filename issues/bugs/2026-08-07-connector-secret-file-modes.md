@@ -1,5 +1,6 @@
 ---
 title: "Connector secret files written/placed without mode 0600"
+workstream: security-report
 area: callback-box
 labels: [soft-launch]
 filed-by: agent

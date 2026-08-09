@@ -1,5 +1,6 @@
 ---
 title: "Worktree box clones lack attachment binaries — image cards 404 their images"
+workstream: lightbox-gestures
 area: callback-box
 filed-by: agent
 discovered-in: worktree-lightbox-gestures — every image in the lightbox rendered as alt text

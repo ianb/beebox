@@ -1,8 +1,10 @@
 ---
 title: "`file-watcher.doctest.md` rapid-write event count flakes under parallel load"
+workstream: member-password-reset
 area: callback-box
 filed-by: agent
 discovered-in: worktree-member-password-reset — finish verification after merging current main
+resolution: implemented
 ---
 
 The full `pnpm test` suite intermittently fails the rapid-write assertion in

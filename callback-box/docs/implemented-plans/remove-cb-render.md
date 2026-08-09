@@ -1,8 +1,10 @@
+---
+title: "Remove `cb render` and the SSR machinery"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Remove `cb render` and the SSR machinery
-
-**Status:** implemented 2026-08 — `cb render` and the SSR entry graph are
-removed, and all five live call sites are rewired off `useSSRMachine` to
-`useMachine`.
 
 `cb render` renders a frontend page to HTML with React SSR. It does not work:
 `renderToString` returns an empty `<body>` because the app is React-Query and

@@ -1,5 +1,6 @@
 ---
 title: "Two engine checkouts on one box silently truncate each other's events.db"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — while scoping the worktree workflow redesign

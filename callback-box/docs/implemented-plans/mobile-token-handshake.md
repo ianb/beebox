@@ -1,6 +1,10 @@
+---
+title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Mobile device token: replace `?mobileToken=` with a box-scoped session cookie
-
-**Status:** implemented 2026-07 — all tracks landed; see the Reconciliation section for where the built shape differs from the design
 
 The durable mobile device token currently travels in a URL query parameter on both the
 iOS webview's initial `/chat` navigation and the web frontend's tRPC WebSocket URL. Because

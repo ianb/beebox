@@ -1,5 +1,6 @@
 ---
 title: "Surface truncated agent-error detail in the chat turn-failed UI"
+workstream: fix-bugs
 area: callback-box
 filed-by: agent
 discovered-in: worktree-fix-bugs — bug-queue validation; split out of the closed box-child-stderr issue

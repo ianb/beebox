@@ -1,3 +1,9 @@
+---
+title: "Query cards — the \"select and arrange cards\" vocabulary"
+status: parked
+workstream: unknown
+issues: []
+---
 # Query cards — the "select and arrange cards" vocabulary
 
 **Status: PARKED (2026-07-03), not planned for implementation.** After

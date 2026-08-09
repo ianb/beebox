@@ -1,5 +1,6 @@
 ---
 title: "Sent message disappears then reappears ~20s later when an intermediate history snapshot omits it"
+workstream: unknown
 needs: [manual-testing]
 area: callback-box
 filed-by: agent

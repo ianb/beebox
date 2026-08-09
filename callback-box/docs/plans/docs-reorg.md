@@ -1,12 +1,10 @@
+---
+title: "Documentation reorganization"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Documentation reorganization
-
-**Status:** implemented 2026-07-04 — all eight tracks executed on
-worktree-doc-review (survey → plans sweep + research/ → corrections +
-convention docs → CLAUDE.md slimming → cb-guide-* skills → design
-reconciliation (rulings recorded and executed; docs/design/) → filename
-conventions (two batches) → doc-check enforcement → cards-as-markdown
-split). Remaining follow-ups live in Open design questions and
-ideas.md, plus the /finish auto-move wiring (plans/README.md TODO).
 
 This plan reorganizes the monorepo's developer-facing documentation (~252
 tracked `.md` files, excluding `callback-box/test/` fixtures and box-agent

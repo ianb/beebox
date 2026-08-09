@@ -1,5 +1,6 @@
 ---
 title: "needs: [manual-testing] is being over-applied — recalibrate when agents add it"
+workstream: unknown
 area: process
 filed-by: agent
 discovered-in: finish-skill-audit worktree — boxholder remark while reviewing /finish changes

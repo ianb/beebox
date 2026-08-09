@@ -1,5 +1,6 @@
 ---
 title: "chat action error surfacing"
+workstream: architectural-review
 needs: [design]
 area: frontend
 filed-by: agent

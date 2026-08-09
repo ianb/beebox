@@ -1,5 +1,6 @@
 ---
 title: "CSP report body bound is bypassed by application/json content-type"
+workstream: open-source-readiness
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes

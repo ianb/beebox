@@ -1,5 +1,6 @@
 ---
 title: "Composer Add menu: 'Attach file…' vs 'Upload files…' are indistinguishable"
+workstream: unknown
 needs: [design]
 area: callback-box
 filed-by: agent

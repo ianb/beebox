@@ -1,5 +1,6 @@
 ---
 title: "`cli/commands/view-check.doctest.md` flakes under full-suite load"
+workstream: session-report-bounded
 area: callback-box
 filed-by: agent
 discovered-in: worktree-session-report-bounded — /finish full-suite verification

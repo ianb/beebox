@@ -1,8 +1,10 @@
+---
+title: "An agent-neutral worktree control surface"
+status: partial
+workstream: worktree-control-surface
+issues: []
+---
 # An agent-neutral worktree control surface
-
-**Status:** Tracks A-C implemented 2026-08; Track D (`resume`) deferred by
-boxholder decision, see "What this plan builds now." Stays in `docs/plans/` as
-an active document holding Track D's design.
 
 The repo's worktree logic works, but it lives behind a Claude Code hook
 interface. Any other frontend must impersonate Claude Code to use it. This plan

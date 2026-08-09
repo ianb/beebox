@@ -1,5 +1,6 @@
 ---
 title: "Hub mobile-auth wall check is presence-only, not verified (S1)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md

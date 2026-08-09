@@ -1,5 +1,6 @@
 ---
 title: "Post-commit deploy fails hard on a transient worktree index.lock (ENOTDIR) instead of retrying"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — while deploying a frontend image-card fix (commit e0a788a7)

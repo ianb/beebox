@@ -1,3 +1,9 @@
+---
+title: "Schema `validate` hook — co-locate non-Zod card validation with its schema"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Schema `validate` hook — co-locate non-Zod card validation with its schema
 
 > **Status: implemented (2026-06-18).** Frozen historical record. The shipped

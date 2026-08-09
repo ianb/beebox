@@ -1,9 +1,10 @@
+---
+title: "design.md — retired sections (history)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # design.md — retired sections (history)
-
-**Status:** historical — retired 2026-07-04 when `docs/design.md` was split
-into `docs/design/` per the rulings in `../plans/design-reconciliation.md`.
-These four sections are preserved verbatim; each preamble says why it was
-retired. Do not treat any of this as current design.
 
 ---
 

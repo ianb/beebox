@@ -1,12 +1,10 @@
+---
+title: "`{% todo %}` — universal todo annotation"
+status: implemented
+workstream: unknown
+issues: []
+---
 # `{% todo %}` — universal todo annotation
-
-**Status:** implemented 2026-07 — all six rollout tracks shipped (tag/rendering,
-body-lint, frontmatter field, collector/CLI, review sweep, todo-view card).
-The follow-up named below — retiring the `todo-list` schema — has since
-landed too (2026-07-29): see
-`issues/closed/features/2026-07-29-retire-todo-list-schema.md` and
-`docs/migrations.md`'s `todo-list-to-doc` entry. The suggested way to make a
-todo list is now a simple `.doc.card` with embedded `{% todo %}` items.
 
 A universal Markdoc annotation that marks any content in any card body (or a
 card's frontmatter) as an open todo, plus the machinery that makes such

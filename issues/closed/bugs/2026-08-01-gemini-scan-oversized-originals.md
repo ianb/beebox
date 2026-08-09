@@ -1,5 +1,6 @@
 ---
 title: Gemini scan path sends unnormalized originals (TIFF, 8–10 MB photos)
+workstream: unknown
 resolution: implemented
 ---
 

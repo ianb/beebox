@@ -1,5 +1,6 @@
 ---
 title: "Deploy's `pnpm install --frozen-lockfile` step gets OOM-killed under box-session memory pressure"
+workstream: architectural-review
 area: deploy
 filed-by: agent
 discovered-in: worktree-architectural-review — /finish merging the markdoc-walkers/as-ban batch to main

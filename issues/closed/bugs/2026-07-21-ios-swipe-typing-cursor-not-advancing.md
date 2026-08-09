@@ -1,5 +1,6 @@
 ---
 title: "iOS: swipe-typing (QuickPath) leaves the cursor behind instead of advancing"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder swipe-typing in the native iOS composer

@@ -1,5 +1,6 @@
 ---
 title: "Chat-embedded image that doesn't exist yet stays 404 until a full page reload"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder report

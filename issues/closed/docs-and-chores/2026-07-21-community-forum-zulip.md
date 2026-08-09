@@ -1,5 +1,6 @@
 ---
 title: "Make the community forum (Zulip) findable across the project's surfaces"
+workstream: unknown
 area: docs
 filed-by: agent
 discovered-in: main session — boxholder created the forum during soft-launch prep

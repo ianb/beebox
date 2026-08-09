@@ -1,5 +1,6 @@
 ---
 title: "Move the issue system inside callback-box"
+workstream: open-source-readiness
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder

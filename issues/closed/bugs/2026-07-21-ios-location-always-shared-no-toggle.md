@@ -1,8 +1,9 @@
 ---
 title: "iOS: location is effectively always shared — the native path bypasses the consent toggle"
+workstream: unknown
 area: callback-box
 filed-by: agent
-discovered-in: main session — boxholder: location seems always shared on iOS, not clearly toggleable
+discovered-in: "main session — boxholder: location seems always shared on iOS, not clearly toggleable"
 resolution: implemented
 ---
 
