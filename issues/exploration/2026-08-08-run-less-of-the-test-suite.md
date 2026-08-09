@@ -2,8 +2,25 @@
 title: "Run less of the full suite — map changes to the tests that could break"
 area: callback-box
 needs: [design]
+design: ../../callback-box/docs/plans/change-based-test-selection.md
 labels: [testing, developer-experience]
 ---
+
+> **Design written 2026-08-08, twice reviewed** —
+> [change-based test selection](../../callback-box/docs/plans/change-based-test-selection.md)
+> settles the mechanism (an import graph derived from the tree with esbuild, not
+> recorded at runtime), the trust model (selection applies only when every
+> changed path is accounted for by the graph; anything else runs everything), and
+> where selection applies (the worktree iteration loop; the merge gate keeps
+> running the full suite while shadow mode measures what selection would have
+> skipped). It is **not implemented**, and it opens with a measurement gate that
+> can end it: if most real commits touch a path no test imports, the plan is not
+> worth building and the per-file cost floor is the better investment. Sections
+> below that the plan supersedes: the option survey (it records why
+> coverage-based, affected-package, directory-heuristic, and runtime-recorded
+> selection were each rejected) and the "measure first" constraint (the
+> `## Research (2026-08-08)` section satisfied it). The `needs: [design]` flag
+> stays until the measurement gate resolves.
 
 Every verification runs everything. `/finish` runs the full suite on each land,
 agents run it before committing, and a re-run after a post-green fix runs it
@@ -700,3 +717,94 @@ measure process time only, not the cost of executing their tests.
 | 480 | `test/core/external-url-fetch.doctest.md` | 0.828 s | pass |
 
 </details>
+
+## Track 0 measurement (2026-08-09) — the gate was not met
+
+The plan's Track 0 spike ran. It built the derived import graph for real and
+replayed the selector over real history. **The result does not meet the exit
+criteria the plan set in advance**, so this is recorded as a negative result
+rather than a step toward implementation.
+
+Method: one esbuild pass over all 484 test entrypoints (`bundle`, `write:false`,
+`metafile`, `packages:"external"`), with two plugins — the doctest transform via
+`generateTestSource` from `agent-doctest/hooks`, and a resolution plugin doing
+the `.js`-to-`.ts`/`.tsx` rewrite plus the `@shared/*` alias. Then, for each
+merge commit on `main`, the branch's own diff (`<merge>^1...<merge>^2`) was
+classified against the graph. 334 real branches measured out of 400 merges (66
+skipped as empty, docs-only, or touching nothing in `callback-box`).
+
+### The four questions
+
+| Question | Bar set in advance | Measured | |
+| --- | --- | --- | --- |
+| Graph build time | under ~10 s | **1.8 s** | pass |
+| Branches fully accounted for by the graph | over 50% | **25%** | **fail** |
+| Selected-set size when it does select | median under 40% | **median 13%** (min 1%, max 59%) | pass |
+| Better than the per-file cost floor? | — | ~22% expected vs ~12-13% certain | inconclusive |
+
+The middle number decides it. Three quarters of real branches touch at least one
+path no test imports, so they run the full suite anyway.
+
+### What forces the full suite (250 FULL branches; a branch can have several causes)
+
+| Branches | Cause |
+| ---: | --- |
+| 194 | `src/frontend/**` — untested by import |
+| 111 | config, script, or data files |
+| 101 | other `src/**` — untested by import |
+| 91 | `src/cli/**` — untested by import |
+| 22 | a `test/` helper or fixture that is not itself an entrypoint |
+
+**The dominant cause is test coverage, not the selection mechanism.** 430 of
+1,288 `src/**` TypeScript files (33%) are imported by no test at all; 327 of
+those are frontend. Filed separately as
+[a third of src is untested by import](../code-quality/2026-08-09-src-untested-by-import.md).
+
+### The tension the numbers expose
+
+If untested frontend files were treated as out of scope rather than as
+unaccounted, **71%** of branches would select instead of 25%. That is precisely
+the trust model the design deliberately inverted away from, after a cross-model
+review found the enumerate-the-exceptions approach had come up short twice. So
+the measurement quantifies the inversion's cost: it is what makes the design
+safe, and it is what makes it not worth building at present coverage levels.
+
+Two caveats, both of which make 25% an **upper** bound:
+
+- The graph is derived from today's tree, not from each historical commit. Paths
+  deleted since were dropped rather than counted as unaccounted (137 branches
+  contained one).
+- Prose markdown inside `callback-box/` is treated as out of scope. That was
+  verified, not assumed: no doctest in the suite reads the repository's own prose
+  markdown — the real-doc validation is `doc-check`, a pre-commit hook outside
+  the tap suite. Counting it as unaccounted instead would drop the per-commit
+  accounted rate from 63% to 27%.
+
+### Salvage
+
+The graph builder works and takes 1.8 s. Even with selection shelved, "which
+tests import this file?" is a question agents ask constantly and currently answer
+with grep. Shipping it as a read-only query tool carries no correctness risk,
+because nothing branches on its answer.
+
+### What the boxholder decided (2026-08-09)
+
+The gate result did not shelve the work; it changed what the work is for.
+
+The argument: if three quarters of branches touch code no test imports, running
+484 tests for them is not verification, it is ritual. A change to untested code
+is untested whether you run the suite or not. What is genuinely unknown is
+whether those full runs ever catch anything — and a replay over git history
+cannot answer it, because history records what was committed, not what failed on
+the way.
+
+So the deliverable became **a ledger of test failures**, classifying each as
+attached (a test the change should have run), missed (a test the change had no
+apparent relation to, which failed anyway), or flaky. It is observational —
+nothing branches on it — and it answers a question this repo has never been able
+to answer: which tests have ever failed in a way that mattered. Selection ships
+alongside it on the worktree iteration loop only; `/finish` keeps running the
+full suite, so the ledger always has ground truth at the merge boundary.
+
+The measurement above stands as recorded. It is the reason the plan's centre of
+gravity moved from the speedup to the instrument.

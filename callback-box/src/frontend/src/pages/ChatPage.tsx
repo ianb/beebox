@@ -10,7 +10,7 @@
  * fresh-chat shell that keys to `"new"`.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { InteractiveChat } from "../components/chat/InteractiveChat";
 import { ChatLoading } from "../components/chat/InteractiveChat-layout";
@@ -19,7 +19,7 @@ import { isNativeShell } from "../components/chat/native-post";
 import { trpc, type RouterOutput } from "../lib/trpc";
 import { chatTailSlice, type ChatInitialLoad } from "../machines/chat-types";
 import { href, toSearch } from "../lib/routing";
-import { carriesFreshChatMachine } from "./chat-session-transition";
+import { carriesFreshChatMachine, createSessionAssignmentLatch } from "./chat-session-transition";
 import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
 import { useIdlePrefetch } from "../hooks/useIdlePrefetch";
 
@@ -150,22 +150,31 @@ export function ChatPage() {
     prev: string | null;
     carried: boolean;
     awaiting: boolean;
-    announcedAssignment: string | null;
   }>({
     epoch: 0,
     prev: null,
     carried: false,
     awaiting: false,
-    announcedAssignment: null,
   });
   // InteractiveChat announces a real backend assignment immediately before
   // it rewrites `?session=new` to the assigned id. Without this handshake,
   // an explicit landmark/session navigation from a fresh chat is
   // indistinguishable from assignment and the blank machine is incorrectly
   // carried onto the existing session instead of loading its transcript.
+  //
+  // An external-store latch, NOT state — see SessionAssignmentLatch for why
+  // (the URL rewrite renders at sync priority, before a same-tick setState).
+  const assignmentLatch = useMemo(() => createSessionAssignmentLatch(), []);
+  const announcedAssignment = useSyncExternalStore(assignmentLatch.subscribe, assignmentLatch.get);
   const announceSessionAssignment = useCallback((sessionId: string) => {
-    setKeyState((state) => ({ ...state, announcedAssignment: sessionId }));
-  }, []);
+    assignmentLatch.announce(sessionId);
+  }, [assignmentLatch]);
+  // One announcement guards exactly one key transition: once a transition
+  // commits (prev changed — whether it consumed the announcement or not), a
+  // later explicit navigation must not inherit it.
+  useEffect(() => {
+    assignmentLatch.clear();
+  }, [keyState.prev, assignmentLatch]);
 
   // The one mount-time round trip. With `session` omitted the server resolves
   // the box's most-active session and answers for it; `?session=new` is a
@@ -257,16 +266,13 @@ export function ChatPage() {
     const isNewResolution = carriesFreshChatMachine({
       previousSessionInput: keyState.prev,
       nextSessionInput: sessionInput,
-      announcedAssignment: keyState.announcedAssignment,
+      announcedAssignment,
     });
     setKeyState({
       epoch: isNewResolution ? keyState.epoch : keyState.epoch + 1,
       prev: sessionInput,
       carried: isNewResolution,
       awaiting: !isNewResolution && !settled,
-      // Consume either a matching announcement or a stale one. A later
-      // explicit navigation must not inherit a prior carry signal.
-      announcedAssignment: null,
     });
   } else if (keyState.awaiting && settled) {
     setKeyState({ ...keyState, awaiting: false });

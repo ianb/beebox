@@ -3,7 +3,63 @@ title: "New chat: the first user message doesn't display until the agent starts 
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder report
+needs: [manual-testing]
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `8acadb78` (ChatPage
+> assignment latch). To try: (1) start a new chat, send a first message, and
+> watch the bubble as the URL flips from `?session=new` to the assigned id —
+> it must stay visible continuously through the redirect and the agent's
+> turn; (2) turn the mic on and SPEAK the first message into a new session —
+> the mic must stay live across the assignment (the remount this fixes also
+> tore down `useChatVoice`, which read as "page reloaded, mic off"; boxholder
+> report 2026-08-09). Only Ian clears this.
+
+## Root cause + fix (2026-08-09)
+
+Reproduced in a real browser (continuous sampling across the redirect): the
+optimistic bubble was visible on `?session=new`, vanished the moment the URL
+flipped to the assigned id, and reappeared ~5s later when the turn became
+durable. Instrumentation showed the exact failure:
+
+```
+[chatpage] announce-assignment f8c0a7ec-…       ← handshake fired before navigate()
+[chatpage] key-transition prev=new next=f8c0a7ec-… announced=null carried=false epoch=2
+[chatfsm]  stream-eof-no-terminal msgCount=1    ← live turn stream torn down
+[chatpage] key-transition … announced=f8c0a7ec-… carried=true   ← one render too late
+```
+
+The `f8ecf363` handshake **did fire in the right order**, but it stored the
+announcement in React state. The URL rewrite reaches `ChatPage` through the
+TanStack Router store (`useSearch` → `useSyncExternalStore`), which re-renders
+at **sync priority — before the same-tick default-priority `setState` is
+applied**. So the search-change render still saw `announcedAssignment: null`,
+classified the assignment as explicit navigation, bumped the key epoch, and
+remounted `InteractiveChat` — discarding the optimistic message, the machine
+context, and the live turn stream. The handshake's ordering held at the call
+sites; it broke across React lanes.
+
+Fix: the announcement now travels through an external-store latch
+(`createSessionAssignmentLatch` in `chat-session-transition.ts`) read via
+`useSyncExternalStore` — the same store kind the router uses, so the
+navigation's own render always sees an announcement made in the same tick. It
+is consumed in a commit effect (never during render, so replayed render passes
+can't half-consume it). Post-fix browser run: bubble visible in every sample
+across the redirect; one machine throughout (`stream-terminal STREAM_RESULT`,
+no remount). Latch semantics locked down in
+`test/frontend/chat-session-transition.doctest.md`.
+
+## Why earlier reproductions failed (environment)
+
+The browse-browser probes stalled because the browser's `cb_session` was
+missing/expired: the dev router **silently destroys** unauthenticated WS
+upgrades (`bin/router.ts` upgrade handler), so the tRPC socket never connects
+— no `system/init`, no `chat-session-assigned`, no redirect — while cached
+pages still render. This matches the gap filed in
+[no-socket-level-ws-auth-test](../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
+A working setup needs a valid owner session cookie in the driven browser
+(mint one with the `~/.cb-session-secret` HMAC scheme, including the user's
+current `gen` — a gen-less cookie is treated as revoked).
 
 Starting a **new** chat and submitting the first message: the user's message does
 not appear in the thread for ~10 seconds — until the agent has done some work.
@@ -57,6 +113,53 @@ the turn completes. A frontend timing bug like this wants the tight browser loop
 log the FSM (`logFsm` already emits `send-from-idle` / `enter-streaming`) and watch
 whether a remount resets `messages.length` to 0 right after the session id is
 assigned.
+
+## Reproduction update (2026-08-09)
+
+The boxholder clarified the important timing: the optimistic message appears
+initially, then is lost **after the URL redirects from `session=new` to the
+assigned session id**. A useful reproduction must therefore observe the bubble
+continuously across that redirect; checking only the first animation frame after
+submit does not exercise the failure boundary.
+
+Browser probes on both the worktree's isolated `test1` and main's primary
+`test1` showed the optimistic bubble promptly and retained it for 20–35 seconds,
+but neither run was a valid negative reproduction:
+
+- `POST /api/chat/send` succeeded and returned a turn id.
+- The backend log showed the SDK assigning a session id and completing the turn.
+- The frontend logged `send-from-idle`, `enter-streaming`, and `stream-start`,
+  but received neither an in-stream `system/init` frame nor the fallback
+  `chat-session-assigned` broadcast.
+- Consequently the browser stayed on `?session=new`; the redirect under
+  suspicion never happened.
+
+The shared-router browser path was not delivering the tRPC WebSocket events
+needed for assignment. An attempted direct-Vite-port browser run wedged during
+navigation and did not produce usable evidence. Manually changing the URL to
+the backend-assigned id would be a false reproduction: without
+`onSessionAssignment` it is intentionally classified as explicit navigation and
+remounts the chat.
+
+### Next reproduction attempt
+
+Use a browser/environment where realtime turn frames and session assignment are
+known to work. Start from an existing chat, choose **New session**, submit a
+uniquely identifiable first message, and record these transitions until after
+the assigned-id URL lands:
+
+1. message present immediately after submit;
+2. `SESSION_ASSIGNED` / assignment announcement;
+3. URL changes from `session=new` to `session=<id>`;
+4. whether `InteractiveChat` remounts or its message count drops to zero;
+5. when the message becomes visible again.
+
+Current source already contains the `f8ecf363` assignment handshake:
+`InteractiveChat-ws.ts` calls `onSessionAssignment(sessionId)` immediately before
+navigation, and `ChatPage.tsx` uses that announcement to keep `keyState.epoch`
+stable across the assignment. The next investigation should verify that runtime
+ordering with mount/message-count evidence rather than assuming the handshake
+works or replacing it speculatively.
 
 ## Related (distinct issues, cross-check when fixing)
 
