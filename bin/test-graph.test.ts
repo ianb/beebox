@@ -128,8 +128,18 @@ test("an ambiguous specifier yields BOTH candidates as edges", async () => {
     },
     (graph) => {
       assert.ok(graph.ambiguousEdges > 0, "expected the ambiguity to be counted");
-      assert.ok(graph.universe.has("pkg/src/pick.ts"), "the chosen candidate is an edge");
-      assert.ok(graph.universe.has("pkg/src/pick.tsx"), "the OTHER candidate is also an edge");
+      // Asserting only `universe` is what let a real bug through: extras were
+      // in `universe` (so `isAccounted` said yes) but in no test's deps (so
+      // `implicatedTests` selected nothing) — a change to the extra candidate
+      // would have looked understood and run almost nothing. Assert BOTH, and
+      // assert implication, which is what actually gets used.
+      assert.deepEqual(depsOf(graph, "test/a.doctest.md"), [
+        "src/pick.ts",
+        "src/pick.tsx",
+        "test/a.doctest.md",
+      ]);
+      assert.ok(graph.universe.has("pkg/src/pick.ts"));
+      assert.ok(graph.universe.has("pkg/src/pick.tsx"));
     },
   );
 });

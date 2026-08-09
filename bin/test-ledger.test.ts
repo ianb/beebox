@@ -49,25 +49,48 @@ test("a file result with no timing still parses, with zero duration", () => {
 
 // ── porcelain parsing ───────────────────────────────────────────────────────
 
+/** Join entries the way `git status --porcelain -z` does: NUL-terminated. */
+const Z = (entries: string[]): string => entries.map((e) => `${e}\u0000`).join("");
+
 test("an unstaged modification keeps its first character", () => {
   // Regression: trimming porcelain output before splitting strips the leading
   // status space, and `slice(3)` then eats the path's first character. It hit
   // the commonest case there is — ` M path` — and produced "in/foo.ts".
-  assert.deepEqual(parsePorcelainPaths(" M bin/test-graph.test.ts"), ["bin/test-graph.test.ts"]);
+  assert.deepEqual(parsePorcelainPaths(Z([" M bin/test-graph.test.ts"])), [
+    "bin/test-graph.test.ts",
+  ]);
 });
 
 test("staged, untracked, and deleted entries all parse", () => {
-  const raw = ["A  a.ts", "?? b.ts", " D c.ts", "MM d.ts"].join("\n");
-  assert.deepEqual(parsePorcelainPaths(raw), ["a.ts", "b.ts", "c.ts", "d.ts"]);
+  assert.deepEqual(parsePorcelainPaths(Z(["A  a.ts", "?? b.ts", " D c.ts", "MM d.ts"])), [
+    "a.ts",
+    "b.ts",
+    "c.ts",
+    "d.ts",
+  ]);
 });
 
-test("a rename reports the new path, which is the one that exists", () => {
-  assert.deepEqual(parsePorcelainPaths("R  old.ts -> new.ts"), ["new.ts"]);
+test("a rename reports the destination and consumes the origin entry", () => {
+  // Under -z a rename is TWO entries: `R  new` then a bare `old`. Treating the
+  // origin as another status line would slice three characters off it.
+  assert.deepEqual(parsePorcelainPaths(Z(["R  new.ts", "old.ts", " M other.ts"])), [
+    "new.ts",
+    "other.ts",
+  ]);
 });
 
-test("blank lines are skipped", () => {
+test("empty output yields no paths", () => {
   assert.deepEqual(parsePorcelainPaths(""), []);
-  assert.deepEqual(parsePorcelainPaths(" M a.ts\n\n"), ["a.ts"]);
+});
+
+test("a path containing a space survives, because -z never quotes", () => {
+  // Without -z git emits `"src/a b.ts"` — quoted — and the quotes land in the
+  // recorded path.
+  assert.deepEqual(parsePorcelainPaths(Z([" M src/a b.ts"])), ["src/a b.ts"]);
+});
+
+test("a path containing ' -> ' is not mistaken for a rename", () => {
+  assert.deepEqual(parsePorcelainPaths(Z(["?? src/a -> b.ts"])), ["src/a -> b.ts"]);
 });
 
 // ── classification ──────────────────────────────────────────────────────────
@@ -101,6 +124,7 @@ function rec(over: Partial<LedgerRecord>): LedgerRecord {
     branch: "worktree-x",
     treeHash: "t1",
     mode: "full",
+    exitCode: 0,
     accounted: true,
     changed: [],
     ranFiles: "all",
@@ -174,6 +198,22 @@ test("a file that never failed still appears, with zero failures", () => {
   const stats = summarize({ records: [rec({})], filesets: FILESETS });
   assert.equal(stats.get("test/b.doctest.md")?.failures, 0);
   assert.equal(stats.get("test/b.doctest.md")?.runs, 1);
+});
+
+test("an incomplete run is excluded from the denominator", () => {
+  // A signal-killed run reports only the files it reached; counting it would
+  // inflate every file's run count with a run that never had a chance to fail.
+  const records = [rec({ exitCode: 0 }), rec({ commit: "c2", exitCode: 143 })];
+  assert.equal(summarize({ records, filesets: FILESETS }).get("test/a.doctest.md")?.runs, 1);
+});
+
+test("a completed run with failures still counts", () => {
+  const records = [
+    rec({ exitCode: 1, failures: [{ file: "test/a.doctest.md", class: "attached" }] }),
+  ];
+  const stats = summarize({ records, filesets: FILESETS });
+  assert.equal(stats.get("test/a.doctest.md")?.runs, 1);
+  assert.equal(stats.get("test/a.doctest.md")?.failures, 1);
 });
 
 test("median duration comes from the recorded per-file timings", () => {

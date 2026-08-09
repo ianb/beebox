@@ -4,20 +4,14 @@
  *   node --import tsx bin/test-graph.ts                    # summary
  *   node --import tsx bin/test-graph.ts <file>             # which tests import <file>
  *
- * The graph is derived from the working tree on every call — there is no
- * cache and nothing to go stale. A full pass over ~484 entrypoints measured
- * 1.8s (see issues/exploration/2026-08-08-run-less-of-the-test-suite.md,
- * `## Track 0 measurement`), which is cheap enough that caching would be
- * machinery defending nothing.
+ * Derived from the working tree on every call — no cache, nothing to go stale.
+ * A full pass over ~490 entrypoints measures ~2s, cheap enough that caching
+ * would be machinery defending nothing.
  *
- * Two properties are deliberate and load-bearing:
- *
- *  - Ambiguity is ADDITIVE. When a specifier could resolve to more than one
- *    file, every candidate becomes an edge. Over-approximating costs extra
- *    test runs; under-approximating silently loses a test.
- *  - Unresolvable is PER-TEST FAIL-OPEN. An entrypoint esbuild cannot fully
- *    resolve is marked `unresolved` and callers must always run it. The build
- *    does not fail, so one broken import cannot disable selection wholesale.
+ * Two load-bearing properties: ambiguity is ADDITIVE (every candidate becomes
+ * an edge, because over-approximating costs a test run while under-
+ * approximating loses one silently), and unresolvable is PER-TEST FAIL-OPEN
+ * (one broken import marks its own entrypoints, never the whole suite).
  */
 
 import { build, type Metafile, type BuildFailure } from "esbuild";
@@ -219,10 +213,22 @@ export async function buildGraphFrom(config: GraphConfig): Promise<TestGraph> {
     }
   }
 
-  for (const extras of internals.extraEdges.values()) {
-    for (const extra of extras) {
-      const rel = toRepoRel(extra);
-      if (!rel.startsWith("..")) universe.add(rel);
+  // Fold ambiguity extras into the DEPS of every test that reaches the
+  // importer — not just into `universe`.
+  //
+  // Adding them to `universe` alone produces the worst possible combination:
+  // `isAccounted` says yes (the path is known), so selection proceeds, while
+  // `implicatedTests` finds no test (no deps set contains it), so it selects
+  // nothing. A change to that file would then run almost nothing while looking
+  // fully understood. Ambiguity has to be additive where implication reads it.
+  for (const [importerAbs, extras] of internals.extraEdges) {
+    const importer = toRepoRel(importerAbs);
+    const relExtras = [...extras].map(toRepoRel).filter((rel) => !rel.startsWith(".."));
+    if (relExtras.length === 0) continue;
+    for (const rel of relExtras) universe.add(rel);
+    for (const deps of tests.values()) {
+      if (!deps.has(importer)) continue;
+      for (const rel of relExtras) deps.add(rel);
     }
   }
 
