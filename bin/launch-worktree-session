@@ -174,149 +174,20 @@ if [ -n "$prompt" ]; then
   } > "$prompt_file"
 fi
 
-# A tiny launcher that the new Terminal tab runs. Keeps AppleScript clear of
-# any quoting hazards.
-launcher="$launch_dir/launch.sh"
-
-if [ "$agent" = "claude" ]; then
-  model_arg=""
-  [ -n "$model" ] && model_arg="--model $model"
-
-  # `--remote-control <name>` takes the name inline (it's an optional-value flag,
-  # so it must not be left bare before another flag or it would swallow it).
-  rc_arg=""
-  [ "$remote_control" = "1" ] && rc_arg="--remote-control $wt"
-
-  cat > "$launcher" <<EOF
-#!/usr/bin/env bash
-printf '\033]0;%s\007' "$session_name"
-cd "$MONO"
-. "$MONO/bin/lib/session-registry.sh"
-launch_patch=\$(jq -n \
-  --arg branch "worktree-$wt" \
-  --arg emoji "$emoji" \
-  --arg agent "claude" \
-  --arg model "$model" \
-  --arg tty "\$(tty 2>/dev/null || true)" \
-  --arg baseSha "\$(git -C "$MONO" rev-parse main 2>/dev/null || true)" \
-  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
-   + if \$model == "" then {} else {model:\$model} end')
-session_registry_merge "$wt" "\$launch_patch" || true
-if [ -s "$prompt_file" ]; then
-  exec claude --worktree "$wt" --name "$session_name" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
-else
-  exec claude --worktree "$wt" --name "$session_name" $model_arg $rc_arg --dangerously-skip-permissions
-fi
-EOF
-else
-  # Codex path. No --worktree in codex, so call the repo's own worktree CLI —
-  # it's idempotent (a relaunch re-attaches and refreshes the AGENTS.md mirrors)
-  # and prints the worktree path on stdout, logs on stderr. Claude Code reaches
-  # the same command through its WorktreeCreate hook adapter, so both agents run
-  # identical setup; this path no longer has to impersonate a Claude hook to get
-  # there.
-  #
-  # Full access (danger-full-access + never-approve), matching claude workers,
-  # which run unsandboxed via --dangerously-skip-permissions. A workspace-write
-  # sandbox can't commit or /finish in a linked worktree (codex force-mounts
-  # .git read-only), so parity means the same unsandboxed footing. Launch-scoped
-  # -c overrides, nothing persisted into ~/.codex/config.toml:
-  #   - trust_level: pre-trust the worktree dir so the first-run trust prompt
-  #     doesn't eat the briefing.
-  #   - project_doc_max_bytes: default 32 KiB truncates the injected root→cwd
-  #     AGENTS.md chain if codex is ever pointed at a subdir (root + a big
-  #     nested doc ≈ the cap); 128 KiB clears every combination in this repo.
-  [ -n "$model" ] && model_line="  -m \"$model\"" || model_line=""
-  cat > "$launcher" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-printf '\033]0;%s\007' "$session_name"
-cd "$MONO"
-wt_path=\$(./bin/workstreams create "$wt")
-if [ ! -f "\$wt_path/AGENTS.md" ]; then
-  echo "launch-worktree-session: no AGENTS.md in \$wt_path (generation failed?) — refusing to launch codex without repo docs" >&2
-  exit 1
-fi
-. "$MONO/bin/lib/session-registry.sh"
-launch_patch=\$(jq -n \
-  --arg branch "worktree-$wt" \
-  --arg emoji "$emoji" \
-  --arg agent "codex" \
-  --arg model "$model" \
-  --arg tty "\$(tty 2>/dev/null || true)" \
-  --arg baseSha "\$(git -C "\$wt_path" rev-parse HEAD 2>/dev/null || true)" \
-  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
-   + if \$model == "" then {} else {model:\$model} end')
-session_registry_merge "$wt" "\$launch_patch" || true
-for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
-  [ -f "\$claude_skill" ] || continue
-  skill_name=\$(basename "\$(dirname "\$claude_skill")")
-  if [ ! -L "\$wt_path/.agents/skills/\$skill_name" ] || [ ! -f "\$wt_path/.agents/skills/\$skill_name/SKILL.md" ]; then
-    echo "launch-worktree-session: missing Codex mirror for skill \$skill_name — refusing to launch codex without repo skills" >&2
-    exit 1
-  fi
-done
-cd "\$wt_path"
-codex_args=(
-  -s danger-full-access -a never
-  -c "projects.\"\$wt_path\".trust_level=\"trusted\""
-  -c project_doc_max_bytes=131072
-$model_line
-)
-
-# Codex is NOT exec'd (claude is), because codex fires no hooks — it reads none
-# of .claude/settings.json, so nothing cleans up when it exits and the worktree
-# lingers until someone runs \`bin/workstreams sweep\`. Running it in the
-# foreground gives us an "after codex exits" moment for bin/codex-session-end,
-# which is what SessionEnd is for claude.
-#
-# The INT trap keeps a Ctrl-C from taking this shell down with codex before the
-# teardown runs: bash defers a trap until the foreground command returns, and a
-# trap with a body (not '') is reset to default in the child, so codex still
-# gets a normal SIGINT. \`|| status=\$?\` keeps set -e from skipping teardown on
-# a non-zero exit.
-trap 'true' INT
-codex_status=0
-if [ -s "$prompt_file" ]; then
-  codex "\${codex_args[@]}" "\$(cat "$prompt_file")" || codex_status=\$?
-else
-  codex "\${codex_args[@]}" || codex_status=\$?
-fi
-trap - INT
-
-teardown="$MONO/bin/codex-session-end"
-if [ -x "\$teardown" ]; then
-  "\$teardown" "\$wt_path" || true
-else
-  echo "launch-worktree-session: no \$teardown — leaving \$wt_path for \\\`bin/workstreams sweep\\\`" >&2
-fi
-exit \$codex_status
-EOF
-fi
-chmod +x "$launcher"
-
-# Open the session and run the launcher.
-#
-# Terminal.app has no scriptable "new tab" command — `do script "X"` always
-# creates a new *window* running X. But macOS's "Prefer tabs: always" setting
-# (System Settings → Desktop & Dock → "Prefer tabs when opening documents")
-# folds that new window into a tab of the front window, so a single bare
-# `do script` is exactly one tab for users who prefer tabs, and one window for
-# those who don't — either way, one container.
-#
-# The previous version also sent a Cmd+T keystroke and polled for the new tab.
-# That was redundant (the Cmd+T tab was a stray) AND, under "Prefer tabs",
-# produced TWO tabs per launch — the Cmd+T tab plus the `do script` tab
-# (2026-06-27). It also needed Accessibility permission for the keystroke.
-# Dropping it: `do script` alone is raceless, permission-free, and single.
-result=$(osascript <<APPLESCRIPT 2>/dev/null
-tell application "Terminal"
-  activate
-  do script "$launcher"
-end tell
-APPLESCRIPT
-) && result="new tab/window (per your Terminal tab preference)" || result="FAILED — Terminal not scriptable?"
+# The shared builder is also used by `bin/workstreams resume`; keep every tab
+# spawn and per-agent script in one implementation.
+# shellcheck source=lib/launch-session.sh
+. "$script_dir/lib/launch-session.sh"
+LS_MONO="$MONO"
+LS_WORKSTREAM="$wt"
+LS_SESSION_NAME="$session_name"
+LS_AGENT="$agent"
+LS_MODEL="$model"
+LS_REMOTE_CONTROL="$remote_control"
+LS_PROMPT_FILE="$prompt_file"
+LS_EMOJI="$emoji"
+LS_LAUNCH_DIR="$launch_dir"
+launch_session_build
+result=$(launch_session_open)
 
 echo "launch-worktree-session: launched $agent — $session_name (worktree=$wt) ($result)"
