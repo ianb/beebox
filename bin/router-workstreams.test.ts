@@ -35,7 +35,7 @@ test("handler serves the read-only page with its own CSP", async () => {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
   } as unknown as ServerResponse;
-  const deps: WorkstreamsDeps = { list: async () => [row({})] };
+  const deps: WorkstreamsDeps = { list: async () => [row({})], run: async () => undefined };
   await serveWorkstreams({ method: "GET", pathname: "/workstreams/", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 200);
   assert.equal(captured.headers["content-security-policy"], "default-src 'none'; style-src 'unsafe-inline'");
@@ -48,7 +48,10 @@ test("handler redirects the bare path and rejects detail paths", async () => {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
   } as unknown as ServerResponse;
-  const deps: WorkstreamsDeps = { list: async () => { throw new Error("must not list"); } };
+  const deps: WorkstreamsDeps = {
+    list: async () => { throw new Error("must not list"); },
+    run: async () => { throw new Error("must not run"); },
+  };
 
   await serveWorkstreams({ method: "GET", pathname: "/workstreams", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 301);
@@ -56,4 +59,43 @@ test("handler redirects the bare path and rejects detail paths", async () => {
 
   await serveWorkstreams({ method: "GET", pathname: "/workstreams/not-built/", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 404);
+});
+
+test("actions validate the path and redirect with command results", async () => {
+  const captured = { status: 0, headers: {} as Record<string, string>, body: "" };
+  const calls: string[] = [];
+  const res = {
+    writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
+    end(body?: string) { captured.body = body ?? ""; return res; },
+  } as unknown as ServerResponse;
+  const deps: WorkstreamsDeps = {
+    list: async () => [],
+    run: async (verb, name) => { calls.push(`${verb}:${name}`); },
+  };
+
+  await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/focus/good_name-2", repoRoot: "/unused", res, deps });
+  assert.deepEqual(calls, ["focus:good_name-2"]);
+  assert.equal(captured.status, 303);
+  assert.match(captured.headers.location ?? "", /flash=focus%20good_name-2%3A%20done/);
+
+  await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/focus/bad.name", repoRoot: "/unused", res, deps });
+  assert.equal(captured.status, 404);
+  assert.deepEqual(calls, ["focus:good_name-2"]);
+});
+
+test("an action failure flashes only the first stderr line", async () => {
+  const captured = { status: 0, headers: {} as Record<string, string>, body: "" };
+  const res = {
+    writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
+    end(body?: string) { captured.body = body ?? ""; return res; },
+  } as unknown as ServerResponse;
+  const deps: WorkstreamsDeps = {
+    list: async () => [],
+    run: async () => { throw Object.assign(new Error("fallback"), { stderr: "TCC denied\nsecond line" }); },
+  };
+
+  await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/close/seam", repoRoot: "/unused", res, deps });
+  assert.equal(captured.status, 303);
+  assert.match(decodeURIComponent(captured.headers.location ?? ""), /TCC denied$/);
+  assert.doesNotMatch(captured.headers.location ?? "", /second/);
 });

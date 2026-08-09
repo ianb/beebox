@@ -1043,7 +1043,14 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
 
     const requestPathname = url.split("?")[0] ?? url;
     if (requestPathname === "/workstreams" || requestPathname.startsWith("/workstreams/")) {
-      await serveWorkstreams({ method: req.method || "GET", pathname: requestPathname, repoRoot: REPO_ROOT, res });
+      const requestUrl = new URL(url, "http://router.local");
+      await serveWorkstreams({
+        method: req.method || "GET",
+        pathname: requestPathname,
+        repoRoot: REPO_ROOT,
+        res,
+        flash: requestUrl.searchParams.get("flash") ?? "",
+      });
       return;
     }
 
