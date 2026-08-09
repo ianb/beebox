@@ -18,6 +18,18 @@ labels: [soft-launch, field-test-findings, ui-error, ui-sensibility]
 > anchoring design), and item 2's two-affordance menu is working-as-designed
 > but needs the labeling/merge decision ("attach to this message" vs
 > "bulk-upload into the box"; the gate is `sessionId === null`).
+>
+> **Run-2 evidence (2026-08-09) — the bulk-upload panel needs its own item:**
+> the operator's files landed in the *composer* while the open Upload-files
+> panel kept saying "No files yet / 0 uploaded / 0 failed / 0 pending" —
+> twice — discovered only by hitting Cancel batch and finding two chips
+> behind the dialog. "Attach file…" gave no visible feedback at all when
+> clicked. Partly harness mechanics (agent-browser hands files to the page
+> rather than the OS picker, and later couldn't find any file input at all —
+> "Element not found", which also failed the upload-photos check), but "the
+> panel reported nothing received while the file went elsewhere" is real UX:
+> the panel should reflect files however they arrive, or the two intake
+> paths should not be simultaneously live on one page.
 Three related composer problems, seen on a first-ever file attach in chat:
 
 1. **The `[file1]` token leaks.** Choosing "+" → "Attach file…" inserts the

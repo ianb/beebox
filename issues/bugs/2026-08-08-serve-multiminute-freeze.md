@@ -30,6 +30,17 @@ sockets — which made this a suspect for the (now-fixed-by-watchdog)
 [chat-status-lies-after-completion](../closed/bugs/2026-08-08-chat-status-lies-after-completion.md)
 finding, same environment.
 
+## Recurrence (2026-08-09, field-test run 2)
+
+Reproduced during `upload-photos` (run
+`onboarding-first-days-2026-08-09T18-10-43`): browse commands that normally
+take a second timed out at 2–5 minutes, three times; each page reload
+restored responsiveness briefly. The operator noted the seizures happened
+"generally right after I opened the upload panel" — correlation observed
+more than once, not proven causal. First concrete lead: profile the
+bulk-upload overlay's open path (and whatever `browse`-route work it
+triggers) against the candidate stall sites below.
+
 ## Research (2026-08-09)
 
 Candidate request-path stall sites collected while investigating the stuck
