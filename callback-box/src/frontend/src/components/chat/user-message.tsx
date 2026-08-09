@@ -129,13 +129,13 @@ function MessageFileChip({ name }: { name: string }) {
   );
 }
 
-function DeliveredMessagePart({ part }: { part: DeliveredUserMessagePart }) {
+function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMessagePart; attachedFileIds: ReadonlySet<number> }) {
   switch (part.kind) {
     case "text":
-      if (stripUserDisplayTags(part.text).trim() === "") return null;
+      if (stripUserDisplayTags(part.text, { attachedFileIds }).trim() === "") return null;
       return (
         <div className="text-sm whitespace-pre-wrap">
-          <UserMessageText text={part.text} />
+          <UserMessageText text={part.text} attachedFileIds={attachedFileIds} />
         </div>
       );
     case "capture":
@@ -147,12 +147,12 @@ function DeliveredMessagePart({ part }: { part: DeliveredUserMessagePart }) {
   }
 }
 
-function DeliveredMessageParts({ text }: { text: string }) {
+function DeliveredMessageParts({ text, attachedFileIds }: { text: string; attachedFileIds: ReadonlySet<number> }) {
   const parts = parseDeliveredUserMessageParts(text);
   return (
     <>
       {parts.map((part, index) => (
-        <DeliveredMessagePart key={`${part.kind}-${String(index)}`} part={part} />
+        <DeliveredMessagePart key={`${part.kind}-${String(index)}`} part={part} attachedFileIds={attachedFileIds} />
       ))}
     </>
   );
@@ -167,6 +167,10 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
   const fileRefs = entry.content
     .filter((b) => b.type === "text")
     .flatMap((b) => extractFileAttachments(b.text ?? ""));
+  // Entry-level, not per-block: `[imageN]` expansion splits a sent message
+  // into several text blocks, and a file token can sit in an earlier block
+  // than the `<attachments>` declaration it resolves through.
+  const attachedFileIds = new Set(fileRefs.map((f) => f.id));
   return (
     <>
       {entry.content.map((block, i) => {
@@ -177,7 +181,7 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
               <Pre key={key} size="xs">{block.text ?? ""}</Pre>
             );
           }
-          return <DeliveredMessageParts key={key} text={block.text ?? ""} />;
+          return <DeliveredMessageParts key={key} text={block.text ?? ""} attachedFileIds={attachedFileIds} />;
         }
         if (block.type === "image") {
           const src = imageBlockSrc(block);
@@ -206,11 +210,12 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoom
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   );
   const hasImages = entries.some((e) => e.content.some((b) => b.type === "image"));
-  const hasFiles = allTexts.some((t) => extractFileAttachments(t).length > 0);
+  const allFileIds = new Set(allTexts.flatMap((t) => extractFileAttachments(t).map((r) => r.id)));
+  const hasFiles = allFileIds.size > 0;
 
   // Hide schedule-fired messages entirely in normal view (they're system-injected)
   if (!debugView) {
-    const allEmpty = allTexts.every((t) => stripUserDisplayTags(t).trim() === "");
+    const allEmpty = allTexts.every((t) => stripUserDisplayTags(t, { attachedFileIds: allFileIds }).trim() === "");
     if (allEmpty && !hasImages && !hasFiles) return null;
   }
 

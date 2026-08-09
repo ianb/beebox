@@ -47,3 +47,30 @@ const mixed = [
 JSON.stringify(stripUserDisplayTags(mixed).trim())
 => "Compare with [file9]."
 ```
+
+## Review-round cases: split blocks, punctuation, spacing
+
+`[imageN]` expansion splits a sent message into several text blocks, so the
+`<attachments>` block can live in a LATER block than a file token. Callers
+with the whole entry pass the declared ids in; the fragment then strips its
+token without seeing the declaration:
+
+```ts
+stripUserDisplayTags("see [file1] and more", { attachedFileIds: new Set([1]) })
+=> see and more
+
+stripUserDisplayTags("see [file1] and more", { attachedFileIds: new Set() })
+=> see [file1] and more
+```
+
+A declared token takes its surrounding spaces with it — no stranded space
+before punctuation, no doubled interior space:
+
+```ts
+const declared = { attachedFileIds: new Set([1]) };
+JSON.stringify(stripUserDisplayTags("Here's the recipe [file1].", declared))
+=> "Here's the recipe."
+
+JSON.stringify(stripUserDisplayTags("[file1] is attached", declared))
+=> "is attached"
+```
