@@ -823,6 +823,12 @@ conversation that built the thing.
   clone. The worker stages stock content (test1 augmentations the feature
   permanently needs) on `keep`; a throwaway repro stays on the clone's
   main and is protected only by the manual-testing pin below.
+  **Constructing `keep`:** staging happens through the app, which commits
+  to the clone's *main* — interleaved with churn — so `keep` is NOT a
+  snapshot of main. It is rooted at `origin/main` (the source test1's
+  state) and the worker cherry-picks or re-commits onto it exactly the
+  content worth persisting. This is deliberate git surgery: what merges
+  home is what was chosen, never what accumulated.
 - **`/finish` merges the `keep` branch home.** A new /finish step (with the
   other finish.md edits in Track E): if the clone has a `keep` branch with
   commits not in the source test1, merge it into the source box's main as
