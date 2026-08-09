@@ -11,7 +11,7 @@ description: >-
 startTime: "2026-08-10T08:40:00Z"
 models:
   operator: opus
-  box: opus
+  chat: opus
 
 checklist:
   # Day 1 — first contact, then two ways of putting things in.

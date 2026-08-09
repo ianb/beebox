@@ -94,7 +94,7 @@ export interface FieldRunResult {
   /** The box's simulated clock at the start, and after any day advances. */
   boxTimeStart: string;
   boxTimeEnd: string;
-  models: { operator: string; box: string };
+  models: { operator: string; chat: string };
   serverBaseUrl: string;
   browseSession: string;
   items: ItemResult[];
@@ -199,7 +199,7 @@ const FieldRunResultSchema = z.strictObject({
   finishedAt: z.string().nullable(),
   boxTimeStart: z.string(),
   boxTimeEnd: z.string(),
-  models: z.strictObject({ operator: z.string(), box: z.string() }),
+  models: z.strictObject({ operator: z.string(), chat: z.string() }),
   serverBaseUrl: z.string(),
   browseSession: z.string(),
   items: z.array(ItemResultSchema),

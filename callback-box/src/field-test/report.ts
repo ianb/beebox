@@ -67,7 +67,10 @@ function renderHeader(result: FieldRunResult): string[] {
     `# Field test report: ${result.scenario}`,
     "",
     `- **Operator model:** ${result.models.operator}`,
-    `- **Box-agent model:** ${result.models.box}`,
+    `- **Chat model:** ${result.models.chat}`,
+    "- **Reactor model:** unpinned (SDK default) — intake, email→task and other" +
+      " reactor work is not pinned to a model; see" +
+      " issues/features/2026-08-08-reactor-agent-model-not-pinnable.md",
     `- **Started:** ${result.startedAt} (box clock ${result.boxTimeStart} → ${result.boxTimeEnd})`,
     `- **Wall time:** ${formatDuration(result.startedAt, result.finishedAt)}`,
     `- **Run directory:** \`${result.runDir}\``,

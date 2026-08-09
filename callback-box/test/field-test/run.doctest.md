@@ -127,7 +127,7 @@ stuck.stuck.map((s) => `${s.name}: ${s.detail}`).join("; ")
 
 A scenario that involves email starts with the connector already configured, as
 if the boxholder had connected their mail last month — field tests exercise
-operating order, never setup. The box-agent model is pinned at the same moment,
+operating order, never setup. The box's chat model is pinned at the same moment,
 and deliberately as gitignored runtime state, so a `reset` cannot rewind the
 run onto a different model than it started with.
 
@@ -147,7 +147,7 @@ await writeFile(
     "description: One item whose pre action injects mail.",
     'startTime: "2026-08-10T09:00:00Z"',
     "models:",
-    "  box: sonnet",
+    "  chat: sonnet",
     "checklist:",
     "  - id: mail",
     "    brief: See what arrived.",
@@ -339,7 +339,7 @@ run that dies part-way still leaves the completed items behind.
 
 ```ts continue
 const onDisk = JSON.parse(await readFile(join(result.runDir, "results.json"), "utf-8"));
-[onDisk.scenario, onDisk.items.length, onDisk.models.box, String(onDisk.aborted)].join(" | ")
+[onDisk.scenario, onDisk.items.length, onDisk.models.chat, String(onDisk.aborted)].join(" | ")
 => loop-fixture | 4 | opus | null
 ```
 

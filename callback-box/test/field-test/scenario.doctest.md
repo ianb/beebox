@@ -109,7 +109,7 @@ const dir = await makeScenario(HEADER + [
   "    brief: Do the thing.",
 ].join("\n") + "\n", {});
 const scenario = await loadFieldScenario(dir);
-[scenario.models.operator, scenario.models.box, scenario.checklist[0]!.cleanup].join(" | ")
+[scenario.models.operator, scenario.models.chat, scenario.checklist[0]!.cleanup].join(" | ")
 => opus | opus | keep
 ```
 

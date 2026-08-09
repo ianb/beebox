@@ -7,15 +7,17 @@
  * their mail last month. So the connector config is written here, committed
  * with the baseline, and the operator never touches a settings screen.
  *
- * The box-agent model is seeded here too, and for a different reason: the
- * persisted chat model is opaque and letting it float would make two weekly
- * runs incomparable.
+ * The chat model is seeded here too, and for a different reason: the persisted
+ * chat model is opaque and letting it float would make two weekly runs
+ * incomparable.
  *
- * **`models.box` pins CHAT ONLY.** The reactor's agent invocations go through
- * `runAgent`, which takes a model nobody passes it, so reactor work — intake,
- * the email→task step this tier exists to watch — runs on the SDK default. A
- * report header saying `box: opus` is therefore true of chat and not of the
- * agent that processed the mail. Tracked in
+ * **`models.chat` pins CHAT ONLY** — and the vocabulary now says so. The
+ * reactor's agent invocations go through `runAgent`, which takes a model nobody
+ * passes it, so reactor work — intake, the email→task step this tier exists to
+ * watch — runs on the SDK default. The report states the reactor model is
+ * unpinned rather than claiming a `box:` model that was only ever chat's. A
+ * box-level agent model the reactor honors is a product feature tracked
+ * separately in
  * `issues/features/2026-08-08-reactor-agent-model-not-pinnable.md`.
  */
 
@@ -77,7 +79,7 @@ export async function seedFieldBox(options: SeedFieldBoxOptions): Promise<void> 
   const modelFile = path.join(box.boxRoot, DEFAULT_MODEL_FILE);
   await mkdir(path.dirname(modelFile), { recursive: true });
   await writeFileAtomic(modelFile, {
-    content: `${JSON.stringify({ model: scenario.models.box }, null, 2)}\n`,
+    content: `${JSON.stringify({ model: scenario.models.chat }, null, 2)}\n`,
   });
 
   const status = await getStatus(box.packageRoot);

@@ -55,7 +55,7 @@ const runResult: FieldRunResult = {
   finishedAt: "2026-08-10T11:30:00.000Z",
   boxTimeStart: "2026-08-10T09:00:00Z",
   boxTimeEnd: "2026-08-12T09:00:00Z",
-  models: { operator: "opus", box: "opus" },
+  models: { operator: "opus", chat: "opus" },
   serverBaseUrl: "http://localhost:61234",
   browseSession: "field-onboarding-first-days-2026-08-10",
   aborted: null,
@@ -156,16 +156,17 @@ const loaded = await loadRunResults(runDir);
 const rendered = renderReport(loaded);
 ```
 
-The header names both models, the box-clock span, and whether the run
-completed.
+The header names the operator and chat models, states plainly that the reactor
+model is unpinned, gives the box-clock span, and whether the run completed.
 
 ```ts continue
-rendered.split("\n").slice(0, 6).join("\n")
+rendered.split("\n").slice(0, 7).join("\n")
 =>
 # Field test report: onboarding-first-days
 «blankline»
 - **Operator model:** opus
-- **Box-agent model:** opus
+- **Chat model:** opus
+«*»
 - **Started:** 2026-08-10T09:00:00.000Z (box clock 2026-08-10T09:00:00Z → 2026-08-12T09:00:00Z)
 - **Wall time:** 2h 30m
 ```
@@ -297,7 +298,7 @@ const abortedResult: FieldRunResult = {
   finishedAt: "2026-08-10T09:05:00.000Z",
   boxTimeStart: "2026-08-10T09:00:00Z",
   boxTimeEnd: "2026-08-10T09:00:00Z",
-  models: { operator: "opus", box: "opus" },
+  models: { operator: "opus", chat: "opus" },
   serverBaseUrl: "http://localhost:61234",
   browseSession: "field-onboarding-first-days-2026-08-10-abort",
   aborted: { itemId: "second-item", reason: "operator session closed unexpectedly" },
