@@ -6,17 +6,21 @@ design: ../../callback-box/docs/plans/change-based-test-selection.md
 labels: [testing, developer-experience]
 ---
 
-> **Design written 2026-08-08** —
+> **Design written 2026-08-08, twice reviewed** —
 > [change-based test selection](../../callback-box/docs/plans/change-based-test-selection.md)
 > settles the mechanism (an import graph derived from the tree with esbuild, not
-> recorded at runtime), the worktree iteration loop, the full-run cadence, and
-> the fail-open rules. It is **not implemented**. The one open cost question is
-> how long the esbuild pass takes over ~484 entrypoints. Sections below that the
-> plan supersedes: the option survey (it records why coverage-based,
-> affected-package, directory-heuristic, and runtime-recorded selection were each
-> rejected) and the "measure first" constraint (the `## Research (2026-08-08)`
-> section satisfied it). The `needs: [design]` flag stays until the rewritten
-> plan gets its cross-model review.
+> recorded at runtime), the trust model (selection applies only when every
+> changed path is accounted for by the graph; anything else runs everything), and
+> where selection applies (the worktree iteration loop; the merge gate keeps
+> running the full suite while shadow mode measures what selection would have
+> skipped). It is **not implemented**, and it opens with a measurement gate that
+> can end it: if most real commits touch a path no test imports, the plan is not
+> worth building and the per-file cost floor is the better investment. Sections
+> below that the plan supersedes: the option survey (it records why
+> coverage-based, affected-package, directory-heuristic, and runtime-recorded
+> selection were each rejected) and the "measure first" constraint (the
+> `## Research (2026-08-08)` section satisfied it). The `needs: [design]` flag
+> stays until the measurement gate resolves.
 
 Every verification runs everything. `/finish` runs the full suite on each land,
 agents run it before committing, and a re-run after a post-green fix runs it

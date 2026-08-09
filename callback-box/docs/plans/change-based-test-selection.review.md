@@ -114,7 +114,7 @@ findings 1–4 moved the balance toward the static graph rather than away from i
 off-by-one against a 5-entry list and is now written without a hardcoded count;
 the tap one-file-per-child claim now carries the reviewer's own citation.
 
-## Things the review did not find
+## Things the first review did not find
 
 No finding disputed the measured baseline in the origin issue's
 `## Research (2026-08-08)` section (it was supplied as given), the claim that
@@ -122,3 +122,93 @@ route doctests reach the server through a real import chain, or the
 `forceFull` / `alwaysRun` distinction. The reviewer also did not challenge the
 decision to keep `src/lib/` out of `forceFull`, which was the plan's one explicit
 disagreement with the briefing.
+
+---
+
+# Second pass — architecture review (2026-08-08)
+
+Reviewer: OpenAI Codex (`gpt-5.5`, high effort), read-only, run against the
+rewritten plan at commit `a78286ab`. Deliberately steered at architecture and
+second-order effects rather than citations, since the first pass covered those.
+Seven findings. Two were verified by hand before recording; both hold exactly.
+
+## Findings (verbatim)
+
+> **1. High: ROI is still unproven, but the plan already commits to the correctness liability.**
+> `change-based-test-selection.md:618-626` defers the per-file floor because it is "independent," and `:720-727` does the real replay of the last 50 commits only during rollout. That is backwards architecturally. The baseline says the suite is long-tail and saturated, but it does not yet show that real callback-box diffs usually select a small enough set to beat the graph cost plus the permanent risk of under-selection. A reviewer optimizing for a faster suite would first build a disposable selector/replay spike and compare it with low-risk suite-speed work before changing agent habits or `/finish`.
+>
+> **2. High: `/finish` stops meaning "the full suite passed for this code."**
+> Today the merge rule is absolute: any code change runs `pnpm test`, and any failure anywhere blocks merge except the tracked-flake protocol (`.claude/agents/finish.md:21-32`, `:159-180`). The plan changes that to "full when debt >= N, otherwise selected," plus nightly (`change-based-test-selection.md:413-417`, `:456-464`). That means a branch can merge after a selected green while an unselected failing test remains undiscovered until main. The plan's Track 4 language says "full at the gate" (`:403-405`), but Track 5 makes it "full at some gates." That semantic split is the part most likely to rot agent judgment.
+>
+> **3. High: the blind-spot model misses data-file dependencies, not just non-import module dependencies.**
+> Track 3 says the graph is blind in three ways: computed dynamic import, `require`, and spawned children (`change-based-test-selection.md:303-312`). But tests also intentionally cover files read by path. Concrete example: `test/publish/pub-worker-meta.doctest.md` validates the real committed `pub-worker/wrangler.jsonc` and hashes real `pub-worker/src/**` (`callback-box/test/publish/pub-worker-meta.doctest.md:47-61`, `:82-90`); the implementation reads those files with `readdir/readFile`, not imports (`callback-box/src/publish/pub-worker-meta.ts:153-175`). `forceFull` names templates and fixtures but not `callback-box/pub-worker/**` (`change-based-test-selection.md:266-280`). A change to `pub-worker/wrangler.jsonc` can therefore select only `alwaysRun`, skipping the very doctest that exists to catch that break. This is an architectural hole: selection needs a positive data-dependency model, or unclassified non-imported changed paths must force full.
+>
+> **4. High: "enumerate exceptions and enforce them" is still a whitelist that will silently age.**
+> The plan admits the critical gap for unimported source (`change-based-test-selection.md:553-560`) but still defaults to trusting the enumeration (`:650-657`). The enforcement tests prove only the channels the author thought to encode. The prior review already found the hand subprocess list short by 6 of 11 (`change-based-test-selection.review.md:104-107`), and the current rewrite repeats the same pattern at a different layer. A sounder architecture would invert the trust: selection only applies to changed paths classified by the graph or by declared test data dependencies; everything else runs full.
+>
+> **5. Medium: child-process coverage is scoped too narrowly.**
+> Track 3c says it covers "the 11 `.doctest.md` files that spawn a child" (`change-based-test-selection.md:337-343`). But traditional tests also spawn child processes, e.g. `test/frontend/trpc-directory-resolution.test.ts` uses `execFile` with `--eval` to import frontend source inside children (`callback-box/test/frontend/trpc-directory-resolution.test.ts:9-18`, `:21-29`). Even if today's particular source is also covered elsewhere, the enforcement rule is attached to a file extension, not the architectural coupling channel. It should scan all test entrypoints and helpers that can launch repo-loading children.
+>
+> **6. Medium: the selector duplicates the runner's discovery and resolution contract.**
+> The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`callback-box/.taprc:7-14`). The loader only patches one TSX-only case and delegates the rest to Node/tsx (`agent-doctest/src/doctest-hooks.mjs:20-43`). The plan builds a sibling `bin/test-graph` that independently enumerates entrypoints and reimplements resolution candidates (`change-based-test-selection.md:153-178`). That creates a second authority over what "this test imports" means. Given the codebase's "one way to do each thing" principle (`callback-box/docs/engineering-principles.md:95-104`), the better seam is inside `agent-doctest` or a runner-owned graph API that consumes the same config the runner consumes.
+>
+> **7. Medium: selection makes flaky-test hygiene worse in practice.**
+> The plan explicitly leaves the TSX-resolution and login-redirect flakes unresolved (`change-based-test-selection.md:32-35`, `:630-631`). Running fewer files reduces the chance agents see those flakes during branch work, so signatures rot and failures shift to nightly/main where attribution is weaker. The current tracked-flake protocol depends on seeing the failure in the branch, rerunning the exact file, checking whether the branch touched the exercised code, and requiring one full-suite rerun (`.claude/agents/finish.md:40-52`). Nightly issue filing (`change-based-test-selection.md:460-464`) is not equivalent to that decision point.
+>
+> **Single Change**
+>
+> Decide that Track 4/5 cannot ship until a pre-rollout spike proves the selector's value and closes the trust model: replay recent commits, measure selected sets and graph cost, and make unclassified changed paths default to `FULL` unless the runner/graph can account for them through imports or declared data dependencies.
+
+## Verified by hand
+
+**Finding 3 holds, and it is worse than the reviewer's phrasing.**
+`test/publish/pub-worker-meta.doctest.md:49-51` states its own purpose: *"The
+real committed config — not a fixture — so a drive-by edit that breaks
+provisioning (renamed Worker, dropped binding, re-enabled preview URLs) fails
+here first."* The implementation reads those bytes with `readdir`/`readFile`
+(`src/publish/pub-worker-meta.ts:159-172`). So a plan whose whole purpose is
+catching drive-by edits would, on exactly a drive-by edit to
+`pub-worker/wrangler.jsonc`, skip the test written to catch it. The blind-spot
+model was module-shaped; this coupling is data-shaped.
+
+**Finding 5 holds.** `test/frontend/trpc-directory-resolution.test.ts:8-17`
+spawns twelve children that `import('./src/frontend/src/lib/view-bindings.ts')`.
+Track 3c scans `.doctest.md` only, so it would not see it — and this is the
+regression test for the open TSX flake, which makes it a poor thing to miss.
+
+## Disposition
+
+**3 and 5 — accepted outright.** They are concrete holes with concrete instances.
+
+**4 — accepted, and it restructured the plan.** The boxholder inverted the trust
+model: selection now applies only when *every* changed path is accounted for by
+the graph, and anything else runs the full suite. This closed finding 3 as a
+special case, deleted the eleven-glob `forceFull` list outright (every entry was
+unaccounted by construction), and removed the accepted critical gap both prior
+drafts carried. The three enforcement tests survive but are demoted from safety
+mechanism to precision guard.
+
+**1 — accepted.** The replay measurement moved out of rollout and became Track 0,
+a gate with stated exit criteria, explicitly including a comparison against the
+per-file floor. The trust inversion makes it sharper: it can now end the plan,
+because a graph that answers `FULL` for most real commits is not worth building.
+
+**2 — accepted in substance, resolved differently than the reviewer proposed.**
+The reviewer's implied fix was to keep `/finish` always-full. The boxholder chose
+shadow mode instead: the gate keeps running the full suite *and* records what
+selection would have run and whether any failing test fell outside it, so the
+decision is made from live evidence rather than argument. Finding 7 dissolves for
+the same reason — the tracked-flake protocol keeps its decision point at a full
+run throughout. The eventual gate design (selected, full-minus-exclusions, or
+stay full) is deferred to that log.
+
+**6 — accepted in principle, deferred in placement.** The resolution logic should
+have one authority. `agent-doctest` is a standalone published package and should
+not learn callback-box's tsconfig aliases, so the shape is: extract the
+resolution rules from `doctest-hooks.mjs` into a module both the loader and the
+graph builder consume, with the callback-box-specific alias passed in.
+
+**7 — accepted as a real second-order effect**, and it dissolves if finding 2 is
+resolved by keeping `/finish` always-full: the tracked-flake protocol lives at
+that gate, and a full run there keeps flake signatures visible at the point where
+attribution is strongest.
