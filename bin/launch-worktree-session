@@ -12,6 +12,14 @@
 # or `codex -m <model>` (e.g. gpt-5.5) with --agent codex — so a worktree can
 # be spun up on a specific model; omit to use the agent's default.
 #
+# --emoji 🐛 prefixes the SESSION name (and so the Terminal tab title) with a
+# glyph, so a wall of tabs is scannable at a glance. Omit it and one is derived
+# from the worktree name — deterministic, so the same worktree always gets the
+# same glyph. The emoji never reaches disk: the worktree dir, branch, router URL
+# prefix, and the argv the sweep's liveness check matches all use the plain
+# `[a-zA-Z0-9_-]+` name. Prefer passing one that fits the task over the derived
+# fallback, which is arbitrary.
+#
 # --agent codex runs OpenAI's codex CLI instead of claude. Codex has no
 # --worktree, so this path calls `bin/worktrees create` directly (same
 # worktree + box clone + installs; it also generates the gitignored
@@ -52,12 +60,15 @@ set -euo pipefail
 model=""
 remote_control=1
 agent="claude"
+emoji=""
 while [ $# -ge 1 ]; do
   case "$1" in
     --model)   [ $# -ge 2 ] || { echo "launch-worktree-session: --model needs a value" >&2; exit 1; }; model="$2"; shift 2 ;;
     --model=*) model="${1#--model=}"; shift ;;
     --agent)   [ $# -ge 2 ] || { echo "launch-worktree-session: --agent needs a value" >&2; exit 1; }; agent="$2"; shift 2 ;;
     --agent=*) agent="${1#--agent=}"; shift ;;
+    --emoji)   [ $# -ge 2 ] || { echo "launch-worktree-session: --emoji needs a value" >&2; exit 1; }; emoji="$2"; shift 2 ;;
+    --emoji=*) emoji="${1#--emoji=}"; shift ;;
     --no-remote-control) remote_control=0; shift ;;
     --remote-control)    remote_control=1; shift ;;
     *)         break ;;
@@ -70,7 +81,7 @@ case "$agent" in
 esac
 
 if [ $# -lt 1 ]; then
-  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "Usage: launch-worktree-session [--agent claude|codex] [--model <model>] [--emoji <char>] [--no-remote-control] <worktree-name> [<prompt> | - | @<file>]" >&2
   exit 1
 fi
 
@@ -80,6 +91,23 @@ if ! [[ "$wt" =~ ^[a-zA-Z0-9_-]+$ ]]; then
   echo "launch-worktree-session: worktree name must match [a-zA-Z0-9_-]+, got: $wt" >&2
   exit 1
 fi
+
+# Session display name: an emoji plus the worktree name. The emoji exists purely
+# so a wall of Terminal tabs is scannable — several concurrent sessions with
+# similar slugs are hard to tell apart at a glance, and a glyph reads faster
+# than a prefix. It goes ONLY into the agent's session name (and thus the tab
+# title); `$wt` stays `[a-zA-Z0-9_-]+` and is what every path, branch, router
+# URL prefix, and liveness check uses. Nothing on disk ever sees the emoji.
+#
+# `--emoji 🐛` sets it explicitly — prefer that, chosen for the task at hand.
+# Otherwise derive one from the name: deterministic, so relaunching the same
+# worktree keeps the same glyph and you learn to recognize it.
+EMOJI_PALETTE=(🐛 🔍 🧪 📋 🚀 🧹 🔧 📦 🌱 🎯 🧭 🔒 📊 🎨 🪄 🧩 🔭 🧵 📮 🌊 🔥 🎁 🍀 🦉)
+if [ -z "$emoji" ]; then
+  emoji_idx=$(( $(printf '%s' "$wt" | cksum | cut -d' ' -f1) % ${#EMOJI_PALETTE[@]} ))
+  emoji="${EMOJI_PALETTE[$emoji_idx]}"
+fi
+session_name="$emoji $wt"
 
 # Resolve the prompt source.
 prompt=""
@@ -161,11 +189,12 @@ if [ "$agent" = "claude" ]; then
 
   cat > "$launcher" <<EOF
 #!/usr/bin/env bash
+printf '\033]0;%s\007' "$session_name"
 cd "$MONO"
 if [ -s "$prompt_file" ]; then
-  exec claude --worktree "$wt" --name "$wt" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
+  exec claude --worktree "$wt" --name "$session_name" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
 else
-  exec claude --worktree "$wt" --name "$wt" $model_arg $rc_arg --dangerously-skip-permissions
+  exec claude --worktree "$wt" --name "$session_name" $model_arg $rc_arg --dangerously-skip-permissions
 fi
 EOF
 else
@@ -190,6 +219,7 @@ else
   cat > "$launcher" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+printf '\033]0;%s\007' "$session_name"
 cd "$MONO"
 wt_path=\$(./bin/worktrees create "$wt")
 if [ ! -f "\$wt_path/AGENTS.md" ]; then
@@ -265,4 +295,4 @@ end tell
 APPLESCRIPT
 ) && result="new tab/window (per your Terminal tab preference)" || result="FAILED — Terminal not scriptable?"
 
-echo "launch-worktree-session: launched $agent — worktree=$wt ($result)"
+echo "launch-worktree-session: launched $agent — $session_name (worktree=$wt) ($result)"
