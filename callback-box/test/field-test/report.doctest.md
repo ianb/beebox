@@ -2,7 +2,7 @@
 
 `renderReport` (`src/field-test/report.ts`) turns a run's `results.json` into
 `report.md` — pure and read-only, so it can be regenerated any time after a run
-with `cb field-test report <run-dir>` (`docs/plans/agent-field-tests.md`,
+with `cb field-test report <run-dir>` (`docs/implemented-plans/agent-field-tests.md`,
 Track 5). These examples write a `FieldRunResult` fixture through the real
 writer (`writeRunResults`), read it back through the real loader
 (`loadRunResults`, which validates against the on-disk schema), and render it —

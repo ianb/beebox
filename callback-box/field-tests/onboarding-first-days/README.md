@@ -1,6 +1,6 @@
 # onboarding-first-days
 
-The first real field-test scenario (`docs/plans/agent-field-tests.md`, Track 4):
+The first real field-test scenario (`docs/implemented-plans/agent-field-tests.md`, Track 4):
 Priya meets an empty box and uses it for three simulated days.
 
 Run it with `cb field-test run onboarding-first-days`. It costs a real Opus

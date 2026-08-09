@@ -1,5 +1,9 @@
 # Agent field tests — an agent-operator exercising realistic box activities end-to-end
 
+**Status:** implemented 2026-08 — the harness, CLI, and `onboarding-first-days`
+scenario shipped and a full real run completed end-to-end; product/harness bugs
+it surfaced are filed as `field-test-findings` issues, not fixed here.
+
 A new top test tier: a persistent Claude "operator" with a persona works through a
 checklist of realistic activities (add a recipe, retrieve it later, upload
 documents, react to an arriving email) against a fresh box through the real web

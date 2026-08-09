@@ -562,7 +562,7 @@ feature that's possible but hidden reads as a finding rather than a pass. Real
 Opus, a real headless browser (`bin/browse`), and real agent processing make
 this the most expensive tier by design: it runs weekly or on demand, **never
 as a CI gate**. Design rationale, the run lifecycle, and the scenario format
-live in [`docs/plans/agent-field-tests.md`](plans/agent-field-tests.md).
+live in [`docs/implemented-plans/agent-field-tests.md`](implemented-plans/agent-field-tests.md).
 
 ```bash
 cb field-test list                        # scenarios in the corpus

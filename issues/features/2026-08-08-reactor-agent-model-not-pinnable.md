@@ -7,7 +7,7 @@ labels: [field-test-findings, code-error, harness]
 ---
 
 `callback-box/field-tests/<scenario>/scenario.yaml` declares `models.box`, and
-the plan (`docs/plans/agent-field-tests.md`, Track 2) states its purpose
+the plan (`docs/implemented-plans/agent-field-tests.md`, Track 2) states its purpose
 plainly: *"the scenario pins which model the product's own agents run (chat's
 persisted model setting and the reactor's) … because the existing setting is
 opaque and letting it float would make weekly runs incomparable."*

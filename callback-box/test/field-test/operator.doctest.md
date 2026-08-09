@@ -2,7 +2,7 @@
 
 The operator is one persistent conversation for a whole run — the persona that
 receives every checklist item and answers every debrief
-(`docs/plans/agent-field-tests.md`, Track 3). It is built on the `ChatBackend`
+(`docs/implemented-plans/agent-field-tests.md`, Track 3). It is built on the `ChatBackend`
 service, so the fake backend gives a fully scripted operator here: no SDK, no
 subprocess, no cost.
 

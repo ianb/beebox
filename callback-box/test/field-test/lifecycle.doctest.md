@@ -1,7 +1,7 @@
 # Field-test run lifecycle
 
 A field run owns a disposable box and a dedicated server
-(`docs/plans/agent-field-tests.md`, Track 2). This exercises the real thing —
+(`docs/implemented-plans/agent-field-tests.md`, Track 2). This exercises the real thing —
 a real `cb init`, a real `cb serve` on a real free port — because the failures
 this module exists to catch (a marker written to the package root instead of
 the operational box root, a server that never comes up, a child left running

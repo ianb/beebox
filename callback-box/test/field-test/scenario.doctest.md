@@ -1,7 +1,7 @@
 # Field-test scenario format
 
 A scenario is a directory the harness loads before it spends an Opus operator
-on a run (`docs/plans/agent-field-tests.md`, Track 4). The happy path is
+on a run (`docs/implemented-plans/agent-field-tests.md`, Track 4). The happy path is
 checked against the real `field-tests/spine/` scenario — the format's meaning
 is what the checked-in scenario says, so a doctest that invented its own fixture
 would keep passing while the real one rotted. The failure cases build throwaway
