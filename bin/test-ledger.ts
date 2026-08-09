@@ -19,8 +19,7 @@
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { appendFileSync, readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { appendFileSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildGraph } from "./test-graph.js";
@@ -49,16 +48,29 @@ function gitCommonDir(): string {
   }).trim();
 }
 
+/**
+ * `--untracked-files=all` is load-bearing in both callers below.
+ *
+ * Plain `git status --porcelain` collapses a wholly-untracked directory into a
+ * single `?? dir/` entry. That breaks two different things: a new test
+ * directory reads as one unaccounted path (so every test in it is invisible to
+ * `implicated`, and the whole change reads as unaccounted), and — worse —
+ * adding another file inside that directory does not change the status output,
+ * so `treeHash` would call two genuinely different working states identical
+ * and the flake derivation would compare across them.
+ */
+const porcelain = (): string => git(["status", "--porcelain", "--untracked-files=all"]);
+
 /** Changed paths versus `main`, plus anything uncommitted. */
 function changedPaths(): string[] {
   const committed = git(["diff", "--name-only", "main...HEAD"]).split("\n");
-  const dirty = parsePorcelainPaths(git(["status", "--porcelain"]));
+  const dirty = parsePorcelainPaths(porcelain());
   return [...new Set([...committed, ...dirty].filter((p) => p !== ""))].sort();
 }
 
 /** Identifies the exact working state, so a re-run with no edits is detectable. */
 function treeHash(): string {
-  return hashFileset([git(["rev-parse", "HEAD^{tree}"]), git(["status", "--porcelain"])]);
+  return hashFileset([git(["rev-parse", "HEAD^{tree}"]), porcelain()]);
 }
 
 function readFilesets(path: string): Record<string, string[]> {
@@ -93,24 +105,42 @@ async function runWrapped(command: string[]): Promise<number> {
     return 2;
   }
 
-  const tmp = mkdtempSync(join(tmpdir(), "test-ledger-"));
-  const tapOut = join(tmp, "tap.txt");
-  // --output-file writes raw TAP to a file while the configured reporter still
-  // prints to stdout, so .taprc's deliberate `reporter: tap` choice is intact.
-  const child = spawnSync(executable, [...args, `--output-file=${tapOut}`], {
-    stdio: "inherit",
+  // Tee stdout rather than using tap's `--output-file`.
+  //
+  // `--output-file` is the obvious seam and it is wrong here: with
+  // `.taprc`'s `reporter: tap`, it makes tap print its summary TWICE on
+  // stdout — including the `# { total: N, pass: N }` line that
+  // `.claude/agents/finish.md` parses to decide whether a merge may proceed.
+  // Measured: 2 occurrences on stdout against 1 in the file. Changing what
+  // `pnpm test` prints is not something an observational instrument gets to do.
+  //
+  // Teeing passes every byte through untouched and parses the copy. It does
+  // rely on the reporter being raw TAP, which `.taprc:31-36` pins with its own
+  // rationale — and if that ever changes, the parse finds no file records, the
+  // record is skipped with a warning, and the test run is unaffected.
+  const child = spawnSync(executable, args, {
+    stdio: ["inherit", "pipe", "inherit"],
+    encoding: "utf-8",
+    maxBuffer: 256 * 1024 * 1024,
   });
+  if (child.error !== undefined) {
+    // The command never started — say so plainly. Reporting this as "no TAP
+    // output was captured" (which is what happens if you only check `status`)
+    // blames the ledger for the caller's PATH.
+    console.error(`test-ledger: could not run ${executable}: ${child.error.message}`);
+    return 127;
+  }
+  const tapOutput = child.stdout ?? "";
+  process.stdout.write(tapOutput);
   const exitCode = child.status ?? 1;
 
   try {
     const changed = changedPaths();
-    record({ tapOut, changed, graph: await computeGraph(changed) });
+    record({ tapOutput, changed, graph: await computeGraph(changed) });
   } catch (e) {
     // The ledger gates nothing. A failure to record must never change the
     // outcome of the test run that was actually asked for.
     console.warn(`test-ledger: not recorded (${String(e)})`);
-  } finally {
-    rmSync(tmp, { recursive: true, force: true });
   }
   return exitCode;
 }
@@ -120,9 +150,8 @@ interface GraphView {
   accounted: boolean;
 }
 
-function record(input: { tapOut: string; changed: string[]; graph: GraphView | null }): void {
-  if (!existsSync(input.tapOut)) throw new Error("no TAP output was captured");
-  const results = parseTapFiles(readFileSync(input.tapOut, "utf-8"));
+function record(input: { tapOutput: string; changed: string[]; graph: GraphView | null }): void {
+  const results = parseTapFiles(input.tapOutput);
   if (results.length === 0) throw new Error("TAP output named no test files");
 
   const paths = ledgerPaths(gitCommonDir());

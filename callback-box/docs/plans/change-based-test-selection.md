@@ -540,8 +540,11 @@ beyond "warn" is defensiveness against a failure with no consequence
 - **Selecting within the root `bin/` suite** (2.60 s), **changing `jobs: 6` or
   `timeout: 300`**, **coverage-based selection**, and **selection in other
   packages** — all unchanged from prior drafts.
-- **A quiet-machine green baseline.** Still owed; no speedup percentage should be
-  claimed until it exists.
+- **A quiet-machine green baseline.** No longer owed — measured 2026-08-09 at
+  143.9s green (see the origin issue). Note what it does to this plan's premise:
+  the suite is 3.9x faster than the loaded profiling suggested, so any scheme
+  justified against 9.5 minutes is being justified against a number that does
+  not exist.
 
 ---
 
@@ -593,7 +596,9 @@ time.
    ground truth before anything narrows. **Landed 2026-08-09** (`bin/test-ledger.ts`,
    `bin/test-ledger-lib.ts`); not yet wired into `pnpm test` itself.
 3. **First full green run on a quiet machine** — the owed baseline, and the
-   ledger's first records. From here it accumulates continuously.
+   ledger's first records. **Done 2026-08-09: 6,623/6,623 green in 143.9s**,
+   against 566.5s and not green on the loaded machine the profiling used. From
+   here the ledger accumulates continuously.
 4. **Track 3** — the four precision guards. 3c generates the `alwaysRun` list and
    3d protects a scope assumption, both of which Track 2 needs.
 5. **Track 2** — `bin/test-select`.
