@@ -264,8 +264,11 @@ Writers:
    registry would never capture the sessionId that resume depends on
    (cross-model review finding, 2026-08-09). If resolved, merge
    `{agent: "claude", sessionId, transcriptPath, tty, updatedAt}`. `tty`
-   from the hook's own controlling terminal (`ps -o tty= -p $$`), which the
-   tab's shell passed down. A session that resolves to no worktree (main
+   comes from the **same ancestor walk** — NOT from the hook's own process:
+   verified empirically 2026-08-09, a hook-style piped child has no
+   controlling tty (`ps -o tty=` on itself says `??`) while the `claude`
+   ancestor reports the tab's real tty alongside `--worktree <name>` in its
+   argv, so one walk yields both facts. A session that resolves to no worktree (main
    sessions) writes nothing. Fires on `source: resume|clear|compact|fork`
    too — the *latest* session id wins, which is the semantics resume wants.
    Must exit 0 always; a registry failure never blocks a session (the
@@ -344,10 +347,24 @@ bin/worktrees close  <name> [--force]
   process actually has that tty (`ps -o tty=` over the liveness snapshot —
   ttys are reused after tabs close, so the registry tty alone is not
   trusted); then AppleScript: select the Terminal.app tab whose `tty`
-  matches, raise its window, `activate`. No live process on that tty →
-  print "no live session — use resume" and exit 1. The AppleScript lives in
-  one adapter function (`bin/lib/terminal-tabs.sh`) so a future terminal swap
-  touches one file.
+  matches, raise its window (`set index of window to 1`), `activate`. No
+  live process on that tty → print "no live session — use resume" and exit
+  1. The AppleScript lives in one adapter function
+  (`bin/lib/terminal-tabs.sh`) so a future terminal swap touches one file.
+  **Verified empirically 2026-08-09** from a live session: enumerating
+  `tty of t`, `busy of t`, and `custom title of t` across all windows/tabs
+  works, and `set selected of t to true` on a tab found by tty succeeds
+  (window `id` is available for direct targeting). The remaining
+  first-chunk verification is only `close` and the router-process TCC
+  grant.
+  **State model, stated plainly:** the system tracks *sessions* (registry
+  tty + process liveness), never *tabs*. A tab whose agent exited but
+  whose shell window stays open is invisible to `focus` (correctly — there
+  is nothing to resume there) and is not cleaned up by anything here;
+  stale empty tabs remain the human's to close, and `resume` on that
+  worktree opens a fresh tab rather than reusing the dead one. Accepted:
+  tracking tab existence would need a Terminal-side registry that drifts,
+  and the cost of a leftover empty tab is one Cmd-W.
 - **`resume`** decides by state, in order:
   1. Live agent in the worktree → delegate to `focus`.
   2. Worktree exists, no live agent → open a new tab (reusing the launcher's
