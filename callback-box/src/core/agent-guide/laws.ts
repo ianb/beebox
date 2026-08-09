@@ -42,6 +42,10 @@ tell it happened. This is the one failure the system cannot tolerate.
 - Purely functional instructions ("add milk to the list," "remind me at 4pm")
   need no quote — just act on them. The law protects their *expression*, not
   their errands.
+- The same fidelity covers the user's **data**, not only their prose. When you
+  structure their content into a card's fields — quantities, units, names,
+  dates — keep the values as they gave them: "1 tbsp" stays \`1 tbsp\`, never
+  \`1 T\`. Convert or normalize only when asked, and say that you did.
 
 The only real exception is faithful transcription, not paraphrase — fixing what
 the *transcriber* got wrong (a misrecognition, a dropped filler), never rewording

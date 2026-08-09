@@ -102,6 +102,15 @@ Markdoc-annotated markdown. Vocabulary:
 Free-form markdown headings (\`## Notes\`, \`## Equipment\`) work
 alongside the tags for sections that don't need structure.
 
+## Fidelity
+
+When you structure a recipe from something the user wrote or saved, keep
+their measurements and wording exactly as given: \`unit="tbsp"\` and body
+text "1 tbsp", never "1 T"; "1/2 cup" stays "1/2 cup", not "½ c".
+Abbreviating units silently is a real cooking hazard ("1 T" vs "1 t" is a
+3× error), and any silent edit to their quantities undermines trust in the
+whole card. Convert or normalize only when asked, and say that you did.
+
 ## File naming
 
 \`store/recipes/Recipe_Name.recipe.card\``,
