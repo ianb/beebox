@@ -35,7 +35,7 @@ Today both pin a tab. Separating them is what makes the first case disposable.
 - `needs: [manual-testing]` (see [issues/CLAUDE.md](../CLAUDE.md)) is the
   existing record for "landed, awaiting human verification" — 10 open items
   carry it. Only Ian may clear it; agents must never remove it.
-- `bin/router-issues.ts` already serves a faceted `/dev/issues/` browser with
+- `bin/router-issues.ts` already serves a faceted `/workstreams/issues/` browser with
   `needs:manual-testing` as a filter facet, overlaid with what each active
   worktree has changed. Much of the "master view" is built.
 - `bin/launch-worktree-session` spawns real Terminal.app tabs via `osascript` —
@@ -69,7 +69,7 @@ gap list above:
   guard — `unknown` no longer reads as "nothing running", which was a fail-open
   hole in front of an irreversible delete.
 - `bin/workstreams list --json` is the planned join of the three signals, and the
-  thing `/dev/issues/` would consume instead of re-deriving worktree state.
+  thing `/workstreams/issues/` would consume instead of re-deriving worktree state.
 
 **`resume` is designed in that plan and deliberately NOT built**, because a new
 motion is a workflow change — this issue's territory, not the refactor's. The
@@ -77,7 +77,7 @@ plan records the design so this issue can pick it up.
 
 ## Direction (not settled)
 
-Extend `/dev/issues/` rather than build a dashboard — it has the facets, the
+Extend `/workstreams/issues/` rather than build a dashboard — it has the facets, the
 worktree overlay, and the rendering path already. Web for seeing, Terminal for
 doing; Ian dislikes tty switchers, which rules out ccmanager/Claude Squad.
 

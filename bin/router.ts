@@ -57,7 +57,7 @@ import {
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
-import { serveWorkstreams } from "./router-workstreams.js";
+import { legacyIssuesRedirect, serveWorkstreams } from "./router-workstreams.js";
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -707,7 +707,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
 <body>
 <h1>callback-box dev router</h1>
 <p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s. <strong>dev ↗</strong> opens that worktree's visualizations &amp; doc browser (served from disk, no start).</p>
-<p><a href="/main/dev/issues/" class="dash" title="Browse the main checkout's issue queue">issues ↗</a></p>
+<p><a href="/workstreams/" class="dash" title="Browse workstreams and the issue queue">workstreams ↗</a></p>
 <ul>${rows}</ul>
 
 <div class="help">
@@ -1048,8 +1048,11 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
         method: req.method || "GET",
         pathname: requestPathname,
         repoRoot: REPO_ROOT,
+        mainRoot: MAIN_ROOT,
+        worktreesRoot: WORKTREES_ROOT,
         res,
         flash: requestUrl.searchParams.get("flash") ?? "",
+        query: requestUrl.searchParams.toString(),
       });
       return;
     }
@@ -1089,6 +1092,12 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     // /<name>/dev/... — the worktree's dev space (artifacts + doc browser),
     // served straight from disk so it never cold-starts the worktree.
     const afterName = url.slice(`/${name}`.length);
+    const issuesRedirect = legacyIssuesRedirect(afterName);
+    if (issuesRedirect) {
+      res.writeHead(301, { location: issuesRedirect });
+      res.end();
+      return;
+    }
     if (afterName.split("?")[0] === "/dev") {
       res.writeHead(301, { location: `/${name}/dev/` });
       res.end();
@@ -1102,7 +1111,7 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       return;
     }
     if (afterName.startsWith("/dev/")) {
-      await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name), mainRoot: MAIN_ROOT, worktreesRoot: WORKTREES_ROOT });
+      await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
       return;
     }
 

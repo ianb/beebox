@@ -3,6 +3,7 @@ import path from "node:path";
 import { execa } from "execa";
 
 import { escapeHtml } from "./router-docs.js";
+import { serveIssues } from "./router-issues.js";
 
 interface RemovedState {
   at: string;
@@ -35,6 +36,13 @@ export interface WorkstreamsDeps {
 type ActionVerb = "close" | "focus" | "resume";
 
 const ACTION_PATH = /^\/workstreams\/action\/(close|focus|resume)\/([a-zA-Z0-9_-]+)$/;
+
+export function legacyIssuesRedirect(afterWorkstream: string): string | null {
+  const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
+  if (pathname !== "/dev/issues" && !pathname.startsWith("/dev/issues/")) return null;
+  const suffix = afterWorkstream.slice("/dev/issues".length);
+  return `/workstreams/issues${suffix || "/"}`;
+}
 
 function defaultDeps(repoRoot: string): WorkstreamsDeps {
   async function run(args: string[]): Promise<string> {
@@ -167,14 +175,35 @@ export async function serveWorkstreams(params: {
   method: string;
   pathname: string;
   repoRoot: string;
+  mainRoot?: string;
+  worktreesRoot?: string;
   res: http.ServerResponse;
   deps?: WorkstreamsDeps;
   flash?: string;
+  query?: string;
 }): Promise<void> {
   const { method, pathname, repoRoot, res } = params;
   const deps = params.deps ?? defaultDeps(repoRoot);
   if (method === "POST" && pathname.startsWith("/workstreams/action/")) {
     await serveAction(pathname, deps, res);
+    return;
+  }
+  if (pathname === "/workstreams/issues" || pathname.startsWith("/workstreams/issues/")) {
+    if (pathname === "/workstreams/issues") {
+      res.writeHead(301, { location: "/workstreams/issues/" });
+      res.end();
+      return;
+    }
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
+    await serveIssues({
+      base: "/workstreams",
+      mainRoot: params.mainRoot ?? repoRoot,
+      worktreesRoot: params.worktreesRoot ?? path.dirname(repoRoot),
+      rel: pathname.slice("/workstreams/issues".length),
+      query: new URLSearchParams(params.query ?? ""),
+      res,
+    });
     return;
   }
   if (pathname === "/workstreams") {

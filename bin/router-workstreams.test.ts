@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
 import type { ServerResponse } from "node:http";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 
-import { renderWorkstreams, serveWorkstreams, type WorkstreamRow, type WorkstreamsDeps } from "./router-workstreams.js";
+import { legacyIssuesRedirect, renderWorkstreams, serveWorkstreams, type WorkstreamRow, type WorkstreamsDeps } from "./router-workstreams.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
   return {
@@ -98,4 +101,38 @@ test("an action failure flashes only the first stderr line", async () => {
   assert.equal(captured.status, 303);
   assert.match(decodeURIComponent(captured.headers.location ?? ""), /TCC denied$/);
   assert.doesNotMatch(captured.headers.location ?? "", /second/);
+});
+
+test("issues are mounted canonically under workstreams", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-issues-"));
+  await fs.mkdir(path.join(root, "issues", "bugs"), { recursive: true });
+  await fs.writeFile(path.join(root, "issues", "bugs", "2026-08-09-seam.md"), "---\ntitle: Seam bug\n---\n");
+  const captured = { status: 0, headers: {} as Record<string, string>, body: "" };
+  const res = {
+    setHeader(name: string, value: string) { captured.headers[name.toLowerCase()] = value; return res; },
+    writeHead(status: number, headers: Record<string, string>) {
+      captured.status = status;
+      Object.assign(captured.headers, headers);
+      return res;
+    },
+    end(body?: string) { captured.body = body ?? ""; return res; },
+  } as unknown as ServerResponse;
+  const deps: WorkstreamsDeps = { list: async () => [], run: async () => undefined };
+
+  await serveWorkstreams({
+    method: "GET", pathname: "/workstreams/issues/", repoRoot: root,
+    mainRoot: root, worktreesRoot: path.join(root, "worktrees"), res, deps,
+  });
+  assert.equal(captured.status, 200);
+  assert.match(captured.body, /href="\/workstreams\/issues\/bugs\/2026-08-09-seam.md"/);
+  assert.equal(captured.headers["content-security-policy"], "default-src 'none'; style-src 'unsafe-inline'");
+});
+
+test("legacy worktree issue URLs redirect permanently without losing suffixes", () => {
+  assert.equal(legacyIssuesRedirect("/dev/issues"), "/workstreams/issues/");
+  assert.equal(
+    legacyIssuesRedirect("/dev/issues/bugs/example.md?state=open"),
+    "/workstreams/issues/bugs/example.md?state=open",
+  );
+  assert.equal(legacyIssuesRedirect("/dev/issues-not-really"), null);
 });

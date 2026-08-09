@@ -1,4 +1,4 @@
-// The /<worktree>/dev/issues/ space: a server-rendered browser over the
+// The /workstreams/issues/ space: a server-rendered browser over the
 // monorepo-root issues/ tree (issues/CLAUDE.md is the data model), overlaid
 // with what every active worktree has added/changed/deleted relative to
 // main. Sibling to router-docs.ts, which dispatches into this module from
@@ -453,7 +453,7 @@ export interface RewrittenIssueLinks {
 // cross-category `../bugs/foo.md`) so they navigate within the issue
 // browser instead of 404ing (the browser doesn't serve raw issues/ files).
 // `dirPath` is the current issue's directory relative to issues/ (e.g.
-// "bugs" or "closed/bugs"); `issuesBase` is like "/main/dev/issues".
+// "bugs" or "closed/bugs"); `issuesBase` is like "/workstreams/issues".
 // Absolute paths, external URLs, and anchors are left untouched. Also
 // collects which of the rewritten hrefs land under closed/ (a link whose
 // target is a closed issue), so the caller can pill them.
@@ -961,7 +961,7 @@ ${diffHtml}`;
 // --- dispatch -------------------------------------------------------------------
 
 /**
- * Dispatch everything under /<name>/dev/issues/. `rel` is the URL after
+ * Dispatch everything under /workstreams/issues/. `rel` is the URL after
  * "/issues" (e.g. "" | "/" | "/bugs/foo.md" | "/private/bugs/foo.md");
  * `query` is the parsed query string. `mainRoot` is always the canonical
  * checkout's root — the issue set is main's regardless of which

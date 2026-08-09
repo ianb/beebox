@@ -43,7 +43,7 @@ async function mkScriptedRepo(): Promise<string> {
 
 async function cspFor(repo: string, rest: string): Promise<string | undefined> {
   const { csp, res } = fakeRes();
-  await serveDev({ name: "wt", rest, res, repoRoot: repo, mainRoot: repo, worktreesRoot: path.dirname(repo) });
+  await serveDev({ name: "wt", rest, res, repoRoot: repo });
   return csp();
 }
 

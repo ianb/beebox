@@ -39,7 +39,7 @@ later the same day, and it agrees with this plan on the substance: the two-case
 distinction, the rejection of Conductor and the desktop app as unbuildable-upon,
 the Codex-must-stay-first-class constraint, and the three-way status
 recomputation. It carries scope this plan does not: the issue↔worktree data link,
-box forking, and the `/dev/issues/` extension.
+box forking, and the `/workstreams/issues/` extension.
 
 ## What this plan builds now
 
@@ -434,7 +434,7 @@ every question about what to persist to a later chunk in the same plan.
 
 Named so the seam's purpose is legible, not to be built here.
 
-`/dev/issues/` becomes a client over `list --json`, replacing the overlay's own
+`/workstreams/issues/` becomes a client over `list --json`, replacing the overlay's own
 worktree discovery (`bin/router-issues.ts:334-360`). A web button that opens a
 terminal tab has its precedent in `bin/launch-worktree-session`'s `osascript`
 (`:255-260`). **Web for seeing, Terminal for doing, no multiplexer** — the

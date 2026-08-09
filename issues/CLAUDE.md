@@ -124,7 +124,7 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   [soft-launch]` marks every issue that belongs to the soft-launch effort
   regardless of which category dir it lives in. Deliberately generic — reach for
   it whenever a set of issues wants a shared handle. Browsable as a facet in the
-  `dev/issues/` browser.
+  `workstreams/issues/` browser.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 
@@ -196,7 +196,7 @@ destroy it); `/finish` lands the private branch on private `main` alongside
 the public merge; unmerged private work survives any worktree removal as an
 orphan that `bin/workstreams sweep` reports until resolved. Details:
 `bin/CLAUDE.md` and `bin/private-issues help`. Private issues appear in the
-dev issues browser (`/dev/issues/`) marked `private` — that page is
+dev issues browser (`/workstreams/issues/`) marked `private` — that page is
 owner-session-gated.
 
 ## Taking on an issue (agents)

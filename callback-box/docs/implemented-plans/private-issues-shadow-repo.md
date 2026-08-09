@@ -43,7 +43,7 @@ callback-box's, one-for-one.
    (a nested repo at an ignored path: callback-box never tracks it, `git add
    -A` can't stage it — the leak guard).
 4. `/finish` couples the private merge with the public one by default.
-5. The dev issues browser (`/dev/issues/`) lists private issues alongside
+5. The dev issues browser (`/workstreams/issues/`) lists private issues alongside
    public ones.
 
 ## Location derivation (no hardcoded `~/src/`)
@@ -342,7 +342,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
   mis-classify every private record): `IssueRecord` gains
   `visibility: "public" | "private"`, keeping `relPath` **issue-relative**
   (`bugs/2026-08-01-foo.md`) for both sources; only URLs carry the
-  `private/` prefix (`/<name>/dev/issues/private/bugs/…`), added/stripped at
+  `private/` prefix (`/workstreams/issues/private/bugs/…`), added/stripped at
   the routing layer. Enumeration and overlay stay restricted to recognized
   category dirs (which also keeps the private README and other root files
   out); content/diff roots are parameterized per source instead of the
@@ -381,7 +381,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
   if any markdown link target (inline or reference-style), after posix
   normalization of the relative path, contains a `private-issues/` path
   segment — covering `private-issues/…`, `../private-issues/…`,
-  root-relative forms, and `/dev/issues/private/…` browser URLs. With tests
+  root-relative forms, and `/workstreams/issues/private/…` browser URLs. With tests
   (both directions: each forbidden form errors; private-issues *mentioned in
   prose* stays legal).
 
