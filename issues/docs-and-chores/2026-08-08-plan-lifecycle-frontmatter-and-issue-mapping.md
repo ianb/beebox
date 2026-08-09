@@ -1,7 +1,7 @@
 ---
 title: "Plans need frontmatter and a mapping from incomplete plans to issues"
 area: process
-needs: [design]
+design: ../../callback-box/docs/plans/workstreams.md
 labels: [plans, issues, worktrees]
 ---
 
