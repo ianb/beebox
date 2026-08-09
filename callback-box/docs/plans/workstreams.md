@@ -565,9 +565,11 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   the blast-radius bound, and all worktree frontend code is owner-authored.
   The escalation path if that trust assumption weakens (running
   third-party branches): move `/workstreams/` to its own port/origin, which the
-  one-file `router-workstreams.ts` seam keeps cheap. This acceptance is a
-  boxholder decision to confirm before implementation, recorded here so
-  it is a choice, not a default.
+  one-file `router-workstreams.ts` seam keeps cheap. **Accepted by the
+  boxholder, 2026-08-09**: the router is only ever exposed on localhost or
+  the owner's tailnet, both trusted-device surfaces; the acceptance covers
+  every `/workstreams/action/*` verb including `confirm-tested`'s
+  commit-to-main.
 - **The workstream detail page — `/workstreams/<name>/` — is the
   integration hub.** Everything about a workstream joins here (boxholder
   requirement: issues and plans fully integrated): registry + git + runtime
