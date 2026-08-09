@@ -6,11 +6,14 @@ discovered-in: main session — boxholder report
 needs: [manual-testing]
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in worktree
-> `first-message-redirect` (ChatPage assignment latch). To try: start a new
-> chat, send a first message, and watch the bubble as the URL flips from
-> `?session=new` to the assigned id — it must stay visible continuously
-> through the redirect and the agent's turn. Only Ian clears this.
+> **⏳ Awaiting manual testing** — fix landed in `8acadb78` (ChatPage
+> assignment latch). To try: (1) start a new chat, send a first message, and
+> watch the bubble as the URL flips from `?session=new` to the assigned id —
+> it must stay visible continuously through the redirect and the agent's
+> turn; (2) turn the mic on and SPEAK the first message into a new session —
+> the mic must stay live across the assignment (the remount this fixes also
+> tore down `useChatVoice`, which read as "page reloaded, mic off"; boxholder
+> report 2026-08-09). Only Ian clears this.
 
 ## Root cause + fix (2026-08-09)
 
