@@ -40,6 +40,15 @@ export interface ChatBackendStartOptions {
   /** Pin to a specific model; omit for SDK default. */
   model?: string | undefined;
   /**
+   * The built-in tools available to the session (the SDK's `tools` option).
+   * Omit for the SDK default (all of them). This is availability, not
+   * permission: `allowedTools` only pre-approves permission prompts, which
+   * `bypassPermissions` never raises, so it would not restrict anything. Box
+   * chat sessions leave this unset; the field-test operator sets it so its
+   * "browser only" boundary is enforced by the SDK, not only by instruction.
+   */
+  tools?: string[] | undefined;
+  /**
    * If true, the SDK emits `stream_event` (`SDKPartialAssistantMessage`)
    * messages as the model streams its response. Off by default to keep
    * the message rate low.

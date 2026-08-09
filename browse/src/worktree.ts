@@ -35,8 +35,57 @@ export function detectWorktreeContext(): WorktreeContext {
   if (!Number.isFinite(port) || port <= 0) {
     throw new BrowseConfigError(`ROUTER_PORT is not a valid port: ${String(portStr)}`);
   }
-  const routerBase = `http://localhost:${String(port)}/${worktree}/${box}`;
+  const routerBase = resolveBase({ port, worktree, box });
   return { repoDir, worktree, box, port, routerBase };
+}
+
+/**
+ * The base every `/`-leading path is rewritten onto, and the ONLY origin the
+ * browse key is attached to (`isOwnOrigin` below is defined against it).
+ *
+ * `BROWSE_BASE_URL` replaces the router-derived default outright, for drivers
+ * that own their own server instead of going through the shared dev router —
+ * callback-box's field-test harness (`docs/plans/agent-field-tests.md`,
+ * Track 2) starts a dedicated `cb serve` on a free port and points browse at
+ * `http://127.0.0.1:<port>/<box>`. Without it, `bin/browse open /` would drive
+ * the router's `test1` instead: the wrong box, silently.
+ *
+ * Both properties move together deliberately. Rewriting paths to the run
+ * server while still scoping the cookie to the router origin would land every
+ * navigation on the login page, and scoping the cookie to a base the rewrite
+ * doesn't use would leak the key to an origin nobody navigated to.
+ *
+ * Unset (the normal case) is byte-for-byte the previous behavior.
+ */
+function resolveBase({ port, worktree, box }: { port: number; worktree: string; box: string }): string {
+  const override = process.env["BROWSE_BASE_URL"];
+  if (override === undefined || override === "") {
+    return `http://localhost:${String(port)}/${worktree}/${box}`;
+  }
+  // Parsed, not prefix-checked. `isOwnOrigin` below is a string-prefix test,
+  // so a value the eye reads as one host but the browser resolves as another
+  // would attach the browse key to that other host: `http://localhost:1234@x`
+  // has origin `x`, yet every rewritten URL starts with the configured base
+  // and would pass the own-origin test. Rejecting userinfo (and rebuilding
+  // from the parsed parts) closes that.
+  let parsed: URL;
+  try {
+    parsed = new URL(override);
+  } catch (_e) {
+    throw new BrowseConfigError(`BROWSE_BASE_URL is not a valid URL: ${override}`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new BrowseConfigError(`BROWSE_BASE_URL must be http(s): ${override}`);
+  }
+  if (parsed.username !== "" || parsed.password !== "") {
+    throw new BrowseConfigError(`BROWSE_BASE_URL must not carry credentials: ${override}`);
+  }
+  if (parsed.search !== "" || parsed.hash !== "") {
+    throw new BrowseConfigError(`BROWSE_BASE_URL must be an origin plus optional path only: ${override}`);
+  }
+  // A trailing slash would make every rewritten path double-slashed and every
+  // own-origin check miss (`base + "/foo"` vs `base + "//foo"`).
+  return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
 }
 
 export function rewriteOpenUrl(url: string, ctx: WorktreeContext): string {

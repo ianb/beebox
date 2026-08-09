@@ -3,6 +3,7 @@ import { withBase } from "../../api";
 import { trpc } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { CheckboxField, TextField } from "../ui/fields";
@@ -92,13 +93,15 @@ export function InviteSection() {
           {inviteUrl ? (
             <Card background="warm" border="subtle" padding="sm">
               <Stack gap="sm">
-                <Text mono breakAll size="sm">{inviteUrl}</Text>
-                <Text size="xs" tone="muted">
-                  Expires {expiresAt === null ? "soon" : new Date(expiresAt).toLocaleTimeString()}
-                </Text>
-                <Button type="button" intent="secondary" onClick={copy} flash={{ label: "Copied" }}>
-                  Copy link
-                </Button>
+                <Text as="div" mono breakAll size="sm">{inviteUrl}</Text>
+                <Row justify="between" wrap>
+                  <Text size="xs" tone="muted">
+                    Expires {expiresAt === null ? "soon" : new Date(expiresAt).toLocaleTimeString()}
+                  </Text>
+                  <Button type="button" intent="secondary" onClick={copy} flash={{ label: "Copied" }}>
+                    Copy link
+                  </Button>
+                </Row>
               </Stack>
             </Card>
           ) : null}

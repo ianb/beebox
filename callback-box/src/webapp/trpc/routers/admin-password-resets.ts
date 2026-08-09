@@ -9,7 +9,7 @@ import {
 } from "../../auth-capabilities.js";
 import { normalizeAllowedEmails } from "../../box-config-write.js";
 import { loadBoxConfig } from "../../../core/box/config.js";
-import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
+import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { ownerProcedure } from "../trpc.js";
 
 export const passwordResetAdminProcedures = {
@@ -20,13 +20,6 @@ export const passwordResetAdminProcedures = {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "A signed-in owner is required." });
       }
       const currentEmail = canonicalizeEmail(ctx.user.email);
-      const localOwner = getLocalOwnerEmail();
-      if (!localOwner || canonicalizeEmail(localOwner) !== currentEmail) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Initialize the matching local owner account before creating password resets.",
-        });
-      }
       const email = canonicalizeEmail(input.email);
       const user = getLocalUser(email);
       const config = await loadBoxConfig(ctx.boxRoot);

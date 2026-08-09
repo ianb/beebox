@@ -1,0 +1,43 @@
+---
+title: "Card views cannot scroll — content below the fold is unreachable in all three views"
+area: callback-box
+filed-by: agent
+discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
+labels: [soft-launch, field-test-findings, ui-error]
+---
+
+A recipe card longer than the viewport is unreadable: the view cuts off (in the
+prototype: right after the third ingredient) and no scroll input moves it. The
+failure is identical in all three surfaces that render a card:
+
+1. the chat side panel (card opened from a chat link),
+2. the browse page (`/<box>/browse/<path>`, with the file sidebar),
+3. the full card view ("Open full view →", the `?view=` page).
+
+Mouse wheel, `PageDown`, and `End` all do nothing. This blocks the core "saved
+it, now read it" loop — the field-test operator could not read its own recipe
+and had to ask chat to recite the ingredients.
+
+## Diagnosis so far
+
+On the browse view of a `.recipe.card`:
+
+- `document.documentElement.scrollHeight === window.innerHeight` — the window
+  itself has nothing to scroll (expected; app is a fixed shell).
+- The card content lives in a `div.flex.flex-col.items-stretch.overflow-auto.flex-1`
+  with `scrollHeight 1304` vs `clientHeight 523` and `overflow-y: auto` — it
+  SHOULD scroll.
+- **Programmatic `el.scrollTop = 500` immediately reads back `0`.** Something
+  resets or prevents the scroll position (re-render? a scroll-lock handler? a
+  zero-height ancestor making the browser treat it as unscrollable despite the
+  computed style?). This is why keyboard and wheel fail too — it is not an
+  input-routing problem.
+
+Repro: any box; save a card whose rendered body exceeds the viewport; open it
+in any of the three views; try to scroll. Likely home: the shared card/file
+renderer container (`src/frontend/` — FileView / renderers), since all three
+views fail identically at the same pixel.
+
+Related: the "Open full view →" link and the pop-out icon both present
+themselves as the escape from the cramped panel and inherit the same bug —
+worth a regression test that a long card is fully reachable in each view.

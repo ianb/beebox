@@ -4,7 +4,7 @@ import { AuthStoreUnavailableError } from "../../local-users-errors.js";
 import { listUsers, type LocalUser } from "../../local-users.js";
 
 type AllowedUserKind = "local-member" | "local-owner" | "owner-entry" | "access-only" | "unknown";
-type LocalPasswordStatus = "ready" | "not-initialized" | "owner-mismatch" | "unavailable";
+type LocalPasswordStatus = "ready" | "unavailable";
 
 interface AllowedUserDetail {
   email: string;
@@ -15,7 +15,6 @@ interface AllowedUserDetail {
 export function describeAllowedUsers(options: {
   allowedEmails: string[];
   configuredOwnerEmail: string | null;
-  signedInEmail: string | null;
 }): {
   allowedUserDetails: AllowedUserDetail[];
   localPasswordStatus: LocalPasswordStatus;
@@ -31,11 +30,7 @@ export function describeAllowedUsers(options: {
   }
   const localOwnerEmail = localUsers?.find((user) => user.role === "owner")?.email ?? null;
   const ownerEmail = options.configuredOwnerEmail ?? localOwnerEmail;
-  let localPasswordStatus: LocalPasswordStatus;
-  if (localUsers === null) localPasswordStatus = "unavailable";
-  else if (localOwnerEmail === null) localPasswordStatus = "not-initialized";
-  else if (options.signedInEmail !== localOwnerEmail) localPasswordStatus = "owner-mismatch";
-  else localPasswordStatus = "ready";
+  const localPasswordStatus: LocalPasswordStatus = localUsers === null ? "unavailable" : "ready";
   const localUsersByEmail = new Map(localUsers?.map((user) => [user.email, user]));
   const allowedUserDetails: AllowedUserDetail[] = options.allowedEmails.map((email) => {
     const localUser = localUsersByEmail.get(email);

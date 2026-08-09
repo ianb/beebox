@@ -10,6 +10,8 @@ Thin wrapper around the upstream [`agent-browser`](https://github.com/vercel-lab
 
 Cheat sheet: [`.claude/skills/browse/SKILL.md`](../.claude/skills/browse/SKILL.md).
 
+**`BROWSE_BASE_URL`** overrides the router-derived base for a driver that owns its own server instead of going through the shared dev router (callback-box's field-test harness starts a dedicated `cb serve` on a free port). It moves both the `/`-leading path rewrite and the browse-key cookie's origin scope, so `BROWSE_BASE_URL=http://127.0.0.1:4711/box bin/browse open /` drives that server's box, authenticated, and sends the key nowhere else. Unset (normal use) changes nothing.
+
 ## Layout
 
 ```

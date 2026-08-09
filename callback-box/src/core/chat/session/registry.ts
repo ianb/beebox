@@ -148,13 +148,17 @@ export class ChatSessionRegistry extends EventEmitter {
     return this.entries.size;
   }
 
+  /** Running/busy snapshot of every session held — entries plus the pre-id
+   *  `pending` ones, which a single-session `status` query cannot name. Touches
+   *  nothing: an observer that kept sessions warm would change what it measures. */
+  snapshotAll(): { sessionId: string | null; running: boolean; busy: boolean }[] {
+    const held = [...[...this.entries.values()].map((e) => e.session), ...this.pending];
+    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy() }));
+  }
+
   /** Number of entries with a live subprocess. */
   liveCount(): number {
-    let n = 0;
-    for (const e of this.entries.values()) {
-      if (e.session.isRunning()) n += 1;
-    }
-    return n;
+    return [...this.entries.values()].filter((e) => e.session.isRunning()).length;
   }
 
   /**

@@ -15,7 +15,7 @@ import { getOwnerEmail } from "../auth.js";
 import { grantBoxAccess, normalizeAllowedEmails } from "../box-config-write.js";
 import { loadBoxConfig } from "../../core/box/config.js";
 import { renderInvitePage, renderInvitePartialPage, renderInviteUnavailablePage } from "../invite-page.js";
-import { addUserWithPasswordHash, canonicalizeEmail, listUsers } from "../local-users.js";
+import { addInvitedMemberWithPasswordHash, canonicalizeEmail, listUsers } from "../local-users.js";
 import { hashPassword } from "../local-users-scrypt.js";
 import { resetLocalUserCache } from "../local-users-cache.js";
 import { loginThrottle } from "../login-throttle.js";
@@ -173,8 +173,10 @@ async function acceptInvite(options: {
 
   try {
     const scrypt = await hashPassword(fields.password);
+    const ownerEmail = getOwnerEmail();
+    if (!ownerEmail) return storeUnavailable(reply);
     const stillClaimable = inspected.invite.email
-      ? email !== getOwnerEmail() && !listUsers().some((user) => user.email === email)
+      ? email !== ownerEmail && !listUsers().some((user) => user.email === email)
       : await openEmailIsClaimable({ boxes, email });
     if (!stillClaimable) return genericFailure({ reply, prefix, token });
     let consumed;
@@ -187,7 +189,7 @@ async function acceptInvite(options: {
     if (consumed.status !== "consumed") {
       return responseHeaders(reply).status(410).type("text/html").send(renderInviteUnavailablePage());
     }
-    const member = await addUserWithPasswordHash({ email, name: fields.name, role: "member", scrypt });
+    const member = await addInvitedMemberWithPasswordHash({ email, name: fields.name, scrypt });
     resetLocalUserCache();
     let grant;
     try {

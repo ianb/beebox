@@ -4,7 +4,18 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, soft-launch confidence
 labels: [soft-launch]
+resolution: implemented
 ---
+
+> **Closed 2026-08-08.** Built end-to-end in
+> `docs/implemented-plans/agent-field-tests.md`: the `cb field-test run|list|report`
+> harness, an agent operator driving the real web UI (`bin/browse`) against a
+> fresh box with real agent processing, and a first full real
+> `onboarding-first-days` run completed (all 6 checklist items, 2h 8m, 3
+> simulated days). The run's product/harness findings are filed separately as
+> `field-test-findings`-labeled issues, not fixed here — that's the tier doing
+> its job. `issues/features/2026-07-22-modeled-demo-family-box.md` stays open
+> (deferred; v1 starts from an empty box).
 
 > **Job to be done:** *Before I show a box to people, I want confidence that the
 > real end-to-end flows actually work — not unit tests, but a person's actual
@@ -35,7 +46,7 @@ mundane flows a real user does. Each is exercised through the real UI + the agen
   intake deterministically).
 - **Fake personas for the user(s)** — CREATE, or revive/reuse what exists. This ties
   directly to
-  [modeled-demo-family-box](2026-07-22-modeled-demo-family-box.md): the fictional
+  [modeled-demo-family-box](../../features/2026-07-22-modeled-demo-family-box.md): the fictional
   family is the personas + the realistic starting data these tests act as / act on.
 - **Box lifecycle** — create a fresh box, seed personas/data, run the activities,
   interact with it (browser + CLI), tear it down.
@@ -64,8 +75,8 @@ mundane flows a real user does. Each is exercised through the real UI + the agen
 
 ## Related
 
-- [modeled-demo-family-box](2026-07-22-modeled-demo-family-box.md) — the personas +
+- [modeled-demo-family-box](../../features/2026-07-22-modeled-demo-family-box.md) — the personas +
   realistic data (create-or-revive); the natural fixture source for this.
-- [demo-readiness](../docs-and-chores/2026-05-22-demo-readiness.md) — adjacent
+- [demo-readiness](../../docs-and-chores/2026-05-22-demo-readiness.md) — adjacent
   demo-prep chore.
 - `docs/testing.md` — the scenario/doctest tiers this sits above.

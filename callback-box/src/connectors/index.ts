@@ -51,6 +51,23 @@ export interface ConnectorProcedureTrigger {
   directive: string;
 }
 
+/**
+ * A connector MISCONFIGURATION, as opposed to a sync that failed.
+ *
+ * The wakeup connector loop deliberately absorbs sync failures — one flaky
+ * service should not stop the cycle — but that absorbing is wrong for a
+ * configuration that must never run at all (the `CB_FAKE_GMAIL` gate is the
+ * first case: fake mail aimed at a real box). Throwing this subclass instead
+ * makes the loop rethrow, so the wakeup aborts rather than printing a line and
+ * carrying on into intake, the reactor and push.
+ */
+export class ConnectorFatalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConnectorFatalError";
+  }
+}
+
 const registry = new Map<string, Connector>();
 
 export function registerConnector(connector: Connector): void {
