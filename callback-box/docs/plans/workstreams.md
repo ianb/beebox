@@ -455,6 +455,10 @@ bin/workstreams close  <name> [--force]
   merged+clean (same `wt_work_state` gates as `remove`; `--force` overrides
   those two, never liveness-unknown). Mechanism: AppleScript `close` on the
   tab found by tty (Terminal.app prompts if the process resists; acceptable).
+  **Implementation correction, verified 2026-08-09:** Terminal tabs do not
+  implement AppleScript's `close` command (`-1708`). The adapter instead
+  selects the tty-matched tab and sends Terminal's native Cmd-W through System
+  Events, which preserves the same busy-process confirmation behavior.
   The agent process ends → the existing SessionEnd hook / next sweep culls
   the worktree through the already-shipped path. `close` adds **no new
   removal logic** — it ends the session and lets the existing lifecycle

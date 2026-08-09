@@ -14,6 +14,9 @@
 #                      dirty, or an agent is live in it. --force overrides the
 #                      first two; nothing overrides the liveness check.
 #                      --keep-branch keeps the branch, --dry-run just reports.
+#   focus <name>       Bring a live workstream's Terminal tab to the front.
+#   close <name>       Close a merged, clean workstream's live Terminal tab.
+#                      --force overrides merged/clean, never liveness safety.
 #   list [--json]      Every worktree, joined across all three signals: git
 #                      (ahead/dirty/merged), the router (cold/ready/ports), and
 #                      agent liveness (none/live/unknown). Works with no router
@@ -146,6 +149,79 @@ case "$cmd" in
     else
       wt_remove_now "$target" "$WT_BRANCH"
     fi
+    ;;
+
+  focus)
+    name="${1:-}"
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    if [ $# -ne 1 ] || ! wt_paths_valid_name "$name"; then
+      echo "usage: workstreams focus <name>" >&2
+      exit 1
+    fi
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    # shellcheck source=lib/terminal-tabs.sh
+    . "$REPO_DIR/bin/lib/terminal-tabs.sh"
+    record=$(session_registry_read "$name" || true)
+    tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
+    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path"; then
+      echo "workstreams focus: no live session for $name — use resume" >&2
+      exit 1
+    fi
+    terminal_focus_tty "$tty_path" || {
+      echo "workstreams focus: Terminal has no tab for $name at $tty_path — use resume" >&2
+      exit 1
+    }
+    ;;
+
+  close)
+    name=""
+    force=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --force) force=true; shift ;;
+        -*) echo "workstreams close: unknown option $1" >&2; exit 1 ;;
+        *) [ -z "$name" ] || { echo "workstreams close: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+      esac
+    done
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ -n "$name" ] && wt_paths_valid_name "$name" || {
+      echo "usage: workstreams close <name> [--force]" >&2
+      exit 1
+    }
+    target="$WT_ROOT/$name"
+    [ -d "$target" ] || { echo "workstreams close: no worktree at $target" >&2; exit 1; }
+
+    wt_other_agent_live "$target"
+    case "$WT_AGENT_STATE" in
+      live) ;;
+      none) echo "workstreams close: no live session for $name — use resume" >&2; exit 1 ;;
+      *) echo "workstreams close: liveness unknown ($WT_AGENT_REASON) — refusing" >&2; exit 1 ;;
+    esac
+    wt_work_state "$target"
+    if [ "$force" = false ] && { [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; }; then
+      echo "workstreams close: refusing $name (ahead=$WT_AHEAD dirty=$WT_DIRTY); pass --force to close anyway" >&2
+      exit 1
+    fi
+
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    # shellcheck source=lib/terminal-tabs.sh
+    . "$REPO_DIR/bin/lib/terminal-tabs.sh"
+    record=$(session_registry_read "$name" || true)
+    tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
+    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path"; then
+      echo "workstreams close: registry tty is stale for $name — refusing" >&2
+      exit 1
+    fi
+    terminal_close_tty "$tty_path" || {
+      echo "workstreams close: could not close Terminal tab $tty_path" >&2
+      exit 1
+    }
     ;;
 
   serve)
