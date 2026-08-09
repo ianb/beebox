@@ -23,3 +23,30 @@ walk? search-index rebuild? git operation on the box?), whether it correlates
 with the chat session pool, and whether anything landed in the box's
 `.callback-box/` logs. The field-test harness (agent-field-tests plan) will
 surface this class of stall as a harness event if it recurs in runs.
+
+Note: a stall long enough would starve the WS ping/pong watchdog
+(`server-box-scope.ts` `keepAlive: pingMs 30s / pongWaitMs 5s`) and close live
+sockets — which made this a suspect for the (now-fixed-by-watchdog)
+[chat-status-lies-after-completion](../closed/bugs/2026-08-08-chat-status-lies-after-completion.md)
+finding, same environment.
+
+## Research (2026-08-09)
+
+Candidate request-path stall sites collected while investigating the stuck
+chat status (flagged by code reading, none traced end-to-end or measured —
+that's the next step when this recurs):
+
+- `src/webapp/trpc/routers/landmarks.ts` — `landmarks.list` runs a full-box
+  `glob("**/*.landmark.card")` on every call, no caching; rapid navigation to
+  the landmarks page re-walks the tree each time.
+- `src/core/nav-counts.ts` — `fs.readdir(dir, { recursive: true })` (async
+  but a full recursive box walk) backs `navStatus`, "the one query every page
+  mounts" — fires on every page load.
+- `src/webapp/trpc/routers/status.ts` (`browse`) — per-directory recursive
+  `readdir` for attachment counts; potentially O(dirs) recursive walks per
+  single call.
+- `src/webapp/trpc/routers/status.ts` (`activity`) + `src/lib/git.ts`
+  `getLog` — git-log on the request path; check whether it shells out
+  synchronously.
+- `src/core/commands/wakeup.ts` — `execSync("which cb", ...)`, a synchronous
+  subprocess spawn; check reachability from any route handler.
