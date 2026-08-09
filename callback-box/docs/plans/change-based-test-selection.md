@@ -359,12 +359,12 @@ worktree, so one ledger serves them all.
 ```jsonc
 { "ts": "...", "commit": "...", "branch": "...", "treeHash": "...",
   "mode": "full",                              // or "selected"
-  "ranFiles": "sha256:ab12…",                  // key into the sidecar manifest
-  "selected": "sha256:cd34…",                  // what the shipped rule would run
-  "implicated": "sha256:ef56…",                // the counterfactual — see below
+  "accounted": true,                           // could the graph place every changed path?
   "changed": ["callback-box/src/..."],
+  "ranFiles": "sha256:ab12…",                  // key into the sidecar manifest
+  "implicated": "sha256:ef56…",                // what the graph alone points at
   "durations": { "test/webapp/routes/scan-upload.doctest.md": 58177 },
-  "failures": ["test/webapp/routes/scan-upload.doctest.md"] }
+  "failures": [{ "file": "test/...", "class": "attached" }] }
 ```
 
 **`ranFiles` is recorded exactly, not implied.** An earlier draft stored no file
@@ -376,31 +376,31 @@ across renames. File lists are stored as a content hash into a sidecar
 `{hash: [files]}` manifest — the entrypoint set changes rarely, so the manifest
 stays small while every record carries an exact, rename-proof membership set.
 
-**Two selections are recorded, and the second is the point.** `selected` is what
-the shipped rule would run — which escapes to the full suite whenever any changed
-path is unaccounted. `implicated` is the counterfactual: what the graph alone
-points at, *ignoring* that escape.
+**Record the graph's opinion, not a policy's.** `implicated` is what the graph
+alone points at, and `accounted` is whether it could place every changed path.
+Neither depends on the selector, which is why the ledger can land before it.
 
-Recording only `selected` would leave the ledger unable to learn the thing it
-exists to learn. On a branch that goes `FULL` the selection is everything, so no
-failure could ever be classified missed — and `FULL` branches are 75% of them,
-the exact population in question. `implicated` is computable on every run
-regardless of mode, and it answers the boxholder's actual question: **if we
-stopped running the whole suite for changes to code no test imports, what would
-we have missed?**
-
-**Classification, all mechanical.** Per failing file, computed from the record —
-no agent judgement, so nothing varies between sessions:
+An earlier draft recorded what the *shipped selection rule* would have run and
+classified failures as `attached` / `missed` / `covered-only-by-policy`. Two
+problems, both found while building it. The classes overlap — on a `FULL` run
+every unimplicated failure is simultaneously "not selected by the graph" and
+"selected by policy", so the same failure satisfies two definitions. And a
+recorded fact that encodes a policy goes stale the moment the policy changes,
+which it is expected to. So the record holds facts and `report` applies
+policies:
 
 - **attached** — the file is in `implicated`. The graph explains the failure.
-- **missed** — the file is not in `implicated`. Nothing pointed at it and it
-  failed anyway. **This is the number that decides selection's future.**
-- **covered-only-by-policy** — not in `implicated`, but in `selected` because the
-  run escaped to `FULL`, or because it is in `alwaysRun` / `unresolved` / is a
-  changed test entrypoint. Selected without a graph explanation; conflating these
-  with `attached` would flatter the graph.
+- **unimplicated** — it is not. Nothing in the graph pointed at it and it failed
+  anyway. **This is the number that decides selection's future.**
 - **unknown** — the diff or the graph could not be computed. Never silently
-  folded into any of the others.
+  folded into either of the others.
+
+From those plus `accounted`, `report` answers both policy questions without
+re-running anything: a conservative rule (unaccounted → full suite) would have
+missed only the unimplicated failures on *accounted* runs, while the aggressive
+rule the boxholder favours would have missed every unimplicated failure not in
+`alwaysRun`. Recording the primitive rather than the verdict is what keeps both
+answerable.
 
 **Flakiness is derived from the ledger, not adjudicated by an agent.** An earlier
 draft delegated it to `/finish`'s tracked-flake protocol
@@ -588,9 +588,10 @@ time.
    `resolve-rules` extraction from `doctest-hooks.mjs`, with `agent-doctest`'s
    suite green afterwards. Needed by the ledger for `implicated`.
 2. **Track 5a** — the ledger: the `--output-file` capture, the sidecar manifest,
-   both selections, mechanical classification, and `report`. Wired to `pnpm test`
-   while **every run is still a full run**, so it collects clean ground truth
-   before anything narrows.
+   `implicated` + `accounted`, mechanical classification, and `report`. Wired to
+   `pnpm test` while **every run is still a full run**, so it collects clean
+   ground truth before anything narrows. **Landed 2026-08-09** (`bin/test-ledger.ts`,
+   `bin/test-ledger-lib.ts`); not yet wired into `pnpm test` itself.
 3. **First full green run on a quiet machine** — the owed baseline, and the
    ledger's first records. From here it accumulates continuously.
 4. **Track 3** — the four precision guards. 3c generates the `alwaysRun` list and

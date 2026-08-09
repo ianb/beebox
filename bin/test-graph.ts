@@ -26,6 +26,7 @@ import { globSync } from "node:fs";
 import { relative, resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { candidateFiles, isRelative } from "../agent-doctest/src/resolve-rules.mjs";
+import type { TestGraph } from "./test-graph-query.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "..");
 const PACKAGE_ROOT = join(REPO_ROOT, "callback-box");
@@ -74,18 +75,6 @@ export function callbackBoxConfig(): GraphConfig {
     aliases: CALLBACK_BOX_ALIASES,
     entrypoints: testEntrypoints(PACKAGE_ROOT),
   };
-}
-
-export interface TestGraph {
-  /** repo-relative test entrypoint -> repo-relative files it transitively imports */
-  tests: Map<string, Set<string>>;
-  /** every repo file appearing anywhere in the graph */
-  universe: Set<string>;
-  /** entrypoints esbuild could not fully resolve — callers must always run these */
-  unresolved: Set<string>;
-  /** how many specifiers had more than one candidate (all were kept as edges) */
-  ambiguousEdges: number;
-  buildMs: number;
 }
 
 interface GraphInternals {
@@ -283,7 +272,11 @@ async function main(): Promise<void> {
       .sort();
     if (importers.length === 0) {
       console.log(`no test imports ${needle}`);
-      console.log(graph.universe.has(needle) ? "(it is in the graph, but only as a leaf)" : "(it is not in the graph at all)");
+      console.log(
+        graph.universe.has(needle)
+          ? "(it is in the graph, but only as a leaf)"
+          : "(it is not in the graph at all)",
+      );
       return;
     }
     for (const importer of importers) console.log(importer);
