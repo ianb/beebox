@@ -32,6 +32,6 @@ agent's guidance should tell it to explain-or-avoid box jargon when talking to
 the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
 the filename-as-heading on card views.
 
-Related: [first-run-experience](2026-07-20-first-run-experience.md) (the
+Related: [first-run-experience](../features/2026-07-20-first-run-experience.md) (the
 surrounding "explains nothing" tension);
 [day-to-day-usage-docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md).

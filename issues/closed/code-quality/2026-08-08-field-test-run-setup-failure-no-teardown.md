@@ -3,7 +3,15 @@ title: Field-test run setup failure between server start and the try/finally lea
 filed-by: agent
 discovered-in: worktree integration-tests — implementing Track 5 (reporting) of docs/implemented-plans/agent-field-tests.md, cross-model review
 labels: [field-test-findings, harness]
+resolution: implemented
 ---
+
+> **Resolved** in `9d87ed87`: the system-prompt write and operator-session
+> startup moved inside the `try`, the operator handle is guarded in `finally`,
+> and a setup-phase throw is recorded as an abort with a null item id. A
+> regression test drives a backend whose `start()` throws and asserts the
+> server is stopped and `results.json` + `report.md` are written.
+
 
 `runFieldScenario` (`callback-box/src/field-test/run.ts`) starts the dedicated
 server, writes the operator's system prompt, and calls `startOperatorSession()`
