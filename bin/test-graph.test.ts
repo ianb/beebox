@@ -10,7 +10,8 @@ import { test } from "node:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { buildGraphFrom, testEntrypoints, type GraphConfig, type TestGraph } from "./test-graph.js";
+import { buildGraphFrom, testEntrypoints, type GraphConfig } from "./test-graph.js";
+import { scopedChanges, type TestGraph } from "./test-graph-query.js";
 
 interface Fixture {
   root: string;
@@ -127,8 +128,18 @@ test("an ambiguous specifier yields BOTH candidates as edges", async () => {
     },
     (graph) => {
       assert.ok(graph.ambiguousEdges > 0, "expected the ambiguity to be counted");
-      assert.ok(graph.universe.has("pkg/src/pick.ts"), "the chosen candidate is an edge");
-      assert.ok(graph.universe.has("pkg/src/pick.tsx"), "the OTHER candidate is also an edge");
+      // Asserting only `universe` is what let a real bug through: extras were
+      // in `universe` (so `isAccounted` said yes) but in no test's deps (so
+      // `implicatedTests` selected nothing) — a change to the extra candidate
+      // would have looked understood and run almost nothing. Assert BOTH, and
+      // assert implication, which is what actually gets used.
+      assert.deepEqual(depsOf(graph, "test/a.doctest.md"), [
+        "src/pick.ts",
+        "src/pick.tsx",
+        "test/a.doctest.md",
+      ]);
+      assert.ok(graph.universe.has("pkg/src/pick.ts"));
+      assert.ok(graph.universe.has("pkg/src/pick.tsx"));
     },
   );
 });
@@ -170,6 +181,43 @@ test("the @shared alias resolves, and only the configured prefix does", async ()
       assert.deepEqual(depsOf(graph, "test/a.doctest.md"), ["src/shared/thing.ts", "test/a.doctest.md"]);
     },
   );
+});
+
+// ── scope ───────────────────────────────────────────────────────────────────
+
+test("paths outside callback-box cannot make a change unaccounted", () => {
+  // /finish routes bin/, issues/, ios-app/ etc. to their own verification.
+  // Treating them as unaccounted here would send almost every branch to the
+  // full suite for reasons that have nothing to do with this suite.
+  assert.deepEqual(
+    scopedChanges([
+      "bin/test-graph.ts",
+      "issues/bugs/x.md",
+      "ios-app/App.swift",
+      "research/notes.md",
+      "callback-box/src/core/box.ts",
+    ]),
+    ["callback-box/src/core/box.ts"],
+  );
+});
+
+test("prose markdown is out of scope, but a .doctest.md is not", () => {
+  // Load-bearing: counting prose drops the accounted rate from 63% to 27%.
+  // Safe only because no doctest reads the repo's own prose — doc-check does,
+  // and it is a pre-commit hook outside tap.
+  assert.deepEqual(
+    scopedChanges([
+      "callback-box/docs/testing.md",
+      "callback-box/SECURITY.md",
+      "callback-box/src/services/CLAUDE.md",
+      "callback-box/test/core/box.doctest.md",
+    ]),
+    ["callback-box/test/core/box.doctest.md"],
+  );
+});
+
+test("dependency manifests stay in scope", () => {
+  assert.deepEqual(scopedChanges(["package.json", "pnpm-lock.yaml"]), ["package.json", "pnpm-lock.yaml"]);
 });
 
 test("test/manual is excluded, mirroring .taprc", async () => {

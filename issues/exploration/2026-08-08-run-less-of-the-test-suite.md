@@ -780,6 +780,22 @@ Two caveats, both of which make 25% an **upper** bound:
   the tap suite. Counting it as unaccounted instead would drop the per-commit
   accounted rate from 63% to 27%.
 
+### Correction (2026-08-09): treat 25% as provisional
+
+While reading the quiet-run per-file timings, `callback-box/test/field-test/`
+turned out to be a live directory whose five doctests are graph entrypoints —
+one of them, `run.doctest.md`, is the single most expensive file in the suite.
+An earlier session note called that directory deleted, which was a
+path-resolution mistake by the agent, not a fact about the tree.
+
+The replay script itself resolved existence correctly (it tested full
+repo-relative paths), so the blame table above is not known to be wrong. But
+the mistake was load-bearing in how the result was *explained*, and no one has
+re-checked the classifier since. **Re-derive the accounted rate before anyone
+relies on 25% for a decision.** That is now cheap: `bin/test-graph` ships the
+graph and `bin/test-graph-query` the accounted/implicated rules, so the replay
+is a short script over merge commits rather than a bespoke spike.
+
 ### Salvage
 
 The graph builder works and takes 1.8 s. Even with selection shelved, "which
@@ -808,3 +824,28 @@ full suite, so the ledger always has ground truth at the merge boundary.
 
 The measurement above stands as recorded. It is the reason the plan's centre of
 gravity moved from the speedup to the instrument.
+
+## Quiet-machine green baseline (2026-08-09) — the measurement this issue owed
+
+The `## Research (2026-08-08)` section above closes by saying "The strongest next
+measurement is a green full run on a quiet machine". It now exists.
+
+**`pnpm test` in `callback-box`: 6,623 assertions, 6,623 pass, exit 0, in
+143.9 seconds** at the configured `jobs: 6`, on the same 12-core Mac.
+
+Against the loaded run in the research section — 566.5 seconds and **not** green
+(13 frontend files hit the TSX-resolution flake) — the quiet machine is
+**3.9x faster** and clean. Every ranking and share in that section was computed
+from the loaded run, so treat those per-file numbers as upper bounds inflated by
+contention, exactly as that section warns. The two are not comparable file by
+file; only the shape (a long tail, no hot spot) survives.
+
+Two consequences worth carrying forward:
+
+- **The suite is not as slow as the profiling implied.** 144 seconds is a
+  different product from 9.5 minutes, and it weakens the case for any scheme
+  whose payoff is measured against the larger number — including change-based
+  selection, whose gate already failed on other grounds.
+- **Per-file durations are now collected continuously**, not by hand. The test
+  ledger (`bin/test-ledger.ts`) records them on every run, so the per-file cost
+  floor issue no longer needs a bespoke profiling exercise to get its data.
