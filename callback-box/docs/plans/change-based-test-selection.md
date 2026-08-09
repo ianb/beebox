@@ -1,4 +1,4 @@
-**Status:** proposed 2026-08-09, measurement done, Track 1 landed 2026-08-09 (`bin/test-graph.ts` + the `resolve-rules` extraction); Tracks 2-5 not started
+**Status:** partially implemented 2026-08-09. Track 1 landed (`bin/test-graph.ts` + the `resolve-rules` extraction) and Track 5a landed (`bin/test-ledger.ts`, `bin/test-ledger-lib.ts`, `bin/test-ledger-report.ts`, wired into `pnpm test`). Tracks 2, 3, 4 are on hold pending ledger data; Track 5b (the nightly) not started.
 
 # Test failure ledger, and change-based selection on the iteration loop
 
@@ -594,7 +594,8 @@ time.
    `implicated` + `accounted`, mechanical classification, and `report`. Wired to
    `pnpm test` while **every run is still a full run**, so it collects clean
    ground truth before anything narrows. **Landed 2026-08-09** (`bin/test-ledger.ts`,
-   `bin/test-ledger-lib.ts`); not yet wired into `pnpm test` itself.
+   `bin/test-ledger-lib.ts`), including the `pnpm test` wiring itself
+   (`callback-box/package.json`).
 3. **First full green run on a quiet machine** — the owed baseline, and the
    ledger's first records. **Done 2026-08-09: 6,623/6,623 green in 143.9s**,
    against 566.5s and not green on the loaded machine the profiling used. From
