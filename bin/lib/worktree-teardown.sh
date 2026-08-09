@@ -32,6 +32,8 @@
 # are this tool's own regenerable cache, not anybody's work.
 # shellcheck source=worktree-paths.sh
 . "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
+# shellcheck source=session-registry.sh
+. "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
   # Leave every derived location empty rather than half-set: `cd ""` and
   # `[ -d "" ]` both fail, so each destructive step declines on its own.
@@ -459,8 +461,12 @@ wt_remove_private_issues() {
 wt_remove_now() {
   local worktree_path="$1" branch="$2" keep_branch=""
   [ "${3:-}" = "--keep-branch" ] && keep_branch=1
-  local name
+  local name final_sha removed_at removed_merged removed_patch moved=false
   name=$(basename "$worktree_path")
+  final_sha=$(git -C "$worktree_path" rev-parse HEAD 2>/dev/null || true)
+  removed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  removed_merged=false
+  [ "${WT_AHEAD:-?}" = "0" ] && removed_merged=true
 
   wt_remove_private_issues "$worktree_path"
   wt_remove_satellites "$name"
@@ -471,6 +477,7 @@ wt_remove_now() {
   # Trash the worktree directory, then prune the now-dangling registration.
   if mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)" 2>/dev/null; then
     wt_say "trashed worktree $worktree_path"
+    moved=true
   fi
   git worktree prune 2>/dev/null || true
 
@@ -478,6 +485,16 @@ wt_remove_now() {
     wt_say "kept branch $branch (unmerged work; \`git worktree add\` to resume)"
   elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
     wt_say "deleted branch $branch"
+  fi
+
+  if [ "$moved" = true ]; then
+    removed_patch=$(jq -n \
+      --arg at "$removed_at" \
+      --arg finalSha "$final_sha" \
+      --argjson merged "$removed_merged" \
+      '{removed: ({at:$at, merged:$merged}
+        + if $finalSha == "" then {} else {finalSha:$finalSha} end)}')
+    session_registry_merge "$name" "$removed_patch" || true
   fi
 
   wt_trash_reap

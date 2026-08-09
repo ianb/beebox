@@ -1,0 +1,64 @@
+# Workstream cull records
+
+Removal captures the branch tip before moving the worktree away. The recorded
+SHA is sufficient to recreate the exact tree later, while a merged verdict is
+kept distinct from forced removal.
+
+```ts setup
+import { execFile } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+const repoRoot = resolve(process.cwd(), "..");
+const teardownLib = join(repoRoot, "bin/lib/worktree-teardown.sh");
+
+async function git(cwd: string, ...args: string[]) {
+  return execFileAsync("git", args, { cwd });
+}
+```
+
+## A merged removal records a recreatable final SHA
+
+```ts
+const root = await mkdtemp(join(tmpdir(), "workstream-cull-doctest-"));
+const mono = join(root, "mono");
+const worktreeRoot = join(root, "worktrees");
+const worktree = join(worktreeRoot, "cull-fixture");
+const stateDir = join(root, "state");
+await execFileAsync("mkdir", ["-p", mono, worktreeRoot]);
+await git(mono, "init", "-b", "main");
+await git(mono, "config", "user.email", "test@example.com");
+await git(mono, "config", "user.name", "Cull Test");
+await execFileAsync("bash", ["-c", 'printf content > "$1/file.txt"', "fixture", mono]);
+await git(mono, "add", "file.txt");
+await git(mono, "commit", "-m", "fixture");
+await git(mono, "worktree", "add", "-b", "worktree-cull-fixture", worktree, "main");
+const finalSha = (await git(worktree, "rev-parse", "HEAD")).stdout.trim();
+
+const removeScript = [
+  '. "$1"',
+  'WT_MONO="$2"',
+  'WT_ROOT="$3"',
+  'WT_BOX_ROOT="$4"',
+  'WT_STATE_DIR="$5"',
+  'WT_LOG_FILE="$5/worktree-cleanup.log"',
+  'WT_AHEAD=0',
+  'wt_remove_now "$6" worktree-cull-fixture',
+].join("; ");
+await execFileAsync("bash", ["-c", removeScript, "cull-test", teardownLib, mono, worktreeRoot, join(root, "boxes"), stateDir, worktree]);
+const record = JSON.parse(await readFile(join(stateDir, "workstreams/cull-fixture.json"), "utf8"));
+JSON.stringify({ finalSha: record.removed.finalSha === finalSha, merged: record.removed.merged })
+=> {"finalSha":true,"merged":true}
+
+const recreated = join(worktreeRoot, "recreated");
+await git(mono, "worktree", "add", "-b", "worktree-recreated", recreated, record.removed.finalSha);
+(await readFile(join(recreated, "file.txt"), "utf8"))
+=> content
+```
+
+```ts cleanup
+await rm(root, { recursive: true, force: true });
+```
