@@ -1,4 +1,4 @@
-**Status:** proposed 2026-08-09, measurement done
+**Status:** proposed 2026-08-09, measurement done, Track 1 landed 2026-08-09 (`bin/test-graph.ts` + the `resolve-rules` extraction); Tracks 2-5 not started
 
 # Test failure ledger, and change-based selection on the iteration loop
 
@@ -584,9 +584,9 @@ ledger is the valuable thing and its payoff is months out, every week it is not
 collecting is a week of data lost, while the selector's benefit is available any
 time.
 
-1. **Track 1** — `bin/test-graph`, including the `resolve-rules` extraction from
-   `doctest-hooks.mjs`, with `agent-doctest`'s suite green afterwards. Needed by
-   the ledger for `implicated`.
+1. **Track 1 (landed 2026-08-09)** — `bin/test-graph`, including the
+   `resolve-rules` extraction from `doctest-hooks.mjs`, with `agent-doctest`'s
+   suite green afterwards. Needed by the ledger for `implicated`.
 2. **Track 5a** — the ledger: the `--output-file` capture, the sidecar manifest,
    both selections, mechanical classification, and `report`. Wired to `pnpm test`
    while **every run is still a full run**, so it collects clean ground truth
