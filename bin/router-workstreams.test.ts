@@ -165,3 +165,19 @@ test("front-page search includes culled registry rows and plan titles", () => {
   assert.match(html, /old-seam/);
   assert.match(html, /Seam design/);
 });
+
+test("plans view groups statuses and links workstreams", async () => {
+  const captured = { status: 0, headers: {} as Record<string, string>, body: "" };
+  const res = {
+    writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
+    end(body?: string) { captured.body = body ?? ""; return res; },
+  } as unknown as ServerResponse;
+  const deps: WorkstreamsDeps = {
+    list: async () => [], run: async () => undefined,
+    documents: async () => ({ issues: [], plans: [{ title: "Seam design", status: "active", workstream: "seam", relPath: "callback-box/docs/plans/seam.md" }] }),
+  };
+  await serveWorkstreams({ method: "GET", pathname: "/workstreams/plans/", repoRoot: "/unused", res, deps });
+  assert.equal(captured.status, 200);
+  assert.match(captured.body, /active <small>1/);
+  assert.match(captured.body, /href="\/workstreams\/seam\/"/);
+});

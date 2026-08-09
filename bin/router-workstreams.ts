@@ -161,13 +161,24 @@ function documentList(params: { issues: IssueRecord[]; plans: PlanRecord[] }): s
 
 function pageShell(title: string, body: string, refresh = false): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${refresh ? '<meta http-equiv="refresh" content="30">' : ""}<title>${escapeHtml(title)}</title>
-<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a></nav>${body}</body></html>`;
+<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a></nav>${body}</body></html>`;
 }
 
 function renderDetail(name: string, row: WorkstreamRow | undefined, documents: { issues: IssueRecord[]; plans: PlanRecord[] }): string {
   const state = row?.path === null ? "culled" : row?.agent.state ?? "registry record unavailable";
   const facts = `<dl class="facts"><dt>State</dt><dd>${escapeHtml(state)}</dd><dt>Path</dt><dd>${escapeHtml(row?.path ?? "none")}</dd><dt>Git</dt><dd>${row?.git ? `${String(row.git.ahead ?? "?")} ahead, ${String(row.git.dirty ?? "?")} dirty` : "unavailable"}</dd><dt>Box</dt><dd>${row?.boxState.testSetup ? "test-setup" : row?.boxState.keepUnmerged ? "keep unmerged" : "no pin"}</dd></dl>`;
   return pageShell(name, `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList(documents)}`);
+}
+
+function renderPlans(plans: PlanRecord[]): string {
+  const statuses = ["draft", "active", "partial", "implemented", "superseded", "parked"];
+  const sections = statuses.map((status) => {
+    const matching = plans.filter((plan) => plan.status === status);
+    if (matching.length === 0) return "";
+    const rows = matching.map((plan) => `<li><a href="${escapeHtml(planHref(plan))}">${escapeHtml(plan.title)}</a><a href="/workstreams/${encodeURIComponent(plan.workstream)}/">${escapeHtml(plan.workstream)}</a></li>`).join("");
+    return `<section><h2>${escapeHtml(status)} <small>${matching.length}</small></h2><ul>${rows}</ul></section>`;
+  }).join("");
+  return pageShell("plans", `<h1>plans</h1>${sections || "<p>No plans found.</p>"}`);
 }
 
 function searchHtml(query: string, rows: WorkstreamRow[], documents: { issues: IssueRecord[]; plans: PlanRecord[] }): string {
@@ -273,6 +284,20 @@ export async function serveWorkstreams(params: {
       query: new URLSearchParams(params.query ?? ""),
       res,
     });
+    return;
+  }
+  if (pathname === "/workstreams/plans" || pathname === "/workstreams/plans/") {
+    if (pathname === "/workstreams/plans") {
+      res.writeHead(301, { location: "/workstreams/plans/" });
+      res.end();
+      return;
+    }
+    const { plans } = await deps.documents();
+    res.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+    });
+    res.end(method === "HEAD" ? undefined : renderPlans(plans));
     return;
   }
   const detailMatch = /^\/workstreams\/([\w-]+)\/$/.exec(pathname);

@@ -723,7 +723,8 @@ function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] 
   // date twice — split it into "date · rest-of-slug" instead.
   const date = issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
   const shortSlug = date ? issue.slug.slice(date.length).replace(/^-/, "") : issue.slug;
-  const pills = `${facetChips(issue.frontmatter, issue.research, issue.visibility)}${worktreeBadges(overlay)}`;
+  const workstream = `<a class="chip" href="/workstreams/${encodeURIComponent(issue.frontmatter.workstream)}/">${escapeHtml(issue.frontmatter.workstream)}</a>`;
+  const pills = `${workstream}${facetChips(issue.frontmatter, issue.research, issue.visibility)}${worktreeBadges(overlay)}`;
   return `<li>
     <div class="issue-main">
       <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
@@ -844,6 +845,7 @@ ${worktreeOnlyHtml}`;
 
 function factsTableHtml(fr: IssueFrontmatter, research: ResearchState, closed: boolean): string {
   const rows: Array<[string, string]> = [];
+  rows.push(["workstream", fr.workstream]);
   if (fr.needs.length) rows.push(["needs", fr.needs.join(", ")]);
   if (fr.labels.length) rows.push(["labels", fr.labels.join(", ")]);
   if (fr.area) rows.push(["area", fr.area]);
