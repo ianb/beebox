@@ -1,4 +1,11 @@
-**Status:** proposed 2026-08, gated on a measurement spike
+**Status:** measured 2026-08-09 — **Track 0's gate was not met.** The mechanism
+works and is cheap (1.8 s for the whole graph), but only **25% of real branches**
+are fully accounted for by the import graph, against a bar of 50% set in advance.
+Three quarters of branches touch a path no test imports and would run the full
+suite anyway. Numbers, method, and caveats are in the origin issue's
+`## Track 0 measurement (2026-08-09)` section. Awaiting the boxholder's call on
+whether to shelve; the design below is unchanged and remains correct, it is the
+payoff that is missing.
 
 # Change-based test selection from a derived import graph
 
