@@ -24,10 +24,12 @@ correctness fixes.
 - **Callback-box applicability:** Nothing specific to assess. The parity target
   names no behavior callback-box depends on, and the release adds no API
   surface. Nothing relevant, nothing act-now.
-- **Action:** Published 2026-08-08T01:48Z, ~14h old. Deliberately not taken in
-  this turn's act-now bump: the act-now fix callback-box needed landed in
+- **Action:** Published 2026-08-08T01:48Z. Deliberately not taken in the
+  `0.3.225` act-now bump: the act-now fix callback-box needed landed in
   `0.3.225`, and `0.3.226` adds nothing that justifies skipping its settling
-  window. It should be picked up by the normal settled-version path next turn.
+  window. Re-reviewed 2026-08-09T16:04Z at ~38h old — upstream text unchanged
+  on both the SDK and Claude Code sides, still short of the 48h window, still
+  nothing act-now, so it waits one more turn.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.226), [Claude Code 2.1.226](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21226)
 
 ### 0.3.225 — applied (act-now)
