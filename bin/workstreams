@@ -380,6 +380,7 @@ case "$cmd" in
 
       wt_other_agent_live "$d"
       wt_work_state "$d"
+      tip=$(git -C "$d" rev-parse HEAD 2>/dev/null || true)
 
       # `git status` failing yields "?" from wt_work_state. Carry that through as
       # JSON null rather than coercing it to a number — a reader must not be able
@@ -403,6 +404,7 @@ case "$cmd" in
         --arg path "$d" \
         --arg ahead "$WT_AHEAD" \
         --arg dirty "$WT_DIRTY" \
+        --arg tip "$tip" \
         --argjson merged "$merged" \
         --argjson runtime "$runtime" \
         --argjson session "$session" \
@@ -416,7 +418,8 @@ case "$cmd" in
               git: {
                 ahead:  (if $ahead == "?" then null else ($ahead | tonumber) end),
                 dirty:  (if $dirty == "?" then null else ($dirty | tonumber) end),
-                merged: $merged
+                merged: $merged,
+                tip: (if $tip == "" then null else $tip end)
               },
               runtime: $runtime,
               agent: { state: $agentState, reason: $agentReason },

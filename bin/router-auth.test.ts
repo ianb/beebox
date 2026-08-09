@@ -104,6 +104,9 @@ test("classifier: exhaustive route-shape mapping", () => {
   assert.deepEqual(c("GET", "/main/dev/"), { kind: "control-read", json: false });
   assert.deepEqual(c("GET", "/main/dev/docs/x.md"), { kind: "control-read", json: false });
   assert.deepEqual(c("GET", "/dev/"), { kind: "control-read", json: false });
+  assert.deepEqual(c("GET", "/workstreams/"), { kind: "control-read", json: false });
+  assert.deepEqual(c("HEAD", "/workstreams/testing/"), { kind: "control-read", json: false });
+  assert.deepEqual(c("POST", "/workstreams/action/resume/seam"), { kind: "control" });
 
   // box
   assert.deepEqual(c("GET", "/main/test1/"), { kind: "box", targetWorktree: "main", targetBox: "test1" });
@@ -124,6 +127,7 @@ test("classifier: exhaustive route-shape mapping", () => {
 
   // unknown
   assert.deepEqual(c("GET", "/__router/bogus"), { kind: "unknown" });
+  assert.deepEqual(c("GET", "/workstreamsx"), { kind: "box", targetWorktree: "workstreamsx", targetBox: null });
   assert.deepEqual(c("GET", "//"), { kind: "unknown" }); // no parseable first segment
 
   // pairing redeem is unauth ONLY for POST — a GET to the same path is a box request.

@@ -57,6 +57,7 @@ import {
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
+import { serveWorkstreams } from "./router-workstreams.js";
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -1037,6 +1038,12 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     if (url === "/" || url === "") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       res.end(await renderIndex(core));
+      return;
+    }
+
+    const requestPathname = url.split("?")[0] ?? url;
+    if (requestPathname === "/workstreams" || requestPathname.startsWith("/workstreams/")) {
+      await serveWorkstreams({ method: req.method || "GET", pathname: requestPathname, repoRoot: REPO_ROOT, res });
       return;
     }
 
