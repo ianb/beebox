@@ -856,12 +856,28 @@ conversation that built the thing.
   Both release themselves: /finish merges stock home; `confirm-tested`
   clears the flag; the next sweep collects. The testing view and front page
   label held rows "worktree held for testing," so a pin is always visible,
-  never a mystery lingerer — a never-confirmed item holds its worktree
-  indefinitely *on the queue page you look at*, which is the correct
-  pressure. This amends the control-surface plan's "eligibility rules
-  unchanged" lock and the vocabulary bullet above; recorded as the one
-  exception, chosen over the alternative (cull destroys the repro;
-  recreate can't restore it — box content is not in the monorepo's git).
+  never a mystery lingerer. **Indefinite is acceptable** (boxholder
+  decision): a pinned worktree with a throwaway repro simply exists until
+  its test runs — no age-based auto-cull, because the pressure lives on the
+  queue page where it belongs. This amends the control-surface plan's
+  "eligibility rules unchanged" lock and the vocabulary bullet above;
+  recorded as the one exception.
+- **Releasing a stale pin — archive, then cull (owner-approved).** For a
+  pinned worktree the boxholder decides not to test after all (or wants off
+  the disk without losing the repro), the testing view offers **Release**:
+  before the cull, the box clone's head is pushed to the **source test1
+  repo as a branch** — `archive/<workstream>-<date>` — as lightweight
+  storage: never merged to test1's main, cheap to keep, prunable later
+  with the boxholder's approval during periodic maintenance. The registry
+  records the archive ref in the `removed` record, and **recreate restores
+  it**: a recreated workstream whose record carries an archive ref gets its
+  box cloned and checked out at that branch, so the repro survives the
+  round trip. Archiving is scoped to the Release path only — ordinary
+  culls of unpinned worktrees stay destructive as today (their box churn
+  is noise by definition; archiving everything would trade a disk problem
+  for a branch-accumulation problem). If the archive push fails, Release
+  refuses and the worktree stays — never trash the only copy on a failed
+  save (§4).
 
 **Pre-merge vs deployed testing — the decision.** Local-first: the worktree
 URL covers "test my local trees" with no new machinery, and it is the only
@@ -1114,6 +1130,9 @@ ships. Codex-implementable: no chunk contains an open question.
 16. **G2 — `/workstreams/testing/` view + `confirm-tested` helper + the
     two buttons on issue detail pages.** Depends on D1, G1; Open-workstream
     buttons depend on D2.
+16b. **G2b — Release action** (archive branch push to source test1 +
+    registry archive ref + cull; recreate restores a box from its archive
+    ref; refuse on failed push). Depends on G2, G3, C1.
 17. **G3 — box-cullability pin in sweep/session-end eligibility** (both
     checks: trailer-filtered `git log` in the clone + grep for an open
     `manual-testing` issue naming the workstream; doctests: pinned worktree
