@@ -1,6 +1,6 @@
 /** Display policy for the chat's "Agent is working…" status strip. */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getChatStatus } from "../../api";
 import type { ChatEvent } from "../../machines/chat-types";
 
@@ -96,12 +96,33 @@ export function useProcessingStatusPoll(opts: {
       clearInterval(pollId);
     };
   }, [processBusy, isStreaming, sessionId, send]);
+  // The registry keys a session's busy entry under the id the CLIENT
+  // initiated it with: a pending "new" session is re-keyed to its assigned id,
+  // but a resumed session whose SDK rotates ids on resume keeps its ORIGINAL
+  // key — `registry.get(rotatedId)` is null and reads as idle, while
+  // SESSION_ASSIGNED rewrites the machine's sessionId to the rotated id
+  // mid-turn. Polling the live sessionId would therefore false-recover a
+  // healthy resumed turn; freeze the first non-null id of each streaming
+  // episode instead — that is the key the busy entry actually lives under.
+  const watchdogIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!isStreamingState || !sessionId) return;
+    if (!isStreamingState) {
+      watchdogIdRef.current = null;
+      return;
+    }
+    if (watchdogIdRef.current === null) watchdogIdRef.current = sessionId;
+  }, [isStreamingState, sessionId]);
+  useEffect(() => {
+    // A "new" session that loses its socket before the first frame (the
+    // system/init that assigns its id) never gets a pollable id — that narrow
+    // wedge stays unrecovered by design; there is no per-session identity to
+    // ask the server about.
+    const pollSessionId = isStreamingState ? watchdogIdRef.current : null;
+    if (pollSessionId === null) return;
     let ignored = false;
     let idlePolls = 0;
     const poll = () => {
-      getChatStatus({ sessionId })
+      getChatStatus({ sessionId: pollSessionId })
         .then((status) => {
           if (ignored) return;
           const step = streamWatchdogAdvance({ busy: status.busy, idlePolls });

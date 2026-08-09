@@ -30,6 +30,15 @@ resolution: implemented
 > Why the socket died in the field-test runs stays open in
 > [serve-multiminute-freeze](../../bugs/2026-08-08-serve-multiminute-freeze.md),
 > now carrying candidate stall sites.
+>
+> Cross-model review round: the watchdog now freezes its poll target to the
+> first non-null session id of each streaming episode — the registry keys a
+> resumed session under the id the client initiated it with, and the SDK can
+> rotate ids on resume, so polling the machine's live (rotated) id would read
+> idle and false-recover a healthy turn. `STREAM_RECOVER` also clears
+> `interrupting`. Accepted gap, documented in the code: a "new" session that
+> loses its socket before the first frame has no pollable identity and stays
+> unrecovered.
 In the v0 field-test spine run, the box agent finished saving a recipe card
 (the card existed on disk — the run's hard check passed), but the chat UI kept
 showing **"Agent is working…"** for 20+ minutes afterward, twice. During that

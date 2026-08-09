@@ -230,7 +230,10 @@ export const chatMachine = setup({
         // refreshing onDone rolls them into a synthetic entry for a still-"new"
         // session whose history is empty, so clearing would lose the only copy
         // of a partial reply. refreshing clears them itself once it's done.
-        STREAM_RECOVER: { target: "refreshing" },
+        // Clear `interrupting` though — the interrupt's own terminal paths do,
+        // and a recovery during an interrupt must not leave the flag latched
+        // into idle.
+        STREAM_RECOVER: { target: "refreshing", actions: assign(clearInterrupt) },
         SEND: {
           // Queue the message — don't interrupt the current stream
           actions: [
