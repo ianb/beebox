@@ -4,8 +4,16 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — cross-model review of the category-2 field-test fixes
 labels: [field-test-findings, ui-sensibility]
+resolution: implemented
 ---
 
+> **Closed 2026-08-09** — boxholder picked the middle option ("totally fine
+> to use Tbsp and tsp and cup"): the display map never produces single-letter
+> forms — long forms compact to `Tbsp`/`tsp`, `cup` stays a word, and stored
+> single letters ("T"/"t", case-sensitively) EXPAND to the safe form, so
+> legacy cards de-hazard at render. Unambiguous `mL`/`oz`/`L`/`kg` keep their
+> standard short forms; unicode fractions were judged fine and stay.
+> Verified live: a stored `unit="T"` renders "3 Tbsp olive oil".
 The recipe renderer normalizes faithfully-stored ingredients when it displays
 them: `UNIT_ABBREV` in
 `callback-box/src/frontend/src/components/RecipeTags.tsx` maps
@@ -16,7 +24,7 @@ This is what the first field-test run's operator actually saw. The stored card
 was faithful (`unit="tbsp"`, `amount="1/2"` — the user's own words); the
 "1 T dried oregano" in the UI came entirely from the renderer. The original
 finding
-([agent-rewrites-recipe-units](../closed/bugs/2026-08-08-agent-rewrites-recipe-units.md))
+([agent-rewrites-recipe-units](2026-08-08-agent-rewrites-recipe-units.md))
 mis-attributed it to agent behavior.
 
 The tension: the abbreviation is deliberate compact display for ingredient

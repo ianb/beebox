@@ -6,6 +6,14 @@ discovered-in: worktree-integration-tests — field-test operator prototype (Pri
 labels: [soft-launch, field-test-findings, ui-sensibility]
 ---
 
+> **Further progress 2026-08-09 (later):** the "worst single item" —
+> filename-as-heading — is fixed: card page and chat headers now headline the
+> card's frontmatter `title:` (falling back to a humanized name, underscores
+> as spaces, never the raw `Name.type.card`), with the path demoted to a
+> small subtitle and the redundant "Type:" line dropped (`FileView.tsx`).
+> Remaining below: the view tabs ("Recipe / Card / Source"), the box-not-found
+> error page, and the nav-chrome labels.
+>
 > **Partly resolved 2026-08-09** in `73f4e8e0`: the *agent-reply* half (jargon
 > in chat — "drop a landmark", "person card", "boxholder" in the third person)
 > is addressed by a new agent-guide section, "Speak the User's Language",

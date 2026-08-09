@@ -11,6 +11,37 @@ Resolved by seeding the browse key in Chromium's cookie jar before navigation.
 The initial WebSocket and a forced reconnect now authenticate through the same
 browser cookie.
 
+## Evidence from field-test run #2 (2026-08-09, onboarding re-run)
+
+Now strongly supported by the `first-contact` item in a dedicated onboarding
+field-test run. This was the session's first message:
+
+- The server answered in **18 seconds** — user message 18:12:10Z, complete
+  assistant reply 18:12:28Z in the session transcript, turn marker written
+  18:12:28Z.
+- The operator's UI showed "Agent is working…" with **zero partial text**
+  for ~7 minutes across four pixel-identical screenshots
+  (`screenshots/first-contact/06,07,09,11`), then the operator gave up;
+  debrief outcome `blocked`.
+- So BOTH WS-fed paths (`events.turnStream` frames and the
+  `chat-complete`→REFRESH broadcast) delivered nothing while HTTP worked
+  fine — consistent only with the WS channel never connecting in the
+  browse-key environment.
+- The stream watchdog (`processing-status-display.ts`) could not rescue it:
+  first message of a "new" session → `sessionId` null until `system/init`
+  arrives on the very stream that is dead. That documented "accepted gap"
+  (see the close note on
+  [chat-status-lies-after-completion](2026-08-08-chat-status-lies-after-completion.md))
+  is therefore NOT a rare corner in this environment — it is every first
+  message — and it is equally reachable by any real user whose socket dies
+  on message one. The remaining recovery gap is tracked in
+  [new-session-dead-socket-status-never-recovers](../../bugs/2026-08-09-new-session-dead-socket-status-never-recovers.md).
+
+The measured harness-side fix delivers the browse key as a real cookie
+(agent-browser `cookies set` supports `--url`/`--domain`/`--path` scoping)
+instead of per-origin header injection, so it rides WS upgrades natively;
+the implementation and its profile-lifetime tradeoff are recorded below.
+
 The browse-key credential (`cb_browse_key`) is not a real browser cookie in
 `bin/browse` sessions: `browse/src/worktree.ts` (`authHeaderFor`) sends it as
 an origin-scoped header via agent-browser's `open <url> --headers <json>`,
