@@ -26,7 +26,7 @@ resolution: implemented
 > ([reload-loses-in-flight-question](../../bugs/2026-08-09-reload-loses-in-flight-question.md))
 > and the suspicion that agent-browser's origin-scoped header injection may
 > not cover WS upgrades
-> ([browse-key-ws-upgrade-headers](../../bugs/2026-08-09-browse-key-ws-upgrade-headers.md)).
+> ([browse-key-ws-upgrade-headers](2026-08-09-browse-key-ws-upgrade-headers.md)).
 > Why the socket died in the field-test runs stays open in
 > [serve-multiminute-freeze](../../bugs/2026-08-08-serve-multiminute-freeze.md),
 > now carrying candidate stall sites.

@@ -42,9 +42,9 @@ export BROWSE_WORKTREE="$worktree"
 # credential. That credential is CB_BROWSE_API_KEY — an opt-in, operator-set
 # key (callback-box/src/core/browse-key.ts), normally living in this
 # checkout's gitignored `callback-box/.env`, which the WorktreeCreate hook
-# copies from the main checkout. cli.ts scopes it to this worktree's origin
-# only (browse/src/worktree.ts) before handing it to agent-browser's own
-# origin-scoped `open --headers`.
+# copies from the main checkout. cli.ts seeds it as a short-lived, host-only
+# cookie in this worktree's isolated browser profile (browse/src/worktree.ts),
+# so normal navigation, fetches, and WebSocket upgrades share one auth path.
 #
 # An already-exported value wins over the file, so `CB_BROWSE_API_KEY=… bin/browse`
 # works for a one-off. No key at all is not an error — browse proceeds

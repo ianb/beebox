@@ -1,8 +1,7 @@
 import { AgentBrowserError, run, runPassthrough } from "agent-browser-typed";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
-import { authHeaderFor, BrowseConfigError, detectWorktreeContext, rewriteOpenUrl } from "./worktree.js";
-import type { WorktreeContext } from "./worktree.js";
+import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl } from "./worktree.js";
 
 // JS expression evaluated in the page. The callback-box frontend exposes
 // `<body data-cb-loading="true|false">` driven by React Query's
@@ -35,13 +34,18 @@ async function main(): Promise<number> {
   // landed on the login wall exactly this way). Hoist it into the env var the
   // binary honors; every child this process spawns then targets that session,
   // waitForReady's own calls included.
-  if (args[0] === "--session") {
-    const name = args[1];
+  const sessionIndexes = args.flatMap((arg, index) => arg === "--session" ? [index] : []);
+  if (sessionIndexes.length > 1) {
+    throw new BrowseConfigError("--session may only be specified once");
+  }
+  const sessionIndex = sessionIndexes[0];
+  if (sessionIndex !== undefined) {
+    const name = args[sessionIndex + 1];
     if (name === undefined || name === "" || name.startsWith("-")) {
       throw new BrowseConfigError("--session requires a session name");
     }
     process.env["AGENT_BROWSER_SESSION"] = name;
-    args = args.slice(2);
+    args = [...args.slice(0, sessionIndex), ...args.slice(sessionIndex + 2)];
   }
   const noWaitIdx = args.indexOf("--no-wait");
   const skipWait = noWaitIdx !== -1;
@@ -60,9 +64,11 @@ async function main(): Promise<number> {
   if (sub === "open") {
     const rest = args.slice(1);
     const target = rest[0];
-    const passArgs = target !== undefined
-      ? buildOpenArgs(rewriteOpenUrl(target, ctx), { rest: rest.slice(1), ctx })
-      : ["open"];
+    const url = target === undefined ? undefined : rewriteOpenUrl(target, ctx);
+    if (url !== undefined && isOwnOrigin(url, ctx)) {
+      await run(authCookieArgs(url, ctx));
+    }
+    const passArgs = url === undefined ? ["open"] : ["open", url, ...rest.slice(1)];
     const code = await runPassthrough(passArgs);
     if (code === 0 && !skipWait && WAIT_AFTER.has(sub)) await waitForReady();
     return code;
@@ -79,21 +85,6 @@ async function main(): Promise<number> {
   }
 
   return runPassthrough(args);
-}
-
-// Auto-attaches the browse-key cookie when `url` is this worktree's own base
-// (see worktree.ts `authHeaderFor`; a `BROWSE_BASE_URL` override moves that
-// base and the cookie's scope together), using agent-browser's native
-// origin-scoped `open <url> --headers <json>` (the header is only ever sent
-// to that origin, never to a target the same session later navigates to). A
-// caller-supplied `--headers` wins outright — we don't merge into it, since
-// we can't know it's safe to layer our credential onto whatever origin the
-// caller already scoped it to.
-function buildOpenArgs(url: string, { rest, ctx }: { rest: readonly string[]; ctx: WorktreeContext }): string[] {
-  if (rest.includes("--headers")) return ["open", url, ...rest];
-  const authHeader = authHeaderFor(url, ctx);
-  if (authHeader === null) return ["open", url, ...rest];
-  return ["open", url, "--headers", JSON.stringify(authHeader), ...rest];
 }
 
 function parseScreenshotArgs(args: readonly string[]): ScreenshotInvocation {
