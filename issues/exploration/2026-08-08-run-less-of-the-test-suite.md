@@ -2,8 +2,20 @@
 title: "Run less of the full suite — map changes to the tests that could break"
 area: callback-box
 needs: [design]
+design: ../../callback-box/docs/plans/change-based-test-selection.md
 labels: [testing, developer-experience]
 ---
+
+> **Design written 2026-08-08** —
+> [change-based test selection](../../callback-box/docs/plans/change-based-test-selection.md)
+> settles the mechanism (a runtime import map recorded by the doctest loader),
+> the full-run cadence, and the fail-open rules. It is **not implemented**; the
+> plan opens with a spike that could still replace the recording half with a
+> static esbuild graph. The `needs: [design]` flag stays until the plan is
+> reviewed and the spike is resolved. Sections below that this plan supersedes:
+> the option survey (the plan records why coverage, affected-package, and
+> directory-heuristic selection were rejected) and the "measure first"
+> constraint (the `## Research (2026-08-08)` section satisfied it).
 
 Every verification runs everything. `/finish` runs the full suite on each land,
 agents run it before committing, and a re-run after a post-green fix runs it
