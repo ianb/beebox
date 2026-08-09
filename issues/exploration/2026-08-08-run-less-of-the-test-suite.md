@@ -100,6 +100,9 @@ the cause.
 The repository-root `pnpm test` (the 19 `bin/*.test.ts` files) took 2.60 seconds
 and had two pre-existing `router-auth.test.ts` assertion failures. Therefore,
 there is no trustworthy green total-suite baseline from this loaded machine.
+Those assertions exposed a real pairing-redeem classifier regression rather
+than bad tests. It was fixed after this profiling run in `03f46268`; the focused
+router-auth file and the 220-test root suite are green on the current baseline.
 
 The loaded callback-box run ranked these files highest:
 
