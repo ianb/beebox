@@ -18,6 +18,12 @@ suite whenever anything is unknown, stale, or ambiguous.
   that flakes, and it adds a rule (below) that makes the flake fail safe instead
   of silently corrupting the map. The interaction is designed for here.
 
+**Reviewed.** [Cross-model review](change-based-test-selection.review.md) (Codex,
+2026-08-08) raised nine findings; all nine were accepted. Two changed the design
+rather than the prose: the rewired-graph selection term in Track 3, and replacing
+the commit-count cadence with one derived from the map's own age. The review file
+records each finding verbatim with its disposition.
+
 Checked and not addressed: `issues/bugs/2026-07-29-flaky-login-redirect-doctest.md`
 (a different flake; selection reduces parallel load, which may reduce its
 frequency, but this plan claims no fix) and
@@ -39,8 +45,8 @@ build the framework).
 - **#10 — Testability is architectural.** The selector's own correctness is
   testable pure logic; the plan separates the pure selection function from the
   git/filesystem I/O so it can be doctested.
-- **#11 — Enforcement beats convention.** The dynamic-import blind spot (below)
-  is closed by a test that fails, not by a note in a doc.
+- **#11 — Enforcement beats convention.** The three non-import blind spots
+  (below) are closed by tests that fail, not by notes in a doc.
 - **#12 — The maintainer is usually an agent.** The selector's output is read by
   agents. It must state what it selected and why, in one line, without a flag.
 - `CLAUDE.md`: "Treat noisy command output as a bug" — the selector runs on every
@@ -58,9 +64,11 @@ build the framework).
   `resolve(specifier, context, nextResolve)`, registered from
   `agent-doctest/src/doctest-loader.ts:11` (`register(new URL("./doctest-hooks.mjs",
   import.meta.url))`). `.taprc` loads it last of the three `--import` hooks, so
-  it runs **first** in the resolve chain and sees every module specifier the test
-  process resolves. **Reused**, not rebuilt: recording is an addition to this
-  hook, not a new mechanism.
+  it runs **first** in the resolve chain and sees every **ESM** specifier the
+  test process resolves, at any depth. It does not see `require()` resolved via
+  `module.createRequire()` — async `register` hooks do not intercept those. Track
+  1 states the bound; Track 4b enforces it. **Reused**, not rebuilt: recording is
+  an addition to this hook, not a new mechanism.
 - **The loader already resolves the awkward cases.** `doctest-hooks.mjs:28-45`
   carries the TSX `.js` → `.tsx` workaround. This is direct evidence that module
   resolution here is subtle enough that a *re-implementation* of resolution (a
@@ -79,7 +87,7 @@ build the framework).
 - **`bin/manual-tests-scheduled.sh`** is a complete, working "launchd →
   constrained triage agent → files an issue → macOS notification" pattern,
   including a `snapshot_open_issues` guard and a `validate_triage_result` parser
-  (`bin/manual-tests-scheduled.sh:66-96`). **Reused as the model** for the
+  (`bin/manual-tests-scheduled.sh:49-57` and `:59-96`). **Reused as the model** for the
   nightly full run; not rebuilt.
 - **esbuild is already a dependency and is already used for a build step**
   (`callback-box/scripts/build-cli.mjs:15`, run by `pretest`). Relevant to the
@@ -117,9 +125,10 @@ build the framework).
 
 ## Tracks / scope
 
-Ordered by implementation dependency: recording produces the map, the map feeds
-the selector, the selector feeds the two callers, and the cadence gates the
-callers.
+Presented in dependency order — recording produces the map, the map feeds the
+selector, the selector feeds the two callers, and the map's age gates the
+callers. Note that the *implementation* order (below) leads with Track 4, which
+is independent of all of them.
 
 ### Track 1 — Record the import map in the doctest loader
 
@@ -160,13 +169,24 @@ function recordResolved(url) {
   try {
     /* openSync(join(recordDir, `${process.pid}.ndjson`), "a") once, then
        writeSync(shardFd, `${repoRelative(url)}\n`) */
-  } catch (_e) {
-    // Recording must never break a test run. One failure disables it for this
-    // process; the reducer's completeness check (below) then rejects the map.
-    recordingDisabled = true;
+  } catch (e) {
+    // Fail CLOSED, deliberately. A half-written shard is indistinguishable
+    // from a complete one, so a recording failure must kill the run rather
+    // than quietly produce a short shard. Safe because recording is only ever
+    // on during a full recording run, where aborting means "no map refresh
+    // tonight" — the outcome we want. Ordinary runs never reach this code.
+    console.error(`doctest import recording failed; aborting: ${e}`);
+    process.exit(1);
   }
 }
 ```
+
+The fail-closed choice here is the correction from the cross-model review
+(`change-based-test-selection.review.md`, finding 4): the first draft set a
+`recordingDisabled` flag and expected the reducer to notice, but a write failure
+*after* the owner line was already written leaves a shard that looks complete.
+There is no durable "I gave up" signal available to a process whose writes are
+failing, so the process must not survive.
 
 and in `resolve`, after the existing branches:
 
@@ -180,10 +200,23 @@ The two existing short-circuit branches (`.doctest.md`, the TSX fallback) also
 call `recordResolved` on their return value.
 
 **Attribution.** The first repo-relative `.doctest.md` or `.test.ts` URL a
-process resolves is that process's *owner* — tap runs exactly one test file per
-child process. Everything the process resolves afterwards is a dependency of the
-owner. A test file that imports another test file records the second one as a
-dependency, which is the correct edge.
+process resolves is that process's *owner* — tap spawns one child process per
+test file (`node_modules/@tapjs/run/dist/esm/execute-test-suite.js:101-112` and
+`run.js:145-160`, confirmed for tap v21 during the cross-model review).
+Everything the process resolves afterwards is a dependency of the owner. A test
+file that imports another test file records the second one as a dependency,
+which is the correct edge.
+
+**What this hook does and does not see.** It sees every ESM specifier the test
+process resolves, at any depth, including dynamic `import()` — that is the whole
+mechanism. It does **not** see `require()` resolved through
+`module.createRequire()`, which async `module.register` hooks do not intercept.
+The repo has such call sites (`test/helpers/test-server.ts:22`,
+`src/webapp/views/node-view-runtime.ts:81`), and the ones checked resolve
+*packages* rather than repo source — so the gap is currently empty, not
+theoretically absent. Track 4 turns that from an observation into an enforced
+rule. Node's synchronous `module.registerHooks()` covers `require` and would
+close the gap structurally; the spike (step 0) should evaluate it.
 
 **Filtering.** Only URLs under the repository root are recorded, and
 `node_modules` is excluded. Temp-directory paths (every box a test creates) are
@@ -207,11 +240,11 @@ open to the full suite, a partial map silently selects too little.
 **Direction.** The reducer's inputs are the shard directory, the tap run's exit
 status, and the discovered test-file list. It writes the map **only if all hold**:
 
-1. the run exited 0;
+1. the run exited 0 — which, given Track 1's fail-closed abort, is also what
+   catches a shard truncated by a write failure;
 2. the set of owner files across all shards equals the set of test files tap
    discovered (`tap --list` or the same glob as `.taprc`'s `include`/`exclude`);
-3. no shard reported that recording was disabled mid-process;
-4. the working tree was clean at the recorded commit.
+3. the working tree was clean at the recorded commit.
 
 Condition 2 is the one that matters most. The TSX resolution flake
 (`issues/bugs/2026-08-05-…`) ends a child with `1..0 # no tests found` — the
@@ -237,14 +270,20 @@ cannot read a half-written map.
   "recordedAtCommit": "<sha>",
   "recordedAt": "<iso8601>",
   "testFiles": ["test/core/box.doctest.md", "..."],   // the complete run set
-  "sourceInventory": ["src/core/box/package.ts", "..."], // every repo file seen
+  "sourceInventory": ["src/core/box/package.ts", "..."], // `git ls-files` at recordedAtCommit
   "sources": { "src/core/box/package.ts": ["test/core/box.doctest.md", "..."] }
 }
 ```
 
-`sourceInventory` is what makes "this source file is in no test's import list"
-distinguishable from "the map has never heard of this file" — the two need
-different responses (see Track 3).
+`sourceInventory` is **every tracked file in the repo at `recordedAtCommit`** —
+`git ls-files`, not "files the loader saw". The distinction is load-bearing and
+the first draft got it wrong (review finding 5): if the inventory were the
+loader's view, then every file no test imports would be *absent* from it, rule 4
+below would fire on it, and the plan's main win — cheap selection for the
+frontend, most of which no doctest imports — would evaporate. Defining it from
+`git ls-files` is what makes "in the repo but imported by no test" a state the
+selector can name and act on, distinct from "the map has never heard of this
+path".
 
 **Why a cache and not a committed artifact.** A committed map would be
 regenerated only on full runs, which by design happen every Nth commit. At ~35
@@ -297,6 +336,37 @@ reads the map, and prints the result.
 7. Any error at all. The shell exits non-zero, and **every caller treats a
    non-zero exit as "run the full suite"**, never as "skip".
 
+**The rewired-graph rule — the one the first draft missed.** Rules 1–7 all treat
+the map's *keys* as the thing that can go stale. Its *edges* go stale too, and
+that is the more dangerous case (review finding 1). Concretely: commit A adds
+`import "../../src/foo.js"` to an existing test; the map is not refreshed;
+commit B changes only `src/foo.ts`. Every rule above passes — no new file, no
+rename, no test added — and the map still says no test imports `src/foo.ts`. The
+test that would have caught the regression is skipped.
+
+The fix is a third selection term. Let `D` be every file changed between
+`map.recordedAtCommit` and the working tree. The selected set is:
+
+```
+selected = alwaysRun
+         ∪ { tests the map maps the changed files to }        // the base case
+         ∪ { test files in D }                                // their own imports may have moved
+         ∪ { tests the map says import anything in D }        // an edge below them may have moved
+```
+
+Why that closes it: suppose test `T` imports `S` at HEAD but did not at record
+time. Some edge on the path `T → … → S` was added, so the file that owns that
+edge is in `D`. If that file is `T`, the third term runs it. Otherwise take the
+shortest unchanged prefix `T → … → F` where `F ∈ D`; the old map records that
+prefix, so the fourth term runs `T`. Induction terminates at `T`. Any newly
+reachable module is therefore covered by a test the selector already runs.
+
+The cost of the fourth term is proportional to how stale the map is, which is
+the right incentive: a map refreshed nightly makes it "every test touching one
+day of changes", and a map a week old makes selection converge toward the full
+suite on its own, before any staleness bound fires. Traces to principle #4 —
+degradation is gradual and visible in the printed file count, not a cliff.
+
 **The genuinely interesting case — a changed source file that is in
 `sourceInventory` but in no test's import list.** This is untested-by-import
 code. Running the whole suite for it is not just wasteful, it is wasteful in the
@@ -307,11 +377,17 @@ are the non-import channels this plan enumerates below. So the rule is: select
 `alwaysRun` (the non-import-coupled set) and nothing else, and **say so**:
 
 ```
-test-select: 6 files (src/frontend/src/components/Composer.tsx is imported by no test — running the blind-spot set only)
+test-select: 7 files (src/frontend/src/components/Composer.tsx is imported by no test — running the blind-spot set only)
 ```
 
 That line is the rot detector. A file that should be tested and is not shows up
 in the agent's terminal the moment someone edits it, on every edit, forever.
+
+**This rule is the plan's one deliberate act of trust, and it should be read as
+such.** It is safe exactly to the degree that the non-import coupling audit
+(`forceFull` plus `alwaysRun` plus Track 4's enforcement) is complete. That is an
+argued position, not a proof — see the open question below for the conservative
+fallback if it proves optimistic.
 
 **`forceFull` — paths where the map is structurally blind.** Committed as
 `bin/test-select.config.ts`, each entry carrying a one-line reason:
@@ -348,29 +424,42 @@ reasons:
 | `test/cli/commands/trick.doctest.md` | Spawns the built CLI. |
 | `test/cli/lib/view-lint-hooks.doctest.md` | Spawns the built CLI. |
 
-Solo cost of the whole set is roughly 55 s by the research table's solo/loaded
+Solo cost of that set is roughly 55 s by the research table's solo/loaded
 ratios — the standing price of every selected run. That price is what buys
 coverage of the subprocess blind spot, and it is worth naming as a cost rather
 than discovering it later.
+
+**This table is a starting point, not the authority.** The review found the
+hand-built list too narrow (finding 7), and a direct count agrees: **11**
+`.doctest.md` files under `callback-box/test/` call `spawn`/`execFile`/`fork`,
+not the 5 a `dist/cli|bin/cb` grep finds. Some of the other six spawn a Node
+child that imports repo source directly — `test/webapp/auth-capabilities.doctest.md:33-38`
+spawns `node --import tsx --eval` importing `src/webapp/auth-capabilities.ts` —
+which the parent process's own import happens to cover today, but only by
+coincidence. So the list is **generated and enforced**, not maintained by hand:
+Track 4's test enumerates every spawning test file and requires each to be in
+`alwaysRun` or to demonstrably import in the parent everything its child
+imports. A hand list that drifts is the failure mode this whole plan exists to
+avoid.
 
 **First implementation chunk.** `bin/test-select.ts` (pure `selectTests` +
 shell), `bin/test-select.config.ts`, `bin/test-select.test.ts` covering every
 numbered rule above plus the untested-by-import case. No open questions inside it.
 
-### Track 4 — Close the dynamic-import blind spot with a test, not a note
+### Track 4 — Close the non-import blind spots with tests, not notes
 
-**What.** A test that enumerates dynamic `import(` call sites in
-`callback-box/src/` and fails if a call site's target is neither statically
-imported elsewhere nor listed in `forceFull`.
+**What.** Three enforcement tests, each turning one of this plan's stated
+assumptions into a build failure when it stops being true.
 
-**Why this needs to change.** Runtime recording under-approximates in exactly
-one structural way: a module that is only ever reached through a conditional
-dynamic `import()` is recorded only if the recording run took that branch. If it
-did not, the module maps to no test, and a change to it selects nothing. That is
-the plan's single most dangerous failure mode and it is silent.
+**Why this needs to change.** Runtime recording under-approximates in three
+structural ways, and all three are silent: a module reached only through an
+untaken conditional `import()`; a module reached only through
+`require()`/`createRequire()`, which async loader hooks do not intercept; and a
+module loaded only inside a spawned child process. Each produces a source file
+that maps to no test, so changing it selects nothing.
 
-**Direction.** The surface is small and enumerable — eight dynamic imports in
-`src/`, of which the ones with repo-local targets are:
+**4a — dynamic `import()` coverage.** The surface is small and enumerable —
+eight dynamic imports in `src/`, of which the ones with repo-local targets are:
 
 ```
 src/cli/bootstrap.ts:37          await import("./lib/fetch.js")
@@ -384,12 +473,27 @@ src/schemas/registry.ts:330      await import(...+ "?v=" + hash)      // box-loc
 The test greps for `import(` with a *literal* specifier, resolves it, and
 asserts the target is covered. Computed specifiers (`moduleUrl`) are asserted to
 resolve outside the repo — if one ever points inside, the test fails and someone
-decides. Traces to principle #11: this is the difference between a documented
-caveat and an enforced one.
+decides.
 
-**First implementation chunk.** `test/dev/dynamic-import-coverage.doctest.md`.
-This is a `callback-box` doctest, not a `bin/` test, because it reads
-`callback-box/src/`.
+**4b — `createRequire` coverage.** Same shape, over `createRequire(...)`/
+`require(...)` call sites in `src/` and `test/`. Each literal specifier must
+resolve to a package, not to repo source. The two current call sites
+(`test/helpers/test-server.ts:22`, `src/webapp/views/node-view-runtime.ts:81`)
+both resolve packages, so the test passes today; it exists to fail the day
+someone `require`s a repo module and silently drops it out of every map.
+
+**4c — child-process coverage.** Over the 11 `.doctest.md` files that spawn a
+child: each must either appear in `alwaysRun`, or the modules its child imports
+must also be imported by the parent process (which the map does see). This is
+what generates and polices the `alwaysRun` table above.
+
+All three trace to principle #11: the difference between a documented caveat and
+an enforced one. They are also the reason the plan can honestly claim a bounded
+blind spot rather than an unbounded one.
+
+**First implementation chunk.** `test/dev/import-coverage.doctest.md` carrying
+all three. It is a `callback-box` doctest, not a `bin/` test, because it reads
+`callback-box/src/` and `callback-box/test/`.
 
 ### Track 5 — Wire the two callers, and the full-run cadence
 
@@ -406,10 +510,14 @@ but a full-suite cadence is still required.
 "test:changed": "node --import tsx ../bin/test-select.ts --run"
 ```
 
-`--run` execs `tap` with the selected files, or plain `tap` on `FULL`. `pretest`
-still runs (it builds `dist/cli.mjs`, which `alwaysRun` needs). `pnpm test`
-keeps its current meaning — the full suite, unchanged — so nothing that says
-"run the tests" today silently starts running fewer.
+`--run` execs `tap` with the selected files, or plain `tap` on `FULL`. A sibling
+`"pretest:changed": "node scripts/build-cli.mjs"` is required — npm lifecycle
+hooks are per script *name*, so `pretest` fires for `test` and not for
+`test:changed` (review finding 6). Without it the selected path can exercise a
+stale `dist/cli.mjs`, which is exactly where `alwaysRun` is supposed to be
+covering the subprocess blind spot. `pnpm test` keeps its current meaning — the
+full suite, unchanged — so nothing that says "run the tests" today silently
+starts running fewer.
 
 **Direction — `/finish` and the cadence.** Three candidate triggers were
 weighed:
@@ -421,34 +529,49 @@ weighed:
 - **Scheduled-only.** Rejected as the *sole* gate. At ~35 commits/day a nightly
   cadence leaves a full day of landings unverified by anything but selection, and
   a selection bug is precisely what a nightly cannot bound.
-- **Derived from history, no state.** Adopted. At step 3 (after
-  `git merge main`), the finish agent computes:
+- **A commit-count multiple.** Rejected — this was the first draft's adopted
+  answer and the review broke it (finding 2). The scheme computed
+  `floor((before+adds)/N) > floor(before/N)` at `/finish` step 3. But a
+  **docs-only** finish skips the whole verification tier
+  (`.claude/agents/finish.md:58-89`), so it *cannot* run a full suite — while its
+  commits still advance `main`'s count. A docs-only landing that steps over a
+  multiple consumes the boundary and no full run happens; the next code landing
+  sees a count already past it and defers to the next multiple. The cadence
+  silently stretches to 2N precisely when docs land, which is often.
+- **Derived from the map's own age.** **Adopted.** At `/finish` step 3, after
+  `git merge main`:
 
   ```
-  before = git rev-list --count main
-  adds   = git rev-list --count main..HEAD
-  full   = floor((before + adds) / N) > floor(before / N)
+  debt = git rev-list --count <map.recordedAtCommit>..main
+  full = debt >= N        # and always full when there is no map at all
   ```
 
-  This is *crossing* detection, not `count % N == 0`, so a landing of several
-  commits that steps over a multiple still triggers. It writes nothing, so
-  concurrent finishes cannot race. If step 8's `--ff-only` merge is refused
-  because `main` moved, the existing procedure already sends the agent back to
-  step 3 (`.claude/agents/finish.md:471-473`), which recomputes both terms — so
-  no crossing is ever skipped, and the finish that actually lands the boundary
-  commit is the one that pays. Note the count is of *all* commits including
-  merges, so N is a rough cadence, not an exact one; that is fine for a safety
-  net.
+  Three properties fall out of using the map as the clock:
+
+  1. **A docs-only landing cannot consume a boundary.** It refreshes no map, so
+     the debt it leaves is still owed, and the next landing that *can* run tests
+     is the one that pays it.
+  2. **It is not shared mutable state on `main`.** The map is a gitignored
+     cache. Two concurrent finishes that both see `debt >= N` both run full and
+     both refresh — wasteful once, never unsafe, and no merge-order race.
+  3. **It unifies the cadence with map freshness**, which is the same quantity
+     the rewired-graph rule in Track 3 already depends on. One number to reason
+     about instead of two, and running the full suite is exactly the act that
+     pays down both debts at once.
 
   `N = 20` as the starting value: about half a day of landings at the observed
   rate, and one ~570 s full run per 20 commits is a small fraction of the
-  aggregate time selection saves.
+  aggregate time selection saves. The count is of all commits including merges,
+  so N is a rough cadence, not an exact one — fine for a safety net.
+
+  A full run at `/finish` writes the map (Track 2's conditions still gate the
+  write), so a green cadence run leaves the next landing with zero debt.
 
 **Recommended combination, and why the rejected ones are worse.** All three of:
 (a) `forceFull` on structurally-blind paths — cheap, removes most of the tail
 risk, and unlike the others it is *precise* about which risk it removes;
-(b) the history-derived every-N-commits full run at `/finish` — bounds how many
-commits can sit on `main` behind a selection bug, with no shared state;
+(b) the map-age-derived full run at `/finish` — bounds how many commits can sit
+on `main` behind a selection bug, with no shared state and no docs-only leak;
 (c) a **nightly full recording run**, modelled on `bin/manual-tests-scheduled.sh`.
 (c) is not redundant with (b): it is the map's natural producer, so the map
 refreshes without any human waiting, and it catches map rot on days when every
@@ -526,9 +649,14 @@ It was not adopted, for two reasons, and the second is the decisive one:
   Runtime recording cannot disagree with the runner, because it *is* the runner.
 
 This trade is genuinely close, and the argument above is a judgement, not a
-proof. It is recorded as an open design question below rather than settled here,
-because if a spike shows the esbuild pass runs in a few seconds and agrees with
-the runtime map file-for-file, the simpler mechanism should win.
+proof. **The cross-model review pushed on it and moved the balance toward the
+static graph, not away from it** (review finding 8): findings 1–4 were all
+fidelity failures in the *runtime* design — a rewired graph the cache cannot
+see, a cadence that leaks, `require()` the hooks do not intercept, an
+unimplementable completeness signal. Each has a fix in this revision, but their
+existence is the point: the runtime path has at least as much fidelity risk as
+the resolution risk it accuses the static path of. So the spike below is a
+**gate**, not a prelude — the plan does not assume its own answer.
 
 ---
 
@@ -543,22 +671,33 @@ prerequisite to it.
 
 ## Failure modes
 
-> **Critical gap:** none remaining. The one that existed in the first draft —
-> a test process dying early (the TSX flake) contributing a short shard that
-> becomes a map entry — is closed by Track 2's condition 2, and that condition
-> is itself tested.
+> **Critical gap (accepted, documented):** a changed source file that the map
+> says no test imports selects only `alwaysRun`. If a non-import coupling
+> channel exists that this plan did not enumerate, the regression it causes
+> ships silently. Track 4's three enforcement tests bound the channels the plan
+> *did* find; they cannot prove the enumeration is complete. This is the one
+> place the design trusts an argument rather than a mechanism, and it is the
+> reason the open question below names a conservative fallback.
+>
+> The first draft's other critical gap — a test process dying early (the TSX
+> flake) contributing a short shard that becomes a map entry — is closed by
+> Track 2's condition 2, and that condition is itself tested.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 | --- | --- | --- | --- |
 | A test process dies early (TSX flake) and records a short shard | Yes — `bin/test-map.test.ts` feeds a shard set missing an owner and asserts the build refuses | Yes — Track 2 condition 2 | Clear: the build prints which owners are missing and exits non-zero; the nightly agent files an issue |
+| **A test gained an import after recording; only the imported source then changes** | Yes — `bin/test-select.test.ts` replays exactly this two-commit sequence | Yes — Track 3's rewired-graph rule (terms 3 and 4) | Clear: the extra files appear in the printed count, attributed to map age |
 | The map is missing (fresh machine, never recorded) | Yes — `bin/test-select.test.ts` with `map: null` | Yes — rule 1 | Clear: `test-select: FULL (no map)` |
-| The map is stale (recorded 300 commits ago) | Yes — rule 2 case | Yes — rule 2 | Clear: `test-select: FULL (map is 312 commits old)` |
-| A source file changed that no test imports | Yes — rule for the untested-by-import case | Yes — selects `alwaysRun` only | Clear: names the file and says why the set is small |
+| The map is stale (recorded 300 commits ago) | Yes — rule 2 case | Yes — rule 2, and the rewired-graph rule degrades toward full before it | Clear: `test-select: FULL (map is 312 commits old)` |
+| A source file changed that no test imports | Yes — the untested-by-import case | Partly — selects `alwaysRun` only; see the critical gap above | Clear: names the file and says why the set is small |
 | A file was renamed, so map keys are wrong | Yes — rule 5 case | Yes — rule 5 | Clear: `FULL (renamed paths)` |
-| A module reached only by an untaken conditional `import()` maps to no test | Yes — Track 4's coverage test | Yes — the target must be statically imported or in `forceFull` | Clear: the coverage test fails at commit time |
-| `writeSync` fails mid-run (ENOSPC, EMFILE) | Yes — the hook's disable path is unit-tested with a forced throw | Yes — recording self-disables, never rethrows into `resolve` | Clear: the shard's owner is absent from the final set, so Track 2 condition 2 refuses the build |
+| A module reached only by an untaken conditional `import()` maps to no test | Yes — Track 4a | Yes — the target must be statically imported or in `forceFull` | Clear: the coverage test fails at commit time |
+| A module reached only through `createRequire()` maps to no test | Yes — Track 4b | Yes — literal specifiers must resolve to packages, not repo source | Clear: the coverage test fails at commit time |
+| A module loaded only inside a spawned child maps to no test | Yes — Track 4c | Yes — the spawning test must be in `alwaysRun` or import the same modules in-parent | Clear: the coverage test fails at commit time |
+| `writeSync` fails mid-run (ENOSPC, EMFILE) | Yes — the hook's abort path is tested with a forced throw | Yes — the process aborts non-zero (fail-closed) | Clear: the run exits non-zero, so Track 2 condition 1 refuses the build |
 | Two sessions run `bin/test-map build` concurrently | No test (see note) | Yes — atomic temp-file + `rename` | Silent, and acceptable: the loser's write is simply replaced by an equally valid map |
-| Concurrent `/finish` runs both compute the cadence | No test | Yes — crossing detection is a pure function of `main`'s count, recomputed on any `--ff-only` refusal | Clear: the finish that lands the boundary reports "full run (cadence)" |
+| Concurrent `/finish` runs both see cadence debt | No test | Yes — both run full and both refresh; the map is a cache, not a claimed lock | Silent, and acceptable: one redundant full run, never a skipped one |
+| A docs-only `/finish` lands while cadence debt is owed | Yes — the cadence is a pure function of `map.recordedAtCommit`, unit-tested | Yes — a docs-only landing refreshes no map, so the debt survives it | Clear: the next test-running finish reports "full run (cadence: N commits since map)" |
 | The selector itself throws | Yes — the shell's catch-all | Yes — non-zero exit, callers run full | Clear: the error prints and the full suite runs |
 | `alwaysRun` names a test file that was deleted | Yes — rule 6 (test-file set differs) | Yes — rule 6 forces full | Clear |
 | Recording is left on for an ordinary run | N/A | The env var is set only by the nightly and the cadence run | Silent but harmless — recording writes shards nobody reduces |
@@ -578,17 +717,23 @@ failure with no consequence (principle #6).
   leaving `pnpm test` meaning exactly what it means today, so the *safe* command
   is the one already in every agent's habit and every doc.
 - **Stale ref** — **ADDRESSED.** The map is the ref, staleness is its central
-  problem, and rules 2, 4, 5 and 6 in Track 3 are the handling. The selector
-  prints the map's age on every run.
+  problem, and rules 2, 4, 5 and 6 plus the rewired-graph rule in Track 3 are the
+  handling. The selector prints the map's age on every run. Stale *keys* and
+  stale *edges* are different failures and get different rules; conflating them
+  was the first draft's main defect.
 - **Two agents touching the same thing** — **ADDRESSED.** The map is shared
   across worktrees by design (`--git-common-dir`). Writes are atomic; reads of a
   map recorded on a commit that is not an ancestor of the reader's HEAD fall to
-  full (rule 2). Concurrent `/finish` cadence races are addressed in Track 5.
+  full (rule 2). Concurrent `/finish` runs can each decide independently that
+  cadence debt is owed; both then run full, which costs a redundant run and can
+  never skip one.
 - **Hand-edit drift** — **ADDRESSED.** The only hand-edited artifacts are
   `bin/test-select.config.ts`'s two lists. A `forceFull` glob matching nothing,
   or an `alwaysRun` entry naming a non-existent file, is caught: the latter by
   rule 6, the former by a test in `bin/test-select.test.ts` asserting every glob
-  matches at least one path in the tree.
+  matches at least one path in the tree. `alwaysRun` drifting *short* — the
+  failure the review actually found — is caught by Track 4c, which derives the
+  spawning-test set from the tree rather than trusting the list.
 - **Fabricated free-form value** — **ADDRESSED.** The `reason` string in
   `SelectionResult` is generated from the rule that fired, never free-form, so
   an agent cannot report a selection reason that did not happen.
@@ -632,26 +777,41 @@ failure with no consequence (principle #6).
 
 ## Open design questions
 
-- **Static graph versus runtime recording.** Argued at length under "Could this
-  be simpler?". My lean is runtime, on resolution-fidelity grounds. The cheap way
-  to settle it: before Track 1, spend one session building the esbuild metafile
-  pass and comparing its per-test input set against a runtime shard for twenty
-  diverse test files. If they agree and the pass runs in a few seconds, adopt the
-  static graph and delete Tracks 1, 2 and most of 5(c). If they disagree
-  anywhere, the disagreement is the answer. **This spike should run before Track
-  1 is implemented**, because it can delete two tracks.
+- **Static graph versus runtime recording — the gate, not a preference.** Argued
+  under "Could this be simpler?". Settle it before Track 1: build the esbuild
+  metafile pass and compare its per-test input set against a runtime shard for
+  twenty diverse test files, including at least three frontend `.tsx` files and
+  two route doctests. Three outcomes: they agree and the pass runs in a few
+  seconds → **adopt the static graph and delete Tracks 1, 2 and most of 5(c)**;
+  they disagree → the disagreement names which mechanism is wrong, and is the
+  answer; the pass is slow (tens of seconds) → runtime wins on cost. The spike
+  should also evaluate Node's synchronous `module.registerHooks()`, which would
+  close the `require()` gap in the runtime design and change the comparison.
+  This is a **gate**: no Track 1 code until it resolves.
+- **Whether the untested-by-import rule is too trusting.** This is the plan's one
+  accepted critical gap (see Failure modes). The conservative fallback, if it
+  proves optimistic in practice: an unimported changed source file also runs the
+  test directory that mirrors its source directory (`test/` mirrors `src/` per
+  `callback-box/CLAUDE.md`'s source-layout table). That is a heuristic and this
+  plan is otherwise heuristic-free, which is why it is not the default — but it
+  is cheap, and one real missed regression should be enough to adopt it. My lean
+  is to ship without it and instrument: the selector already prints the file that
+  triggered the rule, so the evidence accumulates in agent transcripts.
 - **`N = 20` for the cadence.** A starting value, not a derived one. It should be
   revisited once there is a real distribution of selection sizes (see Rollout).
 - **Staleness bounds.** Proposed: full run if the map is more than 200 commits or
   7 days old. Both are guesses; the nightly should keep the map far inside them,
   so the bounds are a backstop for "the nightly stopped working" rather than a
-  tuned parameter. If the nightly is reliable, tighter bounds cost nothing.
-- **Whether `alwaysRun` should include a sample of route doctests.** The
-  subprocess set is the known blind spot, but "known" rests on this plan's
-  enumeration being complete. A cheap hedge is to add two or three of the
+  tuned parameter. Note the rewired-graph rule already degrades selection toward
+  the full suite as the map ages, so these bounds are a second line, not the
+  first.
+- **Whether `alwaysRun` should include a sample of route doctests.** A cheap
+  hedge against an incomplete blind-spot enumeration: add two or three of the
   heaviest route files unconditionally. My lean is no — it is unfocused
-  defensiveness (principle #6), and Track 4's enforcement test is the focused
-  version of the same worry. Worth a second opinion.
+  defensiveness (principle #6) and Track 4c is the focused version of the same
+  worry — but the review's finding 7 (the hand list was in fact too narrow by
+  6 of 11 files) is evidence that my enumeration instinct here was not reliable.
+  Worth the boxholder's call rather than mine.
 
 ---
 
@@ -668,21 +828,26 @@ agents never see it, and an audit could not test it. The corresponding
 
 ## Implementation order
 
-0. **Spike:** static-graph comparison (see Open design questions). Go/no-go on
-   the whole recording half of the plan. One session, no commits to keep.
-1. **Track 1** — recording in `agent-doctest`, plus its fixture doctest.
-2. **Track 2** — `bin/test-map` build/status with the four refusal conditions and
-   their tests. Depends on 1 for real shards; testable against synthetic shards
-   first.
-3. **Track 4** — the dynamic-import coverage test. Independent of 1–3 and
-   deliberately early: it is the enforcement that makes Track 1's known weakness
-   safe, so it should exist before anything relies on the map.
-4. **Track 3** — `bin/test-select` and its config. Depends on 2's map schema.
+0. **Spike (GATE):** static-graph comparison, plus a `registerHooks()`
+   evaluation. Go/no-go on the whole recording half of the plan. One session, no
+   commits to keep. Nothing below starts until this resolves.
+1. **Track 4** — the three coverage tests. Deliberately first, ahead of the
+   mechanism they protect: they are cheap, they are independent of which
+   mechanism the spike picks, and they generate the `alwaysRun` list that Track 3
+   needs. Landing them first also means the blind-spot enumeration is enforced
+   before anything depends on it being right.
+2. **Track 1** — recording in `agent-doctest`, plus its fixture doctest.
+   (Deleted if the spike picks the static graph; replaced by the esbuild pass.)
+3. **Track 2** — `bin/test-map` build/status with the three refusal conditions
+   and their tests. Depends on 2 for real shards; testable against synthetic
+   shards first.
+4. **Track 3** — `bin/test-select` and its config, including the rewired-graph
+   rule. Depends on 3's map schema and 1's generated `alwaysRun`.
 5. **First real recording run** — a full `pnpm test` with `CB_TEST_MAP_DIR` set,
    on a quiet machine. This doubles as the owed green baseline.
-6. **Track 5a** — `pnpm test:changed`, the agent iteration loop. Usable as soon
-   as 4 and 5 are done.
-7. **Track 5b** — `/finish` step 4 change plus the cadence arithmetic, and the
+6. **Track 5a** — `pnpm test:changed` and `pretest:changed`, the agent iteration
+   loop. Usable as soon as 4 and 5 are done.
+7. **Track 5b** — `/finish` step 4 change plus the map-age cadence rule, and the
    `docs/testing.md` update.
 8. **Track 5c** — the nightly launchd job and its triage agent.
 
@@ -693,15 +858,20 @@ agents never see it, and an audit could not test it. The corresponding
 **Test posture.** Every track above names its tests inline; they are design
 tools, not coverage. The plan's done-when is the following assertions passing:
 
-- `bin/test-select.test.ts` — one case per numbered fail-open rule, one for the
-  untested-by-import case, one asserting every `forceFull` glob matches
-  something real, and one asserting that an internal throw exits non-zero.
+- `bin/test-select.test.ts` — one case per numbered fail-open rule; the
+  rewired-graph case (a test gains an import, then only the imported source
+  changes, and the selector still runs that test); the untested-by-import case;
+  one asserting every `forceFull` glob matches something real; one asserting an
+  internal throw exits non-zero; and one asserting the map-age cadence is a pure
+  function of `recordedAtCommit` (so a docs-only landing cannot consume it).
 - `bin/test-map.test.ts` — one case per refusal condition, and one asserting the
   written map round-trips.
 - `agent-doctest`'s recording doctest — a fixture test file records its owner and
-  its imports; a forced `writeSync` failure disables recording without throwing.
-- `test/dev/dynamic-import-coverage.doctest.md` — passes on the current tree, and
-  fails when a new literal-specifier dynamic import is added without coverage.
+  its imports; a forced `writeSync` failure aborts the process non-zero rather
+  than producing a short shard.
+- `test/dev/import-coverage.doctest.md` — 4a/4b/4c all pass on the current tree,
+  and each fails when its assumption is violated (a new literal-specifier dynamic
+  import, a `require` of repo source, a new spawning test file).
 
 **The measurement the plan owes.** Step 5 produces the first green full run on a
 quiet machine — the baseline the research section explicitly says is missing.
@@ -716,5 +886,5 @@ safe and always correct.
 
 **Docs that land with it.** `callback-box/docs/testing.md` gains a short section
 on when to use `test:changed` versus `test`, and `.claude/agents/finish.md`
-gains the cadence rule in step 4. Both are agent-facing and both are the reason
+gains the map-age cadence rule in step 4. Both are agent-facing and both are the reason
 the knowledge-audit section above is skipped rather than empty.
