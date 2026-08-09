@@ -30,6 +30,8 @@ printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
 WT_LOG_LABEL="SessionEnd"
 WT_SAY_PREFIX="[session-end]   "
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/bin/lib/worktree-teardown.sh"
+# shellcheck source=../../bin/lib/session-workstream.sh
+. "$WT_MONO/bin/lib/session-workstream.sh"
 
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
@@ -69,23 +71,11 @@ esac
 
 if [ -z "$worktree_path" ]; then
   tpath=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
-  # Claude Code encodes the launch directory by replacing every `/` with `-`, so
-  # the encoded worktree root is derived from WT_ROOT rather than spelled out.
-  # Matched and split with parameter expansion, not sed: WT_ROOT is a literal
-  # here, and a path component that happened to be a regex metacharacter would
-  # otherwise mis-parse the name.
-  wt_root_encoded=$(printf '%s' "$WT_ROOT" | tr '/' '-')
-  case "$tpath" in
-    *"$wt_root_encoded-"*)
-      name=${tpath#*"$wt_root_encoded-"}
-      name=${name%%/*}
-      candidate="$WT_ROOT/$name"
-      if [ -d "$candidate" ]; then
-        echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
-        worktree_path="$candidate"
-      fi
-      ;;
-  esac
+  if wt_session_workstream_from_transcript "$tpath"; then
+    candidate="$WT_ROOT/$WT_SESSION_WORKSTREAM"
+    echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
+    worktree_path="$candidate"
+  fi
 fi
 
 if [ -z "$worktree_path" ] || [ ! -d "$worktree_path" ]; then
