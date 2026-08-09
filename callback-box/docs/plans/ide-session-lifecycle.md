@@ -236,10 +236,10 @@ recreate (which final SHA). The transcript files themselves persist; only the
   "tty": "/dev/ttys012",              // the tab's tty, for focus
   "launchedAt": "2026-08-09T18:20:00Z",
   "updatedAt": "2026-08-09T18:20:00Z",
-  "culled": {                         // present only after a cull
+  "removed": {                        // present only after any removal
     "at": "2026-08-10T02:11:00Z",
     "finalSha": "bd6fe693…",          // branch tip before git branch -D
-    "merged": true
+    "merged": true                    // true = a cull; false = forced/manual
   }
 }
 ```
@@ -252,29 +252,68 @@ Writers:
    (no hooks); this launch record is its whole entry.
 2. **A new SessionStart hook** (`.claude/hooks/session-start-registry.sh`,
    added to the existing `SessionStart` array in `.claude/settings.json`) —
-   resolves its worktree the same way `session-end.sh:66-89` does (cwd under
-   `$WT_ROOT`, else transcript-path parsing), and if resolved, merges
-   `{agent: "claude", sessionId, transcriptPath, tty, updatedAt}`. `tty` from
-   the hook's own controlling terminal (`ps -o tty= -p $$`), which the tab's
-   shell passed down. A session that resolves to no worktree (main sessions)
-   writes nothing. Fires on `source: resume|clear|compact|fork` too — the
-   *latest* session id wins, which is the semantics resume wants. Must exit 0
-   always; a registry failure never blocks a session (the existing
-   `auto-sweep.sh` non-blocking discipline).
-3. **Cull enrichment** — `wt_remove_now` (`bin/lib/worktree-teardown.sh:459`)
+   resolves its worktree by, in order: **(a) ancestor argv** — walk the
+   hook's ppid chain to the nearest `claude` process and match
+   `--worktree <name>` in its `ps -o command=` output, the exact signal
+   `wt_other_agent_live` already trusts (`bin/lib/worktree-teardown.sh`
+   argv discipline); **(b)** cwd under `$WT_ROOT`; **(c)** transcript-path
+   parsing per `session-end.sh:66-89`. Ancestor argv is FIRST and
+   load-bearing: for launcher-started sessions, `cwd` and `transcript_path`
+   are both main-derived (`session-end.sh:43-52` documents exactly this),
+   so the fallbacks alone would miss the primary launch path and the
+   registry would never capture the sessionId that resume depends on
+   (cross-model review finding, 2026-08-09). If resolved, merge
+   `{agent: "claude", sessionId, transcriptPath, tty, updatedAt}`. `tty`
+   from the hook's own controlling terminal (`ps -o tty= -p $$`), which the
+   tab's shell passed down. A session that resolves to no worktree (main
+   sessions) writes nothing. Fires on `source: resume|clear|compact|fork`
+   too — the *latest* session id wins, which is the semantics resume wants.
+   Must exit 0 always; a registry failure never blocks a session (the
+   existing `auto-sweep.sh` non-blocking discipline). Chunk A2's doctest
+   asserts specifically the launcher-shaped case: a fake claude ancestor
+   with `--worktree foo` in argv and cwd=main resolves to `foo`.
+3. **Removal enrichment** — `wt_remove_now` (`bin/lib/worktree-teardown.sh:459`)
    captures `git -C <path> rev-parse HEAD` *before* trash-mv and branch
-   delete, and merges `culled: {at, finalSha, merged}` into the registry file.
-   The registry lives outside everything teardown deletes, so the record
-   survives its worktree — that is the point.
+   delete, and merges `removed: {at, finalSha, merged}` into the registry
+   file, where `merged` comes from the caller's already-computed
+   `wt_work_state` verdict. **`wt_remove_now` serves forced and manual
+   removals too** (`bin/worktrees remove --force`, `codex-session-end`), so
+   the field is `removed`, not `culled`: a *cull* is a removal with
+   `merged: true`, and only those appear in /ide/'s "recently culled"
+   stratum — a force-removed dirty worktree must never render as
+   safely-reversible (cross-model review finding). The registry lives
+   outside everything teardown deletes, so the record survives its worktree
+   — that is the point.
 
-Retention: registry files for culled worktrees are pruned by `sweep` after 90
-days (one `find -mtime` line in the existing state-prune pass,
-`bin/worktrees:~440`), matching "hint, not archive".
+Concurrency: the launcher, the SessionStart hook, and removal can race on
+one registry file, and temp+`mv` only makes each *write* atomic, not the
+read-merge-write sequence. `session-registry.sh` therefore wraps the whole
+merge in an `mkdir`-based lock (the `pi_lock` pattern from
+`bin/private-issues`, already named as the repo's lock idiom in
+[worktree-control-surface.md](worktree-control-surface.md)), with a stale
+threshold and a bounded wait; on lock timeout it warns to stderr and skips
+the write — a lost hint beats a blocked lifecycle operation (§4).
+
+Retention: registry files whose worktree is gone AND whose `removed.at` is
+older than 90 days are pruned by a new, explicit step in `sweep` — this is
+deliberately **new** behavior, not a rider on the existing orphan-state
+prune: unlike `browse/`/`logs/`/`pids/` orphans, a sessions file with no
+worktree is *correct* state (it is the cull record), so the prune keys on
+age, never on mere orphanhood.
 
 `bin/worktrees list --json` gains an additive `session` field per row —
-`{agent, hasSession, tty, culled}` pulled from the registry — so /ide/ and
-any client join it without reading registry files themselves. Additive only;
-the locked Track C contract fields do not change.
+`{agent, hasSession, tty, removed}` pulled from the registry — so /ide/ and
+any client join it without reading registry files themselves. Culled
+worktrees have **no directory**, so they are not rows at all under the
+current contract (`bin/worktrees:179` loops `$WT_ROOT` dirs); they appear
+only under a new opt-in flag, `list --json --include-removed`, as
+explicitly-shaped ghost rows:
+`{name, branch, path: null, git: null, runtime: {state: "absent"},
+agent: {state: "none", reason: "no-worktree"}, session: {…, removed: {…}}}`.
+Default output is byte-compatible with today; the ghost-row shape is a
+contract addition clients opt into, not a change to existing fields
+(cross-model review finding: the culled stratum is otherwise unservable
+from `list`).
 
 **First implementation chunk.** `bin/lib/session-registry.sh` (read/merge/
 write/prune) + the launcher writes + a doctest asserting shape, atomicity
@@ -323,7 +362,9 @@ bin/worktrees close  <name> [--force]
      the registry says codex, else fresh. `--fresh` forces the no-reattach
      path. `--agent` overrides the registry; required when no registry entry
      exists (the control-surface rule, kept).
-  3. Worktree culled (no dir; registry has `culled`) → `bin/worktrees create
+  3. Worktree culled (no dir; registry has `removed` with `merged: true`;
+     `merged: false` gets a warning naming the final SHA and requires
+     `--at-final-sha` or `--fresh` explicitly) → `bin/worktrees create
      <name>` from **main** (default), then open a fresh session whose
      continuation prompt includes the cull context: the branch's final SHA
      and `git log --oneline <finalSha>..main` (capped at 50 lines) — "here
@@ -373,10 +414,14 @@ dead end.
    list. Buttons: focus (live) / resume (not live).
 2. **Merged, session still open** — `merged && agent.state == live`. Flagged
    "close freely"; button: close.
-3. **Recently culled** — registry-only entries with `culled` (worktree dir
-   gone), newest first, capped at 15. Button: resume (which recreates).
-   These do NOT appear in stratum 1 — a culled worktree has nothing unique,
-   which is exactly why it was culled.
+3. **Recently culled** — ghost rows from `list --json --include-removed`
+   whose `removed.merged` is `true`, newest first, capped at 15. Button:
+   resume (which recreates). These do NOT appear in stratum 1 — a culled
+   worktree has nothing unique, which is exactly why it was culled.
+   Force-removed unmerged worktrees (`removed.merged: false`) are listed
+   separately and dimmed, labeled with their final SHA and no
+   reversibility implied — the branch is gone and the SHA is the only
+   thread back.
 
 Sweep behavior is unchanged (eligibility rules stay locked per the
 control-surface plan); the only sweep addition is registry pruning (Track A)
@@ -384,7 +429,7 @@ and the finalSha capture inside `wt_remove_now`.
 
 **First implementation chunk.** The `wt_remove_now` finalSha capture + a
 doctest: remove a merged worktree, assert the registry gained
-`culled.finalSha` equal to the pre-removal HEAD, then `create --base-ref
+`removed.finalSha` equal to the pre-removal HEAD, then `create --base-ref
 <that sha>` reproduces the tree.
 
 ### Track D — the /ide/ router app
@@ -413,12 +458,17 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   v1 — this is what makes the CSP trivial and keeps the app one file.
   Auto-refresh via `<meta http-equiv="refresh" content="30">` on the front
   page (crude, sufficient, no-JS).
-- **Front page data:** the router execas `bin/worktrees list --json`
-  (timeout 10s) rather than re-deriving state in TypeScript — the bash
-  implementation is the single liveness authority (the control-surface plan
-  settled this exact question in favor of bash for exactly this reason; a TS
-  re-derivation would be the fail-open duplication again). Render the three
-  strata from Track C.
+- **Front page data:** the router execas `bin/worktrees list --json
+  --include-removed` (timeout 10s) rather than re-deriving state in
+  TypeScript — the bash implementation is the single liveness authority
+  (the control-surface plan settled this exact question in favor of bash
+  for exactly this reason; a TS re-derivation would be the fail-open
+  duplication again). Render the three strata from Track C. All links the
+  page emits are **request-relative** (`/<name>/…`, `/ide/…`) — the
+  `url` field in `list --json` is `http://localhost:<port>/…`
+  (`bin/worktrees:211`) and is CLI display data only; rendered into a page
+  viewed over Tailscale it would point at the viewer's own device
+  (cross-model review finding).
 - **Action endpoints:** `POST /ide/action/{focus|resume|close|recreate}/<name>`
   → execa `bin/worktrees <verb> <name>` with `<name>` validated by the same
   `[a-zA-Z0-9_-]+` rule as `wt_paths_valid_name` *before* building argv, no
@@ -430,6 +480,19 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   on the Mac — that is the feature, not a leak; a non-owner or cross-site
   request never reaches dispatch (`bin/router.ts:894-914` chokepoint). The
   spoof wall and `CB_HUB_SECRET` deletion already in place stay untouched.
+  **Known residual (cross-model review): same-origin worktree frontends.**
+  Worktree apps share the router's origin, so JS served by any branch's
+  frontend passes the CSRF check and carries the owner cookie — a
+  compromised or stale branch could POST `/ide/action/*`. The plan's
+  posture is **accept and document**: every action is a fixed,
+  name-validated verb whose worst case is opening/focusing a tab or a
+  guarded `close` that refuses unmerged work — the verbs' own gates are
+  the blast-radius bound, and all worktree frontend code is owner-authored.
+  The escalation path if that trust assumption weakens (running
+  third-party branches): move `/ide/` to its own port/origin, which the
+  one-file `router-ide.ts` seam keeps cheap. This acceptance is a
+  boxholder decision to confirm before implementation, recorded here so
+  it is a choice, not a default.
 - **Issues browser move:** mount `serveIssues` at `/ide/issues/` (it already
   takes `base` as a parameter, `bin/router-issues.ts` interface); change the
   router index link (`bin/router.ts:709`); 301 `/<name>/dev/issues/*` →
@@ -497,9 +560,20 @@ enforcement over convention; the maintainer is an agent).
   (implemented-plans/ ⇒ implemented; unimplemented-plans/ ⇒
   superseded|parked), `issues:` paths resolve (they join the existing link
   graph, so `doc-check --fix` heals them on issue moves for free),
-  `superseded-by` only with the matching status. Issues gain an *optional*
-  `branch:` scalar — validated as `worktree-[a-zA-Z0-9_-]+` when present,
-  never required.
+  `superseded-by` only with the matching status. **Frontmatter paths are a
+  new link class for doc-check, not a free rider**: today's `--fix` repairs
+  only body markdown links via `repairLinks` (`doc-check.ts:161`) and has
+  no frontmatter model at all (cross-model review finding), so E1
+  explicitly includes feeding `issues:`/`superseded-by`/`design:` paths
+  into the reference graph AND teaching `--fix` to rewrite them on moves —
+  otherwise the validator would detect breakage `--fix` can't heal, which
+  is worse than today. Issues gain an *optional* `branch:` scalar —
+  validated as `worktree-[a-zA-Z0-9_-]+` when present, never required —
+  and E3 carries the full consumer side: `IssueFrontmatter` +
+  `parseFrontmatter` projection in `bin/router-issues.ts` (which today
+  discards unknown fields, `router-issues.ts:161`) and a branch column in
+  the issues view joined against live worktrees, since a validated field
+  nobody renders answers nothing.
 - **`/finish` integration:** step 6 writes `status:` frontmatter instead of
   the prose line; step 7b reads `issues:` (falling back to the prose section
   during the long tail of unmigrated habits); when marking a plan `partial`,
@@ -588,7 +662,7 @@ question to justify it.
 | Registry sessionId is stale (transcript pruned, `/clear` created a new id after last write) | To add — resume with a bogus id | To add — `resume` pre-checks `transcriptPath` exists; on in-tab `claude --resume` failure the tab shows claude's own error; wrapper falls back to fresh after printing it | Clear: error visible in the opened tab, fallback stated |
 | tty reused by an unrelated tab after close | To add — focus with a dead-process tty | Yes by design — focus verifies a live claude/codex on that tty before AppleScripting | Clear: "no live session — use resume" |
 | Two concurrent sessions in one worktree | Not tested — hint semantics | Last-writer-wins on `updatedAt`; `resume` reattaches the latest | Acceptable by design; registry is a hint, and `focus` still finds whichever tty is live |
-| `wt_remove_now` can't read HEAD before delete (corrupt worktree) | To add — remove with a broken .git | To add — record `culled` without `finalSha`; recreate then works from main only and says why | Clear: recreate prints "no final SHA recorded" |
+| `wt_remove_now` can't read HEAD before delete (corrupt worktree) | To add — remove with a broken .git | To add — record `removed` without `finalSha`; recreate then works from main only and says why | Clear: recreate prints "no final SHA recorded" |
 | Pre-plan culls (no registry file at all) | Covered by absent-file doctest | Yes — stratum 3 simply doesn't list them; `resume` on them is the "unknown worktree" error | Clear |
 | Router action execa times out / bin missing | To add — action doctest with a stubbed failing command | To add — 303 with flash carrying first stderr line; router never blocks on an action (10s timeout, killGroup) | Clear: flash message |
 | osascript lacks Automation permission (TCC) | Exercised deliberately in chunk D2 on the real Mac | Error surfaces in flash / CLI stderr | Clear |
@@ -694,8 +768,9 @@ than recall (§11) — the same disposition the control-surface plan recorded.
 Each chunk is a commit or a few related commits; all land before the plan
 ships. Codex-implementable: no chunk contains an open question.
 
-1. **A1 — registry lib + launcher writes** (`bin/lib/session-registry.sh`,
-   both launcher paths, doctest for shape/atomicity/absence).
+1. **A1 — registry lib + launcher writes** (`bin/lib/session-registry.sh`
+   including the mkdir merge lock, both launcher paths, doctest for
+   shape/locked-merge/absence).
 2. **A2 — SessionStart registry hook** (worktree resolution shared with
    session-end.sh — extract the transcript-path parser into a lib function
    rather than copying it; hook wired into settings.json). Depends on A1.
@@ -719,12 +794,14 @@ ships. Codex-implementable: no chunk contains an open question.
     TCC exercised). Depends on B3/B4, D1.
 11. **D3 — issues browser move** (mount at /ide/issues/, 301s, link sweep).
     Depends on D1 only.
-12. **E1 — plan frontmatter: validator + 48-file migration**, one commit.
+12. **E1 — plan frontmatter: validator + frontmatter-path repair in
+    `--fix` + 48-file migration**, one commit.
 13. **E2 — /finish + cb-plan updates** (frontmatter writer, `issues:`
     reader, surface-don't-file for partials, `branch:` stamping). Depends on
     E1.
-14. **E3 — `/ide/plans/` view + issue `branch:` validation**. Depends on
-    D1, E1.
+14. **E3 — `/ide/plans/` view + issue `branch:` projection**
+    (`IssueFrontmatter` field, parser, branch column in the issues view).
+    Depends on D1, E1.
 15. **F — watch issue, `design:` links, redesign-issue gap corrections,
     `bin/CLAUDE.md` + `docs/plans/README.md` + `dev/README.md` docs.**
 
