@@ -3,7 +3,16 @@ title: "Chat agent narrates internal bookkeeping the user doesn't care about"
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder noticed it in a live chat exchange
+resolution: implemented
 ---
+
+> **Closed** — a "Do your bookkeeping silently" bullet added to `CHAT_SYSTEM_PROMPT`
+> ("Working in chat", `callback-box/src/core/chat/session/prompts.ts`), general to
+> the whole bookkeeping class, with an explicit guard that a direct "what did you
+> change?" still gets a full answer. Verified in live chats against a box: the work
+> (card edit + `contains:` refresh, including an over-budget trim 361→160 chars)
+> still happens silently, and an explicit "did you update that contains summary
+> too?" got a specific answer. Cross-model (Codex) review: ship as is.
 
 > **Job to be done:** *When I glance at a chat reply after asking for something,
 > I want to see the answer or a brief acknowledgment — not the agent's own
@@ -42,7 +51,7 @@ bookkeeping." Watch the wording so it doesn't over-suppress genuinely useful
 
 ## Related
 
-- [chat output vocabulary ia pass](2026-06-02-chat-output-vocabulary-ia-pass.md)
+- [chat output vocabulary ia pass](../../docs-and-chores/2026-06-02-chat-output-vocabulary-ia-pass.md)
   — adjacent chat-prompt/output-shaping work, but that item is about the *tag
   vocabulary* (`<ack>`, `<callout>`, `{% quote %}`); this is about *what the agent
   chooses to say*, so it's a separate, smaller tweak.
