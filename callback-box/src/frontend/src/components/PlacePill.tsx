@@ -15,12 +15,25 @@
  *
  * Two lazinesses matter. The landmark lookup (`landmarks.forDir`) runs
  * per-place, cheap and scoped to one directory. The switch menu's
- * `chat.byLandmark` — which globs every landmark and enumerates every session
- * — does NOT: it's gated behind the first dropdown open (`enabled`), then
- * cached, with every later open invalidating in the background so the cached
- * rows paint instantly and refresh behind them. A bar that mounts on every
- * page must not carry that at rest (the rationale AppNav already states for
- * `status.navStatus`). The same applies to the `nav.card` section's query.
+ * `chat.placeMenu` — which globs every landmark — does NOT: it's gated behind
+ * the first dropdown open (`enabled`), then cached, with every later open
+ * invalidating in the background so the cached rows paint instantly and
+ * refresh behind them. A bar that mounts on every page must not carry that at
+ * rest (the rationale AppNav already states for `status.navStatus`). The same
+ * applies to the `nav.card` section's query.
+ *
+ * The gate stays; what changed is that the cache is no longer empty when the
+ * user reaches for it. ChatPage warms `chat.placeMenu` from idle time once its
+ * own bootstrap has settled (`useIdlePrefetch`), so the first open paints rows
+ * instead of "Loading…". This query owns none of that — it still just reads
+ * whatever cache exists — and a page that doesn't prefetch still opens cold.
+ *
+ * This menu used to read `chat.byLandmark`, the full picker payload: every chat
+ * in the box, bucketed and *named*. It drew none of that but the counts, and
+ * naming a chat costs a transcript read — so the one query warmed on every page
+ * load was the most expensive in the app. `chat.placeMenu` computes only what
+ * is drawn here. If a row ever needs to show a session's name, that's a reason
+ * to reconsider this split, not to quietly widen the payload.
  */
 
 import { useEffect, useState } from "react";
@@ -111,14 +124,14 @@ export function PlacePill({
   );
   const landmark = place.dir === null ? null : hereQuery.data?.landmark ?? null;
 
-  const switchQuery = trpc.chat.byLandmark.useQuery(undefined, { enabled: switchOpened });
+  const switchQuery = trpc.chat.placeMenu.useQuery(undefined, { enabled: switchOpened });
   const switchData = switchQuery.data;
   // A failed load is shown in the menu as a retry row, and logged: without
   // both, the menu sat on "Loading…" forever with nothing anywhere saying why.
   const switchError = switchQuery.error;
   useEffect(() => {
     if (switchError !== null) {
-      console.error("[app-bar] switch menu: chat.byLandmark failed:", switchError.message);
+      console.error("[app-bar] switch menu: chat.placeMenu failed:", switchError.message);
     }
   }, [switchError]);
   // The box's own nav.card section — same first-open laziness as the
@@ -137,7 +150,7 @@ export function PlacePill({
    */
   function openSwitchMenu(): void {
     if (switchOpened) {
-      void utils.chat.byLandmark.invalidate();
+      void utils.chat.placeMenu.invalidate();
       void utils.nav.get.invalidate();
       return;
     }
@@ -150,15 +163,17 @@ export function PlacePill({
   const faceLabel = landmark === null ? place.label : landmark.label || place.label;
 
   // The box root is always a switchable place, landmark card or not. With no
-  // root card, `byLandmark` has no root bucket (root chats ride `unassigned`),
-  // so the menu gets a synthetic row — otherwise a root chat has no row to be
-  // "current" on and the bar reads as a special case (boxholder, 2026-08-05).
+  // root card there is no root row to render, so the menu synthesizes one —
+  // otherwise a root chat has no row to be "current" on and the bar reads as a
+  // special case (boxholder, 2026-08-05). The server sends `rootFreshCount`
+  // precisely for this row, and zero when a real root landmark already covers
+  // those chats.
   const switchRows: SwitchLandmark[] | null = (() => {
     if (switchData === undefined) return null;
     if (switchData.landmarks.some((lm) => lm.dir === "")) return switchData.landmarks;
-    const rootFresh = switchData.unassigned.sessions.filter((s) => s.contextDir === "").length;
     const root: SwitchLandmark = {
-      path: "", dir: "", label: "Box root", symbol: "🏠", symbolSrc: null, freshCount: rootFresh,
+      path: "", dir: "", label: "Box root", symbol: "🏠", symbolSrc: null,
+      freshCount: switchData.rootFreshCount,
     };
     return [root, ...switchData.landmarks];
   })();

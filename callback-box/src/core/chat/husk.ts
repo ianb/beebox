@@ -14,9 +14,13 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
-import { getSessionMetadata } from "../../cli/lib/session.js";
+import { readFirstUserSnippet } from "../../cli/lib/session-snippet.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
+import { mapInBatchesSettled } from "../../lib/map-batched.js";
+
+/** Husk cards read at once — see {@link mapInBatchesSettled}. */
+const READ_CONCURRENCY = 64;
 
 export const CHAT_HUSK_DIR = "store/chat/web";
 /** Keep husk titles bookmark-sized, not transcript-sized. */
@@ -55,12 +59,7 @@ export async function findChatHusk(boxRoot: string, sessionId: string): Promise<
 async function readSnippetTitle(boxRoot: string, sessionId: string): Promise<string | null> {
   try {
     const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-    const meta = await getSessionMetadata({
-      sessionId,
-      logPath,
-      snippetMaxLen: TITLE_MAX_LEN,
-    });
-    const snippet = meta.firstUserSnippet?.trim();
+    const snippet = (await readFirstUserSnippet({ logPath, snippetMaxLen: TITLE_MAX_LEN }))?.trim();
     return snippet !== undefined && snippet !== "" ? snippet : null;
   } catch (_e) {
     // No transcript yet (brand-new session) or unreadable — the husk starts
@@ -138,11 +137,22 @@ export async function listChatHusksUnder(boxRoot: string, relDir: string): Promi
     if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
+  // Read concurrently: every chat list in the app waits on this, and the husks
+  // are independent files. Bounded, though — a box accumulates one husk per
+  // chat forever, so this list grows without limit and unbounded fan-out here
+  // would eventually exhaust file descriptors. `allSettled` per code-style: an
+  // unreadable husk is already a per-file skip and must not abandon the rest.
+  const settled = await mapInBatchesSettled(
+    names.filter((name) => name.endsWith(".chat.card")),
+    { size: READ_CONCURRENCY, map: (name) => readChatHusk(boxRoot, `${relDir}/${name}`) },
+  );
   const out: ChatHuskEntry[] = [];
-  for (const name of names) {
-    if (!name.endsWith(".chat.card")) continue;
-    const entry = await readChatHusk(boxRoot, `${relDir}/${name}`);
-    if (entry !== null) out.push(entry);
+  for (const outcome of settled) {
+    if (outcome.status === "rejected") {
+      console.warn(`chat-husk: skipping a card under ${relDir}:`, outcome.reason);
+      continue;
+    }
+    if (outcome.value !== null) out.push(outcome.value);
   }
   return out;
 }

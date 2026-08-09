@@ -106,11 +106,14 @@ process.env.CB_AUTH_FILE = join(noOwnerAuthDir, "auth.json");
 process.env.CB_OWNER_EMAIL = "owner@example.com";
 const noOwnerBox = await makeTmpBox({ git: true });
 const noOwnerResult = await caller(noOwnerBox.root).admin.createInvite({}).then(
-  () => "allowed",
-  (error) => error.code,
+  () => ({ code: "allowed", message: "" }),
+  (error) => ({ code: error.code, message: error.message }),
 );
-noOwnerResult
-=> PRECONDITION_FAILED
+JSON.stringify(noOwnerResult)
+=> {"code":"PRECONDITION_FAILED","message":"Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links."}
+
+(await caller(noOwnerBox.root).admin.boxConfig()).localPasswordStatus
+=> not-initialized
 ```
 
 ```ts cleanup
@@ -147,6 +150,25 @@ services: {"calendar":true,"gmail":false}
 hasOwnerEmailField: true
 ```
 
+Google login availability is reported separately from per-box Google service
+toggles, so the allowed-user UI can describe how a non-local account signs in.
+
+```ts continue
+delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+(await caller(box.root).admin.boxConfig()).googleLoginConfigured
+=> false
+
+process.env.GOOGLE_OAUTH_CLIENT_ID = "login-client";
+(await caller(box.root).admin.boxConfig()).googleLoginConfigured
+=> false
+
+process.env.GOOGLE_OAUTH_CLIENT_ID = "login-client";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "login-secret";
+(await caller(box.root).admin.boxConfig()).googleLoginConfigured
+=> true
+```
+
 ## updateBoxConfig still accepts allowedEmails and filters non-emails
 
 ```ts continue
@@ -171,8 +193,27 @@ await caller(box.root).admin.updateBoxConfig({
   allowedEmails: ["member@example.com", "invited@example.com", "owner@example.com"],
 });
 const memberConfig = await caller(box.root).admin.boxConfig();
-JSON.stringify(memberConfig.passwordResetEligibleEmails)
-=> ["member@example.com"]
+const memberConfigSummary = {
+  eligible: memberConfig.passwordResetEligibleEmails,
+  status: memberConfig.localPasswordStatus,
+  details: memberConfig.allowedUserDetails,
+};
+JSON.stringify(memberConfigSummary)
+=> {"eligible":["member@example.com"],"status":"ready","details":[{"email":"member@example.com","kind":"local-member","resetEligible":true},{"email":"invited@example.com","kind":"access-only","resetEligible":false},{"email":"owner@example.com","kind":"owner-entry","resetEligible":false}]}
+```
+
+A local owner remains described as a local account when a different configured
+owner identity makes its allowlist entry non-redundant. It is still ineligible
+for the member password-reset action.
+
+```ts continue
+process.env.CB_OWNER_EMAIL = "google-owner@example.com";
+const localOwnerDetail = (await caller(box.root).admin.boxConfig()).allowedUserDetails
+  .find((user) => user.email === "owner@example.com");
+JSON.stringify(localOwnerDetail)
+=> {"email":"owner@example.com","kind":"local-owner","resetEligible":false}
+
+delete process.env.CB_OWNER_EMAIL;
 ```
 
 The owner can mint a reset only for that eligible member; the returned link is
@@ -198,6 +239,8 @@ await caller(box.root).admin.createPasswordReset({ email: "invited@example.com" 
 await rm(memberAuthDir, { recursive: true, force: true });
 delete process.env.CB_AUTH_FILE;
 delete process.env.CB_AUTH_SCRYPT_N;
+delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 ```
 
 ## empty input is rejected

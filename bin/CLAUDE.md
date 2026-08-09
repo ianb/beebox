@@ -44,6 +44,24 @@ value** (printing it would re-leak exactly what you're purging; look it up with
 convenience not enforcement — pair with server-side push protection / a CI scan
 for a real gate. Companion to the home-path guard above.
 
+## Landing a worktree branch (`land`)
+
+`bin/land [branch]` fast-forwards a finished worktree branch onto `main` — what
+`/finish` step 8 calls, and what you run by hand to land a branch a finish left
+merge-ready. It resolves the main checkout from `--git-common-dir` and targets
+it explicitly, so it works from the main checkout or from inside a worktree
+(where a plain `git -C ~/src/callback-box merge` is blocked by Claude Code's
+worktree isolation).
+
+With no argument: from a worktree it lands that worktree's own branch; from the
+main checkout it auto-detects the single merge-ready branch and refuses if
+several qualify. `--list` shows candidates, `--dry-run` previews.
+
+It enforces the preflight — main checkout clean, on `main`, `--ff-only` — and
+nothing more. Landing is a fast-forward by construction, since `/finish` merges
+main INTO the worktree and verifies there; a not-a-fast-forward refusal means
+main moved, and the fix belongs back in the worktree.
+
 ## Router architecture
 
 One router (`router.ts`, port 3210) serves the main checkout and every
@@ -166,9 +184,63 @@ worktree has no active `claude` session. The generation leak that made
 this necessary (concurrent cold requests racing to spawn duplicate
 vite+fastify pairs) is fixed at the source in `ensureRunning`.
 
+## `bin/worktrees` is the agent-neutral control surface
+
+Worktree creation and removal are CLI subcommands, and every agent frontend is a
+thin client of them. `.claude/hooks/worktree-create.sh` and
+`.claude/hooks/worktree-remove.sh` are ~15-line adapters that translate Claude
+Code's hook JSON into CLI arguments; `bin/launch-worktree-session --agent codex`
+calls the CLI directly. The logic lives in `bin/lib/worktree-create.sh` and
+`bin/lib/worktree-teardown.sh`. It used to live in the hooks, which meant Codex
+had to synthesize hook JSON and pipe it into a file under `.claude/` to reach the
+repo's own worktree logic — and any third frontend would have had to as well.
+Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
+
+**Add worktree behavior to the lib, never to a hook.** A hook that grows its own
+logic is invisible to every other frontend, which is how the coupling came back.
+
+**Locations are derived, never hardcoded** (`bin/lib/worktree-paths.sh`):
+`wt_paths_init` resolves `WT_MONO` through `git rev-parse --git-common-dir` and
+names `WT_ROOT` / `WT_BOX_ROOT` / `WT_BOX_SRC` under its parent. It **fails
+closed** rather than falling back to `$HOME/src/callback-box` — a plausible but
+wrong root means lifecycle operations on a checkout that isn't the one in play,
+which is silent when it happens. Override the basenames with
+`CALLBACK_WORKTREE_ROOT` / `CALLBACK_BOX_ROOT` / `CALLBACK_BOX_SRC`.
+
+**`bin/worktrees create` owns stdout.** Exactly one line — the worktree path —
+because Claude Code's WorktreeCreate contract requires it. This is enforced
+structurally (the command stashes real stdout on fd 3 and points fd 1 at stderr),
+so a child that prints to stdout can't corrupt it. `generate-agents-md.ts` does
+exactly that, and its line landed in the returned path until this was added.
+
+**Agent liveness is tri-state, and `unknown` is not `none`.**
+`wt_other_agent_live` answers `none` / `live` / `unknown` in `WT_AGENT_STATE`;
+every caller must treat `unknown` as `live`, because it stands in front of an
+irreversible delete. `bin/worktrees sweep` kept its own two-state copy until
+2026-08 and that was a real fail-open hole (a failed `ps`/`lsof` read as "nothing
+running"). Sweep keeps its one-snapshot-across-N-worktrees property through
+`wt_agent_snapshot_capture` instead of a private implementation. A snapshot and
+`--exclude-self-ancestor` are mutually exclusive and the guard refuses the
+combination rather than answering wrongly.
+
+**`--force` never overrides liveness.** `bin/worktrees remove --force` skips the
+merged and dirty checks only. Unmerged commits are recoverable from a branch; a
+running session's working directory is not.
+
 ## Lifecycle commands
 
-- `bin/worktrees status` — JSON of running worktrees, PIDs, ports, idle ms
+- `bin/worktrees list [--json]` — every worktree joined across all three
+  signals: git (ahead/dirty/merged), router runtime (cold/ready/ports), agent
+  liveness (none/live/unknown). Works with no router running — `runtime.state`
+  then reports `unknown`, which is distinct from a worktree the router knows to
+  be `cold`. Counts are `null`, never `0`, when git couldn't answer. It is
+  stateless: everything is derived per call, so it cannot drift. Implemented in
+  bash rather than TypeScript specifically so the liveness answer comes from
+  `wt_other_agent_live` and not a second copy of it.
+- `bin/worktrees create <name> [--base-ref <ref>]` — create or re-attach
+  (idempotent); prints the path on stdout, logs on stderr
+- `bin/worktrees remove <name> [--force] [--keep-branch] [--dry-run]`
+- `bin/worktrees status` — raw router status JSON (PIDs, ports, idle ms)
 - `bin/worktrees down <name>` — stop one worktree's processes now
 - `bin/worktrees panic` — kill router + all known children + wipe state,
   then reclaim project-scoped agent-browsers and any stray vite/fastify
@@ -181,7 +253,8 @@ second router without touching the live one (which only picks up
 
 ## Worktree lifecycle hooks
 
-`claude --worktree <name>` triggers the `WorktreeCreate` hook: git-clones
+`claude --worktree <name>` triggers the `WorktreeCreate` hook, which calls
+`bin/worktrees create` (see the control-surface section above). That: git-clones
 `~/src/boxes/test1` to `~/src/box-worktrees/<name>/test1/` (kept outside
 the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename
 stays `test1` so URL slugs match across worktrees and links like
@@ -196,9 +269,10 @@ to keep or remove.
 
 `bin/launch-worktree-session --agent codex` spins up an OpenAI Codex CLI
 session in a fresh worktree the same way the default claude path does. Codex
-has no `--worktree`, so the launcher's generated launch script invokes
-`.claude/hooks/worktree-create.sh` directly (JSON `{name}` on stdin, worktree
-path on stdout; idempotent — a relaunch re-attaches), then execs `codex` in
+has no `--worktree`, so the launcher's generated launch script calls
+`bin/worktrees create <name>` directly (worktree path on stdout; idempotent — a
+relaunch re-attaches) — the same command Claude Code reaches through its hook
+adapter, so both agents get identical setup — then execs `codex` in
 the worktree with full access (`-s danger-full-access -a never`) — parity with
 claude workers, which run unsandboxed via `--dangerously-skip-permissions` (a
 `workspace-write` sandbox can't commit/`/finish` in a linked worktree, since codex
@@ -260,15 +334,17 @@ checkout's** copy, and it `cd`s to main before touching anything — a script
 must not run destructive steps from inside the directory it deletes.
 
 **One implementation of the destructive path: `bin/lib/worktree-teardown.sh`**
-(sourced, not executed), shared by `.claude/hooks/session-end.sh` and
-`bin/codex-session-end`. It owns `wt_other_agent_live` (the fail-closed
-live-agent guard), `wt_work_state` (ahead/dirty/blockers), `wt_remove_now` (the
-trash-mv removal + private-issues + router stop + cache state), and `wt_log`
-(the shared `worktree-cleanup.log`, labeled `SessionEnd` / `CodexExit`).
-`bin/worktrees sweep` deliberately keeps its own: it takes ONE process snapshot
-for N worktrees and removes with `git worktree remove --force` rather than the
-trash-mv. Sweep still counts a live `codex` process whose cwd is in a worktree
-as an active session, same as claude.
+(sourced, not executed), shared by `.claude/hooks/session-end.sh`,
+`.claude/hooks/worktree-remove.sh`, `bin/codex-session-end`, and
+`bin/worktrees` (`list`, `remove`, `sweep`). It owns `wt_other_agent_live` (the
+fail-closed tri-state live-agent guard) with `wt_agent_snapshot_capture` for
+batched callers, `wt_work_state` (ahead/dirty/blockers), `wt_remove_now` (the
+full trash-mv removal), the pieces it is built from —
+`wt_remove_private_issues`, `wt_remove_satellites` (box clone + router stop +
+cache state, which is all the WorktreeRemove hook wants, since Claude Code
+removes the git worktree itself there), `wt_trash_reap` — and `wt_log` (the
+shared `worktree-cleanup.log`, labeled per caller). Sweep counts a live `codex`
+process whose cwd is in a worktree as an active session, same as claude.
 
 **Detecting a live agent process: use `ps -axo pid=,comm=`, never `pgrep -x
 claude`.** pgrep matches the 16-char accounting name (`ps ucomm`), and a

@@ -7,12 +7,16 @@
  * <kind> go?".
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseLandmarkFields, type LandmarkSymbolData } from "../../schemas/landmark.js";
+import { type LandmarkSymbolData } from "../../schemas/landmark.js";
+import { readLandmarkCard } from "./card-cache.js";
 import { findDestination, type DestinationKind } from "./destination.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { mapInBatchesSettled } from "../../lib/map-batched.js";
+
+/** Landmark cards read at once — see {@link mapInBatchesSettled}. */
+const READ_CONCURRENCY = 64;
 
 export interface DestinationInfo {
   /** Box-relative directory containing the landmark (empty string = box root). */
@@ -29,6 +33,28 @@ function symbolText(symbol: LandmarkSymbolData | undefined): string | null {
   return null;
 }
 
+/** One card's destination entry for `kind`, or null when it advertises none. */
+async function readDestination(
+  boxRoot: string,
+  { relPath, kind }: { relPath: string; kind: DestinationKind },
+): Promise<DestinationInfo | null> {
+  const absPath = path.join(boxRoot, relPath);
+  let fields;
+  try {
+    fields = await readLandmarkCard(absPath);
+  } catch (e) {
+    console.warn(`list-destinations: failed to parse ${absPath}: ${errorMessage(e)}`);
+    return null;
+  }
+  if (fields === null) return null;
+  if (findDestination(fields.destinations, kind) === null) return null;
+
+  const dir = path.dirname(relPath);
+  const normalizedDir = dir === "." ? "" : dir;
+  const label = fields.navigation?.label ?? (normalizedDir === "" ? "root" : path.basename(normalizedDir));
+  return { dir: normalizedDir, label, symbol: symbolText(fields.navigation?.symbol) };
+}
+
 export async function listDestinations(
   boxRoot: string,
   kind: DestinationKind,
@@ -39,24 +65,20 @@ export async function listDestinations(
     ignore: ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"],
   });
 
+  // Independent files, read concurrently but in bounded batches — one handle
+  // per landmark at once is an fd-exhaustion risk on a large box. `allSettled`
+  // per code-style: one bad card must not abandon the rest of the destinations.
+  const read = await mapInBatchesSettled(matches, {
+    size: READ_CONCURRENCY,
+    map: (relPath) => readDestination(boxRoot, { relPath, kind }),
+  });
   const out: DestinationInfo[] = [];
-  for (const relPath of matches) {
-    const absPath = path.join(boxRoot, relPath);
-    let fields;
-    try {
-      const content = await fs.readFile(absPath, "utf-8");
-      fields = parseLandmarkFields(content);
-    } catch (e) {
-      console.warn(`list-destinations: failed to parse ${absPath}: ${errorMessage(e)}`);
+  for (const [i, outcome] of read.entries()) {
+    if (outcome.status === "rejected") {
+      console.warn(`list-destinations: failed to read ${matches[i]}: ${errorMessage(outcome.reason)}`);
       continue;
     }
-    if (fields === null) continue;
-    if (findDestination(fields.destinations, kind) === null) continue;
-
-    const dir = path.dirname(relPath);
-    const normalizedDir = dir === "." ? "" : dir;
-    const label = fields.navigation?.label ?? (normalizedDir === "" ? "root" : path.basename(normalizedDir));
-    out.push({ dir: normalizedDir, label, symbol: symbolText(fields.navigation?.symbol) });
+    if (outcome.value !== null) out.push(outcome.value);
   }
 
   out.sort((a, b) => {

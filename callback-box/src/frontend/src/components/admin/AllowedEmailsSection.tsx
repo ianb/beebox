@@ -1,8 +1,8 @@
 /** Box access list and operator-issued password resets for existing members. */
 
-import { useEffect, useState } from "react";
-import { withBase } from "../../api";
-import { trpc, trpcClient } from "../../lib/trpc";
+import { type RouterOutput } from "../../lib/trpc";
+import { useAllowedEmails, type ResetLink } from "../../hooks/useAllowedEmails";
+import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { InlineAction } from "../ui/InlineAction";
@@ -10,17 +10,49 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { TextField } from "../ui/fields";
-import { errorMessage } from "@shared/error-guards";
 
-interface ResetLink {
-  email: string;
-  url: string;
-  expiresAt: number;
+type AllowedUserDetail = RouterOutput["admin"]["boxConfig"]["allowedUserDetails"][number];
+type LocalPasswordStatus = RouterOutput["admin"]["boxConfig"]["localPasswordStatus"];
+
+function AccountBadge({ kind, googleLoginConfigured }: {
+  kind: AllowedUserDetail["kind"];
+  googleLoginConfigured: boolean;
+}) {
+  if (kind === "local-member" || kind === "local-owner") {
+    return <Badge tone="success">Local password account</Badge>;
+  }
+  if (kind === "owner-entry") return <Badge tone="neutral">Owner</Badge>;
+  if (kind === "unknown") return <Badge tone="warning">Password status unavailable</Badge>;
+  if (googleLoginConfigured) return <Badge tone="info">Google sign-in only</Badge>;
+  return <Badge tone="info">Needs account setup</Badge>;
+}
+
+function LocalPasswordNotice({ status }: { status: LocalPasswordStatus }) {
+  if (status === "ready") return null;
+  if (status === "not-initialized") {
+    return (
+      <Card background="info" border="subtle" padding="sm">
+        <Stack gap="xs">
+          <Text size="sm">Local password accounts are not initialized for this owner.</Text>
+          <Text as="div" size="sm" mono>cb auth create-user</Text>
+        </Stack>
+      </Card>
+    );
+  }
+  const message = status === "owner-mismatch"
+    ? "The signed-in owner does not match the server's local password owner. Invite links and password resets are unavailable."
+    : "The local password store is unavailable. Password-account details and resets cannot be loaded.";
+  return (
+    <div role="alert">
+      <Text as="p" size="sm" tone="danger">{message}</Text>
+    </div>
+  );
 }
 
 function AllowedUserRows(options: {
   emails: string[];
-  eligible: Set<string>;
+  details: Map<string, AllowedUserDetail>;
+  googleLoginConfigured: boolean;
   resettingEmail: string | null;
   removingEmail: string | null;
   onReset: (email: string) => Promise<void>;
@@ -38,9 +70,17 @@ function AllowedUserRows(options: {
       {options.emails.map((email) => (
         <Card key={email} background="warm" border="subtle" padding="sm">
           <Row justify="between" wrap>
-            <Text size="sm" breakAll className="min-w-0 flex-1">{email}</Text>
+            <Stack gap="xs" className="min-w-0 flex-1">
+              <Text size="sm" breakAll>{email}</Text>
+              <div>
+                <AccountBadge
+                  kind={options.details.get(email)?.kind ?? "unknown"}
+                  googleLoginConfigured={options.googleLoginConfigured}
+                />
+              </div>
+            </Stack>
             <Row gap="md">
-              {options.eligible.has(email) ? (
+              {options.details.get(email)?.resetEligible === true ? (
                 <InlineAction onClick={() => options.onReset(email)} disabled={options.resettingEmail === email}>
                   Reset password
                 </InlineAction>
@@ -92,91 +132,31 @@ function LoadingAllowedUsers() {
 }
 
 export function AllowedEmailsSection() {
-  const configQuery = trpc.admin.boxConfig.useQuery();
-  const updateMutation = trpc.admin.updateBoxConfig.useMutation();
-  const resetMutation = trpc.admin.createPasswordReset.useMutation();
-  const utils = trpc.useUtils();
-  const [emails, setEmails] = useState<string[]>([]);
-  const [newEmail, setNewEmail] = useState("");
-  const [checking, setChecking] = useState(false);
-  const [pendingExistingEmail, setPendingExistingEmail] = useState<string | null>(null);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [resetLink, setResetLink] = useState<ResetLink | null>(null);
-  const [resettingEmail, setResettingEmail] = useState<string | null>(null);
-  const [removingEmail, setRemovingEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (configQuery.data) setEmails(configQuery.data.allowedEmails);
-  }, [configQuery.data]);
-
-  const saveEmails = async (updated: string[], removedEmail?: string) => {
-    setLocalError(null);
-    setRemovingEmail(removedEmail ?? null);
-    try {
-      const data = await updateMutation.mutateAsync({ allowedEmails: updated });
-      setEmails(data.allowedEmails);
-      setResetLink(null);
-      await utils.admin.boxConfig.invalidate();
-    } catch (_error) {
-      // Mutation error is rendered below.
-    } finally {
-      setRemovingEmail(null);
-    }
-  };
-
-  const addEmail = async () => {
-    const email = newEmail.trim().toLowerCase();
-    if (!email.includes("@")) return;
-    if (emails.includes(email)) {
-      setNewEmail("");
-      return;
-    }
-    if (pendingExistingEmail !== email) {
-      setChecking(true);
-      setLocalError(null);
-      try {
-        const status = await trpcClient.admin.localAccountStatus.query({ email });
-        if (status.exists) {
-          setPendingExistingEmail(email);
-          return;
-        }
-      } catch (error) {
-        setLocalError(errorMessage(error));
-        return;
-      } finally {
-        setChecking(false);
-      }
-    }
-    setNewEmail("");
-    setPendingExistingEmail(null);
-    await saveEmails([...emails, email]);
-  };
-
-  const createReset = async (email: string) => {
-    setResetLink(null);
-    setLocalError(null);
-    updateMutation.reset();
-    resetMutation.reset();
-    setResettingEmail(email);
-    try {
-      const result = await resetMutation.mutateAsync({ email });
-      setResetLink({
-        email,
-        url: `${window.location.origin}${withBase(result.resetPath)}`,
-        expiresAt: result.expiresAt,
-      });
-    } catch (_error) {
-      await utils.admin.boxConfig.invalidate();
-    } finally {
-      setResettingEmail(null);
-    }
-  };
+  const {
+    configQuery,
+    updateMutation,
+    resetMutation,
+    emails,
+    newEmail,
+    setNewEmail,
+    checking,
+    pendingExistingEmail,
+    setPendingExistingEmail,
+    localError,
+    resetLink,
+    resettingEmail,
+    removingEmail,
+    saveEmails,
+    addEmail,
+    createReset,
+  } = useAllowedEmails();
 
   if (configQuery.isLoading) return <LoadingAllowedUsers />;
 
   const queryError = configQuery.error?.message ?? null;
   const mutationError = resetMutation.error?.message ?? updateMutation.error?.message ?? localError;
-  const eligible = new Set(configQuery.data?.passwordResetEligibleEmails);
+  const details = new Map(configQuery.data?.allowedUserDetails.map((user) => [user.email, user]));
+  const visibleEmails = emails.filter((email) => email !== configQuery.data?.ownerEmail);
 
   return (
     <Card as="section" aria-label="Allowed users" shadow>
@@ -197,9 +177,12 @@ export function AllowedEmailsSection() {
           </Card>
         ) : null}
 
+        {configQuery.data ? <LocalPasswordNotice status={configQuery.data.localPasswordStatus} /> : null}
+
         <AllowedUserRows
-          emails={emails}
-          eligible={eligible}
+          emails={visibleEmails}
+          details={details}
+          googleLoginConfigured={configQuery.data?.googleLoginConfigured === true}
           resettingEmail={resettingEmail}
           removingEmail={removingEmail}
           onReset={createReset}

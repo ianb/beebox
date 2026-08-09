@@ -24,12 +24,9 @@ import {
 } from "../../core/chat/session/history.js";
 import { listSessionFilesInDir } from "../../core/chat/session/transcript-paths.js";
 import { ok, err, type Result } from "../../lib/result.js";
-import {
-  extractSnippet,
-  isCompactionSummary,
-  isPlumbingMessage,
-  parseSelfNote,
-} from "./session-text.js";
+import { extractSnippet } from "./session-text.js";
+import { contentBlocks, parseJsonlLine } from "./session-jsonl.js";
+import { userTurnText } from "./session-snippet.js";
 
 // Re-exported so existing callers of `cli/lib/session` keep their imports.
 export {
@@ -122,29 +119,6 @@ export async function findSessionLog(
 }
 
 /**
- * Parse one JSONL line, returning null for blank lines and unparseable lines
- * (a partial/concurrent write shouldn't abort the whole scan). `where`
- * identifies the caller in the debug log when a line is dropped.
- */
-function parseJsonlLine(line: string, where: string): Record<string, unknown> | null {
-  if (!line.trim()) return null;
-  try {
-    const parsed: unknown = JSON.parse(line);
-    return isRecord(parsed) ? parsed : null;
-  } catch (e) {
-    console.debug(`${where}: skipping unparseable JSONL line:`, e);
-    return null;
-  }
-}
-
-/** Normalize a raw `message.content` field into an array of block records. */
-function contentBlocks(content: unknown): Array<Record<string, unknown>> {
-  if (typeof content === "string") return [{ type: "text", text: content }];
-  if (Array.isArray(content)) return content.filter(isRecord);
-  return [];
-}
-
-/**
  * Summary info for a session — used by --list enrichment and --since filtering.
  */
 export interface SessionMetadata {
@@ -175,13 +149,8 @@ function foldUserMetadata(
   args: { acc: MetadataAccumulator; snippetMaxLen: number | undefined }
 ): boolean {
   const { acc, snippetMaxLen } = args;
-  const textBlocks = blocks.filter(
-    (b) => b.type === "text" && b.text && String(b.text).trim()
-  );
-  if (textBlocks.length === 0) return false;
-  const text = textBlocks.map((b) => String(b.text || "")).join("\n").trim();
-  if (isPlumbingMessage(text) || isCompactionSummary(text)) return false;
-  if (parseSelfNote(text)) return false;
+  const text = userTurnText(blocks);
+  if (text === null) return false;
   acc.userTurns += 1;
   if (acc.firstUserSnippet === null) {
     acc.firstUserSnippet = extractSnippet(text, snippetMaxLen);

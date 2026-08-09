@@ -80,6 +80,42 @@ bin/browse close                                # close this browser
 bin/browse close --all                          # close every session
 ```
 
+## `snapshot` waits for the network; `click` and `get` don't
+
+This is not in the upstream `--help`, and it will silently ruin any attempt to
+observe a **transient** UI state — a loading skeleton, a spinner, an optimistic
+row, anything that exists only while a request is in flight.
+
+Measured against a deliberately slowed endpoint (a 20-second query), from one
+page, in one session:
+
+| command | returned in |
+|---|---|
+| `click @e5` (fires the request) | 0.49s |
+| `snapshot` | 16.2s — **blocked until the request settled** |
+| `get text "[role=menu]"` | 0.46s |
+
+So the default loop — `click` then `snapshot` — cannot see a loading state. The
+snapshot waits out the very thing you're trying to catch and hands you the
+settled page, which reads as "there was never a loading state." That is a false
+negative, and a convincing one: it looks like the feature works.
+
+**To observe a transient, read with `get`, not `snapshot`:**
+
+```bash
+bin/browse click @e5                      # returns immediately
+bin/browse get text "[role=menu]"         # what's on screen RIGHT NOW
+```
+
+You still need `snapshot -i` to *discover* refs — take it before the click,
+while the page is idle, then act and read with `get`.
+
+A corollary worth internalizing: if you are timing something and every arm of
+your experiment comes back looking identical and suspiciously settled, suspect
+the instrument before the code. Confirm your probe can produce a negative
+result at all — run the arm you expect to *fail* first, and only trust the
+passing arm once the failing one has actually failed.
+
 ## Worktree / box / port
 
 - Worktree is detected from `$PWD`: `/callback-worktrees/<name>/` → `<name>`; main checkout → `main`.

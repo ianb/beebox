@@ -48,8 +48,8 @@ AGENTS.md
 
 # Xcode local state / build products
 *.xcuserstate
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
 DerivedData/
 ios-app/build/
 

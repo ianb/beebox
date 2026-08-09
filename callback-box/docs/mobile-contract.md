@@ -611,8 +611,15 @@ See §1.3 (full request/response/errors).
 
 ### 5.8 Share Extension — textual destinations and delivery
 
-- **Shared pairing state:** the main app writes selected-box metadata (id, label, base URL, lock
-  requirement) to App Group `group.app.callbackbox.ios`. The device token is never written there;
+- **Shared pairing state:** the main app writes every paired box's non-secret metadata (id, label,
+  base URL, lock requirement), plus its selected box id, to App Group
+  `group.app.callbackbox.ios`. The Share Extension initially selects that box, always names the
+  current box, and offers a box picker when more than one box is paired. Choosing a box in the
+  extension is local to that share action and does not change the main app's selected box. The
+  extension reloads destinations for the chosen box and ignores a stale response from an earlier
+  choice. A protected box's device-owner authentication gate runs before destination loading,
+  which gates submission; provider classification may happen first so unsupported input can fail
+  without an unnecessary authentication prompt. The device token is never written to UserDefaults;
   it is a generic-password Keychain item shared through access group
   `44AJ3D25ZD.group.app.callbackbox.ios` (the resolved access group for the app's signing team), service
   `app.callbackbox.ios.device-token`, account `<box UUID>`. Both targets carry both entitlements.

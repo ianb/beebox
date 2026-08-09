@@ -21,6 +21,7 @@ import { chatTailSlice, type ChatInitialLoad } from "../machines/chat-types";
 import { href, toSearch } from "../lib/routing";
 import { carriesFreshChatMachine } from "./chat-session-transition";
 import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
+import { useIdlePrefetch } from "../hooks/useIdlePrefetch";
 
 interface ChatSearch {
   session?: string;
@@ -210,6 +211,23 @@ export function ChatPage() {
   // from `resolvedDefault` — this navigation costs no round trip. Spread the
   // previous search so a live `?card=` (or any other param) survives it.
   const utils = trpc.useUtils();
+
+  // Warm the app bar's place-switch menu once this page is interactive. Its
+  // `chat.placeMenu` query stays lazy (PlacePill's header explains why a bar
+  // that mounts everywhere must not carry it at rest) — but "lazy" made the
+  // first open after every page load sit on "Loading…". Gating on `settled`,
+  // and running from idle time, is what keeps this off the critical path: the
+  // chat's own readiness never waits on it.
+  // `gcTime` is the whole point of prefetching rather than hoping: react-query
+  // collects an unobserved entry after 5 minutes by default, and the menu has
+  // no observer until it is first opened — so a default-lifetime warm-up would
+  // expire before a user who reads for a while ever clicks. Freshness is
+  // unaffected: the first open still refetches in the background (the entry is
+  // stale by then), and every later open invalidates.
+  useIdlePrefetch(() => utils.chat.placeMenu.prefetch(undefined, { gcTime: 60 * 60 * 1000 }), {
+    enabled: settled,
+  });
+
   useEffect(() => {
     if (sessionParam !== undefined) return;
     const data = bootstrap.data;

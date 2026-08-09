@@ -15,10 +15,11 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
-import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser, listUsers } from "../../local-users.js";
-import { AuthStoreUnavailableError } from "../../local-users-errors.js";
+import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
 import { passwordResetAdminProcedures } from "./admin-password-resets.js";
+import { describeAllowedUsers } from "./admin-user-details.js";
+import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
@@ -166,21 +167,22 @@ export const adminRouter = router({
       config = boxConfigSchema.parse({});
     }
     const allowedEmails = normalizeAllowedEmails(config.allowedEmails);
-    let memberEmails = new Set<string>();
-    try {
-      memberEmails = new Set(listUsers().filter((user) => user.role === "member").map((user) => user.email));
-    } catch (error) {
-      if (!(error instanceof AuthStoreUnavailableError)) throw error;
-      console.warn("[admin.boxConfig] local auth store unavailable; hiding password reset actions:", error);
-    }
+    const configuredOwnerEmail = process.env.CB_OWNER_EMAIL
+      ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
+      : null;
+    const signedInEmail = ctx.user ? canonicalizeEmail(ctx.user.email) : null;
+    const userDetails = describeAllowedUsers({ allowedEmails, configuredOwnerEmail, signedInEmail });
     return {
       boxSlug: ctx.boxSlug,
       allowedEmails,
-      passwordResetEligibleEmails: allowedEmails.filter((email) => memberEmails.has(email)),
+      allowedUserDetails: userDetails.allowedUserDetails,
+      localPasswordStatus: userDetails.localPasswordStatus,
+      passwordResetEligibleEmails: userDetails.allowedUserDetails
+        .filter((user) => user.resetEligible)
+        .map((user) => user.email),
       publicUrl: config.publicUrl,
-      ownerEmail: process.env.CB_OWNER_EMAIL
-        ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
-        : getLocalOwnerEmail(),
+      ownerEmail: userDetails.ownerEmail,
+      googleLoginConfigured: getGoogleClientCreds() !== null,
       googleServices: config.googleServices,
     };
   }),

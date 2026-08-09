@@ -60,6 +60,10 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
     await Promise.all([
       utils.chat.sessions.invalidate(),
       utils.chat.byLandmark.invalidate(),
+      // Both chat-grouped surfaces: the pickers' full payload and the app bar's
+      // lean counts. A deleted chat that still counted toward a landmark's
+      // fresh badge is exactly the kind of ghost this dialog exists to remove.
+      utils.chat.placeMenu.invalidate(),
       utils.chat.bootstrap.invalidate(),
       utils.chat.sessionAvailability.invalidate({ sessionId }),
       ...(huskPath === undefined ? [] : [utils.card.get.invalidate({ path: huskPath })]),
