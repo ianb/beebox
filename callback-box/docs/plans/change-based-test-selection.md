@@ -4,11 +4,12 @@
 
 Two things, in this order of importance:
 
-1. **A ledger of test failures** — one appended line per failing file,
-   classified *attached* (a test the change should have run), *missed* (a test
-   the change had no apparent relation to, which failed anyway), or *flaky*.
-   Green runs write nothing; it lives inside `.git/` so it is never committed;
-   nothing branches on it. It is an instrument, not a database.
+1. **A ledger of test runs**, one appended line each, green ones included —
+   green runs are the denominator that turns failure counts into failure rates.
+   Each failure is classified *attached* (a test the change should have run),
+   *missed* (a test the change had no apparent relation to, which failed
+   anyway), or *flaky*. It lives inside `.git/`, so it is never committed, and
+   nothing branches on it. It is an instrument.
 2. **Change-based selection on the worktree iteration loop** — an import graph
    derived from the tree with esbuild, intersected with the branch's diff
    against `main`. Selection applies only where the graph accounts for every
@@ -125,11 +126,9 @@ of branches where it is free.
 - **Flaky-test dashboards (Google TAP, Chromium's flakiness dashboard)** are the
   closest prior art for the ledger itself. The published lesson: flake rate per
   test over time is the actionable unit, not per-run pass/fail, and the data only
-  becomes useful after months. This plan **deviates** on the first point: it
-  records failures only, so it reports counts rather than rates. Google's scale
-  makes a rate meaningful; at one repo and one machine the count is what anyone
-  acts on. The second point is taken as given and is why time-to-signal is called
-  out in Track 5.
+  becomes useful after months. Both points are taken as given: rate-per-test is
+  why the ledger records green runs (the denominator), and the months-long ramp
+  is why time-to-signal is called out explicitly in Track 5.
   https://testing.googleblog.com/2016/05/flaky-tests-at-google-and-how-we.html
 - **Searched and found nothing** for deriving an import graph from a markdown
   doctest corpus — expected, the format is ours.
@@ -320,32 +319,40 @@ selection's future — does a full run on an unaccounted branch ever catch anyth
 not what failed on the way.
 
 **Direction.** A tap output capture (reporter or wrapper) on `pnpm test` and
-`pnpm test:changed` that **writes only when something failed.** A green run
-appends nothing.
+`pnpm test:changed`, appending **one JSONL record per run** — green runs
+included — to `$(git rev-parse --git-common-dir)/callback-test-ledger.jsonl`.
+The file sits **inside `.git/`, so it is never committed and appears in no
+diff**, while `--git-common-dir` resolves the same path from the main checkout
+and every worktree, so one ledger serves them all.
 
-That is the whole design constraint worth stating, because the obvious version —
-a record per run — is a run database, and nothing here asks a question that needs
-one. What is wanted is a list of failure events durable enough to come back to in
-three months. Green runs are the overwhelming majority and contribute a row of
-zeroes each.
-
-The file lives at
-`$(git rev-parse --git-common-dir)/callback-test-ledger.jsonl` — **inside `.git/`,
-so it is never committed and appears in no diff**, while `--git-common-dir`
-resolves the same path from the main checkout and every worktree, so one ledger
-serves them all. One JSON object per line, appended:
+**Green runs are recorded because they are the denominator.** A failure count
+answers "which file keeps breaking"; a failure *rate* answers "is this getting
+worse", and that needs to know how often the file ran and passed. The asymmetry
+is what decides it: the denominator is free to collect now and **impossible to
+reconstruct later** — start with failures only and the rate is permanently
+unavailable for however long that ran.
 
 ```jsonc
 { "ts": "...", "commit": "...", "branch": "...", "dirty": true,
   "mode": "full",                              // or "selected"
-  "file": "test/webapp/routes/scan-upload.doctest.md",
-  "class": "attached",                         // or "missed" / "unknown"
-  "changed": ["callback-box/src/..."] }        // the diff at that moment
+  "ran": 484, "passed": 483, "ms": 566500,
+  "changed": ["callback-box/src/..."],         // the diff at that moment
+  "selected": [],                              // file list, only when mode = "selected"
+  "durations": { "test/webapp/routes/scan-upload.doctest.md": 58177 },
+  "failures": [ { "file": "test/...", "class": "attached" } ] }
 ```
 
-One line per *failing file*, not per run. At the observed failure rate this is a
-file a human can read end to end, and `grep` answers most questions without a
-tool.
+A `full` record needs no file list — "full" means every entrypoint at that
+commit — so the common case stays small. Only `selected` runs carry one (median
+62 paths). Per-file denominator = full runs + selected runs that included it.
+
+**Per-file durations come free, and pay a debt.** The capture is already parsing
+tap output, which carries `# time=Nms` per file. Recording it means the
+`## Research (2026-08-08)` profiling — hand-collected, on a loaded machine,
+never repeated — becomes something the ledger accumulates continuously. That is
+the measurement
+`issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md` needs, and
+the quiet-machine baseline this plan still owes stops being a one-off exercise.
 
 **Classification is mechanical, not a judgement call.** `attached` vs `missed`
 falls out of the graph and the diff, which the capture already has. No agent
@@ -367,18 +374,9 @@ decides it, so it cannot vary between sessions or be argued with after the fact.
   branch touched neither the test nor the code it exercises. `/finish` already
   performs this and discards the result; Track 5 has it append the outcome.
 
-**`bin/test-ledger report`** answers: how often each file has failed and how many
-of those were flakes; the miss count and which files produced it; and — as the
-complement of everything in the log — which files have never failed at all. A
-local query over a small file, not a dashboard.
-
-**What writing only on failure gives up, and why it is the right trade.** Without
-a record of green runs there is no denominator, so the report gives failure
-*counts*, not failure *rates* — "this file has failed 7 times since May, 6 of
-them flaky" rather than "1.2% of runs". At this scale the count is the actionable
-unit anyway: nobody acts differently on 1.2% versus 0.9%, and everybody acts on
-"this file is the one that keeps failing". If a rate is ever genuinely needed,
-adding a per-run counter later is a two-line change to a file nothing depends on.
+**`bin/test-ledger report`** answers: failure rate per file over time, with the
+flake share broken out; the miss count and which files produced it; which files
+have never failed; and per-file duration trends. A local query, not a dashboard.
 
 **Nothing branches on the ledger.** It is observational. A write failure warns
 and the run proceeds. That is what makes shipping it risk-free, and why it lands
@@ -489,12 +487,10 @@ beyond "warn" is defensiveness against a failure with no consequence
 - **Declared data dependencies (Bazel model).** How precision is earned back
   under an inverted default. Premature until the ledger shows where precision is
   wanted.
-- **A record of green runs.** The ledger writes only on failure, so it yields
-  failure counts rather than rates. Deliberate: the count is the actionable unit
-  at this scale, and a run database is more machinery than any question here
-  needs. Adding a counter later is trivial and nothing depends on its absence.
 - **Committing test results.** The ledger is per-machine and lives in `.git/`.
   Sharing it across machines is a separate decision (see open questions).
+- **Pruning or rotating the ledger.** JSONL at a few tens of KB per day; a year
+  is well under what any local query cares about. Revisit if it ever bites.
 - **The per-file cost floor** — filed separately, worth doing regardless.
 - **Fixing either open flake.** The ledger measures them; it does not fix them.
 - **Selecting within the root `bin/` suite** (2.60 s), **changing `jobs: 6` or
@@ -568,10 +564,11 @@ Note what is absent: any change to what `/finish` verifies.
   `pub-worker/wrangler.jsonc`, `.taprc`, and untested-frontend cases; scope
   handling; `unresolved` pass-through; every `FULL` condition; non-zero exit on
   internal error.
-- `bin/test-ledger.test.ts` — **a green run appends nothing**; a synthetic
-  failing run classifies attached vs missed correctly; an uncomputable diff yields
-  `unknown`, never a guess; a write failure warns without failing the run;
-  `report` aggregates failure counts per file and lists never-failed files.
+- `bin/test-ledger.test.ts` — a green run appends a record with no failures; a
+  synthetic failing run classifies attached vs missed correctly; an uncomputable
+  diff yields `unknown`, never a guess; a write failure warns without failing the
+  run; `report` computes a per-file rate whose denominator counts full runs plus
+  the selected runs that included that file.
 - `test/dev/import-coverage.doctest.md` — 3a–3d pass on the current tree and each
   fails when its assumption is violated.
 
