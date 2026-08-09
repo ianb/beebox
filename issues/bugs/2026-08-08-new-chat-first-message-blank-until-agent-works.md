@@ -58,6 +58,53 @@ log the FSM (`logFsm` already emits `send-from-idle` / `enter-streaming`) and wa
 whether a remount resets `messages.length` to 0 right after the session id is
 assigned.
 
+## Reproduction update (2026-08-09)
+
+The boxholder clarified the important timing: the optimistic message appears
+initially, then is lost **after the URL redirects from `session=new` to the
+assigned session id**. A useful reproduction must therefore observe the bubble
+continuously across that redirect; checking only the first animation frame after
+submit does not exercise the failure boundary.
+
+Browser probes on both the worktree's isolated `test1` and main's primary
+`test1` showed the optimistic bubble promptly and retained it for 20–35 seconds,
+but neither run was a valid negative reproduction:
+
+- `POST /api/chat/send` succeeded and returned a turn id.
+- The backend log showed the SDK assigning a session id and completing the turn.
+- The frontend logged `send-from-idle`, `enter-streaming`, and `stream-start`,
+  but received neither an in-stream `system/init` frame nor the fallback
+  `chat-session-assigned` broadcast.
+- Consequently the browser stayed on `?session=new`; the redirect under
+  suspicion never happened.
+
+The shared-router browser path was not delivering the tRPC WebSocket events
+needed for assignment. An attempted direct-Vite-port browser run wedged during
+navigation and did not produce usable evidence. Manually changing the URL to
+the backend-assigned id would be a false reproduction: without
+`onSessionAssignment` it is intentionally classified as explicit navigation and
+remounts the chat.
+
+### Next reproduction attempt
+
+Use a browser/environment where realtime turn frames and session assignment are
+known to work. Start from an existing chat, choose **New session**, submit a
+uniquely identifiable first message, and record these transitions until after
+the assigned-id URL lands:
+
+1. message present immediately after submit;
+2. `SESSION_ASSIGNED` / assignment announcement;
+3. URL changes from `session=new` to `session=<id>`;
+4. whether `InteractiveChat` remounts or its message count drops to zero;
+5. when the message becomes visible again.
+
+Current source already contains the `f8ecf363` assignment handshake:
+`InteractiveChat-ws.ts` calls `onSessionAssignment(sessionId)` immediately before
+navigation, and `ChatPage.tsx` uses that announcement to keep `keyState.epoch`
+stable across the assignment. The next investigation should verify that runtime
+ordering with mount/message-count evidence rather than assuming the handshake
+works or replacing it speculatively.
+
 ## Related (distinct issues, cross-check when fixing)
 
 - [sent-message-disappears-reappears-late](2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md)
