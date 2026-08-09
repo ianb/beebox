@@ -8,14 +8,15 @@ labels: [testing, developer-experience]
 
 > **Design written 2026-08-08** —
 > [change-based test selection](../../callback-box/docs/plans/change-based-test-selection.md)
-> settles the mechanism (a runtime import map recorded by the doctest loader),
-> the full-run cadence, and the fail-open rules. It is **not implemented**; the
-> plan opens with a spike that could still replace the recording half with a
-> static esbuild graph. The `needs: [design]` flag stays until the plan is
-> reviewed and the spike is resolved. Sections below that this plan supersedes:
-> the option survey (the plan records why coverage, affected-package, and
-> directory-heuristic selection were rejected) and the "measure first"
-> constraint (the `## Research (2026-08-08)` section satisfied it).
+> settles the mechanism (an import graph derived from the tree with esbuild, not
+> recorded at runtime), the worktree iteration loop, the full-run cadence, and
+> the fail-open rules. It is **not implemented**. The one open cost question is
+> how long the esbuild pass takes over ~484 entrypoints. Sections below that the
+> plan supersedes: the option survey (it records why coverage-based,
+> affected-package, directory-heuristic, and runtime-recorded selection were each
+> rejected) and the "measure first" constraint (the `## Research (2026-08-08)`
+> section satisfied it). The `needs: [design]` flag stays until the rewritten
+> plan gets its cross-model review.
 
 Every verification runs everything. `/finish` runs the full suite on each land,
 agents run it before committing, and a re-run after a post-green fix runs it

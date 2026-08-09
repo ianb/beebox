@@ -1,4 +1,16 @@
-**Status:** cross-model review, 2026-08-08 — findings folded into the plan
+**Status:** cross-model review, 2026-08-08 — findings folded in, then the plan's
+mechanism was flipped
+
+> **Read this in context.** This review was written against the plan's first
+> draft, which recorded the import map *empirically* from the doctest loader.
+> Findings 1–4 were all fidelity failures in that recording design, and together
+> with the worktree case they led the boxholder to flip the mechanism to a
+> statically derived esbuild graph. So the dispositions below describe fixes to a
+> design that was subsequently replaced. They are kept because several fixes
+> survived the flip unchanged (findings 5–7, 9), because findings 1–4 are the
+> evidence the current plan cites for *why* recording was rejected, and because
+> the flip means finding 8's recommendation was ultimately adopted in full.
+> A fresh cross-model review of the rewritten plan is owed.
 
 # Cross-model review — change-based test selection
 
