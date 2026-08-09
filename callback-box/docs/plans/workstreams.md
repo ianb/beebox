@@ -213,8 +213,8 @@ the new scalar fields need.**
   session-end), which detaches the workstream's worktree. Culls now leave
   a record, and eligibility gains exactly one new rule — the Track G pin:
   **a worktree is cullable only if its box clone is** (no unmerged `keep`
-  branch, no open `manual-testing` issue naming the workstream); otherwise
-  unchanged.
+  branch, no `test-setup` branch, no open `manual-testing` issue naming
+  the workstream); otherwise unchanged.
 - **`recreate`** = `create` driven from a cull record — re-attaching a
   worktree to a workstream. Not a new command implementation, a new entry
   point into the existing one.
@@ -467,7 +467,8 @@ dead end.
    thread back.
 
 Sweep eligibility changes in exactly one way: the Track G pin — a worktree
-is cullable only if its box clone is (no unmerged `keep` branch, no open
+is cullable only if its box clone is (no unmerged `keep` branch, no
+`test-setup` branch, no open
 `manual-testing` issue naming the workstream). Otherwise the rules stay
 locked per the control-surface plan; the other sweep additions are registry
 pruning (Track A) and the finalSha capture inside `wt_remove_now`.
@@ -821,14 +822,32 @@ conversation that built the thing.
   (including the boxholder's own testing) to accidentally count as
   keep-worthy. Detection is one `git show-ref refs/heads/keep` in the
   clone. The worker stages stock content (test1 augmentations the feature
-  permanently needs) on `keep`; a throwaway repro stays on the clone's
-  main and is protected only by the manual-testing pin below.
+  permanently needs) on `keep`.
   **Constructing `keep`:** staging happens through the app, which commits
   to the clone's *main* — interleaved with churn — so `keep` is NOT a
   snapshot of main. It is rooted at `origin/main` (the source test1's
   state) and the worker cherry-picks or re-commits onto it exactly the
   content worth persisting. This is deliberate git surgery: what merges
   home is what was chosen, never what accumulated.
+- **`test-setup` — the re-runnable starting state.** The clone's third
+  named branch, for the scenario that gets the boxholder *into position to
+  test* but must not follow test1 forever: the worker stages the state
+  through the app, and at the moment it is right, snapshots it —
+  `git branch test-setup` — plain snapshot semantics, fine here because
+  this branch is **never merged anywhere** (churn inside it leaks nowhere).
+  While it exists it **blocks culling** (pin (c) below). Its payoff is the
+  **Reset** button on the testing view and workstream rows:
+  `bin/workstreams reset-test <name>` hard-resets the clone's main to
+  `test-setup` (owner-gated POST like every action; refuses when no such
+  branch exists), so after the boxholder's testing clicks have dirtied the
+  scenario, one click restores the pristine staged state and the test runs
+  again. Implementation note for the chunk: the reset happens under a
+  possibly-running `cb serve` — the filesystem-is-state model treats it
+  like any external edit, but the chunk's test must verify the running box
+  picks it up cleanly (refresh-maps etc.) rather than assume it.
+  `confirm-tested` deletes the clone's `test-setup` branch when the
+  worktree still exists — the scenario's purpose is complete, and deleting
+  it is what releases pin (c) so the normal cull can collect.
 - **`/finish` merges the `keep` branch home.** A new /finish step (with the
   other finish.md edits in Track E): if the clone has a `keep` branch with
   commits not in the source test1, merge it into the source box's main as
@@ -849,15 +868,16 @@ conversation that built the thing.
 - **Cull pinning — a worktree is cullable only if its test1 is.** The
   general rule, replacing any special case: **sweep and session-end skip a
   worktree whose box clone is itself uncullable**, where uncullable means
-  either (a) a `keep` branch with commits not yet merged into the source
+  any of: (a) a `keep` branch with commits not yet merged into the source
   test1 (the safety net when /finish hasn't run or was blocked — kept
-  content must never die with a cull), or (b) the workstream is named
+  content must never die with a cull); (b) the workstream is named
   (`workstream: <name>`) by an open main-side issue carrying
-  `needs: [manual-testing]` (a throwaway repro someone still needs to
-  exercise). Both checks are cheap at eligibility time (a `show-ref` +
-  ancestry check in the clone; a grep over issues/).
-  Both release themselves: /finish merges `keep` home; `confirm-tested`
-  clears the flag; the next sweep collects. The testing view and front page
+  `needs: [manual-testing]`; (c) a `test-setup` branch exists (a staged
+  scenario someone still needs). All three checks are cheap at eligibility
+  time (`show-ref` + ancestry in the clone; a grep over issues/).
+  All three release themselves: /finish merges `keep` home;
+  `confirm-tested` clears the flag AND deletes `test-setup`; the next
+  sweep collects. The testing view and front page
   label held rows "worktree held for testing," so a pin is always visible,
   never a mystery lingerer. **Indefinite is acceptable** (boxholder
   decision): a pinned worktree with a throwaway repro simply exists until
@@ -984,6 +1004,8 @@ question to justify it.
 | Worktree culled before its manual-testing flag lands on main (race: /finish merges, sweep fires, flag-bearing issue merges in the same push) | To add — G3 doctest ordering | The pin greps main's issues at eligibility time, and /finish's merge lands the issue and the code together, so the flag is on main before the session ends; residual race is a sweep firing mid-merge — accepted, recreate + re-stage per the section's instructions is the recovery | Clear: testing view shows a pre-merge row whose worktree is gone |
 | /finish's `keep`-branch merge into source test1 conflicts | To add — finish doctest with a conflicting source commit | Yes by design — BLOCKED-style report, clone left intact, pin (a) keeps the worktree until resolved | Clear: /finish names the conflict |
 | Worker stages persistent content on the clone's main instead of `keep` | Not detectable — main IS the activity default | The content dies at cull (after any manual-testing pin releases); the test still ran against it pre-cull | Silent by design, and safe: the failure direction is losing test scaffolding, never leaking activity into curated test1 |
+| `reset-test` hard-resets the box under a running `cb serve` | To add — chunk G2 test: reset with the box served, assert clean pickup (refresh-maps, no wedged watchers) | Filesystem-is-state should treat it as an external edit — verified, not assumed | Clear: the button reports; the box either shows the staged state or the test fails in implementation |
+| Release culls a worktree whose `test-setup` still exists | Covered by Release semantics | By design — Release is owner-approved "cull despite the pin"; `test-setup` was never merged anywhere and dies with the clone | Clear: the Release confirmation names what dies |
 
 ## Agent-flow / user-flow edge cases
 
@@ -1131,22 +1153,24 @@ ships. Codex-implementable: no chunk contains an open question.
     Depends on D1, E1.
 15. **G1 — `## Manual testing` section validation** (flag ⇒ section, in
     E1's validator) + anchor rendering. Depends on E1.
-16. **G2 — `/workstreams/testing/` view + `confirm-tested` helper + the
-    two buttons on issue detail pages.** Depends on D1, G1; Open-workstream
-    buttons depend on D2.
+16. **G2 — `/workstreams/testing/` view + `confirm-tested` helper
+    (clears flag, deletes `test-setup`) + `reset-test` verb and Reset
+    button + the buttons on issue detail pages.** Depends on D1, G1;
+    action buttons depend on D2.
 16b. **G2b — `keep`-branch preservation in the cull path** (push an
     unmerged `keep` branch to source test1 as `keep/<workstream>-<date>`,
     record the ref in the registry, recreate restores a box from its ref,
     refuse cull on failed push) + the Release button as pin-override.
     Depends on G2, G3, C1.
-17. **G3 — box-cullability pin in sweep/session-end eligibility** (both
-    checks: unmerged `keep` branch in the clone + grep for an open
-    `manual-testing` issue naming the workstream; doctests: pinned worktree
-    survives sweep, released by the keep-merge and by `confirm-tested`
-    respectively) + the /finish keep-merge step + the `keep`-branch and
-    URL-linking conventions in `issues/CLAUDE.md` and the worker-facing
-    docs. Depends on E1 (the `workstream:` field it greps), E2 (finish.md
-    edits), G2 (confirm as a release).
+17. **G3 — box-cullability pin in sweep/session-end eligibility** (three
+    checks: unmerged `keep` branch, `test-setup` branch, open
+    `manual-testing` issue naming the workstream; doctests: pinned
+    worktree survives sweep, released by the keep-merge, by
+    `confirm-tested`, and by `test-setup` deletion respectively) + the
+    /finish keep-merge step + the `keep`/`test-setup` and URL-linking
+    conventions in `issues/CLAUDE.md` and the worker-facing docs. Depends
+    on E1 (the `workstream:` field it greps), E2 (finish.md edits), G2
+    (confirm as a release).
 18. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
     `bin/CLAUDE.md` + `docs/plans/README.md` + `issues/CLAUDE.md` +
     `dev/README.md` docs (including the branch-sentinel rules and the
