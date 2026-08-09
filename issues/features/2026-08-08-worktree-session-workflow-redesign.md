@@ -12,7 +12,7 @@ record of *what still needs checking*. Everything else follows from that:
 - Closing a session feels lossy, so ~9 accumulate (they were live when this was
   filed, on a machine that had exhausted its 20 GB of swap).
 - There's no way to see what's outstanding — the list exists only as terminal tabs.
-- Merged worktrees linger. **The cleanup already exists** — `bin/worktrees sweep`
+- Merged worktrees linger. **The cleanup already exists** — `bin/workstreams sweep`
   plus `.claude/hooks/session-end.sh` remove any worktree that is `ahead=0`,
   clean, and has no live agent. They linger *because a live session pins them*:
   the sweep deliberately skips a worktree with a running `claude`/`codex`
@@ -59,8 +59,8 @@ is the plan for the pieces this redesign needs, deliberately scoped to change
 **no** workflow — only to make the pieces recombinable. What it removes from the
 gap list above:
 
-- Worktree creation and removal are now `bin/worktrees create` /
-  `bin/worktrees remove`. Claude Code's hooks and `bin/launch-worktree-session`
+- Worktree creation and removal are now `bin/workstreams create` /
+  `bin/workstreams remove`. Claude Code's hooks and `bin/launch-worktree-session`
   are thin clients of the same command, so a new frontend (a web button, a
   packaged tool) no longer has to impersonate Claude Code to reach the repo's own
   worktree logic. That is what makes trying Conductor cost one script instead of a
@@ -68,7 +68,7 @@ gap list above:
 - The three-way liveness recomputation is collapsing onto one shared, tri-state
   guard — `unknown` no longer reads as "nothing running", which was a fail-open
   hole in front of an irreversible delete.
-- `bin/worktrees list --json` is the planned join of the three signals, and the
+- `bin/workstreams list --json` is the planned join of the three signals, and the
   thing `/dev/issues/` would consume instead of re-deriving worktree state.
 
 **`resume` is designed in that plan and deliberately NOT built**, because a new

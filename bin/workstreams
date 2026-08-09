@@ -52,15 +52,15 @@ case "$cmd" in
     want_path=""
     while [ $# -ge 1 ]; do
       case "$1" in
-        --base-ref) [ $# -ge 2 ] || { echo "worktrees create: --base-ref needs a value" >&2; exit 1; }; base_ref="$2"; shift 2 ;;
+        --base-ref) [ $# -ge 2 ] || { echo "workstreams create: --base-ref needs a value" >&2; exit 1; }; base_ref="$2"; shift 2 ;;
         --base-ref=*) base_ref="${1#--base-ref=}"; shift ;;
-        --path)     [ $# -ge 2 ] || { echo "worktrees create: --path needs a value" >&2; exit 1; }; want_path="$2"; shift 2 ;;
+        --path)     [ $# -ge 2 ] || { echo "workstreams create: --path needs a value" >&2; exit 1; }; want_path="$2"; shift 2 ;;
         --path=*)   want_path="${1#--path=}"; shift ;;
-        -*)         echo "worktrees create: unknown option $1" >&2; exit 1 ;;
-        *)          [ -z "$name" ] || { echo "worktrees create: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+        -*)         echo "workstreams create: unknown option $1" >&2; exit 1 ;;
+        *)          [ -z "$name" ] || { echo "workstreams create: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
       esac
     done
-    [ -n "$name" ] || { echo "usage: worktrees create <name> [--base-ref <ref>] [--path <dir>]" >&2; exit 1; }
+    [ -n "$name" ] || { echo "usage: workstreams create <name> [--base-ref <ref>] [--path <dir>]" >&2; exit 1; }
 
     # Stdout carries exactly one thing: the resulting worktree path. Claude
     # Code's WorktreeCreate hook contract requires it, and every other caller
@@ -80,7 +80,7 @@ case "$cmd" in
     # rather than the trap's "may be partially set up" — nothing has been
     # created yet. wt_create re-checks for callers that source the lib directly.
     wt_paths_valid_name "$name" \
-      || { echo "worktrees create: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
+      || { echo "workstreams create: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
     trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree may be partially set up at ${WT_CREATED_PATH:-unknown}." >&2; exit $rc' ERR
     wt_create "$name" "$base_ref" "$want_path"
     printf '%s\n' "$WT_CREATED_PATH" >&3
@@ -96,11 +96,11 @@ case "$cmd" in
         --force)       force=true; shift ;;
         --keep-branch) keep_branch="--keep-branch"; shift ;;
         --dry-run)     dry_run=true; shift ;;
-        -*)            echo "worktrees remove: unknown option $1" >&2; exit 1 ;;
-        *)             [ -z "$name" ] || { echo "worktrees remove: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+        -*)            echo "workstreams remove: unknown option $1" >&2; exit 1 ;;
+        *)             [ -z "$name" ] || { echo "workstreams remove: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
       esac
     done
-    [ -n "$name" ] || { echo "usage: worktrees remove <name> [--force] [--keep-branch] [--dry-run]" >&2; exit 1; }
+    [ -n "$name" ] || { echo "usage: workstreams remove <name> [--force] [--keep-branch] [--dry-run]" >&2; exit 1; }
 
     # shellcheck source=lib/worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
@@ -112,9 +112,9 @@ case "$cmd" in
     # Validate BEFORE building a path. `remove ../boxes/test1` would otherwise
     # resolve outside WT_ROOT, pass the `-d` check, and trash the source box.
     wt_paths_valid_name "$name" \
-      || { echo "worktrees remove: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
+      || { echo "workstreams remove: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
     target="$WT_ROOT/$name"
-    [ -d "$target" ] || { echo "worktrees remove: no worktree at $target" >&2; exit 1; }
+    [ -d "$target" ] || { echo "workstreams remove: no worktree at $target" >&2; exit 1; }
 
     # The liveness check is NOT subject to --force. Merged/dirty are judgements
     # about work you can still recover from a branch; a live agent is work in
@@ -241,7 +241,7 @@ case "$cmd" in
     if ! [ -f "$ROUTER_PID_FILE" ] || ! kill -0 "$(cat "$ROUTER_PID_FILE" 2>/dev/null)" 2>/dev/null; then
       echo "router not running"
       if [ -d "$PID_DIR" ] && [ -n "$(ls -A "$PID_DIR" 2>/dev/null)" ]; then
-        echo "(stale PID files present in $PID_DIR — run \`bin/worktrees panic\` to clean)"
+        echo "(stale PID files present in $PID_DIR — run \`bin/workstreams panic\` to clean)"
       fi
       exit 0
     fi
@@ -249,7 +249,7 @@ case "$cmd" in
     ;;
 
   down)
-    name="${1:?usage: worktrees down <name>}"
+    name="${1:?usage: workstreams down <name>}"
     if ! [ -f "$ROUTER_PID_FILE" ]; then
       echo "router not running"
       exit 0
@@ -477,7 +477,7 @@ case "$cmd" in
 
   *)
     echo "unknown command: $cmd" >&2
-    echo "run \`bin/worktrees help\` for usage" >&2
+    echo "run \`bin/workstreams help\` for usage" >&2
     exit 1
     ;;
 esac

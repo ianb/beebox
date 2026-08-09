@@ -510,7 +510,7 @@ from "not really verified" — merging on green tests is fine, claiming more isn
 
 Do NOT run the worktree cleanup — it happens automatically now that the branch
 is merged + clean. Two backstops handle it: the `SessionStart` sweep
-(`.claude/hooks/auto-sweep.sh`, `bin/worktrees sweep`) removes the merged+clean
+(`.claude/hooks/auto-sweep.sh`, `bin/workstreams sweep`) removes the merged+clean
 worktree the next time any session starts — this covers the case where a
 /finish presents as a main session, which defeats `SessionEnd` — and
 `SessionEnd` (`.claude/hooks/session-end.sh`) cleans up on a clean worktree exit.

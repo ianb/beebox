@@ -17,7 +17,7 @@ resolution: implemented
 > Two things the build turned up that the design didn't anticipate, both fixed:
 > a nested `claude -p` inside a worktree fires the project `SessionEnd` hook and
 > **deletes that worktree** (it did, once, during this work), and
-> `pgrep -x claude` — the liveness guard in `bin/worktrees sweep` — misses
+> `pgrep -x claude` — the liveness guard in `bin/workstreams sweep` — misses
 > essentially every live session because pgrep matches the accounting name,
 > which is the Claude Code *version string*. See `bin/CLAUDE.md` → "Codex
 > worktree sessions".

@@ -9,7 +9,7 @@
 # like Claude Code's property: Codex had to synthesize hook JSON and pipe it into
 # a file under .claude/ to reach the repo's own worktree logic, and any third
 # frontend would have had to do the same. Now every frontend is a thin client of
-# `bin/worktrees create`, and .claude/hooks/worktree-create.sh is a ~15-line
+# `bin/workstreams create`, and .claude/hooks/worktree-create.sh is a ~15-line
 # adapter that translates hook JSON into these two arguments.
 #
 # What it does beyond `git worktree add`:

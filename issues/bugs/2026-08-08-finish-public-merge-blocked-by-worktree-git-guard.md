@@ -57,7 +57,7 @@ that is not worktree-isolated (the main checkout itself):
 
 **Fix directions (pick one):**
 - A blessed, locked wrapper for the main checkout analogous to
-  `bin/private-issues with-lock` — a `bin/worktrees land <name>` that the
+  `bin/private-issues with-lock` — a `bin/workstreams land <name>` that the
   harness permits and that serializes against concurrent sweeps — and
   rewrite finish step 8 to call it instead of bare `git -C`.
 - Or have `/finish` hand the final merge back to the main

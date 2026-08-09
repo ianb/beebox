@@ -6,7 +6,7 @@
 #
 # Codex fires no hooks: it reads none of .claude/settings.json, so neither
 # SessionEnd nor WorktreeRemove ever runs for it, and until this existed a
-# codex worktree lingered until someone ran `bin/worktrees sweep` by hand
+# codex worktree lingered until someone ran `bin/workstreams sweep` by hand
 # (~10 had piled up by 2026-08-04). bin/launch-worktree-session's codex path
 # therefore runs codex in the foreground instead of exec'ing it, and calls this
 # afterwards. Parity with what a claude session gets:
@@ -21,7 +21,7 @@
 #
 # Not covered, deliberately: closing the tab. That SIGHUPs this shell before
 # codex returns, so nothing runs — the same gap a claude tab-kill has (it sends
-# no SessionEnd either). The next `bin/worktrees sweep` collects it.
+# no SessionEnd either). The next `bin/workstreams sweep` collects it.
 
 set -euo pipefail
 

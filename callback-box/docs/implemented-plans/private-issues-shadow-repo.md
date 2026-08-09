@@ -59,11 +59,11 @@ from where the monorepo actually lives, never from `$HOME`:
 
 One place owns the derivation — built as the `bin/private-issues` CLI
 (subcommands init/mount/status/remove-if-safe/report-orphans/prune), which
-the hooks and `bin/worktrees` shell out to rather than sourcing a lib. Two
+the hooks and `bin/workstreams` shell out to rather than sourcing a lib. Two
 hardening rules (round-2 finding 6): every command takes an **explicit
 checkout-path argument** — each caller passes the anchor it already has
 (`$worktree_path`, `$REPO_DIR`, the sweep's `$d`) — never bare cwd, which is
-wrong for `bin/worktrees` run from elsewhere and for WorktreeRemove after
+wrong for `bin/workstreams` run from elsewhere and for WorktreeRemove after
 deletion. And the private repo must pass an **identity check** before any
 script touches it: `bin/private-issues init` writes `git config
 callback.privateIssues true` plus a `.callback-private-issues` marker file
@@ -135,7 +135,7 @@ therefore **remove-if-safe, orphan-if-not**:
   ANY `status --porcelain` output counts as dirty) is removed with
   `git worktree remove` + `branch -d` as part of cleanup.
 - Anything else is **left in place as an orphan** — an intact directory plus
-  its branch — never force-removed, never auto-committed. `bin/worktrees
+  its branch — never force-removed, never auto-committed. `bin/workstreams
   sweep` (and `status`) durably REPORT orphaned private worktrees and
   unmerged `worktree-*` private branches every run, so an orphan is
   discovered even when a hook's own log line was lost (hook logging is
@@ -248,9 +248,9 @@ handling, per the topology section:
   proceeds either way — with the symlink topology it cannot destroy private
   work, so the public and private decisions are independent.
 
-### E. `bin/worktrees sweep` — same rule, plus durable orphan reporting
+### E. `bin/workstreams sweep` — same rule, plus durable orphan reporting
 
-(The orphan scanner is a function in `bin/worktrees` invoked by `sweep` —
+(The orphan scanner is a function in `bin/workstreams` invoked by `sweep` —
 NOT by `status`, which is a thin router query that exits early when the
 router is down; wiring the scanner there would change its contract.)
 
@@ -432,7 +432,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
   an orphan, and the log lines appear; merge + clean → verify full cleanup
   including private worktree + branch; sick-mount case (dangling symlink,
   plain dir) → verify fail-closed skip; `worktree-remove.sh` same matrix.
-  `bin/worktrees sweep --dry-run` verification of removal, orphan-report,
+  `bin/workstreams sweep --dry-run` verification of removal, orphan-report,
   and prune behavior. Note: faked-stdin runs exercise our scripts, not
   Claude Code's own removal ordering — with the symlink topology that
   ordering no longer matters for safety (nothing Claude Code deletes holds

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Trigger a background `bin/worktrees sweep`, gated + logged.
+# Trigger a background `bin/workstreams sweep`, gated + logged.
 #
 # WHY THIS EXISTS: worktree auto-cleanup must NOT depend on the SessionEnd hook
 # correctly identifying a finishing session as its worktree — it can't when a
@@ -19,7 +19,7 @@
 # corrupts the deploy's .deploy-checkout). Re-adding needs a shared worktree
 # lock first.
 #
-# Safe to auto-run: `bin/worktrees sweep` removes a worktree only when it is
+# Safe to auto-run: `bin/workstreams sweep` removes a worktree only when it is
 # fully merged into main, clean (no non-deletion dirt), AND has no active
 # `claude`/`codex` session (checked via `ps -axo pid=,comm=` + `--worktree`
 # argv + real process cwd — NOT pgrep, which misses native-installed Claude
@@ -44,7 +44,7 @@ mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
 # alongside the per-worktree hook decisions.
 (
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$trigger START"
-  "$REPO/bin/worktrees" sweep 2>&1 | sed 's/^/  /'
+  "$REPO/bin/workstreams" sweep 2>&1 | sed 's/^/  /'
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) auto-sweep trigger=$trigger END"
 ) >> "$LOG" 2>&1 &
 disown 2>/dev/null || true

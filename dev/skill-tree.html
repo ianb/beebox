@@ -25,7 +25,7 @@
 <div class="wrap">
 <nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <a href="skills.html">Skills profiled</a> · <b>Skill tree</b> · <a href="viz-skill-rhythm.html">Rhythm</a> · <a href="viz-skill-pairs.html">Pairs</a> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
 <h1>🌳 The skill tree</h1>
-<p class="lede">The skills as a talent tree. They build on each other along the arc of a task — fork a session, plan it, have a rival model attack the plan, build, verify, ship. <b>Level = times invoked.</b> The dim, padlocked nodes are <b>born but never unlocked</b> — the craft branch you haven't leveled into yet. The glowing gold path is the ritual that actually carries the work: <b>cb-plan → codex</b>. The <b>⚙ line</b> under each node is the skill's <b>equipment</b> — the real CLI tools it wields (e.g. <code>launch-worktree-session</code> drives a launcher script, <code>claude --worktree</code>, and <code>bin/worktrees</code>; <code>browse</code> is all <code>bin/browse</code>).</p>
+<p class="lede">The skills as a talent tree. They build on each other along the arc of a task — fork a session, plan it, have a rival model attack the plan, build, verify, ship. <b>Level = times invoked.</b> The dim, padlocked nodes are <b>born but never unlocked</b> — the craft branch you haven't leveled into yet. The glowing gold path is the ritual that actually carries the work: <b>cb-plan → codex</b>. The <b>⚙ line</b> under each node is the skill's <b>equipment</b> — the real CLI tools it wields (e.g. <code>launch-worktree-session</code> drives a launcher script, <code>claude --worktree</code>, and <code>bin/workstreams</code>; <code>browse</code> is all <code>bin/browse</code>).</p>
 <div class="legend">
   <span><span class="sw" style="background:#e0a82e"></span><b>Plan &amp; rigor</b></span>
   <span><span class="sw" style="background:#3fb6a8"></span><b>Build / craft</b></span>
@@ -53,7 +53,7 @@ const N = {
 };
 // the CLI tools / surfaces each skill wields to do its work (its "equipment")
 const TOOLS = {
-  "launch-worktree-session":["launch-worktree-session", "claude --worktree", "bin/worktrees", "WorktreeCreate hook"],
+  "launch-worktree-session":["launch-worktree-session", "claude --worktree", "bin/workstreams", "WorktreeCreate hook"],
   "cb-plan":["docs/plans/", "pnpm knowledge-audit"],
   "codex":["codex CLI (OpenAI)", "codex exec -s read-only"],
   "cb-codehealth":["pnpm lint:knip", "lint:circular", "lint:oxlint"],

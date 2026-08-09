@@ -5,7 +5,7 @@
 #
 # Every piece of worktree tooling needs the same five locations, and until this
 # file they each hardcoded `$HOME/src/...` (the WorktreeCreate/Remove hooks,
-# session-end, auto-sweep, `bin/worktrees sweep`). A developer whose checkout
+# session-end, auto-sweep, `bin/workstreams sweep`). A developer whose checkout
 # lives anywhere else got worktrees that silently missed every lifecycle hook.
 # See issues/code-quality/2026-08-01-derive-public-worktree-paths.md.
 #

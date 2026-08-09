@@ -6,7 +6,7 @@ an active document holding Track D's design.
 
 The repo's worktree logic works, but it lives behind a Claude Code hook
 interface. Any other frontend must impersonate Claude Code to use it. This plan
-moves that logic into `bin/worktrees` as ordinary CLI subcommands and makes every
+moves that logic into `bin/workstreams` as ordinary CLI subcommands and makes every
 frontend — Claude Code, Codex, a router web page, a third-party tool — a thin
 client of the same command. Behavior does not change. Who can call it does.
 
@@ -68,7 +68,7 @@ So the deliverable is: the same workflow, over pieces that can be recombined.
 Two changes a user or caller could notice. Both were chosen, and a cross-model
 review flagged both as drift that "no workflow change" would otherwise deny.
 
-- **`bin/worktrees list` no longer aliases `status`.** On `main` they were the
+- **`bin/workstreams list` no longer aliases `status`.** On `main` they were the
   same router-status JSON. `list` is now the unified worktree table and `status`
   is the raw router JSON. Accepted after grepping every tracked file for both
   commands: only `status` had callers (`bin/CLAUDE.md`, the `browse` skill), and
@@ -88,8 +88,8 @@ The boxholder runs many parallel worktree sessions and keeps each one open until
 he has verified its work. An open session is currently the only durable record of
 "this still needs checking."
 
-That has three costs. A live session pins its worktree — `bin/worktrees sweep`
-skips any worktree with a live agent process (`bin/worktrees:172`, `:189`), so a
+That has three costs. A live session pins its worktree — `bin/workstreams sweep`
+skips any worktree with a live agent process (`bin/workstreams:172`, `:189`), so a
 merged, clean worktree lingers only because a tab is open on it. There is no
 place to look for "what is outstanding" other than the tab bar. And switching is
 heavy, because switching means finding the right tab rather than naming the right
@@ -171,19 +171,19 @@ Track D's `resume` builds on this, it does not duplicate it.
 `wt_remove_now`, `wt_log`, sourced by `.claude/hooks/session-end.sh` and
 `bin/codex-session-end`. Its liveness guard is tri-state (`:65-67`: *"the answer
 is in WT_AGENT_STATE (`none` | `live` | `unknown`)… Callers MUST treat `unknown`
-the same as `live`"*). `bin/worktrees` sweep keeps its own two-state copy
+the same as `live`"*). `bin/workstreams` sweep keeps its own two-state copy
 (`:145`, `:155-160`) and `bin/lib/worktree-teardown.sh:11-14` says why: *"it
 takes ONE system-wide process snapshot and reuses it across N worktrees, and
 removes with `git worktree remove --force` rather than the trash-mv below."*
 **Reconcile, don't rebuild** — Track B passes a snapshot into the shared guard.
 
-**Merged worktrees already auto-delete.** `bin/worktrees:193-231` removes any
+**Merged worktrees already auto-delete.** `bin/workstreams:193-231` removes any
 worktree that is `ahead=0`, non-deletion-clean, and has no live agent. The
 lingering the boxholder experiences is caused by the liveness guard doing its
 job, not by missing cleanup.
 
-**`bin/worktrees` has no `create`, `remove`, `list --json`, or `resume`.** The
-dispatch at `bin/worktrees:32` covers `serve`, `status | list`, `down`, `panic`,
+**`bin/workstreams` has no `create`, `remove`, `list --json`, or `resume`.** The
+dispatch at `bin/workstreams:32` covers `serve`, `status | list`, `down`, `panic`,
 `sweep`, `help`. `status | list` (`:37-46`) is a `curl … | jq .` passthrough of
 the router's `/__router/status`.
 
@@ -194,10 +194,10 @@ the router's `/__router/status`.
 **Reuse** — Track C joins onto this rather than re-deriving runtime state.
 
 **Three signals recompute independently and none persist.** Git ahead/dirty is
-computed in sweep's bash (`bin/worktrees:193-198`). Running/idle lives in the
+computed in sweep's bash (`bin/workstreams:193-198`). Running/idle lives in the
 router's in-memory map and is lost on restart (`bin/router.ts:916-940` re-derives
 it). Session liveness is computed by `ps`/`lsof` in two places
-(`bin/lib/worktree-teardown.sh` and `bin/worktrees:145-161`). Joining them is
+(`bin/lib/worktree-teardown.sh` and `bin/workstreams:145-161`). Joining them is
 Track C, and it is the enabling step for any dashboard.
 
 **A faceted issues browser already exists and already overlays worktrees.**
@@ -250,10 +250,10 @@ of any kind.
 
 Ordered by implementation dependency, then surface size.
 
-### Track A — `bin/worktrees create <name>`
+### Track A — `bin/workstreams create <name>`
 
 **What.** Move the 291 lines of `.claude/hooks/worktree-create.sh` into
-`bin/worktrees` (or `bin/lib/worktree-create.sh`, sourced by it) behind a plain
+`bin/workstreams` (or `bin/lib/worktree-create.sh`, sourced by it) behind a plain
 CLI interface. The hook shrinks to an adapter that parses hook JSON and calls the
 command.
 
@@ -265,7 +265,7 @@ again. Principle §7: the location is a false claim about ownership.
 **Direction.**
 
 ```
-bin/worktrees create <name> [--base-ref <ref>] [--path <dir>] [--quiet]
+bin/workstreams create <name> [--base-ref <ref>] [--path <dir>] [--quiet]
 ```
 
 Prints the absolute worktree path on stdout; all logging to stderr (preserving
@@ -283,27 +283,27 @@ name=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
 path=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
 [ -n "$name" ] || name=$(basename "$path")
 base=$(printf '%s' "$input" | jq -r '.base_ref // .baseRef // "main"')
-exec "$(git rev-parse --show-toplevel)/bin/worktrees" create "$name" --base-ref "$base"
+exec "$(git rev-parse --show-toplevel)/bin/workstreams" create "$name" --base-ref "$base"
 ```
 
 `bin/launch-worktree-session`'s codex path drops the JSON synthesis and calls
-`bin/worktrees create "$wt"` directly.
+`bin/workstreams create "$wt"` directly.
 
 **Path derivation folds in here.** The three hardcoded roots
 (`.claude/hooks/worktree-create.sh:66-68`) become one derivation helper in
 `bin/lib/`, following the `bin/private-issues` pattern the issue cites:
 `git rev-parse --path-format=absolute --git-common-dir` from an explicit checkout
 argument gives the main checkout; the worktree root and box root are named peers
-of it. `bin/worktrees:134-135` and the hooks' own copies consume the same helper.
+of it. `bin/workstreams:134-135` and the hooks' own copies consume the same helper.
 Overridable by env for the isolated-router test path, matching
 `CALLBACK_STATE_DIR`.
 
 **First implementation chunk.** Add `bin/lib/worktree-paths.sh` with the
-derivation helper and switch `bin/worktrees sweep` (`:134-135`) to it. No new
+derivation helper and switch `bin/workstreams sweep` (`:134-135`) to it. No new
 commands, no moved logic — the smallest change that proves the derivation is
 correct against a live tree, and it lands with zero callers depending on it yet.
 
-### Track B — `bin/worktrees remove <name>`
+### Track B — `bin/workstreams remove <name>`
 
 **What.** A `remove` subcommand that is the one destructive path, and the
 convergence of sweep's guard onto `wt_other_agent_live`.
@@ -311,7 +311,7 @@ convergence of sweep's guard onto `wt_other_agent_live`.
 **Why this needs to change.** Three removal paths exist:
 `.claude/hooks/worktree-remove.sh` (95 lines), `wt_remove_now` in
 `bin/lib/worktree-teardown.sh`, and sweep's inline block
-(`bin/worktrees:205-231`). Only two share an implementation. Sweep's liveness
+(`bin/workstreams:205-231`). Only two share an implementation. Sweep's liveness
 guard is two-state where the shared one is tri-state, and
 [the filed bug](../../../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md)
 records the consequence: a failed `ps`/`lsof` reads as "nothing running" and the
@@ -321,7 +321,7 @@ inversion, a guard that fails open in front of an irreversible action.
 **Direction.**
 
 ```
-bin/worktrees remove <name> [--keep-branch] [--force] [--dry-run]
+bin/workstreams remove <name> [--keep-branch] [--force] [--dry-run]
 ```
 
 Refuses by default when the worktree is unmerged, dirty, or has a live agent, and
@@ -339,15 +339,15 @@ Sweep becomes a loop over `remove --dry-run`-style eligibility plus `remove`.
 
 **Vocabulary lock-in.** `remove` means the destructive path everywhere: hook,
 sweep, teardown lib, and CLI. `down` stays what it is today — stop the router
-processes only (`bin/worktrees:48-55`) — and the help text must say so, because
+processes only (`bin/workstreams:48-55`) — and the help text must say so, because
 "down" and "remove" are otherwise easy to confuse at a prompt.
 
 **First implementation chunk.** Add the snapshot parameter to
 `wt_other_agent_live` and switch sweep onto it, deleting sweep's inline
-`ps`/`lsof` (`bin/worktrees:145-161`). This closes the filed bug on its own and
+`ps`/`lsof` (`bin/workstreams:145-161`). This closes the filed bug on its own and
 lands before any command moves.
 
-### Track C — `bin/worktrees list --json`
+### Track C — `bin/workstreams list --json`
 
 **What.** One command that joins the three signals that today recompute
 independently and never persist: git state, router runtime state, and agent
@@ -360,7 +360,7 @@ prompt — needs the join, and if it does not exist each client re-derives it, i
 its own language, with its own subtly different liveness guard. That is how the
 fail-open bug happened once already.
 
-**Direction.** `bin/worktrees list` prints a human table; `--json` prints an
+**Direction.** `bin/workstreams list` prints a human table; `--json` prints an
 array. Proposed record shape — this is the contract other clients bind to, so it
 is a lock-in:
 
@@ -393,7 +393,7 @@ Track D is where new persisted state gets justified.
 and `runtime` hardcoded to `unknown`, plus a doctest asserting the shape.
 Complete and useful on its own — that alone answers "what is outstanding."
 
-### Track D — `bin/worktrees resume <name> [--agent claude|codex]` (DEFERRED, not built)
+### Track D — `bin/workstreams resume <name> [--agent claude|codex]` (DEFERRED, not built)
 
 **What.** Reopen a session in an existing worktree, with the right agent, in a
 new Terminal tab. The genuinely missing motion — and therefore a workflow change,
@@ -411,7 +411,7 @@ in its first line, so this must be agent-aware by construction.
 (`:255-260`) and its per-agent launch scripts (`:151-238`), targeting an existing
 worktree instead of creating one. Creation is already idempotent
 (`.claude/hooks/worktree-create.sh:106-112`), so `resume` calls
-`bin/worktrees create` first and gets self-healing (private-issues re-mount,
+`bin/workstreams create` first and gets self-healing (private-issues re-mount,
 AGENTS.md regeneration) for free.
 
 `--agent` is required unless the worktree records which agent last ran there.
@@ -446,7 +446,7 @@ The seam's value is not that it makes any one client better. It is that trying a
 client stops being a bet.
 
 Today, trying Conductor means adopting it: it would own worktree creation, the
-layer most customized here. With `bin/worktrees create` as the contract, trying
+layer most customized here. With `bin/workstreams create` as the contract, trying
 Conductor costs one creation script that shells out to the command, and
 abandoning it costs deleting that script. The same holds for the desktop app, a
 future frontend, or a hand-rolled web page. This is the direct answer to "I can't
@@ -454,10 +454,10 @@ put tools on top of it."
 
 | Frontend | How it creates a worktree |
 |---|---|
-| Claude Code | `WorktreeCreate` hook adapter → `bin/worktrees create` |
-| Codex | `bin/launch-worktree-session` → `bin/worktrees create` |
-| A router web page | button → `bin/worktrees create` |
-| Conductor, if ever tried | its creation script → `bin/worktrees create` |
+| Claude Code | `WorktreeCreate` hook adapter → `bin/workstreams create` |
+| Codex | `bin/launch-worktree-session` → `bin/workstreams create` |
+| A router web page | button → `bin/workstreams create` |
+| Conductor, if ever tried | its creation script → `bin/workstreams create` |
 
 ## Sessions should be disposable — the two cases differ
 
@@ -466,7 +466,7 @@ closed without losing the record. The two cases that keep a session open are not
 the same, and conflating them is what makes "resume" ambiguous:
 
 - **Merged, needs verification.** The code is on `main`. The worktree holds
-  nothing unique and `sweep` would already collect it (`bin/worktrees:193-231`).
+  nothing unique and `sweep` would already collect it (`bin/workstreams:193-231`).
   What is needed is a *record of what to check* — which is what `issues/` is for.
   No resume is involved.
 - **Unmerged, paused mid-work.** The worktree is the only copy of the work.
@@ -477,7 +477,7 @@ entangled with the open `manual-testing` decision (see NOT in scope).
 
 ## Could this be simpler?
 
-**The simplest version that could plausibly work:** add `bin/worktrees list
+**The simplest version that could plausibly work:** add `bin/workstreams list
 --json` and change nothing else. Leave creation in the hook, leave Codex
 synthesizing JSON, leave the three removal paths. That single command answers
 "what is outstanding," which is the boxholder's stated pain.
@@ -521,9 +521,9 @@ shape.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | `create` is called with a name that already has a worktree registered | To add — doctest: create twice, assert same path, assert no second clone | Yes — `.claude/hooks/worktree-create.sh:106-112` resume branch, moved verbatim | Clear: logs "resume, skipping setup" |
-| The hook adapter can't find `bin/worktrees` (worktree predates the refactor, or a detached checkout) | To add — adapter unit test with a bogus toplevel | To add — adapter must fail loudly; a silent fallback to the old inline logic would let two implementations coexist | Must be clear: worktree creation aborts with the resolved path it tried |
+| The hook adapter can't find `bin/workstreams` (worktree predates the refactor, or a detached checkout) | To add — adapter unit test with a bogus toplevel | To add — adapter must fail loudly; a silent fallback to the old inline logic would let two implementations coexist | Must be clear: worktree creation aborts with the resolved path it tried |
 | Path derivation resolves a *different* root than the hardcoded one on the boxholder's machine (e.g. checkout is at `~/src/callback-box` but `--git-common-dir` resolves through a symlink) | To add — assert derived roots equal today's hardcoded values on this machine | To add — a one-time assertion in the derivation helper, not a silent fallback | Clear: refuse and print both paths. Silently picking either is how a worktree gets created outside every lifecycle hook |
-| `remove` runs while an agent is live and `ps`/`lsof` fail | To add — inject a failing `ps` and assert refusal | Partly — `wt_other_agent_live` returns `unknown` (`bin/lib/worktree-teardown.sh:65-67`); sweep currently ignores it (`bin/worktrees:145,155-160`) | Today: **silent** — this is the filed bug. After Track B: clear, skip with printed reason |
+| `remove` runs while an agent is live and `ps`/`lsof` fail | To add — inject a failing `ps` and assert refusal | Partly — `wt_other_agent_live` returns `unknown` (`bin/lib/worktree-teardown.sh:65-67`); sweep currently ignores it (`bin/workstreams:145,155-160`) | Today: **silent** — this is the filed bug. After Track B: clear, skip with printed reason |
 | `remove --force` is used on a worktree with a live agent | To add | To add — `--force` must not override the liveness check | Clear: refuse, and say `--force` does not apply to liveness |
 | `list --json` runs with no router | To add — doctest asserting `runtime.state == "unknown"` | To add — degrade, never fail the whole command | Clear: per-field `unknown`, not an omitted field |
 | `list --json` runs while a worktree is being removed (directory half-gone) | Built + exercised | Built — the row's `git.ahead`/`dirty`/`merged` are `null`, never `0`, and the rest of the list is unaffected. (Shipped as nulls rather than the `git.state: "unreadable"` field this plan first proposed: `wt_work_state` already answers `"?"` for "could not tell", and a null carries that through JSON without a second vocabulary for the same fact.) | Clear: one bad row, rest of the list intact |
@@ -551,7 +551,7 @@ shape.
   `git worktree add`, never through `create`) has no session file and possibly a
   non-conforming name. `list` reports it from disk; `resume` demands `--agent`;
   sweep's argv signal already misses names outside `[a-zA-Z0-9_-]+`
-  (`bin/worktrees:145`, noted in the filed bug) and Track B's convergence onto
+  (`bin/workstreams:145`, noted in the filed bug) and Track B's convergence onto
   cwd-based detection covers it.
 - **Fabricated free-form value** — **ADDRESSED by design**. `list` derives every
   field from git, `ps`, and the router. There is no free-form field for an agent
@@ -631,7 +631,7 @@ this plan is dev-repo tooling, which is invisible to box agents — an audit can
 test it, and writing one would produce a test that passes or fails for reasons
 unrelated to the change.
 
-The agent-facing surface this plan does create — `bin/worktrees` subcommands and
+The agent-facing surface this plan does create — `bin/workstreams` subcommands and
 the `list --json` contract — is documented for agents in `bin/CLAUDE.md`, and the
 enforcement is the tri-state enum itself rather than recall (§11, enforcement
 beats convention).
@@ -641,7 +641,7 @@ beats convention).
 Each chunk is a commit or a few related commits. All land before the plan ships.
 
 1. **Path derivation helper** (`bin/lib/worktree-paths.sh`), consumed by
-   `bin/worktrees sweep` only. The planned refuse-on-mismatch assertion (derived
+   `bin/workstreams sweep` only. The planned refuse-on-mismatch assertion (derived
    roots must equal the old hardcoded ones) was **not** shipped as runtime code:
    it is a one-time migration check, not a durable invariant, and it was verified
    by hand instead — all five derived locations matched exactly. What `wt_paths_init`
@@ -651,17 +651,17 @@ Each chunk is a commit or a few related commits. All land before the plan ships.
    `wt_other_agent_live`, sweep's inline `ps`/`lsof` deleted. Closes
    [the fail-open bug](../../../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
    Depends on nothing; can swap order with 1.
-3. **`bin/worktrees create`** — logic moved verbatim from the hook, hook reduced
+3. **`bin/workstreams create`** — logic moved verbatim from the hook, hook reduced
    to an adapter, `bin/launch-worktree-session` codex path switched off the JSON
    synthesis, hardcoded roots switched to chunk 1's helper. Depends on 1.
-4. **`bin/worktrees remove`** — the destructive path unified; sweep and
+4. **`bin/workstreams remove`** — the destructive path unified; sweep and
    `.claude/hooks/worktree-remove.sh` become callers. Depends on 2 and 3.
-5. **`bin/worktrees list --json`** — git and agent fields, `runtime: unknown`.
+5. **`bin/workstreams list --json`** — git and agent fields, `runtime: unknown`.
    Depends on 1 and 2.
 6. **`list --json` router join** — `runtime` populated from
    `/__router/status` over the UDS, degrading to `unknown` when the router is
    down. Depends on 5.
-7. ~~**`bin/worktrees resume`**~~ — deferred, see "What this plan builds now."
+7. ~~**`bin/workstreams resume`**~~ — deferred, see "What this plan builds now."
 8. ~~**Session hint file**~~ — dropped with chunk 7; it existed only to serve it.
 9. **Docs** — `bin/CLAUDE.md` gains the command contract and the `agent.state`
    tri-state rule; root `CLAUDE.md`'s worktree paragraph points at it.
@@ -678,7 +678,7 @@ Each chunk is a commit or a few related commits. All land before the plan ships.
   change testable.
 - Chunk 3 — create twice, assert the same path and no second box clone; assert
   the hook adapter and a direct CLI call produce identical results; assert a
-  missing `bin/worktrees` aborts loudly.
+  missing `bin/workstreams` aborts loudly.
 - Chunk 4 — assert refusal on unmerged, on dirty, on live-agent, and that
   `--force` overrides the first two but not the third.
 - Chunks 5-6 — doctest the JSON shape, including `runtime.state == "unknown"`

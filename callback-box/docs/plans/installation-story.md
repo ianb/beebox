@@ -282,7 +282,7 @@ in A's pin, B's doctor checks, C's verified sequence).
   agents; the router/worktree harness assumes the personal `~/src` layout
   (release plan, NOT-in-scope: *"do not invest in making the
   worktree/router harness reusable"*). An outside developer needs a path
-  that never touches `bin/worktrees` — and the naive path has three
+  that never touches `bin/workstreams` — and the naive path has three
   landmines the draft plan itself stepped on: `cb` isn't reachable from
   the root, a clean clone has no built frontend, and `--dev` is
   backend-only. And there is no `.env.example` anywhere — the only env

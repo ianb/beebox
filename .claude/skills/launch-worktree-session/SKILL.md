@@ -153,7 +153,7 @@ OpenAI names (`gpt-5.5` was the known-good pick when the account throttled the
 default model, 2026-07 — see the `cross-model` skill); Remote Control doesn't exist
 for codex and the flag is ignored; the briefing wrapper works the same. Only
 use this when the human asked for a Codex session. Cleanup also differs: no
-hook fires on codex exit, so the worktree lingers until `bin/worktrees sweep`
+hook fires on codex exit, so the worktree lingers until `bin/workstreams sweep`
 collects it once merged + clean.
 
 **Remote Control is on by default** — the launcher passes

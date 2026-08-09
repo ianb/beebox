@@ -274,7 +274,7 @@ Rules that keep it private and safe:
   closed/<category>/), same file conventions (issues/CLAUDE.md over there).
 - **Nothing here is ever force-deleted.** If a public worktree goes away
   with private work unmerged, the private worktree and its
-  `worktree-<name>` branch survive as an orphan; `bin/worktrees sweep`
+  `worktree-<name>` branch survive as an orphan; `bin/workstreams sweep`
   reports it until you either resume it (recreate a worktree with the same
   name) or merge it: `git merge worktree-<name>` from this directory.
 - **Remote is yours to wire** (`git remote add …`); until then finish

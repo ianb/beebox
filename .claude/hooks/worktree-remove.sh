@@ -7,7 +7,7 @@
 # `wt_remove_satellites` in bin/lib/worktree-teardown.sh, which this file used to
 # carry its own copy of.
 #
-# It deliberately does NOT call `bin/worktrees remove`: that removes the git
+# It deliberately does NOT call `bin/workstreams remove`: that removes the git
 # worktree and deletes the branch, and here Claude Code owns the worktree
 # removal and the branch may still hold unmerged commits.
 #

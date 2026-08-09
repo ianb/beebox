@@ -194,7 +194,7 @@ into main; worktree creation auto-mounts a private worktree (branch
 `worktree-<name>`, stored outside the public worktree so no cleanup can
 destroy it); `/finish` lands the private branch on private `main` alongside
 the public merge; unmerged private work survives any worktree removal as an
-orphan that `bin/worktrees sweep` reports until resolved. Details:
+orphan that `bin/workstreams sweep` reports until resolved. Details:
 `bin/CLAUDE.md` and `bin/private-issues help`. Private issues appear in the
 dev issues browser (`/dev/issues/`) marked `private` — that page is
 owner-session-gated.

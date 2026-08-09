@@ -21,7 +21,7 @@
 # fallback, which is arbitrary.
 #
 # --agent codex runs OpenAI's codex CLI instead of claude. Codex has no
-# --worktree, so this path calls `bin/worktrees create` directly (same
+# --worktree, so this path calls `bin/workstreams create` directly (same
 # worktree + box clone + installs; it also generates the gitignored
 # AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
 # runs codex in the worktree with full access/no-approvals (parity with claude
@@ -233,7 +233,7 @@ else
 set -euo pipefail
 printf '\033]0;%s\007' "$session_name"
 cd "$MONO"
-wt_path=\$(./bin/worktrees create "$wt")
+wt_path=\$(./bin/workstreams create "$wt")
 if [ ! -f "\$wt_path/AGENTS.md" ]; then
   echo "launch-worktree-session: no AGENTS.md in \$wt_path (generation failed?) — refusing to launch codex without repo docs" >&2
   exit 1
@@ -268,7 +268,7 @@ $model_line
 
 # Codex is NOT exec'd (claude is), because codex fires no hooks — it reads none
 # of .claude/settings.json, so nothing cleans up when it exits and the worktree
-# lingers until someone runs \`bin/worktrees sweep\`. Running it in the
+# lingers until someone runs \`bin/workstreams sweep\`. Running it in the
 # foreground gives us an "after codex exits" moment for bin/codex-session-end,
 # which is what SessionEnd is for claude.
 #
@@ -290,7 +290,7 @@ teardown="$MONO/bin/codex-session-end"
 if [ -x "\$teardown" ]; then
   "\$teardown" "\$wt_path" || true
 else
-  echo "launch-worktree-session: no \$teardown — leaving \$wt_path for \\\`bin/worktrees sweep\\\`" >&2
+  echo "launch-worktree-session: no \$teardown — leaving \$wt_path for \\\`bin/workstreams sweep\\\`" >&2
 fi
 exit \$codex_status
 EOF

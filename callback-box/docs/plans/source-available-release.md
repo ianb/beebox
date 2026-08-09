@@ -391,7 +391,7 @@ introduces none, so they don't apply. The two that do:
 - **History rewrite as a track.** Only triggered *if* Track A finds a committed
   secret (not merely a name) in deep history. Names get scrubbed in-tree; a full
   `git-filter-repo` rewrite is out of scope unless the sweep forces it.
-- **Genericizing the personal dev harness** (`bin/router.ts`, `bin/worktrees`,
+- **Genericizing the personal dev harness** (`bin/router.ts`, `bin/workstreams`,
   `.claude/` hooks/agents/skills). These assume `~/src/...` and are the author's
   workflow. Ship as-is (they're honest personal tooling) — do not invest in making
   the worktree/router harness reusable. Revisit only if contributors ask.

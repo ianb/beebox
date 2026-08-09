@@ -101,7 +101,7 @@ const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 // The local trust boundary (plan Track B): a SECOND listener on a Unix-domain
 // socket. Requests arriving on it are `trustedLocal` (unauthenticated) because a
 // browser cannot originate a UDS connection — a real capability boundary, not a
-// spoofable header. Local CLI (bin/worktrees) talks to the router through this;
+// spoofable header. Local CLI (bin/workstreams) talks to the router through this;
 // everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
 const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 
@@ -712,7 +712,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
 <div class="help">
   <h2>If something looks wedged</h2>
   <p>
-    Run <code>bin/worktrees panic</code> from a terminal — this kills the
+    Run <code>bin/workstreams panic</code> from a terminal — this kills the
     router plus every child it knows about, wipes <code>~/.cache/callback-box</code>
     state, and frees port ${ROUTER_PORT}. Then start fresh with <code>pnpm dev</code>.
   </p>
@@ -721,7 +721,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
   </p>
   <h2>If the list is too long</h2>
   <p>
-    Run <code>bin/worktrees sweep</code> to remove worktrees that are fully
+    Run <code>bin/workstreams sweep</code> to remove worktrees that are fully
     merged into main, clean, and have no active <code>claude</code> session —
     plus any orphan browse/log/pid state left behind by past cleanups.
     Add <code>--dry-run</code> to preview.
@@ -1228,7 +1228,7 @@ async function acquireRouterPidFile(): Promise<void> {
     const existing = await fs.readFile(ROUTER_PID_FILE, "utf8");
     const pid = Number(existing.trim());
     if (pid && pidAlive(pid)) {
-      throw new Error(`Another router is already running (pid ${pid}). Run \`bin/worktrees panic\` to clear.`);
+      throw new Error(`Another router is already running (pid ${pid}). Run \`bin/workstreams panic\` to clear.`);
     }
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {

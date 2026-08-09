@@ -8,14 +8,14 @@
 #   - .claude/hooks/session-end.sh   (Claude Code SessionEnd)
 #   - bin/codex-session-end          (codex tab exit, via launch-worktree-session)
 #
-# `bin/worktrees` (create excepted) is a caller too: `sweep` and `remove` both
+# `bin/workstreams` (create excepted) is a caller too: `sweep` and `remove` both
 # use wt_other_agent_live and wt_remove_now from here, and `list` uses the guard
 # alone. Sweep keeps its ONE system-wide process snapshot across N worktrees via
 # wt_agent_snapshot_capture rather than a private copy of the guard.
 #
 # Everything here stands in front of an irreversible delete, so every "can't
 # tell" answer resolves to "don't delete". A worktree that lingers is collected
-# by the next `bin/worktrees sweep`; a worktree deleted under live work is gone.
+# by the next `bin/workstreams sweep`; a worktree deleted under live work is gone.
 
 # Locations — WT_MONO (where the git bookkeeping runs), WT_BOX_ROOT, and
 # WT_STATE_DIR all come from the shared derivation, so this file makes no $HOME
@@ -75,7 +75,7 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 # same as `live` — that's the fail-closed half of this guard.
 #
 # Cleaning a worktree that still has a live agent pulls the rug out from under
-# it. `bin/worktrees sweep` has always checked; session-end.sh did not, and that
+# it. `bin/workstreams sweep` has always checked; session-end.sh did not, and that
 # gap had teeth: a nested `claude -p` (the /cross-model skill's Codex→Claude
 # reviewer) run from inside a worktree ends its own session, fires the hook, and
 # — seeing a merged, clean branch — deletes the worktree out from under the
@@ -109,7 +109,7 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 #
 # Takes ONE system-wide process + argv + cwd snapshot into WT_SNAP_*, which
 # wt_other_agent_live then uses instead of shelling out per call. This is what
-# lets `bin/worktrees sweep` ask about N worktrees at the cost of one `ps` and
+# lets `bin/workstreams sweep` ask about N worktrees at the cost of one `ps` and
 # one `lsof`, which is the property that kept it on its own two-state copy of
 # this guard until now (and gave it a fail-OPEN hole:
 # issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
@@ -420,7 +420,7 @@ wt_remove_satellites() {
 #
 # It deletes the trash dir's ENTRIES, never the trash dir itself, and it snapshots
 # the entry list here rather than globbing inside the detached shell. Both matter
-# once a caller removes several worktrees in a row: `bin/worktrees sweep` calls
+# once a caller removes several worktrees in a row: `bin/workstreams sweep` calls
 # wt_remove_now per eligible worktree, so a reaper from removal N-1 is still
 # running when removal N does its `mv` into the same directory. Deleting the root
 # would make that `mv` fail — leaving a worktree half-removed, its box and cache

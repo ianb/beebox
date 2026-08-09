@@ -200,7 +200,7 @@ echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 # `.deploy-checkout` is a SEPARATE local clone, NOT a git worktree — deliberately.
 # A worktree shares the main repo's `.git/worktrees/` bookkeeping, which every
 # concurrent worktree op mutates: worktree sessions spinning up, cleanup hooks,
-# `bin/worktrees sweep`, AND Claude Code's own `git worktree remove` on session
+# `bin/workstreams sweep`, AND Claude Code's own `git worktree remove` on session
 # exit. Those repeatedly corrupted the worktree mid-creation and failed the prod
 # deploy (ENOTDIR on `.git/index`). A clone has its OWN `.git` dir and is immune
 # to all of it — no serialization/backoff/lock needed. `--shared` points its

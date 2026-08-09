@@ -29,7 +29,7 @@ despite logging "localhost". Verified: no host argument at that call site.
 So a LAN / container / VM peer can reach the outer router, which proxies into
 the loopback-only but now **auth-disabled** hub and boxes. Before the
 overnight change the same LAN peer hit the login wall; now it doesn't. Scope
-is the monorepo dev path only (`pnpm dev` → `bin/worktrees serve`); a real
+is the monorepo dev path only (`pnpm dev` → `bin/workstreams serve`); a real
 `cb hub`/`cb serve` still defaults to loopback + validates open mode
 (confirmed), so production is unaffected.
 

@@ -110,7 +110,7 @@ runs in prod. Full design and rationale:
   `~/.cache/callback-box/router.sock` (or `$CALLBACK_STATE_DIR/router.sock` for
   an isolated test router). The UDS is the trusted-local, **unauthenticated**
   channel — a browser can't originate a UDS connection, so it's a real
-  capability boundary, not a spoofable header. `bin/worktrees` and other local
+  capability boundary, not a spoofable header. `bin/workstreams` and other local
   CLI tools talk to the router over the UDS. **Every TCP request must
   authenticate** — owner session for `/__router/*` control routes plus the `/`
   worktree list and `/<w>/dev/` infra, per-box mobile/session auth for box
@@ -184,7 +184,7 @@ worktree has no active `claude` session. The generation leak that made
 this necessary (concurrent cold requests racing to spawn duplicate
 vite+fastify pairs) is fixed at the source in `ensureRunning`.
 
-## `bin/worktrees` is the agent-neutral control surface
+## `bin/workstreams` is the agent-neutral control surface
 
 Worktree creation and removal are CLI subcommands, and every agent frontend is a
 thin client of them. `.claude/hooks/worktree-create.sh` and
@@ -207,7 +207,7 @@ wrong root means lifecycle operations on a checkout that isn't the one in play,
 which is silent when it happens. Override the basenames with
 `CALLBACK_WORKTREE_ROOT` / `CALLBACK_BOX_ROOT` / `CALLBACK_BOX_SRC`.
 
-**`bin/worktrees create` owns stdout.** Exactly one line — the worktree path —
+**`bin/workstreams create` owns stdout.** Exactly one line — the worktree path —
 because Claude Code's WorktreeCreate contract requires it. This is enforced
 structurally (the command stashes real stdout on fd 3 and points fd 1 at stderr),
 so a child that prints to stdout can't corrupt it. `generate-agents-md.ts` does
@@ -216,20 +216,20 @@ exactly that, and its line landed in the returned path until this was added.
 **Agent liveness is tri-state, and `unknown` is not `none`.**
 `wt_other_agent_live` answers `none` / `live` / `unknown` in `WT_AGENT_STATE`;
 every caller must treat `unknown` as `live`, because it stands in front of an
-irreversible delete. `bin/worktrees sweep` kept its own two-state copy until
+irreversible delete. `bin/workstreams sweep` kept its own two-state copy until
 2026-08 and that was a real fail-open hole (a failed `ps`/`lsof` read as "nothing
 running"). Sweep keeps its one-snapshot-across-N-worktrees property through
 `wt_agent_snapshot_capture` instead of a private implementation. A snapshot and
 `--exclude-self-ancestor` are mutually exclusive and the guard refuses the
 combination rather than answering wrongly.
 
-**`--force` never overrides liveness.** `bin/worktrees remove --force` skips the
+**`--force` never overrides liveness.** `bin/workstreams remove --force` skips the
 merged and dirty checks only. Unmerged commits are recoverable from a branch; a
 running session's working directory is not.
 
 ## Lifecycle commands
 
-- `bin/worktrees list [--json]` — every worktree joined across all three
+- `bin/workstreams list [--json]` — every worktree joined across all three
   signals: git (ahead/dirty/merged), router runtime (cold/ready/ports), agent
   liveness (none/live/unknown). Works with no router running — `runtime.state`
   then reports `unknown`, which is distinct from a worktree the router knows to
@@ -237,12 +237,12 @@ running session's working directory is not.
   stateless: everything is derived per call, so it cannot drift. Implemented in
   bash rather than TypeScript specifically so the liveness answer comes from
   `wt_other_agent_live` and not a second copy of it.
-- `bin/worktrees create <name> [--base-ref <ref>]` — create or re-attach
+- `bin/workstreams create <name> [--base-ref <ref>]` — create or re-attach
   (idempotent); prints the path on stdout, logs on stderr
-- `bin/worktrees remove <name> [--force] [--keep-branch] [--dry-run]`
-- `bin/worktrees status` — raw router status JSON (PIDs, ports, idle ms)
-- `bin/worktrees down <name>` — stop one worktree's processes now
-- `bin/worktrees panic` — kill router + all known children + wipe state,
+- `bin/workstreams remove <name> [--force] [--keep-branch] [--dry-run]`
+- `bin/workstreams status` — raw router status JSON (PIDs, ports, idle ms)
+- `bin/workstreams down <name>` — stop one worktree's processes now
+- `bin/workstreams panic` — kill router + all known children + wipe state,
   then reclaim project-scoped agent-browsers and any stray vite/fastify
   the pidfiles never tracked (use if you suspect orphans). Spares
   processes owned by an active sibling `claude` session.
@@ -254,7 +254,7 @@ second router without touching the live one (which only picks up
 ## Worktree lifecycle hooks
 
 `claude --worktree <name>` triggers the `WorktreeCreate` hook, which calls
-`bin/worktrees create` (see the control-surface section above). That: git-clones
+`bin/workstreams create` (see the control-surface section above). That: git-clones
 `~/src/boxes/test1` to `~/src/box-worktrees/<name>/test1/` (kept outside
 the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename
 stays `test1` so URL slugs match across worktrees and links like
@@ -270,7 +270,7 @@ to keep or remove.
 `bin/launch-worktree-session --agent codex` spins up an OpenAI Codex CLI
 session in a fresh worktree the same way the default claude path does. Codex
 has no `--worktree`, so the launcher's generated launch script calls
-`bin/worktrees create <name>` directly (worktree path on stdout; idempotent — a
+`bin/workstreams create <name>` directly (worktree path on stdout; idempotent — a
 relaunch re-attaches) — the same command Claude Code reaches through its hook
 adapter, so both agents get identical setup — then execs `codex` in
 the worktree with full access (`-s danger-full-access -a never`) — parity with
@@ -313,7 +313,7 @@ directory, because Codex command-execution rules have different semantics.
 **Teardown is driven by the launcher, not by hooks.** Codex reads none of
 `.claude/settings.json`, so no SessionEnd/WorktreeRemove ever fires for it —
 until this was fixed, a codex worktree lingered until someone ran
-`bin/worktrees sweep` by hand (~10 had piled up by 2026-08-04). So the
+`bin/workstreams sweep` by hand (~10 had piled up by 2026-08-04). So the
 launcher **runs codex in the foreground instead of `exec`ing it** (there'd
 otherwise be no "after codex exits" moment) and then calls
 **`bin/codex-session-end <worktree-path>`**, which gives codex the same
@@ -336,7 +336,7 @@ must not run destructive steps from inside the directory it deletes.
 **One implementation of the destructive path: `bin/lib/worktree-teardown.sh`**
 (sourced, not executed), shared by `.claude/hooks/session-end.sh`,
 `.claude/hooks/worktree-remove.sh`, `bin/codex-session-end`, and
-`bin/worktrees` (`list`, `remove`, `sweep`). It owns `wt_other_agent_live` (the
+`bin/workstreams` (`list`, `remove`, `sweep`). It owns `wt_other_agent_live` (the
 fail-closed tri-state live-agent guard) with `wt_agent_snapshot_capture` for
 batched callers, `wt_work_state` (ahead/dirty/blockers), `wt_remove_now` (the
 full trash-mv removal), the pieces it is built from —
@@ -351,7 +351,7 @@ claude`.** pgrep matches the 16-char accounting name (`ps ucomm`), and a
 native-installed Claude Code reports that as its *version* (`2.1.221`), not
 `claude` — so `pgrep -x claude` misses live sessions almost entirely (10 of 11
 running sessions invisible when measured 2026-08-04). `ps comm` is the
-executable path; match on its basename. Both `bin/worktrees sweep` and
+executable path; match on its basename. Both `bin/workstreams sweep` and
 `bin/lib/worktree-teardown.sh` do it that way for exactly this reason; a guard
 built on pgrep silently protects nothing.
 
@@ -397,7 +397,7 @@ in the spirit of the router protocol above:
   sweep) removes a private worktree only when merged into private `main` AND
   strictly clean (no deletion-only exemption — deleting a private issue is
   intentional work). Everything else is preserved as an orphan; nothing ever
-  forces, escalates a git refusal, or auto-commits. `bin/worktrees sweep`
+  forces, escalates a git refusal, or auto-commits. `bin/workstreams sweep`
   reports orphaned private worktrees/branches unconditionally every run —
   that report, not hook logs, is the durable discovery mechanism.
 - **All private-repo mutations serialize through the mkdir lock** in the

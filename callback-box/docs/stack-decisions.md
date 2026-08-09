@@ -1163,7 +1163,7 @@ as a worktree name, and:
 4. Tracks a per-worktree idle timer; 5 minutes of no traffic and the
    pair is shut down (SIGTERM, escalating to SIGKILL after 2s).
 
-`bin/worktrees` is the CLI wrapper: `serve` (run the router), `status`
+`bin/workstreams` is the CLI wrapper: `serve` (run the router), `status`
 (query `/__router/status`), `down <name>` (stop one worktree), `panic`
 (nuclear cleanup).
 
@@ -1189,7 +1189,7 @@ Other process supervisors (`mprocs`, `process-compose`, `pm2`,
 
 ### Implementation notes
 
-**Done.** Lives at `bin/router.ts` and `bin/worktrees`. See the root
+**Done.** Lives at `bin/router.ts` and `bin/workstreams`. See the root
 `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 runner (Decision 20) is gone — `Procfile.dev` deleted, `cb serve --dev`
 still works for the rare "just the backend" case.
