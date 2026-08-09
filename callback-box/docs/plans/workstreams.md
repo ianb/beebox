@@ -210,8 +210,10 @@ the new scalar fields need.**
   file per workstream. A *hint store*, never a source of truth: every
   consumer falls back cleanly when a file is missing or stale.
 - **`cull`** = the existing merged+clean+no-agent removal (sweep/
-  session-end), which detaches the workstream's worktree. No new
-  eligibility rules; culls now leave a record.
+  session-end), which detaches the workstream's worktree. Culls now leave
+  a record, and eligibility gains exactly one new rule — the Track G
+  testing pin (a worktree named by an open `manual-testing` issue is
+  held); otherwise unchanged.
 - **`recreate`** = `create` driven from a cull record — re-attaching a
   worktree to a workstream. Not a new command implementation, a new entry
   point into the existing one.
@@ -463,9 +465,11 @@ dead end.
    reversibility implied — the branch is gone and the SHA is the only
    thread back.
 
-Sweep behavior is unchanged (eligibility rules stay locked per the
-control-surface plan); the only sweep addition is registry pruning (Track A)
-and the finalSha capture inside `wt_remove_now`.
+Sweep eligibility changes in exactly one way: the Track G testing pin (a
+worktree named by an open main-side `manual-testing` issue is held until
+confirmed). Otherwise the rules stay locked per the control-surface plan;
+the other sweep additions are registry pruning (Track A) and the finalSha
+capture inside `wt_remove_now`.
 
 **First implementation chunk.** The `wt_remove_now` finalSha capture + a
 doctest: remove a merged worktree, assert the registry gained
@@ -801,6 +805,37 @@ conversation that built the thing.
 - **Issue detail pages** in `/workstreams/issues/` grow the same two buttons
   whenever the item carries the flag — the queue view is a filter, not the
   only door.
+- **Reproductions: the worker stages the test.** A worktree's box is a
+  test1 *clone*, so a manual test is only as good as what's in it. The
+  convention (added to `issues/CLAUDE.md` and the worker-facing docs):
+  before flagging `manual-testing`, the worker arranges the reproduction in
+  their worktree's test1 clone, and the `## Manual testing` section names
+  where to look (a path into the box) and **which of two kinds it is**:
+  - **`stock`** — supporting content the feature permanently needs; test1
+    itself should be augmented. Path back: the clone was `git clone`d from
+    the source box, so `origin` already points home — the worker pushes a
+    branch to the source test1, and merging it is part of confirming (noted
+    in the section; test1 is a hand-curated playground, so the merge is
+    deliberate, never automatic).
+  - **`throwaway`** — a scenario staged only to exercise this one change;
+    it must NOT flow back. No mechanism needed: it lives and dies with the
+    clone. This is the default reading when the section doesn't say.
+- **Cull pinning — one deliberate amendment to sweep eligibility.** A
+  merged worktree whose box clone holds the only copy of a staged
+  reproduction must survive until the test runs. Rather than reintroducing
+  "keep the tab open" (the disease this plan treats), the pin is
+  data-driven: **sweep and session-end skip a worktree whose workstream is
+  named (`workstream: <name>`) by an open main-side issue carrying
+  `needs: [manual-testing]`** — a cheap grep at eligibility time. The pin
+  releases itself: `confirm-tested` clears the flag, and the next sweep
+  collects the worktree. The testing view labels such rows "worktree held
+  for testing," so a pin is always visible, never a mystery lingerer — and
+  a never-confirmed item holds its worktree indefinitely *on the queue
+  page you look at*, which is the correct pressure. This amends the
+  control-surface plan's "eligibility rules unchanged" lock and the
+  vocabulary bullet above; recorded here as the one exception, chosen over
+  the alternative (cull destroys the repro; recreate can't restore it —
+  box content is not in the monorepo's git).
 
 **Pre-merge vs deployed testing — the decision.** Local-first: the worktree
 URL covers "test my local trees" with no new machinery, and it is the only
@@ -899,6 +934,9 @@ question to justify it.
 | `/finish` writes prose status out of habit (stale agent behavior) | doc-check catches the missing/duplicated status on its commit | finish.md edited in the same track | Clear: pre-commit fails |
 | `confirm-tested` races a concurrent main-checkout commit (index.lock) | To add — helper doctest with a held lock | To add — the helper fails loudly (bounded retry, then error), never leaves a half-edited uncommitted issue; flash carries the stderr | Clear: flash message, file untouched or fully committed |
 | `confirm-tested` targets an issue with no `## Manual testing` section (pre-validator legacy or hand-edit) | Covered — G1 validation makes this unrepresentable on new commits | Helper refuses and says why | Clear |
+| Testing pin never releases (item flagged, never confirmed) | Not a code failure — a queue-pressure design | The held worktree is labeled on the very page listing what to test | Clear by construction: visible where you look |
+| Worktree culled before its manual-testing flag lands on main (race: /finish merges, sweep fires, flag-bearing issue merges in the same push) | To add — G3 doctest ordering | The pin greps main's issues at eligibility time, and /finish's merge lands the issue and the code together, so the flag is on main before the session ends; residual race is a sweep firing mid-merge — accepted, recreate + re-stage per the section's instructions is the recovery | Clear: testing view shows a pre-merge row whose worktree is gone |
+| A `stock` reproduction branch pushed to source test1 is never merged | No test — human-judgment step by design | The `## Manual testing` section names the branch; confirm instructions include the merge | Visible in the section; test1 merge stays deliberate (playground) |
 
 ## Agent-flow / user-flow edge cases
 
@@ -1049,7 +1087,13 @@ ships. Codex-implementable: no chunk contains an open question.
 16. **G2 — `/workstreams/testing/` view + `confirm-tested` helper + the
     two buttons on issue detail pages.** Depends on D1, G1; Open-workstream
     buttons depend on D2.
-17. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
+17. **G3 — the testing pin in sweep/session-end eligibility** (grep for an
+    open `manual-testing` issue naming the workstream; doctest: pinned
+    worktree survives sweep, released after `confirm-tested`) + the
+    reproduction conventions (`stock`/`throwaway`) in `issues/CLAUDE.md`
+    and the worker-facing docs. Depends on E1 (the `workstream:` field it
+    greps), G2 (confirm as the release).
+18. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
     `bin/CLAUDE.md` + `docs/plans/README.md` + `issues/CLAUDE.md` +
     `dev/README.md` docs (including the branch-sentinel rules and the
     "backfill-only `unknown`" convention).**
