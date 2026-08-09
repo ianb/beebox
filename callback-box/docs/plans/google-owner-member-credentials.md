@@ -1,5 +1,7 @@
 # Google owners can administer local member credentials
 
+**Status:** partially implemented 2026-08 — implementation and automated verification are complete; authenticated browser verification remains outstanding.
+
 This plan lets an authenticated Google owner create invite and password-reset
 links without first creating a local owner password on the host. Invite
 acceptance can initialize a credential store that contains members and no local
@@ -7,7 +9,7 @@ owner.
 
 **Issues addressed:**
 
-- [`issues/bugs/2026-08-08-google-owner-invites-require-local-owner.md`](../../../issues/bugs/2026-08-08-google-owner-invites-require-local-owner.md)
+- [`issues/bugs/2026-08-08-google-owner-invites-require-local-owner.md`](../../../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md)
 
 ## Stated preferences this plan trades against
 
@@ -259,8 +261,8 @@ There are no unresolved critical gaps.
 
 ## Open design questions
 
-None. The boxholder must approve this plan after the cross-model review before
-implementation starts.
+None. The boxholder approved this plan after cross-model review before
+implementation started.
 
 ## Knowledge audits
 

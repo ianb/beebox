@@ -5,7 +5,13 @@ needs:
   - design
 filed-by: agent
 discovered-in: "worktree-member-password-reset — testing hosted invite and reset administration"
+resolution: implemented
 ---
+
+Implemented by `5bdad22d`. Signed-in configured owners can now issue invite and
+member password-reset links without a local owner account. Invite acceptance can
+initialize a member-only credential store, and an empty-store tombstone keeps
+first-run owner setup permanently closed after the final member is removed.
 
 A signed-in box owner can administer the box through Google sign-in, but the
 Admin invite action requires a matching local-password owner record. A hosted

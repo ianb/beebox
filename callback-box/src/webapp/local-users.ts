@@ -307,6 +307,7 @@ async function insertUserWithPasswordHash(opts: {
   const { scrypt } = opts;
   return withAuthFileLock((file) => {
     const hasLocalOwner = file?.users.some((user) => user.role === "owner") === true;
+    // TODO(env-migration): Read the validated owner setting through src/lib/env.ts.
     const hasConfiguredOwner = Boolean(process.env.CB_OWNER_EMAIL);
     if (!file && !opts.allowMemberOnlyStore) throw new NoOwnerError();
     if (!hasLocalOwner && !hasConfiguredOwner) throw new NoOwnerError();
