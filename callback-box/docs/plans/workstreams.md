@@ -879,6 +879,26 @@ conversation that built the thing.
   trash the only copy on a failed save (§4). With archiving universal, the
   testing view's **Release** button is just "cull despite the pin"
   (owner-approved) — same mechanism, no special path.
+- **Quiet clones: divergence must mean somebody did something.** Archiving
+  every diverged box is only sane if an *untouched* clone never diverges —
+  otherwise clock-driven churn mints junk archive branches. The source
+  test1 is already a manual playground (every schedule `enabled: false`,
+  triage only on manual wakeup), so the invariant to establish is: **no
+  clock-driven activity runs against a worktree box clone unless an agent
+  deliberately turns it on.** Implementation starts with an audit (the
+  first task of the chunk): enumerate everything that can commit to a box
+  on a timer or in the background — the `cb tick` scheduler daemon
+  (verify the router does not spawn it for worktree boxes), nightly chat
+  review, background URL checks, image-backup cleanup, any connector
+  auto-sync — and for each, either confirm it is already inert in clones
+  or gate it behind an explicit box-config flag that clone creation leaves
+  OFF. A worker who needs scheduled behavior for a test enables the
+  specific flag in their clone (that enablement is itself box state — a
+  legitimate, archivable divergence). App *usage* still commits — git is
+  the box's state layer, so testing inherently diverges the clone — and
+  that is exactly the divergence worth archiving: with quiet clones,
+  `rev-list origin/main..HEAD` nonempty means "someone staged or exercised
+  something here," never "time passed."
 
 **Pre-merge vs deployed testing — the decision.** Local-first: the worktree
 URL covers "test my local trees" with no new machinery, and it is the only
@@ -1136,6 +1156,13 @@ ships. Codex-implementable: no chunk contains an open question.
     registry archive ref; recreate restores a box from its ref; refuse
     cull on failed push) + the Release button as pin-override. Depends on
     G2, G3, C1.
+16c. **G2c — quiet clones**: audit every timed/background box-committing
+    mechanism (cb tick, nightly chat review, background URL checks,
+    connector sync, backup cleanup), confirm-or-gate each so an untouched
+    worktree clone never diverges; doctest: a freshly created clone left
+    alone (no requests) stays at `rev-list origin/main..HEAD` empty.
+    Should land BEFORE G2b enables archiving, so the first archives are
+    meaningful. No dependency on other chunks.
 17. **G3 — box-cullability pin in sweep/session-end eligibility** (both
     checks: trailer-filtered `git log` in the clone + grep for an open
     `manual-testing` issue naming the workstream; doctests: pinned worktree
