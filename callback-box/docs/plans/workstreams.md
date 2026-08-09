@@ -255,6 +255,8 @@ recreate (which final SHA). The transcript files themselves persist; only the
 {
   "name": "seam",
   "branch": "worktree-seam",
+  "emoji": "✳",                       // advisory tab glyph from the launcher; never part of the id
+  "baseSha": "9fb482d0…",             // the ref create branched from — see "untouched" below
   "agent": "claude",                  // claude | codex — last agent launched
   "sessionId": "3f2a…",               // claude only; codex resumes via --last
   "transcriptPath": "/…/.claude/projects/…/3f2a….jsonl",
@@ -273,9 +275,14 @@ recreate (which final SHA). The transcript files themselves persist; only the
 Writers:
 
 1. **`bin/launch-worktree-session`** — at launch, both agent paths write
-   `{name, branch, agent, model, tty, launchedAt}`. The launcher script runs
-   *inside* the tab, so `tty` is just `$(tty)`. Codex gets no further writes
-   (no hooks); this launch record is its whole entry.
+   `{name, branch, emoji, agent, model, tty, launchedAt}`. The launcher
+   script runs *inside* the tab, so `tty` is just `$(tty)`; `emoji` is the
+   launcher's existing deterministic glyph (`:105-110`) — **advisory
+   display data only, never part of any id or path** (boxholder note; the
+   views render it beside the name for tab↔web recognition, and a missing
+   value falls back to the same cksum derivation). `create` additionally
+   records `baseSha` (the ref it branched from). Codex gets no further
+   writes (no hooks); this launch record is its whole entry.
 2. **A new SessionStart hook** (`.claude/hooks/session-start-registry.sh`,
    added to the existing `SessionStart` array in `.claude/settings.json`) —
    resolves its worktree by, in order: **(a) ancestor argv** — walk the
@@ -298,9 +305,16 @@ Writers:
    sessions) writes nothing. Fires on `source: resume|clear|compact|fork`
    too — the *latest* session id wins, which is the semantics resume wants.
    Must exit 0 always; a registry failure never blocks a session (the
-   existing `auto-sweep.sh` non-blocking discipline). Chunk A2's doctest
-   asserts specifically the launcher-shaped case: a fake claude ancestor
-   with `--worktree foo` in argv and cwd=main resolves to `foo`.
+   existing `auto-sweep.sh` non-blocking discipline). **Headless guard
+   (hard rule):** the hook writes NOTHING when the claude ancestor's argv
+   contains `-p`/`--print` — hooks fire for headless and subagent sessions
+   too (a bare `claude -p` in a worktree famously fired SessionEnd and
+   deleted a worktree, per the cross-model skill's history), and without
+   this guard a /finish subagent or cross-model review would overwrite
+   `sessionId` with a throwaway transcript, silently breaking Resume.
+   Chunk A2's doctests assert both cases: a fake claude ancestor with
+   `--worktree foo` in argv and cwd=main resolves to `foo`; the same
+   ancestor with `-p` in argv writes nothing.
 3. **Removal enrichment** — `wt_remove_now` (`bin/lib/worktree-teardown.sh:459`)
    captures `git -C <path> rev-parse HEAD` *before* trash-mv and branch
    delete, and merges `removed: {at, finalSha, merged}` into the registry
@@ -331,8 +345,12 @@ worktree is *correct* state (it is the cull record), so the prune keys on
 age, never on mere orphanhood.
 
 `bin/worktrees list --json` gains an additive `session` field per row —
-`{agent, hasSession, tty, removed}` pulled from the registry — so /workstreams/ and
-any client join it without reading registry files themselves. Culled
+`{agent, hasSession, tty, emoji, baseSha, removed}` pulled from the
+registry — plus a `boxState` field computed from the clone:
+`{testSetup: bool, keepUnmerged: bool, pristine: bool|null}` (`pristine` =
+`main == test-setup` when that branch exists, else null) — so /workstreams/
+and any client join them without reading registry files or the clone
+themselves. Culled
 worktrees have **no directory**, so they are not rows at all under the
 current contract (`bin/worktrees:179` loops `$WT_ROOT` dirs); they appear
 only under a new opt-in flag, `list --json --include-removed`, as
@@ -450,21 +468,32 @@ decision of what /workstreams/ shows.
 once `close` exists, culls become routine, and a cull without a record is a
 dead end.
 
-**Direction.** The /workstreams/ front page (Track D) lists three strata from
-`list --json` + `session`:
+**Direction.** The /workstreams/ front page (Track D) lists strata from
+`list --json` + `session`. Every row carries the workstream's **emoji**
+(advisory glyph, registry-recorded, matching the tab title) and a **test1
+status** chip — pristine/dirtied (`main` vs `test-setup` when that branch
+exists), unmerged-`keep`, plus the boxholder-facing pin reason when held.
+Merged-ness must never be ambiguous (boxholder requirement): "clean" has
+two very different meanings, distinguished via the registry's `baseSha` —
 
 1. **In progress** — unmerged, dirty, or live-agent worktrees. The main
    list. Buttons: focus (live) / resume (not live).
-2. **Merged, session still open** — `merged && agent.state == live`. Flagged
-   "close freely"; button: close.
-3. **Recently culled** — ghost rows from `list --json --include-removed`
+2. **Merged ✓, session still open** — `merged && agent.state == live` AND
+   `tip != baseSha` (real work, landed). Flagged "close freely"; button:
+   close.
+3. **Untouched** — clean AND `tip == baseSha`: created but never worked
+   (nothing to merge because nothing happened, which is NOT the same as
+   merged). Labeled plainly; sweep already collects these when no agent is
+   live.
+4. **Held for testing** — merged, no live session, pinned (Track G). Shown
+   with the pin reason and testing-view link; without this stratum these
+   rows would be unexplained clutter (they are neither "in progress" nor
+   "close freely" nor culled).
+5. **Recently culled** — ghost rows from `list --json --include-removed`
    whose `removed.merged` is `true`, newest first, capped at 15. Button:
-   resume (which recreates). These do NOT appear in stratum 1 — a culled
-   worktree has nothing unique, which is exactly why it was culled.
-   Force-removed unmerged worktrees (`removed.merged: false`) are listed
-   separately and dimmed, labeled with their final SHA and no
-   reversibility implied — the branch is gone and the SHA is the only
-   thread back.
+   resume (which recreates). Force-removed unmerged worktrees
+   (`removed.merged: false`) are listed separately and dimmed, labeled
+   with their final SHA and no reversibility implied.
 
 Sweep eligibility changes in exactly one way: the Track G pin — a worktree
 is cullable only if its box clone is (no unmerged `keep` branch, no
@@ -539,6 +568,25 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   one-file `router-workstreams.ts` seam keeps cheap. This acceptance is a
   boxholder decision to confirm before implementation, recorded here so
   it is a choice, not a default.
+- **The workstream detail page — `/workstreams/<name>/` — is the
+  integration hub.** Everything about a workstream joins here (boxholder
+  requirement: issues and plans fully integrated): registry + git + runtime
+  state; test1 status (pristine/dirtied, `keep`/`test-setup` presence); its
+  **issues** — every issue, open AND closed, whose `workstream:` names it;
+  its **plans** — every plan, any status, whose `workstream:` names it;
+  and the action buttons (focus/resume/close/reset, as state allows). The
+  issues browser and plans view link each workstream mention here, and
+  this page links back into their filtered views. Culled workstreams get
+  the same page from registry + frontmatter alone (that is where the
+  weeks-later investigation starts).
+- **Search — `/workstreams/?q=…`.** One search field on the front page
+  (server-rendered, query-param, like the issues facets): matches
+  workstream names across **all** registry records (live and culled — not
+  just the display-capped 15), issue titles, and plan titles, each hit
+  linking to its detail page or document. This is the "weeks later, what
+  was that called" entry point; the 90-day registry prune bounds how far
+  back culled-workstream hits reach (accepted for now — see NOT in scope
+  on archiving).
 - **Issues browser move:** mount `serveIssues` at `/workstreams/issues/` (it already
   takes `base` as a parameter, `bin/router-issues.ts` interface); change the
   router index link (`bin/router.ts:709`); 301 `/<name>/dev/issues/*` →
@@ -779,8 +827,12 @@ conversation that built the thing.
   everything else. Two sources, clearly separated:
   1. **Landed, awaiting verification** — main's issues with the flag (what
      the `needs:manual-testing` facet already finds). Each row: title, a
-     direct link to `#manual-testing`, the `workstream:` name, and the
-     **test target** — the deployed app or local main, per the item.
+     direct link to `#manual-testing`, the `workstream:` name (emoji +
+     link to its detail page), the **test target** — the pinned worktree's
+     URL, the deployed app, or local main, per the item — and the
+     **pristine/dirtied badge** (`main` vs `test-setup` in the clone) next
+     to the Reset button, so a drifted scenario is visible before testing
+     against it rather than discovered by a confusing result.
   2. **Pre-merge, testable in place** — issues touched by a live worktree
      (the existing overlay already computes this, `router-issues.ts:341-368`)
      whose worktree copy carries the flag. Test target: **the worktree's own
@@ -1075,6 +1127,10 @@ question to justify it.
   trying them is not this plan.
 - **A `remove` button on /workstreams/** — destructive-beyond-close stays at the
   CLI where the refusal output is fully visible.
+- **A workstream archive** ("small bug, never think about this workstream
+  again" — hide-forever beyond the culled list). Deferred by the boxholder
+  until volume makes it an actual problem; the 90-day registry prune is
+  the de-facto archive for now, and search (Track D) is bounded by it.
 
 ## Open design questions
 
@@ -1142,6 +1198,11 @@ ships. Codex-implementable: no chunk contains an open question.
     TCC exercised). Depends on B3/B4, D1.
 11. **D3 — issues browser move** (mount at /workstreams/issues/, 301s, link sweep).
     Depends on D1 only.
+11b. **D4 — workstream detail page + front-page search** (`/workstreams/<name>/`
+    joining registry/git/runtime/boxState + issues and plans by
+    `workstream:`; `?q=` across all registry records, issue titles, plan
+    titles). Depends on D1, E1 (the frontmatter it joins); fully useful
+    before D2's buttons exist.
 12. **E1 — frontmatter schemas: validator (plans + issues) +
     frontmatter-path repair in `--fix` + full backfill of both corpora**,
     one commit.
