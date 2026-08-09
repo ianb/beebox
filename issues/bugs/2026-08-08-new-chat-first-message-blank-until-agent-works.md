@@ -3,7 +3,60 @@ title: "New chat: the first user message doesn't display until the agent starts 
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder report
+needs: [manual-testing]
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in worktree
+> `first-message-redirect` (ChatPage assignment latch). To try: start a new
+> chat, send a first message, and watch the bubble as the URL flips from
+> `?session=new` to the assigned id — it must stay visible continuously
+> through the redirect and the agent's turn. Only Ian clears this.
+
+## Root cause + fix (2026-08-09)
+
+Reproduced in a real browser (continuous sampling across the redirect): the
+optimistic bubble was visible on `?session=new`, vanished the moment the URL
+flipped to the assigned id, and reappeared ~5s later when the turn became
+durable. Instrumentation showed the exact failure:
+
+```
+[chatpage] announce-assignment f8c0a7ec-…       ← handshake fired before navigate()
+[chatpage] key-transition prev=new next=f8c0a7ec-… announced=null carried=false epoch=2
+[chatfsm]  stream-eof-no-terminal msgCount=1    ← live turn stream torn down
+[chatpage] key-transition … announced=f8c0a7ec-… carried=true   ← one render too late
+```
+
+The `f8ecf363` handshake **did fire in the right order**, but it stored the
+announcement in React state. The URL rewrite reaches `ChatPage` through the
+TanStack Router store (`useSearch` → `useSyncExternalStore`), which re-renders
+at **sync priority — before the same-tick default-priority `setState` is
+applied**. So the search-change render still saw `announcedAssignment: null`,
+classified the assignment as explicit navigation, bumped the key epoch, and
+remounted `InteractiveChat` — discarding the optimistic message, the machine
+context, and the live turn stream. The handshake's ordering held at the call
+sites; it broke across React lanes.
+
+Fix: the announcement now travels through an external-store latch
+(`createSessionAssignmentLatch` in `chat-session-transition.ts`) read via
+`useSyncExternalStore` — the same store kind the router uses, so the
+navigation's own render always sees an announcement made in the same tick. It
+is consumed in a commit effect (never during render, so replayed render passes
+can't half-consume it). Post-fix browser run: bubble visible in every sample
+across the redirect; one machine throughout (`stream-terminal STREAM_RESULT`,
+no remount). Latch semantics locked down in
+`test/frontend/chat-session-transition.doctest.md`.
+
+## Why earlier reproductions failed (environment)
+
+The browse-browser probes stalled because the browser's `cb_session` was
+missing/expired: the dev router **silently destroys** unauthenticated WS
+upgrades (`bin/router.ts` upgrade handler), so the tRPC socket never connects
+— no `system/init`, no `chat-session-assigned`, no redirect — while cached
+pages still render. This matches the gap filed in
+[no-socket-level-ws-auth-test](../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
+A working setup needs a valid owner session cookie in the driven browser
+(mint one with the `~/.cb-session-secret` HMAC scheme, including the user's
+current `gen` — a gen-less cookie is treated as revoked).
 
 Starting a **new** chat and submitting the first message: the user's message does
 not appear in the thread for ~10 seconds — until the agent has done some work.
