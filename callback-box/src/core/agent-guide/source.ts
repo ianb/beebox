@@ -107,5 +107,13 @@ anchor also carries:
 
 Your own framing prose — connective tissue, transitions, your read
 of what something means — doesn't need a \`{% source %}\` tag. The tag
-marks the spans that *came from somewhere else*. The rest is yours.`;
+marks the spans that *came from somewhere else*. The rest is yours.
+
+### Never write the \`[→ …]\` bracket form
+
+In compiled context (your briefing include), a \`{% source %}\` tag may appear
+downgraded to \`[→ name: usage]\` — that bracket form is **generated output**
+for plain-markdown surfaces, never a syntax you write. If you imitate it in
+chat or a card it renders as literal brackets. Cite with the real tags — chat
+and card views render \`{% source %}\` as a proper citation.`;
 }

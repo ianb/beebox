@@ -297,7 +297,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
         </Column>
       </Sidebar>
 
-      <Column overflow="auto" hideOnMobile={!hasDetail} className="flex-1">
+      <Column overflow="auto" focusable hideOnMobile={!hasDetail} className="flex-1">
         {selectedFilePath ? (
           <BrowseDetailPanel
             boxSlug={boxSlug}

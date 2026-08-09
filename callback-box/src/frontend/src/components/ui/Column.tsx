@@ -18,6 +18,14 @@ export interface ColumnProps {
    * above. Common pattern for the detail pane in two-pane page layouts.
    */
   hideOnMobile?: boolean;
+  /**
+   * Make the column keyboard-focusable (`tabIndex` 0). Set this on a
+   * scrolling column (`overflow="auto"`): the app is a fixed shell whose
+   * window never scrolls, so PageDown/End/arrows only reach a scroll
+   * container that can take focus — and a container with focusable children
+   * is never keyboard-scrollable by default. (axe: scrollable-region-focusable.)
+   */
+  focusable?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }
@@ -44,18 +52,20 @@ const OVERFLOW_CLASSES: Record<ColumnOverflow, string> = {
   scroll: "overflow-scroll",
 };
 
-export function Column({ children, gap, align, overflow, hideOnMobile, className }: ColumnProps) {
+export function Column({ children, gap, align, overflow, hideOnMobile, focusable, className }: ColumnProps) {
   gap = gap ?? "none";
   align = align ?? "stretch";
   overflow = overflow ?? "visible";
   hideOnMobile = hideOnMobile ?? false;
+  focusable = focusable ?? false;
   const classes = cn(
     "flex flex-col",
     GAP_CLASSES[gap],
     ALIGN_CLASSES[align],
     OVERFLOW_CLASSES[overflow],
     hideOnMobile ? "hidden sm:flex" : "",
+    focusable ? "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent" : "",
     className,
   );
-  return <div className={classes}>{children}</div>;
+  return <div className={classes} {...(focusable ? { tabIndex: 0 } : {})}>{children}</div>;
 }

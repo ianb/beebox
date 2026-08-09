@@ -88,3 +88,18 @@ const nested = '{% todo id="vet-refill" %}\n\nCall the vet\n\n{% see-also ref="p
 JSON.stringify(emitBodyAsMarkdown(nested))
 => "☐ Call the vet\n\nDana offered to pick it up [→ dana]\n\n"
 ```
+
+## `{% source %}` carries its `usage` text into the bracket citation
+
+The schema's attribute is `usage` (`shared/markdoc-config.ts`); the emitter
+read the pre-rename `as` spelling for months, silently dropping every modern
+tag's usage text from compiled output. Both spellings emit now — `usage`
+preferred, `as` kept for cards written before the rename.
+
+```ts
+JSON.stringify(emitBodyAsMarkdown('{% source ref="store/recipes/stew.recipe.card" usage="verbatim" %}Browning first is the whole trick.{% /source %}'))
+=> "Browning first is the whole trick. [→ stew: verbatim]\n\n"
+
+JSON.stringify(emitBodyAsMarkdown('{% source ref="store/recipes/stew.recipe.card" %}Browning first is the whole trick.{% /source %}'))
+=> "Browning first is the whole trick. [→ stew]\n\n"
+```

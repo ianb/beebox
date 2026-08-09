@@ -4,8 +4,29 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
 labels: [soft-launch, field-test-findings, ui-error]
+resolution: implemented
 ---
 
+> **Closed 2026-08-09 — largely a harness artifact, with one real a11y gap
+> fixed.** Live re-test (dev router, agent-browser): mouse-wheel over the
+> content scrolls all card surfaces, and programmatic `scrollTop` writes
+> stick. What the operator drove was agent-browser's *window-level* scroll
+> (`scroll down`, PageDown/End with body focus) — the app is a fixed shell
+> whose window never scrolls, so those are no-ops by construction, not an app
+> refusal. (The "scrollTop reads back 0" diagnosis did not reproduce.)
+> The real product gap: the scroll containers weren't keyboard-focusable
+> (axe `scrollable-region-focusable` — a container with focusable children is
+> never keyboard-scrollable by default), so keyboard-only users genuinely
+> couldn't scroll. Fixed: `Column` gained a `focusable` prop (tabIndex 0 +
+> focus ring) applied on the card page and browse detail pane, and the chat
+> companion tabpanel got `tabIndex=0` (the tabpanel pattern wants it anyway).
+> tabindex/focus verified live; native key-scroll of a focused scroller is
+> standard browser behavior that agent-browser's raw key dispatch can't
+> exercise. The operator prompt's mechanics layer now teaches how to scroll
+> (mouse move + wheel / scrollintoview) and to verify with a screenshot
+> before reporting anything unreachable. agent-browser's flaky wheel dispatch
+> is filed as
+> [agent-browser-wheel-dispatch-flaky](../../bugs/2026-08-09-agent-browser-wheel-dispatch-flaky.md).
 A recipe card longer than the viewport is unreadable: the view cuts off (in the
 prototype: right after the third ingredient) and no scroll input moves it. The
 failure is identical in all three surfaces that render a card:

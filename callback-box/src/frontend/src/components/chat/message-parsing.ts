@@ -17,8 +17,26 @@ export type { SelfNoteInfo };
 
 /**
  * Strip system-injected tags from user message text for display.
+ *
+ * Inline `[fileN]` tokens are the machine half of the attachments contract
+ * (`chat-assemble.ts`): they anchor where an attached file sits in the text,
+ * resolved through the `<attachments>` block. The block is stripped for
+ * display and the file shows as its own chip, so a leftover bare token reads
+ * as a typo the user never chose to type. Strip exactly the tokens the block
+ * declares — user-typed lookalikes with no matching attachment stay verbatim.
+ *
+ * `attachedFileIds` carries the declared ids when the caller has the whole
+ * entry: `[imageN]` expansion splits a sent message into multiple text blocks
+ * (`shared/chat-content-blocks.ts`), so a file token can sit in an EARLIER
+ * block than the `<attachments>` declaration — deriving ids from this
+ * fragment alone would miss it. Omitted, ids come from this text (the
+ * single-block case).
  */
-export function stripUserDisplayTags(text: string): string {
+export function stripUserDisplayTags(
+  text: string,
+  opts?: { attachedFileIds?: ReadonlySet<number> | undefined },
+): string {
+  const attachedIds = opts?.attachedFileIds ?? new Set(extractFileAttachments(text).map((ref) => ref.id));
   return stripChatAppTags(text)
     .replace(/<typed[^>]*>/gi, "")
     .replace(/<\/typed>/gi, "")
@@ -26,7 +44,15 @@ export function stripUserDisplayTags(text: string): string {
     .replace(/<\/speech>/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
-    .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "");
+    .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "")
+    // A declared token takes its surrounding spaces with it: both neighbors
+    // present collapse to one ("see [file1] here" → "see here"), otherwise
+    // none survive ("see [file1]." → "see."). Undeclared tokens stay whole.
+    .replace(/ ?\[file\d+] ?/g, (token) => {
+      const id = parseInt(token.match(/\d+/)?.[0] ?? "", 10);
+      if (!attachedIds.has(id)) return token;
+      return token.startsWith(" ") && token.endsWith(" ") ? " " : "";
+    });
 }
 
 /**

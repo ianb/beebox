@@ -20,8 +20,8 @@ import {
 } from "../../../core/landmark/resolve.js";
 import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import type { LandmarkProblem } from "../../../core/landmark/summaries.js";
-import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
-import { parseRef, resolveRefPath } from "../../../shared/ref-path.js";
+import { parseLandmarkFields } from "../../../schemas/landmark.js";
+import { readLandmarkSymbol } from "../../../core/landmark/symbol.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 
 export interface LandmarkPayload {
@@ -47,33 +47,6 @@ export interface LandmarkPayload {
    * to this landmark's directory.
    */
   features: Record<string, string>;
-}
-
-/**
- * Pull the navigation `symbol`'s text and image src (if any). A string
- * symbol is text; a `{ src }` symbol is an image whose path is resolved
- * through the shared ref algebra (`src/shared/ref-path.ts`, against the
- * landmark card) into the box-relative form the frontend pipes straight to
- * /api/files. A src that escapes the box resolves to nothing and is reported
- * as no symbol at all — a visible absence rather than a path outside the box.
- */
-function readSymbol(
-  navigation: LandmarkNavigationData | undefined,
-  { landmarkPath }: { landmarkPath: string },
-): { text: string; src: string | null } {
-  const symbol = navigation?.symbol;
-  if (symbol === undefined) return { text: "", src: null };
-  if (typeof symbol === "string") return { text: symbol.trim(), src: null };
-  const resolved = resolveRefPath({
-    fromPath: landmarkPath,
-    ref: parseRef(symbol.src).path,
-    kind: "card",
-  });
-  if (resolved === null) {
-    console.warn(`landmarks: symbol src "${symbol.src}" in ${landmarkPath} escapes the box`);
-    return { text: "", src: null };
-  }
-  return { text: "", src: resolved };
 }
 
 /**
@@ -114,7 +87,7 @@ async function loadLandmarkPayload(
     landmarkPath: relPath,
     boxRoot,
   });
-  const symbol = readSymbol(navigation, { landmarkPath: relPath });
+  const symbol = readLandmarkSymbol(navigation, { landmarkPath: relPath });
 
   return {
     status: "ok",

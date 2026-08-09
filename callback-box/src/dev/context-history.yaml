@@ -3706,6 +3706,14 @@ test1:
       peak: 44749
       added: 0
       turns: 2
+  source-no-bracket-form:
+    - date: 2026-08-09T13:04:32.634Z
+      boxCommit: fb0c37687b24afd09c516b54d21027cfeabb8f72
+      repoCommit: 4ef7266f7c3bfb694a45678c17c374b1bc40e7b2
+      initial: 44966
+      peak: 44966
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -10,7 +10,7 @@ import { LandmarksList } from "../../components/landmarks/LandmarksList";
 
 export function LandmarksPage() {
   return (
-    <Column overflow="auto" className="h-full">
+    <Column overflow="auto" focusable className="h-full">
       <Stack gap="lg" className="max-w-6xl mx-auto py-8 px-4 w-full">
         <Text as="h1" size="2xl" weight="bold">Landmarks</Text>
         <LandmarksList />

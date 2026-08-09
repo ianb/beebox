@@ -52,7 +52,7 @@ export function MobileTextareaRow({
         onDrop={onDrop}
         readOnly={isTranscribing}
         enterKeyHint="enter"
-        placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
         minRows={2}
         maxRows={8}

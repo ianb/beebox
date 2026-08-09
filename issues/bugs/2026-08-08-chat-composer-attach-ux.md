@@ -6,6 +6,18 @@ discovered-in: worktree-integration-tests — field-test operator prototype (Pri
 labels: [soft-launch, field-test-findings, ui-error, ui-sensibility]
 ---
 
+> **Partly resolved 2026-08-09.** Item 1's display half: the `[fileN]` token
+> is load-bearing on send (it anchors the attachment inline, resolved through
+> the hidden `<attachments>` block — `chat-assemble.ts`), but the *sent*
+> message no longer shows it: `stripUserDisplayTags` strips exactly the
+> tokens the block declares (user-typed lookalikes stay; doctested in
+> `test/frontend/chat/message-parsing.doctest.md`). Item 3: placeholder is
+> now "Type a message..." (both composer variants). Remaining, still open:
+> the token is still visible **in the composer while typing** (a plain
+> textarea can't render it as a chip — needs a rich composer or a different
+> anchoring design), and item 2's two-affordance menu is working-as-designed
+> but needs the labeling/merge decision ("attach to this message" vs
+> "bulk-upload into the box"; the gate is `sessionId === null`).
 Three related composer problems, seen on a first-ever file attach in chat:
 
 1. **The `[file1]` token leaks.** Choosing "+" → "Attach file…" inserts the
