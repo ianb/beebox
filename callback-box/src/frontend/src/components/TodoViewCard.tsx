@@ -152,7 +152,14 @@ export function TodoViewCard({ data }: RendererProps) {
         <Stack gap="md">
           <Stack gap="none">
             <Text as="h2" size="lg" weight="bold">{title}</Text>
-            <Text as="div" size="xs" tone="muted" mono>{effectiveGlob}</Text>
+            {/* The box-wide plate's `**` is the default mental model — showing
+                a bare glob under the heading reads as broken markdown to
+                anyone unfamiliar with glob syntax (a field-test operator
+                flagged it as an unparsed `**`). Scoped plates keep their glob,
+                labeled so it reads as configuration rather than debris. */}
+            {effectiveGlob === "**" ? null : (
+              <Text as="div" size="xs" tone="muted" mono>Scope: {effectiveGlob}</Text>
+            )}
           </Stack>
 
           {todos.length === 0 ? (

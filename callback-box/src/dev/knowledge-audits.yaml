@@ -2902,6 +2902,29 @@ tests:
     correct_contains_any: ["as given", "as you wrote", "exactly as", "verbatim"]
     tags: [recipes, laws, cards, behavioral, integrity]
 
+  # PROVENANCE's "[→ …]" prohibition (added 2026-08-09 after a field-test
+  # operator saw literal "[→ original.txt: …]" brackets in chat replies): the
+  # bracket form is emit-tags.ts's plain-markdown downgrade of {% source %}
+  # for compiled docs; the agent reads it in its own briefing include and must
+  # not imitate it — chat and card views render the real tag as a citation.
+  #
+  # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). "No —
+  # never … generated output only … not a syntax I write anywhere", then
+  # produced the correct {% source %} form unprompted.
+  - id: source-no-bracket-form
+    prompt: >
+      In your briefing you've seen citations that look like
+      "[→ recipe.txt: verbatim]". When you cite a source in a chat reply or a
+      card, do you write that bracket form?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — the bracket form is generated output (the compiled-doc
+      downgrade of a source tag), not a syntax to write; writing it renders
+      as literal brackets. Cites with the real {% source %} tag (with
+      ref/href and usage) or a plain markdown link instead.
+    correct_contains_any: ["{% source"]
+    tags: [provenance, laws, chat, behavioral]
+
   # Speak the User's Language (agent-guide section added 2026-08-09 after a
   # field-test persona collected the jargon it couldn't parse — "recipe card,"
   # raw filenames as nouns, "boxholder" in the third person): guide vocabulary

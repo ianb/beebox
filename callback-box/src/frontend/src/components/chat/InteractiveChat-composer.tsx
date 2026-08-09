@@ -66,7 +66,7 @@ function DesktopComposerRow({
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : "Type or paste an image..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: false, isTranscribing })}
         minRows={1}
         maxRows={8}

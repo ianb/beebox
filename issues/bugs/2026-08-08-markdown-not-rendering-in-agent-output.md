@@ -6,6 +6,21 @@ discovered-in: worktree-integration-tests — field-test onboarding-first-days (
 labels: [soft-launch, field-test-findings, ui-error]
 ---
 
+> **Re-attributed 2026-08-09 — neither symptom is a markdown-rendering bug.**
+> (1) The bare `**` under "The Plate" was never markdown: it was the todo
+> view rendering its `glob: "**"` frontmatter as an unlabeled mono line under
+> the heading. Fixed: the box-wide `**` is no longer shown; a scoped plate's
+> glob renders as "Scope: <glob>" (`TodoViewCard.tsx`). (2) The `[→ …]`
+> bracket form is the system's own CLAUDE.md-downgrade serialization of
+> `{% source %}` (`src/core/markdoc/emit-tags.ts` — "markdown can't capture
+> the chip UI"), which the agent read in its compiled briefing context and
+> imitated in chat prose. Chat's renderer DOES render real `{% source %}`
+> tags as citation chips (`Markdown.tsx` wires `SourceInline`/`SourceBlock`),
+> so the remaining work is guidance/design, not rendering: teach the box
+> agent that `[→ …]` is a compiled-doc artifact it must never write — in
+> chat, use `{% quote %}`/`{% source %}` or a plain link. Bold/`**` markdown
+> was confirmed rendering normally everywhere. The apostrophe-loss note
+> ("Wren's" → "Wrens") remains unexamined.
 Across the onboarding field-test run, agent-authored markup reached the UI
 unrendered:
 

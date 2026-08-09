@@ -17,8 +17,16 @@ export type { SelfNoteInfo };
 
 /**
  * Strip system-injected tags from user message text for display.
+ *
+ * Inline `[fileN]` tokens are the machine half of the attachments contract
+ * (`chat-assemble.ts`): they anchor where an attached file sits in the text,
+ * resolved through the `<attachments>` block. The block is stripped for
+ * display and the file shows as its own chip, so a leftover bare token reads
+ * as a typo the user never chose to type. Strip exactly the tokens the block
+ * declares — user-typed lookalikes with no matching attachment stay verbatim.
  */
 export function stripUserDisplayTags(text: string): string {
+  const attachedIds = new Set(extractFileAttachments(text).map((ref) => ref.id));
   return stripChatAppTags(text)
     .replace(/<typed[^>]*>/gi, "")
     .replace(/<\/typed>/gi, "")
@@ -26,7 +34,10 @@ export function stripUserDisplayTags(text: string): string {
     .replace(/<\/speech>/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
-    .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "");
+    .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "")
+    .replace(/\[file(\d+)] ?/g, (token, id: string) =>
+      attachedIds.has(parseInt(id, 10)) ? "" : token,
+    );
 }
 
 /**

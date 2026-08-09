@@ -25,7 +25,7 @@ export function CardViewPage() {
   }
 
   return (
-    <Column overflow="auto" className="h-full">
+    <Column overflow="auto" focusable className="h-full">
       <Stack gap="md" className="max-w-4xl mx-auto py-8 px-4 w-full">
         <Row gap="md" align="center" justify="between">
           <TextLink to={href(`/${boxSlug}/dashboard`)} underline={false}>
