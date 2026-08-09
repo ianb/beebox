@@ -20,7 +20,7 @@ resolution: implemented
 > "½ c" the operator saw came from the recipe *renderer*'s display-time
 > abbreviation map, not from the agent. The guidance above stands as a
 > preventive rule, but the observed symptom is the renderer's — now tracked
-> in [recipe-view-abbreviates-units](../../bugs/2026-08-09-recipe-view-abbreviates-units.md).
+> in [recipe-view-abbreviates-units](2026-08-09-recipe-view-abbreviates-units.md).
 
 Saving an uploaded recipe text file as a `.recipe.card`, the agent rewrote the
 user's measurements into abbreviations: "1 tbsp dried oregano" → "1 T dried

@@ -33,10 +33,15 @@ export interface RecipeLinkContext {
 /** Current scale multiplier (1 = unscaled). Provided by RecipeView. */
 export const RecipeScaleContext = createContext<number>(1);
 
-const UNIT_ABBREV: Record<string, string> = {
-  teaspoon: "t", teaspoons: "t", tsp: "t",
-  tablespoon: "T", tablespoons: "T", tbsp: "T",
-  cup: "c", cups: "c",
+/**
+ * Display forms for units. Never the single-letter forms: "1 T" vs "1 t" is
+ * a 3× misread hazard, so long forms compact only to `Tbsp`/`tsp`, `cup`
+ * stays a word, and stored single letters EXPAND to the safe form
+ * (issues/bugs/2026-08-09-recipe-view-abbreviates-units.md).
+ */
+const UNIT_DISPLAY: Record<string, string> = {
+  teaspoon: "tsp", teaspoons: "tsp", tsp: "tsp",
+  tablespoon: "Tbsp", tablespoons: "Tbsp", tbsp: "Tbsp",
   milliliter: "mL", milliliters: "mL",
   ounce: "oz", ounces: "oz",
   liter: "L", liters: "L",
@@ -51,8 +56,12 @@ const UNICODE_FRACTIONS: Record<string, string> = {
   "1/8": "⅛", "3/8": "⅜", "5/8": "⅝", "7/8": "⅞",
 };
 
-function abbreviateUnit(unit: string): string {
-  return UNIT_ABBREV[unit.toLowerCase()] ?? unit;
+function displayUnit(unit: string): string {
+  // The bare letters are case-SENSITIVE (they mean different units), so they
+  // resolve before the lowercased lookup. Unknown units display as stored.
+  if (unit === "T") return "Tbsp";
+  if (unit === "t") return "tsp";
+  return UNIT_DISPLAY[unit.toLowerCase()] ?? unit;
 }
 
 function formatFraction(f: Fraction): ReactNode {
@@ -106,7 +115,7 @@ function AmountUnit({ amount, unit }: { amount?: string; unit?: string }): React
   const scaled = scaleAmount(amount, scale);
   return (
     <span className="font-medium">
-      {scaled}{unit !== undefined && unit !== "" ? ` ${abbreviateUnit(unit)}` : ""}
+      {scaled}{unit !== undefined && unit !== "" ? ` ${displayUnit(unit)}` : ""}
     </span>
   );
 }
