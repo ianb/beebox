@@ -230,6 +230,26 @@ scoped.todos.map((t) => t.id).join(", ")
 => shared
 ```
 
+## A directory-shaped glob scopes to cards; non-card files are not "unreadable cards"
+
+The box-wide plate ships `glob: "**"` and project plates use bare directory
+globs (`store/projects/foo/**`) — patterns that match every file under their
+scope, not just cards. Non-card files (`config/box.json`, a stray `.md`) are
+not todo candidates and must not surface as read failures: before
+`listTodoCardPaths` scoped every pattern to `.card` files centrally, a
+box-wide plate rendered every non-card file in the box as a
+"card couldn't be read" error.
+
+```ts continue
+await box.write("store/notes.md", "Not a card at all.\n");
+const wideOpen = await collectTodos(box.root, { glob: "**" });
+wideOpen.issues.filter((i) => i.path === "store/notes.md" || i.path === "config/box.json")
+=> []
+
+wideOpen.todos.length > 0
+=> true
+```
+
 ## A malformed box timezone degrades instead of crashing the whole collector
 
 `config/box.json`'s `timezone` is hand-editable; a typo'd IANA zone (e.g.

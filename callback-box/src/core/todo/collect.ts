@@ -74,12 +74,22 @@ export function assertSafeGlobPattern(pattern: string): void {
 export async function listTodoCardPaths(boxRoot: string, pattern: string): Promise<string[]> {
   assertSafeGlobPattern(pattern);
   const boxRootResolved = path.resolve(boxRoot);
-  const rawAbsPaths = await glob(pattern, {
+  const globbed = await glob(pattern, {
     cwd: boxRoot,
     nodir: true,
     absolute: true,
     ignore: CARD_GLOB_IGNORE,
   });
+  // A todo-view's glob is a *scope*, not a file filter: the box-wide plate
+  // ships `glob: "**"` and project plates use bare directory globs
+  // (`store/projects/foo/**`), so those patterns match every file under the
+  // scope — briefing.md, config JSON, generated docs. Only card files are todo
+  // candidates; scope every pattern to them here, centrally, exactly as the
+  // absent-glob default `**/*.card` does. Without this, each non-card match
+  // fell through to classifyCardType and rendered in the todo view as a
+  // "card couldn't be read" issue — a box-wide plate dumped every non-card
+  // file in the box as an error.
+  const rawAbsPaths = globbed.filter((absPath) => absPath.endsWith(".card"));
   // Defense-in-depth: even a pattern that passed `assertSafeGlobPattern`
   // shouldn't be able to produce a match outside the box root (e.g. a
   // symlinked card directory) — verify containment on the resolved paths
