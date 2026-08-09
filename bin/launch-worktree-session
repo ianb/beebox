@@ -102,10 +102,10 @@ fi
 # `--emoji 🐛` sets it explicitly — prefer that, chosen for the task at hand.
 # Otherwise derive one from the name: deterministic, so relaunching the same
 # worktree keeps the same glyph and you learn to recognize it.
-EMOJI_PALETTE=(🐛 🔍 🧪 📋 🚀 🧹 🔧 📦 🌱 🎯 🧭 🔒 📊 🎨 🪄 🧩 🔭 🧵 📮 🌊 🔥 🎁 🍀 🦉)
 if [ -z "$emoji" ]; then
-  emoji_idx=$(( $(printf '%s' "$wt" | cksum | cut -d' ' -f1) % ${#EMOJI_PALETTE[@]} ))
-  emoji="${EMOJI_PALETTE[$emoji_idx]}"
+  # shellcheck source=lib/launch-session.sh
+  . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/launch-session.sh"
+  emoji=$(launch_session_default_emoji "$wt")
 fi
 session_name="$emoji $wt"
 

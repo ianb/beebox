@@ -14,8 +14,9 @@ const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const launchLib = join(repoRoot, "bin/lib/launch-session.sh");
 
-async function buildScript(root: string, agent: "claude" | "codex") {
-  const launchDir = join(root, agent);
+async function buildScript(root: string, options: { agent: "claude" | "codex"; resume: boolean }) {
+  const { agent, resume } = options;
+  const launchDir = join(root, `${agent}-${resume ? "resume" : "fresh"}`);
   const promptFile = join(root, "prompt.txt");
   await writeFile(promptFile, "briefing");
   const command = [
@@ -29,6 +30,7 @@ async function buildScript(root: string, agent: "claude" | "codex") {
     env: {
       ...process.env,
       LS_AGENT: agent,
+      LS_CODEX_RESUME: resume ? "1" : "0",
       LS_EMOJI: "🧵",
       LS_LAUNCH_DIR: launchDir,
       LS_MODEL: agent === "claude" ? "opus" : "gpt-test",
@@ -47,7 +49,7 @@ async function buildScript(root: string, agent: "claude" | "codex") {
 
 ```ts
 const root = await mkdtemp(join(tmpdir(), "launch-session-doctest-"));
-const claudeScript = await buildScript(root, "claude");
+const claudeScript = await buildScript(root, { agent: "claude", resume: false });
 JSON.stringify([
   claudeScript.includes('session_registry_merge "seam"'),
   claudeScript.includes('claude --worktree "seam" --name "🧵 seam" --model opus --remote-control seam'),
@@ -58,7 +60,7 @@ JSON.stringify([
 ## Codex preserves creation, flags, and teardown behavior
 
 ```ts continue
-const codexScript = await buildScript(root, "codex");
+const codexScript = await buildScript(root, { agent: "codex", resume: false });
 JSON.stringify([
   codexScript.includes('./bin/workstreams create "seam"'),
   codexScript.includes('-s danger-full-access -a never'),
@@ -66,6 +68,10 @@ JSON.stringify([
   codexScript.includes('bin/codex-session-end'),
 ])
 => [true,true,true,true]
+
+const codexResumeScript = await buildScript(root, { agent: "codex", resume: true });
+codexResumeScript.includes('codex resume --last "${codex_args[@]}"')
+=> true
 ```
 
 ```ts cleanup

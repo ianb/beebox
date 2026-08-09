@@ -61,9 +61,9 @@ session_registry_lock() {
   printf '%s\n' "$$" > "$lock/pid"
 }
 
-# session_registry_merge <name> <JSON object>
+# session_registry_merge <name> <JSON object> [--preserve-base-sha]
 session_registry_merge() {
-  local name="$1" patch="$2" dir file lock current tmp updated_at
+  local name="$1" patch="$2" preserve_base_sha="${3:-}" dir file lock current tmp updated_at
   wt_paths_valid_name "$name" || {
     echo "session-registry: invalid workstream name '$name'" >&2
     return 1
@@ -89,9 +89,11 @@ session_registry_merge() {
   updated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   tmp=$(mktemp "$dir/.$name.XXXXXX")
   jq -n --argjson current "$current" --argjson patch "$patch" \
+    --arg preserveBaseSha "$preserve_base_sha" \
     --arg name "$name" --arg updatedAt "$updated_at" \
     '$current * $patch * {name: $name, updatedAt: $updatedAt}
-     | if $current.baseSha? then .baseSha = $current.baseSha else . end' > "$tmp"
+     | if $preserveBaseSha == "--preserve-base-sha" and $current.baseSha?
+       then .baseSha = $current.baseSha else . end' > "$tmp"
   mv "$tmp" "$file"
   session_registry_unlock
 }

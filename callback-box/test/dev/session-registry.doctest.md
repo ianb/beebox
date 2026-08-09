@@ -48,7 +48,7 @@ JSON.stringify({ model: concurrent.model, emoji: concurrent.emoji })
 => {"model":"opus","emoji":"🧵"}
 
 await registryShell(stateDir, `session_registry_merge seam '{"baseSha":"first"}'`);
-await registryShell(stateDir, `session_registry_merge seam '{"baseSha":"later"}'`);
+await registryShell(stateDir, `session_registry_merge seam '{"baseSha":"later"}' --preserve-base-sha`);
 const baseRecord = JSON.parse(await readFile(join(stateDir, "workstreams/seam.json"), "utf8"));
 baseRecord.baseSha
 => first

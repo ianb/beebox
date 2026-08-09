@@ -24,7 +24,7 @@ launch_patch=\$(jq -n \
   --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
    + if \$model == "" then {} else {model:\$model} end')
-session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" || true
+session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" --preserve-base-sha || true
 if [ -s "$LS_PROMPT_FILE" ]; then
   exec claude --worktree "$LS_WORKSTREAM" --name "$LS_SESSION_NAME" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$LS_PROMPT_FILE")"
 else
@@ -54,7 +54,7 @@ launch_patch=\$(jq -n \
   --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
    + if \$model == "" then {} else {model:\$model} end')
-session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" || true
+session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" --preserve-base-sha || true
 for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
   [ -f "\$claude_skill" ] || continue
   skill_name=\$(basename "\$(dirname "\$claude_skill")")
@@ -73,7 +73,9 @@ $model_line
 
 trap 'true' INT
 codex_status=0
-if [ -s "$LS_PROMPT_FILE" ]; then
+if [ "${LS_CODEX_RESUME:-0}" = "1" ]; then
+  codex resume --last "\${codex_args[@]}" || codex_status=\$?
+elif [ -s "$LS_PROMPT_FILE" ]; then
   codex "\${codex_args[@]}" "\$(cat "$LS_PROMPT_FILE")" || codex_status=\$?
 else
   codex "\${codex_args[@]}" || codex_status=\$?
@@ -90,6 +92,13 @@ exit \$codex_status
 EOF
   fi
   chmod +x "$LS_LAUNCHER"
+}
+
+launch_session_default_emoji() {
+  local name="$1" emoji_idx
+  local palette=(🐛 🔍 🧪 📋 🚀 🧹 🔧 📦 🌱 🎯 🧭 🔒 📊 🎨 🪄 🧩 🔭 🧵 📮 🌊 🔥 🎁 🍀 🦉)
+  emoji_idx=$(( $(printf '%s' "$name" | cksum | cut -d' ' -f1) % ${#palette[@]} ))
+  printf '%s\n' "${palette[$emoji_idx]}"
 }
 
 launch_session_open() {

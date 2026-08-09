@@ -17,6 +17,8 @@
 #   focus <name>       Bring a live workstream's Terminal tab to the front.
 #   close <name>       Close a merged, clean workstream's live Terminal tab.
 #                      --force overrides merged/clean, never liveness safety.
+#   resume <name>      Focus live, reopen idle, or recreate a culled workstream.
+#                      Options: --agent claude|codex, --fresh, --at-final-sha.
 #   list [--json]      Every worktree, joined across all three signals: git
 #                      (ahead/dirty/merged), the router (cold/ready/ports), and
 #                      agent liveness (none/live/unknown). Works with no router
@@ -222,6 +224,113 @@ case "$cmd" in
       echo "workstreams close: could not close Terminal tab $tty_path" >&2
       exit 1
     }
+    ;;
+
+  resume)
+    name=""
+    requested_agent=""
+    fresh=false
+    at_final_sha=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --agent) [ $# -ge 2 ] || { echo "workstreams resume: --agent needs a value" >&2; exit 1; }; requested_agent="$2"; shift 2 ;;
+        --agent=*) requested_agent="${1#--agent=}"; shift ;;
+        --fresh) fresh=true; shift ;;
+        --at-final-sha) at_final_sha=true; shift ;;
+        -*) echo "workstreams resume: unknown option $1" >&2; exit 1 ;;
+        *) [ -z "$name" ] || { echo "workstreams resume: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+      esac
+    done
+    case "$requested_agent" in ""|claude|codex) ;; *) echo "workstreams resume: --agent must be claude or codex" >&2; exit 1 ;; esac
+
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ -n "$name" ] && wt_paths_valid_name "$name" || {
+      echo "usage: workstreams resume <name> [--agent claude|codex] [--fresh] [--at-final-sha]" >&2
+      exit 1
+    }
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    # shellcheck source=lib/workstream-resume.sh
+    . "$REPO_DIR/bin/lib/workstream-resume.sh"
+    record=$(session_registry_read "$name" || true)
+    target="$WT_ROOT/$name"
+    worktree_exists=false
+    agent_state=none
+    if [ -d "$target" ]; then
+      worktree_exists=true
+      wt_other_agent_live "$target"
+      agent_state="$WT_AGENT_STATE"
+    fi
+    resume_state=$(workstream_resume_state "$worktree_exists" "$agent_state" "$record")
+    case "$resume_state" in
+      focus) exec "$REPO_DIR/bin/workstreams" focus "$name" ;;
+      liveness-unknown)
+        echo "workstreams resume: cannot determine liveness for $name ($WT_AGENT_REASON) — refusing to open a duplicate" >&2
+        exit 1 ;;
+      unknown)
+        echo "workstreams resume: unknown workstream '$name'; use launch-worktree-session to start new work" >&2
+        exit 1 ;;
+      removed-unmerged)
+        if [ "$fresh" = false ] && [ "$at_final_sha" = false ]; then
+          final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // "not recorded"')
+          echo "workstreams resume: $name was removed with unmerged work at $final_sha; pass --at-final-sha or --fresh" >&2
+          exit 1
+        fi
+        ;;
+    esac
+
+    resolved_agent="$requested_agent"
+    [ -n "$resolved_agent" ] || resolved_agent=$(printf '%s' "$record" | jq -r '.agent // empty' 2>/dev/null || true)
+    case "$resolved_agent" in
+      claude|codex) ;;
+      *) echo "workstreams resume: no recorded agent for $name; pass --agent claude or --agent codex" >&2; exit 1 ;;
+    esac
+
+    if [ "$resume_state" = "culled" ] || [ "$resume_state" = "removed-unmerged" ]; then
+      final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty')
+      if [ "$at_final_sha" = true ]; then
+        [ -n "$final_sha" ] || { echo "workstreams resume: no final SHA recorded; recreating at it is impossible" >&2; exit 1; }
+        target=$("$REPO_DIR/bin/workstreams" create "$name" --base-ref "$final_sha")
+        new_base_sha="$final_sha"
+      else
+        [ -n "$final_sha" ] || echo "workstreams resume: no final SHA recorded; recreating from main" >&2
+        target=$("$REPO_DIR/bin/workstreams" create "$name")
+        new_base_sha=$(git -C "$WT_MONO" rev-parse main)
+      fi
+      session_registry_merge "$name" "$(jq -n --arg baseSha "$new_base_sha" '{baseSha:$baseSha}')" || true
+    fi
+
+    final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty' 2>/dev/null || true)
+    landed_log=""
+    if [ -n "$final_sha" ] && git -C "$WT_MONO" cat-file -e "$final_sha^{commit}" 2>/dev/null; then
+      landed_log=$(git -C "$WT_MONO" log --oneline "$final_sha..main" -50 2>/dev/null || true)
+    fi
+    # shellcheck source=lib/launch-session.sh
+    . "$REPO_DIR/bin/lib/launch-session.sh"
+    launch_dir=$(mktemp -d -t workstreams-resume.XXXXXX)
+    prompt_file="$launch_dir/prompt.txt"
+    workstream_continuation_prompt "$name" "$record" "$landed_log" > "$prompt_file"
+    emoji=$(printf '%s' "$record" | jq -r '.emoji // empty' 2>/dev/null || true)
+    [ -n "$emoji" ] || emoji=$(launch_session_default_emoji "$name")
+    model=$(printf '%s' "$record" | jq -r '.model // empty' 2>/dev/null || true)
+    LS_MONO="$WT_MONO"
+    LS_WORKSTREAM="$name"
+    LS_SESSION_NAME="$emoji $name"
+    LS_AGENT="$resolved_agent"
+    LS_MODEL="$model"
+    LS_REMOTE_CONTROL=1
+    LS_PROMPT_FILE="$prompt_file"
+    LS_EMOJI="$emoji"
+    LS_LAUNCH_DIR="$launch_dir"
+    LS_CODEX_RESUME=0
+    if [ "$resolved_agent" = codex ] && [ "$fresh" = false ] && [ "$resume_state" = existing ]; then
+      LS_CODEX_RESUME=1
+    fi
+    launch_session_build
+    result=$(launch_session_open)
+    echo "workstreams resume: launched $resolved_agent for $name ($result)"
     ;;
 
   serve)
