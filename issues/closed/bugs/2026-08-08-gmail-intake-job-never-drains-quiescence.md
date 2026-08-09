@@ -4,7 +4,18 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (dentist-email)
 labels: [field-test-findings, harness]
+resolution: implemented
 ---
+
+> **Resolved** in `6e0a74a0`: chose the "drain in the pre-action" direction. A
+> single wakeup runs only one reactor cycle, so both `inject-email` and
+> `advance-days` now run `cb reactor` (all sources, low priority included,
+> several cycles) after their wakeup — leaving the box caught up before the
+> next item opens, rather than making quiescence drive the reactor. The day
+> boundary needed the same treatment (the leftover intake job survived the
+> day-3 advance in the first run). Verified in the manual inject-email doctest:
+> no intake job remains after inject.
+
 
 In the first full onboarding run, the `dentist-email` item's checks passed
 (1/1 — the email became a task), but the harness quiescence check then timed
