@@ -211,9 +211,10 @@ the new scalar fields need.**
   consumer falls back cleanly when a file is missing or stale.
 - **`cull`** = the existing merged+clean+no-agent removal (sweep/
   session-end), which detaches the workstream's worktree. Culls now leave
-  a record, and eligibility gains exactly one new rule — the Track G
-  testing pin (a worktree named by an open `manual-testing` issue is
-  held); otherwise unchanged.
+  a record, and eligibility gains exactly one new rule — the Track G pin:
+  **a worktree is cullable only if its box clone is** (no unmerged
+  `Test-Content: stock` commits, no open `manual-testing` issue naming the
+  workstream); otherwise unchanged.
 - **`recreate`** = `create` driven from a cull record — re-attaching a
   worktree to a workstream. Not a new command implementation, a new entry
   point into the existing one.
@@ -465,11 +466,11 @@ dead end.
    reversibility implied — the branch is gone and the SHA is the only
    thread back.
 
-Sweep eligibility changes in exactly one way: the Track G testing pin (a
-worktree named by an open main-side `manual-testing` issue is held until
-confirmed). Otherwise the rules stay locked per the control-surface plan;
-the other sweep additions are registry pruning (Track A) and the finalSha
-capture inside `wt_remove_now`.
+Sweep eligibility changes in exactly one way: the Track G pin — a worktree
+is cullable only if its box clone is (no unmerged stock content, no open
+`manual-testing` issue naming the workstream). Otherwise the rules stay
+locked per the control-surface plan; the other sweep additions are registry
+pruning (Track A) and the finalSha capture inside `wt_remove_now`.
 
 **First implementation chunk.** The `wt_remove_now` finalSha capture + a
 doctest: remove a merged worktree, assert the registry gained
@@ -713,6 +714,9 @@ branch" without an agent reading 19k lines, and worktree sessions must be
     did this" needs).
     The manual-testing guard (never close `needs: [manual-testing]`,
     finish.md:419-421) is untouched.
+  - **New step — merge stock test content home** (spec in Track G):
+    cherry-pick the box clone's `Test-Content: stock` commits onto the
+    source test1; conflicts report BLOCKED-style, clone left intact.
   - **No registry interaction:** /finish merges and reports; the worktree's
     cull still happens through session-end/sweep, which is where the
     Track A removal record is written. /finish touching the registry would
@@ -805,37 +809,59 @@ conversation that built the thing.
 - **Issue detail pages** in `/workstreams/issues/` grow the same two buttons
   whenever the item carries the flag — the queue view is a filter, not the
   only door.
-- **Reproductions: the worker stages the test.** A worktree's box is a
-  test1 *clone*, so a manual test is only as good as what's in it. The
-  convention (added to `issues/CLAUDE.md` and the worker-facing docs):
-  before flagging `manual-testing`, the worker arranges the reproduction in
-  their worktree's test1 clone, and the `## Manual testing` section names
-  where to look (a path into the box) and **which of two kinds it is**:
-  - **`stock`** — supporting content the feature permanently needs; test1
-    itself should be augmented. Path back: the clone was `git clone`d from
-    the source box, so `origin` already points home — the worker pushes a
-    branch to the source test1, and merging it is part of confirming (noted
-    in the section; test1 is a hand-curated playground, so the merge is
-    deliberate, never automatic).
-  - **`throwaway`** — a scenario staged only to exercise this one change;
-    it must NOT flow back. No mechanism needed: it lives and dies with the
-    clone. This is the default reading when the section doesn't say.
-- **Cull pinning — one deliberate amendment to sweep eligibility.** A
-  merged worktree whose box clone holds the only copy of a staged
-  reproduction must survive until the test runs. Rather than reintroducing
-  "keep the tab open" (the disease this plan treats), the pin is
-  data-driven: **sweep and session-end skip a worktree whose workstream is
-  named (`workstream: <name>`) by an open main-side issue carrying
-  `needs: [manual-testing]`** — a cheap grep at eligibility time. The pin
-  releases itself: `confirm-tested` clears the flag, and the next sweep
-  collects the worktree. The testing view labels such rows "worktree held
-  for testing," so a pin is always visible, never a mystery lingerer — and
-  a never-confirmed item holds its worktree indefinitely *on the queue
-  page you look at*, which is the correct pressure. This amends the
-  control-surface plan's "eligibility rules unchanged" lock and the
-  vocabulary bullet above; recorded here as the one exception, chosen over
-  the alternative (cull destroys the repro; recreate can't restore it —
-  box content is not in the monorepo's git).
+- **Reproductions: the worker stages the test, and marks its kind in the
+  box commit.** A worktree's box is a test1 *clone*, so a manual test is
+  only as good as what's in it. The convention (added to `issues/CLAUDE.md`
+  and the worker-facing docs): before flagging `manual-testing`, the worker
+  arranges the reproduction in their worktree's test1 clone and commits it
+  with a **git trailer declaring its kind** — box commits already carry
+  structured trailers (`Created-By:` etc., callback-box CLAUDE.md), so this
+  rides the existing convention:
+  - **`Test-Content: stock`** — supporting content the feature permanently
+    needs; test1 itself should be augmented. These commits flow back to the
+    source test1 at `/finish` (below).
+  - **No trailer = throwaway.** Routine box churn (wakeups, agent
+    processing) and staged-for-one-test scenarios are indistinguishable on
+    purpose: both live and die with the clone. Only explicitly-marked stock
+    content survives — the default is disposal, so forgetting the trailer
+    can never leak scenario junk into the curated test1.
+- **`/finish` merges stock content home.** A new /finish step (with the
+  other finish.md edits in Track E): inspect the worktree's box clone for
+  unmerged trailer-marked commits (`git log --grep 'Test-Content: stock'`
+  over `origin/..HEAD` — the clone's `origin` already points at the source
+  test1), and cherry-pick them onto the source box as part of landing.
+  Interleaved routine commits are skipped by the trailer filter;
+  cherry-pick conflicts don't guess — /finish reports BLOCKED-style and
+  leaves the clone intact, same discipline as its merge conflicts. The
+  payoff: once /finish lands, the reproduction for stock-supported features
+  exists in **main's test1**, so post-merge testing targets `/main/test1/…`
+  and needs nothing from the dead worktree.
+- **Linking to reproductions — instructions stay one-click.** The
+  `## Manual testing` section links the staged content by router URL, the
+  same form everywhere: `/<workstream>/test1/browse/<card-path>` pre-merge,
+  `/main/test1/browse/<card-path>` once stock content has landed (the
+  user-facing card page is `/browse/`, not `/views/`). Workers get this as
+  a documented pattern with an example in `issues/CLAUDE.md`, so
+  instructions read "open this, do X, expect Y" with no prose directions
+  into the box.
+- **Cull pinning — a worktree is cullable only if its test1 is.** The
+  general rule, replacing any special case: **sweep and session-end skip a
+  worktree whose box clone is itself uncullable**, where uncullable means
+  either (a) unmerged `Test-Content: stock` commits (the safety net when
+  /finish hasn't run or was blocked — stock content must never die with a
+  cull), or (b) the workstream is named (`workstream: <name>`) by an open
+  main-side issue carrying `needs: [manual-testing]` (a throwaway repro
+  someone still needs to exercise). Both checks are cheap at eligibility
+  time (a trailer-filtered `git log` in the clone; a grep over issues/).
+  Both release themselves: /finish merges stock home; `confirm-tested`
+  clears the flag; the next sweep collects. The testing view and front page
+  label held rows "worktree held for testing," so a pin is always visible,
+  never a mystery lingerer — a never-confirmed item holds its worktree
+  indefinitely *on the queue page you look at*, which is the correct
+  pressure. This amends the control-surface plan's "eligibility rules
+  unchanged" lock and the vocabulary bullet above; recorded as the one
+  exception, chosen over the alternative (cull destroys the repro;
+  recreate can't restore it — box content is not in the monorepo's git).
 
 **Pre-merge vs deployed testing — the decision.** Local-first: the worktree
 URL covers "test my local trees" with no new machinery, and it is the only
@@ -936,7 +962,8 @@ question to justify it.
 | `confirm-tested` targets an issue with no `## Manual testing` section (pre-validator legacy or hand-edit) | Covered — G1 validation makes this unrepresentable on new commits | Helper refuses and says why | Clear |
 | Testing pin never releases (item flagged, never confirmed) | Not a code failure — a queue-pressure design | The held worktree is labeled on the very page listing what to test | Clear by construction: visible where you look |
 | Worktree culled before its manual-testing flag lands on main (race: /finish merges, sweep fires, flag-bearing issue merges in the same push) | To add — G3 doctest ordering | The pin greps main's issues at eligibility time, and /finish's merge lands the issue and the code together, so the flag is on main before the session ends; residual race is a sweep firing mid-merge — accepted, recreate + re-stage per the section's instructions is the recovery | Clear: testing view shows a pre-merge row whose worktree is gone |
-| A `stock` reproduction branch pushed to source test1 is never merged | No test — human-judgment step by design | The `## Manual testing` section names the branch; confirm instructions include the merge | Visible in the section; test1 merge stays deliberate (playground) |
+| /finish's stock cherry-pick onto source test1 conflicts | To add — finish doctest with a conflicting source commit | Yes by design — BLOCKED-style report, clone left intact, pin (a) keeps the worktree until resolved | Clear: /finish names the conflicting commit |
+| Worker forgets the `Test-Content: stock` trailer | Not detectable — absence IS the throwaway default | The content dies with the clone; the manual test still ran against it pre-cull | Silent by design, and safe: the failure direction is losing test scaffolding, never leaking junk into curated test1 |
 
 ## Agent-flow / user-flow edge cases
 
@@ -1087,12 +1114,15 @@ ships. Codex-implementable: no chunk contains an open question.
 16. **G2 — `/workstreams/testing/` view + `confirm-tested` helper + the
     two buttons on issue detail pages.** Depends on D1, G1; Open-workstream
     buttons depend on D2.
-17. **G3 — the testing pin in sweep/session-end eligibility** (grep for an
-    open `manual-testing` issue naming the workstream; doctest: pinned
-    worktree survives sweep, released after `confirm-tested`) + the
-    reproduction conventions (`stock`/`throwaway`) in `issues/CLAUDE.md`
-    and the worker-facing docs. Depends on E1 (the `workstream:` field it
-    greps), G2 (confirm as the release).
+17. **G3 — box-cullability pin in sweep/session-end eligibility** (both
+    checks: trailer-filtered `git log` in the clone + grep for an open
+    `manual-testing` issue naming the workstream; doctests: pinned worktree
+    survives sweep, released by stock-merge and by `confirm-tested`
+    respectively) + the /finish stock cherry-pick step + the
+    `Test-Content: stock` trailer and URL-linking conventions in
+    `issues/CLAUDE.md` and the worker-facing docs. Depends on E1 (the
+    `workstream:` field it greps), E2 (finish.md edits), G2 (confirm as a
+    release).
 18. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
     `bin/CLAUDE.md` + `docs/plans/README.md` + `issues/CLAUDE.md` +
     `dev/README.md` docs (including the branch-sentinel rules and the
