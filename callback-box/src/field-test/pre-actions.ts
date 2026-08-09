@@ -88,6 +88,15 @@ async function runCb(opts: {
  * included, across several cycles — leaving the box the way a user finds it
  * "later", with the arrived work finished and nothing pending. It does not sync
  * (no `--sync`) or push, so it only drains what already exists.
+ *
+ * Two accepted properties of using the plain drain here: it processes ALL
+ * pending jobs, not only the ones this pre action caused, and it runs finalize.
+ * That matches "the box has caught up by the time the user looks" and no
+ * current scenario relies on leaving a job pending across a pre action; a
+ * scenario that ever wanted to observe pending work would need a narrower
+ * drain. `cb reactor` also exits 0 when jobs still remain after its cycle
+ * budget, so the loop re-checks quiescence after the pre actions
+ * (`run-item.ts`) rather than trusting this call's exit code.
  */
 async function drainJobs(opts: { packageRoot: string; env: NodeJS.ProcessEnv; action: string }): Promise<void> {
   await runCb({

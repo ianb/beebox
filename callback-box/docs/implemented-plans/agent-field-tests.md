@@ -179,9 +179,11 @@ Ordered by implementation dependency, then surface size.
 - **Direction:** Run directory `~/src/boxes/field-runs/<scenario>-<timestamp>/`
   containing `box/` (fresh `cb init`, test-box marker, any connector config the
   scenario declares — seeded here so the operator never touches setup — as the
-  git-committed baseline; that seeding includes the **box-agent model**: the
-  scenario pins which model the product's own agents run (chat's persisted
-  model setting and the reactor's), default `opus`, because the existing
+  git-committed baseline; that seeding includes the **chat model** (`models.chat`;
+  shipped as chat-only — pinning the reactor's model too was descoped to
+  `issues/features/2026-08-08-reactor-agent-model-not-pinnable.md`, and the
+  report states the reactor model is unpinned): the scenario pins which model
+  the box's chat agent runs, default `opus`, because the existing
   setting is opaque and letting it float would make weekly runs
   incomparable),
   `screenshots/`, `report.md` (+ `questionnaires/` with each debrief's answers
@@ -314,7 +316,7 @@ Ordered by implementation dependency, then surface size.
   hand the operator (it cannot take photos; every asset must be provided).
 - **Direction:** `callback-box/field-tests/<scenario>/` (in-repo: reviewable,
   doc-checked; run artifacts stay out at `field-runs/`):
-  - `scenario.yaml` — start time; `models:` (`operator:` and `box:`, both
+  - `scenario.yaml` — start time; `models:` (`operator:` and `chat:`, both
     defaulting to `opus`) — pinning the product-agent model is part of the
     scenario definition, and both models appear in the report header so no run
     is ambiguous about what it tested; the ordered checklist: per item an
@@ -348,7 +350,8 @@ Ordered by implementation dependency, then surface size.
 - **Why:** A run whose output needs archaeology will not be read weekly
   (principle #12 — the reader is often a triage agent).
 - **Direction:** `report.md` leads with a run header (scenario, operator
-  model, box-agent model, start time) and a per-item table (outcome, checks,
+  model, chat model, a note that the reactor model is unpinned, start time) and
+  a per-item table (outcome, checks,
   cleanup applied), then findings ordered by severity with screenshot links,
   then a **"Visual flags (unvetted)"** section — every rendering suspect the
   operator raised, each with its screenshot link, explicitly labeled as

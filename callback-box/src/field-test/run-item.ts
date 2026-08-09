@@ -189,6 +189,20 @@ export async function runChecklistItem(options: RunChecklistItemOptions): Promis
     : null;
   if (setupFailed !== null) events.push(setupFailed);
 
+  // The pre actions drive the box's reactor (inject-email processes the mail,
+  // advance-days runs the day's work). Wait for that to settle before the
+  // operator looks, so the activity never opens on a box mid-thought. The pre
+  // actions drain jobs themselves, but `cb reactor` exits 0 even when a job
+  // chain outlives its cycle budget; without this a partial drain would open
+  // the activity on a churning box and only the NEXT item's start check would
+  // notice. Here it surfaces as an event on THIS item instead.
+  if (item.pre.length > 0 && setupFailed === null) {
+    const settled = await runQuiesce(ctx);
+    if (!settled.quiescent) {
+      events.push(`box not quiescent after pre actions: ${settled.stuck.map((s) => s.name).join(", ")}`);
+    }
+  }
+
   const turn = setupFailed === null
     ? await ctx.operator.sendActivity(activityMessage({ brief: item.brief, index, total, screenshotsDir }))
     : null;
