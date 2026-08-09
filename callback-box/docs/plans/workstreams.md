@@ -1,14 +1,16 @@
-# The /ide/ app and disposable sessions
+# The /workstreams/ app and disposable sessions
 
 **Status:** active — designed 2026-08-09, not yet implemented; written for Codex
 implementation.
 
-A new top-level router app at `/ide/` — a development control surface that is
-not worktree-bound — plus the session/worktree lifecycle machinery it fronts: a
-session registry, terminal focus/resume/close commands, cull records that make
-merged worktrees recreatable, and machine-readable plan/issue frontmatter. The
-goal: a terminal tab stops being the only record of work in flight, so sessions
-become disposable.
+A new top-level router app at `/workstreams/` — a development control surface
+that is not worktree-bound — plus the lifecycle machinery it fronts: a
+workstream registry, terminal focus/resume/close commands, cull records that
+make merged worktrees recreatable, and machine-readable plan/issue
+frontmatter. The goal: a terminal tab stops being the only record of work in
+flight, so sessions become disposable. (A **workstream** is the durable unit
+— a named line of work plus its conversation; its **worktree** is just the
+checkout currently attached to it. See Vocabulary lock-ins.)
 
 **Issues addressed:**
 
@@ -43,13 +45,13 @@ become disposable.
   existing terminal tab or launch a new one, so "switching" means naming the
   worktree, not hunting the tab bar. (Launching *new* work stays
   session-driven — `launch-worktree-session` from a conversation remains the
-  primary creation path; /ide/ is for seeing and returning, not for starting.)
+  primary creation path; /workstreams/ is for seeing and returning, not for starting.)
 
 ## Stated preferences this plan trades against
 
 - `docs/engineering-principles.md` §4 (resilient AND never silent — the
   tri-state liveness discipline in front of every destructive action), §7
-  (hierarchy is a discoverability contract — /ide/ is where non-worktree-bound
+  (hierarchy is a discoverability contract — /workstreams/ is where non-worktree-bound
   dev tooling *says* it lives), §8 (one way to do each thing — resume must not
   fork a second launch path), §11/§12 (enforcement beats convention; the
   maintainer is usually an agent — frontmatter over prose conventions).
@@ -77,7 +79,7 @@ behind these citations are summarized here rather than re-derived later.
 (`bin/worktrees:213-222`); `git.merged` is `true|false|null` — "could not
 tell" is never coerced (`bin/worktrees:190-192`). Liveness is tri-state via
 `wt_other_agent_live` (`bin/lib/worktree-teardown.sh:183-300`); `unknown`
-counts as live everywhere. **Reuse: every new command and the /ide/ page
+counts as live everywhere. **Reuse: every new command and the /workstreams/ page
 consume this; nothing re-derives state.**
 
 **`create` is idempotent and takes any ref.** An already-registered worktree
@@ -118,16 +120,16 @@ mechanism it records already exists.**
 **State-dir pattern.** `$WT_STATE_DIR` (`CALLBACK_STATE_DIR`-overridable,
 `bin/lib/worktree-paths.sh:34`) holds per-worktree `pids/<name>.json`,
 `logs/<name>.log`, `browse/<name>/`. **Reuse: the registry is
-`sessions/<name>.json` in the same pattern; `worktree-cleanup.log`'s
+`workstreams/<name>.json` in the same pattern; `worktree-cleanup.log`'s
 fixed-path-outside-anything-teardown-deletes discipline is the template for
 state that must survive removal.**
 
 **Router: top-level routes, auth tiers, and the CSP wall.** Router-infra
 paths are hardcoded ahead of worktree dispatch in `bin/router.ts:916-1067`
 AND classified in `classifyRouterRoute` (`bin/router-auth.ts:216-285`) — an
-unrecognized first segment is treated as a worktree name, so `/ide/` must be
+unrecognized first segment is treated as a worktree name, so `/workstreams/` must be
 special-cased in **both** places or it auth-classifies as a box route against
-a worktree literally named `ide`. Two auth tiers exist: `control-read` (owner
+a worktree literally named `workstreams`. Two auth tiers exist: `control-read` (owner
 session — a valid, non-revoked cookie for `getOwnerEmail()`,
 `bin/router-auth-deps.ts:85-90`) and `control` (owner session + CSRF via
 Sec-Fetch-Site/Origin, `bin/router-auth.ts:331-343`) — `/__router/stop` and
@@ -139,7 +141,7 @@ JS (`bin/router-issues.ts:768-959`), mounted inside `serveDev`
 already execas fixed read-only git commands per request
 (`bin/router-issues.ts:373-406`) but has **no pattern for action-triggering
 commands from a web request** — that's new territory with new security
-design (Track D). **Reuse: serveIssues moves intact; /ide/ pages are
+design (Track D). **Reuse: serveIssues moves intact; /workstreams/ pages are
 server-rendered + POST forms in the issues-browser style, which sidesteps the
 CSP problem entirely.**
 
@@ -170,7 +172,7 @@ the new scalar fields need.**
   sessions have `worktree.bgIsolation: "none"`
   ([#59580](https://github.com/anthropics/claude-code/issues/59580), itself
   undocumented). Consequence: the plan treats isolation as fixed and designs
-  around it — /ide/ actions run in the *router* process, which isolation
+  around it — /workstreams/ actions run in the *router* process, which isolation
   does not constrain, and `bin/land` remains the cross-checkout escape hatch.
   A `watch/` issue records the trigger (Track F).
 - **Codex resume**: sessions in `~/.codex/sessions/YYYY/MM/DD/`;
@@ -189,29 +191,50 @@ the new scalar fields need.**
 
 ## Vocabulary lock-ins (whole plan)
 
-- **`/ide/`** is the top-level, non-worktree-bound dev app. One segment,
-  sibling of `/__router/*` in both dispatch and auth classification.
-- **`session registry`** = `$WT_STATE_DIR/sessions/<name>.json`, one file per
-  worktree name. A *hint store*, never a source of truth: every consumer
-  falls back cleanly when a file is missing or stale.
-- **`cull`** = the existing merged+clean+no-agent removal (sweep/session-end).
-  No new eligibility rules; culls now leave a record.
-- **`recreate`** = `bin/worktrees create` driven from a cull record. Not a new
-  command implementation, a new entry point into the existing one.
-- New `bin/worktrees` subcommands: `focus`, `resume`, `close`. `resume` is
-  the umbrella motion (focus if live, reopen if not, recreate if culled);
-  `focus` and `close` are the narrow verbs. `remove` and `down` keep their
-  locked meanings from the control-surface plan.
+- **`workstream`** — the durable unit: a named line of work plus its
+  conversation and records, identified by its short name (e.g. `seam`).
+  A workstream outlives any checkout: it exists while its worktree is
+  live, while the worktree sits idle, and after the worktree is culled —
+  culling detaches storage; it does not end the workstream. This is the
+  noun the UI, the schema, and the docs use (boxholder decision,
+  2026-08-09; "topic" rejected as too generic, "branch"/"worktree"
+  rejected as naming the substrate rather than the unit).
+- **`worktree`** — from now on, strictly *the checkout attached to a
+  workstream*: a bunch of files. Branch names keep the `worktree-<name>`
+  prefix as substrate convention (they name a worktree's branch, which is
+  exactly what they are); the word never leaks into the schema or UI.
+- **`/workstreams/`** is the top-level, non-worktree-bound dev app. One
+  segment, sibling of `/__router/*` in both dispatch and auth
+  classification.
+- **`workstream registry`** = `$WT_STATE_DIR/workstreams/<name>.json`, one
+  file per workstream. A *hint store*, never a source of truth: every
+  consumer falls back cleanly when a file is missing or stale.
+- **`cull`** = the existing merged+clean+no-agent removal (sweep/
+  session-end), which detaches the workstream's worktree. No new
+  eligibility rules; culls now leave a record.
+- **`recreate`** = `create` driven from a cull record — re-attaching a
+  worktree to a workstream. Not a new command implementation, a new entry
+  point into the existing one.
+- **The CLI is renamed `bin/worktrees` → `bin/workstreams`** (subcommands
+  unchanged: `create`, `remove`, `list`, `sweep`, `status`, `down`,
+  `panic`, plus the new `focus`, `resume`, `close`). The unit the command
+  manages is the workstream; worktree creation/removal is its
+  storage-management half. All callers and docs update in the same commit;
+  no alias or shim is left behind (§8, consolidate over blast-radius
+  fear). `resume` is the umbrella motion (focus if live, reopen if not,
+  recreate if culled); `focus` and `close` are the narrow verbs; `remove`
+  and `down` keep their locked meanings from the control-surface plan.
 
 ## Tracks / scope
 
 Ordered by implementation dependency. A (registry) unblocks B (resume/focus)
-and C (cull/recreate); D (/ide/) fronts A–C; E (frontmatter) is independent
-until its /ide/ view; F is paperwork.
+and C (cull/recreate); D (/workstreams/) fronts A–C; E (frontmatter) is
+independent until its /workstreams/ view; G (manual-testing flow) builds on
+D + E; F is paperwork (listed last in the doc because it closes the loop).
 
-### Track A — the session registry
+### Track A — the workstream registry
 
-**What.** `$WT_STATE_DIR/sessions/<name>.json`, written at launch and at
+**What.** `$WT_STATE_DIR/workstreams/<name>.json`, written at launch and at
 SessionStart, enriched at cull time. Bash + jq, atomic (write temp, `mv`),
 following the `pids/<name>.json` pattern. A new sourced lib
 `bin/lib/session-registry.sh` owns read/merge/write; nothing else touches the
@@ -282,7 +305,7 @@ Writers:
    `wt_work_state` verdict. **`wt_remove_now` serves forced and manual
    removals too** (`bin/worktrees remove --force`, `codex-session-end`), so
    the field is `removed`, not `culled`: a *cull* is a removal with
-   `merged: true`, and only those appear in /ide/'s "recently culled"
+   `merged: true`, and only those appear in /workstreams/'s "recently culled"
    stratum — a force-removed dirty worktree must never render as
    safely-reversible (cross-model review finding). The registry lives
    outside everything teardown deletes, so the record survives its worktree
@@ -305,7 +328,7 @@ worktree is *correct* state (it is the cull record), so the prune keys on
 age, never on mere orphanhood.
 
 `bin/worktrees list --json` gains an additive `session` field per row —
-`{agent, hasSession, tty, removed}` pulled from the registry — so /ide/ and
+`{agent, hasSession, tty, removed}` pulled from the registry — so /workstreams/ and
 any client join it without reading registry files themselves. Culled
 worktrees have **no directory**, so they are not rows at all under the
 current contract (`bin/worktrees:179` loops `$WT_ROOT` dirs); they appear
@@ -338,9 +361,9 @@ is in daily use"; daily use is what's being built).
 **Direction.**
 
 ```
-bin/worktrees focus  <name>                 # bring the live tab to front
-bin/worktrees resume <name> [--agent claude|codex] [--fresh] [--at-final-sha]
-bin/worktrees close  <name> [--force]
+bin/workstreams focus  <name>                 # bring the live tab to front
+bin/workstreams resume <name> [--agent claude|codex] [--fresh] [--at-final-sha]
+bin/workstreams close  <name> [--force]
 ```
 
 - **`focus`**: read `tty` from the registry; verify a live `claude`/`codex`
@@ -418,13 +441,13 @@ that everything else composes with.
 
 **What.** The glue that makes culling invisible-but-reversible: the Track A
 cull enrichment (finalSha) feeding the Track B recreate path, plus the
-decision of what /ide/ shows.
+decision of what /workstreams/ shows.
 
 **Why.** Today a merged worktree lingers only because a live tab pins it;
 once `close` exists, culls become routine, and a cull without a record is a
 dead end.
 
-**Direction.** The /ide/ front page (Track D) lists three strata from
+**Direction.** The /workstreams/ front page (Track D) lists three strata from
 `list --json` + `session`:
 
 1. **In progress** — unmerged, dirty, or live-agent worktrees. The main
@@ -449,10 +472,10 @@ doctest: remove a merged worktree, assert the registry gained
 `removed.finalSha` equal to the pre-removal HEAD, then `create --base-ref
 <that sha>` reproduces the tree.
 
-### Track D — the /ide/ router app
+### Track D — the /workstreams/ router app
 
-**What.** The web surface: `/ide/` (front page), `/ide/issues/` (the moved
-issues browser), `/ide/plans/` (Track E's view), and POST action endpoints
+**What.** The web surface: `/workstreams/` (front page), `/workstreams/issues/` (the moved
+issues browser), `/workstreams/plans/` (Track E's view), and POST action endpoints
 that run the Track B commands.
 
 **Why.** "One page that shows what's outstanding" is the boxholder's stated
@@ -461,13 +484,13 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
 
 **Direction.**
 
-- **Routing:** add `/ide` handling in `router.ts`'s requestListener ahead of
+- **Routing:** add `/workstreams` handling in `router.ts`'s requestListener ahead of
   `parseWorktreeName` (sibling of the `/__router/*` block,
-  `bin/router.ts:916-1067`), delegating to a new `bin/router-ide.ts`
+  `bin/router.ts:916-1067`), delegating to a new `bin/router-workstreams.ts`
   (one-way import from router.ts, same discipline as `router-docs.ts`,
   `bin/CLAUDE.md:76-79`). Add matching cases in `classifyRouterRoute`
-  (`bin/router-auth.ts:216-285`): GET/HEAD under `/ide` → `control-read`;
-  POST `/ide/action/*` → `control`. Never serve /ide/ through the `/dev/`
+  (`bin/router-auth.ts:216-285`): GET/HEAD under `/workstreams` → `control-read`;
+  POST `/workstreams/action/*` → `control`. Never serve /workstreams/ through the `/dev/`
   pipeline — it gets its own handler and its own CSP (`default-src 'none';
   style-src 'unsafe-inline'` to start; no scripts needed).
 - **Rendering:** server-rendered HTML + `<form method="POST">` buttons,
@@ -481,15 +504,15 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   (the control-surface plan settled this exact question in favor of bash
   for exactly this reason; a TS re-derivation would be the fail-open
   duplication again). Render the three strata from Track C. All links the
-  page emits are **request-relative** (`/<name>/…`, `/ide/…`) — the
+  page emits are **request-relative** (`/<name>/…`, `/workstreams/…`) — the
   `url` field in `list --json` is `http://localhost:<port>/…`
   (`bin/worktrees:211`) and is CLI display data only; rendered into a page
   viewed over Tailscale it would point at the viewer's own device
   (cross-model review finding).
-- **Action endpoints:** `POST /ide/action/{focus|resume|close|recreate}/<name>`
-  → execa `bin/worktrees <verb> <name>` with `<name>` validated by the same
+- **Action endpoints:** `POST /workstreams/action/{focus|resume|close|recreate}/<name>`
+  → execa `bin/workstreams <verb> <name>` with `<name>` validated by the same
   `[a-zA-Z0-9_-]+` rule as `wt_paths_valid_name` *before* building argv, no
-  other request data reaching the command line. Response: 303 back to `/ide/`
+  other request data reaching the command line. Response: 303 back to `/workstreams/`
   with a flash message (query param) reporting the command's first stderr
   line on failure. Security posture: these endpoints execute fixed local
   commands, so they are `control` (owner session + CSRF) **and** the plan
@@ -500,20 +523,20 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   **Known residual (cross-model review): same-origin worktree frontends.**
   Worktree apps share the router's origin, so JS served by any branch's
   frontend passes the CSRF check and carries the owner cookie — a
-  compromised or stale branch could POST `/ide/action/*`. The plan's
+  compromised or stale branch could POST `/workstreams/action/*`. The plan's
   posture is **accept and document**: every action is a fixed,
   name-validated verb whose worst case is opening/focusing a tab or a
   guarded `close` that refuses unmerged work — the verbs' own gates are
   the blast-radius bound, and all worktree frontend code is owner-authored.
   The escalation path if that trust assumption weakens (running
-  third-party branches): move `/ide/` to its own port/origin, which the
-  one-file `router-ide.ts` seam keeps cheap. This acceptance is a
+  third-party branches): move `/workstreams/` to its own port/origin, which the
+  one-file `router-workstreams.ts` seam keeps cheap. This acceptance is a
   boxholder decision to confirm before implementation, recorded here so
   it is a choice, not a default.
-- **Issues browser move:** mount `serveIssues` at `/ide/issues/` (it already
+- **Issues browser move:** mount `serveIssues` at `/workstreams/issues/` (it already
   takes `base` as a parameter, `bin/router-issues.ts` interface); change the
   router index link (`bin/router.ts:709`); 301 `/<name>/dev/issues/*` →
-  `/ide/issues/*` (kept indefinitely — one line, and habit + docs point
+  `/workstreams/issues/*` (kept indefinitely — one line, and habit + docs point
   there). Grep tracked files for `dev/issues` links and update them.
 - **osascript from the router:** the router process needs macOS Automation
   permission for Terminal.app the first time an action fires (TCC prompt on
@@ -521,7 +544,7 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   deliberately so the prompt happens during implementation, not during real
   use. If denied, actions fail with the osascript error surfaced in the
   flash message — loud, not silent (§4).
-- **Dev friction, stated plainly:** /ide/ lives in `bin/router*.ts`, so the
+- **Dev friction, stated plainly:** /workstreams/ lives in `bin/router*.ts`, so the
   implementing session tests against an isolated router
   (`CALLBACK_STATE_DIR` + `ROUTER_PORT`, `bin/CLAUDE.md:252`) and the live
   router picks the app up only after main-merge + boxholder-driven `pnpm dev`
@@ -529,7 +552,7 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
 
 **First implementation chunk.** Route wiring + auth classification + a
 read-only front page (three strata, no buttons), with a doctest against the
-isolated router asserting: `/ide/` 200s for an owner session, 403s without,
+isolated router asserting: `/workstreams/` 200s for an owner session, 403s without,
 and an unknown first segment still 404s as before (no regression in worktree
 dispatch).
 
@@ -538,42 +561,45 @@ dispatch).
 **What.** The full, enforced frontmatter schemas for BOTH `docs/plans/*`
 (and its two sibling dirs) and `issues/*`, a backfill of both corpora,
 doc-check validation that rides the existing pre-commit hook, `/finish` +
-cb-plan + issues-skill updates, and `/ide/plans/`.
+cb-plan + issues-skill updates, and `/workstreams/plans/`.
 
 **Why.** 44+ active plans, 0 machine-readable; the plan↔issue join exists in
 3 of 44 files as prose; issue frontmatter is a convention no tool checks.
-The /ide/ views need to answer "which plans are in flight and from which
+The /workstreams/ views need to answer "which plans are in flight and from which
 branch" without an agent reading 19k lines, and worktree sessions must be
 *forced* to record provenance at commit time, not asked to remember (§11,
 §12 — enforcement over convention; the maintainer is an agent).
 
 **Direction.**
 
-- **The provenance field and its sentinels (vocabulary lock-in).** `branch:`
-  is **required** on every plan and every issue — but required fields need
-  an honest empty value or they attract garbage, so two sentinels are part
-  of the enum:
-  - `branch: worktree-<name>` — the worktree branch that carried (or is
-    carrying) the work.
-  - `branch: unattached` — deliberately not worktree-born: filed from a
-    main-checkout session, hand-written, or predating any specific work.
-    This is the normal value for a fresh issue that merely *records* a
-    tension.
-  - `branch: unknown` — provenance existed but is lost. **Backfill-only**:
-    agents never write `unknown` for new items (they always know whether
-    they're in a worktree — it's their own branch name), and the validator
-    could enforce that via the backfill commit being the only one that
-    introduces it, but a lint can't see time — so the rule is documented in
-    `issues/CLAUDE.md` and checked in review, while the schema itself
-    accepts it anywhere (a later re-file of a lost-provenance item must
-    stay expressible).
+- **The provenance field and its sentinels (vocabulary lock-in).**
+  `workstream:` is **required** on every plan and every issue, holding the
+  workstream's **bare short name** (`seam`, not `worktree-seam` — the
+  branch encoding is substrate and does not leak into the schema). Required
+  fields need an honest empty value or they attract garbage, so two
+  sentinels are part of the enum (reserved: no workstream may be named
+  `unattached` or `unknown`, enforced in `create`):
+  - `workstream: <name>` — the workstream that carried (or is carrying)
+    the work.
+  - `workstream: unattached` — deliberately not workstream-born: filed
+    from a main-checkout session, hand-written, or predating any specific
+    work. This is the normal value for a fresh issue that merely *records*
+    a tension.
+  - `workstream: unknown` — provenance existed but is lost.
+    **Backfill-only**: agents never write `unknown` for new items (they
+    always know their own workstream — it's their branch name minus the
+    prefix), and the validator could enforce that via the backfill commit
+    being the only one that introduces it, but a lint can't see time — so
+    the rule is documented in `issues/CLAUDE.md` and checked in review,
+    while the schema itself accepts it anywhere (a later re-file of a
+    lost-provenance item must stay expressible).
 - **Plan frontmatter schema** (full):
 
   ```yaml
   ---
   title: "An agent-neutral worktree control surface"   # required
   status: active        # required: draft | active | partial | implemented | superseded | parked
-  branch: worktree-seam # required: worktree-<name> | unattached | unknown
+  workstream: seam      # required: <name> | unattached | unknown
   issues:               # required list; [] allowed and means "no issue drove this"
     - ../../issues/features/2026-08-08-worktree-session-workflow-redesign.md
   superseded-by: other-plan.md   # only with status: superseded
@@ -590,7 +616,7 @@ branch" without an agent reading 19k lines, and worktree sessions must be
   ```yaml
   ---
   title: "Short human title"        # required (already universal)
-  branch: unattached                # required: worktree-<name> | unattached | unknown
+  workstream: unattached            # required: <name> | unattached | unknown
   needs: [design]                   # optional: design | decision | manual-testing
   design: ../../callback-box/docs/plans/foo.md   # optional; must resolve
   area: callback-box                # optional string
@@ -602,20 +628,21 @@ branch" without an agent reading 19k lines, and worktree sessions must be
   ---
   ```
 
-  `discovered-in:` stays as prose color; `branch:` is the queryable
+  `discovered-in:` stays as prose color; `workstream:` is the queryable
   counterpart. `needs:` values and the `resolution:`/`closed/` consistency
   rule move from convention to validation.
 - **Backfill:** one mechanical pass over both corpora, landing in the same
   commit as the validator so there is no bilingual window:
   - Plans (48 + implemented-plans/ + unimplemented-plans/): `status` derived
     from directory + existing prose line; `issues:` populated where an
-    "Issues addressed" section already names them, else `[]`; `branch:
+    "Issues addressed" section already names them, else `[]`; `workstream:
     unknown` (except this plan and worktree-control-surface.md, whose
-    branches are known).
-  - Issues (~452): existing fields pass through untouched; `branch:` added
-    — `unknown` across the board, except items whose `discovered-in:`
-    already names a `worktree-<name>` verbatim, which the backfill script
-    promotes mechanically (no guessing beyond exact pattern match).
+    workstreams are known).
+  - Issues (~452): existing fields pass through untouched; `workstream:`
+    added — `unknown` across the board, except items whose
+    `discovered-in:` already names a `worktree-<name>` verbatim, which the
+    backfill script promotes mechanically to the bare `<name>` (no
+    guessing beyond exact pattern match).
 - **Validation in doc-check — which IS the commit hook:** a new check in
   `callback-box/src/dev/doc-check.ts` using the `yaml` package + a
   fence-splitter patterned on `src/cards/frontmatter.ts:39` (NOT the
@@ -623,26 +650,28 @@ branch" without an agent reading 19k lines, and worktree sessions must be
   rendering). `doc-check` already runs in the root pre-commit chain on
   every commit (`.husky/` dispatch; it runs even on docs-only commits, per
   root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
-  the existing hook with zero new hook machinery — a worktree session that
-  files an issue without `branch:` simply cannot commit it. Enforces, for
+  the existing hook with zero new hook machinery — a session that files an
+  issue without `workstream:` simply cannot commit it. Enforces, for
   plans: frontmatter present on every file under the three plan dirs, all
   required fields, `status` in the enum and consistent with the directory
   (implemented-plans/ ⇒ implemented; unimplemented-plans/ ⇒
   superseded|parked), `issues:` paths resolve, `superseded-by` only with
-  the matching status. For issues: required `title` + `branch` (enum:
-  `worktree-[a-zA-Z0-9_-]+` | `unattached` | `unknown`), `needs:` values in
-  the enum, `resolution:` present-iff-closed, `design:` resolves. **Frontmatter paths are a
+  the matching status. For issues: required `title` + `workstream` (enum:
+  `[a-zA-Z0-9_-]+` | `unattached` | `unknown`, the sentinels reserved as
+  names), `needs:` values in the enum, `resolution:` present-iff-closed,
+  `design:` resolves. **Frontmatter paths are a
   new link class for doc-check, not a free rider**: today's `--fix` repairs
   only body markdown links via `repairLinks` (`doc-check.ts:161`) and has
   no frontmatter model at all (cross-model review finding), so E1
   explicitly includes feeding `issues:`/`superseded-by`/`design:` paths
   into the reference graph AND teaching `--fix` to rewrite them on moves —
   otherwise the validator would detect breakage `--fix` can't heal, which
-  is worse than today. E3 carries the full consumer side of `branch:`: `IssueFrontmatter` +
-  `parseFrontmatter` projection in `bin/router-issues.ts` (which today
-  discards unknown fields, `router-issues.ts:161`) and a branch column in
-  the issues view joined against live worktrees, since a validated field
-  nobody renders answers nothing.
+  is worse than today. E3 carries the full consumer side of `workstream:`:
+  `IssueFrontmatter` + `parseFrontmatter` projection in
+  `bin/router-issues.ts` (which today discards unknown fields,
+  `router-issues.ts:161`) and a workstream column in the issues view
+  joined against live workstreams, since a validated field nobody renders
+  answers nothing.
 - **`/finish` integration — the concrete edits** (all in
   `.claude/agents/finish.md`; `.claude/skills/finish/SKILL.md` is a thin
   dispatcher and needs no change):
@@ -665,18 +694,19 @@ branch" without an agent reading 19k lines, and worktree sessions must be
     (finish.md:423-425), and E1's frontmatter-path repair is what makes it
     work for the frontmatter class too.
   - **Step 6, `partial` case:** /finish **surfaces** the leftover work as a
-    fully-drafted issue body (title, category, `branch:` prefilled with the
-    worktree branch) in its final report, and does NOT file it — the
+    fully-drafted issue body (title, category, `workstream:` prefilled with
+    its own workstream name) in its final report, and does NOT file it — the
     plan-lifecycle issue's open question, resolved toward "surface, don't
     perform": auto-filed fragments are how the queue fills with items
     nobody chose; agents arrange context, humans keep judgment.
   - **Step 7b (issue closing):** finds resolvable issues from the plan's
     `issues:` list first (prose fallback), then the existing
     commit-message/briefing/grep sweep unchanged. On close it already
-    writes `resolution:`; it now also corrects `branch:` when the merging
-    branch differs from the filed value (an issue filed `unattached` and
-    resolved by this worktree gets the worktree's branch — provenance of
-    the *fix*, which is what "pull up the worktree that did this" needs).
+    writes `resolution:`; it now also corrects `workstream:` when the
+    resolving workstream differs from the filed value (an issue filed
+    `unattached` and resolved by this workstream gets its name —
+    provenance of the *fix*, which is what "pull up the workstream that
+    did this" needs).
     The manual-testing guard (never close `needs: [manual-testing]`,
     finish.md:419-421) is untouched.
   - **No registry interaction:** /finish merges and reports; the worktree's
@@ -685,30 +715,122 @@ branch" without an agent reading 19k lines, and worktree sessions must be
     be a second writer for the same fact (§8).
   - cb-plan's template adds the frontmatter block; the "Issues addressed"
     prose section stays as the human-readable rendering of the same list.
-- **`/ide/plans/`:** a read-only server-rendered list — status facets,
-  branch column joined against `list --json` (a plan whose branch has a live
-  worktree links to its front-page row), each plan linking to the existing
-  `/main/dev/docs/` rendering of the file. Small: it is the issues browser's
-  shape over a 50-file corpus.
-- **Who stamps `branch:`?** The filing session, at filing time — it always
-  knows its own branch (`git branch --show-current`), and writes
-  `unattached` when that is `main`. cb-plan's template and the issues
-  skill/`issues/CLAUDE.md` both gain the rule; the pre-commit validator is
-  what makes forgetting impossible rather than discouraged. /finish
-  additionally corrects `branch:` on issues it closes when the merging
-  branch differs from the filed one. Free-text `discovered-in:` stays for
-  prose color; `branch:` is the queryable field.
+- **`/workstreams/plans/`:** a read-only server-rendered list — status
+  facets, workstream column joined against `list --json` (a plan whose
+  workstream has a live worktree links to its front-page row), each plan
+  linking to the existing `/main/dev/docs/` rendering of the file. Small:
+  it is the issues browser's shape over a 50-file corpus.
+- **Who stamps `workstream:`?** The filing session, at filing time — it
+  always knows its own workstream (`git branch --show-current` minus the
+  `worktree-` prefix), and writes `unattached` when the branch is `main`.
+  cb-plan's template and the issues skill/`issues/CLAUDE.md` both gain the
+  rule; the pre-commit validator is what makes forgetting impossible
+  rather than discouraged. /finish additionally corrects `workstream:` on
+  issues it closes when the resolving workstream differs from the filed
+  one. Free-text `discovered-in:` stays for prose color; `workstream:` is
+  the queryable field.
 
 **First implementation chunk.** The doc-check validator + the full backfill
 of both corpora (48+ plans, ~452 issues) in one commit (validator green over
 the backfilled corpora is the test), touching no consumer yet.
 
+### Track G — the manual-testing flow
+
+**What.** Structure for the verification loop: a `## Manual testing` section
+convention with a stable anchor, a testing queue view in `/workstreams/`,
+and confirm/adjust actions — so "work through what's waiting on me" is one
+page, not a grep plus tab archaeology.
+
+**Why.** The flow exists today as `grep -rl manual-testing issues/` plus
+reading whole issues plus remembering which tab held the work. Each step has
+a home now: the queue is a facet, the instructions are prose *somewhere* in
+the body, and "make adjustments" is the resume motion — but nothing connects
+them. **This structures the existing queue; it adds no new producers of the
+flag** — the [overuse decision](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)
+stays open and untouched, and tightening its criteria would make this view
+shorter, which is fine.
+
+**Job to be done.** When I have a spare half hour for verification, I want
+one page listing what's waiting on me, each item with its instructions one
+click away and a button that reopens the workstream if something's wrong —
+so confirming is cheap and finding-a-problem flows straight back into the
+conversation that built the thing.
+
+**Direction.**
+
+- **The `## Manual testing` section convention.** An issue carrying
+  `needs: [manual-testing]` MUST contain a `## Manual testing` section —
+  what to try, what should happen (the substance `issues/CLAUDE.md` already
+  demands in prose; now enforced by the E1 validator alongside the
+  frontmatter rules, and addressable: the dev-docs renderer's heading
+  anchors make it linkable as `<issue-url>#manual-testing`). The existing
+  blockquote status callout stays as the at-a-glance line; the section is
+  the procedure.
+- **The queue view: `/workstreams/testing/`.** Server-rendered like
+  everything else. Two sources, clearly separated:
+  1. **Landed, awaiting verification** — main's issues with the flag (what
+     the `needs:manual-testing` facet already finds). Each row: title, a
+     direct link to `#manual-testing`, the `workstream:` name, and the
+     **test target** — the deployed app or local main, per the item.
+  2. **Pre-merge, testable in place** — issues touched by a live worktree
+     (the existing overlay already computes this, `router-issues.ts:341-368`)
+     whose worktree copy carries the flag. Test target: **the worktree's own
+     URL** — `/<name>/<box>/…` is already served live by the router with
+     lazy start; local pre-merge testing needs zero new deployment
+     machinery, because the router is that machinery. Phone testing works
+     too where the router is Tailscale-exposed.
+  Buttons per row: **Open workstream** (the Track B resume action — this is
+  the "found a problem, make adjustments" path, landing back in the
+  conversation) and **Confirm**. Pre-merge rows get **no Confirm button** —
+  the item isn't landed, so there is nothing to clear; verifying pre-merge
+  work feeds back into the workstream (adjust, or just merge), and the flag
+  is confirmed only once it exists on main.
+- **Confirm.** POST `/workstreams/action/confirm-tested/<issue-basename>` →
+  execa a new fixed CLI helper (`bin/workstreams confirm-tested <basename>`,
+  main-checkout only): removes `manual-testing` from `needs:`, appends a
+  one-line `> Verified by boxholder <date>` note under the `## Manual
+  testing` header, moves the issue to `closed/<category>/` with
+  `resolution: implemented` when nothing else in `needs:` remains (else it
+  just clears the flag), runs `doc-check --fix`, and commits (issues/ is not
+  a deployed path, so the post-commit deploy hook self-skips). The
+  only-Ian-clears-it rule is preserved in substance: the button sits behind
+  the owner-session gate, so the click *is* the boxholder clearing it;
+  agents still may never run the helper (documented in `issues/CLAUDE.md`,
+  same standing as the existing rule). Basename validated against the same
+  no-traversal rule as workstream names before any path is built.
+- **Issue detail pages** in `/workstreams/issues/` grow the same two buttons
+  whenever the item carries the flag — the queue view is a filter, not the
+  only door.
+
+**Pre-merge vs deployed testing — the decision.** Local-first: the worktree
+URL covers "test my local trees" with no new machinery, and it is the only
+target that exercises the code *before* merge. Testing on the deployed
+server (cb-style prod) today means merging to main — acceptable for the
+tail of items where prod-ness matters (real connectors, real data, HTTPS).
+A **singular staging slot** ("test this" → deploy this branch to one
+testing checkout, separate from main) is deliberately NOT designed here: it
+touches deploy.sh, server provisioning, and prod auth — a different
+subsystem with its own failure modes — and the boxholder's own lean is
+local-first. Track F files it as an exploration issue so the idea is kept,
+not built. What this plan guarantees is that when it IS built, the queue
+view's test-target column is the one place it plugs in.
+
+**First implementation chunk.** The `## Manual testing` section validation
+in E1's validator (flag ⇒ section present) + the anchor link rendering —
+convention before UI, so the corpus is clean before the view reads it.
+
 ### Track F — record what this plan decided elsewhere
 
+- File `issues/exploration/2026-08-09-staging-slot-for-premerge-testing.md`:
+  the "test this" singular staging deployment (one testing checkout on the
+  server, deployable from any workstream, separate from main) — deliberately
+  not designed in this plan (see Track G); the issue records the idea, the
+  local-first lean, and that `/workstreams/testing/`'s test-target column is
+  its integration point.
 - File `issues/watch/2026-08-09-claude-worktree-isolation-off-switch.md`:
   trigger = upstream ships a disable flag
   (anthropics/claude-code#50109 or successor); when it fires, revisit
-  whether `bin/land` and the /ide/-actions-run-in-the-router arrangement
+  whether `bin/land` and the /workstreams/-actions-run-in-the-router arrangement
   should simplify.
 - Update the two addressed issues to point `design:` at this plan.
 - Correct the redesign issue's "Gaps" section (the resume path and status
@@ -716,10 +838,10 @@ the backfilled corpora is the test), touching no consumer yet.
 
 ## Could this be simpler?
 
-**Simplest plausible version:** no /ide/ at all. Ship only Tracks A+B —
+**Simplest plausible version:** no /workstreams/ at all. Ship only Tracks A+B —
 registry + `resume`/`focus`/`close` as CLI — and keep using
 `/main/dev/issues/` where it is. That alone makes tabs disposable: close
-freely, `bin/worktrees resume <name>` from any prompt.
+freely, `bin/workstreams resume <name>` from any prompt.
 
 What the fuller plan buys, concretely:
 
@@ -728,9 +850,9 @@ What the fuller plan buys, concretely:
   CLI you have to remember to run, and the phone/browser case (the buttons)
   doesn't exist at all without it. This is the JTBD itself, not polish.
 - **The issues-browser move** buys truthful addressing (§7): the browser
-  already ignores its worktree prefix; /ide/ is what it already is.
+  already ignores its worktree prefix; /workstreams/ is what it already is.
 - **Track E** buys the join the views need — without frontmatter,
-  `/ide/plans/` would be another prose-scraping renderer, extending the
+  `/workstreams/plans/` would be another prose-scraping renderer, extending the
   drift §11 exists to stop.
 - **Track C's cull records** buy reversibility for a motion (`close`) the
   simple version also ships — shipping `close` *without* the record makes
@@ -746,7 +868,7 @@ automate judgment".
 
 None. The one candidate — the plan-frontmatter schema — is small enough that
 its decision table is inline in Track E; splitting it would manufacture a
-dependency (`/ide/plans/` waiting on a subplan) with no open research
+dependency (`/workstreams/plans/` waiting on a subplan) with no open research
 question to justify it.
 
 ## Failure modes
@@ -771,10 +893,12 @@ question to justify it.
 | Pre-plan culls (no registry file at all) | Covered by absent-file doctest | Yes — stratum 3 simply doesn't list them; `resume` on them is the "unknown worktree" error | Clear |
 | Router action execa times out / bin missing | To add — action doctest with a stubbed failing command | To add — 303 with flash carrying first stderr line; router never blocks on an action (10s timeout, killGroup) | Clear: flash message |
 | osascript lacks Automation permission (TCC) | Exercised deliberately in chunk D2 on the real Mac | Error surfaces in flash / CLI stderr | Clear |
-| `/ide` unknown-segment regression (auth misclassification) | To add — doctest: `/ide` owner-gated, `/idex` still 404s as worktree | Wiring in both dispatch and classifier per Track D | Clear |
+| `/workstreams` unknown-segment regression (auth misclassification) | To add — doctest: `/workstreams` owner-gated, `/workstreamsx` still 404s as worktree | Wiring in both dispatch and classifier per Track D | Clear |
 | Recreated-from-main worktree is instantly sweep-eligible (ahead=0, clean) before its session launches | To add — recreate doctest races sweep | Handled by ordering — `resume` creates and launches in one flow; the launched agent pins it within seconds. Residual race accepted (sweep runs on session lifecycle events, not a timer) | Documented here; near-nil reachability on the real path |
 | Plan frontmatter migration misses a file / wrong enum | Validator IS the test — doc-check red until corpus clean | Same commit, no bilingual window | Clear: doc-check names the file |
 | `/finish` writes prose status out of habit (stale agent behavior) | doc-check catches the missing/duplicated status on its commit | finish.md edited in the same track | Clear: pre-commit fails |
+| `confirm-tested` races a concurrent main-checkout commit (index.lock) | To add — helper doctest with a held lock | To add — the helper fails loudly (bounded retry, then error), never leaves a half-edited uncommitted issue; flash carries the stderr | Clear: flash message, file untouched or fully committed |
+| `confirm-tested` targets an issue with no `## Manual testing` section (pre-validator legacy or hand-edit) | Covered — G1 validation makes this unrepresentable on new commits | Helper refuses and says why | Clear |
 
 ## Agent-flow / user-flow edge cases
 
@@ -804,7 +928,7 @@ question to justify it.
 - **Validation error UX** — **ADDRESSED**: doc-check failures name file and
   field; `bin/worktrees` refusals print which gate blocked and the resolved
   path (control-surface convention, extended to the three new verbs);
-  /ide/ flash messages carry the command's stderr line.
+  /workstreams/ flash messages carry the command's stderr line.
 - **Partial migration / transition state** — **ADDRESSED**: the only
   data-shape change (plan frontmatter) migrates corpus + validator + writer
   in one track with no bilingual window; the registry is created-on-write
@@ -821,7 +945,7 @@ question to justify it.
   terminal now would be a preference change smuggled into a tooling plan.
 - **tmux / tty multiplexers / in-terminal switchers** — boxholder-rejected,
   standing.
-- **Client-side JS in /ide/, live-updating status, WebSockets** — the no-JS
+- **Client-side JS in /workstreams/, live-updating status, WebSockets** — the no-JS
   server-rendered shape meets the JTBD; interactivity beyond POST forms is
   complexity with no named buyer yet.
 - **Session *history* (resuming anything but the latest session)** — the
@@ -831,13 +955,18 @@ question to justify it.
   cwd is the recipe and suffices.
 - **Auto-filing issues from partial plans** — /finish surfaces a proposed
   body; a human files (Track E, "arrange context, don't automate judgment").
-- **Any expansion of `needs: [manual-testing]` flows** — the overuse
-  decision is open; /ide/issues/ inherits the existing facet untouched.
+- **New *producers* of `needs: [manual-testing]`** — the overuse decision
+  is open; Track G structures the *existing* queue (section convention,
+  view, confirm) without changing when or how often the flag gets applied.
+- **A staging deployment slot** ("test this" → deploy a workstream to one
+  testing checkout separate from main) — a different subsystem (deploy.sh,
+  provisioning, prod auth); local-first via worktree URLs covers the bulk,
+  and Track F files the exploration issue with its integration point named.
 - **Box forking / pointing engines at real boxes** — blocked on the
   events.db bug; stays in the redesign issue.
 - **Conductor or any packaged frontend** — the seam keeps them cheap to try;
   trying them is not this plan.
-- **A `remove` button on /ide/** — destructive-beyond-close stays at the
+- **A `remove` button on /workstreams/** — destructive-beyond-close stays at the
   CLI where the refusal output is fully visible.
 
 ## Open design questions
@@ -855,7 +984,7 @@ question to justify it.
 - **Registry pruning window (90 days)** — arbitrary; adjust after seeing
   real cull-to-resume gaps. Not load-bearing (pruned entry ⇒ recreate from
   main without context, clearly stated).
-- **Should `/ide/` get a link on the router index page's nav beyond
+- **Should `/workstreams/` get a link on the router index page's nav beyond
   replacing the issues link?** Lean: yes, one line; decided at
   implementation.
 
@@ -879,7 +1008,14 @@ ships. Codex-implementable: no chunk contains an open question.
 2. **A2 — SessionStart registry hook** (worktree resolution shared with
    session-end.sh — extract the transcript-path parser into a lib function
    rather than copying it; hook wired into settings.json). Depends on A1.
-3. **B1 — launcher refactor** (`bin/lib/launch-session.sh` extraction; pure
+3. **B0 — CLI rename** `bin/worktrees` → `bin/workstreams`: `git mv`, every
+   caller and doc updated in the same commit (grep-driven: hooks, launcher,
+   `codex-session-end`, `bin/CLAUDE.md`, root CLAUDE.md, skills), no alias
+   left behind. Pure rename, zero behavior change; lands early so every
+   later chunk writes the new name once. (Code citations elsewhere in this
+   plan reference the pre-rename `bin/worktrees:<line>` — they describe
+   today's tree and are correct as of writing.)
+4. **B1 — launcher refactor** (`bin/lib/launch-session.sh` extraction; pure
    refactor, behavior-identical).
 4. **B2 — the resume verification spike**: with A1+A2 live, close a real
    worktree session and run `claude --resume <recorded id>` from `$MONO`;
@@ -893,22 +1029,27 @@ ships. Codex-implementable: no chunk contains an open question.
    Depends on A1. (Can land right after A1; listed here for narrative order
    — do it early.)
 8. **C2 — `list --json` `session` field** (additive). Depends on A1.
-9. **D1 — /ide/ wiring + read-only front page** (routes, auth classes, three
+9. **D1 — /workstreams/ wiring + read-only front page** (routes, auth classes, three
    strata, doctests incl. no-regression on worktree dispatch). Depends on C2.
 10. **D2 — action endpoints** (POST forms, name validation, flash errors,
     TCC exercised). Depends on B3/B4, D1.
-11. **D3 — issues browser move** (mount at /ide/issues/, 301s, link sweep).
+11. **D3 — issues browser move** (mount at /workstreams/issues/, 301s, link sweep).
     Depends on D1 only.
 12. **E1 — frontmatter schemas: validator (plans + issues) +
     frontmatter-path repair in `--fix` + full backfill of both corpora**,
     one commit.
 13. **E2 — /finish + cb-plan updates** (frontmatter writer, `issues:`
-    reader, surface-don't-file for partials, `branch:` stamping). Depends on
+    reader, surface-don't-file for partials, `workstream:` stamping). Depends on
     E1.
-14. **E3 — `/ide/plans/` view + issue `branch:` projection**
+14. **E3 — `/workstreams/plans/` view + issue `workstream:` projection**
     (`IssueFrontmatter` field, parser, branch column in the issues view).
     Depends on D1, E1.
-15. **F — watch issue, `design:` links, redesign-issue gap corrections,
+15. **G1 — `## Manual testing` section validation** (flag ⇒ section, in
+    E1's validator) + anchor rendering. Depends on E1.
+16. **G2 — `/workstreams/testing/` view + `confirm-tested` helper + the
+    two buttons on issue detail pages.** Depends on D1, G1; Open-workstream
+    buttons depend on D2.
+17. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
     `bin/CLAUDE.md` + `docs/plans/README.md` + `issues/CLAUDE.md` +
     `dev/README.md` docs (including the branch-sentinel rules and the
     "backfill-only `unknown`" convention).**
@@ -922,7 +1063,7 @@ ships. Codex-implementable: no chunk contains an open question.
   and once by the boxholder (this is the only intentionally-manual step —
   it exercises TCC and Terminal.app, which no doctest can).
 - **Ships dark, lights on restart.** Everything lands on the worktree
-  branch; `/finish` merges; the live router serves /ide/ only after the
+  branch; `/finish` merges; the live router serves /workstreams/ only after the
   boxholder restarts `pnpm dev` (never from a worktree session,
   `bin/CLAUDE.md`). CLI verbs and the registry work immediately on merge.
 - **Migration.** Plan-frontmatter corpus migration is atomic with its
