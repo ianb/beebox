@@ -786,3 +786,25 @@ The graph builder works and takes 1.8 s. Even with selection shelved, "which
 tests import this file?" is a question agents ask constantly and currently answer
 with grep. Shipping it as a read-only query tool carries no correctness risk,
 because nothing branches on its answer.
+
+### What the boxholder decided (2026-08-09)
+
+The gate result did not shelve the work; it changed what the work is for.
+
+The argument: if three quarters of branches touch code no test imports, running
+484 tests for them is not verification, it is ritual. A change to untested code
+is untested whether you run the suite or not. What is genuinely unknown is
+whether those full runs ever catch anything — and a replay over git history
+cannot answer it, because history records what was committed, not what failed on
+the way.
+
+So the deliverable became **a ledger of test failures**, classifying each as
+attached (a test the change should have run), missed (a test the change had no
+apparent relation to, which failed anyway), or flaky. It is observational —
+nothing branches on it — and it answers a question this repo has never been able
+to answer: which tests have ever failed in a way that mattered. Selection ships
+alongside it on the worktree iteration loop only; `/finish` keeps running the
+full suite, so the ledger always has ground truth at the merge boundary.
+
+The measurement above stands as recorded. It is the reason the plan's centre of
+gravity moved from the speedup to the instrument.
