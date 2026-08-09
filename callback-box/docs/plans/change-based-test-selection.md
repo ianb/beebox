@@ -529,9 +529,9 @@ failure with no consequence (principle #6) — the same reasoning that deleted
   observed file is 0.828 s (`test/core/external-url-fetch.doctest.md`), close to
   pure floor; ~0.9 s × 480 is roughly 430 file-seconds against the measured
   3,374.8 aggregate — 12–13%, on the same loaded-machine caveat as every other
-  number here. It helps the *full* suite, and carries no correctness risk. File
-  it as its own `issues/code-quality/` item. **If Track 0 comes out badly, this is
-  what to do instead.**
+  number here. It helps the *full* suite, and carries no correctness risk. Filed
+  as `issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md`.
+  **If Track 0 comes out badly, this is what to do instead.**
 - **Declared data dependencies (the Bazel model).** The way to earn precision back
   under an inverted default: a test declares the paths it reads, so
   `pub-worker-meta` claims `pub-worker/**` and a change there selects it instead
