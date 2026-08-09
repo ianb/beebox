@@ -114,6 +114,25 @@ export const chatControlProcedures = {
   // Session status (running/busy/model).
   status: publicProcedure.input(z.object({ session: z.string().optional() })).query(({ input, ctx }) => readSessionStatus(ctx.boxRoot, input.session ?? null)),
 
+  /**
+   * Every live session's running/busy state at once — the box-wide idle signal
+   * `status` cannot give (it reports on one id, and reports *idle* for an id it
+   * has never heard of, so an outside process cannot tell "quiet" from
+   * "unknown"). The field-test harness polls this for its quiescence gate
+   * (`docs/plans/agent-field-tests.md`, Track 2) with the diagnostic key, which
+   * is why it is on the diag whitelist in `webapp/auth.ts`.
+   *
+   * A box whose chat runtime was never initialized reports `initialized: false`
+   * and no sessions rather than throwing: "there is no chat here" is a
+   * legitimate idle answer to the only question this query is asked.
+   */
+  statusAll: publicProcedure.query(({ ctx }) => {
+    const runtime = getChatRuntime(ctx.boxRoot);
+    if (!runtime) return { initialized: false, busy: false, sessions: [] };
+    const sessions = runtime.registry.snapshotAll();
+    return { initialized: true, busy: sessions.some((s) => s.busy), sessions };
+  }),
+
   // Change a session's active model. getOrCreate re-registers an evicted session
   // rather than 404'ing; the live subprocess is restarted so the next turn picks
   // up the new model (a live `set_model` control request isn't honored).

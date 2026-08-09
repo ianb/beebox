@@ -4,7 +4,18 @@ area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, soft-launch confidence
 labels: [soft-launch]
+resolution: implemented
 ---
+
+> **Closed 2026-08-08.** Built end-to-end in
+> `docs/implemented-plans/agent-field-tests.md`: the `cb field-test run|list|report`
+> harness, an agent operator driving the real web UI (`bin/browse`) against a
+> fresh box with real agent processing, and a first full real
+> `onboarding-first-days` run completed (all 6 checklist items, 2h 8m, 3
+> simulated days). The run's product/harness findings are filed separately as
+> `field-test-findings`-labeled issues, not fixed here — that's the tier doing
+> its job. `issues/features/2026-07-22-modeled-demo-family-box.md` stays open
+> (deferred; v1 starts from an empty box).
 
 > **Job to be done:** *Before I show a box to people, I want confidence that the
 > real end-to-end flows actually work — not unit tests, but a person's actual

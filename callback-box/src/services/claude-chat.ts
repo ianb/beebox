@@ -113,6 +113,9 @@ function buildQueryOptions(
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
   }
+  if (opts.tools !== undefined) {
+    queryOptions.tools = opts.tools;
+  }
   queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()], PostToolUse: [cardValidatorHook()] };
   if (opts.includePartialMessages === true) {
     queryOptions.includePartialMessages = true;
@@ -135,6 +138,19 @@ function warmCompatible(
   if (warm.systemPrompt !== next.systemPrompt) return false;
   if ((warm.model ?? null) !== (next.model ?? null)) return false;
   if (warm.includePartialMessages !== next.includePartialMessages) return false;
+  // The tool set is baked into the warm subprocess, so a slot warmed with a
+  // different one would silently widen (or narrow) the next session. Absent and
+  // empty are compared as different things on purpose: omitting the option
+  // means "all built-in tools", `[]` means none.
+  const wt = warm.tools;
+  const nt = next.tools;
+  if ((wt === undefined) !== (nt === undefined)) return false;
+  if (wt !== undefined && nt !== undefined) {
+    if (wt.length !== nt.length) return false;
+    for (const [i, tool] of wt.entries()) {
+      if (tool !== nt[i]) return false;
+    }
+  }
   const wd = warm.additionalDirectories ?? [];
   const nd = next.additionalDirectories ?? [];
   if (wd.length !== nd.length) return false;

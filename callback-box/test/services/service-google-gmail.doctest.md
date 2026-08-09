@@ -3,7 +3,7 @@
 Fake Google Gmail maintains in-memory messages, labels, and attachments.
 
 ```ts setup
-import { createFakeGoogleGmail } from "../../src/services/google-gmail.js";
+import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake.js";
 import { withCallLog, printCalls } from "../../src/services/call-log.js";
 ```
 

@@ -84,7 +84,9 @@ export function verifyDiagBearerKey(request: FastifyRequest): boolean {
  *   - the request path matches a whitelisted diagnostic endpoint
  *   - the bearer key check passes (see verifyDiagBearerKey)
  *
- * Whitelist: /api/trpc/health.check and /api/trpc/debugLog.get.
+ * Whitelist: /api/trpc/health.check, /api/trpc/debugLog.get and
+ * /api/trpc/chat.statusAll (the field-test harness's quiescence poll — a
+ * running/busy roll-up carrying no conversation content).
  * Top-level /healthz is handled by its own root-level route, not this bypass.
  *
  * The whitelist is checked against the EXACT set of tRPC procedures the URL
@@ -95,7 +97,11 @@ export function verifyDiagBearerKey(request: FastifyRequest): boolean {
  * a non-whitelisted `publicProcedure` (e.g. `history.list`) — a privilege
  * widening for diag-key holders, now closed.
  */
-const DIAG_PROCEDURE_WHITELIST: ReadonlySet<string> = new Set(["health.check", "debugLog.get"]);
+const DIAG_PROCEDURE_WHITELIST: ReadonlySet<string> = new Set([
+  "health.check",
+  "debugLog.get",
+  "chat.statusAll",
+]);
 
 /** Extract the comma-separated tRPC procedure list from a URL's path segment
  *  (the text after `/api/trpc/`, before the query), or `null` when the URL

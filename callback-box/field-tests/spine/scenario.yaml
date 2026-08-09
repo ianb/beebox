@@ -1,0 +1,30 @@
+# The spine scenario: one activity, one hard assert. It exists to prove the
+# whole loop — fresh box, dedicated server, real browser, real box agent, real
+# check — before `onboarding-first-days` spends six activities on it.
+name: spine
+description: >-
+  One activity against an empty box: a first-time user saves a family recipe
+  through the app so it can be found again later.
+startTime: "2026-08-10T09:15:00Z"
+models:
+  operator: opus
+  box: opus
+
+checklist:
+  - id: save-recipe
+    cleanup: keep
+    brief: |
+      You have the family lemon chicken recipe in a plain text file on your
+      computer, at `assets/lemon-chicken.txt`. It has been living in a folder
+      you can never find again.
+
+      Get it into this app, in whatever way the app seems to want, so that
+      later on you (or Tomas) could ask for it and actually get it back.
+
+      You decide when you are done.
+    checks:
+      - save-recipe-card-exists.sh
+    questions:
+      - When you were finished, how confident were you that the recipe was
+        really saved somewhere you could get it back from? What made you feel
+        that way?
