@@ -191,6 +191,18 @@ if [ "$agent" = "claude" ]; then
 #!/usr/bin/env bash
 printf '\033]0;%s\007' "$session_name"
 cd "$MONO"
+. "$MONO/bin/lib/session-registry.sh"
+launch_patch=\$(jq -n \
+  --arg branch "worktree-$wt" \
+  --arg emoji "$emoji" \
+  --arg agent "claude" \
+  --arg model "$model" \
+  --arg tty "\$(tty 2>/dev/null || true)" \
+  --arg baseSha "\$(git -C "$MONO" rev-parse main 2>/dev/null || true)" \
+  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
+   + if \$model == "" then {} else {model:\$model} end')
+session_registry_merge "$wt" "\$launch_patch" || true
 if [ -s "$prompt_file" ]; then
   exec claude --worktree "$wt" --name "$session_name" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
 else
@@ -226,6 +238,18 @@ if [ ! -f "\$wt_path/AGENTS.md" ]; then
   echo "launch-worktree-session: no AGENTS.md in \$wt_path (generation failed?) — refusing to launch codex without repo docs" >&2
   exit 1
 fi
+. "$MONO/bin/lib/session-registry.sh"
+launch_patch=\$(jq -n \
+  --arg branch "worktree-$wt" \
+  --arg emoji "$emoji" \
+  --arg agent "codex" \
+  --arg model "$model" \
+  --arg tty "\$(tty 2>/dev/null || true)" \
+  --arg baseSha "\$(git -C "\$wt_path" rev-parse HEAD 2>/dev/null || true)" \
+  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
+   + if \$model == "" then {} else {model:\$model} end')
+session_registry_merge "$wt" "\$launch_patch" || true
 for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
   [ -f "\$claude_skill" ] || continue
   skill_name=\$(basename "\$(dirname "\$claude_skill")")

@@ -449,6 +449,13 @@ case "$cmd" in
     # which may be never. Sweep already runs at every session start and end and
     # already prunes orphaned state, so this is the same job.
     if [ "$dry_run" = false ]; then
+      # Registry entries intentionally outlive their worktrees. Retire only
+      # records explicitly marked removed and older than the retention window.
+      # shellcheck source=lib/session-registry.sh
+      . "$REPO_DIR/bin/lib/session-registry.sh"
+      registry_cutoff=$(date -v-90d +%s 2>/dev/null || date -d '90 days ago' +%s)
+      session_registry_prune "$registry_cutoff"
+
       trash_left=$(find "$STATE_DIR/trash" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l | tr -d ' ')
       if [ "$trash_left" != "0" ]; then
         echo "reaping $trash_left trashed tree(s) in $STATE_DIR/trash"
