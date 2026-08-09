@@ -3,7 +3,7 @@ title: "Implementation vocabulary leaks into first-contact UI and agent replies"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)
-labels: [soft-launch, field-test-findings]
+labels: [soft-launch, field-test-findings, agent-behavior, ui-sensibility]
 ---
 
 A first-week user persona collected, verbatim, the words the product showed it

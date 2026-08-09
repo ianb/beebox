@@ -3,7 +3,7 @@ title: "Field-test quiescence times out on a gmail intake job that never drains"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (dentist-email)
-labels: [field-test-findings]
+labels: [field-test-findings, harness]
 ---
 
 In the first full onboarding run, the `dentist-email` item's checks passed

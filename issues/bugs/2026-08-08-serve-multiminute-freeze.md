@@ -3,7 +3,7 @@ title: "cb serve went unresponsive for ~4 minutes, then self-healed silently"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
-labels: [field-test-findings]
+labels: [field-test-findings, code-error]
 ---
 
 During the field-test prototype, the served app stopped responding entirely:

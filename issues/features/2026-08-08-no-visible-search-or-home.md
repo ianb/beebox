@@ -3,7 +3,7 @@ title: "No visible search box and no home surface — a knowledge base you can't
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)
-labels: [soft-launch, field-test-findings]
+labels: [soft-launch, field-test-findings, ui-sensibility]
 ---
 
 > When I've put things into the box and come back days later, I want an

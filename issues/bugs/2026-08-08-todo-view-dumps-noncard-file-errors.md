@@ -3,7 +3,7 @@ title: "Todo/Plate view dumps a '75 cards couldn't be read' error list of every 
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (dentist-email)
-labels: [soft-launch, field-test-findings]
+labels: [soft-launch, field-test-findings, code-error]
 ---
 
 The todo view (`plate.todo-view.card`, "The Plate") renders two real todos at

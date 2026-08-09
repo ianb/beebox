@@ -2,6 +2,7 @@
 title: Field-test run setup failure between server start and the try/finally leaks resources and writes no report
 filed-by: agent
 discovered-in: worktree integration-tests — implementing Track 5 (reporting) of docs/plans/agent-field-tests.md, cross-model review
+labels: [field-test-findings, harness]
 ---
 
 `runFieldScenario` (`callback-box/src/field-test/run.ts`) starts the dedicated

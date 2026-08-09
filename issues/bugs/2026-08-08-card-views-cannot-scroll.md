@@ -3,7 +3,7 @@ title: "Card views cannot scroll — content below the fold is unreachable in al
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
-labels: [soft-launch, field-test-findings]
+labels: [soft-launch, field-test-findings, ui-error]
 ---
 
 A recipe card longer than the viewport is unreadable: the view cuts off (in the

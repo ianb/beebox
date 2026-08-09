@@ -3,7 +3,7 @@ title: "Chat shows 'Agent is working…' long after the turn finished; Recent fi
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test v0 spine run (Priya, save-recipe)
-labels: [soft-launch, field-test-findings]
+labels: [soft-launch, field-test-findings, code-error]
 ---
 
 In the v0 field-test spine run, the box agent finished saving a recipe card

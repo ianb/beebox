@@ -3,7 +3,7 @@ title: "Markdown and source-citation markup render raw in agent output and cards
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (multiple activities)
-labels: [soft-launch, field-test-findings]
+labels: [soft-launch, field-test-findings, ui-error]
 ---
 
 Across the onboarding field-test run, agent-authored markup reached the UI

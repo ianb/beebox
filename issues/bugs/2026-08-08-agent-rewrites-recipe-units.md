@@ -3,7 +3,7 @@ title: "Agent silently rewrites user-supplied measurements when structuring a re
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 1)
-labels: [field-test-findings]
+labels: [field-test-findings, agent-behavior]
 ---
 
 Saving an uploaded recipe text file as a `.recipe.card`, the agent rewrote the

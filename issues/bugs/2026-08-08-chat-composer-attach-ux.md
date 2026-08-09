@@ -3,7 +3,7 @@ title: "Chat composer attach UX: literal [file1] token, twin attach items, image
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 1)
-labels: [soft-launch, field-test-findings]
+labels: [soft-launch, field-test-findings, ui-error, ui-sensibility]
 ---
 
 Three related composer problems, seen on a first-ever file attach in chat:

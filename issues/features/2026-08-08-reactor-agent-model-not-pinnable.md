@@ -3,7 +3,7 @@ title: "A field-test scenario's models.box pins chat only — the reactor's agen
 area: callback-box
 filed-by: agent
 discovered-in: field-test Track 2 chunk 2 (cross-model review finding)
-labels: [field-test]
+labels: [field-test-findings, code-error, harness]
 ---
 
 `callback-box/field-tests/<scenario>/scenario.yaml` declares `models.box`, and
@@ -36,3 +36,8 @@ runs a month apart are not comparable in the way the plan claims.
 Option 1 is the one worth doing; option 2 is what to do if it turns out the
 reactor genuinely should not be pinnable. Until then `run-seed.ts` carries a
 comment saying exactly what it does and does not pin.
+
+This is the one real dependency inside the field-test finding set: it is a
+product gap (no reactor-model setting) that surfaces as a harness limitation
+(`models.box` half-works). Fixing it here resolves both — so it is a
+fix-together, not two independent items.
