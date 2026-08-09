@@ -13,6 +13,7 @@
  * prompt must stay time-invariant.
  */
 
+import { getBoxTime } from "../lib/time.js";
 import { loadBoxTimezone } from "./box/config.js";
 import { getMostActiveSavedAt } from "./chat/session/history.js";
 import { composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
@@ -202,7 +203,12 @@ export async function composeSendSnapshot(
     healthGate?: HealthGate;
   },
 ): Promise<string> {
-  const now = new Date();
+  // Box time, not wall time: the `local-time` tag is what the agent reasons
+  // about "today"/"this weekend" from, and a CB_TIME-frozen box (scenarios,
+  // field tests) must not leak the real clock into that reasoning — field-test
+  // run 2's agent told the operator it was "Sunday" (real time) while the box
+  // clock said Wednesday.
+  const now = getBoxTime(boxRoot);
   const context = await buildSnapshotContext(boxRoot, {
     now,
     sessionStart,

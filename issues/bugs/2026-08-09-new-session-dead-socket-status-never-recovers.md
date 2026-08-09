@@ -1,27 +1,45 @@
 ---
-title: "A dead socket on a new chat leaves 'Agent is working' unrecoverable"
+title: "The stream watchdog can fail even when chat has an explicit session ID"
 area: callback-box
 filed-by: agent
 discovered-in: browse-ws-auth — reconciling field-test evidence after the WebSocket auth fix
 labels: [soft-launch, field-test-findings]
 ---
 
-The stream watchdog cannot recover a new chat when its WebSocket dies before
-the first `system/init` frame. The chat machine is streaming, but it has no
-session ID to pass to `chat.statusAll`. The watchdog therefore has no pollable
-identity and never sends `STREAM_RECOVER`.
+The stream watchdog did not recover an established chat after its WebSocket
+failed. The page had an explicit session ID throughout the turn. The server
+completed the turn, but the UI showed "Agent is working" for more than 15
+minutes. A reload revealed the completed reply.
 
-A field-test run reached this state. The server completed the first turn in 18
-seconds, but the UI showed "Agent is working" with no partial text for about
-seven minutes. Both WS-fed completion paths were absent. The operator stopped
-the run as blocked.
+This is broader than the originally documented null-session gap. The stuck
+turn was the session's second turn, and screenshot metadata records the same
+concrete `?session=<id>` URL before send, after send, nine minutes later, and
+into the next activity. `chatMachine` initializes `context.sessionId` from an
+explicit `sessionInput`, so the leading theory that most-active history was
+displayed while the machine stayed at `sessionId: null` does not fit this run.
 
-The browse-key cookie fix closes the harness-specific cause, but the recovery
-gap remains reachable for any real user whose socket dies before the first
-frame on a new chat. The existing watchdog implementation explicitly accepted
-this gap when it was added. The field-test evidence shows that it needs a
-fallback, such as a bootstrap/status query that can resolve the assigned
-session before polling `chat.statusAll`.
+The evidence does not yet distinguish among these remaining paths:
+
+- the watchdog effect never started;
+- its HTTP polls failed;
+- its polls continued to report busy after the server completed;
+- the effect restarted often enough that it never accumulated three idle
+  results;
+- `STREAM_RECOVER` was sent but did not leave the streaming state.
+
+The run did not capture browser console logs, so the existing warning messages
+cannot settle which path occurred. A short reproduction should record the
+machine session ID, each watchdog poll result, effect cleanup/restart, and the
+`STREAM_RECOVER` transition.
+
+## Browse-key fix control (same field run)
+
+The next operator item ran after the browse-key cookie fix. It opened the same
+explicit session, sent another message, and displayed the assistant reply
+within 31 seconds without a reload. This is the first in-situ confirmation that
+the cookie fix restored realtime delivery in the field-test operator flow. It
+does not explain why the fallback watchdog failed in the earlier WS-dead turn;
+that remains this issue's scope.
 
 Related:
 
