@@ -381,6 +381,19 @@ is in daily use"; daily use is what's being built).
 
 **Direction.**
 
+**B2 resume verification — downgrade selected (verified 2026-08-09).** A real
+closed session originally launched in workstream `attach-file-to-card` was
+resumed from the main checkout with `claude --resume
+6aa1c06a-c89f-4dca-b156-b4d25919dc23`. Claude accepted the session and opened
+an interactive process, but `lsof -d cwd` reported the main checkout and `git
+worktree list` showed no recreated `attach-file-to-card` worktree. The deleted
+worktree directory also remained absent. Therefore resume restores the
+conversation but does **not** restore this repo's worktree isolation or attach
+storage. Track B4 uses fresh worktree sessions with generated continuation
+context for Claude in every state. A recorded `sessionId` remains useful for
+the bare Claude session picker and archaeology only; `bin/workstreams resume`
+does not execute `claude --resume <sessionId>`.
+
 ```
 bin/workstreams focus  <name>                 # bring the live tab to front
 bin/workstreams resume <name> [--agent claude|codex] [--fresh] [--at-final-sha]
@@ -415,10 +428,10 @@ bin/workstreams close  <name> [--force]
      tab-spawn + per-agent script generation, extracted into
      `bin/lib/launch-session.sh` and sourced by both callers — the launcher
      itself becomes a thin arg-parsing client, same refactor shape as the
-     hook→CLI move). The tab runs, for claude:
-     `cd "$MONO" && claude --resume <sessionId>` when the registry has one
-     (full conversation restored), else a fresh
-     `claude --worktree <name>` with a generated continuation prompt. For
+     hook→CLI move). For Claude, the tab always runs a fresh
+     `claude --worktree <name>` with a generated continuation prompt; B2
+     proved that `claude --resume <sessionId>` restores conversation text but
+     not worktree isolation. For
      codex: `cd <worktree> && codex resume --last <established flags>` when
      the registry says codex, else fresh. `--fresh` forces the no-reattach
      path. `--agent` overrides the registry; required when no registry entry
@@ -431,11 +444,9 @@ bin/workstreams close  <name> [--force]
      and `git log --oneline <finalSha>..main` (capped at 50 lines) — "here
      is what landed since this workstream last existed." `--at-final-sha`
      instead recreates via `create <name> --base-ref <finalSha>` for the
-     rare case where the old tree state itself matters. If a claude
-     `sessionId` survives in the registry, try `claude --resume <sessionId>`
-     first — the transcript outlives the worktree, and resume works from any
-     directory; fall back to fresh-with-context if it errors (see failure
-     modes).
+     rare case where the old tree state itself matters. Claude opens fresh
+     with the same cull context; its recorded `sessionId` is not executed by
+     this command because B2 proved that path loses worktree isolation.
   4. No worktree, no registry → error: "unknown worktree; use
      launch-worktree-session to start new work." `resume` never creates
      net-new workstreams — creation stays session-driven per the boxholder's
@@ -1073,20 +1084,16 @@ question to justify it.
 
 ## Failure modes
 
-> **Critical gap — accepted as documented risk:** `claude --resume
-> <sessionId>` reattaching a conversation whose session ran under
-> `--worktree` is documented for the general case but unverified for the
-> worktree case (does the resumed session re-enter worktree isolation? does
-> it resolve the same worktree by name?). Chunk B2 verifies this empirically
-> **before** any dependent code lands; if it fails, resume degrades to
-> fresh-with-continuation-context everywhere and the registry's `sessionId`
-> becomes claude-picker assistance only. The plan is written so that
-> downgrade changes one branch in `resume`, nothing else.
+> **Resolved by B2 (2026-08-09):** `claude --resume <sessionId>` restores the
+> conversation but not the deleted worktree or its isolation. Resume therefore
+> uses fresh-with-continuation-context everywhere, and the registry's
+> `sessionId` is Claude-picker assistance only. The empirical command and
+> process evidence are recorded in Track B.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | SessionStart hook can't resolve its worktree (main session, hand-launched odd cwd) | To add — hook doctest with main-checkout cwd | By design — writes nothing, exits 0 | Clear in behavior: no registry entry ⇒ `resume` requires `--agent`, fresh context |
-| Registry sessionId is stale (transcript pruned, `/clear` created a new id after last write) | To add — resume with a bogus id | To add — `resume` pre-checks `transcriptPath` exists; on in-tab `claude --resume` failure the tab shows claude's own error; wrapper falls back to fresh after printing it | Clear: error visible in the opened tab, fallback stated |
+| Registry sessionId is stale (transcript pruned, `/clear` created a new id after last write) | No runtime test needed after B2 | `resume` does not execute Claude session ids; they are advisory picker metadata only | Clear: fresh continuation does not depend on the stale hint |
 | tty reused by an unrelated tab after close | To add — focus with a dead-process tty | Yes by design — focus verifies a live claude/codex on that tty before AppleScripting | Clear: "no live session — use resume" |
 | Two concurrent sessions in one worktree | Not tested — hint semantics | Last-writer-wins on `updatedAt`; `resume` reattaches the latest | Acceptable by design; registry is a hint, and `focus` still finds whichever tty is live |
 | `wt_remove_now` can't read HEAD before delete (corrupt worktree) | To add — remove with a broken .git | To add — record `removed` without `finalSha`; recreate then works from main only and says why | Clear: recreate prints "no final SHA recorded" |
@@ -1181,11 +1188,10 @@ question to justify it.
 
 ## Open design questions
 
-- **Does `claude --resume <id>` fully restore a `--worktree` session?**
-  (isolation, worktree binding). The load-bearing unknown; verified
-  empirically in chunk B2 before dependents land. Lean: works, given
-  documented full-state restore; the degradation path is pre-designed
-  (critical-gap note above).
+- **Resolved by B2:** `claude --resume <id>` restores the conversation but
+  runs from main without recreating or reattaching the worktree. The selected
+  degradation path is fresh-with-continuation-context for Claude everywhere
+  (see Track B's recorded spike evidence).
 - **Should `close` also be offered for *unmerged* worktrees as "pause"?**
   Lean: yes but later — closing an unmerged session is already safe (sweep
   won't touch unmerged worktrees; `resume` reopens), so it needs no code,
