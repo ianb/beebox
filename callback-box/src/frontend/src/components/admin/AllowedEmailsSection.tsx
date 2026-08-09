@@ -29,22 +29,11 @@ function AccountBadge({ kind, googleLoginConfigured }: {
 
 function LocalPasswordNotice({ status }: { status: LocalPasswordStatus }) {
   if (status === "ready") return null;
-  if (status === "not-initialized") {
-    return (
-      <Card background="info" border="subtle" padding="sm">
-        <Stack gap="xs">
-          <Text size="sm">Local password accounts are not initialized for this owner.</Text>
-          <Text as="div" size="sm" mono>cb auth create-user</Text>
-        </Stack>
-      </Card>
-    );
-  }
-  const message = status === "owner-mismatch"
-    ? "The signed-in owner does not match the server's local password owner. Invite links and password resets are unavailable."
-    : "The local password store is unavailable. Password-account details and resets cannot be loaded.";
   return (
     <div role="alert">
-      <Text as="p" size="sm" tone="danger">{message}</Text>
+      <Text as="p" size="sm" tone="danger">
+        The local password store is unavailable. Password-account details and resets cannot be loaded.
+      </Text>
     </div>
   );
 }

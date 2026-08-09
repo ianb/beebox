@@ -12,7 +12,7 @@ import { simpleGit } from "simple-git";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { addUser, createFirstUser } from "../../src/webapp/local-users.js";
+import { addInvitedMember, addUser, createFirstUser } from "../../src/webapp/local-users.js";
 
 // Owner context (ownerProcedure requires ctx.isOwner).
 function caller(boxRoot, user = { email: "owner@example.com", name: "Owner" }) {
@@ -29,7 +29,7 @@ function caller(boxRoot, user = { email: "owner@example.com", name: "Owner" }) {
 }
 ```
 
-## Invite minting requires a concrete matching local owner
+## Invite minting requires a concrete signed-in box owner
 
 ```ts
 const inviteAuthDir = await mkdtemp(join(tmpdir(), "cb-admin-invite-"));
@@ -97,23 +97,19 @@ delete process.env.CB_AUTH_SCRYPT_N;
 delete process.env.CB_OWNER_EMAIL;
 ```
 
-Minting also fails before creating a capability when the deployment has no
-matching local owner account.
+The configured Google owner can mint before any local-password account exists.
 
 ```ts
 const noOwnerAuthDir = await mkdtemp(join(tmpdir(), "cb-admin-no-owner-"));
 process.env.CB_AUTH_FILE = join(noOwnerAuthDir, "auth.json");
 process.env.CB_OWNER_EMAIL = "owner@example.com";
 const noOwnerBox = await makeTmpBox({ git: true });
-const noOwnerResult = await caller(noOwnerBox.root).admin.createInvite({}).then(
-  () => ({ code: "allowed", message: "" }),
-  (error) => ({ code: error.code, message: error.message }),
-);
-JSON.stringify(noOwnerResult)
-=> {"code":"PRECONDITION_FAILED","message":"Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links."}
+const noOwnerResult = await caller(noOwnerBox.root).admin.createInvite({ email: "member@example.com" });
+noOwnerResult.invitePath.startsWith("/auth/invite?token=")
+=> true
 
 (await caller(noOwnerBox.root).admin.boxConfig()).localPasswordStatus
-=> not-initialized
+=> ready
 ```
 
 ```ts cleanup
@@ -187,8 +183,8 @@ allowed addresses without a local account are excluded.
 const memberAuthDir = await mkdtemp(join(tmpdir(), "cb-admin-members-"));
 process.env.CB_AUTH_FILE = join(memberAuthDir, "auth.json");
 process.env.CB_AUTH_SCRYPT_N = "1024";
-await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
-await addUser({ email: "member@example.com", name: "Member", password: "member-password", role: "member" });
+process.env.CB_OWNER_EMAIL = "owner@example.com";
+await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
 await caller(box.root).admin.updateBoxConfig({
   allowedEmails: ["member@example.com", "invited@example.com", "owner@example.com"],
 });
@@ -207,6 +203,7 @@ owner identity makes its allowlist entry non-redundant. It is still ineligible
 for the member password-reset action.
 
 ```ts continue
+await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
 process.env.CB_OWNER_EMAIL = "google-owner@example.com";
 const localOwnerDetail = (await caller(box.root).admin.boxConfig()).allowedUserDetails
   .find((user) => user.email === "owner@example.com");
@@ -239,6 +236,7 @@ await caller(box.root).admin.createPasswordReset({ email: "invited@example.com" 
 await rm(memberAuthDir, { recursive: true, force: true });
 delete process.env.CB_AUTH_FILE;
 delete process.env.CB_AUTH_SCRYPT_N;
+delete process.env.CB_OWNER_EMAIL;
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 ```

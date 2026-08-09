@@ -12,6 +12,7 @@ unusable, since `POST /auth/setup` refuses to create an owner who doesn't match
 ```ts setup
 import * as os from "node:os";
 import * as path from "node:path";
+import { rm, writeFile } from "node:fs/promises";
 import { maybeArmFirstRunSetup } from "../../src/webapp/setup-token.js";
 
 // Point the credential store at a path that does not exist, so there are zero
@@ -60,4 +61,20 @@ There is no auth wall to claim past.
 ```ts continue
 printedLines({ owner: null, openAccess: true }).length
 => 0
+```
+
+## Removing the last local member does not reopen first-run setup
+
+An initialized store keeps an empty file as a durable setup tombstone.
+
+```ts continue
+await writeFile(process.env.CB_AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
+printedLines({ owner: null, openAccess: false }).length
+=> 0
+```
+
+```ts cleanup
+await rm(process.env.CB_AUTH_FILE, { force: true });
+delete process.env.CB_AUTH_FILE;
+delete process.env.CB_OWNER_EMAIL;
 ```

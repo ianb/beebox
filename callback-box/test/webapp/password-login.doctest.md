@@ -10,7 +10,7 @@ constructed with `openAccess: false` so real auth is exercised.
 ```ts setup
 import * as os from "node:os";
 import * as path from "node:path";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { armSetupToken, clearSetupToken } from "../../src/webapp/setup-token.js";
 import { loginThrottle } from "../../src/webapp/login-throttle.js";
@@ -167,7 +167,24 @@ claimed.statusCode
 => 410
 ```
 
-## Two concurrent setups race on O_EXCL — one wins (204), one loses (409)
+An empty initialized store is a durable setup tombstone after the last member is
+removed.
+
+```ts
+await resetAuth();
+await writeFile(AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
+const tombstoneToken = armSetupToken({ now: Date.now() });
+const tombstoneSetup = await postAuth("/auth/setup", {
+  email: "other@example.com",
+  name: "Other",
+  password: "password1234",
+  token: tombstoneToken,
+});
+tombstoneSetup.statusCode
+=> 410
+```
+
+## Two concurrent setups race on the store lock — one wins (204), one loses (409)
 
 ```ts
 await resetAuth();

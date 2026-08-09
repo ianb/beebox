@@ -12,10 +12,9 @@
  * scrypt (passwords are low-entropy) and crash-safe writes instead of a plain
  * `writeFileSync`.
  *
- * Concurrency: the first user is created with `wx` (O_EXCL) so two racing
- * first-run setups can't both win; every later write is temp-file + fsync +
- * rename (crash-safe), and every mutation serializes through the cross-process
- * `file-lock.ts` primitive (CLAUDE.md lock rule).
+ * Concurrency: every mutation, including first-user creation, serializes through
+ * the cross-process `file-lock.ts` primitive. Writes use temp-file + fsync +
+ * rename so a crash cannot leave a partial JSON file.
  */
 
 import * as crypto from "node:crypto";
@@ -65,8 +64,8 @@ const authFileSchema = z
     version: z.literal(1),
     users: z.array(userRecordSchema),
   })
-  .refine((f) => f.users.filter((u) => u.role === "owner").length === 1, {
-    message: "auth file must contain exactly one owner",
+  .refine((f) => f.users.filter((u) => u.role === "owner").length <= 1, {
+    message: "auth file must contain at most one owner",
   });
 export type AuthFile = z.infer<typeof authFileSchema>;
 
@@ -214,6 +213,9 @@ export function listUsers(): LocalUser[] {
   return file ? file.users.map(toPublic) : [];
 }
 
+/** Whether local auth has ever been initialized, including an empty tombstone. */
+export function isLocalAuthStoreInitialized(): boolean { return loadAuthFile() !== null; }
+
 /** One user by (canonicalized) email, or `null`. */
 export function getLocalUser(email: string): LocalUser | null {
   const file = loadAuthFile();
@@ -228,10 +230,10 @@ export function findUser(file: AuthFile, email: string): LocalUser | null {
 }
 
 /**
- * Create the first (owner) account atomically. `wx` (O_EXCL) means a second
- * racing setup gets `UserExistsError` rather than clobbering the winner. When
- * `CB_OWNER_EMAIL` is set, the email must match it (canonicalized) — matching,
- * not shadowing, the configured owner.
+ * Create the first local owner atomically. A member-only store can already
+ * exist when the configured owner uses Google sign-in and invited a member.
+ * When `CB_OWNER_EMAIL` is set, the email must match it (canonicalized) —
+ * matching, not shadowing, the configured owner.
  */
 export async function createFirstUser(opts: {
   email: string;
@@ -249,19 +251,16 @@ export async function createFirstUser(opts: {
     scrypt: await hashPassword(opts.password),
     created: nowIso(),
   };
-  const file: AuthFile = { version: 1, users: [record] };
-  const target = authFilePath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  try {
-    writeAndSync({ path: target, flags: "wx", data: serialize(file) });
-  } catch (e) {
-    if (errnoCode(e) === "EEXIST") throw new UserExistsError(email);
-    throw e;
-  }
-  return toPublic(record);
+  return withAuthFileLock((file) => {
+    if (file?.users.some((user) => user.email === email || user.role === "owner")) {
+      throw new UserExistsError(email);
+    }
+    writeAuthFile({ version: 1, users: file ? [...file.users, record] : [record] });
+    return toPublic(record);
+  });
 }
 
-/** Add a member (or a first owner if the file is somehow missing an owner). */
+/** Add a user. A member can initialize a member-only credential store. */
 export async function addUser(opts: {
   email: string;
   name: string;
@@ -269,7 +268,7 @@ export async function addUser(opts: {
   role: LocalRole;
 }): Promise<LocalUser> {
   const scrypt = await hashPassword(opts.password);
-  return addUserWithPasswordHash({ ...opts, scrypt });
+  return insertUserWithPasswordHash({ ...opts, scrypt, allowMemberOnlyStore: false });
 }
 
 /** Insert a member after its password was hashed outside the store lock. */
@@ -279,14 +278,42 @@ export async function addUserWithPasswordHash(opts: {
   role: LocalRole;
   scrypt: StoredScrypt;
 }): Promise<LocalUser> {
+  return insertUserWithPasswordHash({ ...opts, allowMemberOnlyStore: false });
+}
+
+/** Add a member through an owner-issued invite, including the first local user. */
+export async function addInvitedMember(opts: { email: string; name: string; password: string }): Promise<LocalUser> {
+  const scrypt = await hashPassword(opts.password);
+  return addInvitedMemberWithPasswordHash({ email: opts.email, name: opts.name, scrypt });
+}
+
+/** Insert an invited member after hashing outside the store lock. */
+export async function addInvitedMemberWithPasswordHash(opts: {
+  email: string;
+  name: string;
+  scrypt: StoredScrypt;
+}): Promise<LocalUser> {
+  return insertUserWithPasswordHash({ ...opts, role: "member", allowMemberOnlyStore: true });
+}
+
+async function insertUserWithPasswordHash(opts: {
+  email: string;
+  name: string;
+  role: LocalRole;
+  scrypt: StoredScrypt;
+  allowMemberOnlyStore: boolean;
+}): Promise<LocalUser> {
   const email = canonicalizeEmail(opts.email);
   const { scrypt } = opts;
   return withAuthFileLock((file) => {
-    if (!file) throw new NoOwnerError();
-    if (file.users.some((u) => u.email === email)) throw new UserExistsError(email);
-    if (opts.role === "owner" && file.users.some((u) => u.role === "owner")) throw new OwnerExistsError(email);
+    const hasLocalOwner = file?.users.some((user) => user.role === "owner") === true;
+    const hasConfiguredOwner = Boolean(process.env.CB_OWNER_EMAIL);
+    if (!file && !opts.allowMemberOnlyStore) throw new NoOwnerError();
+    if (!hasLocalOwner && !hasConfiguredOwner) throw new NoOwnerError();
+    if (file?.users.some((u) => u.email === email)) throw new UserExistsError(email);
+    if (opts.role === "owner" && file?.users.some((u) => u.role === "owner")) throw new OwnerExistsError(email);
     const record: UserRecord = { email, name: opts.name, role: opts.role, gen: 1, scrypt, created: nowIso() };
-    writeAuthFile({ version: 1, users: [...file.users, record] });
+    writeAuthFile({ version: 1, users: file ? [...file.users, record] : [record] });
     return toPublic(record);
   });
 }
@@ -333,13 +360,18 @@ export async function verifyPassword(opts: { email: string; password: string }):
 /** Rewrite a verified user's hash with the current work factor. */
 async function rehash(opts: { email: string; password: string }): Promise<void> {
   const scrypt = await hashPassword(opts.password);
-  await withAuthFileLock((file) => {
-    if (!file) return;
-    const record = file.users.find((u) => u.email === opts.email);
-    if (!record) return;
-    record.scrypt = scrypt;
-    writeAuthFile(file);
-  });
+  try {
+    await withAuthFileLock((file) => {
+      if (!file) return;
+      const record = file.users.find((u) => u.email === opts.email);
+      if (!record) return;
+      record.scrypt = scrypt;
+      writeAuthFile(file);
+    });
+  } catch (error) {
+    if (!(error instanceof AuthFileLockError)) throw error;
+    console.warn(`[local-users] skipped opportunistic password rehash for ${opts.email}: credential store busy`);
+  }
 }
 
 /** Set a user's password and bump `gen` (revokes every outstanding session). */
@@ -373,6 +405,7 @@ export async function removeUser(opts: { email: string }): Promise<void> {
     const record = file.users.find((u) => u.email === email);
     if (!record) throw new NoSuchUserError(email);
     if (record.role === "owner") throw new LastOwnerRemovalError(email);
-    writeAuthFile({ version: 1, users: file.users.filter((u) => u.email !== email) });
+    const users = file.users.filter((u) => u.email !== email);
+    writeAuthFile({ version: 1, users });
   });
 }

@@ -170,8 +170,7 @@ export const adminRouter = router({
     const configuredOwnerEmail = process.env.CB_OWNER_EMAIL
       ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
       : null;
-    const signedInEmail = ctx.user ? canonicalizeEmail(ctx.user.email) : null;
-    const userDetails = describeAllowedUsers({ allowedEmails, configuredOwnerEmail, signedInEmail });
+    const userDetails = describeAllowedUsers({ allowedEmails, configuredOwnerEmail });
     return {
       boxSlug: ctx.boxSlug,
       allowedEmails,

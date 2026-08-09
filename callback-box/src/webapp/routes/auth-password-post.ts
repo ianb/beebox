@@ -28,7 +28,7 @@ import {
   type SessionUser,
 } from "../auth.js";
 import { readBasePrefix } from "../base-prefix.js";
-import { canonicalizeEmail, createFirstUser, listUsers, verifyPassword } from "../local-users.js";
+import { canonicalizeEmail, createFirstUser, isLocalAuthStoreInitialized, verifyPassword } from "../local-users.js";
 import { AuthStoreUnavailableError, OwnerEmailMismatchError, UserExistsError } from "../local-users-errors.js";
 import { CONCURRENCY_RETRY_MS, loginThrottle } from "../login-throttle.js";
 import { checkSetupToken, clearSetupToken } from "../setup-token.js";
@@ -316,9 +316,9 @@ export async function handleSetupPost(request: FastifyRequest, reply: FastifyRep
   const failSetup = ({ kind, status, jsonBody }: { kind: SetupErrorKind; status: number; jsonBody: object }): FastifyReply =>
     form ? reply.redirect(setupErrorLocation({ prefix, token: fields.token, kind })) : reply.status(status).send(jsonBody);
 
-  let existingUsers: number;
+  let storeInitialized: boolean;
   try {
-    existingUsers = listUsers().length;
+    storeInitialized = isLocalAuthStoreInitialized();
   } catch (e) {
     if (e instanceof AuthStoreUnavailableError) {
       console.error("[auth] setup failed — credential store unavailable:", e);
@@ -326,8 +326,9 @@ export async function handleSetupPost(request: FastifyRequest, reply: FastifyRep
     }
     throw e;
   }
-  // Once an account exists, setup is permanently closed.
-  if (existingUsers > 0) {
+  // Once local auth has been initialized, setup is permanently closed. An
+  // empty file is the durable tombstone after the last member is removed.
+  if (storeInitialized) {
     return failSetup({
       kind: "exists",
       status: 410,
@@ -385,12 +386,12 @@ export async function handleSetupPost(request: FastifyRequest, reply: FastifyRep
     setSessionCookie(reply, { request, user: { email: owner.email, name: owner.name } });
     return form ? reply.redirect(`${prefix}/`) : reply.status(204).send();
   } catch (e) {
-    // Lost the O_EXCL race (a second setup won): the winner already created it.
-    if (e instanceof UserExistsError) {
-      return failSetup({ kind: "exists", status: 409, jsonBody: { error: "An account already exists" } });
-    }
-    if (e instanceof OwnerEmailMismatchError) {
-      return failSetup({ kind: "generic", status: 400, jsonBody: { error: e.message } });
+    // A second setup won the credential-store lock and created the owner.
+    if (e instanceof UserExistsError) return failSetup({ kind: "exists", status: 409, jsonBody: { error: "An account already exists" } });
+    if (e instanceof OwnerEmailMismatchError) return failSetup({ kind: "generic", status: 400, jsonBody: { error: e.message } });
+    if (e instanceof AuthStoreUnavailableError) {
+      console.error("[auth] setup failed while creating the owner — credential store unavailable:", e);
+      return failSetup({ kind: "generic", status: 503, jsonBody: { error: "Setup temporarily unavailable" } });
     }
     throw e;
   } finally {

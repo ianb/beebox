@@ -7,7 +7,7 @@ import {
   AuthCapabilityStoreError,
   mintAuthInvite,
 } from "../../auth-capabilities.js";
-import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
+import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { ownerProcedure } from "../trpc.js";
 
 export const inviteAdminProcedures = {
@@ -18,13 +18,6 @@ export const inviteAdminProcedures = {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "A signed-in owner is required." });
       }
       const currentEmail = canonicalizeEmail(ctx.user.email);
-      const localOwner = getLocalOwnerEmail();
-      if (!localOwner || canonicalizeEmail(localOwner) !== currentEmail) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Local password accounts aren't initialized for this owner. Create the owner account on the server before issuing invite links.",
-        });
-      }
       const email = input.email === undefined ? undefined : canonicalizeEmail(input.email);
       if (email !== undefined) {
         if (!email.includes("@")) {
