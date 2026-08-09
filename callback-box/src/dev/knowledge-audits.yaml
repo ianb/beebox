@@ -2874,6 +2874,58 @@ tests:
     correct_contains_any: ["{% quote", "verbatim", "your words", "exact words", "not paraphrase", "outside", "betrayal"]
     tags: [quotes, laws, behavioral, integrity]
 
+  # Law 1's data-fidelity bullet (added 2026-08-09 after a field-test run where
+  # the agent silently rewrote "1 tbsp" → "1 T" while structuring an uploaded
+  # recipe): user-supplied values — quantities, units, names, dates — stay as
+  # given when structured into card fields; conversion happens only on request,
+  # and visibly. Backed by the recipe schema's Fidelity section too.
+  #
+  # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). Kept both
+  # examples verbatim ("your file's words verbatim, not normalized short
+  # forms") and volunteered convert-only-on-request-and-say-so unprompted.
+  # Re-run same day after the law gained its machine-format carve-out and the
+  # keyword gate was tightened (cross-model review): still pass, "exactly as
+  # you wrote them … I'd only do that if you asked, and I'd say so".
+  - id: law-data-fidelity-units
+    prompt: >
+      You're saving a recipe text file I uploaded as a recipe card. My file
+      says "1 tablespoon dried oregano" and "1/2 cup green olives". When you
+      fill in the ingredient tags, do you tidy the measurements into standard
+      short forms like "1 T" and "½ c"?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — keeps the user's units and wording exactly as given ("1
+      tablespoon", "1/2 cup"), in both the tag attributes and the body text.
+      Converting or abbreviating happens only if asked, and is announced.
+      Bonus: names the "1 T" vs "1 t" hazard or the trust cost of silent
+      edits. Does NOT frame normalization as helpful tidying.
+    correct_contains_any: ["as given", "as you wrote", "exactly as", "verbatim"]
+    tags: [recipes, laws, cards, behavioral, integrity]
+
+  # Speak the User's Language (agent-guide section added 2026-08-09 after a
+  # field-test persona collected the jargon it couldn't parse — "recipe card,"
+  # raw filenames as nouns, "boxholder" in the third person): guide vocabulary
+  # is for operating the system, not conversation.
+  #
+  # Status (2026-08-09): pass, knows_directly (0 reads, 0 searches). Gave the
+  # filename-inside-a-link form with a human title, refused "the recipe card"
+  # and the raw filename as a noun, and named "boxholder" as system vocabulary
+  # it would never use in conversation.
+  - id: speak-users-language
+    prompt: >
+      In chat I ask "where did my lemon chicken recipe end up?" It lives at
+      store/recipes/Lemon_Chicken.recipe.card. When you answer me, how do you
+      refer to it — and to me?
+    expected_level: knows_directly
+    watch_for: >
+      Calls it "your recipe" (or "your lemon chicken recipe") — not "the
+      recipe card" and not the raw filename as the noun of the sentence; the
+      path appears only inside a markdown link with a human title. Addresses
+      the user as "you" and does not call them "the boxholder" or talk about
+      them in the third person.
+    correct_contains_any: ["your recipe", "your lemon chicken"]
+    tags: [laws, chat, behavioral, vocabulary]
+
   # --- Behavior audit (not knowledge) ---
   #
   # The four audits above test what the agent *knows* about `{% quote %}`

@@ -3683,6 +3683,29 @@ test1:
       peak: 45903
       added: 2735
       turns: 5
+  law-data-fidelity-units:
+    - date: 2026-08-09T09:56:06.424Z
+      boxCommit: b33ab9e2f374cda1c07d90bcd09c05d2825eab19
+      repoCommit: f54685e5d6243bc63fc0674b5f4586662b808bd3
+      initial: 44812
+      peak: 44812
+      added: 0
+      turns: 2
+    - date: 2026-08-09T10:03:44.667Z
+      boxCommit: fb0c37687b24afd09c516b54d21027cfeabb8f72
+      repoCommit: ee1590a19e013195b8c42a5d86a959db490ea798
+      initial: 44857
+      peak: 44857
+      added: 0
+      turns: 2
+  speak-users-language:
+    - date: 2026-08-09T09:56:22.064Z
+      boxCommit: fb0c37687b24afd09c516b54d21027cfeabb8f72
+      repoCommit: f54685e5d6243bc63fc0674b5f4586662b808bd3
+      initial: 44749
+      peak: 44749
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -3,8 +3,16 @@ title: "Implementation vocabulary leaks into first-contact UI and agent replies"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)
-labels: [soft-launch, field-test-findings, agent-behavior, ui-sensibility]
+labels: [soft-launch, field-test-findings, ui-sensibility]
 ---
+
+> **Partly resolved 2026-08-09** in `73f4e8e0`: the *agent-reply* half (jargon
+> in chat — "drop a landmark", "person card", "boxholder" in the third person)
+> is addressed by a new agent-guide section, "Speak the User's Language",
+> verified by the `speak-users-language` knowledge audit (pass,
+> knows_directly). The `agent-behavior` label is dropped; what remains below
+> is the UI-surface sweep (filename-as-heading, view tabs, error pages, nav
+> chrome).
 
 A first-week user persona collected, verbatim, the words the product showed it
 that it could not understand. The list is a map of implementation vocabulary
