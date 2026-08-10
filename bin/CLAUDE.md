@@ -4,6 +4,17 @@ Detail for the tooling in this directory (`router.ts`, `workstreams`,
 `process-cleanup.ts`, `browse`, `box-entry.ts`, `path-leak-check.ts`). The
 always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 
+## Tests for `bin/` tooling
+
+New tests for root dev infrastructure use the repository's primary doctest
+format. Put them in `callback-box/test/dev/*.doctest.md`, importing the `bin/`
+module or invoking the CLI from there. Pure logic, temporary-filesystem tests,
+shell-script fixtures, and CLI behavior all fit doctests; `.test.ts` is not a
+separate integration tier. Existing `bin/*.test.ts` files predate this rule and
+are not precedent. Add a traditional test only when using a doctest would be
+circular (for example, testing the doctest harness itself), and document that
+exception in the file.
+
 ## Home-directory leak guard (`path-leak-check.ts`)
 
 `pnpm path-leak-check` fails if any tracked file contains a real personal home
@@ -248,9 +259,12 @@ running session's working directory is not.
   `wt_other_agent_live` and not a second copy of it.
 - `bin/workstreams quotas --json` — normalized Claude and Codex account quota
   windows for the owner dashboard. Codex is read through its app-server
-  protocol. Claude is read from a passive status-line cache; run
-  `bin/workstreams setup-claude-quota` once after landing to install that
-  collector. It consumes no API tokens and updates after Claude responses.
+  protocol. Claude is read through the Agent SDK's experimental structured
+  usage control request. Claude results are cached for ten minutes and fetched
+  only when the dashboard or CLI requests quotas; this consumes no model turn
+  or API quota. Machines that installed the retired status-line collector can
+  remove its user setting with `bin/workstreams unset-claude-quota`; the command
+  refuses to touch an unrelated status line.
 - `bin/workstreams archive <name>` / `unarchive <name>` — set or clear a
   presentation-only registry marker. Archiving does not close a session,
   remove a worktree, change its branch, or affect sweep eligibility; it only

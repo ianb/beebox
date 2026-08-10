@@ -1,9 +1,12 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { pathToFileURL } from "node:url";
+
+import type { SDKControlGetUsageResponse } from "@anthropic-ai/claude-agent-sdk";
 
 export interface QuotaWindow {
   label: string;
@@ -40,16 +43,29 @@ interface CodexRateLimitResult {
   rateLimitsByLimitId?: Record<string, CodexSnapshot> | null;
 }
 
+type ClaudeUsageResult = Pick<
+  SDKControlGetUsageResponse,
+  "rate_limits" | "rate_limits_available"
+>;
+
+interface ClaudeCache {
+  attemptedAt: string | null;
+  error: string | null;
+  quota: AgentQuota | null;
+}
+
 const CLAUDE_DURATIONS: Record<string, number> = {
   five_hour: 5 * 60,
   seven_day: 7 * 24 * 60,
+  seven_day_oauth_apps: 7 * 24 * 60,
   seven_day_opus: 7 * 24 * 60,
   seven_day_sonnet: 7 * 24 * 60,
 };
 const CODEX_CACHE_MS = 60_000;
-const CLAUDE_STALE_MS = 15 * 60_000;
+export const CLAUDE_CACHE_MS = 10 * 60_000;
 let codexCache: { expiresAt: number; value: AgentQuota } | null = null;
 let codexPending: Promise<AgentQuota> | null = null;
+const claudePending = new Map<string, Promise<AgentQuota>>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -233,10 +249,17 @@ export function parseClaudeQuota(
       message: "Claude quota data is unavailable.",
     };
   }
-  const windows = Object.entries(rateLimits).flatMap(([key, raw]) => {
+  const rateLimitRecord = rateLimits as Record<string, unknown>;
+  const windows = Object.entries(rateLimitRecord).flatMap(([key, raw]) => {
     if (typeof raw !== "object" || raw === null) return [];
-    const value = raw as { used_percentage?: unknown; resets_at?: unknown };
-    const usedPercent = finiteNumber(value.used_percentage);
+    const value = raw as {
+      used_percentage?: unknown;
+      utilization?: unknown;
+      resets_at?: unknown;
+    };
+    const usedPercent = finiteNumber(
+      value.used_percentage ?? value.utilization,
+    );
     const resetValue = value.resets_at;
     const resetDate =
       typeof resetValue === "string"
@@ -252,6 +275,26 @@ export function parseClaudeQuota(
       },
     ];
   });
+  const modelScoped = Array.isArray(rateLimitRecord.model_scoped)
+    ? rateLimitRecord.model_scoped.flatMap((raw: unknown) => {
+        if (!isRecord(raw) || typeof raw.display_name !== "string") return [];
+        const usedPercent = finiteNumber(raw.utilization);
+        const resetDate = new Date(
+          typeof raw.resets_at === "string" ? raw.resets_at : Number.NaN,
+        );
+        if (usedPercent === null || Number.isNaN(resetDate.getTime()))
+          return [];
+        return [
+          {
+            label: `${raw.display_name} · 7-day window`,
+            usedPercent,
+            resetsAt: resetDate.toISOString(),
+            durationMinutes: 7 * 24 * 60,
+          },
+        ];
+      })
+    : [];
+  windows.push(...modelScoped);
   return {
     provider: "claude",
     status: windows.length > 0 ? "available" : "unavailable",
@@ -261,6 +304,53 @@ export function parseClaudeQuota(
       ? { message: "Claude quota data contains no usable windows." }
       : {}),
   };
+}
+
+export async function requestClaudeUsage(
+  timeoutMs = 15_000,
+): Promise<ClaudeUsageResult> {
+  const { query } = await import("@anthropic-ai/claude-agent-sdk");
+  const abortController = new AbortController();
+  async function* idleInput(): AsyncGenerator<never, void> {
+    await new Promise<void>((resolve) => {
+      abortController.signal.addEventListener("abort", () => resolve(), {
+        once: true,
+      });
+    });
+  }
+  const session = query({
+    prompt: idleInput(),
+    options: {
+      abortController,
+      cwd: process.cwd(),
+      settingSources: [],
+    },
+  });
+  if (
+    typeof session.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET !==
+    "function"
+  ) {
+    abortController.abort();
+    session.close();
+    throw new Error("Installed Claude Agent SDK does not expose quota usage.");
+  }
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    abortController.abort();
+    session.close();
+  }, timeoutMs);
+  try {
+    await session.initializationResult();
+    return await session.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET();
+  } catch (error) {
+    if (timedOut) throw new Error("Claude quota request timed out");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    abortController.abort();
+    session.close();
+  }
 }
 
 export function quotaPace(
@@ -361,11 +451,7 @@ export async function requestCodexRateLimits(
                 : "Codex quota request failed",
             ),
           );
-        else
-          finish(
-            undefined,
-            codexRateLimitResult(message.result),
-          );
+        else finish(undefined, codexRateLimitResult(message.result));
       }
     });
     const timer = setTimeout(
@@ -410,8 +496,164 @@ async function collectCodexQuota(now: Date): Promise<AgentQuota> {
   return await codexPending;
 }
 
+async function readClaudeCache(cachePath: string): Promise<ClaudeCache> {
+  return await fs
+    .readFile(cachePath, "utf8")
+    .then((text) => {
+      const parsed: unknown = JSON.parse(text);
+      if (!isRecord(parsed))
+        return { attemptedAt: null, error: null, quota: null };
+      const capturedAt =
+        typeof parsed.captured_at === "string" &&
+        Number.isFinite(new Date(parsed.captured_at).getTime())
+          ? parsed.captured_at
+          : null;
+      return {
+        attemptedAt:
+          typeof parsed.attempted_at === "string"
+            ? parsed.attempted_at
+            : capturedAt,
+        error: typeof parsed.error === "string" ? parsed.error : null,
+        quota: capturedAt ? parseClaudeQuota(parsed, capturedAt) : null,
+      };
+    })
+    .catch(() => ({ attemptedAt: null, error: null, quota: null }));
+}
+
+async function writeClaudeCache(
+  cachePath: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await fs.mkdir(path.dirname(cachePath), { recursive: true });
+  const tempPath = `${cachePath}.${String(process.pid)}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(tempPath, `${JSON.stringify(payload)}\n`, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    await fs.chmod(tempPath, 0o600);
+    await fs.rename(tempPath, cachePath);
+  } finally {
+    await fs.rm(tempPath, { force: true });
+  }
+}
+
+async function refreshClaudeQuota(
+  cachePath: string,
+  fetchedAt: string,
+  request: () => Promise<ClaudeUsageResult>,
+): Promise<AgentQuota> {
+  const existing = claudePending.get(cachePath);
+  if (existing) return await existing;
+  const pending = request()
+    .then(async (response) => {
+      if (!response.rate_limits_available || response.rate_limits === null)
+        throw new Error("Claude returned no subscription quota windows.");
+      const payload = {
+        attempted_at: fetchedAt,
+        captured_at: fetchedAt,
+        rate_limits: response.rate_limits,
+      };
+      const quota = parseClaudeQuota(payload, fetchedAt);
+      if (quota.status !== "available")
+        throw new Error(
+          "Claude returned no usable subscription quota windows.",
+        );
+      await writeClaudeCache(cachePath, payload);
+      return quota;
+    })
+    .catch(async (error: unknown) => {
+      const existing = await fs
+        .readFile(cachePath, "utf8")
+        .then((text) => {
+          const parsed: unknown = JSON.parse(text);
+          return isRecord(parsed) ? parsed : {};
+        })
+        .catch(() => ({}));
+      const message = error instanceof Error ? error.message : String(error);
+      await writeClaudeCache(cachePath, {
+        ...existing,
+        attempted_at: fetchedAt,
+        error: message,
+      });
+      throw error;
+    })
+    .finally(() => claudePending.delete(cachePath));
+  claudePending.set(cachePath, pending);
+  return await pending;
+}
+
+async function collectClaudeQuota(options: {
+  backgroundRefresh: boolean;
+  cachePath: string;
+  fetchedAt: string;
+  now: Date;
+  request: () => Promise<ClaudeUsageResult>;
+}): Promise<AgentQuota> {
+  const cache = await readClaudeCache(options.cachePath);
+  const attemptedMs = new Date(cache.attemptedAt ?? "").getTime();
+  const attemptAge = options.now.getTime() - attemptedMs;
+  const recentAttempt =
+    Number.isFinite(attemptedMs) &&
+    attemptAge >= 0 &&
+    attemptAge < CLAUDE_CACHE_MS;
+  if (cache.quota && recentAttempt && cache.error === null)
+    return { ...cache.quota, stale: false };
+  if (recentAttempt && cache.error !== null) {
+    if (cache.quota)
+      return { ...cache.quota, stale: true, message: cache.error };
+    return {
+      provider: "claude",
+      status: "unavailable",
+      fetchedAt: options.fetchedAt,
+      windows: [],
+      message: cache.error,
+    };
+  }
+
+  if (options.backgroundRefresh) {
+    void refreshClaudeQuota(
+      options.cachePath,
+      options.fetchedAt,
+      options.request,
+    ).catch(() => undefined);
+    if (cache.quota) return { ...cache.quota, stale: true };
+    return {
+      provider: "claude",
+      status: "unavailable",
+      fetchedAt: options.fetchedAt,
+      windows: [],
+      message: "Claude quota is refreshing; reload shortly.",
+    };
+  }
+
+  try {
+    return await refreshClaudeQuota(
+      options.cachePath,
+      options.fetchedAt,
+      options.request,
+    );
+  } catch (error) {
+    if (cache.quota)
+      return {
+        ...cache.quota,
+        stale: true,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    return {
+      provider: "claude",
+      status: "unavailable",
+      fetchedAt: options.fetchedAt,
+      windows: [],
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export async function collectAgentQuotas(
   options: {
+    backgroundClaudeRefresh?: boolean;
+    claudeRequest?: () => Promise<ClaudeUsageResult>;
     stateDir?: string;
     codexRequest?: () => Promise<CodexRateLimitResult>;
     now?: Date;
@@ -425,35 +667,27 @@ export async function collectAgentQuotas(
     process.env.CALLBACK_STATE_DIR ??
     path.join(os.homedir(), ".cache/callback-box");
   const claudePath = path.join(stateDir, "claude-rate-limits.json");
-  const claude = await fs
-    .readFile(claudePath, "utf8")
-    .then((text) => {
-      const parsed: unknown = JSON.parse(text);
-      const cached = isRecord(parsed) ? parsed : {};
-      const quota = parseClaudeQuota(
-        cached,
-        typeof cached.captured_at === "string" ? cached.captured_at : fetchedAt,
-      );
-      return {
-        ...quota,
-        stale:
-          !Number.isFinite(new Date(quota.fetchedAt).getTime()) ||
-          now.getTime() - new Date(quota.fetchedAt).getTime() > CLAUDE_STALE_MS,
-      };
-    })
-    .catch(() => parseClaudeQuota(null, fetchedAt));
-  const codex = options.codexRequest
-    ? await options
-        .codexRequest()
-        .then((result) => parseCodexQuota(result, fetchedAt))
-        .catch((error: unknown) => ({
-          provider: "codex" as const,
-          status: "unavailable" as const,
-          fetchedAt,
-          windows: [],
-          message: error instanceof Error ? error.message : String(error),
-        }))
-    : await collectCodexQuota(now);
+  const [claude, codex] = await Promise.all([
+    collectClaudeQuota({
+      backgroundRefresh: options.backgroundClaudeRefresh ?? false,
+      cachePath: claudePath,
+      fetchedAt,
+      now,
+      request: options.claudeRequest ?? requestClaudeUsage,
+    }),
+    options.codexRequest
+      ? options
+          .codexRequest()
+          .then((result) => parseCodexQuota(result, fetchedAt))
+          .catch((error: unknown) => ({
+            provider: "codex" as const,
+            status: "unavailable" as const,
+            fetchedAt,
+            windows: [],
+            message: error instanceof Error ? error.message : String(error),
+          }))
+      : collectCodexQuota(now),
+  ]);
   return [claude, codex];
 }
 

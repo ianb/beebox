@@ -1,11 +1,15 @@
 ---
 title: "`file-watcher.doctest.md` can time out as a whole under parallel suite load"
-workstream: ios-box-switcher-gate
+workstream: workstreams
 area: callback-box
 filed-by: agent
 discovered-in: worktree-ios-box-switcher-gate — /finish full-suite verification
-resolution: implemented
 ---
+
+Reopened 2026-08-10 after the same whole-file expiration recurred during the
+`workstreams` finish suite: TAP expired the file at 300,999 ms and finished
+6,765/6,768. The file then passed 12/12 in isolation in 8.3 seconds. This branch
+touches neither the watcher implementation nor this doctest.
 
 The full `pnpm test` suite timed out while running
 `test/core/box/file-watcher.doctest.md`. TAP reported this signature:
@@ -22,7 +26,7 @@ touch the watcher test or implementation. The one permitted full-suite rerun
 then passed 6,291/6,291 assertions.
 
 This differs from the resolved
-[watcher assertion-race issue](2026-08-03-file-watcher-doctest-flaky-timing.md).
+[watcher assertion-race issue](../closed/bugs/2026-08-03-file-watcher-doctest-flaky-timing.md).
 That issue recorded individual timing assertion failures. This occurrence
 expired the entire test file under parallel suite load.
 
