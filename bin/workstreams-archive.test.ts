@@ -6,6 +6,17 @@ import { test } from "node:test";
 import { execa } from "execa";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function registryRecord(file: string): Promise<Record<string, unknown>> {
+  const parsed: unknown = JSON.parse(await fs.readFile(file, "utf8"));
+  assert.ok(isRecord(parsed));
+  return parsed;
+}
+
 test("archive and unarchive only update registry presentation state", async (t) => {
   const state = await fs.mkdtemp(
     path.join(os.tmpdir(), "workstreams-archive-"),
@@ -25,28 +36,28 @@ test("archive and unarchive only update registry presentation state", async (t) 
     env,
   });
   const registryFile = path.join(state, "workstreams", `${workstream}.json`);
-  const archived = JSON.parse(await fs.readFile(registryFile, "utf8")) as {
-    archived?: { at?: unknown };
-  };
-  assert.equal(typeof archived.archived?.at, "string");
-  const firstArchivedAt = archived.archived?.at;
+  const archived = await registryRecord(registryFile);
+  assert.ok(typeof archived.archived === "object" && archived.archived !== null);
+  assert.ok("at" in archived.archived);
+  assert.equal(typeof archived.archived.at, "string");
+  const firstArchivedAt = archived.archived.at;
 
   await execa(path.join(repoRoot, "bin/workstreams"), ["archive", workstream], {
     cwd: repoRoot,
     env,
   });
-  const rearchived = JSON.parse(await fs.readFile(registryFile, "utf8")) as {
-    archived?: { at?: unknown };
-  };
-  assert.equal(rearchived.archived?.at, firstArchivedAt);
+  const rearchived = await registryRecord(registryFile);
+  assert.ok(
+    typeof rearchived.archived === "object" && rearchived.archived !== null,
+  );
+  assert.ok("at" in rearchived.archived);
+  assert.equal(rearchived.archived.at, firstArchivedAt);
   await execa(
     path.join(repoRoot, "bin/workstreams"),
     ["unarchive", workstream],
     { cwd: repoRoot, env },
   );
-  const unarchived = JSON.parse(await fs.readFile(registryFile, "utf8")) as {
-    archived?: unknown;
-  };
+  const unarchived = await registryRecord(registryFile);
   assert.equal(unarchived.archived, null);
 
   await fs.writeFile(
