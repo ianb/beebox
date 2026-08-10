@@ -2,7 +2,7 @@
 title: "Worktree/session workflow: make follow-ups outlive their worktrees"
 workstream: unknown
 area: monorepo
-design: ../../callback-box/docs/plans/workstreams.md
+design: ../../callback-box/docs/implemented-plans/workstreams.md
 labels: [worktrees, sessions, workflow]
 ---
 
@@ -50,7 +50,7 @@ Today both pin a tab. Separating them is what makes the first case disposable.
 - **Resume and unified status are implemented.** The session registry,
   `bin/workstreams resume`, joined `list --json` state, and the
   `/workstreams/` control surface now live in the
-  [workstreams plan](../../callback-box/docs/plans/workstreams.md). Remaining
+  [workstreams plan](../../callback-box/docs/implemented-plans/workstreams.md). Remaining
   territory in this issue is the real-box/forking work described below, not the
   terminal-tab lifecycle.
 
@@ -75,7 +75,7 @@ gap list above:
 
 That enabling refactor is now consumed by the implemented workstreams design;
 the current workflow and status live in the
-[workstreams plan](../../callback-box/docs/plans/workstreams.md).
+[workstreams plan](../../callback-box/docs/implemented-plans/workstreams.md).
 
 ## Direction (not settled)
 

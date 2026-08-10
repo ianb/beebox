@@ -2,7 +2,7 @@
 title: "A staging slot for pre-merge workstream testing"
 workstream: workstreams
 area: deploy
-design: ../../callback-box/docs/plans/workstreams.md
+design: ../../callback-box/docs/implemented-plans/workstreams.md
 filed-by: agent
 discovered-in: worktree-workstreams — implementing the workstreams testing queue
 ---

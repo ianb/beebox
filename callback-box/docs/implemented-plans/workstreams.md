@@ -1,6 +1,6 @@
 ---
 title: "The /workstreams/ app and disposable sessions"
-status: active
+status: implemented
 workstream: workstreams
 issues:
   - ../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md
@@ -22,7 +22,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
 
 - [worktree/session workflow redesign](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
   — the primary item; this plan is the workflow change its enabling refactor
-  ([the worktree control surface](worktree-control-surface.md)) deferred.
+  ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
 - [plans need frontmatter and issue mapping](../../../issues/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md)
   — Track E.
 - Related, advanced but not closed:
@@ -64,7 +64,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
 - `bin/CLAUDE.md` — router invariants, the fail-closed authenticating proxy
   model, the `ps -axo pid=,comm=` rule, "read `bin/docs/router-protocol.md`
   before touching lifecycle code".
-- [worktree-control-surface.md](worktree-control-surface.md) — the Track C
+- [worktree-control-surface.md](../plans/worktree-control-surface.md) — the Track C
   `list --json` contract (this plan extends it additively), the Track D
   `resume` design (this plan builds it, revised), and the hard constraint it
   carries: **Codex is a first-class frontend; nothing may be Claude-Code-only.**
@@ -191,7 +191,7 @@ the new scalar fields need.**
   pattern in Terminal automation). iTerm2/kitty have richer APIs — out of
   scope; the adapter isolates the choice.
 - **Orchestrator survey** — already done in
-  [worktree-control-surface.md](worktree-control-surface.md) (Conductor,
+  [worktree-control-surface.md](../plans/worktree-control-surface.md) (Conductor,
   Claude Squad, Vibe Kanban, desktop app: all monoliths; rejected). Not
   repeated.
 
@@ -340,7 +340,7 @@ one registry file, and temp+`mv` only makes each _write_ atomic, not the
 read-merge-write sequence. `session-registry.sh` therefore wraps the whole
 merge in an `mkdir`-based lock (the `pi_lock` pattern from
 `bin/private-issues`, already named as the repo's lock idiom in
-[worktree-control-surface.md](worktree-control-surface.md)), with a stale
+[worktree-control-surface.md](../plans/worktree-control-surface.md)), with a stale
 threshold and a bounded wait; on lock timeout it warns to stderr and skips
 the write — a lost hint beats a blocked lifecycle operation (§4).
 
