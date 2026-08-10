@@ -25,6 +25,7 @@ export interface ScheduleEntry {
   enabled: boolean;
   onWakeup: boolean;
   notBefore: string | undefined;
+  until: string | undefined;
   runs: string;
   lastRun: string | null;
   lastResult: "success" | "failure" | null;
@@ -47,6 +48,7 @@ function parseErrorEntry(scriptName: string): ScheduleEntry {
     enabled: false,
     onWakeup: false,
     notBefore: undefined,
+    until: undefined,
     runs: "",
     lastRun: null,
     lastResult: null,
@@ -110,6 +112,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
     enabled: parsed.enabled,
     onWakeup: parsed.onWakeup,
     notBefore: parsed.notBefore,
+    until: parsed.until,
     runs: parsed.runs,
     lastRun: state.lastRun,
     lastResult: state.lastResult,

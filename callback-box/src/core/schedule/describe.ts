@@ -93,7 +93,10 @@ export function describeCadence(script: ScheduleCadenceInput): string {
   const hasBase = Boolean(script.cron || script.at || script.rrule);
   let text = describeBase(script);
   if (script.onWakeup && hasBase) {
-    text += " and on wakeup";
+    // Wakeup runs ignore the `at` time and repeat (isDueForWakeup checks only
+    // enabled/until/not-before), so an `at` schedule can't say "once … and on
+    // wakeup" — the wakeup half isn't once.
+    text += script.at ? "; also on each wakeup" : " and on wakeup";
   }
   if (script.once && !script.at) {
     text += ", once";

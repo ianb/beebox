@@ -76,6 +76,9 @@ card is removed after its first successful run.
 cadence({ at: "2026-09-01T14:30:00" })
 => Once at Sep 1, 2026, 2:30 PM
 
+cadence({ at: "2026-09-01T14:30:00", onWakeup: true })
+=> Once at Sep 1, 2026, 2:30 PM; also on each wakeup
+
 cadence({ cron: "0 8 * * *", once: true })
 => At 8:00 AM, once
 

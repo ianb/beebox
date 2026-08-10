@@ -114,6 +114,8 @@ function rawScheduleTitle(s: ScheduleInfo): string {
   const parts = [s.schedule];
   if (s.onWakeup && s.scheduleType !== "wakeup-only") parts.push("+wakeup");
   if (s.notBefore) parts.push(`≥${s.notBefore}`);
+  if (s.once) parts.push("once");
+  if (s.until) parts.push(`until ${s.until}`);
   return parts.join(" ");
 }
 
