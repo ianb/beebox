@@ -109,6 +109,14 @@ function ScheduleNameCell({ s }: { s: ScheduleInfo }) {
   );
 }
 
+/** The raw schedule expression, kept reachable (as a tooltip) for editing/debugging. */
+function rawScheduleTitle(s: ScheduleInfo): string {
+  const parts = [s.schedule];
+  if (s.onWakeup && s.scheduleType !== "wakeup-only") parts.push("+wakeup");
+  if (s.notBefore) parts.push(`≥${s.notBefore}`);
+  return parts.join(" ");
+}
+
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
   const [showError, setShowError] = useState(false);
 
@@ -118,14 +126,8 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
         <td className="py-2 pr-3">
           <ScheduleNameCell s={s} />
         </td>
-        <td className="py-2 pr-3 text-warm-700 font-mono text-xs">
-          {s.schedule}
-          {s.onWakeup && s.scheduleType !== "wakeup-only" ? (
-            <span className="ml-1 text-warm-500">+wakeup</span>
-          ) : null}
-          {s.notBefore ? (
-            <span className="ml-1 text-warm-500">&ge;{s.notBefore}</span>
-          ) : null}
+        <td className="py-2 pr-3 text-warm-700 text-xs">
+          <span title={rawScheduleTitle(s)}>{s.cadence}</span>
           {s.budget ? <BudgetIndicator budget={s.budget} /> : null}
         </td>
         <td className="py-2 pr-3 text-warm-700 text-xs">

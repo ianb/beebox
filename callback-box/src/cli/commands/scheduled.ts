@@ -14,6 +14,7 @@ import {
 import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { loadScriptState } from "../../core/schedule/state.js";
+import { describeCadence } from "../../core/schedule/describe.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 export const scheduledCommand = new Command("scheduled")
@@ -44,6 +45,8 @@ export const scheduledCommand = new Command("scheduled")
     console.log("Scheduled Scripts:");
     console.log("");
 
+    const rows: Array<{ line: string } | { name: string; cadence: string; rest: string }> = [];
+
     for (const file of files) {
       const scriptName = file.replace(".scheduled-script.card", "");
       const cardPath = path.join(schedulesDir, file);
@@ -54,23 +57,13 @@ export const scheduledCommand = new Command("scheduled")
         const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
         parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
       } catch (err) {
-        console.log(`  ${scriptName.padEnd(22)} [parse error: ${errorMessage(err)}]`);
+        rows.push({ line: `  ${scriptName.padEnd(22)} [parse error: ${errorMessage(err)}]` });
         continue;
       }
 
       const state = await loadScriptState(boxRoot, scriptName);
 
-      // Build schedule description
-      let scheduleDesc: string;
-      if (parsed.cron) {
-        scheduleDesc = `cron ${parsed.cron}`;
-      } else if (parsed.at) {
-        scheduleDesc = `at ${parsed.at}`;
-      } else if (parsed.rrule) {
-        scheduleDesc = `rrule ${parsed.rrule.substring(0, 30)}`;
-      } else {
-        scheduleDesc = "on-wakeup only";
-      }
+      const scheduleDesc = describeCadence(parsed);
 
       // Build last-run description. Fall back to recentRuns for durationMs when
       // the state file predates lastDurationMs being recorded directly.
@@ -95,20 +88,21 @@ export const scheduledCommand = new Command("scheduled")
         lastDesc = "never run";
       }
 
-      // Build flags
-      const flags: string[] = [];
-      if (parsed.onWakeup && (parsed.cron || parsed.at || parsed.rrule)) {
-        flags.push("+wakeup");
+      // Wakeup, once, and not-before are folded into the cadence sentence;
+      // only disabled remains a flag.
+      const flagStr = parsed.enabled ? "" : "  [disabled]";
+
+      rows.push({ name: scriptName, cadence: scheduleDesc, rest: `${lastDesc}${flagStr}` });
+    }
+
+    // Pad the cadence column to the widest sentence so the state column aligns.
+    const cadenceWidth = Math.max(...rows.map((r) => ("cadence" in r ? r.cadence.length : 0)));
+    for (const row of rows) {
+      if ("line" in row) {
+        console.log(row.line);
+      } else {
+        console.log(`  ${row.name.padEnd(22)} ${row.cadence.padEnd(cadenceWidth)}  ${row.rest}`);
       }
-      if (parsed.once) flags.push("once");
-      if (!parsed.enabled) flags.push("disabled");
-      if (parsed.notBefore) flags.push(`≥${parsed.notBefore}`);
-
-      const flagStr = flags.length > 0 ? `  [${flags.join(", ")}]` : "";
-
-      console.log(
-        `  ${scriptName.padEnd(22)} ${scheduleDesc.padEnd(24)} ${lastDesc}${flagStr}`
-      );
     }
   });
 

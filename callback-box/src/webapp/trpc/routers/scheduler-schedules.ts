@@ -12,11 +12,15 @@ import {
   loadScriptState,
   loadRunningScripts,
 } from "../../../core/schedule/state.js";
+import { describeCadence } from "../../../core/schedule/describe.js";
 
 export interface ScheduleEntry {
   name: string;
   description: string | undefined;
+  /** Raw schedule expression, e.g. "cron 0 4 * * *" — for editing/debugging. */
   schedule: string;
+  /** Human-readable cadence sentence, e.g. "At 4:00 AM, at most once every 20 hours". */
+  cadence: string;
   scheduleType: "cron" | "at" | "rrule" | "wakeup-only";
   enabled: boolean;
   onWakeup: boolean;
@@ -38,6 +42,7 @@ function parseErrorEntry(scriptName: string): ScheduleEntry {
     name: scriptName,
     description: undefined,
     schedule: "parse error",
+    cadence: "parse error",
     scheduleType: "wakeup-only",
     enabled: false,
     onWakeup: false,
@@ -100,6 +105,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
     name: scriptName,
     description: parsed.description,
     schedule,
+    cadence: describeCadence(parsed),
     scheduleType,
     enabled: parsed.enabled,
     onWakeup: parsed.onWakeup,
