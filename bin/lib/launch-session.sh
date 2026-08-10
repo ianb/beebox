@@ -86,7 +86,7 @@ teardown="$LS_MONO/bin/codex-session-end"
 if [ -x "\$teardown" ]; then
   "\$teardown" "\$wt_path" || true
 else
-  echo "launch-worktree-session: no \$teardown — leaving \$wt_path for \\`bin/workstreams sweep\\`" >&2
+  echo "launch-worktree-session: no \$teardown — leaving \$wt_path for \`bin/workstreams sweep\`" >&2
 fi
 exit \$codex_status
 EOF
