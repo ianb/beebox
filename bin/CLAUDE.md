@@ -251,6 +251,10 @@ running session's working directory is not.
   protocol. Claude is read from a passive status-line cache; run
   `bin/workstreams setup-claude-quota` once after landing to install that
   collector. It consumes no API tokens and updates after Claude responses.
+- `bin/workstreams archive <name>` / `unarchive <name>` — set or clear a
+  presentation-only registry marker. Archiving does not close a session,
+  remove a worktree, change its branch, or affect sweep eligibility; it only
+  moves the row into the dashboard's archived section.
 - `bin/workstreams create <name> [--base-ref <ref>] [--box-ref <ref>]` — create
   or re-attach (idempotent); prints the path on stdout, logs on stderr. A
   recorded `keep/*` box ref restores the isolated test1 clone during a culled
