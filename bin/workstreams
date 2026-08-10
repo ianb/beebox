@@ -19,6 +19,8 @@
 #                      --force overrides merged/clean, never liveness safety.
 #   resume <name>      Focus live, reopen idle, or recreate a culled workstream.
 #                      Options: --agent claude|codex, --fresh, --at-final-sha.
+#   reset-test <name>  Hard-reset the workstream's test1 clone to test-setup.
+#   confirm-tested <issue-basename>  Clear manual-testing on main and commit.
 #   list [--json]      Every worktree, joined across git, runtime, agent,
 #                      session-registry, and test1-clone state. Add
 #                      --include-removed with --json for registry ghost rows.
@@ -330,6 +332,32 @@ case "$cmd" in
     launch_session_build
     result=$(launch_session_open)
     echo "workstreams resume: launched $resolved_agent for $name ($result)"
+    ;;
+
+  reset-test)
+    name="${1:-}"
+    . "$REPO_DIR/bin/lib/worktree-paths.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ $# -eq 1 ] || { echo "usage: workstreams reset-test <name>" >&2; exit 1; }
+    . "$REPO_DIR/bin/lib/manual-testing.sh"
+    workstream_reset_test "$name"
+    ;;
+
+  confirm-tested)
+    basename=""
+    agent_confirmed=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --agent-confirmed) agent_confirmed=true; shift ;;
+        -*) echo "workstreams confirm-tested: unknown option $1" >&2; exit 1 ;;
+        *) [ -z "$basename" ] || { echo "workstreams confirm-tested: unexpected argument $1" >&2; exit 1; }; basename="$1"; shift ;;
+      esac
+    done
+    [ -n "$basename" ] || { echo "usage: workstreams confirm-tested <issue-basename> [--agent-confirmed]" >&2; exit 1; }
+    . "$REPO_DIR/bin/lib/worktree-paths.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    . "$REPO_DIR/bin/lib/manual-testing.sh"
+    workstream_confirm_tested "$basename" "$agent_confirmed"
     ;;
 
   serve)

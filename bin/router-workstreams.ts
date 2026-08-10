@@ -4,7 +4,7 @@ import path from "node:path";
 import { execa } from "execa";
 
 import { escapeHtml } from "./router-docs.js";
-import { listIssues, parseFrontmatter, serveIssues, type IssueRecord } from "./router-issues.js";
+import { listIssues, parseFrontmatter, parseIssueFile, serveIssues, type IssueRecord } from "./router-issues.js";
 
 interface RemovedState {
   at: string;
@@ -32,7 +32,7 @@ export interface WorkstreamRow {
 export interface WorkstreamsDeps {
   list(): Promise<WorkstreamRow[]>;
   run(verb: ActionVerb, name: string): Promise<void>;
-  documents(): Promise<{ issues: IssueRecord[]; plans: PlanRecord[] }>;
+  documents(): Promise<{ issues: IssueRecord[]; plans: PlanRecord[]; worktreeIssues?: Array<{ worktree: string; issue: IssueRecord }> }>;
 }
 
 export interface PlanRecord {
@@ -42,9 +42,9 @@ export interface PlanRecord {
   relPath: string;
 }
 
-type ActionVerb = "close" | "focus" | "resume";
+type ActionVerb = "close" | "confirm-tested" | "focus" | "reset-test" | "resume";
 
-const ACTION_PATH = /^\/workstreams\/action\/(close|focus|resume)\/([a-zA-Z0-9_-]+)$/;
+const ACTION_PATH = /^\/workstreams\/action\/(close|confirm-tested|focus|reset-test|resume)\/([a-zA-Z0-9_.-]+)$/;
 
 export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
@@ -53,7 +53,7 @@ export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   return `/workstreams/issues${suffix || "/"}`;
 }
 
-function defaultDeps(repoRoot: string, documentsRoot: string): WorkstreamsDeps {
+function defaultDeps(repoRoot: string, documentsRoot: string, worktreesRoot: string): WorkstreamsDeps {
   async function run(args: string[]): Promise<string> {
     const child = execa(path.join(repoRoot, "bin/workstreams"), args, {
       cwd: repoRoot,
@@ -80,15 +80,41 @@ function defaultDeps(repoRoot: string, documentsRoot: string): WorkstreamsDeps {
       return JSON.parse(stdout) as WorkstreamRow[];
     },
     async run(verb, name) {
-      await run([verb, name]);
+      await run(verb === "confirm-tested" ? [verb, name, "--agent-confirmed"] : [verb, name]);
     },
     async documents() {
       return {
         issues: await listIssues(path.join(documentsRoot, "issues")),
         plans: await listPlans(documentsRoot),
+        worktreeIssues: await listWorktreeTestingIssues(worktreesRoot),
       };
     },
   };
+}
+
+async function listWorktreeTestingIssues(worktreesRoot: string): Promise<Array<{ worktree: string; issue: IssueRecord }>> {
+  const out: Array<{ worktree: string; issue: IssueRecord }> = [];
+  const names = await fs.readdir(worktreesRoot).catch(() => []);
+  for (const worktree of names) {
+    const root = path.join(worktreesRoot, worktree);
+    const [committed, working] = await Promise.all([
+      execa("git", ["diff", "--name-only", "main...HEAD", "--", "issues"], { cwd: root }).then((r) => r.stdout).catch(() => ""),
+      execa("git", ["status", "--porcelain", "--", "issues"], { cwd: root }).then((r) => r.stdout).catch(() => ""),
+    ]);
+    const relPaths = new Set([
+      ...committed.split("\n").filter((line) => line.startsWith("issues/")).map((line) => line.slice("issues/".length)),
+      ...working.split("\n").map((line) => line.slice(3)).filter((line) => line.startsWith("issues/")).map((line) => line.slice("issues/".length)),
+    ]);
+    for (const relPath of relPaths) {
+      try {
+        const issue = parseIssueFile(relPath, await fs.readFile(path.join(root, "issues", relPath), "utf8"));
+        if (issue.frontmatter.needs.includes("manual-testing")) out.push({ worktree, issue });
+      } catch {
+        // Deleted or unreadable issue.
+      }
+    }
+  }
+  return out;
 }
 
 async function listPlans(repoRoot: string): Promise<PlanRecord[]> {
@@ -122,10 +148,11 @@ function actionForm(verb: ActionVerb, row: WorkstreamRow): string {
 }
 
 function actionsHtml(row: WorkstreamRow): string {
-  if (row.agent.state === "live") return actionForm("focus", row) + actionForm("close", row);
+  const reset = row.boxState.testSetup ? actionForm("reset-test", row) : "";
+  if (row.agent.state === "live") return actionForm("focus", row) + actionForm("close", row) + reset;
   if (row.session.removed?.merged === false) return "";
-  if (row.session.hasSession) return actionForm("resume", row);
-  return "";
+  if (row.session.hasSession) return actionForm("resume", row) + reset;
+  return reset;
 }
 
 function rowHtml(row: WorkstreamRow, note: string): string {
@@ -161,7 +188,7 @@ function documentList(params: { issues: IssueRecord[]; plans: PlanRecord[] }): s
 
 function pageShell(title: string, body: string, refresh = false): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${refresh ? '<meta http-equiv="refresh" content="30">' : ""}<title>${escapeHtml(title)}</title>
-<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a></nav>${body}</body></html>`;
+<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
 }
 
 function renderDetail(name: string, row: WorkstreamRow | undefined, documents: { issues: IssueRecord[]; plans: PlanRecord[] }): string {
@@ -179,6 +206,23 @@ function renderPlans(plans: PlanRecord[]): string {
     return `<section><h2>${escapeHtml(status)} <small>${matching.length}</small></h2><ul>${rows}</ul></section>`;
   }).join("");
   return pageShell("plans", `<h1>plans</h1>${sections || "<p>No plans found.</p>"}`);
+}
+
+function testingRow(issue: IssueRecord, worktree: string | null, row: WorkstreamRow | undefined): string {
+  const name = issue.frontmatter.workstream;
+  const target = worktree ? `/${encodeURIComponent(worktree)}/test1/` : "/main/test1/";
+  const reset = row?.boxState.testSetup ? actionForm("reset-test", row) : "";
+  const confirm = worktree ? "" : `<form method="POST" action="/workstreams/action/confirm-tested/${encodeURIComponent(path.posix.basename(issue.relPath))}"><button type="submit">Confirm</button></form>`;
+  return `<li><a href="${escapeHtml(issueHref(issue))}#manual-testing">${escapeHtml(issue.frontmatter.title)}</a><a href="/workstreams/${encodeURIComponent(name)}/">${escapeHtml(name)}</a><a href="${target}">${worktree ? "worktree test1" : "main test1"}</a><span class="actions">${row ? actionForm("resume", row) : ""}${reset}${confirm}</span></li>`;
+}
+
+function renderTesting(rows: WorkstreamRow[], documents: Awaited<ReturnType<WorkstreamsDeps["documents"]>>): string {
+  const rowByName = new Map(rows.map((row) => [row.name, row]));
+  const landed = documents.issues.filter((issue) => !issue.closed && issue.frontmatter.needs.includes("manual-testing"));
+  const pending = documents.worktreeIssues ?? [];
+  const landedHtml = landed.map((issue) => testingRow(issue, null, rowByName.get(issue.frontmatter.workstream))).join("");
+  const pendingHtml = pending.map(({ worktree, issue }) => testingRow(issue, worktree, rowByName.get(worktree))).join("");
+  return pageShell("testing", `<h1>manual testing</h1><section><h2>Landed, awaiting verification <small>${landed.length}</small></h2>${landedHtml ? `<ul>${landedHtml}</ul>` : "<p>Nothing waiting.</p>"}</section><section><h2>Pre-merge, testable in place <small>${pending.length}</small></h2>${pendingHtml ? `<ul>${pendingHtml}</ul>` : "<p>Nothing waiting.</p>"}</section>`);
 }
 
 function searchHtml(query: string, rows: WorkstreamRow[], documents: { issues: IssueRecord[]; plans: PlanRecord[] }): string {
@@ -241,6 +285,14 @@ async function serveAction(pathname: string, deps: WorkstreamsDeps, res: http.Se
   }
   const verb = match[1] as ActionVerb;
   const name = match[2] ?? "";
+  const validTarget = verb === "confirm-tested"
+    ? /^[a-zA-Z0-9_-]+\.md$/.test(name)
+    : /^[a-zA-Z0-9_-]+$/.test(name);
+  if (!validTarget) {
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("invalid workstreams action target\n");
+    return;
+  }
   let flash = `${verb} ${name}: done`;
   try {
     await deps.run(verb, name);
@@ -263,7 +315,7 @@ export async function serveWorkstreams(params: {
   query?: string;
 }): Promise<void> {
   const { method, pathname, repoRoot, res } = params;
-  const deps = params.deps ?? defaultDeps(repoRoot, params.mainRoot ?? repoRoot);
+  const deps = params.deps ?? defaultDeps(repoRoot, params.mainRoot ?? repoRoot, params.worktreesRoot ?? path.dirname(repoRoot));
   if (method === "POST" && pathname.startsWith("/workstreams/action/")) {
     await serveAction(pathname, deps, res);
     return;
@@ -298,6 +350,20 @@ export async function serveWorkstreams(params: {
       "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
     });
     res.end(method === "HEAD" ? undefined : renderPlans(plans));
+    return;
+  }
+  if (pathname === "/workstreams/testing" || pathname === "/workstreams/testing/") {
+    if (pathname === "/workstreams/testing") {
+      res.writeHead(301, { location: "/workstreams/testing/" });
+      res.end();
+      return;
+    }
+    const [rows, documents] = await Promise.all([deps.list(), deps.documents()]);
+    res.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+    });
+    res.end(method === "HEAD" ? undefined : renderTesting(rows, documents));
     return;
   }
   const detailMatch = /^\/workstreams\/([\w-]+)\/$/.exec(pathname);

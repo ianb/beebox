@@ -952,9 +952,13 @@ async function renderIssueDetail(
   const diffHtml = diffSections.filter(Boolean).length
     ? `<div class="wt-diff">${diffSections.join("")}</div>`
     : "";
+  const manualActions = issue.frontmatter.needs.includes("manual-testing")
+    ? `<div class="issue-actions"><form method="POST" action="/workstreams/action/resume/${encodeURIComponent(issue.frontmatter.workstream)}"><button type="submit">Open workstream</button></form>${!worktreeOnlyLabel && visibility === "public" ? `<form method="POST" action="/workstreams/action/confirm-tested/${encodeURIComponent(path.posix.basename(relPath))}"><button type="submit">Confirm</button></form>` : ""}</div>`
+    : "";
 
   const html = `<h1>${escapeHtml(issue.frontmatter.title)}</h1>
 ${worktreeOnlyLabel}
+${manualActions}
 ${factsTableHtml(issue.frontmatter, issue.research, issue.closed)}
 ${bodyHtml}
 ${diffHtml}`;

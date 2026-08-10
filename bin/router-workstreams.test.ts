@@ -6,6 +6,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { legacyIssuesRedirect, renderWorkstreams, serveWorkstreams, type WorkstreamRow, type WorkstreamsDeps } from "./router-workstreams.js";
+import { parseIssueFile } from "./router-issues.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
   return {
@@ -86,6 +87,9 @@ test("actions validate the path and redirect with command results", async () => 
   await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/focus/bad.name", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 404);
   assert.deepEqual(calls, ["focus:good_name-2"]);
+
+  await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/confirm-tested/2026-08-09-test.md", repoRoot: "/unused", res, deps });
+  assert.deepEqual(calls, ["focus:good_name-2", "confirm-tested:2026-08-09-test.md"]);
 });
 
 test("an action failure flashes only the first stderr line", async () => {
@@ -180,4 +184,21 @@ test("plans view groups statuses and links workstreams", async () => {
   assert.equal(captured.status, 200);
   assert.match(captured.body, /active <small>1/);
   assert.match(captured.body, /href="\/workstreams\/seam\/"/);
+});
+
+test("testing view separates landed confirmation from pre-merge feedback", async () => {
+  const captured = { status: 0, headers: {} as Record<string, string>, body: "" };
+  const res = {
+    writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
+    end(body?: string) { captured.body = body ?? ""; return res; },
+  } as unknown as ServerResponse;
+  const issue = parseIssueFile("features/test.md", "---\ntitle: Test it\nworkstream: seam\nneeds: [manual-testing]\n---\n## Manual testing\n");
+  const deps: WorkstreamsDeps = {
+    list: async () => [row({ name: "seam" })], run: async () => undefined,
+    documents: async () => ({ issues: [issue], plans: [], worktreeIssues: [{ worktree: "seam", issue }] }),
+  };
+  await serveWorkstreams({ method: "GET", pathname: "/workstreams/testing/", repoRoot: "/unused", res, deps });
+  assert.match(captured.body, /action="\/workstreams\/action\/confirm-tested\/test.md"/);
+  assert.equal((captured.body.match(/>Confirm<\/button>/g) ?? []).length, 1);
+  assert.match(captured.body, /Pre-merge, testable in place/);
 });
