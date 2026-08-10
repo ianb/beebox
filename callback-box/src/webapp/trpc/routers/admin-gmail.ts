@@ -59,7 +59,10 @@ export const gmailAdminProcedures = {
       z.object({
         query: z.string(),
         labels: z.array(z.string()),
-        action: gmailActionInputSchema,
+        // Optional so clearing every filter can save `{}` — "connected, nothing
+        // automatic" needs no action. Whether one is *required* is the
+        // connector parser's call below, not a second rule stated here.
+        action: gmailActionInputSchema.optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -74,13 +77,15 @@ export const gmailAdminProcedures = {
         }
         const next: Record<string, unknown> = {};
         const trimmedQuery = input.query.trim();
-        if (trimmedQuery) next.query = trimmedQuery;
         const cleanedLabels = input.labels.map((label) => label.trim()).filter(Boolean);
-        if (cleanedLabels.length > 0) next.labels = cleanedLabels;
+        // query and labels are two spellings of one shorthand; a non-empty query
+        // wins so the saved file never carries labels the connector ignores.
+        if (trimmedQuery) next.query = trimmedQuery;
+        else if (cleanedLabels.length > 0) next.labels = cleanedLabels;
         // An action with nothing to match is itself a config error, so only
         // record one alongside a query or labels — the connector's own rule.
         const matches = trimmedQuery !== "" || cleanedLabels.length > 0;
-        const action: GmailAction | null = matches ? input.action : null;
+        const action: GmailAction | null = matches ? input.action ?? null : null;
         if (action !== null) next.action = action;
         if (existing.gc !== undefined) next.gc = existing.gc;
         if (existing.gcIntervalHours !== undefined) {
@@ -99,7 +104,11 @@ export const gmailAdminProcedures = {
           paths: ["config/connectors/gmail.json"],
           message: "Update Gmail filter config",
         });
-        return { query: trimmedQuery, labels: cleanedLabels, action };
+        return {
+          query: trimmedQuery,
+          labels: trimmedQuery ? [] : cleanedLabels,
+          action,
+        };
       });
     }),
 };

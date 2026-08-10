@@ -14,7 +14,7 @@ import { Button } from "../ui/Button";
 type GmailConfig = RouterOutput["admin"]["gmailConfig"];
 type GmailAction = NonNullable<GmailConfig["action"]>;
 
-const PROCEDURE_REF_PATTERN = /^config\/procedures\/[^/]+\.procedure\.card$/;
+const PROCEDURE_REF_PATTERN = /^config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.card$/;
 
 const ACTION_OPTIONS = [
   { value: "", label: "Choose what happens…", disabled: true },
@@ -95,10 +95,14 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
     labels.some((l, i) => l !== initial.labels[i]);
 
   const handleSave = async () => {
-    if (action === null) return;
+    if (matches && action === null) return;
     setSavedFlash(false);
     try {
-      const result = await updateMutation.mutateAsync({ query, labels, action });
+      const result = await updateMutation.mutateAsync({
+        query,
+        labels,
+        ...(action === null ? {} : { action }),
+      });
       setQuery(result.query);
       setLabels(result.labels);
       setActionType(result.action?.type ?? "");

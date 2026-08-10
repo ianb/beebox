@@ -84,7 +84,14 @@ every path a boxholder could reach ended in automatic card creation. Choosing
 the action is now the deliberate step it always should have been.
 
 An `action` with no `query` or `labels` beside it is equally an error, as is
-combining `action` with named `rules` (each rule carries its own).
+combining `action` with named `rules` (each rule carries its own), or setting
+`query` and `labels` together — they are two spellings of the same thing, and
+the one that lost would sit in the file matching nothing.
+
+Renaming or adding a rule resets that rule's budget and re-baselines it, so mail
+already in Gmail when the rule appears is recorded as pre-existing and not
+collected. To pull in a specific older thread, track it explicitly with
+`cb connector gmail track <thread-id>`.
 
 Inspect a rule's machine-local summaries and counts with:
 

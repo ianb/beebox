@@ -55,8 +55,19 @@ to sync rather than sync with zero rules — the current empty-rules path is
 indistinguishable from a healthy connector with nothing to do, which is the
 failure that hid a five-day outage.
 
-The synthetic rule keeps a stable name so rule state survives the change. It is
-no longer called `legacy-import`; `shorthand` reflects what it is.
+The synthetic rule is renamed from `legacy-import` to `shorthand`, which
+**discards that rule's machine-local state**. `stateForRule`
+(`src/connectors/gmail-rules.ts:24`) looks state up strictly by rule name, so
+the old key is orphaned in the gitignored `gmail.state.json`: the automatic
+budget history resets, and the rule re-baselines on its first sync — recording
+the current match count without importing that backlog
+(`src/connectors/gmail-rules.ts:193`).
+
+That is fail-closed and acceptable, but it has a consequence worth stating
+plainly: **mail that accumulated while a box was stalled will not be collected
+when its action is added.** The rule treats everything already in Gmail as
+pre-existing. Anyone repairing a stalled box who wants the gap collected has to
+track those threads explicitly (`cb connector gmail track <thread-id>`).
 
 `GmailConnectorConfig.legacy` and the warning it gated both go away. Nothing
 else reads `legacy`.
@@ -68,6 +79,9 @@ else reads `legacy`.
 `labels`/`query` is present; reject `action` alongside `rules` (the rules carry
 their own); rename the synthetic rule to `shorthand`; drop the `legacy` field.
 Keep `MixedGmailRuleConfigError` — `rules` plus `labels`/`query` stays an error.
+Also reject `query` together with `labels` (`AmbiguousGmailShorthandError`):
+`query` used to silently win, leaving the labels in the file looking effective
+while matching nothing.
 
 ### Track 2 — connector
 `gmail.ts`: drop the `work.config.legacy` warning block. Keep the obsolete-`gc`

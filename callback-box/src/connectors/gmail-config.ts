@@ -133,6 +133,18 @@ export class StrayGmailActionError extends GmailConnectorConfigError {
   }
 }
 
+/**
+ * `query` wins over `labels` when both are set, which means the labels sit in
+ * the file looking effective while matching nothing. Ambiguity in a config that
+ * decides what mail gets collected is worth an error, not a precedence rule.
+ */
+export class AmbiguousGmailShorthandError extends GmailConnectorConfigError {
+  constructor() {
+    super("query and labels are two spellings of the same shorthand — set one, not both");
+    this.name = "AmbiguousGmailShorthandError";
+  }
+}
+
 export class MissingGmailConfigError extends GmailConnectorConfigError {
   constructor() {
     super("file not found — Gmail is enabled for this box but has no configuration");
@@ -167,6 +179,9 @@ function normalizeRule(input: z.infer<typeof RuleInputSchema>): GmailRule {
 
 /** The Gmail query the `query`/`labels` shorthand denotes, or null if unused. */
 function shorthandQuery(input: z.infer<typeof GmailConfigInputSchema>): string | null {
+  if (input.query !== undefined && input.labels !== undefined) {
+    throw new AmbiguousGmailShorthandError();
+  }
   if (input.query !== undefined) return input.query;
   if (input.labels !== undefined) {
     return input.labels.map((label) => `label:${label}`).join(" OR ");

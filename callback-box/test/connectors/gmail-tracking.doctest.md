@@ -252,6 +252,15 @@ parseGmailConnectorConfig({ labels: ["callback"] })
 An action with nothing to match is equally an error, so a stray action cannot
 sit in a config doing nothing.
 
+`query` and `labels` are two spellings of the same shorthand. Setting both is an
+error rather than a precedence rule, because the losing one would sit in the
+file looking effective while matching nothing.
+
+```ts
+parseGmailConnectorConfig({ query: "is:unread", labels: ["a"], action: { type: "track" } })
+=> throws AmbiguousGmailShorthandError
+```
+
 ```ts
 parseGmailConnectorConfig({ action: { type: "track" } })
 => throws StrayGmailActionError
