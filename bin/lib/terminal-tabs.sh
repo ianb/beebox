@@ -49,6 +49,17 @@ terminal_close_tty() {
   # exact tty-matched tab, then use Terminal's native Cmd-W action; this keeps
   # its busy-process confirmation instead of killing the agent directly.
   osascript - "$tty_path" <<'APPLESCRIPT'
+on terminalHasTty(wantedTty)
+  tell application "Terminal"
+    repeat with targetWindow in windows
+      repeat with targetTab in tabs of targetWindow
+        if tty of targetTab is wantedTty then return true
+      end repeat
+    end repeat
+  end tell
+  return false
+end terminalHasTty
+
 on run argv
   set wantedTty to item 1 of argv
   set foundTab to false
@@ -75,16 +86,8 @@ on run argv
     if not frontmost of process "Terminal" then error "Terminal did not become frontmost"
   end tell
   tell application "System Events" to keystroke "w" using command down
-  repeat 40 times
-    tell application "Terminal"
-      set stillPresent to false
-      repeat with targetWindow in windows
-        repeat with targetTab in tabs of targetWindow
-          if tty of targetTab is wantedTty then set stillPresent to true
-        end repeat
-      end repeat
-    end tell
-    if not stillPresent then return
+  repeat 600 times
+    if not my terminalHasTty(wantedTty) then return
     delay 0.05
   end repeat
   error "Terminal tab remained open after Cmd-W"
