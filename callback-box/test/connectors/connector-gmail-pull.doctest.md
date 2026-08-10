@@ -44,14 +44,37 @@ async function transientState(root: string) {
 }
 ```
 
-## No configuration means no automatic cards
+## A missing config file stops the sync
 
-The initial run establishes a history checkpoint. Existing and later mail stay
-remote when there are no rules.
+Gmail is enabled for the box but nothing says what to collect. That is a
+misconfiguration, not a quiet no-op: degrading to "no rules" made a stalled
+connector indistinguishable from a healthy idle one.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+box.commitAll("initialize box");
+const result = await createGmailConnector(box.root, createFakeGoogleGmail()).sync();
+JSON.stringify({ success: result.success, created: result.created.length })
+=> {"success":false,"created":0}
+
+result.error?.includes("no configuration")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## An empty config means no automatic cards
+
+An explicit `{}` is the way to say "connected, nothing automatic". The initial
+run establishes a history checkpoint; existing and later mail stay remote.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
@@ -124,6 +147,7 @@ write instead of permanently wedging upgraded connectors.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 await box.seed("config/connectors/gmail.state.json", JSON.stringify({
   historyId: "1",
   lastReconcileAt: "2026-08-01T00:00:00.000Z",
@@ -150,6 +174,7 @@ untracked thread arriving in the same history window is not materialized.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
@@ -246,7 +271,7 @@ recounts rule matches. It does not full-list messages into Git.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"] }));
+await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"], action: { type: "track" } }));
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "Label_7", name: "callback", type: "user" }],
@@ -260,7 +285,7 @@ const result = await connector.sync();
 result.created.length
 => 0
 
-(await transientState(box.root)).rules["legacy-import"].baselineMatches
+(await transientState(box.root)).rules["shorthand"].baselineMatches
 => 2
 ```
 
@@ -277,6 +302,7 @@ leaves it untracked.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "INBOX", name: "INBOX", type: "system" }],

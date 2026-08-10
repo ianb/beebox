@@ -7,15 +7,14 @@ import { router, ownerProcedure } from "../trpc.js";
 import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
-import { stageAndCommitPaths } from "../../../lib/git.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
-import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
 import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
+import { gmailAdminProcedures } from "./admin-gmail.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
 import { passwordResetAdminProcedures } from "./admin-password-resets.js";
 import { describeAllowedUsers } from "./admin-user-details.js";
@@ -38,19 +37,11 @@ const boxConfigSchema = z.object({
     .default({}),
 });
 
-/** Shape of `config/connectors/gmail.json`, validated on read. */
-const gmailConfigSchema = z.object({
-  query: z.string().default(""),
-  labels: z.array(z.string()).default([]),
-  rules: z.array(z.unknown()).optional(),
-  gc: z.boolean().optional(),
-  gcIntervalHours: z.number().optional(),
-});
-
 /** Per-box admin router (Telegram, box config). */
 export const adminRouter = router({
   ...inviteAdminProcedures,
   ...passwordResetAdminProcedures,
+  ...gmailAdminProcedures,
 
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
@@ -191,65 +182,6 @@ export const adminRouter = router({
     .query(({ input }) => {
       const email = canonicalizeEmail(input.email);
       return { exists: getLocalUser(email) !== null };
-    }),
-
-  gmailConfig: ownerProcedure.query(async ({ ctx }) => {
-    const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
-    let config: z.infer<typeof gmailConfigSchema>;
-    try {
-      config = gmailConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        console.debug("gmail.json missing or unreadable, returning empty Gmail config:", e);
-      }
-      config = gmailConfigSchema.parse({});
-    }
-    return {
-      query: config.query,
-      labels: config.labels,
-      usesRules: config.rules !== undefined,
-    };
-  }),
-
-  updateGmailConfig: ownerProcedure
-    .input(
-      z.object({
-        query: z.string(),
-        labels: z.array(z.string()),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
-      return withCardLock(configPath, async () => {
-        let existing: z.infer<typeof gmailConfigSchema> = gmailConfigSchema.parse({});
-        try {
-          existing = gmailConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
-        } catch (error) {
-          if (errnoCode(error) !== "ENOENT") throw error;
-        }
-        if (existing.rules !== undefined) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "Named Gmail rules must be edited in config/connectors/gmail.json",
-          });
-        }
-        const next: Record<string, unknown> = {};
-        const trimmedQuery = input.query.trim();
-        if (trimmedQuery) next.query = trimmedQuery;
-        const cleanedLabels = input.labels.map((label) => label.trim()).filter(Boolean);
-        if (cleanedLabels.length > 0) next.labels = cleanedLabels;
-        if (existing.gc !== undefined) next.gc = existing.gc;
-        if (existing.gcIntervalHours !== undefined) {
-          next.gcIntervalHours = existing.gcIntervalHours;
-        }
-        await fs.mkdir(path.dirname(configPath), { recursive: true });
-        await fs.writeFile(configPath, JSON.stringify(next, null, 2) + "\n");
-        await stageAndCommitPaths(ctx.boxRoot, {
-          paths: ["config/connectors/gmail.json"],
-          message: "Update Gmail filter config",
-        });
-        return { query: trimmedQuery, labels: cleanedLabels };
-      });
     }),
 
   updateBoxConfig: ownerProcedure

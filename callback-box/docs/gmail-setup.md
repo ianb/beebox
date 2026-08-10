@@ -28,7 +28,10 @@ thread read. A leftover attach scope does not keep a thread tracked.
 
 ## Automatic rules
 
-With no `config/connectors/gmail.json`, Gmail sync creates no new email cards.
+`config/connectors/gmail.json` is required once Gmail is enabled — sync fails
+with an error rather than quietly importing nothing, because "no rules" and "no
+config" used to look identical from the outside.
+
 Named rules may either track newly matching threads or request a procedure:
 
 ```json
@@ -60,9 +63,28 @@ records the existing match count without tracking that backlog. Later matches
 beyond the budget remain in Gmail and appear only as bounded private summaries.
 They are not queued for delayed import.
 
-Legacy `{ "query": "..." }` and `{ "labels": [...] }` configurations are
-treated as one `legacy-import` track rule with the default rolling budget. They
-also baseline existing matches instead of importing the backlog.
+### The shorthand
+
+`query` and `labels` are a shorthand for a single rule, easier to hand-edit and
+the shape the admin page writes. Multiple labels are OR-joined. The rule is
+named `shorthand`, and it baselines existing matches instead of importing the
+backlog, exactly like a named rule.
+
+```json
+{
+  "labels": ["fsmn", "grs", "family"],
+  "action": { "type": "track" }
+}
+```
+
+**`action` is required.** It is not defaulted, and a shorthand without one is a
+config error that stops the sync. It used to be implied as `track`, which meant
+saving a filter from the admin page created cards without ever saying so —
+every path a boxholder could reach ended in automatic card creation. Choosing
+the action is now the deliberate step it always should have been.
+
+An `action` with no `query` or `labels` beside it is equally an error, as is
+combining `action` with named `rules` (each rule carries its own).
 
 Inspect a rule's machine-local summaries and counts with:
 
