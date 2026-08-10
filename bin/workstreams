@@ -55,6 +55,7 @@ case "$cmd" in
   create)
     name=""
     base_ref="main"
+    box_ref=""
     want_path=""
     while [ $# -ge 1 ]; do
       case "$1" in
@@ -62,6 +63,8 @@ case "$cmd" in
         --base-ref=*) base_ref="${1#--base-ref=}"; shift ;;
         --path)     [ $# -ge 2 ] || { echo "workstreams create: --path needs a value" >&2; exit 1; }; want_path="$2"; shift 2 ;;
         --path=*)   want_path="${1#--path=}"; shift ;;
+        --box-ref) [ $# -ge 2 ] || { echo "workstreams create: --box-ref needs a value" >&2; exit 1; }; box_ref="$2"; shift 2 ;;
+        --box-ref=*) box_ref="${1#--box-ref=}"; shift ;;
         -*)         echo "workstreams create: unknown option $1" >&2; exit 1 ;;
         *)          [ -z "$name" ] || { echo "workstreams create: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
       esac
@@ -88,7 +91,7 @@ case "$cmd" in
     wt_paths_valid_name "$name" \
       || { echo "workstreams create: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
     trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree may be partially set up at ${WT_CREATED_PATH:-unknown}." >&2; exit $rc' ERR
-    wt_create "$name" "$base_ref" "$want_path"
+    wt_create "$name" "$base_ref" "$want_path" "$box_ref"
     printf '%s\n' "$WT_CREATED_PATH" >&3
     ;;
 
@@ -148,10 +151,12 @@ case "$cmd" in
       exit 0
     fi
     echo "remove $name (branch=$WT_BRANCH)"
+    preserve_arg=""
+    [ "$force" = true ] && preserve_arg="--preserve-box"
     if [ -n "$keep_branch" ]; then
-      wt_remove_now "$target" "$WT_BRANCH" --keep-branch
+      wt_remove_now "$target" "$WT_BRANCH" --keep-branch $preserve_arg
     else
-      wt_remove_now "$target" "$WT_BRANCH"
+      wt_remove_now "$target" "$WT_BRANCH" $preserve_arg
     fi
     ;;
 
@@ -292,13 +297,18 @@ case "$cmd" in
 
     if [ "$resume_state" = "culled" ] || [ "$resume_state" = "removed-unmerged" ]; then
       final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty')
+      box_ref=$(printf '%s' "$record" | jq -r '.removed.boxRef // empty')
       if [ "$at_final_sha" = true ]; then
         [ -n "$final_sha" ] || { echo "workstreams resume: no final SHA recorded; recreating at it is impossible" >&2; exit 1; }
-        target=$("$REPO_DIR/bin/workstreams" create "$name" --base-ref "$final_sha")
+        create_args=("$name" --base-ref "$final_sha")
+        [ -n "$box_ref" ] && create_args+=(--box-ref "$box_ref")
+        target=$("$REPO_DIR/bin/workstreams" create "${create_args[@]}")
         new_base_sha="$final_sha"
       else
         [ -n "$final_sha" ] || echo "workstreams resume: no final SHA recorded; recreating from main" >&2
-        target=$("$REPO_DIR/bin/workstreams" create "$name")
+        create_args=("$name")
+        [ -n "$box_ref" ] && create_args+=(--box-ref "$box_ref")
+        target=$("$REPO_DIR/bin/workstreams" create "${create_args[@]}")
         new_base_sha=$(git -C "$WT_MONO" rev-parse main)
       fi
       session_registry_merge "$name" "$(jq -n --arg baseSha "$new_base_sha" '{baseSha:$baseSha}')" || true
@@ -342,6 +352,21 @@ case "$cmd" in
     [ $# -eq 1 ] || { echo "usage: workstreams reset-test <name>" >&2; exit 1; }
     . "$REPO_DIR/bin/lib/manual-testing.sh"
     workstream_reset_test "$name"
+    ;;
+
+  release)
+    name="${1:-}"
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ $# -eq 1 ] && wt_paths_valid_name "$name" || { echo "usage: workstreams release <name>" >&2; exit 1; }
+    target="$WT_ROOT/$name"
+    [ -d "$target" ] || { echo "workstreams release: no worktree for $name" >&2; exit 1; }
+    wt_other_agent_live "$target"
+    [ "$WT_AGENT_STATE" = none ] || { echo "workstreams release: agent=$WT_AGENT_STATE — refusing" >&2; exit 1; }
+    wt_work_state "$target"
+    [ "$WT_AHEAD" = 0 ] && [ "$WT_DIRTY" = 0 ] \
+      || { echo "workstreams release: code is not merged and clean — refusing" >&2; exit 1; }
+    wt_remove_now "$target" "$WT_BRANCH" --preserve-box
     ;;
 
   confirm-tested)

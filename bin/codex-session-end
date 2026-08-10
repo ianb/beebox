@@ -166,7 +166,7 @@ case "$answer" in
     fi
     keep_branch=""
     [ "$WT_AHEAD" = "0" ] || keep_branch="--keep-branch"
-    wt_remove_now "$worktree_path" "$WT_BRANCH" $keep_branch
+    wt_remove_now "$worktree_path" "$WT_BRANCH" $keep_branch --preserve-box
     wt_log "done: removed-on-request branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY name=$name keep_branch=${keep_branch:-no}"
     echo "codex-session-end: done"
     ;;

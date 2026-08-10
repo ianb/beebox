@@ -459,14 +459,30 @@ wt_remove_private_issues() {
 }
 
 wt_remove_now() {
-  local worktree_path="$1" branch="$2" keep_branch=""
-  [ "${3:-}" = "--keep-branch" ] && keep_branch=1
-  local name final_sha removed_at removed_merged removed_patch moved=false
+  local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
+  shift 2
+  for arg in "$@"; do
+    [ "$arg" = "--keep-branch" ] && keep_branch=1
+    [ "$arg" = "--preserve-box" ] && preserve_box=1
+  done
+  local name final_sha removed_at removed_merged removed_patch moved=false box_ref=""
   name=$(basename "$worktree_path")
   final_sha=$(git -C "$worktree_path" rev-parse HEAD 2>/dev/null || true)
   removed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   removed_merged=false
   [ "${WT_AHEAD:-?}" = "0" ] && removed_merged=true
+
+  if [ -n "$preserve_box" ]; then
+    local clone="$WT_BOX_ROOT/$name/test1" keep_sha
+    if git -C "$clone" show-ref --verify --quiet refs/heads/keep 2>/dev/null; then
+      keep_sha=$(git -C "$clone" rev-parse refs/heads/keep 2>/dev/null || true)
+      if [ -z "$keep_sha" ] || ! git -C "$WT_BOX_SRC" merge-base --is-ancestor "$keep_sha" main 2>/dev/null; then
+        box_ref="keep/$name-$(date -u +%Y-%m-%d)"
+        git -C "$clone" push "$WT_BOX_SRC" "refs/heads/keep:refs/heads/$box_ref" >/dev/null \
+          || { wt_say "refusing removal: failed to preserve keep as $box_ref"; return 1; }
+      fi
+    fi
+  fi
 
   wt_remove_private_issues "$worktree_path"
   wt_remove_satellites "$name"
@@ -491,9 +507,11 @@ wt_remove_now() {
     removed_patch=$(jq -n \
       --arg at "$removed_at" \
       --arg finalSha "$final_sha" \
+      --arg boxRef "$box_ref" \
       --argjson merged "$removed_merged" \
       '{removed: ({at:$at, merged:$merged}
-        + if $finalSha == "" then {} else {finalSha:$finalSha} end)}')
+        + if $finalSha == "" then {} else {finalSha:$finalSha} end
+        + if $boxRef == "" then {} else {boxRef:$boxRef} end)}')
     session_registry_merge "$name" "$removed_patch" || true
   fi
 

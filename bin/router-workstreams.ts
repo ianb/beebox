@@ -42,9 +42,9 @@ export interface PlanRecord {
   relPath: string;
 }
 
-type ActionVerb = "close" | "confirm-tested" | "focus" | "reset-test" | "resume";
+type ActionVerb = "close" | "confirm-tested" | "focus" | "release" | "reset-test" | "resume";
 
-const ACTION_PATH = /^\/workstreams\/action\/(close|confirm-tested|focus|reset-test|resume)\/([a-zA-Z0-9_.-]+)$/;
+const ACTION_PATH = /^\/workstreams\/action\/(close|confirm-tested|focus|release|reset-test|resume)\/([a-zA-Z0-9_.-]+)$/;
 
 export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
@@ -149,10 +149,13 @@ function actionForm(verb: ActionVerb, row: WorkstreamRow): string {
 
 function actionsHtml(row: WorkstreamRow): string {
   const reset = row.boxState.testSetup ? actionForm("reset-test", row) : "";
+  const release = row.agent.state !== "live" && (row.boxState.testSetup || row.boxState.keepUnmerged)
+    ? actionForm("release", row)
+    : "";
   if (row.agent.state === "live") return actionForm("focus", row) + actionForm("close", row) + reset;
   if (row.session.removed?.merged === false) return "";
-  if (row.session.hasSession) return actionForm("resume", row) + reset;
-  return reset;
+  if (row.session.hasSession) return actionForm("resume", row) + reset + release;
+  return reset + release;
 }
 
 function rowHtml(row: WorkstreamRow, note: string): string {

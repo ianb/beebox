@@ -79,7 +79,7 @@ wt_create_generate_agents_md() {
 # Prints nothing on stdout — the caller owns stdout, and reads the resulting
 # path from WT_CREATED_PATH. All progress goes to stderr.
 wt_create() {
-  local NAME="$1" base_ref="$2" worktree_path="${3:-}"
+  local NAME="$1" base_ref="$2" worktree_path="${3:-}" box_ref="${4:-}"
 
   wt_paths_init || return 1
   # Same rule as removal: a name becomes a path, and a name with a slash in it
@@ -143,6 +143,11 @@ wt_create() {
     if [ -d "$BOX_SRC" ]; then
       echo "[worktree-create] cloning $BOX_SRC -> $BOX_DEST" >&2
       git clone --quiet "$BOX_SRC" "$BOX_DEST"
+      if [ -n "$box_ref" ]; then
+        git -C "$BOX_DEST" fetch --quiet origin "$box_ref"
+        git -C "$BOX_DEST" checkout -q main
+        git -C "$BOX_DEST" reset --hard FETCH_HEAD >&2
+      fi
 
       local box_content_dir="$BOX_DEST"
       [ -d "$BOX_DEST/content" ] && box_content_dir="$BOX_DEST/content"
