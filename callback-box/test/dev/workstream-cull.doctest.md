@@ -46,6 +46,7 @@ const removeScript = [
   'WT_STATE_DIR="$5"',
   'WT_LOG_FILE="$5/worktree-cleanup.log"',
   'WT_AHEAD=0',
+  'WT_DIRTY=0',
   'wt_remove_now "$6" worktree-cull-fixture',
 ].join("; ");
 await execFileAsync("bash", ["-c", removeScript, "cull-test", teardownLib, mono, worktreeRoot, join(root, "boxes"), stateDir, worktree]);
@@ -57,6 +58,24 @@ const recreated = join(worktreeRoot, "recreated");
 await git(mono, "worktree", "add", "-b", "worktree-recreated", recreated, record.removed.finalSha);
 (await readFile(join(recreated, "file.txt"), "utf8"))
 => content
+
+const dirty = join(worktreeRoot, "dirty-fixture");
+await git(mono, "worktree", "add", "-b", "worktree-dirty-fixture", dirty, "main");
+const dirtyScript = [
+  '. "$1"',
+  'WT_MONO="$2"',
+  'WT_ROOT="$3"',
+  'WT_BOX_ROOT="$4"',
+  'WT_STATE_DIR="$5"',
+  'WT_LOG_FILE="$5/worktree-cleanup.log"',
+  'WT_AHEAD=0',
+  'WT_DIRTY=1',
+  'wt_remove_now "$6" worktree-dirty-fixture',
+].join("; ");
+await execFileAsync("bash", ["-c", dirtyScript, "cull-test", teardownLib, mono, worktreeRoot, join(root, "boxes"), stateDir, dirty]);
+const dirtyRecord = JSON.parse(await readFile(join(stateDir, "workstreams/dirty-fixture.json"), "utf8"));
+dirtyRecord.removed.merged
+=> false
 ```
 
 ```ts cleanup

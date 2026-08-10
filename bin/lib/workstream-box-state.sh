@@ -41,7 +41,15 @@ workstream_cull_pin_reason() {
   fi
   while IFS= read -r issue; do
     [ -f "$issue" ] || continue
-    if grep -q "^workstream: $name$" "$issue" && grep -q '^needs:.*manual-testing' "$issue"; then
+    if grep -q "^workstream: $name$" "$issue" && awk '
+      /^---$/ { boundaries++; next }
+      boundaries != 1 { next }
+      /^needs:.*manual-testing/ { found=1 }
+      in_needs && /^[[:space:]]*-[[:space:]]*manual-testing[[:space:]]*$/ { found=1 }
+      /^needs:[[:space:]]*$/ { in_needs=1; next }
+      in_needs && !/^[[:space:]]*-/ { in_needs=0 }
+      END { exit(found ? 0 : 1) }
+    ' "$issue"; then
       echo manual-testing
       return 0
     fi

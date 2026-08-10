@@ -146,13 +146,18 @@ case "$cmd" in
       exit 1
     fi
 
+    if [ "$force" = false ] && pin_reason=$(workstream_cull_pin_reason "$name"); then
+      echo "refusing: $name is pinned=$pin_reason" >&2
+      echo "  (confirm testing or use release; --force preserves keep before removal)" >&2
+      exit 1
+    fi
+
     if [ "$dry_run" = true ]; then
       echo "would remove $name (branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY)"
       exit 0
     fi
     echo "remove $name (branch=$WT_BRANCH)"
-    preserve_arg=""
-    [ "$force" = true ] && preserve_arg="--preserve-box"
+    preserve_arg="--preserve-box"
     if [ -n "$keep_branch" ]; then
       wt_remove_now "$target" "$WT_BRANCH" --keep-branch $preserve_arg
     else
@@ -175,7 +180,7 @@ case "$cmd" in
     . "$REPO_DIR/bin/lib/terminal-tabs.sh"
     record=$(session_registry_read "$name" || true)
     tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
-    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path"; then
+    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path" "$WT_ROOT/$name"; then
       echo "workstreams focus: no live session for $name — use resume" >&2
       exit 1
     fi
@@ -223,7 +228,7 @@ case "$cmd" in
     . "$REPO_DIR/bin/lib/terminal-tabs.sh"
     record=$(session_registry_read "$name" || true)
     tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
-    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path"; then
+    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path" "$target"; then
       echo "workstreams close: registry tty is stale for $name — refusing" >&2
       exit 1
     fi

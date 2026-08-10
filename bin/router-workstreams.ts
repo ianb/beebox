@@ -4,7 +4,13 @@ import path from "node:path";
 import { execa } from "execa";
 
 import { escapeHtml } from "./router-docs.js";
-import { listIssues, parseFrontmatter, parseIssueFile, serveIssues, type IssueRecord } from "./router-issues.js";
+import {
+  listIssues,
+  parseFrontmatter,
+  parseIssueFile,
+  serveIssues,
+  type IssueRecord,
+} from "./router-issues.js";
 
 interface RemovedState {
   at: string;
@@ -15,7 +21,12 @@ interface RemovedState {
 export interface WorkstreamRow {
   name: string;
   path: string | null;
-  git: { ahead: number | null; dirty: number | null; merged: boolean | null; tip: string | null } | null;
+  git: {
+    ahead: number | null;
+    dirty: number | null;
+    merged: boolean | null;
+    tip: string | null;
+  } | null;
   runtime: { state: string };
   agent: { state: string; reason: string };
   session: {
@@ -26,13 +37,21 @@ export interface WorkstreamRow {
     baseSha: string | null;
     removed: RemovedState | null;
   };
-  boxState: { testSetup: boolean; keepUnmerged: boolean; pristine: boolean | null };
+  boxState: {
+    testSetup: boolean;
+    keepUnmerged: boolean;
+    pristine: boolean | null;
+  };
 }
 
 export interface WorkstreamsDeps {
   list(): Promise<WorkstreamRow[]>;
   run(verb: ActionVerb, name: string): Promise<void>;
-  documents(): Promise<{ issues: IssueRecord[]; plans: PlanRecord[]; worktreeIssues?: Array<{ worktree: string; issue: IssueRecord }> }>;
+  documents(): Promise<{
+    issues: IssueRecord[];
+    plans: PlanRecord[];
+    worktreeIssues?: Array<{ worktree: string; issue: IssueRecord }>;
+  }>;
 }
 
 export interface PlanRecord {
@@ -42,31 +61,51 @@ export interface PlanRecord {
   relPath: string;
 }
 
-type ActionVerb = "close" | "confirm-tested" | "focus" | "release" | "reset-test" | "resume";
+type ActionVerb =
+  | "close"
+  | "confirm-tested"
+  | "focus"
+  | "release"
+  | "reset-test"
+  | "resume";
 
-const ACTION_PATH = /^\/workstreams\/action\/(close|confirm-tested|focus|release|reset-test|resume)\/([a-zA-Z0-9_.-]+)$/;
+const ACTION_PATH =
+  /^\/workstreams\/action\/(close|confirm-tested|focus|release|reset-test|resume)\/([a-zA-Z0-9_.-]+)$/;
 
 export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
-  if (pathname !== "/dev/issues" && !pathname.startsWith("/dev/issues/")) return null;
+  if (pathname !== "/dev/issues" && !pathname.startsWith("/dev/issues/"))
+    return null;
   const suffix = afterWorkstream.slice("/dev/issues".length);
   return `/workstreams/issues${suffix || "/"}`;
 }
 
-function defaultDeps(repoRoot: string, documentsRoot: string, worktreesRoot: string): WorkstreamsDeps {
+function defaultDeps(
+  repoRoot: string,
+  documentsRoot: string,
+  worktreesRoot: string,
+): WorkstreamsDeps {
   async function run(args: string[]): Promise<string> {
+    const timeout =
+      args[0] === "resume" ? 15 * 60_000 : args[0] === "list" ? 10_000 : 60_000;
     const child = execa(path.join(repoRoot, "bin/workstreams"), args, {
       cwd: repoRoot,
-      timeout: 10_000,
-      killSignal: "SIGKILL",
+      timeout,
+      killSignal: "SIGTERM",
       detached: true,
     });
     try {
       return (await child).stdout;
     } catch (error) {
-      if (typeof error === "object" && error !== null && "timedOut" in error && error.timedOut === true && child.pid) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "timedOut" in error &&
+        error.timedOut === true &&
+        child.pid
+      ) {
         try {
-          process.kill(-child.pid, "SIGKILL");
+          process.kill(-child.pid, "SIGTERM");
         } catch {
           // The process group already exited.
         }
@@ -80,7 +119,11 @@ function defaultDeps(repoRoot: string, documentsRoot: string, worktreesRoot: str
       return JSON.parse(stdout) as WorkstreamRow[];
     },
     async run(verb, name) {
-      await run(verb === "confirm-tested" ? [verb, name, "--agent-confirmed"] : [verb, name]);
+      await run(
+        verb === "confirm-tested"
+          ? [verb, name, "--agent-confirmed"]
+          : [verb, name],
+      );
     },
     async documents() {
       return {
@@ -92,23 +135,42 @@ function defaultDeps(repoRoot: string, documentsRoot: string, worktreesRoot: str
   };
 }
 
-async function listWorktreeTestingIssues(worktreesRoot: string): Promise<Array<{ worktree: string; issue: IssueRecord }>> {
+async function listWorktreeTestingIssues(
+  worktreesRoot: string,
+): Promise<Array<{ worktree: string; issue: IssueRecord }>> {
   const out: Array<{ worktree: string; issue: IssueRecord }> = [];
   const names = await fs.readdir(worktreesRoot).catch(() => []);
   for (const worktree of names) {
     const root = path.join(worktreesRoot, worktree);
     const [committed, working] = await Promise.all([
-      execa("git", ["diff", "--name-only", "main...HEAD", "--", "issues"], { cwd: root }).then((r) => r.stdout).catch(() => ""),
-      execa("git", ["status", "--porcelain", "--", "issues"], { cwd: root }).then((r) => r.stdout).catch(() => ""),
+      execa("git", ["diff", "--name-only", "main...HEAD", "--", "issues"], {
+        cwd: root,
+      })
+        .then((r) => r.stdout)
+        .catch(() => ""),
+      execa("git", ["status", "--porcelain", "--", "issues"], { cwd: root })
+        .then((r) => r.stdout)
+        .catch(() => ""),
     ]);
     const relPaths = new Set([
-      ...committed.split("\n").filter((line) => line.startsWith("issues/")).map((line) => line.slice("issues/".length)),
-      ...working.split("\n").map((line) => line.slice(3)).filter((line) => line.startsWith("issues/")).map((line) => line.slice("issues/".length)),
+      ...committed
+        .split("\n")
+        .filter((line) => line.startsWith("issues/"))
+        .map((line) => line.slice("issues/".length)),
+      ...working
+        .split("\n")
+        .map((line) => line.slice(3))
+        .filter((line) => line.startsWith("issues/"))
+        .map((line) => line.slice("issues/".length)),
     ]);
     for (const relPath of relPaths) {
       try {
-        const issue = parseIssueFile(relPath, await fs.readFile(path.join(root, "issues", relPath), "utf8"));
-        if (issue.frontmatter.needs.includes("manual-testing")) out.push({ worktree, issue });
+        const issue = parseIssueFile(
+          relPath,
+          await fs.readFile(path.join(root, "issues", relPath), "utf8"),
+        );
+        if (issue.frontmatter.needs.includes("manual-testing"))
+          out.push({ worktree, issue });
       } catch {
         // Deleted or unreadable issue.
       }
@@ -123,14 +185,23 @@ async function listPlans(repoRoot: string): Promise<PlanRecord[]> {
     const root = path.join(repoRoot, "callback-box/docs", dir);
     const names = await fs.readdir(root).catch(() => []);
     for (const name of names) {
-      if (!name.endsWith(".md") || name === "README.md" || name.endsWith(".review.md")) continue;
+      if (
+        !name.endsWith(".md") ||
+        name === "README.md" ||
+        name.endsWith(".review.md")
+      )
+        continue;
       const relPath = `callback-box/docs/${dir}/${name}`;
-      const { data } = parseFrontmatter(await fs.readFile(path.join(root, name), "utf8"));
-      const title = typeof data.title === "string" ? data.title : name.replace(/\.md$/, "");
+      const { data } = parseFrontmatter(
+        await fs.readFile(path.join(root, name), "utf8"),
+      );
+      const title =
+        typeof data.title === "string" ? data.title : name.replace(/\.md$/, "");
       records.push({
         title,
         status: typeof data.status === "string" ? data.status : "unknown",
-        workstream: typeof data.workstream === "string" ? data.workstream : "unknown",
+        workstream:
+          typeof data.workstream === "string" ? data.workstream : "unknown",
         relPath,
       });
     }
@@ -149,12 +220,16 @@ function actionForm(verb: ActionVerb, row: WorkstreamRow): string {
 
 function actionsHtml(row: WorkstreamRow): string {
   const reset = row.boxState.testSetup ? actionForm("reset-test", row) : "";
-  const release = row.agent.state !== "live" && (row.boxState.testSetup || row.boxState.keepUnmerged)
-    ? actionForm("release", row)
-    : "";
-  if (row.agent.state === "live") return actionForm("focus", row) + actionForm("close", row) + reset;
+  const release =
+    row.agent.state !== "live" &&
+    (row.boxState.testSetup || row.boxState.keepUnmerged)
+      ? actionForm("release", row)
+      : "";
+  if (row.agent.state === "live")
+    return actionForm("focus", row) + actionForm("close", row) + reset;
   if (row.session.removed?.merged === false) return "";
-  if (row.session.hasSession) return actionForm("resume", row) + reset + release;
+  if (row.session.hasSession)
+    return actionForm("resume", row) + reset + release;
   return reset + release;
 }
 
@@ -167,7 +242,11 @@ function rowHtml(row: WorkstreamRow, note: string): string {
   return `<li><a href="/workstreams/${encodeURIComponent(row.name)}/"><span class="emoji">${escapeHtml(emoji(row))}</span>${escapeHtml(row.name)}</a><span>${escapeHtml(note)}</span>${box}<span class="actions">${actionsHtml(row)}</span></li>`;
 }
 
-function section(params: { title: string; rows: WorkstreamRow[]; note: (row: WorkstreamRow) => string }): string {
+function section(params: {
+  title: string;
+  rows: WorkstreamRow[];
+  note: (row: WorkstreamRow) => string;
+}): string {
   const { title, rows, note } = params;
   if (rows.length === 0) return "";
   return `<section><h2>${escapeHtml(title)} <small>${rows.length}</small></h2><ul>${rows.map((row) => rowHtml(row, note(row))).join("")}</ul></section>`;
@@ -181,11 +260,22 @@ function planHref(plan: PlanRecord): string {
   return `/main/dev/docs/${plan.relPath.replace(/^callback-box\//, "")}`;
 }
 
-function documentList(params: { issues: IssueRecord[]; plans: PlanRecord[] }): string {
-  const issueRows = params.issues.map((issue) =>
-    `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}</span></li>`).join("");
-  const planRows = params.plans.map((plan) =>
-    `<li><a href="${escapeHtml(planHref(plan))}">${escapeHtml(plan.title)}</a><span>${escapeHtml(plan.status)}</span></li>`).join("");
+function documentList(params: {
+  issues: IssueRecord[];
+  plans: PlanRecord[];
+}): string {
+  const issueRows = params.issues
+    .map(
+      (issue) =>
+        `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}</span></li>`,
+    )
+    .join("");
+  const planRows = params.plans
+    .map(
+      (plan) =>
+        `<li><a href="${escapeHtml(planHref(plan))}">${escapeHtml(plan.title)}</a><span>${escapeHtml(plan.status)}</span></li>`,
+    )
+    .join("");
   return `${issueRows ? `<section><h2>Issues <small>${params.issues.length}</small></h2><ul>${issueRows}</ul></section>` : ""}${planRows ? `<section><h2>Plans <small>${params.plans.length}</small></h2><ul>${planRows}</ul></section>` : ""}`;
 }
 
@@ -194,92 +284,222 @@ function pageShell(title: string, body: string, refresh = false): string {
 <style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
 }
 
-function renderDetail(name: string, row: WorkstreamRow | undefined, documents: { issues: IssueRecord[]; plans: PlanRecord[] }): string {
-  const state = row?.path === null ? "culled" : row?.agent.state ?? "registry record unavailable";
+function renderDetail(
+  name: string,
+  row: WorkstreamRow | undefined,
+  documents: { issues: IssueRecord[]; plans: PlanRecord[] },
+): string {
+  const state =
+    row?.path === null
+      ? "culled"
+      : (row?.agent.state ?? "registry record unavailable");
   const facts = `<dl class="facts"><dt>State</dt><dd>${escapeHtml(state)}</dd><dt>Path</dt><dd>${escapeHtml(row?.path ?? "none")}</dd><dt>Git</dt><dd>${row?.git ? `${String(row.git.ahead ?? "?")} ahead, ${String(row.git.dirty ?? "?")} dirty` : "unavailable"}</dd><dt>Box</dt><dd>${row?.boxState.testSetup ? "test-setup" : row?.boxState.keepUnmerged ? "keep unmerged" : "no pin"}</dd></dl>`;
-  return pageShell(name, `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList(documents)}`);
+  return pageShell(
+    name,
+    `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList(documents)}`,
+  );
 }
 
 function renderPlans(plans: PlanRecord[]): string {
-  const statuses = ["draft", "active", "partial", "implemented", "superseded", "parked"];
-  const sections = statuses.map((status) => {
-    const matching = plans.filter((plan) => plan.status === status);
-    if (matching.length === 0) return "";
-    const rows = matching.map((plan) => `<li><a href="${escapeHtml(planHref(plan))}">${escapeHtml(plan.title)}</a><a href="/workstreams/${encodeURIComponent(plan.workstream)}/">${escapeHtml(plan.workstream)}</a></li>`).join("");
-    return `<section><h2>${escapeHtml(status)} <small>${matching.length}</small></h2><ul>${rows}</ul></section>`;
-  }).join("");
-  return pageShell("plans", `<h1>plans</h1>${sections || "<p>No plans found.</p>"}`);
+  const statuses = [
+    "draft",
+    "active",
+    "partial",
+    "implemented",
+    "superseded",
+    "parked",
+  ];
+  const sections = statuses
+    .map((status) => {
+      const matching = plans.filter((plan) => plan.status === status);
+      if (matching.length === 0) return "";
+      const rows = matching
+        .map(
+          (plan) =>
+            `<li><a href="${escapeHtml(planHref(plan))}">${escapeHtml(plan.title)}</a><a href="/workstreams/${encodeURIComponent(plan.workstream)}/">${escapeHtml(plan.workstream)}</a></li>`,
+        )
+        .join("");
+      return `<section><h2>${escapeHtml(status)} <small>${matching.length}</small></h2><ul>${rows}</ul></section>`;
+    })
+    .join("");
+  return pageShell(
+    "plans",
+    `<h1>plans</h1>${sections || "<p>No plans found.</p>"}`,
+  );
 }
 
-function testingRow(issue: IssueRecord, worktree: string | null, row: WorkstreamRow | undefined): string {
+function testingRow(
+  issue: IssueRecord,
+  worktree: string | null,
+  row: WorkstreamRow | undefined,
+): string {
   const name = issue.frontmatter.workstream;
-  const target = worktree ? `/${encodeURIComponent(worktree)}/test1/` : "/main/test1/";
+  const target = worktree
+    ? `/${encodeURIComponent(worktree)}/test1/`
+    : "/main/test1/";
   const reset = row?.boxState.testSetup ? actionForm("reset-test", row) : "";
-  const confirm = worktree ? "" : `<form method="POST" action="/workstreams/action/confirm-tested/${encodeURIComponent(path.posix.basename(issue.relPath))}"><button type="submit">Confirm</button></form>`;
+  const confirm = worktree
+    ? ""
+    : `<form method="POST" action="/workstreams/action/confirm-tested/${encodeURIComponent(path.posix.basename(issue.relPath))}"><button type="submit">Confirm</button></form>`;
   return `<li><a href="${escapeHtml(issueHref(issue))}#manual-testing">${escapeHtml(issue.frontmatter.title)}</a><a href="/workstreams/${encodeURIComponent(name)}/">${escapeHtml(name)}</a><a href="${target}">${worktree ? "worktree test1" : "main test1"}</a><span class="actions">${row ? actionForm("resume", row) : ""}${reset}${confirm}</span></li>`;
 }
 
-function renderTesting(rows: WorkstreamRow[], documents: Awaited<ReturnType<WorkstreamsDeps["documents"]>>): string {
+function renderTesting(
+  rows: WorkstreamRow[],
+  documents: Awaited<ReturnType<WorkstreamsDeps["documents"]>>,
+): string {
   const rowByName = new Map(rows.map((row) => [row.name, row]));
-  const landed = documents.issues.filter((issue) => !issue.closed && issue.frontmatter.needs.includes("manual-testing"));
+  const landed = documents.issues.filter(
+    (issue) =>
+      !issue.closed && issue.frontmatter.needs.includes("manual-testing"),
+  );
   const pending = documents.worktreeIssues ?? [];
-  const landedHtml = landed.map((issue) => testingRow(issue, null, rowByName.get(issue.frontmatter.workstream))).join("");
-  const pendingHtml = pending.map(({ worktree, issue }) => testingRow(issue, worktree, rowByName.get(worktree))).join("");
-  return pageShell("testing", `<h1>manual testing</h1><section><h2>Landed, awaiting verification <small>${landed.length}</small></h2>${landedHtml ? `<ul>${landedHtml}</ul>` : "<p>Nothing waiting.</p>"}</section><section><h2>Pre-merge, testable in place <small>${pending.length}</small></h2>${pendingHtml ? `<ul>${pendingHtml}</ul>` : "<p>Nothing waiting.</p>"}</section>`);
+  const landedHtml = landed
+    .map((issue) =>
+      testingRow(issue, null, rowByName.get(issue.frontmatter.workstream)),
+    )
+    .join("");
+  const pendingHtml = pending
+    .map(({ worktree, issue }) =>
+      testingRow(issue, worktree, rowByName.get(worktree)),
+    )
+    .join("");
+  return pageShell(
+    "testing",
+    `<h1>manual testing</h1><section><h2>Landed, awaiting verification <small>${landed.length}</small></h2>${landedHtml ? `<ul>${landedHtml}</ul>` : "<p>Nothing waiting.</p>"}</section><section><h2>Pre-merge, testable in place <small>${pending.length}</small></h2>${pendingHtml ? `<ul>${pendingHtml}</ul>` : "<p>Nothing waiting.</p>"}</section>`,
+  );
 }
 
-function searchHtml(query: string, rows: WorkstreamRow[], documents: { issues: IssueRecord[]; plans: PlanRecord[] }): string {
+function searchHtml(
+  query: string,
+  rows: WorkstreamRow[],
+  documents: { issues: IssueRecord[]; plans: PlanRecord[] },
+): string {
   if (!query) return "";
   const needle = query.toLocaleLowerCase();
-  const workstreams = rows.filter((row) => row.name.toLocaleLowerCase().includes(needle));
-  const issues = documents.issues.filter((issue) => issue.frontmatter.title.toLocaleLowerCase().includes(needle));
-  const plans = documents.plans.filter((plan) => plan.title.toLocaleLowerCase().includes(needle));
-  const workstreamRows = workstreams.map((row) => rowHtml(row, row.path === null ? "culled" : row.agent.state)).join("");
+  const workstreams = rows.filter((row) =>
+    row.name.toLocaleLowerCase().includes(needle),
+  );
+  const issues = documents.issues.filter((issue) =>
+    issue.frontmatter.title.toLocaleLowerCase().includes(needle),
+  );
+  const plans = documents.plans.filter((plan) =>
+    plan.title.toLocaleLowerCase().includes(needle),
+  );
+  const workstreamRows = workstreams
+    .map((row) => rowHtml(row, row.path === null ? "culled" : row.agent.state))
+    .join("");
   return `<section><h2>Search results</h2>${workstreamRows ? `<ul>${workstreamRows}</ul>` : ""}${documentList({ issues, plans }) || "<p>No matches.</p>"}</section>`;
 }
 
-export function renderWorkstreams(rows: WorkstreamRow[], flash = "", query = "", documents = { issues: [] as IssueRecord[], plans: [] as PlanRecord[] }): string {
+export function renderWorkstreams(
+  rows: WorkstreamRow[],
+  flash = "",
+  query = "",
+  documents = { issues: [] as IssueRecord[], plans: [] as PlanRecord[] },
+): string {
   const attached = rows.filter((row) => row.path !== null);
-  const held = attached.filter((row) => row.agent.state !== "live" && (row.boxState.keepUnmerged || row.boxState.testSetup));
+  const held = attached.filter(
+    (row) =>
+      row.agent.state !== "live" &&
+      (row.boxState.keepUnmerged || row.boxState.testSetup),
+  );
   const heldNames = new Set(held.map((row) => row.name));
-  const untouched = attached.filter((row) =>
-    !heldNames.has(row.name) && row.git?.dirty === 0 && row.git.tip !== null && row.git.tip === row.session.baseSha
+  const untouched = attached.filter(
+    (row) =>
+      !heldNames.has(row.name) &&
+      row.git?.dirty === 0 &&
+      row.git.tip !== null &&
+      row.git.tip === row.session.baseSha,
   );
   const untouchedNames = new Set(untouched.map((row) => row.name));
-  const mergedOpen = attached.filter((row) =>
-    !heldNames.has(row.name) && !untouchedNames.has(row.name) && row.git?.merged === true && row.agent.state === "live"
+  const mergedOpen = attached.filter(
+    (row) =>
+      !heldNames.has(row.name) &&
+      !untouchedNames.has(row.name) &&
+      row.git?.merged === true &&
+      row.agent.state === "live",
   );
-  const excluded = new Set([...heldNames, ...untouchedNames, ...mergedOpen.map((row) => row.name)]);
+  const excluded = new Set([
+    ...heldNames,
+    ...untouchedNames,
+    ...mergedOpen.map((row) => row.name),
+  ]);
   const inProgress = attached.filter((row) => !excluded.has(row.name));
-  const removed = rows.filter((row) => row.path === null && row.session.removed !== null);
+  const removed = rows.filter(
+    (row) => row.path === null && row.session.removed !== null,
+  );
   const culled = removed
     .filter((row) => row.session.removed?.merged === true)
-    .sort((a, b) => (b.session.removed?.at ?? "").localeCompare(a.session.removed?.at ?? ""))
+    .sort((a, b) =>
+      (b.session.removed?.at ?? "").localeCompare(a.session.removed?.at ?? ""),
+    )
     .slice(0, 15);
   const forced = removed.filter((row) => row.session.removed?.merged === false);
 
   const body = [
-    section({ title: "In progress", rows: inProgress, note: (row) => row.agent.state === "live" ? "session live" : "session closed" }),
-    section({ title: "Merged ✓, session still open", rows: mergedOpen, note: () => "close freely" }),
-    section({ title: "Untouched", rows: untouched, note: () => "created, no work committed" }),
-    section({ title: "Held for testing", rows: held, note: () => "worktree held for testing" }),
-    section({ title: "Recently culled", rows: culled, note: (row) => `removed ${row.session.removed?.at ?? ""}` }),
-    section({ title: "Removed with unmerged work", rows: forced, note: (row) => `final ${row.session.removed?.finalSha?.slice(0, 10) ?? "SHA unavailable"}` }),
+    section({
+      title: "In progress",
+      rows: inProgress,
+      note: (row) =>
+        row.agent.state === "live" ? "session live" : "session closed",
+    }),
+    section({
+      title: "Merged ✓, session still open",
+      rows: mergedOpen,
+      note: () => "close freely",
+    }),
+    section({
+      title: "Untouched",
+      rows: untouched,
+      note: () => "created, no work committed",
+    }),
+    section({
+      title: "Held for testing",
+      rows: held,
+      note: () => "worktree held for testing",
+    }),
+    section({
+      title: "Recently culled",
+      rows: culled,
+      note: (row) => `removed ${row.session.removed?.at ?? ""}`,
+    }),
+    section({
+      title: "Removed with unmerged work",
+      rows: forced,
+      note: (row) =>
+        `final ${row.session.removed?.finalSha?.slice(0, 10) ?? "SHA unavailable"}`,
+    }),
   ].join("");
 
   const search = `<form method="GET" action="/workstreams/"><input name="q" value="${escapeHtml(query)}" placeholder="Search workstreams, issues, plans"><button>Search</button></form>`;
-  return pageShell("workstreams", `<h1>workstreams</h1>${search}${flash ? `<p class="flash">${escapeHtml(flash)}</p>` : ""}${searchHtml(query, rows, documents)}${body || "<p>No workstreams recorded.</p>"}`, true);
+  return pageShell(
+    "workstreams",
+    `<h1>workstreams</h1>${search}${flash ? `<p class="flash">${escapeHtml(flash)}</p>` : ""}${searchHtml(query, rows, documents)}${body || "<p>No workstreams recorded.</p>"}`,
+    true,
+  );
 }
 
 function firstErrorLine(error: unknown): string {
-  if (typeof error === "object" && error !== null && "stderr" in error && typeof error.stderr === "string") {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "stderr" in error &&
+    typeof error.stderr === "string"
+  ) {
     const line = error.stderr.split("\n").find((part) => part.trim() !== "");
     if (line) return line;
   }
-  return error instanceof Error ? error.message.split("\n")[0] ?? "command failed" : String(error);
+  return error instanceof Error
+    ? (error.message.split("\n")[0] ?? "command failed")
+    : String(error);
 }
 
-async function serveAction(pathname: string, deps: WorkstreamsDeps, res: http.ServerResponse): Promise<void> {
+async function serveAction(
+  pathname: string,
+  deps: WorkstreamsDeps,
+  res: http.ServerResponse,
+): Promise<void> {
   const match = ACTION_PATH.exec(pathname);
   if (!match) {
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
@@ -288,9 +508,10 @@ async function serveAction(pathname: string, deps: WorkstreamsDeps, res: http.Se
   }
   const verb = match[1] as ActionVerb;
   const name = match[2] ?? "";
-  const validTarget = verb === "confirm-tested"
-    ? /^[a-zA-Z0-9_-]+\.md$/.test(name)
-    : /^[a-zA-Z0-9_-]+$/.test(name);
+  const validTarget =
+    verb === "confirm-tested"
+      ? /^[a-zA-Z0-9_-]+\.md$/.test(name)
+      : /^[a-zA-Z0-9_-]+$/.test(name);
   if (!validTarget) {
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("invalid workstreams action target\n");
@@ -302,7 +523,9 @@ async function serveAction(pathname: string, deps: WorkstreamsDeps, res: http.Se
   } catch (error) {
     flash = `${verb} ${name}: ${firstErrorLine(error)}`;
   }
-  res.writeHead(303, { location: `/workstreams/?flash=${encodeURIComponent(flash)}` });
+  res.writeHead(303, {
+    location: `/workstreams/?flash=${encodeURIComponent(flash)}`,
+  });
   res.end();
 }
 
@@ -318,19 +541,31 @@ export async function serveWorkstreams(params: {
   query?: string;
 }): Promise<void> {
   const { method, pathname, repoRoot, res } = params;
-  const deps = params.deps ?? defaultDeps(repoRoot, params.mainRoot ?? repoRoot, params.worktreesRoot ?? path.dirname(repoRoot));
+  const deps =
+    params.deps ??
+    defaultDeps(
+      repoRoot,
+      params.mainRoot ?? repoRoot,
+      params.worktreesRoot ?? path.dirname(repoRoot),
+    );
   if (method === "POST" && pathname.startsWith("/workstreams/action/")) {
     await serveAction(pathname, deps, res);
     return;
   }
-  if (pathname === "/workstreams/issues" || pathname.startsWith("/workstreams/issues/")) {
+  if (
+    pathname === "/workstreams/issues" ||
+    pathname.startsWith("/workstreams/issues/")
+  ) {
     if (pathname === "/workstreams/issues") {
       res.writeHead(301, { location: "/workstreams/issues/" });
       res.end();
       return;
     }
     res.setHeader("Cache-Control", "no-store, max-age=0");
-    res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'");
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'none'; style-src 'unsafe-inline'",
+    );
     await serveIssues({
       base: "/workstreams",
       mainRoot: params.mainRoot ?? repoRoot,
@@ -350,21 +585,29 @@ export async function serveWorkstreams(params: {
     const { plans } = await deps.documents();
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy":
+        "default-src 'none'; style-src 'unsafe-inline'",
     });
     res.end(method === "HEAD" ? undefined : renderPlans(plans));
     return;
   }
-  if (pathname === "/workstreams/testing" || pathname === "/workstreams/testing/") {
+  if (
+    pathname === "/workstreams/testing" ||
+    pathname === "/workstreams/testing/"
+  ) {
     if (pathname === "/workstreams/testing") {
       res.writeHead(301, { location: "/workstreams/testing/" });
       res.end();
       return;
     }
-    const [rows, documents] = await Promise.all([deps.list(), deps.documents()]);
+    const [rows, documents] = await Promise.all([
+      deps.list(),
+      deps.documents(),
+    ]);
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy":
+        "default-src 'none'; style-src 'unsafe-inline'",
     });
     res.end(method === "HEAD" ? undefined : renderTesting(rows, documents));
     return;
@@ -372,15 +615,29 @@ export async function serveWorkstreams(params: {
   const detailMatch = /^\/workstreams\/([\w-]+)\/$/.exec(pathname);
   if (detailMatch) {
     const name = detailMatch[1] ?? "";
-    const [rows, documents] = await Promise.all([deps.list(), deps.documents()]);
+    const [rows, documents] = await Promise.all([
+      deps.list(),
+      deps.documents(),
+    ]);
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy":
+        "default-src 'none'; style-src 'unsafe-inline'",
     });
-    res.end(method === "HEAD" ? undefined : renderDetail(name, rows.find((row) => row.name === name), {
-      issues: documents.issues.filter((issue) => issue.frontmatter.workstream === name),
-      plans: documents.plans.filter((plan) => plan.workstream === name),
-    }));
+    res.end(
+      method === "HEAD"
+        ? undefined
+        : renderDetail(
+            name,
+            rows.find((row) => row.name === name),
+            {
+              issues: documents.issues.filter(
+                (issue) => issue.frontmatter.workstream === name,
+              ),
+              plans: documents.plans.filter((plan) => plan.workstream === name),
+            },
+          ),
+    );
     return;
   }
   if (pathname === "/workstreams") {
@@ -394,7 +651,8 @@ export async function serveWorkstreams(params: {
     return;
   }
   try {
-    const query = new URLSearchParams(params.query ?? "").get("q")?.trim() ?? "";
+    const query =
+      new URLSearchParams(params.query ?? "").get("q")?.trim() ?? "";
     const [rows, documents] = await Promise.all([
       deps.list(),
       query ? deps.documents() : Promise.resolve({ issues: [], plans: [] }),
@@ -402,7 +660,8 @@ export async function serveWorkstreams(params: {
     const html = renderWorkstreams(rows, params.flash ?? "", query, documents);
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy":
+        "default-src 'none'; style-src 'unsafe-inline'",
     });
     res.end(method === "HEAD" ? undefined : html);
   } catch (error) {

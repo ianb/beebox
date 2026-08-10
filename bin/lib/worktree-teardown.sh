@@ -470,7 +470,7 @@ wt_remove_now() {
   final_sha=$(git -C "$worktree_path" rev-parse HEAD 2>/dev/null || true)
   removed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   removed_merged=false
-  [ "${WT_AHEAD:-?}" = "0" ] && removed_merged=true
+  [ "${WT_AHEAD:-?}" = "0" ] && [ "${WT_DIRTY:-?}" = "0" ] && removed_merged=true
 
   if [ -n "$preserve_box" ]; then
     workstream_preserve_keep "$name" \

@@ -6,14 +6,17 @@ terminal_valid_tty() {
 }
 
 terminal_agent_on_tty() {
-  local tty_path="$1" tty_name snapshot
+  local tty_path="$1" worktree_path="${2:-}" tty_name pid command cwd
   terminal_valid_tty "$tty_path" || return 1
   tty_name=${tty_path#/dev/}
-  snapshot=$(ps -t "$tty_name" -o comm= 2>/dev/null || true)
-  printf '%s\n' "$snapshot" | awk '
-    { name=$0; sub(/.*\//, "", name) }
-    name == "claude" || name == "codex" { found=1 }
-    END { exit(found ? 0 : 1) }'
+  while read -r pid command; do
+    command=${command##*/}
+    [ "$command" = claude ] || [ "$command" = codex ] || continue
+    [ -n "$worktree_path" ] || return 0
+    cwd=$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1)
+    case "$cwd" in "$worktree_path"|"$worktree_path"/*) return 0 ;; esac
+  done < <(ps -t "$tty_name" -o pid=,comm= 2>/dev/null || true)
+  return 1
 }
 
 terminal_focus_tty() {
@@ -64,7 +67,27 @@ on run argv
     end repeat
   end tell
   if not foundTab then error "no Terminal tab has tty " & wantedTty
+  tell application "System Events"
+    repeat 40 times
+      if frontmost of process "Terminal" then exit repeat
+      delay 0.05
+    end repeat
+    if not frontmost of process "Terminal" then error "Terminal did not become frontmost"
+  end tell
   tell application "System Events" to keystroke "w" using command down
+  repeat 40 times
+    tell application "Terminal"
+      set stillPresent to false
+      repeat with targetWindow in windows
+        repeat with targetTab in tabs of targetWindow
+          if tty of targetTab is wantedTty then set stillPresent to true
+        end repeat
+      end repeat
+    end tell
+    if not stillPresent then return
+    delay 0.05
+  end repeat
+  error "Terminal tab remained open after Cmd-W"
 end run
 APPLESCRIPT
 }
