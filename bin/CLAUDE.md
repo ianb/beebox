@@ -207,6 +207,15 @@ wrong root means lifecycle operations on a checkout that isn't the one in play,
 which is silent when it happens. Override the basenames with
 `CALLBACK_WORKTREE_ROOT` / `CALLBACK_BOX_ROOT` / `CALLBACK_BOX_SRC`.
 
+**Post-merge dependency sync is checkout-local.** `.husky/post-merge` runs
+`bin/post-merge-install.sh` before deploy or extension rebuild work. When the
+merge changed `pnpm-lock.yaml`, it runs one root `pnpm install
+--frozen-lockfile` in the checkout whose hook fired. This applies to main and
+worktrees: either checkout can otherwise rebuild the externalized `cb` CLI
+against packages its old `node_modules` does not contain. Install failure does
+not suppress an eligible server deploy. The hook warns on stderr with the
+manual-install remedy; Git does not propagate a post-merge hook's exit status.
+
 **`bin/workstreams create` owns stdout.** Exactly one line — the worktree path —
 because Claude Code's WorktreeCreate contract requires it. This is enforced
 structurally (the command stashes real stdout on fd 3 and points fd 1 at stderr),

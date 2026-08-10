@@ -1,10 +1,17 @@
 ---
 title: "Merging a dependency-adding change breaks the main checkout's cb until pnpm install runs"
-workstream: schedule-cadence
+workstream: workstreams
 area: callback-box
 filed-by: agent
 discovered-in: worktree-schedule-cadence — full suite failed after landing a change that added cronstrue
+resolution: implemented
 ---
+
+Resolved by adding a checkout-local post-merge dependency sync. The hook runs
+`pnpm install --frozen-lockfile` when a merge changes `pnpm-lock.yaml`. It runs
+before local deploy and build work, applies to main and worktrees, and reports a
+failed install on stderr while completing the hook's other duties. It also
+compares the worktree for squash merges, where `HEAD` does not move.
 
 The `dist/cli.mjs` bundle externalizes all packages (`scripts/build-cli.mjs`,
 `packages: "external"`), so a new dependency must exist in `node_modules` at
