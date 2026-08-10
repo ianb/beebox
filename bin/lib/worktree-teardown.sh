@@ -473,15 +473,9 @@ wt_remove_now() {
   [ "${WT_AHEAD:-?}" = "0" ] && removed_merged=true
 
   if [ -n "$preserve_box" ]; then
-    local clone="$WT_BOX_ROOT/$name/test1" keep_sha
-    if git -C "$clone" show-ref --verify --quiet refs/heads/keep 2>/dev/null; then
-      keep_sha=$(git -C "$clone" rev-parse refs/heads/keep 2>/dev/null || true)
-      if [ -z "$keep_sha" ] || ! git -C "$WT_BOX_SRC" merge-base --is-ancestor "$keep_sha" main 2>/dev/null; then
-        box_ref="keep/$name-$(date -u +%Y-%m-%d)"
-        git -C "$clone" push "$WT_BOX_SRC" "refs/heads/keep:refs/heads/$box_ref" >/dev/null \
-          || { wt_say "refusing removal: failed to preserve keep as $box_ref"; return 1; }
-      fi
-    fi
+    workstream_preserve_keep "$name" \
+      || { wt_say "refusing removal: failed to preserve keep as $WORKSTREAM_PRESERVED_BOX_REF"; return 1; }
+    box_ref="$WORKSTREAM_PRESERVED_BOX_REF"
   fi
 
   wt_remove_private_issues "$worktree_path"

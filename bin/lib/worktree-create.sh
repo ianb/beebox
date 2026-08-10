@@ -74,6 +74,14 @@ wt_create_generate_agents_md() {
   fi
 }
 
+wt_create_restore_box_ref() {
+  local box_dest="$1" box_ref="$2"
+  [ -n "$box_ref" ] || return 0
+  git -C "$box_dest" fetch --quiet origin "$box_ref" || return 1
+  git -C "$box_dest" checkout -q main || return 1
+  git -C "$box_dest" reset --hard FETCH_HEAD >&2
+}
+
 # wt_create <name> <base_ref> [<worktree_path>]
 #
 # Prints nothing on stdout — the caller owns stdout, and reads the resulting
@@ -143,11 +151,7 @@ wt_create() {
     if [ -d "$BOX_SRC" ]; then
       echo "[worktree-create] cloning $BOX_SRC -> $BOX_DEST" >&2
       git clone --quiet "$BOX_SRC" "$BOX_DEST"
-      if [ -n "$box_ref" ]; then
-        git -C "$BOX_DEST" fetch --quiet origin "$box_ref"
-        git -C "$BOX_DEST" checkout -q main
-        git -C "$BOX_DEST" reset --hard FETCH_HEAD >&2
-      fi
+      wt_create_restore_box_ref "$BOX_DEST" "$box_ref"
 
       local box_content_dir="$BOX_DEST"
       [ -d "$BOX_DEST/content" ] && box_content_dir="$BOX_DEST/content"

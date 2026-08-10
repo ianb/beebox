@@ -48,3 +48,19 @@ workstream_cull_pin_reason() {
   done < <(find "$WT_MONO/issues" -mindepth 2 -maxdepth 2 -type f -name '*.md' 2>/dev/null)
   return 1
 }
+
+# Preserve an unmerged keep branch before its clone is removed. The caller reads
+# WORKSTREAM_PRESERVED_BOX_REF; an empty value means keep was absent or already
+# reachable from source main. A push failure is fatal so teardown stays intact.
+workstream_preserve_keep() {
+  local name="$1" clone="$WT_BOX_ROOT/$1/test1" keep_sha
+  WORKSTREAM_PRESERVED_BOX_REF=""
+  git -C "$clone" show-ref --verify --quiet refs/heads/keep 2>/dev/null || return 0
+  keep_sha=$(git -C "$clone" rev-parse refs/heads/keep 2>/dev/null || true)
+  if [ -n "$keep_sha" ] && git -C "$WT_BOX_SRC" merge-base --is-ancestor "$keep_sha" main 2>/dev/null; then
+    return 0
+  fi
+  WORKSTREAM_PRESERVED_BOX_REF="keep/$name-$(date -u +%Y-%m-%d)"
+  git -C "$clone" push "$WT_BOX_SRC" \
+    "refs/heads/keep:refs/heads/$WORKSTREAM_PRESERVED_BOX_REF" >/dev/null
+}

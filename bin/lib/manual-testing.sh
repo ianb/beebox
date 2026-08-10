@@ -31,25 +31,46 @@ workstream_confirm_tested() {
   rel="${issue#"$WT_MONO/"}"
   [ -z "$(git -C "$WT_MONO" status --porcelain -- "$rel")" ] \
     || { echo "confirm-tested: issue has uncommitted changes" >&2; return 1; }
-  local result_file
+  local result_file original_file
   result_file=$(mktemp -t confirm-tested.XXXXXX)
-  (cd "$REPO_DIR" && node --import tsx -e 'import fs from "node:fs"; import {confirmTestedContent} from "./bin/confirm-tested.ts"; const [input, output] = process.argv.slice(1); const result=confirmTestedContent(fs.readFileSync(input,"utf8"),new Date().toISOString().slice(0,10)); fs.writeFileSync(output,JSON.stringify(result));' "$issue" "$result_file")
+  original_file=$(mktemp -t confirm-tested-original.XXXXXX)
+  cp "$issue" "$original_file"
+  if ! (cd "$REPO_DIR" && node --import tsx -e 'import fs from "node:fs"; import {confirmTestedContent} from "./bin/confirm-tested.ts"; const [input, output] = process.argv.slice(1); const result=confirmTestedContent(fs.readFileSync(input,"utf8"),new Date().toISOString().slice(0,10)); fs.writeFileSync(output,JSON.stringify(result));' "$issue" "$result_file"); then
+    rm -f "$result_file" "$original_file"
+    return 1
+  fi
   local close new_rel target workstream
   close=$(jq -r '.close' "$result_file")
   workstream=$(jq -r '.workstream' "$result_file")
-  jq -r '.content' "$result_file" > "$issue.tmp"
-  mv "$issue.tmp" "$issue"
   new_rel="$rel"
   if [ "$close" = true ]; then
     new_rel="issues/closed/${rel#issues/}"
     target="$WT_MONO/$new_rel"
-    mkdir -p "$(dirname "$target")"
-    mv "$issue" "$target"
   fi
-  git -C "$WT_MONO" add -- "$rel" "$new_rel"
-  pnpm --dir "$WT_MONO/callback-box" doc-check --fix >/dev/null
-  git -C "$WT_MONO" add -u
-  git -C "$WT_MONO" commit -m "Confirm manual testing for ${basename%.md}" >/dev/null
+  if ! (
+    jq -r '.content' "$result_file" > "$issue.tmp" || exit
+    mv "$issue.tmp" "$issue" || exit
+    if [ "$close" = true ]; then
+      mkdir -p "$(dirname "$target")" || exit
+      mv "$issue" "$target" || exit
+    fi
+    git -C "$WT_MONO" add -- "$rel" "$new_rel" || exit
+    pnpm --dir "$WT_MONO/callback-box" doc-check --fix >/dev/null || exit
+    git -C "$WT_MONO" add -u || exit
+    git -C "$WT_MONO" commit -m "Confirm manual testing for ${basename%.md}" >/dev/null || exit
+  ); then
+    # Main was clean at preflight, so every tracked worktree/index change here
+    # belongs to this attempted transaction. Restore it without a hard reset;
+    # the closed target can be untracked when the failure preceded `git add`.
+    git -C "$WT_MONO" reset -q
+    git -C "$WT_MONO" restore --worktree -- .
+    [ -z "${target:-}" ] || rm -f "$target"
+    cp "$original_file" "$issue"
+    rm -f "$issue.tmp" "$result_file" "$original_file"
+    echo "confirm-tested: transition failed; restored $rel" >&2
+    return 1
+  fi
+  rm -f "$result_file" "$original_file"
   local clone="$WT_BOX_ROOT/$workstream/test1"
   if git -C "$clone" show-ref --verify --quiet refs/heads/test-setup 2>/dev/null; then
     git -C "$clone" branch -D test-setup >/dev/null
