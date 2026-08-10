@@ -24,6 +24,8 @@
 #   list [--json]      Every worktree, joined across git, runtime, agent,
 #                      session-registry, and test1-clone state. Add
 #                      --include-removed with --json for registry ghost rows.
+#   quotas --json      Claude and Codex account quota windows and reset times.
+#   setup-claude-quota Install the passive Claude quota status-line collector.
 #   serve              Run the router in the foreground.
 #   status             Raw router status JSON (what the router itself reports).
 #   down <name>        Tell the router to stop a worktree's processes.
@@ -52,6 +54,42 @@ cmd="${1:-status}"
 shift || true
 
 case "$cmd" in
+  quotas)
+    [ "${1:-}" = "--json" ] && [ $# -eq 1 ] || { echo "usage: workstreams quotas --json" >&2; exit 1; }
+    exec node --import tsx "$REPO_DIR/bin/agent-quotas.ts"
+    ;;
+
+  setup-claude-quota)
+    [ $# -eq 0 ] || { echo "usage: workstreams setup-claude-quota" >&2; exit 1; }
+    command -v jq >/dev/null || { echo "workstreams setup-claude-quota: jq is required" >&2; exit 1; }
+    config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    settings="$config_dir/settings.json"
+    common_dir=$(git -C "$REPO_DIR" rev-parse --path-format=absolute --git-common-dir)
+    main_root=$(dirname "$common_dir")
+    collector="$main_root/bin/claude-quota-statusline"
+    [ -x "$collector" ] || { echo "workstreams setup-claude-quota: collector is not executable at $collector (land this change first)" >&2; exit 1; }
+    mkdir -p "$config_dir"
+    if [ -f "$settings" ] && ! jq -e 'type == "object"' "$settings" >/dev/null 2>&1; then
+      echo "workstreams setup-claude-quota: refusing malformed settings file: $settings" >&2
+      exit 1
+    fi
+    existing=$(jq -r '.statusLine.command // empty' "$settings" 2>/dev/null || true)
+    has_status_line=$(jq -r 'if .statusLine == null then "false" else "true" end' "$settings" 2>/dev/null || echo false)
+    if [ "$has_status_line" = true ] && [ "$existing" != "$collector" ] && [[ "$existing" != */bin/claude-quota-statusline ]]; then
+      echo "workstreams setup-claude-quota: refusing to replace existing statusLine command: $existing" >&2
+      exit 1
+    fi
+    settings_tmp=$(mktemp "$config_dir/settings.json.XXXXXX")
+    if [ -f "$settings" ]; then
+      jq --arg command "$collector" '.statusLine = {type: "command", command: $command}' "$settings" > "$settings_tmp"
+    else
+      jq -n --arg command "$collector" '{statusLine: {type: "command", command: $command}}' > "$settings_tmp"
+    fi
+    chmod 600 "$settings_tmp"
+    mv "$settings_tmp" "$settings"
+    echo "Claude quota capture enabled; it will populate after the next Claude response."
+    ;;
+
   create)
     name=""
     base_ref="main"

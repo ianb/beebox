@@ -1,10 +1,16 @@
 ---
 title: "Schedule rows show raw cron — replace with a human-readable cadence"
-workstream: unknown
+workstream: schedule-cadence
 area: callback-box
-needs: [design]
 labels: [ui, scheduler]
+resolution: implemented
 ---
+
+Implemented in the `schedule-cadence` workstream: `describeCadence`
+(`src/core/schedule/describe.ts`) composes cron (via cronstrue), rrule
+(via rrule's `toText()`, already a dependency), `at`, `on-wakeup`, `once`,
+`not-before` ("at most once every N"), and `until` into one sentence. Used
+by the dashboard (raw expression kept as a tooltip) and `cb scheduled`.
 
 The schedule list renders the raw expression: `cron 0 4 * * * ≥20h`,
 `cron */15 * * * * +wakeup ≥10m`, `cron 0 6,18 * * * +wakeup ≥4h`. The

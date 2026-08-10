@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { legacyIssuesRedirect, renderWorkstreams, serveWorkstreams, type WorkstreamRow, type WorkstreamsDeps } from "./router-workstreams.js";
+import { legacyIssuesRedirect, quotaHtml, renderWorkstreams, serveWorkstreams, type WorkstreamRow, type WorkstreamsDeps } from "./router-workstreams.js";
 import { parseIssueFile } from "./router-issues.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
@@ -31,6 +31,26 @@ test("renderer emits every workstream stratum", () => {
   }
   assert.match(html, /href="\/workstreams\/progress\/"/);
   assert.doesNotMatch(html, /http:\/\/localhost/);
+});
+
+test("quota cards show linear pace and stale capture state", () => {
+  const html = quotaHtml([
+    { provider: "claude", status: "available", fetchedAt: "2026-08-02T00:00:00Z", stale: true,
+      windows: [{ label: "7-day window", usedPercent: 20, resetsAt: "2026-08-08T00:00:00Z", durationMinutes: 7 * 24 * 60 }] },
+    { provider: "codex", status: "available", fetchedAt: "2026-08-03T00:00:00Z",
+      windows: [{ label: "5-hour window", usedPercent: 60, resetsAt: "2026-08-03T05:00:00Z", durationMinutes: 5 * 60 }] },
+  ], new Date("2026-08-03T00:00:00Z"));
+  assert.match(html, /On track · 9 points under budget \(29% of window elapsed\)/);
+  assert.match(html, /Over pace · 60 points over budget \(0% of window elapsed\)/);
+  assert.match(html, /Stale · Updated/);
+});
+
+test("expired quota windows do not claim to be on track", () => {
+  const html = quotaHtml([{ provider: "claude", status: "available", fetchedAt: "2026-08-03T00:00:00Z",
+    windows: [{ label: "5-hour window", usedPercent: 80, resetsAt: "2026-08-03T05:00:00Z", durationMinutes: 300 }] }],
+  new Date("2026-08-03T06:00:00Z"));
+  assert.match(html, /Expired snapshot/);
+  assert.doesNotMatch(html, /On track|Over pace|80% used/);
 });
 
 test("handler serves the read-only page with its own CSP", async () => {

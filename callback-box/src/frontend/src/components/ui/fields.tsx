@@ -222,7 +222,7 @@ export function CheckboxField({
           className="rounded border-warm-400 text-primary focus:ring-accent disabled:cursor-not-allowed"
           {...rest}
         />
-        <span>
+        <span className="min-w-0 flex-1">
           {label}
           {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
         </span>
