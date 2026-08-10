@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-10T00:42:31Z
-Total documents: 262
+Generated: 2026-08-10T22:40:07Z
+Total documents: 263
 
 ## Issues
 
@@ -434,6 +434,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:72 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/closed/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:28 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
 - ../issues/closed/decisions/2026-07-07-cb-render-vs-bin-browse.md:56 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
+- ../issues/closed/features/2026-08-10-card-view-context-menu-and-missing-card-state.md:96 (mention) — - Read `frontend.md` before building — `restrict-component-classes` applies, and
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
@@ -901,11 +902,12 @@ References:
 
 #### docs/connectors.md
 
-Title: "Connectors" | 94 lines
+Title: "Connectors" | 96 lines
 
 Referenced by:
 - CLAUDE.md:151 (mention) — | Connectors | `docs/connectors.md` |
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `cb finalize`). See [`../connectors.md`](../connectors.md);
+- docs/implemented-plans/gmail-explicit-action.md:111 (mention) — `docs/connectors.md`. Doctests: `connector-gmail-pull.doctest.md` and
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 - docs/knowledge-taxonomy.md:205 (mention) — - **Expected level: Discoverable** — the agent would need to look at `config/connectors/` and/or `docs/generated/connect
@@ -1137,11 +1139,12 @@ References:
 
 #### docs/gmail-setup.md
 
-Title: "Gmail Connector Setup" | 132 lines
+Title: "Gmail Connector Setup" | 161 lines
 
 Referenced by:
 - docs/connectors.md:30 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-
 - docs/google-setup.md:5 (mention) — See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
+- docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/gmail-setup.md` (the shorthand section currently describes it as legacy),
 - docs/plans/docs-reorg.md:208 (mention) — - `google-setup.md` / `gmail-setup.md` / `google-drive.md` / `connectors.md`
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
 - docs/reports/user-stories-audit-2026-06-26.md:2043 (mention) — - docs/gmail-setup.md lines 37-41 (user documentation with examples)
@@ -1812,7 +1815,7 @@ Title: "Triage" | 264 lines
 Referenced by:
 - CLAUDE.md:158 (mention) — | Triage pipeline design | `docs/triage.md` |
 - docs/box-layout.md:121 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
-- docs/connectors.md:91 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
+- docs/connectors.md:93 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:28 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:92 (link) — [`../triage.md`](../triage.md)). Best effort for the moment; more will be
@@ -2629,12 +2632,29 @@ References:
 - → frontend.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/gmail-explicit-action.md
+
+Title: "Gmail config: explicit action, no implicit tracking" | 140 lines
+
+Referenced by:
+- ../issues/closed/bugs/2026-08-10-gmail-connector-silent-when-rules-empty.md:15 (link) — > [gmail-explicit-action](../../../callback-box/docs/implemented-plans/gmail-explicit-action.md).
+
+References:
+- → ../issues/closed/bugs/2026-08-10-gmail-connector-silent-when-rules-empty.md (frontmatter)
+- → ../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md (frontmatter)
+- → docs/plans/email-tracking.md (link)
+- → docs/gmail-setup.md (mention)
+- → docs/connectors.md (mention)
+- → ../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md (link)
+- → ../issues/features/2026-08-10-detect-a-connector-that-stopped-producing.md (link)
+
 #### docs/implemented-plans/gmail-gc-unlabeled.md
 
 Title: "Plan: Garbage-collect unlabeled Gmail messages" | 208 lines
 
 Referenced by:
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
+- ../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md:35 (link) — ([gmail-gc-unlabeled](../../callback-box/docs/implemented-plans/gmail-gc-unlabeled.md))
 
 References:
 - → docs/plans/email-tracking.md (link)
@@ -2960,7 +2980,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:409 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:427 (mention) — `callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3853,6 +3873,7 @@ References:
 Title: "Email tracking instead of mailbox mirroring" | 453 lines
 
 Referenced by:
+- docs/implemented-plans/gmail-explicit-action.md:11 (link) — Follows [email tracking instead of mailbox mirroring](../plans/email-tracking.md), which
 - docs/implemented-plans/gmail-gc-unlabeled.md:9 (link) — > Superseded 2026-08-05 by [email tracking instead of mailbox mirroring](../plans/email-tracking.md).
 - docs/unimplemented-plans/README.md:22 (mention) — | `email-volume-and-materialization-superseded.md` | Superseded by `../plans/email-tracking.md` (2026-08-05) after the b
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:11 (link) — surface with [email tracking instead of mailbox mirroring](../plans/email-tracking.md):
@@ -4711,7 +4732,7 @@ Title: "Services" | 125 lines
 
 Referenced by:
 - CLAUDE.md:99 (mention) — **Services** — Every external dependency is wrapped in a typed interface with real + fake implementations. Fakes have ob
-- docs/connectors.md:75 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
+- docs/connectors.md:77 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:44 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:39 (mention) — the services real/fake pattern (`src/services/CLAUDE.md`).
 - docs/implemented-plans/capture-mode.md:621 (mention) — `src/services/CLAUDE.md`). Scripted word timestamps + fixture image

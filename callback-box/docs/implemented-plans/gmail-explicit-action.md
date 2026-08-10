@@ -8,7 +8,7 @@ issues:
 ---
 # Gmail config: explicit action, no implicit tracking
 
-Follows [email tracking instead of mailbox mirroring](email-tracking.md), which
+Follows [email tracking instead of mailbox mirroring](../plans/email-tracking.md), which
 established the tracked working set. That plan left two shapes for
 `config/connectors/gmail.json` — named `rules`, and a `query`/`labels`
 shorthand treated as "legacy" — and the shorthand silently implies
