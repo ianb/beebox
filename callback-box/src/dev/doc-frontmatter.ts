@@ -58,13 +58,16 @@ function planProblems(params: {
 }
 
 function issueProblems(params: {
-  rel: string; closed: boolean; data: Record<string, unknown>; exists: (rel: string) => boolean;
+  rel: string; closed: boolean; data: Record<string, unknown>; body: string; exists: (rel: string) => boolean;
 }): string[] {
-  const { rel, closed, data, exists } = params;
+  const { rel, closed, data, body, exists } = params;
   const out: string[] = [];
   if (data.needs !== undefined && (!strings(data.needs) || data.needs.some((need) => !NEEDS.has(need)))) out.push(`${rel}: invalid needs list`);
   if (data.labels !== undefined && (!strings(data.labels) || data.labels.some((label) => !/^[\da-z]+(?:-[\da-z]+)*$/.test(label)))) out.push(`${rel}: invalid labels list`);
   if (data.design !== undefined) out.push(...pathProblem({ rel, key: "design", value: data.design, exists }));
+  if (strings(data.needs) && data.needs.includes("manual-testing") && !/^## Manual testing$/m.test(body)) {
+    out.push(`${rel}: needs manual-testing requires a ## Manual testing section`);
+  }
   const resolution = data.resolution;
   if (closed && (typeof resolution !== "string" || !RESOLUTIONS.has(resolution))) out.push(`${rel}: closed issues require a valid resolution`);
   if (!closed && resolution !== undefined) out.push(`${rel}: open issues must not have resolution`);
@@ -102,6 +105,6 @@ export function frontmatterProblems(params: {
     ...commonProblems(rel, data),
     ...(plan
       ? planProblems({ rel, dir: plan[1] ?? "", data, exists })
-      : issueProblems({ rel, closed: issue?.[1] !== undefined, data, exists })),
+      : issueProblems({ rel, closed: issue?.[1] !== undefined, data, body: parsed.body, exists })),
   ];
 }

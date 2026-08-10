@@ -110,3 +110,9 @@ Corrected fix direction: make the optimistic/pending message **survive any
 an intermediate server-history snapshot omits it. Then no intermediate refresh (from
 any source) can open a disappear-gap, regardless of timing. Confirm the exact clearing
 event by instrumentation before fixing (cb-debug).
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

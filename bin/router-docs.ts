@@ -291,9 +291,10 @@ function autolinkUrls(html: string): string {
 }
 
 export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
-  return autolinkUrls(
+  const html = autolinkUrls(
     highlightCodeBlocks(Markdoc.renderers.html(Markdoc.transform(Markdoc.parse(src))), defaultLang),
   );
+  return html.replace(/<h2>Manual testing<\/h2>/g, '<h2 id="manual-testing">Manual testing</h2>');
 }
 
 /**

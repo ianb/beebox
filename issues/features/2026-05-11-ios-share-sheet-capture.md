@@ -49,3 +49,9 @@ does not advertise those types until capture staging supports exact chat and sav
 >    box named by the sheet.
 
 Only Ian should clear `needs: [manual-testing]`.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

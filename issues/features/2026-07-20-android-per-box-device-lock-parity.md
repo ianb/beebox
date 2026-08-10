@@ -34,3 +34,9 @@ Android-specific subplan once the companion's Track 1/2 architecture exists,
 then add unit tests plus emulator and physical-device lifecycle/authentication
 acceptance. Close only when the Android cell in `docs/mobile-parity.md` can be
 changed from planned to done or to a documented deliberate divergence.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

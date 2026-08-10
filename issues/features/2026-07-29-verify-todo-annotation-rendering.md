@@ -35,3 +35,9 @@ Rendering matches the plan's design intent (`docs/implemented-plans/todo-annotat
 with no visual glitches, broken links, or badge miscounts. If something's off,
 it's a real bug even though it passed automated review — automated review
 didn't look at pixels.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

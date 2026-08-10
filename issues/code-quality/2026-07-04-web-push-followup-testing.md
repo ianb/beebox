@@ -91,3 +91,9 @@ start until the keys exist.
   call); root install works and push is cross-box regardless.
 - **Per-endpoint / per-severity filtering** — today an endpoint opting in gets all
   of that box's alerts; no per-device severity filtering.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

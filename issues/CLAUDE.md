@@ -107,8 +107,10 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   a real network, or by looking at whether it *feels* right). Add it rather than
   closing an item on green tests, and say in the body **what specifically to try
   and what should happen** — a year from now "needs testing" alone is useless. An
-  agent should never remove this itself; only Ian clears it, by testing. `grep -rl
-  "manual-testing" issues/` is the list of things waiting on him.
+  agent should never remove this itself; only Ian clears it, by testing. Every
+  flagged issue must use a `## Manual testing` section; the browser links to its
+  stable `#manual-testing` anchor. `grep -rl "manual-testing" issues/` is the
+  list of things waiting on him.
   - **Ready-to-test is the whole point — do NOT use it for an unfixed bug.** If no
     fix has landed (the item just describes a problem, or only proposes fix
     directions), it is *not* awaiting testing — it is awaiting a fix, so it gets

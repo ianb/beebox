@@ -8,7 +8,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import http from "node:http";
-import { renderWorktreeToolCards, readDevTools, isPathInScriptedApp, serveDev } from "./router-docs.js";
+import { renderMarkdownToHtml, renderWorktreeToolCards, readDevTools, isPathInScriptedApp, serveDev } from "./router-docs.js";
+
+test("manual testing headings get a stable anchor", () => {
+  assert.match(renderMarkdownToHtml("## Manual testing\n\nTry it."), /<h2 id="manual-testing">/);
+});
 
 async function mkDevRoot(toolsJson?: string): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "devroot-"));

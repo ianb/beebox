@@ -47,3 +47,15 @@ workstream: unknown
 Body`).join("\n")
 => issues/closed/bugs/x.md: closed issues require a valid resolution
 ```
+
+## Manual-testing flags require an addressable procedure section
+
+```ts
+check("issues/bugs/x.md", `---
+title: X
+workstream: x
+needs: [manual-testing]
+---
+Try it.`).join("\n")
+=> issues/bugs/x.md: needs manual-testing requires a ## Manual testing section
+```
