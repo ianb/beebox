@@ -23,3 +23,28 @@ workstream_box_state() {
     --argjson pristine "$pristine" \
     '{testSetup:$testSetup, keepUnmerged:$keepUnmerged, pristine:$pristine}'
 }
+
+# Prints the first cull pin reason and succeeds when the workstream must stay.
+workstream_cull_pin_reason() {
+  local name="$1" clone="$WT_BOX_ROOT/$1/test1" issue
+  if git -C "$clone" show-ref --verify --quiet refs/heads/keep 2>/dev/null; then
+    local keep_sha
+    keep_sha=$(git -C "$clone" rev-parse refs/heads/keep 2>/dev/null || true)
+    if [ -z "$keep_sha" ] || ! git -C "$WT_BOX_SRC" merge-base --is-ancestor "$keep_sha" main 2>/dev/null; then
+      echo keep-unmerged
+      return 0
+    fi
+  fi
+  if git -C "$clone" show-ref --verify --quiet refs/heads/test-setup 2>/dev/null; then
+    echo test-setup
+    return 0
+  fi
+  while IFS= read -r issue; do
+    [ -f "$issue" ] || continue
+    if grep -q "^workstream: $name$" "$issue" && grep -q '^needs:.*manual-testing' "$issue"; then
+      echo manual-testing
+      return 0
+    fi
+  done < <(find "$WT_MONO/issues" -mindepth 2 -maxdepth 2 -type f -name '*.md' 2>/dev/null)
+  return 1
+}

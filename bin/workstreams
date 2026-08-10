@@ -110,6 +110,7 @@ case "$cmd" in
 
     # shellcheck source=lib/worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    . "$REPO_DIR/bin/lib/workstream-box-state.sh"
     # See the note in `list`: the lib clears the roots instead of exiting, and a
     # destructive command must not proceed on an empty one.
     wt_paths_init "$REPO_DIR" || exit 1
@@ -610,6 +611,8 @@ case "$cmd" in
     # a `ps` or `lsof` that could not answer read as "nothing is running".
     # shellcheck source=lib/worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    # shellcheck source=lib/workstream-box-state.sh
+    . "$REPO_DIR/bin/lib/workstream-box-state.sh"
     WT_LOG_LABEL="Sweep"
     wt_agent_snapshot_capture
 
@@ -642,6 +645,10 @@ case "$cmd" in
       dirty="$WT_DIRTY"
       if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
         echo "skip $name: ahead=$ahead non-deletion-dirty=$dirty (has unmerged work)"
+        continue
+      fi
+      if pin_reason=$(workstream_cull_pin_reason "$name"); then
+        echo "skip $name: pinned=$pin_reason"
         continue
       fi
       branch="$WT_BRANCH"

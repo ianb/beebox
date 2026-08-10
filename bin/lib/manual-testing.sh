@@ -34,8 +34,9 @@ workstream_confirm_tested() {
   local result_file
   result_file=$(mktemp -t confirm-tested.XXXXXX)
   (cd "$REPO_DIR" && node --import tsx -e 'import fs from "node:fs"; import {confirmTestedContent} from "./bin/confirm-tested.ts"; const [input, output] = process.argv.slice(1); const result=confirmTestedContent(fs.readFileSync(input,"utf8"),new Date().toISOString().slice(0,10)); fs.writeFileSync(output,JSON.stringify(result));' "$issue" "$result_file")
-  local close new_rel target
+  local close new_rel target workstream
   close=$(jq -r '.close' "$result_file")
+  workstream=$(jq -r '.workstream' "$result_file")
   jq -r '.content' "$result_file" > "$issue.tmp"
   mv "$issue.tmp" "$issue"
   new_rel="$rel"
@@ -49,4 +50,8 @@ workstream_confirm_tested() {
   pnpm --dir "$WT_MONO/callback-box" doc-check --fix >/dev/null
   git -C "$WT_MONO" add -u
   git -C "$WT_MONO" commit -m "Confirm manual testing for ${basename%.md}" >/dev/null
+  local clone="$WT_BOX_ROOT/$workstream/test1"
+  if git -C "$clone" show-ref --verify --quiet refs/heads/test-setup 2>/dev/null; then
+    git -C "$clone" branch -D test-setup >/dev/null
+  fi
 }

@@ -444,6 +444,14 @@ public move unless the public file was renamed.
 
 ### 8. Finalization gate, then merge into main
 
+Before the code merge, inspect the workstream's isolated test1 clone. If it has
+a `keep` branch with commits absent from the source test1, fetch and fast-forward
+or merge that branch into the source test1's `main`, then push it. `keep` is
+rooted at the source `origin/main` and contains only deliberately selected stock
+content; clone-main churn is never merged. A conflict is BLOCKED: leave the
+clone and worktree intact and report it rather than choosing content. A
+`test-setup` branch is a disposable scenario snapshot and is never merged.
+
 Steps 5–7b may have changed files *after* the green verification tier. Before
 merging, all three must hold:
 

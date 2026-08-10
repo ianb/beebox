@@ -115,6 +115,13 @@ if [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; then
   wt_log "decision=skip:unmerged branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY blockers=[$WT_BLOCKERS] wt=$worktree_path"
   exit 0
 fi
+. "$WT_MONO/bin/lib/workstream-box-state.sh"
+name=$(basename "$worktree_path")
+if pin_reason=$(workstream_cull_pin_reason "$name"); then
+  echo "[session-end] worktree '$WT_BRANCH' is pinned ($pin_reason) — leaving alone"
+  wt_log "decision=skip:pinned reason=$pin_reason branch=$WT_BRANCH wt=$worktree_path"
+  exit 0
+fi
 wt_log "decision=clean branch=$WT_BRANCH ahead=0 dirty=0 wt=$worktree_path"
 
 # IMPORTANT: the name derives from $worktree_path, not $cwd. When the session

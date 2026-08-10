@@ -127,6 +127,12 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
     `> **⏳ Awaiting manual testing** — fix landed in \`<commit>\`; <one line of
     what to try>. Only Ian clears this.` The reader (and Ian scanning the queue)
     should see the true status in the first line.
+  - Persistent stock test1 content belongs on a clone branch named `keep`,
+    rooted at the source test1's `origin/main`; select only intentional content
+    onto it. A re-runnable but disposable scenario is snapshotted as
+    `test-setup`, which blocks culling until confirmation deletes it. Link test
+    instructions as `/<workstream>/test1/browse/<card-path>` before merge and
+    `/main/test1/browse/<card-path>` after stock content lands.
 - `labels:` is a freeform cross-cutting tag — an optional YAML list of
   kebab-case strings for grouping issues by effort/epic/theme/sprint, anything
   the six categories and the `area` field don't capture (multiple allowed). It's
