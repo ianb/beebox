@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { legacyIssuesRedirect, quotaHtml, renderWorkstreams, serveWorkstreams, type WorkstreamRow, type WorkstreamsDeps } from "./router-workstreams.js";
+import { legacyIssuesRedirect, quotaHtml, relativeTime, renderWorkstreams, serveWorkstreams, type WorkstreamRow, type WorkstreamsDeps } from "./router-workstreams.js";
 import { parseIssueFile } from "./router-issues.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
@@ -43,6 +43,28 @@ test("quota cards show linear pace and stale capture state", () => {
   assert.match(html, /On track · 9 points under budget \(29% of window elapsed\)/);
   assert.match(html, /Over pace · 60 points over budget \(0% of window elapsed\)/);
   assert.match(html, /Stale · Updated/);
+  assert.match(html, /<details class="quota-details"><summary>Quotas · over pace<\/summary>/);
+  assert.match(html, /role="region" aria-labelledby="agent-capacity"/);
+});
+
+test("live untouched work is visibly active and archived work is separated", () => {
+  const html = renderWorkstreams([
+    row({ name: "starting", git: { ahead: 0, dirty: 0, merged: true, tip: "base" }, agent: { state: "live", reason: "argv" } }),
+    row({ name: "mystery", agent: { state: "unknown", reason: "probe-failed" } }),
+    row({ name: "done", session: { agent: "codex", hasSession: true, tty: null, emoji: null, baseSha: "base", removed: null, archived: { at: "2026-08-08T00:00:00Z" } } }),
+  ], "", "", undefined, [], new Date("2026-08-10T00:00:00Z"));
+  assert.match(html, /In progress[\s\S]*starting[\s\S]*Claude active/);
+  assert.match(html, /mystery[\s\S]*liveness unknown[\s\S]*Claude activity unknown/);
+  assert.doesNotMatch(html, /Untouched[\s\S]*starting/);
+  assert.match(html, /Archived[\s\S]*done[\s\S]*Codex inactive/);
+  assert.match(html, /archived 2 days ago/);
+  assert.match(html, /action="\/workstreams\/action\/unarchive\/done"/);
+});
+
+test("relative timestamps use readable units", () => {
+  const now = new Date("2026-08-10T12:00:00Z");
+  assert.equal(relativeTime("2026-08-10T11:59:45Z", now), "just now");
+  assert.equal(relativeTime("2026-08-08T12:00:00Z", now), "2 days ago");
 });
 
 test("expired quota windows do not claim to be on track", () => {
@@ -107,12 +129,15 @@ test("actions validate the path and redirect with command results", async () => 
   assert.equal(captured.status, 303);
   assert.match(captured.headers.location ?? "", /flash=focus%20good_name-2%3A%20done/);
 
+  await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/archive/good_name-2", repoRoot: "/unused", res, deps });
+  assert.deepEqual(calls, ["focus:good_name-2", "archive:good_name-2"]);
+
   await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/focus/bad.name", repoRoot: "/unused", res, deps });
   assert.equal(captured.status, 404);
-  assert.deepEqual(calls, ["focus:good_name-2"]);
+  assert.deepEqual(calls, ["focus:good_name-2", "archive:good_name-2"]);
 
   await serveWorkstreams({ method: "POST", pathname: "/workstreams/action/confirm-tested/2026-08-09-test.md", repoRoot: "/unused", res, deps });
-  assert.deepEqual(calls, ["focus:good_name-2", "confirm-tested:2026-08-09-test.md"]);
+  assert.deepEqual(calls, ["focus:good_name-2", "archive:good_name-2", "confirm-tested:2026-08-09-test.md"]);
 });
 
 test("an action failure flashes only the first stderr line", async () => {
