@@ -115,6 +115,7 @@ export function BrowseDetailPanel({
           onSelectRenderer={onSelectRenderer}
           params={params}
           rendererName={rendererName}
+          onClose={onBack}
         />
       </div>
     </div>
