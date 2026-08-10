@@ -1,10 +1,14 @@
 ---
 title: "Card view needs a context menu (delete, history) and a real missing-card state"
-workstream: unknown
+workstream: card-menu
 area: callback-box
-needs: [design]
 labels: [ui, cards]
+resolution: implemented
 ---
+
+Implemented in `7c37e0a3`. The card view now has an extensible actions menu,
+path-filtered history, a recoverable trash flow with inbound-reference warnings,
+and useful states for missing paths with and without history.
 
 The card view has no per-card actions. Add a context menu beside the view
 selector (the `Organizer | Card | Source` segmented control in the top-right of
