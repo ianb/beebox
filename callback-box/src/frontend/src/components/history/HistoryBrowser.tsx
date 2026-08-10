@@ -47,7 +47,8 @@ export function HistoryBrowser({
       filter.workflows.length > 0 ||
       filter.touchpoint ||
       filter.feedback ||
-      filter.session !== null;
+      filter.session !== null ||
+      filter.path !== null;
     if (!hasAny) return;
     return {
       ...(filter.connectors.length > 0 ? { connectors: filter.connectors } : {}),
@@ -55,6 +56,7 @@ export function HistoryBrowser({
       ...(filter.touchpoint ? { touchpoint: true } : {}),
       ...(filter.feedback ? { feedback: true } : {}),
       ...(filter.session !== null ? { session: filter.session } : {}),
+      ...(filter.path !== null ? { path: filter.path } : {}),
     };
   }, [filter]);
 

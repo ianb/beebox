@@ -24,6 +24,10 @@ interface RemovedState {
   merged: boolean;
 }
 
+interface ArchivedState {
+  at: string;
+}
+
 export interface WorkstreamRow {
   name: string;
   path: string | null;
@@ -42,6 +46,7 @@ export interface WorkstreamRow {
     emoji: string | null;
     baseSha: string | null;
     removed: RemovedState | null;
+    archived?: ArchivedState | null;
   };
   boxState: {
     testSetup: boolean;
@@ -69,15 +74,17 @@ export interface PlanRecord {
 }
 
 type ActionVerb =
+  | "archive"
   | "close"
   | "confirm-tested"
   | "focus"
   | "release"
   | "reset-test"
-  | "resume";
+  | "resume"
+  | "unarchive";
 
 const ACTION_PATH =
-  /^\/workstreams\/action\/(close|confirm-tested|focus|release|reset-test|resume)\/([a-zA-Z0-9_.-]+)$/;
+  /^\/workstreams\/action\/(archive|close|confirm-tested|focus|release|reset-test|resume|unarchive)\/([a-zA-Z0-9_.-]+)$/;
 
 export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
@@ -230,6 +237,12 @@ function actionForm(verb: ActionVerb, row: WorkstreamRow): string {
 }
 
 function actionsHtml(row: WorkstreamRow): string {
+  const archive =
+    row.session.archived != null
+      ? actionForm("unarchive", row)
+      : row.agent.state === "live"
+        ? ""
+        : actionForm("archive", row);
   const reset = row.boxState.testSetup ? actionForm("reset-test", row) : "";
   const release =
     row.agent.state !== "live" &&
@@ -237,11 +250,27 @@ function actionsHtml(row: WorkstreamRow): string {
       ? actionForm("release", row)
       : "";
   if (row.agent.state === "live")
-    return actionForm("focus", row) + actionForm("close", row) + reset;
+    return (
+      actionForm("focus", row) + actionForm("close", row) + reset + archive
+    );
   if (row.session.removed?.merged === false) return "";
   if (row.session.hasSession)
-    return actionForm("resume", row) + reset + release;
-  return reset + release;
+    return actionForm("resume", row) + reset + release + archive;
+  return reset + release + archive;
+}
+
+function agentStatusHtml(row: WorkstreamRow): string {
+  const agent =
+    row.session.agent === "claude"
+      ? "Claude"
+      : row.session.agent === "codex"
+        ? "Codex"
+        : "Agent";
+  if (row.agent.state === "live")
+    return `<span class="agent-status agent-live"><span aria-hidden="true">●</span> ${agent} active</span>`;
+  if (row.agent.state === "unknown")
+    return `<span class="agent-status">${agent} activity unknown</span>`;
+  return `<span class="agent-status">${row.session.agent ? `${agent} inactive` : "No agent recorded"}</span>`;
 }
 
 function rowHtml(row: WorkstreamRow, note: string): string {
@@ -250,7 +279,7 @@ function rowHtml(row: WorkstreamRow, note: string): string {
     : row.boxState.testSetup
       ? `<span class="chip held">test1 ${row.boxState.pristine === true ? "pristine" : "dirtied"}</span>`
       : "";
-  return `<li><a href="/workstreams/${encodeURIComponent(row.name)}/"><span class="emoji">${escapeHtml(emoji(row))}</span>${escapeHtml(row.name)}</a><span>${escapeHtml(note)}</span>${box}<span class="actions">${actionsHtml(row)}</span></li>`;
+  return `<li><a href="/workstreams/${encodeURIComponent(row.name)}/"><span class="emoji">${escapeHtml(emoji(row))}</span>${escapeHtml(row.name)}</a><span>${escapeHtml(note)}</span>${agentStatusHtml(row)}${box}<span class="actions">${actionsHtml(row)}</span></li>`;
 }
 
 function section(params: {
@@ -292,7 +321,7 @@ function documentList(params: {
 
 function pageShell(title: string, body: string, refresh = false): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${refresh ? '<meta http-equiv="refresh" content="30">' : ""}<title>${escapeHtml(title)}</title>
-<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}.quota-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}.quota-card{border:1px solid #ddd;border-radius:6px;padding:.8em}.quota-card h3{font-size:1em;margin:0 0 .5em}.quota-window{margin-top:.7em}.quota-window p{margin:.2em 0}.quota-window progress{width:100%}.on-track{color:#176b3a;font-weight:600}.over-pace{color:#9a3412;font-weight:600}.muted{color:#666;font-size:.9em}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}.quota-grid{grid-template-columns:1fr}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
+<style>body{font:14px/1.5 system-ui,sans-serif;max-width:1000px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em;white-space:nowrap}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}button,input{box-sizing:border-box;font:inherit}button{padding:.35em .65em}.agent-status{padding:.15em .5em;border-radius:999px;background:#f1f3f5;color:#59636e;font-size:.82em;white-space:nowrap}.agent-live{background:#dcfce7;color:#166534;font-weight:650}.page-header{margin-top:1.2em}.heading-row{display:flex;align-items:center;justify-content:space-between;gap:1em}.heading-row h1{margin:.2em 0}.search-form{display:flex;gap:.5em;max-width:38em;margin:.8em 0 1.2em}.search-form input{min-width:0;flex:1;padding:.55em .7em;border:1px solid #aeb5bd;border-radius:6px}.search-form button{padding:.55em .85em}.quota-details{position:relative}.quota-details>summary{cursor:pointer;color:#2255aa;font-weight:600;list-style-position:inside}.quota-panel{position:absolute;z-index:2;right:0;width:min(46rem,calc(100vw - 2em));padding:1em;background:#fff;border:1px solid #ccd2d8;border-radius:8px;box-shadow:0 8px 24px #0002}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}.quota-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}.quota-card{border:1px solid #ddd;border-radius:6px;padding:.8em}.quota-card h3{font-size:1em;margin:0 0 .5em}.quota-window{margin-top:.7em}.quota-window p{margin:.2em 0}.quota-window progress{width:100%}.on-track{color:#176b3a;font-weight:600}.over-pace{color:#9a3412;font-weight:600}.muted{color:#666;font-size:.9em}.archived-list{opacity:.82}@media(max-width:700px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}.actions{margin-left:0}.quota-grid{grid-template-columns:1fr}.quota-panel{position:fixed;left:1em;right:1em;width:auto}.heading-row{align-items:flex-start}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
 }
 
 function formatReset(resetsAt: string): string {
@@ -329,7 +358,42 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
       return `<article class="quota-card"><h3>${title}</h3>${content}${credits}${captured}</article>`;
     })
     .join("");
-  return `<section aria-labelledby="agent-capacity"><h2 id="agent-capacity">Agent capacity</h2><div class="quota-grid">${cards}</div></section>`;
+  const paces = quotas.flatMap((quota) =>
+    quota.status === "available"
+      ? quota.windows
+          .map((window) => quotaPace(window, now))
+          .filter((pace) => pace !== null)
+      : [],
+  );
+  const paceSummary = paces.some((pace) => !pace.onTrack)
+    ? " · over pace"
+    : paces.length > 0
+      ? " · on track"
+      : "";
+  return `<details class="quota-details"><summary>Quotas${paceSummary}</summary><div class="quota-panel" role="region" aria-labelledby="agent-capacity"><h2 id="agent-capacity" class="sr-only">Agent capacity</h2><div class="quota-grid">${cards}</div></div></details>`;
+}
+
+export function relativeTime(value: string, now = new Date()): string {
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return value;
+  const seconds = Math.round((time - now.getTime()) / 1000);
+  if (Math.abs(seconds) < 60) return "just now";
+  const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+    ["year", 365 * 24 * 60 * 60],
+    ["month", 30 * 24 * 60 * 60],
+    ["week", 7 * 24 * 60 * 60],
+    ["day", 24 * 60 * 60],
+    ["hour", 60 * 60],
+    ["minute", 60],
+  ];
+  const [unit, size] = units.find(([, size]) => Math.abs(seconds) >= size) ?? [
+    "minute",
+    60,
+  ];
+  return new Intl.RelativeTimeFormat("en", { numeric: "always" }).format(
+    Math.round(seconds / size),
+    unit,
+  );
 }
 
 function renderDetail(
@@ -448,7 +512,16 @@ export function renderWorkstreams(
   quotas: AgentQuota[] = [],
   now = new Date(),
 ): string {
-  const attached = rows.filter((row) => row.path !== null);
+  const archived = rows
+    .filter((row) => row.session.archived != null)
+    .toSorted((a, b) =>
+      (b.session.archived?.at ?? "").localeCompare(
+        a.session.archived?.at ?? "",
+      ),
+    );
+  const archivedNames = new Set(archived.map((row) => row.name));
+  const current = rows.filter((row) => !archivedNames.has(row.name));
+  const attached = current.filter((row) => row.path !== null);
   const held = attached.filter(
     (row) =>
       row.agent.state !== "live" &&
@@ -458,6 +531,7 @@ export function renderWorkstreams(
   const untouched = attached.filter(
     (row) =>
       !heldNames.has(row.name) &&
+      row.agent.state !== "live" &&
       row.git?.dirty === 0 &&
       row.git.tip !== null &&
       row.git.tip === row.session.baseSha,
@@ -468,6 +542,7 @@ export function renderWorkstreams(
       !heldNames.has(row.name) &&
       !untouchedNames.has(row.name) &&
       row.git?.merged === true &&
+      (row.git.tip !== row.session.baseSha || row.git.dirty !== 0) &&
       row.agent.state === "live",
   );
   const excluded = new Set([
@@ -476,7 +551,7 @@ export function renderWorkstreams(
     ...mergedOpen.map((row) => row.name),
   ]);
   const inProgress = attached.filter((row) => !excluded.has(row.name));
-  const removed = rows.filter(
+  const removed = current.filter(
     (row) => row.path === null && row.session.removed !== null,
   );
   const culled = removed
@@ -492,7 +567,11 @@ export function renderWorkstreams(
       title: "In progress",
       rows: inProgress,
       note: (row) =>
-        row.agent.state === "live" ? "session live" : "session closed",
+        row.agent.state === "live"
+          ? "working"
+          : row.agent.state === "unknown"
+            ? "liveness unknown"
+            : "session closed",
     }),
     section({
       title: "Merged ✓, session still open",
@@ -512,7 +591,8 @@ export function renderWorkstreams(
     section({
       title: "Recently culled",
       rows: culled,
-      note: (row) => `removed ${row.session.removed?.at ?? ""}`,
+      note: (row) =>
+        `removed ${relativeTime(row.session.removed?.at ?? "", now)}`,
     }),
     section({
       title: "Removed with unmerged work",
@@ -520,12 +600,18 @@ export function renderWorkstreams(
       note: (row) =>
         `final ${row.session.removed?.finalSha?.slice(0, 10) ?? "SHA unavailable"}`,
     }),
+    section({
+      title: "Archived",
+      rows: archived,
+      note: (row) =>
+        `archived ${relativeTime(row.session.archived?.at ?? "", now)}`,
+    }).replace("<ul>", '<ul class="archived-list">'),
   ].join("");
 
-  const search = `<form method="GET" action="/workstreams/"><input name="q" value="${escapeHtml(query)}" placeholder="Search workstreams, issues, plans"><button>Search</button></form>`;
+  const search = `<form class="search-form" role="search" method="GET" action="/workstreams/"><input type="search" name="q" value="${escapeHtml(query)}" aria-label="Search workstreams, issues, and plans" placeholder="Search workstreams, issues, and plans"><button type="submit">Search</button></form>`;
   return pageShell(
     "workstreams",
-    `<h1>workstreams</h1>${quotaHtml(quotas, now)}${search}${flash ? `<p class="flash">${escapeHtml(flash)}</p>` : ""}${searchHtml(query, rows, documents)}${body || "<p>No workstreams recorded.</p>"}`,
+    `<header class="page-header"><div class="heading-row"><h1>workstreams</h1>${quotaHtml(quotas, now)}</div>${search}</header>${flash ? `<p class="flash">${escapeHtml(flash)}</p>` : ""}${searchHtml(query, rows, documents)}${body || "<p>No workstreams recorded.</p>"}`,
     true,
   );
 }

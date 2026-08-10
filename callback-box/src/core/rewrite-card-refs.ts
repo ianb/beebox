@@ -292,6 +292,22 @@ export function rewriteReferrerRefs(params: {
   return applyTransform(params.text, { transform, skipFencedCode: false });
 }
 
+/** Count refs selected by a remap without changing text; uses the same token scanner as rewrites. */
+export function countReferrerRefs(params: {
+  boxRoot: string;
+  cardAbsPath: string;
+  text: string;
+  remap: Remap;
+  skipFencedCode: boolean;
+}): number {
+  const transform = transformForReferrer({
+    boxRoot: params.boxRoot,
+    cardAbsPath: params.cardAbsPath,
+    remap: params.remap,
+  });
+  return applyTransform(params.text, { transform, skipFencedCode: params.skipFencedCode }).count;
+}
+
 /**
  * Rewrite `cardRef="…"` attributes in a box-authored view (`.tsx`) that point at
  * moved targets. Views aren't cards, so only the widget attribute is touched —

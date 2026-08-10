@@ -10,6 +10,21 @@ import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { parse as parseYaml } from "yaml";
 import { errorMessage } from "../../../lib/error-guards.js";
+import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
+import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash.js";
+import { rollbackTrashReceipt } from "../../../core/commands/trash-recovery.js";
+import { createCollectorContext } from "../../../core/commands/index.js";
+
+function resolveCardPath(boxRoot: string, inputPath: string): { relPath: string; fullPath: string } {
+  const relPath = boxRelativePath(inputPath);
+  const fullPath = path.join(boxRoot, relPath);
+  const resolved = path.resolve(fullPath);
+  const root = path.resolve(boxRoot);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
+  }
+  return { relPath, fullPath };
+}
 
 export interface FrontmatterCardResponse {
   path: string;
@@ -75,8 +90,7 @@ export const cardRouter = router({
       // Accept either ref form (a leading-slash ref or the canonical box-relative
       // path) but normalize to canonical so the security check, the read, and the
       // returned `path` are all consistent. See src/shared/box-path.ts.
-      const relPath = boxRelativePath(input.path);
-      const fullPath = path.join(ctx.boxRoot, relPath);
+      const { relPath, fullPath } = resolveCardPath(ctx.boxRoot, input.path);
 
       // Security: `input.path` arrives from the client (and now from the chat
       // `?card=` deep-link a card-page click writes). Ensure the resolved path
@@ -84,12 +98,6 @@ export const cardRouter = router({
       // crafted `../../etc/...` would otherwise escape boxRoot. Compare against
       // `root + sep` (not a bare prefix) so a sibling dir like `<box>-secrets`
       // can't satisfy the check. Mirrors the `/api/files` boundary guard.
-      const resolved = path.resolve(fullPath);
-      const root = path.resolve(ctx.boxRoot);
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
-      }
-
       let raw: string | null = null;
       try {
         raw = await fs.readFile(fullPath, "utf-8");
@@ -122,5 +130,46 @@ export const cardRouter = router({
         body: split.hasFrontmatter ? split.body : raw,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",
       };
+    }),
+
+  inboundRefs: publicProcedure
+    .input(z.object({ path: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const { relPath } = resolveCardPath(ctx.boxRoot, input.path);
+      return { referrers: await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath }) };
+    }),
+
+  trash: publicProcedure
+    .input(z.object({ path: z.string().min(1), allowDanglingRefs: z.boolean().default(false) }))
+    .mutation(async ({ input, ctx }) => {
+      const { relPath } = resolveCardPath(ctx.boxRoot, input.path);
+      const referrers = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
+      if (referrers.length > 0 && !input.allowDanglingRefs) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `${String(referrers.length)} file${referrers.length === 1 ? "" : "s"} link to this card`,
+          cause: referrers,
+        });
+      }
+      const { ctx: commandContext } = createCollectorContext(ctx.boxRoot);
+      const receipt = await moveCardsToTrash(commandContext, [relPath]);
+      let commit: string | null;
+      try {
+        commit = await commitTrashReceipt(ctx.boxRoot, {
+          receipt,
+          reason: "trashed from card view",
+        });
+      } catch (error) {
+        await rollbackTrashReceipt(ctx.boxRoot, receipt);
+        throw error;
+      }
+      const move = receipt.moves.at(0);
+      if (move === undefined) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Card was not trashed" });
+      ctx.eventBus.emitTransient("file-change", {
+        event: "unlink",
+        path: relPath,
+        timestamp: new Date().toISOString(),
+      });
+      return { move, commit, referrers };
     }),
 });

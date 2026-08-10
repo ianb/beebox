@@ -26,6 +26,8 @@
 #                      --include-removed with --json for registry ghost rows.
 #   quotas --json      Claude and Codex account quota windows and reset times.
 #   setup-claude-quota Install the passive Claude quota status-line collector.
+#   archive <name>     Keep a workstream but move it into the archived section.
+#   unarchive <name>   Return an archived workstream to the active sections.
 #   serve              Run the router in the foreground.
 #   status             Raw router status JSON (what the router itself reports).
 #   down <name>        Tell the router to stop a worktree's processes.
@@ -88,6 +90,36 @@ case "$cmd" in
     chmod 600 "$settings_tmp"
     mv "$settings_tmp" "$settings"
     echo "Claude quota capture enabled; it will populate after the next Claude response."
+    ;;
+
+  archive|unarchive)
+    name="${1:-}"
+    [ -n "$name" ] && [ $# -eq 1 ] || { echo "usage: workstreams $cmd <name>" >&2; exit 1; }
+    # shellcheck source=lib/worktree-paths.sh
+    . "$REPO_DIR/bin/lib/worktree-paths.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    wt_paths_valid_name "$name" \
+      || { echo "workstreams $cmd: invalid workstream name '$name'" >&2; exit 1; }
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    record=$(session_registry_read "$name" || true)
+    if [ ! -d "$WT_ROOT/$name" ] && [ -z "$record" ]; then
+      echo "workstreams $cmd: unknown workstream '$name'" >&2
+      exit 1
+    fi
+    if [ "$cmd" = archive ]; then
+      if printf '%s' "$record" | jq -e '.removed.merged == false' >/dev/null 2>&1; then
+        echo "workstreams archive: refusing to hide recovery state for '$name'" >&2
+        exit 1
+      fi
+      archived_at=$(printf '%s' "$record" | jq -r '.archived.at // empty' 2>/dev/null || true)
+      [ -n "$archived_at" ] || archived_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      patch=$(jq -cn --arg at "$archived_at" '{archived:{at:$at}}')
+    else
+      patch='{"archived":null}'
+    fi
+    session_registry_merge "$name" "$patch"
+    echo "workstreams $cmd: $name"
     ;;
 
   create)
