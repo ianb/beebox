@@ -221,6 +221,11 @@ function CompanionViewPanelInner({
               key={tab.target.path}
               role="tabpanel"
               aria-hidden={!isActive}
+              // tabIndex 0: a scrolling tabpanel must be keyboard-focusable
+              // (both the tabpanel ARIA pattern and axe's
+              // scrollable-region-focusable) — the fixed shell's window never
+              // scrolls, so keys only reach a container that can take focus.
+              tabIndex={0}
               className={cn("absolute inset-0 overflow-auto", !isActive && "hidden")}
               // Scrolling the active card reports a quantized read position
               // (nearest tenth); reportScroll de-dupes so a scroll only fires

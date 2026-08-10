@@ -1,9 +1,10 @@
+---
+title: "Design Exploration: Boxes as Code Repositories"
+status: superseded
+workstream: unknown
+issues: []
+---
 # Design Exploration: Boxes as Code Repositories
-
-**Status:** SUPERSEDED by `docs/implemented-plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
-this design against the current codebase, corrects stale assumptions (cardworks removal,
-`cb boxes` manifest, `cb migrate`/template-sync machinery), and locks the boxholder's
-decisions. Kept for the reasoning record.
 
 **Original status:** Draft for review.
 **Author:** Conversation between Ian and Claude.

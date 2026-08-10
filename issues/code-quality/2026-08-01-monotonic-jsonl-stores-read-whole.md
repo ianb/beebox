@@ -1,5 +1,6 @@
 ---
 title: "Monotonic JSONL stores (retro ledger, usage manifest) read whole with no rotation"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep

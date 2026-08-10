@@ -1,5 +1,6 @@
 ---
 title: "CLI Design for Agents"
+workstream: unknown
 needs: [design]
 area: callback-box
 ---

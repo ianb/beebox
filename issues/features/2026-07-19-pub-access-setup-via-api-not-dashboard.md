@@ -1,5 +1,6 @@
 ---
 title: "cb pub setup's Access instructions are stale and dashboard-bound — provision via the API instead"
+workstream: unknown
 area: callback-box
 needs: [manual-testing]
 design: ../../callback-box/docs/implemented-plans/pub-setup-wrangler.md
@@ -195,3 +196,9 @@ Also worth stating in the output what the boxholder had to be told twice: **this
 whole step is optional** — `public` and `secret` tier publications work without
 any Access setup. The current output says account tiers "fail closed" but doesn't
 make it obvious you can just proceed without them.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

@@ -1,4 +1,4 @@
-// The /<worktree>/dev/issues/ space: a server-rendered browser over the
+// The /workstreams/issues/ space: a server-rendered browser over the
 // monorepo-root issues/ tree (issues/CLAUDE.md is the data model), overlaid
 // with what every active worktree has added/changed/deleted relative to
 // main. Sibling to router-docs.ts, which dispatches into this module from
@@ -18,6 +18,7 @@ type Category = (typeof CATEGORIES)[number];
 
 export interface IssueFrontmatter {
   title: string;
+  workstream: string;
   needs: string[];
   labels: string[];
   area?: string;
@@ -170,6 +171,7 @@ export function parseIssueFile(relPath: string, src: string, visibility?: Visibi
     slug,
     frontmatter: {
       title,
+      workstream: asString(data.workstream) ?? "unknown",
       needs: asStringList(data.needs),
       labels: asStringList(data.labels),
       ...(area !== undefined ? { area } : {}),
@@ -453,7 +455,7 @@ export interface RewrittenIssueLinks {
 // cross-category `../bugs/foo.md`) so they navigate within the issue
 // browser instead of 404ing (the browser doesn't serve raw issues/ files).
 // `dirPath` is the current issue's directory relative to issues/ (e.g.
-// "bugs" or "closed/bugs"); `issuesBase` is like "/main/dev/issues".
+// "bugs" or "closed/bugs"); `issuesBase` is like "/workstreams/issues".
 // Absolute paths, external URLs, and anchors are left untouched. Also
 // collects which of the rewritten hrefs land under closed/ (a link whose
 // target is a closed issue), so the caller can pill them.
@@ -721,7 +723,8 @@ function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] 
   // date twice — split it into "date · rest-of-slug" instead.
   const date = issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
   const shortSlug = date ? issue.slug.slice(date.length).replace(/^-/, "") : issue.slug;
-  const pills = `${facetChips(issue.frontmatter, issue.research, issue.visibility)}${worktreeBadges(overlay)}`;
+  const workstream = `<a class="chip" href="/workstreams/${encodeURIComponent(issue.frontmatter.workstream)}/">${escapeHtml(issue.frontmatter.workstream)}</a>`;
+  const pills = `${workstream}${facetChips(issue.frontmatter, issue.research, issue.visibility)}${worktreeBadges(overlay)}`;
   return `<li>
     <div class="issue-main">
       <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
@@ -842,6 +845,7 @@ ${worktreeOnlyHtml}`;
 
 function factsTableHtml(fr: IssueFrontmatter, research: ResearchState, closed: boolean): string {
   const rows: Array<[string, string]> = [];
+  rows.push(["workstream", fr.workstream]);
   if (fr.needs.length) rows.push(["needs", fr.needs.join(", ")]);
   if (fr.labels.length) rows.push(["labels", fr.labels.join(", ")]);
   if (fr.area) rows.push(["area", fr.area]);
@@ -948,9 +952,13 @@ async function renderIssueDetail(
   const diffHtml = diffSections.filter(Boolean).length
     ? `<div class="wt-diff">${diffSections.join("")}</div>`
     : "";
+  const manualActions = issue.frontmatter.needs.includes("manual-testing")
+    ? `<div class="issue-actions"><form method="POST" action="/workstreams/action/resume/${encodeURIComponent(issue.frontmatter.workstream)}"><button type="submit">Open workstream</button></form>${!worktreeOnlyLabel && visibility === "public" ? `<form method="POST" action="/workstreams/action/confirm-tested/${encodeURIComponent(path.posix.basename(relPath))}"><button type="submit">Confirm</button></form>` : ""}</div>`
+    : "";
 
   const html = `<h1>${escapeHtml(issue.frontmatter.title)}</h1>
 ${worktreeOnlyLabel}
+${manualActions}
 ${factsTableHtml(issue.frontmatter, issue.research, issue.closed)}
 ${bodyHtml}
 ${diffHtml}`;
@@ -961,7 +969,7 @@ ${diffHtml}`;
 // --- dispatch -------------------------------------------------------------------
 
 /**
- * Dispatch everything under /<name>/dev/issues/. `rel` is the URL after
+ * Dispatch everything under /workstreams/issues/. `rel` is the URL after
  * "/issues" (e.g. "" | "/" | "/bugs/foo.md" | "/private/bugs/foo.md");
  * `query` is the parsed query string. `mainRoot` is always the canonical
  * checkout's root — the issue set is main's regardless of which

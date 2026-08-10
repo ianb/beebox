@@ -1,5 +1,6 @@
 ---
 title: "Less-casual releases, and an update story paired with VPS deploy"
+workstream: open-source-readiness
 needs: [design]
 area: callback-box
 filed-by: agent

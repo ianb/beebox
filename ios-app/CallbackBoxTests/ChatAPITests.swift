@@ -59,6 +59,21 @@ final class ChatAPITests: XCTestCase {
         )
     }
 
+    func testDefaultSessionFailureDoesNotStartNewSession() async {
+        let transport = StubChatTransport(statusCode: 503)
+
+        do {
+            _ = try await ChatAPI(box: makeBox(), transport: transport).transcribeAudio(
+                fileURL: URL(fileURLWithPath: "/missing.wav")
+            )
+            XCTFail("Expected default-session failure")
+        } catch let error as ChatAPI.ChatAPIError {
+            XCTAssertEqual(error.errorDescription, "Default-session lookup failed with HTTP status 503.")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     private func makeBox() -> PairedBox {
         PairedBox(
             id: UUID(),

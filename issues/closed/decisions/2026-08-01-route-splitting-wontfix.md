@@ -1,5 +1,7 @@
 ---
 title: Route-level code splitting — decided not now (wontfix)
+workstream: unknown
+resolution: wontfix
 ---
 
 Decided 2026-08-01 (boxholder + measured analysis): do NOT implement

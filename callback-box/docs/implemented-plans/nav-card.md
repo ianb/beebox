@@ -1,3 +1,9 @@
+---
+title: "Nav as a card — first interface-as-cards slice"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Nav as a card — first interface-as-cards slice
 
 Status: **implemented 2026-07** (all three PRs, verified in a live box).

@@ -1,5 +1,6 @@
 ---
 title: "Detect a server update and prompt the client to reload"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked for it

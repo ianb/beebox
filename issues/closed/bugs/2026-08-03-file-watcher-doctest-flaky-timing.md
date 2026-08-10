@@ -1,5 +1,6 @@
 ---
 title: "`core/box/file-watcher.doctest.md` flakes intermittently under load"
+workstream: top-nav-ia
 area: callback-box
 filed-by: agent
 discovered-in: worktree-top-nav-ia — /finish full-suite verification

@@ -1,5 +1,6 @@
 ---
 title: "stale image refs after renames"
+workstream: unknown
 area: callback-box
 resolution: wontfix
 ---

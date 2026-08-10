@@ -1,5 +1,6 @@
 ---
 title: "adapt the SDK's new conversation_reset message"
+workstream: unknown
 area: callback-box
 needs: [design]
 ---

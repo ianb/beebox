@@ -1,8 +1,10 @@
+---
+title: "Clerk↔Server Contract + Frontend Import Boundary"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Clerk↔Server Contract + Frontend Import Boundary
-
-**Status:** implemented 2026-07-12 — both tracks shipped and merged; see
-`issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md`
-items 2 and 5 for the closing record.
 
 Resolves the last two build-item entries of the architectural review's open
 decisions (`issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md`

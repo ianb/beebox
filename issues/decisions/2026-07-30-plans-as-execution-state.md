@@ -1,5 +1,6 @@
 ---
 title: "Should plans carry execution state (checkboxes), or stay design documents?"
+workstream: elixir-skills-review
 needs: [decision]
 area: callback-box
 filed-by: agent

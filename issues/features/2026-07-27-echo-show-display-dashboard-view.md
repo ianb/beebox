@@ -1,5 +1,6 @@
 ---
 title: "Always-on personalized dashboard view for the Echo Show (device auth + Silk keepalive)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder chose this after Echo Show research

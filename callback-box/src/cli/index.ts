@@ -34,6 +34,7 @@ import {
   finishCommand,
   reactorCommand,
   scenarioCommand,
+  fieldTestCommand,
   tickCommand,
   scheduledCommand,
   healthCommand,
@@ -111,6 +112,7 @@ program.addCommand(driveCommand);
 program.addCommand(finishCommand);
 program.addCommand(reactorCommand);
 program.addCommand(scenarioCommand);
+program.addCommand(fieldTestCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
 program.addCommand(healthCommand);

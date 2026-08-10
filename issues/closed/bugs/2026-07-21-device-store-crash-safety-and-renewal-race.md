@@ -1,5 +1,6 @@
 ---
 title: "Device-store write not fully crash-safe; active-check reads outside the lock"
+workstream: open-source-readiness
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes

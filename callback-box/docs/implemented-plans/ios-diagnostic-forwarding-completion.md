@@ -1,6 +1,10 @@
+---
+title: "iOS diagnostic forwarding completion"
+status: implemented
+workstream: unknown
+issues: []
+---
 # iOS diagnostic forwarding completion
-
-**Status:** implemented 2026-08 — boxholder approved box-hosted logging instead of on-device export
 
 This plan completes iOS runtime observability through the existing box-owned
 `client-debug.log`. It adds useful state transitions and media failure details

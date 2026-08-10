@@ -1,5 +1,6 @@
 ---
 title: "Expose a dev checkout (main) over Tailscale without running a second server"
+workstream: tailscale-exposure
 area: bin + callback-box
 needs: [decision, design]
 filed-by: agent

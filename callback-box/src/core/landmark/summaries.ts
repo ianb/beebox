@@ -10,8 +10,14 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
+import { parseLandmarkFields } from "../../schemas/landmark.js";
+import { readLandmarkCard } from "./card-cache.js";
+import { readLandmarkSymbol } from "./symbol.js";
+import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { errnoCode } from "../../lib/error-guards.js";
+
+/** Landmark cards read at once — see {@link mapInBatchesSettled}. */
+const READ_CONCURRENCY = 64;
 
 /**
  * Display label for each of a known set of landmark directories ("" = the box
@@ -88,19 +94,40 @@ export interface LandmarkSummaries {
 }
 
 /**
- * Pull the navigation `symbol`'s text and image src (if any). A string symbol
- * is text; a `{ src }` symbol is an image whose path is resolved from "relative
- * to the landmark directory" to "box-relative" so the frontend can request it.
+ * One card's contribution to the summaries: its tile metadata, a parse
+ * `problem`, or null when the file couldn't be read at all (there's nothing to
+ * say about a card we never saw).
  */
-function readSymbol(
-  navigation: LandmarkNavigationData | undefined,
-  { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
-): { text: string; src: string | null } {
-  const symbol = navigation === undefined ? undefined : navigation.symbol;
-  if (symbol === undefined) return { text: "", src: null };
-  if (typeof symbol === "string") return { text: symbol.trim(), src: null };
-  const absolute = path.resolve(landmarkDir, symbol.src);
-  return { text: "", src: path.relative(boxRoot, absolute) };
+type CardOutcome =
+  | { problem: false; summary: LandmarkSummary }
+  | { problem: true; path: string };
+
+async function readSummary(boxRoot: string, relPath: string): Promise<CardOutcome | null> {
+  const absPath = path.join(boxRoot, relPath);
+  let fields;
+  try {
+    fields = await readLandmarkCard(absPath);
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`Skipping unreadable landmark card ${absPath}:`, e);
+    }
+    return null;
+  }
+  if (fields === null) return { problem: true, path: relPath };
+
+  const navigation = fields.navigation;
+  const dir = path.dirname(relPath);
+  const symbol = readLandmarkSymbol(navigation, { landmarkPath: relPath });
+  return {
+    problem: false,
+    summary: {
+      path: relPath,
+      dir: dir === "." ? "" : dir,
+      label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
+      symbol: symbol.text,
+      symbolSrc: symbol.src,
+    },
+  };
 }
 
 /**
@@ -122,35 +149,27 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
     ignore: ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"],
   });
 
+  // Read the cards concurrently — they're independent files and the picker
+  // waits on all of them — but in bounded batches, not one handle per card at
+  // once: a large box has enough landmarks to matter, and this codebase has
+  // already been bitten by fd exhaustion (see core/box/file-watcher.ts's
+  // header). `allSettled` per code-style; an unreadable card is already handled
+  // per-card below and must not abandon the rest.
+  const read = await mapInBatchesSettled(matches, {
+    size: READ_CONCURRENCY,
+    map: (relPath) => readSummary(boxRoot, relPath),
+  });
+
   const out: LandmarkSummary[] = [];
   const problems: LandmarkProblem[] = [];
-  for (const relPath of matches) {
-    const absPath = path.join(boxRoot, relPath);
-    let fields;
-    try {
-      const content = await fs.readFile(absPath, "utf-8");
-      fields = parseLandmarkFields(content);
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") {
-        console.warn(`Skipping unreadable landmark card ${absPath}:`, e);
-      }
+  for (const [i, outcome] of read.entries()) {
+    if (outcome.status === "rejected") {
+      console.warn(`Skipping landmark card ${matches[i]}:`, outcome.reason);
       continue;
     }
-    if (fields === null) {
-      problems.push({ path: relPath });
-      continue;
-    }
-
-    const navigation = fields.navigation;
-    const dir = path.dirname(relPath);
-    const symbol = readSymbol(navigation, { landmarkDir: path.dirname(absPath), boxRoot });
-    out.push({
-      path: relPath,
-      dir: dir === "." ? "" : dir,
-      label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
-      symbol: symbol.text,
-      symbolSrc: symbol.src,
-    });
+    if (outcome.value === null) continue;
+    if (outcome.value.problem) problems.push({ path: outcome.value.path });
+    else out.push(outcome.value.summary);
   }
   out.sort((a, b) => {
     // Root first, then alphabetical.

@@ -1,5 +1,6 @@
 ---
 title: "mobile-spa-fallback doctest flakes under parallel suite runs"
+workstream: chat-steering
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-steering — running the full suite after the agent-SDK 0.3 bump

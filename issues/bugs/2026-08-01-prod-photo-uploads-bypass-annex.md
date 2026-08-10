@@ -1,5 +1,6 @@
 ---
 title: Photo-batch uploads bypass git-annex (raw blobs + manifest-scheme files post-conversion)
+workstream: unknown
 ---
 
 The prod boxes converted to git-annex on 2026-07-31 (migration commit pair

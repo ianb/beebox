@@ -129,8 +129,11 @@ function emitUniversalTag(ctx: TagCtx): boolean {
       // the closest representation.
       const content = childText(ctx);
       const ref = str(attrs, "ref");
-      const as = str(attrs, "as");
-      const cite = ref === "" ? "" : ` [→ ${displayFromRef(ref)}${as === "" ? "" : `: ${as}`}]`;
+      // The schema's attribute is `usage` (markdoc-config.ts); `as` is its
+      // pre-rename spelling, still read so cards written before the rename
+      // keep their citation text in compiled output.
+      const usage = str(attrs, "usage") === "" ? str(attrs, "as") : str(attrs, "usage");
+      const cite = ref === "" ? "" : ` [→ ${displayFromRef(ref)}${usage === "" ? "" : `: ${usage}`}]`;
       out.push(node.inline ? `${content}${cite}` : `${content}${cite}\n\n`);
       return true;
     }

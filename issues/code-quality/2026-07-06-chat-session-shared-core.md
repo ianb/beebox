@@ -1,5 +1,6 @@
 ---
 title: "chat session shared core"
+workstream: architectural-review
 needs: [design, decision]
 area: callback-box
 filed-by: agent

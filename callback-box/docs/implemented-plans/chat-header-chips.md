@@ -1,7 +1,10 @@
+---
+title: "Chat header re-IA: three stateful chips"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Chat header re-IA: three stateful chips
-
-**Status:** implemented 2026-08 — shipped as `ContextChip`, `VoiceChip`, and
-`ChatMenu`, fixing the mobile-clipped "..." menu bug.
 
 **Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
 header row this plan built no longer exists — it was absorbed into the

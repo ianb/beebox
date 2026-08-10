@@ -51,6 +51,28 @@ JSON.stringify(summaries)
 => [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":"","symbolSrc":"trips/Trips.attach/pin.png"}]
 ```
 
+## A box-root `symbol.src` (leading `/`) resolves against the box, not the card
+
+The regression that shipped broken icons to the app bar's place menu while the
+landmarks page rendered them fine. The two surfaces resolved symbols through
+different code: the page used the shared ref algebra, the menu hand-rolled
+`path.resolve(landmarkDir, src)`. For a *document-relative* src the two agree,
+which is why the case above never caught it — but `path.resolve` lets an
+absolute path win, so a leading-`/` src silently escaped the box
+(`../../../archive/…`) and 404'd. Both now call `readLandmarkSymbol`.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "archive/people/marlowe/Marlowe.landmark.card",
+  "---\nnavigation:\n  label: Marlowe\n  symbol:\n    src: /archive/people/marlowe/images/priya-portrait.webp\n---\n",
+);
+
+const { summaries } = await loadLandmarkSummaries(box.root);
+summaries[0].symbolSrc
+=> archive/people/marlowe/images/priya-portrait.webp
+```
+
 ## Missing label falls back to the filename, missing navigation is tolerated
 
 A landmark card with no `navigation` (a pure routing target) still produces a

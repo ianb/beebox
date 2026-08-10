@@ -1,3 +1,9 @@
+---
+title: "Docling Decisions Log — scanner-ingest"
+status: active
+workstream: unknown
+issues: []
+---
 # Docling Decisions Log — scanner-ingest
 
 Running log of every Docling-related choice made during implementation, for

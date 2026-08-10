@@ -1,5 +1,6 @@
 ---
 title: "Agent signature identity: emoji/avatar on the personality card + a first-run 'meet your assistant' moment"
+workstream: openclaw-onboarding-research
 needs: [decision, design]
 area: callback-box
 labels: [soft-launch]

@@ -15,8 +15,11 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
 import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
-import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
+import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
+import { passwordResetAdminProcedures } from "./admin-password-resets.js";
+import { describeAllowedUsers } from "./admin-user-details.js";
+import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
 
 /**
  * Shape of `config/box.json`, validated on read (config is untrusted input).
@@ -47,6 +50,7 @@ const gmailConfigSchema = z.object({
 /** Per-box admin router (Telegram, box config). */
 export const adminRouter = router({
   ...inviteAdminProcedures,
+  ...passwordResetAdminProcedures,
 
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
@@ -162,13 +166,22 @@ export const adminRouter = router({
       }
       config = boxConfigSchema.parse({});
     }
+    const allowedEmails = normalizeAllowedEmails(config.allowedEmails);
+    const configuredOwnerEmail = process.env.CB_OWNER_EMAIL
+      ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
+      : null;
+    const userDetails = describeAllowedUsers({ allowedEmails, configuredOwnerEmail });
     return {
       boxSlug: ctx.boxSlug,
-      allowedEmails: normalizeAllowedEmails(config.allowedEmails),
+      allowedEmails,
+      allowedUserDetails: userDetails.allowedUserDetails,
+      localPasswordStatus: userDetails.localPasswordStatus,
+      passwordResetEligibleEmails: userDetails.allowedUserDetails
+        .filter((user) => user.resetEligible)
+        .map((user) => user.email),
       publicUrl: config.publicUrl,
-      ownerEmail: process.env.CB_OWNER_EMAIL
-        ? canonicalizeEmail(process.env.CB_OWNER_EMAIL)
-        : getLocalOwnerEmail(),
+      ownerEmail: userDetails.ownerEmail,
+      googleLoginConfigured: getGoogleClientCreds() !== null,
       googleServices: config.googleServices,
     };
   }),

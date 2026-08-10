@@ -1,7 +1,8 @@
 ---
 title: "Per-box lock: require re-auth (biometric/device) to open a sensitive box in a multi-box client"
+workstream: unknown
 area: callback-box
-design: ../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
+design: ../../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder raised it while working through the queue
@@ -71,7 +72,7 @@ compromise:
   key-management story, that's the signal it has drifted past this scope.
 
 Independently: iOS stores its device token in plaintext rather than the Keychain
-([ios-token-plaintext-not-keychain](../../bugs/2026-07-17-ios-token-plaintext-not-keychain.md)).
+([ios-token-plaintext-not-keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md)).
 That's a real fix worth doing on its own merits — it is **not** a prerequisite
 for this feature under the scope above, so the two need not be sequenced
 together.

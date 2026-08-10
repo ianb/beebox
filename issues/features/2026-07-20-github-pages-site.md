@@ -1,5 +1,6 @@
 ---
 title: "GitHub Pages front-door site — un-polished on purpose, cool some other way"
+workstream: open-source-readiness
 needs: [design]
 area: docs
 filed-by: agent

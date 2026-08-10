@@ -1,5 +1,6 @@
 ---
 title: "Three layers each verify credentials independently — is that the right shape?"
+workstream: browse-back-url
 area: callback-box
 filed-by: agent
 discovered-in: worktree-browse-back-url — adding CB_BROWSE_API_KEY touched six call sites across three layers

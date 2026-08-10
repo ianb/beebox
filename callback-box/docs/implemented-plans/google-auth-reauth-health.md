@@ -1,8 +1,10 @@
+---
+title: "Dead Google auth as a first-class health + notify condition"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Dead Google auth as a first-class health + notify condition
-
-**Status:** implemented 2026-07 — code, health checks, alerting, and docs are
-in place; the tracking issue stays open with `needs: [manual-testing]` because
-no run has yet exercised a real revoked Google grant end to end.
 
 Google OAuth grants die silently. A BYO operator whose consent screen sits in
 **Testing** mode gets refresh tokens that expire every 7 days; even an

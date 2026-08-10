@@ -9,11 +9,7 @@ import { makeLog } from "./log.js";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { isRecord } from "../../card-io.js";
-import {
-  listSessionRoots,
-  readHistoryFile,
-  writeHistoryFile,
-} from "./history.js";
+import { listSessionRoots, readHistoryFile, writeHistoryFile, withHistoryLock } from "./history.js";
 import { listSessionFilesInDir } from "./transcript-paths.js";
 
 const log = makeLog("chat-history");
@@ -24,7 +20,10 @@ const log = makeLog("chat-history");
  */
 async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
   const fileStream = createReadStream(logPath, { encoding: "utf-8" });
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity,
+  });
   try {
     for await (const line of rl) {
       if (!line.trim()) continue;
@@ -67,43 +66,44 @@ async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
  * file, then sets `migrated: true` so it never runs again.
  */
 export async function runBackfillIfNeeded(boxRoot: string): Promise<void> {
-  const file = (await readHistoryFile(boxRoot)) ?? { sessions: [], migrated: false };
-  if (file.migrated) return;
+  await withHistoryLock(boxRoot, async () => {
+    const file = (await readHistoryFile(boxRoot)) ?? {
+      sessions: [],
+      migrated: false,
+    };
+    if (file.migrated) return;
 
-  log("backfill", "Scanning JSONLs for web chat sessions");
-  // Scan every context root — a landmark-bound chat's transcript lives
-  // under its own encoded dir, not the box root's.
-  const roots = await listSessionRoots(boxRoot);
-  const sessions = (
-    await Promise.all(
-      roots.map(async (root) => {
-        const files = await listSessionFilesInDir(root.dir);
-        return files.map((f) => ({ ...f, contextDir: root.contextDir }));
-      })
-    )
-  ).flat();
-  const known = new Set(file.sessions.map((s) => s.id));
-  let added = 0;
-  for (const s of sessions) {
-    if (known.has(s.sessionId)) continue;
-    try {
-      if (await logHasWebChatMarkers(s.path)) {
-        // Keep the landmark binding the scan just discovered — appending a
-        // bare id would make resolveSessionLogPath treat it as root-bound.
-        // Box-root finds stay bare-id, matching pre-landmark entries.
-        file.sessions.push(
-          s.contextDir === ""
-            ? { id: s.sessionId }
-            : { id: s.sessionId, contextDir: s.contextDir }
-        );
-        known.add(s.sessionId);
-        added += 1;
+    log("backfill", "Scanning JSONLs for web chat sessions");
+    // Scan every context root — a landmark-bound chat's transcript lives
+    // under its own encoded dir, not the box root's.
+    const roots = await listSessionRoots(boxRoot);
+    const sessions = (
+      await Promise.all(
+        roots.map(async (root) => {
+          const files = await listSessionFilesInDir(root.dir);
+          return files.map((f) => ({ ...f, contextDir: root.contextDir }));
+        }),
+      )
+    ).flat();
+    const known = new Set(file.sessions.map((s) => s.id));
+    let added = 0;
+    for (const s of sessions) {
+      if (known.has(s.sessionId)) continue;
+      try {
+        if (await logHasWebChatMarkers(s.path)) {
+          // Keep the landmark binding the scan just discovered — appending a
+          // bare id would make resolveSessionLogPath treat it as root-bound.
+          // Box-root finds stay bare-id, matching pre-landmark entries.
+          file.sessions.push(s.contextDir === "" ? { id: s.sessionId } : { id: s.sessionId, contextDir: s.contextDir });
+          known.add(s.sessionId);
+          added += 1;
+        }
+      } catch (e) {
+        log("backfill", `Failed to scan ${s.path}: ${e instanceof Error ? e.message : e}`);
       }
-    } catch (e) {
-      log("backfill", `Failed to scan ${s.path}: ${e instanceof Error ? e.message : e}`);
     }
-  }
-  file.migrated = true;
-  await writeHistoryFile(boxRoot, file);
-  log("backfill", `Done — added ${added} session(s)`);
+    file.migrated = true;
+    await writeHistoryFile(boxRoot, file);
+    log("backfill", `Done — added ${added} session(s)`);
+  });
 }

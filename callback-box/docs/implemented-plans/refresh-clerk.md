@@ -1,3 +1,9 @@
+---
+title: "Refresh callback-clerk"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Refresh callback-clerk
 
 > **Implemented June 2026** (worktree-refresh-clerk). Frozen as the design

@@ -1,6 +1,10 @@
+---
+title: "Email Volume and Materialization"
+status: superseded
+workstream: unknown
+issues: []
+---
 # Email Volume and Materialization
-
-**Status:** parked 2026-08 — superseded by the tracked-working-set design
 
 This proposal was not implemented as written. The boxholder's subsequent
 design discussion replaced its callback-specific search/show/promote/demote

@@ -11,6 +11,7 @@ attributes serialize into the tag.
 import {
   admitHealth,
   buildSnapshotContext,
+  composeSendSnapshot,
   createHealthGate,
   describeElapsed,
   formatLocalTime,
@@ -196,4 +197,27 @@ admitHealth("check-calendar: overdue", { gate, now: t0 + 11 * 24 * 60 * 60 * 100
 
 admitHealth(null, { gate, now: t0 + 12 * 24 * 60 * 60 * 1000 })
 => false
+```
+
+## composeSendSnapshot stamps BOX time, not wall time
+
+The `local-time` attribute is what the agent reasons about "today" and
+day-of-week from, so it must come from `getBoxTime` (which honors
+`CB_TIME`), never the process clock. Field-test run 2 caught the
+regression this pins: a CB_TIME-frozen box whose agent confidently told
+the user the real-world weekday ("Sunday, actually") while the box clock
+said Wednesday.
+
+```ts
+const tzBox = await makeTmpBox();
+await tzBox.write("config/box.json", JSON.stringify({ timezone: "UTC" }));
+process.env.CB_TIME = "2026-08-12T08:40:00Z";
+const snapshot = await composeSendSnapshot(tzBox.root, { features: {}, sessionStart: false });
+delete process.env.CB_TIME;
+snapshot.includes('local-time="Wednesday 2026-08-12 08:40 UTC (morning)"')
+=> true
+```
+
+```ts cleanup
+await tzBox.cleanup();
 ```

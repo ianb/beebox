@@ -13,7 +13,7 @@ fails with `EBADF`, so the chat agent could not start at all
 import { ensureBoxWatcher, closeBoxWatcher } from "../../../src/core/box/file-watcher.js";
 import { createEventBus, type EventBus } from "../../../src/core/event-bus.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -291,10 +291,11 @@ Repeats inside the 50 ms window collapse, but the *last* write still reaches
 consumers. Merely dropping duplicates would leave a client that refetched on the
 first event holding content a later write had already superseded.
 
-The writes are spaced ~12 ms — inside the window, but far enough apart that the
-kernel reports them separately. Back-to-back writes are coalesced by FSEvents
-itself before Node ever sees them, so a tighter burst tests the platform rather
-than this module.
+The event count is deliberately not the contract: FSEvents may combine several
+writes into one notification before Node sees them, especially under load.
+Instead, model a consumer that refetches on each hint. First prove it observed
+`v2`, then write three more versions inside the open throttle window and require
+that a later hint advances the consumer all the way to `v5`.
 
 ```ts
 const box = await makeTmpBox();
@@ -308,16 +309,27 @@ await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
 let events = 0;
-bus.subscribe({ listener: (e) => { if (e.event === "file-change" && e.data.path === "store/Note.memo.card") events++; } });
+let observed = "";
+let reads = Promise.resolve();
+bus.subscribe({
+  listener: (e) => {
+    if (e.event !== "file-change" || e.data.path !== "store/Note.memo.card") return;
+    events++;
+    reads = reads.then(async () => { observed = await readFile(card, "utf8"); });
+  },
+});
 
-for (const v of ["v2", "v3", "v4", "v5"]) {
+await writeFile(card, "---\nstatus: new\n---\nv2\n");
+await waitFor(() => observed.endsWith("v2\n"), 5000, "the consumer to observe v2");
+
+for (const v of ["v3", "v4", "v5"]) {
   await writeFile(card, `---\nstatus: new\n---\n${v}\n`);
-  await new Promise((r) => setTimeout(r, 12));
 }
-await new Promise((r) => setTimeout(r, 400));
+await waitFor(() => observed.endsWith("v5\n"), 5000, "the trailing event to expose v5");
+await reads;
 
-`events>=2: ${events >= 2} | bounded: ${events <= 6}`
-=> events>=2: true | bounded: true
+`final content: ${observed.endsWith("v5\n")} | bounded: ${events <= 4}`
+=> final content: true | bounded: true
 ```
 
 ```ts cleanup
@@ -387,7 +399,11 @@ console.error = (...args: unknown[]) => {
 try {
   const { rename } = await import("node:fs/promises");
   await rename(join(box.root, ".incoming"), join(box.root, "store", "arrived"));
-  await waitFor(() => capLogs.length === 1, 5000, "the notification work limit");
+  // The bounded reconcile still stats up to 1,024 files sequentially. Under
+  // six-way suite contention that can legitimately exceed five seconds, so
+  // keep polling for the outcome instead of imposing an interactive latency
+  // budget on this scale test.
+  await waitFor(() => capLogs.length === 1, 30_000, "the notification work limit");
   await watcher.settled();
 } finally {
   console.error = originalConsoleError;

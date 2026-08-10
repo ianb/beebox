@@ -1,7 +1,10 @@
+---
+title: "Docs-reorg companion: gap analysis — non-obvious, undocumented conventions"
+status: active
+workstream: unknown
+issues: []
+---
 # Docs-reorg companion: gap analysis — non-obvious, undocumented conventions
-
-**Status:** survey artifact 2026-07-04 — input to `docs-reorg.md`; findings
-verified by spot-check against code at time of writing.
 
 Premise (from the plan's Direction section): document only what contradicts
 a fresh agent's intuition; flag possibly-incidental divergences as questions

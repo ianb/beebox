@@ -1,5 +1,6 @@
 ---
 title: "Chat assistant as job dispatcher"
+workstream: unknown
 area: callback-box
 ---
 

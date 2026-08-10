@@ -1,10 +1,10 @@
+---
+title: "canvas-loop figure runtime"
+status: implemented
+workstream: unknown
+issues: []
+---
 # canvas-loop figure runtime
-
-**Status:** implemented 2026-07 — all five chunks landed and merged to `main`
-(worktree `quick-seeing-p5js`). Designed 2026-07-14, revised same day after
-firsthand reading of the figure implementation (v1 of this plan was written
-from a scout's report and got `params` semantics and the module contract
-wrong; this version is grounded in the cited lines).
 
 Add `canvas-loop` as a fourth figure-card runtime alongside p5js/three/d3: a
 figure whose attach-scope entry is simultaneously a headless-runnable

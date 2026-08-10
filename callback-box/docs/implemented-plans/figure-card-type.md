@@ -1,3 +1,9 @@
+---
+title: "Figure card type"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Figure card type
 
 > **Status: implemented (2026-06).** This is the frozen design record; the

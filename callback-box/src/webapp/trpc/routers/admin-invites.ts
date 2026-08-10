@@ -2,8 +2,12 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { AuthInviteCapacityError, AuthInviteStoreError, mintAuthInvite } from "../../auth-invites.js";
-import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "../../local-users.js";
+import {
+  AuthCapabilityCapacityError,
+  AuthCapabilityStoreError,
+  mintAuthInvite,
+} from "../../auth-capabilities.js";
+import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
 import { ownerProcedure } from "../trpc.js";
 
 export const inviteAdminProcedures = {
@@ -14,13 +18,6 @@ export const inviteAdminProcedures = {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "A signed-in owner is required." });
       }
       const currentEmail = canonicalizeEmail(ctx.user.email);
-      const localOwner = getLocalOwnerEmail();
-      if (!localOwner || canonicalizeEmail(localOwner) !== currentEmail) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Initialize the matching local owner account with `cb auth create-user` before creating invites.",
-        });
-      }
       const email = input.email === undefined ? undefined : canonicalizeEmail(input.email);
       if (email !== undefined) {
         if (!email.includes("@")) {
@@ -38,10 +35,10 @@ export const inviteAdminProcedures = {
           ...(email === undefined ? {} : { email }),
         });
       } catch (error) {
-        if (error instanceof AuthInviteCapacityError) {
+        if (error instanceof AuthCapabilityCapacityError) {
           throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many live invites; wait for one to expire." });
         }
-        if (error instanceof AuthInviteStoreError) {
+        if (error instanceof AuthCapabilityStoreError) {
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "The invite store is unavailable." });
         }
         throw error;

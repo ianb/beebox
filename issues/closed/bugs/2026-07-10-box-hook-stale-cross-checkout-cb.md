@@ -1,5 +1,6 @@
 ---
 title: "Box pre-commit hooks point at a fixed checkout's cb, breaking worktree schema development"
+workstream: questions-end-to-end
 area: callback-box
 filed-by: agent
 discovered-in: worktree-questions-end-to-end — live-verifying a schema change against the worktree's test box

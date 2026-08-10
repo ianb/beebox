@@ -14,12 +14,12 @@ import { execa } from "execa";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
 import { z } from "zod";
-import { serveIssues, findClosedIssueLinkHrefs, appendClosedIssuePills } from "./router-issues.js";
+import { findClosedIssueLinkHrefs, appendClosedIssuePills } from "./router-issues.js";
 
 // Per-worktree extra cards for the /dev/ manifest, declared in the worktree's
 // tracked `dev/tools.json` and served straight from disk — so a worktree can add
 // its own tools without a router-code change + main-merge. Universal tools (doc
-// browser, issue browser, site preview) stay in code; this is for the rest.
+// browser and site preview) stay in code; this is for the rest.
 const devToolSchema = z
   .object({
     title: z.string().min(1),
@@ -291,9 +291,10 @@ function autolinkUrls(html: string): string {
 }
 
 export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
-  return autolinkUrls(
+  const html = autolinkUrls(
     highlightCodeBlocks(Markdoc.renderers.html(Markdoc.transform(Markdoc.parse(src))), defaultLang),
   );
+  return html.replace(/<h2>Manual testing<\/h2>/g, '<h2 id="manual-testing">Manual testing</h2>');
 }
 
 /**
@@ -304,8 +305,6 @@ export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
 async function renderDevManifest(name: string, base: string, devRoot: string): Promise<string> {
   let builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
     + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`
-    + `<li><a class="title" href="${base}/issues/">🗂️ Issue browser</a>`
-    + `<div class="desc">Browse the monorepo's <code>issues/</code> queue, overlaid with what every active worktree has added, changed, or closed relative to main.</div></li>`
     + `<li><a class="title" href="/${encodeURIComponent(name)}/site/">🌐 Public site preview</a>`
     + `<div class="desc">This worktree's build of the front-door site (<code>site/dist/</code> — run <code>pnpm --dir site build</code> first). What GitHub Pages will serve.</div></li>`;
 
@@ -820,19 +819,14 @@ async function serveDevArtifact(
  * never needs to import router.ts's MAIN_ROOT/WORKTREES_ROOT config (which
  * would create a value-import cycle, since router.ts imports `escapeHtml`
  * and `serveDev` from here). `mainRoot`/`worktreesRoot` are those same
- * constants, threaded through for the issue browser only (router-issues.ts
- * reads main's issues/ tree regardless of which /<name>/ prefix served the
- * request, plus the cross-worktree overlay).
  */
 export async function serveDev(params: {
   name: string;
   rest: string;
   res: http.ServerResponse;
   repoRoot: string;
-  mainRoot: string;
-  worktreesRoot: string;
 }): Promise<void> {
-  const { name, rest, res, repoRoot, mainRoot, worktreesRoot } = params;
+  const { name, rest, res, repoRoot } = params;
   // The /dev/ space is live working material — never let the browser cache it.
   // Set here so every response below (manifest, doc browser, .md, dir index,
   // static artifacts) inherits it; nothing overrides cache-control to anything
@@ -895,16 +889,6 @@ export async function serveDev(params: {
     const query = rest.includes("?") ? rest.slice(rest.indexOf("?") + 1) : "";
     const sort = new URLSearchParams(query).get("sort") === "recent" ? "recent" : "path";
     await serveDocBrowser(base, repoRoot, rel.slice("/docs".length), sort, res);
-    return;
-  }
-  if (rel === "/issues") {
-    res.writeHead(301, { location: `${base}/issues/` });
-    res.end();
-    return;
-  }
-  if (rel === "/issues/" || rel.startsWith("/issues/")) {
-    const query = rest.includes("?") ? rest.slice(rest.indexOf("?") + 1) : "";
-    await serveIssues({ base, mainRoot, worktreesRoot, rel: rel.slice("/issues".length), query: new URLSearchParams(query), res });
     return;
   }
   await serveDevArtifact(base, devRoot, rel, pathOnly, scripted, res);

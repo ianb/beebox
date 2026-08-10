@@ -1,5 +1,6 @@
 ---
 title: "Agent containment: an allowed-directories control plane (box escapes)"
+workstream: open-source-readiness
 needs: [design]
 area: callback-box
 filed-by: agent

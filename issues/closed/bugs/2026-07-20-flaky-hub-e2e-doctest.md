@@ -1,5 +1,6 @@
 ---
 title: "hub-e2e doctest times out under parallel suite runs"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main — scheduled agent-SDK update (0.3.210 → 0.3.214)

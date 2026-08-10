@@ -1,6 +1,7 @@
 ---
 title: "v1-removal residue: stale legacy-box src comments + flat scenario boxes"
-needs: [cleanup]
+workstream: unknown
+
 area: callback-box
 ---
 

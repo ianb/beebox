@@ -1,5 +1,6 @@
 ---
 title: "Box agents occasionally leak a macOS notification — they inherit the user's Notification hook"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder gets occasional stray notification popups from boxes

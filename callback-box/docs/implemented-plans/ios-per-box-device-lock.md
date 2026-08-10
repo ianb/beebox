@@ -1,9 +1,10 @@
+---
+title: "iOS per-box device lock"
+status: implemented
+workstream: unknown
+issues: []
+---
 # iOS per-box device lock
-
-**Status:** implemented 2026-07-20 — build and XCTest are green, and seeded
-protected-box layouts were exercised on iPhone and iPad simulators. Interactive
-authentication/background checks on a physical device remain before issue
-closure.
 
 This plan adds an optional, device-local navigation lock to each box paired with
 the iOS companion. A protected box requires Face ID, Touch ID, or device

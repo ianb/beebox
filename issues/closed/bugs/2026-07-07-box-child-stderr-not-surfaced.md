@@ -1,5 +1,6 @@
 ---
 title: "box child stderr not surfaced"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: prod (one personal box) — an intermittent chat-turn "error_during_execution (no detail)" couldn't be diagnosed because the box child's error log went nowhere findable

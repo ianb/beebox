@@ -1,5 +1,6 @@
 ---
 title: "knowledge-audit --box crashes on a box package root (needs content/)"
+workstream: quick-seeing-p5js
 area: callback-box
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — running the figure-canvas-loop audits against the worktree box clone

@@ -1,5 +1,7 @@
 ---
 title: Hub /healthz is blind to box children — deploy verified "healthy" while every box was crashing
+workstream: unknown
+resolution: implemented
 ---
 
 During the Node 22→24 upgrade (2026-07-16), every per-box `cb serve` child

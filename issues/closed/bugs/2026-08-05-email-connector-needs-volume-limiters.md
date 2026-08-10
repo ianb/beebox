@@ -1,5 +1,6 @@
 ---
 title: "The email connector has no volume limiters — a normal inbox lands ~69k directories in the box"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — box-family, 2026-08-05

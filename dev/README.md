@@ -3,8 +3,10 @@
 Things the **dev-repo agent** (Claude Code, not a box) builds for you to look at
 in the browser: HTML visualizations, rendered Markdown reports, data displays.
 
-View them via the dev router at **`http://localhost:3210/dev/`** — a manifest
-page that lists the built-in tools plus whatever is in this directory.
+View them via the dev router at
+**`http://localhost:3210/<worktree>/dev/`** — a manifest page that lists the
+built-in tools plus whatever is in this directory. Use `main` for the main
+checkout or the worktree's short name for an isolated checkout.
 
 - This directory **is tracked in git** (unlike the gitignored `scratch/`), so
   views kept here are committed and shared.
@@ -12,8 +14,11 @@ page that lists the built-in tools plus whatever is in this directory.
   Drop a `.md` file and the router renders it to HTML (via Markdoc — tables,
   code, lists all work).
 - Built-in tool, not a file here: the **markdown doc browser** at
-  `/dev/docs/` — read every `.md` in the repository, grouped by area.
-- **`dev/tools.json`** — declare extra "Built-in tools" cards for *this*
+  `/<worktree>/dev/docs/` — read every `.md` in the repository, grouped by area.
+- The workstream, issue, plan, and manual-testing control surfaces are router
+  apps, not files in this directory: `/workstreams/`, `/workstreams/issues/`,
+  `/workstreams/plans/`, and `/workstreams/testing/`.
+- **`dev/tools.json`** — declare extra "Built-in tools" cards for _this_
   worktree's manifest (a full page or view that shouldn't just be a bare
   folder row). Read live from disk, so a card appears the moment you commit
   it here — no router-code change or main-merge. Shape:
@@ -23,8 +28,8 @@ page that lists the built-in tools plus whatever is in this directory.
   - **Scripts in `dev/` pages are sandboxed off by default.** The router serves
     `/dev/` HTML with a bare `sandbox` CSP (no JS, no same-origin requests) —
     it shares an authenticated origin with worktree control routes, so arbitrary
-    agent-authored HTML must not be able to script them. A *trusted, committed,
-    first-party* interactive app (its own page, needs JS + localStorage) opts
+    agent-authored HTML must not be able to script them. A _trusted, committed,
+    first-party_ interactive app (its own page, needs JS + localStorage) opts
     out by listing its `dev/` subdirectory name in `tools.json`'s `scripted`
     array — e.g. `"scripted": ["story-eval"]` — which grants it
     `allow-scripts allow-same-origin`. Only add reviewed first-party apps here.

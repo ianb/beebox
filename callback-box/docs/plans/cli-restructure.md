@@ -1,6 +1,10 @@
+---
+title: "`cb` CLI Restructure — Plan"
+status: active
+workstream: unknown
+issues: []
+---
 # `cb` CLI Restructure — Plan
-
-**Status:** active — proposed, not started
 
 Proposed reorganization of the `cb` CLI surface. **Not yet implemented** beyond a few resolved items below — this doc records the plan so it persists across sessions and we can implement in focused passes.
 

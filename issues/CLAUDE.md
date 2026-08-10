@@ -70,11 +70,13 @@ clickable, not informative.)
 
 ## Frontmatter
 
-`title:` is required; everything else is optional — omit what doesn't apply.
+`title:` and `workstream:` are required; everything else is optional — omit
+what doesn't apply.
 
 ```yaml
 ---
 title: "Short human title"    # required — the H1 replacement
+workstream: unattached        # bare workstream name; unknown is backfill-only
 needs: [design, decision]     # what must happen before this can be called done
 design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
@@ -84,6 +86,12 @@ discovered-in: worktree-foo — while doing X    # pair with filed-by: agent
 resolution: implemented       # closed/ only: implemented | wontfix | superseded
 ---
 ```
+
+- `workstream:` is the current branch name minus `worktree-`, or `unattached`
+  when deliberately filed outside a workstream. `unknown` exists only for lost
+  historical provenance and is never written for a new issue. When another
+  workstream resolves an issue, `/finish` stamps the resolving workstream even
+  if `manual-testing` keeps the issue open.
 
 - `needs:` values: `design` (needs a design/plan written), `decision` (a fork
   only Ian can resolve), `manual-testing` (see below). Research-needed is
@@ -99,8 +107,10 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   a real network, or by looking at whether it *feels* right). Add it rather than
   closing an item on green tests, and say in the body **what specifically to try
   and what should happen** — a year from now "needs testing" alone is useless. An
-  agent should never remove this itself; only Ian clears it, by testing. `grep -rl
-  "manual-testing" issues/` is the list of things waiting on him.
+  agent should never remove this itself; only Ian clears it, by testing. Every
+  flagged issue must use a `## Manual testing` section; the browser links to its
+  stable `#manual-testing` anchor. `grep -rl "manual-testing" issues/` is the
+  list of things waiting on him.
   - **Ready-to-test is the whole point — do NOT use it for an unfixed bug.** If no
     fix has landed (the item just describes a problem, or only proposes fix
     directions), it is *not* awaiting testing — it is awaiting a fix, so it gets
@@ -117,6 +127,12 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
     `> **⏳ Awaiting manual testing** — fix landed in \`<commit>\`; <one line of
     what to try>. Only Ian clears this.` The reader (and Ian scanning the queue)
     should see the true status in the first line.
+  - Persistent stock test1 content belongs on a clone branch named `keep`,
+    rooted at the source test1's `origin/main`; select only intentional content
+    onto it. A re-runnable but disposable scenario is snapshotted as
+    `test-setup`, which blocks culling until confirmation deletes it. Link test
+    instructions as `/<workstream>/test1/browse/<card-path>` before merge and
+    `/main/test1/browse/<card-path>` after stock content lands.
 - `labels:` is a freeform cross-cutting tag — an optional YAML list of
   kebab-case strings for grouping issues by effort/epic/theme/sprint, anything
   the six categories and the `area` field don't capture (multiple allowed). It's
@@ -124,7 +140,7 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   [soft-launch]` marks every issue that belongs to the soft-launch effort
   regardless of which category dir it lives in. Deliberately generic — reach for
   it whenever a set of issues wants a shared handle. Browsable as a facet in the
-  `dev/issues/` browser.
+  `workstreams/issues/` browser.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 
@@ -194,9 +210,9 @@ into main; worktree creation auto-mounts a private worktree (branch
 `worktree-<name>`, stored outside the public worktree so no cleanup can
 destroy it); `/finish` lands the private branch on private `main` alongside
 the public merge; unmerged private work survives any worktree removal as an
-orphan that `bin/worktrees sweep` reports until resolved. Details:
+orphan that `bin/workstreams sweep` reports until resolved. Details:
 `bin/CLAUDE.md` and `bin/private-issues help`. Private issues appear in the
-dev issues browser (`/dev/issues/`) marked `private` — that page is
+dev issues browser (`/workstreams/issues/`) marked `private` — that page is
 owner-session-gated.
 
 ## Taking on an issue (agents)

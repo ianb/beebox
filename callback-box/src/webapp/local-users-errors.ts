@@ -97,7 +97,7 @@ export class OwnerEmailMismatchError extends Error {
   }
 }
 
-export class AuthFileLockError extends Error {
+export class AuthFileLockError extends AuthStoreUnavailableError {
   constructor(readonly lockPath: string) {
     super(`auth file lock could not be acquired at ${lockPath}`);
     this.name = "AuthFileLockError";

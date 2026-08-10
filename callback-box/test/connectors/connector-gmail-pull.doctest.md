@@ -10,10 +10,8 @@ import { initBox } from "../../src/core/box/index.js";
 import { createGmailConnector } from "../../src/connectors/gmail.js";
 import { trackGmailThread } from "../../src/connectors/gmail-track.js";
 import { findTrackedGmailThreads } from "../../src/connectors/gmail-tracking.js";
-import {
-  createFakeGoogleGmail,
-  type GmailMessage,
-} from "../../src/services/google-gmail.js";
+import { createFakeGoogleGmail } from "../../src/services/google-gmail-fake.js";
+import type { GmailMessage } from "../../src/services/google-gmail-types.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 function message(opts: {

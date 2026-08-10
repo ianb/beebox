@@ -1,5 +1,6 @@
 ---
 title: "A card that extends another card (package refs + override/merge)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 needs: [design]

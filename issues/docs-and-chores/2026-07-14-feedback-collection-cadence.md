@@ -1,5 +1,6 @@
 ---
 title: "Feedback collection has no cadence — items rot before review"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — while reviewing accumulated box feedback (all 9 items stale)

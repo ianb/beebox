@@ -93,7 +93,7 @@ export function DashboardPage() {
         connected={connected}
       />
 
-      <Column overflow="auto" className="flex-1">
+      <Column overflow="auto" focusable className="flex-1">
         <Stack gap="lg" className="w-full min-w-0 max-w-4xl mx-auto py-4 px-4">
           <OpsLinks />
 

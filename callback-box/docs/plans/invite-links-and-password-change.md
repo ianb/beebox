@@ -1,7 +1,10 @@
+---
+title: "Invite links and self-service password change"
+status: partial
+workstream: unknown
+issues: []
+---
 # Invite links and self-service password change
-
-**Status:** Partially implemented 2026-08-06 — source complete after boxholder
-approval and cross-model review; signed-in browser smoke testing remains.
 
 This plan adds the complete no-password-sharing lifecycle for member accounts.
 An owner can invite one person to one box. The invitee chooses their own
@@ -149,7 +152,7 @@ owner-only Admin mutation that mints one invite for the current box.
 
 **Direction.**
 
-- Add `src/webapp/auth-invites.ts`. Derive a sibling path from `authFilePath()`
+- Add the invite capability store (now `src/webapp/auth-capabilities.ts`). Derive a sibling path from `authFilePath()`
   so tests remain isolated via `CB_AUTH_FILE`; do not alter the v1 user schema.
 - Propagate `CB_AUTH_FILE` from the hub to each box child so minting and
   acceptance resolve the same `authFilePath()` and invite store. A future
@@ -187,7 +190,7 @@ owner-only Admin mutation that mints one invite for the current box.
 **Vocabulary lock-ins.** `/auth/invite`; `AuthInviteStatus`; fixed 15-minute
 TTL; one invite grants one member identity access to exactly one box.
 
-**First implementation chunk.** Write `test/webapp/auth-invites.doctest.md`
+**First implementation chunk.** Write `test/webapp/auth-capabilities.doctest.md`
 first: hash-at-rest, expiry, box binding, corruption, permissions, cap,
 concurrent consume, replay, owner/local-auth prerequisites, and pinned conflicts.
 Then implement the store and minting service; no route or UI yet.
@@ -482,7 +485,7 @@ deterministic red doctest and lands only with its focused checks green.
 
 ## Rollout shape
 
-- **Tests.** Add `auth-invites.doctest.md`, `invite-accept.doctest.md`, and
+- **Tests.** Add `auth-capabilities.doctest.md`, `invite-accept.doctest.md`, and
   `password-change.doctest.md`; extend the closest OAuth/session/box-access/Admin
   doctests. Use isolated `CB_AUTH_FILE` and registered test boxes; never touch
   real credentials.

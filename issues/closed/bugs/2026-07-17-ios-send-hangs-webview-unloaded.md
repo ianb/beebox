@@ -1,5 +1,6 @@
 ---
 title: "iOS native send hangs forever (and loses the message) if the webview isn't loaded yet"
+workstream: unknown
 area: callback-box
 resolution: implemented
 filed-by: agent

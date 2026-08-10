@@ -1,5 +1,6 @@
 ---
 title: "Delivered capture renders as raw <capture> markup when the message was queued"
+workstream: fixup-capture
 area: callback-box
 filed-by: agent
 discovered-in: worktree-fixup-capture — boxholder reported it while reporting the capture upload failures

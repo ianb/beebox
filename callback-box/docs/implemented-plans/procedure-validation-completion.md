@@ -1,3 +1,9 @@
+---
+title: "Procedure validation completion (D5)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Procedure validation completion (D5)
 
 > **Status: IMPLEMENTED (2026-06-27).** Tracks 1 (model-evaluated instruction

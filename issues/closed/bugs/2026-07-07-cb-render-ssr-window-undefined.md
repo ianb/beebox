@@ -1,5 +1,6 @@
 ---
 title: "cb render ssr window undefined"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — while debugging the prod blank-page outage, tried `cb render` on the server to inspect a box page past the OAuth wall

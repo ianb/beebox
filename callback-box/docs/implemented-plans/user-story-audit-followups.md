@@ -1,6 +1,10 @@
+---
+title: "User-story audit — follow-up plans"
+status: implemented
+workstream: unknown
+issues: []
+---
 # User-story audit — follow-up plans
-
-**Status:** implemented 2026-06 — buckets A–C done; bucket D partially done (see body)
 
 This plan triages the 95 `IAN:` comments left on `docs/reports/user-stories-audit-2026-06-26.md` (the
 auto-generated user-story catalog). Each comment was investigated against the

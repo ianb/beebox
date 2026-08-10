@@ -1,5 +1,6 @@
 ---
 title: "Mobile device tokens still have no expiry or rotation"
+workstream: mobile-token-handshake
 area: callback-box
 filed-by: agent
 discovered-in: worktree-mobile-token-handshake — deferred from the cb_mobile cookie work
@@ -29,5 +30,5 @@ Open questions, none settled:
   web (`docs/mobile-contract.md` §2).
 - Existing devices: grandfather them with a far-future `expiresAt`, or force one re-pair?
 
-Related: [iOS stores the token as plaintext, not Keychain](../bugs/2026-07-17-ios-token-plaintext-not-keychain.md)
+Related: [iOS stores the token as plaintext, not Keychain](../closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md)
 (where the token lives on-device).

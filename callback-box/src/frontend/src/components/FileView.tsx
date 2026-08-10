@@ -223,10 +223,23 @@ function useFileData(path: string): LoadResult {
 
 /* ---------- chrome helpers ---------- */
 
+/** Filename-derived fallback name: a card's `Name.type.card` becomes "Name"
+ *  with underscores read as spaces (the First_Last authoring convention) —
+ *  the filename is never the headline a user should have to parse
+ *  (issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md). A card's
+ *  frontmatter `title:` still wins where available; this is the fallback. */
 function displayName(path: string): string {
   const base = path.split("/").pop();
   if (!base) return path;
+  const cardName = base.match(/^(.+)\.[^.]+\.card$/)?.[1];
+  if (cardName !== undefined) return cardName.replace(/[_-]+/g, " ");
   return base.endsWith(".card") ? base.slice(0, -5) : base;
+}
+
+/** The card's own display title, when its frontmatter carries one. */
+function cardTitle(data: FileData): string | null {
+  const title = data.frontmatter?.title;
+  return typeof title === "string" && title.trim() !== "" ? title : null;
 }
 
 function RendererToggle({
@@ -257,9 +270,11 @@ function RendererToggle({
 
 /** Chat-mode header: name + full path (truncated, hover for full), open-in-sidebar + open-in-browse icons. */
 function ChatHeader({
-  path, renderers, active, onSelect, onOpenInPanel,
+  path, title, renderers, active, onSelect, onOpenInPanel,
 }: {
   path: string;
+  /** The card's frontmatter title, when it has one — wins over the filename. */
+  title: string | null;
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
@@ -270,7 +285,7 @@ function ChatHeader({
   return (
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{displayName(path)}</div>
+        <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
         <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
@@ -292,13 +307,19 @@ function PageHeader({
   onSelect: (name: string) => void;
 }) {
   const status = typeof data.frontmatter?.status === "string" ? data.frontmatter.status : null;
+  // The card's title is the headline; the path is metadata. A filename as
+  // the page heading was the field test's worst vocabulary leak — and the
+  // path subtitle already carries the `.type.card` suffix, so a separate
+  // "Type:" label said it twice.
   return (
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>{data.path}</h1>
+          <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>
+            {cardTitle(data) ?? displayName(data.path)}
+          </h1>
           <div className="flex items-center gap-2 mt-1">
-            {data.type ? <span className="text-sm text-warm-600">Type: {data.type}</span> : null}
+            <span className="text-xs text-warm-500 truncate" title={data.path}>{data.path}</span>
             {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
@@ -395,7 +416,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (mode === "chat") {
     return (
       <div className="border rounded-lg overflow-hidden bg-white">
-        <ChatHeader path={path} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} />
+        <ChatHeader path={path} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
     );

@@ -273,7 +273,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
             <span className="text-warm-500">‹ Box: {boxName}</span>
           </MenuItem>
           <MenuDivider />
-          <MenuItem to={href(`/${boxSlug}/dashboard`)}>Overview</MenuItem>
+          <MenuItem to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
           <MenuItem to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
           <MenuItem to={href(`/${boxSlug}/history`)}>History</MenuItem>
           {boxSwitchingAvailable ? (

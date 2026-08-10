@@ -1,5 +1,6 @@
 ---
 title: "MCP tool: agent launches the conversation into another chat (by landmark or specific chat), carrying context"
+workstream: unknown
 needs: [design]
 area: callback-box
 filed-by: agent

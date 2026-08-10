@@ -1,5 +1,6 @@
 ---
 title: "report workflows emit relative paths"
+workstream: unknown
 area: docs
 filed-by: agent
 discovered-in: main session — cleaning path leaks for the source-available release

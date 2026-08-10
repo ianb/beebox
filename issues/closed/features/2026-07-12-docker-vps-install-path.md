@@ -1,7 +1,9 @@
 ---
 title: "Docker + compose as the generic VPS install path (replaces deploy genericization)"
+workstream: unknown
 needs: [design]
-design: ../../research/openclaw-hermes/deep-installation.md
+design: ../../../research/openclaw-hermes/deep-installation.md
+resolution: implemented
 ---
 
 The public server-hosting story should be a Dockerfile + docker-compose

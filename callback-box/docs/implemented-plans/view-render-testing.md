@@ -1,3 +1,9 @@
+---
+title: "Plan: testing agent-authored views"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Plan: testing agent-authored views
 
 Box agents can author custom `.tsx` views in a box's `views/` directory, but

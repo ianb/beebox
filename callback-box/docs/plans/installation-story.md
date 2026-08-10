@@ -1,14 +1,10 @@
+---
+title: "Installation story, phase 1: developer install + local Docker"
+status: partial
+workstream: unknown
+issues: []
+---
 # Installation story, phase 1: developer install + local Docker
-
-**Status:** partially implemented 2026-07 — every code/doc chunk (A1/A2, B1/B2,
-C1/C2, D1/D2) has landed and is verified by execution (doctor run, doctests,
-docker lifecycle smoke, dev-install sequence on a scratch clean clone). The two
-rollout-verification done-when items in "Rollout shape" below — a clean-clone
-walkthrough on a second machine and a real cheap-VPS run of the compose file —
-now have executable Docker approximations that both PASS
-(`callback-box/docker/smoke-dev-install.sh` and `smoke-vps-install.sh`, added
-2026-07-12; see "Rollout shape"); a real VPS with ACME/DNS/Tailscale and an
-interactive `claude auth login` still want a human.
 
 Make callback-box installable by an outside developer: one pinned Node version
 enforced at install time, a preflight doctor that makes every missing
@@ -282,7 +278,7 @@ in A's pin, B's doctor checks, C's verified sequence).
   agents; the router/worktree harness assumes the personal `~/src` layout
   (release plan, NOT-in-scope: *"do not invest in making the
   worktree/router harness reusable"*). An outside developer needs a path
-  that never touches `bin/worktrees` — and the naive path has three
+  that never touches `bin/workstreams` — and the naive path has three
   landmines the draft plan itself stepped on: `cb` isn't reachable from
   the root, a clean clone has no built frontend, and `--dev` is
   backend-only. And there is no `.env.example` anywhere — the only env

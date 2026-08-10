@@ -30,6 +30,8 @@ printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
 WT_LOG_LABEL="SessionEnd"
 WT_SAY_PREFIX="[session-end]   "
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/bin/lib/worktree-teardown.sh"
+# shellcheck source=../../bin/lib/session-workstream.sh
+. "$WT_MONO/bin/lib/session-workstream.sh"
 
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
@@ -64,21 +66,16 @@ wt_log "event: session=$session_id reason=$reason cwd=$cwd"
 # `~/.claude/projects/<encoded-path>/<uuid>.jsonl`.
 worktree_path=""
 case "$cwd" in
-  "$HOME/src/callback-worktrees/"*) worktree_path="$cwd" ;;
+  "$WT_ROOT/"*) worktree_path="$cwd" ;;
 esac
 
 if [ -z "$worktree_path" ]; then
   tpath=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
-  case "$tpath" in
-    *"-src-callback-worktrees-"*)
-      name=$(printf '%s' "$tpath" | sed -E 's|.*-src-callback-worktrees-([^/]+)/.*|\1|')
-      candidate="$HOME/src/callback-worktrees/$name"
-      if [ -d "$candidate" ]; then
-        echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
-        worktree_path="$candidate"
-      fi
-      ;;
-  esac
+  if wt_session_workstream_from_transcript "$tpath"; then
+    candidate="$WT_ROOT/$WT_SESSION_WORKSTREAM"
+    echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
+    worktree_path="$candidate"
+  fi
 fi
 
 if [ -z "$worktree_path" ] || [ ! -d "$worktree_path" ]; then
@@ -116,6 +113,13 @@ if [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; then
   # WT_BLOCKERS captures WHICH entries block it — untracked file vs unmerged
   # commit is the whole diagnosis (e.g. review-ios lingered on one untracked doc).
   wt_log "decision=skip:unmerged branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY blockers=[$WT_BLOCKERS] wt=$worktree_path"
+  exit 0
+fi
+. "$WT_MONO/bin/lib/workstream-box-state.sh"
+name=$(basename "$worktree_path")
+if pin_reason=$(workstream_cull_pin_reason "$name"); then
+  echo "[session-end] worktree '$WT_BRANCH' is pinned ($pin_reason) — leaving alone"
+  wt_log "decision=skip:pinned reason=$pin_reason branch=$WT_BRANCH wt=$worktree_path"
   exit 0
 fi
 wt_log "decision=clean branch=$WT_BRANCH ahead=0 dirty=0 wt=$worktree_path"

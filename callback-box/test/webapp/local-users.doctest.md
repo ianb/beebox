@@ -11,14 +11,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createFirstUser,
+  addInvitedMember,
   addUser,
   verifyPassword,
   setPassword,
+  setPasswordWithPasswordHash,
   removeUser,
   listUsers,
   getLocalUser,
   getLocalOwnerEmail,
+  isLocalAuthStoreInitialized,
 } from "../../src/webapp/local-users.js";
+import { hashPassword } from "../../src/webapp/local-users-scrypt.js";
+import { AuthFileLockError, AuthStoreUnavailableError } from "../../src/webapp/local-users-errors.js";
 
 // Small work factor keeps scrypt fast in tests (2^14 vs the 2^17 prod default).
 process.env.CB_AUTH_SCRYPT_N = String(2 ** 14);
@@ -45,6 +50,14 @@ async function rejectName(fn) {
 const owner = await createFirstUser({ email: "Boxholder@Example.com", name: "Boxholder", password: "correct horse" });
 JSON.stringify(owner)
 => {"email":"boxholder@example.com","name":"Boxholder","role":"owner","gen":1,"created":«*»}
+```
+
+Credential lock exhaustion is part of the store-unavailable contract, so every
+route that already fails closed on an unavailable store also handles it.
+
+```ts continue
+new AuthFileLockError("/redacted/auth.lock") instanceof AuthStoreUnavailableError
+=> true
 ```
 
 The email is canonicalized (trim + lowercase); the owner email is discoverable.
@@ -86,7 +99,7 @@ await verifyPassword({ email: "nobody@example.com", password: "correct horse" })
 => null
 ```
 
-## A second create fails (O_EXCL — first writer wins)
+## A second owner creation fails without replacing the first
 
 ```ts continue
 await rejectName(() => createFirstUser({ email: "other@example.com", name: "Other", password: "hunter2" }))
@@ -134,7 +147,25 @@ await verifyPassword({ email: "member@example.com", password: "s3cret" })
 
 (await verifyPassword({ email: "member@example.com", password: "n3wsecret" }))?.gen
 => 2
+```
 
+The reset flow can do expensive hashing before entering the credential-store
+lock, while preserving the same generation bump and user metadata.
+
+```ts continue
+const resetHash = await hashPassword("reset-secret");
+const resetUser = await setPasswordWithPasswordHash({ email: " MEMBER@example.com ", scrypt: resetHash });
+JSON.stringify({ name: resetUser.name, role: resetUser.role, gen: resetUser.gen })
+=> {"name":"Member","role":"member","gen":3}
+
+await verifyPassword({ email: "member@example.com", password: "n3wsecret" })
+=> null
+
+(await verifyPassword({ email: "member@example.com", password: "reset-secret" }))?.gen
+=> 3
+```
+
+```ts continue
 await rejectName(() => setPassword({ email: "ghost@example.com", password: "x" }))
 => NoSuchUserError
 ```
@@ -195,11 +226,11 @@ listUsers()
 => throws AuthFileCorruptError
 ```
 
-A well-formed-JSON-but-wrong-shape file (here: zero owners) is corrupt too —
-the login path refuses it rather than treating it as an empty store.
+A well-formed-JSON-but-wrong-shape file (here: zero users) is corrupt too — the
+login path refuses it rather than treating it as an empty store.
 
 ```ts continue
-await writeFile(process.env.CB_AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
+await writeFile(process.env.CB_AUTH_FILE, JSON.stringify({ version: 2, users: [] }), { mode: 0o600 });
 await rejectName(() => verifyPassword({ email: "boxholder@example.com", password: "x" }))
 => AuthFileCorruptError
 ```
@@ -226,11 +257,87 @@ getLocalUser("anyone@example.com")
 
 await verifyPassword({ email: "anyone@example.com", password: "x" })
 => null
+
+await rejectName(() => addUser({ email: "member@example.com", name: "Member", password: "member-password", role: "member" }))
+=> NoOwnerError
 ```
 
 ```ts cleanup
 await rm(dir3, { recursive: true, force: true });
 delete process.env.CB_AUTH_FILE;
+```
+
+## An invited member can initialize the store before a local owner exists
+
+Google-authenticated owners do not need a local password. The first invited
+member can therefore create a valid member-only credential file.
+
+```ts
+const memberFirstDir = await mkdtemp(join(tmpdir(), "cb-auth-member-first-"));
+process.env.CB_AUTH_FILE = join(memberFirstDir, "auth.json");
+process.env.CB_AUTH_SCRYPT_N = String(2 ** 14);
+process.env.CB_OWNER_EMAIL = "owner@example.com";
+
+await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
+JSON.stringify({ owner: getLocalOwnerEmail(), users: listUsers().map((user) => `${user.email}:${user.role}`) })
+=> {"owner":null,"users":["member@example.com:member"]}
+```
+
+Removing the only member keeps an empty credential-store tombstone. First-run
+setup must not reopen after local auth has been initialized once.
+
+```ts continue
+await removeUser({ email: "member@example.com" });
+listUsers().length
+=> 0
+
+JSON.stringify({ file: await stat(process.env.CB_AUTH_FILE).then(() => "exists"), initialized: isLocalAuthStoreInitialized() })
+=> {"file":"exists","initialized":true}
+```
+
+The CLI owner-creation path can add the configured owner after members exist.
+
+```ts continue
+await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
+const laterOwner = await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
+laterOwner.role
+=> owner
+
+listUsers().map((user) => user.role).sort().join(",")
+=> member,owner
+```
+
+```ts cleanup
+await rm(memberFirstDir, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
+delete process.env.CB_AUTH_SCRYPT_N;
+delete process.env.CB_OWNER_EMAIL;
+```
+
+## Concurrent first owner and first member creation preserve both accounts
+
+Both initialization paths share the credential-file lock. Either operation can
+win, but neither can overwrite the other.
+
+```ts
+const raceDir = await mkdtemp(join(tmpdir(), "cb-auth-first-race-"));
+process.env.CB_AUTH_FILE = join(raceDir, "auth.json");
+process.env.CB_AUTH_SCRYPT_N = String(2 ** 12);
+process.env.CB_OWNER_EMAIL = "owner@example.com";
+
+const raceResults = await Promise.allSettled([
+  createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" }),
+  addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" }),
+]);
+JSON.stringify({ results: raceResults.map((result) => result.status), users: listUsers().map((user) => user.role).sort() })
+=> {"results":["fulfilled","fulfilled"],"users":["member","owner"]}
+```
+
+```ts cleanup
+await rm(raceDir, { recursive: true, force: true });
+delete process.env.CB_AUTH_FILE;
+delete process.env.CB_AUTH_SCRYPT_N;
+delete process.env.CB_OWNER_EMAIL;
 ```
 
 ## `CB_OWNER_EMAIL` pins the first owner's identity

@@ -1,5 +1,6 @@
 ---
 title: "iOS: a stale 'chat did not confirm the message' banner (with a duplicating Retry) survives when the send actually went through"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder saw the banner without composing anything

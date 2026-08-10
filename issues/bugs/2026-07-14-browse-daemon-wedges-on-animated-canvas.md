@@ -1,5 +1,6 @@
 ---
 title: browse daemon wedges (os error 35) on pages with continuously animating canvas
+workstream: unknown
 ---
 
 During figure verification (responsive-figures worktree), `bin/browse` repeatedly

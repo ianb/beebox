@@ -21,6 +21,21 @@ import { assertNever } from "../callback-box/src/lib/invariant.js";
 import { isScanUploadSubpath } from "../callback-box/src/hub/scan-gate.js";
 import { isPairingRedeemUrl } from "../callback-box/src/webapp/routes/pairing.js";
 
+/**
+ * The router-scoped variant of `isPairingRedeemUrl`. The shared matcher is
+ * anchored to the box-only shape (`/<box>/api/pairing/redeem`) the hub and box
+ * servers see — deliberately, per
+ * issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md,
+ * which tightened it away from an unbounded `endsWith` match. The router sees
+ * requests un-stripped (`/<worktree>/<box>/...`), one segment deeper, so it
+ * needs its own anchor rather than reusing the box-level one — widening the
+ * shared matcher to accept two segments would re-open the imprecision that
+ * fix closed for the hub/box servers.
+ */
+function isRouterPairingRedeemUrl(pathname: string): boolean {
+  return isPairingRedeemUrl(pathname) || /^\/[^/]+\/[^/]+\/api\/pairing\/redeem$/.test(pathname);
+}
+
 /** Node's incoming header bag. Repeated headers arrive as arrays. */
 export type RouterHeaders = Record<string, string | string[] | undefined>;
 
@@ -201,14 +216,20 @@ function classifyRouterControl(pathname: string): RouterRoute {
 export function classifyRouterRoute({ method, url }: { method: string; url: string }): RouterRoute {
   const pathname = pathnameOf(url);
 
-  // The pre-auth iOS pairing bootstrap, matched by the REUSED prefix-agnostic
-  // matcher (the same one the hub and box use) — the ticket is the credential.
-  if (method === "POST" && isPairingRedeemUrl(url)) return { kind: "unauth-allowlist" };
+  // The pre-auth iOS pairing bootstrap. Router-scoped: the router sees the
+  // request un-stripped, one segment deeper than the hub/box servers do — see
+  // isRouterPairingRedeemUrl. The ticket is the credential.
+  if (method === "POST" && isRouterPairingRedeemUrl(pathname)) return { kind: "unauth-allowlist" };
 
   // Router infra at the bare root (never under a worktree).
   if (pathname === "/" || pathname === "") return { kind: "control-read", json: false };
   if (pathname === "/favicon.png" || pathname === "/favicon.ico") return { kind: "unauth-allowlist" };
   if (pathname === "/__router" || pathname.startsWith("/__router/")) return classifyRouterControl(pathname);
+  if (pathname === "/workstreams" || pathname.startsWith("/workstreams/")) {
+    if (method === "GET" || method === "HEAD") return { kind: "control-read", json: false };
+    if (method === "POST" && pathname.startsWith("/workstreams/action/")) return { kind: "control" };
+    return { kind: "unknown" };
+  }
   // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev browser (owner).
   if (pathname === "/dev" || pathname === "/dev/") return { kind: "control-read", json: false };
 

@@ -171,6 +171,19 @@ pi_mount_state() {
     return 0
   fi
 
+  if [ "$wt" = "$(canon "$PI_MAIN")" ]; then
+    # The main checkout mounts the private repo's primary tree, not a
+    # worktree-<name> branch under PI_WT_ROOT.
+    PI_TARGET="$PI_REPO"
+    PI_BRANCH=$(pi_branch_of "$PI_REPO")
+    if [ -L "$wt/private-issues" ] && [ "$(canon "$wt/private-issues")" = "$(canon "$PI_REPO")" ]; then
+      PI_STATE="valid"
+    else
+      PI_STATE="invalid"
+    fi
+    return 0
+  fi
+
   if [ -L "$wt/private-issues" ]; then
     link=$(canon "$wt/private-issues")
     if [ "$link" = "$(canon "$PI_TARGET")" ] && pi_registered_at "$PI_TARGET" &&
@@ -261,7 +274,7 @@ Rules that keep it private and safe:
   closed/<category>/), same file conventions (issues/CLAUDE.md over there).
 - **Nothing here is ever force-deleted.** If a public worktree goes away
   with private work unmerged, the private worktree and its
-  `worktree-<name>` branch survive as an orphan; `bin/worktrees sweep`
+  `worktree-<name>` branch survive as an orphan; `bin/workstreams sweep`
   reports it until you either resume it (recreate a worktree with the same
   name) or merge it: `git merge worktree-<name>` from this directory.
 - **Remote is yours to wire** (`git remote add …`); until then finish
@@ -355,6 +368,10 @@ cmd_status() {
 cmd_remove_if_safe() {
   local wt="${1:?usage: private-issues remove-if-safe <worktree-path>}"
   pi_derive "$wt" || exit 1
+  if [ "$(canon "$wt")" = "$(canon "$PI_MAIN")" ]; then
+    echo "nothing"
+    return
+  fi
   pi_mount_state "$wt"
   case "$PI_STATE" in
     no-repo | create | attach-branch)

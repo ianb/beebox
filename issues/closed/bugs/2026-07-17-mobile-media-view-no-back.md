@@ -1,5 +1,6 @@
 ---
 title: "Following a link to a media file traps you on mobile — no way to go back"
+workstream: unknown
 filed-by: agent
 discovered-in: main session — boxholder got stuck on mobile
 area: callback-box

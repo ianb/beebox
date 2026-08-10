@@ -9,6 +9,7 @@
  *     - for: [triage]                triage-routing target
  *     - for: [commentary]            commentary filing spot
  *     - for: [triage, commentary]    both
+ *     - for: [share]                 native share-sheet save target
  *
  * Pure data inspection — no Node deps — so it's safe to import from both
  * core (triage) and the webapp (clerk routes).
@@ -17,7 +18,7 @@
 import type { LandmarkDestinationData } from "../../schemas/landmark.js";
 
 /** Destination kinds the system understands. `for` may list any subset. */
-export const DESTINATION_KINDS = ["triage", "commentary"] as const;
+export const DESTINATION_KINDS = ["triage", "commentary", "share"] as const;
 export type DestinationKind = (typeof DESTINATION_KINDS)[number];
 
 /**

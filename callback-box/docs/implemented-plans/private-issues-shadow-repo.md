@@ -1,11 +1,10 @@
+---
+title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Private issues: a shadow repo mounted at `<checkout>/private-issues/`
-
-**Status:** implemented 2026-08-01 (same worktree, after two plan-review
-rounds). Everything below is built and exercised end-to-end on the real
-machine (orphan preservation, relink, merged removal, gitignore-symlink
-guard, doc-check rule, browser tests) EXCEPT: the finish push leg is
-untested until a private remote exists, and the dev browser serves private
-issues only after this lands on main and the router restarts.
 
 ## Problem
 
@@ -43,7 +42,7 @@ callback-box's, one-for-one.
    (a nested repo at an ignored path: callback-box never tracks it, `git add
    -A` can't stage it — the leak guard).
 4. `/finish` couples the private merge with the public one by default.
-5. The dev issues browser (`/dev/issues/`) lists private issues alongside
+5. The dev issues browser (`/workstreams/issues/`) lists private issues alongside
    public ones.
 
 ## Location derivation (no hardcoded `~/src/`)
@@ -59,11 +58,11 @@ from where the monorepo actually lives, never from `$HOME`:
 
 One place owns the derivation — built as the `bin/private-issues` CLI
 (subcommands init/mount/status/remove-if-safe/report-orphans/prune), which
-the hooks and `bin/worktrees` shell out to rather than sourcing a lib. Two
+the hooks and `bin/workstreams` shell out to rather than sourcing a lib. Two
 hardening rules (round-2 finding 6): every command takes an **explicit
 checkout-path argument** — each caller passes the anchor it already has
 (`$worktree_path`, `$REPO_DIR`, the sweep's `$d`) — never bare cwd, which is
-wrong for `bin/worktrees` run from elsewhere and for WorktreeRemove after
+wrong for `bin/workstreams` run from elsewhere and for WorktreeRemove after
 deletion. And the private repo must pass an **identity check** before any
 script touches it: `bin/private-issues init` writes `git config
 callback.privateIssues true` plus a `.callback-private-issues` marker file
@@ -135,7 +134,7 @@ therefore **remove-if-safe, orphan-if-not**:
   ANY `status --porcelain` output counts as dirty) is removed with
   `git worktree remove` + `branch -d` as part of cleanup.
 - Anything else is **left in place as an orphan** — an intact directory plus
-  its branch — never force-removed, never auto-committed. `bin/worktrees
+  its branch — never force-removed, never auto-committed. `bin/workstreams
   sweep` (and `status`) durably REPORT orphaned private worktrees and
   unmerged `worktree-*` private branches every run, so an orphan is
   discovered even when a hook's own log line was lost (hook logging is
@@ -248,9 +247,9 @@ handling, per the topology section:
   proceeds either way — with the symlink topology it cannot destroy private
   work, so the public and private decisions are independent.
 
-### E. `bin/worktrees sweep` — same rule, plus durable orphan reporting
+### E. `bin/workstreams sweep` — same rule, plus durable orphan reporting
 
-(The orphan scanner is a function in `bin/worktrees` invoked by `sweep` —
+(The orphan scanner is a function in `bin/workstreams` invoked by `sweep` —
 NOT by `status`, which is a thin router query that exits early when the
 router is down; wiring the scanner there would change its contract.)
 
@@ -342,7 +341,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
   mis-classify every private record): `IssueRecord` gains
   `visibility: "public" | "private"`, keeping `relPath` **issue-relative**
   (`bugs/2026-08-01-foo.md`) for both sources; only URLs carry the
-  `private/` prefix (`/<name>/dev/issues/private/bugs/…`), added/stripped at
+  `private/` prefix (`/workstreams/issues/private/bugs/…`), added/stripped at
   the routing layer. Enumeration and overlay stay restricted to recognized
   category dirs (which also keeps the private README and other root files
   out); content/diff roots are parameterized per source instead of the
@@ -381,7 +380,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
   if any markdown link target (inline or reference-style), after posix
   normalization of the relative path, contains a `private-issues/` path
   segment — covering `private-issues/…`, `../private-issues/…`,
-  root-relative forms, and `/dev/issues/private/…` browser URLs. With tests
+  root-relative forms, and `/workstreams/issues/private/…` browser URLs. With tests
   (both directions: each forbidden form errors; private-issues *mentioned in
   prose* stays legal).
 
@@ -432,7 +431,7 @@ Precedent: the scoped gitignored-path include for `scratch/` in
   an orphan, and the log lines appear; merge + clean → verify full cleanup
   including private worktree + branch; sick-mount case (dangling symlink,
   plain dir) → verify fail-closed skip; `worktree-remove.sh` same matrix.
-  `bin/worktrees sweep --dry-run` verification of removal, orphan-report,
+  `bin/workstreams sweep --dry-run` verification of removal, orphan-report,
   and prune behavior. Note: faked-stdin runs exercise our scripts, not
   Claude Code's own removal ordering — with the symlink topology that
   ordering no longer matters for safety (nothing Claude Code deletes holds

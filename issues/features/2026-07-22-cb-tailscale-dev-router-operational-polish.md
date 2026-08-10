@@ -1,5 +1,6 @@
 ---
 title: "cb tailscale: dev-router exposure operational polish (from the first live proof)"
+workstream: unknown
 area: callback-box
 needs: [design]
 filed-by: agent

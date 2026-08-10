@@ -1,3 +1,9 @@
+---
+title: "Job-Card XML Purge (subplan)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Job-Card XML Purge (subplan)
 
 > **Landed** (2026-07). Implemented on `worktree-job-xml-purge`, merged to main.

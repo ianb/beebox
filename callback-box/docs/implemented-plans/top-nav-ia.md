@@ -1,7 +1,10 @@
+---
+title: "Unified app bar: one nav for chat and everything else"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Unified app bar: one nav for chat and everything else
-
-**Status:** implemented 2026-08 — all tracks (A–E) shipped, including a
-post-review follow-up commit (`ac8e12c5`).
 
 Replace the two stacked header rows (the AppNav link bar + the chat header
 chips row) with a single unified app bar, navigate by place (box ▸ landmark)
@@ -51,8 +54,12 @@ Category → control (the boxholder's taxonomy):
 - **I/O** — the voice chip, unchanged (mic + narration pooled for target
   size). Chat pages only.
 - **Chat fiddling** — the session chip: face is the session title
-  (truncated), menu is New session / Model / Advanced. "Recent chats"
-  drops out — the switch menu owns finding sessions. Replaces the `⋯`
+  (truncated), menu is New session / Recent chats / Model / Advanced.
+  (The plan dropped "Recent chats" here, on the theory that the switch
+  menu owned finding sessions; shipping proved otherwise — that menu
+  switches landmarks and resumes each one's newest chat, so it can't
+  reach a sibling session in the landmark you're already in. Restored
+  2026-08-07.) Replaces the `⋯`
   ChatMenu face; an unlabeled `⋯` stops working once every other menu
   face names its object. Phone face: a sliders icon, no title.
 - **Landmark fiddling** — the here menu: today's ContextChip root
@@ -135,7 +142,8 @@ context exists (Browse inside a landmarked dir), else hides.
   menu is this menu, moved into the bar. `VoiceChip` (split-pill face
   precedent) and `ChatMenu` (New session / Recent chats / Advanced;
   model selection) — **reused**: voice unchanged; ChatMenu becomes the
-  session chip's menu minus Recent chats.
+  session chip's menu, Recent chats included (see the chat-fiddling note
+  above — it briefly wasn't, and had to come back).
 - **AppNav** (`src/frontend/src/components/AppNav.tsx`) — gradient bar,
   box `<select>`, link row from `useNavLinks`, QuestionsBadge
   (`AppNav.tsx:254`) / PlateBadge (`AppNav.tsx:276-289`: `☑` + count →

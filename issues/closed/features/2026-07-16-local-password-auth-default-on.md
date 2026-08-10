@@ -1,6 +1,7 @@
 ---
 title: "Username/password login + forced account creation (even in dev) so a box is never accidentally open"
-design: ../../callback-box/docs/implemented-plans/local-password-auth.md
+workstream: unknown
+design: ../../../callback-box/docs/implemented-plans/local-password-auth.md
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked for a local-first, default-secure auth path

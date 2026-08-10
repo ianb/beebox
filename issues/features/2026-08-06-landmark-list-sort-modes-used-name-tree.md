@@ -1,5 +1,6 @@
 ---
 title: "Landmark list menu: switch ordering between used / name / tree (per-surface pref)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder

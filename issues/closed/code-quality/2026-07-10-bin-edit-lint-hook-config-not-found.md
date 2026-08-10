@@ -1,5 +1,6 @@
 ---
 title: "PostToolUse lint hook errors on every bin/ edit — ESLint can't find a config"
+workstream: issue-browser
 area: router
 filed-by: agent
 discovered-in: worktree-issue-browser — editing bin/router-issues.ts

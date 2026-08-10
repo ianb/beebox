@@ -19,6 +19,8 @@ export interface ChatRuntime {
   scheduleManager: ChatScheduleManager;
   /** Wire a session's events onto the shared event bus (idempotent). */
   wireSession: (session: ChatSession) => void;
+  /** Startup backfill followed by husk reconciliation. */
+  maintenance: Promise<void>;
 }
 
 const runtimes = new Map<string, ChatRuntime>();

@@ -1,5 +1,6 @@
 ---
 title: "Doctest failure diagnostics can show source from the preceding block"
+workstream: agent-sdk-monitor
 area: agent-doctest
 filed-by: agent
 discovered-in: worktree-agent-sdk-monitor — debugging the file-watcher doctest flake

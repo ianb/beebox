@@ -1,0 +1,128 @@
+# The first scenario (`docs/plans/agent-field-tests.md`, Track 4): a household
+# adopting an empty box over three simulated days. Nothing is pre-seeded except
+# the mail connector, so this is precisely the first-run experience — the box
+# is as empty for the operator as it is for a new boxholder.
+name: onboarding-first-days
+description: >-
+  A first-time user meets an empty box, puts a recipe and a batch of household
+  photos into it, comes back the next day to get the recipe out again and to
+  find out what the box did with an arriving email, and on the third day asks
+  what needs her attention.
+startTime: "2026-08-10T08:40:00Z"
+models:
+  operator: opus
+  chat: opus
+
+checklist:
+  # Day 1 — first contact, then two ways of putting things in.
+  - id: first-contact
+    cleanup: keep
+    brief: |
+      Someone told you this app is worth a look for keeping the household
+      straight. You have opened it for the first time and you have about ten
+      minutes before you have to leave.
+
+      Look around. Work out what this thing is for and what you could actually
+      use it for. You do not have to accomplish anything — but if something
+      invites you to do something, and it looks worth doing, do it.
+
+      Stop when you feel you have the measure of it, or when your ten minutes
+      of patience are gone.
+    questions:
+      - In one or two sentences, as you would say it to Tomas that evening —
+        what is this app for?
+      - Was there anything you wanted to do straight away but could not see how
+        to start?
+
+  - id: save-recipe
+    cleanup: keep
+    brief: |
+      You have the family lemon chicken recipe in a plain text file on your
+      computer, at `assets/lemon-chicken.txt`. It has been living in a folder
+      you can never find again.
+
+      Get it into this app, in whatever way the app seems to want, so that
+      later on you (or Tomas) could ask for it and actually get it back.
+
+      You decide when you are done.
+    checks:
+      - save-recipe-card-exists.sh
+    questions:
+      - When you were finished, how confident were you that the recipe was
+        really saved somewhere you could get it back from? What made you feel
+        that way?
+
+  - id: upload-photos
+    cleanup: keep
+    brief: |
+      Your phone photos have piled up. Four of them are things you actually
+      need to keep, and they are on your computer:
+
+      - `assets/kitchen-sink-leak.jpg`
+      - `assets/juniper-school-artwork.jpg`
+      - `assets/wren-soccer-schedule.jpg`
+      - `assets/pantry-shelf.jpg`
+
+      Put all four into the app in one go, if it lets you. You want them in
+      there and sorted out — not sitting in a pile you will have to deal with
+      later.
+    checks:
+      - uploaded-photos-present.sh
+    questions:
+      - Did the app tell you what it made of the photos? Did what it said match
+        what you had actually given it?
+
+  # Day 2 — the recipe comes back out, and mail arrives on its own.
+  - id: recall-recipe
+    cleanup: keep
+    pre:
+      - advance-days: 1
+    brief: |
+      It is the next evening and you are cooking. You want the lemon chicken
+      recipe you put in yesterday — specifically, you cannot remember how long
+      it stays covered on low heat.
+
+      Get the answer out of the app.
+    # This check asserts SURVIVAL, not retrieval: the recipe is still there
+    # after a simulated day and a server restart. Whether Priya could actually
+    # get the answer back is the operator's judgment plus the question below —
+    # a hard assert on a chat answer would test the model, not the product.
+    checks:
+      - save-recipe-card-exists.sh
+    questions:
+      - How long did it take to get the answer, and did you ever doubt you
+        would?
+
+  - id: dentist-email
+    cleanup: keep
+    pre:
+      - inject-email: dentist-reminder
+    brief: |
+      Your email is connected to this app, and something came in from the
+      dentist a little while ago.
+
+      You have not read it yet. Go and see what, if anything, the app has done
+      with it — and decide whether you are happy with that.
+    checks:
+      - email-thread-card-exists.sh
+    questions:
+      - Did the app do anything with that email on its own? Was that more, less,
+        or about what you wanted it to do?
+      - If you had not been told the email existed, would you have found out
+        about it from the app?
+
+  # Day 3 — the payoff question.
+  - id: whats-needed
+    cleanup: keep
+    pre:
+      - advance-days: 1
+    brief: |
+      A quiet morning moment, two days after the dentist email. Ask the app
+      what needs your attention, however you would naturally ask that, and
+      see whether what comes back is any use to you.
+    checks:
+      - dentist-followup-exists.sh
+    questions:
+      - Of the things it told you about, how many were things you actually
+        needed to know? Was anything you were expecting missing?
+      - After three days of using this, would you keep using it? Say why plainly.

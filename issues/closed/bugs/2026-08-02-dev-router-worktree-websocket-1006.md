@@ -1,5 +1,6 @@
 ---
 title: "Dev router: tRPC WebSocket upgrade closes 1006; UI shows Disconnected"
+workstream: top-nav-ia
 area: bin
 filed-by: agent
 discovered-in: worktree-top-nav-ia — unified app bar browse walk

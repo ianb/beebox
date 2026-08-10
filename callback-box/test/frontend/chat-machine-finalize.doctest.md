@@ -275,3 +275,46 @@ actor.getSnapshot().context.messages.length
 actor.getSnapshot().context.pendingMessages.length
 => 0
 ```
+
+## A wedged stream recovers via `STREAM_RECOVER` without dropping partial text
+
+The stream watchdog (`useProcessingStatusPoll` in
+`components/chat/processing-status-display.ts`) sends `STREAM_RECOVER` when the
+server has been idle for several polls while the machine is still `streaming` —
+the per-turn WS died and its terminal frame will never arrive. Recovery goes
+through `refreshing`, the same finalize path as a healthy turn, so any partial
+streamed text is held for the history swap rather than blanked.
+
+```ts
+const historyCalls = [];
+const actor = createActor(
+  chatMachine.provide({
+    actors: {
+      fetchInitial: fromPromise(async () => EMPTY),
+      fetchHistory: fromPromise(() => {
+        historyCalls.push(1);
+        return new Promise(() => {});
+      }),
+      stream: fromCallback(() => {}),
+    },
+  }),
+  { input: { sessionInput: "s1" } },
+);
+actor.start();
+await Promise.resolve();
+actor.send({ type: "SEND", message: "hi", messageId: "m1" });
+actor.send({ type: "STREAM_TEXT", text: "partial reply before the socket died" });
+actor.getSnapshot().matches("streaming")
+=> true
+
+actor.send({ type: "STREAM_RECOVER" });
+const recovered = actor.getSnapshot();
+recovered.matches("refreshing")
+=> true
+
+recovered.context.streamText
+=> partial reply before the socket died
+
+historyCalls.length
+=> 1
+```

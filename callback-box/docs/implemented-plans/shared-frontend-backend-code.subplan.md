@@ -1,3 +1,9 @@
+---
+title: "Shared Frontend/Backend Code — Subplan"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Shared Frontend/Backend Code — Subplan
 
 A subplan of `markdoc-tags-plan.md`. The Markdoc work needs the same

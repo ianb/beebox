@@ -1,5 +1,6 @@
 ---
 title: "iOS: switching boxes via the web-view boxes menu dead-ends on a stuck screen — box-switching should be native-only"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder on iOS

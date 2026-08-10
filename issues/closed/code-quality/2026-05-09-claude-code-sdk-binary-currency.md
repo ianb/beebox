@@ -1,5 +1,6 @@
 ---
 title: "Keeping the bundled Claude Code SDK binary current"
+workstream: unknown
 area: callback-box
 resolution: implemented
 ---

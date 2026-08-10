@@ -312,7 +312,9 @@ Two rules keep this from degenerating into a rubber stamp (the whole point):
 
 The verdict drives two things:
 
-- **Step 6's plan disposition.** All requirements MET → the plan is
+- **Step 6's plan disposition.** Requirements start with the plan frontmatter
+  `issues:` list (fall back to a prose Issues addressed section during the
+  migration tail). All requirements MET → the plan is
   "implemented." Any PARTIAL/UNMET → it is **partially implemented**: mark it so
   and leave it in `docs/plans/`; do NOT move it to `implemented-plans/` as if
   complete.
@@ -343,18 +345,23 @@ plan stays in `docs/plans/`:
 - **Abandoned/superseded** → `git mv` to `docs/unimplemented-plans/` and add a
   row to that directory's README disposition table saying what superseded or
   shelved it.
-- **Status headers** — whatever stays or moves gets the first-line status
-  convention from `docs/plans/README.md` (`**Status:** implemented YYYY-MM …`).
+- **Frontmatter status** — whatever stays or moves gets `status: implemented`,
+  `partial`, `superseded`, or `parked` according to the disposition. Do not add
+  a duplicate prose status line.
 - **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
   historical file still named `plan-foo.md` or `foo-design.md` misleads once
   the thing exists; superseded docs get `-superseded`.
-- After any move/rename: `pnpm doc-graph` from `callback-box/` to regenerate
+- After any plan move/rename: run `pnpm --dir callback-box doc-check --fix`,
+  then `pnpm doc-graph` from `callback-box/` to regenerate
   the index (the pre-commit `doc-check` will fail the commit on any reference
   you missed — fix, don't bypass).
 
 Skip if no planning-style docs were touched. Unsure if a doc is a "plan" vs a
 reference? Read its opening paragraph (future tense + "will/proposes/we should"
 is the tell) — resolve this yourself, it doesn't need the human.
+
+For a `partial` disposition, include a fully drafted follow-up issue in the
+final report with `workstream:` prefilled, but do not file it automatically.
 
 ### 7. Resolve any feedback item this work addressed
 
@@ -388,8 +395,8 @@ commit naming the issue path, and stayed filed as open until a human noticed).
 
 Find candidates — do ALL of these, this is exactly where issues get forgotten:
 
-- the **plan's "Issues addressed" list** — if the branch introduced or modified a
-  plan doc (`docs/plans/`), it names the issues to reconcile; start there;
+- the plan frontmatter **`issues:` list** (fall back to a prose Issues addressed
+  section during the migration tail) — start there;
 - the branch's own commit messages (they often name the issue path) and the
   worktree briefing (it usually names the issue it came from);
 - a grep of `issues/` for the files/symptoms/symbols this branch touched;
@@ -407,7 +414,9 @@ git mv issues/<category>/<file>.md issues/closed/<category>/
 
 Then edit the moved file: add `resolution: implemented` (or `wontfix` /
 `superseded`) to the frontmatter, and a short closing note at the **top of the
-body** naming the resolving commit. If the fix took a different route than the
+body** naming the resolving commit. Set `workstream:` to the resolving bare
+workstream name. Stamp that field even when `manual-testing` means the issue
+must remain open. If the fix took a different route than the
 issue proposed, say so in that note — the divergence is the useful part.
 
 **Only close what's genuinely done.** Several issues are deliberately open
@@ -435,6 +444,14 @@ public move unless the public file was renamed.
 
 ### 8. Finalization gate, then merge into main
 
+Before the code merge, inspect the workstream's isolated test1 clone. If it has
+a `keep` branch with commits absent from the source test1, fetch and fast-forward
+or merge that branch into the source test1's `main`, then push it. `keep` is
+rooted at the source `origin/main` and contains only deliberately selected stock
+content; clone-main churn is never merged. A conflict is BLOCKED: leave the
+clone and worktree intact and report it rather than choosing content. A
+`test-setup` branch is a disposable scenario snapshot and is never merged.
+
 Steps 5–7b may have changed files *after* the green verification tier. Before
 merging, all three must hold:
 
@@ -443,10 +460,10 @@ merging, all three must hold:
 2. **Post-green commits re-verified** per the path-precise rule in step 4 (a
    Track O code fix means the full tier ran again after it; a doc move means
    doc-check ran).
-3. **Main checkout clean and on `main`**: `git -C ~/src/callback-box status
-   --porcelain` is empty AND `git -C ~/src/callback-box rev-parse
-   --abbrev-ref HEAD` prints `main` (check both — a clean checkout parked on
-   another branch would mis-target the merge).
+3. **Main checkout clean and on `main`** (a clean checkout parked on another
+   branch would mis-target the merge). Don't check this yourself — `bin/land`
+   below enforces both and refuses with a precise message; treat its refusal
+   as the BLOCKED reason.
 4. **Private leg only:** `git -C private-issues status --porcelain` empty
    (strictly — deletions count), and the private PRIMARY checkout (the
    `repo=` path from `bin/private-issues status .`) is on `main` and clean —
@@ -458,10 +475,14 @@ self-healing one — see the PRIVATE contract below). You're INSIDE the
 worktree, so operate on the main checkout with `-C`:
 
 ```bash
-MONO=~/src/callback-box
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git -C "$MONO" merge --ff-only "$BRANCH"
+bin/land
 ```
+
+Run bare — from a worktree, `bin/land` lands that worktree's own branch. Use it
+rather than `git -C ~/src/callback-box merge`: worktree isolation blocks a
+worktree session (and its subagents) from running git against the main
+checkout. `bin/land` also performs the main-checkout preflight in item 3 above
+and prints the merge hash and log that step 9 reports.
 
 You merged main in at step 3, so this fast-forwards unless `main` moved during
 this run (e.g. another finish landed). If `--ff-only` refuses: go back to step
@@ -496,9 +517,7 @@ it) and mergeable later. It MUST surface in the `PRIVATE:` report line.
 
 ### 9. Report
 
-```bash
-git -C ~/src/callback-box log --oneline -3
-```
+Quote the merge hash and log that `bin/land` already printed at step 8.
 
 Return a report whose language matches the truth. Be straight about: **scope**
 (is the planned work complete, or did this land part? name what's outstanding —
@@ -508,7 +527,7 @@ from "not really verified" — merging on green tests is fine, claiming more isn
 
 Do NOT run the worktree cleanup — it happens automatically now that the branch
 is merged + clean. Two backstops handle it: the `SessionStart` sweep
-(`.claude/hooks/auto-sweep.sh`, `bin/worktrees sweep`) removes the merged+clean
+(`.claude/hooks/auto-sweep.sh`, `bin/workstreams sweep`) removes the merged+clean
 worktree the next time any session starts — this covers the case where a
 /finish presents as a main session, which defeats `SessionEnd` — and
 `SessionEnd` (`.claude/hooks/session-end.sh`) cleans up on a clean worktree exit.

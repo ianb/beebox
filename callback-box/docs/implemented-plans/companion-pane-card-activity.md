@@ -1,3 +1,9 @@
+---
+title: "Companion-pane card activity awareness for chat"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Companion-pane card activity awareness for chat
 
 > **Status: implemented (2026-06-14).** Shipped as five tracks. Where the

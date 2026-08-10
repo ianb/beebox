@@ -1,5 +1,6 @@
 ---
 title: "Standardize agent-authored links on box-root-relative paths (drop document-relative)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, recurring agent link error

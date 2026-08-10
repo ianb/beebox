@@ -1,5 +1,6 @@
 ---
 title: "Manually verify local password auth (login/setup/WS/browse + prod hardening)"
+workstream: local-password-auth
 resolution: implemented
 filed-by: agent
 discovered-in: worktree-local-password-auth — always-on auth shipped; flows an agent can't exercise

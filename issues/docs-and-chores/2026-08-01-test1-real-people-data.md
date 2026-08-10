@@ -1,5 +1,6 @@
 ---
 title: test1 should be fully generic; sweep for references to real people
+workstream: unknown
 ---
 
 test1 is supposed to be a generic demo/test box — "a plausible thing with no

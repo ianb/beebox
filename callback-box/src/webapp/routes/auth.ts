@@ -42,6 +42,7 @@ import {
 import { handleLoginPost, handleSetupPost } from "./auth-password-post.js";
 import { registerAuthInviteRoutes } from "./auth-invite.js";
 import { currentUserHasPassword, handlePasswordChange } from "./auth-password-change.js";
+import { registerAuthPasswordResetRoutes } from "./auth-password-reset.js";
 
 export interface AuthRoutesOptions {
   boxes: BoxSpec[];
@@ -114,7 +115,10 @@ function computeSetupRequired(request: FastifyRequest): boolean {
 }
 
 /** Assemble the bare login page's server-rendered state from a GET request. */
-function loginPageState(request: FastifyRequest, query: { returnTo?: string; error?: string }): LoginPageState {
+function loginPageState(
+  request: FastifyRequest,
+  query: { returnTo?: string; error?: string; passwordReset?: string },
+): LoginPageState {
   const prefix = readBasePrefix(request.headers);
   return {
     prefix,
@@ -122,6 +126,7 @@ function loginPageState(request: FastifyRequest, query: { returnTo?: string; err
     error: query.error === "1",
     googleConfigured: getGoogleClientCreds() !== null,
     setupRequired: computeSetupRequired(request),
+    passwordReset: query.passwordReset === "1",
   };
 }
 
@@ -141,7 +146,7 @@ function loginPageState(request: FastifyRequest, query: { returnTo?: string; err
 async function registerPasswordRoutes(server: FastifyInstance, options: AuthRoutesOptions): Promise<void> {
   invariant(!isHubMode(), "registerPasswordRoutes must never run in hub mode — the hub owns fleet login");
 
-  server.get<{ Querystring: { returnTo?: string; error?: string } }>("/auth/login", async (request, reply) => {
+  server.get<{ Querystring: { returnTo?: string; error?: string; passwordReset?: string } }>("/auth/login", async (request, reply) => {
     return reply.type("text/html").send(renderLoginPage(loginPageState(request, request.query)));
   });
   server.get<{ Querystring: { token?: string; error?: string } }>("/auth/setup", async (request, reply) => {
@@ -177,6 +182,7 @@ async function registerPasswordRoutes(server: FastifyInstance, options: AuthRout
     formScope.post("/auth/login", async (request, reply) => handleLoginPost(request, reply));
     formScope.post("/auth/setup", async (request, reply) => handleSetupPost(request, reply));
     await registerAuthInviteRoutes(formScope, options.boxes);
+    await registerAuthPasswordResetRoutes(formScope, options.boxes);
     formScope.post("/auth/password", async (request, reply) => handlePasswordChange(request, reply));
   });
 }

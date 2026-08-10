@@ -1,3 +1,9 @@
+---
+title: "Normalize chat/card links"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Normalize chat/card links
 
 > **Superseded in part (2026-07-30).** This plan's `contextDir`-relative chat

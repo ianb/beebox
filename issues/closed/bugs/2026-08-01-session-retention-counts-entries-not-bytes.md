@@ -1,5 +1,6 @@
 ---
 title: "Session-log retention is bounded by entry count, not bytes"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Codex review of Track A

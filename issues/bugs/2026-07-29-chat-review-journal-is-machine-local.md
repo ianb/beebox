@@ -1,5 +1,6 @@
 ---
 title: "Chat review's journal is machine-local but the husk it guards is shared, so two machines fight"
+workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — checking prod retention after shipping chat review

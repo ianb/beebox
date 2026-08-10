@@ -10,7 +10,7 @@
  * fresh-chat shell that keys to `"new"`.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { InteractiveChat } from "../components/chat/InteractiveChat";
 import { ChatLoading } from "../components/chat/InteractiveChat-layout";
@@ -19,7 +19,9 @@ import { isNativeShell } from "../components/chat/native-post";
 import { trpc, type RouterOutput } from "../lib/trpc";
 import { chatTailSlice, type ChatInitialLoad } from "../machines/chat-types";
 import { href, toSearch } from "../lib/routing";
-import { carriesFreshChatMachine } from "./chat-session-transition";
+import { carriesFreshChatMachine, createSessionAssignmentLatch } from "./chat-session-transition";
+import { UnavailableChat } from "../components/chat-delete/UnavailableChat";
+import { useIdlePrefetch } from "../hooks/useIdlePrefetch";
 
 interface ChatSearch {
   session?: string;
@@ -40,11 +42,6 @@ interface ChatSearch {
    * here so a reload restores it; kept in sync by `useCardUrlPersistence`.
    */
   card?: string;
-  /**
-   * Native companion embed mode: render the conversation as a web client, but
-   * leave input to the native shell.
-   */
-  embed?: string | number;
   /**
    * Keep the normal web navigation and chat header, but leave message input to
    * the native shell.
@@ -106,10 +103,7 @@ function useSessionLabel({
   bootstrapped: RouterOutput["chat"]["bootstrap"] | undefined;
 }): string | null {
   const assigned = carried && rendered !== null && rendered !== "new" ? rendered : null;
-  const query = trpc.chat.label.useQuery(
-    { session: assigned ?? "" },
-    { enabled: assigned !== null, refetchOnWindowFocus: false },
-  );
+  const query = trpc.chat.label.useQuery({ session: assigned ?? "" }, { enabled: assigned !== null, refetchOnWindowFocus: false });
   if (bootstrapped !== undefined && bootstrapped.sessionId === rendered) return bootstrapped.label;
   return query.data === undefined ? null : query.data.label;
 }
@@ -129,7 +123,6 @@ export function ChatPage() {
   const contextDir = search.contextDir;
   const companion = search.companion;
   const card = search.card;
-  const embedded = String(search.embed) === "1";
   // The `?nativeComposer=1` param only rides the initial chat URL; after an
   // in-app navigation it's gone, which un-suppressed the web composer under the
   // native one. Detect the native shell by its always-present bridge instead, so
@@ -157,16 +150,31 @@ export function ChatPage() {
     prev: string | null;
     carried: boolean;
     awaiting: boolean;
-    announcedAssignment: string | null;
-  }>({ epoch: 0, prev: null, carried: false, awaiting: false, announcedAssignment: null });
+  }>({
+    epoch: 0,
+    prev: null,
+    carried: false,
+    awaiting: false,
+  });
   // InteractiveChat announces a real backend assignment immediately before
   // it rewrites `?session=new` to the assigned id. Without this handshake,
   // an explicit landmark/session navigation from a fresh chat is
   // indistinguishable from assignment and the blank machine is incorrectly
   // carried onto the existing session instead of loading its transcript.
+  //
+  // An external-store latch, NOT state — see SessionAssignmentLatch for why
+  // (the URL rewrite renders at sync priority, before a same-tick setState).
+  const assignmentLatch = useMemo(() => createSessionAssignmentLatch(), []);
+  const announcedAssignment = useSyncExternalStore(assignmentLatch.subscribe, assignmentLatch.get);
   const announceSessionAssignment = useCallback((sessionId: string) => {
-    setKeyState((state) => ({ ...state, announcedAssignment: sessionId }));
-  }, []);
+    assignmentLatch.announce(sessionId);
+  }, [assignmentLatch]);
+  // One announcement guards exactly one key transition: once a transition
+  // commits (prev changed — whether it consumed the announcement or not), a
+  // later explicit navigation must not inherit it.
+  useEffect(() => {
+    assignmentLatch.clear();
+  }, [keyState.prev, assignmentLatch]);
 
   // The one mount-time round trip. With `session` omitted the server resolves
   // the box's most-active session and answers for it; `?session=new` is a
@@ -189,8 +197,7 @@ export function ChatPage() {
   // about to refetch, and the machine reads its preload exactly once. Mounting
   // on a stale cache entry would show an old transcript that the completed
   // refetch could no longer correct.
-  const settled = isFreshChat || keyState.carried
-    || ((bootstrap.data !== undefined || bootstrap.isError) && !bootstrap.isFetching);
+  const settled = isFreshChat || keyState.carried || ((bootstrap.data !== undefined || bootstrap.isError) && !bootstrap.isFetching);
 
   // Bare `/chat`: adopt whatever the server resolved. A failed bootstrap falls
   // through to the fresh-chat shell, as the old default-session lookup did.
@@ -203,7 +210,7 @@ export function ChatPage() {
   // onto a real session id.
   const resolvedDefault = ((): string | null => {
     if (sessionParam !== undefined) return null;
-    const candidate = bootstrap.data ? bootstrap.data.sessionId ?? "new" : (bootstrap.isError ? "new" : null);
+    const candidate = bootstrap.data ? (bootstrap.data.sessionId ?? "new") : bootstrap.isError ? "new" : null;
     if (candidate === null) return null;
     return keyState.prev === null || keyState.prev === candidate ? candidate : null;
   })();
@@ -213,6 +220,23 @@ export function ChatPage() {
   // from `resolvedDefault` — this navigation costs no round trip. Spread the
   // previous search so a live `?card=` (or any other param) survives it.
   const utils = trpc.useUtils();
+
+  // Warm the app bar's place-switch menu once this page is interactive. Its
+  // `chat.placeMenu` query stays lazy (PlacePill's header explains why a bar
+  // that mounts everywhere must not carry it at rest) — but "lazy" made the
+  // first open after every page load sit on "Loading…". Gating on `settled`,
+  // and running from idle time, is what keeps this off the critical path: the
+  // chat's own readiness never waits on it.
+  // `gcTime` is the whole point of prefetching rather than hoping: react-query
+  // collects an unobserved entry after 5 minutes by default, and the menu has
+  // no observer until it is first opened — so a default-lifetime warm-up would
+  // expire before a user who reads for a while ever clicks. Freshness is
+  // unaffected: the first open still refetches in the background (the entry is
+  // stale by then), and every later open invalidates.
+  useIdlePrefetch(() => utils.chat.placeMenu.prefetch(undefined, { gcTime: 60 * 60 * 1000 }), {
+    enabled: settled,
+  });
+
   useEffect(() => {
     if (sessionParam !== undefined) return;
     const data = bootstrap.data;
@@ -226,13 +250,14 @@ export function ChatPage() {
     // navigation below changes this page's query input from "default session"
     // to `session=<id>`, which is a different cache key — without the seed,
     // react-query would fetch the very same bootstrap a second time.
-    utils.chat.bootstrap.setData(
-      { slice: chatTailSlice(), session: resolvedId },
-      data,
-    );
+    utils.chat.bootstrap.setData({ slice: chatTailSlice(), session: resolvedId }, data);
     // navigate()'s promise only rejects on a superseded/redirected
     // navigation (not a user-facing failure) -- fire-and-forget.
-    void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ ...search, session: resolvedId }), replace: true });
+    void navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: toSearch({ ...search, session: resolvedId }),
+      replace: true,
+    });
   }, [sessionParam, bootstrap.data, boxSlug, navigate, search, utils.chat.bootstrap, keyState.prev]);
 
   const sessionInput = sessionParam ?? resolvedDefault;
@@ -241,16 +266,13 @@ export function ChatPage() {
     const isNewResolution = carriesFreshChatMachine({
       previousSessionInput: keyState.prev,
       nextSessionInput: sessionInput,
-      announcedAssignment: keyState.announcedAssignment,
+      announcedAssignment,
     });
     setKeyState({
       epoch: isNewResolution ? keyState.epoch : keyState.epoch + 1,
       prev: sessionInput,
       carried: isNewResolution,
       awaiting: !isNewResolution && !settled,
-      // Consume either a matching announcement or a stale one. A later
-      // explicit navigation must not inherit a prior carry signal.
-      announcedAssignment: null,
     });
   } else if (keyState.awaiting && settled) {
     setKeyState({ ...keyState, awaiting: false });
@@ -275,20 +297,28 @@ export function ChatPage() {
     return <ChatLoading />;
   }
 
+  const unavailable = bootstrap.data?.kind === "unavailable" && bootstrap.data.sessionId === rendered ? bootstrap.data : null;
+  if (unavailable !== null) {
+    return <UnavailableChat boxSlug={boxSlug} sessionId={unavailable.sessionId} label={unavailable.label} huskPath={unavailable.huskPath} />;
+  }
+
   // contextDir is only meaningful when starting a "new" chat; once the
   // session is assigned, the dir is recorded server-side.
   return (
     <InteractiveChat
       key={keyState.epoch}
       sessionInput={rendered}
-      initial={initialLoadFrom({ rendered, data: bootstrap.data, error: bootstrap.error })}
+      initial={initialLoadFrom({
+        rendered,
+        data: bootstrap.data,
+        error: bootstrap.error,
+      })}
       contextDir={rendered === "new" ? contextDir : undefined}
       companion={companion}
       card={card}
       emissionStore={emissionStore}
       sessionLabel={sessionLabel}
       onSessionAssignment={announceSessionAssignment}
-      embedded={embedded}
       nativeComposer={nativeComposer}
       openCaptureOnMount={openCaptureOnMount}
     />

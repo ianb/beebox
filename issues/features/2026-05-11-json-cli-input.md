@@ -1,5 +1,6 @@
 ---
 title: "JSON as CLI input — structured arguments and composable profiles"
+workstream: unknown
 area: callback-box
 ---
 

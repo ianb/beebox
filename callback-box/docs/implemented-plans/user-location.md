@@ -1,3 +1,9 @@
+---
+title: "User Location (`cb location get`)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # User Location (`cb location get`)
 
 > **Status: implemented (2026-06-29).** Frozen design record. The code lives in

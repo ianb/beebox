@@ -10,15 +10,15 @@ import { router, publicProcedure } from "../trpc.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";
 import { chatControlProcedures } from "./chat-control-procedures.js";
 import { chatBootstrapProcedure } from "./chat-bootstrap-procedure.js";
+import { chatPlaceMenuProcedure } from "./chat-place-menu-procedure.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
 } from "../../../core/chat/session/history.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
 import { loadAllSessions, type ChatSessionRow } from "../../../core/chat/session/list.js";
+import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
-
-const FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface PickerSession {
   sessionId: string;
@@ -79,6 +79,7 @@ export const chatRouter = router({
   ...chatSessionProcedures,
   ...chatControlProcedures,
   ...chatBootstrapProcedure,
+  ...chatPlaceMenuProcedure,
   /**
    * Most-recently-created session associated with a directory, or null
    * if no chat has been started for that directory.
@@ -143,7 +144,7 @@ export const chatRouter = router({
     freshCount: number;
     problems: LandmarkProblem[];
   }> => {
-    const cutoff = Date.now() - FRESH_WINDOW_MS;
+    const cutoff = Date.now() - CHAT_FRESH_WINDOW_MS;
     const [{ summaries: landmarks, problems }, allSessions] = await Promise.all([
       loadLandmarkSummaries(ctx.boxRoot),
       loadAllSessions(ctx.boxRoot),

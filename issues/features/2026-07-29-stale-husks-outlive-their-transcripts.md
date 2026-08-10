@@ -1,9 +1,17 @@
 ---
 title: "Husks outlive their transcripts, and nothing handles the resulting husk graveyard"
+workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — eval'ing chat review against real boxes
 ---
+
+**Implementation update (2026-08-07):** `worktree-chat-session-delete` makes
+missing local transcripts an explicit unavailable state, disables the unsafe
+`Open chat` path, and guards bootstrap, raw-send, and schedule-resume paths.
+This issue remains open for the broader stale-husk lifecycle policy: marking,
+archiving or garbage collection, expiry attribution, and durable review
+coverage.
 
 Chat husks are permanent git-tracked cards. Their transcripts are not: Claude
 Code prunes `~/.claude/projects/**/*.jsonl` on a retention timer
@@ -68,6 +76,15 @@ A dead husk is not inert — it is actively misleading:
 - [Chat review](../../callback-box/docs/chat-review.md) skips it too (correctly —
   there is nothing to read), so it will never be titled or summarized. Its
   content is unrecoverable.
+- **Resuming it crashes the turn — it is not merely a dead link.** Confirmed
+  2026-08-07 against our SDK (`@anthropic-ai/claude-agent-sdk@0.3.222`): asking the
+  SDK to resume a session whose `.jsonl` is gone exits with code 1 ("No
+  conversation found with session ID" —
+  [claude-agent-sdk-typescript#47](https://github.com/anthropics/claude-agent-sdk-typescript/issues/47)).
+  So the `Open chat →` link on a dead husk does not fail gracefully; it hard-
+  crashes the chat subprocess. This turns open question #4 below from cosmetic
+  into a real bug: the link must be disabled/guarded when the transcript is
+  missing, before a delete/lifecycle feature ships.
 
 ## Why it matters more now
 

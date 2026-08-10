@@ -1,6 +1,10 @@
+---
+title: "Clerk tab arrangements"
+status: partial
+workstream: unknown
+issues: []
+---
 # Clerk tab arrangements
-
-**Status:** partially implemented 2026-08 — the explicit one-transfer experiment landed; fuller recovery and review UX remain planned
 
 ## Landed slice (2026-08-05)
 

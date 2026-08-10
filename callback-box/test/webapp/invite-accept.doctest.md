@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTestServer } from "../helpers/doctest-server.js";
 import { createFirstUser, listUsers } from "../../src/webapp/local-users.js";
-import { mintAuthInvite } from "../../src/webapp/auth-invites.js";
+import { mintAuthInvite } from "../../src/webapp/auth-capabilities.js";
 import { loginThrottle } from "../../src/webapp/login-throttle.js";
 
 process.env.CB_AUTH_SCRYPT_N = "1024";
@@ -33,7 +33,6 @@ function inviteForm(fields) {
 const authDir = await mkdtemp(join(tmpdir(), "cb-invite-route-"));
 process.env.CB_AUTH_FILE = join(authDir, "auth.json");
 process.env.CB_OWNER_EMAIL = "Owner@Example.COM";
-await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
 const ctx = await makeTestServer({ openAccess: false });
 const minted = await mintAuthInvite({
   boxRoot: `${ctx.boxRoot}/`,
@@ -74,6 +73,24 @@ JSON.stringify({ status: mismatch.statusCode, token: mismatch.payload.includes(`
 => {"status":400,"token":true,"pinned":true}
 ```
 
+If the configured owner disappears before acceptance, the route fails closed
+before consuming the capability. Restoring the owner configuration makes the
+same link usable again.
+
+```ts continue
+delete process.env.CB_OWNER_EMAIL;
+const missingOwner = await ctx.server.inject(inviteForm({
+  token: minted.token,
+  name: "Member",
+  password: "member-password",
+  confirmPassword: "member-password",
+}));
+missingOwner.statusCode
+=> 503
+
+process.env.CB_OWNER_EMAIL = "Owner@Example.COM";
+```
+
 ```ts continue
 const accepted = await ctx.server.inject(inviteForm({
   token: minted.token,
@@ -86,7 +103,7 @@ JSON.stringify({ status: accepted.statusCode, location: accepted.headers.locatio
 => {"status":302,"location":"/test/","cookie":true}
 
 listUsers().map((user) => `${user.email}:${user.role}`).join(",")
-=> owner@example.com:owner,member@example.com:member
+=> member@example.com:member
 
 JSON.parse(await ctx.read("config/box.json")).allowedEmails.join(",")
 => member@example.com

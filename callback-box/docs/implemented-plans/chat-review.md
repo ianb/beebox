@@ -1,7 +1,10 @@
+---
+title: "Chat review: size-gated overnight compaction and generated titles"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Chat review: size-gated overnight compaction and generated titles
-
-**Status:** implemented 2026-07-28 — see [docs/chat-review.md](../chat-review.md) for the
-current reference; this doc is the design history and rationale.
 
 A nightly pass that reads chat sessions which have accumulated enough *new*
 material since it last read them, and writes back to the session's husk card:

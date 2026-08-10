@@ -1,5 +1,6 @@
 ---
 title: "mobile-contract.md lacks capture rows and marks shipped bulk-upload native side deferred"
+workstream: skill-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-skill-review — codex review of the new cb-ios-overlap skill

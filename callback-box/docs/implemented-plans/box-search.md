@@ -1,3 +1,9 @@
+---
+title: "Box search (`cb search`) and the global `contains` field"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Box search (`cb search`) and the global `contains` field
 
 Add full-text search over a box's cards — an Orama index in `.callback-box/`,

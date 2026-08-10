@@ -57,8 +57,8 @@ type MessagePart =
   | { type: "send"; phrase: string }
   | { type: "selection"; text: string; sourceRef: string; position: string; placement: string };
 
-export function UserMessageText({ text }: { text: string }) {
-  const stripped = stripUserDisplayTags(text);
+export function UserMessageText({ text, attachedFileIds }: { text: string; attachedFileIds?: ReadonlySet<number> }) {
+  const stripped = stripUserDisplayTags(text, { attachedFileIds });
 
   const parts: MessagePart[] = [];
   // Pills: <send-message phrase="…"/> / <send-close-message phrase="…"/> (voice

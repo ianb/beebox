@@ -100,7 +100,13 @@ Title and a 1-2 sentence statement of what this plan is and why. Don't
 recap the conversation; state the plan's purpose as if the reader has
 no context.
 
-**Issues addressed.** List the `issues/<category>/<file>.md` item(s) this plan
+**Frontmatter.** Start every plan with the schema in `docs/plans/README.md`:
+title, `status: draft`, the current bare `workstream:` name (or `unattached`
+from main), and an `issues:` list. Never use the backfill-only `unknown`
+sentinel for a new plan.
+
+**Issues addressed.** Populate the frontmatter `issues:` list with the
+`issues/<category>/<file>.md` item(s) this plan
 resolves — and any **related or duplicate** issues you turned up (grep the queue
 by slug/keyword/symptom before planning; a fix often closes more than the one you
 started from, and a duplicate left open is wasted future work). This list is

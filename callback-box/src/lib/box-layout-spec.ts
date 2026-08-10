@@ -266,7 +266,7 @@ export const BOX_LAYOUT = [
     boxDirsKey: "schedules",
     path: "config/schedules",
     area: "config",
-    description: "Scheduled-script cards (`*.scheduled-script.card`). Disabled by default after `cb init`.",
+    description: "Scheduled-script cards (`*.scheduled-script.card`). Fresh `cb init` boxes enable map refresh and procedure-run cleanup; other seeded schedules require opt-in.",
   },
 
   // tricks/ — agent-authored scripts

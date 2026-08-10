@@ -1,5 +1,6 @@
 ---
 title: "Frontend chat messages array grows without ceiling as the user pages back"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep

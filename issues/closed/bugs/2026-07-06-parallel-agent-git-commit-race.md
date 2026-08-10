@@ -1,5 +1,6 @@
 ---
 title: "Parallel task agents sharing one worktree can race `git add`/`git commit`"
+workstream: architectural-review
 area: router
 filed-by: agent
 discovered-in: worktree-architectural-review — Track D (P2-c), during the architectural-review multi-agent commit run

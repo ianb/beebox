@@ -1,5 +1,6 @@
 ---
 title: "bin/browse cannot reach an authenticated dev page — the agent-token path is broken end to end"
+workstream: browse-back-url
 area: router
 filed-by: agent
 discovered-in: worktree-browse-back-url — verifying the browse back-button fix in a real browser

@@ -1,6 +1,10 @@
+---
+title: "Codex worktree sessions"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Codex worktree sessions
-
-**Status:** implemented 2026-08 — shipped as `bin/launch-worktree-session --agent codex`; see `bin/CLAUDE.md` for the current reference.
 
 Let `bin/launch-worktree-session` spin up an OpenAI Codex CLI session in a fresh
 worktree the same way it spins up Claude Code sessions today: new worktree,
@@ -44,7 +48,7 @@ It lives here because `docs/plans/` is the plans directory.
   directly. The hook is already a clean contract: JSON `{name}` on stdin,
   worktree path on stdout (fd-3 dance), logs on stderr, idempotent on resume.
 - **Teardown gap.** No WorktreeRemove/SessionEnd fires for a Codex session.
-  Cleanup falls to `bin/worktrees sweep` (merged + clean + no active session),
+  Cleanup falls to `bin/workstreams sweep` (merged + clean + no active session),
   but sweep's active-session guard only looks for `claude` processes (argv +
   cwd via lsof). A live Codex session in a merged+clean worktree is currently
   sweepable out from under itself.
@@ -135,7 +139,7 @@ and AppleScript tab logic are all agent-agnostic; only the generated
 
 ### 4. Sweep learns about Codex
 
-In `bin/worktrees` sweep: alongside the existing claude checks, collect
+In `bin/workstreams` sweep: alongside the existing claude checks, collect
 `pgrep -x codex` pids and their cwds via the same lsof pattern; a worktree
 containing a live codex cwd is skipped ("active codex session (cwd)"). No argv
 check (codex argv carries no worktree name). Same addition in

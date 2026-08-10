@@ -1,8 +1,10 @@
+---
+title: "Let an agent-driven browser reach a local dev page"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Let an agent-driven browser reach a local dev page
-
-**Status:** implemented 2026-07 — `CB_BROWSE_API_KEY` ships, verified end to
-end against an isolated router. See "Implemented 2026-07-31" below for what
-building it changed vs. the original design.
 
 `bin/browse` cannot open any authenticated page of the local dev app, so any
 issue whose verification says "check it in a real browser" is un-verifiable by

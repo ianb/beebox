@@ -12,6 +12,7 @@ import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { Text } from "../ui/Text";
 import type { RouterOutput } from "../../lib/trpc";
+import { DeleteChatAction } from "../chat-delete/DeleteChatDialog";
 
 /** A session as `chat.byLandmark` reports it under a landmark. */
 type PickerSession = RouterOutput["chat"]["byLandmark"]["landmarks"][number]["sessions"][number];
@@ -42,13 +43,7 @@ function formatRelativeTime(iso: string): string {
  * binding under the label; a row listed under its own landmark doesn't
  * carry one, because the section header already says where it lives.
  */
-export function SessionRow({
-  session,
-  boxSlug,
-}: {
-  session: SessionRowItem;
-  boxSlug: string;
-}) {
+export function SessionRow({ session, boxSlug }: { session: SessionRowItem; boxSlug: string }) {
   const contextDir = "contextDir" in session ? session.contextDir : null;
 
   return (
@@ -60,9 +55,13 @@ export function SessionRow({
       >
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            <Text as="div" size="sm" className="line-clamp-2">{session.label}</Text>
+            <Text as="div" size="sm" className="line-clamp-2">
+              {session.label}
+            </Text>
             {contextDir !== null && contextDir !== "" ? (
-              <Text as="div" size="xs" tone="muted" truncate>{contextDir}/</Text>
+              <Text as="div" size="xs" tone="muted" truncate>
+                {contextDir}/
+              </Text>
             ) : null}
           </div>
           <Text as="span" size="xs" tone="muted" className="flex-shrink-0">
@@ -77,8 +76,19 @@ export function SessionRow({
         aria-label="Open this chat's card"
         className="flex items-center px-2 rounded border border-subtle text-warm-400 hover:text-info-dark hover:border-info-400 transition-colors"
       >
-        <Text as="span" size="xs">card</Text>
+        <Text as="span" size="xs">
+          card
+        </Text>
       </Link>
+      <DeleteChatAction
+        sessionId={session.sessionId}
+        label={session.label}
+        huskPath={session.huskPath}
+        className="flex items-center rounded border border-subtle px-2 text-warm-400 transition-colors hover:border-danger hover:bg-danger/10 hover:text-danger"
+      >
+        <span className="sr-only">Delete {session.label}</span>
+        <span aria-hidden="true">⋯</span>
+      </DeleteChatAction>
     </div>
   );
 }

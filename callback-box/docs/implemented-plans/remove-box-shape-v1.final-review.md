@@ -1,3 +1,9 @@
+---
+title: "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)
 
 Holistic review of the complete v1 removal (steps 1a–1e; the 1a+1b core was

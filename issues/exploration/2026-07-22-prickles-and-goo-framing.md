@@ -1,5 +1,6 @@
 ---
 title: "Prickles-and-goo as a framing for callback-box (Watts)"
+workstream: github-pages-site
 area: docs
 filed-by: agent
 discovered-in: worktree-github-pages-site — boxholder asked what Alan Watts might say about the project

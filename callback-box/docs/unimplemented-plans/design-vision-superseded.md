@@ -1,3 +1,9 @@
+---
+title: "Callback Box: Design Vision and Architecture"
+status: parked
+workstream: unknown
+issues: []
+---
 # Callback Box: Design Vision and Architecture
 
 > **Status:** superseded by `../design/` (2026-07-04, rulings in

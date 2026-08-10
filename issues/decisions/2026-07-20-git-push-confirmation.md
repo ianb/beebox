@@ -1,5 +1,6 @@
 ---
 title: "Git push confirmation: should the box confirm before pushing content off-machine?"
+workstream: open-source-readiness
 needs: [decision]
 area: callback-box
 filed-by: agent

@@ -1,8 +1,9 @@
 ---
 title: "Cloudflare Access is walling off the production box (mis-scoped from pub-setup)"
+workstream: unknown
 area: callback-box
 filed-by: agent
-resolution: fixed
+resolution: implemented
 discovered-in: main session — boxholder saw a broken admin page + console errors on the deployed box
 ---
 

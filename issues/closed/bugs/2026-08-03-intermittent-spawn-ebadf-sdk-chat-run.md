@@ -1,5 +1,6 @@
 ---
 title: "`cb serve` file-descriptor exhaustion made every SDK chat spawn fail with `EBADF`"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit "internal server error" on a local box

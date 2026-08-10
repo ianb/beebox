@@ -1,5 +1,6 @@
 ---
 title: "Central Google auth + policy proxy: escape-proof filtering and per-client capabilities"
+workstream: unknown
 area: callback-box
 filed-by: agent
 needs: [design]
@@ -205,3 +206,23 @@ add a doctest for the Nango auth impl against a fake Nango.
 - **Scope creep guard.** This is a big new component; worth scoping a minimal
   first slice (e.g. Gmail read with label filtering + draft-not-send for one box)
   before the general capability system.
+
+## Additional mitigations from the todo-security breakdown (2026-08-07)
+
+Two Google-hardening mitigations listed in
+`callback-box/docs/todo-security.md` fold in here rather than standing as their
+own issues — both are conditional on this proxy direction:
+
+- **Incremental authorization.** Today the OAuth flow requests all scopes
+  (calendar, gmail, drive) upfront regardless of a box's `googleServices` policy
+  (`src/core/box/config.ts` `isGoogleServiceAllowed`, checked post-hoc in
+  `src/connectors/requirements.ts:23-28`). Requesting only the scopes a box needs
+  shrinks the blast radius of a leaked `CB_GOOGLE_TOKENS_FILE`. Open question:
+  once the proxy owns the single Google grant (Tier 1), incremental auth mostly
+  matters only for the BYO / direct-mode path — decide its relevance during design.
+- **Per-box Google API audit logging.** The `googleServices` policy is enforced
+  only in app code, so a bug or compromised connector could call an out-of-policy
+  Google API with nothing recording it. Structured audit logging (box slug,
+  service, endpoint/scope, timestamp) around the shared client makes
+  cross-box / out-of-policy access detectable after the fact — and the proxy is
+  the natural place to add it.

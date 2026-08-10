@@ -1,7 +1,8 @@
 ---
 title: "Publish-pages: resume the Cloudflare publishing feature"
+workstream: unknown
 area: callback-box
-needs: [implementation, manual-testing]
+needs: [manual-testing]
 design: ../../callback-box/docs/plans/publish-pages.md
 ---
 
@@ -104,3 +105,9 @@ for the connector (with the broad token reserved for one-time `cb pub setup`) is
 hardening — at the cost of a second credential. Deferred for v1 simplicity; the Worker
 being versioned in git + the `cb pub status` drift check bound the risk. Decide before
 this goes anywhere beyond the boxholder's own account.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.
