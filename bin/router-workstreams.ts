@@ -116,6 +116,7 @@ function defaultDeps(
   return {
     async list() {
       const stdout = await run(["list", "--json", "--include-removed"]);
+      // This is the same-repository CLI's tested --json contract, not external input.
       return JSON.parse(stdout) as WorkstreamRow[];
     },
     async run(verb, name) {

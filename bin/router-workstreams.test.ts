@@ -38,6 +38,7 @@ test("handler serves the read-only page with its own CSP", async () => {
   const res = {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const deps: WorkstreamsDeps = { list: async () => [row({})], run: async () => undefined, documents: async () => ({ issues: [], plans: [] }) };
   await serveWorkstreams({ method: "GET", pathname: "/workstreams/", repoRoot: "/unused", res, deps });
@@ -51,6 +52,7 @@ test("handler redirects the bare path and rejects detail paths", async () => {
   const res = {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const deps: WorkstreamsDeps = {
     list: async () => { throw new Error("must not list"); },
@@ -72,6 +74,7 @@ test("actions validate the path and redirect with command results", async () => 
   const res = {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const deps: WorkstreamsDeps = {
     list: async () => [],
@@ -97,6 +100,7 @@ test("an action failure flashes only the first stderr line", async () => {
   const res = {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const deps: WorkstreamsDeps = {
     list: async () => [],
@@ -123,6 +127,7 @@ test("issues are mounted canonically under workstreams", async () => {
       return res;
     },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const deps: WorkstreamsDeps = { list: async () => [], run: async () => undefined, documents: async () => ({ issues: [], plans: [] }) };
 
@@ -149,6 +154,7 @@ test("detail joins a workstream to its plans", async () => {
   const res = {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const deps: WorkstreamsDeps = {
     list: async () => [row({ name: "seam" })],
@@ -175,6 +181,7 @@ test("plans view groups statuses and links workstreams", async () => {
   const res = {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const deps: WorkstreamsDeps = {
     list: async () => [], run: async () => undefined,
@@ -191,6 +198,7 @@ test("testing view separates landed confirmation from pre-merge feedback", async
   const res = {
     writeHead(status: number, headers: Record<string, string>) { captured.status = status; captured.headers = headers; return res; },
     end(body?: string) { captured.body = body ?? ""; return res; },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   const issue = parseIssueFile("features/test.md", "---\ntitle: Test it\nworkstream: seam\nneeds: [manual-testing]\n---\n## Manual testing\n");
   const deps: WorkstreamsDeps = {
