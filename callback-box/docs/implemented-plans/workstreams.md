@@ -23,7 +23,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
 - [worktree/session workflow redesign](../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md)
   — the primary item; this plan is the workflow change its enabling refactor
   ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- [plans need frontmatter and issue mapping](../../../issues/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md)
+- [plans need frontmatter and issue mapping](../../../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md)
   — Track E.
 - Related, advanced but not closed:
   [manual-testing flag overuse](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)
