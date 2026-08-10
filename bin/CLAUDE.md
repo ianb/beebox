@@ -237,6 +237,11 @@ running session's working directory is not.
   stateless: everything is derived per call, so it cannot drift. Implemented in
   bash rather than TypeScript specifically so the liveness answer comes from
   `wt_other_agent_live` and not a second copy of it.
+- `bin/workstreams quotas --json` — normalized Claude and Codex account quota
+  windows for the owner dashboard. Codex is read through its app-server
+  protocol. Claude is read from a passive status-line cache; run
+  `bin/workstreams setup-claude-quota` once after landing to install that
+  collector. It consumes no API tokens and updates after Claude responses.
 - `bin/workstreams create <name> [--base-ref <ref>] [--box-ref <ref>]` — create
   or re-attach (idempotent); prints the path on stdout, logs on stderr. A
   recorded `keep/*` box ref restores the isolated test1 clone during a culled
