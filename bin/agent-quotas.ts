@@ -51,6 +51,48 @@ const CLAUDE_STALE_MS = 15 * 60_000;
 let codexCache: { expiresAt: number; value: AgentQuota } | null = null;
 let codexPending: Promise<AgentQuota> | null = null;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function codexWindowRecord(value: unknown): CodexWindow | null {
+  if (!isRecord(value)) return null;
+  return {
+    usedPercent: value.usedPercent,
+    resetsAt: value.resetsAt,
+    windowDurationMins: value.windowDurationMins,
+  };
+}
+
+function codexSnapshotRecord(value: unknown): CodexSnapshot | null {
+  if (!isRecord(value)) return null;
+  const credits = isRecord(value.credits)
+    ? { balance: value.credits.balance, unlimited: value.credits.unlimited }
+    : null;
+  return {
+    limitName: value.limitName,
+    primary: codexWindowRecord(value.primary),
+    secondary: codexWindowRecord(value.secondary),
+    credits,
+  };
+}
+
+function codexRateLimitResult(value: unknown): CodexRateLimitResult {
+  if (!isRecord(value)) return {};
+  const byId = isRecord(value.rateLimitsByLimitId)
+    ? Object.fromEntries(
+        Object.entries(value.rateLimitsByLimitId).flatMap(([id, snapshot]) => {
+          const parsed = codexSnapshotRecord(snapshot);
+          return parsed ? [[id, parsed]] : [];
+        }),
+      )
+    : null;
+  return {
+    rateLimits: codexSnapshotRecord(value.rateLimits),
+    rateLimitsByLimitId: byId,
+  };
+}
+
 function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -289,31 +331,41 @@ export async function requestCodexRateLimits(
         );
     });
     lines.on("line", (line) => {
-      let message: {
-        id?: number;
-        result?: unknown;
-        error?: { message?: string };
-      };
+      let message: Record<string, unknown>;
       try {
-        message = JSON.parse(line) as typeof message;
+        const parsed: unknown = JSON.parse(line);
+        if (!isRecord(parsed)) return;
+        message = parsed;
       } catch {
         return;
       }
       if (message.id === 0) {
-        if (message.error) {
+        if (isRecord(message.error)) {
           finish(
-            new Error(message.error.message ?? "Codex initialization failed"),
+            new Error(
+              typeof message.error.message === "string"
+                ? message.error.message
+                : "Codex initialization failed",
+            ),
           );
           return;
         }
         send({ method: "initialized", params: {} });
         send({ method: "account/rateLimits/read", id: 1, params: {} });
       } else if (message.id === 1) {
-        if (message.error)
+        if (isRecord(message.error))
           finish(
-            new Error(message.error.message ?? "Codex quota request failed"),
+            new Error(
+              typeof message.error.message === "string"
+                ? message.error.message
+                : "Codex quota request failed",
+            ),
           );
-        else finish(undefined, message.result as CodexRateLimitResult);
+        else
+          finish(
+            undefined,
+            codexRateLimitResult(message.result),
+          );
       }
     });
     const timer = setTimeout(
@@ -369,16 +421,15 @@ export async function collectAgentQuotas(
   const fetchedAt = now.toISOString();
   const stateDir =
     options.stateDir ??
+    // TODO(env-migration): operational state override belongs in shared env config.
     process.env.CALLBACK_STATE_DIR ??
     path.join(os.homedir(), ".cache/callback-box");
   const claudePath = path.join(stateDir, "claude-rate-limits.json");
   const claude = await fs
     .readFile(claudePath, "utf8")
     .then((text) => {
-      const cached = JSON.parse(text) as { captured_at?: unknown } & Record<
-        string,
-        unknown
-      >;
+      const parsed: unknown = JSON.parse(text);
+      const cached = isRecord(parsed) ? parsed : {};
       const quota = parseClaudeQuota(
         cached,
         typeof cached.captured_at === "string" ? cached.captured_at : fetchedAt,
