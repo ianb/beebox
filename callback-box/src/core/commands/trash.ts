@@ -15,6 +15,7 @@ import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { findInboundCardRefs, type InboundCardRef } from "../find-inbound-card-refs.js";
 
 class NotACardFileError extends Error {
   readonly cardPath: string;
@@ -54,11 +55,31 @@ export interface TrashMove {
   sourcePath: string;
   destPath: string;
   relatedFiles: string[];
+  fileMoves: Array<{ sourcePath: string; destPath: string }>;
 }
 
 export interface TrashReceipt {
   moves: TrashMove[];
   gitPaths: string[];
+}
+
+async function reportInboundRefs(
+  ctx: CommandContext,
+  cardPaths: string[],
+): Promise<Record<string, InboundCardRef[]>> {
+  const inboundRefs: Record<string, InboundCardRef[]> = {};
+  for (const cardPath of cardPaths) {
+    const relPath = path.relative(
+      ctx.boxRoot,
+      path.isAbsolute(cardPath) ? cardPath : boxPath(ctx.boxRoot, cardPath),
+    );
+    const refs = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
+    inboundRefs[relPath] = refs;
+    for (const referrer of refs) {
+      ctx.writeLine(`Inbound ref: ${referrer.path} (${referrer.refs}) → ${relPath}`);
+    }
+  }
+  return inboundRefs;
 }
 
 async function pathExists(target: string): Promise<boolean> {
@@ -84,6 +105,7 @@ async function trashOne(
   relDestPath: string;
   relatedFiles: string[];
   gitPaths: string[];
+  fileMoves: Array<{ sourcePath: string; destPath: string }>;
 }> {
   // Resolve source path
   let sourcePath: string;
@@ -154,17 +176,19 @@ async function trashOne(
   // Move the card's attach scope (if it exists) — the whole directory tree,
   // including nested cards and their attach scopes.
   const relatedFiles: string[] = [];
+  const fileMoves = [{ sourcePath: relSourcePath, destPath: relDestPath }];
   const gitPaths: string[] = [relSourcePath, relDestPath];
 
   if (hasAttachments) {
     const relAttachSource = path.relative(ctx.boxRoot, sourceAttachDir);
     const relAttachDest = path.relative(ctx.boxRoot, finalAttachDest);
     relatedFiles.push(path.basename(sourceAttachDir));
+    fileMoves.push({ sourcePath: relAttachSource, destPath: relAttachDest });
     gitPaths.push(relAttachSource, relAttachDest);
     ctx.writeLine(`  Also moved attach scope: ${relAttachSource} → ${relAttachDest}`);
   }
 
-  return { relSourcePath, relDestPath, relatedFiles, gitPaths };
+  return { relSourcePath, relDestPath, relatedFiles, gitPaths, fileMoves };
 }
 
 /** Move cards and attachment scopes, returning a receipt even before git commit. */
@@ -177,6 +201,7 @@ export async function moveCardsToTrash(ctx: CommandContext, cardPaths: string[])
       sourcePath: result.relSourcePath,
       destPath: result.relDestPath,
       relatedFiles: result.relatedFiles,
+      fileMoves: result.fileMoves,
     });
     gitPaths.push(...result.gitPaths);
   }
@@ -214,6 +239,8 @@ async function executeTrash(ctx: CommandContext, args: Record<string, unknown>):
     return { success: false, error: "At least one path is required" };
   }
 
+  const inboundRefs = await reportInboundRefs(ctx, allPaths);
+
   // Dry run: validate each path and report what would move, mutating nothing.
   // (`cb rm --dry-run` advertised this flag but the command never read it —
   // a dry-run invocation actually trashed files.)
@@ -244,7 +271,7 @@ async function executeTrash(ctx: CommandContext, args: Record<string, unknown>):
     }
     return {
       success: true,
-      data: { dryRun: true, wouldTrash, errors: dryErrors },
+      data: { dryRun: true, wouldTrash, errors: dryErrors, inboundRefs },
     };
   }
 
@@ -304,7 +331,9 @@ async function executeTrash(ctx: CommandContext, args: Record<string, unknown>):
 
   return {
     success: true,
-    data: results.length === 1 ? results[0] : { results, errors },
+    data: results.length === 1
+      ? { ...results[0], inboundRefs: inboundRefs[results[0]?.sourcePath ?? ""] ?? [] }
+      : { results, errors, inboundRefs },
   };
 }
 
