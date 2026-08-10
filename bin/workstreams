@@ -108,6 +108,10 @@ case "$cmd" in
       exit 1
     fi
     if [ "$cmd" = archive ]; then
+      if printf '%s' "$record" | jq -e '.removed.merged == false' >/dev/null 2>&1; then
+        echo "workstreams archive: refusing to hide recovery state for '$name'" >&2
+        exit 1
+      fi
       archived_at=$(printf '%s' "$record" | jq -r '.archived.at // empty' 2>/dev/null || true)
       [ -n "$archived_at" ] || archived_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
       patch=$(jq -cn --arg at "$archived_at" '{archived:{at:$at}}')

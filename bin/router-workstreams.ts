@@ -253,7 +253,7 @@ function actionsHtml(row: WorkstreamRow): string {
     return (
       actionForm("focus", row) + actionForm("close", row) + reset + archive
     );
-  if (row.session.removed?.merged === false) return archive;
+  if (row.session.removed?.merged === false) return "";
   if (row.session.hasSession)
     return actionForm("resume", row) + reset + release + archive;
   return reset + release + archive;
@@ -267,7 +267,7 @@ function agentStatusHtml(row: WorkstreamRow): string {
         ? "Codex"
         : "Agent";
   if (row.agent.state === "live")
-    return `<span class="agent-status agent-live">● ${agent} active</span>`;
+    return `<span class="agent-status agent-live"><span aria-hidden="true">●</span> ${agent} active</span>`;
   if (row.agent.state === "unknown")
     return `<span class="agent-status">${agent} activity unknown</span>`;
   return `<span class="agent-status">${row.session.agent ? `${agent} inactive` : "No agent recorded"}</span>`;
@@ -321,7 +321,7 @@ function documentList(params: {
 
 function pageShell(title: string, body: string, refresh = false): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${refresh ? '<meta http-equiv="refresh" content="30">' : ""}<title>${escapeHtml(title)}</title>
-<style>body{font:14px/1.5 system-ui,sans-serif;max-width:1000px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em;white-space:nowrap}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}button,input{box-sizing:border-box;font:inherit}button{padding:.35em .65em}.agent-status{padding:.15em .5em;border-radius:999px;background:#f1f3f5;color:#59636e;font-size:.82em;white-space:nowrap}.agent-live{background:#dcfce7;color:#166534;font-weight:650}.page-header{margin-top:1.2em}.heading-row{display:flex;align-items:center;justify-content:space-between;gap:1em}.heading-row h1{margin:.2em 0}.search-form{display:flex;gap:.5em;max-width:38em;margin:.8em 0 1.2em}.search-form input{min-width:0;flex:1;padding:.55em .7em;border:1px solid #aeb5bd;border-radius:6px}.search-form button{padding:.55em .85em}.quota-details{position:relative}.quota-details>summary{cursor:pointer;color:#2255aa;font-weight:600;list-style-position:inside}.quota-panel{position:absolute;z-index:2;right:0;width:min(46rem,calc(100vw - 2em));padding:1em;background:#fff;border:1px solid #ccd2d8;border-radius:8px;box-shadow:0 8px 24px #0002}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}.quota-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}.quota-card{border:1px solid #ddd;border-radius:6px;padding:.8em}.quota-card h3{font-size:1em;margin:0 0 .5em}.quota-window{margin-top:.7em}.quota-window p{margin:.2em 0}.quota-window progress{width:100%}.on-track{color:#176b3a;font-weight:600}.over-pace{color:#9a3412;font-weight:600}.muted{color:#666;font-size:.9em}.archived-list{opacity:.82}@media(max-width:700px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}.actions{margin-left:0}.quota-grid{grid-template-columns:1fr}.quota-panel{position:fixed;left:1em;right:1em;width:auto}.heading-row{align-items:flex-start}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
+<style>body{font:14px/1.5 system-ui,sans-serif;max-width:1000px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em;white-space:nowrap}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}button,input{box-sizing:border-box;font:inherit}button{padding:.35em .65em}.agent-status{padding:.15em .5em;border-radius:999px;background:#f1f3f5;color:#59636e;font-size:.82em;white-space:nowrap}.agent-live{background:#dcfce7;color:#166534;font-weight:650}.page-header{margin-top:1.2em}.heading-row{display:flex;align-items:center;justify-content:space-between;gap:1em}.heading-row h1{margin:.2em 0}.search-form{display:flex;gap:.5em;max-width:38em;margin:.8em 0 1.2em}.search-form input{min-width:0;flex:1;padding:.55em .7em;border:1px solid #aeb5bd;border-radius:6px}.search-form button{padding:.55em .85em}.quota-details{position:relative}.quota-details>summary{cursor:pointer;color:#2255aa;font-weight:600;list-style-position:inside}.quota-panel{position:absolute;z-index:2;right:0;width:min(46rem,calc(100vw - 2em));padding:1em;background:#fff;border:1px solid #ccd2d8;border-radius:8px;box-shadow:0 8px 24px #0002}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}.quota-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}.quota-card{border:1px solid #ddd;border-radius:6px;padding:.8em}.quota-card h3{font-size:1em;margin:0 0 .5em}.quota-window{margin-top:.7em}.quota-window p{margin:.2em 0}.quota-window progress{width:100%}.on-track{color:#176b3a;font-weight:600}.over-pace{color:#9a3412;font-weight:600}.muted{color:#666;font-size:.9em}.archived-list{opacity:.82}@media(max-width:700px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}.actions{margin-left:0}.quota-grid{grid-template-columns:1fr}.quota-panel{position:fixed;left:1em;right:1em;width:auto}.heading-row{align-items:flex-start}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
 }
 
 function formatReset(resetsAt: string): string {
@@ -358,7 +358,19 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
       return `<article class="quota-card"><h3>${title}</h3>${content}${credits}${captured}</article>`;
     })
     .join("");
-  return `<details class="quota-details"><summary>Quotas</summary><div class="quota-panel"><div class="quota-grid">${cards}</div></div></details>`;
+  const paces = quotas.flatMap((quota) =>
+    quota.status === "available"
+      ? quota.windows
+          .map((window) => quotaPace(window, now))
+          .filter((pace) => pace !== null)
+      : [],
+  );
+  const paceSummary = paces.some((pace) => !pace.onTrack)
+    ? " · over pace"
+    : paces.length > 0
+      ? " · on track"
+      : "";
+  return `<details class="quota-details"><summary>Quotas${paceSummary}</summary><div class="quota-panel" role="region" aria-labelledby="agent-capacity"><h2 id="agent-capacity" class="sr-only">Agent capacity</h2><div class="quota-grid">${cards}</div></div></details>`;
 }
 
 export function relativeTime(value: string, now = new Date()): string {
@@ -555,7 +567,11 @@ export function renderWorkstreams(
       title: "In progress",
       rows: inProgress,
       note: (row) =>
-        row.agent.state === "live" ? "working" : "session closed",
+        row.agent.state === "live"
+          ? "working"
+          : row.agent.state === "unknown"
+            ? "liveness unknown"
+            : "session closed",
     }),
     section({
       title: "Merged ✓, session still open",

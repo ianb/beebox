@@ -43,15 +43,18 @@ test("quota cards show linear pace and stale capture state", () => {
   assert.match(html, /On track · 9 points under budget \(29% of window elapsed\)/);
   assert.match(html, /Over pace · 60 points over budget \(0% of window elapsed\)/);
   assert.match(html, /Stale · Updated/);
-  assert.match(html, /<details class="quota-details"><summary>Quotas<\/summary>/);
+  assert.match(html, /<details class="quota-details"><summary>Quotas · over pace<\/summary>/);
+  assert.match(html, /role="region" aria-labelledby="agent-capacity"/);
 });
 
 test("live untouched work is visibly active and archived work is separated", () => {
   const html = renderWorkstreams([
     row({ name: "starting", git: { ahead: 0, dirty: 0, merged: true, tip: "base" }, agent: { state: "live", reason: "argv" } }),
+    row({ name: "mystery", agent: { state: "unknown", reason: "probe-failed" } }),
     row({ name: "done", session: { agent: "codex", hasSession: true, tty: null, emoji: null, baseSha: "base", removed: null, archived: { at: "2026-08-08T00:00:00Z" } } }),
   ], "", "", undefined, [], new Date("2026-08-10T00:00:00Z"));
   assert.match(html, /In progress[\s\S]*starting[\s\S]*Claude active/);
+  assert.match(html, /mystery[\s\S]*liveness unknown[\s\S]*Claude activity unknown/);
   assert.doesNotMatch(html, /Untouched[\s\S]*starting/);
   assert.match(html, /Archived[\s\S]*done[\s\S]*Codex inactive/);
   assert.match(html, /archived 2 days ago/);
