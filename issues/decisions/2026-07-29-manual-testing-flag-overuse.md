@@ -2,6 +2,7 @@
 title: "needs: [manual-testing] is being over-applied — recalibrate when agents add it"
 workstream: unknown
 area: process
+design: ../../callback-box/docs/plans/workstreams.md
 filed-by: agent
 discovered-in: finish-skill-audit worktree — boxholder remark while reviewing /finish changes
 needs: [decision]
@@ -16,7 +17,7 @@ human-verification chore that no agent can retire.
 
 The tension: the flag exists precisely because some fixes genuinely can only
 be confirmed by a human (on a phone, against live credentials, over a real
-network). But if agents reach for it whenever they merely *didn't* verify
+network). But if agents reach for it whenever they merely _didn't_ verify
 something in the running app — rather than when a human is the only possible
 verifier — the queue grows past what Ian will actually work through, and the
 flag stops meaning anything.

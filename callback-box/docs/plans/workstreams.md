@@ -2,8 +2,11 @@
 title: "The /workstreams/ app and disposable sessions"
 status: active
 workstream: workstreams
-issues: []
+issues:
+  - ../../../issues/features/2026-08-08-worktree-session-workflow-redesign.md
+  - ../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md
 ---
+
 # The /workstreams/ app and disposable sessions
 
 A new top-level router app at `/workstreams/` — a development control surface
@@ -46,7 +49,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
   last touched the branch — so the cull cost nothing.
 - When I'm looking at the in-progress list, I want buttons that focus the
   existing terminal tab or launch a new one, so "switching" means naming the
-  worktree, not hunting the tab bar. (Launching *new* work stays
+  worktree, not hunting the tab bar. (Launching _new_ work stays
   session-driven — `launch-worktree-session` from a conversation remains the
   primary creation path; /workstreams/ is for seeing and returning, not for starting.)
 
@@ -55,7 +58,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
 - `docs/engineering-principles.md` §4 (resilient AND never silent — the
   tri-state liveness discipline in front of every destructive action), §7
   (hierarchy is a discoverability contract — /workstreams/ is where non-worktree-bound
-  dev tooling *says* it lives), §8 (one way to do each thing — resume must not
+  dev tooling _says_ it lives), §8 (one way to do each thing — resume must not
   fork a second launch path), §11/§12 (enforcement beats convention; the
   maintainer is usually an agent — frontmatter over prose conventions).
 - `bin/CLAUDE.md` — router invariants, the fail-closed authenticating proxy
@@ -96,14 +99,14 @@ creation path.**
 **Removal trash-mvs and records nothing.** `wt_remove_now`
 (`bin/lib/worktree-teardown.sh:459-485`) stops router processes, trash-mvs the
 worktree and box, then `git branch -D`. **No final SHA is recorded anywhere**
-— `wt_log` logs branch *name* only. This is the one hard gap for
+— `wt_log` logs branch _name_ only. This is the one hard gap for
 recreate-from-where-it-ended; Track A closes it.
 
 **Launcher: creation + tab spawn, no state.** `bin/launch-worktree-session`
 derives a deterministic emoji title (`:105-110`), writes a per-launch script,
 and spawns a Terminal.app tab via `osascript 'do script'` (`:290-296` —
 create-only; Terminal.app tabs are never found or focused today; the title is
-set by an OSC escape from *inside* the tab, not tracked by AppleScript). The
+set by an OSC escape from _inside_ the tab, not tracked by AppleScript). The
 claude path execs `claude --worktree "$wt" --name "$session_name" …`; the
 codex path calls `bin/worktrees create` then runs codex foreground and fires
 `bin/codex-session-end` on exit. **Reuse: resume/focus reuse the launcher's
@@ -175,7 +178,7 @@ the new scalar fields need.**
   sessions have `worktree.bgIsolation: "none"`
   ([#59580](https://github.com/anthropics/claude-code/issues/59580), itself
   undocumented). Consequence: the plan treats isolation as fixed and designs
-  around it — /workstreams/ actions run in the *router* process, which isolation
+  around it — /workstreams/ actions run in the _router_ process, which isolation
   does not constrain, and `bin/land` remains the cross-checkout escape hatch.
   A `watch/` issue records the trigger (Track F).
 - **Codex resume**: sessions in `~/.codex/sessions/YYYY/MM/DD/`;
@@ -202,15 +205,15 @@ the new scalar fields need.**
   noun the UI, the schema, and the docs use (boxholder decision,
   2026-08-09; "topic" rejected as too generic, "branch"/"worktree"
   rejected as naming the substrate rather than the unit).
-- **`worktree`** — from now on, strictly *the checkout attached to a
-  workstream*: a bunch of files. Branch names keep the `worktree-<name>`
+- **`worktree`** — from now on, strictly _the checkout attached to a
+  workstream_: a bunch of files. Branch names keep the `worktree-<name>`
   prefix as substrate convention (they name a worktree's branch, which is
   exactly what they are); the word never leaks into the schema or UI.
 - **`/workstreams/`** is the top-level, non-worktree-bound dev app. One
   segment, sibling of `/__router/*` in both dispatch and auth
   classification.
 - **`workstream registry`** = `$WT_STATE_DIR/workstreams/<name>.json`, one
-  file per workstream. A *hint store*, never a source of truth: every
+  file per workstream. A _hint store_, never a source of truth: every
   consumer falls back cleanly when a file is missing or stale.
 - **`cull`** = the existing merged+clean+no-agent removal (sweep/
   session-end), which detaches the workstream's worktree. Culls now leave
@@ -249,7 +252,7 @@ files directly (§8).
 **Why.** Three consumers need a durable worktree→session mapping that
 nothing records today: `resume` (which conversation), `focus` (which tty),
 recreate (which final SHA). The transcript files themselves persist; only the
-*mapping* is missing.
+_mapping_ is missing.
 
 **Direction.** Record shape (all fields optional except `name`,
 `updatedAt`; consumers must tolerate absence):
@@ -258,20 +261,21 @@ recreate (which final SHA). The transcript files themselves persist; only the
 {
   "name": "seam",
   "branch": "worktree-seam",
-  "emoji": "✳",                       // advisory tab glyph from the launcher; never part of the id
-  "baseSha": "9fb482d0…",             // the ref create branched from — see "untouched" below
-  "agent": "claude",                  // claude | codex — last agent launched
-  "sessionId": "3f2a…",               // claude only; codex resumes via --last
+  "emoji": "✳", // advisory tab glyph from the launcher; never part of the id
+  "baseSha": "9fb482d0…", // the ref create branched from — see "untouched" below
+  "agent": "claude", // claude | codex — last agent launched
+  "sessionId": "3f2a…", // claude only; codex resumes via --last
   "transcriptPath": "/…/.claude/projects/…/3f2a….jsonl",
-  "model": "opus",                    // as passed at launch; absent if default
-  "tty": "/dev/ttys012",              // the tab's tty, for focus
+  "model": "opus", // as passed at launch; absent if default
+  "tty": "/dev/ttys012", // the tab's tty, for focus
   "launchedAt": "2026-08-09T18:20:00Z",
   "updatedAt": "2026-08-09T18:20:00Z",
-  "removed": {                        // present only after any removal
+  "removed": {
+    // present only after any removal
     "at": "2026-08-10T02:11:00Z",
-    "finalSha": "bd6fe693…",          // branch tip before git branch -D
-    "merged": true                    // true = a cull; false = forced/manual
-  }
+    "finalSha": "bd6fe693…", // branch tip before git branch -D
+    "merged": true, // true = a cull; false = forced/manual
+  },
 }
 ```
 
@@ -279,7 +283,7 @@ Writers:
 
 1. **`bin/launch-worktree-session`** — at launch, both agent paths write
    `{name, branch, emoji, agent, model, tty, launchedAt}`. The launcher
-   script runs *inside* the tab, so `tty` is just `$(tty)`; `emoji` is the
+   script runs _inside_ the tab, so `tty` is just `$(tty)`; `emoji` is the
    launcher's existing deterministic glyph (`:105-110`) — **advisory
    display data only, never part of any id or path** (boxholder note; the
    views render it beside the name for tab↔web recognition, and a missing
@@ -306,7 +310,7 @@ Writers:
    ancestor reports the tab's real tty alongside `--worktree <name>` in its
    argv, so one walk yields both facts. A session that resolves to no worktree (main
    sessions) writes nothing. Fires on `source: resume|clear|compact|fork`
-   too — the *latest* session id wins, which is the semantics resume wants.
+   too — the _latest_ session id wins, which is the semantics resume wants.
    Must exit 0 always; a registry failure never blocks a session (the
    existing `auto-sweep.sh` non-blocking discipline). **Headless guard
    (hard rule):** the hook writes NOTHING when the claude ancestor's argv
@@ -319,12 +323,12 @@ Writers:
    `--worktree foo` in argv and cwd=main resolves to `foo`; the same
    ancestor with `-p` in argv writes nothing.
 3. **Removal enrichment** — `wt_remove_now` (`bin/lib/worktree-teardown.sh:459`)
-   captures `git -C <path> rev-parse HEAD` *before* trash-mv and branch
+   captures `git -C <path> rev-parse HEAD` _before_ trash-mv and branch
    delete, and merges `removed: {at, finalSha, merged}` into the registry
    file, where `merged` comes from the caller's already-computed
    `wt_work_state` verdict. **`wt_remove_now` serves forced and manual
    removals too** (`bin/worktrees remove --force`, `codex-session-end`), so
-   the field is `removed`, not `culled`: a *cull* is a removal with
+   the field is `removed`, not `culled`: a _cull_ is a removal with
    `merged: true`, and only those appear in /workstreams/'s "recently culled"
    stratum — a force-removed dirty worktree must never render as
    safely-reversible (cross-model review finding). The registry lives
@@ -332,7 +336,7 @@ Writers:
    — that is the point.
 
 Concurrency: the launcher, the SessionStart hook, and removal can race on
-one registry file, and temp+`mv` only makes each *write* atomic, not the
+one registry file, and temp+`mv` only makes each _write_ atomic, not the
 read-merge-write sequence. `session-registry.sh` therefore wraps the whole
 merge in an `mkdir`-based lock (the `pi_lock` pattern from
 `bin/private-issues`, already named as the repo's lock idiom in
@@ -344,7 +348,7 @@ Retention: registry files whose worktree is gone AND whose `removed.at` is
 older than 90 days are pruned by a new, explicit step in `sweep` — this is
 deliberately **new** behavior, not a rider on the existing orphan-state
 prune: unlike `browse/`/`logs/`/`pids/` orphans, a sessions file with no
-worktree is *correct* state (it is the cull record), so the prune keys on
+worktree is _correct_ state (it is the cull record), so the prune keys on
 age, never on mere orphanhood.
 
 `bin/worktrees list --json` gains an additive `session` field per row —
@@ -410,21 +414,21 @@ bin/workstreams close  <name> [--force]
   matches, raise its window (`set index of window to 1`), `activate`. No
   live process on that tty → print "no live session — use resume" and exit
   1. The AppleScript lives in one adapter function
-  (`bin/lib/terminal-tabs.sh`) so a future terminal swap touches one file.
-  **Verified empirically 2026-08-09** from a live session: enumerating
-  `tty of t`, `busy of t`, and `custom title of t` across all windows/tabs
-  works, and `set selected of t to true` on a tab found by tty succeeds
-  (window `id` is available for direct targeting). The remaining
-  first-chunk verification is only `close` and the router-process TCC
-  grant.
-  **State model, stated plainly:** the system tracks *sessions* (registry
-  tty + process liveness), never *tabs*. A tab whose agent exited but
-  whose shell window stays open is invisible to `focus` (correctly — there
-  is nothing to resume there) and is not cleaned up by anything here;
-  stale empty tabs remain the human's to close, and `resume` on that
-  worktree opens a fresh tab rather than reusing the dead one. Accepted:
-  tracking tab existence would need a Terminal-side registry that drifts,
-  and the cost of a leftover empty tab is one Cmd-W.
+     (`bin/lib/terminal-tabs.sh`) so a future terminal swap touches one file.
+     **Verified empirically 2026-08-09** from a live session: enumerating
+     `tty of t`, `busy of t`, and `custom title of t` across all windows/tabs
+     works, and `set selected of t to true` on a tab found by tty succeeds
+     (window `id` is available for direct targeting). The remaining
+     first-chunk verification is only `close` and the router-process TCC
+     grant.
+     **State model, stated plainly:** the system tracks _sessions_ (registry
+     tty + process liveness), never _tabs_. A tab whose agent exited but
+     whose shell window stays open is invisible to `focus` (correctly — there
+     is nothing to resume there) and is not cleaned up by anything here;
+     stale empty tabs remain the human's to close, and `resume` on that
+     worktree opens a fresh tab rather than reusing the dead one. Accepted:
+     tracking tab existence would need a Terminal-side registry that drifts,
+     and the cost of a leftover empty tab is one Cmd-W.
 - **`resume`** decides by state, in order:
   1. Live agent in the worktree → delegate to `focus`.
   2. Worktree exists, no live agent → open a new tab (reusing the launcher's
@@ -442,7 +446,7 @@ bin/workstreams close  <name> [--force]
   3. Worktree culled (no dir; registry has `removed` with `merged: true`;
      `merged: false` gets a warning naming the final SHA and requires
      `--at-final-sha` or `--fresh` explicitly) → `bin/worktrees create
-     <name>` from **main** (default), then open a fresh session whose
+<name>` from **main** (default), then open a fresh session whose
      continuation prompt includes the cull context: the branch's final SHA
      and `git log --oneline <finalSha>..main` (capped at 50 lines) — "here
      is what landed since this workstream last existed." `--at-final-sha`
@@ -545,14 +549,14 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   (`bin/router-auth.ts:216-285`): GET/HEAD under `/workstreams` → `control-read`;
   POST `/workstreams/action/*` → `control`. Never serve /workstreams/ through the `/dev/`
   pipeline — it gets its own handler and its own CSP (`default-src 'none';
-  style-src 'unsafe-inline'` to start; no scripts needed).
+style-src 'unsafe-inline'` to start; no scripts needed).
 - **Rendering:** server-rendered HTML + `<form method="POST">` buttons,
   exactly the issues-browser + `/__router/stop` precedent. No client JS in
   v1 — this is what makes the CSP trivial and keeps the app one file.
   Auto-refresh via `<meta http-equiv="refresh" content="30">` on the front
   page (crude, sufficient, no-JS).
 - **Front page data:** the router execas `bin/worktrees list --json
-  --include-removed` (timeout 10s) rather than re-deriving state in
+--include-removed` (timeout 10s) rather than re-deriving state in
   TypeScript — the bash implementation is the single liveness authority
   (the control-surface plan settled this exact question in favor of bash
   for exactly this reason; a TS re-derivation would be the fail-open
@@ -569,7 +573,7 @@ its current `/main/dev/issues/` address is a lie about what it is (§7).
   (no `recreate` endpoint — recreation is `resume`'s culled-state branch,
   not a verb; the CLI has no `recreate` subcommand by design)
   → execa `bin/workstreams <verb> <name>` with `<name>` validated by the same
-  `[a-zA-Z0-9_-]+` rule as `wt_paths_valid_name` *before* building argv, no
+  `[a-zA-Z0-9_-]+` rule as `wt_paths_valid_name` _before_ building argv, no
   other request data reaching the command line. Response: 303 back to `/workstreams/`
   with a flash message (query param) reporting the command's first stderr
   line on failure. Security posture: these endpoints execute fixed local
@@ -646,7 +650,7 @@ cb-plan + issues-skill updates, and `/workstreams/plans/`.
 3 of 44 files as prose; issue frontmatter is a convention no tool checks.
 The /workstreams/ views need to answer "which plans are in flight and from which
 branch" without an agent reading 19k lines, and worktree sessions must be
-*forced* to record provenance at commit time, not asked to remember (§11,
+_forced_ to record provenance at commit time, not asked to remember (§11,
 §12 — enforcement over convention; the maintainer is an agent).
 
 **Direction.**
@@ -662,7 +666,7 @@ branch" without an agent reading 19k lines, and worktree sessions must be
     the work.
   - `workstream: unattached` — deliberately not workstream-born: filed
     from a main-checkout session, hand-written, or predating any specific
-    work. This is the normal value for a fresh issue that merely *records*
+    work. This is the normal value for a fresh issue that merely _records_
     a tension.
   - `workstream: unknown` — provenance existed but is lost.
     **Backfill-only**: agents never write `unknown` for new items (they
@@ -676,12 +680,12 @@ branch" without an agent reading 19k lines, and worktree sessions must be
 
   ```yaml
   ---
-  title: "An agent-neutral worktree control surface"   # required
-  status: active        # required: draft | active | partial | implemented | superseded | parked
-  workstream: seam      # required: <name> | unattached | unknown
-  issues:               # required list; [] allowed and means "no issue drove this"
+  title: "An agent-neutral worktree control surface" # required
+  status: active # required: draft | active | partial | implemented | superseded | parked
+  workstream: seam # required: <name> | unattached | unknown
+  issues: # required list; [] allowed and means "no issue drove this"
     - ../../issues/features/2026-08-08-worktree-session-workflow-redesign.md
-  superseded-by: other-plan.md   # only with status: superseded
+  superseded-by: other-plan.md # only with status: superseded
   ---
   ```
 
@@ -689,33 +693,36 @@ branch" without an agent reading 19k lines, and worktree sessions must be
   status encodings would drift (§8). `docs/plans/README.md` is rewritten to
   document the frontmatter as the convention. Body H1 stays (unlike issues/)
   — plans are long documents read as documents.
+
 - **Issue frontmatter schema** (full — formalizing `issues/CLAUDE.md`'s
   existing fields, which no tool validates today, plus the new field):
 
   ```yaml
   ---
-  title: "Short human title"        # required (already universal)
-  workstream: unattached            # required: <name> | unattached | unknown
-  needs: [design]                   # optional: design | decision | manual-testing
-  design: ../../callback-box/docs/plans/foo.md   # optional; must resolve
-  area: callback-box                # optional string
-  labels: [soft-launch]             # optional kebab-case list
-  filed-by: agent                   # optional
-  discovered-in: worktree-foo — while doing X    # optional free text
-  resolution: implemented           # required under closed/, forbidden elsewhere:
-                                    #   implemented | wontfix | superseded
+  title: "Short human title" # required (already universal)
+  workstream: unattached # required: <name> | unattached | unknown
+  needs: [design] # optional: design | decision | manual-testing
+  design: ../../callback-box/docs/plans/foo.md # optional; must resolve
+  area: callback-box # optional string
+  labels: [soft-launch] # optional kebab-case list
+  filed-by: agent # optional
+  discovered-in: worktree-foo — while doing X # optional free text
+  resolution:
+    implemented # required under closed/, forbidden elsewhere:
+    #   implemented | wontfix | superseded
   ---
   ```
 
   `discovered-in:` stays as prose color; `workstream:` is the queryable
   counterpart. `needs:` values and the `resolution:`/`closed/` consistency
   rule move from convention to validation.
+
 - **Backfill:** one mechanical pass over both corpora, landing in the same
   commit as the validator so there is no bilingual window:
   - Plans (48 + implemented-plans/ + unimplemented-plans/): `status` derived
     from directory + existing prose line; `issues:` populated where an
     "Issues addressed" section already names them, else `[]`; `workstream:
-    unknown` (except this plan and worktree-control-surface.md, whose
+unknown` (except this plan and worktree-control-surface.md, whose
     workstreams are known).
   - Issues (~452): existing fields pass through untouched; `workstream:`
     added — `unknown` across the board, except items whose
@@ -731,7 +738,7 @@ branch" without an agent reading 19k lines, and worktree sessions must be
   root CLAUDE.md "Commit docs WITH hooks"), so schema enforcement lands in
   the existing hook with zero new hook machinery — a session that files an
   issue without `workstream:` simply cannot commit it. Enforces, for
-  plans: frontmatter present on every *plan* file under the three plan dirs
+  plans: frontmatter present on every _plan_ file under the three plan dirs
   — `README.md` and `*.review.md` are exempt (reviews are artifacts about
   plans, not plans; `*.subplan.md` files ARE plans and get the schema), all
   required fields, `status` in the enum and consistent with the directory
@@ -771,7 +778,7 @@ branch" without an agent reading 19k lines, and worktree sessions must be
     review-caught (§11). **After any plan `git mv`, run
     `pnpm --dir callback-box doc-check --fix`** — the moved plan's own
     relative `issues:`/`superseded-by:` paths and every inbound link
-    re-resolve; today finish.md only prescribes this after *issue* moves
+    re-resolve; today finish.md only prescribes this after _issue_ moves
     (finish.md:423-425), and E1's frontmatter-path repair is what makes it
     work for the frontmatter class too.
   - **Step 6, `partial` case:** /finish **surfaces** the leftover work as a
@@ -786,7 +793,7 @@ branch" without an agent reading 19k lines, and worktree sessions must be
     writes `resolution:`; it now also corrects `workstream:` when the
     resolving workstream differs from the filed value (an issue filed
     `unattached` and resolved by this workstream gets its name —
-    provenance of the *fix*, which is what "pull up the workstream that
+    provenance of the _fix_, which is what "pull up the workstream that
     did this" needs). **The stamp happens on RESOLVE, not only on close**
     (cross-model finding): an issue /finish resolves but must leave open
     because it carries `manual-testing` gets its `workstream:` corrected
@@ -832,7 +839,7 @@ page, not a grep plus tab archaeology.
 
 **Why.** The flow exists today as `grep -rl manual-testing issues/` plus
 reading whole issues plus remembering which tab held the work. Each step has
-a home now: the queue is a facet, the instructions are prose *somewhere* in
+a home now: the queue is a facet, the instructions are prose _somewhere_ in
 the body, and "make adjustments" is the resume motion — but nothing connects
 them. **This structures the existing queue; it adds no new producers of the
 flag** — the [overuse decision](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)
@@ -872,17 +879,17 @@ conversation that built the thing.
      lazy start; local pre-merge testing needs zero new deployment
      machinery, because the router is that machinery. Phone testing works
      too where the router is Tailscale-exposed.
-  Buttons per row: **Open workstream** (the Track B resume action — this is
-  the "found a problem, make adjustments" path, landing back in the
-  conversation) and **Confirm**. Pre-merge rows get **no Confirm button** —
-  the item isn't landed, so there is nothing to clear; verifying pre-merge
-  work feeds back into the workstream (adjust, or just merge), and the flag
-  is confirmed only once it exists on main.
+     Buttons per row: **Open workstream** (the Track B resume action — this is
+     the "found a problem, make adjustments" path, landing back in the
+     conversation) and **Confirm**. Pre-merge rows get **no Confirm button** —
+     the item isn't landed, so there is nothing to clear; verifying pre-merge
+     work feeds back into the workstream (adjust, or just merge), and the flag
+     is confirmed only once it exists on main.
 - **Confirm.** POST `/workstreams/action/confirm-tested/<issue-basename>` →
   execa a new fixed CLI helper (`bin/workstreams confirm-tested <basename>`,
   main-checkout only): removes `manual-testing` from `needs:`, appends a
   one-line `> Verified by boxholder <date>` note under the `## Manual
-  testing` header, moves the issue to `closed/<category>/` with
+testing` header, moves the issue to `closed/<category>/` with
   `resolution: implemented` when nothing else in `needs:` remains (else it
   just clears the flag), runs `doc-check --fix`, and commits (issues/ is not
   a deployed path, so the post-commit deploy hook self-skips). The
@@ -891,7 +898,7 @@ conversation that built the thing.
   enforcement-over-convention premise): the helper reuses the
   `src/lib/agent-context.ts` refusal pattern that `cb auth` established —
   it refuses in an agent session unless passed `--agent-confirmed`, the
-  flag that asserts *a human explicitly asked*, and the router's
+  flag that asserts _a human explicitly asked_, and the router's
   owner-gated endpoint is the one caller that passes it. Preflights before
   touching anything (the same finalization discipline `/finish` applies,
   finish.md:446-449): the main checkout is on `main`, has no active
@@ -903,7 +910,7 @@ conversation that built the thing.
   whenever the item carries the flag — the queue view is a filter, not the
   only door.
 - **Reproductions: persistence is an explicitly named branch, everything
-  else is activity.** A worktree's box is a test1 *clone*, so a manual test
+  else is activity.** A worktree's box is a test1 _clone_, so a manual test
   is only as good as what's in it. The rule (boxholder decision,
   superseding an earlier commit-trailer design): **an agent that wants box
   changes to persist commits them on a branch named `keep` in the clone**;
@@ -916,14 +923,14 @@ conversation that built the thing.
   clone. The worker stages stock content (test1 augmentations the feature
   permanently needs) on `keep`.
   **Constructing `keep`:** staging happens through the app, which commits
-  to the clone's *main* — interleaved with churn — so `keep` is NOT a
+  to the clone's _main_ — interleaved with churn — so `keep` is NOT a
   snapshot of main. It is rooted at `origin/main` (the source test1's
   state) and the worker cherry-picks or re-commits onto it exactly the
   content worth persisting. This is deliberate git surgery: what merges
   home is what was chosen, never what accumulated.
 - **`test-setup` — the re-runnable starting state.** The clone's third
-  named branch, for the scenario that gets the boxholder *into position to
-  test* but must not follow test1 forever: the worker stages the state
+  named branch, for the scenario that gets the boxholder _into position to
+  test_ but must not follow test1 forever: the worker stages the state
   through the app, and at the moment it is right, snapshots it —
   `git branch test-setup` — plain snapshot semantics, fine here because
   this branch is **never merged anywhere** (churn inside it leaks nowhere).
@@ -979,7 +986,7 @@ conversation that built the thing.
   recorded as the one exception.
 - **Override removals preserve `keep`; normal culls never see one.**
   Precision the first draft lacked (cross-model finding — the pin makes
-  "push at cull" unreachable on the normal path): a *normal* cull only
+  "push at cull" unreachable on the normal path): a _normal_ cull only
   fires when eligibility passes, and an unmerged `keep` branch fails
   eligibility (pin (a)), so the preservation push lives in the **override
   paths only** — Release, `remove --force`, and `codex-session-end`'s
@@ -1002,14 +1009,14 @@ conversation that built the thing.
   `bin/lib/worktree-create.sh:137-142`): `create` gains `--box-ref <ref>` —
   after the normal box clone, it resets the clone's main to that
   source-repo ref (`git -C <clone> fetch origin <ref> && git -C <clone>
-  reset --hard FETCH_HEAD`), so the restored box *is* the preserved state.
+reset --hard FETCH_HEAD`), so the restored box _is_ the preserved state.
   `resume`'s culled-state branch passes the registry's `removed.boxRef`
   when present. This is the one new `create` flag this plan adds; without
   it the restore claim is fiction.
 
 **Pre-merge vs deployed testing — the decision.** Local-first: the worktree
 URL covers "test my local trees" with no new machinery, and it is the only
-target that exercises the code *before* merge. Testing on the deployed
+target that exercises the code _before_ merge. Testing on the deployed
 server (cb-style prod) today means merging to main — acceptable for the
 tail of items where prod-ness matters (real connectors, real data, HTTPS).
 A **singular staging slot** ("test this" → deploy this branch to one
@@ -1023,15 +1030,15 @@ view's test-target column is the one place it plugs in.
 **The Track G state machine** (added at cross-model review's direction —
 the authoritative event table; if prose elsewhere disagrees, this wins):
 
-| Event | Clone `main` | Clone `keep` | Clone `test-setup` | Source test1 | Registry | Cull-eligible after? |
-|---|---|---|---|---|---|---|
-| Worker stages + snapshots | advances (app commits) | worker cherry-picks onto it | created (snapshot of main) | untouched | — | No (pins a, c) |
-| `/finish` | untouched | **merged into source main** (branch left in clone; pin (a)'s ancestry check now passes, so no deletion needed) | untouched | main gains `keep` content | — | No while `test-setup`/flag remain; else Yes |
-| `reset-test` | **hard-reset to `test-setup`** | untouched | untouched | untouched | — | unchanged |
-| `confirm-tested` | untouched | untouched | **deleted** | untouched (issue commit is monorepo-side) | — | Yes, once no pin remains |
-| Normal cull (sweep/session-end) | dies (trash) | *cannot exist* (pin (a) blocked eligibility) | *cannot exist* (pin (c)) | untouched | `removed{at, finalSha, merged:true}` | — (it just happened) |
-| Release / `remove --force` / codex `[r]` | dies | **pushed as `keep/<ws>-<date>`**, then dies (push-fail ⇒ removal refused) | dies | gains the `keep/*` ref only | `removed{…, boxRef}` | — |
-| `resume` of culled ws | fresh clone; reset to `boxRef` when recorded | absent | absent | untouched | new session fields | No while a pin recurs; else Yes |
+| Event                                    | Clone `main`                                 | Clone `keep`                                                                                                   | Clone `test-setup`         | Source test1                              | Registry                             | Cull-eligible after?                        |
+| ---------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------- | ------------------------------------ | ------------------------------------------- |
+| Worker stages + snapshots                | advances (app commits)                       | worker cherry-picks onto it                                                                                    | created (snapshot of main) | untouched                                 | —                                    | No (pins a, c)                              |
+| `/finish`                                | untouched                                    | **merged into source main** (branch left in clone; pin (a)'s ancestry check now passes, so no deletion needed) | untouched                  | main gains `keep` content                 | —                                    | No while `test-setup`/flag remain; else Yes |
+| `reset-test`                             | **hard-reset to `test-setup`**               | untouched                                                                                                      | untouched                  | untouched                                 | —                                    | unchanged                                   |
+| `confirm-tested`                         | untouched                                    | untouched                                                                                                      | **deleted**                | untouched (issue commit is monorepo-side) | —                                    | Yes, once no pin remains                    |
+| Normal cull (sweep/session-end)          | dies (trash)                                 | _cannot exist_ (pin (a) blocked eligibility)                                                                   | _cannot exist_ (pin (c))   | untouched                                 | `removed{at, finalSha, merged:true}` | — (it just happened)                        |
+| Release / `remove --force` / codex `[r]` | dies                                         | **pushed as `keep/<ws>-<date>`**, then dies (push-fail ⇒ removal refused)                                      | dies                       | gains the `keep/*` ref only               | `removed{…, boxRef}`                 | —                                           |
+| `resume` of culled ws                    | fresh clone; reset to `boxRef` when recorded | absent                                                                                                         | absent                     | untouched                                 | new session fields                   | No while a pin recurs; else Yes             |
 
 **First implementation chunk.** The `## Manual testing` section validation
 in E1's validator (flag ⇒ section present) + the anchor link rendering —
@@ -1063,7 +1070,7 @@ freely, `bin/workstreams resume <name>` from any prompt.
 
 What the fuller plan buys, concretely:
 
-- **Track D (the app)** buys the *seeing* half of the boxholder's ask —
+- **Track D (the app)** buys the _seeing_ half of the boxholder's ask —
   "what worktrees are actually in progress" has no answer at a glance from a
   CLI you have to remember to run, and the phone/browser case (the buttons)
   doesn't exist at all without it. This is the JTBD itself, not polish.
@@ -1073,13 +1080,13 @@ What the fuller plan buys, concretely:
   `/workstreams/plans/` would be another prose-scraping renderer, extending the
   drift §11 exists to stop.
 - **Track C's cull records** buy reversibility for a motion (`close`) the
-  simple version also ships — shipping `close` *without* the record makes
+  simple version also ships — shipping `close` _without_ the record makes
   culling feel lossy again, which recreates the original tab-hoarding.
 
 Genuinely at risk of over-building, and trimmed: no client-side JS, no live
 WebSocket status, no session-history browser (latest session only), no
 multi-terminal support, no new sweep rules, no auto-filed issues. Each cut
-traces to *stop over-engineering rare failures* / "arrange context, don't
+traces to _stop over-engineering rare failures_ / "arrange context, don't
 automate judgment".
 
 ## Subplans
@@ -1097,28 +1104,28 @@ question to justify it.
 > `sessionId` is Claude-picker assistance only. The empirical command and
 > process evidence are recorded in Track B.
 
-| What can fail | Test exists? | Handling exists? | Clear-or-silent? |
-|---|---|---|---|
-| SessionStart hook can't resolve its worktree (main session, hand-launched odd cwd) | To add — hook doctest with main-checkout cwd | By design — writes nothing, exits 0 | Clear in behavior: no registry entry ⇒ `resume` requires `--agent`, fresh context |
-| Registry sessionId is stale (transcript pruned, `/clear` created a new id after last write) | No runtime test needed after B2 | `resume` does not execute Claude session ids; they are advisory picker metadata only | Clear: fresh continuation does not depend on the stale hint |
-| tty reused by an unrelated tab after close | To add — focus with a dead-process tty | Yes by design — focus verifies a live claude/codex on that tty before AppleScripting | Clear: "no live session — use resume" |
-| Two concurrent sessions in one worktree | Not tested — hint semantics | Last-writer-wins on `updatedAt`; `resume` reattaches the latest | Acceptable by design; registry is a hint, and `focus` still finds whichever tty is live |
-| `wt_remove_now` can't read HEAD before delete (corrupt worktree) | To add — remove with a broken .git | To add — record `removed` without `finalSha`; recreate then works from main only and says why | Clear: recreate prints "no final SHA recorded" |
-| Pre-plan culls (no registry file at all) | Covered by absent-file doctest | Yes — stratum 3 simply doesn't list them; `resume` on them is the "unknown worktree" error | Clear |
-| Router action execa times out / bin missing | To add — action doctest with a stubbed failing command | To add — 303 with flash carrying first stderr line; router never blocks on an action (10s timeout, killGroup) | Clear: flash message |
-| osascript lacks Automation permission (TCC) | Exercised deliberately in chunk D2 on the real Mac | Error surfaces in flash / CLI stderr | Clear |
-| `/workstreams` unknown-segment regression (auth misclassification) | To add — doctest: `/workstreams` owner-gated, `/workstreamsx` still 404s as worktree | Wiring in both dispatch and classifier per Track D | Clear |
-| Recreated-from-main worktree is instantly sweep-eligible (ahead=0, clean) before its session launches | To add — recreate doctest races sweep | Handled by ordering — `resume` creates and launches in one flow; the launched agent pins it within seconds. Residual race accepted (sweep runs on session lifecycle events, not a timer) | Documented here; near-nil reachability on the real path |
-| Plan frontmatter migration misses a file / wrong enum | Validator IS the test — doc-check red until corpus clean | Same commit, no bilingual window | Clear: doc-check names the file |
-| `/finish` writes prose status out of habit (stale agent behavior) | doc-check catches the missing/duplicated status on its commit | finish.md edited in the same track | Clear: pre-commit fails |
-| `confirm-tested` races a concurrent main-checkout commit (index.lock) | To add — helper doctest with a held lock | To add — the helper fails loudly (bounded retry, then error), never leaves a half-edited uncommitted issue; flash carries the stderr | Clear: flash message, file untouched or fully committed |
-| `confirm-tested` targets an issue with no `## Manual testing` section (pre-validator legacy or hand-edit) | Covered — G1 validation makes this unrepresentable on new commits | Helper refuses and says why | Clear |
-| Testing pin never releases (item flagged, never confirmed) | Not a code failure — a queue-pressure design | The held worktree is labeled on the very page listing what to test | Clear by construction: visible where you look |
-| Worktree culled before its manual-testing flag lands on main (race: /finish merges, sweep fires, flag-bearing issue merges in the same push) | To add — G3 doctest ordering | The pin greps main's issues at eligibility time, and /finish's merge lands the issue and the code together, so the flag is on main before the session ends; residual race is a sweep firing mid-merge — accepted, recreate + re-stage per the section's instructions is the recovery | Clear: testing view shows a pre-merge row whose worktree is gone |
-| /finish's `keep`-branch merge into source test1 conflicts | To add — finish doctest with a conflicting source commit | Yes by design — BLOCKED-style report, clone left intact, pin (a) keeps the worktree until resolved | Clear: /finish names the conflict |
-| Worker stages persistent content on the clone's main instead of `keep` | Not detectable — main IS the activity default | The content dies at cull (after any manual-testing pin releases); the test still ran against it pre-cull | Silent by design, and safe: the failure direction is losing test scaffolding, never leaking activity into curated test1 |
-| `reset-test` hard-resets the box under a running `cb serve` | To add — chunk G2 test: reset with the box served, assert clean pickup (refresh-maps, no wedged watchers) | Filesystem-is-state should treat it as an external edit — verified, not assumed | Clear: the button reports; the box either shows the staged state or the test fails in implementation |
-| Release culls a worktree whose `test-setup` still exists | Covered by Release semantics | By design — Release is owner-approved "cull despite the pin"; `test-setup` was never merged anywhere and dies with the clone | Clear: the Release confirmation names what dies |
+| What can fail                                                                                                                                | Test exists?                                                                                              | Handling exists?                                                                                                                                                                                                                                                                     | Clear-or-silent?                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| SessionStart hook can't resolve its worktree (main session, hand-launched odd cwd)                                                           | To add — hook doctest with main-checkout cwd                                                              | By design — writes nothing, exits 0                                                                                                                                                                                                                                                  | Clear in behavior: no registry entry ⇒ `resume` requires `--agent`, fresh context                                       |
+| Registry sessionId is stale (transcript pruned, `/clear` created a new id after last write)                                                  | No runtime test needed after B2                                                                           | `resume` does not execute Claude session ids; they are advisory picker metadata only                                                                                                                                                                                                 | Clear: fresh continuation does not depend on the stale hint                                                             |
+| tty reused by an unrelated tab after close                                                                                                   | To add — focus with a dead-process tty                                                                    | Yes by design — focus verifies a live claude/codex on that tty before AppleScripting                                                                                                                                                                                                 | Clear: "no live session — use resume"                                                                                   |
+| Two concurrent sessions in one worktree                                                                                                      | Not tested — hint semantics                                                                               | Last-writer-wins on `updatedAt`; `resume` reattaches the latest                                                                                                                                                                                                                      | Acceptable by design; registry is a hint, and `focus` still finds whichever tty is live                                 |
+| `wt_remove_now` can't read HEAD before delete (corrupt worktree)                                                                             | To add — remove with a broken .git                                                                        | To add — record `removed` without `finalSha`; recreate then works from main only and says why                                                                                                                                                                                        | Clear: recreate prints "no final SHA recorded"                                                                          |
+| Pre-plan culls (no registry file at all)                                                                                                     | Covered by absent-file doctest                                                                            | Yes — stratum 3 simply doesn't list them; `resume` on them is the "unknown worktree" error                                                                                                                                                                                           | Clear                                                                                                                   |
+| Router action execa times out / bin missing                                                                                                  | To add — action doctest with a stubbed failing command                                                    | To add — 303 with flash carrying first stderr line; router never blocks on an action (10s timeout, killGroup)                                                                                                                                                                        | Clear: flash message                                                                                                    |
+| osascript lacks Automation permission (TCC)                                                                                                  | Exercised deliberately in chunk D2 on the real Mac                                                        | Error surfaces in flash / CLI stderr                                                                                                                                                                                                                                                 | Clear                                                                                                                   |
+| `/workstreams` unknown-segment regression (auth misclassification)                                                                           | To add — doctest: `/workstreams` owner-gated, `/workstreamsx` still 404s as worktree                      | Wiring in both dispatch and classifier per Track D                                                                                                                                                                                                                                   | Clear                                                                                                                   |
+| Recreated-from-main worktree is instantly sweep-eligible (ahead=0, clean) before its session launches                                        | To add — recreate doctest races sweep                                                                     | Handled by ordering — `resume` creates and launches in one flow; the launched agent pins it within seconds. Residual race accepted (sweep runs on session lifecycle events, not a timer)                                                                                             | Documented here; near-nil reachability on the real path                                                                 |
+| Plan frontmatter migration misses a file / wrong enum                                                                                        | Validator IS the test — doc-check red until corpus clean                                                  | Same commit, no bilingual window                                                                                                                                                                                                                                                     | Clear: doc-check names the file                                                                                         |
+| `/finish` writes prose status out of habit (stale agent behavior)                                                                            | doc-check catches the missing/duplicated status on its commit                                             | finish.md edited in the same track                                                                                                                                                                                                                                                   | Clear: pre-commit fails                                                                                                 |
+| `confirm-tested` races a concurrent main-checkout commit (index.lock)                                                                        | To add — helper doctest with a held lock                                                                  | To add — the helper fails loudly (bounded retry, then error), never leaves a half-edited uncommitted issue; flash carries the stderr                                                                                                                                                 | Clear: flash message, file untouched or fully committed                                                                 |
+| `confirm-tested` targets an issue with no `## Manual testing` section (pre-validator legacy or hand-edit)                                    | Covered — G1 validation makes this unrepresentable on new commits                                         | Helper refuses and says why                                                                                                                                                                                                                                                          | Clear                                                                                                                   |
+| Testing pin never releases (item flagged, never confirmed)                                                                                   | Not a code failure — a queue-pressure design                                                              | The held worktree is labeled on the very page listing what to test                                                                                                                                                                                                                   | Clear by construction: visible where you look                                                                           |
+| Worktree culled before its manual-testing flag lands on main (race: /finish merges, sweep fires, flag-bearing issue merges in the same push) | To add — G3 doctest ordering                                                                              | The pin greps main's issues at eligibility time, and /finish's merge lands the issue and the code together, so the flag is on main before the session ends; residual race is a sweep firing mid-merge — accepted, recreate + re-stage per the section's instructions is the recovery | Clear: testing view shows a pre-merge row whose worktree is gone                                                        |
+| /finish's `keep`-branch merge into source test1 conflicts                                                                                    | To add — finish doctest with a conflicting source commit                                                  | Yes by design — BLOCKED-style report, clone left intact, pin (a) keeps the worktree until resolved                                                                                                                                                                                   | Clear: /finish names the conflict                                                                                       |
+| Worker stages persistent content on the clone's main instead of `keep`                                                                       | Not detectable — main IS the activity default                                                             | The content dies at cull (after any manual-testing pin releases); the test still ran against it pre-cull                                                                                                                                                                             | Silent by design, and safe: the failure direction is losing test scaffolding, never leaking activity into curated test1 |
+| `reset-test` hard-resets the box under a running `cb serve`                                                                                  | To add — chunk G2 test: reset with the box served, assert clean pickup (refresh-maps, no wedged watchers) | Filesystem-is-state should treat it as an external edit — verified, not assumed                                                                                                                                                                                                      | Clear: the button reports; the box either shows the staged state or the test fails in implementation                    |
+| Release culls a worktree whose `test-setup` still exists                                                                                     | Covered by Release semantics                                                                              | By design — Release is owner-approved "cull despite the pin"; `test-setup` was never merged anywhere and dies with the clone                                                                                                                                                         | Clear: the Release confirmation names what dies                                                                         |
 
 ## Agent-flow / user-flow edge cases
 
@@ -1168,15 +1175,15 @@ question to justify it.
 - **Client-side JS in /workstreams/, live-updating status, WebSockets** — the no-JS
   server-rendered shape meets the JTBD; interactivity beyond POST forms is
   complexity with no named buyer yet.
-- **Session *history* (resuming anything but the latest session)** — the
+- **Session _history_ (resuming anything but the latest session)** — the
   claude picker (`claude --resume` bare) already serves the archaeology
   case; the registry records latest-only on purpose.
 - **Codex resume-by-id** — unconfirmed upstream; `--last` from the worktree
   cwd is the recipe and suffices.
 - **Auto-filing issues from partial plans** — /finish surfaces a proposed
   body; a human files (Track E, "arrange context, don't automate judgment").
-- **New *producers* of `needs: [manual-testing]`** — the overuse decision
-  is open; Track G structures the *existing* queue (section convention,
+- **New _producers_ of `needs: [manual-testing]`** — the overuse decision
+  is open; Track G structures the _existing_ queue (section convention,
   view, confirm) without changing when or how often the flag gets applied.
 - **A staging deployment slot** ("test this" → deploy a workstream to one
   testing checkout separate from main) — a different subsystem (deploy.sh,
@@ -1199,7 +1206,7 @@ question to justify it.
   runs from main without recreating or reattaching the worktree. The selected
   degradation path is fresh-with-continuation-context for Claude everywhere
   (see Track B's recorded spike evidence).
-- **Should `close` also be offered for *unmerged* worktrees as "pause"?**
+- **Should `close` also be offered for _unmerged_ worktrees as "pause"?**
   Lean: yes but later — closing an unmerged session is already safe (sweep
   won't touch unmerged worktrees; `resume` reopens), so it needs no code,
   only the front page eventually showing paused-unmerged rows distinctly.
@@ -1216,7 +1223,7 @@ question to justify it.
 **Skip, with rationale.** Everything here is dev-repo tooling — invisible to
 box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
 agent-facing surfaces created (the three subcommands, the registry contract,
-plan frontmatter) are documented for *dev* agents in `bin/CLAUDE.md` and
+plan frontmatter) are documented for _dev_ agents in `bin/CLAUDE.md` and
 `docs/plans/README.md`, and enforced by doc-check + refusal messages rather
 than recall (§11) — the same disposition the control-surface plan recorded.
 
@@ -1240,50 +1247,50 @@ ships. Codex-implementable: no chunk contains an open question.
    today's tree and are correct as of writing.)
 4. **B1 — launcher refactor** (`bin/lib/launch-session.sh` extraction; pure
    refactor, behavior-identical).
-4. **B2 — the resume verification spike**: with A1+A2 live, close a real
+5. **B2 — the resume verification spike**: with A1+A2 live, close a real
    worktree session and run `claude --resume <recorded id>` from `$MONO`;
    record the outcome IN THIS PLAN (edit this doc) and pick the resume
    branch accordingly. Gate for B3.
-5. **B3 — `focus` + `close`** (`bin/lib/terminal-tabs.sh` adapter, tty
+6. **B3 — `focus` + `close`** (`bin/lib/terminal-tabs.sh` adapter, tty
    verification, gates). Depends on A1.
-6. **B4 — `resume`** (four-state dispatch, continuation-prompt generation).
+7. **B4 — `resume`** (four-state dispatch, continuation-prompt generation).
    Depends on B1–B3, C1.
-7. **C1 — cull finalSha capture** in `wt_remove_now` + recreate doctest.
+8. **C1 — cull finalSha capture** in `wt_remove_now` + recreate doctest.
    Depends on A1. (Can land right after A1; listed here for narrative order
    — do it early.)
-8. **C2 — `list --json` `session` field** (additive). Depends on A1.
-9. **D1 — /workstreams/ wiring + read-only front page** (routes, auth classes, three
-   strata, doctests incl. no-regression on worktree dispatch). Depends on C2.
-10. **D2 — action endpoints** (POST forms, name validation, flash errors,
+9. **C2 — `list --json` `session` field** (additive). Depends on A1.
+10. **D1 — /workstreams/ wiring + read-only front page** (routes, auth classes, three
+    strata, doctests incl. no-regression on worktree dispatch). Depends on C2.
+11. **D2 — action endpoints** (POST forms, name validation, flash errors,
     TCC exercised). Depends on B3/B4, D1.
-11. **D3 — issues browser move** (mount at /workstreams/issues/, 301s, link sweep).
+12. **D3 — issues browser move** (mount at /workstreams/issues/, 301s, link sweep).
     Depends on D1 only.
-11b. **D4 — workstream detail page + front-page search** (`/workstreams/<name>/`
+    11b. **D4 — workstream detail page + front-page search** (`/workstreams/<name>/`
     joining registry/git/runtime/boxState + issues and plans by
     `workstream:`; `?q=` across all registry records, issue titles, plan
     titles). Depends on D1, E1 (the frontmatter it joins); fully useful
     before D2's buttons exist.
-12. **E1 — frontmatter schemas: validator (plans + issues) +
+13. **E1 — frontmatter schemas: validator (plans + issues) +
     frontmatter-path repair in `--fix` + full backfill of both corpora**,
     one commit.
-13. **E2 — /finish + cb-plan updates** (frontmatter writer, `issues:`
+14. **E2 — /finish + cb-plan updates** (frontmatter writer, `issues:`
     reader, surface-don't-file for partials, `workstream:` stamping). Depends on
     E1.
-14. **E3 — `/workstreams/plans/` view + issue `workstream:` projection**
+15. **E3 — `/workstreams/plans/` view + issue `workstream:` projection**
     (`IssueFrontmatter` field, parser, branch column in the issues view).
     Depends on D1, E1.
-15. **G1 — `## Manual testing` section validation** (flag ⇒ section, in
+16. **G1 — `## Manual testing` section validation** (flag ⇒ section, in
     E1's validator) + anchor rendering. Depends on E1.
-16. **G2 — `/workstreams/testing/` view + `confirm-tested` helper
+17. **G2 — `/workstreams/testing/` view + `confirm-tested` helper
     (clears flag, deletes `test-setup`) + `reset-test` verb and Reset
     button + the buttons on issue detail pages.** Depends on D1, G1;
     action buttons depend on D2.
-16b. **G2b — `keep`-branch preservation in the cull path** (push an
+    16b. **G2b — `keep`-branch preservation in the cull path** (push an
     unmerged `keep` branch to source test1 as `keep/<workstream>-<date>`,
     record the ref in the registry, recreate restores a box from its ref,
     refuse cull on failed push) + the Release button as pin-override.
     Depends on G2, G3, C1.
-17. **G3 — box-cullability pin in sweep/session-end eligibility** (three
+18. **G3 — box-cullability pin in sweep/session-end eligibility** (three
     checks: unmerged `keep` branch, `test-setup` branch, open
     `manual-testing` issue naming the workstream; doctests: pinned
     worktree survives sweep, released by the keep-merge, by
@@ -1292,7 +1299,7 @@ ships. Codex-implementable: no chunk contains an open question.
     conventions in `issues/CLAUDE.md` and the worker-facing docs. Depends
     on E1 (the `workstream:` field it greps), E2 (finish.md edits), G2
     (confirm as a release).
-18. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
+19. **F — watch issue, staging exploration issue, `design:` links, redesign-issue gap corrections,
     `bin/CLAUDE.md` + `docs/plans/README.md` + `issues/CLAUDE.md` +
     `dev/README.md` docs (including the branch-sentinel rules and the
     "backfill-only `unknown`" convention).**
@@ -1315,7 +1322,7 @@ ships. Codex-implementable: no chunk contains an open question.
   cross-model review — an earlier draft claimed otherwise): Track G writes
   branches in worktree box clones, merges `keep` into the source test1's
   main, pushes `keep/<workstream>-<date>` refs to it, and hard-resets
-  clone mains. The containment guarantees: the *source* test1 is only ever
+  clone mains. The containment guarantees: the _source_ test1 is only ever
   touched by (1) /finish's `keep` merge — conflict-refusing, boxholder-
   reviewable like any /finish output — and (2) namespaced `keep/*` ref
   pushes that touch no working state; clone-side operations are all

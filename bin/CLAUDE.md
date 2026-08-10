@@ -1,6 +1,6 @@
-# Dev infrastructure: router, worktrees, process lifecycle
+# Dev infrastructure: router, workstreams, process lifecycle
 
-Detail for the tooling in this directory (`router.ts`, `worktrees`,
+Detail for the tooling in this directory (`router.ts`, `workstreams`,
 `process-cleanup.ts`, `browse`, `box-entry.ts`, `path-leak-check.ts`). The
 always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 
@@ -19,13 +19,13 @@ aren't personal-identity leaks; any other username trips it. Fix a hit with a re
 
 ## Commit blocklist (`commit-blocklist-check.ts`)
 
-`pnpm commit-blocklist-check` blocks a commit whose staged *additions* contain
+`pnpm commit-blocklist-check` blocks a commit whose staged _additions_ contain
 any entry from a personal, gitignored `.commit-blocklist` at the repo root; the
 pre-commit hook runs it on every commit. Shared mechanism, personal list: the
 script is tracked so everyone has the guard, but the strings it blocks live in a
 gitignored file so the sensitive values (a purged domain, an IP, personal names)
 never enter git. No `.commit-blocklist` → silent no-op (opt-in per person); a
-malformed list → fail closed; a *tracked* list → refused. Copy
+malformed list → fail closed; a _tracked_ list → refused. Copy
 `.commit-blocklist.example` to start your own.
 
 Rule kinds (one per line, `#` comments and blanks skipped): a bare entry is a
@@ -118,7 +118,7 @@ runs in prod. Full design and rationale:
   tagged devices/Funnel and are never trusted). The practical upshot: **local
   browser dev now requires logging in once**, same as a deployed box.
 - **`cb tailscale setup --target <routerPort>`** (e.g. `--target 3210`) exposes
-  the *whole* router — every worktree and box — over the tailnet through this
+  the _whole_ router — every worktree and box — over the tailnet through this
   one authenticated front door. Before recording the exposure, setup verifies
   the gate is actually live: it hits the served `/__router/status` over Serve
   with no credentials and requires a `401` (a `200` means an ungated router or
@@ -237,15 +237,42 @@ running session's working directory is not.
   stateless: everything is derived per call, so it cannot drift. Implemented in
   bash rather than TypeScript specifically so the liveness answer comes from
   `wt_other_agent_live` and not a second copy of it.
-- `bin/workstreams create <name> [--base-ref <ref>]` — create or re-attach
-  (idempotent); prints the path on stdout, logs on stderr
+- `bin/workstreams create <name> [--base-ref <ref>] [--box-ref <ref>]` — create
+  or re-attach (idempotent); prints the path on stdout, logs on stderr. A
+  recorded `keep/*` box ref restores the isolated test1 clone during a culled
+  workstream's recreation.
 - `bin/workstreams remove <name> [--force] [--keep-branch] [--dry-run]`
+- `bin/workstreams focus <name>` — focus the recorded live Terminal tab
+- `bin/workstreams close <name> [--force]` — close a merged, clean live tab;
+  force does not override liveness/TTY verification
+- `bin/workstreams resume <name> [--agent claude|codex] [--fresh]
+[--at-final-sha]` — focus, reopen, or recreate according to registry and git
+  state; unknown and unattached names are deliberately refused
+- `bin/workstreams reset-test <name>` — hard-reset the isolated test1 clone to
+  its `test-setup` branch
+- `bin/workstreams confirm-tested <issue-basename>` — clear a landed issue's
+  `manual-testing` need on main, delete its `test-setup` branch, and commit the
+  issue transition
+- `bin/workstreams release <name>` — clear a manual-testing cull pin after the
+  code is merged, clean, and no agent is live
 - `bin/workstreams status` — raw router status JSON (PIDs, ports, idle ms)
 - `bin/workstreams down <name>` — stop one worktree's processes now
 - `bin/workstreams panic` — kill router + all known children + wipe state,
   then reclaim project-scoped agent-browsers and any stray vite/fastify
   the pidfiles never tracked (use if you suspect orphans). Spares
   processes owned by an active sibling `claude` session.
+
+Sweep treats an open issue whose `workstream:` matches and whose `needs:` still
+contains `manual-testing` as a cull pin. Once released or confirmed, an
+unmerged `keep` branch in the workstream's test1 clone is pushed into the source
+test1 repository as `keep/<workstream>-<date>` before deletion; a failed push
+refuses the cull. The `test-setup` branch is the repeatable reset baseline.
+
+The authenticated top-level `/workstreams/` app exposes the joined status and
+safe POST actions, with `/workstreams/issues/`, `/workstreams/plans/`, and
+`/workstreams/testing/` beneath it. Router code ships dark from a worktree: the
+shared router sees these routes only after merge and a boxholder-run `pnpm dev`
+restart. Never restart that shared router from a worktree session.
 
 Isolated router testing: `CALLBACK_STATE_DIR` + `ROUTER_PORT` run a
 second router without touching the live one (which only picks up
@@ -286,7 +313,7 @@ roots) and network, but **reads are global** — verified empirically 2026-08-04
 codex session reads files in a sibling worktree outside every writable root fine.
 So a codex worker can inspect other in-progress worktrees (`git worktree list`,
 `git -C <path> status`/`diff main`) with no extra grant; the root preamble tells it
-so. Broadening read scope needs nothing; only *writing* another worktree would.
+so. Broadening read scope needs nothing; only _writing_ another worktree would.
 
 Codex reads AGENTS.md where Claude reads CLAUDE.md (root→cwd chain injected
 at startup; nested files discovered by the model as it works, per its own
@@ -319,7 +346,7 @@ otherwise be no "after codex exits" moment) and then calls
 **`bin/codex-session-end <worktree-path>`**, which gives codex the same
 teardown claude gets: auto-remove when the branch is merged into main and the
 tree is clean, and an interactive keep/remove prompt at the tty otherwise —
-codex's stand-in for Claude Code's own built-in prompt. Choosing *remove* with
+codex's stand-in for Claude Code's own built-in prompt. Choosing _remove_ with
 unmerged commits still keeps the **branch** (`--keep-branch`); only the tree,
 the box clone, and the router/cache state go. Anything other than an explicit
 `r` keeps: no tty, timeout, EOF, empty line. Closing the tab is still
@@ -348,7 +375,7 @@ process whose cwd is in a worktree as an active session, same as claude.
 
 **Detecting a live agent process: use `ps -axo pid=,comm=`, never `pgrep -x
 claude`.** pgrep matches the 16-char accounting name (`ps ucomm`), and a
-native-installed Claude Code reports that as its *version* (`2.1.221`), not
+native-installed Claude Code reports that as its _version_ (`2.1.221`), not
 `claude` — so `pgrep -x claude` misses live sessions almost entirely (10 of 11
 running sessions invisible when measured 2026-08-04). `ps comm` is the
 executable path; match on its basename. Both `bin/workstreams sweep` and
@@ -358,7 +385,7 @@ built on pgrep silently protects nothing.
 **A nested `claude` run must not clean up the worktree it runs inside.**
 `wt_other_agent_live` refuses to clean when another live `claude`/`codex`
 process belongs to the worktree. `session-end.sh` passes
-`--exclude-self-ancestor`, which excludes the *nearest* agent ancestor of the
+`--exclude-self-ancestor`, which excludes the _nearest_ agent ancestor of the
 hook (that one is the session that's ending); `bin/codex-session-end` does not,
 because codex has already exited by the time it runs — there is no self to
 exclude, and not excluding one is the conservative answer for a hand-run.
@@ -371,7 +398,7 @@ the next sweep and a deleted one is gone. Without this, a nested headless
 `claude -p` — what the `cross-model` skill runs for its Codex→Claude review —
 ends its own session, fires the hook, and deletes the worktree out from under
 the session that spawned it (this happened on 2026-08-04). Callers should
-*also* pass `--setting-sources user` so the project's hooks never load at all;
+_also_ pass `--setting-sources user` so the project's hooks never load at all;
 the skill documents that as load-bearing. Two independent guards because the
 failure destroys work.
 
