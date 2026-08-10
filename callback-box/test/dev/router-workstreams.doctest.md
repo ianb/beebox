@@ -61,6 +61,7 @@ function responseDouble() {
       captured.body = body ?? "";
       return res;
     },
+    // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   return { captured, res };
 }
