@@ -3,6 +3,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
 
+import {
+  collectAgentQuotas,
+  quotaPace,
+  type AgentQuota,
+  type QuotaWindow,
+} from "./agent-quotas.js";
 import { escapeHtml } from "./router-docs.js";
 import {
   listIssues,
@@ -46,6 +52,7 @@ export interface WorkstreamRow {
 
 export interface WorkstreamsDeps {
   list(): Promise<WorkstreamRow[]>;
+  quotas?(): Promise<AgentQuota[]>;
   run(verb: ActionVerb, name: string): Promise<void>;
   documents(): Promise<{
     issues: IssueRecord[];
@@ -118,6 +125,9 @@ function defaultDeps(
       const stdout = await run(["list", "--json", "--include-removed"]);
       // This is the same-repository CLI's tested --json contract, not external input.
       return JSON.parse(stdout) as WorkstreamRow[];
+    },
+    async quotas() {
+      return await collectAgentQuotas();
     },
     async run(verb, name) {
       await run(
@@ -282,7 +292,44 @@ function documentList(params: {
 
 function pageShell(title: string, body: string, refresh = false): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${refresh ? '<meta http-equiv="refresh" content="30">' : ""}<title>${escapeHtml(title)}</title>
-<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
+<style>body{font:14px/1.5 system-ui,sans-serif;max-width:900px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{margin-left:auto;padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}.quota-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}.quota-card{border:1px solid #ddd;border-radius:6px;padding:.8em}.quota-card h3{font-size:1em;margin:0 0 .5em}.quota-window{margin-top:.7em}.quota-window p{margin:.2em 0}.quota-window progress{width:100%}.on-track{color:#176b3a;font-weight:600}.over-pace{color:#9a3412;font-weight:600}.muted{color:#666;font-size:.9em}@media(max-width:600px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}.quota-grid{grid-template-columns:1fr}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
+}
+
+function formatReset(resetsAt: string): string {
+  return resetsAt.replace("T", " ").replace(/:00\.000Z$/, "Z");
+}
+
+function quotaWindowHtml(window: QuotaWindow, now: Date): string {
+  if (new Date(window.resetsAt).getTime() <= now.getTime()) {
+    return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p class="muted">Expired snapshot · awaiting a fresh quota update.</p></div>`;
+  }
+  const used = Math.min(100, Math.max(0, window.usedPercent));
+  const pace = quotaPace(window, now);
+  const paceHtml = pace
+    ? pace.onTrack
+      ? `<p class="on-track">On track · ${Math.round(pace.differencePoints)} points under budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
+      : `<p class="over-pace">Over pace · ${Math.round(Math.abs(pace.differencePoints))} points over budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
+    : '<p class="muted">Pace unavailable for this window.</p>';
+  return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p>${Math.round(window.usedPercent)}% used</p><progress max="100" value="${String(used)}" aria-label="${escapeHtml(window.label)} usage"></progress>${paceHtml}<p class="muted">Resets ${escapeHtml(formatReset(window.resetsAt))}</p></div>`;
+}
+
+export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
+  if (quotas.length === 0) return "";
+  const cards = quotas
+    .map((quota) => {
+      const title = quota.provider === "claude" ? "Claude account" : "Codex";
+      const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(formatReset(quota.fetchedAt))}</p>`;
+      const content =
+        quota.status === "available"
+          ? quota.windows.map((window) => quotaWindowHtml(window, now)).join("")
+          : `<p>${escapeHtml(quota.message ?? "Quota unavailable.")}</p>`;
+      const credits = quota.credits
+        ? `<p class="muted">Credits: ${quota.credits.unlimited ? "unlimited" : escapeHtml(quota.credits.balance ?? "unavailable")}</p>`
+        : "";
+      return `<article class="quota-card"><h3>${title}</h3>${content}${credits}${captured}</article>`;
+    })
+    .join("");
+  return `<section aria-labelledby="agent-capacity"><h2 id="agent-capacity">Agent capacity</h2><div class="quota-grid">${cards}</div></section>`;
 }
 
 function renderDetail(
@@ -398,6 +445,8 @@ export function renderWorkstreams(
   flash = "",
   query = "",
   documents = { issues: [] as IssueRecord[], plans: [] as PlanRecord[] },
+  quotas: AgentQuota[] = [],
+  now = new Date(),
 ): string {
   const attached = rows.filter((row) => row.path !== null);
   const held = attached.filter(
@@ -476,7 +525,7 @@ export function renderWorkstreams(
   const search = `<form method="GET" action="/workstreams/"><input name="q" value="${escapeHtml(query)}" placeholder="Search workstreams, issues, plans"><button>Search</button></form>`;
   return pageShell(
     "workstreams",
-    `<h1>workstreams</h1>${search}${flash ? `<p class="flash">${escapeHtml(flash)}</p>` : ""}${searchHtml(query, rows, documents)}${body || "<p>No workstreams recorded.</p>"}`,
+    `<h1>workstreams</h1>${quotaHtml(quotas, now)}${search}${flash ? `<p class="flash">${escapeHtml(flash)}</p>` : ""}${searchHtml(query, rows, documents)}${body || "<p>No workstreams recorded.</p>"}`,
     true,
   );
 }
@@ -654,11 +703,18 @@ export async function serveWorkstreams(params: {
   try {
     const query =
       new URLSearchParams(params.query ?? "").get("q")?.trim() ?? "";
-    const [rows, documents] = await Promise.all([
+    const [rows, documents, quotas] = await Promise.all([
       deps.list(),
       query ? deps.documents() : Promise.resolve({ issues: [], plans: [] }),
+      deps.quotas?.() ?? Promise.resolve([]),
     ]);
-    const html = renderWorkstreams(rows, params.flash ?? "", query, documents);
+    const html = renderWorkstreams(
+      rows,
+      params.flash ?? "",
+      query,
+      documents,
+      quotas,
+    );
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
       "content-security-policy":
