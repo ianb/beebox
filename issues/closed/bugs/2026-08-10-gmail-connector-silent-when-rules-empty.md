@@ -5,7 +5,20 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
+resolution: implemented
 ---
+
+> **Resolved** in `96fec6cf` (+ review fixes in `01c03821`). The shorthand is
+> first-class and must state its `action`; a missing config file now fails the
+> sync instead of parsing as zero rules; the admin form gained the "On match"
+> control it never had. Plan:
+> [gmail-explicit-action](../../../callback-box/docs/plans/gmail-explicit-action.md).
+>
+> Direction 3 (a migration) was declined by the boxholder — an existing
+> shorthand config without an action errors on purpose, so no box keeps
+> collecting on an implied rule. Direction 4 (detecting a connector that
+> stopped producing) is the surviving idea and moved to
+> [detect-a-connector-that-stopped-producing](../../features/2026-08-10-detect-a-connector-that-stopped-producing.md).
 
 A box with no `config/connectors/gmail.json` behaved in two opposite ways
 across one deploy, and was never told about either.
@@ -61,7 +74,7 @@ by comparing per-day first-message dates across the thread cards.
 4. **A connector that used to produce items and abruptly stopped is detectable
    generically** — compare a connector's last-import time against its own recent
    history. That would catch this class without per-connector knowledge. Compare
-   [box-growth-warning-cannot-clear](2026-08-10-box-growth-warning-cannot-clear.md):
+   [box-growth-warning-cannot-clear](../../bugs/2026-08-10-box-growth-warning-cannot-clear.md):
    the health surface warned loudly and continuously about the box being large,
    while this stall went entirely unreported.
 

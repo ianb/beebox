@@ -3,7 +3,7 @@ title: "Gmail config: explicit action, no implicit tracking"
 status: implemented
 workstream: box-family-email
 issues:
-  - ../../../issues/bugs/2026-08-10-gmail-connector-silent-when-rules-empty.md
+  - ../../../issues/closed/bugs/2026-08-10-gmail-connector-silent-when-rules-empty.md
   - ../../../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md
 ---
 # Gmail config: explicit action, no implicit tracking
@@ -126,8 +126,9 @@ all is unconfigured in every other respect too.
 
 The orphan-reporting command
 ([reconcile tracked set](../../../issues/features/2026-08-10-gmail-reconcile-tracked-set-against-rules.md))
-is a separate deliverable and still needs design. So is a health check for a
-connector that has stopped importing.
+is a separate deliverable and still needs design. So is
+[detecting a connector that stopped producing](../../../issues/features/2026-08-10-detect-a-connector-that-stopped-producing.md),
+the generic version of the failure this plan's specific cause created.
 
 ## Deployment note
 
