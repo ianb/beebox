@@ -7,6 +7,9 @@ src/frontend/dist/
 # The .log files are already covered by *.log above; this ignores the directory
 # explicitly so a non-.log entry can never sneak in.
 deploy/.deploy-logs/
+# Sha of the last FULLY successful deploy (written past the healthcheck, see
+# deploy.sh). Machine-local state, like server-ip — never committed.
+deploy/.last-deployed-sha
 .DS_Store
 .env
 .claude/session-*

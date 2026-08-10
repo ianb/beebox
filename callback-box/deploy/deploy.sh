@@ -656,6 +656,18 @@ HEALTHCHECK
 fi
 
 echo "Deploy complete."
+# Truthful "what is actually live" marker, written ONLY here — past the upload,
+# the restart, and the health verification. Nothing else in this script is a
+# safe proxy: `.deploy-last-sha` is written right after `pnpm install` (it is a
+# node_modules cache key, not a success record), so a run that dies during the
+# build or the upload leaves it claiming a sha that never shipped.
+#
+# Why it exists: a deploy killed outright (OOM, terminal closed) never runs the
+# EXIT trap, so it prints no "Deploy failed", sends no notification, and leaves
+# main silently undeployed — observed 2026-08-10, caught only because someone
+# happened to ask. `bin/doctor.ts` compares this against main's HEAD so the
+# gap becomes visible instead of waiting for the next question.
+echo "$SHA" > "$SCRIPT_DIR/.last-deployed-sha"
 # Show what shipped (hash + commit subject) rather than the — frankly boring —
 # server IP. Both vars are computed above for deploy-info.json.
 notify "✅ callback-box deployed" "$CALLBACK_BOX_HASH $CALLBACK_BOX_SUBJECT"
