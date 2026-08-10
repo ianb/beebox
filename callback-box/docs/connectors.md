@@ -45,10 +45,11 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 Each connector reads its config from `config/connectors/`:
 - `telegram.secret.json` — `{ botToken, webhookSecret }`
 - `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
-- `gmail.json` — named Gmail query rules with either a bounded `track` action or
-  a `procedure` action, or the equivalent `query`/`labels` shorthand for a single
-  rule. Every shape states its action explicitly; a missing action, or a missing
-  file, is an error that stops the sync rather than a silent no-op. The history
+- `gmail.json` — named Gmail query rules with a bounded `track` action, a
+  `procedure` action, or a `stage` action (record a pending summary and do
+  nothing else), or the equivalent `query`/`labels` shorthand for a single rule.
+  Every shape states its action explicitly; a missing action, or a missing file,
+  is an error that stops the sync rather than a silent no-op. The history
   cursor, budgets, and bounded pending summaries live in gitignored
   `gmail.state.json`.
   A live email-thread card is the sole tracking registry; deleting it untracks

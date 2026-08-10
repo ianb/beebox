@@ -18,6 +18,7 @@ const PROCEDURE_REF_PATTERN = /^config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.
 
 const ACTION_OPTIONS = [
   { value: "", label: "Choose what happens…", disabled: true },
+  { value: "stage", label: "Stage for review — records a list, creates nothing" },
   { value: "track", label: "Track as cards (bounded, 25 per 7 days)" },
   { value: "procedure", label: "Run a procedure — creates no cards" },
 ];
@@ -67,6 +68,7 @@ export function GmailFiltersSection() {
 /** The chosen action, or null when the form cannot yet describe a valid one. */
 function buildAction(input: { actionType: string; procedureRef: string }): GmailAction | null {
   if (input.actionType === "track") return { type: "track" };
+  if (input.actionType === "stage") return { type: "stage" };
   if (input.actionType !== "procedure") return null;
   const ref = input.procedureRef.trim();
   return PROCEDURE_REF_PATTERN.test(ref) ? { type: "procedure", ref } : null;
@@ -174,7 +176,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
           options={ACTION_OPTIONS}
           helper={
             matches
-              ? "Tracking writes an email-thread card per matching thread. A procedure runs instead, and writes nothing."
+              ? "Staging records a summary you read with `cb connector gmail pending` and promote by hand. Tracking writes a card per matching thread. A procedure runs instead, and writes nothing itself."
               : "Add a query or a label above — there is nothing to act on yet."
           }
         />

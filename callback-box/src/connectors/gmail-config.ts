@@ -37,10 +37,15 @@ const ProcedureActionInputSchema = z.object({
   ),
 }).strict();
 
+const StageActionInputSchema = z.object({
+  type: z.literal("stage"),
+}).strict();
+
 /** Exported so the admin API validates an action against the same shape. */
 export const gmailActionInputSchema = z.discriminatedUnion("type", [
   TrackActionInputSchema,
   ProcedureActionInputSchema,
+  StageActionInputSchema,
 ]);
 
 const RuleInputSchema = z.object({
@@ -71,7 +76,19 @@ export interface GmailProcedureAction {
   ref: string;
 }
 
-export type GmailRuleAction = GmailTrackAction | GmailProcedureAction;
+/**
+ * Record the match as a pending summary and do nothing else — no card, no
+ * procedure, no agent. The list is read with `cb connector gmail pending` and
+ * promoted deliberately with `cb connector gmail track`. This is the "watching,
+ * not acting" state: what a rule should be while its procedure is still being
+ * written, and the honest default for a query whose matches you have not
+ * decided about yet.
+ */
+export interface GmailStageAction {
+  type: "stage";
+}
+
+export type GmailRuleAction = GmailTrackAction | GmailProcedureAction | GmailStageAction;
 
 export interface GmailRule {
   name: string;
@@ -168,6 +185,8 @@ function normalizeAction(input: z.infer<typeof gmailActionInputSchema>): GmailRu
       return { type: "track", budget: normalizeBudget(input.budget) };
     case "procedure":
       return { type: "procedure", ref: input.ref };
+    case "stage":
+      return { type: "stage" };
     default:
       return assertNever(input);
   }

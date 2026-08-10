@@ -230,6 +230,17 @@ JSON.stringify(shorthand.rules[0]?.action)
 => {"type":"track","budget":{"threads":25,"windowMs":604800000}}
 ```
 
+`stage` is the third action: record the match and do nothing else.
+
+```ts
+const staged = parseGmailConnectorConfig({
+  labels: ["callback"],
+  action: { type: "stage" },
+});
+JSON.stringify(staged.rules)
+=> [{"name":"shorthand","query":"label:callback","action":{"type":"stage"}}]
+```
+
 The shorthand can route to a procedure instead, which creates no cards.
 
 ```ts
@@ -472,6 +483,48 @@ JSON.stringify(procedureResult.procedures)
 => [{"procedureRef":"config/procedures/review-mail.procedure.card","directive":"Gmail rule review-mail has new matching mail. Inspect with: cb connector gmail pending review-mail"}]
 
 procedureResult.state.rules?.["review-mail"]?.pending?.length
+=> 1
+```
+
+A `stage` rule records the same summary and stops there: no card is requested
+and nothing is woken. That is the state a rule sits in while its procedure is
+still being written.
+
+```ts continue
+const stageConfig = parseGmailConnectorConfig({
+  rules: [{ name: "watch-mail", query: "label:callback", action: { type: "stage" } }],
+});
+const stageResult = await evaluateGmailRules({
+  service: gmail,
+  config: stageConfig,
+  state: { rules: { "watch-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
+  candidates: [fresh],
+  trackedThreadIds: new Set(),
+  labelMap: new Map([["Label_7", "callback"]]),
+  now: new Date("2026-08-05T13:00:00.000Z"),
+});
+JSON.stringify({ tracked: stageResult.trackRequests.length, procedures: stageResult.procedures.length })
+=> {"tracked":0,"procedures":0}
+
+stageResult.state.rules?.["watch-mail"]?.pending?.length
+=> 1
+```
+
+New mail on a thread the box already holds is still staged. `stage` records
+whatever the eventual procedure would have seen — skipping tracked threads
+(as `track` does) would drop that mail from the backlog for good.
+
+```ts continue
+const alreadyTracked = await evaluateGmailRules({
+  service: gmail,
+  config: stageConfig,
+  state: { rules: { "watch-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
+  candidates: [fresh],
+  trackedThreadIds: new Set([fresh.threadId]),
+  labelMap: new Map([["Label_7", "callback"]]),
+  now: new Date("2026-08-05T13:00:00.000Z"),
+});
+alreadyTracked.state.rules?.["watch-mail"]?.pending?.length ?? 0
 => 1
 ```
 

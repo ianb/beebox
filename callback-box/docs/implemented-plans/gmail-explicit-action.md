@@ -130,10 +130,35 @@ is a separate deliverable and still needs design. So is
 [detecting a connector that stopped producing](../../../issues/features/2026-08-10-detect-a-connector-that-stopped-producing.md),
 the generic version of the failure this plan's specific cause created.
 
+## Follow-up: the `stage` action (2026-08-10, same day)
+
+Making the action explicit exposed that the union could not express the state
+the boxholder actually wanted first: watch a query, record what matches, act on
+none of it. `track` writes cards; `procedure` needs a procedure to exist. There
+was no way to say "not yet".
+
+`stage` is that third member — it records the same pending summary a
+`procedure` rule records and stops. No card, no trigger, no agent. Read the
+list with `cb connector gmail pending <rule>`, promote with
+`cb connector gmail track <thread-id>`.
+
+Two properties make it a usable holding state rather than a dead end. Rule
+state is keyed by rule *name*, so switching a staged rule to `procedure` later
+keeps its baseline (no re-baseline gap) and its accumulated summaries. The
+procedure does not run merely because pending exists — it first fires on the
+next *matching candidate* after the switch, and reads the whole accumulated
+list at that point.
+
+And `stage` records exactly what its eventual procedure would have seen. Only
+`track` skips a thread the box already holds, because tracking it again is a
+no-op; `stage` and `procedure` both record new mail on an already-tracked
+thread. A first pass skipped tracked threads for `stage` too, on the reasoning
+that an already-promoted thread does not belong on a to-promote list — a
+cross-model review caught that this quietly makes `stage` lossy relative to the
+procedure it is standing in for, which defeats its whole purpose.
+
 ## Deployment note
 
-`box-family` currently holds a shorthand config with no `action`, so its Gmail
-sync will report a config error until a human adds one. That is the intended
-outcome — it collects nothing in the meantime — but it needs a hand edit before
-the box resumes collecting, and it is production, so that edit is the
-boxholder's to make.
+`box-family` is stalled at `{}` while its triage procedure is written. The
+label rule returns as a `stage` rule once this ships, and becomes a `procedure`
+rule when the procedure exists.

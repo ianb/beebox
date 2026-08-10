@@ -57,6 +57,21 @@ Named rules may either track newly matching threads or request a procedure:
 }
 ```
 
+A third action, `stage`, records the match as a pending summary and does
+nothing else — no card, no procedure, no agent:
+
+```json
+{ "labels": ["school"], "action": { "type": "stage" } }
+```
+
+Staging is the "watching, not acting" state. Use it while a rule's procedure is
+still being written, or for a query whose matches you have not decided about
+yet. Read what has accumulated with `cb connector gmail pending <rule>`, and
+promote anything worth keeping with `cb connector gmail track <thread-id>`.
+Switching a staged rule to `procedure` later keeps its accumulated summaries,
+because rule state is keyed by rule name — the procedure sees the backlog the
+first time it runs.
+
 Track rules always have a rolling thread budget. The default is 25 threads in
 seven days; both values are configurable. The first sync after a rule is added
 records the existing match count without tracking that backlog. Later matches
