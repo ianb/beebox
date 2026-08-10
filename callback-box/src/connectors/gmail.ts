@@ -13,7 +13,11 @@ import {
   type GoogleGmailService,
 } from "../services/google-gmail.js";
 import { buildGmailCommitMessage, type ThreadNote } from "./gmail-commit.js";
-import { parseGmailConnectorConfig, type GmailConnectorConfig } from "./gmail-config.js";
+import {
+  MissingGmailConfigError,
+  parseGmailConnectorConfig,
+  type GmailConnectorConfig,
+} from "./gmail-config.js";
 import { discoverGmailChanges } from "./gmail-discovery.js";
 import { uploadPendingDrafts } from "./gmail-drafts.js";
 import { resolveFakeGmailService } from "../field-test/fake-gmail-gate.js";
@@ -36,14 +40,22 @@ interface SyncWork {
   service: GoogleGmailService;
 }
 
+/**
+ * Read and validate the connector config. Every failure throws — including a
+ * missing file. Degrading to an empty config used to look identical to a
+ * healthy connector with nothing to do, which is how a production box went five
+ * days without importing mail and reported no problem.
+ */
 async function readConfig(boxRoot: string): Promise<GmailConnectorConfig> {
   const configPath = path.join(boxRoot, "config/connectors/gmail.json");
+  let raw: string;
   try {
-    return parseGmailConnectorConfig(JSON.parse(await fs.readFile(configPath, "utf-8")));
+    raw = await fs.readFile(configPath, "utf-8");
   } catch (error) {
-    if (errnoCode(error) === "ENOENT") return parseGmailConnectorConfig({});
+    if (errnoCode(error) === "ENOENT") throw new MissingGmailConfigError();
     throw error;
   }
+  return parseGmailConnectorConfig(JSON.parse(raw));
 }
 
 async function readState(boxRoot: string): Promise<GmailTransientState> {
@@ -174,11 +186,6 @@ class GmailConnector implements Connector {
   }
 
   private async syncWorkingSet(work: SyncWork): Promise<SyncResult> {
-    if (work.config.legacy) {
-      console.warn(
-        "Gmail: legacy query/labels config now uses a bounded track rule; migrate to named rules",
-      );
-    }
     if (work.config.gc !== undefined || work.config.gcIntervalHours !== undefined) {
       console.warn(
         "Gmail: gc settings are obsolete; card deletion now controls untracking",

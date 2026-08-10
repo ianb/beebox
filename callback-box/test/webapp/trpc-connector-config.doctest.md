@@ -9,6 +9,7 @@ returns the saved shape. Gmail is an `ownerProcedure`; the others are public.
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { getLog } from "../../src/lib/git.js";
+import { errorMessage } from "../../src/lib/error-guards.js";
 import { simpleGit } from "simple-git";
 
 function caller(boxRoot) {
@@ -118,30 +119,82 @@ await box.cleanup();
 
 ## admin.updateGmailConfig trims and drops empties, committing the result
 
-The query is trimmed and blank labels are filtered out. When both end up empty
-the config is written as `{}`, and re-saving the same empty config is a
-tolerated no-op (nothing new to commit).
+The query is trimmed and blank labels are filtered out. The action is persisted
+alongside them — the form cannot save a filter without saying what happens to a
+match, so the connector never infers `track`.
+
+`query` and `labels` are two spellings of one shorthand, so a non-empty query
+wins and the labels are dropped rather than written into a file where they would
+look effective while matching nothing.
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const c = caller(box.root);
 
-const res = await c.admin.updateGmailConfig({ query: "  is:unread  ", labels: ["INBOX", "  ", "Work"] });
+const res = await c.admin.updateGmailConfig({
+  query: "  is:unread  ",
+  labels: ["INBOX", "  ", "Work"],
+  action: { type: "track" },
+});
 JSON.stringify(res)
-=> {"query":"is:unread","labels":["INBOX","Work"]}
+=> {"query":"is:unread","labels":[],"action":{"type":"track"}}
 
 JSON.stringify(await readJson(box, "config/connectors/gmail.json"))
-=> {"query":"is:unread","labels":["INBOX","Work"]}
+=> {"query":"is:unread","action":{"type":"track"}}
 
 (await getLog(box.root, 1))[0].subject
 => Update Gmail filter config
 ```
 
+Labels alone are written as labels.
+
+```ts continue
+const byLabel = await c.admin.updateGmailConfig({
+  query: "",
+  labels: ["INBOX", "  ", "Work"],
+  action: { type: "track" },
+});
+JSON.stringify(byLabel.labels)
+=> ["INBOX","Work"]
+
+JSON.stringify(await readJson(box, "config/connectors/gmail.json"))
+=> {"labels":["INBOX","Work"],"action":{"type":"track"}}
+```
+
+A filter with something to match but no action is refused, so the form cannot
+save a config the connector would then reject.
+
+```ts continue
+let refused = "";
+try {
+  await c.admin.updateGmailConfig({ query: "is:unread", labels: [] });
+} catch (error) {
+  refused = errorMessage(error);
+};
+refused.includes("needs an action")
+=> true
+```
+
+A procedure action routes matches without creating any card.
+
+```ts continue
+const routed = await c.admin.updateGmailConfig({
+  query: "is:unread",
+  labels: [],
+  action: { type: "procedure", ref: "config/procedures/review.procedure.card" },
+});
+JSON.stringify(routed.action)
+=> {"type":"procedure","ref":"config/procedures/review.procedure.card"}
+```
+
+When nothing is left to match, the action is dropped too: an action with no
+query or labels beside it is a config error the connector would reject.
+
 ```ts continue
 // All-blank input collapses to an empty config.
 const empty = await c.admin.updateGmailConfig({ query: "   ", labels: ["  "] });
 JSON.stringify(empty)
-=> {"query":"","labels":[]}
+=> {"query":"","labels":[],"action":null}
 
 JSON.stringify(await readJson(box, "config/connectors/gmail.json"))
 => {}

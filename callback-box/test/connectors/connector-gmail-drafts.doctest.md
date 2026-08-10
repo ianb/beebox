@@ -19,6 +19,7 @@ import { createGmailConnector } from "../../src/connectors/gmail.js";
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
 await mkdir(join(box.root, "box/inbox/email/draft-2026-04-28-hello"), { recursive: true });
@@ -75,6 +76,7 @@ Gmail thread.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
 await mkdir(join(box.root, "box/inbox/email/thread-Test-abc12345"), { recursive: true });
@@ -120,6 +122,7 @@ resolve to the same source card:
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
 await mkdir(join(box.root, "box/inbox/email/thread-Test-zzz99999"), { recursive: true });
@@ -154,6 +157,7 @@ the user only notices is wrong after opening Gmail:
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
 await mkdir(join(box.root, "box/inbox/email/thread-Bad-aaa00000"), { recursive: true });
@@ -188,6 +192,7 @@ connector leaves it alone:
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
 await mkdir(join(box.root, "box/inbox/email/draft-2026-04-28-already"), { recursive: true });
@@ -213,6 +218,7 @@ alone — the connector only uploads `email-outbound` cards:
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
+await box.seed("config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
 await mkdir(join(box.root, "box/inbox/email/thread-Hello-xyz12345"), { recursive: true });
