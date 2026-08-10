@@ -273,7 +273,7 @@ function RendererToggle({
 
 /** Chat-mode header: name + full path (truncated, hover for full), open-in-sidebar + open-in-browse icons. */
 function ChatHeader({
-  path, title, renderers, active, onSelect, onOpenInPanel,
+  path, title, renderers, active, onSelect, onOpenInPanel, onTrashed,
 }: {
   path: string;
   /** The card's frontmatter title, when it has one — wins over the filename. */
@@ -281,7 +281,7 @@ function ChatHeader({
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
-  onOpenInPanel?: () => void;
+  onOpenInPanel?: () => void; onTrashed?: (() => void) | undefined;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const browseHref = withBase(`/${boxSlug}/browse/${path}`);
@@ -292,6 +292,7 @@ function ChatHeader({
         <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
+      <CardActions path={path} onTrashed={onTrashed} />
       {onOpenInPanel ? (
         <OpenInPanelButton onClick={onOpenInPanel} label="Open in sidebar" size="sm" />
       ) : null}
@@ -408,7 +409,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (mode === "chat") {
     return (
       <div className="border rounded-lg overflow-hidden bg-white">
-        <ChatHeader path={path} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} />
+        <ChatHeader path={path} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} onTrashed={onClose} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
     );
@@ -419,9 +420,10 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     // compact toggle row if there are alternates.
     return (
       <div>
-        {renderers.length > 1 ? (
-          <div className="flex justify-end px-3 py-2 border-b border-warm-200 print:hidden">
+        {renderers.length > 1 || isCardPath(data.path) ? (
+          <div className="flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
             <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact />
+            {isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onClose} /> : null}
           </div>
         ) : null}
         {body}
