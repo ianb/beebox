@@ -1,5 +1,5 @@
 ---
-title: "A Gmail connector with no config imports nothing, silently, forever"
+title: "Gmail's no-config default silently flipped from the whole inbox to nothing"
 workstream: box-family-email
 area: callback-box
 filed-by: agent
@@ -7,10 +7,18 @@ discovered-in: worktree-box-family-email — investigating growth on a productio
 labels: [code-error]
 ---
 
-When `config/connectors/gmail.json` is absent, `readConfig`
-(`callback-box/src/connectors/gmail.ts:39`) maps ENOENT to
-`parseGmailConnectorConfig({})`, which yields `rules: []`. `syncWorkingSet`
-then short-circuits candidate fetching:
+A box with no `config/connectors/gmail.json` behaved in two opposite ways
+across one deploy, and was never told about either.
+
+**Before `ba3bf436` ("Implement tracked Gmail working set", 2026-08-05):**
+`gmail-pull.ts` fell back to `"label:inbox"` when the config was absent, and the
+code acknowledged what that meant — a comment described the first sync of "the
+bare `label:inbox` default" as pulling "the user's entire inbox in as cards".
+So an unconfigured Gmail connector imported everything.
+
+**After `ba3bf436`:** `readConfig` (`gmail.ts:39`) maps ENOENT to
+`parseGmailConnectorConfig({})`, which yields `rules: []`, and `syncWorkingSet`
+short-circuits:
 
 ```ts
 const candidates = work.config.rules.length === 0
@@ -18,42 +26,44 @@ const candidates = work.config.rules.length === 0
   : await fetchCandidates({ service: work.service, refs: changes.refs });
 ```
 
-So the connector imports no new mail at all — while otherwise behaving exactly
-like a healthy connector. It runs on every wakeup, advances its `historyId`
-cursor, refreshes threads it already tracks, and commits those refreshes with
-ordinary "Pull 1 Gmail thread" messages. Nothing logs, nothing warns, and the
-health check reports the connector fine.
+So an unconfigured Gmail connector now imports nothing.
 
-Observed on a production box: mail arrived at a steady 8–24 threads/day for
-five weeks, then stopped dead on a specific day and stayed stopped for five
-more. The box kept committing Gmail activity the whole time — those commits
-were updates to the 530 already-tracked threads. The stall was invisible from
-every surface the boxholder looks at; it surfaced only by comparing per-day
-first-message dates across the thread cards.
+Both defaults are defensible in isolation. The problem is the transition: the
+commit carries no migration, and neither state warns. A box that was silently
+over-collecting became a box that is silently collecting nothing, on a deploy,
+with no signal in either direction.
 
-The trigger there was config loss: `gmail.json` was untracked (it is not
-gitignored, and never appeared in that box's git history), so a working-tree
-clean removed it along with a large population of untracked files. But the
-config could go missing any number of ways — the point is that losing it
-degrades to a silent no-op rather than an error.
+## Observed
 
-Two distinct problems, both worth fixing:
+A production box that had never had a `gmail.json` (the file appears nowhere in
+its git history, and it is not gitignored) accumulated 530 email threads over
+five weeks under the old default — an unfiltered inbox mirror, 81% of it Gmail's
+Updates and Promotions categories. Its owner believed a three-label filter was
+in effect. Nothing had ever reported otherwise.
 
-1. **ENOENT should not silently mean "empty config".** A connector that is
-   enabled but has no config file is a misconfiguration, not a valid state.
-   Either fail loudly, or warn every sync.
-2. **Zero rules should be reported.** Even with a config present, an empty
-   `rules` array means "import nothing". If that is ever a legitimate
-   configuration it needs to be visibly distinct from "broken"; if it is not,
-   it should be an error at parse time.
+On 2026-08-05 imports stopped dead — not one thread since — while the connector
+went on looking healthy: it runs every wakeup, advances its `historyId` cursor,
+refreshes already-tracked threads, and commits those refreshes with ordinary
+"Pull 1 Gmail thread" messages. Five days passed before anyone noticed, and only
+by comparing per-day first-message dates across the thread cards.
 
-A third, weaker direction: a health check that compares a connector's
-last-import time against its own recent history would catch this class
-generally — any connector that used to produce items and abruptly stopped —
-without needing per-connector knowledge. Related surface:
-[box-growth-warning-cannot-clear](2026-08-10-box-growth-warning-cannot-clear.md),
-which warns loudly about a box being large while this stall went unreported.
+## Directions (unsettled)
 
-Separately: connector config files are a box's real configuration and should be
-tracked. Worth checking whether anything ensures that, given
-`google-calendar.json` was tracked on the same box while `gmail.json` was not.
+1. **ENOENT should not silently mean "empty config".** An enabled connector with
+   no config file is a misconfiguration, not a valid state — fail loudly, or
+   warn every sync.
+2. **Zero rules should be reported.** If "import nothing" is ever a legitimate
+   configuration it must be visibly distinct from "broken"; if it is not, make
+   it a parse-time error.
+3. **A default change of this size wants a migration**, even a no-op one that
+   writes the previous behavior into an explicit config so the box keeps doing
+   what it was doing until someone chooses otherwise.
+4. **A connector that used to produce items and abruptly stopped is detectable
+   generically** — compare a connector's last-import time against its own recent
+   history. That would catch this class without per-connector knowledge. Compare
+   [box-growth-warning-cannot-clear](2026-08-10-box-growth-warning-cannot-clear.md):
+   the health surface warned loudly and continuously about the box being large,
+   while this stall went entirely unreported.
+
+Worth checking whether other connectors have the same absent-config-means-
+something shape.
