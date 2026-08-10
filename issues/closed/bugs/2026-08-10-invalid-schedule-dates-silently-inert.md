@@ -4,7 +4,18 @@ workstream: schedule-cadence
 area: callback-box
 filed-by: agent
 discovered-in: worktree-schedule-cadence — cross-model review of the cadence formatter
+resolution: implemented
 ---
+
+Implemented in the `schedule-cadence` workstream: `at`/`until` now require an
+ISO 8601 shape that parses (`src/schemas/scheduled-script-fields.ts`), `cron`
+must parse AND produce a previous occurrence, `rrule` must parse, and
+cron/at/rrule are mutually exclusive (schema `superRefine`, fail-closed at
+load). `createScheduledScriptTemplate` validates its output and throws rather
+than emitting a card that can't load. The runtime catches in
+`isCronDue`/`isRruleDue` now `console.warn` instead of silently returning
+false. Sweep confirmed zero existing cards on any real box fail the new
+validation.
 
 The `scheduled-script` schema types `at` and `until` as plain `z.string()`
 (`src/schemas/scheduled-script.tsx:54-56`). A malformed date passes validation

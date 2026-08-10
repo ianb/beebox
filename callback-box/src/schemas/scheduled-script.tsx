@@ -14,6 +14,8 @@ import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
 import { cardSchema, type InferCardFields } from "../cards/index.js";
 import { parseDuration, parseBudget } from "./scheduled-script-duration.js";
+import { DatetimeField, CronField, RruleField } from "./scheduled-script-fields.js";
+
 const { rrulestr } = rrulePkg;
 
 export {
@@ -50,10 +52,10 @@ export const ScheduledScriptSchema = cardSchema("scheduled-script", {
   category: "authored",
   searchable: false,
   fields: {
-    cron: z.string().optional(),
-    at: z.string().optional(),
-    rrule: z.string().optional(),
-    until: z.string().optional(),
+    cron: CronField.optional(),
+    at: DatetimeField.optional(),
+    rrule: RruleField.optional(),
+    until: DatetimeField.optional(),
     "not-before": z.string().optional(),
     "on-wakeup": z.boolean().optional(),
     once: z.boolean().optional(),
@@ -102,6 +104,21 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
   // instead of the whole card parking as "edited." Any edit beyond `enabled`
   // (retimed cron, changed runs) still parks for review.
   templateMerge: { boxOwnedFields: ["enabled"] },
+  superRefine: (fields, ctx) => {
+    const present: Array<"cron" | "at" | "rrule"> = [];
+    if (fields.cron !== undefined) present.push("cron");
+    if (fields.at !== undefined) present.push("at");
+    if (fields.rrule !== undefined) present.push("rrule");
+    if (present.length > 1) {
+      for (const key of present) {
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message: "cron, at, and rrule are mutually exclusive — specify at most one",
+        });
+      }
+    }
+  },
 });
 
 // ============================================
@@ -272,7 +289,12 @@ function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
       return prev <= ctx.now;
     }
     return prev > new Date(ctx.lastRun);
-  } catch {
+  } catch (e) {
+    // Schema validation rejects an unparseable cron string at authoring
+    // time, so this should be unreachable in practice — but if a card
+    // slips through (an old box, a hand-edited file), degrade visibly
+    // rather than silently never firing.
+    console.warn(`isCronDue: invalid cron expression "${cronExpr}":`, e);
     return false;
   }
 }
@@ -283,7 +305,10 @@ function isRruleDue(rruleStr: string, ctx: ScheduleCheckContext): boolean {
     const after = ctx.lastRun ? new Date(ctx.lastRun) : new Date(0);
     const occurrences = rule.between(after, ctx.now, false);
     return occurrences.length > 0;
-  } catch {
+  } catch (e) {
+    // See isCronDue: near-unreachable once the schema validates RRULEs,
+    // but a slipped-through card should degrade visibly.
+    console.warn(`isRruleDue: invalid RRULE "${rruleStr}":`, e);
     return false;
   }
 }
@@ -311,8 +336,18 @@ export interface ScheduledScriptTemplateOptions {
   requires?: string[];
 }
 
+export class InvalidScheduledScriptTemplateError extends Error {
+  constructor(issues: string) {
+    super(`createScheduledScriptTemplate produced an invalid card: ${issues}`);
+    this.name = "InvalidScheduledScriptTemplateError";
+  }
+}
+
 /**
  * Create a scheduled-script card template (YAML frontmatter + empty body).
+ * Throws {@link InvalidScheduledScriptTemplateError} if the assembled fields
+ * would fail schema validation — a programmatic caller should fail here, not
+ * hand the box a card that can't load.
  */
 export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOptions): string {
   const fields: Record<string, unknown> = {
@@ -347,6 +382,16 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   }
   if (options.requires !== undefined && options.requires.length > 0) {
     fields["requires"] = { connectors: options.requires };
+  }
+  const check = ScheduledScriptSchema.frontmatterSchema.safeParse({
+    type: "scheduled-script",
+    ...fields,
+  });
+  if (!check.success) {
+    const issues = check.error.issues
+      .map((i) => `${i.path.join(".")}: ${i.message}`)
+      .join("; ");
+    throw new InvalidScheduledScriptTemplateError(issues);
   }
   return `---\n${stringifyYaml(fields)}---\n`;
 }
