@@ -15,25 +15,47 @@ interface ArrangementFields {
 export function arrangementIssues(fields: ArrangementFields): LintIssue[] {
   const sourceTabs = fields.source.windows.flatMap((window) => window.tabs);
   const sourceIds = new Set(sourceTabs.map((tab) => tab.id));
-  const proposed = [
-    ...fields.proposal.windows.flatMap((window) => window.tabs),
-    ...fields.proposal.close,
-  ];
-  const seen = new Set<string>();
+  const arranged = fields.proposal.windows.flatMap((window) => window.tabs);
+  const arrangedIds = new Set<string>();
+  const closedIds = new Set<string>();
   const issues: LintIssue[] = [];
 
-  for (const id of proposed) {
+  for (const id of arranged) {
     if (!sourceIds.has(id)) {
       issues.push({ type: "validation", severity: "error", message: `proposal contains unknown tab ${id}` });
-    } else if (seen.has(id)) {
-      issues.push({ type: "validation", severity: "error", message: `proposal contains tab ${id} more than once` });
+    } else if (arrangedIds.has(id)) {
+      issues.push({ type: "validation", severity: "error", message: `proposal contains tab ${id} in more than one window position` });
     }
-    seen.add(id);
+    arrangedIds.add(id);
   }
-  for (const id of sourceIds) {
-    if (!seen.has(id)) {
-      issues.push({ type: "validation", severity: "error", message: `proposal omits source tab ${id}` });
+  for (const id of fields.proposal.close) {
+    if (!sourceIds.has(id)) {
+      issues.push({ type: "validation", severity: "error", message: `proposal closes unknown tab ${id}` });
+    } else if (closedIds.has(id)) {
+      issues.push({ type: "validation", severity: "error", message: `proposal closes tab ${id} more than once` });
     }
+    closedIds.add(id);
+  }
+
+  const annotated = arrangedIds.size === sourceIds.size
+    && [...sourceIds].every((id) => arrangedIds.has(id));
+  const legacy = arranged.length + fields.proposal.close.length === sourceIds.size
+    && fields.proposal.close.every((id) => !arrangedIds.has(id));
+  if (!annotated && !legacy) {
+    issues.push({
+      type: "validation",
+      severity: "error",
+      message: "every source tab must appear in exactly one proposed window; deleted tabs must also be listed in close",
+    });
+  } else if (annotated) {
+    for (const id of closedIds) {
+      if (!arrangedIds.has(id)) {
+        issues.push({ type: "validation", severity: "error", message: `deleted tab ${id} is missing from the proposed windows` });
+      }
+    }
+  }
+  if (closedIds.size >= sourceIds.size) {
+    issues.push({ type: "validation", severity: "error", message: "at least one tab must remain open" });
   }
 
   const pinnedById = new Map(sourceTabs.map((tab) => [tab.id, tab.pinned]));
@@ -80,10 +102,13 @@ export const TabArrangementSchema = cardSchema("tab-arrangement", {
 
 A tab arrangement card is a captured browser snapshot sent by Callback Clerk.
 Help the boxholder reorganize it by editing only the \`proposal\` and explanatory
-body. Preserve every source tab UUID: each UUID must appear exactly once, either
-in one proposed window's ordered \`tabs\` list or in \`close\`. Never replace a
-UUID with a URL. Existing source window UUIDs preserve those windows; a new UUID
-creates a new window. Keep pinned tabs before unpinned tabs in each window.
+body. Preserve every source tab UUID: each UUID must appear exactly once
+in one proposed window's ordered \`tabs\` list. Mark tabs to delete by also adding
+their UUIDs to \`close\`; keep those UUIDs in their proposed window and roughly in
+place so the boxholder can review them in context. Never replace a UUID with a
+URL. Existing source window UUIDs preserve those windows; a new UUID creates a
+new window. Keep pinned tabs before unpinned tabs in each window, and leave at
+least one tab open.
 
 Set \`status: ready\` only when the boxholder agrees the proposal is ready to
 apply. Applying is always a separate, explicit action in the card viewer. Clerk
