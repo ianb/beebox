@@ -134,7 +134,7 @@ function defaultDeps(
       return JSON.parse(stdout) as WorkstreamRow[];
     },
     async quotas() {
-      return await collectAgentQuotas();
+      return await collectAgentQuotas({ backgroundClaudeRefresh: true });
     },
     async run(verb, name) {
       await run(
@@ -350,7 +350,7 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
       const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(formatReset(quota.fetchedAt))}</p>`;
       const content =
         quota.status === "available"
-          ? quota.windows.map((window) => quotaWindowHtml(window, now)).join("")
+          ? `${quota.message ? `<p class="muted">Refresh failed: ${escapeHtml(quota.message)}</p>` : ""}${quota.windows.map((window) => quotaWindowHtml(window, now)).join("")}`
           : `<p>${escapeHtml(quota.message ?? "Quota unavailable.")}</p>`;
       const credits = quota.credits
         ? `<p class="muted">Credits: ${quota.credits.unlimited ? "unlimited" : escapeHtml(quota.credits.balance ?? "unavailable")}</p>`
