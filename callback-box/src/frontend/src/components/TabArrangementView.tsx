@@ -173,8 +173,8 @@ function TabRow(props: {
               {tab.pinned ? <Badge size="sm" tone="info">Pinned</Badge> : null}
               {deleted ? <Badge size="sm" tone="danger">Deleted</Badge> : null}
               <div className="min-w-0">
-                <Text as="div" size="sm" weight="medium" className={`truncate ${deleted ? "line-through" : ""}`}>{tab.title}</Text>
-                <Text as="div" size="xs" tone="subtle" className="truncate">{tab.url}</Text>
+                <Text as="div" size="sm" weight="medium" className="break-words">{tab.title}</Text>
+                <Text as="div" size="xs" tone="subtle" truncate>{tab.url}</Text>
               </div>
             </div>
           </div>
