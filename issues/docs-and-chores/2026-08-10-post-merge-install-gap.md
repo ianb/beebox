@@ -14,6 +14,9 @@ starts importing the new package — but nothing runs `pnpm install` in the main
 checkout, so every `cb` invocation there fails with `ERR_MODULE_NOT_FOUND`
 until someone installs by hand.
 
+This is a recurring problem — the boxholder reports being bitten by it
+before, independent of this incident.
+
 This is not hypothetical: landing cronstrue (2026-08-10) broke `cb` for every
 consumer of the main checkout — including real boxes at `~/src/boxes/*`, whose
 box packages resolve `callback-box` from it — until a manual `pnpm install`.
