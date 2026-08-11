@@ -12,6 +12,7 @@ import path from "node:path";
 
 import {
   legacyIssuesRedirect,
+  issuesForWorkstream,
   quotaHtml,
   relativeTime,
   renderWorkstreams,
@@ -19,7 +20,11 @@ import {
   type WorkstreamRow,
   type WorkstreamsDeps,
 } from "../../../bin/router-workstreams.js";
-import { parseIssueFile } from "../../../bin/router-issues.js";
+import {
+  matches,
+  parseFilters,
+  parseIssueFile,
+} from "../../../bin/router-issues.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
   return {
@@ -188,6 +193,82 @@ const html = renderWorkstreams(
 );
 assert.match(html, /old-seam/);
 assert.match(html, /Seam design/);
+```
+
+Open issues appear beneath their assigned workstream. An issue changed in that
+worktree replaces main's metadata and status, including a move into `closed/`.
+
+```ts
+const mainIssue = parseIssueFile(
+  "bugs/2026-08-10-example.md",
+  "---\ntitle: Main title\nworkstream: seam\n---\n",
+);
+const closedIssue = parseIssueFile(
+  "closed/bugs/2026-08-10-example.md",
+  "---\ntitle: Worktree title\nworkstream: seam\n---\n",
+);
+const documents = {
+  issues: [mainIssue],
+  plans: [],
+  worktreeIssues: [{ worktree: "seam", issue: closedIssue }],
+  worktreeTouchedSlugs: [{ worktree: "seam", slug: closedIssue.slug }],
+};
+const authoritative = issuesForWorkstream(documents, "seam");
+JSON.stringify(authoritative.map((issue) => [issue.frontmatter.title, issue.closed]))
+=> [["Worktree title",true]]
+
+const deletedOnly = issuesForWorkstream(
+  {
+    issues: [mainIssue],
+    plans: [],
+    worktreeIssues: [],
+    worktreeTouchedSlugs: [],
+  },
+  "seam",
+);
+deletedOnly[0]?.frontmatter.title
+=> Main title
+
+const crossWorktree = issuesForWorkstream(
+  {
+    issues: [mainIssue],
+    plans: [],
+    worktreeIssues: [{ worktree: "editor", issue: closedIssue }],
+    worktreeTouchedSlugs: [{ worktree: "editor", slug: closedIssue.slug }],
+  },
+  "seam",
+);
+crossWorktree[0]?.frontmatter.title
+=> Worktree title
+
+const openIssue = parseIssueFile(
+  "features/2026-08-11-open.md",
+  "---\ntitle: Verify the seam\nworkstream: seam\nneeds: [manual-testing]\n---\n",
+);
+const html = renderWorkstreams(
+  [row({ name: "seam" })],
+  "",
+  "",
+  { issues: [openIssue], plans: [] },
+);
+assert.match(html, /row-issues[\s\S]*Verify the seam/);
+assert.match(
+  html,
+  /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
+);
+
+const query = parseFilters(
+  new URLSearchParams("needs=manual-testing&assigned=true"),
+);
+JSON.stringify([
+  matches(openIssue, query, false),
+  matches(
+    parseIssueFile("features/no.md", "---\ntitle: No\nworkstream: unattached\nneeds: [manual-testing]\n---\n"),
+    query,
+    false,
+  ),
+])
+=> [true,false]
 ```
 
 ## Quota summary

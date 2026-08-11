@@ -1,6 +1,6 @@
 ---
 title: "iOS native and web-view runtime errors are not observable"
-workstream: unknown
+workstream: ios-log-forwarding
 needs: [manual-testing]
 area: callback-box
 filed-by: agent

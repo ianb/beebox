@@ -1,6 +1,6 @@
 ---
 title: "cb pub setup's Access instructions are stale and dashboard-bound — provision via the API instead"
-workstream: unknown
+workstream: pub-setup-wrangler
 area: callback-box
 needs: [manual-testing]
 design: ../../callback-box/docs/implemented-plans/pub-setup-wrangler.md

@@ -11,6 +11,7 @@ import {
 } from "./agent-quotas.js";
 import { escapeHtml } from "./router-docs.js";
 import {
+  collectOverlay,
   listIssues,
   parseFrontmatter,
   parseIssueFile,
@@ -63,6 +64,7 @@ export interface WorkstreamsDeps {
     issues: IssueRecord[];
     plans: PlanRecord[];
     worktreeIssues?: Array<{ worktree: string; issue: IssueRecord }>;
+    worktreeTouchedSlugs?: Array<{ worktree: string; slug: string }>;
   }>;
 }
 
@@ -99,6 +101,7 @@ function defaultDeps(
   documentsRoot: string,
   worktreesRoot: string,
 ): WorkstreamsDeps {
+  let documentsCache: { at: number; value: WorkstreamDocuments } | undefined;
   async function run(args: string[]): Promise<string> {
     const timeout =
       args[0] === "resume" ? 15 * 60_000 : args[0] === "list" ? 10_000 : 60_000;
@@ -144,57 +147,81 @@ function defaultDeps(
       );
     },
     async documents() {
-      return {
+      if (documentsCache && Date.now() - documentsCache.at < 60_000)
+        return documentsCache.value;
+      const issueOverlay = await listWorktreeIssueChanges(worktreesRoot);
+      const value = {
         issues: await listIssues(path.join(documentsRoot, "issues")),
         plans: await listPlans(documentsRoot),
-        worktreeIssues: await listWorktreeTestingIssues(worktreesRoot),
+        ...issueOverlay,
       };
+      documentsCache = { at: Date.now(), value };
+      return value;
     },
   };
 }
 
-async function listWorktreeTestingIssues(
-  worktreesRoot: string,
-): Promise<Array<{ worktree: string; issue: IssueRecord }>> {
+async function listWorktreeIssueChanges(worktreesRoot: string): Promise<{
+  worktreeIssues: Array<{ worktree: string; issue: IssueRecord }>;
+  worktreeTouchedSlugs: Array<{ worktree: string; slug: string }>;
+}> {
   const out: Array<{ worktree: string; issue: IssueRecord }> = [];
-  const names = await fs.readdir(worktreesRoot).catch(() => []);
-  for (const worktree of names) {
-    const root = path.join(worktreesRoot, worktree);
-    const [committed, working] = await Promise.all([
-      execa("git", ["diff", "--name-only", "main...HEAD", "--", "issues"], {
-        cwd: root,
-      })
-        .then((r) => r.stdout)
-        .catch(() => ""),
-      execa("git", ["status", "--porcelain", "--", "issues"], { cwd: root })
-        .then((r) => r.stdout)
-        .catch(() => ""),
-    ]);
-    const relPaths = new Set([
-      ...committed
-        .split("\n")
-        .filter((line) => line.startsWith("issues/"))
-        .map((line) => line.slice("issues/".length)),
-      ...working
-        .split("\n")
-        .map((line) => line.slice(3))
-        .filter((line) => line.startsWith("issues/"))
-        .map((line) => line.slice("issues/".length)),
-    ]);
-    for (const relPath of relPaths) {
+  const touched: Array<{ worktree: string; slug: string }> = [];
+  const overlay = await collectOverlay(worktreesRoot);
+  for (const [relPath, entries] of overlay.byPath) {
+    for (const worktree of new Set(entries.map((entry) => entry.worktree))) {
+      const slug = path.posix.basename(relPath, ".md");
+      const root = overlay.worktreeRoots.get(worktree);
+      if (!root) continue;
       try {
         const issue = parseIssueFile(
           relPath,
           await fs.readFile(path.join(root, "issues", relPath), "utf8"),
         );
-        if (issue.frontmatter.needs.includes("manual-testing"))
-          out.push({ worktree, issue });
+        out.push({ worktree, issue });
+        touched.push({ worktree, slug });
       } catch {
         // Deleted or unreadable issue.
       }
     }
   }
-  return out;
+  return { worktreeIssues: out, worktreeTouchedSlugs: touched };
+}
+
+type WorkstreamDocuments = Awaited<ReturnType<WorkstreamsDeps["documents"]>>;
+
+export function issuesForWorkstream(
+  documents: WorkstreamDocuments,
+  workstream: string,
+): IssueRecord[] {
+  const touched = new Set(
+    (documents.worktreeTouchedSlugs ?? []).map((entry) => entry.slug),
+  );
+  const main = documents.issues.filter((issue) => !touched.has(issue.slug));
+  const candidates = new Map<
+    string,
+    Array<{ worktree: string; issue: IssueRecord }>
+  >();
+  for (const entry of documents.worktreeIssues ?? []) {
+    const records = candidates.get(entry.issue.slug) ?? [];
+    records.push(entry);
+    candidates.set(entry.issue.slug, records);
+  }
+  const overlay = [...candidates.values()].map((records) => {
+    records.sort((a, b) => a.worktree.localeCompare(b.worktree));
+    return (
+      records.find(
+        (entry) => entry.issue.frontmatter.workstream === entry.worktree,
+      ) ?? records[0]!
+    ).issue;
+  });
+  return [...main, ...overlay]
+    .filter((issue) => issue.frontmatter.workstream === workstream)
+    .toSorted(
+      (a, b) =>
+        Number(a.closed) - Number(b.closed) ||
+        a.frontmatter.title.localeCompare(b.frontmatter.title),
+    );
 }
 
 async function listPlans(repoRoot: string): Promise<PlanRecord[]> {
@@ -273,23 +300,45 @@ function agentStatusHtml(row: WorkstreamRow): string {
   return `<span class="agent-status">${row.session.agent ? `${agent} inactive` : "No agent recorded"}</span>`;
 }
 
-function rowHtml(row: WorkstreamRow, note: string): string {
+function issueSummaryHtml(issues: IssueRecord[]): string {
+  const open = issues.filter((issue) => !issue.closed);
+  if (open.length === 0) return "";
+  return `<div class="row-issues">${open
+    .map((issue) => {
+      const manual = issue.frontmatter.needs.includes("manual-testing");
+      const className = manual ? ' class="manual-testing-issue"' : "";
+      const label = manual
+        ? '<span class="manual-testing-label">Manual testing</span>'
+        : "";
+      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}${escapeHtml(issue.frontmatter.title)}</a>`;
+    })
+    .join("")}</div>`;
+}
+
+function rowHtml(
+  row: WorkstreamRow,
+  note: string,
+  issues: IssueRecord[] = [],
+): string {
   const box = row.boxState.keepUnmerged
     ? '<span class="chip held">keep unmerged</span>'
     : row.boxState.testSetup
       ? `<span class="chip held">test1 ${row.boxState.pristine === true ? "pristine" : "dirtied"}</span>`
       : "";
-  return `<li><a href="/workstreams/${encodeURIComponent(row.name)}/"><span class="emoji">${escapeHtml(emoji(row))}</span>${escapeHtml(row.name)}</a><span>${escapeHtml(note)}</span>${agentStatusHtml(row)}${box}<span class="actions">${actionsHtml(row)}</span></li>`;
+  const name = `<a class="workstream-link" href="/workstreams/${encodeURIComponent(row.name)}/"><span class="emoji">${escapeHtml(emoji(row))}</span>${escapeHtml(row.name)}</a>`;
+  const main = `<div class="row-main">${name}<span>${escapeHtml(note)}</span>${agentStatusHtml(row)}${box}<span class="actions">${actionsHtml(row)}</span></div>`;
+  return `<li>${main}${issueSummaryHtml(issues)}</li>`;
 }
 
 function section(params: {
   title: string;
   rows: WorkstreamRow[];
   note: (row: WorkstreamRow) => string;
+  documents: WorkstreamDocuments;
 }): string {
-  const { title, rows, note } = params;
+  const { title, rows, note, documents } = params;
   if (rows.length === 0) return "";
-  return `<section><h2>${escapeHtml(title)} <small>${rows.length}</small></h2><ul>${rows.map((row) => rowHtml(row, note(row))).join("")}</ul></section>`;
+  return `<section><h2>${escapeHtml(title)} <small>${rows.length}</small></h2><ul>${rows.map((row) => rowHtml(row, note(row), issuesForWorkstream(documents, row.name))).join("")}</ul></section>`;
 }
 
 function issueHref(issue: IssueRecord): string {
@@ -319,9 +368,84 @@ function documentList(params: {
   return `${issueRows ? `<section><h2>Issues <small>${params.issues.length}</small></h2><ul>${issueRows}</ul></section>` : ""}${planRows ? `<section><h2>Plans <small>${params.plans.length}</small></h2><ul>${planRows}</ul></section>` : ""}`;
 }
 
+const PAGE_CSS = `
+body { font: 14px/1.5 system-ui, sans-serif; max-width: 1000px; margin: 2em auto; padding: 0 1em; color: #222; }
+h1 { font-size: 1.4em; }
+h2 { font-size: 1em; margin-top: 1.8em; }
+h2 small { color: #999; font-weight: 400; }
+ul { list-style: none; padding: 0; }
+li { padding: .55em 0; border-bottom: 1px solid #eee; }
+nav a, .row-issues a { color: #2255aa; text-decoration: none; }
+.row-main { display: flex; gap: 1em; align-items: center; }
+.workstream-link, li > a { min-width: 18em; font: 600 14px ui-monospace, Menlo, monospace; color: #2255aa; text-decoration: none; }
+.row-issues { display: flex; flex-direction: column; gap: .15em; margin: .35em 0 0 2.8em; }
+.row-issues a::before { content: "Issue · "; color: #777; }
+.row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
+.row-issues .manual-testing-issue::before { content: none; }
+.manual-testing-label { margin-right: .55em; padding-right: .55em; border-right: 1px solid #ffffff80; font-size: .78em; letter-spacing: .02em; text-transform: uppercase; }
+.emoji { display: inline-block; width: 1.8em; }
+.chip { padding: .1em .45em; border-radius: 4px; background: #eee; font-size: .8em; white-space: nowrap; }
+.held { background: #fff1c7; color: #765600; }
+.actions { display: flex; gap: .4em; margin-left: auto; }
+.actions form { margin: 0; }
+button, input { box-sizing: border-box; font: inherit; }
+button { padding: .35em .65em; }
+.agent-status { padding: .15em .5em; border-radius: 999px; background: #f1f3f5; color: #59636e; font-size: .82em; white-space: nowrap; }
+.agent-live { background: #dcfce7; color: #166534; font-weight: 650; }
+.page-header { margin-top: 1.2em; }
+.heading-row { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+.heading-row h1 { margin: .2em 0; }
+.search-form { display: flex; gap: .5em; max-width: 38em; margin: .8em 0 1.2em; }
+.search-form input { min-width: 0; flex: 1; padding: .55em .7em; border: 1px solid #aeb5bd; border-radius: 6px; }
+.search-form button { padding: .55em .85em; }
+.quota-details { position: relative; }
+.quota-details > summary { cursor: pointer; color: #2255aa; font-weight: 600; list-style-position: inside; }
+.quota-panel { position: absolute; z-index: 2; right: 0; width: min(46rem, calc(100vw - 2em)); padding: 1em; background: #fff; border: 1px solid #ccd2d8; border-radius: 8px; box-shadow: 0 8px 24px #0002; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.flash { background: #eef6ff; border: 1px solid #bbd8f5; padding: .6em .8em; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: .35em 1em; }
+.facts dt { font-weight: 600; }
+.facts dd { margin: 0; }
+.quota-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1em; }
+.quota-card { border: 1px solid #ddd; border-radius: 6px; padding: .8em; }
+.quota-card h3 { font-size: 1em; margin: 0 0 .5em; }
+.quota-window { margin-top: .7em; }
+.quota-window p { margin: .2em 0; }
+.quota-window progress { width: 100%; }
+.on-track { color: #176b3a; font-weight: 600; }
+.over-pace { color: #9a3412; font-weight: 600; }
+.muted { color: #666; font-size: .9em; }
+.archived-list { opacity: .82; }
+@media (max-width: 700px) {
+  .row-main { align-items: flex-start; flex-wrap: wrap; }
+  .workstream-link { min-width: 100%; }
+  .row-issues { margin-left: 0; }
+  .actions { margin-left: 0; }
+  .quota-grid { grid-template-columns: 1fr; }
+  .quota-panel { position: fixed; left: 1em; right: 1em; width: auto; }
+  .heading-row { align-items: flex-start; }
+}`;
+
 function pageShell(title: string, body: string, refresh = false): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${refresh ? '<meta http-equiv="refresh" content="30">' : ""}<title>${escapeHtml(title)}</title>
-<style>body{font:14px/1.5 system-ui,sans-serif;max-width:1000px;margin:2em auto;padding:0 1em;color:#222}h1{font-size:1.4em}h2{font-size:1em;margin-top:1.8em}h2 small{color:#999;font-weight:400}ul{list-style:none;padding:0}li{display:flex;gap:1em;align-items:center;padding:.55em 0;border-bottom:1px solid #eee}li>a{min-width:18em;font:600 14px ui-monospace,Menlo,monospace;color:#2255aa;text-decoration:none}.emoji{display:inline-block;width:1.8em}.chip{padding:.1em .45em;border-radius:4px;background:#eee;font-size:.8em;white-space:nowrap}.held{background:#fff1c7;color:#765600}nav a{color:#2255aa}.actions{display:flex;gap:.4em;margin-left:auto}.actions form{margin:0}button,input{box-sizing:border-box;font:inherit}button{padding:.35em .65em}.agent-status{padding:.15em .5em;border-radius:999px;background:#f1f3f5;color:#59636e;font-size:.82em;white-space:nowrap}.agent-live{background:#dcfce7;color:#166534;font-weight:650}.page-header{margin-top:1.2em}.heading-row{display:flex;align-items:center;justify-content:space-between;gap:1em}.heading-row h1{margin:.2em 0}.search-form{display:flex;gap:.5em;max-width:38em;margin:.8em 0 1.2em}.search-form input{min-width:0;flex:1;padding:.55em .7em;border:1px solid #aeb5bd;border-radius:6px}.search-form button{padding:.55em .85em}.quota-details{position:relative}.quota-details>summary{cursor:pointer;color:#2255aa;font-weight:600;list-style-position:inside}.quota-panel{position:absolute;z-index:2;right:0;width:min(46rem,calc(100vw - 2em));padding:1em;background:#fff;border:1px solid #ccd2d8;border-radius:8px;box-shadow:0 8px 24px #0002}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.flash{background:#eef6ff;border:1px solid #bbd8f5;padding:.6em .8em}.facts{display:grid;grid-template-columns:max-content 1fr;gap:.35em 1em}.facts dt{font-weight:600}.facts dd{margin:0}.quota-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}.quota-card{border:1px solid #ddd;border-radius:6px;padding:.8em}.quota-card h3{font-size:1em;margin:0 0 .5em}.quota-window{margin-top:.7em}.quota-window p{margin:.2em 0}.quota-window progress{width:100%}.on-track{color:#176b3a;font-weight:600}.over-pace{color:#9a3412;font-weight:600}.muted{color:#666;font-size:.9em}.archived-list{opacity:.82}@media(max-width:700px){li{align-items:flex-start;flex-wrap:wrap}li>a{min-width:100%}.actions{margin-left:0}.quota-grid{grid-template-columns:1fr}.quota-panel{position:fixed;left:1em;right:1em;width:auto}.heading-row{align-items:flex-start}}</style></head><body><nav><a href="/">router</a> · <a href="/workstreams/">workstreams</a> · <a href="/workstreams/issues/">issues</a> · <a href="/workstreams/plans/">plans</a> · <a href="/workstreams/testing/">testing</a></nav>${body}</body></html>`;
+  const refreshMeta = refresh ? '<meta http-equiv="refresh" content="30">' : "";
+  const navItems = [
+    '<a href="/">router</a>',
+    '<a href="/workstreams/">workstreams</a>',
+    '<a href="/workstreams/issues/">issues</a>',
+    '<a href="/workstreams/issues/?needs=manual-testing&amp;assigned=true">manual testing issues</a>',
+    '<a href="/workstreams/plans/">plans</a>',
+    '<a href="/workstreams/testing/">test queue</a>',
+  ];
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  ${refreshMeta}<title>${escapeHtml(title)}</title>
+  <style>${PAGE_CSS}</style>
+</head>
+<body><nav>${navItems.join(" · ")}</nav>${body}</body>
+</html>`;
 }
 
 function formatReset(resetsAt: string): string {
@@ -461,11 +585,19 @@ function renderTesting(
   documents: Awaited<ReturnType<WorkstreamsDeps["documents"]>>,
 ): string {
   const rowByName = new Map(rows.map((row) => [row.name, row]));
+  const changedSlugs = new Set(
+    (documents.worktreeTouchedSlugs ?? []).map((entry) => entry.slug),
+  );
   const landed = documents.issues.filter(
     (issue) =>
+      !changedSlugs.has(issue.slug) &&
+      !issue.closed &&
+      issue.frontmatter.needs.includes("manual-testing"),
+  );
+  const pending = (documents.worktreeIssues ?? []).filter(
+    ({ issue }) =>
       !issue.closed && issue.frontmatter.needs.includes("manual-testing"),
   );
-  const pending = documents.worktreeIssues ?? [];
   const landedHtml = landed
     .map((issue) =>
       testingRow(issue, null, rowByName.get(issue.frontmatter.workstream)),
@@ -566,6 +698,7 @@ export function renderWorkstreams(
     section({
       title: "In progress",
       rows: inProgress,
+      documents,
       note: (row) =>
         row.agent.state === "live"
           ? "working"
@@ -576,33 +709,39 @@ export function renderWorkstreams(
     section({
       title: "Merged ✓, session still open",
       rows: mergedOpen,
+      documents,
       note: () => "close freely",
     }),
     section({
       title: "Untouched",
       rows: untouched,
+      documents,
       note: () => "created, no work committed",
     }),
     section({
       title: "Held for testing",
       rows: held,
+      documents,
       note: () => "worktree held for testing",
     }),
     section({
       title: "Recently culled",
       rows: culled,
+      documents,
       note: (row) =>
         `removed ${relativeTime(row.session.removed?.at ?? "", now)}`,
     }),
     section({
       title: "Removed with unmerged work",
       rows: forced,
+      documents,
       note: (row) =>
         `final ${row.session.removed?.finalSha?.slice(0, 10) ?? "SHA unavailable"}`,
     }),
     section({
       title: "Archived",
       rows: archived,
+      documents,
       note: (row) =>
         `archived ${relativeTime(row.session.archived?.at ?? "", now)}`,
     }).replace("<ul>", '<ul class="archived-list">'),
@@ -767,9 +906,7 @@ export async function serveWorkstreams(params: {
             name,
             rows.find((row) => row.name === name),
             {
-              issues: documents.issues.filter(
-                (issue) => issue.frontmatter.workstream === name,
-              ),
+              issues: issuesForWorkstream(documents, name),
               plans: documents.plans.filter((plan) => plan.workstream === name),
             },
           ),
@@ -791,7 +928,7 @@ export async function serveWorkstreams(params: {
       new URLSearchParams(params.query ?? "").get("q")?.trim() ?? "";
     const [rows, documents, quotas] = await Promise.all([
       deps.list(),
-      query ? deps.documents() : Promise.resolve({ issues: [], plans: [] }),
+      deps.documents(),
       deps.quotas?.() ?? Promise.resolve([]),
     ]);
     const html = renderWorkstreams(

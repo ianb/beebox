@@ -27,6 +27,7 @@ async function buildScript(
     agent: "claude" | "codex";
     mono?: string;
     resume: boolean;
+    issue?: string;
     worktreePath?: string;
   },
 ) {
@@ -57,6 +58,7 @@ async function buildScript(
         LS_REMOTE_CONTROL: "1",
         LS_SESSION_NAME: "🧵 seam",
         LS_WORKSTREAM: "seam",
+        LS_ISSUE: options.issue ?? "",
         ...(options.worktreePath
           ? { LS_WORKTREE_PATH: options.worktreePath }
           : {}),
@@ -77,6 +79,11 @@ the repository's SessionEnd hook and later sweep retain ownership of cleanup.
 ```ts
 const root = await mkdtemp(join(tmpdir(), "launch-session-doctest-"));
 const claudeScript = await buildScript(root, { agent: "claude", resume: false });
+const issueScript = await buildScript(root, {
+  agent: "claude",
+  resume: false,
+  issue: "issues/bugs/2026-08-11-example.md",
+});
 JSON.stringify([
   claudeScript.includes('./bin/workstreams create "seam"'),
   claudeScript.includes('cd "$wt_path"'),
@@ -85,9 +92,17 @@ JSON.stringify([
   !claudeScript.includes("claude --worktree"),
   claudeScript.includes("merge-base main HEAD"),
   claudeScript.indexOf('cd "$wt_path"') < claudeScript.indexOf("exec claude"),
+  issueScript.includes("assign-issue-workstream.ts"),
+  issueScript.includes("issues/bugs/2026-08-11-example.md"),
+  issueScript.includes('if [ -n "issues/bugs/2026-08-11-example.md" ]'),
+  claudeScript.includes('if [ -n "" ]'),
+  issueScript.indexOf("assign-issue-workstream.ts") < issueScript.indexOf("exec claude"),
 ])
-=> [true,true,true,true,true,true,true]
+=> [true,true,true,true,true,true,true,true,true,true,true,true]
 ```
+
+When the launch skill takes on an existing issue, the generated script assigns
+that issue inside the new checkout before the agent starts.
 
 Creation failures, including a broken zero-status/empty-stdout producer, stop
 before Claude starts. A resumed session can instead consume the already

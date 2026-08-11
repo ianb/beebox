@@ -1,6 +1,6 @@
 ---
 title: "Detect dead Google auth in health + notify the user with a clear re-authorize CTA"
-workstream: unknown
+workstream: google-reauth-health
 area: callback-box
 filed-by: agent
 needs: [manual-testing]

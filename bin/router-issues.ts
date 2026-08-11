@@ -9,11 +9,24 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import type http from "node:http";
 import { execa } from "execa";
-import { escapeHtml, renderDevShell, devBreadcrumbs, renderMarkdownToHtml } from "./router-docs.js";
+import {
+  escapeHtml,
+  renderDevShell,
+  devBreadcrumbs,
+  renderMarkdownToHtml,
+} from "./router-docs.js";
 
 // --- data model (issues/CLAUDE.md) ------------------------------------------
 
-const CATEGORIES = ["bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch"] as const;
+const CATEGORIES = [
+  "bugs",
+  "features",
+  "code-quality",
+  "docs-and-chores",
+  "decisions",
+  "exploration",
+  "watch",
+] as const;
 type Category = (typeof CATEGORIES)[number];
 
 export interface IssueFrontmatter {
@@ -64,8 +77,11 @@ function unquote(s: string): string {
   // written as `title: "Agent \"give up\""` — renders every quote as a literal
   // `\"` on the page.
   if (s.length >= 2 && s[0] === '"' && s[s.length - 1] === '"') {
-    return s.slice(1, -1).replace(/\\(["\\/nt])/g, (_m, c: string) =>
-      c === "n" ? "\n" : c === "t" ? "\t" : c);
+    return s
+      .slice(1, -1)
+      .replace(/\\(["\\/nt])/g, (_m, c: string) =>
+        c === "n" ? "\n" : c === "t" ? "\t" : c,
+      );
   }
   // Single-quoted YAML: `''` is the escaped single quote.
   if (s.length >= 2 && s[0] === "'" && s[s.length - 1] === "'") {
@@ -74,12 +90,18 @@ function unquote(s: string): string {
   return s;
 }
 
-export function parseFrontmatter(src: string): { data: Record<string, string | string[]>; body: string } {
+export function parseFrontmatter(src: string): {
+  data: Record<string, string | string[]>;
+  body: string;
+} {
   const lines = src.split("\n");
   if ((lines[0] ?? "").trim() !== "---") return { data: {}, body: src };
   let end = -1;
   for (let i = 1; i < lines.length; i++) {
-    if ((lines[i] ?? "").trim() === "---") { end = i; break; }
+    if ((lines[i] ?? "").trim() === "---") {
+      end = i;
+      break;
+    }
   }
   if (end === -1) return { data: {}, body: src };
 
@@ -113,7 +135,8 @@ export function parseFrontmatter(src: string): { data: Record<string, string | s
     }
     if (value.startsWith("[") && value.endsWith("]")) {
       const inner = value.slice(1, -1).trim();
-      data[key!] = inner === "" ? [] : inner.split(",").map((s) => unquote(s.trim()));
+      data[key!] =
+        inner === "" ? [] : inner.split(",").map((s) => unquote(s.trim()));
       continue;
     }
     data[key!] = unquote(value);
@@ -147,7 +170,11 @@ function detectResearchState(body: string): ResearchState {
 // came from. Falls back to a filename-derived title when frontmatter has
 // none (an older/stray file might use an H1 instead — see the caller for a
 // real example) rather than dropping the issue from the browser entirely.
-export function parseIssueFile(relPath: string, src: string, visibility?: Visibility): IssueRecord {
+export function parseIssueFile(
+  relPath: string,
+  src: string,
+  visibility?: Visibility,
+): IssueRecord {
   const v = visibility ?? "public";
   const segments = relPath.split("/");
   const closed = segments[0] === "closed";
@@ -190,7 +217,10 @@ export function parseIssueFile(relPath: string, src: string, visibility?: Visibi
 async function listMdFiles(dir: string): Promise<string[]> {
   try {
     const dirents = await fs.readdir(dir, { withFileTypes: true });
-    return dirents.filter((d) => d.isFile() && d.name.endsWith(".md")).map((d) => d.name).sort();
+    return dirents
+      .filter((d) => d.isFile() && d.name.endsWith(".md"))
+      .map((d) => d.name)
+      .sort();
   } catch {
     return [];
   }
@@ -208,7 +238,10 @@ async function listMdFiles(dir: string): Promise<string[]> {
 // absent root (visibility "private" when the developer hasn't opted in)
 // naturally yields zero records with no error — listMdFiles already treats
 // a missing directory as empty.
-export async function listIssues(issuesRoot: string, visibility?: Visibility): Promise<IssueRecord[]> {
+export async function listIssues(
+  issuesRoot: string,
+  visibility?: Visibility,
+): Promise<IssueRecord[]> {
   const v = visibility ?? "public";
   const records: IssueRecord[] = [];
   for (const category of CATEGORIES) {
@@ -216,15 +249,31 @@ export async function listIssues(issuesRoot: string, visibility?: Visibility): P
     for (const file of await listMdFiles(dir)) {
       const relPath = `${category}/${file}`;
       try {
-        records.push(parseIssueFile(relPath, await fs.readFile(path.join(dir, file), "utf8"), v));
-      } catch { /* unreadable — skip */ }
+        records.push(
+          parseIssueFile(
+            relPath,
+            await fs.readFile(path.join(dir, file), "utf8"),
+            v,
+          ),
+        );
+      } catch {
+        /* unreadable — skip */
+      }
     }
     const closedDir = path.join(issuesRoot, "closed", category);
     for (const file of await listMdFiles(closedDir)) {
       const relPath = `closed/${category}/${file}`;
       try {
-        records.push(parseIssueFile(relPath, await fs.readFile(path.join(closedDir, file), "utf8"), v));
-      } catch { /* unreadable — skip */ }
+        records.push(
+          parseIssueFile(
+            relPath,
+            await fs.readFile(path.join(closedDir, file), "utf8"),
+            v,
+          ),
+        );
+      } catch {
+        /* unreadable — skip */
+      }
     }
   }
   return records;
@@ -261,7 +310,8 @@ export function parseNameStatusZ(stdout: string): NameStatusRecord[] {
     if (letter === "R" || letter === "C") {
       const oldPath = tokens[i++];
       const newPath = tokens[i++];
-      if (oldPath !== undefined && newPath !== undefined) out.push({ code: "R", path: newPath, oldPath });
+      if (oldPath !== undefined && newPath !== undefined)
+        out.push({ code: "R", path: newPath, oldPath });
     } else if (letter === "A" || letter === "M" || letter === "D") {
       const p = tokens[i++];
       if (p !== undefined) out.push({ code: letter, path: p });
@@ -299,7 +349,10 @@ function categoryPathspecs(): string[] {
   // :(glob) makes `*` stop at `/` (default pathspec `*` crosses directory
   // separators, which would admit nested files listIssues never enumerates —
   // phantom worktree-only records).
-  return CATEGORIES.flatMap((cat) => [`:(glob)${cat}/*.md`, `:(glob)closed/${cat}/*.md`]);
+  return CATEGORIES.flatMap((cat) => [
+    `:(glob)${cat}/*.md`,
+    `:(glob)closed/${cat}/*.md`,
+  ]);
 }
 
 export interface OverlayResult {
@@ -324,7 +377,10 @@ async function hasGitMarker(dir: string): Promise<boolean> {
   }
 }
 
-function mergeInto(target: Map<string, OverlayEntry[]>, source: Map<string, OverlayEntry[]>): void {
+function mergeInto(
+  target: Map<string, OverlayEntry[]>,
+  source: Map<string, OverlayEntry[]>,
+): void {
   for (const [relPath, list] of source) {
     const existing = target.get(relPath);
     if (existing) existing.push(...list);
@@ -340,7 +396,9 @@ function mergeInto(target: Map<string, OverlayEntry[]>, source: Map<string, Over
 // in, so an absent mount or a failing private git command is skipped
 // silently (see worktreePrivateOverlayWithPaths), never logged as if it were
 // a real error.
-export async function collectOverlay(worktreesRoot: string): Promise<OverlayResult> {
+export async function collectOverlay(
+  worktreesRoot: string,
+): Promise<OverlayResult> {
   const byPath = new Map<string, OverlayEntry[]>();
   const byPathPrivate = new Map<string, OverlayEntry[]>();
   const worktreeRoots = new Map<string, string>();
@@ -352,19 +410,28 @@ export async function collectOverlay(worktreesRoot: string): Promise<OverlayResu
     return { byPath, byPathPrivate, worktreeRoots };
   }
 
-  await Promise.all(names.map(async (name) => {
-    const root = path.join(worktreesRoot, name);
-    if (!(await hasGitMarker(root))) return;
-    worktreeRoots.set(name, root);
-    try {
-      mergeInto(byPath, await worktreeIssueOverlayWithPaths(name, root));
-    } catch (err) {
-      console.error(`[issues] skipping worktree overlay for ${name}: ${(err as Error).message}`);
-    }
-    try {
-      mergeInto(byPathPrivate, await worktreePrivateOverlayWithPaths(name, root));
-    } catch { /* no private mount, or its git commands failed — soft dependency, stays silent */ }
-  }));
+  await Promise.all(
+    names.map(async (name) => {
+      const root = path.join(worktreesRoot, name);
+      if (!(await hasGitMarker(root))) return;
+      worktreeRoots.set(name, root);
+      try {
+        mergeInto(byPath, await worktreeIssueOverlayWithPaths(name, root));
+      } catch (err) {
+        console.error(
+          `[issues] skipping worktree overlay for ${name}: ${(err as Error).message}`,
+        );
+      }
+      try {
+        mergeInto(
+          byPathPrivate,
+          await worktreePrivateOverlayWithPaths(name, root),
+        );
+      } catch {
+        /* no private mount, or its git commands failed — soft dependency, stays silent */
+      }
+    }),
+  );
 
   return { byPath, byPathPrivate, worktreeRoots };
 }
@@ -372,14 +439,30 @@ export async function collectOverlay(worktreesRoot: string): Promise<OverlayResu
 // Like worktreeIssueOverlay but keyed by relPath (the shape collectOverlay
 // actually needs) — kept separate so worktreeIssueOverlay's git-command
 // parsing stays unit-testable against raw stdout without a filesystem.
-async function worktreeIssueOverlayWithPaths(worktree: string, worktreeRoot: string): Promise<Map<string, OverlayEntry[]>> {
+async function worktreeIssueOverlayWithPaths(
+  worktree: string,
+  worktreeRoot: string,
+): Promise<Map<string, OverlayEntry[]>> {
   const run = (args: string[]) => execa("git", args, { cwd: worktreeRoot });
   const [committed, uncommitted, untracked] = await Promise.all([
     run(["diff", "--name-status", "-z", "main...HEAD", "--", "issues/"]),
     run(["diff", "--name-status", "-z", "HEAD", "--", "issues/"]),
-    run(["ls-files", "--others", "--exclude-standard", "-z", "--", "issues/*.md", "issues/**/*.md"]),
+    run([
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "-z",
+      "--",
+      "issues/*.md",
+      "issues/**/*.md",
+    ]),
   ]);
-  return mergeOverlaySources(worktree, committed.stdout, uncommitted.stdout, untracked.stdout);
+  return mergeOverlaySources(
+    worktree,
+    committed.stdout,
+    uncommitted.stdout,
+    untracked.stdout,
+  );
 }
 
 // Like worktreeIssueOverlayWithPaths, but for the PRIVATE mount at
@@ -394,7 +477,10 @@ async function worktreeIssueOverlayWithPaths(worktree: string, worktreeRoot: str
 // for them (it only strips when the prefix is actually present) — no
 // separate merge step needed. An absent mount returns an empty map rather
 // than attempting (and failing) a git command against it.
-async function worktreePrivateOverlayWithPaths(worktree: string, worktreeRoot: string): Promise<Map<string, OverlayEntry[]>> {
+async function worktreePrivateOverlayWithPaths(
+  worktree: string,
+  worktreeRoot: string,
+): Promise<Map<string, OverlayEntry[]>> {
   const privateRoot = path.join(worktreeRoot, "private-issues");
   if (!(await hasGitMarker(privateRoot))) return new Map();
   const pathspecs = categoryPathspecs();
@@ -402,9 +488,21 @@ async function worktreePrivateOverlayWithPaths(worktree: string, worktreeRoot: s
   const [committed, uncommitted, untracked] = await Promise.all([
     run(["diff", "--name-status", "-z", "main...HEAD", "--", ...pathspecs]),
     run(["diff", "--name-status", "-z", "HEAD", "--", ...pathspecs]),
-    run(["ls-files", "--others", "--exclude-standard", "-z", "--", ...pathspecs]),
+    run([
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "-z",
+      "--",
+      ...pathspecs,
+    ]),
   ]);
-  return mergeOverlaySources(worktree, committed.stdout, uncommitted.stdout, untracked.stdout);
+  return mergeOverlaySources(
+    worktree,
+    committed.stdout,
+    uncommitted.stdout,
+    untracked.stdout,
+  );
 }
 
 // Pure merge step (unit-testable without spawning git): three raw git
@@ -424,17 +522,27 @@ export function mergeOverlaySources(
 
   for (const rec of parseNameStatusZ(committedNameStatusZ)) {
     const relPath = stripIssuesPrefix(rec.path);
-    const entry: OverlayEntry = { worktree, status: statusToOverlay(rec.code), committed: true };
+    const entry: OverlayEntry = {
+      worktree,
+      status: statusToOverlay(rec.code),
+      committed: true,
+    };
     if (rec.oldPath) entry.oldPath = stripIssuesPrefix(rec.oldPath);
     add(relPath, entry);
-    if (rec.code === "R" && rec.oldPath) add(stripIssuesPrefix(rec.oldPath), { ...entry });
+    if (rec.code === "R" && rec.oldPath)
+      add(stripIssuesPrefix(rec.oldPath), { ...entry });
   }
   for (const rec of parseNameStatusZ(uncommittedNameStatusZ)) {
     const relPath = stripIssuesPrefix(rec.path);
-    const entry: OverlayEntry = { worktree, status: statusToOverlay(rec.code), committed: false };
+    const entry: OverlayEntry = {
+      worktree,
+      status: statusToOverlay(rec.code),
+      committed: false,
+    };
     if (rec.oldPath) entry.oldPath = stripIssuesPrefix(rec.oldPath);
     add(relPath, entry);
-    if (rec.code === "R" && rec.oldPath) add(stripIssuesPrefix(rec.oldPath), { ...entry });
+    if (rec.code === "R" && rec.oldPath)
+      add(stripIssuesPrefix(rec.oldPath), { ...entry });
   }
   for (const p of parseNulPaths(untrackedNulPaths)) {
     add(stripIssuesPrefix(p), { worktree, status: "added", committed: false });
@@ -459,16 +567,26 @@ export interface RewrittenIssueLinks {
 // Absolute paths, external URLs, and anchors are left untouched. Also
 // collects which of the rewritten hrefs land under closed/ (a link whose
 // target is a closed issue), so the caller can pill them.
-export function rewriteIssueLinks(md: string, dirPath: string, issuesBase: string): RewrittenIssueLinks {
+export function rewriteIssueLinks(
+  md: string,
+  dirPath: string,
+  issuesBase: string,
+): RewrittenIssueLinks {
   const closedHrefs = new Set<string>();
   const out = md.replace(/\]\(([^()\s]+)\)/g, (full: string, link: string) => {
-    if (/^([a-z][a-z0-9+.-]*:)?\/\//i.test(link) || link.startsWith("/") || link.startsWith("#")) return full;
+    if (
+      /^([a-z][a-z0-9+.-]*:)?\/\//i.test(link) ||
+      link.startsWith("/") ||
+      link.startsWith("#")
+    )
+      return full;
     const [target, anchor] = link.split("#");
     if (!target || !target.endsWith(".md")) return full;
     const resolved = path.posix.normalize(path.posix.join(dirPath, target));
     if (resolved.startsWith("..")) return full; // escapes issues/ — leave alone
     const href = `${issuesBase}/${resolved}${anchor ? `#${anchor}` : ""}`;
-    if (resolved === "closed" || resolved.startsWith("closed/")) closedHrefs.add(href);
+    if (resolved === "closed" || resolved.startsWith("closed/"))
+      closedHrefs.add(href);
     return `](${href})`;
   });
   return { md: out, closedHrefs };
@@ -480,15 +598,24 @@ export function rewriteIssueLinks(md: string, dirPath: string, issuesBase: strin
 // the rendered HTML. `docDirRel` is the doc's directory relative to the
 // repo root (posix-style; "." for a repo-root file, which
 // path.posix.join/normalize handle natively).
-export function findClosedIssueLinkHrefs(md: string, docDirRel: string): Set<string> {
+export function findClosedIssueLinkHrefs(
+  md: string,
+  docDirRel: string,
+): Set<string> {
   const closedHrefs = new Set<string>();
   for (const m of md.matchAll(/\]\(([^()\s]+)\)/g)) {
     const link = m[1]!;
-    if (/^([a-z][a-z0-9+.-]*:)?\/\//i.test(link) || link.startsWith("/") || link.startsWith("#")) continue;
+    if (
+      /^([a-z][a-z0-9+.-]*:)?\/\//i.test(link) ||
+      link.startsWith("/") ||
+      link.startsWith("#")
+    )
+      continue;
     const [target] = link.split("#");
     if (!target || !target.endsWith(".md")) continue;
     const resolved = path.posix.normalize(path.posix.join(docDirRel, target));
-    if (resolved === "issues/closed" || resolved.startsWith("issues/closed/")) closedHrefs.add(link);
+    if (resolved === "issues/closed" || resolved.startsWith("issues/closed/"))
+      closedHrefs.add(link);
   }
   return closedHrefs;
 }
@@ -501,11 +628,18 @@ export function findClosedIssueLinkHrefs(md: string, docDirRel: string): Set<str
 // tag never appears inside one). `closedHrefs` holds raw href text; this
 // escapes each one the same way Markdoc escapes the rendered attribute
 // before comparing.
-export function appendClosedIssuePills(html: string, closedHrefs: ReadonlySet<string>): string {
+export function appendClosedIssuePills(
+  html: string,
+  closedHrefs: ReadonlySet<string>,
+): string {
   if (closedHrefs.size === 0) return html;
   const escaped = new Set([...closedHrefs].map(escapeHtml));
-  return html.replace(/<a\b[^>]*\bhref="([^"]*)"[^>]*>[\s\S]*?<\/a>/g, (tag: string, href: string) =>
-    escaped.has(href) ? `${tag}<span class="chip chip-closed-link">closed</span>` : tag,
+  return html.replace(
+    /<a\b[^>]*\bhref="([^"]*)"[^>]*>[\s\S]*?<\/a>/g,
+    (tag: string, href: string) =>
+      escaped.has(href)
+        ? `${tag}<span class="chip chip-closed-link">closed</span>`
+        : tag,
   );
 }
 
@@ -516,11 +650,17 @@ export function appendClosedIssuePills(html: string, closedHrefs: ReadonlySet<st
 // string (no leading slash, no "/issues" prefix) so callers can round-trip
 // through them instead of hand-building the prefix.
 
-export function addVisibilityPrefix(relPath: string, visibility: Visibility): string {
+export function addVisibilityPrefix(
+  relPath: string,
+  visibility: Visibility,
+): string {
   return visibility === "private" ? `private/${relPath}` : relPath;
 }
 
-export function stripVisibilityPrefix(urlRel: string): { visibility: Visibility; relPath: string } {
+export function stripVisibilityPrefix(urlRel: string): {
+  visibility: Visibility;
+  relPath: string;
+} {
   if (urlRel === "private" || urlRel.startsWith("private/")) {
     return { visibility: "private", relPath: urlRel.slice("private/".length) };
   }
@@ -533,28 +673,51 @@ function issuesBaseFor(base: string, visibility: Visibility): string {
   return visibility === "private" ? `${base}/issues/private` : `${base}/issues`;
 }
 
-function issueDetailHref(base: string, issue: Pick<IssueRecord, "relPath" | "visibility">): string {
+function issueDetailHref(
+  base: string,
+  issue: Pick<IssueRecord, "relPath" | "visibility">,
+): string {
   return `${base}/issues/${addVisibilityPrefix(issue.relPath, issue.visibility)}`;
 }
 
 // The right overlay map for an issue's visibility — never cross the two, so
 // a public and private issue sharing a relPath can't attribute badges to
 // each other.
-function overlayEntriesFor(overlay: OverlayResult, issue: Pick<IssueRecord, "relPath" | "visibility">): OverlayEntry[] | undefined {
-  return (issue.visibility === "private" ? overlay.byPathPrivate : overlay.byPath).get(issue.relPath);
+function overlayEntriesFor(
+  overlay: OverlayResult,
+  issue: Pick<IssueRecord, "relPath" | "visibility">,
+): OverlayEntry[] | undefined {
+  return (
+    issue.visibility === "private" ? overlay.byPathPrivate : overlay.byPath
+  ).get(issue.relPath);
 }
 
 // --- UI: shared bits ----------------------------------------------------------
 
-function facetChips(fr: IssueFrontmatter, research: ResearchState, visibility: Visibility): string {
+function facetChips(
+  fr: IssueFrontmatter,
+  research: ResearchState,
+  visibility: Visibility,
+): string {
   const chips: string[] = [];
-  if (visibility === "private") chips.push(`<span class="chip chip-private">private</span>`);
-  for (const need of fr.needs) chips.push(`<span class="chip chip-needs">needs:${escapeHtml(need)}</span>`);
-  for (const label of fr.labels) chips.push(`<span class="chip chip-label">${escapeHtml(label)}</span>`);
-  if (fr.area) chips.push(`<span class="chip chip-area">${escapeHtml(fr.area)}</span>`);
-  if (fr.filedBy) chips.push(`<span class="chip chip-filedby">filed:${escapeHtml(fr.filedBy)}</span>`);
-  if (research === "awaiting") chips.push(`<span class="chip chip-research">awaiting research</span>`);
-  else if (research === "researched") chips.push(`<span class="chip chip-research-done">researched</span>`);
+  if (visibility === "private")
+    chips.push(`<span class="chip chip-private">private</span>`);
+  for (const need of fr.needs)
+    chips.push(
+      `<span class="chip chip-needs">needs:${escapeHtml(need)}</span>`,
+    );
+  for (const label of fr.labels)
+    chips.push(`<span class="chip chip-label">${escapeHtml(label)}</span>`);
+  if (fr.area)
+    chips.push(`<span class="chip chip-area">${escapeHtml(fr.area)}</span>`);
+  if (fr.filedBy)
+    chips.push(
+      `<span class="chip chip-filedby">filed:${escapeHtml(fr.filedBy)}</span>`,
+    );
+  if (research === "awaiting")
+    chips.push(`<span class="chip chip-research">awaiting research</span>`);
+  else if (research === "researched")
+    chips.push(`<span class="chip chip-research-done">researched</span>`);
   return chips.join("");
 }
 
@@ -565,12 +728,21 @@ function worktreeBadges(entries: OverlayEntry[] | undefined): string {
   const byWorktree = new Map<string, OverlayEntry>();
   for (const e of entries) {
     const existing = byWorktree.get(e.worktree);
-    if (!existing || (existing.committed && !e.committed)) byWorktree.set(e.worktree, e);
+    if (!existing || (existing.committed && !e.committed))
+      byWorktree.set(e.worktree, e);
   }
-  const marks: Record<OverlayStatus, string> = { added: "+", modified: "~", deleted: "−", renamed: "→" };
+  const marks: Record<OverlayStatus, string> = {
+    added: "+",
+    modified: "~",
+    deleted: "−",
+    renamed: "→",
+  };
   return [...byWorktree.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([wt, e]) => `<span class="badge badge-${e.status}${e.committed ? "" : " uncommitted"}" title="${e.status}${e.committed ? "" : " (uncommitted)"} on ${escapeHtml(wt)}">${marks[e.status]}${escapeHtml(wt)}</span>`)
+    .map(
+      ([wt, e]) =>
+        `<span class="badge badge-${e.status}${e.committed ? "" : " uncommitted"}" title="${e.status}${e.committed ? "" : " (uncommitted)"} on ${escapeHtml(wt)}">${marks[e.status]}${escapeHtml(wt)}</span>`,
+    )
     .join("");
 }
 
@@ -624,6 +796,7 @@ export interface Filters {
   labels?: string;
   research?: string;
   visibility?: Visibility;
+  assigned: boolean;
   worktreeTouched: boolean;
   status: "open" | "closed" | "all";
 }
@@ -642,19 +815,32 @@ export function parseFilters(query: URLSearchParams): Filters {
     ...(needs !== null ? { needs } : {}),
     ...(labels !== null ? { labels } : {}),
     ...(research !== null ? { research } : {}),
-    ...(visibility === "public" || visibility === "private" ? { visibility } : {}),
+    ...(visibility === "public" || visibility === "private"
+      ? { visibility }
+      : {}),
+    assigned: query.get("assigned") === "true",
     worktreeTouched: query.get("worktree") === "touched",
     status: status === "closed" || status === "all" ? status : "open",
   };
 }
 
-export function matches(issue: IssueRecord, f: Filters, touched: boolean): boolean {
+export function matches(
+  issue: IssueRecord,
+  f: Filters,
+  touched: boolean,
+): boolean {
   if (f.category && issue.category !== f.category) return false;
   if (f.area && issue.frontmatter.area !== f.area) return false;
   if (f.needs && !issue.frontmatter.needs.includes(f.needs)) return false;
   if (f.labels && !issue.frontmatter.labels.includes(f.labels)) return false;
   if (f.research === "awaiting" && issue.research !== "awaiting") return false;
   if (f.visibility && issue.visibility !== f.visibility) return false;
+  if (
+    f.assigned &&
+    (issue.frontmatter.workstream === "unattached" ||
+      issue.frontmatter.workstream === "unknown")
+  )
+    return false;
   if (f.worktreeTouched && !touched) return false;
   return true;
 }
@@ -671,18 +857,32 @@ export interface IssueFacets {
 export function deriveFacets(issues: IssueRecord[]): IssueFacets {
   return {
     categories: [...CATEGORIES],
-    areas: [...new Set(issues.map((i) => i.frontmatter.area).filter((a): a is string => !!a))].sort(),
+    areas: [
+      ...new Set(
+        issues.map((i) => i.frontmatter.area).filter((a): a is string => !!a),
+      ),
+    ].sort(),
     needs: [...new Set(issues.flatMap((i) => i.frontmatter.needs))].sort(),
     labels: [...new Set(issues.flatMap((i) => i.frontmatter.labels))].sort(),
   };
 }
 
-function filterChipsHtml(base: string, f: Filters, facets: IssueFacets): string {
+function filterChipsHtml(
+  base: string,
+  f: Filters,
+  facets: IssueFacets,
+): string {
   const qs = (overrides: Record<string, string | undefined>): string => {
     const p = new URLSearchParams();
     const merged = {
-      category: f.category, area: f.area, needs: f.needs, labels: f.labels,
-      research: f.research, visibility: f.visibility, worktree: f.worktreeTouched ? "touched" : undefined,
+      category: f.category,
+      area: f.area,
+      needs: f.needs,
+      labels: f.labels,
+      research: f.research,
+      visibility: f.visibility,
+      worktree: f.worktreeTouched ? "touched" : undefined,
+      assigned: f.assigned ? "true" : undefined,
       status: f.status === "open" ? undefined : f.status,
       ...overrides,
     };
@@ -690,25 +890,53 @@ function filterChipsHtml(base: string, f: Filters, facets: IssueFacets): string 
     const s = p.toString();
     return `${base}/issues/${s ? `?${s}` : ""}`;
   };
-  const group = (label: string, key: keyof Filters, values: string[], active: string | undefined): string => {
-    const items = values.map((v) =>
-      `<a class="chip${active === v ? " active" : ""}" href="${qs({ [key]: active === v ? undefined : v })}">${escapeHtml(v)}</a>`,
-    ).join("");
+  const group = (
+    label: string,
+    key: keyof Filters,
+    values: string[],
+    active: string | undefined,
+  ): string => {
+    const items = values
+      .map(
+        (v) =>
+          `<a class="chip${active === v ? " active" : ""}" href="${qs({ [key]: active === v ? undefined : v })}">${escapeHtml(v)}</a>`,
+      )
+      .join("");
     return `<span>${escapeHtml(label)}: ${items}</span>`;
   };
-  const statusGroup = (["open", "all", "closed"] as const).map((s) =>
-    `<a class="chip${f.status === s ? " active" : ""}" href="${qs({ status: s === "open" ? undefined : s })}">${s}</a>`,
-  ).join("");
+  const statusGroup = (["open", "all", "closed"] as const)
+    .map(
+      (s) =>
+        `<a class="chip${f.status === s ? " active" : ""}" href="${qs({ status: s === "open" ? undefined : s })}">${s}</a>`,
+    )
+    .join("");
   const researchChip = `<a class="chip${f.research === "awaiting" ? " active" : ""}" href="${qs({ research: f.research === "awaiting" ? undefined : "awaiting" })}">awaiting research</a>`;
   const worktreeChip = `<a class="chip${f.worktreeTouched ? " active" : ""}" href="${qs({ worktree: f.worktreeTouched ? undefined : "touched" })}">touched by any worktree</a>`;
-  const visibilityGroup = (["public", "private"] as const).map((v) =>
-    `<a class="chip${f.visibility === v ? " active" : ""}" href="${qs({ visibility: f.visibility === v ? undefined : v })}">${v}</a>`,
-  ).join("");
-  const anyActive = f.category || f.area || f.needs || f.labels || f.research || f.visibility || f.worktreeTouched || f.status !== "open";
-  const clear = anyActive ? `<a class="clear" href="${base}/issues/">clear all ×</a>` : "";
-  const labelsRow = facets.labels.length ? `<div>${group("labels", "labels", facets.labels, f.labels)}</div>` : "";
+  const assignedChip = `<a class="chip${f.assigned ? " active" : ""}" href="${qs({ assigned: f.assigned ? undefined : "true" })}">assigned to a workstream</a>`;
+  const visibilityGroup = (["public", "private"] as const)
+    .map(
+      (v) =>
+        `<a class="chip${f.visibility === v ? " active" : ""}" href="${qs({ visibility: f.visibility === v ? undefined : v })}">${v}</a>`,
+    )
+    .join("");
+  const anyActive =
+    f.category ||
+    f.area ||
+    f.needs ||
+    f.labels ||
+    f.research ||
+    f.visibility ||
+    f.assigned ||
+    f.worktreeTouched ||
+    f.status !== "open";
+  const clear = anyActive
+    ? `<a class="clear" href="${base}/issues/">clear all ×</a>`
+    : "";
+  const labelsRow = facets.labels.length
+    ? `<div>${group("labels", "labels", facets.labels, f.labels)}</div>`
+    : "";
   return `<div class="filters">
-    <div>status: ${statusGroup} ${researchChip} ${worktreeChip}${clear}</div>
+    <div>status: ${statusGroup} ${researchChip} ${assignedChip} ${worktreeChip}${clear}</div>
     <div>visibility: ${visibilityGroup}</div>
     <div>${group("category", "category", facets.categories, f.category)}</div>
     <div>${group("area", "area", facets.areas, f.area)}</div>
@@ -717,12 +945,18 @@ function filterChipsHtml(base: string, f: Filters, facets: IssueFacets): string 
   </div>`;
 }
 
-function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] | undefined): string {
+function issueRowHtml(
+  base: string,
+  issue: IssueRecord,
+  overlay: OverlayEntry[] | undefined,
+): string {
   const href = issueDetailHref(base, issue);
   // The slug starts with the filing date, so "date · slug" would print the
   // date twice — split it into "date · rest-of-slug" instead.
   const date = issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
-  const shortSlug = date ? issue.slug.slice(date.length).replace(/^-/, "") : issue.slug;
+  const shortSlug = date
+    ? issue.slug.slice(date.length).replace(/^-/, "")
+    : issue.slug;
   const workstream = `<a class="chip" href="/workstreams/${encodeURIComponent(issue.frontmatter.workstream)}/">${escapeHtml(issue.frontmatter.workstream)}</a>`;
   const pills = `${workstream}${facetChips(issue.frontmatter, issue.research, issue.visibility)}${worktreeBadges(overlay)}`;
   return `<li>
@@ -737,8 +971,15 @@ function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] 
 // worktreeRoot is the WORKTREE checkout root; the visibility-appropriate
 // subdirectory (issues/ or private-issues/) is joined here so callers never
 // hand-build that path.
-async function readWorktreeOnlyIssue(worktreeRoot: string, relPath: string, visibility: Visibility): Promise<IssueRecord | null> {
-  const dir = visibility === "private" ? path.join(worktreeRoot, "private-issues") : path.join(worktreeRoot, "issues");
+async function readWorktreeOnlyIssue(
+  worktreeRoot: string,
+  relPath: string,
+  visibility: Visibility,
+): Promise<IssueRecord | null> {
+  const dir =
+    visibility === "private"
+      ? path.join(worktreeRoot, "private-issues")
+      : path.join(worktreeRoot, "issues");
   try {
     const src = await fs.readFile(path.join(dir, relPath), "utf8");
     return parseIssueFile(relPath, src, visibility);
@@ -747,25 +988,41 @@ async function readWorktreeOnlyIssue(worktreeRoot: string, relPath: string, visi
   }
 }
 
-// Worktree-only issues (paths the overlay knows about — added somewhere —
-// that don't exist on the given main root) for one visibility. Read their
-// frontmatter from whichever worktree has them (first one found).
-async function findWorktreeOnlyIssues(
-  mainPaths: ReadonlySet<string>,
+async function authoritativeOverlayIssues(
+  main: IssueRecord[],
   overlayByPath: Map<string, OverlayEntry[]>,
   worktreeRoots: Map<string, string>,
   visibility: Visibility,
-): Promise<Array<{ issue: IssueRecord; entries: OverlayEntry[] }>> {
-  const out: Array<{ issue: IssueRecord; entries: OverlayEntry[] }> = [];
+): Promise<IssueRecord[]> {
+  const touchedSlugs = new Set<string>();
+  const candidates = new Map<
+    string,
+    Array<{ issue: IssueRecord; worktree: string }>
+  >();
   for (const [relPath, entries] of overlayByPath) {
-    if (mainPaths.has(relPath)) continue;
-    const addedFrom = entries.find((e) => e.status === "added" || e.status === "renamed");
-    const root = addedFrom ? worktreeRoots.get(addedFrom.worktree) : undefined;
-    if (!root) continue;
-    const issue = await readWorktreeOnlyIssue(root, relPath, visibility);
-    if (issue) out.push({ issue, entries });
+    const slug = path.posix.basename(relPath, ".md");
+    for (const worktree of new Set(entries.map((entry) => entry.worktree))) {
+      const root = worktreeRoots.get(worktree);
+      if (!root) continue;
+      const issue = await readWorktreeOnlyIssue(root, relPath, visibility);
+      if (!issue) continue;
+      touchedSlugs.add(slug);
+      const records = candidates.get(slug) ?? [];
+      records.push({ issue, worktree });
+      candidates.set(slug, records);
+    }
   }
-  return out;
+  const selected = [...candidates.values()].map((records) => {
+    records.sort((a, b) => a.worktree.localeCompare(b.worktree));
+    const owned = records.find(
+      ({ issue, worktree }) => issue.frontmatter.workstream === worktree,
+    );
+    return (owned ?? records[0]!).issue;
+  });
+  return [
+    ...main.filter((issue) => !touchedSlugs.has(issue.slug)),
+    ...selected,
+  ];
 }
 
 async function renderIssueIndex(
@@ -783,28 +1040,36 @@ async function renderIssueIndex(
   // category sections, distinguished only by the "private" chip — the
   // simplest coherent presentation per the plan, rather than a parallel set
   // of sections.
-  const issues = [...publicIssues, ...privateIssues];
-  const mainPublicPaths = new Set(publicIssues.map((i) => i.relPath));
-  const mainPrivatePaths = new Set(privateIssues.map((i) => i.relPath));
-
-  const [worktreeOnlyPublic, worktreeOnlyPrivate] = await Promise.all([
-    findWorktreeOnlyIssues(mainPublicPaths, overlay.byPath, overlay.worktreeRoots, "public"),
-    findWorktreeOnlyIssues(mainPrivatePaths, overlay.byPathPrivate, overlay.worktreeRoots, "private"),
+  const [authoritativePublic, authoritativePrivate] = await Promise.all([
+    authoritativeOverlayIssues(
+      publicIssues,
+      overlay.byPath,
+      overlay.worktreeRoots,
+      "public",
+    ),
+    authoritativeOverlayIssues(
+      privateIssues,
+      overlay.byPathPrivate,
+      overlay.worktreeRoots,
+      "private",
+    ),
   ]);
-  const worktreeOnly = [...worktreeOnlyPublic, ...worktreeOnlyPrivate];
+  const issues = [...authoritativePublic, ...authoritativePrivate];
 
   const f = parseFilters(query);
-  // Worktree-only issues honor the same filters as main's (they are all
-  // touched-by-a-worktree by definition, so that predicate is always true).
-  const worktreeOnlyVisible = worktreeOnly.filter(({ issue }) =>
-    (f.status === "all" || (f.status === "closed" ? issue.closed : !issue.closed)) && matches(issue, f, true),
-  );
   const facets = deriveFacets(issues);
 
-  const statusFiltered = issues.filter((i) => f.status === "all" || (f.status === "closed" ? i.closed : !i.closed));
-  const visible = statusFiltered.filter((i) => matches(i, f, overlayEntriesFor(overlay, i) !== undefined));
+  const statusFiltered = issues.filter(
+    (i) => f.status === "all" || (f.status === "closed" ? i.closed : !i.closed),
+  );
+  const visible = statusFiltered.filter((i) =>
+    matches(i, f, overlayEntriesFor(overlay, i) !== undefined),
+  );
 
-  const byCategory = new Map<string, { open: IssueRecord[]; closed: IssueRecord[] }>();
+  const byCategory = new Map<
+    string,
+    { open: IssueRecord[]; closed: IssueRecord[] }
+  >();
   for (const cat of CATEGORIES) byCategory.set(cat, { open: [], closed: [] });
   for (const issue of visible) {
     const bucket = byCategory.get(issue.category);
@@ -812,38 +1077,43 @@ async function renderIssueIndex(
     (issue.closed ? bucket.closed : bucket.open).push(issue);
   }
 
-  const row = (i: IssueRecord): string => issueRowHtml(base, i, overlayEntriesFor(overlay, i));
+  const row = (i: IssueRecord): string =>
+    issueRowHtml(base, i, overlayEntriesFor(overlay, i));
   const categoryHtml = CATEGORIES.map((cat) => {
     const bucket = byCategory.get(cat)!;
     if (bucket.open.length === 0 && bucket.closed.length === 0) return "";
     const openList = bucket.open.length
       ? `<ul class="issues">${bucket.open.map(row).join("")}</ul>`
       : `<p class="empty">no open items</p>`;
-    const closedList = bucket.closed.length && f.status !== "closed"
-      ? `<details class="closed-group"><summary>${bucket.closed.length} closed</summary><ul class="issues">${bucket.closed.map(row).join("")}</ul></details>`
-      : (f.status === "closed" && bucket.closed.length
-        ? `<ul class="issues">${bucket.closed.map(row).join("")}</ul>`
-        : "");
-    const count = f.status === "closed" ? bucket.closed.length : bucket.open.length;
+    const closedList =
+      bucket.closed.length && f.status !== "closed"
+        ? `<details class="closed-group"><summary>${bucket.closed.length} closed</summary><ul class="issues">${bucket.closed.map(row).join("")}</ul></details>`
+        : f.status === "closed" && bucket.closed.length
+          ? `<ul class="issues">${bucket.closed.map(row).join("")}</ul>`
+          : "";
+    const count =
+      f.status === "closed" ? bucket.closed.length : bucket.open.length;
     return `<h2 class="cat">${escapeHtml(cat)} <span class="count">${count}</span></h2>${f.status === "closed" ? closedList : openList}${f.status === "all" ? closedList : ""}`;
   }).join("");
 
-  const worktreeOnlyHtml = worktreeOnlyVisible.length
-    ? `<h2 class="cat">worktree-only <span class="count">${worktreeOnlyVisible.length}</span></h2>
-       <p style="color:#888;font-size:0.85em;margin-top:0">Issues that exist only on a worktree, not yet on main.</p>
-       <ul class="issues">${worktreeOnlyVisible.map(({ issue, entries }) => issueRowHtml(base, issue, entries)).join("")}</ul>`
-    : "";
-
   const body = `<h1>issues</h1>
 ${filterChipsHtml(base, f, facets)}
-${categoryHtml || `<p class="empty">no issues match these filters</p>`}
-${worktreeOnlyHtml}`;
-  return renderDevShell("issues", devBreadcrumbs(base, "issues"), body, ISSUES_CSS);
+${categoryHtml || `<p class="empty">no issues match these filters</p>`}`;
+  return renderDevShell(
+    "issues",
+    devBreadcrumbs(base, "issues"),
+    body,
+    ISSUES_CSS,
+  );
 }
 
 // --- UI: detail ----------------------------------------------------------------
 
-function factsTableHtml(fr: IssueFrontmatter, research: ResearchState, closed: boolean): string {
+function factsTableHtml(
+  fr: IssueFrontmatter,
+  research: ResearchState,
+  closed: boolean,
+): string {
   const rows: Array<[string, string]> = [];
   rows.push(["workstream", fr.workstream]);
   if (fr.needs.length) rows.push(["needs", fr.needs.join(", ")]);
@@ -860,8 +1130,10 @@ function factsTableHtml(fr: IssueFrontmatter, research: ResearchState, closed: b
 
 function escapeDiffLine(line: string): string {
   const escaped = escapeHtml(line);
-  if (line.startsWith("+") && !line.startsWith("+++")) return `<span class="diff-add">${escaped}</span>`;
-  if (line.startsWith("-") && !line.startsWith("---")) return `<span class="diff-del">${escaped}</span>`;
+  if (line.startsWith("+") && !line.startsWith("+++"))
+    return `<span class="diff-add">${escaped}</span>`;
+  if (line.startsWith("-") && !line.startsWith("---"))
+    return `<span class="diff-del">${escaped}</span>`;
   return escaped;
 }
 
@@ -870,16 +1142,36 @@ function escapeDiffLine(line: string): string {
 // prefix; for a private one, cwd is `<worktreeRoot>/private-issues` and the
 // path is repo-root-relative with NO prefix (the private repo's categories
 // sit at its own root).
-async function worktreeDiffHtml(worktree: string, gitCwd: string, gitPath: string): Promise<string> {
+async function worktreeDiffHtml(
+  worktree: string,
+  gitCwd: string,
+  gitPath: string,
+): Promise<string> {
   const sections: string[] = [];
   try {
-    const { stdout } = await execa("git", ["diff", "main...HEAD", "--", gitPath], { cwd: gitCwd });
-    if (stdout.trim()) sections.push(`<h3>${escapeHtml(worktree)} — committed since main</h3><pre>${stdout.split("\n").map(escapeDiffLine).join("\n")}</pre>`);
-  } catch { /* skip */ }
+    const { stdout } = await execa(
+      "git",
+      ["diff", "main...HEAD", "--", gitPath],
+      { cwd: gitCwd },
+    );
+    if (stdout.trim())
+      sections.push(
+        `<h3>${escapeHtml(worktree)} — committed since main</h3><pre>${stdout.split("\n").map(escapeDiffLine).join("\n")}</pre>`,
+      );
+  } catch {
+    /* skip */
+  }
   try {
-    const { stdout } = await execa("git", ["diff", "HEAD", "--", gitPath], { cwd: gitCwd });
-    if (stdout.trim()) sections.push(`<h3>${escapeHtml(worktree)} — uncommitted</h3><pre>${stdout.split("\n").map(escapeDiffLine).join("\n")}</pre>`);
-  } catch { /* skip */ }
+    const { stdout } = await execa("git", ["diff", "HEAD", "--", gitPath], {
+      cwd: gitCwd,
+    });
+    if (stdout.trim())
+      sections.push(
+        `<h3>${escapeHtml(worktree)} — uncommitted</h3><pre>${stdout.split("\n").map(escapeDiffLine).join("\n")}</pre>`,
+      );
+  } catch {
+    /* skip */
+  }
   return sections.join("");
 }
 
@@ -891,16 +1183,21 @@ async function renderIssueDetail(
   res: http.ServerResponse,
 ): Promise<void> {
   const { visibility, relPath } = stripVisibilityPrefix(urlRel);
-  const contentRoot = visibility === "private" ? roots.mainPrivateRoot : roots.mainIssuesRoot;
+  const contentRoot =
+    visibility === "private" ? roots.mainPrivateRoot : roots.mainIssuesRoot;
   const resolved = path.resolve(contentRoot, relPath);
-  if (!resolved.startsWith(contentRoot + path.sep) || !resolved.endsWith(".md")) {
+  if (
+    !resolved.startsWith(contentRoot + path.sep) ||
+    !resolved.endsWith(".md")
+  ) {
     res.writeHead(403, { "content-type": "text/plain" });
     res.end("forbidden\n");
     return;
   }
 
   const overlay = await collectOverlay(worktreesRoot);
-  const overlayByPath = visibility === "private" ? overlay.byPathPrivate : overlay.byPath;
+  const overlayByPath =
+    visibility === "private" ? overlay.byPathPrivate : overlay.byPath;
   const dirPath = path.posix.dirname(relPath.split(path.sep).join("/"));
   const issuesBase = issuesBaseFor(base, visibility);
 
@@ -911,14 +1208,21 @@ async function renderIssueDetail(
   } catch {
     // Not on main — maybe a worktree-only issue.
     const entries = overlayByPath.get(relPath);
-    const addedFrom = entries?.find((e) => e.status === "added" || e.status === "renamed");
-    const root = addedFrom ? overlay.worktreeRoots.get(addedFrom.worktree) : undefined;
+    const addedFrom = entries?.find(
+      (e) => e.status === "added" || e.status === "renamed",
+    );
+    const root = addedFrom
+      ? overlay.worktreeRoots.get(addedFrom.worktree)
+      : undefined;
     if (!root) {
       res.writeHead(404, { "content-type": "text/plain" });
       res.end(`not found: ${relPath}\n`);
       return;
     }
-    const dir = visibility === "private" ? path.join(root, "private-issues") : path.join(root, "issues");
+    const dir =
+      visibility === "private"
+        ? path.join(root, "private-issues")
+        : path.join(root, "issues");
     try {
       src = await fs.readFile(path.join(dir, relPath), "utf8");
       worktreeOnlyLabel = `<p style="color:#a2380a;font:13px ui-monospace,monospace">worktree-only — exists on <strong>${escapeHtml(addedFrom!.worktree)}</strong>, not on main</p>`;
@@ -930,9 +1234,16 @@ async function renderIssueDetail(
   }
 
   const issue = parseIssueFile(relPath, src, visibility);
-  const { md: rewritten, closedHrefs } = rewriteIssueLinks(src, dirPath, issuesBase);
+  const { md: rewritten, closedHrefs } = rewriteIssueLinks(
+    src,
+    dirPath,
+    issuesBase,
+  );
   const { body } = parseFrontmatter(rewritten);
-  const bodyHtml = appendClosedIssuePills(renderMarkdownToHtml(body), closedHrefs);
+  const bodyHtml = appendClosedIssuePills(
+    renderMarkdownToHtml(body),
+    closedHrefs,
+  );
 
   const entries = overlayByPath.get(relPath) ?? [];
   const byWorktree = new Map<string, OverlayEntry>();
@@ -942,13 +1253,17 @@ async function renderIssueDetail(
   }
   const diffSections = worktreeOnlyLabel
     ? []
-    : await Promise.all([...byWorktree.keys()].map(async (wt) => {
-        const root = overlay.worktreeRoots.get(wt);
-        if (!root) return "";
-        const gitCwd = visibility === "private" ? path.join(root, "private-issues") : root;
-        const gitPath = visibility === "private" ? relPath : `issues/${relPath}`;
-        return worktreeDiffHtml(wt, gitCwd, gitPath);
-      }));
+    : await Promise.all(
+        [...byWorktree.keys()].map(async (wt) => {
+          const root = overlay.worktreeRoots.get(wt);
+          if (!root) return "";
+          const gitCwd =
+            visibility === "private" ? path.join(root, "private-issues") : root;
+          const gitPath =
+            visibility === "private" ? relPath : `issues/${relPath}`;
+          return worktreeDiffHtml(wt, gitCwd, gitPath);
+        }),
+      );
   const diffHtml = diffSections.filter(Boolean).length
     ? `<div class="wt-diff">${diffSections.join("")}</div>`
     : "";
@@ -963,7 +1278,17 @@ ${factsTableHtml(issue.frontmatter, issue.research, issue.closed)}
 ${bodyHtml}
 ${diffHtml}`;
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(renderDevShell(issue.frontmatter.title, devBreadcrumbs(base, `issues/${addVisibilityPrefix(relPath, visibility)}`), html, ISSUES_CSS));
+  res.end(
+    renderDevShell(
+      issue.frontmatter.title,
+      devBreadcrumbs(
+        base,
+        `issues/${addVisibilityPrefix(relPath, visibility)}`,
+      ),
+      html,
+      ISSUES_CSS,
+    ),
+  );
 }
 
 // --- dispatch -------------------------------------------------------------------
@@ -989,7 +1314,10 @@ export async function serveIssues(params: {
   res: http.ServerResponse;
 }): Promise<void> {
   const { base, mainRoot, worktreesRoot, rel, query, res } = params;
-  const roots = { mainIssuesRoot: path.join(mainRoot, "issues"), mainPrivateRoot: path.join(mainRoot, "private-issues") };
+  const roots = {
+    mainIssuesRoot: path.join(mainRoot, "issues"),
+    mainPrivateRoot: path.join(mainRoot, "private-issues"),
+  };
 
   if (rel === "" || rel === "/") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
