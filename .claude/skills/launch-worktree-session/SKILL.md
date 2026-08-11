@@ -46,7 +46,7 @@ like:
 > commit to a plan.
 
 Adjust the wording to fit the conversation, but the spirit is constant:
-*understanding first, plan second, work third.*
+_understanding first, plan second, work third._
 
 ## How the briefing reaches the new session
 
@@ -69,10 +69,15 @@ briefing.
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
    Ask the human if a good name isn't obvious from the discussion.
 
+   If this work takes on an existing public or private issue, pass its
+   repo-relative path with `--issue`. The launcher updates that issue's
+   `workstream:` field inside the new checkout, so the issue immediately appears
+   under the workstream and the assignment lands with the eventual work. Omit
+   `--issue` when the discussion is not taking on a specific filed issue.
+
 3. **Pick a model, and say which.** Match the model to the scope of the work,
    and always pass `--model` explicitly — omitting it inherits whatever the
    boxholder's saved default happens to be, which decides this by accident.
-
    - **Fable** (`claude-fable-5`) — larger, more ambiguous, or harder work: a
      feature, a refactor with design choices left open, anything spanning
      several subsystems, anything where the right approach isn't settled yet.
@@ -81,7 +86,7 @@ briefing.
      shape, a mechanical pass, cleanup, a change whose scope the briefing can
      already state completely.
 
-   Judge by how much is *undecided*, not by how many files move. A ten-file
+   Judge by how much is _undecided_, not by how many files move. A ten-file
    rename is clerical; a two-file change resting on an unresolved design
    question is not. When it's genuinely borderline, say which way you're
    leaning and why — the boxholder cares about reserving Fable for work that
@@ -90,7 +95,7 @@ briefing.
 4. **Draft the briefing and launch it.** Write the briefing directly and
    invoke the command — don't pre-review the briefing with the human in
    the current session. The whole point of the launched session is that
-   *it* is where discussion, clarification, and approval happen. Pre-
+   _it_ is where discussion, clarification, and approval happen. Pre-
    reviewing here just duplicates that work in the wrong place. Trust the
    briefing to be good enough; it explicitly invites the new agent to push
    back, ask questions, and propose its own approach before acting.
@@ -103,7 +108,7 @@ briefing.
    quoting issues:
 
    ```bash
-   bin/launch-worktree-session --model <model> <worktree-name> - <<'EOF'
+   bin/launch-worktree-session --model <model> [--issue issues/<category>/<file>.md] <worktree-name> - <<'EOF'
    <briefing text — see "What the briefing is" above>
    EOF
    ```
@@ -203,7 +208,7 @@ what you see and which approach the existing structure prefers; then
 we'll decide together.
 ```
 
-Notice: it conveys what we *understood* together, points at the relevant
+Notice: it conveys what we _understood_ together, points at the relevant
 prior thinking (an issues/ entry), and explicitly invites the new agent to
 think first, not act.
 

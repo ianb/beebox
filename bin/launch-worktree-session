@@ -4,7 +4,7 @@
 # user message; the agent reads it as context but does NOT auto-implement.
 #
 # Usage:
-#   launch-worktree-session [--agent claude|codex] [--model <model>] <worktree-name> "<prompt text>"
+#   launch-worktree-session [--agent claude|codex] [--model <model>] [--issue issues/<path>.md] <worktree-name> "<prompt text>"
 #   launch-worktree-session [--model <model>] <worktree-name> -      # prompt from stdin
 #   launch-worktree-session [--model <model>] <worktree-name> @<file># prompt from a file
 #
@@ -63,6 +63,7 @@ model=""
 remote_control=1
 agent="claude"
 emoji=""
+issue=""
 while [ $# -ge 1 ]; do
   case "$1" in
     --model)   [ $# -ge 2 ] || { echo "launch-worktree-session: --model needs a value" >&2; exit 1; }; model="$2"; shift 2 ;;
@@ -71,6 +72,8 @@ while [ $# -ge 1 ]; do
     --agent=*) agent="${1#--agent=}"; shift ;;
     --emoji)   [ $# -ge 2 ] || { echo "launch-worktree-session: --emoji needs a value" >&2; exit 1; }; emoji="$2"; shift 2 ;;
     --emoji=*) emoji="${1#--emoji=}"; shift ;;
+    --issue)   [ $# -ge 2 ] || { echo "launch-worktree-session: --issue needs a value" >&2; exit 1; }; issue="$2"; shift 2 ;;
+    --issue=*) issue="${1#--issue=}"; shift ;;
     --no-remote-control) remote_control=0; shift ;;
     --remote-control)    remote_control=1; shift ;;
     *)         break ;;
@@ -91,6 +94,11 @@ wt="$1"; shift
 
 if ! [[ "$wt" =~ ^[a-zA-Z0-9_-]+$ ]]; then
   echo "launch-worktree-session: worktree name must match [a-zA-Z0-9_-]+, got: $wt" >&2
+  exit 1
+fi
+
+if [ -n "$issue" ] && ! [[ "$issue" =~ ^(issues|private-issues)/(closed/)?(bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)/[a-zA-Z0-9_-]+\.md$ ]]; then
+  echo "launch-worktree-session: --issue must be a repo-relative issue markdown path, got: $issue" >&2
   exit 1
 fi
 
@@ -149,6 +157,9 @@ if [ ! -x "$MONO/bin/launch-worktree-session" ]; then
   echo "launch-worktree-session: resolved monorepo $MONO has no bin/launch-worktree-session" >&2
   exit 1
 fi
+if [ -n "$issue" ]; then
+  node --import tsx "$MONO/bin/assign-issue-workstream.ts" --check "$MONO/$issue" "$wt"
+fi
 
 # Stash the prompt in a tempfile so the launcher script can splat it back as
 # the final positional arg. This avoids AppleScript/bash double-escaping for
@@ -190,6 +201,7 @@ LS_REMOTE_CONTROL="$remote_control"
 LS_PROMPT_FILE="$prompt_file"
 LS_EMOJI="$emoji"
 LS_LAUNCH_DIR="$launch_dir"
+LS_ISSUE="$issue"
 LS_WORKTREE_PATH=""
 launch_session_build
 result=$(launch_session_open)

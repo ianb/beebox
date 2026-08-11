@@ -24,6 +24,9 @@ if [ -z "\$wt_path" ] || [ ! -d "\$wt_path" ] || ! git -C "\$wt_path" rev-parse 
   echo "launch-worktree-session: invalid worktree path for $LS_WORKSTREAM: '\$wt_path'" >&2
   exit 1
 fi
+if [ -n "${LS_ISSUE:-}" ]; then
+  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/$LS_ISSUE" "$LS_WORKSTREAM"
+fi
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
   --arg branch "worktree-$LS_WORKSTREAM" \
@@ -58,6 +61,9 @@ fi
 if [ ! -f "\$wt_path/AGENTS.md" ]; then
   echo "launch-worktree-session: no AGENTS.md in \$wt_path (generation failed?) — refusing to launch codex without repo docs" >&2
   exit 1
+fi
+if [ -n "${LS_ISSUE:-}" ]; then
+  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/$LS_ISSUE" "$LS_WORKSTREAM"
 fi
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
