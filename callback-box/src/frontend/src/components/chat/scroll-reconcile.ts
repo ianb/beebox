@@ -55,3 +55,38 @@ export function decideReconcile(inputs: ReconcileInputs): ReconcileAction {
   if (inputs.source === "content" && inputs.grew) return "flag-unseen";
   return "none";
 }
+
+/** One non-programmatic scroll event, reduced to the facts the decision turns on. */
+export interface ScrollInputs {
+  /** scrollTop decreased beyond the programmatic epsilon. */
+  scrolledUp: boolean;
+  /** A genuine wheel/touch/scroll-key input fired within the intent window. */
+  recentIntent: boolean;
+  /** Distance from the bottom after this scroll, in px. */
+  fromBottom: number;
+  /** The generous near-bottom re-engage margin (NEAR_BOTTOM_PX). */
+  nearBottomPx: number;
+}
+
+/** What a user scroll event should do to the follow state. */
+export type ScrollAction = "disengage" | "re-engage" | "none";
+
+/**
+ * Classify one scroll event. An upward scroll disengages following when it
+ * carries recent input intent — or, absent intent, when it lands well above
+ * the bottom: a scrollbar-thumb drag fires no wheel/touch/key events but is
+ * still the user, while the layout-driven scrolls the intent gate exists to
+ * ignore are *clamps* (content shrink, mobile keyboard dismiss), and a clamp
+ * by definition lands AT the new bottom. A downward (or stationary) scroll
+ * that settles near the bottom re-engages; a clamp never re-engages either
+ * (it reads as scrolled-up), so a detached reader isn't re-pinned when a turn
+ * finalizes shorter than its streamed form.
+ */
+export function decideScroll(inputs: ScrollInputs): ScrollAction {
+  if (inputs.scrolledUp) {
+    if (inputs.recentIntent || inputs.fromBottom > inputs.nearBottomPx) return "disengage";
+    return "none";
+  }
+  if (inputs.fromBottom <= inputs.nearBottomPx) return "re-engage";
+  return "none";
+}
