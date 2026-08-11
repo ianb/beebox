@@ -10,7 +10,7 @@
 
 import { setup, assign } from "xstate";
 import { invariant } from "@shared/invariant";
-import { buildOptimisticContent, reconcilePending } from "./chat-shared";
+import { buildOptimisticContent } from "./chat-shared";
 import {
   chatTailSlice,
   logFsm,
@@ -35,6 +35,7 @@ import {
   untrackLastSend,
   clearInterrupt,
   sendInterrupt,
+  reconcilePendingWithDiagnostics,
 } from "./chat-actions";
 
 export { chatTailSlice };
@@ -345,7 +346,7 @@ export const chatMachine = setup({
                 streamTools: [],
               };
             }
-            const reconciled = reconcilePending({
+            const reconciled = reconcilePendingWithDiagnostics({
               serverMessages: event.output.entries,
               pendingMessages: context.pendingMessages,
             });

@@ -16,6 +16,8 @@
  * no DOM, values only.
  */
 
+import { chatSendReasonKind, recordChatSendEvent } from "../../lib/chat-send-diagnostics";
+
 export type Receipt =
   | { disposition: "sent"; emissionId: string; deduplicated: boolean }
   | { disposition: "queued"; emissionId: string }
@@ -61,6 +63,8 @@ export function expectReceipt(emissionId: string): Promise<Receipt> {
  * — outcome sites can call this unconditionally.
  */
 export function settleReceipt(receipt: Receipt): void {
+  recordChatSendEvent(receipt.emissionId, { event: "receipt-settled", detail: { disposition: receipt.disposition,
+    ...(receipt.disposition === "rejected" ? { reasonKind: chatSendReasonKind(receipt.reason) } : {}) } });
   const entry = pending.get(receipt.emissionId);
   if (entry === undefined) return;
   pending.delete(receipt.emissionId);
