@@ -12,7 +12,7 @@ import path from "node:path";
 
 import {
   legacyIssuesRedirect,
-  issueRelationship,
+  issueIndicators,
   issuesForWorkstream,
   quotaHtml,
   relativeTime,
@@ -196,8 +196,9 @@ assert.match(html, /old-seam/);
 assert.match(html, /Seam design/);
 ```
 
-Open issues appear beneath their assigned workstream. An issue changed in that
-worktree replaces main's metadata and status, including a move into `closed/`.
+Issues appear beneath a workstream when it owns the work or discovered it. These
+are independent facts. An issue changed in that worktree replaces main's
+metadata and status, including a move into `closed/`.
 
 ```ts
 const mainIssue = parseIssueFile(
@@ -218,15 +219,15 @@ const authoritative = issuesForWorkstream(documents, "seam");
 JSON.stringify(authoritative.map((issue) => [issue.frontmatter.title, issue.closed]))
 => [["Worktree title",true]]
 
-issueRelationship(documents, "seam", authoritative[0]!)
-=> closed-here
+JSON.stringify(issueIndicators(documents, "seam", authoritative[0]!))
+=> {"state":"closed","owned":true,"discovered":false,"activity":"closed"}
 
-issueRelationship(
+JSON.stringify(issueIndicators(
   { issues: [closedIssue], plans: [] },
   "seam",
   closedIssue,
-)
-=> closed-here
+))
+=> {"state":"closed","owned":true,"discovered":false}
 
 const deletedOnly = issuesForWorkstream(
   {
@@ -252,11 +253,50 @@ const crossWorktree = issuesForWorkstream(
 crossWorktree[0]?.frontmatter.title
 => Worktree title
 
+JSON.stringify(issueIndicators(
+  {
+    issues: [mainIssue],
+    plans: [],
+    worktreeIssues: [{ worktree: "editor", issue: closedIssue }],
+    worktreeTouchedSlugs: [{ worktree: "editor", slug: closedIssue.slug }],
+  },
+  "seam",
+  crossWorktree[0]!,
+))
+=> {"state":"closed","owned":true,"discovered":false}
+
 const openIssue = parseIssueFile(
   "features/2026-08-11-open.md",
   "---\ntitle: Verify the seam\nworkstream: seam\nneeds: [manual-testing]\n---\n",
 );
-issueRelationship(
+const discoveredIssue = parseIssueFile(
+  "features/2026-08-11-discovered.md",
+  "---\ntitle: Later work\nworkstream: unattached\nfiled-by: agent\ndiscovered-in: worktree-seam — while doing the seam\n---\n",
+);
+JSON.stringify({
+  listed: issuesForWorkstream(
+    { issues: [discoveredIssue], plans: [] },
+    "seam",
+  ).length,
+  indicators: issueIndicators(
+    { issues: [discoveredIssue], plans: [] },
+    "seam",
+    discoveredIssue,
+  ),
+})
+=> {"listed":1,"indicators":{"state":"open","owned":false,"discovered":true}}
+
+const similarlyNamedDiscovery = parseIssueFile(
+  "features/2026-08-11-similar.md",
+  "---\ntitle: Similar name\nworkstream: unattached\nfiled-by: agent\ndiscovered-in: worktree-seam-extra — elsewhere\n---\n",
+);
+issuesForWorkstream(
+  { issues: [similarlyNamedDiscovery], plans: [] },
+  "seam",
+).length
+=> 0
+
+JSON.stringify(issueIndicators(
   {
     issues: [],
     plans: [],
@@ -265,8 +305,8 @@ issueRelationship(
   },
   "seam",
   openIssue,
-)
-=> opened-here
+))
+=> {"state":"open","owned":true,"discovered":false,"activity":"opened"}
 
 const html = renderWorkstreams(
   [row({ name: "seam" })],
@@ -279,6 +319,7 @@ assert.match(
   html,
   /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
 );
+assert.match(html, /Verify the seam[\s\S]*Open[\s\S]*Owns work/);
 
 const query = parseFilters(
   new URLSearchParams("needs=manual-testing&assigned=true"),
@@ -292,6 +333,13 @@ JSON.stringify([
   ),
 ])
 => [true,false]
+
+const unassignedQuery = parseFilters(new URLSearchParams("assigned=false"));
+JSON.stringify([
+  matches(openIssue, unassignedQuery, false),
+  matches(discoveredIssue, unassignedQuery, false),
+])
+=> [false,true]
 ```
 
 ## Quota summary

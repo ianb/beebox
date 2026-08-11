@@ -189,13 +189,22 @@ async function listWorktreeIssueChanges(worktreesRoot: string): Promise<{
 }
 
 type WorkstreamDocuments = Awaited<ReturnType<WorkstreamsDeps["documents"]>>;
-type IssueRelationship =
-  | "open"
-  | "closed"
-  | "opened-here"
-  | "updated-here"
-  | "closed-here"
-  | "reopened-here";
+interface IssueIndicators {
+  state: "open" | "closed";
+  owned: boolean;
+  discovered: boolean;
+  activity?: "opened" | "updated" | "closed" | "reopened";
+}
+
+function discoveredInWorkstream(
+  issue: IssueRecord,
+  workstream: string,
+): boolean {
+  const origin = /^(worktree-[\w-]+)(?:\s+—|\s+-|$)/.exec(
+    issue.frontmatter.discoveredIn ?? "",
+  )?.[1];
+  return origin === `worktree-${workstream}`;
+}
 
 export function issuesForWorkstream(
   documents: WorkstreamDocuments,
@@ -223,7 +232,11 @@ export function issuesForWorkstream(
     ).issue;
   });
   return [...main, ...overlay]
-    .filter((issue) => issue.frontmatter.workstream === workstream)
+    .filter(
+      (issue) =>
+        issue.frontmatter.workstream === workstream ||
+        discoveredInWorkstream(issue, workstream),
+    )
     .toSorted(
       (a, b) =>
         Number(a.closed) - Number(b.closed) ||
@@ -231,22 +244,32 @@ export function issuesForWorkstream(
     );
 }
 
-export function issueRelationship(
+export function issueIndicators(
   documents: WorkstreamDocuments,
   workstream: string,
   issue: IssueRecord,
-): IssueRelationship {
+): IssueIndicators {
+  const owned = issue.frontmatter.workstream === workstream;
+  const discovered = discoveredInWorkstream(issue, workstream);
   const changedHere = (documents.worktreeIssues ?? []).some(
     (entry) => entry.worktree === workstream && entry.issue.slug === issue.slug,
   );
-  if (!changedHere) return issue.closed ? "closed-here" : "open";
   const main = documents.issues.find(
     (candidate) => candidate.slug === issue.slug,
   );
-  if (!main) return "opened-here";
-  if (!main.closed && issue.closed) return "closed-here";
-  if (main.closed && !issue.closed) return "reopened-here";
-  return "updated-here";
+  let activity: IssueIndicators["activity"];
+  if (changedHere) {
+    if (main?.closed && !issue.closed) activity = "reopened";
+    else if (!main) activity = "opened";
+    else if (!main.closed && issue.closed) activity = "closed";
+    else activity = "updated";
+  }
+  return {
+    state: issue.closed ? "closed" : "open",
+    owned,
+    discovered,
+    ...(activity ? { activity } : {}),
+  };
 }
 
 async function listPlans(repoRoot: string): Promise<PlanRecord[]> {
@@ -325,28 +348,40 @@ function agentStatusHtml(row: WorkstreamRow): string {
   return `<span class="agent-status">${row.session.agent ? `${agent} inactive` : "No agent recorded"}</span>`;
 }
 
-const RELATIONSHIP_LABELS: Record<IssueRelationship, string> = {
-  open: "Open",
-  closed: "Closed",
-  "opened-here": "Opened here",
-  "updated-here": "Updated here",
-  "closed-here": "Closed here",
-  "reopened-here": "Reopened here",
+const ACTIVITY_LABELS: Record<
+  NonNullable<IssueIndicators["activity"]>,
+  string
+> = {
+  opened: "Opened here",
+  updated: "Updated here",
+  closed: "Closed here",
+  reopened: "Reopened here",
 };
 
 function issueSummaryHtml(
-  issues: Array<{ issue: IssueRecord; relationship: IssueRelationship }>,
+  issues: Array<{ issue: IssueRecord; indicators: IssueIndicators }>,
 ): string {
   if (issues.length === 0) return "";
   return `<div class="row-issues">${issues
-    .map(({ issue, relationship }) => {
+    .map(({ issue, indicators }) => {
       const manual = issue.frontmatter.needs.includes("manual-testing");
       const className = manual ? ' class="manual-testing-issue"' : "";
       const label = manual
         ? '<span class="manual-testing-label">Manual testing</span>'
         : "";
-      const status = `<span class="issue-state issue-state-${relationship}">${RELATIONSHIP_LABELS[relationship]}</span>`;
-      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}${status}${escapeHtml(issue.frontmatter.title)}</a>`;
+      const badges = [
+        `<span class="issue-state issue-state-${indicators.state}">${indicators.state === "closed" ? "Closed" : "Open"}</span>`,
+        indicators.owned
+          ? `<span class="issue-state issue-state-owned">${indicators.state === "closed" ? "Resolved here" : "Owns work"}</span>`
+          : "",
+        indicators.discovered
+          ? '<span class="issue-state issue-state-discovered">Discovered here</span>'
+          : "",
+        indicators.activity
+          ? `<span class="issue-state issue-activity-${indicators.activity}">${ACTIVITY_LABELS[indicators.activity]}</span>`
+          : "",
+      ].join("");
+      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}<span class="issue-title">${escapeHtml(issue.frontmatter.title)}</span><span class="issue-indicators">${badges}</span></a>`;
     })
     .join("")}</div>`;
 }
@@ -365,7 +400,7 @@ function rowHtml(
   const main = `<div class="row-main">${name}<span>${escapeHtml(note)}</span>${agentStatusHtml(row)}${box}<span class="actions">${actionsHtml(row)}</span></div>`;
   const issues = issuesForWorkstream(documents, row.name).map((issue) => ({
     issue,
-    relationship: issueRelationship(documents, row.name, issue),
+    indicators: issueIndicators(documents, row.name, issue),
   }));
   return `<li>${main}${issueSummaryHtml(issues)}</li>`;
 }
@@ -392,12 +427,29 @@ function planHref(plan: PlanRecord): string {
 function documentList(params: {
   issues: IssueRecord[];
   plans: PlanRecord[];
+  documents?: WorkstreamDocuments;
+  workstream?: string;
 }): string {
   const issueRows = params.issues
-    .map(
-      (issue) =>
-        `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}</span></li>`,
-    )
+    .map((issue) => {
+      const indicators =
+        params.documents && params.workstream
+          ? issueIndicators(params.documents, params.workstream, issue)
+          : undefined;
+      const association = indicators
+        ? [
+            indicators.owned
+              ? indicators.state === "closed"
+                ? "resolved here"
+                : "owns work"
+              : "",
+            indicators.discovered ? "discovered here" : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "";
+      return `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}${association ? ` · ${association}` : ""}</span></li>`;
+    })
     .join("");
   const planRows = params.plans
     .map(
@@ -419,13 +471,18 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .row-main { display: flex; gap: 1em; align-items: center; }
 .workstream-link, li > a { min-width: 18em; font: 600 14px ui-monospace, Menlo, monospace; color: #2255aa; text-decoration: none; }
 .row-issues { display: flex; flex-direction: column; gap: .15em; margin: .35em 0 0 2.8em; }
-.row-issues a::before { content: "Issue · "; color: #777; }
-.issue-state { display: inline-block; min-width: 6.8em; margin-right: .55em; padding: .08em .4em; border-radius: 999px; background: #e8edf5; color: #405168; font-size: .78em; font-weight: 700; text-align: center; }
+.row-issues a { display: flex; align-items: baseline; gap: .55em; }
+.row-issues a::before { content: "Issue · "; flex: 0 0 auto; color: #777; }
+.issue-title { min-width: 0; }
+.issue-indicators { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .3em; }
+.issue-state { display: inline-block; padding: .08em .4em; border-radius: 999px; background: #e8edf5; color: #405168; font-size: .78em; font-weight: 700; text-align: center; white-space: nowrap; }
 .issue-state-closed { background: #ececec; color: #666; }
-.issue-state-opened-here { background: #dcfce7; color: #166534; }
-.issue-state-updated-here { background: #ede9fe; color: #5b21b6; }
-.issue-state-closed-here { background: #374151; color: #fff; }
-.issue-state-reopened-here { background: #ccfbf1; color: #115e59; }
+.issue-state-owned { background: #dbeafe; color: #1e40af; }
+.issue-state-discovered { background: #fef3c7; color: #92400e; }
+.issue-activity-opened { background: #dcfce7; color: #166534; }
+.issue-activity-updated { background: #ede9fe; color: #5b21b6; }
+.issue-activity-closed { background: #374151; color: #fff; }
+.issue-activity-reopened { background: #ccfbf1; color: #115e59; }
 .row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
 .row-issues .manual-testing-issue::before { content: none; }
 .manual-testing-issue .issue-state { background: #ffffff26; color: #fff; }
@@ -570,7 +627,7 @@ export function relativeTime(value: string, now = new Date()): string {
 function renderDetail(
   name: string,
   row: WorkstreamRow | undefined,
-  documents: { issues: IssueRecord[]; plans: PlanRecord[] },
+  documents: WorkstreamDocuments,
 ): string {
   const state =
     row?.path === null
@@ -579,7 +636,7 @@ function renderDetail(
   const facts = `<dl class="facts"><dt>State</dt><dd>${escapeHtml(state)}</dd><dt>Path</dt><dd>${escapeHtml(row?.path ?? "none")}</dd><dt>Git</dt><dd>${row?.git ? `${String(row.git.ahead ?? "?")} ahead, ${String(row.git.dirty ?? "?")} dirty` : "unavailable"}</dd><dt>Box</dt><dd>${row?.boxState.testSetup ? "test-setup" : row?.boxState.keepUnmerged ? "keep unmerged" : "no pin"}</dd></dl>`;
   return pageShell(
     name,
-    `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList(documents)}`,
+    `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList({ issues: documents.issues, plans: documents.plans, documents, workstream: name })}`,
   );
 }
 
@@ -955,6 +1012,7 @@ export async function serveWorkstreams(params: {
             name,
             rows.find((row) => row.name === name),
             {
+              ...documents,
               issues: issuesForWorkstream(documents, name),
               plans: documents.plans.filter((plan) => plan.workstream === name),
             },

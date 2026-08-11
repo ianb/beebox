@@ -87,11 +87,20 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
 ---
 ```
 
-- `workstream:` is the current branch name minus `worktree-`, or `unattached`
-  when deliberately filed outside a workstream. `unknown` exists only for lost
-  historical provenance and is never written for a new issue. When another
-  workstream resolves an issue, `/finish` stamps the resolving workstream even
-  if `manual-testing` keeps the issue open.
+- `workstream:` records **ownership**: the bare name of the workstream that has
+  taken responsibility for resolving the issue. Use `unattached` when no
+  workstream owns it yet, including for out-of-scope work merely discovered
+  while doing something else. `unknown` exists only for lost historical
+  provenance and is never written for a new issue. When another workstream
+  resolves an issue, `/finish` stamps the resolving workstream even if
+  `manual-testing` keeps the issue open.
+- `discovered-in:` records **provenance**: where an agent noticed or opened the
+  issue and what it was doing. It does not assign the issue to that workstream.
+  Its machine-readable prefix is the exact token `worktree-<bare-name>`,
+  followed by a spaced em dash and the human context shown in the example.
+  An issue can be discovered by one workstream and owned by another. It can also
+  be discovered in a workstream while remaining `workstream: unattached` for
+  later triage.
 
 - `needs:` values: `design` (needs a design/plan written), `decision` (a fork
   only Ian can resolve), `manual-testing` (see below). Research-needed is
@@ -251,6 +260,8 @@ are the ones that get forgotten.
 
 Filing is at your discretion — no thresholds or quotas. When you notice something
 worth keeping that's outside your current task: check for an existing item, pick a
-category, then file with `title:`, `filed-by: agent`, and `discovered-in:` (your
-worktree and what you were doing), and move on. Don't fix out-of-scope things in
-place, and don't file trivia you'd be embarrassed to see triaged.
+category, then file with `title:`, `workstream: unattached`, `filed-by: agent`, and
+`discovered-in:` (your worktree and what you were doing), and move on. Set
+`workstream:` to the current workstream only when it has explicitly taken
+responsibility for resolving the issue. Don't fix out-of-scope things in place,
+and don't file trivia you'd be embarrassed to see triaged.
