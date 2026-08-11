@@ -1,6 +1,6 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
-workstream: unknown
+workstream: send-receipt-logging
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
