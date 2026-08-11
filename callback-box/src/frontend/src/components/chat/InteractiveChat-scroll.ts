@@ -233,10 +233,15 @@ export function useStickToBottom(): StickToBottom {
     if (!pinnedRef.current && liveAnchor) liveAnchor.top += lastScrollTopRef.current - top;
     // The disengage/re-engage rules (scrollbar drags, clamps, the near-bottom
     // margin) live in the pure `decideScroll` — see its doc comment.
+    // fromBottom uses the smaller of the live and last-reconciled scrollHeight:
+    // a clamp's scroll event can be raced by stream growth landing before this
+    // handler runs, and measuring against the grown height would misread that
+    // clamp as an intent-less scroll-up far from the bottom (a "drag").
+    // Not-yet-reconciled growth is exactly the raced amount, so exclude it.
     const action = decideScroll({
       scrolledUp: top < lastScrollTopRef.current - PROGRAMMATIC_EPSILON,
       recentIntent,
-      fromBottom: el.scrollHeight - top - el.clientHeight,
+      fromBottom: Math.min(el.scrollHeight, prevScrollHeightRef.current) - top - el.clientHeight,
       nearBottomPx: NEAR_BOTTOM_PX,
     });
     if (action === "disengage") {
