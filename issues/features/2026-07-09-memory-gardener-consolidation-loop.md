@@ -1,5 +1,6 @@
 ---
 title: "memory gardener consolidation loop"
+workstream: unknown
 area: callback-box
 needs: [design]
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Box engine symlinks: should anything repair a dead link automatically?"
+workstream: orama-semantic-search
 needs: [decision]
 area: callback-box
 filed-by: agent

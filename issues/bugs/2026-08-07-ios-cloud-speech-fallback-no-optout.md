@@ -1,5 +1,6 @@
 ---
 title: "iOS legacy speech fallback streams audio to Apple with no app-level opt-out"
+workstream: security-report
 area: callback-box
 filed-by: agent
 discovered-in: worktree-security-report — egress inventory for the security report

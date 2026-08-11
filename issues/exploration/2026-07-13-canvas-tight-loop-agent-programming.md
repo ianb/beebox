@@ -1,5 +1,6 @@
 ---
 title: "Canvas tight-loop: browser-less run→render→screenshot programming surface for agents"
+workstream: unknown
 needs: [design]
 area: callback-box
 ---

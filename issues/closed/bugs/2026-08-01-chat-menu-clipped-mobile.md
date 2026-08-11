@@ -1,5 +1,6 @@
 ---
 title: "Chat header \"...\" menu clipped/unreachable on narrow phones"
+workstream: chat-menu-mobile-overflow
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-menu-mobile-overflow — implementing docs/plans/chat-header-chips.md

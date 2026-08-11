@@ -1,5 +1,6 @@
 ---
 title: "wt_remove_now silently continues to branch deletion when the trash-mv fails"
+workstream: seam
 area: bin
 filed-by: agent
 discovered-in: "worktree-seam — cross-model review follow-up on the worktree control surface"
@@ -32,7 +33,7 @@ must not vanish.
 
 This is pre-existing behavior in the shared lib — `session-end.sh` and the
 `codex-exit` hook already ran this path before the worktree-control-surface
-refactor. What changed: `bin/worktrees sweep` now reaches it too, and sweep
+refactor. What changed: `bin/workstreams sweep` now reaches it too, and sweep
 runs unattended at every session start *and* end (`.claude/hooks/auto-sweep.sh`
 + `SessionEnd`), so the blast radius of a silent `mv` failure widened from "one
 interactive teardown" to "every session boundary, for every worktree sweep

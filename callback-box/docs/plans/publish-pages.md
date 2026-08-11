@@ -1,14 +1,10 @@
+---
+title: "Publish Pages — External Static Publishing via Cloudflare Workers"
+status: active
+workstream: unknown
+issues: []
+---
 # Publish Pages — External Static Publishing via Cloudflare Workers
-
-**Status:** active — design complete; Tracks A, B (docs renderer only), C, D, E,
-and F are implemented and tested (landed on `worktree-publish-pages`). `cb pub
-setup` and `cb pub status` exist behind an injectable Cloudflare client (fake in
-tests) plus a `/__version` drift probe on the Worker; the real Cloudflare adapter
-and wrangler deploy are UNVERIFIED until the live pass. Still open: end-to-end
-verification against a real Cloudflare account, the views renderer subplan, and
-docs/knowledge-audits. See
-[the resume issue](../../../issues/features/2026-07-19-publish-pages-resume.md) for
-the exact per-track breakdown and how-to-resume notes.
 
 This plan adds publishing to callback-box: a boxholder (or the box's agent, with the boxholder's explicit go-ahead) can take content the box already holds — markdown docs, agent-built views and visualizations — and put it at a public(ish) URL that other people can open. Publications are **static snapshots hosted externally on Cloudflare Workers**, a hard boundary: the box itself gains zero inbound public surface (boxes may sit behind Tailscale), and a published page can never call back into the box. The plan covers the bundle format, the snapshot renderers, the Cloudflare Worker that serves publications, per-publication access tiers (public / secret-URL / Google-account-gated), a "drop box" for inbound submissions that the box pulls on `cb wakeup`, and the human-gated publish flow with a leak scan.
 

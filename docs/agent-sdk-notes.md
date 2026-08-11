@@ -8,15 +8,15 @@ opportunities elsewhere in the code. The monitor automatically bumps settled
 releases and immediately applies callback-box-relevant security, memory, and
 correctness fixes.
 
-- **Current pin:** `0.3.225`
+- **Current pin:** `0.3.226`
 - **Latest reviewed upstream version:** `0.3.226`
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Nothing pending is act-now. `0.3.226` is the only
-  version ahead of the pin; let it finish the 48h settling window, then bump.
+- **Current recommendation:** No pending releases. The pin is at the newest
+  stable version.
 
 ## Release ledger
 
-### 0.3.226 — pending
+### 0.3.226 — applied
 
 - **Upstream:** "Updated to parity with Claude Code v2.1.226." The matching
   Claude Code 2.1.226 entry says only "Bug fixes and reliability improvements" —
@@ -27,9 +27,12 @@ correctness fixes.
 - **Action:** Published 2026-08-08T01:48Z. Deliberately not taken in the
   `0.3.225` act-now bump: the act-now fix callback-box needed landed in
   `0.3.225`, and `0.3.226` adds nothing that justifies skipping its settling
-  window. Re-reviewed 2026-08-09T16:04Z at ~38h old — upstream text unchanged
-  on both the SDK and Claude Code sides, still short of the 48h window, still
-  nothing act-now, so it waits one more turn.
+  window. Re-reviewed 2026-08-09 at ~38h old (upstream text unchanged, still
+  short of the window) and again 2026-08-08+62h on 2026-08-10, when it cleared.
+  Applied 2026-08-10 via `pnpm update-agent-sdk` as the newest settled version.
+  Verified: typecheck clean, `pnpm -C callback-box test` 6680/6680 pass, and
+  `scripts/sdk-steering-probe.ts` holds all four steering behaviors. The bundled
+  Claude Code binary is now 2.1.226, matching the parity claim.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.226), [Claude Code 2.1.226](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21226)
 
 ### 0.3.225 — applied (act-now)

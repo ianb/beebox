@@ -12,7 +12,7 @@ controller), `InteractiveChat-messages.tsx` (the list/button), or the
 
 ## Setup
 
-1. Dev router running (`bin/worktrees serve` / `pnpm dev` at the monorepo root).
+1. Dev router running (`bin/workstreams serve` / `pnpm dev` at the monorepo root).
 2. Open a fresh chat and get the composer's element ref (it changes on reload):
 
    ```bash

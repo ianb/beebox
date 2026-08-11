@@ -1,5 +1,6 @@
 ---
 title: "annex.largefiles is case-sensitive — an iOS .HEIC is committed to git as raw bytes"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: capture-agent-driven worktree — scoping the annex filter attributes

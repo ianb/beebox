@@ -1,3 +1,9 @@
+---
+title: "Callback Box: Implementation Guide (MVP era)"
+status: implemented
+workstream: unknown
+issues: []
+---
 > **Status:** superseded — the MVP-era build plan, retained as history
 > (retired 2026-07-04 per `../plans/design-reconciliation.md`). Everything
 > still true in it is documented better in CLAUDE.md and the reference docs

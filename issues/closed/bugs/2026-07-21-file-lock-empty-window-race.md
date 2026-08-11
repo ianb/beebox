@@ -1,5 +1,6 @@
 ---
 title: "file-lock: cross-process reclaim/release can let two holders acquire the same lock"
+workstream: open-source-readiness
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes

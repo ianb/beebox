@@ -1,8 +1,10 @@
 ---
 title: "`file-watcher.doctest.md` rapid-write event count flakes under parallel load"
+workstream: member-password-reset
 area: callback-box
 filed-by: agent
 discovered-in: worktree-member-password-reset — finish verification after merging current main
+resolution: implemented
 ---
 
 The full `pnpm test` suite intermittently fails the rapid-write assertion in
@@ -25,7 +27,7 @@ pnpm exec tap test/core/box/file-watcher.doctest.md -j1
 
 The branch did not change the watcher implementation or its doctest. This
 signature differs from the open
-[whole-file timeout](2026-08-06-file-watcher-doctest-suite-timeout.md). The
+[whole-file timeout](../../bugs/2026-08-06-file-watcher-doctest-suite-timeout.md). The
 older [watcher assertion-race issue](2026-08-03-file-watcher-doctest-flaky-timing.md)
 was closed after adding an event-delivery readiness handshake, but this later
 rapid-write assertion can still undercount events under contention.

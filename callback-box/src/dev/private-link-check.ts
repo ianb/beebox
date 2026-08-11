@@ -65,8 +65,9 @@ function hasConsecutiveSegments(segments: string[], needle: string[]): boolean {
 // Forbidden if the (posix-normalized) path segments contain a `private-issues`
 // segment exactly (relative, `../`-relative, or root-relative forms), or if
 // any target at all — including an external URL to another host — has a
-// literal `/dev/issues/private/` segment run (the private issues browser
-// route). Segment-exact: "not-private-issues-thing.md" never matches.
+// canonical `/workstreams/issues/private/` segment run or its permanent
+// legacy `/dev/issues/private/` redirect. Segment-exact:
+// "not-private-issues-thing.md" never matches.
 export function isForbiddenPrivateLinkTarget(rawTarget: string): boolean {
   const resolved = pathnameOf(rawTarget);
   if (!resolved) return false;
@@ -76,6 +77,7 @@ export function isForbiddenPrivateLinkTarget(rawTarget: string): boolean {
     .split("/")
     .filter((s) => s.length > 0 && s !== ".");
 
+  if (hasConsecutiveSegments(segments, ["workstreams", "issues", "private"])) return true;
   if (hasConsecutiveSegments(segments, ["dev", "issues", "private"])) return true;
   if (resolved.isExternal) return false;
   return segments.includes("private-issues");

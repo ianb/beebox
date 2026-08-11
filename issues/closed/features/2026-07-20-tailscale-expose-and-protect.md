@@ -1,5 +1,6 @@
 ---
 title: "Tailscale to expose and protect boxes — tooling, not another documented path"
+workstream: tailscale-exposure
 area: callback-box
 needs: [design]
 filed-by: agent

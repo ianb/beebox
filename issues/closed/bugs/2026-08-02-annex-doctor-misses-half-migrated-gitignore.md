@@ -1,5 +1,6 @@
 ---
 title: "cb doctor annex passes green on a half-migrated box whose .gitignore still hides all assets"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — a clerk page-save 500'd; several boxes found half-migrated

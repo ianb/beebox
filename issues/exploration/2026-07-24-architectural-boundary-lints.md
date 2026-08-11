@@ -1,5 +1,6 @@
 ---
 title: "Architectural boundary lints (openclaw-style channel-agnostic enforcement)"
+workstream: openclaw-security-lints
 area: callback-box
 labels: [lint, openclaw-borrow]
 filed-by: agent

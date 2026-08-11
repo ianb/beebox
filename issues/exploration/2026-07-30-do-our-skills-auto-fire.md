@@ -1,5 +1,6 @@
 ---
 title: "Do our skills ever auto-fire, or only when someone types the slash command?"
+workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix

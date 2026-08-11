@@ -1,5 +1,6 @@
 ---
 title: "iOS small cleanups: legacy STT off-device partials, temp WAV leak, dev pairing defaults, duplicate extension, no strict concurrency"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md

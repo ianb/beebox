@@ -1,5 +1,6 @@
 ---
 title: "Loaded Callback Clerk build can silently lag behind source"
+workstream: tab-organizer-clerk
 area: clerk
 filed-by: agent
 discovered-in: worktree-tab-organizer-clerk — testing tab organizer handoff

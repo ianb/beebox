@@ -1,5 +1,6 @@
 ---
 title: "Write-only secret capture in chat — model requests a token, never sees the value"
+workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea alongside the /admin chat landmark

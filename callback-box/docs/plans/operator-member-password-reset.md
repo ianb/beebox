@@ -1,6 +1,10 @@
+---
+title: "Operator-driven member password reset"
+status: partial
+workstream: unknown
+issues: []
+---
 # Operator-driven member password reset
-
-**Status:** partially implemented 2026-08 — feature and automated credential-path coverage shipped; isolated browser validation remains
 
 The operator and member flows described below are implemented. Automated tests
 cover capability migration/isolation, authorization, reset redemption, session

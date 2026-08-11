@@ -1,7 +1,10 @@
+---
+title: "Spec: Box as Linux User Account"
+status: superseded
+workstream: unknown
+issues: []
+---
 # Spec: Box as Linux User Account
-
-**Status:** Draft.
-**Relationship to other docs:** Builds on the [boxes-as-packages design exploration](boxes-as-packages-v1-superseded.md), which proposed Option C (each box is its own code repo + process under its own OS user). This spec tightens that proposal by adopting **the OS user account as the unit of box identity**: there is no separate "box" entity maintained by callback-box; the OS user *is* the box.
 
 ---
 

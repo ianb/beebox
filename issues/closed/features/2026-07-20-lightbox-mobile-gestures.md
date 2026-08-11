@@ -1,10 +1,11 @@
 ---
 title: "Lightbox mobile gestures: double-tap to zoom + pan, swipe up/down to close"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked for it after using the lightbox on a phone
 resolution: implemented
-design: ../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md
+design: ../../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md
 ---
 
 **Closed (implemented + boxholder-confirmed) 2026-07-31.** Double-tap zoom + pan,

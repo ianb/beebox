@@ -1,15 +1,10 @@
+---
+title: "Boxes as Packages v2 — callback-box as a library"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Boxes as Packages v2 — callback-box as a library
-
-**Status:** implemented 2026-07 — the laptop and server fleet are converted to the v2
-package layout, the server runs `cb hub` in place of shared `callback-serve`, and the dev loop
-runs one `cb hub` per worktree. Deferred/loose ends — the deploy provisioning scripts not yet
-codifying the hub units, npm publish, and per-box OS isolation — live in "Post-cutover state"
-above and the isolation-hardening subplan, not tracked as open items on this plan.
-**Supersedes:** `docs/unimplemented-plans/boxes-as-packages-v1-superseded.md` (2025 design exploration). This plan re-derives that
-design from the current codebase, corrects what has gone stale, and locks the decisions the
-boxholder made on 2026-07-03. (Session working notes — an independent re-derivation and a
-reconciliation against the old plan — lived in the untracked monorepo `scratch/` dir; their
-conclusions are folded into this document.)
 
 Each box becomes a Node package that depends on `callback-box` as a library — real imports,
 real types, its own process — while the *operational* box (cards, config, runtime state) stays

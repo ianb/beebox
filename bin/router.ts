@@ -57,6 +57,7 @@ import {
 import { escapeHtml, serveDev } from "./router-docs.js";
 import { serveSite } from "./router-site.js";
 import { serveStoryEvalSave } from "./router-story-eval.js";
+import { legacyIssuesRedirect, serveWorkstreams } from "./router-workstreams.js";
 import {
   type WorktreeHandle,
   type CapturedError,
@@ -101,7 +102,7 @@ const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 // The local trust boundary (plan Track B): a SECOND listener on a Unix-domain
 // socket. Requests arriving on it are `trustedLocal` (unauthenticated) because a
 // browser cannot originate a UDS connection — a real capability boundary, not a
-// spoofable header. Local CLI (bin/worktrees) talks to the router through this;
+// spoofable header. Local CLI (bin/workstreams) talks to the router through this;
 // everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
 const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
 
@@ -706,13 +707,13 @@ async function renderIndex(core: RouterCore): Promise<string> {
 <body>
 <h1>callback-box dev router</h1>
 <p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s. <strong>dev ↗</strong> opens that worktree's visualizations &amp; doc browser (served from disk, no start).</p>
-<p><a href="/main/dev/issues/" class="dash" title="Browse the main checkout's issue queue">issues ↗</a></p>
+<p><a href="/workstreams/" class="dash" title="Browse workstreams and the issue queue">workstreams ↗</a></p>
 <ul>${rows}</ul>
 
 <div class="help">
   <h2>If something looks wedged</h2>
   <p>
-    Run <code>bin/worktrees panic</code> from a terminal — this kills the
+    Run <code>bin/workstreams panic</code> from a terminal — this kills the
     router plus every child it knows about, wipes <code>~/.cache/callback-box</code>
     state, and frees port ${ROUTER_PORT}. Then start fresh with <code>pnpm dev</code>.
   </p>
@@ -721,7 +722,7 @@ async function renderIndex(core: RouterCore): Promise<string> {
   </p>
   <h2>If the list is too long</h2>
   <p>
-    Run <code>bin/worktrees sweep</code> to remove worktrees that are fully
+    Run <code>bin/workstreams sweep</code> to remove worktrees that are fully
     merged into main, clean, and have no active <code>claude</code> session —
     plus any orphan browse/log/pid state left behind by past cleanups.
     Add <code>--dry-run</code> to preview.
@@ -1040,6 +1041,22 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       return;
     }
 
+    const requestPathname = url.split("?")[0] ?? url;
+    if (requestPathname === "/workstreams" || requestPathname.startsWith("/workstreams/")) {
+      const requestUrl = new URL(url, "http://router.local");
+      await serveWorkstreams({
+        method: req.method || "GET",
+        pathname: requestPathname,
+        repoRoot: REPO_ROOT,
+        mainRoot: MAIN_ROOT,
+        worktreesRoot: WORKTREES_ROOT,
+        res,
+        flash: requestUrl.searchParams.get("flash") ?? "",
+        query: requestUrl.searchParams.toString(),
+      });
+      return;
+    }
+
     if (url === "/favicon.png" || url === "/favicon.ico") {
       try {
         const buf = await fs.readFile(path.join(REPO_ROOT, "bin", "assets", "favicon.png"));
@@ -1075,6 +1092,12 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
     // /<name>/dev/... — the worktree's dev space (artifacts + doc browser),
     // served straight from disk so it never cold-starts the worktree.
     const afterName = url.slice(`/${name}`.length);
+    const issuesRedirect = legacyIssuesRedirect(afterName);
+    if (issuesRedirect) {
+      res.writeHead(301, { location: issuesRedirect });
+      res.end();
+      return;
+    }
     if (afterName.split("?")[0] === "/dev") {
       res.writeHead(301, { location: `/${name}/dev/` });
       res.end();
@@ -1088,7 +1111,7 @@ function createRouterServer(core: RouterCore, gate: { authDeps: RouterAuthDeps; 
       return;
     }
     if (afterName.startsWith("/dev/")) {
-      await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name), mainRoot: MAIN_ROOT, worktreesRoot: WORKTREES_ROOT });
+      await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
       return;
     }
 
@@ -1228,7 +1251,7 @@ async function acquireRouterPidFile(): Promise<void> {
     const existing = await fs.readFile(ROUTER_PID_FILE, "utf8");
     const pid = Number(existing.trim());
     if (pid && pidAlive(pid)) {
-      throw new Error(`Another router is already running (pid ${pid}). Run \`bin/worktrees panic\` to clear.`);
+      throw new Error(`Another router is already running (pid ${pid}). Run \`bin/workstreams panic\` to clear.`);
     }
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {

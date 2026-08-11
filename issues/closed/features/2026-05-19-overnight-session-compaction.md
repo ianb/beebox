@@ -1,5 +1,6 @@
 ---
 title: "overnight session compaction"
+workstream: unknown
 design: ../../../callback-box/docs/implemented-plans/chat-review.md
 area: callback-box
 resolution: implemented

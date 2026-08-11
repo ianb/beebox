@@ -1,3 +1,9 @@
+---
+title: "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)"
+status: implemented
+workstream: unknown
+issues: []
+---
 # 1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)
 
 Breakpoint review of the v1-removal core (steps 1a fixtures→v2, 1b strict

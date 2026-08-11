@@ -1,5 +1,6 @@
 ---
 title: "Installation: what's verified, what still needs testing, what's not built yet"
+workstream: unknown
 design: ../../callback-box/docs/plans/installation-story.md
 needs: [manual-testing]
 ---
@@ -71,3 +72,9 @@ section.
 Items 1–4 are a single afternoon with a $5 VPS + a Mac; items 6–11 are
 each their own decision-then-build. Nothing here blocks the
 source-available drop except by the boxholder's own judgment.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

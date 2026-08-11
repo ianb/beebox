@@ -1,6 +1,10 @@
+---
+title: "Box-growth health checks"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Box-growth health checks
-
-**Status:** implemented 2026-08 — box growth monitoring, acknowledgement, and rate expectations shipped
 
 This plan adds a low-cost, persisted measurement of box filesystem and Git
 growth. It reports large or fast-growing boxes before they exhaust server

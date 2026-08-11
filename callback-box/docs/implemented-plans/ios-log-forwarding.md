@@ -1,9 +1,10 @@
+---
+title: "iOS log forwarding to the box debug log"
+status: implemented
+workstream: unknown
+issues: []
+---
 # iOS log forwarding to the box debug log
-
-**Status:** implemented 2026-08 — server sink, iOS forwarding core, and
-instrumentation all shipped and tested (route doctests + `LogForwarderTests`,
-193/193 iOS suite). Manual iPhone verification (below) is still pending as of
-merge — the boxholder is exercising it against prod post-merge.
 
 **Update 2026-08-06:** the boxholder chose regular box-hosted diagnostics over
 the issue's proposed on-device export/share bundle. The forwarder now also sends

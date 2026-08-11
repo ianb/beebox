@@ -1,5 +1,6 @@
 ---
 title: "box-packageify migration created doubled subtrees in some boxes"
+workstream: unknown
 filed-by: agent
 discovered-in: main session — investigating a test box's stuck refresh-maps health flag
 area: callback-box

@@ -1,5 +1,6 @@
 ---
 title: "Take the Pages site live once the repo is public"
+workstream: github-pages-site
 area: docs
 filed-by: agent
 discovered-in: worktree-github-pages-site — building the site while the repo is still private

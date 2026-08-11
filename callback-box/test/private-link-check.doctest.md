@@ -22,9 +22,10 @@ isForbiddenPrivateLinkTarget("../../private-issues/bar.md")
 isForbiddenPrivateLinkTarget("/private-issues/baz.md")
 => true
 
-isForbiddenPrivateLinkTarget("/dev/issues/private/some-thread")
+isForbiddenPrivateLinkTarget("/workstreams/issues/private/some-thread")
 => true
 
+// The permanent legacy redirect stays forbidden too.
 isForbiddenPrivateLinkTarget("http://localhost:3210/main/test1/dev/issues/private/some-thread")
 => true
 ```
@@ -39,14 +40,14 @@ isForbiddenPrivateLinkTarget("not-private-issues-thing.md")
 isForbiddenPrivateLinkTarget("issues/features/private-issues-migration.md")
 => false
 
-// an external URL to another host is fine unless its path is the dev/issues/private route
+// an external URL to another host is fine unless its path is the private browser route
 isForbiddenPrivateLinkTarget("https://example.com/private-issues/README.md")
 => false
 
 isForbiddenPrivateLinkTarget("docs/testing.md")
 => false
 
-isForbiddenPrivateLinkTarget("/dev/issues/public/some-thread")
+isForbiddenPrivateLinkTarget("/workstreams/issues/public/some-thread")
 => false
 ```
 

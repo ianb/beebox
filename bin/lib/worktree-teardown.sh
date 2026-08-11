@@ -8,14 +8,14 @@
 #   - .claude/hooks/session-end.sh   (Claude Code SessionEnd)
 #   - bin/codex-session-end          (codex tab exit, via launch-worktree-session)
 #
-# `bin/worktrees` (create excepted) is a caller too: `sweep` and `remove` both
+# `bin/workstreams` (create excepted) is a caller too: `sweep` and `remove` both
 # use wt_other_agent_live and wt_remove_now from here, and `list` uses the guard
 # alone. Sweep keeps its ONE system-wide process snapshot across N worktrees via
 # wt_agent_snapshot_capture rather than a private copy of the guard.
 #
 # Everything here stands in front of an irreversible delete, so every "can't
 # tell" answer resolves to "don't delete". A worktree that lingers is collected
-# by the next `bin/worktrees sweep`; a worktree deleted under live work is gone.
+# by the next `bin/workstreams sweep`; a worktree deleted under live work is gone.
 
 # Locations — WT_MONO (where the git bookkeeping runs), WT_BOX_ROOT, and
 # WT_STATE_DIR all come from the shared derivation, so this file makes no $HOME
@@ -32,6 +32,8 @@
 # are this tool's own regenerable cache, not anybody's work.
 # shellcheck source=worktree-paths.sh
 . "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
+# shellcheck source=session-registry.sh
+. "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
   # Leave every derived location empty rather than half-set: `cd ""` and
   # `[ -d "" ]` both fail, so each destructive step declines on its own.
@@ -75,7 +77,7 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 # same as `live` — that's the fail-closed half of this guard.
 #
 # Cleaning a worktree that still has a live agent pulls the rug out from under
-# it. `bin/worktrees sweep` has always checked; session-end.sh did not, and that
+# it. `bin/workstreams sweep` has always checked; session-end.sh did not, and that
 # gap had teeth: a nested `claude -p` (the /cross-model skill's Codex→Claude
 # reviewer) run from inside a worktree ends its own session, fires the hook, and
 # — seeing a merged, clean branch — deletes the worktree out from under the
@@ -91,11 +93,9 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 # by hand from inside a live session.
 #
 # Two independent liveness signals, mirroring sweep:
-#   1. argv — `claude --worktree <name>`. Required because a session launched by
-#      bin/launch-worktree-session runs claude from the MAIN checkout, so its
-#      process cwd is main, not the worktree.
-#   2. process cwd — resumed claude sessions and all codex sessions carry no
-#      --worktree argv, but their cwd is inside the worktree.
+#   1. argv — `claude --worktree <name>` for direct native sessions, or
+#      `claude --name <name>` for managed sessions.
+#   2. process cwd — an independent signal for managed claude/codex sessions.
 #
 # NOT `pgrep -x claude`: pgrep matches the 16-char accounting name (`ps ucomm`),
 # and a native-installed Claude Code reports that as its VERSION ("2.1.221"),
@@ -109,7 +109,7 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 #
 # Takes ONE system-wide process + argv + cwd snapshot into WT_SNAP_*, which
 # wt_other_agent_live then uses instead of shelling out per call. This is what
-# lets `bin/worktrees sweep` ask about N worktrees at the cost of one `ps` and
+# lets `bin/workstreams sweep` ask about N worktrees at the cost of one `ps` and
 # one `lsof`, which is the property that kept it on its own two-state copy of
 # this guard until now (and gave it a fail-OPEN hole:
 # issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md).
@@ -209,7 +209,7 @@ wt_other_agent_live() {
     while IFS= read -r snap_line; do
       [ -n "$snap_line" ] || continue
       case "$snap_line" in
-        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
           WT_AGENT_STATE="live"
           WT_AGENT_REASON="signal=argv pid=${snap_line%% *}"
           return 0 ;;
@@ -266,7 +266,7 @@ EOF
   for pid in $other_pids; do
     pargs=$(ps -o command= -p "$pid" 2>/dev/null || true)
     case "$pargs" in
-      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
         WT_AGENT_STATE="live"
         WT_AGENT_REASON="signal=argv pid=$pid"
         return 0 ;;
@@ -420,7 +420,7 @@ wt_remove_satellites() {
 #
 # It deletes the trash dir's ENTRIES, never the trash dir itself, and it snapshots
 # the entry list here rather than globbing inside the detached shell. Both matter
-# once a caller removes several worktrees in a row: `bin/worktrees sweep` calls
+# once a caller removes several worktrees in a row: `bin/workstreams sweep` calls
 # wt_remove_now per eligible worktree, so a reaper from removal N-1 is still
 # running when removal N does its `mv` into the same directory. Deleting the root
 # would make that `mv` fail — leaving a worktree half-removed, its box and cache
@@ -457,10 +457,24 @@ wt_remove_private_issues() {
 }
 
 wt_remove_now() {
-  local worktree_path="$1" branch="$2" keep_branch=""
-  [ "${3:-}" = "--keep-branch" ] && keep_branch=1
-  local name
+  local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
+  shift 2
+  for arg in "$@"; do
+    [ "$arg" = "--keep-branch" ] && keep_branch=1
+    [ "$arg" = "--preserve-box" ] && preserve_box=1
+  done
+  local name final_sha removed_at removed_merged removed_patch moved=false box_ref=""
   name=$(basename "$worktree_path")
+  final_sha=$(git -C "$worktree_path" rev-parse HEAD 2>/dev/null || true)
+  removed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  removed_merged=false
+  [ "${WT_AHEAD:-?}" = "0" ] && [ "${WT_DIRTY:-?}" = "0" ] && removed_merged=true
+
+  if [ -n "$preserve_box" ]; then
+    workstream_preserve_keep "$name" \
+      || { wt_say "refusing removal: failed to preserve keep as $WORKSTREAM_PRESERVED_BOX_REF"; return 1; }
+    box_ref="$WORKSTREAM_PRESERVED_BOX_REF"
+  fi
 
   wt_remove_private_issues "$worktree_path"
   wt_remove_satellites "$name"
@@ -471,6 +485,7 @@ wt_remove_now() {
   # Trash the worktree directory, then prune the now-dangling registration.
   if mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)" 2>/dev/null; then
     wt_say "trashed worktree $worktree_path"
+    moved=true
   fi
   git worktree prune 2>/dev/null || true
 
@@ -478,6 +493,18 @@ wt_remove_now() {
     wt_say "kept branch $branch (unmerged work; \`git worktree add\` to resume)"
   elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
     wt_say "deleted branch $branch"
+  fi
+
+  if [ "$moved" = true ]; then
+    removed_patch=$(jq -n \
+      --arg at "$removed_at" \
+      --arg finalSha "$final_sha" \
+      --arg boxRef "$box_ref" \
+      --argjson merged "$removed_merged" \
+      '{removed: ({at:$at, merged:$merged}
+        + if $finalSha == "" then {} else {finalSha:$finalSha} end
+        + if $boxRef == "" then {} else {boxRef:$boxRef} end)}')
+    session_registry_merge "$name" "$removed_patch" || true
   fi
 
   wt_trash_reap

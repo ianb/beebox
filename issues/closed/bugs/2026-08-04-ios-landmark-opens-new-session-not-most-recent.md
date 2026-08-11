@@ -1,5 +1,6 @@
 ---
 title: "iOS: selecting a landmark starts a NEW chat instead of resuming the landmark's most-recent session"
+workstream: unknown
 area: callback-box
 resolution: implemented
 filed-by: agent

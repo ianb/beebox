@@ -5,6 +5,7 @@ import { requestTabArrangement, type ArrangementRelayResult } from "../lib/tab-a
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
+import { CheckboxField } from "./ui/fields";
 import { Stack } from "./ui/Stack";
 import { Text } from "./ui/Text";
 
@@ -24,35 +25,57 @@ interface ArrangementData {
 
 export function TabArrangementView({ data }: RendererProps) {
   const arrangement = useMemo(() => parseArrangement(data.frontmatter), [data.frontmatter]);
-  const [relay, setRelay] = useState<ArrangementRelayResult | null>(null);
-
-  useEffect(() => {
-    if (arrangement === null) return;
-    void requestTabArrangement({ action: "status", transferId: arrangement.transferId }).then(setRelay);
-  }, [arrangement]);
-
-  const apply = useCallback(async () => {
-    if (arrangement === null) return;
-    setRelay(await requestTabArrangement({
-      action: "apply",
-      transferId: arrangement.transferId,
-      proposal: arrangement.proposal,
-    }));
-  }, [arrangement]);
-
-  const undo = useCallback(async () => {
-    if (arrangement === null) return;
-    setRelay(await requestTabArrangement({ action: "undo", transferId: arrangement.transferId }));
-  }, [arrangement]);
-
   if (arrangement === null) {
     return <Text as="div" tone="danger" className="p-4">This tab arrangement card is malformed. Open Source to repair it.</Text>;
   }
+  return (
+    <TabArrangementEditor
+      key={`${arrangement.transferId}:${JSON.stringify(arrangement.proposal)}`}
+      arrangement={arrangement}
+      path={data.path}
+    />
+  );
+}
+
+function TabArrangementEditor({ arrangement, path }: { arrangement: ArrangementData; path: string }) {
+  const [proposal, setProposal] = useState(() => normalizeProposal(arrangement));
+  const [relay, setRelay] = useState<ArrangementRelayResult | null>(null);
+
+  useEffect(() => {
+    void requestTabArrangement({ action: "status", transferId: arrangement.transferId }).then(setRelay);
+  }, [arrangement.transferId]);
+
+  const apply = useCallback(async () => {
+    setRelay(await requestTabArrangement({
+      action: "apply",
+      transferId: arrangement.transferId,
+      proposal,
+    }));
+  }, [arrangement.transferId, proposal]);
+
+  const undo = useCallback(async () => {
+    setRelay(await requestTabArrangement({ action: "undo", transferId: arrangement.transferId }));
+  }, [arrangement.transferId]);
+
+  const toggleDeleted = useCallback((id: string, deleted: boolean) => {
+    setProposal((current) => {
+      const close = new Set(current.close);
+      if (deleted) close.add(id);
+      else close.delete(id);
+      return {
+        ...current,
+        close: current.windows.flatMap((window) => window.tabs).filter((tabId) => close.has(tabId)),
+      };
+    });
+  }, []);
+
   const tabs = new Map(arrangement.source.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab]));
+  const deleted = new Set(proposal.close);
+  const remainingCount = tabs.size - deleted.size;
   const canApply = arrangement.status === "ready" && relay?.ok === true && relay.state === "ready";
 
   return (
-    <div className="mx-auto max-w-4xl p-4" {...cbSource("card", data.path)}>
+    <div className="mx-auto max-w-4xl p-4" {...cbSource("card", path)}>
       <Stack gap="lg">
         <header>
           <div className="flex flex-wrap items-center gap-2">
@@ -60,29 +83,30 @@ export function TabArrangementView({ data }: RendererProps) {
             <Badge tone={arrangement.status === "ready" ? "success" : "warning"}>{arrangement.status}</Badge>
           </div>
           <Text as="p" size="sm" tone="subtle" className="mt-1">
-            Review the proposed windows below. Clerk validates the live tabs again before changing anything.
+            Check or uncheck tabs to mark them for deletion. Deleted tabs stay in place here for review; Clerk validates the live tabs again before changing anything.
+          </Text>
+          <Text as="p" size="xs" tone="subtle" className="mt-1">
+            Checkbox changes affect this Apply only; they do not rewrite the saved card.
           </Text>
         </header>
 
         <Stack gap="md">
-          {arrangement.proposal.windows.map((window, index) => (
+          {proposal.windows.map((window, index) => (
             <Card key={window.id} as="section" aria-label={`Proposed window ${index + 1}`} background="warm">
               <Text as="h2" weight="semibold" className="mb-2">Window {index + 1}</Text>
               <ol className="space-y-2">
-                {window.tabs.map((id) => <TabRow key={id} tab={tabs.get(id)} />)}
+                {window.tabs.map((id) => (
+                  <TabRow
+                    key={id}
+                    tab={tabs.get(id)}
+                    deleted={deleted.has(id)}
+                    deletionDisabled={!deleted.has(id) && remainingCount === 1}
+                    onDeletedChange={(checked) => toggleDeleted(id, checked)}
+                  />
+                ))}
               </ol>
             </Card>
           ))}
-          <Card as="section" aria-label="Tabs to close" border="subtle">
-            <Text as="h2" weight="semibold" className="mb-2">Close ({arrangement.proposal.close.length})</Text>
-            {arrangement.proposal.close.length === 0 ? (
-              <Text as="p" size="sm" tone="subtle">No tabs will be closed.</Text>
-            ) : (
-              <ul className="space-y-2">
-                {arrangement.proposal.close.map((id) => <TabRow key={id} tab={tabs.get(id)} />)}
-              </ul>
-            )}
-          </Card>
         </Stack>
 
         <ArrangementActions
@@ -127,19 +151,106 @@ function ArrangementActions(props: {
   );
 }
 
-function TabRow({ tab }: { tab: CapturedTab | undefined }) {
+function TabRow(props: {
+  tab: CapturedTab | undefined;
+  deleted: boolean;
+  deletionDisabled: boolean;
+  onDeletedChange: (deleted: boolean) => void;
+}) {
+  const { tab, deleted, deletionDisabled, onDeletedChange } = props;
   if (tab === undefined) return <li className="text-sm text-danger">Unknown tab UUID</li>;
   return (
-    <li className="min-w-0 rounded border border-warm-200 bg-white px-3 py-2">
-      <div className="flex items-start gap-2">
-        {tab.pinned ? <Badge size="sm" tone="info">Pinned</Badge> : null}
-        <div className="min-w-0">
-          <Text as="div" size="sm" weight="medium" className="truncate">{tab.title}</Text>
-          <Text as="div" size="xs" tone="subtle" className="truncate">{tab.url}</Text>
-        </div>
-      </div>
+    <li className={`min-w-0 rounded border px-3 py-2 ${deleted ? "border-danger/30 bg-danger/5" : "border-warm-200 bg-white"}`}>
+      <CheckboxField
+        checked={deleted}
+        disabled={deletionDisabled}
+        onChange={onDeletedChange}
+        aria-label={`Delete ${tab.title}`}
+        title={deletionDisabled ? "At least one tab must remain open" : undefined}
+        label={(
+          <div className={`min-w-0 ${deleted ? "opacity-60" : ""}`}>
+            <div className="flex items-start gap-2">
+              {tab.pinned ? <Badge size="sm" tone="info">Pinned</Badge> : null}
+              {deleted ? <Badge size="sm" tone="danger">Deleted</Badge> : null}
+              <div className="min-w-0">
+                <Text as="div" size="sm" weight="medium" className="break-words">{tab.title}</Text>
+                <Text as="div" size="xs" tone="subtle" truncate>{tab.url}</Text>
+              </div>
+            </div>
+          </div>
+        )}
+      />
     </li>
   );
+}
+
+function normalizeProposal(arrangement: ArrangementData): ArrangementData["proposal"] {
+  const arranged = new Set(arrangement.proposal.windows.flatMap((window) => window.tabs));
+  const sourceIds = arrangement.source.windows.flatMap((window) => window.tabs.map((tab) => tab.id));
+  if (sourceIds.every((id) => arranged.has(id))) return arrangement.proposal;
+
+  const windows = arrangement.proposal.windows.map((window) => ({ ...window, tabs: [...window.tabs] }));
+  const survivorIds = new Set(windows.flatMap((window) => window.tabs));
+  const deleted = new Set(arrangement.proposal.close);
+  for (const sourceWindow of arrangement.source.windows) {
+    const ids = sourceWindow.tabs.map((tab) => tab.id);
+    for (const id of ids) {
+      if (!deleted.has(id) || windows.some((window) => window.tabs.includes(id))) continue;
+      const target = nearestLegacyWindow({ windows, survivorIds, sourceWindowId: sourceWindow.id, id, sourceIds: ids });
+      insertNearNeighbors({ tabs: target.tabs, id, sourceIds: ids });
+    }
+  }
+  const pinned = new Map(arrangement.source.windows.flatMap((window) => window.tabs).map((tab) => [tab.id, tab.pinned]));
+  for (const window of windows) {
+    window.tabs = [
+      ...window.tabs.filter((id) => pinned.get(id) === true),
+      ...window.tabs.filter((id) => pinned.get(id) !== true),
+    ];
+  }
+  return { windows, close: [...arrangement.proposal.close] };
+}
+
+function nearestLegacyWindow(options: {
+  windows: ArrangementData["proposal"]["windows"];
+  survivorIds: Set<string>;
+  sourceWindowId: string;
+  id: string;
+  sourceIds: string[];
+}): ArrangementData["proposal"]["windows"][number] {
+  const { windows, survivorIds, sourceWindowId, id, sourceIds } = options;
+  const sourceIndex = sourceIds.indexOf(id);
+  for (let distance = 1; distance < sourceIds.length; distance += 1) {
+    const neighbors = [sourceIds[sourceIndex - distance], sourceIds[sourceIndex + distance]];
+    const target = windows.find((window) => neighbors.some(
+      (neighbor) => neighbor !== undefined && survivorIds.has(neighbor) && window.tabs.includes(neighbor),
+    ));
+    if (target !== undefined) return target;
+  }
+  const sameWindow = windows.find((window) => window.id === sourceWindowId);
+  if (sameWindow !== undefined) return sameWindow;
+  const created = { id: sourceWindowId, tabs: [] };
+  windows.push(created);
+  return created;
+}
+
+function insertNearNeighbors(options: { tabs: string[]; id: string; sourceIds: string[] }): void {
+  const { tabs, id, sourceIds } = options;
+  const sourceIndex = sourceIds.indexOf(id);
+  for (let index = sourceIndex - 1; index >= 0; index -= 1) {
+    const preceding = tabs.indexOf(sourceIds[index] ?? "");
+    if (preceding !== -1) {
+      tabs.splice(preceding + 1, 0, id);
+      return;
+    }
+  }
+  for (let index = sourceIndex + 1; index < sourceIds.length; index += 1) {
+    const following = tabs.indexOf(sourceIds[index] ?? "");
+    if (following !== -1) {
+      tabs.splice(following, 0, id);
+      return;
+    }
+  }
+  tabs.push(id);
 }
 
 function parseArrangement(frontmatter: Record<string, unknown> | undefined): ArrangementData | null {

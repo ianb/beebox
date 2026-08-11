@@ -1,5 +1,6 @@
 ---
 title: "Keep multi-MB payloads out of transcript entries the history path serves (strip/sidecar at write or render)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — direction 4 spun out of the closed chat.history parse-OOM bug

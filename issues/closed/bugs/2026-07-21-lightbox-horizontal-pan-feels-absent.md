@@ -1,5 +1,6 @@
 ---
 title: "Zoomed lightbox: left/right pan feels absent while up/down works"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, panning a zoomed photo on mobile

@@ -1,7 +1,10 @@
+---
+title: "Box-local schema reload — design & implementation plan"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Box-local schema reload — design & implementation plan
-
-**Status:** design complete, reviewed (incl. an adversarial Codex pass + empirical
-leak measurements). Ready to implement.
 
 ## TL;DR
 

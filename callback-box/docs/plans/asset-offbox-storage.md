@@ -1,3 +1,9 @@
+---
+title: "Off-Box Asset Storage — Content-Addressable Backup to R2"
+status: active
+workstream: unknown
+issues: []
+---
 # Off-Box Asset Storage — Content-Addressable Backup to R2
 
 **Status: SUPERSEDED by [`asset-annex.md`](asset-annex.md).** Nothing

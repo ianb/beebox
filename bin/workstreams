@@ -14,10 +14,20 @@
 #                      dirty, or an agent is live in it. --force overrides the
 #                      first two; nothing overrides the liveness check.
 #                      --keep-branch keeps the branch, --dry-run just reports.
-#   list [--json]      Every worktree, joined across all three signals: git
-#                      (ahead/dirty/merged), the router (cold/ready/ports), and
-#                      agent liveness (none/live/unknown). Works with no router
-#                      running — the runtime column degrades to "unknown".
+#   focus <name>       Bring a live workstream's Terminal tab to the front.
+#   close <name>       Close a merged, clean workstream's live Terminal tab.
+#                      --force overrides merged/clean, never liveness safety.
+#   resume <name>      Focus live, reopen idle, or recreate a culled workstream.
+#                      Options: --agent claude|codex, --fresh, --at-final-sha.
+#   reset-test <name>  Hard-reset the workstream's test1 clone to test-setup.
+#   confirm-tested <issue-basename>  Clear manual-testing on main and commit.
+#   list [--json]      Every worktree, joined across git, runtime, agent,
+#                      session-registry, and test1-clone state. Add
+#                      --include-removed with --json for registry ghost rows.
+#   quotas --json      Claude and Codex account quota windows and reset times.
+#   unset-claude-quota Remove the retired Claude quota status-line collector.
+#   archive <name>     Keep a workstream but move it into the archived section.
+#   unarchive <name>   Return an archived workstream to the active sections.
 #   serve              Run the router in the foreground.
 #   status             Raw router status JSON (what the router itself reports).
 #   down <name>        Tell the router to stop a worktree's processes.
@@ -46,21 +56,84 @@ cmd="${1:-status}"
 shift || true
 
 case "$cmd" in
+  quotas)
+    [ "${1:-}" = "--json" ] && [ $# -eq 1 ] || { echo "usage: workstreams quotas --json" >&2; exit 1; }
+    exec node --import tsx "$REPO_DIR/bin/agent-quotas.ts"
+    ;;
+
+  unset-claude-quota)
+    [ $# -eq 0 ] || { echo "usage: workstreams unset-claude-quota" >&2; exit 1; }
+    command -v jq >/dev/null || { echo "workstreams unset-claude-quota: jq is required" >&2; exit 1; }
+    config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    settings="$config_dir/settings.json"
+    [ -f "$settings" ] || exit 0
+    jq -e 'type == "object"' "$settings" >/dev/null 2>&1 || {
+      echo "workstreams unset-claude-quota: refusing malformed settings file: $settings" >&2
+      exit 1
+    }
+    existing=$(jq -r '.statusLine.command // empty' "$settings")
+    if [ -z "$existing" ]; then
+      exit 0
+    fi
+    if [[ "$existing" != */bin/claude-quota-statusline ]]; then
+      echo "workstreams unset-claude-quota: refusing to remove unrelated statusLine command: $existing" >&2
+      exit 1
+    fi
+    settings_tmp=$(mktemp "$config_dir/settings.json.XXXXXX")
+    jq 'del(.statusLine)' "$settings" > "$settings_tmp"
+    chmod 600 "$settings_tmp"
+    mv "$settings_tmp" "$settings"
+    echo "Removed the retired Claude quota status-line collector."
+    ;;
+
+  archive|unarchive)
+    name="${1:-}"
+    [ -n "$name" ] && [ $# -eq 1 ] || { echo "usage: workstreams $cmd <name>" >&2; exit 1; }
+    # shellcheck source=lib/worktree-paths.sh
+    . "$REPO_DIR/bin/lib/worktree-paths.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    wt_paths_valid_name "$name" \
+      || { echo "workstreams $cmd: invalid workstream name '$name'" >&2; exit 1; }
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    record=$(session_registry_read "$name" || true)
+    if [ ! -d "$WT_ROOT/$name" ] && [ -z "$record" ]; then
+      echo "workstreams $cmd: unknown workstream '$name'" >&2
+      exit 1
+    fi
+    if [ "$cmd" = archive ]; then
+      if printf '%s' "$record" | jq -e '.removed.merged == false' >/dev/null 2>&1; then
+        echo "workstreams archive: refusing to hide recovery state for '$name'" >&2
+        exit 1
+      fi
+      archived_at=$(printf '%s' "$record" | jq -r '.archived.at // empty' 2>/dev/null || true)
+      [ -n "$archived_at" ] || archived_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      patch=$(jq -cn --arg at "$archived_at" '{archived:{at:$at}}')
+    else
+      patch='{"archived":null}'
+    fi
+    session_registry_merge "$name" "$patch"
+    echo "workstreams $cmd: $name"
+    ;;
+
   create)
     name=""
     base_ref="main"
+    box_ref=""
     want_path=""
     while [ $# -ge 1 ]; do
       case "$1" in
-        --base-ref) [ $# -ge 2 ] || { echo "worktrees create: --base-ref needs a value" >&2; exit 1; }; base_ref="$2"; shift 2 ;;
+        --base-ref) [ $# -ge 2 ] || { echo "workstreams create: --base-ref needs a value" >&2; exit 1; }; base_ref="$2"; shift 2 ;;
         --base-ref=*) base_ref="${1#--base-ref=}"; shift ;;
-        --path)     [ $# -ge 2 ] || { echo "worktrees create: --path needs a value" >&2; exit 1; }; want_path="$2"; shift 2 ;;
+        --path)     [ $# -ge 2 ] || { echo "workstreams create: --path needs a value" >&2; exit 1; }; want_path="$2"; shift 2 ;;
         --path=*)   want_path="${1#--path=}"; shift ;;
-        -*)         echo "worktrees create: unknown option $1" >&2; exit 1 ;;
-        *)          [ -z "$name" ] || { echo "worktrees create: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+        --box-ref) [ $# -ge 2 ] || { echo "workstreams create: --box-ref needs a value" >&2; exit 1; }; box_ref="$2"; shift 2 ;;
+        --box-ref=*) box_ref="${1#--box-ref=}"; shift ;;
+        -*)         echo "workstreams create: unknown option $1" >&2; exit 1 ;;
+        *)          [ -z "$name" ] || { echo "workstreams create: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
       esac
     done
-    [ -n "$name" ] || { echo "usage: worktrees create <name> [--base-ref <ref>] [--path <dir>]" >&2; exit 1; }
+    [ -n "$name" ] || { echo "usage: workstreams create <name> [--base-ref <ref>] [--path <dir>]" >&2; exit 1; }
 
     # Stdout carries exactly one thing: the resulting worktree path. Claude
     # Code's WorktreeCreate hook contract requires it, and every other caller
@@ -80,9 +153,9 @@ case "$cmd" in
     # rather than the trap's "may be partially set up" — nothing has been
     # created yet. wt_create re-checks for callers that source the lib directly.
     wt_paths_valid_name "$name" \
-      || { echo "worktrees create: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
+      || { echo "workstreams create: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
     trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree may be partially set up at ${WT_CREATED_PATH:-unknown}." >&2; exit $rc' ERR
-    wt_create "$name" "$base_ref" "$want_path"
+    wt_create "$name" "$base_ref" "$want_path" "$box_ref"
     printf '%s\n' "$WT_CREATED_PATH" >&3
     ;;
 
@@ -96,14 +169,15 @@ case "$cmd" in
         --force)       force=true; shift ;;
         --keep-branch) keep_branch="--keep-branch"; shift ;;
         --dry-run)     dry_run=true; shift ;;
-        -*)            echo "worktrees remove: unknown option $1" >&2; exit 1 ;;
-        *)             [ -z "$name" ] || { echo "worktrees remove: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+        -*)            echo "workstreams remove: unknown option $1" >&2; exit 1 ;;
+        *)             [ -z "$name" ] || { echo "workstreams remove: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
       esac
     done
-    [ -n "$name" ] || { echo "usage: worktrees remove <name> [--force] [--keep-branch] [--dry-run]" >&2; exit 1; }
+    [ -n "$name" ] || { echo "usage: workstreams remove <name> [--force] [--keep-branch] [--dry-run]" >&2; exit 1; }
 
     # shellcheck source=lib/worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    . "$REPO_DIR/bin/lib/workstream-box-state.sh"
     # See the note in `list`: the lib clears the roots instead of exiting, and a
     # destructive command must not proceed on an empty one.
     wt_paths_init "$REPO_DIR" || exit 1
@@ -112,9 +186,9 @@ case "$cmd" in
     # Validate BEFORE building a path. `remove ../boxes/test1` would otherwise
     # resolve outside WT_ROOT, pass the `-d` check, and trash the source box.
     wt_paths_valid_name "$name" \
-      || { echo "worktrees remove: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
+      || { echo "workstreams remove: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
     target="$WT_ROOT/$name"
-    [ -d "$target" ] || { echo "worktrees remove: no worktree at $target" >&2; exit 1; }
+    [ -d "$target" ] || { echo "workstreams remove: no worktree at $target" >&2; exit 1; }
 
     # The liveness check is NOT subject to --force. Merged/dirty are judgements
     # about work you can still recover from a branch; a live agent is work in
@@ -136,16 +210,250 @@ case "$cmd" in
       exit 1
     fi
 
+    if [ "$force" = false ] && pin_reason=$(workstream_cull_pin_reason "$name"); then
+      echo "refusing: $name is pinned=$pin_reason" >&2
+      echo "  (confirm testing or use release; --force preserves keep before removal)" >&2
+      exit 1
+    fi
+
     if [ "$dry_run" = true ]; then
       echo "would remove $name (branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY)"
       exit 0
     fi
     echo "remove $name (branch=$WT_BRANCH)"
+    preserve_arg="--preserve-box"
     if [ -n "$keep_branch" ]; then
-      wt_remove_now "$target" "$WT_BRANCH" --keep-branch
+      wt_remove_now "$target" "$WT_BRANCH" --keep-branch $preserve_arg
     else
-      wt_remove_now "$target" "$WT_BRANCH"
+      wt_remove_now "$target" "$WT_BRANCH" $preserve_arg
     fi
+    ;;
+
+  focus)
+    name="${1:-}"
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    if [ $# -ne 1 ] || ! wt_paths_valid_name "$name"; then
+      echo "usage: workstreams focus <name>" >&2
+      exit 1
+    fi
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    # shellcheck source=lib/terminal-tabs.sh
+    . "$REPO_DIR/bin/lib/terminal-tabs.sh"
+    record=$(session_registry_read "$name" || true)
+    tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
+    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path" "$WT_ROOT/$name"; then
+      echo "workstreams focus: no live session for $name — use resume" >&2
+      exit 1
+    fi
+    terminal_focus_tty "$tty_path" || {
+      echo "workstreams focus: Terminal has no tab for $name at $tty_path — use resume" >&2
+      exit 1
+    }
+    ;;
+
+  close)
+    name=""
+    force=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --force) force=true; shift ;;
+        -*) echo "workstreams close: unknown option $1" >&2; exit 1 ;;
+        *) [ -z "$name" ] || { echo "workstreams close: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+      esac
+    done
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ -n "$name" ] && wt_paths_valid_name "$name" || {
+      echo "usage: workstreams close <name> [--force]" >&2
+      exit 1
+    }
+    target="$WT_ROOT/$name"
+    [ -d "$target" ] || { echo "workstreams close: no worktree at $target" >&2; exit 1; }
+
+    wt_other_agent_live "$target"
+    case "$WT_AGENT_STATE" in
+      live) ;;
+      none) echo "workstreams close: no live session for $name — use resume" >&2; exit 1 ;;
+      *) echo "workstreams close: liveness unknown ($WT_AGENT_REASON) — refusing" >&2; exit 1 ;;
+    esac
+    wt_work_state "$target"
+    if [ "$force" = false ] && { [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; }; then
+      echo "workstreams close: refusing $name (ahead=$WT_AHEAD dirty=$WT_DIRTY); pass --force to close anyway" >&2
+      exit 1
+    fi
+
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    # shellcheck source=lib/terminal-tabs.sh
+    . "$REPO_DIR/bin/lib/terminal-tabs.sh"
+    record=$(session_registry_read "$name" || true)
+    tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
+    if [ -z "$tty_path" ] || ! terminal_agent_on_tty "$tty_path" "$target"; then
+      echo "workstreams close: registry tty is stale for $name — refusing" >&2
+      exit 1
+    fi
+    terminal_close_tty "$tty_path" || {
+      echo "workstreams close: could not close Terminal tab $tty_path" >&2
+      exit 1
+    }
+    ;;
+
+  resume)
+    name=""
+    requested_agent=""
+    fresh=false
+    at_final_sha=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --agent) [ $# -ge 2 ] || { echo "workstreams resume: --agent needs a value" >&2; exit 1; }; requested_agent="$2"; shift 2 ;;
+        --agent=*) requested_agent="${1#--agent=}"; shift ;;
+        --fresh) fresh=true; shift ;;
+        --at-final-sha) at_final_sha=true; shift ;;
+        -*) echo "workstreams resume: unknown option $1" >&2; exit 1 ;;
+        *) [ -z "$name" ] || { echo "workstreams resume: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
+      esac
+    done
+    case "$requested_agent" in ""|claude|codex) ;; *) echo "workstreams resume: --agent must be claude or codex" >&2; exit 1 ;; esac
+
+    # shellcheck source=lib/worktree-teardown.sh
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ -n "$name" ] && wt_paths_valid_name "$name" || {
+      echo "usage: workstreams resume <name> [--agent claude|codex] [--fresh] [--at-final-sha]" >&2
+      exit 1
+    }
+    # shellcheck source=lib/session-registry.sh
+    . "$REPO_DIR/bin/lib/session-registry.sh"
+    # shellcheck source=lib/workstream-resume.sh
+    . "$REPO_DIR/bin/lib/workstream-resume.sh"
+    record=$(session_registry_read "$name" || true)
+    target="$WT_ROOT/$name"
+    worktree_exists=false
+    agent_state=none
+    if [ -d "$target" ]; then
+      worktree_exists=true
+      wt_other_agent_live "$target"
+      agent_state="$WT_AGENT_STATE"
+    fi
+    resume_state=$(workstream_resume_state "$worktree_exists" "$agent_state" "$record")
+    case "$resume_state" in
+      focus) exec "$REPO_DIR/bin/workstreams" focus "$name" ;;
+      liveness-unknown)
+        echo "workstreams resume: cannot determine liveness for $name ($WT_AGENT_REASON) — refusing to open a duplicate" >&2
+        exit 1 ;;
+      unknown)
+        echo "workstreams resume: unknown workstream '$name'; use launch-worktree-session to start new work" >&2
+        exit 1 ;;
+      removed-unmerged)
+        if [ "$fresh" = false ] && [ "$at_final_sha" = false ]; then
+          final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // "not recorded"')
+          echo "workstreams resume: $name was removed with unmerged work at $final_sha; pass --at-final-sha or --fresh" >&2
+          exit 1
+        fi
+        ;;
+    esac
+
+    resolved_agent="$requested_agent"
+    [ -n "$resolved_agent" ] || resolved_agent=$(printf '%s' "$record" | jq -r '.agent // empty' 2>/dev/null || true)
+    case "$resolved_agent" in
+      claude|codex) ;;
+      *) echo "workstreams resume: no recorded agent for $name; pass --agent claude or --agent codex" >&2; exit 1 ;;
+    esac
+
+    if [ "$resume_state" = "culled" ] || [ "$resume_state" = "removed-unmerged" ]; then
+      final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty')
+      box_ref=$(printf '%s' "$record" | jq -r '.removed.boxRef // empty')
+      if [ "$at_final_sha" = true ]; then
+        [ -n "$final_sha" ] || { echo "workstreams resume: no final SHA recorded; recreating at it is impossible" >&2; exit 1; }
+        create_args=("$name" --base-ref "$final_sha")
+        [ -n "$box_ref" ] && create_args+=(--box-ref "$box_ref")
+        target=$("$REPO_DIR/bin/workstreams" create "${create_args[@]}")
+        new_base_sha="$final_sha"
+      else
+        [ -n "$final_sha" ] || echo "workstreams resume: no final SHA recorded; recreating from main" >&2
+        create_args=("$name")
+        [ -n "$box_ref" ] && create_args+=(--box-ref "$box_ref")
+        target=$("$REPO_DIR/bin/workstreams" create "${create_args[@]}")
+        new_base_sha=$(git -C "$WT_MONO" rev-parse main)
+      fi
+      session_registry_merge "$name" "$(jq -n --arg baseSha "$new_base_sha" '{baseSha:$baseSha}')" || true
+    fi
+
+    final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty' 2>/dev/null || true)
+    landed_log=""
+    if [ -n "$final_sha" ] && git -C "$WT_MONO" cat-file -e "$final_sha^{commit}" 2>/dev/null; then
+      landed_log=$(git -C "$WT_MONO" log --oneline "$final_sha..main" -50 2>/dev/null || true)
+    fi
+    # shellcheck source=lib/launch-session.sh
+    . "$REPO_DIR/bin/lib/launch-session.sh"
+    launch_dir=$(mktemp -d -t workstreams-resume.XXXXXX)
+    prompt_file="$launch_dir/prompt.txt"
+    workstream_continuation_prompt "$name" "$record" "$landed_log" > "$prompt_file"
+    emoji=$(printf '%s' "$record" | jq -r '.emoji // empty' 2>/dev/null || true)
+    [ -n "$emoji" ] || emoji=$(launch_session_default_emoji "$name")
+    model=$(printf '%s' "$record" | jq -r '.model // empty' 2>/dev/null || true)
+    LS_MONO="$WT_MONO"
+    LS_WORKSTREAM="$name"
+    LS_SESSION_NAME="$emoji $name"
+    LS_AGENT="$resolved_agent"
+    LS_MODEL="$model"
+    LS_REMOTE_CONTROL=1
+    LS_PROMPT_FILE="$prompt_file"
+    LS_EMOJI="$emoji"
+    LS_LAUNCH_DIR="$launch_dir"
+    LS_WORKTREE_PATH="$target"
+    LS_CODEX_RESUME=0
+    if [ "$resolved_agent" = codex ] && [ "$fresh" = false ] && [ "$resume_state" = existing ]; then
+      LS_CODEX_RESUME=1
+    fi
+    launch_session_build
+    result=$(launch_session_open)
+    echo "workstreams resume: launched $resolved_agent for $name ($result)"
+    ;;
+
+  reset-test)
+    name="${1:-}"
+    . "$REPO_DIR/bin/lib/worktree-paths.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ $# -eq 1 ] || { echo "usage: workstreams reset-test <name>" >&2; exit 1; }
+    . "$REPO_DIR/bin/lib/manual-testing.sh"
+    workstream_reset_test "$name"
+    ;;
+
+  release)
+    name="${1:-}"
+    . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    [ $# -eq 1 ] && wt_paths_valid_name "$name" || { echo "usage: workstreams release <name>" >&2; exit 1; }
+    target="$WT_ROOT/$name"
+    [ -d "$target" ] || { echo "workstreams release: no worktree for $name" >&2; exit 1; }
+    wt_other_agent_live "$target"
+    [ "$WT_AGENT_STATE" = none ] || { echo "workstreams release: agent=$WT_AGENT_STATE — refusing" >&2; exit 1; }
+    wt_work_state "$target"
+    [ "$WT_AHEAD" = 0 ] && [ "$WT_DIRTY" = 0 ] \
+      || { echo "workstreams release: code is not merged and clean — refusing" >&2; exit 1; }
+    wt_remove_now "$target" "$WT_BRANCH" --preserve-box
+    ;;
+
+  confirm-tested)
+    basename=""
+    agent_confirmed=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --agent-confirmed) agent_confirmed=true; shift ;;
+        -*) echo "workstreams confirm-tested: unknown option $1" >&2; exit 1 ;;
+        *) [ -z "$basename" ] || { echo "workstreams confirm-tested: unexpected argument $1" >&2; exit 1; }; basename="$1"; shift ;;
+      esac
+    done
+    [ -n "$basename" ] || { echo "usage: workstreams confirm-tested <issue-basename> [--agent-confirmed]" >&2; exit 1; }
+    . "$REPO_DIR/bin/lib/worktree-paths.sh"
+    wt_paths_init "$REPO_DIR" || exit 1
+    . "$REPO_DIR/bin/lib/manual-testing.sh"
+    workstream_confirm_tested "$basename" "$agent_confirmed"
     ;;
 
   serve)
@@ -154,7 +462,18 @@ case "$cmd" in
 
   list)
     as_json=false
-    [ "${1:-}" = "--json" ] && as_json=true
+    include_removed=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --json) as_json=true; shift ;;
+        --include-removed) include_removed=true; shift ;;
+        *) echo "workstreams list: unknown option $1" >&2; exit 1 ;;
+      esac
+    done
+    if [ "$include_removed" = true ] && [ "$as_json" = false ]; then
+      echo "workstreams list: --include-removed requires --json" >&2
+      exit 1
+    fi
 
     # Implemented in bash, not TypeScript, for one reason: the agent-liveness
     # answer must come from wt_other_agent_live and nowhere else. A second
@@ -170,6 +489,8 @@ case "$cmd" in
     wt_paths_init "$REPO_DIR" || exit 1
     WT_LOG_LABEL="List"
     wt_agent_snapshot_capture
+    # shellcheck source=lib/workstream-box-state.sh
+    . "$REPO_DIR/bin/lib/workstream-box-state.sh"
 
     # One router query for the whole listing. A router that is down, wedged, or
     # simply not started is normal — every runtime field then reports "unknown",
@@ -183,6 +504,7 @@ case "$cmd" in
 
       wt_other_agent_live "$d"
       wt_work_state "$d"
+      tip=$(git -C "$d" rev-parse HEAD 2>/dev/null || true)
 
       # `git status` failing yields "?" from wt_work_state. Carry that through as
       # JSON null rather than coercing it to a number — a reader must not be able
@@ -196,6 +518,8 @@ case "$cmd" in
       else
         runtime='{"state":"unknown"}'
       fi
+      session=$(session_registry_summary "$name")
+      box_state=$(workstream_box_state "$WT_BOX_ROOT/$name/test1" "$WT_BOX_SRC")
 
       rows=$(jq -c \
         --argjson rows "$rows" \
@@ -204,8 +528,11 @@ case "$cmd" in
         --arg path "$d" \
         --arg ahead "$WT_AHEAD" \
         --arg dirty "$WT_DIRTY" \
+        --arg tip "$tip" \
         --argjson merged "$merged" \
         --argjson runtime "$runtime" \
+        --argjson session "$session" \
+        --argjson boxState "$box_state" \
         --arg agentState "$WT_AGENT_STATE" \
         --arg agentReason "$WT_AGENT_REASON" \
         --arg box "$WT_BOX_ROOT/$name/test1" \
@@ -215,12 +542,41 @@ case "$cmd" in
               git: {
                 ahead:  (if $ahead == "?" then null else ($ahead | tonumber) end),
                 dirty:  (if $dirty == "?" then null else ($dirty | tonumber) end),
-                merged: $merged
+                merged: $merged,
+                tip: (if $tip == "" then null else $tip end)
               },
               runtime: $runtime,
-              agent: { state: $agentState, reason: $agentReason }
+              agent: { state: $agentState, reason: $agentReason },
+              session: $session,
+              boxState: $boxState
             }]')
     done
+
+    if [ "$include_removed" = true ] && [ -d "$WT_STATE_DIR/workstreams" ]; then
+      for registry_file in "$WT_STATE_DIR"/workstreams/*.json; do
+        [ -f "$registry_file" ] || continue
+        name=$(basename "$registry_file" .json)
+        wt_paths_valid_name "$name" || continue
+        [ -d "$WT_ROOT/$name" ] && continue
+        record=$(session_registry_read "$name" || true)
+        [ -n "$record" ] || continue
+        printf '%s' "$record" | jq -e '.removed != null' >/dev/null 2>&1 || continue
+        session=$(session_registry_summary "$name")
+        box_state=$(workstream_box_state "$WT_BOX_ROOT/$name/test1" "$WT_BOX_SRC")
+        branch=$(printf '%s' "$record" | jq -r '.branch // ("worktree-" + .name)')
+        rows=$(jq -c \
+          --argjson rows "$rows" \
+          --arg name "$name" \
+          --arg branch "$branch" \
+          --argjson session "$session" \
+          --argjson boxState "$box_state" \
+          -n '$rows + [{
+            name:$name, branch:$branch, path:null, box:null, url:null, git:null,
+            runtime:{state:"absent"}, agent:{state:"none", reason:"no-worktree"},
+            session:$session, boxState:$boxState
+          }]')
+      done
+    fi
 
     if [ "$as_json" = true ]; then
       printf '%s\n' "$rows" | jq .
@@ -241,7 +597,7 @@ case "$cmd" in
     if ! [ -f "$ROUTER_PID_FILE" ] || ! kill -0 "$(cat "$ROUTER_PID_FILE" 2>/dev/null)" 2>/dev/null; then
       echo "router not running"
       if [ -d "$PID_DIR" ] && [ -n "$(ls -A "$PID_DIR" 2>/dev/null)" ]; then
-        echo "(stale PID files present in $PID_DIR — run \`bin/worktrees panic\` to clean)"
+        echo "(stale PID files present in $PID_DIR — run \`bin/workstreams panic\` to clean)"
       fi
       exit 0
     fi
@@ -249,7 +605,7 @@ case "$cmd" in
     ;;
 
   down)
-    name="${1:?usage: worktrees down <name>}"
+    name="${1:?usage: workstreams down <name>}"
     if ! [ -f "$ROUTER_PID_FILE" ]; then
       echo "router not running"
       exit 0
@@ -350,6 +706,8 @@ case "$cmd" in
     # a `ps` or `lsof` that could not answer read as "nothing is running".
     # shellcheck source=lib/worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
+    # shellcheck source=lib/workstream-box-state.sh
+    . "$REPO_DIR/bin/lib/workstream-box-state.sh"
     WT_LOG_LABEL="Sweep"
     wt_agent_snapshot_capture
 
@@ -382,6 +740,10 @@ case "$cmd" in
       dirty="$WT_DIRTY"
       if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
         echo "skip $name: ahead=$ahead non-deletion-dirty=$dirty (has unmerged work)"
+        continue
+      fi
+      if pin_reason=$(workstream_cull_pin_reason "$name"); then
+        echo "skip $name: pinned=$pin_reason"
         continue
       fi
       branch="$WT_BRANCH"
@@ -449,6 +811,13 @@ case "$cmd" in
     # which may be never. Sweep already runs at every session start and end and
     # already prunes orphaned state, so this is the same job.
     if [ "$dry_run" = false ]; then
+      # Registry entries intentionally outlive their worktrees. Retire only
+      # records explicitly marked removed and older than the retention window.
+      # shellcheck source=lib/session-registry.sh
+      . "$REPO_DIR/bin/lib/session-registry.sh"
+      registry_cutoff=$(date -v-90d +%s 2>/dev/null || date -d '90 days ago' +%s)
+      session_registry_prune "$registry_cutoff"
+
       trash_left=$(find "$STATE_DIR/trash" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l | tr -d ' ')
       if [ "$trash_left" != "0" ]; then
         echo "reaping $trash_left trashed tree(s) in $STATE_DIR/trash"
@@ -470,7 +839,7 @@ case "$cmd" in
 
   *)
     echo "unknown command: $cmd" >&2
-    echo "run \`bin/worktrees help\` for usage" >&2
+    echo "run \`bin/workstreams help\` for usage" >&2
     exit 1
     ;;
 esac

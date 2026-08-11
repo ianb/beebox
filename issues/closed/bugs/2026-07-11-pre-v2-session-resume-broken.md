@@ -1,5 +1,6 @@
 ---
 title: "Pre-v2-migration chat sessions are unresumable on prod (project-dir hash changed with content/); schedule-fire responses into them vanish silently"
+workstream: memory-use
 area: callback-box
 filed-by: agent
 discovered-in: worktree-memory-use — live-testing chat-schedule firing under the lazy hub

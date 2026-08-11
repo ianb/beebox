@@ -5,13 +5,14 @@ break; where its basename is unique repo-wide, the current location is
 recoverable, so the broken link can be rewritten. Pure logic (fs/git injected).
 
 ```ts setup
-import { repairLinks, duplicateBasenames, buildBasenameLookup, NON_UNIQUE_BASENAMES } from "../src/dev/doc-link-repair.js";
+import { repairFrontmatterPaths, repairLinks, duplicateBasenames, buildBasenameLookup, NON_UNIQUE_BASENAMES } from "../src/dev/doc-link-repair.js";
 
 // A tiny fake tree: bugs/foo.md has moved to closed/bugs/foo.md.
 const files = ["issues/closed/bugs/foo.md", "issues/features/bar.md", "callback-box/docs/guide.md"];
 const exists = (p) => files.includes(p);
 const lookup = buildBasenameLookup(files);
 const repair = (fromRel, content) => repairLinks({ fromRel, content, fileExists: exists, basenameLookup: lookup });
+const repairFrontmatter = (fromRel, content) => repairFrontmatterPaths({ fromRel, content, fileExists: exists, basenameLookup: lookup });
 ```
 
 ## A stale link is rewritten to the file's current location
@@ -23,6 +24,29 @@ r.content
 
 JSON.stringify(r.rewrites)
 => [{"line":1,"from":"../bugs/foo.md","to":"../closed/bugs/foo.md"}]
+```
+
+## Frontmatter scalar and list paths use the same repair contract
+
+```ts
+const fm = repairFrontmatter("issues/features/bar.md", `---
+title: Bar
+design: ../../callback-box/old/guide.md
+issues:
+  - ../bugs/foo.md
+---
+# Bar`);
+fm.content
+=> ---
+title: Bar
+design: ../../callback-box/docs/guide.md
+issues:
+  - ../closed/bugs/foo.md
+---
+# Bar
+
+JSON.stringify(fm.rewrites)
+=> [{"line":3,"from":"../../callback-box/old/guide.md","to":"../../callback-box/docs/guide.md"},{"line":5,"from":"../bugs/foo.md","to":"../closed/bugs/foo.md"}]
 ```
 
 ## A link that already resolves is left untouched (anchor preserved)

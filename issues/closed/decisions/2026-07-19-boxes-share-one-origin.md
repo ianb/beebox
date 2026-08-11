@@ -1,5 +1,6 @@
 ---
 title: "Boxes are path siblings on one origin, so per-box isolation isn't enforceable in the browser"
+workstream: mobile-token-handshake
 area: callback-box
 filed-by: agent
 discovered-in: worktree-mobile-token-handshake — cross-model review of the cb_mobile cookie design

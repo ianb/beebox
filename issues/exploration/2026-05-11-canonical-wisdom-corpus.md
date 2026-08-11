@@ -1,5 +1,6 @@
 ---
 title: "Canonical wisdom corpus (in lieu of plugins)"
+workstream: unknown
 area: callback-box
 ---
 

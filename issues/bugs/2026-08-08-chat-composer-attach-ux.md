@@ -1,5 +1,6 @@
 ---
 title: "Chat composer attach UX: literal [file1] token, twin attach items, image-only placeholder"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 1)

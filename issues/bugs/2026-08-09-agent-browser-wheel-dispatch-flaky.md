@@ -1,5 +1,6 @@
 ---
 title: "agent-browser `mouse wheel` dispatch is flaky: os error 35 after retries, multi-minute hangs"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — live re-test of the card-views-cannot-scroll finding

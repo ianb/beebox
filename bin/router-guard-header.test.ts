@@ -34,6 +34,7 @@ function fakeRes(captured: Captured): ServerResponse {
       if (typeof chunk === "string") captured.body = chunk;
       return res;
     },
+  // Test-only structural double implements every response method this handler uses.
   } as unknown as ServerResponse;
   return res;
 }

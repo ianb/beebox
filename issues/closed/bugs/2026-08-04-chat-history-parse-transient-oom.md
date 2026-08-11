@@ -1,5 +1,6 @@
 ---
 title: "chat.history parse cost is unbounded per request — concurrent fetches of a fat transcript OOM cb serve (box-family crashes ×4)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — live-measured on prod during the 2026-08-03/04 box-family incident

@@ -1,5 +1,6 @@
 ---
 title: "Chat review stops advancing once a transcript passes MAX_SESSION_ENTRIES"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md

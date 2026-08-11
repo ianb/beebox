@@ -1,5 +1,6 @@
 ---
 title: "Implementation vocabulary leaks into first-contact UI and agent replies"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)

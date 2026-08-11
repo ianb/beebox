@@ -1,5 +1,6 @@
 ---
 title: "New chat: the first user message doesn't display until the agent starts working (~10s blank)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder report
@@ -172,3 +173,9 @@ works or replacing it speculatively.
   — adjacent new/opened-session render glitch.
 - [chat-send-receipts-fail-often](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
   — different symptom (receipt shows failed), same chat-send surface.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

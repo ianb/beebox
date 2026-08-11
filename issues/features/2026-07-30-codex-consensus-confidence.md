@@ -1,5 +1,6 @@
 ---
 title: "Treat codex/Claude agreement as a confidence signal, and remember prior triage"
+workstream: elixir-skills-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix

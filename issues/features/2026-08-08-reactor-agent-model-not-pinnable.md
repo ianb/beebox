@@ -1,5 +1,6 @@
 ---
 title: "No box-level agent model: the reactor's model floats while chat's can be pinned"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: field-test Track 2 chunk 2 (cross-model review finding)

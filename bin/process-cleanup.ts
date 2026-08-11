@@ -32,7 +32,7 @@
 // and the dead ones accumulate — the pidfile check is what reaps them.)
 //
 // Used by bin/router.ts (startup sweep, aggressive:false) and by
-// `bin/worktrees panic` (run directly as a CLI, aggressive:true).
+// `bin/workstreams panic` (run directly as a CLI, aggressive:true).
 
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -151,7 +151,7 @@ async function cwdOf(pids: number[]): Promise<Map<number, string>> {
 
 /**
  * Worktrees with a live `claude` session, by two signals (mirrors the
- * precedent in `bin/worktrees sweep`):
+ * precedent in `bin/workstreams sweep`):
  *   1. argv — sessions launched as `claude --worktree <name>`.
  *   2. cwd  — sessions resumed in-place lack that argv, but the claude
  *      process's cwd is inside the worktree (or the main checkout).

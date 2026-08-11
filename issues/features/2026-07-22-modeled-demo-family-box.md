@@ -1,5 +1,6 @@
 ---
 title: "A fully-modeled fictional-family demo box (alongside test1)"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder wants a concrete demo box

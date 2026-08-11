@@ -1,5 +1,6 @@
 ---
 title: "A meta-assistant: teach the user's own external agent to manage the box + connectors + local setup"
+workstream: unknown
 needs: [design]
 area: callback-box
 filed-by: agent

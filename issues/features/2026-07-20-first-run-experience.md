@@ -1,5 +1,6 @@
 ---
 title: "First-run experience: the empty box explains nothing"
+workstream: open-source-readiness
 needs: [design]
 area: callback-box
 filed-by: agent

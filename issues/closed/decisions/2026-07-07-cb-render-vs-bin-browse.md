@@ -1,5 +1,6 @@
 ---
 title: "cb render vs bin browse"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — after fixing cb render's SSR crash and building bin/browse prod access, the boxholder questioned whether cb render earns its keep

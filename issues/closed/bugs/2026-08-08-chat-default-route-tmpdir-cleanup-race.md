@@ -1,5 +1,6 @@
 ---
 title: "`chat-default-route.doctest.md` can fail on ENOTEMPTY/ENOENT tmp-dir cleanup under parallel suite load"
+workstream: member-password-reset
 area: callback-box
 filed-by: agent
 discovered-in: worktree-member-password-reset — /finish full-suite verification for the file-watcher rapid-write flake fix

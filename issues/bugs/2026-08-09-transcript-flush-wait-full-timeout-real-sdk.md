@@ -1,5 +1,6 @@
 ---
 title: "Transcript durability gate hits its full 5s timeout on both turns of a real-SDK doctest"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: weekly manual-test triage — 2026-08-09T151705Z run, repo 508f42cc

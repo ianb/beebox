@@ -1,6 +1,8 @@
 ---
 title: "cb doctor — one preflight command for every install path"
-design: ../../research/openclaw-hermes/deep-installation.md
+workstream: unknown
+design: ../../../research/openclaw-hermes/deep-installation.md
+resolution: implemented
 ---
 
 Both OpenClaw (`openclaw doctor`) and Hermes (`hermes doctor`) ship a doctor

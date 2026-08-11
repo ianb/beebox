@@ -1,12 +1,10 @@
+---
+title: "Make the shared dev router safely exposable over Tailscale"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Make the shared dev router safely exposable over Tailscale
-
-**Status:** implemented 2026-07 — the router is now a fail-closed
-authenticating reverse proxy (`bin/router-auth.ts`, `bin/router-auth-deps.ts`,
-the UDS local channel in `bin/router.ts`) and `cb tailscale setup --target
-<routerPort>` exposes it. Verified by the full test suite plus four Codex
-adversarial reviews (GO for a private tailnet); a live end-to-end exposure
-against the real `tailscaled` (including pairing the iOS app over the tailnet)
-is still the boxholder's acceptance test, not yet run.
 
 Turn the `pnpm dev` router into an **authenticating reverse proxy** — the same
 front-door model the prod `cb hub` already runs — so the whole dev environment
@@ -216,7 +214,7 @@ worktree runs its own code so the wall must be at the shared front door.
   listener (Serve-fronted, browsers) and add a UDS listener (e.g.
   `~/.cache/callback-box/router.sock`, 0600). Requests on the **UDS are
   trusted-local, unauthenticated** — but only *non-browser* local tooling can use
-  it: `bin/worktrees` and other CLI move to `curl --unix-socket`. **Browser HMR
+  it: `bin/workstreams` and other CLI move to `curl --unix-socket`. **Browser HMR
   and the tRPC WebSocket stay on TCP** (a browser can't originate a UDS
   connection; HMR rides the page origin through the router, `vite.config.ts:48`,
   `bin/router.ts:896`) and authenticate with the local browser session
@@ -475,7 +473,7 @@ exposable; local CLI uses the socket) and the tailscale docs.
    (dup slug → null → 401), per-box `resolveMobileRequestAuth` (+ agent bearer
    folded in), `canAccessBox` session, `Sec-Fetch-Site`/Origin CSRF; single
    chokepoint before all dispatch + the WS `upgrade` (try/catch fail-closed);
-   deny → 302 login / JSON 401·403·404; `bin/worktrees` CLI → UDS. Verified live
+   deny → 302 login / JSON 401·403·404; `bin/workstreams` CLI → UDS. Verified live
    (curl+browser+WS): the full table passes.
    **Two carry-forwards to B.2b/iOS:** (1) *sound deviation, confirmed* — a
    non-box worktree segment (`/<w>/@vite/`, `/src/`) maps to a session-gated

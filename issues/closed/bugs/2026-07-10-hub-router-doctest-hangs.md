@@ -1,5 +1,6 @@
 ---
 title: "hub router doctest hangs"
+workstream: architectural-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-architectural-review — verifying `pnpm test` while landing the no-non-null-assertion / no-unnecessary-condition preset burn-down (architectural-review-followups Track 7c/7d)

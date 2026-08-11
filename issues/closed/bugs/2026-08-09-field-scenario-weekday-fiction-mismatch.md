@@ -1,5 +1,6 @@
 ---
 title: "Field-test scenario briefs name weekdays that don't match the box clock"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, whats-needed item

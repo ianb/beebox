@@ -1,5 +1,6 @@
 ---
 title: "Codex SDK as an optional second backend (bring-your-ChatGPT-subscription)"
+workstream: backend-research
 needs: [decision]
 area: callback-box
 filed-by: agent

@@ -1,5 +1,6 @@
 ---
 title: "chat-session-history.json is re-read and re-parsed O(n) times per lookup"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep

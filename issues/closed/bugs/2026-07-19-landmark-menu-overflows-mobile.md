@@ -1,5 +1,6 @@
 ---
 title: "Mobile: the landmark cards menu (bookmark icon) doesn't fit the viewport"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it on mobile

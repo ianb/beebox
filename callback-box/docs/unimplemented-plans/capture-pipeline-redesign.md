@@ -1,8 +1,12 @@
+---
+title: "Capture Pipeline Redesign"
+status: parked
+workstream: unknown
+issues: []
+---
 # Capture Pipeline Redesign
 
 **Superseded by [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)** — that plan retired the `process-captures` pipeline outright (capture is now prepared in-process and handed to the chat agent) rather than reworking it. Kept for the OCR/assembly ideas below, which may still inform future work.
-
-**Status:** parked 2026-03 — direction (simpler capture pipeline) may still be relevant; OCR vendor pricing in body is stale
 
 ## Problem
 

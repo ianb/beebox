@@ -30,6 +30,18 @@ printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
 WT_LOG_LABEL="SessionEnd"
 WT_SAY_PREFIX="[session-end]   "
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/bin/lib/worktree-teardown.sh"
+# shellcheck source=../../bin/lib/session-workstream.sh
+. "$WT_MONO/bin/lib/session-workstream.sh"
+
+# Managed Claude runs inside the worktree, so it loads that checkout's hook.
+# Re-exec the main checkout's copy before teardown: cleanup must not remove the
+# directory its script and caller are still executing from. The marker prevents
+# a loop if path resolution is ever unusual.
+hook_repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+if [ "$hook_repo" != "$WT_MONO" ] && [ "${CB_SESSION_END_MAIN_REEXEC:-0}" != "1" ]; then
+  cd "$WT_MONO"
+  CB_SESSION_END_MAIN_REEXEC=1 exec "$WT_MONO/.claude/hooks/session-end.sh" <<<"$input"
+fi
 
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
@@ -37,19 +49,14 @@ reason=$(printf '%s' "$input" | jq -r '.reason // empty')
 wt_log "event: session=$session_id reason=$reason cwd=$cwd"
 
 # Trigger a sweep on EVERY session end, before the per-worktree logic below
-# runs (which mostly can't resolve its own worktree — see next comment). Must
+# runs. Must
 # be here, above the early `exit 0`s, or it never fires in the common case.
 #
-# Why: the per-session cleanup below identifies its worktree from cwd or
-# transcript_path, and BOTH are the main checkout when the session was started
-# by `bin/launch-worktree-session` (it runs `claude --worktree <name>` from the
-# monorepo root, so Claude Code files the session under main's project dir).
-# So this hook logs `skip:not-a-worktree-session` and cleans nothing. The sweep
-# doesn't care whose session ended — it removes every worktree that is merged,
-# clean, and has no live `claude` — so it covers this case and tab-kills alike.
-# Previously the sweep only ran at SessionStart, which meant a long-lived main
-# session accumulated finished worktrees all day with nothing to collect them
-# (2026-07-19: nine piled up in one session).
+# The sweep does not care which session ended: it removes every eligible
+# worktree with no live agent, covering tab-kills and older native `--worktree`
+# sessions whose final cwd/transcript could not be resolved here. Previously it
+# ran only at SessionStart, so a long-lived main session accumulated finished
+# worktrees all day (2026-07-19: nine piled up in one session).
 #
 # The MAIN checkout's copy deliberately: auto-sweep.sh gates itself out when its
 # own REPO is a worktree, so invoking a worktree's copy would no-op.
@@ -69,23 +76,11 @@ esac
 
 if [ -z "$worktree_path" ]; then
   tpath=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
-  # Claude Code encodes the launch directory by replacing every `/` with `-`, so
-  # the encoded worktree root is derived from WT_ROOT rather than spelled out.
-  # Matched and split with parameter expansion, not sed: WT_ROOT is a literal
-  # here, and a path component that happened to be a regex metacharacter would
-  # otherwise mis-parse the name.
-  wt_root_encoded=$(printf '%s' "$WT_ROOT" | tr '/' '-')
-  case "$tpath" in
-    *"$wt_root_encoded-"*)
-      name=${tpath#*"$wt_root_encoded-"}
-      name=${name%%/*}
-      candidate="$WT_ROOT/$name"
-      if [ -d "$candidate" ]; then
-        echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
-        worktree_path="$candidate"
-      fi
-      ;;
-  esac
+  if wt_session_workstream_from_transcript "$tpath"; then
+    candidate="$WT_ROOT/$WT_SESSION_WORKSTREAM"
+    echo "[session-end] cwd is '$cwd'; using worktree '$candidate' derived from transcript_path"
+    worktree_path="$candidate"
+  fi
 fi
 
 if [ -z "$worktree_path" ] || [ ! -d "$worktree_path" ]; then
@@ -123,6 +118,13 @@ if [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; then
   # WT_BLOCKERS captures WHICH entries block it — untracked file vs unmerged
   # commit is the whole diagnosis (e.g. review-ios lingered on one untracked doc).
   wt_log "decision=skip:unmerged branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY blockers=[$WT_BLOCKERS] wt=$worktree_path"
+  exit 0
+fi
+. "$WT_MONO/bin/lib/workstream-box-state.sh"
+name=$(basename "$worktree_path")
+if pin_reason=$(workstream_cull_pin_reason "$name"); then
+  echo "[session-end] worktree '$WT_BRANCH' is pinned ($pin_reason) — leaving alone"
+  wt_log "decision=skip:pinned reason=$pin_reason branch=$WT_BRANCH wt=$worktree_path"
   exit 0
 fi
 wt_log "decision=clean branch=$WT_BRANCH ahead=0 dirty=0 wt=$worktree_path"

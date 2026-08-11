@@ -1,8 +1,10 @@
 ---
 title: "capture pipeline retries broken capture forever"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: prod (one personal box) — the box's own agent flagged process-captures failing 3,333×; boxholder asked me to look
+resolution: implemented
 ---
 
 On one prod box, `process-captures` has failed **every wakeup since ~Jul 4**

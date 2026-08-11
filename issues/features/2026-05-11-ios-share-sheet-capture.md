@@ -1,8 +1,9 @@
 ---
 title: "iOS Share Sheet capture via native extension"
+workstream: unknown
 area: callback-box
 needs: [manual-testing]
-design: ../callback-box/docs/plans/ios-share-extension-capture.md
+design: ../../callback-box/docs/plans/ios-share-extension-capture.md
 ---
 
 ## Current design decision
@@ -48,3 +49,9 @@ does not advertise those types until capture staging supports exact chat and sav
 >    box named by the sheet.
 
 Only Ian should clear `needs: [manual-testing]`.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

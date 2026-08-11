@@ -1,5 +1,6 @@
 ---
 title: "CLAUDE.md / docs backlog (from CLAUDE-MD-REVIEW, 2026-04)"
+workstream: unknown
 ---
 
 2026-07-04 · backlog, carried forward from a retired audit doc.

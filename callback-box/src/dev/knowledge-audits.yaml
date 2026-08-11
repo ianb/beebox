@@ -110,8 +110,9 @@ tests:
   # can't express go in the schema's `validate` hook, not a `.refine()`"). See
   # docs/reports/knowledge-audit-rerun-2026-07-03.md.
   # Status (2026-08-04): tab-arrangement-editing passed its first focused run
-  # (2 file reads, 0 searches). The agent preserved UUID identity, described
-  # close as an explicit partition, and kept status-ready separate from Apply.
+  # (2 file reads, 0 searches). Status (2026-08-10): passed after the switch to
+  # annotated deletion (1 file read, 0 searches); the agent kept every UUID in
+  # a proposed window, also marked deletions in close, and preserved explicit Apply.
 
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
@@ -165,9 +166,11 @@ tests:
     expected_level: knows_about
     should_read: ["docs/generated/card-tab-arrangement.md"]
     watch_for: >
-      Preserves the original per-tab UUIDs exactly once across proposed
-      windows or close, never substitutes URLs, and says status ready does not
-      itself change Chrome: the boxholder must explicitly Apply in the viewer.
+      Preserves every original per-tab UUID exactly once in the proposed
+      windows, additionally lists deleted UUIDs in close without removing them
+      from their window positions, never substitutes URLs, and says status
+      ready does not itself change Chrome: the boxholder must explicitly Apply
+      in the viewer.
     correct_contains: ["UUID", "Apply"]
     tags: [cards, schemas, tab-arrangement]
 

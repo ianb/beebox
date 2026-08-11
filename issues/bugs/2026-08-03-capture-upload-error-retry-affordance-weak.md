@@ -1,5 +1,6 @@
 ---
 title: "Capture upload error/retry affordance is tiny and gives no feedback on click"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder tried to retry a failed capture upload

@@ -1,5 +1,6 @@
 ---
 title: "Capture's DELETE route and sweep can delete a session out from under its worker"
+workstream: chat-photo-batch-upload
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-photo-batch-upload — Codex review of the bulk-upload teardown fixes

@@ -1,5 +1,6 @@
 ---
 title: "Lightbox: can't page rapidly — each swipe must fully land before the next is accepted"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: boxholder, using the new swipe nav on a real device right after it shipped

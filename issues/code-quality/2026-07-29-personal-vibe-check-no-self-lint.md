@@ -1,9 +1,10 @@
 ---
 title: "personal-vibe-check has no working self-lint"
+workstream: unknown
 area: personal-vibe-check
 filed-by: agent
 discovered-in: finish-skill-audit worktree — adding a root `lint` script exposed it
-needs: []
+
 ---
 
 The preset package that defines everyone else's lint has never linted itself.

@@ -1,5 +1,6 @@
 ---
 title: "Do our subagents inherit the monorepo CLAUDE.md and its rules?"
+workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix

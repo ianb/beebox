@@ -23,8 +23,9 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { buildGraphExtended, ROOT } from "./doc-graph-data.js";
-import { duplicateBasenames, buildBasenameLookup, repairLinks, type UnfixableLink } from "./doc-link-repair.js";
+import { duplicateBasenames, buildBasenameLookup, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./doc-link-repair.js";
 import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link-check.js";
+import { frontmatterProblems } from "./doc-frontmatter.js";
 
 const MONO_ROOT = path.dirname(ROOT);
 
@@ -133,9 +134,18 @@ function privateLinkProblems(): string[] {
   return problems;
 }
 
+function schemaProblems(tracked: string[]): string[] {
+  const exists = (rel: string): boolean => fs.existsSync(path.join(MONO_ROOT, rel));
+  return tracked.flatMap((rel) => frontmatterProblems({
+    rel,
+    source: fs.readFileSync(path.join(MONO_ROOT, rel), "utf8"),
+    exists,
+  }));
+}
+
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
-  const problems = [...referenceProblems(), ...issuesUniquenessProblems(tracked), ...privateLinkProblems()];
+  const problems = [...referenceProblems(), ...issuesUniquenessProblems(tracked), ...privateLinkProblems(), ...schemaProblems(tracked)];
 
   if (problems.length > 0) {
     console.error("doc-check failed:");
@@ -161,7 +171,13 @@ function runFix(): void {
   for (const rel of scanSources) {
     const abs = path.join(MONO_ROOT, rel);
     const content = fs.readFileSync(abs, "utf8");
-    const result = repairLinks({ fromRel: rel, content, fileExists, basenameLookup });
+    const frontmatterResult = repairFrontmatterPaths({ fromRel: rel, content, fileExists, basenameLookup });
+    const markdownResult = repairLinks({ fromRel: rel, content: frontmatterResult.content, fileExists, basenameLookup });
+    const result = {
+      content: markdownResult.content,
+      rewrites: [...frontmatterResult.rewrites, ...markdownResult.rewrites],
+      unfixable: [...frontmatterResult.unfixable, ...markdownResult.unfixable],
+    };
     if (result.rewrites.length > 0) {
       fs.writeFileSync(abs, result.content, "utf8");
       filesChanged++;

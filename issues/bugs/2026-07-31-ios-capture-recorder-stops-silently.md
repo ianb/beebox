@@ -1,5 +1,6 @@
 ---
 title: "iOS: native audio capture can stop recording while the UI still says recording"
+workstream: ios-audio-session-fix
 area: callback-box
 filed-by: agent
 discovered-in: worktree-ios-audio-session-fix — Codex review of the audio-session fix

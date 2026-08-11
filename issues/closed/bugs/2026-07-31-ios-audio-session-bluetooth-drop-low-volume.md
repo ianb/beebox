@@ -1,9 +1,10 @@
 ---
 title: "iOS: audio drops off Bluetooth and plays very quietly — the mic's AVAudioSession config"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, using audio on the iOS app
-design: ../../callback-box/docs/plans/ios-audio-session-routing.md
+design: ../../../callback-box/docs/implemented-plans/ios-audio-session-routing.md
 labels: [mobile]
 resolution: implemented
 ---

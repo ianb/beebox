@@ -1,10 +1,11 @@
 import type { TabArrangementPayload } from "../contract/clerk-contract.generated.js";
 import type { StoredTabTransfer } from "../domain/tab-arrangement.js";
-import { sourceProposal, validateProposal } from "../domain/tab-arrangement.js";
+import { normalizeProposal, sourceProposal, validateProposal } from "../domain/tab-arrangement.js";
 import type { TabArrangementResult } from "../domain/relay-messages.js";
 import { loadTabTransfer, saveTabTransfer } from "./tab-transfer-storage.js";
 import {
   compareBeforeClose,
+  compareClosedTabs,
   compareOriginalSnapshot,
   compareProposalSnapshot,
 } from "./tab-arrangement-verifier.js";
@@ -68,36 +69,39 @@ async function applyArrangement(
   if (transfer.state !== "ready") return failure("invalid", "Only a ready, unapplied transfer can be applied.");
   const invalid = validateProposal(transfer.payload, proposal);
   if (invalid !== null) return failure("invalid", invalid);
+  const normalized = normalizeProposal(transfer.payload, proposal);
   const stale = await compareOriginalSnapshot(transfer);
   if (stale !== null) return failure("stale", `Nothing was changed: ${stale}`);
 
   const beforeApply = sourceProposal(transfer.payload);
-  await saveTabTransfer({ ...transfer, state: "applying", beforeApply, appliedProposal: proposal });
+  await saveTabTransfer({ ...transfer, state: "applying", beforeApply, appliedProposal: normalized });
   let closesStarted = false;
   try {
-    const updatedLocations = await arrangeOpenTabs(transfer, proposal);
-    const beforeClose = await compareBeforeClose({ transfer, locations: updatedLocations, proposal });
+    const updatedLocations = await arrangeOpenTabs(transfer, normalized);
+    const beforeClose = await compareBeforeClose({ transfer, locations: updatedLocations, proposal: normalized });
     if (beforeClose !== null) throw new VerificationError(beforeClose);
-    const closeTabIds = proposal.close.map((id) => transfer.locations[id]?.tabId).filter(isNumber);
+    const closeTabIds = normalized.close.map((id) => updatedLocations[id]?.tabId).filter(isNumber);
     if (closeTabIds.length > 0) {
       closesStarted = true;
       await chrome.tabs.remove(closeTabIds);
     }
-    const verification = await compareProposalSnapshot({ ...transfer, locations: updatedLocations }, proposal);
+    const closedVerification = await compareClosedTabs(updatedLocations, normalized);
+    if (closedVerification !== null) throw new VerificationError(closedVerification);
+    const verification = await compareProposalSnapshot({ ...transfer, locations: updatedLocations }, normalized);
     if (verification !== null) throw new VerificationError(verification);
     const applied: StoredTabTransfer = {
       ...transfer,
       locations: updatedLocations,
       state: "applied",
       beforeApply,
-      appliedProposal: proposal,
+      appliedProposal: normalized,
       error: undefined,
     };
     await saveTabTransfer(applied);
     return {
       ok: true,
       state: "applied",
-      message: `Applied the arrangement. ${proposal.close.length} tab${proposal.close.length === 1 ? " was" : "s were"} closed.`,
+      message: `Applied the arrangement. ${normalized.close.length} tab${normalized.close.length === 1 ? " was" : "s were"} closed.`,
       undoAvailable: true,
     };
   } catch (error) {
@@ -116,7 +120,7 @@ async function applyArrangement(
         return failure("error", `Chrome rejected the arrangement; the captured layout was restored. ${message}`);
       }
     }
-    await saveTabTransfer({ ...transfer, state: "partial", beforeApply, appliedProposal: proposal, error: message });
+    await saveTabTransfer({ ...transfer, state: "partial", beforeApply, appliedProposal: normalized, error: message });
     return { ok: true, state: "partial", message: `Chrome stopped partway through: ${message}`, undoAvailable: false };
   }
 }
@@ -194,9 +198,8 @@ async function arrangeOpenTabs(
   proposal: TabArrangementPayload["proposal"],
 ): Promise<StoredTabTransfer["locations"]> {
   const locations = { ...transfer.locations };
-  const close = new Set(proposal.close);
-  const openIds = Object.keys(locations).filter((id) => !close.has(id));
-  await Promise.all(openIds.map((id) => chrome.tabs.update(requireLocation(locations, id).tabId, { pinned: false })));
+  const arrangedIds = proposal.windows.flatMap((window) => window.tabs);
+  await Promise.all(arrangedIds.map((id) => chrome.tabs.update(requireLocation(locations, id).tabId, { pinned: false })));
 
   const originalWindowIds = sourceWindowMap(transfer);
   for (const proposedWindow of proposal.windows) {

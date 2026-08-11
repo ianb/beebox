@@ -1,5 +1,6 @@
 ---
 title: "Chat list full-streams every untitled transcript on the request path"
+workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep

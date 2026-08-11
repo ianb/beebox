@@ -1,9 +1,10 @@
+---
+title: "Hub `/healthz` reflects box-child health"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Hub `/healthz` reflects box-child health
-
-**Status:** implemented 2026-07 — verdict derivation, auth gating, and the
-canary route all shipped; see `docs/health-checks.md` for the current
-reference and `src/hub/hub-health.ts` / `src/hub/hub-health-routes.ts` for the
-code.
 
 The hub's `/healthz` cannot report a failure: its status field is the literal
 `"ok"`, and the per-box supervisor state it already returns is evaluated by

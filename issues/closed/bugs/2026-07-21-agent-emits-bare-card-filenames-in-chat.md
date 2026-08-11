@@ -1,5 +1,6 @@
 ---
 title: "Agent writes a bare `Foo.type.card` filename in chat instead of a link"
+workstream: unknown
 area: callback-box
 filed-by: agent
 resolution: implemented

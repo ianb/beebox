@@ -1,5 +1,6 @@
 ---
 title: "Field-test quiescence times out on a gmail intake job that never drains"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (dentist-email)

@@ -1,5 +1,6 @@
 ---
 title: "Email storage: API access for the bulk, file-based cards only for threads that earn it"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — raised by the boxholder after the box-family watcher OOM, 2026-08-05

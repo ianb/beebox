@@ -44,6 +44,8 @@ import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
 import { StatusBadge } from "./ui/StatusBadge";
+import { CardActions } from "./card-actions/CardActions";
+import { MissingCardState } from "./card-actions/MissingCardState";
 
 export type FileViewMode = "page" | "chat" | "companion" | "embed";
 
@@ -95,6 +97,7 @@ interface FileViewProps {
    * an embedded image/figure card shows it like a normal captioned image.
    */
   caption?: string;
+  onClose?: () => void;
 }
 
 /* ---------- path classification ---------- */
@@ -258,7 +261,7 @@ function RendererToggle({
 
 /** Chat-mode header: name + full path (truncated, hover for full), open-in-sidebar + open-in-browse icons. */
 function ChatHeader({
-  path, title, renderers, active, onSelect, onOpenInPanel,
+  path, title, renderers, active, onSelect, onOpenInPanel, onTrashed,
 }: {
   path: string;
   /** The card's frontmatter title, when it has one — wins over the filename. */
@@ -266,7 +269,7 @@ function ChatHeader({
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
-  onOpenInPanel?: () => void;
+  onOpenInPanel?: () => void; onTrashed?: (() => void) | undefined;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const browseHref = withBase(`/${boxSlug}/browse/${path}`);
@@ -277,6 +280,7 @@ function ChatHeader({
         <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
+      <CardActions path={path} onTrashed={onTrashed} />
       {onOpenInPanel ? (
         <OpenInPanelButton onClick={onOpenInPanel} label="Open in sidebar" size="sm" />
       ) : null}
@@ -285,20 +289,16 @@ function ChatHeader({
   );
 }
 
-/** Page-mode header: path as title, metadata (type/status), renderer toggle. */
 function PageHeader({
-  data, renderers, active, onSelect,
+  data, renderers, active, onSelect, onTrashed,
 }: {
   data: FileData;
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
+  onTrashed?: (() => void) | undefined;
 }) {
   const status = typeof data.frontmatter?.status === "string" ? data.frontmatter.status : null;
-  // The card's title is the headline; the path is metadata. A filename as
-  // the page heading was the field test's worst vocabulary leak — and the
-  // path subtitle already carries the `.type.card` suffix, so a separate
-  // "Type:" label said it twice.
   return (
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
@@ -311,7 +311,7 @@ function PageHeader({
             {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
-        <RendererToggle renderers={renderers} active={active} onSelect={onSelect} />
+        <div className="flex items-center gap-1"><RendererToggle renderers={renderers} active={active} onSelect={onSelect} />{isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onTrashed} /> : null}</div>
       </div>
     </div>
   );
@@ -319,7 +319,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -329,11 +329,6 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     onAddSelection({ ref, text: selection.text, position: selection.position });
   }, [onAddSelection, path]);
 
-  // Track user's toggle selection scoped to the current path. When the path
-  // changes, the stored path no longer matches so selection resets without
-  // needing an effect. Unused in the controlled case below: a host that owns
-  // the renderer never writes here, so `userSelection` stays null and can't
-  // shadow the `rendererName` it hands down.
   const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
   const selectForPath = useCallback((name: string) => {
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
@@ -346,8 +341,6 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     setUserSelection({ path, name });
   }, [onSelectRenderer, path, reportActivity]);
 
-  // A box view exporting `rendersCardTypes` becomes this card type's
-  // default renderer; the built-ins stay available through the toggle.
   const binding = useCardViewBinding(data?.type);
   const renderers: FileRenderer[] = useMemo(() => {
     const base = data ? getRenderers(path, data) : [];
@@ -368,7 +361,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   }, [path, data, binding, mode, reportActivity, onNavigate, params]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
-  if (error) {
+  if (error && !(isCardPath(path) && error.startsWith("Card not found:"))) {
     return (
       <div className="p-4 text-danger-dark">
         <p className="font-medium">Error loading {path}</p>
@@ -376,7 +369,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
       </div>
     );
   }
-  if (!data) return <div className="p-4 text-warm-600">File not found: {path}</div>;
+  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {path}</div>;
 
   const userName = userSelection && userSelection.path === path ? userSelection.name : null;
   const requested = userName ?? rendererName ?? null;
@@ -404,7 +397,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (mode === "chat") {
     return (
       <div className="border rounded-lg overflow-hidden bg-white">
-        <ChatHeader path={path} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} />
+        <ChatHeader path={path} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} onTrashed={onClose} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
     );
@@ -415,9 +408,10 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     // compact toggle row if there are alternates.
     return (
       <div>
-        {renderers.length > 1 ? (
-          <div className="flex justify-end px-3 py-2 border-b border-warm-200 print:hidden">
+        {renderers.length > 1 || isCardPath(data.path) ? (
+          <div className="flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
             <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact />
+            {isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onClose} /> : null}
           </div>
         ) : null}
         {body}
@@ -425,10 +419,9 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     );
   }
 
-  // page mode
   return (
     <div>
-      <PageHeader data={data} renderers={renderers} active={active} onSelect={selectForPath} />
+      <PageHeader data={data} renderers={renderers} active={active} onSelect={selectForPath} onTrashed={onClose} />
       {body}
     </div>
   );

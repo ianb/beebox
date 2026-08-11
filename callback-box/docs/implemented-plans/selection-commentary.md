@@ -1,3 +1,9 @@
+---
+title: "Selection Commentary — referencing document text in chat input"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Selection Commentary — referencing document text in chat input
 
 > **Status: Implemented (2026-05).** This document is the original design

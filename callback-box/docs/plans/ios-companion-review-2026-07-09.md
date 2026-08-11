@@ -1,3 +1,9 @@
+---
+title: "iOS Companion — code review (2026-07-09)"
+status: active
+workstream: unknown
+issues: []
+---
 # iOS Companion — code review (2026-07-09)
 
 **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the composer redesign; server findings S1–S3 still open there.

@@ -1,3 +1,9 @@
+---
+title: "Scan vision: Claude Sonnet default, Gemini opt-in"
+status: active
+workstream: unknown
+issues: []
+---
 # Scan vision: Claude Sonnet default, Gemini opt-in
 
 Switch `cb scan-import`'s photo-analysis backend from Gemini Flash (required

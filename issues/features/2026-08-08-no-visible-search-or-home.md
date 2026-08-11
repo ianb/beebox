@@ -1,5 +1,6 @@
 ---
 title: "No visible search box and no home surface — a knowledge base you can't search or survey"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)

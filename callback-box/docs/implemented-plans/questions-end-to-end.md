@@ -1,6 +1,10 @@
+---
+title: "Questions, end-to-end"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Questions, end-to-end
-
-**Status:** implemented 2026-07 — landed on `worktree-questions-end-to-end`.
 
 Redesign of the questions subsystem so that it does the job it exists for:
 the box asks the boxholder things it cannot decide alone, the boxholder

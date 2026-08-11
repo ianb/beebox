@@ -1,5 +1,6 @@
 ---
 title: "Public worktree tooling hardcodes ~/src/… paths; derive like private-issues does"
+workstream: private-issues
 area: router
 filed-by: agent
 discovered-in: worktree-private-issues — while building the private-issues shadow repo
@@ -8,7 +9,7 @@ design: ../../callback-box/docs/plans/worktree-control-surface.md
 
 > **Mostly resolved 2026-08 in `worktree-worktree-seam`.** The new
 > `bin/lib/worktree-paths.sh` (`wt_paths_init`) now covers the
-> WorktreeCreate/Remove hooks, `session-end.sh`, `bin/worktrees sweep`, and
+> WorktreeCreate/Remove hooks, `session-end.sh`, `bin/workstreams sweep`, and
 > `bin/launch-worktree-session` — the first three bullets below are done.
 > **Still outstanding:** the fourth bullet, `bin/private-issues
 > cmd_report_orphans`'s `callback-worktrees` sibling-basename assumption.
@@ -30,7 +31,7 @@ their clone. The PUBLIC worktree tooling predates that and hardcodes
   `~/src/boxes/test1`, `~/src/box-worktrees`.
 - `.claude/hooks/session-end.sh` — `$HOME/src/callback-worktrees/*` cwd
   match, `MONO="$HOME/src/callback-box"`, the transcript-path regex.
-- `.claude/hooks/auto-sweep.sh` gate, `bin/worktrees sweep` roots.
+- `.claude/hooks/auto-sweep.sh` gate, `bin/workstreams sweep` roots.
 - `bin/private-issues cmd_report_orphans` assumes the sibling dir name
   `callback-worktrees` (it derives the parent, but not that basename).
 

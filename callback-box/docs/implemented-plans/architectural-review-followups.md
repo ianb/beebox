@@ -1,9 +1,10 @@
+---
+title: "Architectural Review Follow-ups — Plan"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Architectural Review Follow-ups — Plan
-
-**Status:** implemented 2026-07 — all eight tracks landed on
-`worktree-architectural-review` and merged to `main`; full suite green (3484
-pass at merge; one known flake filed as
-[`issues/bugs/2026-07-09-flaky-child-output-log-doctest.md`](../../../issues/closed/bugs/2026-07-09-flaky-child-output-log-doctest.md)).
 
 Second round of the architectural review: implementing the follow-up issues
 the first round filed (`issues/2026-07-0[56]-*.md`), under the same

@@ -225,6 +225,11 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   if (pathname === "/" || pathname === "") return { kind: "control-read", json: false };
   if (pathname === "/favicon.png" || pathname === "/favicon.ico") return { kind: "unauth-allowlist" };
   if (pathname === "/__router" || pathname.startsWith("/__router/")) return classifyRouterControl(pathname);
+  if (pathname === "/workstreams" || pathname.startsWith("/workstreams/")) {
+    if (method === "GET" || method === "HEAD") return { kind: "control-read", json: false };
+    if (method === "POST" && pathname.startsWith("/workstreams/action/")) return { kind: "control" };
+    return { kind: "unknown" };
+  }
   // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev browser (owner).
   if (pathname === "/dev" || pathname === "/dev/") return { kind: "control-read", json: false };
 

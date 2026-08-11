@@ -1,5 +1,6 @@
 ---
 title: "agent-browser's origin-scoped header injection may not cover WebSocket upgrades (browse-key sessions)"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — investigating the stuck "Agent is working…" field-test finding

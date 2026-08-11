@@ -1,3 +1,9 @@
+---
+title: "Capture mode — unifying capture into the input"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Capture mode — unifying capture into the input
 
 Implements the "Capture mode" section of
@@ -10,14 +16,6 @@ pointing at the document. The chat agent — not a background procedure —
 annotates and files (or completes and deletes) the capture. The
 `/capture` page, the `process-captures` pipeline, its `cb` commands,
 and the dead voice-memo path retire.
-
-**Status:** implemented 2026-07 (worktree: `unify-capture-input`).
-Parent design: [input-widget.md](../plans/input-widget.md) (that doc's
-capture-mode section is now implemented; its listening-mode section
-remains an open design). Related parked doc:
-[../unimplemented-plans/capture-pipeline-redesign.md](../unimplemented-plans/capture-pipeline-redesign.md)
-(this plan supersedes its motivation for UI captures — the pipeline it
-wanted to fix is retired instead).
 
 ## Stated preferences this plan trades against
 

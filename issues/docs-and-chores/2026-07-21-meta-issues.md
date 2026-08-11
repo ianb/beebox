@@ -1,5 +1,6 @@
 ---
 title: "Meta issues: tracking issues that aggregate other issues"
+workstream: open-source-readiness
 area: issues
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder

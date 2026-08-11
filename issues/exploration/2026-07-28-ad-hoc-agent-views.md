@@ -1,5 +1,6 @@
 ---
 title: "Ad hoc views — the agent shows something without creating a card to host it"
+workstream: todo-annotation
 area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — designing the todo-view card surface

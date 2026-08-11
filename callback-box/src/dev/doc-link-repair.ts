@@ -186,3 +186,48 @@ export function repairLinks({
 
   return { content: outLines.join("\n"), rewrites, unfixable };
 }
+
+// Repair the path-bearing plan/issue frontmatter fields without reserializing
+// YAML (which would churn unrelated formatting and comments). The schema keeps
+// these paths as plain scalar values or an `issues:` block list.
+export function repairFrontmatterPaths({
+  fromRel,
+  content,
+  fileExists,
+  basenameLookup,
+}: {
+  fromRel: string;
+  content: string;
+  fileExists: (repoRelPath: string) => boolean;
+  basenameLookup: Map<string, string[]>;
+}): RepairResult {
+  if (!content.startsWith("---\n")) return { content, rewrites: [], unfixable: [] };
+  const rewrites: LinkRewrite[] = [];
+  const unfixable: UnfixableLink[] = [];
+  const ctx = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup };
+  let inFrontmatter = true;
+  let issuesList = false;
+  const lines = content.split("\n").map((line, index) => {
+    if (!inFrontmatter) return line;
+    if (index > 0 && line === "---") {
+      inFrontmatter = false;
+      return line;
+    }
+    if (index === 0) return line;
+    const scalar = /^(design|superseded-by):(\s*)(\S+\.md)$/.exec(line);
+    if (/^issues:\s*$/.test(line)) issuesList = true;
+    else if (/^\S/.test(line)) issuesList = false;
+    const listItem = issuesList ? /^(\s+-\s+)(\S+\.md)$/.exec(line) : null;
+    const target = scalar?.[3] ?? listItem?.[2];
+    if (!target) return line;
+    const decision = decideLink(target, ctx);
+    if (decision.kind === "unfixable") {
+      unfixable.push({ line: index + 1, target, reason: decision.reason });
+      return line;
+    }
+    if (decision.kind !== "rewrite") return line;
+    rewrites.push({ line: index + 1, from: target, to: decision.to });
+    return scalar ? `${scalar[1]}:${scalar[2]}${decision.to}` : `${listItem?.[1] ?? ""}${decision.to}`;
+  });
+  return { content: lines.join("\n"), rewrites, unfixable };
+}

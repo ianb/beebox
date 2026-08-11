@@ -1,3 +1,9 @@
+---
+title: "Asset Manifests"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Asset Manifests
 
 **Status: SUPERSEDED by git-annex — see [`../assets.md`](../assets.md).**

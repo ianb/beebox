@@ -1,5 +1,6 @@
 ---
 title: "Detect dead Google auth in health + notify the user with a clear re-authorize CTA"
+workstream: unknown
 area: callback-box
 filed-by: agent
 needs: [manual-testing]
@@ -84,3 +85,9 @@ but *handling it gracefully* is where we can be better than the field.
   (login failure is self-evident to the user in the moment)?
 - **Deep link** — can we link straight into the re-authorize action, or only to
   the admin page? A one-click reconnect from the notification is the ideal.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

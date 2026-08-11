@@ -1,5 +1,6 @@
 import type { TabArrangementPayload } from "../contract/clerk-contract.generated.js";
 import type { StoredTabTransfer } from "../domain/tab-arrangement.js";
+import { openProposal } from "../domain/tab-arrangement.js";
 
 const UNGROUPED = -1;
 
@@ -32,7 +33,8 @@ export async function compareProposalSnapshot(
   transfer: StoredTabTransfer,
   proposal: TabArrangementPayload["proposal"],
 ): Promise<string | null> {
-  for (const proposedWindow of proposal.windows) {
+  const expectedProposal = openProposal(proposal);
+  for (const proposedWindow of expectedProposal.windows) {
     const first = proposedWindow.tabs.at(0);
     if (first === undefined) return "the proposal contains an empty window";
     const windowId = transfer.locations[first]?.windowId;
@@ -49,8 +51,21 @@ export async function compareProposalSnapshot(
       if (changed !== null) return changed;
     }
   }
-  if (transfer.payload.scope === "all-windows" && (await normalWindows()).length !== proposal.windows.length) {
+  if (transfer.payload.scope === "all-windows" && (await normalWindows()).length !== expectedProposal.windows.length) {
     return "the set of normal windows changed";
+  }
+  return null;
+}
+
+export async function compareClosedTabs(
+  locations: StoredTabTransfer["locations"],
+  proposal: TabArrangementPayload["proposal"],
+): Promise<string | null> {
+  const liveTabIds = new Set((await chrome.tabs.query({})).map((tab) => tab.id));
+  for (const id of proposal.close) {
+    const tabId = locations[id]?.tabId;
+    if (tabId === undefined) return "a deleted tab has no local correlation";
+    if (liveTabIds.has(tabId)) return "a deleted tab remained open";
   }
   return null;
 }
@@ -70,16 +85,14 @@ export async function compareBeforeClose(options: {
       return "an unknown tab appeared before closes; no tabs were closed";
     }
   }
-  const closeTabIds = new Set(proposal.close.map((id) => locations[id]?.tabId));
   for (const window of proposal.windows) {
     const first = window.tabs.at(0);
     const targetWindowId = first === undefined ? undefined : locations[first]?.windowId;
     if (targetWindowId === undefined) return "a proposed tab has no local correlation";
     const live = await tabsInWindow(targetWindowId);
     if (live === null) return "a target window disappeared before closes";
-    const remaining = live.filter((tab) => tab.id === undefined || !closeTabIds.has(tab.id));
     const expected = window.tabs.map((id) => locations[id]?.tabId);
-    if (remaining.length !== expected.length || remaining.some((tab, index) => tab.id !== expected[index])) {
+    if (live.length !== expected.length || live.some((tab, index) => tab.id !== expected[index])) {
       return "the reversible layout did not verify before closes";
     }
   }

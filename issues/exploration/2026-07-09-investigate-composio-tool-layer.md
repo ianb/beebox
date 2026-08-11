@@ -1,7 +1,8 @@
 ---
 title: "investigate composio tool layer"
+workstream: unknown
 area: callback-box
-needs: [investigate]
+
 ---
 
 > **Update (2026-07-28) — for the auth-broker / token-custody angle, resolved

@@ -1,5 +1,6 @@
 ---
 title: "flaky child output log doctest"
+workstream: architectural-review
 area: callback-box
 filed-by: agent
 discovered-in: worktree-architectural-review — Phase-2 lint verification runs

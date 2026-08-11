@@ -1,3 +1,9 @@
+---
+title: "Remove cardworks — final deletion phase"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Remove cardworks — final deletion phase
 
 The execution plan for the last phase of `remove-cardworks-package.md`: sever

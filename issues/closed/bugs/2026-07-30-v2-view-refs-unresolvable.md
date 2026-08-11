@@ -1,5 +1,6 @@
 ---
 title: "View cardRefs are unresolvable on a v2 box (views live outside the box root)"
+workstream: unknown
 area: callback-box
 resolution: implemented
 ---

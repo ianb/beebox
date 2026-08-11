@@ -1,10 +1,11 @@
 ---
 title: "Submitting many photos to chat fails (iOS); route >N through upload+references"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder hit it on a prod box
 resolution: implemented
-design: ../../callback-box/docs/plans/chat-photo-batch-upload.md
+design: ../../../callback-box/docs/plans/chat-photo-batch-upload.md
 labels: [mobile]
 ---
 

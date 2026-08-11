@@ -1,9 +1,15 @@
 ---
 title: "Plans need frontmatter and a mapping from incomplete plans to issues"
+workstream: workstreams
 area: process
-needs: [design]
+design: ../../../callback-box/docs/implemented-plans/workstreams.md
 labels: [plans, issues, worktrees]
+resolution: implemented
 ---
+
+Closed by `b66aed4f` and `8b6d91df`: plan and issue frontmatter are now
+machine-validated, the document graph exposes the mapping, and `/finish`
+reconciles incomplete plan work explicitly.
 
 There are **44 active plans in `callback-box/docs/plans/`, 18,838 lines** (plus
 105 files / 45,130 lines in `implemented-plans/`). Nothing about that state is
@@ -35,7 +41,7 @@ remaining work never becomes a tracked item. It's visible only to whoever next
 reads the whole document.
 
 **No worktree/branch association.** Same gap the
-[worktree/session workflow redesign](../features/2026-08-08-worktree-session-workflow-redesign.md)
+[worktree/session workflow redesign](../../features/2026-08-08-worktree-session-workflow-redesign.md)
 describes for issues: `discovered-in:` is free text there, and plans have
 nothing at all. A plan produced by `worktree-foo` doesn't say so, so you can't
 get from a plan back to the work in flight on it.
@@ -64,7 +70,7 @@ they're the fastest-growing category of prose in the repo (0 → 64k lines in
 three months, more than double all actual documentation). The value is real:
 `implemented-plans/boxes-as-packages-v2.md` is where the `events.db` two-engine
 hazard was documented, and that's how
-[the events.db bug](../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md)
+[the events.db bug](../../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md)
 got filed. But an unqueryable pile of 44 in-flight plans has the same failure
 mode as the session/worktree problem: things accumulate and nothing says what's
 outstanding.

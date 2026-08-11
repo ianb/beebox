@@ -1,5 +1,6 @@
 ---
 title: "Todo/Plate view dumps a '75 cards couldn't be read' error list of every non-card file"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (dentist-email)

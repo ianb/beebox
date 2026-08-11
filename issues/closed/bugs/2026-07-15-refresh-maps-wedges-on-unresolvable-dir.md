@@ -1,8 +1,10 @@
 ---
 title: "refresh-maps wedges permanently when a directory can't be resolved at the asOf ref"
+workstream: unknown
 filed-by: agent
 discovered-in: main session — investigating a test box's stuck refresh-maps health flag
 area: callback-box
+resolution: implemented
 ---
 
 `refresh-maps` can enter an **unrecoverable deadlock** when the box contains a

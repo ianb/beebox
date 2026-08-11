@@ -1,5 +1,6 @@
 ---
 title: "Mobile device tokens still have no expiry or rotation"
+workstream: mobile-token-handshake
 area: callback-box
 filed-by: agent
 discovered-in: worktree-mobile-token-handshake — deferred from the cb_mobile cookie work

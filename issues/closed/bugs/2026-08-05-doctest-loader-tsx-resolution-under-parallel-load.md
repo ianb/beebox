@@ -1,5 +1,6 @@
 ---
 title: "Doctest loader intermittently resolves .tsx schema modules as missing .ts files"
+workstream: tab-organizer-clerk
 area: callback-box
 filed-by: agent
 discovered-in: worktree-tab-organizer-clerk — full finish-suite verification

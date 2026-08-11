@@ -1,7 +1,10 @@
+---
+title: "Story extraction: rubric, prompts, and the A/B review loop"
+status: active
+workstream: unknown
+issues: []
+---
 # Story extraction: rubric, prompts, and the A/B review loop
-
-**Status:** active — subplan of [github-pages-site](github-pages-site.md)
-(Track E's front half). Elicitation is explicitly out of scope here.
 
 Develop the extraction rubric and prompts that let subagents pull *story
 nuggets* out of repo documents, prove them on a small varied corpus, and give

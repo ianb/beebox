@@ -1,7 +1,10 @@
+---
+title: "Assets on git-annex"
+status: active
+workstream: unknown
+issues: []
+---
 # Assets on git-annex
-
-**Status:** proposed — design complete, nothing implemented. Supersedes
-`asset-offbox-storage.md` (see "How this plan changed").
 
 Move box assets (photos, scans, audio, video — the binary subset of
 attachments) from the hand-rolled manifest system onto git-annex, with

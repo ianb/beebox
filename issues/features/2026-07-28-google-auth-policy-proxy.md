@@ -1,5 +1,6 @@
 ---
 title: "Central Google auth + policy proxy: escape-proof filtering and per-client capabilities"
+workstream: unknown
 area: callback-box
 filed-by: agent
 needs: [design]

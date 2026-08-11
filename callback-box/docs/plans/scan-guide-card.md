@@ -1,6 +1,10 @@
+---
+title: "Scan Guide Card — scanner priors via the guide system"
+status: active
+workstream: unknown
+issues: []
+---
 # Scan Guide Card — scanner priors via the guide system
-
-**Status:** active — reviewed (codex cross-model, see `scan-guide-card.review.md`); implementation in flight on `worktree-scanner-ingest`.
 
 Replace the bespoke `CLAUDE_SCANS.md` scanner-priors file with a
 `config/scan.guide.card` guide card. The scan-import photo flow consumes the

@@ -1,5 +1,6 @@
 ---
 title: "login-redirect doctest flakes under parallel suite runs"
+workstream: finish-skill-audit
 area: callback-box
 filed-by: agent
 discovered-in: worktree-finish-skill-audit — /finish full-suite run after merging main

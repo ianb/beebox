@@ -1,6 +1,10 @@
+---
+title: "Courseware Phase 1 — the course: cards, rules, and the authoring skill"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Courseware Phase 1 — the course: cards, rules, and the authoring skill
-
-**Status:** implemented 2026-06
 
 This plan introduces a "courseware" card family centered on one container — a
 **course** — that an agent builds *with* a learner through a

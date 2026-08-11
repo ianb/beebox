@@ -1,5 +1,6 @@
 ---
 title: "iOS native and web-view runtime errors are not observable"
+workstream: unknown
 needs: [manual-testing]
 area: callback-box
 filed-by: agent
@@ -54,3 +55,9 @@ Confirm that media failures include the operation, error name or media error
 code, network state, and ready state, with symbolic labels rather than bare
 numbers. Leave the phone offline long enough for a
 navigation retry, then reconnect and confirm that retries did not flood the log.
+
+## Manual testing
+
+Follow the concrete reproduction or verification steps above. Confirm the
+observed result matches the expected behavior described in this issue before
+clearing the manual-testing flag.

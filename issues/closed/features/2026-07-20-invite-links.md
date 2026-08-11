@@ -1,5 +1,6 @@
 ---
 title: "Invite links: add a member without sharing a password"
+workstream: open-source-readiness
 needs: [design]
 area: callback-box
 filed-by: agent

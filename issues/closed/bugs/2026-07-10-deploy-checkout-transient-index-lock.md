@@ -1,5 +1,6 @@
 ---
 title: "Post-commit deploy fails hard on a transient worktree index.lock (ENOTDIR) instead of retrying"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — while deploying a frontend image-card fix (commit e0a788a7)
@@ -47,7 +48,7 @@ backoff/self-heal/lock attempts all failed because they treated symptoms. The
 real cause is structural: **`.deploy-checkout` was a git *worktree*, so it
 shared the main repo's `.git/worktrees/` bookkeeping that every concurrent
 worktree op mutates** — worktree sessions spinning up, cleanup hooks,
-`bin/worktrees sweep`, and (unlockable) Claude Code's own `git worktree remove`
+`bin/workstreams sweep`, and (unlockable) Claude Code's own `git worktree remove`
 on session exit. A shared `mkdir` lock was tried and STILL failed: `core.hooksPath`
 is relative (`.husky/_`), so the pre-existing worktree sessions run their OWN
 old, unlocked hooks — a lock in the current checkout can't cover them, nor

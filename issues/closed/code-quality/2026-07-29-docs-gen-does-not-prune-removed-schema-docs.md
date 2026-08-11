@@ -1,5 +1,6 @@
 ---
 title: "docs-gen never prunes docs/generated/card-<type>.md for a removed schema"
+workstream: todo-annotation
 area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — retiring the todo-list card type

@@ -1,5 +1,6 @@
 ---
 title: "Can directory-scoped rules replace generated CLAUDE.md / @-includes?"
+workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wondering if per-directory rules could replace generated context

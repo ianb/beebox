@@ -1,3 +1,9 @@
+---
+title: "iOS audio-session routing"
+status: implemented
+workstream: unknown
+issues: []
+---
 # iOS audio-session routing
 
 The iOS app configures `AVAudioSession` in two record paths and never

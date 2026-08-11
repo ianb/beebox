@@ -1,5 +1,6 @@
 ---
 title: "Run trigger evals on our skills — we vendored the tool and never used it"
+workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix

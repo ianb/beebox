@@ -1,3 +1,9 @@
+---
+title: "Plan: stop composer keystrokes from re-rendering chat history"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Plan: stop composer keystrokes from re-rendering chat history
 
 ## Goal

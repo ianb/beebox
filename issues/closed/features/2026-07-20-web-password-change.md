@@ -1,5 +1,6 @@
 ---
 title: "Web self-service password change"
+workstream: open-source-readiness
 area: callback-box
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code WorktreeCreate hook — an ADAPTER, not the implementation.
 #
-# The worktree logic itself lives in `bin/worktrees create`
+# The worktree logic itself lives in `bin/workstreams create`
 # (bin/lib/worktree-create.sh). It used to live here, which made repo-wide logic
 # look like Claude Code's property: `bin/launch-worktree-session --agent codex`
 # had to synthesize hook JSON and pipe it into this file to reach it. Now every
@@ -36,7 +36,7 @@ fi
 # a silent fallback to some other copy of the logic is how two implementations
 # start to coexist, which is the exact thing this adapter exists to prevent.
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-cli="$repo/bin/worktrees"
+cli="$repo/bin/workstreams"
 if [ ! -x "$cli" ]; then
   echo "[worktree-create] FATAL: no executable $cli — cannot create a worktree" >&2
   exit 1
@@ -45,6 +45,6 @@ fi
 # NOTE: --path is deliberately NOT forwarded. Claude Code proposes
 # <repo>/.claude/worktrees/<name>, and the whole point of this hook is to
 # override that (callback-box's file:../personal-vibe-check dep only resolves
-# when the worktree is a sibling of the monorepo). `bin/worktrees create`
+# when the worktree is a sibling of the monorepo). `bin/workstreams create`
 # chooses the location; we accept it.
 exec "$cli" create "$name" --base-ref "$base_ref"

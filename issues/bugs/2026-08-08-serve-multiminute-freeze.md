@@ -1,5 +1,6 @@
 ---
 title: "cb serve went unresponsive for ~4 minutes, then self-healed silently"
+workstream: integration-tests
 area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)

@@ -1,5 +1,6 @@
 ---
 title: "Google auth for self-hosters: formalize the bring-your-own-Cloud-project story"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder asked about BYO-domain auth

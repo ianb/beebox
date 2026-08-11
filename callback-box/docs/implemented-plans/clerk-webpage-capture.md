@@ -1,6 +1,10 @@
+---
+title: "Web-page commentary capture"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Web-page commentary capture
-
-**Status:** implemented 2026-06 — merged to main via worktree-callback-clerk
 
 Make the callback-clerk browser extension's primary action turn the current
 web page into a **commentary document** inside a box: extract a readable

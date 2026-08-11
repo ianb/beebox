@@ -1,5 +1,6 @@
 ---
 title: "Chat turn stream never arrives — UI stuck on 'Agent is working…'"
+workstream: remove-cb-render
 area: callback-box
 filed-by: agent
 discovered-in: worktree-remove-cb-render — browser-verifying the chat surfaces after removing cb render

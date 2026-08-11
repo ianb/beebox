@@ -145,15 +145,15 @@ bin/launch-worktree-session --agent codex [--model gpt-5.5] <name> -  # OpenAI C
 ```
 
 **`--agent codex`** launches OpenAI's codex CLI instead of Claude Code: same
-worktree + box clone + installs (the launch script calls the WorktreeCreate
-hook directly, since codex has no `--worktree`), plus generated AGENTS.md
+worktree + box clone + installs (both launch paths call the agent-neutral
+`bin/workstreams create` command), plus generated AGENTS.md
 mirrors of every CLAUDE.md so codex gets the repo docs (mechanism:
 `bin/CLAUDE.md` → "Codex worktree sessions"). With codex, `--model` takes
 OpenAI names (`gpt-5.5` was the known-good pick when the account throttled the
 default model, 2026-07 — see the `cross-model` skill); Remote Control doesn't exist
 for codex and the flag is ignored; the briefing wrapper works the same. Only
 use this when the human asked for a Codex session. Cleanup also differs: no
-hook fires on codex exit, so the worktree lingers until `bin/worktrees sweep`
+hook fires on codex exit, so the worktree lingers until `bin/workstreams sweep`
 collects it once merged + clean.
 
 **Remote Control is on by default** — the launcher passes
@@ -171,10 +171,12 @@ A Fable session then follows the delegate-and-Codex-review guidance in the root
 CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
 just a stronger single pass.
 
-It opens a new tab in the front Terminal.app window (or a new window if
-none is open), `cd`s into the monorepo, and runs `claude --worktree <name>
---name <name> --dangerously-skip-permissions "<briefing>"`. The WorktreeCreate
-hook handles git worktree setup, the cloned test box, and pnpm installs.
+It opens a new tab in the front Terminal.app window (or a new window if none is
+open), calls `bin/workstreams create <name>`, `cd`s into that checkout, and runs
+`claude --name <name> --dangerously-skip-permissions "<briefing>"`. The launcher
+deliberately omits Claude's native `--worktree`: the repository's SessionEnd
+hook and sweep own cleanup, so exiting a named session does not ask the human to
+keep or remove the worktree.
 
 First-time macOS will prompt for Accessibility permission for Terminal
 control. Mention that to the human if it happens.

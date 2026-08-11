@@ -1,5 +1,6 @@
 ---
 title: "Camera capture traps you — Cancel is disabled until you've captured something"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder opened the camera and couldn't get out

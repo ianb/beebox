@@ -1,5 +1,6 @@
 ---
 title: "Chat agent narrates internal bookkeeping the user doesn't care about"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder noticed it in a live chat exchange

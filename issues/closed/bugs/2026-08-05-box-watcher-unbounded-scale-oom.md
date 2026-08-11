@@ -1,5 +1,6 @@
 ---
 title: "The box file watcher watches every directory in the box — 69k watches on a real box, and it OOMs the whole server"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — heap snapshot of the live prod box-family child, 2026-08-05

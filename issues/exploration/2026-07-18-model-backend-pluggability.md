@@ -1,5 +1,6 @@
 ---
 title: "Model-backend pluggability: can the Agent SDK run on an Anthropic-compatible endpoint?"
+workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — backend-alternatives research (research/backend-alternatives/README.md)

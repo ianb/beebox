@@ -1,5 +1,9 @@
-**Status:** partially implemented 2026-08-09. Track 1 landed (`bin/test-graph.ts` + the `resolve-rules` extraction) and Track 5a landed (`bin/test-ledger.ts`, `bin/test-ledger-lib.ts`, `bin/test-ledger-report.ts`, wired into `pnpm test`). Tracks 2, 3, 4 are on hold pending ledger data; Track 5b (the nightly) not started.
-
+---
+title: "Test failure ledger, and change-based selection on the iteration loop"
+status: partial
+workstream: unknown
+issues: []
+---
 # Test failure ledger, and change-based selection on the iteration loop
 
 Two things, in this order of importance:

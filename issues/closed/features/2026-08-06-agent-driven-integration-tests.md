@@ -1,5 +1,6 @@
 ---
 title: "Full agent-driven integration tests exercising realistic box activities"
+workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, soft-launch confidence

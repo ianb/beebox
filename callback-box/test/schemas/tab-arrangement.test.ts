@@ -18,11 +18,15 @@ const source = {
   }],
 };
 
-t.test("tab arrangement proposal is an exact identity partition", (st) => {
+t.test("tab arrangement proposal keeps deleted tabs in their window positions", (st) => {
+  st.same(arrangementIssues({
+    source,
+    proposal: { windows: [{ id: "40000000-0000-4000-8000-000000000000", tabs: [pinned, other] }], close: [other] },
+  }), []);
   st.same(arrangementIssues({
     source,
     proposal: { windows: [{ id: "40000000-0000-4000-8000-000000000000", tabs: [pinned] }], close: [other] },
-  }), []);
+  }), [], "legacy partition cards remain valid");
   st.match(arrangementIssues({
     source,
     proposal: { windows: [{ id: "40000000-0000-4000-8000-000000000000", tabs: [other, pinned] }], close: [] },
@@ -30,7 +34,11 @@ t.test("tab arrangement proposal is an exact identity partition", (st) => {
   st.match(arrangementIssues({
     source,
     proposal: { windows: [{ id: "40000000-0000-4000-8000-000000000000", tabs: [pinned] }], close: [] },
-  }).map((issue) => issue.message), [/omits source tab/]);
+  }).map((issue) => issue.message), [/every source tab/]);
+  st.match(arrangementIssues({
+    source,
+    proposal: { windows: [{ id: "40000000-0000-4000-8000-000000000000", tabs: [pinned, other] }], close: [pinned, other] },
+  }).map((issue) => issue.message), [/at least one tab/]);
   st.end();
 });
 

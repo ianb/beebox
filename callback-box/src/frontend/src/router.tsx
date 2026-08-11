@@ -130,6 +130,7 @@ const historySearchSchema = z.object({
   touchpoint: z.boolean().optional(),
   feedback: z.boolean().optional(),
   session: z.string().optional(),
+  path: z.string().optional(),
 });
 
 const historyRoute = createRoute({

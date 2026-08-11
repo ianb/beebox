@@ -1,3 +1,9 @@
+---
+title: "Codex review — web-push-notifications.md"
+status: implemented
+workstream: unknown
+issues: []
+---
 # Codex review — web-push-notifications.md
 
 Cross-model (OpenAI codex, read-only repo access, high reasoning) review of the

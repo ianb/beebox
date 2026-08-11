@@ -1,9 +1,10 @@
 ---
 title: "Retire the todo-list card schema, superseded by {% todo %}"
+workstream: todo-annotation
 area: callback-box
 filed-by: agent
 discovered-in: worktree-todo-annotation — follow-up named in the todo-annotation plan's NOT-in-scope list
-design: ../../callback-box/docs/implemented-plans/todo-annotation.md
+design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
 resolution: implemented
 ---
 
