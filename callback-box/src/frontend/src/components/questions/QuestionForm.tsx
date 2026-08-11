@@ -32,32 +32,56 @@ interface QuestionFormProps {
   sourcePath?: string;
 }
 
-/** Shared memo/learning preamble shown above every widget. */
+/**
+ * Shared preamble shown above every widget: title and prompt always fully
+ * visible, supporting prose (memo, learning) height-capped with its own
+ * scroll.
+ *
+ * The question and its answer controls are the card's point, and long prose
+ * used to push them below an invisible fold — a field-test operator judged a
+ * real person "would have read that card as informational and closed it,"
+ * silently breaking the questions loop. So the prompt leads (it's the
+ * question), the context scrolls, and the answer never hides.
+ */
 function QuestionContext({ question }: { question: QuestionInfo }) {
+  const hasMemo = question.memo !== undefined && question.memo !== "";
+  const hasLearning = question.learning?.proposal !== undefined;
   return (
     <>
       <Text as="h3" size="lg" weight="bold" className="mb-2">
         {question.name}
       </Text>
-      {question.memo !== undefined && question.memo !== "" ? (
-        <Text as="p" tone="subtle" size="sm" className="mb-2">
-          {question.memo}
-        </Text>
-      ) : null}
-      <Text as="p" className="mb-4">
+      <Text as="p" className="mb-2">
         {question.prompt}
       </Text>
-      {question.learning?.proposal !== undefined ? (
-        <Card padding="sm" background="info" border="none" className="mb-4">
-          <Text as="div" size="xs" tone="subtle" uppercase weight="semibold" className="mb-1">
-            What the box is trying to learn
-          </Text>
-          <Text as="div" size="sm">{question.learning.proposal}</Text>
-        </Card>
-      ) : null}
+      {hasMemo || hasLearning ? (
+        <div className="max-h-[30vh] overflow-y-auto mb-4">
+          {hasMemo ? (
+            <Text as="p" tone="subtle" size="sm" className="mb-2">
+              {question.memo}
+            </Text>
+          ) : null}
+          {hasLearning ? (
+            <Card padding="sm" background="info" border="none">
+              <Text as="div" size="xs" tone="subtle" uppercase weight="semibold" className="mb-1">
+                What the box is trying to learn
+              </Text>
+              <Text as="div" size="sm">{question.learning?.proposal}</Text>
+            </Card>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mb-2" />
+      )}
     </>
   );
 }
+
+/** The submit/dismiss row, pinned to the bottom of whatever scrolls the
+ *  card: even a long option list never scrolls the answer buttons out of
+ *  reach (the second fold the field-test operator hit). Card backgrounds
+ *  are white, so the pinned row paints over content sliding beneath it. */
+const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-white py-2 -mb-2";
 
 function DismissButton({ question, onAnswered }: { question: QuestionInfo; onAnswered: () => void }) {
   const dismissMutation = trpc.actions.dismiss.useMutation({ onSuccess: () => onAnswered() });
@@ -103,7 +127,7 @@ function ConfirmForm({ question, onAnswered }: { question: QuestionInfo; onAnswe
         rows={2}
       />
       {error !== null ? <Text as="div" tone="danger" size="sm">{error}</Text> : null}
-      <Row gap="sm">
+      <Row gap="sm" className={SUBMIT_ROW_CLASSES}>
         <Button
           type="button"
           intent="primary"
@@ -160,7 +184,7 @@ function SelectForm({ question, onAnswered }: { question: QuestionInfo; onAnswer
           options={(question.options ?? []).map((option) => ({ value: option, label: option }))}
           error={error !== null ? error : undefined}
         />
-        <Row gap="sm">
+        <Row gap="sm" className={SUBMIT_ROW_CLASSES}>
           <Button
             type="submit"
             intent="primary"
@@ -206,7 +230,7 @@ function TextForm({ question, onAnswered }: { question: QuestionInfo; onAnswered
           rows={3}
           error={error !== null ? error : undefined}
         />
-        <Row gap="sm">
+        <Row gap="sm" className={SUBMIT_ROW_CLASSES}>
           <Button
             type="submit"
             intent="primary"

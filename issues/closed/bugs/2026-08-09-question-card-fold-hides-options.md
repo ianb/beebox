@@ -4,8 +4,21 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, dentist-email item
 labels: [field-test-findings, ui-error]
+resolution: implemented
 ---
 
+> **Closed 2026-08-10** — boxholder picked options-visible-at-open. The form
+> restructured (`QuestionForm.tsx`): the prompt now leads and is never
+> clipped (it IS the question), the supporting prose (memo + learning card)
+> lives in a 30vh-capped scroll region, and the Submit/Dismiss row is sticky
+> to the bottom of whatever scrolls the card — so even a short pane shows a
+> live Submit button at open, making the card impossible to misread as
+> informational. Verified live with a deliberately long-prose select
+> question on both the full card page and the browse pane (probe:
+> `submitVisibleAtOpen: true`, 3 radios reachable). Residual noticed while
+> verifying, not fixed here: the browse page's detail area can overflow the
+> WINDOW rather than its own pane in some layouts — pre-existing, unrelated
+> to questions.
 Answering a three-option question card took two forced scrolls: the card
 opens showing only the prose, with the options below an invisible fold
 (run 2 screenshot `dentist-email/06-the-question.png`), and once the options

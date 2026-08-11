@@ -41,6 +41,36 @@ more than once, not proven causal. First concrete lead: profile the
 bulk-upload overlay's open path (and whatever `browse`-route work it
 triggers) against the candidate stall sites below.
 
+## Investigation (2026-08-10) — candidates exonerated, suspicion moved
+
+Served a copy of run 2's actual box and drove every candidate below hard
+(5,700+ requests over ~6 min with a 500ms stall detector): **no stall
+reproduced**, and code reading confirms all the listed request-path
+candidates are async / bounded-concurrency (`fs.promises`, `mapInBatches`,
+`simple-git` async spawns; the `execSync("which cb")` is unreachable from
+read routes). Consider `landmarks.list`, `navStatus`, `status.browse`,
+`status.activity`/`getLog`, and the wakeup `execSync` **exonerated**.
+
+Not exercised, still suspect: the bulk-upload create→register→upload→
+finalize→git-commit path (`src/webapp/routes/bulk-upload.ts`,
+`src/core/bulk-upload/worker.ts`) — needs a cookie-authenticated local user
+the browse key doesn't grant, and minting one needs `--agent-confirmed`
+(correctly not done unilaterally). Nothing sync-CPU-heavy found by reading.
+
+Reframed hypotheses, from the original transcript: every freeze coincided
+with a long-running chat turn, and a page reload always restored
+responsiveness with state intact. So either (a) git-index contention
+between the chat turn's commits and the upload worker's
+`stageAndCommitPaths` (`withIndexLockRetry` in `src/lib/git.ts` retries
+once after 2s — check whether real contention cascades), or (b) the
+"freeze" is partly a FRONTEND/tab hang, not the server at all — total
+non-response to snapshot/screenshot with reload-fixes-it fits a blocked
+page as well as a blocked server. Next repro attempt should watch both:
+`node --cpu-prof` on the server AND a parallel curl heartbeat that
+distinguishes "server dead" from "this tab dead", while a real chat turn
+runs concurrently with upload-panel use (needs a boxholder-authorized test
+identity for the upload half).
+
 ## Research (2026-08-09)
 
 Candidate request-path stall sites collected while investigating the stuck
