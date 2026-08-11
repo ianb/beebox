@@ -8,13 +8,94 @@ opportunities elsewhere in the code. The monitor automatically bumps settled
 releases and immediately applies callback-box-relevant security, memory, and
 correctness fixes.
 
+Two channels are assessed, not one. **Runtime** is callback-box's own use of the
+SDK (`src/core/agent/`, `src/core/chat/session/`, `src/services/claude-chat.ts`,
+`src/services/scan-vision-claude.ts`, `src/core/sdk-hooks.ts`). **Harness** is
+the Claude Code the boxholder and every worker session run in — `.claude/hooks/`,
+`.claude/agents/finish.md` and the `/finish` flow, `bin/` worktree tooling,
+`bin/land`, and the isolation rules worker sessions run under. Most SDK releases
+say only "parity with Claude Code v2.1.N", so the itemized detail lives in the
+Claude Code changelog, which is read every turn regardless of whether an SDK
+release claims parity. A Claude Code change with zero SDK API surface can still
+break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
+merge step for days. Claude Code versions that move harness behavior get their
+own entries here, labeled as such, with no pin to apply.
+
 - **Current pin:** `0.3.226`
-- **Latest reviewed upstream version:** `0.3.226`
+- **Latest reviewed upstream version:** `0.3.227` (SDK), `2.1.227` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** No pending releases. The pin is at the newest
-  stable version.
+- **Current recommendation:** Let `0.3.227` finish the 48h settling window, then
+  bump. Nothing in it is act-now for callback-box on either channel.
 
 ## Release ledger
+
+### 0.3.227 — pending (parity with Claude Code 2.1.227)
+
+- **Upstream:** The SDK entry says only "Updated to parity with Claude Code
+  v2.1.227". The itemized content is Claude Code 2.1.227: fixed feature flags
+  being evaluated without the user's subscription tier when a session started
+  with an expired login token, which could wrongly prompt Max plan users to
+  enable usage credits for Fable; fixed every Bash command failing under
+  `claude-code-action` with `allowed_non_write_users` on GitHub-hosted runners;
+  fixed `/tui` bringing back a conversation rewound to before its first message;
+  improved the slash-command menu's selection highlighting and glyph handling;
+  improved performance with fewer event-loop stalls on file-not-found
+  suggestions and at-mention size checks.
+- **Callback-box applicability (runtime):** Nothing. No API surface changed, and
+  none of the fixes touch the query, message-adaptation, or hook paths
+  callback-box uses.
+- **Callback-box applicability (harness):** Effectively nothing to act on.
+  - The `claude-code-action` fix does not apply: this repo's only GitHub
+    workflow is `.github/workflows/pages.yml`, and nothing references
+    `claude-code-action` or `allowed_non_write_users`.
+  - `/tui` rewind and the slash-command menu are interactive-only surfaces that
+    no hook, agent, or `bin/` tool depends on.
+  - The expired-login-token feature-flag fix is a boxholder-session nuisance
+    (a spurious Fable usage-credits prompt on Max), not a repo behavior change;
+    it needs no adjustment to `.claude/` or `bin/`.
+- **Action:** Published 2026-08-10T21:06Z, ~19h old as of 2026-08-11T16:04Z, so
+  inside the settling window. Nothing act-now on either channel, so it waits.
+- **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.227), [Claude Code 2.1.227](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21227)
+
+### Claude Code 2.1.224–2.1.226 — harness/deployment backfill (no pin)
+
+Recorded 2026-08-11. These CLI versions were reviewed when their SDK
+counterparts landed, but only through the runtime lens; this entry backfills the
+harness and deployment channel. All three are already present in the bundled CLI
+at the current pin (`0.3.226` bundles Claude Code 2.1.226), so nothing here is
+outstanding work — it is durable evidence.
+
+- **2.1.225 — long-lived `CLAUDE_CODE_OAUTH_TOKEN` clobbered by a transient
+  401.** Upstream: a transient 401 replaced a long-lived
+  `CLAUDE_CODE_OAUTH_TOKEN` with a stored login's short-lived token, breaking
+  headless sessions until restart. **This is the most deployment-relevant item
+  in the range.** `CLAUDE_CODE_OAUTH_TOKEN` is callback-box's documented server
+  auth path (`callback-box/docs/docker-install.md`,
+  `docs/plans/installation-story.md`), and box agents on a Docker/VPS install
+  are exactly the long-running headless sessions described. Keep this as the
+  explanation for any past "box agent stopped working until the service was
+  restarted" report on a token-authenticated install. Fixed as of the current
+  pin.
+- **2.1.225 — cross-session messages parked without notice or expiry in headless
+  sessions and during startup.** Pairs with the `crossSessionInbound` note in
+  the 0.3.224 entry below. Callback-box sends no cross-session messages today,
+  so this is latent, not active.
+- **2.1.224 — removed the 200-subagent-per-session spawn cap.** Concurrency and
+  depth limits still apply. Relevant to this repo's heavy fan-out worker
+  sessions: a long-lived session no longer refuses new agents after 200. No
+  action, but it removes a ceiling worth knowing about.
+- **2.1.224 — sandbox filesystem deny entries with a trailing slash silently
+  bypassable.** Not applicable: `.claude/settings.json` configures only
+  `statusLine` and hooks — no sandbox permission rules — and worker sessions run
+  unsandboxed by design (`bin/CLAUDE.md`).
+- **2.1.224 — plugin install records corrupted when the same plugin is installed
+  in multiple projects.** Worth noting because this monorepo ships plugins
+  (`callback-box/plugins/`, the canvas-loop Claude plugin). No corruption has
+  been observed here; recorded so a future "plugin vanished from one checkout"
+  symptom has a known cause.
+- **2.1.226 — "bug fixes and reliability improvements"** with nothing itemized;
+  no harness surface to assess.
+- **Sources:** [Claude Code 2.1.224](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21224), [2.1.225](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21225), [2.1.226](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21226)
 
 ### 0.3.226 — applied
 
