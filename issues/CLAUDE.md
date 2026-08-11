@@ -193,6 +193,27 @@ information?" is a human call. If a sanitized public version loses the
 substance, split it: a sanitized public item plus a private item holding the
 specifics (the private one links to the public one, never the reverse).
 
+### Working directly on a real box: nothing lands public unvetted
+
+When your task is **maintenance on, or debugging of, a developer's live box**
+— their real content, not a `test1` clone — the default inverts. **Nothing you
+learned there enters this repo until the developer has scrubbed and approved
+it**: not an issue, not a commit message, not a code comment, not a test
+fixture. Route the follow-up to `private-issues/` instead, or hold it and ask.
+
+This is stricter than the general rule above because the failure is
+asymmetric. Public-safe *code* findings are cheap to re-derive if you defer
+them; a fragment of someone's personal content committed to a
+source-available repo cannot be recalled — git history keeps it after the
+file is fixed. So "I think this part is generic" is not the standard. The
+developer's review is.
+
+Structural facts are the exception that keeps this workable: command shapes,
+file names and sizes, card *types*, counts, durations, timestamps, error
+strings from our own code. That is nearly always enough to describe a
+mechanism. If your write-up needs more than that to make sense, it belongs in
+`private-issues/`.
+
 **It is a different git repo.** Stage and commit private issues from INSIDE
 `private-issues/`. An agent that edits a private issue and runs `git add -A`
 at the monorepo root sees nothing staged — that is the leak guard working
