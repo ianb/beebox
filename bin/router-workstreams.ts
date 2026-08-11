@@ -189,6 +189,13 @@ async function listWorktreeIssueChanges(worktreesRoot: string): Promise<{
 }
 
 type WorkstreamDocuments = Awaited<ReturnType<WorkstreamsDeps["documents"]>>;
+type IssueRelationship =
+  | "open"
+  | "closed"
+  | "opened-here"
+  | "updated-here"
+  | "closed-here"
+  | "reopened-here";
 
 export function issuesForWorkstream(
   documents: WorkstreamDocuments,
@@ -222,6 +229,24 @@ export function issuesForWorkstream(
         Number(a.closed) - Number(b.closed) ||
         a.frontmatter.title.localeCompare(b.frontmatter.title),
     );
+}
+
+export function issueRelationship(
+  documents: WorkstreamDocuments,
+  workstream: string,
+  issue: IssueRecord,
+): IssueRelationship {
+  const changedHere = (documents.worktreeIssues ?? []).some(
+    (entry) => entry.worktree === workstream && entry.issue.slug === issue.slug,
+  );
+  if (!changedHere) return issue.closed ? "closed-here" : "open";
+  const main = documents.issues.find(
+    (candidate) => candidate.slug === issue.slug,
+  );
+  if (!main) return "opened-here";
+  if (!main.closed && issue.closed) return "closed-here";
+  if (main.closed && !issue.closed) return "reopened-here";
+  return "updated-here";
 }
 
 async function listPlans(repoRoot: string): Promise<PlanRecord[]> {
@@ -300,17 +325,28 @@ function agentStatusHtml(row: WorkstreamRow): string {
   return `<span class="agent-status">${row.session.agent ? `${agent} inactive` : "No agent recorded"}</span>`;
 }
 
-function issueSummaryHtml(issues: IssueRecord[]): string {
-  const open = issues.filter((issue) => !issue.closed);
-  if (open.length === 0) return "";
-  return `<div class="row-issues">${open
-    .map((issue) => {
+const RELATIONSHIP_LABELS: Record<IssueRelationship, string> = {
+  open: "Open",
+  closed: "Closed",
+  "opened-here": "Opened here",
+  "updated-here": "Updated here",
+  "closed-here": "Closed here",
+  "reopened-here": "Reopened here",
+};
+
+function issueSummaryHtml(
+  issues: Array<{ issue: IssueRecord; relationship: IssueRelationship }>,
+): string {
+  if (issues.length === 0) return "";
+  return `<div class="row-issues">${issues
+    .map(({ issue, relationship }) => {
       const manual = issue.frontmatter.needs.includes("manual-testing");
       const className = manual ? ' class="manual-testing-issue"' : "";
       const label = manual
         ? '<span class="manual-testing-label">Manual testing</span>'
         : "";
-      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}${escapeHtml(issue.frontmatter.title)}</a>`;
+      const status = `<span class="issue-state issue-state-${relationship}">${RELATIONSHIP_LABELS[relationship]}</span>`;
+      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}${status}${escapeHtml(issue.frontmatter.title)}</a>`;
     })
     .join("")}</div>`;
 }
@@ -318,7 +354,7 @@ function issueSummaryHtml(issues: IssueRecord[]): string {
 function rowHtml(
   row: WorkstreamRow,
   note: string,
-  issues: IssueRecord[] = [],
+  documents: WorkstreamDocuments,
 ): string {
   const box = row.boxState.keepUnmerged
     ? '<span class="chip held">keep unmerged</span>'
@@ -327,6 +363,10 @@ function rowHtml(
       : "";
   const name = `<a class="workstream-link" href="/workstreams/${encodeURIComponent(row.name)}/"><span class="emoji">${escapeHtml(emoji(row))}</span>${escapeHtml(row.name)}</a>`;
   const main = `<div class="row-main">${name}<span>${escapeHtml(note)}</span>${agentStatusHtml(row)}${box}<span class="actions">${actionsHtml(row)}</span></div>`;
+  const issues = issuesForWorkstream(documents, row.name).map((issue) => ({
+    issue,
+    relationship: issueRelationship(documents, row.name, issue),
+  }));
   return `<li>${main}${issueSummaryHtml(issues)}</li>`;
 }
 
@@ -338,7 +378,7 @@ function section(params: {
 }): string {
   const { title, rows, note, documents } = params;
   if (rows.length === 0) return "";
-  return `<section><h2>${escapeHtml(title)} <small>${rows.length}</small></h2><ul>${rows.map((row) => rowHtml(row, note(row), issuesForWorkstream(documents, row.name))).join("")}</ul></section>`;
+  return `<section><h2>${escapeHtml(title)} <small>${rows.length}</small></h2><ul>${rows.map((row) => rowHtml(row, note(row), documents)).join("")}</ul></section>`;
 }
 
 function issueHref(issue: IssueRecord): string {
@@ -380,8 +420,15 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .workstream-link, li > a { min-width: 18em; font: 600 14px ui-monospace, Menlo, monospace; color: #2255aa; text-decoration: none; }
 .row-issues { display: flex; flex-direction: column; gap: .15em; margin: .35em 0 0 2.8em; }
 .row-issues a::before { content: "Issue · "; color: #777; }
+.issue-state { display: inline-block; min-width: 6.8em; margin-right: .55em; padding: .08em .4em; border-radius: 999px; background: #e8edf5; color: #405168; font-size: .78em; font-weight: 700; text-align: center; }
+.issue-state-closed { background: #ececec; color: #666; }
+.issue-state-opened-here { background: #dcfce7; color: #166534; }
+.issue-state-updated-here { background: #ede9fe; color: #5b21b6; }
+.issue-state-closed-here { background: #374151; color: #fff; }
+.issue-state-reopened-here { background: #ccfbf1; color: #115e59; }
 .row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
 .row-issues .manual-testing-issue::before { content: none; }
+.manual-testing-issue .issue-state { background: #ffffff26; color: #fff; }
 .manual-testing-label { margin-right: .55em; padding-right: .55em; border-right: 1px solid #ffffff80; font-size: .78em; letter-spacing: .02em; text-transform: uppercase; }
 .emoji { display: inline-block; width: 1.8em; }
 .chip { padding: .1em .45em; border-radius: 4px; background: #eee; font-size: .8em; white-space: nowrap; }
@@ -631,7 +678,9 @@ function searchHtml(
     plan.title.toLocaleLowerCase().includes(needle),
   );
   const workstreamRows = workstreams
-    .map((row) => rowHtml(row, row.path === null ? "culled" : row.agent.state))
+    .map((row) =>
+      rowHtml(row, row.path === null ? "culled" : row.agent.state, documents),
+    )
     .join("");
   return `<section><h2>Search results</h2>${workstreamRows ? `<ul>${workstreamRows}</ul>` : ""}${documentList({ issues, plans }) || "<p>No matches.</p>"}</section>`;
 }
