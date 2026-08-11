@@ -304,10 +304,14 @@ function issueSummaryHtml(issues: IssueRecord[]): string {
   const open = issues.filter((issue) => !issue.closed);
   if (open.length === 0) return "";
   return `<div class="row-issues">${open
-    .map(
-      (issue) =>
-        `<a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a>`,
-    )
+    .map((issue) => {
+      const manual = issue.frontmatter.needs.includes("manual-testing");
+      const className = manual ? ' class="manual-testing-issue"' : "";
+      const label = manual
+        ? '<span class="manual-testing-label">Manual testing</span>'
+        : "";
+      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}${escapeHtml(issue.frontmatter.title)}</a>`;
+    })
     .join("")}</div>`;
 }
 
@@ -376,6 +380,9 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .workstream-link, li > a { min-width: 18em; font: 600 14px ui-monospace, Menlo, monospace; color: #2255aa; text-decoration: none; }
 .row-issues { display: flex; flex-direction: column; gap: .15em; margin: .35em 0 0 2.8em; }
 .row-issues a::before { content: "Issue · "; color: #777; }
+.row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
+.row-issues .manual-testing-issue::before { content: none; }
+.manual-testing-label { margin-right: .55em; padding-right: .55em; border-right: 1px solid #ffffff80; font-size: .78em; letter-spacing: .02em; text-transform: uppercase; }
 .emoji { display: inline-block; width: 1.8em; }
 .chip { padding: .1em .45em; border-radius: 4px; background: #eee; font-size: .8em; white-space: nowrap; }
 .held { background: #fff1c7; color: #765600; }

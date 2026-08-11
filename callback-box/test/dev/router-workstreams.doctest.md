@@ -252,6 +252,10 @@ const html = renderWorkstreams(
   { issues: [openIssue], plans: [] },
 );
 assert.match(html, /row-issues[\s\S]*Verify the seam/);
+assert.match(
+  html,
+  /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
+);
 
 const query = parseFilters(
   new URLSearchParams("needs=manual-testing&assigned=true"),
