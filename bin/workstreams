@@ -405,6 +405,7 @@ case "$cmd" in
     LS_PROMPT_FILE="$prompt_file"
     LS_EMOJI="$emoji"
     LS_LAUNCH_DIR="$launch_dir"
+    LS_WORKTREE_PATH="$target"
     LS_CODEX_RESUME=0
     if [ "$resolved_agent" = codex ] && [ "$fresh" = false ] && [ "$resume_state" = existing ]; then
       LS_CODEX_RESUME=1

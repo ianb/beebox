@@ -33,25 +33,30 @@ WT_SAY_PREFIX="[session-end]   "
 # shellcheck source=../../bin/lib/session-workstream.sh
 . "$WT_MONO/bin/lib/session-workstream.sh"
 
+# Managed Claude runs inside the worktree, so it loads that checkout's hook.
+# Re-exec the main checkout's copy before teardown: cleanup must not remove the
+# directory its script and caller are still executing from. The marker prevents
+# a loop if path resolution is ever unusual.
+hook_repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+if [ "$hook_repo" != "$WT_MONO" ] && [ "${CB_SESSION_END_MAIN_REEXEC:-0}" != "1" ]; then
+  cd "$WT_MONO"
+  CB_SESSION_END_MAIN_REEXEC=1 exec "$WT_MONO/.claude/hooks/session-end.sh" <<<"$input"
+fi
+
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 reason=$(printf '%s' "$input" | jq -r '.reason // empty')
 wt_log "event: session=$session_id reason=$reason cwd=$cwd"
 
 # Trigger a sweep on EVERY session end, before the per-worktree logic below
-# runs (which mostly can't resolve its own worktree — see next comment). Must
+# runs. Must
 # be here, above the early `exit 0`s, or it never fires in the common case.
 #
-# Why: the per-session cleanup below identifies its worktree from cwd or
-# transcript_path, and BOTH are the main checkout when the session was started
-# by `bin/launch-worktree-session` (it runs `claude --worktree <name>` from the
-# monorepo root, so Claude Code files the session under main's project dir).
-# So this hook logs `skip:not-a-worktree-session` and cleans nothing. The sweep
-# doesn't care whose session ended — it removes every worktree that is merged,
-# clean, and has no live `claude` — so it covers this case and tab-kills alike.
-# Previously the sweep only ran at SessionStart, which meant a long-lived main
-# session accumulated finished worktrees all day with nothing to collect them
-# (2026-07-19: nine piled up in one session).
+# The sweep does not care which session ended: it removes every eligible
+# worktree with no live agent, covering tab-kills and older native `--worktree`
+# sessions whose final cwd/transcript could not be resolved here. Previously it
+# ran only at SessionStart, so a long-lived main session accumulated finished
+# worktrees all day (2026-07-19: nine piled up in one session).
 #
 # The MAIN checkout's copy deliberately: auto-sweep.sh gates itself out when its
 # own REPO is a worktree, so invoking a worktree's copy would no-op.

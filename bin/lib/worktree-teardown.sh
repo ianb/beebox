@@ -93,11 +93,9 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 # by hand from inside a live session.
 #
 # Two independent liveness signals, mirroring sweep:
-#   1. argv — `claude --worktree <name>`. Required because a session launched by
-#      bin/launch-worktree-session runs claude from the MAIN checkout, so its
-#      process cwd is main, not the worktree.
-#   2. process cwd — resumed claude sessions and all codex sessions carry no
-#      --worktree argv, but their cwd is inside the worktree.
+#   1. argv — `claude --worktree <name>` for direct native sessions, or
+#      `claude --name <name>` for managed sessions.
+#   2. process cwd — an independent signal for managed claude/codex sessions.
 #
 # NOT `pgrep -x claude`: pgrep matches the 16-char accounting name (`ps ucomm`),
 # and a native-installed Claude Code reports that as its VERSION ("2.1.221"),
@@ -211,7 +209,7 @@ wt_other_agent_live() {
     while IFS= read -r snap_line; do
       [ -n "$snap_line" ] || continue
       case "$snap_line" in
-        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+        *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
           WT_AGENT_STATE="live"
           WT_AGENT_REASON="signal=argv pid=${snap_line%% *}"
           return 0 ;;
@@ -268,7 +266,7 @@ EOF
   for pid in $other_pids; do
     pargs=$(ps -o command= -p "$pid" 2>/dev/null || true)
     case "$pargs" in
-      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name")
+      *"claude --worktree $wt_name "*|*"claude --worktree $wt_name"|*"claude --name $wt_name "*|*"claude --name $wt_name")
         WT_AGENT_STATE="live"
         WT_AGENT_REASON="signal=argv pid=$pid"
         return 0 ;;

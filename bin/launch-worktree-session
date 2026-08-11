@@ -12,17 +12,17 @@
 # or `codex -m <model>` (e.g. gpt-5.5) with --agent codex — so a worktree can
 # be spun up on a specific model; omit to use the agent's default.
 #
-# --emoji 🐛 prefixes the SESSION name (and so the Terminal tab title) with a
-# glyph, so a wall of tabs is scannable at a glance. Omit it and one is derived
+# --emoji 🐛 prefixes the Terminal tab title with a glyph, so a wall of tabs is
+# scannable at a glance. Omit it and one is derived
 # from the worktree name — deterministic, so the same worktree always gets the
 # same glyph. The emoji never reaches disk: the worktree dir, branch, router URL
 # prefix, and the argv the sweep's liveness check matches all use the plain
 # `[a-zA-Z0-9_-]+` name. Prefer passing one that fits the task over the derived
 # fallback, which is arbitrary.
 #
-# --agent codex runs OpenAI's codex CLI instead of claude. Codex has no
-# --worktree, so this path calls `bin/workstreams create` directly (same
-# worktree + box clone + installs; it also generates the gitignored
+# --agent codex runs OpenAI's codex CLI instead of claude. Both paths call
+# `bin/workstreams create` directly (same worktree + box clone + installs; it
+# also generates the gitignored
 # AGENTS.md/rule/skill mirrors Codex reads — bin/generate-agents-md.ts), then
 # runs codex in the worktree with full access/no-approvals (parity with claude
 # workers, which run unsandboxed). Codex is run, not exec'd, because it fires no
@@ -43,8 +43,10 @@
 #   launch-worktree-session explore-foo @briefing.md
 #
 # Notes:
-# - Mirrors the existing `cccb` bash function: cd into the monorepo and pass
-#   --worktree/--name/--dangerously-skip-permissions. Adds the initial prompt.
+# - Creates or reattaches through `bin/workstreams create`, cd's into the
+#   managed checkout, and passes --name/--dangerously-skip-permissions. It does
+#   not pass Claude's native --worktree flag: repository hooks and sweep own
+#   cleanup, so Claude must not show its separate keep/remove dialog on exit.
 # - First AppleScript invocation will prompt for Accessibility permission for
 #   Terminal control; macOS only asks once.
 
@@ -95,9 +97,10 @@ fi
 # Session display name: an emoji plus the worktree name. The emoji exists purely
 # so a wall of Terminal tabs is scannable — several concurrent sessions with
 # similar slugs are hard to tell apart at a glance, and a glyph reads faster
-# than a prefix. It goes ONLY into the agent's session name (and thus the tab
-# title); `$wt` stays `[a-zA-Z0-9_-]+` and is what every path, branch, router
-# URL prefix, and liveness check uses. Nothing on disk ever sees the emoji.
+# than a prefix. It goes into the Terminal title and registry presentation;
+# Claude's `--name` remains the plain workstream name as a durable liveness
+# marker. `$wt` stays `[a-zA-Z0-9_-]+` and is what every path, branch, router
+# URL prefix, and liveness check uses.
 #
 # `--emoji 🐛` sets it explicitly — prefer that, chosen for the task at hand.
 # Otherwise derive one from the name: deterministic, so relaunching the same
@@ -122,7 +125,7 @@ fi
 # Self-locate the monorepo from this script's own REAL path (bin/ lives at the
 # repo root; the ~/.local/bin install is a symlink, so follow it first),
 # falling back to the historical location. A worktree checkout resolves to the
-# MAIN checkout via git-common-dir so `claude --worktree` runs there.
+# MAIN checkout via git-common-dir so creation always uses the shared owner.
 self="${BASH_SOURCE[0]}"
 while [ -L "$self" ]; do
   target=$(readlink "$self")
@@ -187,6 +190,7 @@ LS_REMOTE_CONTROL="$remote_control"
 LS_PROMPT_FILE="$prompt_file"
 LS_EMOJI="$emoji"
 LS_LAUNCH_DIR="$launch_dir"
+LS_WORKTREE_PATH=""
 launch_session_build
 result=$(launch_session_open)
 

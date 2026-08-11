@@ -319,19 +319,20 @@ the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename
 stays `test1` so URL slugs match across worktrees and links like
 `/<wt>/test1/...` swap cleanly), runs `pnpm install` at every level, and
 generates the gitignored AGENTS.md mirrors (next section).
-On session exit with no changes the worktree is auto-removed and the
-`WorktreeRemove` hook deletes the cloned box and tells the router to stop
-the worktree's dev server. With uncommitted changes, Claude Code prompts
-to keep or remove.
+Direct native sessions retain Claude's own exit behavior. Managed sessions from
+`bin/launch-worktree-session` deliberately do not pass `--worktree`: they call
+`bin/workstreams create`, change into the resulting checkout, and let the
+repository's SessionEnd hook plus later sweeps own cleanup. This avoids asking
+the boxholder to keep or remove a worktree when the registry can safely retain
+it and cull it later.
 
 ## Codex worktree sessions
 
 `bin/launch-worktree-session --agent codex` spins up an OpenAI Codex CLI
-session in a fresh worktree the same way the default claude path does. Codex
-has no `--worktree`, so the launcher's generated launch script calls
-`bin/workstreams create <name>` directly (worktree path on stdout; idempotent — a
-relaunch re-attaches) — the same command Claude Code reaches through its hook
-adapter, so both agents get identical setup — then execs `codex` in
+session in a fresh worktree the same way the default Claude path does. Both
+generated launch scripts call `bin/workstreams create <name>` directly
+(worktree path on stdout; idempotent — a relaunch re-attaches), so both agents
+get identical setup. The Codex path then execs `codex` in
 the worktree with full access (`-s danger-full-access -a never`) — parity with
 claude workers, which run unsandboxed via `--dangerously-skip-permissions` (a
 `workspace-write` sandbox can't commit/`/finish` in a linked worktree, since codex
@@ -421,10 +422,10 @@ process belongs to the worktree. `session-end.sh` passes
 hook (that one is the session that's ending); `bin/codex-session-end` does not,
 because codex has already exited by the time it runs — there is no self to
 exclude, and not excluding one is the conservative answer for a hand-run.
-It checks the same two signals sweep
-does — `claude --worktree <name>` in argv, and process cwd inside the worktree —
-because a session launched by `bin/launch-worktree-session` runs claude from the
-main checkout, so cwd alone misses it. It **fails closed**: if `ps` or `lsof`
+It checks the same two signals sweep does — `claude --worktree <name>` for
+direct native sessions or the managed `claude --name <name>` marker in argv,
+plus process cwd inside the worktree for managed Claude and Codex sessions. It
+**fails closed**: if `ps` or `lsof`
 can't answer, it skips the cleanup, since a lingering worktree is collected by
 the next sweep and a deleted one is gone. Without this, a nested headless
 `claude -p` — what the `cross-model` skill runs for its Codex→Claude review —

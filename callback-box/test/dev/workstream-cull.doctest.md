@@ -81,3 +81,33 @@ dirtyRecord.removed.merged
 ```ts cleanup
 await rm(root, { recursive: true, force: true });
 ```
+
+## Managed Claude has a cwd-independent liveness marker
+
+The managed `--name <workstream>` argument is a second signal in front of
+destructive sweep. It remains live even if the process cwd cannot be associated
+with the worktree; a longer neighboring name does not collide.
+
+```ts
+const livenessScript = [
+  '. "$1"',
+  'WT_SNAP_STATE=ok',
+  'WT_SNAP_ARGS="123 /usr/local/bin/claude --name seam --model opus"',
+  'WT_SNAP_CWDS="/unrelated"',
+  'wt_other_agent_live /tmp/seam',
+  'printf "%s|%s" "$WT_AGENT_STATE" "$WT_AGENT_REASON"',
+].join("; ");
+(await execFileAsync("bash", ["-c", livenessScript, "liveness", teardownLib])).stdout
+=> live|signal=argv pid=123
+
+const neighborScript = [
+  '. "$1"',
+  'WT_SNAP_STATE=ok',
+  'WT_SNAP_ARGS="123 /usr/local/bin/claude --name seam-other --model opus"',
+  'WT_SNAP_CWDS="/unrelated"',
+  'wt_other_agent_live /tmp/seam',
+  'printf "%s" "$WT_AGENT_STATE"',
+].join("; ");
+(await execFileAsync("bash", ["-c", neighborScript, "liveness", teardownLib])).stdout
+=> none
+```
