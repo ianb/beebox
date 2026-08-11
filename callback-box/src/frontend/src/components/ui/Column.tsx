@@ -45,11 +45,17 @@ const ALIGN_CLASSES: Record<ColumnAlign, string> = {
   stretch: "items-stretch",
 };
 
+// A clipping column is also a containing block (`relative`): absolutely
+// positioned descendants with no positioned ancestor — Tailwind's `sr-only`
+// is `position: absolute` — otherwise resolve against the initial containing
+// block, and one sitting below the fold inside the scrolled pane STRETCHES
+// the document, making the app's fixed shell window-scrollable (found via a
+// field-test browse page: a radio card's sr-only input grew the page 43px).
 const OVERFLOW_CLASSES: Record<ColumnOverflow, string> = {
   visible: "",
-  hidden: "overflow-hidden",
-  auto: "overflow-auto",
-  scroll: "overflow-scroll",
+  hidden: "overflow-hidden relative",
+  auto: "overflow-auto relative",
+  scroll: "overflow-scroll relative",
 };
 
 export function Column({ children, gap, align, overflow, hideOnMobile, focusable, className }: ColumnProps) {

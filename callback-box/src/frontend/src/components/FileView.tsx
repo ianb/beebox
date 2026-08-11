@@ -25,6 +25,7 @@ import { useState, useCallback, useMemo, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
+import { displayName } from "../lib/display-name";
 import { getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
@@ -222,19 +223,6 @@ function useFileData(path: string): LoadResult {
 }
 
 /* ---------- chrome helpers ---------- */
-
-/** Filename-derived fallback name: a card's `Name.type.card` becomes "Name"
- *  with underscores read as spaces (the First_Last authoring convention) —
- *  the filename is never the headline a user should have to parse
- *  (issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md). A card's
- *  frontmatter `title:` still wins where available; this is the fallback. */
-function displayName(path: string): string {
-  const base = path.split("/").pop();
-  if (!base) return path;
-  const cardName = base.match(/^(.+)\.[^.]+\.card$/)?.[1];
-  if (cardName !== undefined) return cardName.replace(/[_-]+/g, " ");
-  return base.endsWith(".card") ? base.slice(0, -5) : base;
-}
 
 /** The card's own display title, when its frontmatter carries one. */
 function cardTitle(data: FileData): string | null {
