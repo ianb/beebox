@@ -21,6 +21,7 @@ import type { EmissionDraft, EmissionEditor, ImageItem, FileItem } from "../emis
 import type { ChatEvent } from "../../machines/chat-types";
 import { assembleChatMessage, type ChatWitness } from "./chat-assemble";
 import { expectReceipt, type Receipt } from "./receipts";
+import { beginChatSendDiagnostic } from "../../lib/chat-send-diagnostics";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 type CardFields = Pick<SendEvent, "openCard" | "cardActivity" | "cardState">;
@@ -60,6 +61,8 @@ export function acceptEmission(
 ): Promise<Receipt> {
   const { message, messageId, images } = assembleChatMessage(emission, opts.witness);
   const receipt = expectReceipt(messageId);
+  beginChatSendDiagnostic({ emissionId: messageId, origin: emission.origin, textLength: emission.text.length,
+    imageCount: emission.images.length, fileCount: emission.files.length, selectionCount: emission.selections.length });
   if (images.length > 0) {
     opts.send({ type: "SEND", message, messageId, images: [...images], ...opts.cardFields });
   } else {

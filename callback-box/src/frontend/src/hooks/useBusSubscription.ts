@@ -35,6 +35,7 @@ function unwrap(wire: WireEvent): RealtimeEvent {
 export interface UseBusSubscriptionOptions {
   onEvent: (event: RealtimeEvent) => void;
   onConnect?: () => void;
+  onError?: () => void;
 }
 
 export function useBusSubscription(options: UseBusSubscriptionOptions): { connected: boolean } {
@@ -51,6 +52,7 @@ export function useBusSubscription(options: UseBusSubscriptionOptions): { connec
       optionsRef.current.onEvent(unwrap(data));
     }, []),
     onError: useCallback((err: { message: string }) => {
+      optionsRef.current.onError?.();
       // wsLink retries the connection itself; surface for debugging only.
       console.warn(`[events-sub] ${err.message}`);
     }, []),

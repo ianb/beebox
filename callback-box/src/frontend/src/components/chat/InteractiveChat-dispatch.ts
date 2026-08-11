@@ -21,6 +21,7 @@ import { localTime, formatTimePassed } from "./InteractiveChat-helpers";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { CardSendFields } from "./InteractiveChat-card-hooks";
 import type { ViewTarget } from "../../lib/view-url";
+import { chatSendReasonKind, observeChatSendReceipt } from "../../lib/chat-send-diagnostics";
 
 export function useEmissionDispatch(opts: {
   send: (event: ChatEvent) => void;
@@ -65,6 +66,8 @@ export function useEmissionDispatch(opts: {
       void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
       const cardFields = captureCardSend();
       return acceptEmission(emission, { witness: getWitness(), cardFields, send }).then((receipt) => {
+        observeChatSendReceipt({ emissionId: receipt.emissionId, disposition: receipt.disposition,
+          ...(receipt.disposition === "rejected" ? { reasonKind: chatSendReasonKind(receipt.reason) } : {}) });
         if (receipt.disposition === "rejected" && restoreRejected) {
           // The composer was cleared optimistically at dispatch — put the
           // emission back rather than losing it to the error banner.
