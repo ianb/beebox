@@ -35,6 +35,7 @@ import {
   type SessionInput,
 } from "./chat-types";
 import { runFakeStream } from "./chat-actors-fakestream";
+import { chatSendReasonKind, recordChatSendEvent } from "../lib/chat-send-diagnostics";
 
 export const fetchInitialActor = fromPromise<
   { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
@@ -205,6 +206,8 @@ export function handleTurnMessage(
  * (deduplicated / queued / turnId) plus the no-turnId failure.
  */
 function settleFromTurnStart(messageId: string, result: ChatTurnStart): void {
+  recordChatSendEvent(messageId, { event: "post-response", detail: {
+    outcome: result.deduplicated ? "deduplicated" : result.queued ? "queued" : result.turnId ? "turn-started" : "empty" } });
   if (result.deduplicated) {
     settleReceipt({ disposition: "sent", emissionId: messageId, deduplicated: true });
     return;
@@ -309,6 +312,7 @@ export const streamActor = fromCallback(
             onData: (data: TurnStreamWire) => {
               msgCount++;
               const frame = unwrapTurnFrame(data);
+              recordChatSendEvent(input.messageId, { event: "turn-stream-frame", detail: { frame: frame.t, frameNumber: msgCount } });
               if (frame.t === "resync") {
                 // Buffer gone / reconnect past evicted frames → silent recover
                 // to a history refresh (the durable transcript floor).
@@ -326,11 +330,13 @@ export const streamActor = fromCallback(
               handleTurnMessage(frame.msg, { sessionInput: input.sessionInput, sendBack, terminal, state });
             },
             onError: (err: { message: string }) => {
+              recordChatSendEvent(input.messageId, { event: "turn-stream-error", detail: { errorLength: err.message.length } });
               console.error(`[chat] turn stream subscription failed: ${err.message}`);
               logFsm("stream-throw", { msg: err.message, msgCount });
               if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message, accepted: true });
             },
             onComplete: () => {
+              recordChatSendEvent(input.messageId, { event: "turn-stream-complete", detail: { terminalFired } });
               // The subscription ended without a terminal (turn closed without a
               // result frame) — fall back to a history refresh.
               if (!terminalFired) {
@@ -345,6 +351,7 @@ export const streamActor = fromCallback(
       .catch((err: unknown) => {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Send failed";
+        recordChatSendEvent(input.messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(msg) } });
         console.error(`[chat] send failed: ${msg}`);
         logFsm("stream-throw", { msg, msgCount });
         settleReceipt({ disposition: "rejected", emissionId: input.messageId, reason: msg });
@@ -393,6 +400,7 @@ export function queueMessageToBackend(opts: { session: string; message: string; 
     .then((result) => settleFromTurnStart(messageId, result))
     .catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : "Send failed";
+      recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(msg) } });
       settleReceipt({ disposition: "rejected", emissionId: messageId, reason: msg });
     });
 }

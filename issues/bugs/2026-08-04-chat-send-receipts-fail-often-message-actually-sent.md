@@ -1,6 +1,6 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
-workstream: unknown
+workstream: send-receipt-logging
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
@@ -64,7 +64,7 @@ optimization and history as the source of truth. Only a pending emission with **
 corresponding history entry is a real failure worth surfacing (and Retry should be
 safe only then).
 
-## Research (incomplete)
+## Research (2026-08-11)
 
 The precise trigger and timing are unknown — this needs instrumentation of the
 emission → receipt path to find where receipts get lost:
@@ -74,6 +74,28 @@ emission → receipt path to find where receipts get lost:
 - Is the send POST completing server-side while the receipt broadcast is missed by a
   reconnecting client?
 - Web vs iOS incidence — confirm both, since the emission path is shared.
+
+Instrumentation now records a bounded, metadata-only timeline for each send.
+Routine success stays in memory and prints nothing. A rejected or slow receipt,
+network retry/offline event, stream error, incomplete stream, or event-bus error
+flushes the timeline at `warn` level, so it reaches
+`.callback-box/client-debug.log` while the debug panel is closed. The timeline uses
+the emission ID to correlate dispatch, each `/api/chat/send` attempt and response,
+local receipt settlement, turn-stream frames, durable-history reconciliation,
+visibility changes, online state, and global event-bus reconnects. It records text
+length and attachment counts, but never text, attachment names or paths, URLs, or
+raw error strings.
+
+The code has no separate receipt broadcast. It settles the acceptance receipt
+locally from the `/api/chat/send` response. The WebSocket carries the turn stream
+and global history events. The diagnostic names these actual boundaries so a future
+incident can distinguish a slow POST from a stream or history-ordering problem.
+
+A local browser check backgrounded the chat tab and triggered the anomaly path.
+The resulting durable log entry contained `visible -> hidden -> visible` with
+millisecond offsets while the debug panel stayed closed. This check verified only
+the instrumentation transport. It did not reproduce the reported send failure or
+identify its cause, and this work does not change send or reconciliation behavior.
 
 ## Related
 

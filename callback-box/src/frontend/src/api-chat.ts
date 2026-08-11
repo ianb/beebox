@@ -30,6 +30,7 @@ import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -241,7 +242,10 @@ export async function startChatTurn(params: {
   const { session, message, images, contextDir, seedFeatures, openCard, cardActivity, cardState } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+  let attemptNumber = 0;
   const attempt = async (): Promise<Response> => {
+    attemptNumber++;
+    recordChatSendEvent(messageId, { event: "post-issued", detail: { attempt: attemptNumber } });
     const response = await fetch(`${getApiBase()}/chat/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...mobileAuthHeaders() },
@@ -257,6 +261,7 @@ export async function startChatTurn(params: {
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
       }),
     });
+    recordChatSendEvent(messageId, { event: "post-http-response", detail: { attempt: attemptNumber, status: response.status } });
 
     if (!response.ok) {
       const error = await response
@@ -275,16 +280,20 @@ export async function startChatTurn(params: {
     // Retry once on network errors (not HTTP errors — those already threw above).
     // fetch() throws TypeError on network failure.
     if (err instanceof TypeError) {
+      recordChatSendEvent(messageId, { event: "post-retry-scheduled", detail: { reasonKind: "network", delayMs: 2000 } });
       console.warn("[chat] Send failed with network error, retrying...", err.message);
       await new Promise((r) => setTimeout(r, 2000));
       response = await attempt();
     } else {
+      const reason = err instanceof Error ? err.message : String(err);
+      recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(reason) } });
       throw err instanceof Error ? err : new RequestError(String(err));
     }
   }
 
   const parsed = chatTurnStartSchema.safeParse(await response.json());
   if (!parsed.success) {
+    recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: "malformed-response" } });
     const detail = `Chat send returned a malformed response: ${parsed.error.message}`;
     throw new RequestError(detail);
   }

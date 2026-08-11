@@ -7,10 +7,11 @@
  */
 
 import { interruptChat, type PendingSessionEntry, type SessionEntry } from "../api";
-import { buildOptimisticContent, reconcilePending } from "./chat-shared";
+import { buildOptimisticContent, entryText, reconcilePending } from "./chat-shared";
 import { queueMessageToBackend } from "./chat-actors";
 import { toastError } from "../components/ui/toast-store";
 import type { ChatContext, ChatEvent } from "./chat-types";
+import { observeChatSendHistory } from "../lib/chat-send-diagnostics";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 
@@ -139,7 +140,7 @@ export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error"> {
 export function applyServerMessages(
   { context, event }: { context: ChatContext; event: Extract<ChatEvent, { type: "SET_MESSAGES" }> },
 ): Pick<ChatContext, "messages" | "pendingMessages" | "sessionId"> {
-  const reconciled = reconcilePending({
+  const reconciled = reconcilePendingWithDiagnostics({
     serverMessages: event.messages,
     pendingMessages: context.pendingMessages,
   });
@@ -148,6 +149,19 @@ export function applyServerMessages(
     pendingMessages: reconciled.pendingMessages,
     sessionId: event.sessionId,
   };
+}
+
+/** Reconcile durable history and mark every pending emission it confirmed. */
+export function reconcilePendingWithDiagnostics(params: {
+  serverMessages: SessionEntry[];
+  pendingMessages: PendingSessionEntry[];
+}): ReturnType<typeof reconcilePending> {
+  const reconciled = reconcilePending(params);
+  const stillPending = new Set(reconciled.pendingMessages.map((entry) => entry.uuid));
+  observeChatSendHistory(params.pendingMessages
+    .filter((entry) => entryText(entry).length > 0 && !stillPending.has(entry.uuid))
+    .map((entry) => entry.uuid));
+  return reconciled;
 }
 
 /**

@@ -27,6 +27,7 @@ import type { ChatEvent } from "../../machines/chat-types";
 import type { TaskEvent } from "./background-tasks";
 import type { CaptureLiveStatus } from "./capture-bubble";
 import type { ScreenshotRequest } from "./screenshot-request-handler";
+import { recordChatSendEnvironmentEvent } from "../../lib/chat-send-diagnostics";
 
 /**
  * Server response shape of GET /api/chat/voice-config (mirrors the backend's
@@ -183,6 +184,7 @@ export function useChatWs(opts: {
   // Events tagged with a sessionId are filtered to this view's session only.
   useBusSubscription({
     onConnect: useCallback(() => {
+      recordChatSendEnvironmentEvent("bus-ws-connect");
       console.debug("[chatfsm] ws-connect");
       // Re-sync on every RE-connect: a full history REFRESH backs up the
       // subscription's automatic lastEventId replay for gaps that exceed the
@@ -192,6 +194,7 @@ export function useChatWs(opts: {
       // trailing timer so it's still eventually serviced.
       refreshGateRef.current?.notifyReconnect(triggerRefresh);
     }, [triggerRefresh]),
+    onError: useCallback(() => { recordChatSendEnvironmentEvent("bus-ws-error"); }, []),
     onEvent: useCallback((event: RealtimeEvent) => {
       const scheduleFired = busEventData(event, "schedule-fired");
       const history = busEventData(event, "chat-history");

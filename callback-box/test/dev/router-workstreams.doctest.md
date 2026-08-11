@@ -12,6 +12,7 @@ import path from "node:path";
 
 import {
   legacyIssuesRedirect,
+  issueRelationship,
   issuesForWorkstream,
   quotaHtml,
   relativeTime,
@@ -217,6 +218,16 @@ const authoritative = issuesForWorkstream(documents, "seam");
 JSON.stringify(authoritative.map((issue) => [issue.frontmatter.title, issue.closed]))
 => [["Worktree title",true]]
 
+issueRelationship(documents, "seam", authoritative[0]!)
+=> closed-here
+
+issueRelationship(
+  { issues: [closedIssue], plans: [] },
+  "seam",
+  closedIssue,
+)
+=> closed-here
+
 const deletedOnly = issuesForWorkstream(
   {
     issues: [mainIssue],
@@ -245,6 +256,18 @@ const openIssue = parseIssueFile(
   "features/2026-08-11-open.md",
   "---\ntitle: Verify the seam\nworkstream: seam\nneeds: [manual-testing]\n---\n",
 );
+issueRelationship(
+  {
+    issues: [],
+    plans: [],
+    worktreeIssues: [{ worktree: "seam", issue: openIssue }],
+    worktreeTouchedSlugs: [{ worktree: "seam", slug: openIssue.slug }],
+  },
+  "seam",
+  openIssue,
+)
+=> opened-here
+
 const html = renderWorkstreams(
   [row({ name: "seam" })],
   "",
