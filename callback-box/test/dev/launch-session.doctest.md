@@ -58,7 +58,7 @@ async function buildScript(
         LS_REMOTE_CONTROL: "1",
         LS_SESSION_NAME: "🧵 seam",
         LS_WORKSTREAM: "seam",
-        LS_ISSUE: options.issue ?? "",
+        ...(options.issue !== undefined ? { LS_ISSUE: options.issue } : {}),
         ...(options.worktreePath
           ? { LS_WORKTREE_PATH: options.worktreePath }
           : {}),

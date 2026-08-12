@@ -25,7 +25,7 @@ if [ -z "\$wt_path" ] || [ ! -d "\$wt_path" ] || ! git -C "\$wt_path" rev-parse 
   exit 1
 fi
 if [ -n "${LS_ISSUE:-}" ]; then
-  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/$LS_ISSUE" "$LS_WORKSTREAM"
+  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/${LS_ISSUE:-}" "$LS_WORKSTREAM"
 fi
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
@@ -63,7 +63,7 @@ if [ ! -f "\$wt_path/AGENTS.md" ]; then
   exit 1
 fi
 if [ -n "${LS_ISSUE:-}" ]; then
-  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/$LS_ISSUE" "$LS_WORKSTREAM"
+  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/${LS_ISSUE:-}" "$LS_WORKSTREAM"
 fi
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
