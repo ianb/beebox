@@ -87,6 +87,8 @@ type ActionVerb =
 
 const ACTION_PATH =
   /^\/workstreams\/action\/(archive|close|confirm-tested|focus|release|reset-test|resume|unarchive)\/([a-zA-Z0-9_.-]+)$/;
+const WORKSTREAMS_CSP =
+  "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'";
 const ACTION_SCRIPT = `
 document.addEventListener("submit", (event) => {
   const form = event.target instanceof HTMLFormElement
@@ -1061,8 +1063,7 @@ export async function serveWorkstreams(params: {
     const { plans } = await deps.documents();
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(method === "HEAD" ? undefined : renderPlans(plans));
     return;
@@ -1082,8 +1083,7 @@ export async function serveWorkstreams(params: {
     ]);
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(method === "HEAD" ? undefined : renderTesting(rows, documents));
     return;
@@ -1097,8 +1097,7 @@ export async function serveWorkstreams(params: {
     ]);
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(
       method === "HEAD"
@@ -1142,8 +1141,7 @@ export async function serveWorkstreams(params: {
     );
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(method === "HEAD" ? undefined : html);
   } catch (error) {
