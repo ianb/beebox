@@ -1015,10 +1015,11 @@ export async function serveWorkstreams(params: {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'none'; style-src 'unsafe-inline'",
+      "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
     );
     await serveIssues({
       base: "/workstreams",
+      method,
       mainRoot: params.mainRoot ?? repoRoot,
       worktreesRoot: params.worktreesRoot ?? path.dirname(repoRoot),
       rel: pathname.slice("/workstreams/issues".length),

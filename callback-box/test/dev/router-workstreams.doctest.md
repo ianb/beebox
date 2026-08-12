@@ -9,6 +9,7 @@ import fs from "node:fs/promises";
 import type { ServerResponse } from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { execa } from "execa";
 
 import {
   legacyIssuesRedirect,
@@ -26,6 +27,7 @@ import {
   matches,
   parseFilters,
   parseIssueFile,
+  setIssuePriority,
 } from "../../../bin/router-issues.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
@@ -605,9 +607,138 @@ await serveWorkstreams({
 });
 assert.equal(issues.captured.status, 200);
 assert.match(issues.captured.body, /href="\/workstreams\/issues\/bugs\/2026-08-09-seam.md"/);
+assert.match(
+  issues.captured.body,
+  /role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*Important[\s\S]*Normal[\s\S]*Backlog[\s\S]*Uncategorized/,
+);
 assert.equal(
   issues.captured.headers["content-security-policy"],
-  "default-src 'none'; style-src 'unsafe-inline'",
+  "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
+);
+assert.match(issues.captured.body, /script src="\/workstreams\/issues\/priority.js" defer/);
+const priorityScript = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/priority.js",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: priorityScript.res,
+  deps,
+});
+assert.equal(priorityScript.captured.status, 200);
+assert.match(priorityScript.captured.body, /addEventListener\("submit"/);
+
+const priorityUpdate = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/priority",
+  query:
+    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=important&return=priority%3Duncategorized",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: priorityUpdate.res,
+  deps,
+});
+assert.equal(priorityUpdate.captured.status, 303);
+assert.equal(
+  priorityUpdate.captured.headers.location,
+  "/workstreams/issues/?priority=uncategorized",
+);
+assert.match(
+  await fs.readFile(
+    path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
+    "utf8",
+  ),
+  /priority: important/,
+);
+const updatedIssues = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: updatedIssues.res,
+  deps,
+});
+assert.match(
+  updatedIssues.captured.body,
+  /<button type="submit" role="radio" aria-checked="true" class="active">Important<\/button>/,
+);
+const invalidPriority = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/priority",
+  query: "visibility=public&issue=..%2FCLAUDE.md&priority=important",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: invalidPriority.res,
+  deps,
+});
+assert.equal(invalidPriority.captured.status, 400);
+
+const ownerRoot = path.join(root, "worktrees", "owner");
+const ownerIssue = path.join(
+  ownerRoot,
+  "issues",
+  "bugs",
+  "2026-08-09-seam.md",
+);
+await fs.mkdir(path.dirname(ownerIssue), { recursive: true });
+await execa("git", ["init", "-b", "main"], { cwd: ownerRoot });
+await execa("git", ["config", "user.email", "test@example.com"], {
+  cwd: ownerRoot,
+});
+await execa("git", ["config", "user.name", "Test"], { cwd: ownerRoot });
+await fs.writeFile(
+  ownerIssue,
+  "---\ntitle: Owned seam bug\nworkstream: owner\npriority: backlog\n---\n",
+);
+await execa("git", ["add", "."], { cwd: ownerRoot });
+await execa("git", ["commit", "-m", "baseline"], { cwd: ownerRoot });
+await execa("git", ["switch", "-c", "owner"], { cwd: ownerRoot });
+await fs.writeFile(
+  ownerIssue,
+  "---\ntitle: Owned seam bug\nworkstream: owner\npriority: important\n---\n",
+);
+const overlayPriority = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/priority",
+  query:
+    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=normal",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: overlayPriority.res,
+  deps,
+});
+assert.equal(overlayPriority.captured.status, 303);
+assert.match(await fs.readFile(ownerIssue, "utf8"), /priority: normal/);
+assert.match(
+  await fs.readFile(
+    path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
+    "utf8",
+  ),
+  /priority: important/,
+);
+
+assert.equal(
+  setIssuePriority(
+    "---\ntitle: Existing\npriority: backlog\n---\nBody\n",
+    "normal",
+  ),
+  "---\ntitle: Existing\npriority: normal\n---\nBody\n",
+);
+assert.equal(
+  setIssuePriority(
+    "--- \r\ntitle: Existing\r\npriority: important\r\n---\r\nBody\r\n",
+    "uncategorized",
+  ),
+  "--- \r\ntitle: Existing\r\n---\r\nBody\r\n",
 );
 JSON.stringify([
   legacyIssuesRedirect("/dev/issues"),

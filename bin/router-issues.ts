@@ -6,6 +6,7 @@
 // -> router-issues.ts is the one-way chain; see bin/CLAUDE.md).
 
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import type http from "node:http";
 import { execa } from "execa";
@@ -27,6 +28,45 @@ const CATEGORIES = [
   "exploration",
   "watch",
 ] as const;
+const ISSUE_REL_RE =
+  /^(?:closed\/)?(?:bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)\/[^/]+\.md$/;
+const PRIORITY_SCRIPT = `
+document.addEventListener("submit", async (event) => {
+  const form = event.target instanceof HTMLFormElement
+    ? event.target.closest(".priority-controls form")
+    : null;
+  if (!form) return;
+  event.preventDefault();
+  const group = form.closest(".priority-controls");
+  const row = form.closest("li");
+  if (!group || !row) return;
+  const buttons = [...group.querySelectorAll("button")];
+  for (const button of buttons) button.disabled = true;
+  row.querySelector(".priority-error")?.remove();
+  try {
+    const url = new URL(form.action);
+    url.searchParams.set("format", "json");
+    const response = await fetch(url, { method: "POST" });
+    if (!response.ok) throw new Error((await response.text()).trim() || "Priority update failed");
+    for (const button of buttons) {
+      const active = button === form.querySelector("button");
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-checked", String(active));
+    }
+    const selected = url.searchParams.get("priority");
+    const filter = new URLSearchParams(location.search).get("priority");
+    if (filter && filter !== selected) row.remove();
+  } catch (error) {
+    const message = document.createElement("span");
+    message.className = "priority-error";
+    message.setAttribute("role", "alert");
+    message.textContent = error instanceof Error ? error.message : String(error);
+    group.insertAdjacentElement("afterend", message);
+  } finally {
+    for (const button of buttons) button.disabled = false;
+  }
+});
+`;
 type Category = (typeof CATEGORIES)[number];
 export type IssuePriority =
   | "important"
@@ -731,10 +771,6 @@ function facetChips(
     );
   for (const label of fr.labels)
     chips.push(`<span class="chip chip-label">${escapeHtml(label)}</span>`);
-  if (fr.priority !== "normal")
-    chips.push(
-      `<span class="chip chip-priority-${fr.priority}">${fr.priority}</span>`,
-    );
   if (fr.area)
     chips.push(`<span class="chip chip-area">${escapeHtml(fr.area)}</span>`);
   if (fr.filedBy)
@@ -789,8 +825,6 @@ const ISSUES_CSS = `
   .chip-research { background: #fdeee0; color: #a2380a; }
   .chip-research-done { background: #e6f4ea; color: #1e6b34; }
   .chip-label { background: #ece4fb; color: #5a34a8; }
-  .chip-priority-important { background: #9a3412; color: #fff; font-weight: 700; }
-  .chip-priority-backlog { background: #eee; color: #777; }
   .badge { display: inline-block; padding: 0.1em 0.5em; margin: 0.15em 0.3em 0.15em 0; border-radius: 4px; font: 12px ui-monospace, Menlo, monospace; background: #f0f0f0; color: #444; }
   .badge-added { background: #e6f4ea; color: #1e6b34; }
   .badge-deleted { background: #fbe9e7; color: #a23522; }
@@ -805,6 +839,15 @@ const ISSUES_CSS = `
   ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
   ul.issues a.title:hover { color: #2255aa; text-decoration: underline; }
   ul.issues .meta { display: block; color: #888; font: 12px ui-monospace, Menlo, monospace; margin-top: 0.2em; }
+  ul.issues .issue-controls { flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: 0.7em; max-width: 58%; }
+  .priority-controls { display: flex; flex: 0 0 auto; }
+  .priority-controls form { margin: 0; }
+  .priority-controls button { padding: 0.2em 0.45em; border: 1px solid #bbc2ca; border-right-width: 0; background: #fff; color: #555; font: 11px ui-monospace, Menlo, monospace; cursor: pointer; }
+  .priority-controls form:first-child button { border-radius: 4px 0 0 4px; }
+  .priority-controls form:last-child button { border-right-width: 1px; border-radius: 0 4px 4px 0; }
+  .priority-controls button.active { background: #2255aa; color: #fff; font-weight: 700; }
+  .priority-target { display: block; margin-top: 0.15em; color: #888; font: 10px ui-monospace, Menlo, monospace; text-align: right; }
+  .priority-error { display: block; max-width: 22em; margin-top: 0.2em; color: #a23522; font-size: 0.8em; }
   ul.issues .issue-pills { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.2em; max-width: 45%; }
   ul.issues .issue-pills .chip, ul.issues .issue-pills .badge { font-size: 0.78em; opacity: 0.85; margin: 0; }
   h2.cat { display: flex; align-items: baseline; gap: 0.5em; font-weight: 500; color: #444; }
@@ -818,6 +861,12 @@ const ISSUES_CSS = `
   .wt-diff h3 { font: 13px ui-monospace, Menlo, monospace; color: #555; margin-bottom: 0.3em; }
   .wt-diff pre { font-size: 0.82em; }
   .diff-add { color: #1e6b34; } .diff-del { color: #a23522; }
+  @media (max-width: 700px) {
+    ul.issues li { align-items: flex-start; flex-direction: column; gap: 0.55em; }
+    ul.issues .issue-controls { align-items: flex-start; flex-direction: column; max-width: 100%; }
+    ul.issues .issue-pills { justify-content: flex-start; max-width: 100%; }
+    .priority-target { text-align: left; }
+  }
 `;
 
 // --- UI: index ----------------------------------------------------------------
@@ -895,6 +944,26 @@ export function compareIssuePriority(a: IssueRecord, b: IssueRecord): number {
     PRIORITY_ORDER[a.frontmatter.priority] -
     PRIORITY_ORDER[b.frontmatter.priority]
   );
+}
+
+export function setIssuePriority(
+  source: string,
+  priority: IssuePriority,
+): string {
+  const opening = /^(?:\uFEFF)?---[ \t]*(\r?\n)/.exec(source);
+  if (!opening) throw new Error("issue has no writable YAML frontmatter");
+  const newline = opening[1] ?? "\n";
+  const closing = /^---[ \t]*\r?$/gm;
+  closing.lastIndex = opening[0].length;
+  const end = closing.exec(source)?.index;
+  if (end === undefined)
+    throw new Error("issue has no writable YAML frontmatter");
+  const priorityLine = /^priority:[^\r\n]*(?:\r?\n)?/m;
+  if (priority === "uncategorized") return source.replace(priorityLine, "");
+  const line = `priority: ${priority}`;
+  if (priorityLine.test(source))
+    return source.replace(priorityLine, `${line}${newline}`);
+  return `${source.slice(0, end)}${line}${newline}${source.slice(end)}`;
 }
 
 export interface IssueFacets {
@@ -1006,6 +1075,7 @@ function issueRowHtml(
   base: string,
   issue: IssueRecord,
   overlay: OverlayEntry[] | undefined,
+  returnQuery: string,
 ): string {
   const href = issueDetailHref(base, issue);
   // The slug starts with the filing date, so "date · slug" would print the
@@ -1016,12 +1086,33 @@ function issueRowHtml(
     : issue.slug;
   const workstream = `<a class="chip" href="/workstreams/${encodeURIComponent(issue.frontmatter.workstream)}/">${escapeHtml(issue.frontmatter.workstream)}</a>`;
   const pills = `${workstream}${facetChips(issue.frontmatter, issue.research, issue.visibility)}${worktreeBadges(overlay)}`;
+  const editWorktrees = [
+    ...new Set((overlay ?? []).map((entry) => entry.worktree)),
+  ].toSorted();
+  const editWorktree =
+    editWorktrees.find(
+      (worktree) => worktree === issue.frontmatter.workstream,
+    ) ?? editWorktrees[0];
+  const editTarget = editWorktree ? `worktree ${editWorktree}` : "main";
+  const editTargetHtml = editWorktree
+    ? `<span class="priority-target">saves to worktree ${escapeHtml(editWorktree)}</span>`
+    : "";
+  const priorityControls = (
+    ["important", "normal", "backlog", "uncategorized"] as const
+  )
+    .map((priority) => {
+      const active = issue.frontmatter.priority === priority;
+      const label = priority[0]!.toUpperCase() + priority.slice(1);
+      const action = `${base}/issues/action/priority?visibility=${issue.visibility}&amp;issue=${encodeURIComponent(issue.relPath)}&amp;priority=${priority}${returnQuery ? `&amp;return=${encodeURIComponent(returnQuery)}` : ""}`;
+      return `<form method="POST" action="${action}"><button type="submit" role="radio" aria-checked="${active ? "true" : "false"}"${active ? ' class="active"' : ""}>${label}</button></form>`;
+    })
+    .join("");
   return `<li>
     <div class="issue-main">
       <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
       <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
     </div>
-    <div class="issue-pills">${pills}</div>
+    <div class="issue-controls"><div><div class="priority-controls" role="radiogroup" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div>${editTargetHtml}</div><div class="issue-pills">${pills}</div></div>
   </li>`;
 }
 
@@ -1069,17 +1160,26 @@ async function authoritativeOverlayIssues(
       candidates.set(slug, records);
     }
   }
-  const selected = [...candidates.values()].map((records) => {
-    records.sort((a, b) => a.worktree.localeCompare(b.worktree));
-    const owned = records.find(
-      ({ issue, worktree }) => issue.frontmatter.workstream === worktree,
-    );
-    return (owned ?? records[0]!).issue;
-  });
+  const selected = [...candidates.values()].map(
+    (records) => preferredIssueCandidate(records)!.issue,
+  );
   return [
     ...main.filter((issue) => !touchedSlugs.has(issue.slug)),
     ...selected,
   ];
+}
+
+function preferredIssueCandidate<
+  T extends { issue: IssueRecord; worktree: string },
+>(records: T[]): T | undefined {
+  const sorted = records.toSorted((a, b) =>
+    a.worktree.localeCompare(b.worktree),
+  );
+  return (
+    sorted.find(
+      ({ issue, worktree }) => issue.frontmatter.workstream === worktree,
+    ) ?? sorted[0]
+  );
 }
 
 async function renderIssueIndex(
@@ -1138,8 +1238,9 @@ async function renderIssueIndex(
     bucket.closed.sort(compareIssuePriority);
   }
 
+  const returnQuery = query.toString();
   const row = (i: IssueRecord): string =>
-    issueRowHtml(base, i, overlayEntriesFor(overlay, i));
+    issueRowHtml(base, i, overlayEntriesFor(overlay, i), returnQuery);
   const categoryHtml = CATEGORIES.map((cat) => {
     const bucket = byCategory.get(cat)!;
     if (bucket.open.length === 0 && bucket.closed.length === 0) return "";
@@ -1159,13 +1260,137 @@ async function renderIssueIndex(
 
   const body = `<h1>issues</h1>
 ${filterChipsHtml(base, f, facets)}
-${categoryHtml || `<p class="empty">no issues match these filters</p>`}`;
+${categoryHtml || `<p class="empty">no issues match these filters</p>`}<script src="${base}/issues/priority.js" defer></script>`;
   return renderDevShell(
     "issues",
     devBreadcrumbs(base, "issues"),
     body,
     ISSUES_CSS,
   );
+}
+
+async function priorityTarget(params: {
+  roots: { mainIssuesRoot: string; mainPrivateRoot: string };
+  worktreesRoot: string;
+  relPath: string;
+  visibility: Visibility;
+}): Promise<string> {
+  const { roots, worktreesRoot, relPath, visibility } = params;
+  const overlay = await collectOverlay(worktreesRoot);
+  const entries =
+    (visibility === "private" ? overlay.byPathPrivate : overlay.byPath).get(
+      relPath,
+    ) ?? [];
+  const candidates = await Promise.all(
+    [...new Set(entries.map((entry) => entry.worktree))]
+      .sort()
+      .map(async (worktree) => {
+        const root = overlay.worktreeRoots.get(worktree);
+        if (!root) return null;
+        const issue = await readWorktreeOnlyIssue(root, relPath, visibility);
+        return issue ? { issue, root, worktree } : null;
+      }),
+  );
+  const existing = candidates.filter(
+    (candidate): candidate is NonNullable<typeof candidate> =>
+      candidate !== null,
+  );
+  const selected = preferredIssueCandidate(existing);
+  if (selected) {
+    return path.join(
+      selected.root,
+      visibility === "private" ? "private-issues" : "issues",
+      relPath,
+    );
+  }
+  return path.join(
+    visibility === "private" ? roots.mainPrivateRoot : roots.mainIssuesRoot,
+    relPath,
+  );
+}
+
+async function servePriorityAction(params: {
+  base: string;
+  roots: { mainIssuesRoot: string; mainPrivateRoot: string };
+  worktreesRoot: string;
+  query: URLSearchParams;
+  res: http.ServerResponse;
+}): Promise<void> {
+  const { base, roots, worktreesRoot, query, res } = params;
+  const relPath = query.get("issue") ?? "";
+  const visibility = query.get("visibility");
+  const priority = query.get("priority");
+  if (
+    !ISSUE_REL_RE.test(relPath) ||
+    (visibility !== "public" && visibility !== "private") ||
+    (priority !== "important" &&
+      priority !== "normal" &&
+      priority !== "backlog" &&
+      priority !== "uncategorized")
+  ) {
+    res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+    res.end("invalid issue priority action\n");
+    return;
+  }
+  try {
+    const target = await priorityTarget({
+      roots,
+      worktreesRoot,
+      relPath,
+      visibility,
+    });
+    const before = await fs.stat(target, { bigint: true });
+    const source = await fs.readFile(target, "utf8");
+    const afterRead = await fs.stat(target, { bigint: true });
+    if (
+      before.ino !== afterRead.ino ||
+      before.mtimeNs !== afterRead.mtimeNs ||
+      before.size !== afterRead.size
+    )
+      throw new Error("issue changed while its priority was being read");
+    const updated = setIssuePriority(source, priority);
+    const temporary = `${target}.priority-${randomUUID()}.tmp`;
+    try {
+      await fs.writeFile(temporary, updated, {
+        mode: Number(afterRead.mode & 0o777n),
+      });
+      const beforeRename = await fs.stat(target, { bigint: true });
+      if (
+        beforeRename.ino !== afterRead.ino ||
+        beforeRename.mtimeNs !== afterRead.mtimeNs ||
+        beforeRename.size !== afterRead.size
+      )
+        throw new Error("issue changed while its priority was being saved");
+      await fs.rename(temporary, target);
+    } finally {
+      await fs.unlink(temporary).catch(() => undefined);
+    }
+  } catch (error) {
+    if (query.get("format") === "json") {
+      res.writeHead(409, { "content-type": "text/plain; charset=utf-8" });
+      res.end(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    res.writeHead(409, { "content-type": "text/html; charset=utf-8" });
+    res.end(
+      renderDevShell(
+        "priority update failed",
+        devBreadcrumbs(base, "issues"),
+        `<h1>Priority update failed</h1><p>${escapeHtml(error instanceof Error ? error.message : String(error))}</p><p><a href="${base}/issues/">Return to issues</a></p>`,
+      ),
+    );
+    return;
+  }
+  if (query.get("format") === "json") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+  const returnQuery = new URLSearchParams(query.get("return") ?? "").toString();
+  res.writeHead(303, {
+    location: `${base}/issues/${returnQuery ? `?${returnQuery}` : ""}`,
+  });
+  res.end();
 }
 
 // --- UI: detail ----------------------------------------------------------------
@@ -1370,17 +1595,32 @@ ${diffHtml}`;
  */
 export async function serveIssues(params: {
   base: string;
+  method: string;
   mainRoot: string;
   worktreesRoot: string;
   rel: string;
   query: URLSearchParams;
   res: http.ServerResponse;
 }): Promise<void> {
-  const { base, mainRoot, worktreesRoot, rel, query, res } = params;
+  const { base, method, mainRoot, worktreesRoot, rel, query, res } = params;
   const roots = {
     mainIssuesRoot: path.join(mainRoot, "issues"),
     mainPrivateRoot: path.join(mainRoot, "private-issues"),
   };
+
+  if (method === "GET" && rel === "/priority.js") {
+    res.writeHead(200, {
+      "content-type": "text/javascript; charset=utf-8",
+      "cache-control": "no-store",
+    });
+    res.end(PRIORITY_SCRIPT);
+    return;
+  }
+
+  if (method === "POST" && rel === "/action/priority") {
+    await servePriorityAction({ base, roots, worktreesRoot, query, res });
+    return;
+  }
 
   if (rel === "" || rel === "/") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
