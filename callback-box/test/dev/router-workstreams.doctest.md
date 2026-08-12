@@ -322,12 +322,12 @@ const html = renderWorkstreams(
 assert.match(html, /row-issues[\s\S]*Verify the seam/);
 assert.match(
   html,
-  /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
+  /class="manual-testing-issue"[\s\S]*Owns[\s\S]*Discovered[\s\S]*Verify the seam[\s\S]*Manual testing[\s\S]*Important/,
 );
-assert.match(html, /Verify the seam[\s\S]*Important[\s\S]*Open[\s\S]*Owns work/);
+assert.match(html, /issue-state-owned">Owns<[\s\S]*issue-state-discovered issue-state-inactive">Discovered</);
 assert.match(
   html,
-  /Later work[\s\S]*Discovered here[\s\S]*Discovered by Ian/,
+  /issue-state-owned issue-state-inactive">Owns<[\s\S]*issue-state-discovered">Discovered<[\s\S]*Later work[\s\S]*Discovered by Ian/,
 );
 
 const query = parseFilters(

@@ -388,32 +388,18 @@ function issueSummaryHtml(
     .map(({ issue, indicators }) => {
       const manual = issue.frontmatter.needs.includes("manual-testing");
       const className = manual ? ' class="manual-testing-issue"' : "";
-      const label = manual
-        ? '<span class="manual-testing-label">Manual testing</span>'
-        : "";
-      const badges = [
-        issue.frontmatter.priority === "important"
-          ? '<span class="issue-state issue-priority-important">Important</span>'
-          : issue.frontmatter.priority === "backlog"
-            ? '<span class="issue-state issue-priority-backlog">Backlog</span>'
-            : issue.frontmatter.priority === "uncategorized"
-              ? '<span class="issue-state issue-priority-uncategorized">Uncategorized</span>'
-              : "",
-        `<span class="issue-state issue-state-${indicators.state}">${indicators.state === "closed" ? "Closed" : "Open"}</span>`,
-        indicators.owned
-          ? `<span class="issue-state issue-state-owned">${indicators.state === "closed" ? "Resolved here" : "Owns work"}</span>`
-          : "",
-        indicators.discovered
-          ? '<span class="issue-state issue-state-discovered">Discovered here</span>'
-          : "",
+      const ownership = `<span class="issue-state issue-state-owned${indicators.owned ? "" : " issue-state-inactive"}">Owns</span>`;
+      const discovery = `<span class="issue-state issue-state-discovered${indicators.discovered ? "" : " issue-state-inactive"}">Discovered</span>`;
+      const priority = issue.frontmatter.priority[0]!.toUpperCase() + issue.frontmatter.priority.slice(1);
+      const details = [
+        manual ? "Manual testing" : "",
+        indicators.state === "closed" ? "Closed" : "Open",
+        indicators.activity ? ACTIVITY_LABELS[indicators.activity] : "",
         indicators.discoveredBy
-          ? `<span class="issue-state issue-state-discovered-by">Discovered by ${escapeHtml(indicators.discoveredBy)}</span>`
+          ? `Discovered by ${escapeHtml(indicators.discoveredBy)}`
           : "",
-        indicators.activity
-          ? `<span class="issue-state issue-activity-${indicators.activity}">${ACTIVITY_LABELS[indicators.activity]}</span>`
-          : "",
-      ].join("");
-      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}<span class="issue-title">${escapeHtml(issue.frontmatter.title)}</span><span class="issue-indicators">${badges}</span></a>`;
+      ].filter(Boolean).join(" · ");
+      return `<a${className} href="${escapeHtml(issueHref(issue))}"><span class="issue-association">${ownership}${discovery}</span><span class="issue-copy"><span class="issue-title">${escapeHtml(issue.frontmatter.title)}</span><span class="issue-details">${details}</span></span><span class="issue-state issue-priority issue-priority-${issue.frontmatter.priority}">${priority}</span></a>`;
     })
     .join("")}</div>`;
 }
@@ -509,28 +495,26 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .row-main { display: flex; gap: 1em; align-items: center; }
 .workstream-link, li > a { min-width: 18em; font: 600 14px ui-monospace, Menlo, monospace; color: #2255aa; text-decoration: none; }
 .row-issues { display: flex; flex-direction: column; gap: .15em; margin: .35em 0 0 2.8em; }
-.row-issues a { display: flex; align-items: baseline; gap: .55em; }
-.row-issues a::before { content: "Issue · "; flex: 0 0 auto; color: #777; }
+.row-issues a { display: grid; grid-template-columns: 10.7em minmax(0, 1fr) 7.5em; align-items: center; gap: .7em; }
+.issue-association { display: flex; gap: .3em; }
+.issue-copy { display: flex; min-width: 0; flex-direction: column; }
 .issue-title { min-width: 0; }
-.issue-indicators { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .3em; }
+.issue-details { color: #777; font-size: .78em; }
 .issue-state { display: inline-block; padding: .08em .4em; border-radius: 999px; background: #e8edf5; color: #405168; font-size: .78em; font-weight: 700; text-align: center; white-space: nowrap; }
-.issue-state-closed { background: #ececec; color: #666; }
 .issue-state-owned { background: #dbeafe; color: #1e40af; }
 .issue-state-discovered { background: #fef3c7; color: #92400e; }
-.issue-state-discovered-by { background: #f4ead7; color: #6f4b18; }
+.issue-state-inactive { background: #f2f2f2; color: #999; font-weight: 500; }
+.issue-priority { justify-self: stretch; }
 .issue-priority-important { background: #9a3412; color: #fff; }
+.issue-priority-normal { background: #e8edf5; color: #405168; }
 .issue-priority-backlog { background: #ececec; color: #666; }
 .issue-priority-uncategorized { border: 1px dashed #999; background: transparent; color: #666; }
-.issue-activity-opened { background: #dcfce7; color: #166534; }
-.issue-activity-updated { background: #ede9fe; color: #5b21b6; }
-.issue-activity-closed { background: #374151; color: #fff; }
-.issue-activity-reopened { background: #ccfbf1; color: #115e59; }
-.row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
-.row-issues .manual-testing-issue::before { content: none; }
+.row-issues .manual-testing-issue { padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
+.manual-testing-issue .issue-details { color: #fff; opacity: .85; }
 .manual-testing-issue .issue-state { background: #ffffff26; color: #fff; }
+.manual-testing-issue .issue-state-inactive { color: #ffffffa6; }
 .manual-testing-issue .issue-priority-important { background: #fff; color: #9a3412; }
 .manual-testing-issue .issue-priority-backlog { border: 1px solid #ffffff80; background: transparent; }
-.manual-testing-label { margin-right: .55em; padding-right: .55em; border-right: 1px solid #ffffff80; font-size: .78em; letter-spacing: .02em; text-transform: uppercase; }
 .emoji { display: inline-block; width: 1.8em; }
 .chip { padding: .1em .45em; border-radius: 4px; background: #eee; font-size: .8em; white-space: nowrap; }
 .held { background: #fff1c7; color: #765600; }
@@ -569,6 +553,10 @@ button { padding: .35em .65em; }
   .row-main { align-items: flex-start; flex-wrap: wrap; }
   .workstream-link { min-width: 100%; }
   .row-issues { margin-left: 0; }
+  .row-issues a { grid-template-columns: 1fr auto; }
+  .issue-association { grid-column: 1; grid-row: 2; }
+  .issue-copy { grid-column: 1 / -1; grid-row: 1; }
+  .issue-priority { grid-column: 2; grid-row: 2; }
   .actions { margin-left: 0; }
   .quota-grid { grid-template-columns: 1fr; }
   .quota-panel { position: fixed; left: 1em; right: 1em; width: auto; }
