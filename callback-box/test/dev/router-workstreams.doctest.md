@@ -22,6 +22,7 @@ import {
   type WorkstreamsDeps,
 } from "../../../bin/router-workstreams.js";
 import {
+  compareIssuePriority,
   matches,
   parseFilters,
   parseIssueFile,
@@ -267,7 +268,7 @@ JSON.stringify(issueIndicators(
 
 const openIssue = parseIssueFile(
   "features/2026-08-11-open.md",
-  "---\ntitle: Verify the seam\nworkstream: seam\nneeds: [manual-testing]\n---\n",
+  "---\ntitle: Verify the seam\nworkstream: seam\npriority: important\nneeds: [manual-testing]\n---\n",
 );
 const discoveredIssue = parseIssueFile(
   "features/2026-08-11-discovered.md",
@@ -319,7 +320,7 @@ assert.match(
   html,
   /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
 );
-assert.match(html, /Verify the seam[\s\S]*Open[\s\S]*Owns work/);
+assert.match(html, /Verify the seam[\s\S]*Important[\s\S]*Open[\s\S]*Owns work/);
 assert.match(
   html,
   /Later work[\s\S]*Discovered here[\s\S]*Discovered by Ian/,
@@ -344,6 +345,37 @@ JSON.stringify([
   matches(discoveredIssue, unassignedQuery, false),
 ])
 => [false,true]
+
+const priorityIssue = (slug: string, priority?: string) =>
+  parseIssueFile(
+    `features/2026-08-11-${slug}.md`,
+    `---\ntitle: ${slug}${priority ? `\npriority: ${priority}` : ""}\n---\n`,
+  );
+const uncategorizedPriority = priorityIssue("uncategorized");
+const normalPriority = priorityIssue("normal", "normal");
+const importantPriority = priorityIssue("important", "important");
+const backlogPriority = priorityIssue("backlog", "backlog");
+JSON.stringify({
+  omitted: uncategorizedPriority.frontmatter.priority,
+  filtered: [importantPriority, normalPriority].filter((issue) =>
+    matches(
+      issue,
+      parseFilters(new URLSearchParams("priority=important")),
+      false,
+    ),
+  ).length,
+  sorted: [backlogPriority, uncategorizedPriority, normalPriority, importantPriority]
+    .sort(compareIssuePriority)
+    .map((issue) => issue.frontmatter.priority),
+})
+=> {"omitted":"uncategorized","filtered":1,"sorted":["important","normal","uncategorized","backlog"]}
+
+matches(
+  normalPriority,
+  parseFilters(new URLSearchParams("priority=urgent")),
+  false,
+)
+=> false
 ```
 
 ## Quota summary
@@ -589,8 +621,12 @@ Detail and plans views join documents back to their workstream.
 
 ```ts
 const detail = responseDouble();
+const detailIssue = parseIssueFile(
+  "features/2026-08-11-important.md",
+  "---\ntitle: Important seam\nworkstream: seam\npriority: important\n---\n",
+);
 const documents = {
-  issues: [],
+  issues: [detailIssue],
   plans: [
     {
       title: "Seam design",
@@ -614,6 +650,7 @@ await serveWorkstreams({
 });
 assert.equal(detail.captured.status, 200);
 assert.match(detail.captured.body, /Seam design/);
+assert.match(detail.captured.body, /open · important · owns work/);
 assert.match(detail.captured.body, /1 ahead, 0 dirty/);
 
 const plans = responseDouble();

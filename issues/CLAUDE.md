@@ -81,6 +81,7 @@ needs: [design, decision]     # what must happen before this can be called done
 design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
 labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
+priority: important           # important | normal | backlog; omitted is uncategorized
 filed-by: agent               # only for non-Ian items
 discovered-by: Ian            # person or agent that first identified the issue
 discovered-in: worktree-foo — while doing X    # workstream/context provenance
@@ -156,6 +157,12 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   regardless of which category dir it lives in. Deliberately generic — reach for
   it whenever a set of issues wants a shared handle. Browsable as a facet in the
   `workstreams/issues/` browser.
+- `priority:` controls attention within the issue queue: `important` deserves
+  prominent review, `normal` has been deliberately triaged as ordinary, and
+  `backlog` is intentionally deprioritized. Omission means `uncategorized`: no
+  priority decision has been made yet. `uncategorized` is a derived UI state,
+  not an authored frontmatter value. The issue browser sorts important, normal,
+  uncategorized, then backlog and exposes all four states as filters.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 

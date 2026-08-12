@@ -374,6 +374,13 @@ function issueSummaryHtml(
         ? '<span class="manual-testing-label">Manual testing</span>'
         : "";
       const badges = [
+        issue.frontmatter.priority === "important"
+          ? '<span class="issue-state issue-priority-important">Important</span>'
+          : issue.frontmatter.priority === "backlog"
+            ? '<span class="issue-state issue-priority-backlog">Backlog</span>'
+            : issue.frontmatter.priority === "uncategorized"
+              ? '<span class="issue-state issue-priority-uncategorized">Uncategorized</span>'
+              : "",
         `<span class="issue-state issue-state-${indicators.state}">${indicators.state === "closed" ? "Closed" : "Open"}</span>`,
         indicators.owned
           ? `<span class="issue-state issue-state-owned">${indicators.state === "closed" ? "Resolved here" : "Owns work"}</span>`
@@ -445,6 +452,9 @@ function documentList(params: {
           : undefined;
       const association = indicators
         ? [
+            issue.frontmatter.priority === "normal"
+              ? ""
+              : issue.frontmatter.priority,
             indicators.owned
               ? indicators.state === "closed"
                 ? "resolved here"
@@ -490,6 +500,9 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .issue-state-owned { background: #dbeafe; color: #1e40af; }
 .issue-state-discovered { background: #fef3c7; color: #92400e; }
 .issue-state-discovered-by { background: #f4ead7; color: #6f4b18; }
+.issue-priority-important { background: #9a3412; color: #fff; }
+.issue-priority-backlog { background: #ececec; color: #666; }
+.issue-priority-uncategorized { border: 1px dashed #999; background: transparent; color: #666; }
 .issue-activity-opened { background: #dcfce7; color: #166534; }
 .issue-activity-updated { background: #ede9fe; color: #5b21b6; }
 .issue-activity-closed { background: #374151; color: #fff; }
@@ -497,6 +510,8 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
 .row-issues .manual-testing-issue::before { content: none; }
 .manual-testing-issue .issue-state { background: #ffffff26; color: #fff; }
+.manual-testing-issue .issue-priority-important { background: #fff; color: #9a3412; }
+.manual-testing-issue .issue-priority-backlog { border: 1px solid #ffffff80; background: transparent; }
 .manual-testing-label { margin-right: .55em; padding-right: .55em; border-right: 1px solid #ffffff80; font-size: .78em; letter-spacing: .02em; text-transform: uppercase; }
 .emoji { display: inline-block; width: 1.8em; }
 .chip { padding: .1em .45em; border-radius: 4px; background: #eee; font-size: .8em; white-space: nowrap; }
