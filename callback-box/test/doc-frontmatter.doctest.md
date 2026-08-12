@@ -59,3 +59,24 @@ needs: [manual-testing]
 Try it.`).join("\n")
 => issues/bugs/x.md: needs manual-testing requires a ## Manual testing section
 ```
+
+## Issue priority uses the documented vocabulary
+
+Omission means normal, while an authored value must be exact.
+
+```ts
+check("issues/features/x.md", `---
+title: X
+workstream: unattached
+---
+Body`).length
+=> 0
+
+check("issues/features/x.md", `---
+title: X
+workstream: unattached
+priority: urgent
+---
+Body`).join("\n")
+=> issues/features/x.md: priority must be important, normal, or backlog
+```

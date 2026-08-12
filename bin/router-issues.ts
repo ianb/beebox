@@ -28,12 +28,24 @@ const CATEGORIES = [
   "watch",
 ] as const;
 type Category = (typeof CATEGORIES)[number];
+export type IssuePriority =
+  | "important"
+  | "normal"
+  | "uncategorized"
+  | "backlog";
+const PRIORITY_ORDER: Record<IssuePriority, number> = {
+  important: 0,
+  normal: 1,
+  uncategorized: 2,
+  backlog: 3,
+};
 
 export interface IssueFrontmatter {
   title: string;
   workstream: string;
   needs: string[];
   labels: string[];
+  priority: IssuePriority;
   area?: string;
   filedBy?: string;
   discoveredBy?: string;
@@ -188,6 +200,13 @@ export function parseIssueFile(
   const title = asString(data.title) ?? h1?.[1]?.trim() ?? slug;
 
   const area = asString(data.area);
+  const priorityValue = asString(data.priority);
+  const priority: IssuePriority =
+    priorityValue === "important" ||
+    priorityValue === "normal" ||
+    priorityValue === "backlog"
+      ? priorityValue
+      : "uncategorized";
   const filedBy = asString(data["filed-by"]);
   const discoveredBy = asString(data["discovered-by"]);
   const discoveredIn = asString(data["discovered-in"]);
@@ -203,6 +222,7 @@ export function parseIssueFile(
       workstream: asString(data.workstream) ?? "unknown",
       needs: asStringList(data.needs),
       labels: asStringList(data.labels),
+      priority,
       ...(area !== undefined ? { area } : {}),
       ...(filedBy !== undefined ? { filedBy } : {}),
       ...(discoveredBy !== undefined ? { discoveredBy } : {}),
@@ -711,6 +731,10 @@ function facetChips(
     );
   for (const label of fr.labels)
     chips.push(`<span class="chip chip-label">${escapeHtml(label)}</span>`);
+  if (fr.priority !== "normal")
+    chips.push(
+      `<span class="chip chip-priority-${fr.priority}">${fr.priority}</span>`,
+    );
   if (fr.area)
     chips.push(`<span class="chip chip-area">${escapeHtml(fr.area)}</span>`);
   if (fr.filedBy)
@@ -765,6 +789,8 @@ const ISSUES_CSS = `
   .chip-research { background: #fdeee0; color: #a2380a; }
   .chip-research-done { background: #e6f4ea; color: #1e6b34; }
   .chip-label { background: #ece4fb; color: #5a34a8; }
+  .chip-priority-important { background: #9a3412; color: #fff; font-weight: 700; }
+  .chip-priority-backlog { background: #eee; color: #777; }
   .badge { display: inline-block; padding: 0.1em 0.5em; margin: 0.15em 0.3em 0.15em 0; border-radius: 4px; font: 12px ui-monospace, Menlo, monospace; background: #f0f0f0; color: #444; }
   .badge-added { background: #e6f4ea; color: #1e6b34; }
   .badge-deleted { background: #fbe9e7; color: #a23522; }
@@ -801,6 +827,7 @@ export interface Filters {
   area?: string;
   needs?: string;
   labels?: string;
+  priority?: string;
   research?: string;
   visibility?: Visibility;
   assigned: boolean;
@@ -815,6 +842,7 @@ export function parseFilters(query: URLSearchParams): Filters {
   const area = query.get("area");
   const needs = query.get("needs");
   const labels = query.get("labels");
+  const priority = query.get("priority");
   const research = query.get("research");
   const visibility = query.get("visibility");
   return {
@@ -822,6 +850,7 @@ export function parseFilters(query: URLSearchParams): Filters {
     ...(area !== null ? { area } : {}),
     ...(needs !== null ? { needs } : {}),
     ...(labels !== null ? { labels } : {}),
+    ...(priority !== null ? { priority } : {}),
     ...(research !== null ? { research } : {}),
     ...(visibility === "public" || visibility === "private"
       ? { visibility }
@@ -842,6 +871,7 @@ export function matches(
   if (f.area && issue.frontmatter.area !== f.area) return false;
   if (f.needs && !issue.frontmatter.needs.includes(f.needs)) return false;
   if (f.labels && !issue.frontmatter.labels.includes(f.labels)) return false;
+  if (f.priority && issue.frontmatter.priority !== f.priority) return false;
   if (f.research === "awaiting" && issue.research !== "awaiting") return false;
   if (f.visibility && issue.visibility !== f.visibility) return false;
   if (
@@ -858,6 +888,13 @@ export function matches(
     return false;
   if (f.worktreeTouched && !touched) return false;
   return true;
+}
+
+export function compareIssuePriority(a: IssueRecord, b: IssueRecord): number {
+  return (
+    PRIORITY_ORDER[a.frontmatter.priority] -
+    PRIORITY_ORDER[b.frontmatter.priority]
+  );
 }
 
 export interface IssueFacets {
@@ -894,6 +931,7 @@ function filterChipsHtml(
       area: f.area,
       needs: f.needs,
       labels: f.labels,
+      priority: f.priority,
       research: f.research,
       visibility: f.visibility,
       worktree: f.worktreeTouched ? "touched" : undefined,
@@ -940,6 +978,7 @@ function filterChipsHtml(
     f.area ||
     f.needs ||
     f.labels ||
+    f.priority ||
     f.research ||
     f.visibility ||
     f.assigned ||
@@ -954,6 +993,7 @@ function filterChipsHtml(
     : "";
   return `<div class="filters">
     <div>status: ${statusGroup} ${researchChip} ${assignedChip} ${unassignedChip} ${worktreeChip}${clear}</div>
+    <div>${group("priority", "priority", ["important", "normal", "uncategorized", "backlog"], f.priority)}</div>
     <div>visibility: ${visibilityGroup}</div>
     <div>${group("category", "category", facets.categories, f.category)}</div>
     <div>${group("area", "area", facets.areas, f.area)}</div>
@@ -1093,6 +1133,10 @@ async function renderIssueIndex(
     if (!bucket) continue;
     (issue.closed ? bucket.closed : bucket.open).push(issue);
   }
+  for (const bucket of byCategory.values()) {
+    bucket.open.sort(compareIssuePriority);
+    bucket.closed.sort(compareIssuePriority);
+  }
 
   const row = (i: IssueRecord): string =>
     issueRowHtml(base, i, overlayEntriesFor(overlay, i));
@@ -1135,6 +1179,7 @@ function factsTableHtml(
   rows.push(["workstream", fr.workstream]);
   if (fr.needs.length) rows.push(["needs", fr.needs.join(", ")]);
   if (fr.labels.length) rows.push(["labels", fr.labels.join(", ")]);
+  rows.push(["priority", fr.priority]);
   if (fr.area) rows.push(["area", fr.area]);
   if (fr.filedBy) rows.push(["filed-by", fr.filedBy]);
   if (fr.discoveredBy) rows.push(["discovered-by", fr.discoveredBy]);
