@@ -1,84 +1,103 @@
 ---
-title: "Encryption at rest — decide what it would actually mean here"
+title: "Dormant boxes: sleep after no human activity, and encrypt what sleeps"
 workstream: unknown
 area: callback-box
 needs: [design, decision]
-labels: [security, soft-launch]
+labels: [security, soft-launch, lifecycle]
 ---
 
-"Encrypt at rest" sounds obviously good, and the boxholder's instinct is that
-it might be — but neither the threat it defends against nor the scope is
-settled. *Encrypt with what? How much resting?* Those are the right questions,
-and this issue exists to answer them before anything is built.
+The interesting case for encryption at rest is **deep storage** — someone
+forgets about a box. After some period with no *human* activity (a week? a
+month?) the box goes to sleep. Waking it takes a deliberate human recovery
+step, and **that step is also where the decryption key comes from.**
 
-## What's already encrypted, and what isn't
+This is the shape that makes at-rest encryption actually mean something here.
 
-`docs/security-report.md` §2 shows the credential layer is handled: invite and
-password-reset capabilities and mobile device tokens are **SHA-256 hashed at
-rest**, 0600, atomic + locked. Those are one-way hashes of secrets — the right
-treatment for credentials, and not what this issue is about.
+## Why dormancy resolves the tension
 
-**Nothing covers box content.** The report has no data-at-rest section for the
-substance: card files, git history, transcripts, annexed media, `events.db` /
-`usage.db`, connector caches. On the server those sit as ordinary files under
-the box directory.
+A live box can't be meaningfully encrypted against its own host: the agent
+exists to read the cards, search them, and act on them, so the running system
+needs plaintext continuously. Any scheme where the server holds the key while
+the box is live protects against a stolen disk and nothing else.
 
-## The question that decides everything: against whom?
+**A dormant box has nothing running.** No agent, no scheduler, no connectors.
+That is the one state where the server genuinely does not need the key — so it
+can be encrypted with something the machine doesn't hold, and the human supplies
+it on wake. Same act, two purposes: recovery *is* the key ceremony.
 
-"At rest" only means something relative to an attacker. The plausible ones here
-want very different mechanisms, and some are already covered:
+## What exists today
 
-- **A stolen or decommissioned disk / the hosting provider's storage layer.**
-  Full-disk or volume encryption answers this and nothing else needs to change.
-  Cheapest by far; likely already partly true depending on what Hetzner does
-  with volumes — *check before building anything.*
-- **A compromised host, or anyone with a shell.** Full-disk encryption does
-  **nothing** here: the volume is mounted and the app is reading it. Defending
-  this means keys the running server doesn't hold, which collides with the next
-  section.
-- **Backups and anything that leaves the machine.** Probably the best
-  value-per-effort, and it interlocks with
-  [no automated backup story](../decisions/2026-08-07-server-backup-story.md)
-  — if a backup mechanism is being designed anyway, "encrypted in transit and at
-  the destination" is far cheaper to build in now than to retrofit.
-- **The boxholder's own laptop.** FileVault likely already covers local boxes;
-  worth confirming rather than assuming.
+- **A first tier already works.** The hub idle-stops a box's `cb serve` child
+  after inactivity (minutes), lazily restarting on request. So "boxes stop when
+  unused" is an established pattern — this proposes a second, much longer tier
+  with teeth.
+- **Credentials are already hashed at rest** (`docs/security-report.md` §2:
+  invite/reset capabilities and mobile device tokens, SHA-256, 0600, atomic +
+  locked). Not what this is about.
+- **Nothing covers box content** — cards, git history, transcripts, annexed
+  media, `events.db`/`usage.db`, connector caches.
+- **No dormancy/archive concept exists anywhere.**
 
-## The tension that makes this hard
+## The prerequisite nobody has built
 
-**The agent has to read the box to do anything.** A box exists so an agent can
-process its cards, search it, summarize it, and act on it — so the running
-system needs plaintext, continuously, for essentially all of it. That rules out
-end-to-end encryption in the usual sense without redefining the product.
+**There is no signal for "when did a human last touch this box."** A search for
+one finds nothing. Everything here depends on it, and it has to be *human*
+activity specifically:
 
-Which means the honest ceiling for content encryption is roughly: *protect the
-bytes when the process isn't running or when they're somewhere other than the
-live server.* That's real value — disk theft, provider access, leaked backups,
-a decommissioned volume — but it is not "your host can't read your data," and
-the issue should not be written up as if it were.
+- Agent runs, scheduler ticks, connector syncs, and wakeups must **not** count.
+  A box with enabled schedules generates activity forever — key it off "activity"
+  and no box ever sleeps.
+- Plausible human signals: a chat message sent, a web session, a capture or
+  upload, a mobile pairing use. Worth deciding explicitly rather than inferring
+  from request logs, which the scheduler also touches.
 
-Anything stronger needs a specific carve-out: a subset of cards the agent never
-needs to read, or a key the boxholder supplies per session, with the box
-degraded while it's absent. Both are plausible; both are a different product
-decision, not a deployment change.
+Define this first. Everything else is downstream of it.
+
+## What sleeping actually does — and its cost
+
+Sleeping is not just encrypting. It stops the box *working*:
+
+- **Schedules stop.** No chat review, no retrospectives, no map refreshes.
+- **Connectors stop pulling.** Email, calendar, and RSS stop accumulating —
+  which is a *feature* for a forgotten box (it stops growing unattended) but
+  means a wake may face a large backlog.
+- **Notifications stop**, so the box can't tell you it wants attention.
+
+That last one makes the warning path load-bearing: a box must announce that it's
+about to sleep, while it can still reach you. A forgotten box becoming an
+*inaccessible* box with no warning is worse than a forgotten box.
+
+## The hard part: key custody
+
+This is the same problem as
+[the backup story](../decisions/2026-08-07-server-backup-story.md), and it
+should be decided with it:
+
+- If the server discards the key at sleep, **losing it means losing the box.**
+- Recovery has to be designed *before* the encryption, not after — including
+  what happens when the human has the box but not the key.
+- What about a box the boxholder shares with someone else? Whose key?
+
+## A second benefit worth pricing in
+
+Prod hit **100% of a 75 GB volume** on 2026-08-04. Dormant boxes are also
+excellent candidates for compression and off-host archival — so this earns its
+keep on storage pressure even before the security argument.
 
 ## Open questions
 
-- Does the provider already encrypt the volume? If so, what does that actually
-  defend against, and is the marginal gain of anything further worth it?
-- Is there a category of box content that deserves stronger treatment than the
-  rest — connector credentials on disk, `~/.cb-auth.json`, `.env` — where the
+- The threshold: a week? a month? Per-box, or one policy?
+- Does dormancy apply to local boxes too, or only the deployed server?
+- Does `git-annex` change the media picture (content-addressed blobs, and
+  `numcopies: 1` today)?
+- Is there content deserving stronger treatment even while live — connector
+  credentials on disk, `~/.cb-auth.json`, `.env` — where the
   agent-needs-plaintext argument doesn't apply?
-- Does `git-annex` change the picture for media, given annexed files are
-  content-addressed blobs?
-- What would this cost operationally — key custody, recovery when a key is lost,
-  and what happens to `cb` running unattended on a scheduler?
 
 ## Related
 
-- [no automated backup story](../decisions/2026-08-07-server-backup-story.md)
-  — decide these together; encrypted backups are likely the concrete win here.
+- [server backup story](../decisions/2026-08-07-server-backup-story.md) —
+  decide together; a dormant encrypted box is also the ideal backup unit.
 - [Cloudflare Flexible SSL leaves edge-to-origin plaintext](../bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md)
-  — encryption *in transit*, and a live gap. Worth fixing before spending
-  effort on at-rest: today the bytes cross the public internet unencrypted on
-  one leg, which is a strictly larger exposure than a powered-down disk.
+  — encryption *in transit*, live today, and a strictly larger exposure than a
+  powered-down disk. Worth fixing first.
