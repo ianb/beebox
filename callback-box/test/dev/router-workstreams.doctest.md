@@ -395,9 +395,33 @@ assert.match(
 assert.match(html, /Stale · Updated/);
 assert.match(
   html,
-  /<details class="quota-details"><summary>Quotas · over pace<\/summary>/,
+  /<details class="quota-details"><summary>Quotas · Claude on track · Codex over pace<\/summary>/,
 );
 assert.match(html, /role="region" aria-labelledby="agent-capacity"/);
+assert.match(html, /Resets in 5 hours · /);
+
+const forecast = quotaHtml(
+  [
+    {
+      provider: "claude",
+      status: "available",
+      fetchedAt: "2026-08-03T00:00:00Z",
+      windows: [
+        {
+          label: "7-day window",
+          usedPercent: 60,
+          resetsAt: "2026-08-08T00:00:00Z",
+          durationMinutes: 7 * 24 * 60,
+        },
+      ],
+    },
+  ],
+  new Date("2026-08-03T00:00:00Z"),
+);
+assert.match(
+  forecast,
+  /At this rate, quota reached in 1 day · 3 days 16 hours before reset/,
+);
 
 const expired = quotaHtml(
   [

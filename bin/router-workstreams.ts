@@ -515,6 +515,7 @@ button { padding: .35em .65em; }
 .search-form button { padding: .55em .85em; }
 .quota-details { position: relative; }
 .quota-details > summary { cursor: pointer; color: #2255aa; font-weight: 600; list-style-position: inside; }
+.quota-details[open] > summary::after { content: ""; position: fixed; z-index: 1; inset: 0; cursor: default; }
 .quota-panel { position: absolute; z-index: 2; right: 0; width: min(46rem, calc(100vw - 2em)); padding: 1em; background: #fff; border: 1px solid #ccd2d8; border-radius: 8px; box-shadow: 0 8px 24px #0002; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .flash { background: #eef6ff; border: 1px solid #bbd8f5; padding: .6em .8em; }
@@ -563,8 +564,50 @@ function pageShell(title: string, body: string, refresh = false): string {
 </html>`;
 }
 
-function formatReset(resetsAt: string): string {
-  return resetsAt.replace("T", " ").replace(/:00\.000Z$/, "Z");
+function friendlyTimestamp(value: string, now: Date): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const absolute = new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `${relativeTime(value, now)} · ${absolute}`;
+}
+
+function compactDuration(milliseconds: number): string {
+  const totalHours = Math.max(0, Math.round(milliseconds / 3_600_000));
+  if (totalHours < 2) {
+    const minutes = Math.max(1, Math.round(milliseconds / 60_000));
+    return `${String(minutes)} minute${minutes === 1 ? "" : "s"}`;
+  }
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days === 0) return `${String(totalHours)} hours`;
+  return `${String(days)} day${days === 1 ? "" : "s"}${hours === 0 ? "" : ` ${String(hours)} hours`}`;
+}
+
+function exhaustionHtml(window: QuotaWindow, now: Date): string {
+  const pace = quotaPace(window, now);
+  if (
+    !pace ||
+    pace.onTrack ||
+    pace.expectedPercent <= 0 ||
+    window.usedPercent <= 0 ||
+    window.usedPercent >= 100 ||
+    window.durationMinutes === null
+  )
+    return "";
+  const resetMs = new Date(window.resetsAt).getTime();
+  const durationMs = window.durationMinutes * 60_000;
+  const startMs = resetMs - durationMs;
+  const elapsedMs = now.getTime() - startMs;
+  const exhaustionMs = startMs + (elapsedMs * 100) / window.usedPercent;
+  const earlyMs = resetMs - exhaustionMs;
+  if (earlyMs <= 0 || exhaustionMs <= now.getTime()) return "";
+  return `<p class="over-pace">At this rate, quota reached ${escapeHtml(relativeTime(new Date(exhaustionMs).toISOString(), now))} · ${escapeHtml(compactDuration(earlyMs))} before reset</p>`;
 }
 
 function quotaWindowHtml(window: QuotaWindow, now: Date): string {
@@ -578,7 +621,7 @@ function quotaWindowHtml(window: QuotaWindow, now: Date): string {
       ? `<p class="on-track">On track · ${Math.round(pace.differencePoints)} points under budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
       : `<p class="over-pace">Over pace · ${Math.round(Math.abs(pace.differencePoints))} points over budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
     : '<p class="muted">Pace unavailable for this window.</p>';
-  return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p>${Math.round(window.usedPercent)}% used</p><progress max="100" value="${String(used)}" aria-label="${escapeHtml(window.label)} usage"></progress>${paceHtml}<p class="muted">Resets ${escapeHtml(formatReset(window.resetsAt))}</p></div>`;
+  return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p>${Math.round(window.usedPercent)}% used</p><progress max="100" value="${String(used)}" aria-label="${escapeHtml(window.label)} usage"></progress>${paceHtml}${exhaustionHtml(window, now)}<p class="muted">Resets ${escapeHtml(friendlyTimestamp(window.resetsAt, now))}</p></div>`;
 }
 
 export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
@@ -586,7 +629,7 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
   const cards = quotas
     .map((quota) => {
       const title = quota.provider === "claude" ? "Claude account" : "Codex";
-      const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(formatReset(quota.fetchedAt))}</p>`;
+      const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(friendlyTimestamp(quota.fetchedAt, now))}</p>`;
       const content =
         quota.status === "available"
           ? `${quota.message ? `<p class="muted">Refresh failed: ${escapeHtml(quota.message)}</p>` : ""}${quota.windows.map((window) => quotaWindowHtml(window, now)).join("")}`
@@ -597,18 +640,19 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
       return `<article class="quota-card"><h3>${title}</h3>${content}${credits}${captured}</article>`;
     })
     .join("");
-  const paces = quotas.flatMap((quota) =>
-    quota.status === "available"
-      ? quota.windows
-          .map((window) => quotaPace(window, now))
-          .filter((pace) => pace !== null)
-      : [],
-  );
-  const paceSummary = paces.some((pace) => !pace.onTrack)
-    ? " · over pace"
-    : paces.length > 0
-      ? " · on track"
-      : "";
+  const providerSummaries = quotas.map((quota) => {
+    const name = quota.provider === "claude" ? "Claude" : "Codex";
+    if (quota.status !== "available") return `${name} unavailable`;
+    const paces = quota.windows
+      .filter((window) => new Date(window.resetsAt).getTime() > now.getTime())
+      .map((window) => quotaPace(window, now))
+      .filter((pace) => pace !== null);
+    if (paces.length === 0) return `${name} pace unavailable`;
+    return `${name} ${paces.some((pace) => !pace.onTrack) ? "over pace" : "on track"}`;
+  });
+  const paceSummary = providerSummaries.length
+    ? ` · ${providerSummaries.join(" · ")}`
+    : "";
   return `<details class="quota-details"><summary>Quotas${paceSummary}</summary><div class="quota-panel" role="region" aria-labelledby="agent-capacity"><h2 id="agent-capacity" class="sr-only">Agent capacity</h2><div class="quota-grid">${cards}</div></div></details>`;
 }
 
