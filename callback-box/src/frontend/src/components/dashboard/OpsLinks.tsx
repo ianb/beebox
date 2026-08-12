@@ -27,6 +27,12 @@ export function OpsLinks() {
       >
         History &rarr;
       </Link>
+      <Link
+        to={href(`/${boxSlug}/inventory`)}
+        className="text-sm text-primary hover:text-primary-dark"
+      >
+        Box files &rarr;
+      </Link>
     </nav>
   );
 }
