@@ -1,19 +1,25 @@
 ---
 title: "Restart the chat send receipt investigation after the next real incident"
 workstream: send-receipt-logging
+needs: [manual-testing]
 area: callback-box
 filed-by: agent
+discovered-by: boxholder
 discovered-in: worktree-send-receipt-logging — after landing send receipt diagnostics
 ---
+
+> **⏳ Awaiting manual testing** — instrumentation landed in `a98f3b34`; wait
+> for the next real send-confirmation failure, then inspect its diagnostic
+> timeline. Only Ian clears this.
 
 The instrumentation for
 [chat sends that appear unconfirmed after they succeeded](../bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
 is deployed. The failure trigger is still unknown. More speculative work before
 another incident would not add evidence.
 
-## Trigger
+## Manual testing
 
-Reopen this investigation when the boxholder next sees any of these symptoms:
+Wait for the boxholder to see any of these symptoms during ordinary use:
 
 - A sent message returns to the composer.
 - A sent message remains in the composer after it appears in chat history.
@@ -21,8 +27,10 @@ Reopen this investigation when the boxholder next sees any of these symptoms:
 - The client logs `[chat] Send failed with network error, retrying...` during a
   send that later succeeds.
 
-Record the approximate incident time, surface (web or iOS), and whether the app
-or tab was backgrounded. Do not record the message content.
+When one occurs, record the approximate incident time, surface (web or iOS), and
+whether the app or tab was backgrounded. Do not record the message content. Then
+follow the investigation procedure below. Only the boxholder removes
+`manual-testing` after the incident has been investigated.
 
 ## Investigation procedure
 
