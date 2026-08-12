@@ -24,8 +24,14 @@ controller depends on:
   scroller's `clientHeight` without changing content height; a content-only
   observer silently drifts off the bottom.
 - User vs. programmatic scroll is told apart by recording the last `scrollTop`
-  the controller wrote (not `event.isTrusted`), and a scroll-up only disengages
-  when a real wheel/touch/key intent fired recently.
+  the controller wrote (not `event.isTrusted`), plus the in-flight smooth-scroll
+  target (the button's return animation frames are ours too). A scroll-up
+  disengages on recent wheel/touch/key intent, or — with no intent — when it
+  lands well above the bottom: scrollbar-thumb drags fire no input events, while
+  the layout clamps the intent gate ignores land at the bottom. While detached,
+  the reading anchor's offset is updated inside the scroll handler itself, so a
+  resize mid-fling measures only reflow — never the user's own scrolling (the
+  pure rules: `decideScroll`/`decideReconcile` in `scroll-reconcile.ts`).
 
 **After changing scroll code, run the manual procedure in
 `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout

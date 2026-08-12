@@ -36,6 +36,7 @@ export interface IssueFrontmatter {
   labels: string[];
   area?: string;
   filedBy?: string;
+  discoveredBy?: string;
   discoveredIn?: string;
   resolution?: string;
   design?: string;
@@ -188,6 +189,7 @@ export function parseIssueFile(
 
   const area = asString(data.area);
   const filedBy = asString(data["filed-by"]);
+  const discoveredBy = asString(data["discovered-by"]);
   const discoveredIn = asString(data["discovered-in"]);
   const resolution = asString(data.resolution);
   const design = asString(data.design);
@@ -203,6 +205,7 @@ export function parseIssueFile(
       labels: asStringList(data.labels),
       ...(area !== undefined ? { area } : {}),
       ...(filedBy !== undefined ? { filedBy } : {}),
+      ...(discoveredBy !== undefined ? { discoveredBy } : {}),
       ...(discoveredIn !== undefined ? { discoveredIn } : {}),
       ...(resolution !== undefined ? { resolution } : {}),
       ...(design !== undefined ? { design } : {}),
@@ -714,6 +717,10 @@ function facetChips(
     chips.push(
       `<span class="chip chip-filedby">filed:${escapeHtml(fr.filedBy)}</span>`,
     );
+  if (fr.discoveredBy)
+    chips.push(
+      `<span class="chip chip-discoveredby">discovered:${escapeHtml(fr.discoveredBy)}</span>`,
+    );
   if (research === "awaiting")
     chips.push(`<span class="chip chip-research">awaiting research</span>`);
   else if (research === "researched")
@@ -797,6 +804,7 @@ export interface Filters {
   research?: string;
   visibility?: Visibility;
   assigned: boolean;
+  unassigned: boolean;
   worktreeTouched: boolean;
   status: "open" | "closed" | "all";
 }
@@ -819,6 +827,7 @@ export function parseFilters(query: URLSearchParams): Filters {
       ? { visibility }
       : {}),
     assigned: query.get("assigned") === "true",
+    unassigned: query.get("assigned") === "false",
     worktreeTouched: query.get("worktree") === "touched",
     status: status === "closed" || status === "all" ? status : "open",
   };
@@ -839,6 +848,12 @@ export function matches(
     f.assigned &&
     (issue.frontmatter.workstream === "unattached" ||
       issue.frontmatter.workstream === "unknown")
+  )
+    return false;
+  if (
+    f.unassigned &&
+    issue.frontmatter.workstream !== "unattached" &&
+    issue.frontmatter.workstream !== "unknown"
   )
     return false;
   if (f.worktreeTouched && !touched) return false;
@@ -882,7 +897,7 @@ function filterChipsHtml(
       research: f.research,
       visibility: f.visibility,
       worktree: f.worktreeTouched ? "touched" : undefined,
-      assigned: f.assigned ? "true" : undefined,
+      assigned: f.assigned ? "true" : f.unassigned ? "false" : undefined,
       status: f.status === "open" ? undefined : f.status,
       ...overrides,
     };
@@ -913,6 +928,7 @@ function filterChipsHtml(
   const researchChip = `<a class="chip${f.research === "awaiting" ? " active" : ""}" href="${qs({ research: f.research === "awaiting" ? undefined : "awaiting" })}">awaiting research</a>`;
   const worktreeChip = `<a class="chip${f.worktreeTouched ? " active" : ""}" href="${qs({ worktree: f.worktreeTouched ? undefined : "touched" })}">touched by any worktree</a>`;
   const assignedChip = `<a class="chip${f.assigned ? " active" : ""}" href="${qs({ assigned: f.assigned ? undefined : "true" })}">assigned to a workstream</a>`;
+  const unassignedChip = `<a class="chip${f.unassigned ? " active" : ""}" href="${qs({ assigned: f.unassigned ? undefined : "false" })}">unassigned</a>`;
   const visibilityGroup = (["public", "private"] as const)
     .map(
       (v) =>
@@ -927,6 +943,7 @@ function filterChipsHtml(
     f.research ||
     f.visibility ||
     f.assigned ||
+    f.unassigned ||
     f.worktreeTouched ||
     f.status !== "open";
   const clear = anyActive
@@ -936,7 +953,7 @@ function filterChipsHtml(
     ? `<div>${group("labels", "labels", facets.labels, f.labels)}</div>`
     : "";
   return `<div class="filters">
-    <div>status: ${statusGroup} ${researchChip} ${assignedChip} ${worktreeChip}${clear}</div>
+    <div>status: ${statusGroup} ${researchChip} ${assignedChip} ${unassignedChip} ${worktreeChip}${clear}</div>
     <div>visibility: ${visibilityGroup}</div>
     <div>${group("category", "category", facets.categories, f.category)}</div>
     <div>${group("area", "area", facets.areas, f.area)}</div>
@@ -1120,6 +1137,7 @@ function factsTableHtml(
   if (fr.labels.length) rows.push(["labels", fr.labels.join(", ")]);
   if (fr.area) rows.push(["area", fr.area]);
   if (fr.filedBy) rows.push(["filed-by", fr.filedBy]);
+  if (fr.discoveredBy) rows.push(["discovered-by", fr.discoveredBy]);
   if (fr.discoveredIn) rows.push(["discovered-in", fr.discoveredIn]);
   if (fr.design) rows.push(["design", fr.design]);
   if (closed && fr.resolution) rows.push(["resolution", fr.resolution]);

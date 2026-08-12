@@ -189,6 +189,23 @@ async function listWorktreeIssueChanges(worktreesRoot: string): Promise<{
 }
 
 type WorkstreamDocuments = Awaited<ReturnType<WorkstreamsDeps["documents"]>>;
+interface IssueIndicators {
+  state: "open" | "closed";
+  owned: boolean;
+  discovered: boolean;
+  discoveredBy?: string;
+  activity?: "opened" | "updated" | "closed" | "reopened";
+}
+
+function discoveredInWorkstream(
+  issue: IssueRecord,
+  workstream: string,
+): boolean {
+  const origin = /^(worktree-[\w-]+)(?:\s+—|\s+-|$)/.exec(
+    issue.frontmatter.discoveredIn ?? "",
+  )?.[1];
+  return origin === `worktree-${workstream}`;
+}
 
 export function issuesForWorkstream(
   documents: WorkstreamDocuments,
@@ -216,12 +233,47 @@ export function issuesForWorkstream(
     ).issue;
   });
   return [...main, ...overlay]
-    .filter((issue) => issue.frontmatter.workstream === workstream)
+    .filter(
+      (issue) =>
+        issue.frontmatter.workstream === workstream ||
+        discoveredInWorkstream(issue, workstream),
+    )
     .toSorted(
       (a, b) =>
         Number(a.closed) - Number(b.closed) ||
         a.frontmatter.title.localeCompare(b.frontmatter.title),
     );
+}
+
+export function issueIndicators(
+  documents: WorkstreamDocuments,
+  workstream: string,
+  issue: IssueRecord,
+): IssueIndicators {
+  const owned = issue.frontmatter.workstream === workstream;
+  const discovered = discoveredInWorkstream(issue, workstream);
+  const changedHere = (documents.worktreeIssues ?? []).some(
+    (entry) => entry.worktree === workstream && entry.issue.slug === issue.slug,
+  );
+  const main = documents.issues.find(
+    (candidate) => candidate.slug === issue.slug,
+  );
+  let activity: IssueIndicators["activity"];
+  if (changedHere) {
+    if (main?.closed && !issue.closed) activity = "reopened";
+    else if (!main) activity = "opened";
+    else if (!main.closed && issue.closed) activity = "closed";
+    else activity = "updated";
+  }
+  return {
+    state: issue.closed ? "closed" : "open",
+    owned,
+    discovered,
+    ...(issue.frontmatter.discoveredBy
+      ? { discoveredBy: issue.frontmatter.discoveredBy }
+      : {}),
+    ...(activity ? { activity } : {}),
+  };
 }
 
 async function listPlans(repoRoot: string): Promise<PlanRecord[]> {
@@ -300,17 +352,43 @@ function agentStatusHtml(row: WorkstreamRow): string {
   return `<span class="agent-status">${row.session.agent ? `${agent} inactive` : "No agent recorded"}</span>`;
 }
 
-function issueSummaryHtml(issues: IssueRecord[]): string {
-  const open = issues.filter((issue) => !issue.closed);
-  if (open.length === 0) return "";
-  return `<div class="row-issues">${open
-    .map((issue) => {
+const ACTIVITY_LABELS: Record<
+  NonNullable<IssueIndicators["activity"]>,
+  string
+> = {
+  opened: "Opened here",
+  updated: "Updated here",
+  closed: "Closed here",
+  reopened: "Reopened here",
+};
+
+function issueSummaryHtml(
+  issues: Array<{ issue: IssueRecord; indicators: IssueIndicators }>,
+): string {
+  if (issues.length === 0) return "";
+  return `<div class="row-issues">${issues
+    .map(({ issue, indicators }) => {
       const manual = issue.frontmatter.needs.includes("manual-testing");
       const className = manual ? ' class="manual-testing-issue"' : "";
       const label = manual
         ? '<span class="manual-testing-label">Manual testing</span>'
         : "";
-      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}${escapeHtml(issue.frontmatter.title)}</a>`;
+      const badges = [
+        `<span class="issue-state issue-state-${indicators.state}">${indicators.state === "closed" ? "Closed" : "Open"}</span>`,
+        indicators.owned
+          ? `<span class="issue-state issue-state-owned">${indicators.state === "closed" ? "Resolved here" : "Owns work"}</span>`
+          : "",
+        indicators.discovered
+          ? '<span class="issue-state issue-state-discovered">Discovered here</span>'
+          : "",
+        indicators.discoveredBy
+          ? `<span class="issue-state issue-state-discovered-by">Discovered by ${escapeHtml(indicators.discoveredBy)}</span>`
+          : "",
+        indicators.activity
+          ? `<span class="issue-state issue-activity-${indicators.activity}">${ACTIVITY_LABELS[indicators.activity]}</span>`
+          : "",
+      ].join("");
+      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}<span class="issue-title">${escapeHtml(issue.frontmatter.title)}</span><span class="issue-indicators">${badges}</span></a>`;
     })
     .join("")}</div>`;
 }
@@ -318,7 +396,7 @@ function issueSummaryHtml(issues: IssueRecord[]): string {
 function rowHtml(
   row: WorkstreamRow,
   note: string,
-  issues: IssueRecord[] = [],
+  documents: WorkstreamDocuments,
 ): string {
   const box = row.boxState.keepUnmerged
     ? '<span class="chip held">keep unmerged</span>'
@@ -327,6 +405,10 @@ function rowHtml(
       : "";
   const name = `<a class="workstream-link" href="/workstreams/${encodeURIComponent(row.name)}/"><span class="emoji">${escapeHtml(emoji(row))}</span>${escapeHtml(row.name)}</a>`;
   const main = `<div class="row-main">${name}<span>${escapeHtml(note)}</span>${agentStatusHtml(row)}${box}<span class="actions">${actionsHtml(row)}</span></div>`;
+  const issues = issuesForWorkstream(documents, row.name).map((issue) => ({
+    issue,
+    indicators: issueIndicators(documents, row.name, issue),
+  }));
   return `<li>${main}${issueSummaryHtml(issues)}</li>`;
 }
 
@@ -338,7 +420,7 @@ function section(params: {
 }): string {
   const { title, rows, note, documents } = params;
   if (rows.length === 0) return "";
-  return `<section><h2>${escapeHtml(title)} <small>${rows.length}</small></h2><ul>${rows.map((row) => rowHtml(row, note(row), issuesForWorkstream(documents, row.name))).join("")}</ul></section>`;
+  return `<section><h2>${escapeHtml(title)} <small>${rows.length}</small></h2><ul>${rows.map((row) => rowHtml(row, note(row), documents)).join("")}</ul></section>`;
 }
 
 function issueHref(issue: IssueRecord): string {
@@ -352,12 +434,32 @@ function planHref(plan: PlanRecord): string {
 function documentList(params: {
   issues: IssueRecord[];
   plans: PlanRecord[];
+  documents?: WorkstreamDocuments;
+  workstream?: string;
 }): string {
   const issueRows = params.issues
-    .map(
-      (issue) =>
-        `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}</span></li>`,
-    )
+    .map((issue) => {
+      const indicators =
+        params.documents && params.workstream
+          ? issueIndicators(params.documents, params.workstream, issue)
+          : undefined;
+      const association = indicators
+        ? [
+            indicators.owned
+              ? indicators.state === "closed"
+                ? "resolved here"
+                : "owns work"
+              : "",
+            indicators.discovered ? "discovered here" : "",
+            indicators.discoveredBy
+              ? `discovered by ${indicators.discoveredBy}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "";
+      return `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}${association ? ` · ${association}` : ""}</span></li>`;
+    })
     .join("");
   const planRows = params.plans
     .map(
@@ -379,9 +481,22 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .row-main { display: flex; gap: 1em; align-items: center; }
 .workstream-link, li > a { min-width: 18em; font: 600 14px ui-monospace, Menlo, monospace; color: #2255aa; text-decoration: none; }
 .row-issues { display: flex; flex-direction: column; gap: .15em; margin: .35em 0 0 2.8em; }
-.row-issues a::before { content: "Issue · "; color: #777; }
+.row-issues a { display: flex; align-items: baseline; gap: .55em; }
+.row-issues a::before { content: "Issue · "; flex: 0 0 auto; color: #777; }
+.issue-title { min-width: 0; }
+.issue-indicators { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .3em; }
+.issue-state { display: inline-block; padding: .08em .4em; border-radius: 999px; background: #e8edf5; color: #405168; font-size: .78em; font-weight: 700; text-align: center; white-space: nowrap; }
+.issue-state-closed { background: #ececec; color: #666; }
+.issue-state-owned { background: #dbeafe; color: #1e40af; }
+.issue-state-discovered { background: #fef3c7; color: #92400e; }
+.issue-state-discovered-by { background: #f4ead7; color: #6f4b18; }
+.issue-activity-opened { background: #dcfce7; color: #166534; }
+.issue-activity-updated { background: #ede9fe; color: #5b21b6; }
+.issue-activity-closed { background: #374151; color: #fff; }
+.issue-activity-reopened { background: #ccfbf1; color: #115e59; }
 .row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
 .row-issues .manual-testing-issue::before { content: none; }
+.manual-testing-issue .issue-state { background: #ffffff26; color: #fff; }
 .manual-testing-label { margin-right: .55em; padding-right: .55em; border-right: 1px solid #ffffff80; font-size: .78em; letter-spacing: .02em; text-transform: uppercase; }
 .emoji { display: inline-block; width: 1.8em; }
 .chip { padding: .1em .45em; border-radius: 4px; background: #eee; font-size: .8em; white-space: nowrap; }
@@ -400,6 +515,7 @@ button { padding: .35em .65em; }
 .search-form button { padding: .55em .85em; }
 .quota-details { position: relative; }
 .quota-details > summary { cursor: pointer; color: #2255aa; font-weight: 600; list-style-position: inside; }
+.quota-details[open] > summary::after { content: ""; position: fixed; z-index: 1; inset: 0; cursor: default; }
 .quota-panel { position: absolute; z-index: 2; right: 0; width: min(46rem, calc(100vw - 2em)); padding: 1em; background: #fff; border: 1px solid #ccd2d8; border-radius: 8px; box-shadow: 0 8px 24px #0002; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .flash { background: #eef6ff; border: 1px solid #bbd8f5; padding: .6em .8em; }
@@ -448,8 +564,50 @@ function pageShell(title: string, body: string, refresh = false): string {
 </html>`;
 }
 
-function formatReset(resetsAt: string): string {
-  return resetsAt.replace("T", " ").replace(/:00\.000Z$/, "Z");
+function friendlyTimestamp(value: string, now: Date): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const absolute = new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `${relativeTime(value, now)} · ${absolute}`;
+}
+
+function compactDuration(milliseconds: number): string {
+  const totalHours = Math.max(0, Math.round(milliseconds / 3_600_000));
+  if (totalHours < 2) {
+    const minutes = Math.max(1, Math.round(milliseconds / 60_000));
+    return `${String(minutes)} minute${minutes === 1 ? "" : "s"}`;
+  }
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days === 0) return `${String(totalHours)} hours`;
+  return `${String(days)} day${days === 1 ? "" : "s"}${hours === 0 ? "" : ` ${String(hours)} hours`}`;
+}
+
+function exhaustionHtml(window: QuotaWindow, now: Date): string {
+  const pace = quotaPace(window, now);
+  if (
+    !pace ||
+    pace.onTrack ||
+    pace.expectedPercent <= 0 ||
+    window.usedPercent <= 0 ||
+    window.usedPercent >= 100 ||
+    window.durationMinutes === null
+  )
+    return "";
+  const resetMs = new Date(window.resetsAt).getTime();
+  const durationMs = window.durationMinutes * 60_000;
+  const startMs = resetMs - durationMs;
+  const elapsedMs = now.getTime() - startMs;
+  const exhaustionMs = startMs + (elapsedMs * 100) / window.usedPercent;
+  const earlyMs = resetMs - exhaustionMs;
+  if (earlyMs <= 0 || exhaustionMs <= now.getTime()) return "";
+  return `<p class="over-pace">At this rate, quota reached ${escapeHtml(relativeTime(new Date(exhaustionMs).toISOString(), now))} · ${escapeHtml(compactDuration(earlyMs))} before reset</p>`;
 }
 
 function quotaWindowHtml(window: QuotaWindow, now: Date): string {
@@ -463,7 +621,7 @@ function quotaWindowHtml(window: QuotaWindow, now: Date): string {
       ? `<p class="on-track">On track · ${Math.round(pace.differencePoints)} points under budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
       : `<p class="over-pace">Over pace · ${Math.round(Math.abs(pace.differencePoints))} points over budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
     : '<p class="muted">Pace unavailable for this window.</p>';
-  return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p>${Math.round(window.usedPercent)}% used</p><progress max="100" value="${String(used)}" aria-label="${escapeHtml(window.label)} usage"></progress>${paceHtml}<p class="muted">Resets ${escapeHtml(formatReset(window.resetsAt))}</p></div>`;
+  return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p>${Math.round(window.usedPercent)}% used</p><progress max="100" value="${String(used)}" aria-label="${escapeHtml(window.label)} usage"></progress>${paceHtml}${exhaustionHtml(window, now)}<p class="muted">Resets ${escapeHtml(friendlyTimestamp(window.resetsAt, now))}</p></div>`;
 }
 
 export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
@@ -471,7 +629,7 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
   const cards = quotas
     .map((quota) => {
       const title = quota.provider === "claude" ? "Claude account" : "Codex";
-      const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(formatReset(quota.fetchedAt))}</p>`;
+      const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(friendlyTimestamp(quota.fetchedAt, now))}</p>`;
       const content =
         quota.status === "available"
           ? `${quota.message ? `<p class="muted">Refresh failed: ${escapeHtml(quota.message)}</p>` : ""}${quota.windows.map((window) => quotaWindowHtml(window, now)).join("")}`
@@ -482,18 +640,19 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
       return `<article class="quota-card"><h3>${title}</h3>${content}${credits}${captured}</article>`;
     })
     .join("");
-  const paces = quotas.flatMap((quota) =>
-    quota.status === "available"
-      ? quota.windows
-          .map((window) => quotaPace(window, now))
-          .filter((pace) => pace !== null)
-      : [],
-  );
-  const paceSummary = paces.some((pace) => !pace.onTrack)
-    ? " · over pace"
-    : paces.length > 0
-      ? " · on track"
-      : "";
+  const providerSummaries = quotas.map((quota) => {
+    const name = quota.provider === "claude" ? "Claude" : "Codex";
+    if (quota.status !== "available") return `${name} unavailable`;
+    const paces = quota.windows
+      .filter((window) => new Date(window.resetsAt).getTime() > now.getTime())
+      .map((window) => quotaPace(window, now))
+      .filter((pace) => pace !== null);
+    if (paces.length === 0) return `${name} pace unavailable`;
+    return `${name} ${paces.some((pace) => !pace.onTrack) ? "over pace" : "on track"}`;
+  });
+  const paceSummary = providerSummaries.length
+    ? ` · ${providerSummaries.join(" · ")}`
+    : "";
   return `<details class="quota-details"><summary>Quotas${paceSummary}</summary><div class="quota-panel" role="region" aria-labelledby="agent-capacity"><h2 id="agent-capacity" class="sr-only">Agent capacity</h2><div class="quota-grid">${cards}</div></div></details>`;
 }
 
@@ -523,7 +682,7 @@ export function relativeTime(value: string, now = new Date()): string {
 function renderDetail(
   name: string,
   row: WorkstreamRow | undefined,
-  documents: { issues: IssueRecord[]; plans: PlanRecord[] },
+  documents: WorkstreamDocuments,
 ): string {
   const state =
     row?.path === null
@@ -532,7 +691,7 @@ function renderDetail(
   const facts = `<dl class="facts"><dt>State</dt><dd>${escapeHtml(state)}</dd><dt>Path</dt><dd>${escapeHtml(row?.path ?? "none")}</dd><dt>Git</dt><dd>${row?.git ? `${String(row.git.ahead ?? "?")} ahead, ${String(row.git.dirty ?? "?")} dirty` : "unavailable"}</dd><dt>Box</dt><dd>${row?.boxState.testSetup ? "test-setup" : row?.boxState.keepUnmerged ? "keep unmerged" : "no pin"}</dd></dl>`;
   return pageShell(
     name,
-    `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList(documents)}`,
+    `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList({ issues: documents.issues, plans: documents.plans, documents, workstream: name })}`,
   );
 }
 
@@ -631,7 +790,9 @@ function searchHtml(
     plan.title.toLocaleLowerCase().includes(needle),
   );
   const workstreamRows = workstreams
-    .map((row) => rowHtml(row, row.path === null ? "culled" : row.agent.state))
+    .map((row) =>
+      rowHtml(row, row.path === null ? "culled" : row.agent.state, documents),
+    )
     .join("");
   return `<section><h2>Search results</h2>${workstreamRows ? `<ul>${workstreamRows}</ul>` : ""}${documentList({ issues, plans }) || "<p>No matches.</p>"}</section>`;
 }
@@ -906,6 +1067,7 @@ export async function serveWorkstreams(params: {
             name,
             rows.find((row) => row.name === name),
             {
+              ...documents,
               issues: issuesForWorkstream(documents, name),
               plans: documents.plans.filter((plan) => plan.workstream === name),
             },

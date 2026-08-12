@@ -12,6 +12,7 @@ import path from "node:path";
 
 import {
   legacyIssuesRedirect,
+  issueIndicators,
   issuesForWorkstream,
   quotaHtml,
   relativeTime,
@@ -195,8 +196,9 @@ assert.match(html, /old-seam/);
 assert.match(html, /Seam design/);
 ```
 
-Open issues appear beneath their assigned workstream. An issue changed in that
-worktree replaces main's metadata and status, including a move into `closed/`.
+Issues appear beneath a workstream when it owns the work or discovered it. These
+are independent facts. An issue changed in that worktree replaces main's
+metadata and status, including a move into `closed/`.
 
 ```ts
 const mainIssue = parseIssueFile(
@@ -216,6 +218,16 @@ const documents = {
 const authoritative = issuesForWorkstream(documents, "seam");
 JSON.stringify(authoritative.map((issue) => [issue.frontmatter.title, issue.closed]))
 => [["Worktree title",true]]
+
+JSON.stringify(issueIndicators(documents, "seam", authoritative[0]!))
+=> {"state":"closed","owned":true,"discovered":false,"activity":"closed"}
+
+JSON.stringify(issueIndicators(
+  { issues: [closedIssue], plans: [] },
+  "seam",
+  closedIssue,
+))
+=> {"state":"closed","owned":true,"discovered":false}
 
 const deletedOnly = issuesForWorkstream(
   {
@@ -241,20 +253,76 @@ const crossWorktree = issuesForWorkstream(
 crossWorktree[0]?.frontmatter.title
 => Worktree title
 
+JSON.stringify(issueIndicators(
+  {
+    issues: [mainIssue],
+    plans: [],
+    worktreeIssues: [{ worktree: "editor", issue: closedIssue }],
+    worktreeTouchedSlugs: [{ worktree: "editor", slug: closedIssue.slug }],
+  },
+  "seam",
+  crossWorktree[0]!,
+))
+=> {"state":"closed","owned":true,"discovered":false}
+
 const openIssue = parseIssueFile(
   "features/2026-08-11-open.md",
   "---\ntitle: Verify the seam\nworkstream: seam\nneeds: [manual-testing]\n---\n",
 );
+const discoveredIssue = parseIssueFile(
+  "features/2026-08-11-discovered.md",
+  "---\ntitle: Later work\nworkstream: unattached\nfiled-by: agent\ndiscovered-by: Ian\ndiscovered-in: worktree-seam — while doing the seam\n---\n",
+);
+JSON.stringify({
+  listed: issuesForWorkstream(
+    { issues: [discoveredIssue], plans: [] },
+    "seam",
+  ).length,
+  indicators: issueIndicators(
+    { issues: [discoveredIssue], plans: [] },
+    "seam",
+    discoveredIssue,
+  ),
+})
+=> {"listed":1,"indicators":{"state":"open","owned":false,"discovered":true,"discoveredBy":"Ian"}}
+
+const similarlyNamedDiscovery = parseIssueFile(
+  "features/2026-08-11-similar.md",
+  "---\ntitle: Similar name\nworkstream: unattached\nfiled-by: agent\ndiscovered-in: worktree-seam-extra — elsewhere\n---\n",
+);
+issuesForWorkstream(
+  { issues: [similarlyNamedDiscovery], plans: [] },
+  "seam",
+).length
+=> 0
+
+JSON.stringify(issueIndicators(
+  {
+    issues: [],
+    plans: [],
+    worktreeIssues: [{ worktree: "seam", issue: openIssue }],
+    worktreeTouchedSlugs: [{ worktree: "seam", slug: openIssue.slug }],
+  },
+  "seam",
+  openIssue,
+))
+=> {"state":"open","owned":true,"discovered":false,"activity":"opened"}
+
 const html = renderWorkstreams(
   [row({ name: "seam" })],
   "",
   "",
-  { issues: [openIssue], plans: [] },
+  { issues: [openIssue, discoveredIssue], plans: [] },
 );
 assert.match(html, /row-issues[\s\S]*Verify the seam/);
 assert.match(
   html,
   /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
+);
+assert.match(html, /Verify the seam[\s\S]*Open[\s\S]*Owns work/);
+assert.match(
+  html,
+  /Later work[\s\S]*Discovered here[\s\S]*Discovered by Ian/,
 );
 
 const query = parseFilters(
@@ -269,6 +337,13 @@ JSON.stringify([
   ),
 ])
 => [true,false]
+
+const unassignedQuery = parseFilters(new URLSearchParams("assigned=false"));
+JSON.stringify([
+  matches(openIssue, unassignedQuery, false),
+  matches(discoveredIssue, unassignedQuery, false),
+])
+=> [false,true]
 ```
 
 ## Quota summary
@@ -320,9 +395,33 @@ assert.match(
 assert.match(html, /Stale · Updated/);
 assert.match(
   html,
-  /<details class="quota-details"><summary>Quotas · over pace<\/summary>/,
+  /<details class="quota-details"><summary>Quotas · Claude on track · Codex over pace<\/summary>/,
 );
 assert.match(html, /role="region" aria-labelledby="agent-capacity"/);
+assert.match(html, /Resets in 5 hours · /);
+
+const forecast = quotaHtml(
+  [
+    {
+      provider: "claude",
+      status: "available",
+      fetchedAt: "2026-08-03T00:00:00Z",
+      windows: [
+        {
+          label: "7-day window",
+          usedPercent: 60,
+          resetsAt: "2026-08-08T00:00:00Z",
+          durationMinutes: 7 * 24 * 60,
+        },
+      ],
+    },
+  ],
+  new Date("2026-08-03T00:00:00Z"),
+);
+assert.match(
+  forecast,
+  /At this rate, quota reached in 1 day · 3 days 16 hours before reset/,
+);
 
 const expired = quotaHtml(
   [
