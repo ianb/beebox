@@ -11,6 +11,7 @@ enum NativeVoiceTurnCommand: Equatable {
 enum NativeVoiceTurnEvent: Equatable {
     case microphoneStarted
     case microphoneStopped
+    case draftErased
     case voiceMessageSent(closeMicrophone: Bool)
     case speechPlaybackChanged(playing: Bool)
 }
@@ -27,6 +28,8 @@ struct NativeVoiceTurnState: Equatable {
         case .microphoneStopped:
             isActive = false
             return .stopDictation
+        case .draftErased:
+            return isActive && speechPlaybackActive == false ? .startDictation : .none
         case .voiceMessageSent(let closeMicrophone):
             if closeMicrophone {
                 isActive = false

@@ -22,12 +22,70 @@ merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
 - **Current pin:** `0.3.226`
-- **Latest reviewed upstream version:** `0.3.227` (SDK), `2.1.227` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.228` (SDK), `2.1.228` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Let `0.3.227` finish the 48h settling window, then
-  bump. Nothing in it is act-now for callback-box on either channel.
+- **Current recommendation:** Bump to the newest settled version next turn.
+  As of 2026-08-12T16:04Z `0.3.227` is ~43h old (clears in ~5h) and `0.3.228`
+  ~22h, so neither has cleared the 48h window yet. Nothing act-now on either
+  channel.
 
 ## Release ledger
+
+### Claude Code 2.1.228 — harness channel (no pin)
+
+The boxholder's harness is already on 2.1.228 (verified `claude --version` this
+turn); it auto-updates independently of our SDK pin, so there is nothing to
+apply. Recorded because several items land squarely on this repo's workflow.
+
+- **Session cleanup deleting contents inside a project's memory folder
+  (fixed).** The most consequential item here: this session's persistent memory
+  lives in a project memory folder, so the pre-fix behavior was silent data
+  loss of durable notes. **Checked this machine — intact:** `MEMORY.md` indexes
+  54 memories and 54 files exist, with no indexed-but-missing and no
+  unindexed-orphan files. So this repo appears never to have been bitten, or
+  was already past it. Keep as the explanation if memories ever go missing on a
+  checkout still running an older CLI.
+- **Write tool now lets newer models overwrite an existing file they haven't
+  read this session** (matching Edit's rules; older models still require the
+  read). A real loosening of a safety property in both channels: worker
+  sessions in this repo and box agents editing cards can now blind-overwrite.
+  Nothing to change today, but if a card or doc is ever clobbered wholesale
+  rather than edited, this is the mechanism.
+- **Background plugin-cache cleanup deleting a plugin's cache when its only
+  version is a symlinked development checkout (fixed).** Directly relevant:
+  this monorepo ships Claude plugins from local checkouts (the canvas-loop
+  plugin, `callback-box/plugins/`), which is exactly the symlinked-dev-checkout
+  shape that was being collected.
+- **Skills synced from claude.ai hardened** — they no longer shadow local
+  commands or MCP prompts, descriptions are sanitized and labeled, and their
+  bodies no longer run `!` commands or expand `@` files. This repo's skills are
+  all local (`.claude/skills/`) and unaffected; the hardening removes a path by
+  which a synced skill could have shadowed one of them.
+- **Not applicable:** the `self-hosted-runner` fixes (unused), Windows Git Bash
+  discovery, `/tui` model reversion, marketplace settings-merge headers,
+  cross-session inbox-on-first-start (no cross-session messaging here), and the
+  interactive redraw/terminal-glyph/compaction-progress polish. Remote Control
+  `/resume` history leaking into a connected session is a boxholder-session
+  privacy fix with no repo surface.
+- **Sources:** [Claude Code 2.1.228](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21228)
+
+### 0.3.228 — pending
+
+- **Upstream:** One change, and it is a real API item rather than a parity
+  line: agent tool results (`AgentOutput`) now carry through
+  `usage.output_tokens_details`.
+- **Callback-box applicability (runtime):** Additive, nothing act-now, but it
+  lands on a surface already flagged in this ledger. Callback-box's token
+  accounting reads `result.usage` in `toBatchUsage`
+  (`src/services/scan-vision-claude.ts`) and aggregates JSONL assistant-message
+  usage in `src/core/usage.ts`; neither consumes agent-tool (`AgentOutput`)
+  usage today, so subagent output tokens are simply absent from both. Combined
+  with the `usage` vs `modelUsage` note in the 0.3.223 entry, this is the second
+  piece of the same picture: cost accounting here undercounts anything outside
+  the main loop. No behavior changes by upgrading.
+- **Callback-box applicability (harness):** Nothing — no CLI behavior claimed.
+- **Action:** Published 2026-08-11T17:49Z, ~22h old, inside the settling window.
+- **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.228), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03228)
 
 ### 0.3.227 — pending (parity with Claude Code 2.1.227)
 
@@ -53,8 +111,9 @@ own entries here, labeled as such, with no pin to apply.
   - The expired-login-token feature-flag fix is a boxholder-session nuisance
     (a spurious Fable usage-credits prompt on Max), not a repo behavior change;
     it needs no adjustment to `.claude/` or `bin/`.
-- **Action:** Published 2026-08-10T21:06Z, ~19h old as of 2026-08-11T16:04Z, so
-  inside the settling window. Nothing act-now on either channel, so it waits.
+- **Action:** Published 2026-08-10T21:06Z. Still pending. Re-reviewed
+  2026-08-12 at ~43h old — about five hours short of the 48h window, upstream
+  text unchanged, still nothing act-now, so it waits one more turn.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.227), [Claude Code 2.1.227](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21227)
 
 ### Claude Code 2.1.224–2.1.226 — harness/deployment backfill (no pin)
