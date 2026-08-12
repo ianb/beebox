@@ -193,6 +193,7 @@ interface IssueIndicators {
   state: "open" | "closed";
   owned: boolean;
   discovered: boolean;
+  discoveredBy?: string;
   activity?: "opened" | "updated" | "closed" | "reopened";
 }
 
@@ -268,6 +269,9 @@ export function issueIndicators(
     state: issue.closed ? "closed" : "open",
     owned,
     discovered,
+    ...(issue.frontmatter.discoveredBy
+      ? { discoveredBy: issue.frontmatter.discoveredBy }
+      : {}),
     ...(activity ? { activity } : {}),
   };
 }
@@ -377,6 +381,9 @@ function issueSummaryHtml(
         indicators.discovered
           ? '<span class="issue-state issue-state-discovered">Discovered here</span>'
           : "",
+        indicators.discoveredBy
+          ? `<span class="issue-state issue-state-discovered-by">Discovered by ${escapeHtml(indicators.discoveredBy)}</span>`
+          : "",
         indicators.activity
           ? `<span class="issue-state issue-activity-${indicators.activity}">${ACTIVITY_LABELS[indicators.activity]}</span>`
           : "",
@@ -444,6 +451,9 @@ function documentList(params: {
                 : "owns work"
               : "",
             indicators.discovered ? "discovered here" : "",
+            indicators.discoveredBy
+              ? `discovered by ${indicators.discoveredBy}`
+              : "",
           ]
             .filter(Boolean)
             .join(" · ")
@@ -479,6 +489,7 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .issue-state-closed { background: #ececec; color: #666; }
 .issue-state-owned { background: #dbeafe; color: #1e40af; }
 .issue-state-discovered { background: #fef3c7; color: #92400e; }
+.issue-state-discovered-by { background: #f4ead7; color: #6f4b18; }
 .issue-activity-opened { background: #dcfce7; color: #166534; }
 .issue-activity-updated { background: #ede9fe; color: #5b21b6; }
 .issue-activity-closed { background: #374151; color: #fff; }

@@ -36,6 +36,7 @@ export interface IssueFrontmatter {
   labels: string[];
   area?: string;
   filedBy?: string;
+  discoveredBy?: string;
   discoveredIn?: string;
   resolution?: string;
   design?: string;
@@ -188,6 +189,7 @@ export function parseIssueFile(
 
   const area = asString(data.area);
   const filedBy = asString(data["filed-by"]);
+  const discoveredBy = asString(data["discovered-by"]);
   const discoveredIn = asString(data["discovered-in"]);
   const resolution = asString(data.resolution);
   const design = asString(data.design);
@@ -203,6 +205,7 @@ export function parseIssueFile(
       labels: asStringList(data.labels),
       ...(area !== undefined ? { area } : {}),
       ...(filedBy !== undefined ? { filedBy } : {}),
+      ...(discoveredBy !== undefined ? { discoveredBy } : {}),
       ...(discoveredIn !== undefined ? { discoveredIn } : {}),
       ...(resolution !== undefined ? { resolution } : {}),
       ...(design !== undefined ? { design } : {}),
@@ -714,6 +717,10 @@ function facetChips(
     chips.push(
       `<span class="chip chip-filedby">filed:${escapeHtml(fr.filedBy)}</span>`,
     );
+  if (fr.discoveredBy)
+    chips.push(
+      `<span class="chip chip-discoveredby">discovered:${escapeHtml(fr.discoveredBy)}</span>`,
+    );
   if (research === "awaiting")
     chips.push(`<span class="chip chip-research">awaiting research</span>`);
   else if (research === "researched")
@@ -1130,6 +1137,7 @@ function factsTableHtml(
   if (fr.labels.length) rows.push(["labels", fr.labels.join(", ")]);
   if (fr.area) rows.push(["area", fr.area]);
   if (fr.filedBy) rows.push(["filed-by", fr.filedBy]);
+  if (fr.discoveredBy) rows.push(["discovered-by", fr.discoveredBy]);
   if (fr.discoveredIn) rows.push(["discovered-in", fr.discoveredIn]);
   if (fr.design) rows.push(["design", fr.design]);
   if (closed && fr.resolution) rows.push(["resolution", fr.resolution]);

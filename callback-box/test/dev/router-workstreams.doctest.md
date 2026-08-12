@@ -271,7 +271,7 @@ const openIssue = parseIssueFile(
 );
 const discoveredIssue = parseIssueFile(
   "features/2026-08-11-discovered.md",
-  "---\ntitle: Later work\nworkstream: unattached\nfiled-by: agent\ndiscovered-in: worktree-seam — while doing the seam\n---\n",
+  "---\ntitle: Later work\nworkstream: unattached\nfiled-by: agent\ndiscovered-by: Ian\ndiscovered-in: worktree-seam — while doing the seam\n---\n",
 );
 JSON.stringify({
   listed: issuesForWorkstream(
@@ -284,7 +284,7 @@ JSON.stringify({
     discoveredIssue,
   ),
 })
-=> {"listed":1,"indicators":{"state":"open","owned":false,"discovered":true}}
+=> {"listed":1,"indicators":{"state":"open","owned":false,"discovered":true,"discoveredBy":"Ian"}}
 
 const similarlyNamedDiscovery = parseIssueFile(
   "features/2026-08-11-similar.md",
@@ -312,7 +312,7 @@ const html = renderWorkstreams(
   [row({ name: "seam" })],
   "",
   "",
-  { issues: [openIssue], plans: [] },
+  { issues: [openIssue, discoveredIssue], plans: [] },
 );
 assert.match(html, /row-issues[\s\S]*Verify the seam/);
 assert.match(
@@ -320,6 +320,10 @@ assert.match(
   /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
 );
 assert.match(html, /Verify the seam[\s\S]*Open[\s\S]*Owns work/);
+assert.match(
+  html,
+  /Later work[\s\S]*Discovered here[\s\S]*Discovered by Ian/,
+);
 
 const query = parseFilters(
   new URLSearchParams("needs=manual-testing&assigned=true"),
