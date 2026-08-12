@@ -1,0 +1,68 @@
+# Box inventory grouping
+
+The inventory reports literal file types and a content-oriented projection where
+an attachment scope rolls into its owning card. Runtime/dependency directories
+are excluded, while loose files and orphaned attachment directories stay visible.
+
+```ts setup
+import * as fs from "node:fs/promises";
+import { scanBoxInventory } from "../src/core/box-inventory.js";
+import { makeTmpBox } from "./helpers/doctest-helpers.js";
+
+const box = await makeTmpBox();
+await fs.mkdir(box.path("people"), { recursive: true });
+await fs.writeFile(box.path("people/Alice.image.card"), "card");
+await fs.mkdir(box.path("people/Alice.attach"));
+await fs.writeFile(box.path("people/Alice.attach/photo.webp"), "123456");
+await fs.writeFile(box.path("people/Alice.attach/nested.doc.card"), "nested");
+await fs.mkdir(box.path("people/Alice.attach/nested.attach"));
+await fs.writeFile(box.path("people/Alice.attach/nested.attach/page.bin"), "page");
+await fs.writeFile(box.path("people/notes.md"), "notes");
+await fs.mkdir(box.path("people/Gone.attach"));
+await fs.writeFile(box.path("people/Gone.attach/lost.bin"), "lost");
+await fs.mkdir(box.path("people/Empty.attach"));
+await fs.writeFile(box.path("people/Bob.image.card"), "one");
+await fs.writeFile(box.path("people/Bob.doc.card"), "two");
+await fs.mkdir(box.path("people/Bob.attach"));
+await fs.writeFile(box.path("people/Bob.attach/shared.bin"), "three");
+await fs.mkdir(box.path("node_modules/pkg"), { recursive: true });
+await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
+```
+
+Direct accounting sees each physical file. Grouped accounting counts the image
+card once and includes its attachment bytes; the orphan directory is one item,
+including when empty.
+
+```ts
+const inventory = await scanBoxInventory(box.root, { now: new Date("2026-08-12T12:00:00Z") });
+const direct = Object.fromEntries(inventory.direct.map((item) => [item.type, [item.count, item.bytes]]));
+const grouped = Object.fromEntries(inventory.grouped.map((item) => [item.type, [item.count, item.bytes]]));
+print(JSON.stringify({
+  direct: { card: direct[".image.card"], nestedCard: direct[".doc.card"], webp: direct[".webp"], markdown: direct[".md"] },
+  grouped: { card: grouped[".image.card"], markdown: grouped[".md"], orphan: grouped["Orphaned .attach/"] },
+  ambiguous: grouped["Ambiguous card basename"],
+  orphanDirectories: inventory.orphanAttachmentDirectories,
+  hasJavaScript: direct[".js"] !== undefined,
+}));
+=>
+{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[1,5]},"grouped":{"card":[1,20],"markdown":[1,5],"orphan":[2,4]},"ambiguous":[1,11],"orphanDirectories":2,"hasJavaScript":false}
+```
+
+A disappearing or unreadable subtree produces labeled lower-bound totals instead
+of failing the entire scan.
+
+```ts
+const locked = box.path("locked");
+await fs.mkdir(locked);
+await fs.writeFile(box.path("locked/hidden.txt"), "hidden");
+await fs.chmod(locked, 0o000);
+const partial = await scanBoxInventory(box.root);
+await fs.chmod(locked, 0o700);
+print(`${String(partial.complete)}:${String(partial.filesystemErrors.length > 0)}`);
+=>
+false:true
+```
+
+```ts cleanup
+await box.cleanup();
+```
