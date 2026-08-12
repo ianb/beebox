@@ -61,8 +61,10 @@ bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scrolle
 ```
 
 ### 3. Scroll-up during streaming must NOT yank back
-**Use a real `WheelEvent`** — a bare `scrollTop` write is intentionally ignored
-(the controller only disengages on genuine wheel/touch/key intent), and
+Dispatch a `WheelEvent` alongside the `scrollTop` write to model a wheel
+scroll. (A bare upward `scrollTop` write also disengages *when it lands well
+above the bottom* — that's the scrollbar-drag rule, scenario 3c — but wheel
+intent is the primary path and also covers small scroll-ups near the bottom.)
 agent-browser's `mouse wheel` doesn't scroll headless Chromium.
 ```bash
 bin/browse fill "@e$CREF" "/fakestream 400 25 25"; bin/browse press Enter
@@ -72,8 +74,35 @@ bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scrolle
 bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");return Math.round(s.scrollHeight-s.scrollTop-s.clientHeight);})()'
 ```
 
+### 3b. Continuing to scroll while chunks land must NOT saw-tooth
+The mid-stream momentum bug (fixed 2026-08-11): scroll events arriving faster
+than the 80ms anchor recapture (an iOS fling sends scroll events but no
+touchmove) left the anchor frozen at the disengage point, and every chunk
+"corrected" the user back to it. Detach, then keep scrolling in 30ms steps with
+NO further input events; every observed scroll position must move up
+monotonically — zero jumps back down:
+```bash
+bin/browse fill "@e$CREF" "/fakestream 400 25 25"; bin/browse press Enter
+sleep 1.5
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");const ev=[];s.addEventListener("scroll",()=>ev.push(Math.round(s.scrollTop)));s.dispatchEvent(new WheelEvent("wheel",{deltaY:-150,bubbles:true}));s.scrollTop-=400;return new Promise(res=>{setTimeout(()=>{let i=0;const drag=setInterval(()=>{s.scrollTop-=40;if(++i>=50){clearInterval(drag);setTimeout(()=>{let jumps=0;for(let k=1;k<ev.length;k++)if(ev[k]>ev[k-1]+2)jumps++;res(JSON.stringify({events:ev.length,upJumps:jumps}));},300);}},30);},400);});})()'
+# expect upJumps:0
+```
+
+### 3c. A scrollbar-thumb drag must disengage (no input events at all)
+A thumb drag fires only scroll events — no wheel/touch/key. Upward movement
+landing well above the bottom must disengage rather than fight follow-bottom:
+```bash
+bin/browse fill "@e$CREF" "/fakestream 300 25 25"; bin/browse press Enter
+sleep 1.5
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");return new Promise(res=>{let i=0;const drag=setInterval(()=>{s.scrollTop-=60;if(++i>=40){clearInterval(drag);setTimeout(()=>{const b=document.querySelector("button[aria-label=\"Scroll to latest messages\"]");const fb=Math.round(s.scrollHeight-s.scrollTop-s.clientHeight);res(JSON.stringify({detached:!!b,fb,snappedBack:fb<100}));},600);}},30);});})()'
+# expect detached:true, snappedBack:false
+```
+
 ### 4. Scroll-to-bottom button
-While detached (scenario 3), the button must be present and accented; clicking returns.
+While detached (scenario 3), the button must be present and accented; clicking
+returns — **including mid-stream**: the smooth return animation's frames are
+swallowed as programmatic (`smoothTargetRef`), so they must not read as a
+scroll-up and re-detach (the fb≈180-with-button-still-present regression).
 ```bash
 bin/browse eval '(()=>{const b=document.querySelector("button[aria-label=\"Scroll to latest messages\"]");return JSON.stringify({btn:!!b,emph:!!(b&&b.querySelector("span"))});})()'
 # expect {btn:true, emph:true}  (emph = unseen content arrived since detaching)
@@ -158,7 +187,10 @@ fresh chat shows no flash.
   (`.h-app` tracks `visualViewport`), and the list must re-pin to the bottom when
   the keyboard opens/closes if it was pinned.
 - **Momentum fling:** flick-scroll up during streaming — must not fight the
-  finger or snap back (fling-safety is not yet implemented; watch for jumps).
+  finger or snap back. Scenario 3b models this (scroll events with no input
+  events), but only a real fling proves it: the fix keeps the reading anchor
+  in step inside the scroll handler, so chunk resizes measure zero shift and
+  write nothing during the fling.
 - **Rubber-band:** overscroll at top/bottom must not scroll the page behind
   (`overscroll-behavior: contain`, iOS 16+).
 - **Retina:** confirm "at bottom" still registers at `devicePixelRatio` 2
