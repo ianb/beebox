@@ -94,6 +94,30 @@ final class NativeVoiceTurnTests: XCTestCase {
         XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
         XCTAssertTrue(turn.isActive)
     }
+
+    func testErasingDraftKeepsActiveVoiceTurnListening() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+
+        XCTAssertEqual(turn.handle(.draftErased), .startDictation)
+        XCTAssertTrue(turn.isActive)
+    }
+
+    func testErasingDraftDoesNotStartAnInactiveVoiceTurn() {
+        var turn = NativeVoiceTurnState()
+
+        XCTAssertEqual(turn.handle(.draftErased), .none)
+        XCTAssertFalse(turn.isActive)
+    }
+
+    func testMicrophoneOffStillStopsAfterErasingDraft() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.draftErased)
+
+        XCTAssertEqual(turn.handle(.microphoneStopped), .stopDictation)
+        XCTAssertFalse(turn.isActive)
+    }
 }
 
 final class NativeEarconStateTests: XCTestCase {
