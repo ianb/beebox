@@ -500,7 +500,7 @@ await serveWorkstreams({
 assert.equal(page.captured.status, 200);
 assert.equal(
   page.captured.headers["content-security-policy"],
-  "default-src 'none'; style-src 'unsafe-inline'",
+  "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'",
 );
 assert.match(page.captured.body, /workstreams/);
 
