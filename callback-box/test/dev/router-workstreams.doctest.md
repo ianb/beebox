@@ -29,6 +29,7 @@ import {
   parseIssueFile,
   setIssuePriority,
 } from "../../../bin/router-issues.js";
+import { classifyRouterRoute } from "../../../bin/router-auth.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
   return {
@@ -628,6 +629,13 @@ await serveWorkstreams({
 });
 assert.equal(priorityScript.captured.status, 200);
 assert.match(priorityScript.captured.body, /addEventListener\("submit"/);
+assert.deepEqual(
+  classifyRouterRoute({
+    method: "POST",
+    url: "/workstreams/issues/action/priority?issue=bugs%2Fseam.md",
+  }),
+  { kind: "control" },
+);
 
 const priorityUpdate = responseDouble();
 await serveWorkstreams({

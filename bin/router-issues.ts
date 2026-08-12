@@ -832,14 +832,14 @@ const ISSUES_CSS = `
   .badge-renamed { background: #f3eefb; color: #6f42c1; }
   .badge.uncommitted { border: 1px dashed currentColor; }
   ul.issues { list-style: none; padding: 0; margin: 0 0 1.6em; border: 1px solid #e3e3e3; border-radius: 8px; overflow: hidden; }
-  ul.issues li { display: flex; align-items: center; justify-content: space-between; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
+  ul.issues li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
   ul.issues li:last-child { border-bottom: none; }
   ul.issues li:hover { background: #f6f8fa; }
   ul.issues .issue-main { min-width: 0; }
   ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
   ul.issues a.title:hover { color: #2255aa; text-decoration: underline; }
   ul.issues .meta { display: block; color: #888; font: 12px ui-monospace, Menlo, monospace; margin-top: 0.2em; }
-  ul.issues .issue-controls { flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: 0.7em; max-width: 58%; }
+  ul.issues .issue-controls { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 0.7em; }
   .priority-controls { display: flex; flex: 0 0 auto; }
   .priority-controls form { margin: 0; }
   .priority-controls button { padding: 0.2em 0.45em; border: 1px solid #bbc2ca; border-right-width: 0; background: #fff; color: #555; font: 11px ui-monospace, Menlo, monospace; cursor: pointer; }
@@ -861,8 +861,12 @@ const ISSUES_CSS = `
   .wt-diff h3 { font: 13px ui-monospace, Menlo, monospace; color: #555; margin-bottom: 0.3em; }
   .wt-diff pre { font-size: 0.82em; }
   .diff-add { color: #1e6b34; } .diff-del { color: #a23522; }
+  @media (max-width: 1000px) {
+    ul.issues li { grid-template-columns: minmax(0, 1fr); align-items: flex-start; gap: 0.55em; }
+    ul.issues .issue-controls { justify-content: flex-start; width: 100%; }
+    ul.issues .issue-pills { justify-content: flex-start; }
+  }
   @media (max-width: 700px) {
-    ul.issues li { align-items: flex-start; flex-direction: column; gap: 0.55em; }
     ul.issues .issue-controls { align-items: flex-start; flex-direction: column; max-width: 100%; }
     ul.issues .issue-pills { justify-content: flex-start; max-width: 100%; }
     .priority-target { text-align: left; }

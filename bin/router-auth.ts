@@ -227,7 +227,12 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   if (pathname === "/__router" || pathname.startsWith("/__router/")) return classifyRouterControl(pathname);
   if (pathname === "/workstreams" || pathname.startsWith("/workstreams/")) {
     if (method === "GET" || method === "HEAD") return { kind: "control-read", json: false };
-    if (method === "POST" && pathname.startsWith("/workstreams/action/")) return { kind: "control" };
+    if (
+      method === "POST" &&
+      (pathname.startsWith("/workstreams/action/") ||
+        pathname.startsWith("/workstreams/issues/action/"))
+    )
+      return { kind: "control" };
     return { kind: "unknown" };
   }
   // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev browser (owner).
