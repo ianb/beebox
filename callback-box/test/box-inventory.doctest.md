@@ -17,7 +17,10 @@ await fs.writeFile(box.path("people/Alice.attach/photo.webp"), "123456");
 await fs.writeFile(box.path("people/Alice.attach/nested.doc.card"), "nested");
 await fs.mkdir(box.path("people/Alice.attach/nested.attach"));
 await fs.writeFile(box.path("people/Alice.attach/nested.attach/page.bin"), "page");
-await fs.writeFile(box.path("people/notes.md"), "notes");
+await fs.writeFile(box.path("people/notes.md"), [
+  "[Alice](/people/Alice.image.card)",
+  "[Bob attachment](/people/Bob.attach/shared.bin)",
+].join("\n"));
 await fs.mkdir(box.path("people/Gone.attach"));
 await fs.writeFile(box.path("people/Gone.attach/lost.bin"), "lost");
 await fs.mkdir(box.path("people/Empty.attach"));
@@ -25,6 +28,7 @@ await fs.writeFile(box.path("people/Bob.image.card"), "one");
 await fs.writeFile(box.path("people/Bob.doc.card"), "two");
 await fs.mkdir(box.path("people/Bob.attach"));
 await fs.writeFile(box.path("people/Bob.attach/shared.bin"), "three");
+await fs.writeFile(box.path("people/Charlie.memo.card"), "solo");
 await fs.mkdir(box.path("node_modules/pkg"), { recursive: true });
 await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
 ```
@@ -37,15 +41,20 @@ including when empty.
 const inventory = await scanBoxInventory(box.root, { now: new Date("2026-08-12T12:00:00Z") });
 const direct = Object.fromEntries(inventory.direct.map((item) => [item.type, [item.count, item.bytes]]));
 const grouped = Object.fromEntries(inventory.grouped.map((item) => [item.type, [item.count, item.bytes]]));
+const linkedDirect = Object.fromEntries(inventory.byLinkStatus.linked.direct.map((item) => [item.type, [item.count, item.bytes]]));
+const linkedGrouped = Object.fromEntries(inventory.byLinkStatus.linked.grouped.map((item) => [item.type, [item.count, item.bytes]]));
+const unlinkedGrouped = Object.fromEntries(inventory.byLinkStatus.unlinked.grouped.map((item) => [item.type, [item.count, item.bytes]]));
 print(JSON.stringify({
   direct: { card: direct[".image.card"], nestedCard: direct[".doc.card"], webp: direct[".webp"], markdown: direct[".md"] },
   grouped: { card: grouped[".image.card"], markdown: grouped[".md"], orphan: grouped["Orphaned .attach/"] },
   ambiguous: grouped["Ambiguous card basename"],
+  linked: { grouped: linkedGrouped[".image.card"], ambiguous: linkedGrouped["Ambiguous card basename"], card: linkedDirect[".image.card"], nestedCard: linkedDirect[".doc.card"], attachment: linkedDirect[".webp"] },
+  unlinked: unlinkedGrouped[".memo.card"],
   orphanDirectories: inventory.orphanAttachmentDirectories,
   hasJavaScript: direct[".js"] !== undefined,
 }));
 =>
-{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[1,5]},"grouped":{"card":[1,20],"markdown":[1,5],"orphan":[2,4]},"ambiguous":[1,11],"orphanDirectories":2,"hasJavaScript":false}
+{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[1,81]},"grouped":{"card":[1,20],"markdown":[1,81],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"orphanDirectories":2,"hasJavaScript":false}
 ```
 
 A disappearing or unreadable subtree produces labeled lower-bound totals instead

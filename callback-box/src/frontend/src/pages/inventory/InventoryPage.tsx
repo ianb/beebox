@@ -12,11 +12,13 @@ import { InventoryLoading } from "./components/InventoryLoading";
 
 type Projection = "grouped" | "direct";
 type Metric = "count" | "bytes";
+type LinkStatus = "all" | "linked" | "unlinked";
 
 export function InventoryPage() {
   const { boxSlug } = useParams({ strict: false });
   const [projection, setProjection] = useState<Projection>("grouped");
   const [metric, setMetric] = useState<Metric>("count");
+  const [linkStatus, setLinkStatus] = useState<LinkStatus>("all");
   const inventory = trpc.inventory.summary.useQuery(undefined, { staleTime: 15 * 60 * 1000 });
   const utils = trpc.useUtils();
   const [refreshing, setRefreshing] = useState(false);
@@ -50,8 +52,10 @@ export function InventoryPage() {
           <InventoryContent
             data={data}
             metric={metric}
+            linkStatus={linkStatus}
             projection={projection}
             setMetric={setMetric}
+            setLinkStatus={setLinkStatus}
             setProjection={setProjection}
           />
         )}
