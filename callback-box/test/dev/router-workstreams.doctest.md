@@ -141,6 +141,7 @@ for (const heading of [
   assert.ok(html.includes(heading));
 assert.match(html, /href="\/workstreams\/progress\/"/);
 assert.doesNotMatch(html, /http:\/\/localhost/);
+assert.match(html, /script src="\/workstreams\/actions.js" defer/);
 ```
 
 Agent liveness outranks an untouched Git state. Archived rows are separated,
@@ -617,6 +618,14 @@ assert.equal(
   "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
 );
 assert.match(issues.captured.body, /script src="\/workstreams\/issues\/priority.js" defer/);
+const actionScript = responseDouble();
+await serveWorkstreams({
+  method: "GET", pathname: "/workstreams/actions.js", repoRoot: root,
+  mainRoot: root, worktreesRoot: path.join(root, "worktrees"),
+  res: actionScript.res, deps,
+});
+assert.equal(actionScript.captured.status, 200);
+assert.match(actionScript.captured.body, /aria-busy/);
 const priorityScript = responseDouble();
 await serveWorkstreams({
   method: "GET",

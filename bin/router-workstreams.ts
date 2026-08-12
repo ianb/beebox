@@ -87,6 +87,22 @@ type ActionVerb =
 
 const ACTION_PATH =
   /^\/workstreams\/action\/(archive|close|confirm-tested|focus|release|reset-test|resume|unarchive)\/([a-zA-Z0-9_.-]+)$/;
+const ACTION_SCRIPT = `
+document.addEventListener("submit", (event) => {
+  const form = event.target instanceof HTMLFormElement
+    ? event.target.closest(".actions form")
+    : null;
+  if (!form) return;
+  const button = form.querySelector("button[type=submit]");
+  if (!button) return;
+  const label = button.textContent?.trim() || "Working";
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.textContent = label.endsWith("e")
+    ? label.slice(0, -1) + "ing…"
+    : label + "ing…";
+});
+`;
 
 export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
@@ -575,7 +591,7 @@ function pageShell(title: string, body: string, refresh = false): string {
   ${refreshMeta}<title>${escapeHtml(title)}</title>
   <style>${PAGE_CSS}</style>
 </head>
-<body><nav>${navItems.join(" · ")}</nav>${body}</body>
+<body><nav>${navItems.join(" · ")}</nav>${body}<script src="/workstreams/actions.js" defer></script></body>
 </html>`;
 }
 
@@ -999,6 +1015,14 @@ export async function serveWorkstreams(params: {
       params.mainRoot ?? repoRoot,
       params.worktreesRoot ?? path.dirname(repoRoot),
     );
+  if (method === "GET" && pathname === "/workstreams/actions.js") {
+    res.writeHead(200, {
+      "content-type": "text/javascript; charset=utf-8",
+      "cache-control": "no-store",
+    });
+    res.end(ACTION_SCRIPT);
+    return;
+  }
   if (method === "POST" && pathname.startsWith("/workstreams/action/")) {
     await serveAction(pathname, deps, res);
     return;

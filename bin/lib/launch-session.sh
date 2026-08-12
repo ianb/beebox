@@ -125,12 +125,18 @@ launch_session_default_emoji() {
 
 launch_session_open() {
   local result
-  result=$(osascript <<APPLESCRIPT 2>/dev/null
+  if result=$(osascript <<APPLESCRIPT
 tell application "Terminal"
   activate
   do script "$LS_LAUNCHER"
 end tell
 APPLESCRIPT
-  ) && result="new tab/window (per your Terminal tab preference)" || result="FAILED — Terminal not scriptable?"
-  printf '%s\n' "$result"
+  ); then
+    printf '%s\n' "new tab/window (per your Terminal tab preference)"
+    return 0
+  else
+    local status=$?
+    echo "workstreams launch: Terminal automation failed" >&2
+    return "$status"
+  fi
 }
