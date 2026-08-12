@@ -25,6 +25,28 @@ That is the one state where the server genuinely does not need the key — so it
 can be encrypted with something the machine doesn't hold, and the human supplies
 it on wake. Same act, two purposes: recovery *is* the key ceremony.
 
+## Opt-in, per box — and opt-in is where the questions get answered
+
+**Decided: this is opt-in.** No box sleeps because a default said so. That
+matters more than it sounds, because it turns most of the hard questions from
+policy the system must guess into **choices made once, in a flow, by someone
+who is paying attention**:
+
+- the threshold for *this* box (a week, a month, longer)
+- what the key is and where it goes — the opt-in is the natural moment to
+  generate one and make the human take custody of it, with the "if you lose
+  this, the box is gone" warning where they'll actually read it
+- who holds it for a shared box
+- how they want to be warned before sleep, and through what channel
+
+Design the opt-in as the ceremony, not as a checkbox. It's the one moment when
+the person is thinking about this box's dormancy on purpose, and every later
+moment (the warning, the sleep, the wake) is easier if this one did its job.
+
+One honest consequence: because it's opt-in, the storage benefit below only
+materializes for boxes that opted in. It can't be counted on as a fleet-wide
+answer to disk pressure.
+
 ## What exists today
 
 - **A first tier already works.** The hub idle-stops a box's `cb serve` child
@@ -86,13 +108,21 @@ keep on storage pressure even before the security argument.
 
 ## Open questions
 
-- The threshold: a week? a month? Per-box, or one policy?
+Answered at opt-in (see above), so they need a *flow*, not a policy: the
+threshold, key generation and custody, who holds it for a shared box, and the
+warning channel.
+
+Genuinely open, and not the opt-in's job:
+
 - Does dormancy apply to local boxes too, or only the deployed server?
 - Does `git-annex` change the media picture (content-addressed blobs, and
   `numcopies: 1` today)?
 - Is there content deserving stronger treatment even while live — connector
   credentials on disk, `~/.cb-auth.json`, `.env` — where the
   agent-needs-plaintext argument doesn't apply?
+- What does a *partial* wake look like, if anything: can the boxholder see that
+  a box exists, and its metadata, without the key? A dormant box that's
+  invisible is easy to forget twice.
 
 ## Related
 
