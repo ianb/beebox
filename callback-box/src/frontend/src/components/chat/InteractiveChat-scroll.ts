@@ -41,7 +41,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { MutableRefObject } from "react";
-import { decideReconcile, decideScroll } from "./scroll-reconcile";
+import { decideReconcile, decideScroll, type ReconcileAction } from "./scroll-reconcile";
 import { recordScrollTrace } from "../../lib/scroll-diagnostics";
 
 // Re-engage following once the user scrolls back within this many px of the
@@ -92,6 +92,42 @@ function topVisibleChild(scroller: HTMLDivElement | null, content: HTMLDivElemen
     if (r.bottom > scTop + 1) return { el: child, top: r.top - scTop };
   }
   return null;
+}
+
+// Applies the effect a reconcile cycle decided on. Split out of the
+// `useStickToBottom` hook body purely to keep that function under the
+// max-lines-per-function budget — it has no state of its own, just the refs
+// and callbacks the caller already holds.
+function applyReconcileAction(action: ReconcileAction, opts: {
+  el: HTMLDivElement;
+  anchorDelta: number;
+  prependGapRef: MutableRefObject<number | null>;
+  anchorRef: MutableRefObject<{ el: Element; top: number } | null>;
+  contentElRef: MutableRefObject<HTMLDivElement | null>;
+  writeTop: (top: number, behavior: ScrollBehavior) => void;
+  writeToBottom: (behavior: ScrollBehavior) => void;
+  setUnseen: (v: boolean) => void;
+}): void {
+  const { el, anchorDelta, prependGapRef, anchorRef, contentElRef, writeTop, writeToBottom, setUnseen } = opts;
+  if (action === "hold-prepend") {
+    // Restore the captured bottom-gap so inserting older messages above
+    // doesn't move the view, then re-anchor to a now-visible message: the
+    // older block (with its late-decoding images/embeds) is above the
+    // viewport, so subsequent growth there compensates against this anchor
+    // instead of being misread as new content below (the false-"new messages"
+    // bug this path fixes).
+    const gap = prependGapRef.current ?? 0;
+    prependGapRef.current = null;
+    writeTop(el.scrollHeight - gap, "instant");
+    anchorRef.current = topVisibleChild(el, contentElRef.current);
+  } else if (action === "follow-bottom") {
+    writeToBottom("instant");
+  } else if (action === "hold-anchor") {
+    // Existing content above reflowed — compensate; not new, don't flag.
+    writeTop(el.scrollTop + anchorDelta, "instant");
+  } else if (action === "flag-unseen") {
+    setUnseen(true);
+  }
 }
 
 export interface StickToBottom {
@@ -169,7 +205,10 @@ export function useStickToBottom(): StickToBottom {
     lastScrollTopRef.current = el.scrollTop;
   }, []);
 
-  const writeToBottom = useCallback((behavior: ScrollBehavior) => { const el = scrollerElRef.current; if (el) writeTop(el.scrollHeight - el.clientHeight, behavior); }, [writeTop]);
+  const writeToBottom = useCallback((behavior: ScrollBehavior) => {
+    const el = scrollerElRef.current;
+    if (el) writeTop(el.scrollHeight - el.clientHeight, behavior);
+  }, [writeTop]);
 
   const scrollToBottom = useCallback((opts?: { behavior?: ScrollBehavior }) => {
     const behavior = opts && opts.behavior ? opts.behavior : "instant";
@@ -178,11 +217,19 @@ export function useStickToBottom(): StickToBottom {
     writeToBottom(behavior);
   }, [setPinned, setUnseen, writeToBottom]);
 
-  const captureForPrepend = useCallback(() => { const el = scrollerElRef.current; if (el) prependGapRef.current = el.scrollHeight - el.scrollTop; }, []);
+  const captureForPrepend = useCallback(() => {
+    const el = scrollerElRef.current;
+    if (el) prependGapRef.current = el.scrollHeight - el.scrollTop;
+  }, []);
 
-  const markUserIntent = useCallback(() => { lastUserIntentAtRef.current = performance.now(); recordScrollTrace("intent", {}); }, []);
+  const markUserIntent = useCallback(() => {
+    lastUserIntentAtRef.current = performance.now();
+    recordScrollTrace("intent", {});
+  }, []);
 
-  const handleKeyIntent = useCallback((e: KeyboardEvent) => { if (SCROLL_KEYS.has(e.key)) lastUserIntentAtRef.current = performance.now(); }, []);
+  const handleKeyIntent = useCallback((e: KeyboardEvent) => {
+    if (SCROLL_KEYS.has(e.key)) lastUserIntentAtRef.current = performance.now();
+  }, []);
 
   // Refresh the anchor (only meaningful while detached) shortly after the
   // user pauses scrolling, so a resize that lands while they read is corrected.
@@ -281,25 +328,7 @@ export function useStickToBottom(): StickToBottom {
     recordScrollTrace("reconcile", { src: source, grew, ad: Math.round(anchorDelta), act: action, sh: el.scrollHeight, ch: el.clientHeight, st: Math.round(el.scrollTop) });
     prevScrollHeightRef.current = el.scrollHeight;
 
-    if (action === "hold-prepend") {
-      // Restore the captured bottom-gap so inserting older messages above
-      // doesn't move the view, then re-anchor to a now-visible message: the
-      // older block (with its late-decoding images/embeds) is above the
-      // viewport, so subsequent growth there compensates against this anchor
-      // instead of being misread as new content below (the false-"new messages"
-      // bug this path fixes).
-      const gap = prependGapRef.current ?? 0;
-      prependGapRef.current = null;
-      writeTop(el.scrollHeight - gap, "instant");
-      anchorRef.current = topVisibleChild(el, contentElRef.current);
-    } else if (action === "follow-bottom") {
-      writeToBottom("instant");
-    } else if (action === "hold-anchor") {
-      // Existing content above reflowed — compensate; not new, don't flag.
-      writeTop(el.scrollTop + anchorDelta, "instant");
-    } else if (action === "flag-unseen") {
-      setUnseen(true);
-    }
+    applyReconcileAction(action, { el, anchorDelta, prependGapRef, anchorRef, contentElRef, writeTop, writeToBottom, setUnseen });
   }, [pinnedRef, writeTop, writeToBottom, setUnseen]);
 
   const scrollerRef = useCallback((el: HTMLDivElement | null) => {
