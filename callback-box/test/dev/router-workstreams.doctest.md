@@ -748,7 +748,12 @@ t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
 await fs.mkdir(path.join(root, "issues", "bugs"), { recursive: true });
 await fs.writeFile(
   path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
-  "---\ntitle: Seam bug\nneeds: [review, manual-testing]\n---\n",
+  "---\ntitle: Seam bug\nneeds: [review, manual-testing]\n---\nSeam detail.\n",
+);
+await fs.mkdir(path.join(root, "private-issues", "bugs"), { recursive: true });
+await fs.writeFile(
+  path.join(root, "private-issues", "bugs", "2026-08-08-private.md"),
+  "---\ntitle: Private seam\n---\nPrivate detail.\n",
 );
 await execa("git", ["init", "-b", "main"], { cwd: root });
 await execa("git", ["config", "user.email", "test@example.com"], { cwd: root });
@@ -766,7 +771,14 @@ await serveWorkstreams({
   res: issues.res, deps,
 });
 assert.equal(issues.captured.status, 200);
-assert.match(issues.captured.body, /href="\/workstreams\/issues\/bugs\/2026-08-09-seam.md"/);
+assert.match(
+  issues.captured.body,
+  /href="\/workstreams\/issues\/\?issue=bugs%2F2026-08-09-seam.md" data-issue-link="bugs\/2026-08-09-seam.md"/,
+);
+assert.match(
+  issues.captured.body,
+  /class="issue-browser" data-issue-browser data-detail-endpoint="\/workstreams\/issues\/detail"[\s\S]*class="issue-list-pane"[\s\S]*class="issue-detail-pane"/,
+);
 assert.match(
   issues.captured.body,
   /class="issue-main"[\s\S]*class="issue-pills"[\s\S]*class="issue-priority"[\s\S]*class="priority-controls"/,
@@ -826,6 +838,93 @@ assert.match(priorityScript.captured.body, /Saving and committing/);
 assert.match(priorityScript.captured.body, /beforeunload/);
 assert.match(priorityScript.captured.body, /navigator\.clipboard\.writeText/);
 assert.match(priorityScript.captured.body, /data-next-action/);
+assert.match(priorityScript.captured.body, /history\.pushState/);
+assert.match(priorityScript.captured.body, /addEventListener\("popstate"/);
+assert.match(priorityScript.captured.body, /Loading issue/);
+const selectedIssuePage = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/",
+  query: "issue=bugs%2F2026-08-09-seam.md",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: selectedIssuePage.res,
+  deps,
+});
+assert.equal(selectedIssuePage.captured.status, 200);
+assert.match(
+  selectedIssuePage.captured.body,
+  /class="issue-browser has-selection"[^>]*data-initial-issue="bugs\/2026-08-09-seam.md"/,
+);
+assert.match(
+  selectedIssuePage.captured.body,
+  /data-issue-link="bugs\/2026-08-09-seam.md" aria-current="true"/,
+);
+assert.match(
+  selectedIssuePage.captured.body,
+  /<h1>Seam bug<\/h1>[\s\S]*Seam detail\./,
+);
+assert.match(
+  selectedIssuePage.captured.body,
+  /href="\/workstreams\/issues\/\?status=all&issue=bugs%2F2026-08-09-seam.md"/,
+);
+const issueFragment = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/detail",
+  query: "issue=bugs%2F2026-08-09-seam.md",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: issueFragment.res,
+  deps,
+});
+assert.equal(issueFragment.captured.status, 200);
+assert.doesNotMatch(issueFragment.captured.body, /<!doctype html>/i);
+assert.match(issueFragment.captured.body, /<h1>Seam bug<\/h1>/);
+assert.match(issueFragment.captured.body, /Seam detail\./);
+
+const missingIssueFragment = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/detail",
+  query: "issue=bugs%2Fmissing.md",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: missingIssueFragment.res,
+  deps,
+});
+assert.equal(missingIssueFragment.captured.status, 404);
+assert.match(missingIssueFragment.captured.body, /not found: bugs\/missing\.md/);
+
+const escapedIssueFragment = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/detail",
+  query: "issue=..%2F..%2Fetc%2Fpasswd.md",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: escapedIssueFragment.res,
+  deps,
+});
+assert.equal(escapedIssueFragment.captured.status, 403);
+
+const privateIssueFragment = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/detail",
+  query: "issue=private%2Fbugs%2F2026-08-08-private.md",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: privateIssueFragment.res,
+  deps,
+});
+assert.equal(privateIssueFragment.captured.status, 200);
+assert.match(privateIssueFragment.captured.body, /<h1>Private seam<\/h1>/);
 assert.deepEqual(
   classifyRouterRoute({
     method: "POST",

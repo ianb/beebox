@@ -37,6 +37,131 @@ const save = editor?.querySelector("[data-save]");
 const reset = editor?.querySelector("[data-reset]");
 const count = editor?.querySelector("[data-dirty-count]");
 const status = editor?.querySelector("[data-save-status]");
+const issueBrowser = document.querySelector("[data-issue-browser]");
+const detailPane = document.querySelector("[data-issue-detail]");
+const detailEndpoint = issueBrowser?.dataset.detailEndpoint;
+let detailRequest;
+
+function selectedIssue() {
+  return new URLSearchParams(location.search).get("issue");
+}
+
+function issueUrl(issue, hash = "") {
+  const url = new URL(location.href);
+  if (issue) url.searchParams.set("issue", issue);
+  else url.searchParams.delete("issue");
+  url.hash = hash;
+  return url;
+}
+
+function revealHash(hash) {
+  if (!hash || !detailPane) return false;
+  const target = detailPane.querySelector("#" + CSS.escape(decodeURIComponent(hash.slice(1))));
+  if (!target) return false;
+  target.scrollIntoView();
+  return true;
+}
+
+function markSelected(issue) {
+  for (const link of document.querySelectorAll("[data-issue-link]")) {
+    const selected = link.dataset.issueLink === issue;
+    link.closest("li")?.classList.toggle("selected", selected);
+    if (selected) link.setAttribute("aria-current", "true");
+    else link.removeAttribute("aria-current");
+  }
+}
+
+function clearIssue(options = {}) {
+  const selectedLink = document.querySelector('[data-issue-link][aria-current="true"]');
+  detailRequest?.abort();
+  issueBrowser?.classList.remove("has-selection");
+  markSelected(null);
+  if (detailPane) {
+    detailPane.removeAttribute("aria-busy");
+    detailPane.innerHTML = '<p class="issue-detail-empty">Select an issue to read it.</p>';
+  }
+  if (options.focus) selectedLink?.focus();
+}
+
+async function openIssue(issue, options = {}) {
+  if (!detailPane || !detailEndpoint) return;
+  if (
+    options.push &&
+    selectedIssue() === issue &&
+    issueBrowser?.classList.contains("has-selection")
+  ) {
+    if (location.hash !== (options.hash ?? "")) {
+      history.pushState({}, "", issueUrl(issue, options.hash));
+    }
+    revealHash(options.hash);
+    return;
+  }
+  detailRequest?.abort();
+  detailRequest = new AbortController();
+  issueBrowser?.classList.add("has-selection");
+  markSelected(issue);
+  detailPane.setAttribute("aria-busy", "true");
+  detailPane.innerHTML = '<div class="issue-detail-loading" role="status"><strong>Loading issue…</strong><span>Reading the issue and worktree changes.</span></div>';
+  if (options.push) history.pushState({}, "", issueUrl(issue, options.hash));
+  try {
+    const url = new URL(detailEndpoint, location.origin);
+    url.searchParams.set("issue", issue);
+    const response = await fetch(url, { signal: detailRequest.signal });
+    if (!response.ok) throw new Error((await response.text()).trim() || "Issue failed to load");
+    detailPane.innerHTML = await response.text();
+    detailPane.removeAttribute("aria-busy");
+    if (!revealHash(options.hash) && options.focus) {
+      const heading = detailPane.querySelector("h1");
+      heading?.setAttribute("tabindex", "-1");
+      heading?.focus();
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    detailPane.removeAttribute("aria-busy");
+    detailPane.innerHTML = '<div class="issue-detail-error" role="alert"><strong>Could not load issue</strong><span></span><button type="button" data-retry-issue>Retry</button></div>';
+    detailPane.querySelector("span").textContent = error instanceof Error ? error.message : String(error);
+  }
+}
+
+document.addEventListener("click", (event) => {
+  const link = event.target instanceof Element ? event.target.closest("a") : null;
+  if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  let issue = link.dataset.issueLink;
+  let hash = "";
+  if (!issue && detailPane?.contains(link)) {
+    const url = new URL(link.href);
+    const issuesPrefix = detailEndpoint?.replace(/detail$/, "") ?? "";
+    if (url.origin === location.origin && url.pathname.startsWith(issuesPrefix)) {
+      issue = decodeURIComponent(url.pathname.slice(issuesPrefix.length));
+      hash = url.hash;
+    }
+  }
+  if (!issue) return;
+  event.preventDefault();
+  openIssue(issue, {
+    push: true,
+    focus: true,
+    hash,
+  });
+});
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element) || !event.target.closest("[data-close-issue]")) return;
+  history.pushState({}, "", issueUrl(null));
+  clearIssue({ focus: true });
+});
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element) || !event.target.closest("[data-retry-issue]")) return;
+  const issue = selectedIssue();
+  if (issue) openIssue(issue);
+});
+
+addEventListener("popstate", () => {
+  const issue = selectedIssue();
+  if (issue) openIssue(issue, { focus: true, hash: location.hash });
+  else clearIssue({ focus: true });
+});
 
 function updateEditor() {
   const size = pending.size;
@@ -183,6 +308,15 @@ addEventListener("beforeunload", (event) => {
   if (pending.size === 0) return;
   event.preventDefault();
 });
+
+const initialIssue = selectedIssue();
+if (initialIssue) {
+  issueBrowser?.classList.add("has-selection");
+  markSelected(initialIssue);
+  if (issueBrowser?.dataset.initialIssue !== initialIssue) {
+    openIssue(initialIssue, { hash: location.hash });
+  }
+}
 `;
 type Category = (typeof CATEGORIES)[number];
 export type IssuePriority =
@@ -864,13 +998,6 @@ function issuesBaseFor(base: string, visibility: Visibility): string {
   return visibility === "private" ? `${base}/issues/private` : `${base}/issues`;
 }
 
-function issueDetailHref(
-  base: string,
-  issue: Pick<IssueRecord, "relPath" | "visibility">,
-): string {
-  return `${base}/issues/${addVisibilityPrefix(issue.relPath, issue.visibility)}`;
-}
-
 // The right overlay map for an issue's visibility — never cross the two, so
 // a public and private issue sharing a relPath can't attribute badges to
 // each other.
@@ -960,6 +1087,7 @@ function worktreeBadges(entries: OverlayEntry[] | undefined): string {
 }
 
 const ISSUES_CSS = `
+  body { max-width: 1500px; }
   .issue-editor-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 0.8em; margin: 0 -0.4em 1em; padding: 0.65em 0.4em; border-bottom: 1px solid #d8dde3; background: rgba(255, 255, 255, 0.96); }
   .issue-editor-bar h1 { flex: 0 0 auto; margin: 0; }
   .issue-editor-filters { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 0.3em; align-items: center; }
@@ -968,6 +1096,18 @@ const ISSUES_CSS = `
   .issue-editor-actions button:disabled { cursor: default; opacity: 0.45; }
   .dirty-count, .save-status { color: #666; font: 12px ui-monospace, Menlo, monospace; }
   .save-status { max-width: 24em; color: #a23522; }
+  .issue-browser { display: grid; grid-template-columns: minmax(30em, 0.9fr) minmax(0, 1.1fr); gap: 1.2em; align-items: start; }
+  .issue-list-pane, .issue-detail-pane { min-width: 0; max-height: calc(100vh - 7em); overflow: auto; }
+  .issue-list-pane { padding-right: 0.2em; }
+  .issue-detail-pane { padding: 0 0.8em 2em 1.3em; border-left: 1px solid #d8dde3; }
+  .issue-detail-pane h1 { margin-top: 0; }
+  .issue-detail-empty { margin: 3em 1em; color: #888; text-align: center; }
+  .issue-detail-loading, .issue-detail-error { display: flex; min-height: 10em; flex-direction: column; align-items: center; justify-content: center; gap: 0.5em; color: #666; text-align: center; }
+  .issue-detail-loading span, .issue-detail-error span { font-size: 0.9em; }
+  .issue-detail-error { color: #a23522; }
+  .issue-detail-header { display: none; justify-content: flex-end; margin-bottom: 0.5em; }
+  .issue-browser.has-selection .issue-detail-header { display: flex; }
+  .issue-detail-header button { padding: 0.25em 0.65em; }
   .filters { margin: 0 0 1.4em; font: 13px ui-monospace, Menlo, monospace; }
   .filters .chip { cursor: default; }
   .filters a.chip { cursor: pointer; }
@@ -991,6 +1131,7 @@ const ISSUES_CSS = `
   ul.issues li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
   ul.issues li:last-child { border-bottom: none; }
   ul.issues li:hover { background: #f6f8fa; }
+  ul.issues li.selected { background: #eaf1fb; box-shadow: inset 3px 0 #2255aa; }
   ul.issues .issue-main { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; }
   ul.issues .issue-title-row { display: flex; min-width: 0; align-items: baseline; gap: 0.5em; }
   ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
@@ -1037,6 +1178,11 @@ const ISSUES_CSS = `
     ul.issues li { grid-template-columns: minmax(0, 1fr); }
     ul.issues .issue-priority { justify-self: start; }
     .priority-target { text-align: left; }
+    .issue-browser { display: block; }
+    .issue-list-pane, .issue-detail-pane { max-height: none; overflow: visible; }
+    .issue-detail-pane { display: none; padding: 0; border-left: none; }
+    .issue-browser.has-selection .issue-list-pane { display: none; }
+    .issue-browser.has-selection .issue-detail-pane { display: block; }
   }
 `;
 
@@ -1202,6 +1348,7 @@ function filterChipsHtml(
   base: string,
   f: Filters,
   facets: IssueFacets,
+  selectedIssue?: string,
 ): string {
   const qs = (overrides: Record<string, string | undefined>): string => {
     const p = new URLSearchParams();
@@ -1217,6 +1364,7 @@ function filterChipsHtml(
       assigned: f.assigned ? "true" : f.unassigned ? "false" : undefined,
       status: f.status === "open" ? undefined : f.status,
       sort: f.sort === "date" ? undefined : f.sort,
+      issue: selectedIssue,
       ...overrides,
     };
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
@@ -1318,8 +1466,12 @@ function issueRowHtml(
   issue: IssueRecord,
   overlay: OverlayEntry[] | undefined,
   returnQuery: string,
+  selectedIssue?: string,
 ): string {
-  const href = issueDetailHref(base, issue);
+  const paneQuery = new URLSearchParams(returnQuery);
+  const paneIssue = addVisibilityPrefix(issue.relPath, issue.visibility);
+  paneQuery.set("issue", paneIssue);
+  const href = `${base}/issues/?${paneQuery.toString()}`;
   // The slug starts with the filing date, so "date · slug" would print the
   // date twice — split it into "date · rest-of-slug" instead.
   const date = issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
@@ -1369,9 +1521,10 @@ function issueRowHtml(
     )
     .join("");
   const copyPath = `${issue.visibility === "private" ? "private-issues" : "issues"}/${issue.relPath}`;
-  return `<li>
+  const selected = paneIssue === selectedIssue;
+  return `<li${selected ? ' class="selected"' : ""}>
     <div class="issue-main">
-      <div class="issue-title-row"><a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a><button type="button" class="copy-issue-path" data-copy-path="${escapeHtml(copyPath)}" aria-label="Copy issue path ${escapeHtml(copyPath)}" title="Copy ${escapeHtml(copyPath)}">Copy</button></div>
+      <div class="issue-title-row"><a class="title" href="${href}" data-issue-link="${escapeHtml(paneIssue)}"${selected ? ' aria-current="true"' : ""}>${escapeHtml(issue.frontmatter.title)}</a><button type="button" class="copy-issue-path" data-copy-path="${escapeHtml(copyPath)}" aria-label="Copy issue path ${escapeHtml(copyPath)}" title="Copy ${escapeHtml(copyPath)}">Copy</button></div>
       <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
       <div class="issue-pills">${pills}</div>
     </div>
@@ -1475,6 +1628,10 @@ async function renderIssueIndex(
     ),
   ]);
   const issues = [...authoritativePublic, ...authoritativePrivate];
+  const selectedIssue = query.get("issue") ?? undefined;
+  const selectedDetail = selectedIssue
+    ? await buildIssueDetail(base, roots, selectedIssue, overlay)
+    : undefined;
 
   const f = parseFilters(query);
   const facets = deriveFacets(issues);
@@ -1508,7 +1665,13 @@ async function renderIssueIndex(
 
   const returnQuery = query.toString();
   const row = (i: IssueRecord): string =>
-    issueRowHtml(base, i, overlayEntriesFor(overlay, i), returnQuery);
+    issueRowHtml(
+      base,
+      i,
+      overlayEntriesFor(overlay, i),
+      returnQuery,
+      selectedIssue,
+    );
   const categoryHtml = CATEGORIES.map((cat) => {
     const bucket = byCategory.get(cat)!;
     if (bucket.open.length === 0 && bucket.closed.length === 0) return "";
@@ -1526,6 +1689,11 @@ async function renderIssueIndex(
     return `<h2 class="cat">${escapeHtml(cat)} <span class="count">${count}</span></h2>${f.status === "closed" ? closedList : openList}${f.status === "all" ? closedList : ""}`;
   }).join("");
 
+  const initialDetail = selectedDetail
+    ? selectedDetail.status === 200
+      ? selectedDetail.body
+      : `<div class="issue-detail-error" role="alert"><strong>Could not load issue</strong><span>${escapeHtml(selectedDetail.body.trim())}</span><button type="button" data-retry-issue>Retry</button></div>`
+    : `<p class="issue-detail-empty">Select an issue to read it.</p>`;
   const body = `<div class="issue-editor-bar">
   <h1>issues</h1>
   <div class="issue-editor-filters" aria-label="Active filters">${activeFiltersHtml(f)}</div>
@@ -1536,8 +1704,16 @@ async function renderIssueIndex(
     <button type="button" data-save data-endpoint="${base}/issues/action/save-priorities" disabled>Save</button>
   </div>
 </div>
-${filterChipsHtml(base, f, facets)}
-${categoryHtml || `<p class="empty">no issues match these filters</p>`}<script src="${base}/issues/priority.js" defer></script>`;
+<div class="issue-browser${selectedIssue ? " has-selection" : ""}" data-issue-browser data-detail-endpoint="${base}/issues/detail"${selectedIssue ? ` data-initial-issue="${escapeHtml(selectedIssue)}"` : ""}>
+  <section class="issue-list-pane" aria-label="Issue list">
+    ${filterChipsHtml(base, f, facets, selectedIssue)}
+    ${categoryHtml || `<p class="empty">no issues match these filters</p>`}
+  </section>
+  <section class="issue-detail-pane" aria-label="Issue detail">
+    <div class="issue-detail-header"><button type="button" data-close-issue>Back to issues</button></div>
+    <div data-issue-detail aria-live="polite">${initialDetail}</div>
+  </section>
+</div><script src="${base}/issues/priority.js" defer></script>`;
   return renderDevShell(
     "issues",
     devBreadcrumbs(base, "issues"),
@@ -2012,13 +2188,21 @@ async function worktreeDiffHtml(
   return sections.join("");
 }
 
-async function renderIssueDetail(
+interface IssueDetailResult {
+  status: number;
+  contentType: string;
+  body: string;
+  title?: string;
+  relPath?: string;
+  visibility?: Visibility;
+}
+
+async function buildIssueDetail(
   base: string,
   roots: { mainIssuesRoot: string; mainPrivateRoot: string },
-  worktreesRoot: string,
   urlRel: string,
-  res: http.ServerResponse,
-): Promise<void> {
+  overlay: OverlayResult,
+): Promise<IssueDetailResult> {
   const { visibility, relPath } = stripVisibilityPrefix(urlRel);
   const contentRoot =
     visibility === "private" ? roots.mainPrivateRoot : roots.mainIssuesRoot;
@@ -2027,12 +2211,9 @@ async function renderIssueDetail(
     !resolved.startsWith(contentRoot + path.sep) ||
     !resolved.endsWith(".md")
   ) {
-    res.writeHead(403, { "content-type": "text/plain" });
-    res.end("forbidden\n");
-    return;
+    return { status: 403, contentType: "text/plain", body: "forbidden\n" };
   }
 
-  const overlay = await collectOverlay(worktreesRoot);
   const overlayByPath =
     visibility === "private" ? overlay.byPathPrivate : overlay.byPath;
   const dirPath = path.posix.dirname(relPath.split(path.sep).join("/"));
@@ -2052,9 +2233,11 @@ async function renderIssueDetail(
       ? overlay.worktreeRoots.get(addedFrom.worktree)
       : undefined;
     if (!root) {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end(`not found: ${relPath}\n`);
-      return;
+      return {
+        status: 404,
+        contentType: "text/plain",
+        body: `not found: ${relPath}\n`,
+      };
     }
     const dir =
       visibility === "private"
@@ -2064,9 +2247,11 @@ async function renderIssueDetail(
       src = await fs.readFile(path.join(dir, relPath), "utf8");
       worktreeOnlyLabel = `<p style="color:#a2380a;font:13px ui-monospace,monospace">worktree-only — exists on <strong>${escapeHtml(addedFrom!.worktree)}</strong>, not on main</p>`;
     } catch {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end(`not found: ${relPath}\n`);
-      return;
+      return {
+        status: 404,
+        contentType: "text/plain",
+        body: `not found: ${relPath}\n`,
+      };
     }
   }
 
@@ -2114,15 +2299,43 @@ ${manualActions}
 ${factsTableHtml(issue.frontmatter, issue.research, issue.closed)}
 ${bodyHtml}
 ${diffHtml}`;
-  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  return {
+    status: 200,
+    contentType: "text/html; charset=utf-8",
+    body: html,
+    title: issue.frontmatter.title,
+    relPath,
+    visibility,
+  };
+}
+
+async function renderIssueDetail(
+  base: string,
+  roots: { mainIssuesRoot: string; mainPrivateRoot: string },
+  worktreesRoot: string,
+  urlRel: string,
+  res: http.ServerResponse,
+  fragment = false,
+): Promise<void> {
+  const result = await buildIssueDetail(
+    base,
+    roots,
+    urlRel,
+    await collectOverlay(worktreesRoot),
+  );
+  res.writeHead(result.status, { "content-type": result.contentType });
+  if (fragment || result.status !== 200) {
+    res.end(result.body);
+    return;
+  }
   res.end(
     renderDevShell(
-      issue.frontmatter.title,
+      result.title!,
       devBreadcrumbs(
         base,
-        `issues/${addVisibilityPrefix(relPath, visibility)}`,
+        `issues/${addVisibilityPrefix(result.relPath!, result.visibility!)}`,
       ),
-      html,
+      result.body,
       ISSUES_CSS,
     ),
   );
@@ -2174,6 +2387,18 @@ export async function serveIssues(params: {
 
   if (method === "POST" && rel === "/action/save-priorities") {
     await servePrioritySave({ roots, worktreesRoot, req, res });
+    return;
+  }
+
+  if (method === "GET" && rel === "/detail") {
+    await renderIssueDetail(
+      base,
+      roots,
+      worktreesRoot,
+      query.get("issue") ?? "",
+      res,
+      true,
+    );
     return;
   }
 
