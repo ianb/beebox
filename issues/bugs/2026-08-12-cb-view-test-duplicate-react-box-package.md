@@ -19,6 +19,12 @@ claimed global (`useState is not defined`).
 Practical cost: a hook-using view can be authored but never render-tested.
 `docs/generated/views.md` tells authors hooks just work.
 
+**Reported independently three weeks earlier**, from a different box
+(2026-07-21): same "Invalid hook call / dual React copies", reproducing on two
+*pre-existing* views there as well as a new one, which likewise had to fall back
+to manual code review. So this is not box-specific, not view-specific, and has
+been costing render-testing since at least mid-July.
+
 ## The code states the invariant it breaks
 
 `src/cli/commands/view.ts:154-159` spells out the requirement:
