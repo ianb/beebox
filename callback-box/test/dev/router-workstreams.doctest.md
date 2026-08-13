@@ -755,7 +755,7 @@ assert.match(
 );
 assert.match(
   issues.captured.body,
-  /role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*Important[\s\S]*Normal[\s\S]*Backlog[\s\S]*Uncategorized/,
+  /role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*aria-label="Important" title="Important"[\s\S]*>!<\/button>[\s\S]*aria-label="Normal" title="Normal"[\s\S]*>−<\/button>[\s\S]*aria-label="Backlog" title="Backlog"[\s\S]*>↓<\/button>[\s\S]*aria-label="Uncategorized" title="Uncategorized"[\s\S]*>\?<\/button>/,
 );
 assert.equal(
   issues.captured.headers["content-security-policy"],
@@ -828,7 +828,7 @@ await serveWorkstreams({
 });
 assert.match(
   updatedIssues.captured.body,
-  /<button type="submit" role="radio" aria-checked="true" class="active">Important<\/button>/,
+  /<button type="submit" role="radio" aria-label="Important" title="Important" aria-checked="true" class="active">!<\/button>/,
 );
 const invalidPriority = responseDouble();
 await serveWorkstreams({

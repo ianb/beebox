@@ -832,7 +832,7 @@ const ISSUES_CSS = `
   .badge-renamed { background: #f3eefb; color: #6f42c1; }
   .badge.uncommitted { border: 1px dashed currentColor; }
   ul.issues { list-style: none; padding: 0; margin: 0 0 1.6em; border: 1px solid #e3e3e3; border-radius: 8px; overflow: hidden; }
-  ul.issues li { display: grid; grid-template-columns: minmax(0, 1fr) 25em; align-items: center; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
+  ul.issues li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
   ul.issues li:last-child { border-bottom: none; }
   ul.issues li:hover { background: #f6f8fa; }
   ul.issues .issue-main { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; }
@@ -842,7 +842,7 @@ const ISSUES_CSS = `
   ul.issues .issue-priority { min-width: 0; justify-self: end; }
   .priority-controls { display: flex; flex: 0 0 auto; }
   .priority-controls form { margin: 0; }
-  .priority-controls button { padding: 0.2em 0.45em; border: 1px solid #bbc2ca; border-right-width: 0; background: #fff; color: #555; font: 11px ui-monospace, Menlo, monospace; cursor: pointer; }
+  .priority-controls button { min-width: 2.25em; padding: 0.25em 0.5em; border: 1px solid #bbc2ca; border-right-width: 0; background: #fff; color: #555; font: 600 13px ui-monospace, Menlo, monospace; cursor: pointer; }
   .priority-controls form:first-child button { border-radius: 4px 0 0 4px; }
   .priority-controls form:last-child button { border-right-width: 1px; border-radius: 0 4px 4px 0; }
   .priority-controls button.active { background: #2255aa; color: #fff; font-weight: 700; }
@@ -1106,8 +1106,14 @@ function issueRowHtml(
     .map((priority) => {
       const active = issue.frontmatter.priority === priority;
       const label = priority[0]!.toUpperCase() + priority.slice(1);
+      const symbol = {
+        important: "!",
+        normal: "−",
+        backlog: "↓",
+        uncategorized: "?",
+      }[priority];
       const action = `${base}/issues/action/priority?visibility=${issue.visibility}&amp;issue=${encodeURIComponent(issue.relPath)}&amp;priority=${priority}${returnQuery ? `&amp;return=${encodeURIComponent(returnQuery)}` : ""}`;
-      return `<form method="POST" action="${action}"><button type="submit" role="radio" aria-checked="${active ? "true" : "false"}"${active ? ' class="active"' : ""}>${label}</button></form>`;
+      return `<form method="POST" action="${action}"><button type="submit" role="radio" aria-label="${label}" title="${label}" aria-checked="${active ? "true" : "false"}"${active ? ' class="active"' : ""}>${symbol}</button></form>`;
     })
     .join("");
   return `<li>
