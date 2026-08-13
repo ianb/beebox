@@ -751,6 +751,10 @@ assert.equal(issues.captured.status, 200);
 assert.match(issues.captured.body, /href="\/workstreams\/issues\/bugs\/2026-08-09-seam.md"/);
 assert.match(
   issues.captured.body,
+  /class="issue-main"[\s\S]*class="issue-pills"[\s\S]*class="issue-priority"[\s\S]*class="priority-controls"/,
+);
+assert.match(
+  issues.captured.body,
   /role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*Important[\s\S]*Normal[\s\S]*Backlog[\s\S]*Uncategorized/,
 );
 assert.equal(

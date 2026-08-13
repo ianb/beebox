@@ -832,14 +832,14 @@ const ISSUES_CSS = `
   .badge-renamed { background: #f3eefb; color: #6f42c1; }
   .badge.uncommitted { border: 1px dashed currentColor; }
   ul.issues { list-style: none; padding: 0; margin: 0 0 1.6em; border: 1px solid #e3e3e3; border-radius: 8px; overflow: hidden; }
-  ul.issues li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
+  ul.issues li { display: grid; grid-template-columns: minmax(0, 1fr) 25em; align-items: center; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
   ul.issues li:last-child { border-bottom: none; }
   ul.issues li:hover { background: #f6f8fa; }
-  ul.issues .issue-main { min-width: 0; }
+  ul.issues .issue-main { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; }
   ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
   ul.issues a.title:hover { color: #2255aa; text-decoration: underline; }
   ul.issues .meta { display: block; color: #888; font: 12px ui-monospace, Menlo, monospace; margin-top: 0.2em; }
-  ul.issues .issue-controls { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 0.7em; }
+  ul.issues .issue-priority { min-width: 0; justify-self: end; }
   .priority-controls { display: flex; flex: 0 0 auto; }
   .priority-controls form { margin: 0; }
   .priority-controls button { padding: 0.2em 0.45em; border: 1px solid #bbc2ca; border-right-width: 0; background: #fff; color: #555; font: 11px ui-monospace, Menlo, monospace; cursor: pointer; }
@@ -848,7 +848,7 @@ const ISSUES_CSS = `
   .priority-controls button.active { background: #2255aa; color: #fff; font-weight: 700; }
   .priority-target { display: block; margin-top: 0.15em; color: #888; font: 10px ui-monospace, Menlo, monospace; text-align: right; }
   .priority-error { display: block; max-width: 22em; margin-top: 0.2em; color: #a23522; font-size: 0.8em; }
-  ul.issues .issue-pills { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.2em; max-width: 45%; }
+  ul.issues .issue-pills { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0.2em; margin-top: 0.35em; }
   ul.issues .issue-pills .chip, ul.issues .issue-pills .badge { font-size: 0.78em; opacity: 0.85; margin: 0; }
   h2.cat { display: flex; align-items: baseline; gap: 0.5em; font-weight: 500; color: #444; }
   h2.cat .count { color: #999; font-size: 0.7em; font-weight: 400; }
@@ -862,13 +862,12 @@ const ISSUES_CSS = `
   .wt-diff pre { font-size: 0.82em; }
   .diff-add { color: #1e6b34; } .diff-del { color: #a23522; }
   @media (max-width: 1000px) {
-    ul.issues li { grid-template-columns: minmax(0, 1fr); align-items: flex-start; gap: 0.55em; }
-    ul.issues .issue-controls { justify-content: flex-start; width: 100%; }
-    ul.issues .issue-pills { justify-content: flex-start; }
+    ul.issues li { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0.7em; }
+    ul.issues .issue-priority { justify-self: end; }
   }
   @media (max-width: 700px) {
-    ul.issues .issue-controls { align-items: flex-start; flex-direction: column; max-width: 100%; }
-    ul.issues .issue-pills { justify-content: flex-start; max-width: 100%; }
+    ul.issues li { grid-template-columns: minmax(0, 1fr); }
+    ul.issues .issue-priority { justify-self: start; }
     .priority-target { text-align: left; }
   }
 `;
@@ -1115,8 +1114,9 @@ function issueRowHtml(
     <div class="issue-main">
       <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
       <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
+      <div class="issue-pills">${pills}</div>
     </div>
-    <div class="issue-controls"><div><div class="priority-controls" role="radiogroup" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div>${editTargetHtml}</div><div class="issue-pills">${pills}</div></div>
+    <div class="issue-priority"><div class="priority-controls" role="radiogroup" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div>${editTargetHtml}</div>
   </li>`;
 }
 
