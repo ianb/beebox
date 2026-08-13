@@ -303,7 +303,7 @@ One chunk:
 6. Add a top-of-file comment to
    `src/shared/markdoc-config.ts` documenting the "pure TS, no
    platform APIs" rule.
-7. Run `pnpm typecheck:all` and `pnpm lint` to confirm both sides
+7. Run `pnpm typecheck` and `pnpm lint` to confirm both sides
    resolve the new path.
 8. Run the existing `card-lint.doctest.md` to confirm the
    backend body-refs path still works.

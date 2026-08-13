@@ -185,14 +185,23 @@ Per-path map — run what the diff touches, nothing more:
 - `callback-box/` → `pnpm test` / `pnpm typecheck` / `pnpm lint` in
   `callback-box/`. This is the "full suite" above.
 - Root `bin/`, `dev/` → root `pnpm test` (bin/*.test.ts) + root
-  `pnpm typecheck`. Root `pnpm lint` fans out to every package's own lint
-  (`pnpm -r lint`); `bin/` and `dev/` themselves deliberately have no ESLint
-  rules (root `eslint.config.mjs` says so) — don't go spelunking for more.
+  `pnpm typecheck`. Root `pnpm lint` fans out to every package's own lint except
+  the separately-covered callback-box frontend workspace; callback-box's lint
+  includes that exact frontend command. `bin/` and `dev/` themselves
+  deliberately have no ESLint rules (root `eslint.config.mjs` says so) — don't
+  go spelunking for more.
 - `site/` → its own `pnpm test` / `pnpm typecheck` / `pnpm lint` in `site/`.
 - `personal-vibe-check/`, `agent-doctest/`, `canvas-loop/`, `callback-clerk/`
   → each has its own scripts; run them only if the diff touches that package.
 - `issues/`, `research/`, root docs → nothing beyond the pre-commit checks
   that run on commit (doc-check etc.).
+
+Coalesce lint commands across the selected paths. Root `pnpm lint` is the
+workspace-wide lint gate (`pnpm -r lint` with only the separately-covered
+callback-box frontend workspace filtered out), so when it runs, do not run a
+second package-local `pnpm lint` for any package it already covers. Package
+tests and typechecks remain separate: root `pnpm typecheck` is root-only, and
+does not replace any package typecheck.
 
 Capture expensive command output (the full suite, any long build) to a temp
 file **outside the worktree** and re-parse the FILE if your first parse missed
