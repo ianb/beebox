@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder tried to retry a failed capture upload
+priority: important
 ---
 
 When a capture upload fails, the error indicator (which also carries the **retry**

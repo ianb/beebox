@@ -5,6 +5,7 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-photo-batch-upload — Codex review of the bulk-upload teardown fixes
 labels: [mobile]
+priority: normal
 ---
 
 The bulk-upload side of this race was fixed (see

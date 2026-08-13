@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder, repeatedly, sending voice messages
+priority: important
 ---
 
 After submitting a voice message, it still shows up as an unsent message offered

@@ -4,6 +4,7 @@ workstream: tab-organizer-clerk
 area: clerk
 filed-by: agent
 discovered-in: worktree-tab-organizer-clerk — testing tab organizer handoff
+priority: normal
 ---
 
 Callback Clerk is loaded from the generated `callback-clerk/dist/chrome-mv3/`

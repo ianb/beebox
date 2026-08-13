@@ -4,6 +4,7 @@ workstream: chat-history-oom-mobile-lock
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
+priority: normal
 ---
 
 `callback-box/src/frontend/src/machines/chatMachine.ts` `PREPEND_MESSAGES`

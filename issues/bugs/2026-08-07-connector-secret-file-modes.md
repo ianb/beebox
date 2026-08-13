@@ -5,6 +5,7 @@ area: callback-box
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — credential inventory for the security report
+priority: important
 ---
 
 Every bespoke credential store in the codebase writes with an explicit

@@ -4,6 +4,7 @@ workstream: compacting
 area: callback-box
 filed-by: agent
 discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
+priority: normal
 ---
 
 `parseSessionLog` (`callback-box/src/cli/lib/session.ts:317`) defaults `limit`

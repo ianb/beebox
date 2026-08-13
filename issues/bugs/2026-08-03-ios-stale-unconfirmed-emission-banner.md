@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder saw the banner without composing anything
+priority: important
 ---
 
 The iOS banner **"The chat did not confirm the message. Try sending it again."**

@@ -4,6 +4,7 @@ workstream: unknown
 area: callback-box
 filed-by: agent
 discovered-in: boxholder, using the new swipe nav on a real device right after it shipped
+priority: backlog
 ---
 
 Swiping through a set of images one after another doesn't work. After a

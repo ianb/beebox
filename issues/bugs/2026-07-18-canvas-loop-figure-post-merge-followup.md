@@ -4,6 +4,7 @@ workstream: quick-seeing-p5js
 area: callback-box
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — after merging the canvas-loop library + figure runtime to main (f57eb12c)
+priority: backlog
 ---
 
 The canvas-loop library + figure runtime landed on `main` (merge `f57eb12c`,
