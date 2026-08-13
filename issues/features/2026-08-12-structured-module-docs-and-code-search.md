@@ -62,6 +62,30 @@ Findings from this month, each of which a working search would have surfaced:
 Each is the same failure: the thing existed, and finding it required someone to
 already know it existed.
 
+## The search engine already exists: reuse `cb search`'s
+
+`cb search` is built on **Orama** (`@orama/orama`, plus
+`@orama/plugin-data-persistence` for the on-disk index) — see
+`src/core/search/`, with an embedding pass in `embed-pass.ts` alongside the
+lexical path.
+
+That is the same shape this needs, and reusing it settles two questions rather
+than opening them:
+
+- **Lexical vs embeddings is not a fork.** Orama does full-text (BM25-family
+  ranking), vector, and hybrid search in one index — so the "revisit BM25"
+  thread and the "maybe with embeddings" thread are the same tool, and the
+  baseline is free rather than a separate build.
+- **Persistence and refresh are solved.** `search-store.ts`, `manifest.ts`,
+  `refresh.ts` and `walk.ts` already handle indexing a tree, keeping it current,
+  and persisting it. A module-docs index wants exactly that machinery over a
+  different corpus.
+
+The open design question becomes narrower and better: **one index or two?** Box
+content and source-module docs have different corpora, refresh triggers, and
+audiences — but sharing the store means one thing to keep warm and one query
+path for `cb-plan` to call.
+
 ## Open: does jsdoc actually fit?
 
 Ian's own doubt, and worth taking seriously. The preset carries **no jsdoc rules
@@ -79,8 +103,8 @@ one-way part.
 
 - Module-level, export-level, or both? Export-level is where the scope
   annotation lives, but it is also where the backfill cost explodes.
-- Is search lexical, embedding-based, or both? BM25 is on Ian's list to revisit
-  and would be the cheap baseline worth beating before reaching for embeddings.
+- One Orama index shared with `cb search`, or a separate one for module docs?
+  (See above — the engine choice itself is settled.)
 - What does `cb-plan` do with results — paste them, summarize them, or require
   the planner to say why each near-miss wasn't reused?
 - Does the scope annotation get *enforced* (a lint error on importing a
