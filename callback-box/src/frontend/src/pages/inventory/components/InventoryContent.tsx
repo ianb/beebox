@@ -31,6 +31,7 @@ export function InventoryContent({ data, metric, linkStatus, projection, setMetr
   return (
     <>
       <InventorySummary data={data} linkStatus={linkStatus} />
+      <RepositorySummary data={data} />
       <InventoryArea
         items={items}
         metric={metric}
@@ -43,6 +44,60 @@ export function InventoryContent({ data, metric, linkStatus, projection, setMetr
       <InventoryDataTable items={items} linkStatus={linkStatus} projection={projection} />
       <InventoryRules data={data} />
     </>
+  );
+}
+
+function RepositorySummary({ data }: { data: Inventory }) {
+  const { repository } = data;
+  const annexedPercent = percent(repository.storage.all.annexed.bytes, repository.storage.all);
+  return (
+    <Card as="section" aria-label="Git repository summary">
+      <Stack gap="md">
+        <Text as="h2" size="lg" weight="semibold">Git storage</Text>
+        <Row gap="lg" wrap>
+          <InventoryStatistic value={formatBytes(repository.checkoutDiskBytes)} label="repository footprint" />
+          <InventoryStatistic value={formatBytes(repository.gitDiskBytes)} label="of that, Git storage" />
+          <InventoryStatistic value={repository.annexed ? repository.annexQueryAvailable ? `${annexedPercent}%` : "Unavailable" : "Not enabled"} label="logical content annexed" />
+        </Row>
+        {repository.complete ? null : <Text as="p" tone="danger" size="sm">Repository footprint is a lower bound because some paths could not be read.</Text>}
+        {repository.annexed && !repository.annexQueryAvailable ? <Text as="p" tone="danger" size="sm">Git-annex accounting is unavailable; no annex percentage or breakdown is shown.</Text> : null}
+        {repository.annexed && repository.annexQueryAvailable ? <StorageTable storage={repository.storage} /> : repository.annexed ? null : <Text as="p" tone="muted" size="sm">This repository is not using Git-annex.</Text>}
+      </Stack>
+    </Card>
+  );
+}
+
+function percent(bytes: number, storage: Inventory["repository"]["storage"]["all"]): string {
+  const total = storage.annexed.bytes + storage.regular.bytes;
+  return total === 0 ? "0" : (bytes / total * 100).toFixed(1);
+}
+
+function StorageTable({ storage }: { storage: Inventory["repository"]["storage"] }) {
+  const columns = [
+    { label: "All", value: storage.all },
+    { label: "Linked", value: storage.linked },
+    { label: "Unlinked", value: storage.unlinked },
+  ];
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead><tr className="border-b border-warm-300 text-left text-warm-600"><th className="py-2 pr-3 font-medium">Storage</th>{columns.map((column) => <th key={column.label} className="py-2 px-3 text-right font-medium">{column.label}</th>)}</tr></thead>
+        <tbody>
+          <StorageRow label="Annexed" columns={columns.map((column) => column.value.annexed)} />
+          <StorageRow label="Regular Git" columns={columns.map((column) => column.value.regular)} />
+        </tbody>
+      </table>
+      <Text as="p" size="xs" tone="muted" className="mt-2">Cells show logical content size and physical file count; annex sizes include content not fetched locally. Repository footprint includes dependencies and Git storage, and Git storage is part of that total. Loose files appear only under All.</Text>
+    </div>
+  );
+}
+
+function StorageRow({ label, columns }: { label: string; columns: Array<{ files: number; bytes: number }> }) {
+  return (
+    <tr className="border-b border-warm-200">
+      <td className="py-2 pr-3 font-medium">{label}</td>
+      {columns.map((column, index) => <td key={index} className="py-2 px-3 text-right tabular-nums">{formatBytes(column.bytes)} <span className="text-warm-500">· {column.files.toLocaleString()}</span></td>)}
+    </tr>
   );
 }
 

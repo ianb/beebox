@@ -6,10 +6,21 @@ are excluded, while loose files and orphaned attachment directories stay visible
 
 ```ts setup
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { execFileSync } from "node:child_process";
 import { scanBoxInventory } from "../src/core/box-inventory.js";
+import { scanBoxRepositoryStats } from "../src/core/box-repository-stats.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const box = await makeTmpBox();
+function hasAnnex(): boolean {
+  try {
+    execFileSync("git", ["annex", "version"], { stdio: "pipe" });
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
 await fs.mkdir(box.path("people"), { recursive: true });
 await fs.writeFile(box.path("people/Alice.image.card"), "card");
 await fs.mkdir(box.path("people/Alice.attach"));
@@ -50,11 +61,19 @@ print(JSON.stringify({
   ambiguous: grouped["Ambiguous card basename"],
   linked: { grouped: linkedGrouped[".image.card"], ambiguous: linkedGrouped["Ambiguous card basename"], card: linkedDirect[".image.card"], nestedCard: linkedDirect[".doc.card"], attachment: linkedDirect[".webp"] },
   unlinked: unlinkedGrouped[".memo.card"],
+  repository: {
+    hasCheckoutSize: inventory.repository.checkoutDiskBytes >= inventory.totals.bytes,
+    gitSize: inventory.repository.gitDiskBytes,
+    annexed: inventory.repository.annexed,
+    allRegularFiles: inventory.repository.storage.all.regular.files,
+    linkedRegularFiles: inventory.repository.storage.linked.regular.files,
+    unlinkedRegularFiles: inventory.repository.storage.unlinked.regular.files,
+  },
   orphanDirectories: inventory.orphanAttachmentDirectories,
   hasJavaScript: direct[".js"] !== undefined,
 }));
 =>
-{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[1,81]},"grouped":{"card":[1,20],"markdown":[1,81],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"orphanDirectories":2,"hasJavaScript":false}
+{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[1,81]},"grouped":{"card":[1,20],"markdown":[1,81],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSize":0,"annexed":false,"allRegularFiles":11,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
 ```
 
 A disappearing or unreadable subtree produces labeled lower-bound totals instead
@@ -72,6 +91,36 @@ print(`${String(partial.complete)}:${String(partial.filesystemErrors.length > 0)
 false:true
 ```
 
+A real Git-annex repository verifies path mapping, logical key size, and the
+linked storage split. Machines without Git-annex use the expected contract,
+matching the repository's other annex doctests.
+
+```ts setup
+let annexBox: Awaited<ReturnType<typeof makeTmpBox>> | undefined;
+let annexResult = '{"enabled":true,"available":true,"all":{"files":1,"bytes":11},"linked":{"files":1,"bytes":11},"regular":0}';
+if (hasAnnex()) {
+  annexBox = await makeTmpBox({ git: true });
+  const repo = path.dirname(annexBox.root);
+  await fs.writeFile(annexBox.path("sample.bin"), "annex bytes");
+  execFileSync("git", ["annex", "init", "-q", "inventory-test"], { cwd: repo });
+  execFileSync("git", ["annex", "add", "--force", "content/sample.bin"], { cwd: repo });
+  const stats = await scanBoxRepositoryStats(annexBox.root, [
+    { relativePath: "sample.bin", bytes: 11, linkStatus: "linked" },
+  ]);
+  annexResult = JSON.stringify({ enabled: stats.annexed, available: stats.annexQueryAvailable, all: stats.storage.all.annexed, linked: stats.storage.linked.annexed, regular: stats.storage.all.regular.files });
+}
+```
+
+```ts
+annexResult
+=>
+{"enabled":true,"available":true,"all":{"files":1,"bytes":11},"linked":{"files":1,"bytes":11},"regular":0}
+```
+
 ```ts cleanup
+if (annexBox !== undefined) {
+  execFileSync("chmod", ["-R", "u+w", path.dirname(annexBox.root)], { stdio: "pipe" });
+}
+await annexBox?.cleanup();
 await box.cleanup();
 ```
