@@ -78,6 +78,30 @@ install that would produce it. A bundle built once and committed, or built by
 the main checkout only, may sidestep the circularity — decide it before writing
 components.
 
+### Better shape: `/workstreams/` as its own app, routed to
+
+Boxholder, 2026-08-13. Rather than a nicer rendering layer *inside* the router,
+make the workstreams surface (and the issues browser mounted under it) **a
+separate app that the router proxies to** — which is what the router already
+does for every worktree's Vite + hub pair, by path prefix. This reuses the
+router's actual competence instead of growing a second one.
+
+It resolves the buildless tension more cleanly than splitting by surface kind:
+the diagnostic layer (worktree list, status, error pages, `/dev/` artifacts)
+stays in-process and dependency-light, while the app leaves entirely — its own
+package, its own deps, the full house stack, its own failure domain. A broken
+workstreams build then costs the workstreams UI and nothing else.
+
+The real cost to price: **in-process state becomes an API.** Today the views
+read `core.entries()`, lifecycle handles, and `lastActivity` directly. A
+separate app has to fetch that — though `bin/workstreams list --json` already
+exists as the join of git, runtime, and registry state, and `/__router/status`
+already serves the process view, so the seam is partly built.
+
+Also decide: is it lazy-started like a worktree or resident; does it inherit the
+router's authentication by sitting behind the proxy (as boxes do today); and
+does it keep working when the main checkout's install is mid-flight.
+
 ## The tension worth deciding first
 
 Adopting a framework (Fastify, Hono) would supply routing, middleware,
