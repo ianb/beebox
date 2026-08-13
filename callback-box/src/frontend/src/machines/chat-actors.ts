@@ -34,7 +34,7 @@ import {
   type InitialSessionInput,
   type SessionInput,
 } from "./chat-types";
-import { runFakeStream } from "./chat-actors-fakestream";
+import { runFakeStream, runScrollDebugToggle } from "./chat-actors-fakestream";
 import { chatSendReasonKind, recordChatSendEvent } from "../lib/chat-send-diagnostics";
 
 export const fetchInitialActor = fromPromise<
@@ -259,6 +259,12 @@ export const streamActor = fromCallback(
     });
 
     const unwrapped = input.message.replace(/^<typed[^>]*>/, "").replace(/<\/typed>$/, "");
+    if (unwrapped.startsWith("/scrolldebug")) {
+      // Frontend-only toggle for the scroll-controller trace — reachable on
+      // devices with no devtools. Same receipt handling as /fakestream.
+      settleReceipt({ disposition: "sent", emissionId: input.messageId, deduplicated: false });
+      return runScrollDebugToggle({ sendBack, terminal });
+    }
     if (unwrapped.startsWith("/fakestream")) {
       // The fake stream never reaches startChatTurn, so settle the receipt
       // here — otherwise it times out to `rejected` 30s in and the dispatcher

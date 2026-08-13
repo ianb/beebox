@@ -33,7 +33,7 @@ calls `socket.destroy()` on deny — no status, no close frame), so realtime is
 dead with **zero client-side signal**: no `[events-sub]` error, no console
 warning, `wsLink` just backs off and retries forever. This masked the
 first-message-redirect reproduction (see
-[new-chat-first-message-blank-until-agent-works](../bugs/2026-08-08-new-chat-first-message-blank-until-agent-works.md)).
+[new-chat-first-message-blank-until-agent-works](../closed/bugs/2026-08-08-new-chat-first-message-blank-until-agent-works.md)).
 When adding the socket-level test, also consider whether the router/box should
 refuse the upgrade with a readable 401 response (as the hub already does)
 rather than a bare TCP reset, and/or whether the client should surface a

@@ -64,7 +64,10 @@ the invocation + its output) that is red-capable (drives the real path, asserts
 the user's exact symptom), deterministic, fast, and agent-runnable. No such
 command → no Phase 2. If you genuinely can't build a loop, say so explicitly,
 list what you tried, and ask for an artifact (the deployed box's debug log, a
-HAR, a captured payload) — do **not** hypothesize without a loop.
+HAR, a captured payload) — do **not** hypothesize without a loop. When the bug
+only manifests on the boxholder's device or in prod, the artifact-gathering
+loop has its own protocol: the **field-probe** skill (deploy gated
+instrumentation, hand the boxholder a headlined script, read the trace back).
 
 ## Phase 2 — Reproduce + minimise
 
