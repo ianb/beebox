@@ -13,6 +13,7 @@ import { execa } from "execa";
 
 import {
   legacyIssuesRedirect,
+  createResumeMarkerParser,
   issueIndicators,
   issuesForWorkstream,
   quotaHtml,
@@ -142,6 +143,8 @@ for (const heading of [
 assert.match(html, /href="\/workstreams\/progress\/"/);
 assert.doesNotMatch(html, /http:\/\/localhost/);
 assert.match(html, /script src="\/workstreams\/actions.js" defer/);
+assert.match(html, /body data-auto-refresh="true"/);
+assert.doesNotMatch(html, /http-equiv="refresh"/);
 ```
 
 Agent liveness outranks an untouched Git state. Archived rows are separated,
@@ -558,6 +561,143 @@ JSON.stringify(calls)
 => ["focus:good_name-2","archive:good_name-2","confirm-tested:2026-08-09-test.md"]
 ```
 
+Resume can run as an observable background job. The CLI remains authoritative
+for the phase boundaries; the HTTP layer exposes only the current phase and a
+short-lived opaque job identifier.
+
+```ts
+const resumeStart = responseDouble();
+const resumeDeps: WorkstreamsDeps = {
+  list: async () => [],
+  run: async (_verb, _name, onProgress) => {
+    onProgress?.("restoring");
+    onProgress?.("preparing");
+    onProgress?.("opening-terminal");
+    onProgress?.("opened");
+  },
+  documents: async () => ({ issues: [], plans: [] }),
+};
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/action/resume/seam",
+  query: "format=json",
+  repoRoot: "/unused",
+  res: resumeStart.res,
+  deps: resumeDeps,
+});
+assert.equal(resumeStart.captured.status, 202);
+const resumeId = JSON.parse(resumeStart.captured.body).id as string;
+assert.match(resumeId, /^[0-9a-f-]+$/);
+const resumeStatus = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: `/workstreams/action-status/${resumeId}`,
+  repoRoot: "/unused",
+  res: resumeStatus.res,
+  deps: resumeDeps,
+});
+assert.equal(resumeStatus.captured.status, 200);
+assert.deepEqual(JSON.parse(resumeStatus.captured.body), {
+  stage: "opened",
+  name: "seam",
+});
+
+const parsedStages: string[] = [];
+const parseMarker = createResumeMarkerParser((stage) => parsedStages.push(stage));
+parseMarker("install output\nWORKSTREAM_RESUME_STA");
+parseMarker("TUS:restoring\rinstall tailWORKSTREAM_RESUME_STATUS:preparing\n");
+assert.deepEqual(parsedStages, ["restoring", "preparing"]);
+
+const monoRoot = path.resolve(process.cwd(), "..");
+const realMarkerFailure = await execa(
+  path.join(monoRoot, "bin/workstreams"),
+  ["resume", "definitely-not-a-workstream"],
+  {
+    cwd: monoRoot,
+    env: { ...process.env, WORKSTREAM_RESUME_PROGRESS: "1" },
+    reject: false,
+  },
+);
+assert.notEqual(realMarkerFailure.exitCode, 0);
+assert.match(realMarkerFailure.stderr, /WORKSTREAM_RESUME_STATUS:checking/);
+
+let finishMarkerless!: () => void;
+const markerlessDone = new Promise<void>((resolve) => {
+  finishMarkerless = resolve;
+});
+let markerlessRuns = 0;
+const markerlessDeps: WorkstreamsDeps = {
+  list: async () => [],
+  run: async () => { markerlessRuns += 1; await markerlessDone; },
+  documents: async () => ({ issues: [], plans: [] }),
+};
+const firstMarkerless = responseDouble();
+await serveWorkstreams({
+  method: "POST", pathname: "/workstreams/action/resume/markerless",
+  query: "format=json", repoRoot: "/unused", res: firstMarkerless.res,
+  deps: markerlessDeps,
+});
+const secondMarkerless = responseDouble();
+await serveWorkstreams({
+  method: "POST", pathname: "/workstreams/action/resume/markerless",
+  query: "format=json", repoRoot: "/unused", res: secondMarkerless.res,
+  deps: markerlessDeps,
+});
+assert.equal(markerlessRuns, 1);
+assert.equal(secondMarkerless.captured.body, firstMarkerless.captured.body);
+const plainMarkerless = responseDouble();
+await serveWorkstreams({
+  method: "POST", pathname: "/workstreams/action/resume/markerless",
+  repoRoot: "/unused", res: plainMarkerless.res, deps: markerlessDeps,
+});
+assert.equal(markerlessRuns, 1);
+assert.match(plainMarkerless.captured.headers.location ?? "", /started/);
+finishMarkerless();
+await markerlessDone;
+await new Promise((resolve) => setImmediate(resolve));
+const markerlessStatus = responseDouble();
+const markerlessId = JSON.parse(firstMarkerless.captured.body).id as string;
+await serveWorkstreams({
+  method: "GET", pathname: `/workstreams/action-status/${markerlessId}`,
+  repoRoot: "/unused", res: markerlessStatus.res, deps: markerlessDeps,
+});
+assert.equal(JSON.parse(markerlessStatus.captured.body).stage, "ready");
+
+const failedResume = responseDouble();
+const failedResumeDeps: WorkstreamsDeps = {
+  list: async () => [],
+  run: async () => {
+    throw Object.assign(new Error("fallback"), {
+      stderr:
+        "restore exploded\nWORKSTREAM_RESUME_STATUS:opening-terminal\n",
+    });
+  },
+  documents: async () => ({ issues: [], plans: [] }),
+};
+await serveWorkstreams({
+  method: "POST", pathname: "/workstreams/action/resume/failing",
+  query: "format=json", repoRoot: "/unused", res: failedResume.res,
+  deps: failedResumeDeps,
+});
+await new Promise((resolve) => setImmediate(resolve));
+const failedStatus = responseDouble();
+const failedId = JSON.parse(failedResume.captured.body).id as string;
+await serveWorkstreams({
+  method: "GET", pathname: `/workstreams/action-status/${failedId}`,
+  repoRoot: "/unused", res: failedStatus.res, deps: failedResumeDeps,
+});
+assert.deepEqual(JSON.parse(failedStatus.captured.body), {
+  stage: "failed", error: "restore exploded", name: "failing",
+});
+const missingStatus = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/action-status/00000000-0000-0000-0000-000000000000",
+  repoRoot: "/unused", res: missingStatus.res, deps: resumeDeps,
+});
+assert.equal(missingStatus.captured.status, 404);
+```
+
 Only the first stderr line is exposed in an action failure flash.
 
 ```ts
@@ -626,6 +766,8 @@ await serveWorkstreams({
 });
 assert.equal(actionScript.captured.status, 200);
 assert.match(actionScript.captured.body, /aria-busy/);
+assert.match(actionScript.captured.body, /format=json/);
+assert.match(actionScript.captured.body, /\/workstreams\/action-status\//);
 const priorityScript = responseDouble();
 await serveWorkstreams({
   method: "GET",

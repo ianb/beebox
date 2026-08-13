@@ -303,6 +303,10 @@ case "$cmd" in
     ;;
 
   resume)
+    workstream_resume_status() {
+      [ "${WORKSTREAM_RESUME_PROGRESS:-}" = 1 ] || return 0
+      printf '\nWORKSTREAM_RESUME_STATUS:%s\n' "$1" >&2
+    }
     name=""
     requested_agent=""
     fresh=false
@@ -330,6 +334,7 @@ case "$cmd" in
     . "$REPO_DIR/bin/lib/session-registry.sh"
     # shellcheck source=lib/workstream-resume.sh
     . "$REPO_DIR/bin/lib/workstream-resume.sh"
+    workstream_resume_status checking
     record=$(session_registry_read "$name" || true)
     target="$WT_ROOT/$name"
     worktree_exists=false
@@ -365,6 +370,7 @@ case "$cmd" in
     esac
 
     if [ "$resume_state" = "culled" ] || [ "$resume_state" = "removed-unmerged" ]; then
+      workstream_resume_status restoring
       final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty')
       box_ref=$(printf '%s' "$record" | jq -r '.removed.boxRef // empty')
       if [ "$at_final_sha" = true ]; then
@@ -383,6 +389,7 @@ case "$cmd" in
       session_registry_merge "$name" "$(jq -n --arg baseSha "$new_base_sha" '{baseSha:$baseSha}')" || true
     fi
 
+    workstream_resume_status preparing
     final_sha=$(printf '%s' "$record" | jq -r '.removed.finalSha // empty' 2>/dev/null || true)
     landed_log=""
     if [ -n "$final_sha" ] && git -C "$WT_MONO" cat-file -e "$final_sha^{commit}" 2>/dev/null; then
@@ -411,7 +418,9 @@ case "$cmd" in
       LS_CODEX_RESUME=1
     fi
     launch_session_build
+    workstream_resume_status opening-terminal
     result=$(launch_session_open)
+    workstream_resume_status opened
     echo "workstreams resume: launched $resolved_agent for $name ($result)"
     ;;
 

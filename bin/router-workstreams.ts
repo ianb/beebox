@@ -1,4 +1,5 @@
 import type http from "node:http";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
@@ -59,7 +60,11 @@ export interface WorkstreamRow {
 export interface WorkstreamsDeps {
   list(): Promise<WorkstreamRow[]>;
   quotas?(): Promise<AgentQuota[]>;
-  run(verb: ActionVerb, name: string): Promise<void>;
+  run(
+    verb: ActionVerb,
+    name: string,
+    onProgress?: (stage: ResumeStage) => void,
+  ): Promise<void>;
   documents(): Promise<{
     issues: IssueRecord[];
     plans: PlanRecord[];
@@ -84,13 +89,40 @@ type ActionVerb =
   | "reset-test"
   | "resume"
   | "unarchive";
+type ResumeStage =
+  | "queued"
+  | "checking"
+  | "restoring"
+  | "preparing"
+  | "opening-terminal"
+  | "opened"
+  | "ready"
+  | "failed";
+interface ResumeJob {
+  id: string;
+  name: string;
+  stage: ResumeStage;
+  error?: string;
+}
+const resumeJobs = new Map<string, ResumeJob>();
+const resumeJobsByName = new Map<string, ResumeJob>();
 
 const ACTION_PATH =
   /^\/workstreams\/action\/(archive|close|confirm-tested|focus|release|reset-test|resume|unarchive)\/([a-zA-Z0-9_.-]+)$/;
 const WORKSTREAMS_CSP =
   "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'";
 const ACTION_SCRIPT = `
-document.addEventListener("submit", (event) => {
+const resumeLabels = {
+  queued: "Starting resume…",
+  checking: "Checking workstream…",
+  restoring: "Restoring worktree…",
+  preparing: "Preparing session…",
+  "opening-terminal": "Opening Terminal…",
+  opened: "Terminal opened",
+  ready: "Session ready",
+  failed: "Resume failed",
+};
+document.addEventListener("submit", async (event) => {
   const form = event.target instanceof HTMLFormElement
     ? event.target.closest(".actions form")
     : null;
@@ -100,11 +132,93 @@ document.addEventListener("submit", (event) => {
   const label = button.textContent?.trim() || "Working";
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
+  if (form.action.includes("/action/resume/")) {
+    event.preventDefault();
+    let statusElement = form.nextElementSibling;
+    if (!(statusElement instanceof HTMLSpanElement) || !statusElement.classList.contains("action-status")) {
+      statusElement = document.createElement("span");
+      statusElement.className = "action-status";
+      form.insertAdjacentElement("afterend", statusElement);
+    }
+    statusElement.setAttribute("role", "status");
+    statusElement.classList.remove("action-failed");
+    statusElement.textContent = resumeLabels.queued;
+    const pollStarted = Date.now();
+    let confirmedFailure = false;
+    try {
+      const response = await fetch(form.action + "?format=json", { method: "POST" });
+      if (!response.ok) throw new Error((await response.text()).trim());
+      const started = await response.json();
+      let delay = 500;
+      while (true) {
+        const statusResponse = await fetch("/workstreams/action-status/" + encodeURIComponent(started.id));
+        if (Date.now() - pollStarted > 16 * 60 * 1000) throw new Error("Status timed out — check Terminal");
+        if (statusResponse.status === 404) throw new Error("Resume status expired — check Terminal");
+        if (!statusResponse.ok) throw new Error((await statusResponse.text()).trim());
+        const status = await statusResponse.json();
+        statusElement.textContent = resumeLabels[status.stage] || "Resuming…";
+        if (status.stage === "opened" || status.stage === "ready") {
+          button.textContent = label;
+          button.removeAttribute("aria-busy");
+          setTimeout(() => location.reload(), 1200);
+          return;
+        }
+        if (status.stage === "failed") {
+          confirmedFailure = true;
+          throw new Error(status.error || "Resume failed");
+        }
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay = Math.min(2000, delay + 250);
+      }
+    } catch (error) {
+      statusElement.setAttribute("role", "alert");
+      const message = error instanceof Error ? error.message : String(error);
+      statusElement.textContent = confirmedFailure
+        ? message
+        : "Status interrupted — resume may still be running: " + message;
+      statusElement.classList.add("action-failed");
+      document.body.dataset.resumeFailed = "true";
+      button.textContent = label;
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
+    return;
+  }
   button.textContent = label.endsWith("e")
     ? label.slice(0, -1) + "ing…"
     : label + "ing…";
 });
+function scheduleRefresh() {
+  if (document.body.dataset.autoRefresh !== "true") return;
+  setTimeout(() => {
+    if (document.querySelector('[aria-busy="true"]') || document.body.dataset.resumeFailed === "true") scheduleRefresh();
+    else location.reload();
+  }, 30000);
+}
+scheduleRefresh();
 `;
+
+export function createResumeMarkerParser(
+  onProgress: (stage: ResumeStage) => void,
+): (chunk: string) => void {
+  let remainder = "";
+  return (chunk) => {
+    const lines = `${remainder}${chunk}`.split(/[\r\n]/);
+    remainder = lines.pop() ?? "";
+    for (const line of lines) {
+      const stage = line.match(/WORKSTREAM_RESUME_STATUS:([a-z-]+)/)?.[1];
+      if (
+        stage === "checking" ||
+        stage === "restoring" ||
+        stage === "preparing" ||
+        stage === "opening-terminal" ||
+        stage === "opened"
+      )
+        onProgress(stage);
+    }
+    if (remainder.length > 4096) remainder = remainder.slice(-4096);
+  };
+}
 
 export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
@@ -120,7 +234,10 @@ function defaultDeps(
   worktreesRoot: string,
 ): WorkstreamsDeps {
   let documentsCache: { at: number; value: WorkstreamDocuments } | undefined;
-  async function run(args: string[]): Promise<string> {
+  async function run(
+    args: string[],
+    onProgress?: (stage: ResumeStage) => void,
+  ): Promise<string> {
     const timeout =
       args[0] === "resume" ? 15 * 60_000 : args[0] === "list" ? 10_000 : 60_000;
     const child = execa(path.join(repoRoot, "bin/workstreams"), args, {
@@ -128,7 +245,17 @@ function defaultDeps(
       timeout,
       killSignal: "SIGTERM",
       detached: true,
+      env:
+        args[0] === "resume"
+          ? { ...process.env, WORKSTREAM_RESUME_PROGRESS: "1" }
+          : process.env,
     });
+    if (onProgress) {
+      const parseProgress = createResumeMarkerParser(onProgress);
+      child.stderr?.on("data", (chunk: Buffer) =>
+        parseProgress(chunk.toString()),
+      );
+    }
     try {
       return (await child).stdout;
     } catch (error) {
@@ -157,11 +284,12 @@ function defaultDeps(
     async quotas() {
       return await collectAgentQuotas({ backgroundClaudeRefresh: true });
     },
-    async run(verb, name) {
+    async run(verb, name, onProgress) {
       await run(
         verb === "confirm-tested"
           ? [verb, name, "--agent-confirmed"]
           : [verb, name],
+        onProgress,
       );
     },
     async documents() {
@@ -522,6 +650,8 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .actions form { margin: 0; }
 button, input { box-sizing: border-box; font: inherit; }
 button { padding: .35em .65em; }
+.action-status { align-self: center; color: #59636e; font-size: .82em; }
+.action-failed { max-width: 24em; color: #9a3412; white-space: normal; }
 .agent-status { padding: .15em .5em; border-radius: 999px; background: #f1f3f5; color: #59636e; font-size: .82em; white-space: nowrap; }
 .agent-live { background: #dcfce7; color: #166534; font-weight: 650; }
 .page-header { margin-top: 1.2em; }
@@ -564,7 +694,6 @@ button { padding: .35em .65em; }
 }`;
 
 function pageShell(title: string, body: string, refresh = false): string {
-  const refreshMeta = refresh ? '<meta http-equiv="refresh" content="30">' : "";
   const navItems = [
     '<a href="/">router</a>',
     '<a href="/workstreams/">workstreams</a>',
@@ -578,10 +707,10 @@ function pageShell(title: string, body: string, refresh = false): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  ${refreshMeta}<title>${escapeHtml(title)}</title>
+  <title>${escapeHtml(title)}</title>
   <style>${PAGE_CSS}</style>
 </head>
-<body><nav>${navItems.join(" · ")}</nav>${body}<script src="/workstreams/actions.js" defer></script></body>
+<body${refresh ? ' data-auto-refresh="true"' : ""}><nav>${navItems.join(" · ")}</nav>${body}<script src="/workstreams/actions.js" defer></script></body>
 </html>`;
 }
 
@@ -952,10 +1081,70 @@ function firstErrorLine(error: unknown): string {
     : String(error);
 }
 
+function resumeErrorLine(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "timedOut" in error &&
+    error.timedOut === true
+  )
+    return "resume timed out after 15 minutes";
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "stderr" in error &&
+    typeof error.stderr === "string"
+  ) {
+    const lines = error.stderr
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(
+        (line) => line !== "" && !line.includes("WORKSTREAM_RESUME_STATUS:"),
+      );
+    if (lines.length > 0) return lines.at(-1)!;
+  }
+  return firstErrorLine(error);
+}
+
+function startResumeJob(
+  deps: WorkstreamsDeps,
+  name: string,
+): ResumeJob {
+  const existing = resumeJobsByName.get(name);
+  if (
+    existing &&
+    existing.stage !== "opened" &&
+    existing.stage !== "ready" &&
+    existing.stage !== "failed"
+  )
+    return existing;
+  const job: ResumeJob = { id: randomUUID(), name, stage: "queued" };
+  resumeJobs.set(job.id, job);
+  resumeJobsByName.set(name, job);
+  void deps
+    .run("resume", name, (stage) => {
+      job.stage = stage;
+    })
+    .then(() => {
+      if (job.stage !== "failed" && job.stage !== "opened")
+        job.stage = "ready";
+    })
+    .catch((error: unknown) => {
+      job.stage = "failed";
+      job.error = resumeErrorLine(error);
+    });
+  setTimeout(() => {
+    resumeJobs.delete(job.id);
+    if (resumeJobsByName.get(name) === job) resumeJobsByName.delete(name);
+  }, 30 * 60_000).unref();
+  return job;
+}
+
 async function serveAction(
   pathname: string,
   deps: WorkstreamsDeps,
   res: http.ServerResponse,
+  format: string | null,
 ): Promise<void> {
   const match = ACTION_PATH.exec(pathname);
   if (!match) {
@@ -972,6 +1161,21 @@ async function serveAction(
   if (!validTarget) {
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("invalid workstreams action target\n");
+    return;
+  }
+  if (verb === "resume") {
+    const job = startResumeJob(deps, name);
+    if (format === "json") {
+      res.writeHead(202, {
+        "content-type": "application/json; charset=utf-8",
+      });
+      res.end(JSON.stringify({ id: job.id }));
+    } else {
+      res.writeHead(303, {
+        location: `/workstreams/?flash=${encodeURIComponent(`resume ${name}: started`)}`,
+      });
+      res.end();
+    }
     return;
   }
   let flash = `${verb} ${name}: done`;
@@ -1013,8 +1217,35 @@ export async function serveWorkstreams(params: {
     res.end(ACTION_SCRIPT);
     return;
   }
+  const statusMatch = /^\/workstreams\/action-status\/([0-9a-f-]+)$/.exec(
+    pathname,
+  );
+  if (method === "GET" && statusMatch) {
+    const job = resumeJobs.get(statusMatch[1] ?? "");
+    if (!job) {
+      res.writeHead(404, {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "no-store",
+      });
+      res.end("resume status not found\n");
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    });
+    res.end(
+      JSON.stringify({ stage: job.stage, error: job.error, name: job.name }),
+    );
+    return;
+  }
   if (method === "POST" && pathname.startsWith("/workstreams/action/")) {
-    await serveAction(pathname, deps, res);
+    await serveAction(
+      pathname,
+      deps,
+      res,
+      new URLSearchParams(params.query ?? "").get("format"),
+    );
     return;
   }
   if (

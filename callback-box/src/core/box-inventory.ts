@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { attachDirFor, isAttachDirName, isInsideAttachScope } from "../shared/attach-path.js";
 import { errorMessage } from "../lib/error-guards.js";
 import { findLinkedCardPaths } from "./find-inbound-card-refs.js";
+import { scanBoxRepositoryStats, type BoxRepositoryStats } from "./box-repository-stats.js";
 
 const EXCLUDED_DIRECTORY_NAMES = new Set([".git", ".callback-box", "node_modules"]);
 const STAT_CONCURRENCY = 32;
@@ -28,6 +29,7 @@ export interface BoxInventory {
     linked: { direct: InventoryTypeSummary[]; grouped: InventoryTypeSummary[] };
     unlinked: { direct: InventoryTypeSummary[]; grouped: InventoryTypeSummary[] };
   };
+  repository: BoxRepositoryStats;
   totals: {
     files: number;
     bytes: number;
@@ -40,7 +42,9 @@ export interface BoxInventory {
 interface FileRecord {
   relativePath: string;
   bytes: number;
+  linkStatus?: "linked" | "unlinked";
 }
+
 
 interface CollectedTree {
   files: FileRecord[];
@@ -122,8 +126,9 @@ function summarizeDirectCards(input: {
   for (const file of input.files) {
     const parts = cardParts(path.basename(file.relativePath));
     if (parts !== null && !isInsideAttachScope(file.relativePath)) {
+      file.linkStatus = input.linkedCardPaths.has(file.relativePath) ? "linked" : "unlinked";
       addSummary({
-        summaries: input.linkedCardPaths.has(file.relativePath) ? input.linkedDirect : input.unlinkedDirect,
+        summaries: file.linkStatus === "linked" ? input.linkedDirect : input.unlinkedDirect,
         type: directType(file.relativePath),
         bytes: file.bytes,
       });
@@ -134,10 +139,9 @@ function summarizeDirectCards(input: {
     if (attachIndex === -1) continue;
     const owner = input.cardsByOwner.get(segments.slice(0, attachIndex + 1).join(path.sep));
     if (owner === undefined) continue;
+    file.linkStatus = owner.cards.some((card) => input.linkedCardPaths.has(card.path)) ? "linked" : "unlinked";
     addSummary({
-      summaries: owner.cards.some((card) => input.linkedCardPaths.has(card.path))
-        ? input.linkedDirect
-        : input.unlinkedDirect,
+      summaries: file.linkStatus === "linked" ? input.linkedDirect : input.unlinkedDirect,
       type: directType(file.relativePath),
       bytes: file.bytes,
     });
@@ -278,6 +282,7 @@ export async function scanBoxInventory(
     addSummary({ summaries: grouped, type: "Orphaned .attach/", bytes: orphan.bytes });
   }
   summarizeDirectCards({ files, cardsByOwner, linkedCardPaths, linkedDirect, unlinkedDirect });
+  const repository = await scanBoxRepositoryStats(boxRoot, files);
 
   return {
     scannedAt: (options?.now ?? new Date()).toISOString(),
@@ -291,6 +296,7 @@ export async function scanBoxInventory(
       linked: { direct: sortedSummaries(linkedDirect), grouped: sortedSummaries(linkedGrouped) },
       unlinked: { direct: sortedSummaries(unlinkedDirect), grouped: sortedSummaries(unlinkedGrouped) },
     },
+    repository,
     totals: {
       files: files.length,
       bytes: files.reduce((total, file) => total + file.bytes, 0),
