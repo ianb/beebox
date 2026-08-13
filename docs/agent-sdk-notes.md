@@ -21,15 +21,141 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.226`
-- **Latest reviewed upstream version:** `0.3.228` (SDK), `2.1.228` (Claude Code)
+- **Current pin:** `0.3.227` (in `callback-box/package.json` — see the split-pin
+  note below; the monorepo root now carries a second, unmanaged pin)
+- **Latest reviewed upstream version:** `0.3.231` (SDK), `2.1.231` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Bump to the newest settled version next turn.
-  As of 2026-08-12T16:04Z `0.3.227` is ~43h old (clears in ~5h) and `0.3.228`
-  ~22h, so neither has cleared the 48h window yet. Nothing act-now on either
-  channel.
+- **Current recommendation:** `0.3.228` clears the 48h window within hours of
+  this turn and `0.3.229` tomorrow; take them on the normal settled path.
+  Nothing act-now on either channel. Watch `0.3.229`'s file-watcher handle-leak
+  fix (see its entry) — it is the most callback-box-shaped item in the backlog.
 
 ## Release ledger
+
+### Monitor reliability — the SDK pin has split in two (needs a decision)
+
+Not an upstream release; recorded here because it degrades this monitor.
+
+Commit `db2ed936` ("Use SDK-backed Claude quota cache") added a **second**
+`@anthropic-ai/claude-agent-sdk` pin at the monorepo root (`package.json`),
+currently `0.3.226`. `bin/update-agent-sdk.ts` rewrites only
+`callback-box/package.json` (its `MANIFEST` constant), so after this turn's bump
+the two pins diverge: callback-box `0.3.227`, root `0.3.226`.
+
+The concrete breakage is in the updater's own reporting and gate:
+`installedVersion()` and `bundledCliVersion()` both read
+`<root>/node_modules/@anthropic-ai/claude-agent-sdk`, which resolves the **root**
+pin. That is why this turn's run ended with "Now at 0.3.226 (bundled CLI:
+2.1.226)" even though the bump succeeded — `pnpm -C callback-box list` and
+callback-box's own resolution both confirm `0.3.227`. Left alone, the next run's
+`compareVersions(target, current)` check compares the target against the root
+pin, so the script will read as perpetually behind.
+
+Severity is limited: the root import is **type-only**
+(`bin/agent-quotas.ts` imports `SDKControlGetUsageResponse` as a type; the other
+root consumers are `bin/doctor.ts` and the updater itself), so no box agent runs
+the root copy and prod is unaffected — it installs callback-box's pin from the
+lockfile. **This turn deliberately did not touch the root pin**: the monitor's
+commit scope is `docs/agent-sdk-notes.md`, `callback-box/package.json`, and
+`pnpm-lock.yaml`, and unrelated files are out of bounds. Wanted from the
+boxholder: either teach `update-agent-sdk.ts` to rewrite both manifests (and read
+the version it actually manages), or drop the root pin in favor of the workspace
+one.
+
+### 0.3.231 — pending (parity with Claude Code 2.1.231)
+
+- **Upstream:** SDK entry is only "Updated to parity with Claude Code v2.1.231".
+  The itemized content is Claude Code 2.1.231's single fix: MCP OAuth sign-in
+  failing with a redirect URI mismatch for servers that use a pre-registered
+  OAuth client, such as Slack.
+- **Callback-box applicability:** Nothing on the runtime channel — callback-box
+  configures no `mcpServers` (still true as of this turn). On the harness
+  channel it only affects a boxholder session signing in to a pre-registered
+  MCP OAuth server; no repo surface, nothing to adjust.
+- **Action:** Published 2026-08-13T08:31Z, ~8h old, inside the settling window.
+- **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.231), [Claude Code 2.1.231](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21231)
+
+### 0.3.230 — never published to npm (evidence for the settling window)
+
+The SDK changelog carries a `0.3.230` entry ("Updated to parity with Claude Code
+v2.1.230"), but **npm has no `0.3.230`** — the registry goes `0.3.229` →
+`0.3.231` — and the Claude Code changelog has no `2.1.230` either. So a release
+was cut and then withdrawn upstream this week. Nothing to apply; recorded because
+it is direct, current evidence that the two-day settling window earns its keep,
+and a caution against reading the changelog as the list of installable versions.
+
+### 0.3.229 — pending
+
+- **Upstream (SDK):** Added `terminal_slash_commands` to the system init message
+  so Remote Control clients can hide terminal-oriented commands. Changed
+  conversations whose messages alone exceed the API's 32 MB limit to end the turn
+  with `terminal_reason` `"api_error"` instead of `"image_error"`, with
+  `StopFailure` `error_details` of `"request_body_over_limit: …"`. It also
+  carries Claude Code 2.1.229, a large release whose relevant items are below.
+- **Callback-box applicability (runtime):**
+  - `terminal_slash_commands` on system/init is additive and inert here —
+    `adaptSdkMessage` (`src/core/chat/session/messages.ts`) forwards only
+    `session_id` from a `system`/`init` message.
+  - The 32 MB `terminal_reason` change is also inert: `terminal_reason`,
+    `StopFailure`, `error_details`, and `image_error` appear nowhere in
+    `callback-box/src`. Worth knowing if chat ever surfaces *why* a turn died,
+    since image-heavy box threads are the ones that hit a 32 MB body.
+  - **`Fixed SDK and --input-format stream-json sessions getting a 400 API error
+    when a whitespace-only message was submitted` (2.1.229).** Names
+    callback-box's exact session type, so it was checked: **not reachable.**
+    The `/chat/send` body schema refines on `v.trim().length > 0`
+    (`src/webapp/routes/chat-helpers.ts:97`), so a whitespace-only body is
+    rejected at the HTTP boundary before it can reach the SDK. Transcription
+    routes return text to the client, which then posts it through that same
+    guarded route. Not act-now for that reason alone.
+  - **`Fixed a file-watcher handle leak after atomic file replacements`
+    (2.1.229) — the item to watch.** Callback-box replaces files atomically
+    everywhere (`writeFileAtomic`, `src/lib/atomic-write.ts`, described in
+    CLAUDE.md as the write every small state store uses), and prod runs resident
+    `cb hub` + per-box `cb serve` with long-lived agent sessions — the shape
+    where a per-replacement handle leak accumulates. Not marked act-now because
+    the reachability is inferred rather than demonstrated (it is unconfirmed
+    whether a headless SDK session watches box files at all), and this repo has
+    prior heap-OOM history that was diagnosed, not guessed at. Given `0.3.229`
+    settles tomorrow anyway, the cost of waiting is one day. If resident-process
+    handle or memory growth shows up, start here.
+  - `Fixed a crash to the error screen (including on --resume) when a tool call
+    had a non-string glob, file_path, or command value` — callback-box resumes
+    sessions constantly, so a resume-path crash is in-shape; the trigger is a
+    malformed tool call, which is model behavior rather than anything the repo
+    controls. Good to have, not act-now.
+  - `Fixed dynamic workflows inside CPU-limited containers using the host
+    machine's core count` — relevant to the documented Docker/VPS install
+    (`callback-box/docs/docker-install.md`), where a container CPU limit is
+    normal.
+  - Vertex/Bedrock SSE keepalives and the `ANTHROPIC_BASE_URL` gateway fixes do
+    not apply — callback-box talks to the Anthropic API directly.
+- **Callback-box applicability (harness):**
+  - **`Changed /commit-push-pr so git/gh commands with dangerous flags
+    (--force, --amend, --no-verify, etc.) are no longer auto-approved`.** This is
+    the 2.1.218-class item in the release, so it was checked directly: **no
+    exposure.** Nothing in `.claude/` or `bin/` references `/commit-push-pr`, and
+    `.claude/agents/finish.md`, `bin/land`, and
+    `bin/lib/worktree-teardown.sh` contain no `--force`, `--amend`, or
+    `--no-verify`. The `/finish` flow merges `--ff-only`, which is not on the
+    dangerous list. Nothing to adjust — but this is the pattern to keep watching:
+    a permission tightening that turns an unattended worker's git step into a
+    prompt it cannot answer.
+  - `Fixed one-shot claude plugin commands leaving a stray liveness file that
+    could prevent cleanup of outdated plugin versions` — pairs with the
+    symlinked-dev-checkout plugin-cache fix in the 2.1.228 entry; this monorepo
+    ships plugins from local checkouts.
+  - `Improved workflow fan-outs to stagger same-prefix sibling agents so
+    subsequent agents read the cached prompt prefix` — a straight cost win for
+    this repo's fan-out worker sessions. No action.
+  - `Updated /login to repeat the CLAUDE_CODE_OAUTH_TOKEN override warning after
+    a successful login` — touches the token path this ledger flagged in the
+    2.1.224–2.1.226 backfill as callback-box's documented server auth.
+  - Not applicable: self-hosted-runner items, sandbox IPv6 bracketing (no
+    sandbox rules configured), Windows path fixes, IDE-diagnostics stalls, and
+    the VSCode/Remote Control UI items.
+- **Action:** Published 2026-08-12T19:30Z, ~21h old, inside the settling window.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03229), [Claude Code 2.1.229](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21229)
 
 ### Claude Code 2.1.228 — harness channel (no pin)
 
@@ -87,7 +213,7 @@ apply. Recorded because several items land squarely on this repo's workflow.
 - **Action:** Published 2026-08-11T17:49Z, ~22h old, inside the settling window.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.228), [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03228)
 
-### 0.3.227 — pending (parity with Claude Code 2.1.227)
+### 0.3.227 — applied (parity with Claude Code 2.1.227)
 
 - **Upstream:** The SDK entry says only "Updated to parity with Claude Code
   v2.1.227". The itemized content is Claude Code 2.1.227: fixed feature flags
@@ -111,9 +237,11 @@ apply. Recorded because several items land squarely on this repo's workflow.
   - The expired-login-token feature-flag fix is a boxholder-session nuisance
     (a spurious Fable usage-credits prompt on Max), not a repo behavior change;
     it needs no adjustment to `.claude/` or `bin/`.
-- **Action:** Published 2026-08-10T21:06Z. Still pending. Re-reviewed
-  2026-08-12 at ~43h old — about five hours short of the 48h window, upstream
-  text unchanged, still nothing act-now, so it waits one more turn.
+- **Action:** Published 2026-08-10T21:06Z; held one extra turn on 2026-08-12 at
+  ~43h. Applied 2026-08-13 via `pnpm update-agent-sdk` at ~67h as the newest
+  settled version. Verified: typecheck clean, `pnpm -C callback-box test`
+  6830/6830 pass, and `scripts/sdk-steering-probe.ts` holds all four steering
+  behaviors.
 - **Sources:** [Agent SDK release](https://github.com/anthropics/claude-agent-sdk-typescript/releases/tag/v0.3.227), [Claude Code 2.1.227](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21227)
 
 ### Claude Code 2.1.224–2.1.226 — harness/deployment backfill (no pin)
