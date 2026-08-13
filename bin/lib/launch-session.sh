@@ -25,7 +25,7 @@ if [ -z "\$wt_path" ] || [ ! -d "\$wt_path" ] || ! git -C "\$wt_path" rev-parse 
   exit 1
 fi
 if [ -n "${LS_ISSUE:-}" ]; then
-  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/$LS_ISSUE" "$LS_WORKSTREAM"
+  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/${LS_ISSUE:-}" "$LS_WORKSTREAM"
 fi
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
@@ -63,7 +63,7 @@ if [ ! -f "\$wt_path/AGENTS.md" ]; then
   exit 1
 fi
 if [ -n "${LS_ISSUE:-}" ]; then
-  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/$LS_ISSUE" "$LS_WORKSTREAM"
+  node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/${LS_ISSUE:-}" "$LS_WORKSTREAM"
 fi
 . "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
@@ -125,12 +125,18 @@ launch_session_default_emoji() {
 
 launch_session_open() {
   local result
-  result=$(osascript <<APPLESCRIPT 2>/dev/null
+  if result=$(osascript <<APPLESCRIPT
 tell application "Terminal"
   activate
   do script "$LS_LAUNCHER"
 end tell
 APPLESCRIPT
-  ) && result="new tab/window (per your Terminal tab preference)" || result="FAILED — Terminal not scriptable?"
-  printf '%s\n' "$result"
+  ); then
+    printf '%s\n' "new tab/window (per your Terminal tab preference)"
+    return 0
+  else
+    local status=$?
+    echo "workstreams launch: Terminal automation failed" >&2
+    return "$status"
+  fi
 }

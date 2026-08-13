@@ -27,6 +27,7 @@ import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
+import { InventoryPage } from "./pages/inventory/InventoryPage";
 
 // --- Root route ---
 
@@ -87,6 +88,12 @@ const dashboardRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/dashboard",
   component: DashboardPage,
+});
+
+const inventoryRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/inventory",
+  component: InventoryPage,
 });
 
 const chatRoute = createRoute({
@@ -233,6 +240,7 @@ const routeTree = rootRoute.addChildren([
   boxLayoutRoute.addChildren([
     boxIndexRoute,
     dashboardRoute,
+    inventoryRoute,
     chatRoute,
     questionsRoute,
     browseRoute,

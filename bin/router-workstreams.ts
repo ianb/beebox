@@ -87,6 +87,24 @@ type ActionVerb =
 
 const ACTION_PATH =
   /^\/workstreams\/action\/(archive|close|confirm-tested|focus|release|reset-test|resume|unarchive)\/([a-zA-Z0-9_.-]+)$/;
+const WORKSTREAMS_CSP =
+  "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'";
+const ACTION_SCRIPT = `
+document.addEventListener("submit", (event) => {
+  const form = event.target instanceof HTMLFormElement
+    ? event.target.closest(".actions form")
+    : null;
+  if (!form) return;
+  const button = form.querySelector("button[type=submit]");
+  if (!button) return;
+  const label = button.textContent?.trim() || "Working";
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.textContent = label.endsWith("e")
+    ? label.slice(0, -1) + "ing…"
+    : label + "ing…";
+});
+`;
 
 export function legacyIssuesRedirect(afterWorkstream: string): string | null {
   const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
@@ -189,13 +207,23 @@ async function listWorktreeIssueChanges(worktreesRoot: string): Promise<{
 }
 
 type WorkstreamDocuments = Awaited<ReturnType<WorkstreamsDeps["documents"]>>;
-type IssueRelationship =
-  | "open"
-  | "closed"
-  | "opened-here"
-  | "updated-here"
-  | "closed-here"
-  | "reopened-here";
+interface IssueIndicators {
+  state: "open" | "closed";
+  owned: boolean;
+  discovered: boolean;
+  discoveredBy?: string;
+  activity?: "opened" | "updated" | "closed" | "reopened";
+}
+
+function discoveredInWorkstream(
+  issue: IssueRecord,
+  workstream: string,
+): boolean {
+  const origin = /^(worktree-[\w-]+)(?:\s+—|\s+-|$)/.exec(
+    issue.frontmatter.discoveredIn ?? "",
+  )?.[1];
+  return origin === `worktree-${workstream}`;
+}
 
 export function issuesForWorkstream(
   documents: WorkstreamDocuments,
@@ -223,7 +251,11 @@ export function issuesForWorkstream(
     ).issue;
   });
   return [...main, ...overlay]
-    .filter((issue) => issue.frontmatter.workstream === workstream)
+    .filter(
+      (issue) =>
+        issue.frontmatter.workstream === workstream ||
+        discoveredInWorkstream(issue, workstream),
+    )
     .toSorted(
       (a, b) =>
         Number(a.closed) - Number(b.closed) ||
@@ -231,22 +263,35 @@ export function issuesForWorkstream(
     );
 }
 
-export function issueRelationship(
+export function issueIndicators(
   documents: WorkstreamDocuments,
   workstream: string,
   issue: IssueRecord,
-): IssueRelationship {
+): IssueIndicators {
+  const owned = issue.frontmatter.workstream === workstream;
+  const discovered = discoveredInWorkstream(issue, workstream);
   const changedHere = (documents.worktreeIssues ?? []).some(
     (entry) => entry.worktree === workstream && entry.issue.slug === issue.slug,
   );
-  if (!changedHere) return issue.closed ? "closed-here" : "open";
   const main = documents.issues.find(
     (candidate) => candidate.slug === issue.slug,
   );
-  if (!main) return "opened-here";
-  if (!main.closed && issue.closed) return "closed-here";
-  if (main.closed && !issue.closed) return "reopened-here";
-  return "updated-here";
+  let activity: IssueIndicators["activity"];
+  if (changedHere) {
+    if (main?.closed && !issue.closed) activity = "reopened";
+    else if (!main) activity = "opened";
+    else if (!main.closed && issue.closed) activity = "closed";
+    else activity = "updated";
+  }
+  return {
+    state: issue.closed ? "closed" : "open",
+    owned,
+    discovered,
+    ...(issue.frontmatter.discoveredBy
+      ? { discoveredBy: issue.frontmatter.discoveredBy }
+      : {}),
+    ...(activity ? { activity } : {}),
+  };
 }
 
 async function listPlans(repoRoot: string): Promise<PlanRecord[]> {
@@ -325,28 +370,36 @@ function agentStatusHtml(row: WorkstreamRow): string {
   return `<span class="agent-status">${row.session.agent ? `${agent} inactive` : "No agent recorded"}</span>`;
 }
 
-const RELATIONSHIP_LABELS: Record<IssueRelationship, string> = {
-  open: "Open",
-  closed: "Closed",
-  "opened-here": "Opened here",
-  "updated-here": "Updated here",
-  "closed-here": "Closed here",
-  "reopened-here": "Reopened here",
+const ACTIVITY_LABELS: Record<
+  NonNullable<IssueIndicators["activity"]>,
+  string
+> = {
+  opened: "Opened here",
+  updated: "Updated here",
+  closed: "Closed here",
+  reopened: "Reopened here",
 };
 
 function issueSummaryHtml(
-  issues: Array<{ issue: IssueRecord; relationship: IssueRelationship }>,
+  issues: Array<{ issue: IssueRecord; indicators: IssueIndicators }>,
 ): string {
   if (issues.length === 0) return "";
   return `<div class="row-issues">${issues
-    .map(({ issue, relationship }) => {
+    .map(({ issue, indicators }) => {
       const manual = issue.frontmatter.needs.includes("manual-testing");
       const className = manual ? ' class="manual-testing-issue"' : "";
-      const label = manual
-        ? '<span class="manual-testing-label">Manual testing</span>'
-        : "";
-      const status = `<span class="issue-state issue-state-${relationship}">${RELATIONSHIP_LABELS[relationship]}</span>`;
-      return `<a${className} href="${escapeHtml(issueHref(issue))}">${label}${status}${escapeHtml(issue.frontmatter.title)}</a>`;
+      const ownership = `<span class="issue-state issue-state-owned${indicators.owned ? "" : " issue-state-inactive"}">Owns</span>`;
+      const discovery = `<span class="issue-state issue-state-discovered${indicators.discovered ? "" : " issue-state-inactive"}">Discovered</span>`;
+      const priority = issue.frontmatter.priority[0]!.toUpperCase() + issue.frontmatter.priority.slice(1);
+      const details = [
+        manual ? "Manual testing" : "",
+        indicators.state === "closed" ? "Closed" : "Open",
+        indicators.activity ? ACTIVITY_LABELS[indicators.activity] : "",
+        indicators.discoveredBy
+          ? `Discovered by ${escapeHtml(indicators.discoveredBy)}`
+          : "",
+      ].filter(Boolean).join(" · ");
+      return `<a${className} href="${escapeHtml(issueHref(issue))}"><span class="issue-association">${ownership}${discovery}</span><span class="issue-copy"><span class="issue-title">${escapeHtml(issue.frontmatter.title)}</span><span class="issue-details">${details}</span></span><span class="issue-state issue-priority issue-priority-${issue.frontmatter.priority}">${priority}</span></a>`;
     })
     .join("")}</div>`;
 }
@@ -365,7 +418,7 @@ function rowHtml(
   const main = `<div class="row-main">${name}<span>${escapeHtml(note)}</span>${agentStatusHtml(row)}${box}<span class="actions">${actionsHtml(row)}</span></div>`;
   const issues = issuesForWorkstream(documents, row.name).map((issue) => ({
     issue,
-    relationship: issueRelationship(documents, row.name, issue),
+    indicators: issueIndicators(documents, row.name, issue),
   }));
   return `<li>${main}${issueSummaryHtml(issues)}</li>`;
 }
@@ -392,12 +445,35 @@ function planHref(plan: PlanRecord): string {
 function documentList(params: {
   issues: IssueRecord[];
   plans: PlanRecord[];
+  documents?: WorkstreamDocuments;
+  workstream?: string;
 }): string {
   const issueRows = params.issues
-    .map(
-      (issue) =>
-        `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}</span></li>`,
-    )
+    .map((issue) => {
+      const indicators =
+        params.documents && params.workstream
+          ? issueIndicators(params.documents, params.workstream, issue)
+          : undefined;
+      const association = indicators
+        ? [
+            issue.frontmatter.priority === "normal"
+              ? ""
+              : issue.frontmatter.priority,
+            indicators.owned
+              ? indicators.state === "closed"
+                ? "resolved here"
+                : "owns work"
+              : "",
+            indicators.discovered ? "discovered here" : "",
+            indicators.discoveredBy
+              ? `discovered by ${indicators.discoveredBy}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "";
+      return `<li><a href="${escapeHtml(issueHref(issue))}">${escapeHtml(issue.frontmatter.title)}</a><span>${issue.closed ? "closed" : "open"}${association ? ` · ${association}` : ""}</span></li>`;
+    })
     .join("");
   const planRows = params.plans
     .map(
@@ -419,17 +495,26 @@ nav a, .row-issues a { color: #2255aa; text-decoration: none; }
 .row-main { display: flex; gap: 1em; align-items: center; }
 .workstream-link, li > a { min-width: 18em; font: 600 14px ui-monospace, Menlo, monospace; color: #2255aa; text-decoration: none; }
 .row-issues { display: flex; flex-direction: column; gap: .15em; margin: .35em 0 0 2.8em; }
-.row-issues a::before { content: "Issue · "; color: #777; }
-.issue-state { display: inline-block; min-width: 6.8em; margin-right: .55em; padding: .08em .4em; border-radius: 999px; background: #e8edf5; color: #405168; font-size: .78em; font-weight: 700; text-align: center; }
-.issue-state-closed { background: #ececec; color: #666; }
-.issue-state-opened-here { background: #dcfce7; color: #166534; }
-.issue-state-updated-here { background: #ede9fe; color: #5b21b6; }
-.issue-state-closed-here { background: #374151; color: #fff; }
-.issue-state-reopened-here { background: #ccfbf1; color: #115e59; }
-.row-issues .manual-testing-issue { align-self: flex-start; padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
-.row-issues .manual-testing-issue::before { content: none; }
+.row-issues a { display: grid; grid-template-columns: 10.7em minmax(0, 1fr) 7.5em; align-items: center; gap: .7em; }
+.issue-association { display: flex; gap: .3em; }
+.issue-copy { display: flex; min-width: 0; flex-direction: column; }
+.issue-title { min-width: 0; }
+.issue-details { color: #777; font-size: .78em; }
+.issue-state { display: inline-block; padding: .08em .4em; border-radius: 999px; background: #e8edf5; color: #405168; font-size: .78em; font-weight: 700; text-align: center; white-space: nowrap; }
+.issue-state-owned { background: #dbeafe; color: #1e40af; }
+.issue-state-discovered { background: #fef3c7; color: #92400e; }
+.issue-state-inactive { background: #f2f2f2; color: #999; font-weight: 500; }
+.issue-priority { justify-self: stretch; }
+.issue-priority-important { background: #9a3412; color: #fff; }
+.issue-priority-normal { background: #e8edf5; color: #405168; }
+.issue-priority-backlog { background: #ececec; color: #666; }
+.issue-priority-uncategorized { border: 1px dashed #999; background: transparent; color: #666; }
+.row-issues .manual-testing-issue { padding: .25em .55em; border-radius: 4px; background: #9a5b00; color: #fff; font-weight: 650; }
+.manual-testing-issue .issue-details { color: #fff; opacity: .85; }
 .manual-testing-issue .issue-state { background: #ffffff26; color: #fff; }
-.manual-testing-label { margin-right: .55em; padding-right: .55em; border-right: 1px solid #ffffff80; font-size: .78em; letter-spacing: .02em; text-transform: uppercase; }
+.manual-testing-issue .issue-state-inactive { color: #ffffffa6; }
+.manual-testing-issue .issue-priority-important { background: #fff; color: #9a3412; }
+.manual-testing-issue .issue-priority-backlog { border: 1px solid #ffffff80; background: transparent; }
 .emoji { display: inline-block; width: 1.8em; }
 .chip { padding: .1em .45em; border-radius: 4px; background: #eee; font-size: .8em; white-space: nowrap; }
 .held { background: #fff1c7; color: #765600; }
@@ -447,6 +532,7 @@ button { padding: .35em .65em; }
 .search-form button { padding: .55em .85em; }
 .quota-details { position: relative; }
 .quota-details > summary { cursor: pointer; color: #2255aa; font-weight: 600; list-style-position: inside; }
+.quota-details[open] > summary::after { content: ""; position: fixed; z-index: 1; inset: 0; cursor: default; }
 .quota-panel { position: absolute; z-index: 2; right: 0; width: min(46rem, calc(100vw - 2em)); padding: 1em; background: #fff; border: 1px solid #ccd2d8; border-radius: 8px; box-shadow: 0 8px 24px #0002; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .flash { background: #eef6ff; border: 1px solid #bbd8f5; padding: .6em .8em; }
@@ -467,6 +553,10 @@ button { padding: .35em .65em; }
   .row-main { align-items: flex-start; flex-wrap: wrap; }
   .workstream-link { min-width: 100%; }
   .row-issues { margin-left: 0; }
+  .row-issues a { grid-template-columns: 1fr auto; }
+  .issue-association { grid-column: 1; grid-row: 2; }
+  .issue-copy { grid-column: 1 / -1; grid-row: 1; }
+  .issue-priority { grid-column: 2; grid-row: 2; }
   .actions { margin-left: 0; }
   .quota-grid { grid-template-columns: 1fr; }
   .quota-panel { position: fixed; left: 1em; right: 1em; width: auto; }
@@ -491,12 +581,54 @@ function pageShell(title: string, body: string, refresh = false): string {
   ${refreshMeta}<title>${escapeHtml(title)}</title>
   <style>${PAGE_CSS}</style>
 </head>
-<body><nav>${navItems.join(" · ")}</nav>${body}</body>
+<body><nav>${navItems.join(" · ")}</nav>${body}<script src="/workstreams/actions.js" defer></script></body>
 </html>`;
 }
 
-function formatReset(resetsAt: string): string {
-  return resetsAt.replace("T", " ").replace(/:00\.000Z$/, "Z");
+function friendlyTimestamp(value: string, now: Date): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const absolute = new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `${relativeTime(value, now)} · ${absolute}`;
+}
+
+function compactDuration(milliseconds: number): string {
+  const totalHours = Math.max(0, Math.round(milliseconds / 3_600_000));
+  if (totalHours < 2) {
+    const minutes = Math.max(1, Math.round(milliseconds / 60_000));
+    return `${String(minutes)} minute${minutes === 1 ? "" : "s"}`;
+  }
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days === 0) return `${String(totalHours)} hours`;
+  return `${String(days)} day${days === 1 ? "" : "s"}${hours === 0 ? "" : ` ${String(hours)} hours`}`;
+}
+
+function exhaustionHtml(window: QuotaWindow, now: Date): string {
+  const pace = quotaPace(window, now);
+  if (
+    !pace ||
+    pace.onTrack ||
+    pace.expectedPercent <= 0 ||
+    window.usedPercent <= 0 ||
+    window.usedPercent >= 100 ||
+    window.durationMinutes === null
+  )
+    return "";
+  const resetMs = new Date(window.resetsAt).getTime();
+  const durationMs = window.durationMinutes * 60_000;
+  const startMs = resetMs - durationMs;
+  const elapsedMs = now.getTime() - startMs;
+  const exhaustionMs = startMs + (elapsedMs * 100) / window.usedPercent;
+  const earlyMs = resetMs - exhaustionMs;
+  if (earlyMs <= 0 || exhaustionMs <= now.getTime()) return "";
+  return `<p class="over-pace">At this rate, quota reached ${escapeHtml(relativeTime(new Date(exhaustionMs).toISOString(), now))} · ${escapeHtml(compactDuration(earlyMs))} before reset</p>`;
 }
 
 function quotaWindowHtml(window: QuotaWindow, now: Date): string {
@@ -510,7 +642,7 @@ function quotaWindowHtml(window: QuotaWindow, now: Date): string {
       ? `<p class="on-track">On track · ${Math.round(pace.differencePoints)} points under budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
       : `<p class="over-pace">Over pace · ${Math.round(Math.abs(pace.differencePoints))} points over budget (${Math.round(pace.expectedPercent)}% of window elapsed)</p>`
     : '<p class="muted">Pace unavailable for this window.</p>';
-  return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p>${Math.round(window.usedPercent)}% used</p><progress max="100" value="${String(used)}" aria-label="${escapeHtml(window.label)} usage"></progress>${paceHtml}<p class="muted">Resets ${escapeHtml(formatReset(window.resetsAt))}</p></div>`;
+  return `<div class="quota-window"><strong>${escapeHtml(window.label)}</strong><p>${Math.round(window.usedPercent)}% used</p><progress max="100" value="${String(used)}" aria-label="${escapeHtml(window.label)} usage"></progress>${paceHtml}${exhaustionHtml(window, now)}<p class="muted">Resets ${escapeHtml(friendlyTimestamp(window.resetsAt, now))}</p></div>`;
 }
 
 export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
@@ -518,7 +650,7 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
   const cards = quotas
     .map((quota) => {
       const title = quota.provider === "claude" ? "Claude account" : "Codex";
-      const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(formatReset(quota.fetchedAt))}</p>`;
+      const captured = `<p class="muted">${quota.stale ? "Stale · " : ""}Updated ${escapeHtml(friendlyTimestamp(quota.fetchedAt, now))}</p>`;
       const content =
         quota.status === "available"
           ? `${quota.message ? `<p class="muted">Refresh failed: ${escapeHtml(quota.message)}</p>` : ""}${quota.windows.map((window) => quotaWindowHtml(window, now)).join("")}`
@@ -529,18 +661,19 @@ export function quotaHtml(quotas: AgentQuota[], now = new Date()): string {
       return `<article class="quota-card"><h3>${title}</h3>${content}${credits}${captured}</article>`;
     })
     .join("");
-  const paces = quotas.flatMap((quota) =>
-    quota.status === "available"
-      ? quota.windows
-          .map((window) => quotaPace(window, now))
-          .filter((pace) => pace !== null)
-      : [],
-  );
-  const paceSummary = paces.some((pace) => !pace.onTrack)
-    ? " · over pace"
-    : paces.length > 0
-      ? " · on track"
-      : "";
+  const providerSummaries = quotas.map((quota) => {
+    const name = quota.provider === "claude" ? "Claude" : "Codex";
+    if (quota.status !== "available") return `${name} unavailable`;
+    const paces = quota.windows
+      .filter((window) => new Date(window.resetsAt).getTime() > now.getTime())
+      .map((window) => quotaPace(window, now))
+      .filter((pace) => pace !== null);
+    if (paces.length === 0) return `${name} pace unavailable`;
+    return `${name} ${paces.some((pace) => !pace.onTrack) ? "over pace" : "on track"}`;
+  });
+  const paceSummary = providerSummaries.length
+    ? ` · ${providerSummaries.join(" · ")}`
+    : "";
   return `<details class="quota-details"><summary>Quotas${paceSummary}</summary><div class="quota-panel" role="region" aria-labelledby="agent-capacity"><h2 id="agent-capacity" class="sr-only">Agent capacity</h2><div class="quota-grid">${cards}</div></div></details>`;
 }
 
@@ -570,7 +703,7 @@ export function relativeTime(value: string, now = new Date()): string {
 function renderDetail(
   name: string,
   row: WorkstreamRow | undefined,
-  documents: { issues: IssueRecord[]; plans: PlanRecord[] },
+  documents: WorkstreamDocuments,
 ): string {
   const state =
     row?.path === null
@@ -579,7 +712,7 @@ function renderDetail(
   const facts = `<dl class="facts"><dt>State</dt><dd>${escapeHtml(state)}</dd><dt>Path</dt><dd>${escapeHtml(row?.path ?? "none")}</dd><dt>Git</dt><dd>${row?.git ? `${String(row.git.ahead ?? "?")} ahead, ${String(row.git.dirty ?? "?")} dirty` : "unavailable"}</dd><dt>Box</dt><dd>${row?.boxState.testSetup ? "test-setup" : row?.boxState.keepUnmerged ? "keep unmerged" : "no pin"}</dd></dl>`;
   return pageShell(
     name,
-    `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList(documents)}`,
+    `<h1>${escapeHtml(row?.session.emoji ?? "·")} ${escapeHtml(name)}</h1>${facts}${row ? `<div class="actions">${actionsHtml(row)}</div>` : ""}${documentList({ issues: documents.issues, plans: documents.plans, documents, workstream: name })}`,
   );
 }
 
@@ -872,6 +1005,14 @@ export async function serveWorkstreams(params: {
       params.mainRoot ?? repoRoot,
       params.worktreesRoot ?? path.dirname(repoRoot),
     );
+  if (method === "GET" && pathname === "/workstreams/actions.js") {
+    res.writeHead(200, {
+      "content-type": "text/javascript; charset=utf-8",
+      "cache-control": "no-store",
+    });
+    res.end(ACTION_SCRIPT);
+    return;
+  }
   if (method === "POST" && pathname.startsWith("/workstreams/action/")) {
     await serveAction(pathname, deps, res);
     return;
@@ -888,10 +1029,11 @@ export async function serveWorkstreams(params: {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'none'; style-src 'unsafe-inline'",
+      "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
     );
     await serveIssues({
       base: "/workstreams",
+      method,
       mainRoot: params.mainRoot ?? repoRoot,
       worktreesRoot: params.worktreesRoot ?? path.dirname(repoRoot),
       rel: pathname.slice("/workstreams/issues".length),
@@ -909,8 +1051,7 @@ export async function serveWorkstreams(params: {
     const { plans } = await deps.documents();
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(method === "HEAD" ? undefined : renderPlans(plans));
     return;
@@ -930,8 +1071,7 @@ export async function serveWorkstreams(params: {
     ]);
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(method === "HEAD" ? undefined : renderTesting(rows, documents));
     return;
@@ -945,8 +1085,7 @@ export async function serveWorkstreams(params: {
     ]);
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(
       method === "HEAD"
@@ -955,6 +1094,7 @@ export async function serveWorkstreams(params: {
             name,
             rows.find((row) => row.name === name),
             {
+              ...documents,
               issues: issuesForWorkstream(documents, name),
               plans: documents.plans.filter((plan) => plan.workstream === name),
             },
@@ -989,8 +1129,7 @@ export async function serveWorkstreams(params: {
     );
     res.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy":
-        "default-src 'none'; style-src 'unsafe-inline'",
+      "content-security-policy": WORKSTREAMS_CSP,
     });
     res.end(method === "HEAD" ? undefined : html);
   } catch (error) {

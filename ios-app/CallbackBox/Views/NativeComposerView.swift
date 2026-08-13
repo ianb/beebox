@@ -472,8 +472,8 @@ struct NativeComposerView: View {
             statusText = "Microphone off."
         case .erase:
             selectedPhotoItems = []
-            applyVoiceTurn(.microphoneStopped)
             dictation.resetDictationState()
+            applyVoiceTurn(.draftErased)
             statusText = "Message erased."
             Task {
                 await draftStore.discardCurrentDraft()

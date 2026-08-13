@@ -17,8 +17,6 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
    (Track O) over the changed lines for the patterns lint can't yet catch (its
    findings come back in the report). Because it can't ask questions
    mid-run, give it everything it needs up front in the prompt:
-   - any **`cb feedback` item** this work resolves — its file basename and the
-     source box;
    - any **`issues/` item** this work resolves (or partly resolves) — it closes
      what's done and leaves punch-lists open, but it can only judge issues it
      knows about;
@@ -38,8 +36,7 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
 
 2. **Relay its result** to the human — don't re-run its steps here:
    - **`RESULT: MERGED`** → pass along its report (hash, test counts,
-     scope/verification honesty, any deferred cleanup like an unresolved feedback
-     item). Remind them the worktree + box auto-clean on exit now that it's merged
+     scope/verification honesty, any deferred cleanup). Remind them the worktree + box auto-clean on exit now that it's merged
      — so exit to clean up, or keep the session going to keep the worktree.
      - If the report carries a **`NEW ISSUES:`** block (issues the finish filed —
        a flake, a spun-out scope gap, a Track O finding), surface it **prominently
@@ -47,8 +44,7 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
        continue the session by fixing exactly these, so make them easy to act on —
        don't fold them into the prose.
    - **`RESULT: BLOCKED`** → it hit something needing a human call (on `main`, a
-     merge conflict, a test failure, ambiguous uncommitted files, missing info,
-     an unclear feedback item). Surface exactly what it reported, resolve it with
+     merge conflict, a test failure, ambiguous uncommitted files, missing info). Surface exactly what it reported, resolve it with
      the human here, then **re-dispatch** the subagent (or, if faster and the
      human agrees, finish the remaining step yourself). Nothing merged if it
      blocked before the merge step — say so.

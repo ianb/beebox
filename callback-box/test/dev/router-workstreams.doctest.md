@@ -9,10 +9,11 @@ import fs from "node:fs/promises";
 import type { ServerResponse } from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { execa } from "execa";
 
 import {
   legacyIssuesRedirect,
-  issueRelationship,
+  issueIndicators,
   issuesForWorkstream,
   quotaHtml,
   relativeTime,
@@ -22,10 +23,13 @@ import {
   type WorkstreamsDeps,
 } from "../../../bin/router-workstreams.js";
 import {
+  compareIssuePriority,
   matches,
   parseFilters,
   parseIssueFile,
+  setIssuePriority,
 } from "../../../bin/router-issues.js";
+import { classifyRouterRoute } from "../../../bin/router-auth.js";
 
 function row(overrides: Partial<WorkstreamRow>): WorkstreamRow {
   return {
@@ -137,6 +141,7 @@ for (const heading of [
   assert.ok(html.includes(heading));
 assert.match(html, /href="\/workstreams\/progress\/"/);
 assert.doesNotMatch(html, /http:\/\/localhost/);
+assert.match(html, /script src="\/workstreams\/actions.js" defer/);
 ```
 
 Agent liveness outranks an untouched Git state. Archived rows are separated,
@@ -196,8 +201,9 @@ assert.match(html, /old-seam/);
 assert.match(html, /Seam design/);
 ```
 
-Open issues appear beneath their assigned workstream. An issue changed in that
-worktree replaces main's metadata and status, including a move into `closed/`.
+Issues appear beneath a workstream when it owns the work or discovered it. These
+are independent facts. An issue changed in that worktree replaces main's
+metadata and status, including a move into `closed/`.
 
 ```ts
 const mainIssue = parseIssueFile(
@@ -218,15 +224,15 @@ const authoritative = issuesForWorkstream(documents, "seam");
 JSON.stringify(authoritative.map((issue) => [issue.frontmatter.title, issue.closed]))
 => [["Worktree title",true]]
 
-issueRelationship(documents, "seam", authoritative[0]!)
-=> closed-here
+JSON.stringify(issueIndicators(documents, "seam", authoritative[0]!))
+=> {"state":"closed","owned":true,"discovered":false,"activity":"closed"}
 
-issueRelationship(
+JSON.stringify(issueIndicators(
   { issues: [closedIssue], plans: [] },
   "seam",
   closedIssue,
-)
-=> closed-here
+))
+=> {"state":"closed","owned":true,"discovered":false}
 
 const deletedOnly = issuesForWorkstream(
   {
@@ -252,11 +258,50 @@ const crossWorktree = issuesForWorkstream(
 crossWorktree[0]?.frontmatter.title
 => Worktree title
 
+JSON.stringify(issueIndicators(
+  {
+    issues: [mainIssue],
+    plans: [],
+    worktreeIssues: [{ worktree: "editor", issue: closedIssue }],
+    worktreeTouchedSlugs: [{ worktree: "editor", slug: closedIssue.slug }],
+  },
+  "seam",
+  crossWorktree[0]!,
+))
+=> {"state":"closed","owned":true,"discovered":false}
+
 const openIssue = parseIssueFile(
   "features/2026-08-11-open.md",
-  "---\ntitle: Verify the seam\nworkstream: seam\nneeds: [manual-testing]\n---\n",
+  "---\ntitle: Verify the seam\nworkstream: seam\npriority: important\nneeds: [manual-testing]\n---\n",
 );
-issueRelationship(
+const discoveredIssue = parseIssueFile(
+  "features/2026-08-11-discovered.md",
+  "---\ntitle: Later work\nworkstream: unattached\nfiled-by: agent\ndiscovered-by: Ian\ndiscovered-in: worktree-seam — while doing the seam\n---\n",
+);
+JSON.stringify({
+  listed: issuesForWorkstream(
+    { issues: [discoveredIssue], plans: [] },
+    "seam",
+  ).length,
+  indicators: issueIndicators(
+    { issues: [discoveredIssue], plans: [] },
+    "seam",
+    discoveredIssue,
+  ),
+})
+=> {"listed":1,"indicators":{"state":"open","owned":false,"discovered":true,"discoveredBy":"Ian"}}
+
+const similarlyNamedDiscovery = parseIssueFile(
+  "features/2026-08-11-similar.md",
+  "---\ntitle: Similar name\nworkstream: unattached\nfiled-by: agent\ndiscovered-in: worktree-seam-extra — elsewhere\n---\n",
+);
+issuesForWorkstream(
+  { issues: [similarlyNamedDiscovery], plans: [] },
+  "seam",
+).length
+=> 0
+
+JSON.stringify(issueIndicators(
   {
     issues: [],
     plans: [],
@@ -265,19 +310,24 @@ issueRelationship(
   },
   "seam",
   openIssue,
-)
-=> opened-here
+))
+=> {"state":"open","owned":true,"discovered":false,"activity":"opened"}
 
 const html = renderWorkstreams(
   [row({ name: "seam" })],
   "",
   "",
-  { issues: [openIssue], plans: [] },
+  { issues: [openIssue, discoveredIssue], plans: [] },
 );
 assert.match(html, /row-issues[\s\S]*Verify the seam/);
 assert.match(
   html,
-  /class="manual-testing-issue"[\s\S]*Manual testing[\s\S]*Verify the seam/,
+  /class="manual-testing-issue"[\s\S]*Owns[\s\S]*Discovered[\s\S]*Verify the seam[\s\S]*Manual testing[\s\S]*Important/,
+);
+assert.match(html, /issue-state-owned">Owns<[\s\S]*issue-state-discovered issue-state-inactive">Discovered</);
+assert.match(
+  html,
+  /issue-state-owned issue-state-inactive">Owns<[\s\S]*issue-state-discovered">Discovered<[\s\S]*Later work[\s\S]*Discovered by Ian/,
 );
 
 const query = parseFilters(
@@ -292,6 +342,44 @@ JSON.stringify([
   ),
 ])
 => [true,false]
+
+const unassignedQuery = parseFilters(new URLSearchParams("assigned=false"));
+JSON.stringify([
+  matches(openIssue, unassignedQuery, false),
+  matches(discoveredIssue, unassignedQuery, false),
+])
+=> [false,true]
+
+const priorityIssue = (slug: string, priority?: string) =>
+  parseIssueFile(
+    `features/2026-08-11-${slug}.md`,
+    `---\ntitle: ${slug}${priority ? `\npriority: ${priority}` : ""}\n---\n`,
+  );
+const uncategorizedPriority = priorityIssue("uncategorized");
+const normalPriority = priorityIssue("normal", "normal");
+const importantPriority = priorityIssue("important", "important");
+const backlogPriority = priorityIssue("backlog", "backlog");
+JSON.stringify({
+  omitted: uncategorizedPriority.frontmatter.priority,
+  filtered: [importantPriority, normalPriority].filter((issue) =>
+    matches(
+      issue,
+      parseFilters(new URLSearchParams("priority=important")),
+      false,
+    ),
+  ).length,
+  sorted: [backlogPriority, uncategorizedPriority, normalPriority, importantPriority]
+    .sort(compareIssuePriority)
+    .map((issue) => issue.frontmatter.priority),
+})
+=> {"omitted":"uncategorized","filtered":1,"sorted":["important","normal","uncategorized","backlog"]}
+
+matches(
+  normalPriority,
+  parseFilters(new URLSearchParams("priority=urgent")),
+  false,
+)
+=> false
 ```
 
 ## Quota summary
@@ -343,9 +431,33 @@ assert.match(
 assert.match(html, /Stale · Updated/);
 assert.match(
   html,
-  /<details class="quota-details"><summary>Quotas · over pace<\/summary>/,
+  /<details class="quota-details"><summary>Quotas · Claude on track · Codex over pace<\/summary>/,
 );
 assert.match(html, /role="region" aria-labelledby="agent-capacity"/);
+assert.match(html, /Resets in 5 hours · /);
+
+const forecast = quotaHtml(
+  [
+    {
+      provider: "claude",
+      status: "available",
+      fetchedAt: "2026-08-03T00:00:00Z",
+      windows: [
+        {
+          label: "7-day window",
+          usedPercent: 60,
+          resetsAt: "2026-08-08T00:00:00Z",
+          durationMinutes: 7 * 24 * 60,
+        },
+      ],
+    },
+  ],
+  new Date("2026-08-03T00:00:00Z"),
+);
+assert.match(
+  forecast,
+  /At this rate, quota reached in 1 day · 3 days 16 hours before reset/,
+);
 
 const expired = quotaHtml(
   [
@@ -388,7 +500,7 @@ await serveWorkstreams({
 assert.equal(page.captured.status, 200);
 assert.equal(
   page.captured.headers["content-security-policy"],
-  "default-src 'none'; style-src 'unsafe-inline'",
+  "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
 );
 assert.match(page.captured.body, /workstreams/);
 
@@ -497,9 +609,153 @@ await serveWorkstreams({
 });
 assert.equal(issues.captured.status, 200);
 assert.match(issues.captured.body, /href="\/workstreams\/issues\/bugs\/2026-08-09-seam.md"/);
+assert.match(
+  issues.captured.body,
+  /role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*Important[\s\S]*Normal[\s\S]*Backlog[\s\S]*Uncategorized/,
+);
 assert.equal(
   issues.captured.headers["content-security-policy"],
-  "default-src 'none'; style-src 'unsafe-inline'",
+  "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
+);
+assert.match(issues.captured.body, /script src="\/workstreams\/issues\/priority.js" defer/);
+const actionScript = responseDouble();
+await serveWorkstreams({
+  method: "GET", pathname: "/workstreams/actions.js", repoRoot: root,
+  mainRoot: root, worktreesRoot: path.join(root, "worktrees"),
+  res: actionScript.res, deps,
+});
+assert.equal(actionScript.captured.status, 200);
+assert.match(actionScript.captured.body, /aria-busy/);
+const priorityScript = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/priority.js",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: priorityScript.res,
+  deps,
+});
+assert.equal(priorityScript.captured.status, 200);
+assert.match(priorityScript.captured.body, /addEventListener\("submit"/);
+assert.deepEqual(
+  classifyRouterRoute({
+    method: "POST",
+    url: "/workstreams/issues/action/priority?issue=bugs%2Fseam.md",
+  }),
+  { kind: "control" },
+);
+
+const priorityUpdate = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/priority",
+  query:
+    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=important&return=priority%3Duncategorized",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: priorityUpdate.res,
+  deps,
+});
+assert.equal(priorityUpdate.captured.status, 303);
+assert.equal(
+  priorityUpdate.captured.headers.location,
+  "/workstreams/issues/?priority=uncategorized",
+);
+assert.match(
+  await fs.readFile(
+    path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
+    "utf8",
+  ),
+  /priority: important/,
+);
+const updatedIssues = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: updatedIssues.res,
+  deps,
+});
+assert.match(
+  updatedIssues.captured.body,
+  /<button type="submit" role="radio" aria-checked="true" class="active">Important<\/button>/,
+);
+const invalidPriority = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/priority",
+  query: "visibility=public&issue=..%2FCLAUDE.md&priority=important",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: invalidPriority.res,
+  deps,
+});
+assert.equal(invalidPriority.captured.status, 400);
+
+const ownerRoot = path.join(root, "worktrees", "owner");
+const ownerIssue = path.join(
+  ownerRoot,
+  "issues",
+  "bugs",
+  "2026-08-09-seam.md",
+);
+await fs.mkdir(path.dirname(ownerIssue), { recursive: true });
+await execa("git", ["init", "-b", "main"], { cwd: ownerRoot });
+await execa("git", ["config", "user.email", "test@example.com"], {
+  cwd: ownerRoot,
+});
+await execa("git", ["config", "user.name", "Test"], { cwd: ownerRoot });
+await fs.writeFile(
+  ownerIssue,
+  "---\ntitle: Owned seam bug\nworkstream: owner\npriority: backlog\n---\n",
+);
+await execa("git", ["add", "."], { cwd: ownerRoot });
+await execa("git", ["commit", "-m", "baseline"], { cwd: ownerRoot });
+await execa("git", ["switch", "-c", "owner"], { cwd: ownerRoot });
+await fs.writeFile(
+  ownerIssue,
+  "---\ntitle: Owned seam bug\nworkstream: owner\npriority: important\n---\n",
+);
+const overlayPriority = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/priority",
+  query:
+    "visibility=public&issue=bugs%2F2026-08-09-seam.md&priority=normal",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: overlayPriority.res,
+  deps,
+});
+assert.equal(overlayPriority.captured.status, 303);
+assert.match(await fs.readFile(ownerIssue, "utf8"), /priority: normal/);
+assert.match(
+  await fs.readFile(
+    path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
+    "utf8",
+  ),
+  /priority: important/,
+);
+
+assert.equal(
+  setIssuePriority(
+    "---\ntitle: Existing\npriority: backlog\n---\nBody\n",
+    "normal",
+  ),
+  "---\ntitle: Existing\npriority: normal\n---\nBody\n",
+);
+assert.equal(
+  setIssuePriority(
+    "--- \r\ntitle: Existing\r\npriority: important\r\n---\r\nBody\r\n",
+    "uncategorized",
+  ),
+  "--- \r\ntitle: Existing\r\n---\r\nBody\r\n",
 );
 JSON.stringify([
   legacyIssuesRedirect("/dev/issues"),
@@ -513,8 +769,12 @@ Detail and plans views join documents back to their workstream.
 
 ```ts
 const detail = responseDouble();
+const detailIssue = parseIssueFile(
+  "features/2026-08-11-important.md",
+  "---\ntitle: Important seam\nworkstream: seam\npriority: important\n---\n",
+);
 const documents = {
-  issues: [],
+  issues: [detailIssue],
   plans: [
     {
       title: "Seam design",
@@ -538,6 +798,7 @@ await serveWorkstreams({
 });
 assert.equal(detail.captured.status, 200);
 assert.match(detail.captured.body, /Seam design/);
+assert.match(detail.captured.body, /open · important · owns work/);
 assert.match(detail.captured.body, /1 ahead, 0 dirty/);
 
 const plans = responseDouble();

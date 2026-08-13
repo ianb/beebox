@@ -81,17 +81,33 @@ needs: [design, decision]     # what must happen before this can be called done
 design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
 labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
+priority: important           # important | normal | backlog; omitted is uncategorized
 filed-by: agent               # only for non-Ian items
-discovered-in: worktree-foo — while doing X    # pair with filed-by: agent
+discovered-by: Ian            # person or agent that first identified the issue
+discovered-in: worktree-foo — while doing X    # workstream/context provenance
 resolution: implemented       # closed/ only: implemented | wontfix | superseded
 ---
 ```
 
-- `workstream:` is the current branch name minus `worktree-`, or `unattached`
-  when deliberately filed outside a workstream. `unknown` exists only for lost
-  historical provenance and is never written for a new issue. When another
-  workstream resolves an issue, `/finish` stamps the resolving workstream even
-  if `manual-testing` keeps the issue open.
+- `workstream:` records **ownership**: the bare name of the workstream that has
+  taken responsibility for resolving the issue. Use `unattached` when no
+  workstream owns it yet, including for out-of-scope work merely discovered
+  while doing something else. `unknown` exists only for lost historical
+  provenance and is never written for a new issue. When another workstream
+  resolves an issue, `/finish` stamps the resolving workstream even if
+  `manual-testing` keeps the issue open.
+- `discovered-in:` records **provenance**: where the issue was noticed and what
+  was happening. It does not assign the issue to that workstream.
+  Its machine-readable prefix is the exact token `worktree-<bare-name>`,
+  followed by a spaced em dash and the human context shown in the example.
+  An issue can be discovered by one workstream and owned by another. It can also
+  be discovered in a workstream while remaining `workstream: unattached` for
+  later triage.
+- `discovered-by:` records **attribution**: the person or agent that first
+  identified or reported the issue. Use a human's preferred name when known,
+  such as `Ian`, or `agent` when an agent independently found it. This differs
+  from `filed-by:`, which records who created the issue file. An agent can file
+  an issue that has `discovered-by: Ian` and `filed-by: agent`.
 
 - `needs:` values: `design` (needs a design/plan written), `decision` (a fork
   only Ian can resolve), `manual-testing` (see below). Research-needed is
@@ -141,6 +157,12 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   regardless of which category dir it lives in. Deliberately generic — reach for
   it whenever a set of issues wants a shared handle. Browsable as a facet in the
   `workstreams/issues/` browser.
+- `priority:` controls attention within the issue queue: `important` deserves
+  prominent review, `normal` has been deliberately triaged as ordinary, and
+  `backlog` is intentionally deprioritized. Omission means `uncategorized`: no
+  priority decision has been made yet. `uncategorized` is a derived UI state,
+  not an authored frontmatter value. The issue browser sorts important, normal,
+  uncategorized, then backlog and exposes all four states as filters.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 
@@ -251,6 +273,9 @@ are the ones that get forgotten.
 
 Filing is at your discretion — no thresholds or quotas. When you notice something
 worth keeping that's outside your current task: check for an existing item, pick a
-category, then file with `title:`, `filed-by: agent`, and `discovered-in:` (your
-worktree and what you were doing), and move on. Don't fix out-of-scope things in
-place, and don't file trivia you'd be embarrassed to see triaged.
+category, then file with `title:`, `workstream: unattached`, `filed-by: agent`,
+`discovered-by:` (the actual source), and `discovered-in:` (your worktree and
+what you were doing), and move on. Set
+`workstream:` to the current workstream only when it has explicitly taken
+responsibility for resolving the issue. Don't fix out-of-scope things in place,
+and don't file trivia you'd be embarrassed to see triaged.

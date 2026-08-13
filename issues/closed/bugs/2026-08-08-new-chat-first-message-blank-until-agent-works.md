@@ -4,17 +4,13 @@ workstream: first-message-redirect
 area: callback-box
 filed-by: agent
 discovered-in: main session — boxholder report
-needs: [manual-testing]
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in `8acadb78` (ChatPage
-> assignment latch). To try: (1) start a new chat, send a first message, and
-> watch the bubble as the URL flips from `?session=new` to the assigned id —
-> it must stay visible continuously through the redirect and the agent's
-> turn; (2) turn the mic on and SPEAK the first message into a new session —
-> the mic must stay live across the assignment (the remount this fixes also
-> tore down `useChatVoice`, which read as "page reloaded, mic off"; boxholder
-> report 2026-08-09). Only Ian clears this.
+> **✅ Confirmed fixed by Ian, 2026-08-12.** Fix landed in `8acadb78` (ChatPage
+> assignment latch). The manual-testing flag is cleared by that confirmation —
+> the first-message bubble now survives the `?session=new` → assigned-id
+> redirect, which no automated test could verify.
 
 ## Root cause + fix (2026-08-09)
 
@@ -57,7 +53,7 @@ missing/expired: the dev router **silently destroys** unauthenticated WS
 upgrades (`bin/router.ts` upgrade handler), so the tRPC socket never connects
 — no `system/init`, no `chat-session-assigned`, no redirect — while cached
 pages still render. This matches the gap filed in
-[no-socket-level-ws-auth-test](../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
+[no-socket-level-ws-auth-test](../../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
 A working setup needs a valid owner session cookie in the driven browser
 (mint one with the `~/.cb-session-secret` HMAC scheme, including the user's
 current `gen` — a gen-less cookie is treated as revoked).
@@ -164,14 +160,14 @@ works or replacing it speculatively.
 
 ## Related (distinct issues, cross-check when fixing)
 
-- [sent-message-disappears-reappears-late](2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md)
+- [sent-message-disappears-reappears-late](../../bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md)
   — an **existing**-chat variant (intermediate history snapshot omits the message,
   ~20s), likely the same "optimistic entry not protected across a server snapshot"
   family but a different trigger; a fix here should check whether it also covers
   that.
-- [open-chat-flashes-agent-working-no-send](2026-08-05-open-chat-flashes-agent-working-no-send.md)
+- [open-chat-flashes-agent-working-no-send](../../bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md)
   — adjacent new/opened-session render glitch.
-- [chat-send-receipts-fail-often](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+- [chat-send-receipts-fail-often](../../bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
   — different symptom (receipt shows failed), same chat-send surface.
 
 ## Manual testing

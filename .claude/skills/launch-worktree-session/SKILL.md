@@ -69,11 +69,12 @@ briefing.
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
    Ask the human if a good name isn't obvious from the discussion.
 
-   If this work takes on an existing public or private issue, pass its
+   If this work takes ownership of an existing public or private issue, pass its
    repo-relative path with `--issue`. The launcher updates that issue's
    `workstream:` field inside the new checkout, so the issue immediately appears
-   under the workstream and the assignment lands with the eventual work. Omit
-   `--issue` when the discussion is not taking on a specific filed issue.
+   as work owned by the workstream, and the assignment lands with the eventual
+   work. This is responsibility, not discovery provenance. Omit `--issue` when
+   the discussion is not taking on a specific filed issue.
 
 3. **Pick a model, and say which.** Match the model to the scope of the work,
    and always pass `--model` explicitly — omitting it inherits whatever the

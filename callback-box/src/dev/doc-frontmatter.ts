@@ -6,6 +6,7 @@ const ISSUE_RE = /^issues\/(closed\/)?(?:bugs|features|code-quality|docs-and-cho
 const PLAN_STATUSES = new Set(["draft", "active", "partial", "implemented", "superseded", "parked"]);
 const NEEDS = new Set(["design", "decision", "manual-testing"]);
 const RESOLUTIONS = new Set(["implemented", "wontfix", "superseded"]);
+const PRIORITIES = new Set(["important", "normal", "backlog"]);
 const WORKSTREAM_RE = /^[\w-]+$/;
 
 export interface FrontmatterDocument {
@@ -64,6 +65,7 @@ function issueProblems(params: {
   const out: string[] = [];
   if (data.needs !== undefined && (!strings(data.needs) || data.needs.some((need) => !NEEDS.has(need)))) out.push(`${rel}: invalid needs list`);
   if (data.labels !== undefined && (!strings(data.labels) || data.labels.some((label) => !/^[\da-z]+(?:-[\da-z]+)*$/.test(label)))) out.push(`${rel}: invalid labels list`);
+  if (data.priority !== undefined && (typeof data.priority !== "string" || !PRIORITIES.has(data.priority))) out.push(`${rel}: priority must be important, normal, or backlog`);
   if (data.design !== undefined) out.push(...pathProblem({ rel, key: "design", value: data.design, exists }));
   if (strings(data.needs) && data.needs.includes("manual-testing") && !/^## Manual testing$/m.test(body)) {
     out.push(`${rel}: needs manual-testing requires a ## Manual testing section`);

@@ -58,7 +58,7 @@ async function buildScript(
         LS_REMOTE_CONTROL: "1",
         LS_SESSION_NAME: "🧵 seam",
         LS_WORKSTREAM: "seam",
-        LS_ISSUE: options.issue ?? "",
+        ...(options.issue !== undefined ? { LS_ISSUE: options.issue } : {}),
         ...(options.worktreePath
           ? { LS_WORKTREE_PATH: options.worktreePath }
           : {}),
@@ -162,6 +162,36 @@ const resolvedCodexScript = await buildScript(root, {
 });
 resolvedCodexScript.includes('wt_path="/resolved/seam"')
 => true
+```
+
+Terminal automation failures must reach the CLI caller. In particular, the
+web action depends on a nonzero exit to show an actionable flash instead of
+claiming that a session launched when no tab opened.
+
+```ts continue
+const failingBin = join(root, "failing-bin");
+await mkdir(failingBin);
+const failingOsascript = join(failingBin, "osascript");
+await writeFile(
+  failingOsascript,
+  "#!/usr/bin/env bash\necho 'Terminal automation denied' >&2\nexit 17\n",
+);
+await chmod(failingOsascript, 0o755);
+const failedOpen = await execFileAsync(
+  "bash",
+  [
+    "-c",
+    '. "$1"; LS_LAUNCHER=/tmp/not-run; launch_session_open',
+    "launch-open-test",
+    launchLib,
+  ],
+  { env: { ...process.env, PATH: `${failingBin}:${process.env.PATH ?? ""}` } },
+).catch((error: unknown) => error as { code: number; stderr: string });
+JSON.stringify({
+  code: failedOpen.code,
+  message: failedOpen.stderr.includes("Terminal automation denied"),
+})
+=> {"code":17,"message":true}
 ```
 
 ```ts cleanup
