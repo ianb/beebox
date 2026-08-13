@@ -39,3 +39,9 @@ Design questions to settle:
   code).
 - A mismatch line in the client debug log even without any UI would already
   help the agent rule stale bundles in/out during a field probe.
+
+The native-app half already exists (2026-08-12): the iOS build stamps its git
+commit into Info.plist (`CBGitCommit` build phase) and logs
+`[ios] lifecycle: launch build=<sha>` at startup. What remains is the WEB
+bundle side — the version the webview actually renders with — which is the
+one that went stale in the incident above.

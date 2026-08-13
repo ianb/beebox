@@ -380,6 +380,7 @@
 				5A1000202C3C000100000001 /* Frameworks */,
 				5A1000612C3C000100000001 /* Resources */,
 				E2A000402D7B000100000001 /* Embed App Extensions */,
+				B41DC0DE2D8CAFE100000001 /* Stamp git commit into Info.plist */,
 			);
 			buildRules = (
 			);
@@ -499,6 +500,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		B41DC0DE2D8CAFE100000001 /* Stamp git commit into Info.plist */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Stamp git commit into Info.plist";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Stamp the source git commit into the built app's Info.plist (CBGitCommit)\n# so the binary can identify itself in logs (the BoxLog launch line) — a\n# stale installed build is otherwise indistinguishable from a failed fix.\n# Needs ENABLE_USER_SCRIPT_SANDBOXING=NO on this target: git reads .git\n# metadata the script sandbox denies.\nsha=$(cd \"$SRCROOT\" && git rev-parse --short HEAD 2>/dev/null || echo unknown)\nif [ \"$sha\" != unknown ] && ! (cd \"$SRCROOT\" && git diff --quiet HEAD -- . 2>/dev/null); then\n  sha=\"$sha-dirty\"\nfi\nplist=\"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\n/usr/libexec/PlistBuddy -c \"Delete :CBGitCommit\" \"$plist\" 2>/dev/null || true\n/usr/libexec/PlistBuddy -c \"Add :CBGitCommit string $sha\" \"$plist\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		5A1000602C3C000100000001 /* Sources */ = {
@@ -728,6 +747,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 44AJ3D25ZD;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CallbackBox/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -758,6 +778,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 44AJ3D25ZD;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CallbackBox/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
