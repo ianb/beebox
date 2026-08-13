@@ -82,6 +82,7 @@ design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
 area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
 labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
 priority: important           # important | normal | backlog; omitted is uncategorized
+next-action: fixed            # reconfirm | duplicate | invalid | fixed; provisional agent task
 filed-by: agent               # only for non-Ian items
 discovered-by: Ian            # person or agent that first identified the issue
 discovered-in: worktree-foo — while doing X    # workstream/context provenance
@@ -161,8 +162,17 @@ resolution: implemented       # closed/ only: implemented | wontfix | superseded
   prominent review, `normal` has been deliberately triaged as ordinary, and
   `backlog` is intentionally deprioritized. Omission means `uncategorized`: no
   priority decision has been made yet. `uncategorized` is a derived UI state,
-  not an authored frontmatter value. The issue browser sorts important, normal,
-  uncategorized, then backlog and exposes all four states as filters.
+  not an authored frontmatter value. The issue browser defaults to newest-filed
+  order. Its priority sort groups important, normal, uncategorized, then backlog,
+  with newest-filed order inside each group. All four states are filters.
+- `next-action:` asks the next agent to verify a suspected outcome and apply it
+  only when the evidence confirms it. It is separate from priority. The issue
+  browser renders the values with question marks to keep their provisional
+  meaning visible: `reconfirm` means reassess whether the issue is still live;
+  `duplicate` means confirm that another issue owns the same work; `invalid`
+  means confirm that the premise does not hold; and `fixed` means confirm that
+  the reported behavior is already resolved. A matching tag is not permission
+  to close blindly. Remove the field after acting on it or disproving it.
 - `resolution:` is set when moving to `closed/`. Add a short closing note at the
   top of the body naming the resolving commit, plan doc, or reason.
 

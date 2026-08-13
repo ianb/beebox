@@ -53,6 +53,27 @@ function selectPriority(group, priority) {
   }
 }
 
+function updatePending(controls) {
+  const priority = controls.querySelector(".priority-controls button.active")?.dataset.priority;
+  const nextAction = controls.querySelector("[data-next-action]")?.value ?? "";
+  const originalNextAction = controls.dataset.originalNextAction ?? "";
+  const key = controls.dataset.visibility + ":" + controls.dataset.issue;
+  if (priority === controls.dataset.originalPriority && nextAction === originalNextAction) {
+    pending.delete(key);
+  } else {
+    pending.set(key, {
+      issue: controls.dataset.issue,
+      visibility: controls.dataset.visibility,
+      priority,
+      originalPriority: controls.dataset.originalPriority,
+      nextAction,
+      originalNextAction,
+    });
+  }
+  if (status) status.textContent = "";
+  updateEditor();
+}
+
 document.addEventListener("submit", (event) => {
   const form = event.target instanceof HTMLFormElement
     ? event.target.closest(".priority-controls form")
@@ -65,21 +86,72 @@ document.addEventListener("submit", (event) => {
   const priority = button?.dataset.priority;
   if (!priority) return;
   selectPriority(group, priority);
-  const key = group.dataset.visibility + ":" + group.dataset.issue;
-  if (priority === group.dataset.originalPriority) pending.delete(key);
-  else pending.set(key, {
-    issue: group.dataset.issue,
-    visibility: group.dataset.visibility,
-    priority,
-    originalPriority: group.dataset.originalPriority,
-  });
-  if (status) status.textContent = "";
-  updateEditor();
+  const controls = group.closest(".issue-editor-controls");
+  if (controls) updatePending(controls);
+});
+
+document.addEventListener("change", (event) => {
+  const select = event.target instanceof Element
+    ? event.target.closest("[data-next-action]")
+    : null;
+  if (!select) return;
+  const controls = select.closest(".issue-editor-controls");
+  if (controls) updatePending(controls);
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target instanceof Element
+    ? event.target.closest("[data-copy-path]")
+    : null;
+  if (!button) return;
+  if (button.disabled) return;
+  const copyPath = button.dataset.copyPath;
+  button.disabled = true;
+  try {
+    try {
+      await navigator.clipboard.writeText(copyPath);
+    } catch {
+      const field = document.createElement("textarea");
+      field.value = copyPath;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.opacity = "0";
+      document.body.append(field);
+      field.select();
+      const copied = document.execCommand("copy");
+      field.remove();
+      button.focus();
+      if (!copied) throw new Error("copy command failed");
+    }
+    button.textContent = "Copied";
+    button.setAttribute("aria-label", "Copied " + copyPath);
+    button.classList.add("copied");
+    setTimeout(() => {
+      button.textContent = "Copy";
+      button.setAttribute("aria-label", "Copy issue path " + copyPath);
+      button.classList.remove("copied");
+      button.disabled = false;
+    }, 1200);
+  } catch {
+    button.textContent = "Copy failed";
+    button.setAttribute("aria-label", "Copy failed for " + copyPath);
+    button.classList.add("copy-failed");
+    if (status) status.textContent = "Could not copy " + copyPath;
+    setTimeout(() => {
+      button.textContent = "Copy";
+      button.setAttribute("aria-label", "Copy issue path " + copyPath);
+      button.classList.remove("copy-failed");
+      button.disabled = false;
+    }, 2000);
+  }
 });
 
 reset?.addEventListener("click", () => {
-  for (const group of document.querySelectorAll(".priority-controls")) {
+  for (const controls of document.querySelectorAll(".issue-editor-controls")) {
+    const group = controls.querySelector(".priority-controls");
     selectPriority(group, group.dataset.originalPriority);
+    const nextAction = controls.querySelector("[data-next-action]");
+    if (nextAction) nextAction.value = controls.dataset.originalNextAction ?? "";
   }
   pending.clear();
   if (status) status.textContent = "Changes reset";
@@ -118,6 +190,7 @@ export type IssuePriority =
   | "normal"
   | "uncategorized"
   | "backlog";
+export type IssueNextAction = "reconfirm" | "duplicate" | "invalid" | "fixed";
 const PRIORITY_ORDER: Record<IssuePriority, number> = {
   important: 0,
   normal: 1,
@@ -137,6 +210,7 @@ export interface IssueFrontmatter {
   discoveredIn?: string;
   resolution?: string;
   design?: string;
+  nextAction?: IssueNextAction;
 }
 
 export type ResearchState = "none" | "awaiting" | "researched";
@@ -297,6 +371,14 @@ export function parseIssueFile(
   const discoveredIn = asString(data["discovered-in"]);
   const resolution = asString(data.resolution);
   const design = asString(data.design);
+  const nextActionValue = asString(data["next-action"]);
+  const nextAction: IssueNextAction | undefined =
+    nextActionValue === "reconfirm" ||
+    nextActionValue === "duplicate" ||
+    nextActionValue === "invalid" ||
+    nextActionValue === "fixed"
+      ? nextActionValue
+      : undefined;
   return {
     relPath,
     category,
@@ -314,6 +396,7 @@ export function parseIssueFile(
       ...(discoveredIn !== undefined ? { discoveredIn } : {}),
       ...(resolution !== undefined ? { resolution } : {}),
       ...(design !== undefined ? { design } : {}),
+      ...(nextAction !== undefined ? { nextAction } : {}),
     },
     research: detectResearchState(body),
     visibility: v,
@@ -810,10 +893,28 @@ function facetChips(
   const chips: string[] = [];
   if (visibility === "private")
     chips.push(`<span class="chip chip-private">private</span>`);
-  for (const need of fr.needs)
+  const needs = fr.needs.toSorted((a, b) => {
+    if (a === "manual-testing") return -1;
+    if (b === "manual-testing") return 1;
+    return 0;
+  });
+  for (const need of needs) {
+    const needClass = need === "manual-testing" ? " chip-manual-testing" : "";
     chips.push(
-      `<span class="chip chip-needs">needs:${escapeHtml(need)}</span>`,
+      `<span class="chip chip-needs${needClass}">needs:${escapeHtml(need)}</span>`,
     );
+  }
+  if (fr.nextAction) {
+    const label: Record<IssueNextAction, string> = {
+      reconfirm: "Reconfirm?",
+      duplicate: "Dup?",
+      invalid: "Invalid?",
+      fixed: "Fixed?",
+    };
+    chips.push(
+      `<span class="chip chip-next-action">next:${label[fr.nextAction]}</span>`,
+    );
+  }
   for (const label of fr.labels)
     chips.push(`<span class="chip chip-label">${escapeHtml(label)}</span>`);
   if (fr.area)
@@ -877,6 +978,8 @@ const ISSUES_CSS = `
   .chip-private { background: #eee; color: #666; border: 1px dashed #bbb; }
   .chip-research { background: #fdeee0; color: #a2380a; }
   .chip-research-done { background: #e6f4ea; color: #1e6b34; }
+  .chip-manual-testing { background: #9a5b00; color: #fff; font-weight: 650; }
+  .chip-next-action { background: #f7e6b5; color: #754300; font-weight: 650; }
   .chip-label { background: #ece4fb; color: #5a34a8; }
   .badge { display: inline-block; padding: 0.1em 0.5em; margin: 0.15em 0.3em 0.15em 0; border-radius: 4px; font: 12px ui-monospace, Menlo, monospace; background: #f0f0f0; color: #444; }
   .badge-added { background: #e6f4ea; color: #1e6b34; }
@@ -889,8 +992,12 @@ const ISSUES_CSS = `
   ul.issues li:last-child { border-bottom: none; }
   ul.issues li:hover { background: #f6f8fa; }
   ul.issues .issue-main { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; }
+  ul.issues .issue-title-row { display: flex; min-width: 0; align-items: baseline; gap: 0.5em; }
   ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
   ul.issues a.title:hover { color: #2255aa; text-decoration: underline; }
+  .copy-issue-path { flex: 0 0 auto; padding: 0.1em 0.35em; border: 1px solid #ccd2d8; border-radius: 4px; background: #fff; color: #66717c; font: 600 10px ui-monospace, Menlo, monospace; cursor: pointer; }
+  .copy-issue-path.copied { border-color: #3f7b50; color: #2f6b40; }
+  .copy-issue-path.copy-failed { border-color: #a23522; color: #a23522; }
   ul.issues .meta { display: block; color: #888; font: 12px ui-monospace, Menlo, monospace; margin-top: 0.2em; }
   ul.issues .issue-priority { min-width: 0; justify-self: end; }
   .priority-controls { display: flex; flex: 0 0 auto; }
@@ -899,6 +1006,11 @@ const ISSUES_CSS = `
   .priority-controls form:first-child button { border-radius: 4px 0 0 4px; }
   .priority-controls form:last-child button { border-right-width: 1px; border-radius: 0 4px 4px 0; }
   .priority-controls button.active { background: #2255aa; color: #fff; font-weight: 700; }
+  .priority-controls button[data-priority="important"].active { background: #b8422d; }
+  .priority-controls button[data-priority="normal"].active { background: #555; }
+  .priority-controls button[data-priority="backlog"].active { background: #58738f; }
+  .issue-editor-controls { display: flex; align-items: center; gap: 0.45em; }
+  .next-action-control { padding: 0.25em 0.45em; border: 1px solid #bbc2ca; border-radius: 4px; background: #fff; color: #666; font: 600 12px ui-monospace, Menlo, monospace; }
   .priority-target { display: block; margin-top: 0.15em; color: #888; font: 10px ui-monospace, Menlo, monospace; text-align: right; }
   .priority-error { display: block; max-width: 22em; margin-top: 0.2em; color: #a23522; font-size: 0.8em; }
   ul.issues .issue-pills { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0.2em; margin-top: 0.35em; }
@@ -942,6 +1054,7 @@ export interface Filters {
   unassigned: boolean;
   worktreeTouched: boolean;
   status: "open" | "closed" | "all";
+  sort: "date" | "priority";
 }
 
 export function parseFilters(query: URLSearchParams): Filters {
@@ -953,6 +1066,7 @@ export function parseFilters(query: URLSearchParams): Filters {
   const priority = query.get("priority");
   const research = query.get("research");
   const visibility = query.get("visibility");
+  const sort = query.get("sort");
   return {
     ...(category !== null ? { category } : {}),
     ...(area !== null ? { area } : {}),
@@ -967,6 +1081,7 @@ export function parseFilters(query: URLSearchParams): Filters {
     unassigned: query.get("assigned") === "false",
     worktreeTouched: query.get("worktree") === "touched",
     status: status === "closed" || status === "all" ? status : "open",
+    sort: sort === "priority" ? "priority" : "date",
   };
 }
 
@@ -1005,6 +1120,16 @@ export function compareIssuePriority(a: IssueRecord, b: IssueRecord): number {
   );
 }
 
+export function compareIssueDateDescending(
+  a: IssueRecord,
+  b: IssueRecord,
+): number {
+  const aDate = a.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+  const bDate = b.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+  if (aDate !== bDate) return aDate < bDate ? 1 : -1;
+  return a.slug.localeCompare(b.slug);
+}
+
 export function setIssuePriority(
   source: string,
   priority: IssuePriority,
@@ -1018,10 +1143,36 @@ export function setIssuePriority(
   if (end === undefined)
     throw new Error("issue has no writable YAML frontmatter");
   const priorityLine = /^priority:[^\r\n]*(?:\r?\n)?/m;
-  if (priority === "uncategorized") return source.replace(priorityLine, "");
+  const frontmatter = source.slice(0, end);
+  const remainder = source.slice(end);
+  if (priority === "uncategorized")
+    return `${frontmatter.replace(priorityLine, "")}${remainder}`;
   const line = `priority: ${priority}`;
-  if (priorityLine.test(source))
-    return source.replace(priorityLine, `${line}${newline}`);
+  if (priorityLine.test(frontmatter))
+    return `${frontmatter.replace(priorityLine, `${line}${newline}`)}${remainder}`;
+  return `${source.slice(0, end)}${line}${newline}${source.slice(end)}`;
+}
+
+export function setIssueNextAction(
+  source: string,
+  nextAction: IssueNextAction | undefined,
+): string {
+  const opening = /^(?:\uFEFF)?---[ \t]*(\r?\n)/.exec(source);
+  if (!opening) throw new Error("issue has no writable YAML frontmatter");
+  const newline = opening[1] ?? "\n";
+  const closing = /^---[ \t]*\r?$/gm;
+  closing.lastIndex = opening[0].length;
+  const end = closing.exec(source)?.index;
+  if (end === undefined)
+    throw new Error("issue has no writable YAML frontmatter");
+  const actionLine = /^next-action:[^\r\n]*(?:\r?\n)?/m;
+  const frontmatter = source.slice(0, end);
+  const remainder = source.slice(end);
+  if (nextAction === undefined)
+    return `${frontmatter.replace(actionLine, "")}${remainder}`;
+  const line = `next-action: ${nextAction}`;
+  if (actionLine.test(frontmatter))
+    return `${frontmatter.replace(actionLine, `${line}${newline}`)}${remainder}`;
   return `${source.slice(0, end)}${line}${newline}${source.slice(end)}`;
 }
 
@@ -1065,6 +1216,7 @@ function filterChipsHtml(
       worktree: f.worktreeTouched ? "touched" : undefined,
       assigned: f.assigned ? "true" : f.unassigned ? "false" : undefined,
       status: f.status === "open" ? undefined : f.status,
+      sort: f.sort === "date" ? undefined : f.sort,
       ...overrides,
     };
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
@@ -1091,6 +1243,15 @@ function filterChipsHtml(
         `<a class="chip${f.status === s ? " active" : ""}" href="${qs({ status: s === "open" ? undefined : s })}">${s}</a>`,
     )
     .join("");
+  const sortGroup = ([
+    ["date", "newest filed"],
+    ["priority", "priority"],
+  ] as const)
+    .map(
+      ([value, label]) =>
+        `<a class="chip${f.sort === value ? " active" : ""}" href="${qs({ sort: value === "date" ? undefined : value })}">${label}</a>`,
+    )
+    .join("");
   const researchChip = `<a class="chip${f.research === "awaiting" ? " active" : ""}" href="${qs({ research: f.research === "awaiting" ? undefined : "awaiting" })}">awaiting research</a>`;
   const worktreeChip = `<a class="chip${f.worktreeTouched ? " active" : ""}" href="${qs({ worktree: f.worktreeTouched ? undefined : "touched" })}">touched by any worktree</a>`;
   const assignedChip = `<a class="chip${f.assigned ? " active" : ""}" href="${qs({ assigned: f.assigned ? undefined : "true" })}">assigned to a workstream</a>`;
@@ -1112,7 +1273,8 @@ function filterChipsHtml(
     f.assigned ||
     f.unassigned ||
     f.worktreeTouched ||
-    f.status !== "open";
+    f.status !== "open" ||
+    f.sort !== "date";
   const clear = anyActive
     ? `<a class="clear" href="${base}/issues/">clear all ×</a>`
     : "";
@@ -1121,6 +1283,7 @@ function filterChipsHtml(
     : "";
   return `<div class="filters">
     <div>status: ${statusGroup} ${researchChip} ${assignedChip} ${unassignedChip} ${worktreeChip}${clear}</div>
+    <div>sort: ${sortGroup}</div>
     <div>${group("priority", "priority", ["important", "normal", "uncategorized", "backlog"], f.priority)}</div>
     <div>visibility: ${visibilityGroup}</div>
     <div>${group("category", "category", facets.categories, f.category)}</div>
@@ -1133,6 +1296,7 @@ function filterChipsHtml(
 function activeFiltersHtml(f: Filters): string {
   const filters = [
     `status: ${f.status}`,
+    `sort: ${f.sort === "date" ? "newest filed" : "priority"}`,
     f.priority ? `priority: ${f.priority}` : undefined,
     f.category ? `category: ${f.category}` : undefined,
     f.area ? `area: ${f.area}` : undefined,
@@ -1191,13 +1355,27 @@ function issueRowHtml(
       return `<form method="POST" action="${action}"><button type="submit" role="radio" data-priority="${priority}" aria-label="${label}" title="${label}" aria-checked="${active ? "true" : "false"}"${active ? ' class="active"' : ""}>${symbol}</button></form>`;
     })
     .join("");
+  const nextAction = issue.frontmatter.nextAction ?? "";
+  const nextActionOptions = [
+    ["", "Next action…"],
+    ["reconfirm", "Reconfirm?"],
+    ["duplicate", "Dup?"],
+    ["invalid", "Invalid?"],
+    ["fixed", "Fixed?"],
+  ]
+    .map(
+      ([value, label]) =>
+        `<option value="${value}"${nextAction === value ? " selected" : ""}>${label}</option>`,
+    )
+    .join("");
+  const copyPath = `${issue.visibility === "private" ? "private-issues" : "issues"}/${issue.relPath}`;
   return `<li>
     <div class="issue-main">
-      <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
+      <div class="issue-title-row"><a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a><button type="button" class="copy-issue-path" data-copy-path="${escapeHtml(copyPath)}" aria-label="Copy issue path ${escapeHtml(copyPath)}" title="Copy ${escapeHtml(copyPath)}">Copy</button></div>
       <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
       <div class="issue-pills">${pills}</div>
     </div>
-    <div class="issue-priority"><div class="priority-controls" role="radiogroup" data-issue="${escapeHtml(issue.relPath)}" data-visibility="${issue.visibility}" data-original-priority="${issue.frontmatter.priority}" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div>${editTargetHtml}</div>
+    <div class="issue-priority"><div class="issue-editor-controls" data-issue="${escapeHtml(issue.relPath)}" data-visibility="${issue.visibility}" data-original-priority="${issue.frontmatter.priority}" data-original-next-action="${nextAction}"><div class="priority-controls" role="radiogroup" aria-label="Priority for ${escapeHtml(issue.frontmatter.title)}; saves to ${escapeHtml(editTarget)}">${priorityControls}</div><select class="next-action-control" data-next-action aria-label="Next action for ${escapeHtml(issue.frontmatter.title)}" title="Ask the next agent to verify and apply this outcome">${nextActionOptions}</select></div>${editTargetHtml}</div>
   </li>`;
 }
 
@@ -1319,8 +1497,13 @@ async function renderIssueIndex(
     (issue.closed ? bucket.closed : bucket.open).push(issue);
   }
   for (const bucket of byCategory.values()) {
-    bucket.open.sort(compareIssuePriority);
-    bucket.closed.sort(compareIssuePriority);
+    const comparator =
+      f.sort === "priority"
+        ? (a: IssueRecord, b: IssueRecord) =>
+            compareIssuePriority(a, b) || compareIssueDateDescending(a, b)
+        : compareIssueDateDescending;
+    bucket.open.sort(comparator);
+    bucket.closed.sort(comparator);
   }
 
   const returnQuery = query.toString();
@@ -1409,6 +1592,8 @@ interface PriorityChange {
   visibility: Visibility;
   priority: IssuePriority;
   originalPriority?: IssuePriority;
+  nextAction?: IssueNextAction | "";
+  originalNextAction?: IssueNextAction | "";
 }
 
 function isPriority(value: unknown): value is IssuePriority {
@@ -1417,6 +1602,16 @@ function isPriority(value: unknown): value is IssuePriority {
     value === "normal" ||
     value === "backlog" ||
     value === "uncategorized"
+  );
+}
+
+function isNextAction(value: unknown): value is IssueNextAction | "" {
+  return (
+    value === "" ||
+    value === "reconfirm" ||
+    value === "duplicate" ||
+    value === "invalid" ||
+    value === "fixed"
   );
 }
 
@@ -1430,7 +1625,10 @@ function validatePriorityChange(value: unknown): PriorityChange {
     (candidate.visibility !== "public" && candidate.visibility !== "private") ||
     !isPriority(candidate.priority) ||
     (candidate.originalPriority !== undefined &&
-      !isPriority(candidate.originalPriority))
+      !isPriority(candidate.originalPriority)) ||
+    (candidate.nextAction !== undefined && !isNextAction(candidate.nextAction)) ||
+    (candidate.originalNextAction !== undefined &&
+      !isNextAction(candidate.originalNextAction))
   )
     throw new Error("invalid priority change");
   return {
@@ -1439,6 +1637,12 @@ function validatePriorityChange(value: unknown): PriorityChange {
     priority: candidate.priority,
     ...(candidate.originalPriority !== undefined
       ? { originalPriority: candidate.originalPriority }
+      : {}),
+    ...(candidate.nextAction !== undefined
+      ? { nextAction: candidate.nextAction }
+      : {}),
+    ...(candidate.originalNextAction !== undefined
+      ? { originalNextAction: candidate.originalNextAction }
       : {}),
   };
 }
@@ -1483,7 +1687,7 @@ async function commitPriorityTargets(targets: string[]): Promise<void> {
       throw new Error(`could not inspect staged issue priorities in ${repoRoot}`);
     await execa(
       "git",
-      ["commit", "--only", "-m", "Update issue priorities", "--", ...repoTargets],
+      ["commit", "--only", "-m", "Update issue metadata", "--", ...repoTargets],
       { cwd: repoRoot },
     );
   }
@@ -1493,9 +1697,10 @@ async function assertPriorityOnlyTarget(params: {
   target: string;
   source: string;
   currentPriority: IssuePriority;
+  currentNextAction: IssueNextAction | undefined;
   issue: string;
 }): Promise<void> {
-  const { target, source, currentPriority, issue } = params;
+  const { target, source, currentPriority, currentNextAction, issue } = params;
   const canonicalTarget = await fs.realpath(target);
   const { stdout } = await execa("git", ["rev-parse", "--show-toplevel"], {
     cwd: path.dirname(canonicalTarget),
@@ -1509,7 +1714,11 @@ async function assertPriorityOnlyTarget(params: {
   });
   if (head.exitCode !== 0)
     throw new Error(`commit this new issue before changing its priority: ${issue}`);
-  if (setIssuePriority(head.stdout, currentPriority) !== source)
+  const normalizedHead = setIssueNextAction(
+    setIssuePriority(head.stdout, currentPriority),
+    currentNextAction,
+  );
+  if (normalizedHead !== source)
     throw new Error(`issue has other uncommitted edits: ${issue}`);
   const staged = await execa(
     "git",
@@ -1558,22 +1767,41 @@ async function savePriorityChanges(params: {
         source,
         change.visibility,
       ).frontmatter.priority;
+      const currentNextAction = parseIssueFile(
+        change.issue,
+        source,
+        change.visibility,
+      ).frontmatter.nextAction;
       if (
         change.originalPriority !== undefined &&
         change.originalPriority !== currentPriority
       )
         throw new Error(`issue priority changed since the page loaded: ${change.issue}`);
+      if (
+        change.originalNextAction !== undefined &&
+        change.originalNextAction !== (currentNextAction ?? "")
+      )
+        throw new Error(`issue next action changed since the page loaded: ${change.issue}`);
       await assertPriorityOnlyTarget({
         target,
         source,
         currentPriority,
+        currentNextAction,
         issue: change.issue,
       });
+      const priorityUpdated = setIssuePriority(source, change.priority);
+      const updated =
+        change.nextAction === undefined
+          ? priorityUpdated
+          : setIssueNextAction(
+              priorityUpdated,
+              change.nextAction === "" ? undefined : change.nextAction,
+            );
       return {
         change,
         target,
         source,
-        updated: setIssuePriority(source, change.priority),
+        updated,
         stat: afterRead,
       };
     }),

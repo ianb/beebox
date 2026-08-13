@@ -25,10 +25,12 @@ import {
   type WorkstreamsDeps,
 } from "../../../bin/router-workstreams.js";
 import {
+  compareIssueDateDescending,
   compareIssuePriority,
   matches,
   parseFilters,
   parseIssueFile,
+  setIssueNextAction,
   setIssuePriority,
 } from "../../../bin/router-issues.js";
 import { classifyRouterRoute } from "../../../bin/router-auth.js";
@@ -377,6 +379,16 @@ JSON.stringify({
     .map((issue) => issue.frontmatter.priority),
 })
 => {"omitted":"uncategorized","filtered":1,"sorted":["important","normal","uncategorized","backlog"]}
+
+JSON.stringify({
+  defaultSort: parseFilters(new URLSearchParams()).sort,
+  selectedSort: parseFilters(new URLSearchParams("sort=priority")).sort,
+  dates: [
+    parseIssueFile("bugs/2026-01-01-old.md", "---\ntitle: Old\n---\n"),
+    parseIssueFile("bugs/2026-08-13-new.md", "---\ntitle: New\n---\n"),
+  ].sort(compareIssueDateDescending).map((issue) => issue.slug),
+})
+=> {"defaultSort":"date","selectedSort":"priority","dates":["2026-08-13-new","2026-01-01-old"]}
 
 matches(
   normalPriority,
@@ -736,7 +748,7 @@ t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
 await fs.mkdir(path.join(root, "issues", "bugs"), { recursive: true });
 await fs.writeFile(
   path.join(root, "issues", "bugs", "2026-08-09-seam.md"),
-  "---\ntitle: Seam bug\n---\n",
+  "---\ntitle: Seam bug\nneeds: [review, manual-testing]\n---\n",
 );
 await execa("git", ["init", "-b", "main"], { cwd: root });
 await execa("git", ["config", "user.email", "test@example.com"], { cwd: root });
@@ -761,13 +773,28 @@ assert.match(
 );
 assert.match(
   issues.captured.body,
-  /role="radiogroup" data-issue="bugs\/2026-08-09-seam.md" data-visibility="public" data-original-priority="uncategorized" aria-label="Priority for Seam bug; saves to main"[\s\S]*data-priority="important"[\s\S]*>!<\/button>[\s\S]*data-priority="normal"[\s\S]*>−<\/button>[\s\S]*data-priority="backlog"[\s\S]*>↓<\/button>[\s\S]*data-priority="uncategorized"[\s\S]*>\?<\/button>/,
+  /class="issue-editor-controls" data-issue="bugs\/2026-08-09-seam.md" data-visibility="public" data-original-priority="uncategorized" data-original-next-action=""[\s\S]*role="radiogroup" aria-label="Priority for Seam bug; saves to main"[\s\S]*data-priority="important"[\s\S]*>!<\/button>[\s\S]*data-priority="normal"[\s\S]*>−<\/button>[\s\S]*data-priority="backlog"[\s\S]*>↓<\/button>[\s\S]*data-priority="uncategorized"[\s\S]*>\?<\/button>[\s\S]*data-next-action[\s\S]*Reconfirm\?[\s\S]*Dup\?[\s\S]*Invalid\?[\s\S]*Fixed\?/,
 );
 assert.match(issues.captured.body, /class="issue-editor-bar"/);
 assert.match(issues.captured.body, /data-dirty-count[^>]*>0 unsaved issues/);
 assert.match(issues.captured.body, /data-reset disabled>Reset<\/button>/);
 assert.match(issues.captured.body, /data-save[^>]*disabled>Save<\/button>/);
 assert.match(issues.captured.body, /Active filters[\s\S]*status: open/);
+assert.match(
+  issues.captured.body,
+  /sort: <a class="chip active"[^>]*>newest filed<\/a><a class="chip"[^>]*sort=priority[^>]*>priority<\/a>/,
+);
+assert.match(
+  issues.captured.body,
+  /data-copy-path="issues\/bugs\/2026-08-09-seam.md" aria-label="Copy issue path issues\/bugs\/2026-08-09-seam.md"/,
+);
+assert.match(issues.captured.body, /data-priority="important"\]\.active \{ background: #b8422d/);
+assert.match(issues.captured.body, /data-priority="normal"\]\.active \{ background: #555/);
+assert.match(issues.captured.body, /data-priority="backlog"\]\.active \{ background: #58738f/);
+assert.match(
+  issues.captured.body,
+  /class="chip chip-needs chip-manual-testing">needs:manual-testing<\/span>[\s\S]*class="chip chip-needs">needs:review<\/span>/,
+);
 assert.equal(
   issues.captured.headers["content-security-policy"],
   "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'",
@@ -797,6 +824,8 @@ assert.equal(priorityScript.captured.status, 200);
 assert.match(priorityScript.captured.body, /addEventListener\("submit"/);
 assert.match(priorityScript.captured.body, /Saving and committing/);
 assert.match(priorityScript.captured.body, /beforeunload/);
+assert.match(priorityScript.captured.body, /navigator\.clipboard\.writeText/);
+assert.match(priorityScript.captured.body, /data-next-action/);
 assert.deepEqual(
   classifyRouterRoute({
     method: "POST",
@@ -838,7 +867,7 @@ assert.match(
 );
 assert.equal(
   (await execa("git", ["log", "-1", "--pretty=%s"], { cwd: root })).stdout,
-  "Update issue priorities",
+  "Update issue metadata",
 );
 const updatedIssues = responseDouble();
 await serveWorkstreams({
@@ -864,8 +893,8 @@ await fs.writeFile(path.join(root, "notes.txt"), "unrelated staged edit\n");
 await execa("git", ["add", "notes.txt"], { cwd: root });
 const saveBody = JSON.stringify({
   changes: [
-    { issue: "bugs/2026-08-09-seam.md", visibility: "public", priority: "normal", originalPriority: "important" },
-    { issue: "bugs/2026-08-10-second.md", visibility: "public", priority: "backlog", originalPriority: "uncategorized" },
+    { issue: "bugs/2026-08-09-seam.md", visibility: "public", priority: "normal", originalPriority: "important", nextAction: "fixed", originalNextAction: "" },
+    { issue: "bugs/2026-08-10-second.md", visibility: "public", priority: "backlog", originalPriority: "uncategorized", nextAction: "", originalNextAction: "" },
   ],
 });
 const savePriorities = responseDouble();
@@ -882,6 +911,65 @@ await serveWorkstreams({
 assert.equal(savePriorities.captured.status, 200);
 assert.deepEqual(JSON.parse(savePriorities.captured.body), { saved: 2 });
 assert.match(await fs.readFile(secondIssue, "utf8"), /priority: backlog/);
+assert.match(
+  await fs.readFile(path.join(root, "issues", "bugs", "2026-08-09-seam.md"), "utf8"),
+  /next-action: fixed/,
+);
+const nextActionIssues = responseDouble();
+await serveWorkstreams({
+  method: "GET",
+  pathname: "/workstreams/issues/",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  res: nextActionIssues.res,
+  deps,
+});
+assert.match(
+  nextActionIssues.captured.body,
+  /chip-manual-testing">needs:manual-testing<\/span>[\s\S]*chip-next-action">next:Fixed\?<\/span>/,
+);
+const clearNextAction = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/save-priorities",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  req: Readable.from([
+    JSON.stringify({
+      changes: [
+        { issue: "bugs/2026-08-09-seam.md", visibility: "public", priority: "normal", originalPriority: "normal", nextAction: "", originalNextAction: "fixed" },
+      ],
+    }),
+  ]) as IncomingMessage,
+  res: clearNextAction.res,
+  deps,
+});
+assert.equal(clearNextAction.captured.status, 200);
+assert.doesNotMatch(
+  await fs.readFile(path.join(root, "issues", "bugs", "2026-08-09-seam.md"), "utf8"),
+  /next-action:/,
+);
+const staleNextAction = responseDouble();
+await serveWorkstreams({
+  method: "POST",
+  pathname: "/workstreams/issues/action/save-priorities",
+  repoRoot: root,
+  mainRoot: root,
+  worktreesRoot: path.join(root, "worktrees"),
+  req: Readable.from([
+    JSON.stringify({
+      changes: [
+        { issue: "bugs/2026-08-09-seam.md", visibility: "public", priority: "normal", originalPriority: "normal", nextAction: "duplicate", originalNextAction: "fixed" },
+      ],
+    }),
+  ]) as IncomingMessage,
+  res: staleNextAction.res,
+  deps,
+});
+assert.equal(staleNextAction.captured.status, 409);
+assert.match(staleNextAction.captured.body, /next action changed since the page loaded/);
 assert.equal(
   (await execa("git", ["status", "--short", "--", "notes.txt"], { cwd: root })).stdout,
   "M  notes.txt",
@@ -986,6 +1074,27 @@ assert.equal(
     "uncategorized",
   ),
   "--- \r\ntitle: Existing\r\n---\r\nBody\r\n",
+);
+assert.equal(
+  setIssueNextAction(
+    "---\ntitle: Existing\nneeds: [manual-testing]\n---\nBody\n",
+    "duplicate",
+  ),
+  "---\ntitle: Existing\nneeds: [manual-testing]\nnext-action: duplicate\n---\nBody\n",
+);
+assert.equal(
+  setIssueNextAction(
+    "---\r\ntitle: Existing\r\nnext-action: invalid\r\n---\r\nBody\r\nnext-action: body example\r\n",
+    undefined,
+  ),
+  "---\r\ntitle: Existing\r\n---\r\nBody\r\nnext-action: body example\r\n",
+);
+assert.equal(
+  setIssuePriority(
+    "---\ntitle: Existing\npriority: important\n---\nBody\npriority: body example\n",
+    "normal",
+  ),
+  "---\ntitle: Existing\npriority: normal\n---\nBody\npriority: body example\n",
 );
 JSON.stringify([
   legacyIssuesRedirect("/dev/issues"),
