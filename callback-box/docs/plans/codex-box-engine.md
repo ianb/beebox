@@ -3,8 +3,8 @@ title: "Codex as an optional box engine"
 status: draft
 workstream: codex-engine-plan
 issues:
-  - ../../../issues/decisions/2026-08-13-codex-as-an-alternative-engine.md
-  - ../../../issues/exploration/2026-07-18-codex-sdk-second-backend.md
+  - ../../../issues/closed/decisions/2026-08-13-codex-as-an-alternative-engine.md
+  - ../../../issues/closed/exploration/2026-07-18-codex-sdk-second-backend.md
 ---
 
 # Codex as an optional box engine

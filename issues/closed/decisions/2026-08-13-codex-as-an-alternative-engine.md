@@ -1,13 +1,18 @@
 ---
 title: "Support Codex as a box engine alongside Claude Code — refresh the research and decide"
-workstream: unattached
+workstream: codex-engine-plan
 area: callback-box
-needs: [decision, design]
 labels: [engine, vendor-risk, research]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder decision to reduce single-vendor exposure
 ---
+
+Resolved by the [Codex box engine plan](../../../callback-box/docs/plans/codex-box-engine.md)
+(commit `9c90712a`). The plan chooses a complete optional box engine, with
+callback-owned normalized transcripts as the central boundary. Implementation remains
+a separate decision.
 
 Ian wants callback-box able to run on **Codex as an engine**, not only Claude
 Code, to reduce exposure to a single vendor's product decisions. There was no

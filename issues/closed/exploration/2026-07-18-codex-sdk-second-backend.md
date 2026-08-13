@@ -1,16 +1,21 @@
 ---
 title: "Codex SDK as an optional second backend (bring-your-ChatGPT-subscription)"
-workstream: backend-research
-needs: [decision]
+workstream: codex-engine-plan
 area: callback-box
+resolution: superseded
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
 ---
 
+Superseded by the [Codex box engine plan](../../../callback-box/docs/plans/codex-box-engine.md)
+(commit `9c90712a`). The new plan refreshes the evidence and chooses a full optional box
+runtime rather than the narrow subscription-backend framing. The separate port-hygiene
+prerequisite remains open.
+
 The LATER recommendation from the backend deep pass
-([synthesis](../../research/backend-alternatives/2026-07-18-synthesis.md);
-detail in [chatgpt-subscription-path](../../research/backend-alternatives/2026-07-18-chatgpt-subscription-path.md)
-and [alt-harnesses](../../research/backend-alternatives/2026-07-18-alt-harnesses.md)).
+([synthesis](../../../research/backend-alternatives/2026-07-18-synthesis.md);
+detail in [chatgpt-subscription-path](../../../research/backend-alternatives/2026-07-18-chatgpt-subscription-path.md)
+and [alt-harnesses](../../../research/backend-alternatives/2026-07-18-alt-harnesses.md)).
 
 The tension: the single most-wanted user story pluggability could serve — "I
 already pay for ChatGPT; use that" — is only reachable through Codex
@@ -39,5 +44,5 @@ Pickup triggers:
 If picked up: ship as an opt-in, clearly-labeled backend with explicit warnings
 (fragile undocumented auth endpoint, training toggles), never the default. The
 port-hygiene work in
-[chat-backend-port-hygiene](../code-quality/2026-07-18-chat-backend-port-hygiene.md)
+[chat-backend-port-hygiene](../../code-quality/2026-07-18-chat-backend-port-hygiene.md)
 is the prerequisite that makes the second backend implementable.
