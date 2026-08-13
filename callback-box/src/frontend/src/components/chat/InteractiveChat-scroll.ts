@@ -42,6 +42,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { MutableRefObject } from "react";
 import { decideReconcile, decideScroll } from "./scroll-reconcile";
+import { recordScrollTrace } from "../../lib/scroll-diagnostics";
 
 // Re-engage following once the user scrolls back within this many px of the
 // bottom. Generous on purpose, and never exact equality.
@@ -159,19 +160,16 @@ export function useStickToBottom(): StickToBottom {
   const writeTop = useCallback((top: number, behavior: ScrollBehavior) => {
     const el = scrollerElRef.current;
     if (!el) return;
+    recordScrollTrace("write", { top: Math.round(top), b: behavior });
     lastProgrammaticTopRef.current = top;
     smoothTargetRef.current = behavior === "smooth" ? top : null;
     el.scrollTo({ top, behavior });
     // For a smooth write this is the (unchanged) start position — the animation
-    // frames update it as they're swallowed below.
+    // frames update it as they're swallowed in the scroll handler.
     lastScrollTopRef.current = el.scrollTop;
   }, []);
 
-  const writeToBottom = useCallback((behavior: ScrollBehavior) => {
-    const el = scrollerElRef.current;
-    if (!el) return;
-    writeTop(el.scrollHeight - el.clientHeight, behavior);
-  }, [writeTop]);
+  const writeToBottom = useCallback((behavior: ScrollBehavior) => { const el = scrollerElRef.current; if (el) writeTop(el.scrollHeight - el.clientHeight, behavior); }, [writeTop]);
 
   const scrollToBottom = useCallback((opts?: { behavior?: ScrollBehavior }) => {
     const behavior = opts && opts.behavior ? opts.behavior : "instant";
@@ -180,18 +178,11 @@ export function useStickToBottom(): StickToBottom {
     writeToBottom(behavior);
   }, [setPinned, setUnseen, writeToBottom]);
 
-  const captureForPrepend = useCallback(() => {
-    const el = scrollerElRef.current;
-    if (el) prependGapRef.current = el.scrollHeight - el.scrollTop;
-  }, []);
+  const captureForPrepend = useCallback(() => { const el = scrollerElRef.current; if (el) prependGapRef.current = el.scrollHeight - el.scrollTop; }, []);
 
-  const markUserIntent = useCallback(() => {
-    lastUserIntentAtRef.current = performance.now();
-  }, []);
+  const markUserIntent = useCallback(() => { lastUserIntentAtRef.current = performance.now(); recordScrollTrace("intent", {}); }, []);
 
-  const handleKeyIntent = useCallback((e: KeyboardEvent) => {
-    if (SCROLL_KEYS.has(e.key)) lastUserIntentAtRef.current = performance.now();
-  }, []);
+  const handleKeyIntent = useCallback((e: KeyboardEvent) => { if (SCROLL_KEYS.has(e.key)) lastUserIntentAtRef.current = performance.now(); }, []);
 
   // Refresh the anchor (only meaningful while detached) shortly after the
   // user pauses scrolling, so a resize that lands while they read is corrected.
@@ -208,6 +199,7 @@ export function useStickToBottom(): StickToBottom {
     const top = el.scrollTop;
     // Our own programmatic write — don't reinterpret it as user intent.
     if (Math.abs(top - lastProgrammaticTopRef.current) <= PROGRAMMATIC_EPSILON) {
+      recordScrollTrace("scroll", { top: Math.round(top), act: "own" });
       smoothTargetRef.current = null;
       lastScrollTopRef.current = top;
       return;
@@ -219,6 +211,7 @@ export function useStickToBottom(): StickToBottom {
     const smoothTarget = smoothTargetRef.current;
     const towardSmooth = smoothTarget !== null && Math.abs(smoothTarget - top) < Math.abs(smoothTarget - lastScrollTopRef.current);
     if (towardSmooth && !recentIntent) {
+      recordScrollTrace("scroll", { top: Math.round(top), act: "smooth-own" });
       lastScrollTopRef.current = top;
       return;
     }
@@ -238,12 +231,14 @@ export function useStickToBottom(): StickToBottom {
     // handler runs, and measuring against the grown height would misread that
     // clamp as an intent-less scroll-up far from the bottom (a "drag").
     // Not-yet-reconciled growth is exactly the raced amount, so exclude it.
+    const fromBottom = Math.min(el.scrollHeight, prevScrollHeightRef.current) - top - el.clientHeight;
     const action = decideScroll({
       scrolledUp: top < lastScrollTopRef.current - PROGRAMMATIC_EPSILON,
       recentIntent,
-      fromBottom: Math.min(el.scrollHeight, prevScrollHeightRef.current) - top - el.clientHeight,
+      fromBottom,
       nearBottomPx: NEAR_BOTTOM_PX,
     });
+    recordScrollTrace("scroll", { top: Math.round(top), fb: Math.round(fromBottom), act: action, intent: recentIntent, pin: pinnedRef.current });
     if (action === "disengage") {
       setPinned(false);
       anchorRef.current = topVisibleChild(el, contentElRef.current);
@@ -283,6 +278,7 @@ export function useStickToBottom(): StickToBottom {
     }
 
     const action = decideReconcile({ source, grew, pinned: pinnedRef.current, prepend, anchorMoved: Math.abs(anchorDelta) > 1 });
+    recordScrollTrace("reconcile", { src: source, grew, ad: Math.round(anchorDelta), act: action, sh: el.scrollHeight, ch: el.clientHeight, st: Math.round(el.scrollTop) });
     prevScrollHeightRef.current = el.scrollHeight;
 
     if (action === "hold-prepend") {
