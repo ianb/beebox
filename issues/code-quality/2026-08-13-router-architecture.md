@@ -98,9 +98,26 @@ separate app has to fetch that — though `bin/workstreams list --json` already
 exists as the join of git, runtime, and registry state, and `/__router/status`
 already serves the process view, so the seam is partly built.
 
-Also decide: is it lazy-started like a worktree or resident; does it inherit the
-router's authentication by sitting behind the proxy (as boxes do today); and
-does it keep working when the main checkout's install is mid-flight.
+Also decide: does it inherit the router's authentication by sitting behind the
+proxy (as boxes do today), and does it keep working when the main checkout's
+install is mid-flight.
+
+**Resident, not lazy-started.** Keep the app light enough to just stay up — it
+serves the surface you check *between* pieces of work, so a cold start is paid
+exactly when you're least willing to wait. Lazy-starting is the right shape for
+a worktree's Vite + hub (heavy, per-checkout, often idle); a single light app
+that reads state doesn't need it.
+
+**Some of `/<worktree>/dev/` moves in.** The docs browser is the clear case: it
+is per-worktree today, and a workstream-scoped view — this workstream's docs,
+issues, and plans in one place — is the better shape. Accessed differently as a
+consequence, which is fine.
+
+Preserve the property that made `/dev/` work: it reads **straight from disk and
+never cold-starts a worktree**. A resident app reading any checkout's files
+keeps that, and arguably improves it — one process instead of a per-worktree
+one. What stays behind is the genuinely per-checkout part: static `dev/*.html`
+artifacts and the `tools.json` cards, which belong to the tree they live in.
 
 ## The tension worth deciding first
 
