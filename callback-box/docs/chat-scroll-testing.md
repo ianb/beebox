@@ -181,6 +181,20 @@ empty frame's content is the `ldrs` Grid spinner, not a real disappearance.
 The machine swaps streamText→entry in one atomic `assign`, so a single-turn
 fresh chat shows no flash.
 
+## `/scrolldebug` — the on-device scroll trace (field probe)
+
+When scroll behavior misbehaves somewhere `bin/browse` can't reach (a real
+iPhone, a prod-only condition), type `/scrolldebug` in the composer to toggle
+a flag-gated trace of the controller (`lib/scroll-diagnostics.ts`): every
+scroll event with its `decideScroll` action, every reconcile cycle with its
+`decideReconcile` action and measured anchor delta, every programmatic write,
+and every input-intent mark. Reproduce for ~20–30s, toggle again to flush;
+batches land in the box's `client-debug.log` tagged `[scroll-trace]`
+(numbers only — safe to quote). Reading one: `write` events are the
+controller acting — a healthy detached/dragging trace has none; `sh` dips in
+`reconcile` events are content collapses. Protocol for running a round with
+the boxholder: the `field-probe` skill.
+
 ## Device-only checklist (real iPhone — Chromium can't emulate these)
 
 - **Keyboard:** focus the composer; it must stay above the on-screen keyboard
